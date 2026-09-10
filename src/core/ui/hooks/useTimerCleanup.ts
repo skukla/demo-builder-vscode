@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect } from 'react';
 
 /**
  * Timer reference object managed by useTimerCleanup
@@ -63,27 +63,26 @@ export function useTimerCleanup(count: number = 1): TimerRef[] {
         };
     }, []);
 
-    // Create stable timer management objects
-    const timerObjects = useCallback((): TimerRef[] => {
-        return refsArray.current.map((timerRef) => ({
-            ref: timerRef,
-            set: (callback: () => void, delay: number) => {
-                // Clear any existing timer before setting a new one
-                if (timerRef.current) {
-                    clearTimeout(timerRef.current);
-                }
-                timerRef.current = setTimeout(callback, delay);
-            },
-            clear: () => {
-                if (timerRef.current) {
-                    clearTimeout(timerRef.current);
-                    timerRef.current = null;
-                }
-            },
-        }));
-    }, []);
-
-    return timerObjects();
+    // The REFS are what is stable; these wrappers are rebuilt each render and
+    // always were. They used to be wrapped in a useCallback that was invoked on
+    // the very next line, so the memo was never read and every render produced
+    // fresh objects regardless.
+    return refsArray.current.map((timerRef) => ({
+        ref: timerRef,
+        set: (callback: () => void, delay: number) => {
+            // Clear any existing timer before setting a new one
+            if (timerRef.current) {
+                clearTimeout(timerRef.current);
+            }
+            timerRef.current = setTimeout(callback, delay);
+        },
+        clear: () => {
+            if (timerRef.current) {
+                clearTimeout(timerRef.current);
+                timerRef.current = null;
+            }
+        },
+    }));
 }
 
 /**

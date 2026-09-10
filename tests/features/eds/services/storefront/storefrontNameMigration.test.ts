@@ -14,23 +14,21 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
 
 import { COMPONENT_IDS } from '@/core/constants';
 import { migrateStorefrontNamingIfNeeded } from '@/features/eds/services/storefront/storefrontNameMigration';
-import type {
-    StorefrontMigrationContext,
-} from '@/features/eds/services/storefront/storefrontNameMigration';
+import type { StorefrontMigrationContext } from '@/features/eds/services/storefront/storefrontNameMigration';
 import type { Project } from '@/types/base';
+import { createMockLogger } from '../../../../helpers/loggerFake';
+import { createMockProject } from '../../../../helpers/projectFake';
 
-const mockLogger = {
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-};
+const mockLogger = createMockLogger();
 
 function makeProject(daLiveSite: string): Project {
-    return {
+    return createMockProject({
         name: 'my-commerce-demo',
         componentInstances: {
             [COMPONENT_IDS.EDS_STOREFRONT]: {
+                id: COMPONENT_IDS.EDS_STOREFRONT,
+                name: 'EDS Storefront',
+                status: 'ready',
                 metadata: {
                     daLiveOrg: 'skukla',
                     daLiveSite,
@@ -38,7 +36,7 @@ function makeProject(daLiveSite: string): Project {
                 },
             },
         },
-    } as unknown as Project;
+    });
 }
 
 function makeCtx(overrides: Partial<StorefrontMigrationContext> = {}): StorefrontMigrationContext {
@@ -52,10 +50,12 @@ function makeCtx(overrides: Partial<StorefrontMigrationContext> = {}): Storefron
     };
 }
 
-function makeDaOps(overrides: Partial<{
-    copy: jest.Mock;
-    deleteRoot: jest.Mock;
-}> = {}) {
+function makeDaOps(
+    overrides: Partial<{
+        copy: jest.Mock;
+        deleteRoot: jest.Mock;
+    }> = {}
+) {
     return {
         copyDaLiveSite: overrides.copy ?? jest.fn().mockResolvedValue({ success: true }),
         deleteSiteRoot: overrides.deleteRoot ?? jest.fn().mockResolvedValue(undefined),
@@ -81,7 +81,11 @@ describe('migrateStorefrontNamingIfNeeded', () => {
             const configService = makeConfigService();
 
             const result = await migrateStorefrontNamingIfNeeded(
-                ctx, project, daOps as any, configService as any, mockLogger as any,
+                ctx,
+                project,
+                daOps,
+                configService,
+                mockLogger
             );
 
             expect(result).toEqual({ skipped: true, migrated: false });
@@ -98,12 +102,13 @@ describe('migrateStorefrontNamingIfNeeded', () => {
             const daOps = makeDaOps();
             const configService = makeConfigService();
 
-            await migrateStorefrontNamingIfNeeded(
-                ctx, project, daOps as any, configService as any, mockLogger as any,
-            );
+            await migrateStorefrontNamingIfNeeded(ctx, project, daOps, configService, mockLogger);
 
             expect(daOps.copyDaLiveSite).toHaveBeenCalledWith(
-                'skukla', 'b2b-boilerplate-content', 'skukla', 'b2b-boilerplate',
+                'skukla',
+                'b2b-boilerplate-content',
+                'skukla',
+                'b2b-boilerplate'
             );
         });
 
@@ -113,9 +118,7 @@ describe('migrateStorefrontNamingIfNeeded', () => {
             const daOps = makeDaOps();
             const configService = makeConfigService();
 
-            await migrateStorefrontNamingIfNeeded(
-                ctx, project, daOps as any, configService as any, mockLogger as any,
-            );
+            await migrateStorefrontNamingIfNeeded(ctx, project, daOps, configService, mockLogger);
 
             expect(configService.updateSiteConfig).toHaveBeenCalledTimes(1);
             const passed = configService.updateSiteConfig.mock.calls[0][0];
@@ -132,7 +135,11 @@ describe('migrateStorefrontNamingIfNeeded', () => {
             const project = makeProject('b2b-boilerplate-content');
 
             await migrateStorefrontNamingIfNeeded(
-                ctx, project, makeDaOps() as any, makeConfigService() as any, mockLogger as any,
+                ctx,
+                project,
+                makeDaOps(),
+                makeConfigService(),
+                mockLogger
             );
 
             expect(ctx.daLiveSite).toBe('b2b-boilerplate');
@@ -143,11 +150,15 @@ describe('migrateStorefrontNamingIfNeeded', () => {
             const project = makeProject('b2b-boilerplate-content');
 
             await migrateStorefrontNamingIfNeeded(
-                ctx, project, makeDaOps() as any, makeConfigService() as any, mockLogger as any,
+                ctx,
+                project,
+                makeDaOps(),
+                makeConfigService(),
+                mockLogger
             );
 
             expect(
-                project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.metadata?.daLiveSite,
+                project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.metadata?.daLiveSite
             ).toBe('b2b-boilerplate');
         });
 
@@ -157,16 +168,14 @@ describe('migrateStorefrontNamingIfNeeded', () => {
             const daOps = makeDaOps();
             const configService = makeConfigService();
 
-            await migrateStorefrontNamingIfNeeded(
-                ctx, project, daOps as any, configService as any, mockLogger as any,
-            );
+            await migrateStorefrontNamingIfNeeded(ctx, project, daOps, configService, mockLogger);
 
             expect(daOps.deleteSiteRoot).toHaveBeenCalledWith('skukla', 'b2b-boilerplate-content');
             // Verify ordering: deleteSiteRoot is the last call.
             const callOrder = [
-                (daOps.copyDaLiveSite as jest.Mock).mock.invocationCallOrder[0],
-                (configService.updateSiteConfig as jest.Mock).mock.invocationCallOrder[0],
-                (daOps.deleteSiteRoot as jest.Mock).mock.invocationCallOrder[0],
+                daOps.copyDaLiveSite.mock.invocationCallOrder[0],
+                configService.updateSiteConfig.mock.invocationCallOrder[0],
+                daOps.deleteSiteRoot.mock.invocationCallOrder[0],
             ];
             const sorted = [...callOrder].sort((a, b) => a - b);
             expect(callOrder).toEqual(sorted);
@@ -177,7 +186,11 @@ describe('migrateStorefrontNamingIfNeeded', () => {
             const project = makeProject('b2b-boilerplate-content');
 
             const result = await migrateStorefrontNamingIfNeeded(
-                ctx, project, makeDaOps() as any, makeConfigService() as any, mockLogger as any,
+                ctx,
+                project,
+                makeDaOps(),
+                makeConfigService(),
+                mockLogger
             );
 
             expect(result).toEqual({ skipped: false, migrated: true });
@@ -189,7 +202,11 @@ describe('migrateStorefrontNamingIfNeeded', () => {
             const configService = makeConfigService();
 
             await migrateStorefrontNamingIfNeeded(
-                ctx, project, makeDaOps() as any, configService as any, mockLogger as any,
+                ctx,
+                project,
+                makeDaOps(),
+                configService,
+                mockLogger
             );
 
             const passed = configService.updateSiteConfig.mock.calls[0][0];
@@ -202,7 +219,11 @@ describe('migrateStorefrontNamingIfNeeded', () => {
             const configService = makeConfigService();
 
             await migrateStorefrontNamingIfNeeded(
-                ctx, project, makeDaOps() as any, configService as any, mockLogger as any,
+                ctx,
+                project,
+                makeDaOps(),
+                configService,
+                mockLogger
             );
 
             const passed = configService.updateSiteConfig.mock.calls[0][0];
@@ -220,7 +241,11 @@ describe('migrateStorefrontNamingIfNeeded', () => {
             const configService = makeConfigService();
 
             const result = await migrateStorefrontNamingIfNeeded(
-                ctx, project, daOps as any, configService as any, mockLogger as any,
+                ctx,
+                project,
+                daOps,
+                configService,
+                mockLogger
             );
 
             expect(result.skipped).toBe(false);
@@ -231,7 +256,7 @@ describe('migrateStorefrontNamingIfNeeded', () => {
             // ctx and project must be left unchanged so the next reset retries from scratch.
             expect(ctx.daLiveSite).toBe('b2b-boilerplate-content');
             expect(
-                project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.metadata?.daLiveSite,
+                project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.metadata?.daLiveSite
             ).toBe('b2b-boilerplate-content');
         });
 
@@ -240,11 +265,15 @@ describe('migrateStorefrontNamingIfNeeded', () => {
             const project = makeProject('b2b-boilerplate-content');
             const daOps = makeDaOps();
             const configService = makeConfigService(
-                jest.fn().mockResolvedValue({ success: false, error: '401 auth failed' }),
+                jest.fn().mockResolvedValue({ success: false, error: '401 auth failed' })
             );
 
             const result = await migrateStorefrontNamingIfNeeded(
-                ctx, project, daOps as any, configService as any, mockLogger as any,
+                ctx,
+                project,
+                daOps,
+                configService,
+                mockLogger
             );
 
             expect(result.skipped).toBe(false);
@@ -254,7 +283,7 @@ describe('migrateStorefrontNamingIfNeeded', () => {
             // ctx and project must NOT yet reflect the new name — Helix is still on the old URL.
             expect(ctx.daLiveSite).toBe('b2b-boilerplate-content');
             expect(
-                project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.metadata?.daLiveSite,
+                project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.metadata?.daLiveSite
             ).toBe('b2b-boilerplate-content');
         });
 
@@ -267,17 +296,21 @@ describe('migrateStorefrontNamingIfNeeded', () => {
             const configService = makeConfigService();
 
             const result = await migrateStorefrontNamingIfNeeded(
-                ctx, project, daOps as any, configService as any, mockLogger as any,
+                ctx,
+                project,
+                daOps,
+                configService,
+                mockLogger
             );
 
             expect(result).toEqual({ skipped: false, migrated: true });
             expect(mockLogger.warn).toHaveBeenCalledWith(
-                expect.stringContaining('Old DA site cleanup failed'),
+                expect.stringContaining('Old DA site cleanup failed')
             );
             // State did successfully transition — Helix is on the new URL, manifest was patched.
             expect(ctx.daLiveSite).toBe('b2b-boilerplate');
             expect(
-                project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.metadata?.daLiveSite,
+                project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.metadata?.daLiveSite
             ).toBe('b2b-boilerplate');
         });
     });
@@ -293,12 +326,15 @@ describe('migrateStorefrontNamingIfNeeded', () => {
                     success: true,
                     grantsRestored: false,
                     lostGrants: ['a****@x.test'],
-                }),
+                })
             );
 
             const result = await migrateStorefrontNamingIfNeeded(
-                makeCtx(), makeProject('b2b-boilerplate-content'), makeDaOps() as any,
-                configService as any, mockLogger as any,
+                makeCtx(),
+                makeProject('b2b-boilerplate-content'),
+                makeDaOps(),
+                configService,
+                mockLogger
             );
 
             expect(result.migrated).toBe(true);
@@ -314,12 +350,15 @@ describe('migrateStorefrontNamingIfNeeded', () => {
                     error: 'boom',
                     grantsRestored: false,
                     lostGrants: ['a****@x.test'],
-                }),
+                })
             );
 
             const result = await migrateStorefrontNamingIfNeeded(
-                makeCtx(), makeProject('b2b-boilerplate-content'), makeDaOps() as any,
-                configService as any, mockLogger as any,
+                makeCtx(),
+                makeProject('b2b-boilerplate-content'),
+                makeDaOps(),
+                configService,
+                mockLogger
             );
 
             expect(result.migrated).toBe(false);
@@ -327,12 +366,83 @@ describe('migrateStorefrontNamingIfNeeded', () => {
             expect(result.lostGrants).toEqual(['a****@x.test']);
         });
 
-        it('tolerates a project missing the eds-storefront instance (no crash, ctx still mutated)', async () => {
-            const ctx = makeCtx();
-            const project = { name: 'no-eds', componentInstances: {} } as unknown as Project;
+        it('does NOT report lost grants when the restore succeeded', async () => {
+            // `grantsRestored` is the decision, not the presence of the array —
+            // the service echoes the addresses it handled either way. Reporting
+            // them on a successful restore would send an SC to re-invite admins
+            // who never lost access.
+            const configService = makeConfigService(
+                jest.fn().mockResolvedValue({
+                    success: true,
+                    grantsRestored: true,
+                    lostGrants: ['a****@x.test'],
+                })
+            );
 
             const result = await migrateStorefrontNamingIfNeeded(
-                ctx, project, makeDaOps() as any, makeConfigService() as any, mockLogger as any,
+                makeCtx(),
+                makeProject('b2b-boilerplate-content'),
+                makeDaOps(),
+                configService,
+                mockLogger
+            );
+
+            expect(result.migrated).toBe(true);
+            expect(result).not.toHaveProperty('lostGrants');
+        });
+
+        it('names the re-registration failure "unknown" when the service returns no error text', async () => {
+            // The message is the only thing the SC sees when reset stops here.
+            // An empty tail reads as a truncated log line rather than a state.
+            const configService = makeConfigService(
+                jest.fn().mockResolvedValue({ success: false })
+            );
+
+            const result = await migrateStorefrontNamingIfNeeded(
+                makeCtx(),
+                makeProject('b2b-boilerplate-content'),
+                makeDaOps(),
+                configService,
+                mockLogger
+            );
+
+            expect(result.migrated).toBe(false);
+            expect(result.error).toBe(
+                'Storefront name migration failed during Helix re-registration: unknown',
+            );
+        });
+
+        it('tolerates a project with no componentInstances at all (no crash, ctx still mutated)', async () => {
+            // A manifest written before componentInstances existed. Reaching for
+            // the storefront must not throw the migration out midway — Helix is
+            // already re-pointed by this line, so a throw here strands the
+            // storefront between two names.
+            const ctx = makeCtx();
+            const project = createMockProject({ name: 'no-instances' });
+            delete (project as Partial<Project>).componentInstances;
+
+            const result = await migrateStorefrontNamingIfNeeded(
+                ctx,
+                project,
+                makeDaOps(),
+                makeConfigService(),
+                mockLogger
+            );
+
+            expect(result.migrated).toBe(true);
+            expect(ctx.daLiveSite).toBe('b2b-boilerplate');
+        });
+
+        it('tolerates a project missing the eds-storefront instance (no crash, ctx still mutated)', async () => {
+            const ctx = makeCtx();
+            const project = createMockProject({ name: 'no-eds', componentInstances: {} });
+
+            const result = await migrateStorefrontNamingIfNeeded(
+                ctx,
+                project,
+                makeDaOps(),
+                makeConfigService(),
+                mockLogger
             );
 
             expect(result.migrated).toBe(true);

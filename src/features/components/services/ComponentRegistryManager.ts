@@ -14,16 +14,8 @@
 
 import * as path from 'path';
 import { ConfigurationLoader } from '@/core/config/ConfigurationLoader';
-import { validateNodeVersion } from '@/core/validation';
-import {
-    ComponentRegistry,
-    TransformedComponentDefinition,
-    RawComponentRegistry,
-    RawComponentDefinition,
-    EnvVarDefinition,
-    ServiceDefinition,
-    PresetDefinition,
-} from '@/types';
+import { validateNodeVersion } from '@/core/validation/validators/NodeVersionValidator';
+import { ComponentRegistry, PresetDefinition, RawComponentDefinition, RawComponentRegistry, ServiceDefinition, TransformedComponentDefinition } from '@/types/components';
 
 // Re-export DependencyResolver for backward compatibility
 export { DependencyResolver } from './DependencyResolver';
@@ -259,39 +251,6 @@ export class ComponentRegistryManager {
             services: raw.services || {},
             envVars: raw.envVars || {},
         };
-    }
-
-    private _buildServicesForComponent(
-        serviceIds: string[],
-        services: Record<string, ServiceDefinition>,
-        sharedEnvVars: Record<string, Omit<EnvVarDefinition, 'key'>>,
-    ): ServiceDefinition[] {
-        const expandedServices: ServiceDefinition[] = [];
-
-        for (const serviceId of serviceIds) {
-            const service = services[serviceId];
-            if (service) {
-                const serviceEnvVars: EnvVarDefinition[] = [];
-                const requiredKeys = service.requiredEnvVars || [];
-                
-                for (const key of requiredKeys) {
-                    const envVar = sharedEnvVars[key];
-                    if (envVar) {
-                        serviceEnvVars.push({
-                            key,
-                            ...envVar,
-                        });
-                    }
-                }
-
-                expandedServices.push({
-                    ...service,
-                    envVars: serviceEnvVars,
-                });
-            }
-        }
-
-        return expandedServices;
     }
 
     async getFrontends(): Promise<TransformedComponentDefinition[]> {

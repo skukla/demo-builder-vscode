@@ -44,28 +44,20 @@ import {
     getSelectableAppBuilderComponents,
     type SelectableAppBuilderComponent,
 } from '../../services/appBuilderComponentSelection';
-import {
-    AddIntegrationFlowModal,
-    buildReservedIds,
-    isApiEditable,
-    resolveIntegrationRows,
-    sublineFor,
-    toIntegrationCards,
-    type ApiEditTarget,
-    type FlowMode,
-    type IntegrationRow,
-} from '../components/integration-flow';
 import { meshComponentForStack } from './tileStatus';
 import { useProjectBuilder } from './useProjectBuilder';
-import {
-    IntegrationCard,
-    type CardAction,
-    type IntegrationCardModel,
-} from '@/core/ui/components/integrations';
+import { IntegrationCard } from '@/core/ui/components/integrations/IntegrationCard';
+import type { CardAction, IntegrationCardModel } from '@/core/ui/components/integrations/integrationCardModel.types';
 import { StepAreaShell } from '@/core/ui/components/layout/StepAreaShell';
 import { DestinationContext } from '@/core/ui/components/ui/DestinationContext';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
 import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
+import { AddIntegrationFlowModal } from '@/features/project-creation/ui/components/integration-flow/AddIntegrationFlowModal';
+import type { FlowMode } from '@/features/project-creation/ui/components/integration-flow/flowStages';
+import { buildReservedIds } from '@/features/project-creation/ui/components/integration-flow/instanceId';
+import { isApiEditable, sublineFor, toIntegrationCards } from '@/features/project-creation/ui/components/integration-flow/integrationCards';
+import { resolveIntegrationRows, type IntegrationRow } from '@/features/project-creation/ui/components/integration-flow/integrationRows';
+import type { ApiEditTarget } from '@/features/project-creation/ui/components/integration-flow/useIntegrationFlow';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';

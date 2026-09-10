@@ -16,7 +16,7 @@
  */
 
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import type { Logger } from '@/types';
+import type { Logger } from '@/types/logger';
 
 /** Minimal shape both ContentPatchSource and CodePatchSource satisfy. */
 interface PatchSourceLike {

@@ -23,14 +23,6 @@ jest.mock('@octokit/plugin-retry', () => ({
 }));
 
 // Mock logger
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
-}));
 
 describe('GitHub Repository Operations', () => {
     let GitHubRepoOperations: any;

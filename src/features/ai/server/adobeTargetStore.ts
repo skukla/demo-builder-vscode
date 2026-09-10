@@ -13,7 +13,7 @@
  * across windows (each window is its own extension-host process).
  */
 
-import { withOrgContext, type OrgContextTarget } from '@/core/shell';
+import { withOrgContext, type OrgContextTarget } from '@/core/shell/orgContextEnv';
 
 /** The active session target, or undefined when nothing has been selected. */
 let target: OrgContextTarget | undefined;

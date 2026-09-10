@@ -16,6 +16,7 @@
  * is already past the 500-line lint threshold.
  */
 
+import { mockWithOrgContext } from './appBuilderComponentRunner.orgContextMock';
 import type { Project } from '@/types/base';
 
 jest.setTimeout(5000);
@@ -24,13 +25,8 @@ jest.setTimeout(5000);
 // Mocks — defined before imports
 // =============================================================================
 
-const mockWithOrgContext = jest.fn((_target: unknown, fn: () => Promise<unknown>) => fn());
-jest.mock('@/core/shell', () => ({
-    ...jest.requireActual('@/core/shell'),
-    withOrgContext: (target: unknown, fn: () => Promise<unknown>) => mockWithOrgContext(target, fn),
-}));
-
 jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
+    listDeclaredPackageNames: jest.fn().mockResolvedValue([]),
     detectAppLayout: jest.fn().mockResolvedValue('standalone'),
 }));
 
@@ -59,7 +55,7 @@ describe('mesh add — writes the .env before deploying', () => {
         const project = createProject();
         const deps = createDeps();
 
-        const result = await addAppBuilderComponent(project, MESH_ENTRY, deps as never);
+        const result = await addAppBuilderComponent(project, MESH_ENTRY, deps);
 
         expect(result.success).toBe(true);
         expect(deps.writeComponentEnv).toHaveBeenCalledWith(
@@ -84,7 +80,7 @@ describe('mesh add — writes the .env before deploying', () => {
             }),
         });
 
-        await addAppBuilderComponent(project, MESH_ENTRY, deps as never);
+        await addAppBuilderComponent(project, MESH_ENTRY, deps);
 
         expect(order).toEqual(['env', 'deploy']);
     });
@@ -95,7 +91,7 @@ describe('mesh add — writes the .env before deploying', () => {
             writeComponentEnv: jest.fn().mockRejectedValue(new Error('registry unavailable')),
         });
 
-        const result = await addAppBuilderComponent(project, MESH_ENTRY, deps as never);
+        const result = await addAppBuilderComponent(project, MESH_ENTRY, deps);
 
         expect(result.success).toBe(false);
         expect(result.error).toMatch(/registry unavailable/);
@@ -109,7 +105,7 @@ describe('integration add — no .env (catalog app repos ship none)', () => {
         const project = createProject();
         const deps = createDeps();
 
-        const result = await addAppBuilderComponent(project, INTEGRATION_ENTRY, deps as never);
+        const result = await addAppBuilderComponent(project, INTEGRATION_ENTRY, deps);
 
         expect(result.success).toBe(true);
         expect(deps.writeComponentEnv).not.toHaveBeenCalled();
@@ -122,8 +118,13 @@ describe('mesh redeploy — refreshes the .env', () => {
     function deployedMeshProject(): Project {
         const project = createProject();
         project.componentInstances = {
-            [MESH_ENTRY.id]: { path: `/proj/components/${MESH_ENTRY.id}` },
-        } as never;
+            [MESH_ENTRY.id]: {
+                id: MESH_ENTRY.id,
+                name: MESH_ENTRY.name,
+                status: 'ready',
+                path: `/proj/components/${MESH_ENTRY.id}`,
+            },
+        };
         project.appBuilderComponents = {
             [MESH_ENTRY.id]: {
                 kind: 'mesh',
@@ -131,7 +132,7 @@ describe('mesh redeploy — refreshes the .env', () => {
                 name: MESH_ENTRY.name,
                 source: MESH_ENTRY.source,
             },
-        } as never;
+        };
         return project;
     }
 
@@ -151,7 +152,7 @@ describe('mesh redeploy — refreshes the .env', () => {
             }),
         });
 
-        const result = await deployAppBuilderComponent(project, MESH_ENTRY.id, deps as never);
+        const result = await deployAppBuilderComponent(project, MESH_ENTRY.id, deps);
 
         expect(result.success).toBe(true);
         expect(order).toEqual(['env', 'deploy']);

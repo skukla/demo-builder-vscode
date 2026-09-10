@@ -83,7 +83,7 @@
 
     /* Smooth transition for progress bar appearance */
     .prerequisites-container .animate-fade-in {
-        animation: fadeIn 0.3s ease-in-out;
+        animation: fadeIn var(--spectrum-global-animation-duration-600) ease-in-out;
     }
 
     /* Circular Number Badge
@@ -98,20 +98,12 @@
        into every webview; `.sample-data-note` above already relies on one.)
        The fallback is the accent blue rather than another grey — if the var is
        ever missing, a visible chip is the failure we want. */
-    .number-badge {
-        min-width: 32px;
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        background-color: var(--vscode-badge-background, var(--db-status-info));
-        color: var(--vscode-badge-foreground, #ffffff);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: bold;
-        font-size: 16px;
-        flex-shrink: 0;
-    }
+    /* .number-badge moved to utilities.css (ADR-017 §6). It is used by two
+       CORE components — NumberedInstructions and FieldHelpButton — and this sheet
+       is imported by only 4 of the 8 entries, so the badge rendered unstyled on
+       the other four. The rule kept its `@layer theme` wrapper at the
+       destination, so its cascade position is unchanged. */
+
 }
 
 /* ============================================
@@ -138,81 +130,50 @@
     }
 
     /* Input Field Styling */
-    .spectrum-Textfield {
-        min-height: 42px !important;
-    }
-
-    /* Target the actual input element with high specificity */
-    .spectrum-Textfield .spectrum-Textfield-input,
-    .spectrum-Textfield input.spectrum-Textfield-input,
+    
     input.spectrum-Textfield-input {
-        padding: 10px 14px !important;
-        font-size: 14px !important;
-        line-height: 1.5 !important;
-        box-sizing: border-box !important;
+        padding: 10px 14px;
+        font-size: 14px;
+        line-height: 1.5;
+        box-sizing: border-box;
     }
 
     /* Ensure padding is visible on focus */
-    .spectrum-Textfield-input:focus,
-    .spectrum-Textfield input:focus {
-        padding: 10px 14px !important;
-    }
-
-    /* Apply to all text inputs including textarea */
-    .spectrum-Textfield input,
-    .spectrum-Textfield textarea,
+    
     div[class*="spectrum-Textfield"] input {
-        padding: 10px 14px !important;
-        box-sizing: border-box !important;
+        padding: 10px 14px;
+        box-sizing: border-box;
     }
 
     /* Muted Placeholder Styling */
-    .spectrum-Textfield-input::placeholder {
-        color: var(--spectrum-global-color-gray-500) !important;
-        opacity: 0.5 !important;
-        font-style: italic;
-    }
+    
 
     input::placeholder {
-        color: var(--spectrum-global-color-gray-500) !important;
-        opacity: 0.5 !important;
+        color: var(--spectrum-global-color-gray-500);
+        opacity: 0.5;
     }
 
-    .spectrum-Picker-label::placeholder {
-        color: var(--spectrum-global-color-gray-500) !important;
-        opacity: 0.5 !important;
-    }
+    
 
     /* SearchField Input Padding - Account for magnifying glass icon */
-    .spectrum-SearchField-input,
-    .spectrum-SearchField input {
-        padding-left: 36px !important;  /* Space for magnifying glass icon */
-        padding-right: 14px !important;
-        padding-top: 10px !important;
-        padding-bottom: 10px !important;
-    }
+    
 
     /* SearchField Placeholder */
-    .spectrum-SearchField-input::placeholder {
-        color: var(--spectrum-global-color-gray-500) !important;
-        opacity: 0.5 !important;
-    }
+    
 
     /* Form Field Spacing */
-    .spectrum-Form-item {
-        margin-bottom: 20px !important;
-    }
+    
 
     /* Compact Button Styles */
     .wizard-compact-button {
-        height: 32px !important;
-        padding: 0 16px !important;
-        font-size: 13px !important;
+        height: 32px;
+        padding: 0 16px;
+        font-size: 13px;
     }
 
     /* Timeline Step Hover Effect */
     .timeline-step {
-        transition: background-color 0.2s ease;
+        transition: background-color var(--spectrum-global-animation-duration-300) ease;
         padding: 4px 8px;
         border-radius: 4px;
         cursor: pointer;
@@ -232,41 +193,43 @@
     }
 
     /* Well Component Compact Styling */
-    .spectrum-Well {
-        padding: 12px !important;
-    }
+    
 
     /* ListView Compact Items */
-    .spectrum-ListView-item {
-        padding: 8px 12px !important;
-        min-height: 36px !important;
-    }
+    
 
     /* Compact TextField Description */
-    .spectrum-FieldLabel + .spectrum-HelpText {
-        margin-top: 4px !important;
-        font-size: 12px !important;
-        color: var(--spectrum-global-color-gray-600) !important;
-    }
+    
 
     /* Error Message Styling */
-    .spectrum-FieldLabel--invalid + .spectrum-HelpText {
-        color: var(--spectrum-global-color-red-600) !important;
-    }
+    
 
-    /* Smooth Transitions */
-    * {
-        transition: opacity 0.2s ease, transform 0.2s ease;
-    }
+    /* THE UNIVERSAL TRANSITION IS GONE, and nothing replaced it.
+
+       It was `* { transition: opacity ..., transform ... }` in a sheet FOUR
+       entries import — every element on four surfaces given a transition it
+       never asked for. On the wizard that was 84 elements, `<script>`, `<style>`
+       and `<path>` among them.
+
+       It looked load-bearing because `.step-content.transitioning` toggles
+       opacity and transform right above and needs something to animate them. It
+       was not: that element carries the `transition-all` UTILITY CLASS in its
+       markup, which sets `transition: all` at 0.3s and wins anyway. The step
+       crossfade never came from here.
+
+       Found while converting durations to Spectrum's scale — the rule could not
+       take a token, because `*` also matches `body` and `#root`, outside the
+       Spectrum theme scope where the token does not resolve, and a failed
+       `var()` deletes the declaration rather than degrading it. The first motion
+       fingerprint caught it as `transition-duration: 0.2s -> 0s` on BODY.
+       A fallback would have hidden a rule that should not exist. */
 
     /* Remove default focus outlines for cleaner look */
-    .spectrum-Textfield-input:focus {
-        box-shadow: 0 0 0 1px var(--spectrum-global-color-blue-500) !important;
-    }
+    
 
     /* Compact Headers */
     h1, h2, h3 {
-        margin-bottom: 12px !important;
+        margin-bottom: 12px;
     }
 
     /* Ensure fixed height for wizard container */
@@ -284,78 +247,37 @@
     }
 
     /* Ensure Picker takes full width of container */
-    .spectrum-Picker {
-        width: 100% !important;
-        cursor: pointer !important;
-    }
-
-    /* All Picker elements should have pointer cursor */
-    .spectrum-Picker,
-    .spectrum-Picker *,
+    
     button[class*="spectrum-Picker"],
     div[class*="spectrum-Picker"],
     button[class*="Picker"],
     button[aria-haspopup="listbox"] {
-        cursor: pointer !important;
+        cursor: pointer;
     }
 
     /* Dropdown Menu Item Styling */
-    .spectrum-Menu-item {
-        padding: 8px 12px !important;
-        cursor: pointer !important;
-    }
-
-    /* All menu items and their children - more specific targeting */
-    .spectrum-Menu-item,
-    .spectrum-Menu-item *,
+    
     li[role="option"],
     li[role="option"] *,
     ul[role="listbox"] li,
     ul[role="listbox"] li *,
     [role="option"],
     [role="option"] * {
-        cursor: pointer !important;
+        cursor: pointer;
     }
-
-    /* Checkbox cursor styling - target all checkbox-related elements */
-    .spectrum-Checkbox,
-    .spectrum-Checkbox *,
-    .spectrum-Checkbox-input,
-    .spectrum-Checkbox-box,
-    .spectrum-Checkbox-label,
     label[class*="spectrum-Checkbox"],
     label[class*="spectrum-Checkbox"] *,
     input[type="checkbox"],
     input[type="checkbox"] + label {
-        cursor: pointer !important;
+        cursor: pointer;
     }
 
     /* Force dropdown descriptions to appear on separate lines */
-    .spectrum-Menu-itemGrid {
-        display: grid !important;
-        grid-template-columns: 1fr !important;
-        grid-template-rows: auto auto !important;
-        gap: 2px !important;
-    }
+    
 
-    .spectrum-Menu-itemLabel {
-        grid-column: 1 !important;
-        grid-row: 1 !important;
-        white-space: nowrap !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
-    }
+    
 
-    .spectrum-Menu-description {
-        grid-column: 1 !important;
-        grid-row: 2 !important;
-        display: block !important;
-        white-space: normal !important;
-        font-size: 11px !important;
-        color: var(--spectrum-global-color-gray-600) !important;
-        margin: 0 !important;
-        padding: 0 !important;
-    }
+    
 }
 /* ==========================================================================
    Sample Data area (Build Your Project)
@@ -366,34 +288,41 @@
    once cannot drift.
    ========================================================================== */
 
+@layer theme {
 .sample-data-area {
     display: flex;
     flex-direction: column;
     gap: 16px;
     max-width: var(--content-width);
 }
+}
 
+@layer theme {
 .sample-data-note {
     margin: 0;
     font-size: 12px;
     color: var(--vscode-descriptionForeground);
+}
 }
 
 /* The pack grid. Same shape as the panel's `.datapack-grid` — this surface shows
    the SAME DatapackCard, and a second column rule would let the two drift.
    Restated rather than shared because that class lives in the feature-scoped
    data-installer sheet, which this bundle never loads; the CARD's own styles
-   moved to custom-spectrum.css, which both bundles do load. */
+   moved to utilities.css, which both bundles do load. */
+@layer theme {
 .sample-data-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
     gap: 24px;
     padding: 8px;
 }
+}
 
 /* "None" is one option among the packs, so it sits IN the grid rather than
    beside it — a choice parked outside the group reads as "nothing chosen yet"
    rather than as a decision. Sized to the cards it stands with. */
+@layer theme {
 .sample-data-none {
     display: flex;
     flex-direction: column;
@@ -407,21 +336,30 @@
        inside a grid track — state it rather than inherit it by luck. */
     box-sizing: border-box;
 }
+}
 
+@layer theme {
 .sample-data-none:hover {
     border-color: var(--spectrum-global-color-gray-400);
 }
+}
 
+@layer theme {
 .sample-data-none.is-selected {
     border-color: var(--spectrum-global-color-blue-500);
     background: var(--spectrum-global-color-gray-75);
 }
+}
 
+@layer theme {
 .sample-data-none-label {
     font-weight: 600;
 }
+}
 
+@layer theme {
 .sample-data-none-description {
     font-size: 12px;
     color: var(--vscode-descriptionForeground);
+}
 }

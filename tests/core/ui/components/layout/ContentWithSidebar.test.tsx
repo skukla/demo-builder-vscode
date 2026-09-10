@@ -33,7 +33,10 @@ describe('ContentWithSidebar', () => {
         );
         const inner = container.querySelector('.content-sidebar-inner') as HTMLElement;
         expect(inner).toBeInTheDocument();
-        expect(inner.style.maxWidth).toBe('280px');
+        // The component passes a PARAMETER; `.content-sidebar-inner` in
+        // two-column-layout.css owns `max-width`. The default lives in that
+        // rule's var() fallback, so an unset prop writes no variable at all.
+        expect(inner.style.getPropertyValue('--sidebar-content-width')).toBe('');
     });
 
     it('honors a custom sidebarContentWidth', () => {
@@ -43,6 +46,6 @@ describe('ContentWithSidebar', () => {
             </ContentWithSidebar>,
         );
         const inner = container.querySelector('.content-sidebar-inner') as HTMLElement;
-        expect(inner.style.maxWidth).toBe('320px');
+        expect(inner.style.getPropertyValue('--sidebar-content-width')).toBe('320px');
     });
 });

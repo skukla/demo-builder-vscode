@@ -8,12 +8,6 @@
 import * as vscode from 'vscode';
 import { toggleLogsPanel } from '@/features/lifecycle/services/lifecycleService';
 
-// Mock VS Code
-jest.mock('vscode', () => ({
-    commands: {
-        executeCommand: jest.fn().mockResolvedValue(undefined),
-    },
-}));
 
 // Mock sessionUIState
 jest.mock('@/core/state/sessionUIState', () => ({

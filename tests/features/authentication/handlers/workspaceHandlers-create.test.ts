@@ -8,26 +8,37 @@
 
 import { handleCreateAdobeWorkspace } from '@/features/authentication/handlers/workspaceHandlers';
 import { ErrorCode } from '@/types/errorCodes';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
-jest.mock('@/core/validation');
-jest.mock('@/core/utils/timeoutConfig', () => ({ TIMEOUTS: { NORMAL: 30000 } }));
-jest.mock('@/core/utils/promiseUtils', () => ({ withTimeout: jest.fn((promise) => promise) }));
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+jest.mock('@/core/validation/validators/AdobeResourceValidator');
 
 const WS = { id: 'ws-new', name: 'Stage', title: 'Stage' };
 
 function createContext() {
-    const authManager: any = {
+    /**
+     * `authManager` was declared `any` and the whole context cast `as any` — two
+     * erasures in one twelve-line factory, which is why nine calls in this suite
+     * were checked against nothing.
+     *
+     * It is re-attached below so its MOCK type survives: read back through
+     * `HandlerContext` the members are plain functions, and these tests call
+     * `.mockResolvedValue` on them.
+     */
+    const authManager = createMockAuthenticationService({
         testDeveloperPermissions: jest.fn().mockResolvedValue({ hasPermissions: true }),
         createWorkspace: jest.fn().mockResolvedValue(WS),
         getWorkspaces: jest.fn().mockResolvedValue([WS]),
-    };
-    return {
+    });
+    const base = createMockHandlerContext({
         authManager,
-        logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn(), trace: jest.fn() } as any,
-        debugLogger: { trace: jest.fn(), debug: jest.fn() } as any,
+        logger: createMockLogger(),
+        // The DEBUG logger is `Logger`-shaped — the same builder is the right fake.
+        debugLogger: createMockLogger(),
         sendMessage: jest.fn().mockResolvedValue(undefined),
-        sharedState: { isAuthenticating: false },
-    } as any;
+    });
+    return { ...base, authManager };
 }
 
 describe('workspaceHandlers - Create', () => {
@@ -39,12 +50,24 @@ describe('workspaceHandlers - Create', () => {
     });
 
     it('returns an error when authManager is missing', async () => {
-        const ctx = { ...mockContext, authManager: undefined } as any;
+        const ctx = { ...mockContext, authManager: undefined };
 
         const result = await handleCreateAdobeWorkspace(ctx, { name: 'Stage' });
 
-        expect(result.success).toBe(false);
-        expect(result.error).toBeTruthy();
+        // The guard's OWN verdict — not the TypeError the try/catch would otherwise
+        // wrap as "Failed to create workspace: Cannot read properties of undefined".
+        expect(result).toEqual({ success: false, error: 'Authentication not available' });
+        expect(mockContext.authManager.testDeveloperPermissions).not.toHaveBeenCalled();
+    });
+
+    it('treats a missing payload as an empty name rather than throwing', async () => {
+        const result = await handleCreateAdobeWorkspace(
+            mockContext,
+            undefined as unknown as Parameters<typeof handleCreateAdobeWorkspace>[1],
+        );
+
+        expect(result).toEqual({ success: false, error: 'Workspace name is required.' });
+        expect(mockContext.authManager.createWorkspace).not.toHaveBeenCalled();
     });
 
     it('returns a permission-typed error and does NOT create when permission is denied', async () => {
@@ -55,8 +78,29 @@ describe('workspaceHandlers - Create', () => {
 
         const result = await handleCreateAdobeWorkspace(mockContext, { name: 'Stage' });
 
-        expect(result.success).toBe(false);
-        expect(result.code).toBe(ErrorCode.AUTH_FORBIDDEN);
+        // Console's own reason travels verbatim; the generic sentence is a fallback only.
+        expect(result).toEqual({
+            success: false,
+            code: ErrorCode.AUTH_FORBIDDEN,
+            error: 'Developer or System Admin role required.',
+        });
+        expect(mockContext.authManager.createWorkspace).not.toHaveBeenCalled();
+    });
+
+    it('falls back to the generic permission sentence when the probe gives no reason', async () => {
+        mockContext.authManager.testDeveloperPermissions.mockResolvedValue({
+            hasPermissions: false,
+        });
+
+        const result = await handleCreateAdobeWorkspace(mockContext, { name: 'Stage' });
+
+        expect(result).toEqual({
+            success: false,
+            code: ErrorCode.AUTH_FORBIDDEN,
+            error:
+                'You do not have permission to create workspaces in this organization. ' +
+                'Select an existing workspace instead.',
+        });
         expect(mockContext.authManager.createWorkspace).not.toHaveBeenCalled();
     });
 
@@ -67,23 +111,46 @@ describe('workspaceHandlers - Create', () => {
         expect(mockContext.authManager.createWorkspace).not.toHaveBeenCalled();
     });
 
-    it('returns a failure message when createWorkspace returns undefined (quota/failure)', async () => {
-        mockContext.authManager.createWorkspace.mockResolvedValue(undefined);
+    /**
+     * REPLACES a test that fed `undefined` and called it "quota/failure" — the exact
+     * twin of the one removed from `projectHandlers-create` earlier today, down to
+     * the wording.
+     *
+     * `createWorkspace` returns `AdobeWorkspace | ConsoleOpFailure` and cannot return
+     * undefined. That test passed because the handler has no undefined guard, so a
+     * property read threw and the outer catch turned it into a generic failure —
+     * making it a duplicate of "returns an error when createWorkspace throws" below,
+     * while appearing to cover something else.
+     *
+     * The failure path production ACTUALLY implements had no test here either.
+     * Production's own comment says the quota guess was replaced by Console's
+     * reason; this asserts that reason reaches the user.
+     */
+    it("surfaces Console's own reason when createWorkspace reports a failure", async () => {
+        mockContext.authManager.createWorkspace.mockResolvedValue({
+            error: 'Workspace limit reached for this project',
+        });
 
         const result = await handleCreateAdobeWorkspace(mockContext, { name: 'Stage' });
 
         expect(result.success).toBe(false);
-        expect(result.error).toBeTruthy();
+        expect(result.error).toContain('Workspace limit reached for this project');
     });
 
     it('returns the refreshed list ON THE RESPONSE (the caller is unmounted, a push is lost)', async () => {
         mockContext.authManager.getWorkspaces.mockResolvedValue([WS]);
 
-        const result = await handleCreateAdobeWorkspace(mockContext, { name: 'Stage', description: 'A workspace' });
+        const result = await handleCreateAdobeWorkspace(mockContext, {
+            name: 'Stage',
+            description: 'A workspace',
+        });
 
         expect(result.success).toBe(true);
         expect(result.data).toEqual(WS);
-        expect(mockContext.authManager.createWorkspace).toHaveBeenCalledWith('Stage', 'A workspace');
+        expect(mockContext.authManager.createWorkspace).toHaveBeenCalledWith(
+            'Stage',
+            'A workspace'
+        );
         expect(result.workspaces).toEqual([WS]);
     });
 
@@ -93,8 +160,14 @@ describe('workspaceHandlers - Create', () => {
         // `AdobeWorkspaceField` swaps the picker out for the create panel, so nothing
         // is listening for `get-workspaces` at this moment — WebviewClient drops it.
         // `workspaceSelected` never had a listener at all.
-        expect(mockContext.sendMessage).not.toHaveBeenCalledWith('get-workspaces', expect.anything());
-        expect(mockContext.sendMessage).not.toHaveBeenCalledWith('workspaceSelected', expect.anything());
+        expect(mockContext.sendMessage).not.toHaveBeenCalledWith(
+            'get-workspaces',
+            expect.anything()
+        );
+        expect(mockContext.sendMessage).not.toHaveBeenCalledWith(
+            'workspaceSelected',
+            expect.anything()
+        );
     });
 
     it('still succeeds when the refresh fetch fails, omitting workspaces so the caller reloads', async () => {
@@ -112,7 +185,9 @@ describe('workspaceHandlers - Create', () => {
 
         // The refresh must target the wizard's project; the fetcher resolves the org via
         // its token-org fallback. Unthreaded, the fetch would drop to the stale-org CLI.
-        expect(mockContext.authManager.getWorkspaces).toHaveBeenCalledWith({ projectId: 'proj-42' });
+        expect(mockContext.authManager.getWorkspaces).toHaveBeenCalledWith({
+            projectId: 'proj-42',
+        });
     });
 
     it('returns an error when createWorkspace throws', async () => {

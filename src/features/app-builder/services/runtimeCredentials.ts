@@ -26,7 +26,7 @@ import * as crypto from 'crypto';
 import * as fsPromises from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
-import type { CommandExecutor } from '@/core/shell';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
@@ -213,5 +213,7 @@ export function extractAioErrorDetail(stderr: string | undefined): string {
         .split('\n')
         .map((line) => line.replace(/^\s*›\s*/, '').trim())
         .filter((line) => /error/i.test(line));
-    return errorLines.join(' ').trim();
+    // Every line is already trimmed and non-empty, so the join has no edge whitespace
+    // for a second trim to remove.
+    return errorLines.join(' ');
 }

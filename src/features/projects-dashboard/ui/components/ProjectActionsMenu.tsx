@@ -33,9 +33,7 @@ import { Text, Section, Item } from '@adobe/react-spectrum';
 import React, { useCallback, useMemo } from 'react';
 import { CardActionsMenu } from '@/core/ui/components/ui/CardActionsMenu';
 import { renderMenuIcon } from '@/core/ui/components/ui/menuIcons';
-import {
-    hasIntegrations,
-} from '@/features/projects-dashboard/utils/projectStatusUtils';
+import { hasIntegrations } from '@/features/projects-dashboard/utils/projectStatusUtils';
 import type { Project } from '@/types/base';
 import { isEdsProject } from '@/types/typeGuards';
 
@@ -116,12 +114,12 @@ export interface ProjectActionsMenuProps {
  * Centralizes action menu logic for ProjectCard and ProjectRow.
  * Stops click propagation to prevent parent element selection.
  */
-export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
+export function ProjectActionsMenu({
     project,
     isRunning = false,
     actions,
     className,
-}) => {
+}: ProjectActionsMenuProps) {
     const {
         onStartDemo,
         onStopDemo,
@@ -169,7 +167,7 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
             onResetProject,
             onOpenIntegrations,
             onEdit,
-                onExport,
+            onExport,
             onOpenAi,
             onPinToggle,
             onDelete,
@@ -273,11 +271,7 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
     ]);
 
     // Nothing to show — render no trigger at all.
-    if (
-        groups.use.length === 0 &&
-        groups.manage.length === 0 &&
-        !onDelete
-    ) {
+    if (groups.use.length === 0 && groups.manage.length === 0 && !onDelete) {
         return null;
     }
 
@@ -316,4 +310,4 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
             ) : null}
         </CardActionsMenu>
     );
-};
+}

@@ -1,6 +1,17 @@
 # ADR-001: Component Naming Standardization (externalSystems → integrations)
 
-**Status**: Accepted and Implemented
+**Status**: Accepted
+
+> Verified 2026-08-30: the rename is completely and durably implemented —
+> `externalSystems` appears 0 times in `src/` or `tests/`, and `integrations` is the
+> registry type and the config group.
+>
+> This was briefly relabelled `Historical` in the same audit. That was a mistake and
+> is reverted: the research the audit itself produced found that the ADR vocabulary
+> is Proposed / Accepted / Deprecated / Superseded, and inventing a status makes an
+> ADR set unreadable to anyone who knows the convention. A finished decision that
+> still holds is `Accepted`. Nothing citing it is a fact about its traffic, not
+> about its standing.
 **Date**: 2025-11-04
 **Decision Maker**: Project Team
 **Implementer**: RPTC Workflow
@@ -228,3 +239,16 @@ const [selectedIntegrations, setSelectedIntegrations] = useState();
 2. Search for "externalSystems" in your branch: `git grep externalSystems`
 3. Replace with "integrations" in your code
 4. Run tests to verify: `npm test`
+
+## Reference notes
+
+Names below intentionally do not resolve in this repository. They are the record, not rot.
+
+- `externalSystems`, `ExternalSystems` — the name this decision REPLACED. Removing them
+  would destroy the thing the ADR exists to record.
+- `src/commands/configureProjectWebview.ts`, `src/features/components/ui/steps/ComponentSelectionStep.tsx`,
+  `src/features/components/ui/steps/ComponentConfigStep.tsx`, `src/features/dashboard/ui/ConfigureScreen.tsx`,
+  `tests/features/prerequisites/handlers/checkHandler.test.ts`, `tests/features/prerequisites/handlers/shared.test.ts`,
+  `tests/features/components/ui/steps/ComponentSelectionStep.test.tsx`, `tests/features/components/ui/steps/ComponentConfigStep.test.tsx`
+  — the files as they stood in November 2025. Several have since moved or been deleted;
+  the paths are accurate to the decision's date.

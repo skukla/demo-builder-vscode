@@ -11,7 +11,7 @@ import { PageFooter } from '@/core/ui/components/layout/PageFooter';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { vscode, webviewClient } from '@/core/ui/utils/vscode-api';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { GitHubAppInstallDialog } from '@/features/eds/ui/components';
+import { GitHubAppInstallDialog } from '@/features/eds/ui/components/GitHubAppInstallDialog';
 import { DemoPackage } from '@/types/demoPackages';
 import { WizardState } from '@/types/webview';
 import type { CreationFailedPayload } from '@/types/webviewPayloads';

@@ -13,7 +13,7 @@
 
 import * as path from 'path';
 import { ConfigurationLoader } from '@/core/config/ConfigurationLoader';
-import type { RawComponentRegistry, RawComponentDefinition } from '@/types';
+import type { RawComponentDefinition, RawComponentRegistry } from '@/types/components';
 import type { Logger } from '@/types/logger';
 
 export interface ComponentRepositoryInfo {

@@ -8,143 +8,27 @@
  * not as a type error, so every tool asserts what it passed downstream.
  */
 
-jest.mock('@/features/eds/handlers/edsHelpers', () => ({
-    getGitHubServices: jest.fn(),
-    getDaLiveAuthService: jest.fn(),
-}));
-jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
-    DaLiveContentOperations: jest.fn(),
-    createDaLiveServiceTokenProvider: jest.fn(() => ({ getAccessToken: async () => 'da-token' })),
-}));
-jest.mock('@/features/eds/services/helix/helixService', () => ({
-    HelixService: jest.fn(),
-}));
-jest.mock('@/types/typeGuards', () => ({
-    ...jest.requireActual('@/types/typeGuards'),
-    isEdsProject: jest.fn(),
-}));
-jest.mock('@/features/ai/server/adobeTargetStore', () => ({
-    getAdobeTarget: jest.fn(() => ({ orgId: 'org-stored' })),
-    runWithAdobeTarget: jest.fn(async (fn: () => Promise<unknown>) => fn()),
-}));
-
-import { registerContentAuthoringTools } from '@/features/ai/server/contentAuthoringTools';
+import {
+    EDS_PROJECT,
+    getCurrentProject,
+    getDaLiveAuthServiceMock,
+    getGitHubServicesMock,
+    isEdsProjectMock,
+    DaLiveOpsDouble,
+    HelixDouble,
+    okResponse,
+    register,
+    setupContentAuthoring,
+} from './contentAuthoringTools.testUtils';
 import { COMPONENT_IDS } from '@/core/constants';
-import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
-import { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
-import { HelixService } from '@/features/eds/services/helix/helixService';
-import { isEdsProject } from '@/types/typeGuards';
-import type { HandlerContext } from '@/types/handlers';
 
-const getGitHubServicesMock = getGitHubServices as jest.Mock;
-const getDaLiveAuthServiceMock = getDaLiveAuthService as jest.Mock;
-const isEdsProjectMock = isEdsProject as unknown as jest.Mock;
-const DaLiveContentOperationsMock = DaLiveContentOperations as unknown as jest.Mock;
-const HelixServiceMock = HelixService as unknown as jest.Mock;
-
-/** Minimal MCP server double: capture handlers, invoke by name, parse the JSON back. */
-function fakeServer() {
-    const tools = new Map<string, (args: unknown) => Promise<{ content: Array<{ text: string }> }>>();
-    return {
-        registerTool(
-            name: string,
-            _def: unknown,
-            handler: (args: unknown) => Promise<{ content: Array<{ text: string }> }>,
-        ) {
-            tools.set(name, handler);
-        },
-        names: () => [...tools.keys()],
-         
-        async call(name: string, args: unknown = {}): Promise<any> {
-            return JSON.parse((await tools.get(name)!(args)).content[0].text);
-        },
-    };
-}
-
-// `selectedStack` must start with "eds-": the module now uses the shared
-// getEdsRepoParts/getEdsDaLiveTarget getters, whose INTERNAL isEdsProject call
-// resolves to the real implementation even though the SUT's own call is mocked.
-// Mocking the getters instead would stop testing the coordinate extraction.
-const EDS_PROJECT = {
-    name: 'bodea',
-    path: '/p/bodea',
-    selectedStack: 'eds-commerce',
-    componentInstances: {
-        [COMPONENT_IDS.EDS_STOREFRONT]: {
-            metadata: { githubRepo: 'skukla/bodea', daLiveOrg: 'skukla', daLiveSite: 'bodea' },
-        },
-    },
-};
-
-const getCurrentProject = jest.fn();
-const ctxFactory = () =>
-    ({
-        stateManager: { getCurrentProject },
-        context: { secrets: {} },
-        logger: { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() },
-    }) as unknown as HandlerContext;
-
-// ─── service doubles ─────────────────────────────────────────────────────────
-
-let daOps: {
-    listDirectory: jest.Mock;
-    createSource: jest.Mock;
-    deleteSource: jest.Mock;
-    readSource: jest.Mock;
-};
-let helix: {
-    previewAndPublishPage: jest.Mock;
-    unpublishPage: jest.Mock;
-};
+let daOps: DaLiveOpsDouble;
+let helix: HelixDouble;
 let fetchMock: jest.Mock;
-
-const okResponse = (body: string, status = 200) => ({
-    ok: status >= 200 && status < 300,
-    status,
-    statusText: status === 200 ? 'OK' : 'Error',
-    text: async () => body,
-});
-
-function register() {
-    const s = fakeServer();
-    registerContentAuthoringTools(s, ctxFactory);
-    return s;
-}
 
 beforeEach(() => {
     jest.clearAllMocks();
-
-    getCurrentProject.mockResolvedValue(EDS_PROJECT);
-    isEdsProjectMock.mockReturnValue(true);
-    getGitHubServicesMock.mockReturnValue({
-        tokenService: { validateToken: jest.fn(async () => ({ valid: true })) },
-    });
-    getDaLiveAuthServiceMock.mockReturnValue({
-        isAuthenticated: jest.fn(async () => true),
-        getAccessToken: jest.fn(async () => 'da-token'),
-    });
-
-    daOps = {
-        listDirectory: jest.fn(async () => []),
-        createSource: jest.fn(async () => ({ success: true, path: '/about.html' })),
-        deleteSource: jest.fn(async () => ({ success: true })),
-        readSource: jest.fn(async () => ({
-            status: 200,
-            body: '<body><main>hi</main></body>',
-            bytes: 28,
-            truncated: false,
-        })),
-    };
-    DaLiveContentOperationsMock.mockImplementation(() => daOps);
-
-    helix = {
-        previewAndPublishPage: jest.fn(async () => undefined),
-        unpublishPage: jest.fn(async () => true),
-    };
-    HelixServiceMock.mockImplementation(() => helix);
-
-    fetchMock = jest.fn(async () => okResponse('<body><main>hi</main></body>'));
-    global.fetch = fetchMock as unknown as typeof fetch;
+    ({ daOps, helix, fetchMock } = setupContentAuthoring());
 });
 
 // ─── registration ────────────────────────────────────────────────────────────
@@ -159,7 +43,7 @@ describe('registerContentAuthoringTools', () => {
                 'read_page',
                 'read_published_page',
                 'write_page',
-            ].sort(),
+            ].sort()
         );
     });
 });
@@ -251,7 +135,9 @@ describe('path containment', () => {
 
     it('still accepts ordinary paths, including a legitimate dot in a filename', async () => {
         expect(await register().call('read_page', { path: '/about' })).not.toHaveProperty('error');
-        expect(await register().call('list_content', { path: '/products' })).not.toHaveProperty('error');
+        expect(await register().call('list_content', { path: '/products' })).not.toHaveProperty(
+            'error'
+        );
     });
 });
 
@@ -324,7 +210,12 @@ describe('read_page', () => {
     });
 
     it('reports a 404 as a missing page rather than throwing', async () => {
-        daOps.readSource.mockResolvedValueOnce({ status: 404, body: '', bytes: 0, truncated: false });
+        daOps.readSource.mockResolvedValueOnce({
+            status: 404,
+            body: '',
+            bytes: 0,
+            truncated: false,
+        });
         expect(await register().call('read_page', { path: '/nope' })).toMatchObject({
             error: expect.stringMatching(/not found/i),
         });
@@ -332,10 +223,14 @@ describe('read_page', () => {
 
     it('surfaces truncation so an agent knows the body is partial', async () => {
         daOps.readSource.mockResolvedValueOnce({
-            status: 200, body: 'x'.repeat(100), bytes: 999_999, truncated: true,
+            status: 200,
+            body: 'x'.repeat(100),
+            bytes: 999_999,
+            truncated: true,
         });
         expect(await register().call('read_page', { path: '/big' })).toMatchObject({
-            truncated: true, bytes: 999_999,
+            truncated: true,
+            bytes: 999_999,
         });
     });
 
@@ -357,7 +252,7 @@ describe('write_page', () => {
             'bodea',
             'about.html',
             '<p>x</p>',
-            { overwrite: true },
+            { overwrite: true }
         );
         expect(helix.previewAndPublishPage).not.toHaveBeenCalled();
         expect(res).toMatchObject({ written: true, published: false, path: '/about' });
@@ -376,14 +271,18 @@ describe('write_page', () => {
             'bodea',
             'about.html',
             expect.any(String),
-            expect.any(Object),
+            expect.any(Object)
         );
         expect(helix.previewAndPublishPage).toHaveBeenCalledWith('skukla', 'bodea', '/about');
         expect(res).toMatchObject({ written: true, published: true });
     });
 
     it('does not publish when the write failed', async () => {
-        daOps.createSource.mockResolvedValueOnce({ success: false, path: '/about.html', error: 'boom' });
+        daOps.createSource.mockResolvedValueOnce({
+            success: false,
+            path: '/about.html',
+            error: 'boom',
+        });
 
         const res = await register().call('write_page', {
             path: '/about',
@@ -419,13 +318,13 @@ describe('write_page', () => {
         });
 
         // Write alone: DA.live is enough.
-        expect(
-            await register().call('write_page', { path: '/a', content: 'x' }),
-        ).toMatchObject({ written: true });
+        expect(await register().call('write_page', { path: '/a', content: 'x' })).toMatchObject({
+            written: true,
+        });
 
         // Publishing sends x-auth-token, so GitHub is required.
         expect(
-            await register().call('write_page', { path: '/a', content: 'x', publish: true }),
+            await register().call('write_page', { path: '/a', content: 'x', publish: true })
         ).toMatchObject({ needsAuth: 'github' });
     });
 
@@ -442,7 +341,11 @@ describe('publish_page', () => {
     it('previews and publishes the web path', async () => {
         const res = await register().call('publish_page', { path: '/products/shoes' });
 
-        expect(helix.previewAndPublishPage).toHaveBeenCalledWith('skukla', 'bodea', '/products/shoes');
+        expect(helix.previewAndPublishPage).toHaveBeenCalledWith(
+            'skukla',
+            'bodea',
+            '/products/shoes'
+        );
         expect(res).toMatchObject({ published: true, path: '/products/shoes' });
     });
 
@@ -579,7 +482,11 @@ describe('delete_page', () => {
         const res = await register().call('delete_page', { path: '/about', confirm: true });
 
         expect(daOps.deleteSource).not.toHaveBeenCalled();
-        expect(res).toMatchObject({ deleted: false, unpublished: false, error: expect.stringMatching(/403/) });
+        expect(res).toMatchObject({
+            deleted: false,
+            unpublished: false,
+            error: expect.stringMatching(/403/),
+        });
     });
 
     // unpublishPage returns false (not throws) on 401/403, so the falsy result
@@ -601,7 +508,9 @@ describe('read_published_page', () => {
     it('fetches .plain.html from the live CDN, with a timeout', async () => {
         const res = await register().call('read_published_page', { path: '/about' });
 
-        expect(fetchMock.mock.calls[0][0]).toBe('https://main--bodea--skukla.aem.live/about.plain.html');
+        expect(fetchMock.mock.calls[0][0]).toBe(
+            'https://main--bodea--skukla.aem.live/about.plain.html'
+        );
         // Every other CDN read in the codebase bounds itself; an MCP call has no
         // client-side cancel, so a hung socket would hang the agent's turn.
         expect(fetchMock.mock.calls[0][1]).toMatchObject({ signal: expect.anything() });
@@ -611,7 +520,7 @@ describe('read_published_page', () => {
     it('maps the site root to index.plain.html', async () => {
         await register().call('read_published_page', { path: '/' });
         expect(fetchMock.mock.calls[0][0]).toBe(
-            'https://main--bodea--skukla.aem.live/index.plain.html',
+            'https://main--bodea--skukla.aem.live/index.plain.html'
         );
     });
 

@@ -10,11 +10,10 @@
  */
 
 import * as fs from 'fs/promises';
-import { setupMocks, createMockProject, type TestMocks } from './stateManager.testUtils';
-import type { Project } from '@/types';
+import { setupMocks, createStateManagerProject, type TestMocks } from './stateManager.testUtils';
+import type { Project } from '@/types/base';
 
 // Re-declare mocks to ensure proper typing and hoisting
-jest.mock('vscode');
 jest.mock('fs/promises');
 jest.mock('os');
 
@@ -30,7 +29,7 @@ describe('StateManager - componentVersions Persistence', () => {
             const { stateManager } = testMocks;
             await stateManager.initialize();
 
-            const project = createMockProject();
+            const project = createStateManagerProject();
             project.componentVersions = {
                 'headless': {
                     version: '1.0.0-beta.2',
@@ -68,7 +67,7 @@ describe('StateManager - componentVersions Persistence', () => {
             const { stateManager } = testMocks;
             await stateManager.initialize();
 
-            const project = createMockProject();
+            const project = createStateManagerProject();
             project.componentVersions = {
                 'component-with-tag': {
                     version: '2.5.3',
@@ -101,7 +100,7 @@ describe('StateManager - componentVersions Persistence', () => {
             const { stateManager } = testMocks;
             await stateManager.initialize();
 
-            const project = createMockProject();
+            const project = createStateManagerProject();
             project.componentVersions = {};
 
             await stateManager.saveProject(project as Project);
@@ -112,14 +111,14 @@ describe('StateManager - componentVersions Persistence', () => {
 
             expect(manifestCall).toBeDefined();
             const manifestContent = JSON.parse(manifestCall![1] as string);
-            expect(manifestContent.componentVersions).toEqual({});
+            expect(manifestContent.componentVersions).toStrictEqual({});
         });
 
         it('should handle undefined componentVersions (backward compatibility)', async () => {
             const { stateManager } = testMocks;
             await stateManager.initialize();
 
-            const project = createMockProject();
+            const project = createStateManagerProject();
             project.componentVersions = undefined;
 
             await stateManager.saveProject(project as Project);
@@ -201,7 +200,7 @@ describe('StateManager - componentVersions Persistence', () => {
 
             expect(project).not.toBeNull();
             // Should default to empty object (line 401: manifest.componentVersions || {})
-            expect(project?.componentVersions).toEqual({});
+            expect(project?.componentVersions).toStrictEqual({});
         });
 
         it('should handle null componentVersions in manifest', async () => {
@@ -225,7 +224,7 @@ describe('StateManager - componentVersions Persistence', () => {
 
             expect(project).not.toBeNull();
             // Should fallback to empty object
-            expect(project?.componentVersions).toEqual({});
+            expect(project?.componentVersions).toStrictEqual({});
         });
     });
 
@@ -234,7 +233,7 @@ describe('StateManager - componentVersions Persistence', () => {
             const { stateManager } = testMocks;
             await stateManager.initialize();
 
-            const originalProject = createMockProject();
+            const originalProject = createStateManagerProject();
             originalProject.componentVersions = {
                 'comp-a': { version: '1.0.0', lastUpdated: '2025-11-20T00:00:00.000Z' },
                 'comp-b': { version: 'abc123de', lastUpdated: '2025-11-20T00:00:00.000Z' },

@@ -11,11 +11,11 @@
 import { hasHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 
 // Import all handler maps
-import { dashboardHandlers } from '@/features/dashboard/handlers';
-import { projectsListHandlers } from '@/features/projects-dashboard/handlers';
-import { meshHandlers } from '@/features/mesh/handlers';
-import { edsHandlers } from '@/features/eds/handlers';
-import { prerequisitesHandlers } from '@/features/prerequisites/handlers';
+import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
+import { projectsListHandlers } from '@/features/projects-dashboard/handlers/projectsListHandlers';
+import { meshHandlers } from '@/features/mesh/handlers/meshHandlers';
+import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
+import { prerequisitesHandlers } from '@/features/prerequisites/handlers/prerequisitesHandlers';
 import { lifecycleHandlers } from '@/features/project-creation/handlers/wizardLifecycleHandlers';
 
 describe('Handler Map Pattern Consistency', () => {
@@ -53,10 +53,11 @@ describe('Handler Map Pattern Consistency', () => {
             ({ handlers }) => {
                 const registeredTypes = getRegisteredTypes(handlers);
 
-                // First registered type should be findable
-                if (registeredTypes.length > 0) {
-                    expect(hasHandler(handlers, registeredTypes[0])).toBe(true);
-                }
+                // A handler map with NO types registered is itself a failure, and the
+                // guard used to let it pass silently. The sibling test above asserts
+                // the same thing; asserting it here makes the lookup unconditional.
+                expect(registeredTypes.length).toBeGreaterThan(0);
+                expect(hasHandler(handlers, registeredTypes[0])).toBe(true);
 
                 // Non-existent type should not be findable
                 expect(hasHandler(handlers, 'non-existent-handler-type')).toBe(false);

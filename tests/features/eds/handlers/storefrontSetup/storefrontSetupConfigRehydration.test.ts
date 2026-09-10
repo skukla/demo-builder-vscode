@@ -15,6 +15,7 @@
 
 import { rehydratePackageDerivedConfig } from '@/features/eds/handlers/storefrontSetup/storefrontSetupConfigRehydration';
 import { getStorefrontForStack } from '@/features/components/services/demoPackageLoader';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
 jest.mock('@/features/components/services/demoPackageLoader', () => ({
     getStorefrontForStack: jest.fn(),
@@ -22,7 +23,7 @@ jest.mock('@/features/components/services/demoPackageLoader', () => ({
 
 const mockLookup = getStorefrontForStack as jest.Mock;
 
-const logger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() };
+const logger = createMockLogger();
 
 const STOREFRONT = {
     codePatches: ['product-link-sku-encoding', 'aem-assets-sku-sanitization'],
@@ -68,7 +69,7 @@ describe('rehydratePackageDerivedConfig', () => {
             EDIT_MODE_CONFIG,
             'custom',
             'eds-accs',
-            logger as never
+            logger
         );
 
         expect(result.codePatches).toEqual(STOREFRONT.codePatches);
@@ -83,7 +84,7 @@ describe('rehydratePackageDerivedConfig', () => {
             EDIT_MODE_CONFIG,
             'custom',
             'eds-accs',
-            logger as never
+            logger
         )) as Record<string, unknown>;
 
         for (const key of Object.keys(STOREFRONT)) {
@@ -96,7 +97,7 @@ describe('rehydratePackageDerivedConfig', () => {
             EDIT_MODE_CONFIG,
             'custom',
             'eds-accs',
-            logger as never
+            logger
         );
 
         expect(result.repoName).toBe('demo-builder-test');
@@ -109,14 +110,40 @@ describe('rehydratePackageDerivedConfig', () => {
         // deliberate choice with the package default.
         const supplied = { ...EDIT_MODE_CONFIG, codePatches: ['only-this-one'] };
 
-        const result = await rehydratePackageDerivedConfig(
-            supplied,
-            'custom',
-            'eds-accs',
-            logger as never
-        );
+        const result = await rehydratePackageDerivedConfig(supplied, 'custom', 'eds-accs', logger);
 
         expect(result.codePatches).toEqual(['only-this-one']);
+    });
+
+    it('does not INVENT a key the package never defined', async () => {
+        // toEqual would let this through — it ignores properties whose value is
+        // undefined — so the check is on the key set. A field written as
+        // undefined is not the same as a field absent: every consumer guards on
+        // presence, and `brandAssets: undefined` reads as configured-but-empty.
+        mockLookup.mockResolvedValue({ codePatches: ['only-the-one-defined'] });
+
+        const result = (await rehydratePackageDerivedConfig(
+            EDIT_MODE_CONFIG,
+            'custom',
+            'eds-accs',
+            logger
+        )) as Record<string, unknown>;
+
+        expect(result.codePatches).toEqual(['only-the-one-defined']);
+        expect(Object.keys(result).sort()).toStrictEqual(
+            [...Object.keys(EDIT_MODE_CONFIG), 'codePatches'].sort()
+        );
+    });
+
+    it('stays silent when there was nothing to restore', async () => {
+        // The info line is the record that a republish picked its patches back
+        // up. Printing it on a config that arrived complete makes it worthless —
+        // it would appear on every creation run, which restores nothing.
+        const complete = { ...EDIT_MODE_CONFIG, ...STOREFRONT };
+
+        await rehydratePackageDerivedConfig(complete, 'custom', 'eds-accs', logger);
+
+        expect(logger.info).not.toHaveBeenCalled();
     });
 
     it('returns the config untouched when the package is unknown', async () => {
@@ -126,7 +153,7 @@ describe('rehydratePackageDerivedConfig', () => {
             EDIT_MODE_CONFIG,
             'nope',
             'eds-accs',
-            logger as never
+            logger
         );
 
         expect(result).toEqual(EDIT_MODE_CONFIG);
@@ -137,7 +164,7 @@ describe('rehydratePackageDerivedConfig', () => {
             EDIT_MODE_CONFIG,
             undefined,
             undefined,
-            logger as never
+            logger
         );
 
         expect(result).toEqual(EDIT_MODE_CONFIG);
@@ -147,7 +174,7 @@ describe('rehydratePackageDerivedConfig', () => {
     it('warns when it cannot resolve, rather than no-opping in silence', async () => {
         // A silent no-op here is what let a missing `selectedStack` disable every
         // patch with no trace in the log — the same failure this function fixes.
-        await rehydratePackageDerivedConfig(EDIT_MODE_CONFIG, 'custom', undefined, logger as never);
+        await rehydratePackageDerivedConfig(EDIT_MODE_CONFIG, 'custom', undefined, logger);
 
         expect(logger.warn).toHaveBeenCalled();
         expect(logger.warn.mock.calls.flat().join(' ')).toContain('stack=missing');
@@ -162,7 +189,7 @@ describe('rehydratePackageDerivedConfig', () => {
             EDIT_MODE_CONFIG,
             'custom',
             'eds-accs',
-            logger as never
+            logger
         );
 
         expect(result).toEqual(EDIT_MODE_CONFIG);
@@ -170,12 +197,7 @@ describe('rehydratePackageDerivedConfig', () => {
     });
 
     it('reports what it restored, so a silent skip can never recur unlogged', async () => {
-        await rehydratePackageDerivedConfig(
-            EDIT_MODE_CONFIG,
-            'custom',
-            'eds-accs',
-            logger as never
-        );
+        await rehydratePackageDerivedConfig(EDIT_MODE_CONFIG, 'custom', 'eds-accs', logger);
 
         const said = logger.info.mock.calls.flat().join(' ');
         expect(said).toContain('codePatches');

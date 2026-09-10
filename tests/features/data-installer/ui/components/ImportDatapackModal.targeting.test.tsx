@@ -15,13 +15,23 @@
  * near the 500-line limit.
  */
 
-import { screen, waitFor, fireEvent } from '@testing-library/react';
-import { mockRequest, renderModal, resetModalMocks } from './ImportDatapackModal.testUtils';
+import { screen, waitFor } from '@testing-library/react';
+import {
+    change,
+    mockRequest,
+    press,
+    renderModal,
+    resetModalMocks,
+} from './ImportDatapackModal.testUtils';
 
 /** The shape `list-datapack-import-scopes` returns. */
 const SCOPES = {
     websites: [
-        { code: 'base', name: 'Main Website', storeViews: [{ code: 'default', name: 'Default View' }] },
+        {
+            code: 'base',
+            name: 'Main Website',
+            storeViews: [{ code: 'default', name: 'Default View' }],
+        },
         { code: 'bodea', name: 'Bodea', storeViews: [{ code: 'bodea_view', name: 'Bodea View' }] },
     ],
 };
@@ -91,13 +101,13 @@ describe('import targeting', () => {
         renderModal();
         await awaitScopes();
 
-        fireEvent.change(pickerFor(/target website/i), { target: { value: 'bodea' } });
+        await change(pickerFor(/target website/i), 'bodea');
         await waitFor(() => expect(pickerFor(/store view/i)).not.toBeDisabled());
-        fireEvent.change(pickerFor(/store view/i), { target: { value: 'bodea_view' } });
+        await change(pickerFor(/store view/i), 'bodea_view');
 
         // canStart also needs a data type; without one the button is disabled.
-        fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
-        fireEvent.click(screen.getByRole('button', { name: /start import/i }));
+        await press(screen.getByRole('checkbox', { name: 'Categories' }));
+        await press(screen.getByRole('button', { name: /start import/i }));
 
         await waitFor(() => {
             const call = mockRequest.mock.calls.find((c) => c[0] === 'start-datapack-import');
@@ -119,8 +129,8 @@ describe('import targeting', () => {
         renderModal();
         await awaitScopes();
 
-        fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
-        fireEvent.click(screen.getByRole('button', { name: /start import/i }));
+        await press(screen.getByRole('checkbox', { name: 'Categories' }));
+        await press(screen.getByRole('button', { name: /start import/i }));
 
         await waitFor(() => {
             const call = mockRequest.mock.calls.find((c) => c[0] === 'start-datapack-import');
@@ -134,7 +144,7 @@ describe('import targeting', () => {
         renderModal();
         await awaitScopes();
 
-        fireEvent.change(pickerFor(/target website/i), { target: { value: 'bodea' } });
+        await change(pickerFor(/target website/i), 'bodea');
 
         await waitFor(() => expect(pickerFor(/store view/i)).not.toBeDisabled());
         const options = Array.from(pickerFor(/store view/i).options).map((o) => o.value);
@@ -147,12 +157,12 @@ describe('import targeting', () => {
         mockRequest.mockImplementation(async (type: string) =>
             type === 'list-datapack-import-scopes'
                 ? { success: false, error: 'Connection timed out.' }
-                : { success: true, data: null },
+                : { success: true, data: null }
         );
         renderModal();
 
         await waitFor(() =>
-            expect(screen.getByRole('button', { name: /start import/i })).toBeInTheDocument(),
+            expect(screen.getByRole('button', { name: /start import/i })).toBeInTheDocument()
         );
         // Wait for the failure to SETTLE — the spinner standing in for the
         // pickers is what marks the in-flight state, so its absence is the
@@ -160,7 +170,7 @@ describe('import targeting', () => {
         // exists at all now the label lives outside the Picker: the wait
         // passed instantly and asserted nothing.)
         await waitFor(() =>
-            expect(screen.queryByLabelText('Loading websites')).not.toBeInTheDocument(),
+            expect(screen.queryByLabelText('Loading websites')).not.toBeInTheDocument()
         );
     });
 });
@@ -198,7 +208,11 @@ describe('seeding the target scope', () => {
             if (type === 'get-datapack-import-target') {
                 return {
                     success: true,
-                    data: { instance: 'inst', projectName: 'bodea-template-test', ...(scope && { scope }) },
+                    data: {
+                        instance: 'inst',
+                        projectName: 'bodea-template-test',
+                        ...(scope && { scope }),
+                    },
                 };
             }
             if (type === 'list-datapack-import-scopes') {
@@ -206,8 +220,16 @@ describe('seeding the target scope', () => {
                     success: true,
                     data: {
                         websites: [
-                            { code: 'base', name: 'Main Website', storeViews: [{ code: 'default', name: 'Default Store View' }] },
-                            { code: 'bodea', name: 'Bodea Website', storeViews: [{ code: 'bodea_us', name: 'Bodea US' }] },
+                            {
+                                code: 'base',
+                                name: 'Main Website',
+                                storeViews: [{ code: 'default', name: 'Default Store View' }],
+                            },
+                            {
+                                code: 'bodea',
+                                name: 'Bodea Website',
+                                storeViews: [{ code: 'bodea_us', name: 'Bodea US' }],
+                            },
                         ],
                     },
                 };
@@ -224,9 +246,7 @@ describe('seeding the target scope', () => {
         withScopedProject(BODEA_SCOPE);
         renderModal();
 
-        await waitFor(() =>
-            expect(pickerFor(/target website/i)).toHaveValue('bodea'),
-        );
+        await waitFor(() => expect(pickerFor(/target website/i)).toHaveValue('bodea'));
     });
 
     it('selects the store view the project recorded', async () => {
@@ -241,8 +261,8 @@ describe('seeding the target scope', () => {
         renderModal();
         await waitFor(() => expect(pickerFor(/target website/i)).toHaveValue('bodea'));
 
-        fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
-        fireEvent.click(screen.getByRole('button', { name: /start import/i }));
+        await press(screen.getByRole('checkbox', { name: 'Categories' }));
+        await press(screen.getByRole('button', { name: /start import/i }));
 
         await waitFor(() => {
             const call = mockRequest.mock.calls.find((c) => c[0] === 'start-datapack-import');
@@ -356,7 +376,7 @@ describe('the redesigned target section', () => {
         renderModal({ availableTypes: ['categories'] });
 
         await screen.findByLabelText('Loading websites');
-        fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
+        await press(screen.getByRole('checkbox', { name: 'Categories' }));
 
         // The shared Modal renders actions as div[role="button"][aria-disabled],
         // not <button disabled>, so jest-dom's toBeDisabled() does not apply —
@@ -364,7 +384,7 @@ describe('the redesigned target section', () => {
         // attribute, as the sibling suites do.
         expect(screen.getByRole('button', { name: /start import/i })).toHaveAttribute(
             'aria-disabled',
-            'true',
+            'true'
         );
     });
 
@@ -386,13 +406,13 @@ describe('the redesigned target section', () => {
         });
         renderModal({ availableTypes: ['categories'] });
 
-        fireEvent.click(await screen.findByRole('checkbox', { name: 'Categories' }));
+        await press(await screen.findByRole('checkbox', { name: 'Categories' }));
 
         await waitFor(() =>
             expect(screen.getByRole('button', { name: /start import/i })).toHaveAttribute(
                 'aria-disabled',
-                'false',
-            ),
+                'false'
+            )
         );
     });
 
@@ -436,7 +456,7 @@ describe('the redesigned target section', () => {
         mockRequest.mockImplementation(async (type: string) =>
             type === 'get-datapack-import-target'
                 ? { success: true, data: { projectName: 'demo-1' } }
-                : { success: true, data: null },
+                : { success: true, data: null }
         );
         renderModal();
 
@@ -470,8 +490,8 @@ describe('default scope selection', () => {
     it('sends the defaulted pair with the import', async () => {
         renderModal();
         await awaitScopes();
-        fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
-        fireEvent.click(screen.getByRole('button', { name: /start import/i }));
+        await press(screen.getByRole('checkbox', { name: 'Categories' }));
+        await press(screen.getByRole('button', { name: /start import/i }));
 
         await waitFor(() => {
             const call = mockRequest.mock.calls.find((c) => c[0] === 'start-datapack-import');
@@ -484,7 +504,7 @@ describe('default scope selection', () => {
         renderModal();
         await awaitScopes();
 
-        fireEvent.change(pickerFor(/target website/i), { target: { value: 'bodea' } });
+        await change(pickerFor(/target website/i), 'bodea');
 
         await waitFor(() => expect(pickerFor(/store view/i)).toHaveValue('bodea_view'));
     });

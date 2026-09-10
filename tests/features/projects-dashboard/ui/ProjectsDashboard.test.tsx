@@ -1,23 +1,12 @@
-/**
- * @jest-environment jsdom
- */
-
+import '../../../helpers/webviewClientMock';
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { ProjectsDashboard } from '@/features/projects-dashboard/ui/ProjectsDashboard';
 import {
     createMockProjects,
-    createMockProject,
+    createProjectsDashboardProject,
 } from '../testUtils';
-
-// Mock the webviewClient
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        postMessage: jest.fn(),
-        onMessage: jest.fn(() => jest.fn()), // Returns unsubscribe function
-    },
-}));
 
 // Wrap component with Spectrum Provider
 const renderWithProvider = (ui: React.ReactElement) => {
@@ -159,12 +148,12 @@ describe('ProjectsDashboard', () => {
 
         it('should filter projects based on search query', async () => {
             const projects = [
-                createMockProject({ name: 'Alpha Project', path: '/test/alpha' }),
-                createMockProject({ name: 'Beta Project', path: '/test/beta' }),
-                createMockProject({ name: 'Gamma Project', path: '/test/gamma' }),
-                createMockProject({ name: 'Delta Project', path: '/test/delta' }),
-                createMockProject({ name: 'Epsilon Project', path: '/test/epsilon' }),
-                createMockProject({ name: 'Zeta Project', path: '/test/zeta' }),
+                createProjectsDashboardProject({ name: 'Alpha Project', path: '/test/alpha' }),
+                createProjectsDashboardProject({ name: 'Beta Project', path: '/test/beta' }),
+                createProjectsDashboardProject({ name: 'Gamma Project', path: '/test/gamma' }),
+                createProjectsDashboardProject({ name: 'Delta Project', path: '/test/delta' }),
+                createProjectsDashboardProject({ name: 'Epsilon Project', path: '/test/epsilon' }),
+                createProjectsDashboardProject({ name: 'Zeta Project', path: '/test/zeta' }),
             ];
             renderWithProvider(
                 <ProjectsDashboard
@@ -300,14 +289,17 @@ describe('ProjectsDashboard', () => {
             );
 
             // Then: PageLayout provides 100vh flex column container via inline styles
-            // PageLayout uses a plain div with inline styles (not Spectrum View)
-            const layoutContainer = container.querySelector('[style*="height: 100vh"]');
+            // PageLayout's shell is `.page-layout` (index.css) since 2026-09-10.
+            // This used to select on `[style*="height: 100vh"]` — finding an element
+            // by its styling, which breaks the moment the styling moves to a
+            // stylesheet and silently keeps "working" if the height changes.
+            const layoutContainer = container.querySelector('.page-layout');
             expect(layoutContainer).toBeInTheDocument();
-            // PageLayout sets display: flex and flex-direction: column via inline style
-            expect(layoutContainer).toHaveStyle({
-                display: 'flex',
-                flexDirection: 'column',
-            });
+            // `display: flex` and `flex-direction: column` are declared in
+            // `.page-layout` (index.css) since 2026-09-10. jsdom loads no
+            // stylesheets, so reading them back here asserts nothing — the
+            // contract this test can actually check is that the shell is applied.
+            expect(layoutContainer).toHaveClass('page-layout');
         });
 
         it('should have scrollable content area provided by PageLayout', () => {
@@ -324,7 +316,7 @@ describe('ProjectsDashboard', () => {
             );
 
             // Then: PageLayout provides scrollable content area with overflow-y: auto
-            const scrollableArea = container.querySelector('[style*="overflow-y: auto"]');
+            const scrollableArea = container.querySelector('.page-layout-content');
             expect(scrollableArea).toBeInTheDocument();
         });
 
@@ -342,7 +334,7 @@ describe('ProjectsDashboard', () => {
 
             // Then: Loading state does NOT have scrollable area (no overflow-y: auto)
             // because it doesn't use PageLayout - it uses original View/Flex structure
-            const scrollableArea = container.querySelector('[style*="overflow-y: auto"]');
+            const scrollableArea = container.querySelector('.page-layout-content');
             expect(scrollableArea).not.toBeInTheDocument();
         });
 
@@ -359,7 +351,7 @@ describe('ProjectsDashboard', () => {
 
             // Then: Empty state does NOT have scrollable area (no overflow-y: auto)
             // because it doesn't use PageLayout - it uses original View/Flex structure
-            const scrollableArea = container.querySelector('[style*="overflow-y: auto"]');
+            const scrollableArea = container.querySelector('.page-layout-content');
             expect(scrollableArea).not.toBeInTheDocument();
         });
     });

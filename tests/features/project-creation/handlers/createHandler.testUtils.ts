@@ -1,11 +1,15 @@
 import { HandlerContext } from '@/types/handlers';
-import * as validation from '@/core/validation';
+import { validateProjectNameSecurity } from '@/core/validation/validators/ProjectNameValidator';
 import * as executor from '@/features/project-creation/handlers/executor';
 import * as promiseUtils from '@/core/utils/promiseUtils';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import * as vscode from 'vscode';
 import * as fs from 'fs';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { mockWorkspace } from '../../../helpers/vscodeMockViews';
 /**
  * Shared test utilities for createHandler tests
  */
@@ -20,37 +24,51 @@ export interface TestSetup {
 }
 
 /**
- * Creates a mock HandlerContext with sensible defaults
+ * Creates a mock HandlerContext with sensible defaults.
+ *
+ * DELIBERATELY NOT delegating to the canonical `createMockHandlerContext`
+ * (ADR-016), unlike its eight siblings. The canonical fills every absent field
+ * with a placeholder — `{} as jest.Mocked<...>` — and this suite's handler
+ * behaves differently when those fields are PRESENT-BUT-EMPTY rather than
+ * absent: the cancellation test's mesh cleanup stops running. Verified by
+ * stashing the delegation, where the suite passes, and restoring it, where it
+ * does not.
+ *
+ * The general lesson, recorded because it bounds the consolidation: a suite
+ * that omits a context field may be expressing something, and a canonical
+ * fixture that fills every gap with a truthy empty object is not neutral.
  */
-export function createMockContext(overrides?: Partial<HandlerContext>): jest.Mocked<HandlerContext> {
+export function createProjectCreationContext(
+    overrides?: Partial<jest.Mocked<HandlerContext>>
+): jest.Mocked<HandlerContext> {
     return {
         sendMessage: jest.fn().mockResolvedValue(undefined),
-        logger: {
-            trace: jest.fn(),
-            info: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-            debug: jest.fn(),
-        } as any,
-        context: {
+        logger: createMockLogger(),
+        debugLogger: createMockLogger(),
+        context: createMockExtensionContext({
             globalState: {
                 get: jest.fn().mockReturnValue(false),
                 update: jest.fn().mockResolvedValue(undefined),
+                keys: jest.fn().mockReturnValue([]),
+                setKeysForSync: jest.fn(),
             },
-        } as any,
-        stateManager: {
-            getAllProjects: jest.fn().mockResolvedValue([]) as jest.MockedFunction<any>,
-            getCurrentProject: jest.fn().mockResolvedValue(undefined) as jest.MockedFunction<any>,
-            saveProject: jest.fn().mockResolvedValue(undefined) as jest.MockedFunction<any>,
-            clearProject: jest.fn().mockResolvedValue(undefined) as jest.MockedFunction<any>,
-        } as any,
+        }),
+        panel: undefined,
+        communicationManager: undefined,
+        stateManager: createMockStateManager({
+            getAllProjects: jest.fn().mockResolvedValue([]),
+            getCurrentProject: jest.fn().mockResolvedValue(undefined),
+            saveProject: jest.fn().mockResolvedValue(undefined),
+            clearProject: jest.fn().mockResolvedValue(undefined),
+        }),
         sharedState: {
+            isAuthenticating: false,
             projectCreationAbortController: undefined,
             meshCreatedForWorkspace: undefined,
             meshExistedBeforeSession: undefined,
         },
         ...overrides,
-    } as any;
+    };
 }
 
 /**
@@ -78,7 +96,7 @@ export function setupDefaultMocks(): MockCommandExecutor {
     (ServiceLocator.getCommandExecutor as jest.Mock).mockReturnValue(mockCommandExecutor);
 
     // Mock validation
-    (validation.validateProjectNameSecurity as jest.Mock).mockImplementation(() => {});
+    (validateProjectNameSecurity as jest.Mock).mockImplementation(() => {});
 
     // Mock executor
     (executor.executeProjectCreation as jest.Mock).mockResolvedValue(undefined);
@@ -88,7 +106,7 @@ export function setupDefaultMocks(): MockCommandExecutor {
 
     // Mock vscode
     (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue(undefined);
-    (vscode.workspace as any).isTrusted = true;
+    mockWorkspace.isTrusted = true;
 
     // Mock fs
     (fs.existsSync as jest.Mock).mockReturnValue(false);
@@ -100,7 +118,7 @@ export function setupDefaultMocks(): MockCommandExecutor {
  * Configures mocks for a validation error scenario
  */
 export function mockValidationError(errorMessage: string): void {
-    (validation.validateProjectNameSecurity as jest.Mock).mockImplementation(() => {
+    (validateProjectNameSecurity as jest.Mock).mockImplementation(() => {
         throw new Error(errorMessage);
     });
 }
@@ -132,7 +150,7 @@ export function mockExecutionFailure(errorMessage: string): void {
  * Configures mocks for workspace trust scenarios
  */
 export function mockUntrustedWorkspace(tipAlreadyShown = false): jest.Mock {
-    (vscode.workspace as any).isTrusted = false;
+    mockWorkspace.isTrusted = false;
     (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue(undefined);
 
     // Return function that gets current mock implementation

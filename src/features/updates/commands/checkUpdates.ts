@@ -20,9 +20,11 @@ import {
     type TemplateUpdateItem,
     type UpdateItem,
 } from './updateTypes';
-import { BaseCommand } from '@/core/base';
-import { ExecutionLock, TIMEOUTS } from '@/core/utils';
+import { BaseCommand } from '@/core/base/baseCommand';
+import { ServiceLocator } from '@/core/di/serviceLocator';
+import { ExecutionLock } from '@/core/utils/executionLock';
 import { sleep } from '@/core/utils/sleep';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { AddonUpdateChecker } from '@/features/updates/services/addonUpdateChecker';
 import { AdobeMcpUpdateChecker } from '@/features/updates/services/adobeMcpUpdateChecker';
 import { ExtensionUpdater } from '@/features/updates/services/extensionUpdater';
@@ -30,7 +32,7 @@ import { ForkSyncService } from '@/features/updates/services/forkSyncService';
 import { shouldOfferGraduation } from '@/features/updates/services/releaseTrack';
 import { TemplateUpdateChecker, TemplateUpdateResult } from '@/features/updates/services/templateUpdateChecker';
 import { UpdateManager, MultiProjectUpdateResult } from '@/features/updates/services/updateManager';
-import { Project } from '@/types';
+import { Project } from '@/types/base';
 
 /**
  * Command to check for and apply updates to extension and components.
@@ -231,23 +233,25 @@ export class CheckUpdatesCommand extends BaseCommand {
     }
 
     private async dispatchSelectedUpdates(selected: UpdateItem[]): Promise<void> {
+        // The flag's presence is the whole test: every member of UpdateItem declares
+        // its flag as the literal `true`, so `in` narrows the union on its own.
         const selectedForks = selected.filter(
-            (item): item is ForkSyncItem => 'isForkSync' in item && item.isForkSync,
+            (item): item is ForkSyncItem => 'isForkSync' in item,
         );
         const selectedTemplates = selected.filter(
-            (item): item is TemplateUpdateItem => 'isTemplateUpdate' in item && item.isTemplateUpdate,
+            (item): item is TemplateUpdateItem => 'isTemplateUpdate' in item,
         );
         const selectedComponents = selected.filter(
-            (item): item is ProjectUpdateItem => 'isProjectUpdate' in item && item.isProjectUpdate,
+            (item): item is ProjectUpdateItem => 'isProjectUpdate' in item,
         );
         const selectedBlockLibraries = selected.filter(
-            (item): item is BlockLibraryUpdateItem => 'isBlockLibraryUpdate' in item && item.isBlockLibraryUpdate,
+            (item): item is BlockLibraryUpdateItem => 'isBlockLibraryUpdate' in item,
         );
         const selectedInspectors = selected.filter(
-            (item): item is InspectorUpdateItem => 'isInspectorUpdate' in item && item.isInspectorUpdate,
+            (item): item is InspectorUpdateItem => 'isInspectorUpdate' in item,
         );
         const selectedAdobeMcp = selected.filter(
-            (item): item is AdobeMcpUpdateItem => 'isAdobeMcpUpdate' in item && item.isAdobeMcpUpdate,
+            (item): item is AdobeMcpUpdateItem => 'isAdobeMcpUpdate' in item,
         );
 
         this.logger.debug(
@@ -447,6 +451,7 @@ export class CheckUpdatesCommand extends BaseCommand {
             extensionPath: this.context.extensionPath,
             stateManager: this.stateManager,
             logger: this.logger,
+            commandManager: ServiceLocator.getCommandExecutor(),
         };
     }
 }

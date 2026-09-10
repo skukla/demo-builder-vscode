@@ -64,7 +64,7 @@ describe('seedDefaultAiPrompts', () => {
         await seedDefaultAiPrompts(gs);
 
         expect(gs.update).not.toHaveBeenCalled();
-        expect((gs._store.get(GLOBAL_AI_PROMPTS_KEY) as AiPrompt[]).length).toBe(DEFAULT_AI_PROMPTS.length);
+        expect((gs._store.get(GLOBAL_AI_PROMPTS_KEY) as AiPrompt[])).toHaveLength(DEFAULT_AI_PROMPTS.length);
     });
 
     it('does NOT resurrect a starter prompt the user deleted (ledger blocks re-seed)', async () => {
@@ -76,7 +76,25 @@ describe('seedDefaultAiPrompts', () => {
 
         await seedDefaultAiPrompts(gs);
 
-        expect(gs._store.get(GLOBAL_AI_PROMPTS_KEY)).toEqual([]);
+        expect(gs._store.get(GLOBAL_AI_PROMPTS_KEY)).toStrictEqual([]);
+    });
+
+    it('does not write the prompt store at all when every default is already present', async () => {
+        // The store write is guarded on there being something to add. Without that
+        // guard the seeder rewrites the global prompt list on activation with a
+        // value it did not change — a needless globalState write on every launch,
+        // and one that would clobber a concurrent edit. Asserting the ARGUMENTS
+        // the Memento receives is the only way to see it; the resulting store
+        // contents are identical either way.
+        const id = DEFAULT_IDS[0];
+        const userCopy: AiPrompt[] = [{ id, title: 'User copy', prompt: 'edited', pinned: true }];
+        const gs = makeGlobalState({ [GLOBAL_AI_PROMPTS_KEY]: userCopy });
+
+        await seedDefaultAiPrompts(gs);
+
+        expect(gs.update).not.toHaveBeenCalledWith(GLOBAL_AI_PROMPTS_KEY, expect.anything());
+        expect(gs.update).toHaveBeenCalledTimes(1);
+        expect(gs.update).toHaveBeenCalledWith(SEEDED_DEFAULT_PROMPT_IDS_KEY, DEFAULT_IDS);
     });
 
     it('ledgers a default without duplicating it when the id already exists in the store', async () => {

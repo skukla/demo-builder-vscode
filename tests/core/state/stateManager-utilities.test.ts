@@ -11,13 +11,12 @@ import * as path from 'path';
 import {
     setupMocks,
     mockHomedir,
-    createMockProject,
+    createStateManagerProject,
     type TestMocks,
 } from './stateManager.testUtils';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 
 // Re-declare mocks to ensure proper typing and hoisting
-jest.mock('vscode');
 jest.mock('fs/promises');
 jest.mock('os');
 
@@ -317,7 +316,7 @@ describe('StateManager - Utilities', () => {
             await stateManager.initialize();
             const projects = await stateManager.getAllProjects();
 
-            expect(projects).toEqual([]);
+            expect(projects).toStrictEqual([]);
         });
 
         it('should exclude non-directory entries', async () => {
@@ -354,8 +353,8 @@ describe('StateManager - Utilities', () => {
             const { stateManager } = testMocks;
             await stateManager.initialize();
 
-            const project1 = createMockProject('project1');
-            const project2 = createMockProject('project2');
+            const project1 = createStateManagerProject('project1');
+            const project2 = createStateManagerProject('project2');
 
             await Promise.all([
                 stateManager.saveProject(project1 as Project),
@@ -374,7 +373,7 @@ describe('StateManager - Utilities', () => {
             // Simulate file system error
             (fs.writeFile as jest.Mock).mockRejectedValue(new Error('Disk full'));
 
-            const project = createMockProject();
+            const project = createStateManagerProject();
 
             // FIXED: Errors should now be propagated (not swallowed)
             await expect(stateManager.saveProject(project as Project)).rejects.toThrow('Disk full');

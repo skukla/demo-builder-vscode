@@ -48,7 +48,7 @@ index misses.
 Copy by **following references**, not by trusting the index alone, and **audit
 completeness after** the copy.
 
-- `daLiveContentOperations.extractInternalReferences` extracts internal,
+- `daLiveContentOperations.extractReferencedPaths` extracts internal,
   site-relative references from each copied page's authored HTML — from anchor
   hrefs **and** from the fragment-block convention (a regex scoped to
   `class="fragment"` blocks so it stays precise to the convention and doesn't

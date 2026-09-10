@@ -24,9 +24,6 @@ import '@testing-library/jest-dom';
 import { WelcomeStep } from '@/features/project-creation/ui/steps/WelcomeStep';
 import { WizardState } from '@/types/webview';
 
-jest.mock('@/core/ui/hooks/useSelectableDefault', () => ({
-    useSelectableDefault: () => ({}),
-}));
 
 const mockUpdateState = jest.fn();
 
@@ -47,14 +44,13 @@ const renderStep = (state: Partial<WizardState>) =>
                 packages={[]}
                 stacks={[]}
             />
-        </Provider>,
+        </Provider>
     );
 
 const nameField = () => screen.getByLabelText(/project name/i);
 
 /** The last object handed to updateState. */
-const lastUpdate = (): Record<string, unknown> =>
-    mockUpdateState.mock.calls.at(-1)?.[0] ?? {};
+const lastUpdate = (): Record<string, unknown> => mockUpdateState.mock.calls.at(-1)?.[0] ?? {};
 
 beforeEach(() => {
     jest.clearAllMocks();

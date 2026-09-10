@@ -59,6 +59,29 @@ describe('probeCredentialService', () => {
         expect(result.verdict).toMatch(/available/i);
     });
 
+    /**
+     * The probe asks with the user's OWN session, and asks for nothing else. A
+     * request with no Authorization header would come back 401 and be reported
+     * as "sign in again" — blaming the user for a call that was never made on
+     * their behalf.
+     */
+    it('asks the configured URL with the user\'s bearer token', async () => {
+        const fetchImpl = responder(200);
+
+        await probeCredentialService({
+            auth: auth('ims-token'),
+            fetchImpl: fetchImpl as unknown as typeof fetch,
+        });
+
+        expect(fetchImpl).toHaveBeenCalledWith(
+            SERVICE_URL,
+            expect.objectContaining({
+                method: 'GET',
+                headers: { Authorization: 'Bearer ims-token' },
+            }),
+        );
+    });
+
     it.each([
         ['none-configured'],
         ['invalid-url'],
@@ -90,6 +113,31 @@ describe('probeCredentialService', () => {
         expect(result.verdict).toMatch(/administrator/i);
     });
 
+    /**
+     * Four statuses, four different people to go and talk to. A status this
+     * check cannot interpret says so, rather than borrowing a remedy that would
+     * send someone to the wrong place.
+     */
+    it.each([
+        [401, /session|sign in again/i],
+        [503, /deployed but not configured/i],
+        [500, /HTTP 500/],
+    ])('reports HTTP %i in its own words', async (status, expected) => {
+        const result = await probeCredentialService({
+            auth: auth('t'),
+            fetchImpl: responder(status) as unknown as typeof fetch,
+        });
+
+        expect(result.endpoint?.httpStatus).toBe(status);
+        expect(result.verdict).toMatch(expected);
+        expect(result.verdict).not.toMatch(/administrator/i);
+    });
+
+    /**
+     * A timeout and a refused connection are different outages: one says the
+     * service is slow or hanging, the other that nothing is listening. Reporting
+     * either as the other sends the reader to check the wrong thing.
+     */
     it('distinguishes an unreachable service from a refusal', async () => {
         const fetchImpl = jest.fn().mockRejectedValue(
             Object.assign(new Error('aborted'), { name: 'AbortError' }),
@@ -101,8 +149,19 @@ describe('probeCredentialService', () => {
         });
 
         expect(result.endpoint?.httpStatus).toBeUndefined();
-        expect(result.endpoint?.error).toBeDefined();
+        expect(result.endpoint?.error).toBe('timed out');
         expect(result.verdict).not.toMatch(/administrator/i);
+    });
+
+    it('calls a connection failure that is not a timeout what it is', async () => {
+        const fetchImpl = jest.fn().mockRejectedValue(new TypeError('fetch failed'));
+
+        const result = await probeCredentialService({
+            auth: auth('t'),
+            fetchImpl: fetchImpl as unknown as typeof fetch,
+        });
+
+        expect(result.endpoint?.error).toBe('could not connect');
     });
 
     it('reports a missing Adobe session without blaming the service', async () => {
@@ -110,6 +169,28 @@ describe('probeCredentialService', () => {
 
         const result = await probeCredentialService({
             auth: auth(undefined),
+            fetchImpl: fetchImpl as unknown as typeof fetch,
+        });
+
+        expect(result.configured).toBe(true);
+        expect(result.verdict).toMatch(/sign in|not signed in/i);
+        expect(fetchImpl).not.toHaveBeenCalled();
+    });
+
+    /**
+     * A token manager that THROWS is the same situation as one that has no
+     * token: the user is not signed in. It must not become an unhandled
+     * rejection out of a diagnostics check.
+     */
+    it('treats a token lookup that throws as "not signed in"', async () => {
+        const fetchImpl = responder(200);
+
+        const result = await probeCredentialService({
+            auth: {
+                getTokenManager: () => ({
+                    inspectToken: jest.fn().mockRejectedValue(new Error('IMS unavailable')),
+                }),
+            },
             fetchImpl: fetchImpl as unknown as typeof fetch,
         });
 

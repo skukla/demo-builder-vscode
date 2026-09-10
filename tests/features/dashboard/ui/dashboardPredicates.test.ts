@@ -8,6 +8,13 @@ describe('isStartActionDisabled', () => {
         expect(isStartActionDisabled(true, undefined, 'stopped')).toBe(true);
     });
 
+    it('returns true while the mesh is being CHECKED, not just while deploying', () => {
+        // The verification pass is a distinct mesh state from the deploy, and it
+        // was the only one of the five disabling conditions no test drove — so
+        // deleting the check entirely left every test green.
+        expect(isStartActionDisabled(false, 'checking', 'stopped')).toBe(true);
+    });
+
     it('returns true when mesh deploying', () => {
         expect(isStartActionDisabled(false, 'deploying', 'stopped')).toBe(true);
     });

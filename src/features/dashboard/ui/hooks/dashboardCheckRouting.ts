@@ -12,12 +12,9 @@
 import type { Dispatch, SetStateAction } from 'react';
 import type { DashboardStatusUpdatePayload, VerifyAiSetupResponse } from './dashboardStatusTypes';
 import type { OrgMismatchInfo } from '@/features/authentication/services/detectProjectOrgMismatch';
-import type {
-    CheckOutcome,
-    CheckStatus,
-    OrgContextCheckData,
-    MeshVerifyCheckData,
-} from '@/features/dashboard/services/onOpenChecks';
+import type { MeshVerifyCheckData } from '@/features/dashboard/services/onOpenChecks/meshVerifyCheck';
+import type { OrgContextCheckData } from '@/features/dashboard/services/onOpenChecks/orgContextCheck';
+import type { CheckOutcome, CheckStatus } from '@/features/dashboard/services/onOpenChecks/types';
 import { CHECK_IDS } from '@/types/messages';
 
 /** The slices of useDashboardStatus state a check outcome may update. */

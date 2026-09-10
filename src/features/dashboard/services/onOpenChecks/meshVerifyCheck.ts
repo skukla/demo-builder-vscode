@@ -19,7 +19,7 @@
  */
 
 import type { CheckResult, OnOpenCheck, OnOpenCheckContext } from './types';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import { CHECK_IDS } from '@/types/messages';
 
 /** The subset of the mesh verifier result this check reads. */

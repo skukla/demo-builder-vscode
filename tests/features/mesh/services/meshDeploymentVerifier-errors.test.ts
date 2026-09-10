@@ -11,13 +11,13 @@ import {
 } from './meshDeploymentVerifier.testUtils';
 
 // Mock dependencies
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getCommandExecutor: jest.fn(),
     },
 }));
 
-jest.mock('@/core/validation', () => ({
+jest.mock('@/core/validation/validators/AdobeResourceValidator', () => ({
     validateMeshId: jest.fn(),
 }));
 
@@ -92,6 +92,7 @@ describe('MeshDeploymentVerifier - Error Handling', () => {
             mockCommandManager.execute.mockResolvedValue(createPendingStatusResponse());
 
             const promise = waitForMeshDeployment({
+                ...createDefaultOptions(),
                 initialWait: 100,
                 pollInterval: 100,
                 maxRetries: 3,
@@ -126,6 +127,46 @@ describe('MeshDeploymentVerifier - Error Handling', () => {
             const result = await promise;
 
             expect(result.deployed).toBe(true);
+        });
+    });
+    // The response's own `error` field is the mesh's account of what went wrong.
+    // The full command output is the fallback, and it can carry an unrelated
+    // earlier failure that would summarise to something else entirely.
+    describe('which text the summary comes from', () => {
+        it('summarises the error FIELD, not the whole command output', async () => {
+            mockCommandManager.execute.mockResolvedValueOnce({
+                code: 0,
+                stdout:
+                    'Failed to fetch introspection from https://commerce.test/graphql: GraphQLError\n' +
+                    JSON.stringify({ meshStatus: 'error', error: 'rate limit exceeded' }),
+                stderr: '',
+                duration: 0,
+            });
+
+            const promise = waitForMeshDeployment({ ...createDefaultOptions(), maxRetries: 1 });
+
+            await jest.runAllTimersAsync();
+            const result = await promise;
+
+            expect(result.error).toBe(
+                'Adobe API rate limit reached. Please wait a few minutes and try again.',
+            );
+        });
+
+        it('falls back to the command output when the response carries no error field', async () => {
+            mockCommandManager.execute.mockResolvedValueOnce({
+                code: 0,
+                stdout: JSON.stringify({ meshStatus: 'failed' }) + '\nECONNREFUSED 127.0.0.1:3000',
+                stderr: '',
+                duration: 0,
+            });
+
+            const promise = waitForMeshDeployment({ ...createDefaultOptions(), maxRetries: 1 });
+
+            await jest.runAllTimersAsync();
+            const result = await promise;
+
+            expect(result.error).toContain('Could not connect to: 127.0.0.1:3000');
         });
     });
 });

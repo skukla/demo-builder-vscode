@@ -5,42 +5,20 @@
  * (selectedStack, componentConfigs, packageConfigDefaults,
  * onConfigsChange, onValidationChange) instead of full WizardState.
  *
- * @jest-environment jsdom
  */
 
 import { renderHook, act, waitFor } from '@testing-library/react';
+
+import { settle } from '../../../../helpers/reactSettle';
 import type { ComponentConfigs } from '@/types/webview';
 
 // ---------------------------------------------------------------------------
 // Mocks
 // ---------------------------------------------------------------------------
 
-// Mock vscode API used by the hook
-const mockRequest = jest.fn();
-jest.mock('@/core/ui/utils/vscode-api', () => ({
-    vscode: {
-        postMessage: jest.fn(),
-        request: (...args: any[]) => mockRequest(...args),
-        onMessage: jest.fn(() => jest.fn()),
-    },
-}));
-
-// Mock webviewLogger
-jest.mock('@/core/ui/utils/webviewLogger', () => ({
-    webviewLogger: () => ({
-        info: jest.fn(),
-        error: jest.fn(),
-        warn: jest.fn(),
-        debug: jest.fn(),
-    }),
-}));
+import { mockRequest } from './useComponentConfig.testUtils';
 
 // Mock Validator
-jest.mock('@/core/validation/Validator', () => ({
-    url: () => () => ({ valid: true }),
-    pattern: () => () => ({ valid: true }),
-    normalizeUrl: (v: string) => v.replace(/\/+$/, ''),
-}));
 
 // Mock envVarHelpers
 jest.mock('@/features/components/services/envVarHelpers', () => ({
@@ -48,31 +26,17 @@ jest.mock('@/features/components/services/envVarHelpers', () => ({
 }));
 
 // Mock serviceGroupTransforms
-jest.mock('@/features/components/services/serviceGroupTransforms', () => ({
-    toServiceGroupWithSortedFields: jest.fn(
-        (def: any, groups: any) => ({ ...def, fields: groups[def.id] || [] }),
-    ),
-    SERVICE_GROUP_DEFINITIONS: [],
-}));
 
 // Mock useSelectedStack helper
-jest.mock('@/features/project-creation/ui/hooks/useSelectedStack', () => ({
-    getStackById: jest.fn(),
-}));
 
 // Mock componentDataHelpers
-jest.mock('@/core/ui/utils/componentDataHelpers', () => ({
-    findComponentById: jest.fn(),
-}));
 
 // Lazy-import so mocks are registered first
 let useComponentConfig: any;
 let resetComponentRegistryCache: () => void;
 
 beforeAll(async () => {
-    const mod = await import(
-        '@/features/components/ui/hooks/useComponentConfig'
-    );
+    const mod = await import('@/features/components/ui/hooks/useComponentConfig');
     useComponentConfig = mod.useComponentConfig;
     resetComponentRegistryCache = mod.resetComponentRegistryCache;
 });
@@ -108,11 +72,15 @@ describe('useComponentConfig — narrow interface', () => {
                     componentConfigs: {},
                     onConfigsChange: jest.fn(),
                     onValidationChange: jest.fn(),
-                }),
+                })
             );
 
             // Hook should not throw and should return loading state initially
             expect(result.current.isLoading).toBe(true);
+
+            // The registry load is still open — settle so its response commits
+            // inside act() rather than at this test's return boundary.
+            await settle();
         });
 
         it('should accept componentConfigs directly instead of state.componentConfigs', async () => {
@@ -125,10 +93,14 @@ describe('useComponentConfig — narrow interface', () => {
                     componentConfigs: configs,
                     onConfigsChange: jest.fn(),
                     onValidationChange: jest.fn(),
-                }),
+                })
             );
 
             expect(result.current.isLoading).toBe(true);
+
+            // The registry load is still open — settle so its response commits
+            // inside act() rather than at this test's return boundary.
+            await settle();
         });
 
         it('should accept packageConfigDefaults directly instead of state.packageConfigDefaults', async () => {
@@ -140,10 +112,14 @@ describe('useComponentConfig — narrow interface', () => {
                     packageConfigDefaults: defaults,
                     onConfigsChange: jest.fn(),
                     onValidationChange: jest.fn(),
-                }),
+                })
             );
 
             expect(result.current.isLoading).toBe(true);
+
+            // The registry load is still open — settle so its response commits
+            // inside act() rather than at this test's return boundary.
+            await settle();
         });
 
         it('should accept onConfigsChange callback instead of updateState', async () => {
@@ -154,10 +130,14 @@ describe('useComponentConfig — narrow interface', () => {
                     componentConfigs: {},
                     onConfigsChange,
                     onValidationChange: jest.fn(),
-                }),
+                })
             );
 
             expect(result.current.isLoading).toBe(true);
+
+            // The registry load is still open — settle so its response commits
+            // inside act() rather than at this test's return boundary.
+            await settle();
         });
 
         it('should accept onValidationChange callback instead of setCanProceed', async () => {
@@ -168,10 +148,14 @@ describe('useComponentConfig — narrow interface', () => {
                     componentConfigs: {},
                     onConfigsChange: jest.fn(),
                     onValidationChange,
-                }),
+                })
             );
 
             expect(result.current.isLoading).toBe(true);
+
+            // The registry load is still open — settle so its response commits
+            // inside act() rather than at this test's return boundary.
+            await settle();
         });
     });
 
@@ -188,7 +172,7 @@ describe('useComponentConfig — narrow interface', () => {
                     componentConfigs: { test: { KEY: 'value' } },
                     onConfigsChange,
                     onValidationChange: jest.fn(),
-                }),
+                })
             );
 
             // onConfigsChange should be called during the validation effect
@@ -198,6 +182,10 @@ describe('useComponentConfig — narrow interface', () => {
             });
 
             expect(onConfigsChange).toHaveBeenCalled();
+
+            // The registry load is still open — settle so its response commits
+            // inside act() rather than at this test's return boundary.
+            await settle();
         });
 
         it('should call onValidationChange during validation effect', async () => {
@@ -208,7 +196,7 @@ describe('useComponentConfig — narrow interface', () => {
                     componentConfigs: {},
                     onConfigsChange: jest.fn(),
                     onValidationChange,
-                }),
+                })
             );
 
             await act(async () => {
@@ -216,6 +204,10 @@ describe('useComponentConfig — narrow interface', () => {
             });
 
             expect(onValidationChange).toHaveBeenCalled();
+
+            // The registry load is still open — settle so its response commits
+            // inside act() rather than at this test's return boundary.
+            await settle();
         });
     });
 
@@ -224,76 +216,100 @@ describe('useComponentConfig — narrow interface', () => {
     // -------------------------------------------------------------------
 
     describe('return shape', () => {
-        it('should return componentConfigs in the result', () => {
+        it('should return componentConfigs in the result', async () => {
             const { result } = renderHook(() =>
                 useComponentConfig({
                     componentConfigs: {},
                     onConfigsChange: jest.fn(),
                     onValidationChange: jest.fn(),
-                }),
+                })
             );
 
             expect(result.current).toHaveProperty('componentConfigs');
+
+            // The registry load is still open — settle so its response commits
+            // inside act() rather than at this test's return boundary.
+            await settle();
         });
 
-        it('should return isLoading in the result', () => {
+        it('should return isLoading in the result', async () => {
             const { result } = renderHook(() =>
                 useComponentConfig({
                     componentConfigs: {},
                     onConfigsChange: jest.fn(),
                     onValidationChange: jest.fn(),
-                }),
+                })
             );
 
             expect(result.current).toHaveProperty('isLoading');
+
+            // The registry load is still open — settle so its response commits
+            // inside act() rather than at this test's return boundary.
+            await settle();
         });
 
-        it('should return serviceGroups in the result', () => {
+        it('should return serviceGroups in the result', async () => {
             const { result } = renderHook(() =>
                 useComponentConfig({
                     componentConfigs: {},
                     onConfigsChange: jest.fn(),
                     onValidationChange: jest.fn(),
-                }),
+                })
             );
 
             expect(result.current).toHaveProperty('serviceGroups');
+
+            // The registry load is still open — settle so its response commits
+            // inside act() rather than at this test's return boundary.
+            await settle();
         });
 
-        it('should return updateField function', () => {
+        it('should return updateField function', async () => {
             const { result } = renderHook(() =>
                 useComponentConfig({
                     componentConfigs: {},
                     onConfigsChange: jest.fn(),
                     onValidationChange: jest.fn(),
-                }),
+                })
             );
 
             expect(typeof result.current.updateField).toBe('function');
+
+            // The registry load is still open — settle so its response commits
+            // inside act() rather than at this test's return boundary.
+            await settle();
         });
 
-        it('should return getFieldValue function', () => {
+        it('should return getFieldValue function', async () => {
             const { result } = renderHook(() =>
                 useComponentConfig({
                     componentConfigs: {},
                     onConfigsChange: jest.fn(),
                     onValidationChange: jest.fn(),
-                }),
+                })
             );
 
             expect(typeof result.current.getFieldValue).toBe('function');
+
+            // The registry load is still open — settle so its response commits
+            // inside act() rather than at this test's return boundary.
+            await settle();
         });
 
-        it('should return normalizeUrlField function', () => {
+        it('should return normalizeUrlField function', async () => {
             const { result } = renderHook(() =>
                 useComponentConfig({
                     componentConfigs: {},
                     onConfigsChange: jest.fn(),
                     onValidationChange: jest.fn(),
-                }),
+                })
             );
 
             expect(typeof result.current.normalizeUrlField).toBe('function');
+
+            // The registry load is still open — settle so its response commits
+            // inside act() rather than at this test's return boundary.
+            await settle();
         });
     });
 
@@ -302,7 +318,7 @@ describe('useComponentConfig — narrow interface', () => {
     // -------------------------------------------------------------------
 
     describe('no WizardState dependency', () => {
-        it('should not require state property', () => {
+        it('should not require state property', async () => {
             // The hook should accept props without a 'state' key
             const props = {
                 componentConfigs: {},
@@ -315,9 +331,13 @@ describe('useComponentConfig — narrow interface', () => {
             expect(() => {
                 renderHook(() => useComponentConfig(props));
             }).not.toThrow();
+
+            // The registry load is still open — settle so its response commits
+            // inside act() rather than at this test's return boundary.
+            await settle();
         });
 
-        it('should not require updateState property', () => {
+        it('should not require updateState property', async () => {
             const props = {
                 componentConfigs: {},
                 onConfigsChange: jest.fn(),
@@ -327,9 +347,13 @@ describe('useComponentConfig — narrow interface', () => {
             expect(() => {
                 renderHook(() => useComponentConfig(props));
             }).not.toThrow();
+
+            // The registry load is still open — settle so its response commits
+            // inside act() rather than at this test's return boundary.
+            await settle();
         });
 
-        it('should not require setCanProceed property', () => {
+        it('should not require setCanProceed property', async () => {
             const props = {
                 componentConfigs: {},
                 onConfigsChange: jest.fn(),
@@ -339,6 +363,10 @@ describe('useComponentConfig — narrow interface', () => {
             expect(() => {
                 renderHook(() => useComponentConfig(props));
             }).not.toThrow();
+
+            // The registry load is still open — settle so its response commits
+            // inside act() rather than at this test's return boundary.
+            await settle();
         });
     });
 
@@ -374,7 +402,11 @@ describe('useComponentConfig — narrow interface', () => {
             first.unmount();
             renderHook(() => useComponentConfig(props));
 
-            expect(mockRequest.mock.calls.length).toBe(callsAfterFirst);
+            expect(mockRequest.mock.calls).toHaveLength(callsAfterFirst);
+
+            // The registry load is still open — settle so its response commits
+            // inside act() rather than at this test's return boundary.
+            await settle();
         });
 
         it('renders the form straight away on the rebuild, with no loader', async () => {
@@ -387,6 +419,10 @@ describe('useComponentConfig — narrow interface', () => {
             const second = renderHook(() => useComponentConfig(props));
 
             expect(second.result.current.isLoading).toBe(false);
+
+            // The registry load is still open — settle so its response commits
+            // inside act() rather than at this test's return boundary.
+            await settle();
         });
     });
 });

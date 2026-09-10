@@ -124,6 +124,58 @@ describe('resolveApiRowStates', () => {
         );
     });
 
+    describe('claim order — a later claim must win on rank, not on arrival', () => {
+        it('replaces a lower claim that arrived first, and names the new holder only', () => {
+            // ERP's requirement is claimed before Loyalty's (owners order), so the
+            // row is other-required when Loyalty's mine-required claim lands.
+            const erp = { ...ERP, requiredApis: ['SharedSDK'] };
+            const loyalty = { ...LOYALTY, requiredApis: ['SharedSDK'] };
+
+            expect(states('loyalty', [erp, loyalty]).get('SharedSDK')).toEqual({
+                code: 'SharedSDK',
+                ownership: 'mine-required',
+                requiredBy: ['Loyalty'],
+            });
+        });
+
+        it('leaves a baseline row unnamed when a lower claim with a name follows', () => {
+            expect(states('loyalty', [ERP], { 'erp-sync': ['BaselineSDK'] }).get('BaselineSDK'))
+                .toEqual({ code: 'BaselineSDK', ownership: 'baseline', requiredBy: [] });
+        });
+
+        it('names a same-tier holder once, even when it claims the code twice', () => {
+            // ERP requires the code AND picked it: one integration, one name.
+            expect(states('loyalty', [ERP], { 'erp-sync': ['ErpSDK'] }).get('ErpSDK')?.requiredBy)
+                .toEqual(['ERP Sync']);
+        });
+
+        it('locks my own pick, naming nobody, when a legacy unattributed pick follows it', () => {
+            // My pick is claimed first (picks order); the unattributed claim
+            // outranks it and can name no one — the row must not invent a name.
+            const map = states('erp-sync', [ERP], {
+                'erp-sync': ['AssetsSDK'],
+                __existing__: ['AssetsSDK'],
+            });
+
+            expect(map.get('AssetsSDK')).toEqual({
+                code: 'AssetsSDK',
+                ownership: 'other-required',
+                requiredBy: [],
+            });
+        });
+
+        it('adds no name for a same-tier unattributed claim', () => {
+            expect(states('loyalty', [ERP], { __existing__: ['ErpSDK'] }).get('ErpSDK')?.requiredBy)
+                .toEqual(['ERP Sync']);
+        });
+    });
+
+    it('claims nothing for an owner that declares no requirements', () => {
+        const bare: ApiOwner = { id: 'erp-sync', name: 'ERP Sync' };
+
+        expect([...states('erp-sync', [bare]).keys()]).toEqual(['BaselineSDK']);
+    });
+
     it("is unaffected by an unknown componentId (every row reads as another owner's)", () => {
         const map = states('does-not-exist');
 

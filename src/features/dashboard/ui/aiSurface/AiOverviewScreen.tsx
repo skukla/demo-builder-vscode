@@ -11,7 +11,7 @@
  * terminal to run for real, and it LEAVES — the library never grows a
  * transcript or a composer of its own. A second destination (the Prompt
  * Workbench, which simulated rather than ran) moved to
- * `feature/prompt-workbench` on 2026-08-26; see AI-3b. The rule it was built on
+ * `feature/evaluation-mode-dry-run` on 2026-08-26; see AI-3b. The rule it was built on
  * still holds: each surface does one thing.
  */
 
@@ -19,7 +19,9 @@ import { Button, DialogContainer, Flex } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useState } from 'react';
 import { PromptEditDialog } from './components/PromptEditDialog';
 import { PromptGrid } from './components/PromptGrid';
-import { PageFooter, PageHeader, PageLayout } from '@/core/ui/components/layout';
+import { PageFooter } from '@/core/ui/components/layout/PageFooter';
+import { PageHeader } from '@/core/ui/components/layout/PageHeader';
+import { PageLayout } from '@/core/ui/components/layout/PageLayout';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import type { AiPrompt } from '@/types/base';

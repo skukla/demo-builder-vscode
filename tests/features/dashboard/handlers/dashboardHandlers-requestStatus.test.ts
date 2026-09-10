@@ -6,7 +6,7 @@
  */
 
 // IMPORTANT: Mocks must be declared before imports
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(),
         // The on-open org-context check self-heals via the state manager on the
@@ -17,16 +17,9 @@ jest.mock('@/core/di', () => ({
     },
 }));
 jest.mock('@/features/mesh/services/stalenessDetector');
-jest.mock('@/features/authentication');
 jest.mock('@/features/mesh/services/meshVerifier', () => ({
     verifyMeshDeployment: jest.fn().mockResolvedValue(undefined),
     syncMeshStatus: jest.fn().mockResolvedValue(undefined),
-}));
-jest.mock('@/core/validation', () => ({
-    validateOrgId: jest.fn(),
-    validateProjectId: jest.fn(),
-    validateWorkspaceId: jest.fn(),
-    validateURL: jest.fn(),
 }));
 jest.mock(
     'vscode',
@@ -48,6 +41,7 @@ jest.mock(
     { virtual: true }
 );
 
+import './dashboardValidatorMocks';
 import { handleRequestStatus } from '@/features/dashboard/handlers/dashboardHandlers';
 import { setupMocks } from './dashboardHandlers.testUtils';
 
@@ -64,7 +58,7 @@ describe('dashboardHandlers - handleRequestStatus', () => {
         detectFrontendChanges.mockReturnValue(false);
 
         // Project has meshStatusSummary='deployed' (set by card grid)
-        const { mockContext } = setupMocks({ meshStatusSummary: 'deployed' } as any);
+        const { mockContext } = setupMocks({ meshStatusSummary: 'deployed' });
 
         const result = await handleRequestStatus(mockContext);
 
@@ -92,7 +86,7 @@ describe('dashboardHandlers - handleRequestStatus', () => {
         const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
         detectFrontendChanges.mockReturnValue(false);
 
-        const { mockContext } = setupMocks({ meshStatusSummary: 'stale' } as any);
+        const { mockContext } = setupMocks({ meshStatusSummary: 'stale' });
 
         const result = await handleRequestStatus(mockContext);
 
@@ -104,15 +98,19 @@ describe('dashboardHandlers - handleRequestStatus', () => {
         });
     });
 
-    // ADR-011 D3 Steps 07+09: a keyed-only project (no meshState — the post-Step-07
-    // shape) must report the same deployed status + endpoint from the keyed entry.
+    // ADR-011 D3 Steps 07+09: a keyed-only project must report the same deployed
+    // status + endpoint from the keyed entry.
+    //
+    // These cases used to pass `meshState: undefined` to say "the post-Step-07
+    // shape". That field was REMOVED from the in-memory Project by PL-1 phase 2,
+    // so setting it to undefined asserted nothing — keyed-only is now the only
+    // shape there is. An `as any` on the override was hiding it.
     it('should report deployed status + endpoint for a keyed-only project (Steps 07+09)', async () => {
         const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
         detectFrontendChanges.mockReturnValue(false);
 
         const { mockContext } = setupMocks({
             meshStatusSummary: 'deployed',
-            meshState: undefined,
             appBuilderComponents: {
                 mesh: {
                     kind: 'mesh',
@@ -122,7 +120,7 @@ describe('dashboardHandlers - handleRequestStatus', () => {
                     envVars: { MESH_ID: 'mesh123' },
                 },
             },
-        } as any);
+        });
 
         const result = await handleRequestStatus(mockContext);
 
@@ -146,8 +144,7 @@ describe('dashboardHandlers - handleRequestStatus', () => {
                     port: 3000,
                 },
             },
-            meshState: undefined,
-        } as any);
+        });
 
         const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
         detectFrontendChanges.mockReturnValue(false);
@@ -200,8 +197,9 @@ describe('dashboardHandlers - handleRequestStatus', () => {
                 envVars: {
                     NEXT_PUBLIC_MESH_ENDPOINT: 'old-value',
                 },
+                capturedAt: '2025-01-26T12:00:00.000Z',
             },
-        } as any);
+        });
 
         const result = await handleRequestStatus(mockContext);
 
@@ -218,7 +216,7 @@ describe('dashboardHandlers - handleRequestStatus', () => {
         const { mockContext } = setupMocks();
 
         // Override auth mock AFTER setupMocks (which sets isAuthenticated=true)
-        const { ServiceLocator } = require('@/core/di');
+        const { ServiceLocator } = require('@/core/di/serviceLocator');
         ServiceLocator.getAuthenticationService.mockReturnValue({
             isAuthenticated: jest.fn().mockResolvedValue(false),
             loginAndRestoreProjectContext: jest.fn().mockResolvedValue(false),
@@ -251,8 +249,8 @@ describe('dashboardHandlers - handleRequestStatus', () => {
         const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
         detectFrontendChanges.mockReturnValue(false);
 
-        const { mockContext } = setupMocks({ meshStatusSummary: 'deployed' } as any);
-        const { ServiceLocator } = require('@/core/di');
+        const { mockContext } = setupMocks({ meshStatusSummary: 'deployed' });
+        const { ServiceLocator } = require('@/core/di/serviceLocator');
         ServiceLocator.getAuthenticationService.mockReturnValue({
             isAuthenticated: jest.fn().mockResolvedValue(true),
             // SDK-only read (the non-interactive on-open probe), never the CLI fallback.
@@ -271,10 +269,10 @@ describe('dashboardHandlers - handleRequestStatus', () => {
         const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
         detectFrontendChanges.mockReturnValue(false);
 
-        const { mockContext } = setupMocks({ meshStatusSummary: 'deployed' } as any);
+        const { mockContext } = setupMocks({ meshStatusSummary: 'deployed' });
 
         // Auth returns false initially, then true after login
-        const { ServiceLocator } = require('@/core/di');
+        const { ServiceLocator } = require('@/core/di/serviceLocator');
         const mockAuthManager = {
             isAuthenticated: jest
                 .fn()

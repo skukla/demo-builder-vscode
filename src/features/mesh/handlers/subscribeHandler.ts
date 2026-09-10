@@ -11,8 +11,8 @@
  * NOT `getCurrentProject()` — the wizard has no current project yet.
  */
 
-import { ServiceLocator } from '@/core/di';
-import { validateOrgId, validateProjectId, validateWorkspaceId } from '@/core/validation';
+import { ServiceLocator } from '@/core/di/serviceLocator';
+import { validateOrgId, validateProjectId, validateWorkspaceId } from '@/core/validation/validators/AdobeResourceValidator';
 import type { SubscribedApi } from '@/features/app-builder/services/apiSubscriber';
 import {
     ensureMeshApiSubscribed,
@@ -74,12 +74,15 @@ export async function handleEnsureMeshApiSubscribed(
     }
 
     // PRE-FLIGHT: Check authentication before any Adobe operations
-    const authResult = await ensureAuthenticated(context.logger, 'enable the API Mesh API');
+    const authResult = await ensureAuthenticated(context, 'enable the API Mesh API');
     if (!authResult.authenticated) {
         return {
             success: false,
             error: authResult.error,
             code: authResult.code,
+            // Carried through so the AGENT is told which sign-in to offer;
+            // defaultShape returns a failure whole when it has more than error/code.
+            ...(authResult.needsAuth ? { needsAuth: authResult.needsAuth } : {}),
         };
     }
 

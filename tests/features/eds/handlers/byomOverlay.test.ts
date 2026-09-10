@@ -19,6 +19,15 @@ var mockEnabledValue: unknown;
 var mockWarn: jest.Mock;
 /* eslint-enable no-var */
 
+jest.mock('@/core/logging/debugLogger', () => {
+    const { createMockLogger } = require('../../../helpers/loggerFake');
+    mockWarn = jest.fn();
+    return {
+        getLogger: jest.fn().mockReturnValue(createMockLogger({ warn: mockWarn })),
+        initializeLogger: jest.fn(),
+    };
+});
+
 jest.mock('vscode', () => {
     mockSettingValue = '';
     mockEnabledValue = undefined;  // honor the default
@@ -38,18 +47,7 @@ jest.mock('vscode', () => {
     };
 }, { virtual: true });
 
-jest.mock('@/core/logging', () => {
-    mockWarn = jest.fn();
-    return {
-        getLogger: jest.fn().mockReturnValue({
-            info: jest.fn(),
-            debug: jest.fn(),
-            error: jest.fn(),
-            warn: mockWarn,
-        }),
-        initializeLogger: jest.fn(),
-    };
-});
+
 
 // Mock service imports required by byomOverlay module
 jest.mock('@/features/eds/services/github/githubTokenService');
@@ -67,11 +65,17 @@ import {
     resolveByomOverlayConfig,
     resolveByomOverlayUrl,
     surfaceOverlayRegistrationFailure,
+    addPdpCaveat,
+    describeSmart404Skip,
+    explainAbsentOverlay,
+    BYOM_DISABLED_MESSAGE,
     BYOM_OVERLAY_NOT_AUTHORIZED_MESSAGE,
     BYOM_OVERLAY_REGISTRATION_FAILED_MESSAGE,
+    BYOM_OVERLAY_URL_MISSING_MESSAGE,
 } from '@/features/eds/handlers/byomOverlay';
 import * as vscode from 'vscode';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 describe('resolveByomOverlayUrl', () => {
     beforeEach(() => {
@@ -109,6 +113,67 @@ describe('resolveByomOverlayUrl', () => {
         const result = resolveByomOverlayUrl();
 
         expect(result).toBeUndefined();
+    });
+
+    it('stays silent when the setting is empty — an unset overlay is not a misconfiguration', () => {
+        mockSettingValue = '';
+
+        expect(resolveByomOverlayUrl('https://fallback.example.com/render-pdp')).toBe(
+            'https://fallback.example.com/render-pdp',
+        );
+        // The warning channel is for a value that was supplied and rejected.
+        // Firing it for "nothing configured" is how a channel stops being read.
+        expect(mockWarn).not.toHaveBeenCalled();
+    });
+
+    it('accepts a URL of exactly the safety cap length', () => {
+        // The cap is inclusive. Off by one here and the longest legal overlay
+        // URL is silently dropped in favour of the fallback.
+        const head = 'https://overlay.example.com/';
+        mockSettingValue = head + 'a'.repeat(2048 - head.length);
+
+        expect(resolveByomOverlayUrl()).toBe(mockSettingValue);
+        expect(mockWarn).not.toHaveBeenCalled();
+    });
+
+    it('rejects an http:// URL on a host that merely LOOKS local', () => {
+        // Loopback is an allowlist, not a substring rule: only an exact
+        // localhost/127.0.0.1/[::1] host may drop TLS.
+        mockSettingValue = 'http://localhost.evil.example.com/render-pdp';
+
+        expect(resolveByomOverlayUrl('https://fallback.example.com/x')).toBe(
+            'https://fallback.example.com/x',
+        );
+    });
+
+    it('rejects a loopback host on a scheme that is neither http nor https', () => {
+        // The loopback exception exists to let local dev drop TLS on http. It
+        // is not a blanket "localhost is fine" — ftp://localhost must not pass
+        // just because the host matches.
+        mockSettingValue = 'ftp://localhost/render-pdp';
+
+        expect(resolveByomOverlayUrl('https://fallback.example.com/x')).toBe(
+            'https://fallback.example.com/x',
+        );
+    });
+
+    it('does not echo the rejected URL into the log', () => {
+        // Users paste debug logs into tickets, and a mistyped overlay URL can
+        // carry a token in its query string. The warning fingerprints the value
+        // (scheme, host, length) and never reproduces it.
+        mockSettingValue = 'http://evil.example.com/render-pdp?token=fake-test-pw-not-a-secret';
+
+        resolveByomOverlayUrl();
+
+        const warned = mockWarn.mock.calls[0][0] as string;
+        expect(warned).not.toContain('fake-test-pw-not-a-secret');
+        expect(warned).not.toContain('/render-pdp');
+    });
+
+    it('treats an empty fromConfig fallback as no fallback', () => {
+        mockSettingValue = '';
+
+        expect(resolveByomOverlayUrl('')).toBeUndefined();
     });
 
     it('accepts http://localhost URLs (for local dev)', () => {
@@ -355,9 +420,7 @@ describe('resolveByomOverlayConfig', () => {
 
 describe('surfaceOverlayRegistrationFailure', () => {
     function createLogger(): Logger {
-        return {
-            info: jest.fn(), debug: jest.fn(), error: jest.fn(), warn: jest.fn(), trace: jest.fn(),
-        } as unknown as Logger;
+        return createMockLogger() as unknown as Logger;
     }
 
     beforeEach(() => {
@@ -379,6 +442,21 @@ describe('surfaceOverlayRegistrationFailure', () => {
         // No showWarning callback — MCP / AI contexts must not toast, only log.
         expect(() => surfaceOverlayRegistrationFailure(logger)).not.toThrow();
         expect(logger.error).toHaveBeenCalledWith(expect.stringContaining('BYOM'));
+    });
+
+    it('ignores a callback that returns a plain value instead of a thenable', () => {
+        // The callback is typed `void` for headless callers, so it may return
+        // anything at all. The guard reads for `.then` rather than trusting the
+        // type — a truthy non-thenable must not be awaited, or a plain sink
+        // crashes the whole failure report it was meant to carry.
+        const showWarning: (message: string, ...actions: string[]) => void = jest
+            .fn()
+            .mockReturnValue('logged');
+
+        expect(() =>
+            surfaceOverlayRegistrationFailure(createLogger(), showWarning, 403),
+        ).not.toThrow();
+        expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
     });
 
     it('names the authorization cause on a 403 instead of prescribing a reset', () => {
@@ -501,5 +579,95 @@ describe('byomRegistrationFailureMessage', () => {
         expect(byomRegistrationFailureMessage(undefined)).toBe(
             BYOM_OVERLAY_REGISTRATION_FAILED_MESSAGE,
         );
+    });
+});
+
+// ==========================================================================
+// The caveat helpers
+//
+// These answer "why can this storefront not serve a PDP?" after the fact.
+// They exist because setup used to report plain success in exactly these
+// cases: the "overlay not registered" check was gated on the overlay URL
+// being truthy, so turning BYOM off, or supplying a URL the resolver
+// rejected, skipped the check entirely and the run ended on "Storefront
+// setup completed successfully!" for a storefront whose every product page
+// would 401.
+// ==========================================================================
+
+describe('explainAbsentOverlay', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockEnabledValue = undefined;
+    });
+
+    it('blames the missing URL when BYOM is on', () => {
+        mockEnabledValue = true;
+        expect(explainAbsentOverlay()).toBe(BYOM_OVERLAY_URL_MISSING_MESSAGE);
+    });
+
+    it('blames the toggle when BYOM is off', () => {
+        // Two different causes need two different sentences: "not registered"
+        // is wrong when there was nothing to register, and one of the two may
+        // be deliberate while the other is a misconfiguration the SC can fix.
+        mockEnabledValue = false;
+        expect(explainAbsentOverlay()).toBe(BYOM_DISABLED_MESSAGE);
+    });
+
+    it('treats an unset toggle as on, so the caveat names the URL', () => {
+        // The declared default is true. Reading it as false would tell every SC
+        // who never touched the setting to go turn on something already on.
+        mockEnabledValue = undefined;
+        expect(explainAbsentOverlay()).toBe(BYOM_OVERLAY_URL_MISSING_MESSAGE);
+    });
+});
+
+describe('addPdpCaveat', () => {
+    it('creates the list on a carrier that has none yet', () => {
+        const target: { pdpCaveats?: string[] } = {};
+        addPdpCaveat(target, 'first');
+        expect(target.pdpCaveats).toEqual(['first']);
+    });
+
+    it('appends to an existing list, preserving order', () => {
+        const target = { pdpCaveats: ['first'] };
+        addPdpCaveat(target, 'second');
+        expect(target.pdpCaveats).toEqual(['first', 'second']);
+    });
+
+    it('skips a caveat already present', () => {
+        // Phase 3's catch path and its success path can both fire for one run,
+        // and the SC should not read the same sentence twice.
+        const target = { pdpCaveats: ['first'] };
+        addPdpCaveat(target, 'first');
+        expect(target.pdpCaveats).toEqual(['first']);
+    });
+
+    it('keeps a pre-populated list rather than replacing it', () => {
+        const existing = ['kept'];
+        const target = { pdpCaveats: existing };
+        addPdpCaveat(target, 'added');
+        expect(target.pdpCaveats).toBe(existing);
+        expect(target.pdpCaveats).toEqual(['kept', 'added']);
+    });
+});
+
+describe('describeSmart404Skip', () => {
+    it('names the publisher’s own reason in parentheses when it gave one', () => {
+        expect(describeSmart404Skip('404 handler already present')).toBe(
+            'Product detail pages may not recover on first visit: the smart-404 handler ' +
+                'was not installed (404 handler already present). Reset the storefront to ' +
+                'reinstall it.',
+        );
+    });
+
+    it('reads cleanly when no reason was given', () => {
+        expect(describeSmart404Skip()).toBe(
+            'Product detail pages may not recover on first visit: the smart-404 handler ' +
+                'was not installed. Reset the storefront to reinstall it.',
+        );
+    });
+
+    it('reads an empty reason as no reason, not as empty parentheses', () => {
+        expect(describeSmart404Skip('')).toBe(describeSmart404Skip());
     });
 });

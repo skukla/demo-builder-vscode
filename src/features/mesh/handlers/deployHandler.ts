@@ -14,6 +14,7 @@
  * what each does with the RESULT: toasts there, a tool response here.
  */
 
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import type { MeshDeployBlock } from '@/features/mesh/services/deployMeshHeadless';
 import { deployMeshWithFeedback } from '@/features/mesh/services/deployMeshWithFeedback';
 import { ErrorCode } from '@/types/errorCodes';
@@ -39,6 +40,9 @@ export const handleDeployApiMesh: MessageHandler = async (context) => {
     }
 
     const result = await deployMeshWithFeedback({
+        authManager: ServiceLocator.getAuthenticationService(),
+        secrets: ServiceLocator.getSecretStorage() ?? undefined,
+        commandManager: ServiceLocator.getCommandExecutor(),
         project,
         stateManager: context.stateManager,
         logger: context.logger,

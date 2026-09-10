@@ -33,7 +33,7 @@ import {
     type ExportRequest,
 } from '../services/dataInstallerWriteClient';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
-import { ACCS_GRAPHQL_ENDPOINT, PAAS_URL } from '@/features/components/config/envVarKeys';
+import { ACCS_GRAPHQL_ENDPOINT, PAAS_URL } from '@/core/config/envVarKeys';
 import { lookupComponentConfigValue } from '@/features/components/services/envVarHelpers';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';

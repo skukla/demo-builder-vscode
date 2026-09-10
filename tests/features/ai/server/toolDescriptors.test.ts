@@ -6,24 +6,38 @@
  * `confirm` gating — all without touching vscode.
  */
 
+import { z } from 'zod';
 import { STATUS_DESCRIPTORS } from '@/features/ai/server/statusDescriptors';
-import { defaultShape, registerDescriptorTools, type ToolDescriptor } from '@/features/ai/server/toolDescriptors';
+import {
+    defaultShape,
+    registerDescriptorTools,
+    type ToolDescriptor,
+} from '@/features/ai/server/toolDescriptors';
 import type { HandlerContext, HandlerMap, HandlerResponse } from '@/types/handlers';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 
 /** Fake McpServer capturing registrations. */
 function fakeServer() {
-     
-    const tools = new Map<string, { inputSchema: any; handler: (args: any) => Promise<any> }>();
+    const tools = new Map<
+        string,
+        { inputSchema: any; def: any; handler: (args: any) => Promise<any> }
+    >();
     return {
-         
-        registerTool(name: string, def: { inputSchema: any }, handler: (args: any) => Promise<any>) {
-            tools.set(name, { inputSchema: def.inputSchema, handler });
+        registerTool(
+            name: string,
+            def: { inputSchema?: unknown },
+            handler: (args: any) => Promise<any>
+        ) {
+            // The WHOLE definition is kept: annotations travel to the client in
+            // tools/list and the dry run gates on them, so dropping them here would
+            // leave the declaration unconstrained.
+            tools.set(name, { inputSchema: def.inputSchema, def, handler });
         },
         tools,
     };
 }
 
-const ctxFactory = () => ({}) as HandlerContext;
+const ctxFactory = () => createMockHandlerContext();
 
 function textOf(result: { content: Array<{ text: string }> }): string {
     return result.content[0].text;
@@ -34,6 +48,13 @@ describe('defaultShape', () => {
         expect(defaultShape({ success: true, data: { a: 1 } } as HandlerResponse)).toBe('{"a":1}');
     });
 
+    it('unwraps data ONLY when it is the lone field', () => {
+        // The unwrap is a convenience for the common single-payload handler; doing
+        // it whenever `data` is present would silently drop every sibling field.
+        const res = { success: true, data: { a: 1 }, warning: 'partial' } as unknown as HandlerResponse;
+        expect(defaultShape(res)).toBe('{"data":{"a":1},"warning":"partial"}');
+    });
+
     it('strips the success flag and keeps remaining fields', () => {
         const res = { success: true, status: 'ok', count: 2 } as unknown as HandlerResponse;
         expect(defaultShape(res)).toBe('{"status":"ok","count":2}');
@@ -42,6 +63,36 @@ describe('defaultShape', () => {
     it('renders errors as terse text with the code', () => {
         const res = { success: false, error: 'nope', code: 'X1' } as unknown as HandlerResponse;
         expect(defaultShape(res)).toBe('Error: nope [X1]');
+    });
+
+    it('keeps a failure that carries structured data — the needsAuth handoff survives', () => {
+        /**
+         * The regression this guards is not hypothetical. `dataInstallerHandlers`
+         * returns exactly this shape from its headless branch, deliberately, so an
+         * AGENT is told to sign in rather than prompted with a modal. Until
+         * 2026-08-31 defaultShape rendered it as `Error: … [AUTH_REQUIRED]` and
+         * dropped the marker, so the best auth handoff in the repo never reached
+         * the agent that needed it.
+         */
+        const res = {
+            success: false,
+            error: 'Adobe sign-in required.',
+            code: 'AUTH_REQUIRED',
+            needsAuth: 'adobe',
+        } as unknown as HandlerResponse;
+        const out = JSON.parse(defaultShape(res));
+        expect(out).toEqual({
+            error: 'Adobe sign-in required.',
+            code: 'AUTH_REQUIRED',
+            needsAuth: 'adobe',
+        });
+    });
+
+    it('CONTROL: a plain failure still gets the terse string, not JSON', () => {
+        // The terse form is deliberate — this output is billed as context tokens
+        // on every call. Only a failure carrying MORE than error/code earns JSON.
+        const res = { success: false, error: 'plain' } as unknown as HandlerResponse;
+        expect(defaultShape(res)).toBe('Error: plain');
     });
 
     it('never pretty-prints (no newlines)', () => {
@@ -56,7 +107,14 @@ describe('registerDescriptorTools', () => {
             'my-type': async (_ctx, args) => ({ success: true, data: { echoed: args } }),
         };
         const descriptors: ToolDescriptor[] = [
-            { tool: 'my_tool', description: 'x', map, type: 'my-type', readOnly: true },
+            {
+                needsAuth: false,
+                tool: 'my_tool',
+                description: 'x',
+                map,
+                type: 'my-type',
+                readOnly: true,
+            },
         ];
         const server = fakeServer();
 
@@ -74,8 +132,18 @@ describe('registerDescriptorTools', () => {
 
         registerDescriptorTools(
             server,
-            [{ tool: 'danger', description: 'x', map, type: 'do-it', confirm: true, readOnly: false }],
-            ctxFactory,
+            [
+                {
+                    needsAuth: false,
+                    tool: 'danger',
+                    description: 'x',
+                    map,
+                    type: 'do-it',
+                    confirm: true,
+                    readOnly: false,
+                },
+            ],
+            ctxFactory
         );
 
         const blocked = await server.tools.get('danger')!.handler({});
@@ -93,14 +161,179 @@ describe('registerDescriptorTools', () => {
         registerDescriptorTools(
             server,
             [
-                { tool: 'safe', description: 'x', map, type: 't', readOnly: true },
-                { tool: 'gated', description: 'x', map, type: 't', confirm: true, readOnly: false },
+                {
+                    needsAuth: false,
+                    tool: 'safe',
+                    description: 'x',
+                    map,
+                    type: 't',
+                    readOnly: true,
+                },
+                {
+                    needsAuth: false,
+                    tool: 'gated',
+                    description: 'x',
+                    map,
+                    type: 't',
+                    confirm: true,
+                    readOnly: false,
+                },
             ],
-            ctxFactory,
+            ctxFactory
         );
 
         expect(server.tools.get('safe')!.inputSchema.confirm).toBeUndefined();
         expect(server.tools.get('gated')!.inputSchema.confirm).toBeDefined();
+    });
+
+    it('declares each row to the client — annotations mirror readOnly and confirm', async () => {
+        const map: HandlerMap = { t: async () => ({ success: true }) };
+        const server = fakeServer();
+        registerDescriptorTools(
+            server,
+            [
+                {
+                    needsAuth: false,
+                    tool: 'reader',
+                    description: 'reads things',
+                    map,
+                    type: 't',
+                    readOnly: true,
+                },
+                {
+                    needsAuth: ['adobe'],
+                    tool: 'wrecker',
+                    description: 'breaks things',
+                    map,
+                    type: 't',
+                    confirm: true,
+                    readOnly: false,
+                },
+            ],
+            ctxFactory
+        );
+
+        expect(server.tools.get('reader')!.def.annotations).toStrictEqual({
+            readOnlyHint: true,
+            // Only a confirm-gated row is destructive; the two say the same thing
+            // in one vocabulary rather than two that can drift apart.
+            destructiveHint: false,
+        });
+        expect(server.tools.get('reader')!.def.needsAuth).toBe(false);
+        expect(server.tools.get('reader')!.def.description).toBe('reads things');
+
+        expect(server.tools.get('wrecker')!.def.annotations).toStrictEqual({
+            readOnlyHint: false,
+            destructiveHint: true,
+        });
+        expect(server.tools.get('wrecker')!.def.needsAuth).toStrictEqual(['adobe']);
+    });
+
+    it("keeps a row's own input schema fields alongside the confirm flag", async () => {
+        const map: HandlerMap = { t: async () => ({ success: true }) };
+        const server = fakeServer();
+        registerDescriptorTools(
+            server,
+            [
+                {
+                    needsAuth: false,
+                    tool: 'gated_with_args',
+                    description: 'x',
+                    map,
+                    type: 't',
+                    inputSchema: { owner: z.string(), repo: z.string() },
+                    confirm: true,
+                    readOnly: false,
+                },
+            ],
+            ctxFactory
+        );
+
+        const schema = server.tools.get('gated_with_args')!.inputSchema;
+        expect(Object.keys(schema).sort()).toStrictEqual(['confirm', 'owner', 'repo']);
+        expect(schema.owner.parse('skukla')).toBe('skukla');
+    });
+
+    it('refuses a confirm-gated tool called with NO arguments at all', async () => {
+        // An MCP client may send nothing; reading through a missing argument object
+        // would turn the guard into a crash.
+        const handler = jest.fn(async () => ({ success: true }));
+        const server = fakeServer();
+        registerDescriptorTools(
+            server,
+            [
+                {
+                    needsAuth: false,
+                    tool: 'danger',
+                    description: 'x',
+                    map: { 'do-it': handler },
+                    type: 'do-it',
+                    confirm: true,
+                    readOnly: false,
+                },
+            ],
+            ctxFactory
+        );
+
+        const blocked = await server.tools.get('danger')!.handler(undefined);
+        expect(textOf(blocked)).toMatch(/requires confirm:true/);
+        expect(handler).not.toHaveBeenCalled();
+    });
+
+    it('hands the call arguments to the shaper, so a row can vary its projection', async () => {
+        // The inventory: 'counts' | 'full' pattern lives on this — without the
+        // arguments a row could only ever pick one size.
+        const map: HandlerMap = { t: async () => ({ success: true, data: { n: 5 } }) };
+        const server = fakeServer();
+        registerDescriptorTools(
+            server,
+            [
+                {
+                    needsAuth: false,
+                    tool: 'varies',
+                    description: 'x',
+                    map,
+                    type: 't',
+                    shape: (_res, args) => JSON.stringify({ sawArgs: args }),
+                    readOnly: true,
+                },
+            ],
+            ctxFactory
+        );
+
+        const result = await server.tools.get('varies')!.handler({ inventory: 'full' });
+        expect(JSON.parse(textOf(result))).toStrictEqual({ sawArgs: { inventory: 'full' } });
+    });
+
+    it('dispatches with the PLAIN context when no capture is asked for', async () => {
+        // The capturing wrapper replaces sendMessage. A row that did not ask for it
+        // must reach the handler with the context the factory built.
+        const sendMessage = jest.fn(async () => {});
+        const seen: unknown[] = [];
+        const map: HandlerMap = {
+            t: async (ctx: HandlerContext) => {
+                seen.push(ctx.sendMessage);
+                return { success: true, ok: true };
+            },
+        };
+        const server = fakeServer();
+        registerDescriptorTools(
+            server,
+            [
+                {
+                    needsAuth: false,
+                    tool: 'plain',
+                    description: 'x',
+                    map,
+                    type: 't',
+                    readOnly: true,
+                },
+            ],
+            () => createMockHandlerContext({ sendMessage })
+        );
+
+        await server.tools.get('plain')!.handler({});
+        expect(seen[0]).toBe(sendMessage);
     });
 
     it('applies a custom shape when provided', async () => {
@@ -108,8 +341,18 @@ describe('registerDescriptorTools', () => {
         const server = fakeServer();
         registerDescriptorTools(
             server,
-            [{ tool: 'custom', description: 'x', map, type: 't', shape: () => 'SHAPED', readOnly: true }],
-            ctxFactory,
+            [
+                {
+                    needsAuth: false,
+                    tool: 'custom',
+                    description: 'x',
+                    map,
+                    type: 't',
+                    shape: () => 'SHAPED',
+                    readOnly: true,
+                },
+            ],
+            ctxFactory
         );
 
         const result = await server.tools.get('custom')!.handler({});
@@ -135,22 +378,38 @@ describe('capturePayloadFrom', () => {
     };
 
     function serverFor(row: Partial<ToolDescriptor>) {
-        const tools = new Map<string, (a: unknown) => Promise<{ content: Array<{ text: string }> }>>();
+        const tools = new Map<
+            string,
+            (a: unknown) => Promise<{ content: Array<{ text: string }> }>
+        >();
         const server = {
-            registerTool(name: string, _d: unknown, h: (a: unknown) => Promise<{ content: Array<{ text: string }> }>) {
+            registerTool(
+                name: string,
+                _d: unknown,
+                h: (a: unknown) => Promise<{ content: Array<{ text: string }> }>
+            ) {
                 tools.set(name, h);
             },
         };
         registerDescriptorTools(
             server,
-            [{ tool: 't', description: 'd', map: dispatchOnly, type: 'check-thing', ...row } as ToolDescriptor],
-            () => ({ sendMessage: async () => {} }) as unknown as HandlerContext,
+            [
+                {
+                    needsAuth: false,
+                    tool: 't',
+                    description: 'd',
+                    map: dispatchOnly,
+                    type: 'check-thing',
+                    ...row,
+                } as ToolDescriptor,
+            ],
+            () => createMockHandlerContext({ sendMessage: async () => {} })
         );
         return async () => JSON.parse((await tools.get('t')!({})).content[0].text);
     }
 
     it('WITHOUT it, the tool returns nothing — the "cannot fail" defect', async () => {
-        expect(await serverFor({})()).toEqual({});
+        expect(await serverFor({})()).toStrictEqual({});
     });
 
     it('WITH it, the pushed payload becomes the tool result', async () => {
@@ -161,21 +420,34 @@ describe('capturePayloadFrom', () => {
     });
 
     it('ignores an event name that never fires, rather than inventing one', async () => {
-        expect(await serverFor({ capturePayloadFrom: 'never-sent' })()).toEqual({});
+        expect(await serverFor({ capturePayloadFrom: 'never-sent' })()).toStrictEqual({});
     });
 
-    it('lets the handler\'s own return win over the captured payload', async () => {
+    it("lets the handler's own return win over the captured payload", async () => {
         const both: HandlerMap = {
             'check-thing': async (ctx: HandlerContext) => {
                 await ctx.sendMessage('thing-status', { isReady: false });
                 return { success: true, isReady: true };
             },
         };
-        const tools = new Map<string, (a: unknown) => Promise<{ content: Array<{ text: string }> }>>();
+        const tools = new Map<
+            string,
+            (a: unknown) => Promise<{ content: Array<{ text: string }> }>
+        >();
         registerDescriptorTools(
             { registerTool: (n: string, _d: unknown, h: never) => tools.set(n, h) },
-            [{ tool: 't', description: 'd', map: both, type: 'check-thing', capturePayloadFrom: 'thing-status', readOnly: true }],
-            () => ({ sendMessage: async () => {} }) as unknown as HandlerContext,
+            [
+                {
+                    needsAuth: false,
+                    tool: 't',
+                    description: 'd',
+                    map: both,
+                    type: 'check-thing',
+                    capturePayloadFrom: 'thing-status',
+                    readOnly: true,
+                },
+            ],
+            () => createMockHandlerContext({ sendMessage: async () => {} })
         );
         const out = JSON.parse((await tools.get('t')!({})).content[0].text);
         expect(out.isReady).toBe(true);
@@ -188,11 +460,24 @@ describe('capturePayloadFrom', () => {
                 return { success: false, error: 'nope' };
             },
         };
-        const tools = new Map<string, (a: unknown) => Promise<{ content: Array<{ text: string }> }>>();
+        const tools = new Map<
+            string,
+            (a: unknown) => Promise<{ content: Array<{ text: string }> }>
+        >();
         registerDescriptorTools(
             { registerTool: (n: string, _d: unknown, h: never) => tools.set(n, h) },
-            [{ tool: 't', description: 'd', map: failing, type: 'check-thing', capturePayloadFrom: 'thing-status', readOnly: true }],
-            () => ({ sendMessage: async () => {} }) as unknown as HandlerContext,
+            [
+                {
+                    needsAuth: false,
+                    tool: 't',
+                    description: 'd',
+                    map: failing,
+                    type: 'check-thing',
+                    capturePayloadFrom: 'thing-status',
+                    readOnly: true,
+                },
+            ],
+            () => createMockHandlerContext({ sendMessage: async () => {} })
         );
         expect((await tools.get('t')!({})).content[0].text).toMatch(/^Error: nope/);
     });
@@ -209,11 +494,24 @@ describe('capturePayloadFrom — when the payload disagrees with the return', ()
                 return returned;
             },
         };
-        const tools = new Map<string, (a: unknown) => Promise<{ content: Array<{ text: string }> }>>();
+        const tools = new Map<
+            string,
+            (a: unknown) => Promise<{ content: Array<{ text: string }> }>
+        >();
         registerDescriptorTools(
             { registerTool: (n: string, _d: unknown, h: never) => tools.set(n, h) },
-            [{ tool: 't', description: 'd', map, type: 'do-thing', capturePayloadFrom: 'thing-result', readOnly: false }],
-            () => ({ sendMessage: async () => {} }) as unknown as HandlerContext,
+            [
+                {
+                    needsAuth: false,
+                    tool: 't',
+                    description: 'd',
+                    map,
+                    type: 'do-thing',
+                    capturePayloadFrom: 'thing-result',
+                    readOnly: false,
+                },
+            ],
+            () => createMockHandlerContext({ sendMessage: async () => {} })
         );
         return tools.get('t')!({});
     }
@@ -221,7 +519,7 @@ describe('capturePayloadFrom — when the payload disagrees with the return', ()
     it('reports the operation failure, not the handler success', async () => {
         const out = await run(
             { success: false, error: 'Store discovery failed: 404' },
-            { success: true },
+            { success: true }
         );
         expect(out.content[0].text).toMatch(/^Error: Store discovery failed: 404/);
     });
@@ -252,8 +550,17 @@ describe('argDefaults', () => {
         const tools = new Map<string, (a: unknown) => Promise<unknown>>();
         registerDescriptorTools(
             { registerTool: (n: string, _d: unknown, h: never) => tools.set(n, h) },
-            [{ tool: 't', description: 'd', map, type: 'do-thing', ...row } as ToolDescriptor],
-            () => ({ sendMessage: async () => {} }) as unknown as HandlerContext,
+            [
+                {
+                    needsAuth: false,
+                    tool: 't',
+                    description: 'd',
+                    map,
+                    type: 'do-thing',
+                    ...row,
+                } as ToolDescriptor,
+            ],
+            () => createMockHandlerContext({ sendMessage: async () => {} })
         );
         return tools.get('t')!(sent).then(() => seen[0]);
     }
@@ -266,13 +573,13 @@ describe('argDefaults', () => {
 
     it('OVERRIDES a caller trying to turn the guard off', async () => {
         expect(
-            await capture({ argDefaults: { skipTrigger: true } }, { skipTrigger: false }),
+            await capture({ argDefaults: { skipTrigger: true } }, { skipTrigger: false })
         ).toMatchObject({ skipTrigger: true });
     });
 
-    it('leaves the caller\'s other arguments alone', async () => {
+    it("leaves the caller's other arguments alone", async () => {
         expect(
-            await capture({ argDefaults: { skipTrigger: true } }, { owner: 'me', repo: 'site' }),
+            await capture({ argDefaults: { skipTrigger: true } }, { owner: 'me', repo: 'site' })
         ).toMatchObject({ owner: 'me', repo: 'site', skipTrigger: true });
     });
 
@@ -295,11 +602,23 @@ describe('preflight', () => {
                 return { success: true, data: 'real work' };
             },
         };
-        const tools = new Map<string, (a: unknown) => Promise<{ content: Array<{ text: string }> }>>();
+        const tools = new Map<
+            string,
+            (a: unknown) => Promise<{ content: Array<{ text: string }> }>
+        >();
         registerDescriptorTools(
             { registerTool: (n: string, _d: unknown, h: never) => tools.set(n, h) },
-            [{ tool: 't', description: 'd', map, type: 'do-thing', ...row } as ToolDescriptor],
-            () => ({ sendMessage: async () => {} }) as unknown as HandlerContext,
+            [
+                {
+                    needsAuth: false,
+                    tool: 't',
+                    description: 'd',
+                    map,
+                    type: 'do-thing',
+                    ...row,
+                } as ToolDescriptor,
+            ],
+            () => createMockHandlerContext({ sendMessage: async () => {} })
         );
         return { call: (a: unknown) => tools.get('t')!(a), ran };
     }
@@ -307,7 +626,7 @@ describe('preflight', () => {
     it('returns the handoff and NEVER dispatches', async () => {
         const t = build({ preflight: () => HANDOFF });
         expect(JSON.parse((await t.call({})).content[0].text)).toEqual(HANDOFF);
-        expect(t.ran).toEqual([]);
+        expect(t.ran).toStrictEqual([]);
     });
 
     it('dispatches normally when preflight returns nothing', async () => {
@@ -328,7 +647,7 @@ describe('preflight', () => {
     it('an unconfirmed destructive row still refuses first', async () => {
         const t = build({ confirm: true, preflight: () => HANDOFF });
         expect((await t.call({})).content[0].text).toMatch(/requires confirm:true/);
-        expect(t.ran).toEqual([]);
+        expect(t.ran).toStrictEqual([]);
     });
 });
 

@@ -20,18 +20,33 @@ jest.mock('fs', () => ({
     realpathSync: jest.fn((p: string) => p),
 }));
 
+import { validateProjectPath } from '@/core/validation/PathSafetyValidator';
 import {
     validateAdobeResourceId,
-    validateProjectNameSecurity,
-    validateProjectPath,
+    validateMeshId,
     validateOrgId,
     validateProjectId,
     validateWorkspaceId,
-    validateMeshId
-} from '@/core/validation';
+} from '@/core/validation/validators/AdobeResourceValidator';
+import { validateProjectNameSecurity } from '@/core/validation/validators/ProjectNameValidator';
+
+/**
+ * A value that CLAIMS to be a `T` and is not.
+ *
+ * These validators declare typed parameters and then check the type anyway —
+ * `validateAdobeResourceId(id: string)` opens with `typeof id !== 'string'`. That
+ * guard is deliberate: the values arrive from webview messages and JSON, where the
+ * declared type is a promise nobody kept. Testing it means handing over a liar.
+ *
+ * `lyingAbout(null)` said that badly. It disabled checking of the WHOLE call, including
+ * the second argument, so a typo there would have gone unnoticed too. This names
+ * exactly one lie and leaves the rest of the call checked.
+ */
+function lyingAbout<T>(value: unknown): T {
+    return value as T;
+}
 
 describe('securityValidation - Input Validation', () => {
-
     // =================================================================
     // validateAdobeResourceId Tests
     // =================================================================
@@ -60,98 +75,116 @@ describe('securityValidation - Input Validation', () => {
             });
 
             it('should accept typical Adobe resource ID formats', () => {
-                expect(() => validateAdobeResourceId('1234567890abcdef12345678', 'project ID')).not.toThrow();
+                expect(() =>
+                    validateAdobeResourceId('1234567890abcdef12345678', 'project ID')
+                ).not.toThrow();
                 // Note: @ is NOT allowed - only alphanumeric, hyphens, underscores
             });
         });
 
         describe('command injection attacks', () => {
             it('should reject shell metacharacters - semicolon', () => {
-                expect(() => validateAdobeResourceId('abc; rm -rf /', 'test'))
-                    .toThrow(/illegal characters/);
+                expect(() => validateAdobeResourceId('abc; rm -rf /', 'test')).toThrow(
+                    /illegal characters/
+                );
             });
 
             it('should reject shell metacharacters - pipe', () => {
-                expect(() => validateAdobeResourceId('abc | cat /etc/passwd', 'test'))
-                    .toThrow(/illegal characters/);
+                expect(() => validateAdobeResourceId('abc | cat /etc/passwd', 'test')).toThrow(
+                    /illegal characters/
+                );
             });
 
             it('should reject shell metacharacters - ampersand', () => {
-                expect(() => validateAdobeResourceId('abc && whoami', 'test'))
-                    .toThrow(/illegal characters/);
+                expect(() => validateAdobeResourceId('abc && whoami', 'test')).toThrow(
+                    /illegal characters/
+                );
             });
 
             it('should reject shell metacharacters - backticks', () => {
-                expect(() => validateAdobeResourceId('abc`whoami`', 'test'))
-                    .toThrow(/illegal characters/);
+                expect(() => validateAdobeResourceId('abc`whoami`', 'test')).toThrow(
+                    /illegal characters/
+                );
             });
 
             it('should reject shell metacharacters - dollar sign', () => {
-                expect(() => validateAdobeResourceId('abc$(whoami)', 'test'))
-                    .toThrow(/illegal characters/);
-                expect(() => validateAdobeResourceId('${PATH}', 'test'))
-                    .toThrow(/illegal characters/);
+                expect(() => validateAdobeResourceId('abc$(whoami)', 'test')).toThrow(
+                    /illegal characters/
+                );
+                expect(() => validateAdobeResourceId('${PATH}', 'test')).toThrow(
+                    /illegal characters/
+                );
             });
 
             it('should reject shell metacharacters - redirection', () => {
-                expect(() => validateAdobeResourceId('abc > /tmp/file', 'test'))
-                    .toThrow(/illegal characters/);
-                expect(() => validateAdobeResourceId('abc < /etc/passwd', 'test'))
-                    .toThrow(/illegal characters/);
+                expect(() => validateAdobeResourceId('abc > /tmp/file', 'test')).toThrow(
+                    /illegal characters/
+                );
+                expect(() => validateAdobeResourceId('abc < /etc/passwd', 'test')).toThrow(
+                    /illegal characters/
+                );
             });
 
             it('should reject shell metacharacters - parentheses', () => {
-                expect(() => validateAdobeResourceId('abc(test)', 'test'))
-                    .toThrow(/illegal characters/);
+                expect(() => validateAdobeResourceId('abc(test)', 'test')).toThrow(
+                    /illegal characters/
+                );
             });
 
             it('should reject quotes', () => {
-                expect(() => validateAdobeResourceId('abc"test"', 'test'))
-                    .toThrow(/illegal characters/);
-                expect(() => validateAdobeResourceId("abc'test'", 'test'))
-                    .toThrow(/illegal characters/);
+                expect(() => validateAdobeResourceId('abc"test"', 'test')).toThrow(
+                    /illegal characters/
+                );
+                expect(() => validateAdobeResourceId("abc'test'", 'test')).toThrow(
+                    /illegal characters/
+                );
             });
 
             it('should reject backslashes', () => {
-                expect(() => validateAdobeResourceId('abc\\test', 'test'))
-                    .toThrow(/illegal characters/);
+                expect(() => validateAdobeResourceId('abc\\test', 'test')).toThrow(
+                    /illegal characters/
+                );
             });
         });
 
         describe('edge cases', () => {
             it('should reject empty strings', () => {
-                expect(() => validateAdobeResourceId('', 'test'))
-                    .toThrow(/must be a non-empty string/);
+                expect(() => validateAdobeResourceId('', 'test')).toThrow(
+                    /must be a non-empty string/
+                );
             });
 
             it('should reject whitespace-only strings', () => {
-                expect(() => validateAdobeResourceId('   ', 'test'))
-                    .toThrow(/illegal characters/);
+                expect(() => validateAdobeResourceId('   ', 'test')).toThrow(/illegal characters/);
             });
 
             it('should reject IDs with spaces', () => {
-                expect(() => validateAdobeResourceId('abc 123', 'test'))
-                    .toThrow(/illegal characters/);
+                expect(() => validateAdobeResourceId('abc 123', 'test')).toThrow(
+                    /illegal characters/
+                );
             });
 
             it('should reject null/undefined', () => {
-                expect(() => validateAdobeResourceId(null as any, 'test'))
-                    .toThrow(/must be a non-empty string/);
-                expect(() => validateAdobeResourceId(undefined as any, 'test'))
-                    .toThrow(/must be a non-empty string/);
+                expect(() => validateAdobeResourceId(lyingAbout(null), 'test')).toThrow(
+                    /must be a non-empty string/
+                );
+                expect(() => validateAdobeResourceId(lyingAbout(undefined), 'test')).toThrow(
+                    /must be a non-empty string/
+                );
             });
 
             it('should reject non-string values', () => {
-                expect(() => validateAdobeResourceId(123 as any, 'test'))
-                    .toThrow(/must be a non-empty string/);
-                expect(() => validateAdobeResourceId({} as any, 'test'))
-                    .toThrow(/must be a non-empty string/);
+                expect(() => validateAdobeResourceId(lyingAbout(123), 'test')).toThrow(
+                    /must be a non-empty string/
+                );
+                expect(() => validateAdobeResourceId(lyingAbout({}), 'test')).toThrow(
+                    /must be a non-empty string/
+                );
             });
 
             it('should reject IDs exceeding 100 characters', () => {
                 const longId = 'a'.repeat(101);
-                expect(() => validateAdobeResourceId(longId, 'test'))
-                    .toThrow(/too long/);
+                expect(() => validateAdobeResourceId(longId, 'test')).toThrow(/too long/);
             });
 
             it('should accept IDs at exactly 100 characters', () => {
@@ -162,23 +195,30 @@ describe('securityValidation - Input Validation', () => {
 
         describe('special characters', () => {
             it('should reject special characters', () => {
-                expect(() => validateAdobeResourceId('abc@test', 'test'))
-                    .toThrow(/illegal characters/);
-                expect(() => validateAdobeResourceId('abc#test', 'test'))
-                    .toThrow(/illegal characters/);
-                expect(() => validateAdobeResourceId('abc%test', 'test'))
-                    .toThrow(/illegal characters/);
-                expect(() => validateAdobeResourceId('abc&test', 'test'))
-                    .toThrow(/illegal characters/);
-                expect(() => validateAdobeResourceId('abc*test', 'test'))
-                    .toThrow(/illegal characters/);
+                expect(() => validateAdobeResourceId('abc@test', 'test')).toThrow(
+                    /illegal characters/
+                );
+                expect(() => validateAdobeResourceId('abc#test', 'test')).toThrow(
+                    /illegal characters/
+                );
+                expect(() => validateAdobeResourceId('abc%test', 'test')).toThrow(
+                    /illegal characters/
+                );
+                expect(() => validateAdobeResourceId('abc&test', 'test')).toThrow(
+                    /illegal characters/
+                );
+                expect(() => validateAdobeResourceId('abc*test', 'test')).toThrow(
+                    /illegal characters/
+                );
             });
 
             it('should reject dots and slashes', () => {
-                expect(() => validateAdobeResourceId('abc.test', 'test'))
-                    .toThrow(/illegal characters/);
-                expect(() => validateAdobeResourceId('abc/test', 'test'))
-                    .toThrow(/illegal characters/);
+                expect(() => validateAdobeResourceId('abc.test', 'test')).toThrow(
+                    /illegal characters/
+                );
+                expect(() => validateAdobeResourceId('abc/test', 'test')).toThrow(
+                    /illegal characters/
+                );
             });
         });
     });
@@ -193,8 +233,9 @@ describe('securityValidation - Input Validation', () => {
         });
 
         it('should reject invalid organization IDs', () => {
-            expect(() => validateOrgId('invalid; org'))
-                .toThrow(/organization ID.*illegal characters/);
+            expect(() => validateOrgId('invalid; org')).toThrow(
+                /organization ID.*illegal characters/
+            );
         });
     });
 
@@ -204,8 +245,9 @@ describe('securityValidation - Input Validation', () => {
         });
 
         it('should reject invalid project IDs', () => {
-            expect(() => validateProjectId('invalid$(whoami)'))
-                .toThrow(/project ID.*illegal characters/);
+            expect(() => validateProjectId('invalid$(whoami)')).toThrow(
+                /project ID.*illegal characters/
+            );
         });
     });
 
@@ -215,8 +257,9 @@ describe('securityValidation - Input Validation', () => {
         });
 
         it('should reject invalid workspace IDs', () => {
-            expect(() => validateWorkspaceId('invalid | cat'))
-                .toThrow(/workspace ID.*illegal characters/);
+            expect(() => validateWorkspaceId('invalid | cat')).toThrow(
+                /workspace ID.*illegal characters/
+            );
         });
     });
 
@@ -227,8 +270,7 @@ describe('securityValidation - Input Validation', () => {
         });
 
         it('should reject command injection in mesh IDs', () => {
-            expect(() => validateMeshId('abc; rm -rf /'))
-                .toThrow(/mesh ID.*illegal characters/);
+            expect(() => validateMeshId('abc; rm -rf /')).toThrow(/mesh ID.*illegal characters/);
         });
     });
 
@@ -252,95 +294,87 @@ describe('securityValidation - Input Validation', () => {
 
         describe('path traversal attacks', () => {
             it('should reject parent directory references', () => {
-                expect(() => validateProjectNameSecurity('../etc/passwd'))
-                    .toThrow(/path separators/);
-                expect(() => validateProjectNameSecurity('..'))
-                    .toThrow(/path separators/);
-                expect(() => validateProjectNameSecurity('abc..def'))
-                    .toThrow(/path separators/);
+                expect(() => validateProjectNameSecurity('../etc/passwd')).toThrow(
+                    /path separators/
+                );
+                expect(() => validateProjectNameSecurity('..')).toThrow(/path separators/);
+                expect(() => validateProjectNameSecurity('abc..def')).toThrow(/path separators/);
             });
 
             it('should reject forward slashes', () => {
-                expect(() => validateProjectNameSecurity('abc/def'))
-                    .toThrow(/path separators/);
-                expect(() => validateProjectNameSecurity('/etc/passwd'))
-                    .toThrow(/path separators/);
+                expect(() => validateProjectNameSecurity('abc/def')).toThrow(/path separators/);
+                expect(() => validateProjectNameSecurity('/etc/passwd')).toThrow(/path separators/);
             });
 
             it('should reject backslashes', () => {
-                expect(() => validateProjectNameSecurity('abc\\def'))
-                    .toThrow(/path separators/);
-                expect(() => validateProjectNameSecurity('C:\\Windows'))
-                    .toThrow(/path separators/);
+                expect(() => validateProjectNameSecurity('abc\\def')).toThrow(/path separators/);
+                expect(() => validateProjectNameSecurity('C:\\Windows')).toThrow(/path separators/);
             });
         });
 
         describe('command injection attacks', () => {
             it('should reject semicolons', () => {
-                expect(() => validateProjectNameSecurity('proj; rm -rf /'))
-                    .toThrow(/path separators/);
+                expect(() => validateProjectNameSecurity('proj; rm -rf /')).toThrow(
+                    /path separators/
+                );
             });
 
             it('should reject pipes', () => {
                 // This contains "/" so it gets caught by path separator check
-                expect(() => validateProjectNameSecurity('proj | cat /etc/passwd'))
-                    .toThrow(/path separators/);
+                expect(() => validateProjectNameSecurity('proj | cat /etc/passwd')).toThrow(
+                    /path separators/
+                );
             });
 
             it('should reject shell metacharacters', () => {
-                expect(() => validateProjectNameSecurity('proj$(whoami)'))
-                    .toThrow(/can only contain letters/);
-                expect(() => validateProjectNameSecurity('proj`whoami`'))
-                    .toThrow(/can only contain letters/);
+                expect(() => validateProjectNameSecurity('proj$(whoami)')).toThrow(
+                    /can only contain letters/
+                );
+                expect(() => validateProjectNameSecurity('proj`whoami`')).toThrow(
+                    /can only contain letters/
+                );
             });
         });
 
         describe('reserved names', () => {
             it('should reject Windows reserved names', () => {
-                expect(() => validateProjectNameSecurity('con'))
-                    .toThrow(/reserved system name/);
-                expect(() => validateProjectNameSecurity('CON'))
-                    .toThrow(/reserved system name/);
-                expect(() => validateProjectNameSecurity('prn'))
-                    .toThrow(/reserved system name/);
-                expect(() => validateProjectNameSecurity('aux'))
-                    .toThrow(/reserved system name/);
-                expect(() => validateProjectNameSecurity('nul'))
-                    .toThrow(/reserved system name/);
+                expect(() => validateProjectNameSecurity('con')).toThrow(/reserved system name/);
+                expect(() => validateProjectNameSecurity('CON')).toThrow(/reserved system name/);
+                expect(() => validateProjectNameSecurity('prn')).toThrow(/reserved system name/);
+                expect(() => validateProjectNameSecurity('aux')).toThrow(/reserved system name/);
+                expect(() => validateProjectNameSecurity('nul')).toThrow(/reserved system name/);
             });
 
             it('should reject COM ports', () => {
-                expect(() => validateProjectNameSecurity('com1'))
-                    .toThrow(/reserved system name/);
-                expect(() => validateProjectNameSecurity('COM9'))
-                    .toThrow(/reserved system name/);
+                expect(() => validateProjectNameSecurity('com1')).toThrow(/reserved system name/);
+                expect(() => validateProjectNameSecurity('COM9')).toThrow(/reserved system name/);
             });
 
             it('should reject LPT ports', () => {
-                expect(() => validateProjectNameSecurity('lpt1'))
-                    .toThrow(/reserved system name/);
-                expect(() => validateProjectNameSecurity('LPT9'))
-                    .toThrow(/reserved system name/);
+                expect(() => validateProjectNameSecurity('lpt1')).toThrow(/reserved system name/);
+                expect(() => validateProjectNameSecurity('LPT9')).toThrow(/reserved system name/);
             });
         });
 
         describe('edge cases', () => {
             it('should reject empty strings', () => {
-                expect(() => validateProjectNameSecurity(''))
-                    .toThrow(/must be a non-empty string/);
+                expect(() => validateProjectNameSecurity('')).toThrow(/must be a non-empty string/);
             });
 
             it('should reject null/undefined', () => {
-                expect(() => validateProjectNameSecurity(null as any))
-                    .toThrow(/must be a non-empty string/);
-                expect(() => validateProjectNameSecurity(undefined as any))
-                    .toThrow(/must be a non-empty string/);
+                expect(() => validateProjectNameSecurity(lyingAbout(null))).toThrow(
+                    /must be a non-empty string/
+                );
+                expect(() => validateProjectNameSecurity(lyingAbout(undefined))).toThrow(
+                    /must be a non-empty string/
+                );
             });
 
             it('should reject names exceeding 100 characters', () => {
                 const longName = 'a'.repeat(101);
-                expect(() => validateProjectNameSecurity(longName))
-                    .toThrow(/less than 100 characters/);
+                expect(() => validateProjectNameSecurity(longName)).toThrow(
+                    /less than 100 characters/
+                );
             });
 
             it('should accept names at exactly 100 characters', () => {
@@ -349,12 +383,15 @@ describe('securityValidation - Input Validation', () => {
             });
 
             it('should reject special characters', () => {
-                expect(() => validateProjectNameSecurity('project@test'))
-                    .toThrow(/can only contain letters/);
-                expect(() => validateProjectNameSecurity('project#1'))
-                    .toThrow(/can only contain letters/);
-                expect(() => validateProjectNameSecurity('project!'))
-                    .toThrow(/can only contain letters/);
+                expect(() => validateProjectNameSecurity('project@test')).toThrow(
+                    /can only contain letters/
+                );
+                expect(() => validateProjectNameSecurity('project#1')).toThrow(
+                    /can only contain letters/
+                );
+                expect(() => validateProjectNameSecurity('project!')).toThrow(
+                    /can only contain letters/
+                );
             });
         });
     });
@@ -381,42 +418,46 @@ describe('securityValidation - Input Validation', () => {
         describe('path traversal attacks', () => {
             it('should reject paths with parent directory references', () => {
                 const maliciousPath = path.join(allowedBase, '..', '..', '..', 'etc', 'passwd');
-                expect(() => validateProjectPath(maliciousPath))
-                    .toThrow(/escapes allowed directory/);
+                expect(() => validateProjectPath(maliciousPath)).toThrow(
+                    /escapes allowed directory/
+                );
             });
 
             it('should reject absolute paths outside allowed base', () => {
-                expect(() => validateProjectPath('/etc/passwd'))
-                    .toThrow(/escapes allowed directory/);
-                expect(() => validateProjectPath('/tmp/malicious'))
-                    .toThrow(/escapes allowed directory/);
+                expect(() => validateProjectPath('/etc/passwd')).toThrow(
+                    /escapes allowed directory/
+                );
+                expect(() => validateProjectPath('/tmp/malicious')).toThrow(
+                    /escapes allowed directory/
+                );
             });
 
             it('should reject relative path traversal', () => {
                 const maliciousPath = path.join(allowedBase, 'project', '..', '..', '..', 'etc');
-                expect(() => validateProjectPath(maliciousPath))
-                    .toThrow(/escapes allowed directory/);
+                expect(() => validateProjectPath(maliciousPath)).toThrow(
+                    /escapes allowed directory/
+                );
             });
 
             it('should handle normalized paths correctly', () => {
                 // Path that looks safe but normalizes to escape
                 const sneakyPath = path.join(allowedBase, 'project/../../../etc/passwd');
-                expect(() => validateProjectPath(sneakyPath))
-                    .toThrow(/escapes allowed directory/);
+                expect(() => validateProjectPath(sneakyPath)).toThrow(/escapes allowed directory/);
             });
         });
 
         describe('edge cases', () => {
             it('should reject empty strings', () => {
-                expect(() => validateProjectPath(''))
-                    .toThrow(/must be a non-empty string/);
+                expect(() => validateProjectPath('')).toThrow(/must be a non-empty string/);
             });
 
             it('should reject null/undefined', () => {
-                expect(() => validateProjectPath(null as any))
-                    .toThrow(/must be a non-empty string/);
-                expect(() => validateProjectPath(undefined as any))
-                    .toThrow(/must be a non-empty string/);
+                expect(() => validateProjectPath(lyingAbout(null))).toThrow(
+                    /must be a non-empty string/
+                );
+                expect(() => validateProjectPath(lyingAbout(undefined))).toThrow(
+                    /must be a non-empty string/
+                );
             });
 
             it('should accept the allowed base directory itself', () => {
@@ -429,15 +470,15 @@ describe('securityValidation - Input Validation', () => {
                 it('should handle Windows paths', () => {
                     const winPath = 'C:\\Users\\test\\.demo-builder\\projects\\myproject';
                     // This will fail since it's not in the homedir, but testing the logic
-                    expect(() => validateProjectPath(winPath))
-                        .toThrow(/escapes allowed directory/);
+                    expect(() => validateProjectPath(winPath)).toThrow(/escapes allowed directory/);
                 });
             } else {
                 it('should handle Unix paths', () => {
                     const unixPath = '/home/user/.demo-builder/projects/myproject';
                     // This will fail since it's not in the homedir, but testing the logic
-                    expect(() => validateProjectPath(unixPath))
-                        .toThrow(/escapes allowed directory/);
+                    expect(() => validateProjectPath(unixPath)).toThrow(
+                        /escapes allowed directory/
+                    );
                 });
             }
         });

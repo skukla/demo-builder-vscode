@@ -1,15 +1,15 @@
 import { handleCreateProject } from '@/features/project-creation/handlers/createHandler';
-import * as _validation from '@/core/validation';
+
 import * as executor from '@/features/project-creation/handlers/executor';
 import * as _promiseUtils from '@/core/utils/promiseUtils';
-import { ServiceLocator as _ServiceLocator } from '@/core/di';
+import { ServiceLocator as _ServiceLocator } from '@/core/di/serviceLocator';
 import * as vscode from 'vscode';
 import * as _fs from 'fs';
 import { promises as fsPromises } from 'fs';
 import { GitHubAppNotInstalledError } from '@/features/eds/services/types';
-import { getActiveOrgContext } from '@/core/shell';
+import { getActiveOrgContext } from '@/core/shell/orgContextEnv';
 import {
-    createMockContext,
+    createProjectCreationContext,
     setupDefaultMocks,
     mockTimeout,
     mockExecutionFailure,
@@ -19,11 +19,10 @@ import {
 } from './createHandler.testUtils';
 
 // Mock all dependencies
-jest.mock('@/core/validation');
+jest.mock('@/core/validation/validators/ProjectNameValidator');
 jest.mock('@/features/project-creation/handlers/executor');
 jest.mock('@/core/utils/promiseUtils');
-jest.mock('@/core/di');
-jest.mock('vscode');
+jest.mock('@/core/di/serviceLocator');
 jest.mock('fs', () => ({
     existsSync: jest.fn(),
     promises: {
@@ -32,12 +31,12 @@ jest.mock('fs', () => ({
 }));
 
 describe('Project Creation - Create Handler - Errors & Cleanup', () => {
-    let mockContext: ReturnType<typeof createMockContext>;
+    let mockContext: ReturnType<typeof createProjectCreationContext>;
     let mockCommandExecutor: ReturnType<typeof setupDefaultMocks>;
 
     beforeEach(() => {
         mockCommandExecutor = setupDefaultMocks();
-        mockContext = createMockContext();
+        mockContext = createProjectCreationContext();
     });
 
     describe('timeout handling', () => {
@@ -159,9 +158,7 @@ describe('Project Creation - Create Handler - Errors & Cleanup', () => {
         it('should handle mesh cleanup failure gracefully', async () => {
             mockExecutionFailure('Creation failed');
             setupMeshCleanupScenario(mockContext, false);
-            (mockCommandExecutor.execute as jest.Mock).mockRejectedValue(
-                new Error('Mesh delete failed')
-            );
+            mockCommandExecutor.execute.mockRejectedValue(new Error('Mesh delete failed'));
 
             const result = await handleCreateProject(mockContext, mockConfig);
 
@@ -177,7 +174,7 @@ describe('Project Creation - Create Handler - Errors & Cleanup', () => {
             setupMeshCleanupScenario(mockContext, false); // meshCreatedForWorkspace = 'workspace-123'
 
             let capturedTarget: ReturnType<typeof getActiveOrgContext>;
-            (mockCommandExecutor.execute as jest.Mock).mockImplementation(async (cmd: string) => {
+            mockCommandExecutor.execute.mockImplementation(async (cmd: string) => {
                 if (cmd.includes('api-mesh:delete')) capturedTarget = getActiveOrgContext();
                 return { code: 0, stdout: 'Deleted', stderr: '' };
             });
@@ -200,7 +197,7 @@ describe('Project Creation - Create Handler - Errors & Cleanup', () => {
         it('should successfully delete mesh with exit code 0', async () => {
             mockExecutionFailure('Failed');
             setupMeshCleanupScenario(mockContext, false);
-            (mockCommandExecutor.execute as jest.Mock).mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 code: 0,
                 stdout: 'Deleted',
                 stderr: '',
@@ -216,7 +213,7 @@ describe('Project Creation - Create Handler - Errors & Cleanup', () => {
         it('should handle mesh delete with non-zero exit code', async () => {
             mockExecutionFailure('Failed');
             setupMeshCleanupScenario(mockContext, false);
-            (mockCommandExecutor.execute as jest.Mock).mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 code: 1,
                 stdout: '',
                 stderr: 'Mesh not found',

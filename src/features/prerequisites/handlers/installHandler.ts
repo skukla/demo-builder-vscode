@@ -15,12 +15,13 @@
  */
 
 import * as vscode from 'vscode';
+import { ServiceLocator } from '@/core/di/serviceLocator';
+import { isTimeout, toAppError } from '@/core/errors';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getRequiredNodeVersions, getNodeVersionMapping, checkPerNodeVersionStatus, determinePrerequisiteStatus, hasNodeVersions, getNodeVersionKeys } from '@/features/prerequisites/handlers/shared';
 import type { InstallStep, PrerequisiteDefinition, PrerequisiteStatus } from '@/features/prerequisites/services/PrerequisitesManager';
-import { getInstalledNodeVersions } from '@/features/prerequisites/services/versioning';
+import { getInstalledNodeVersions } from '@/features/prerequisites/services/versioning/MultiVersionDetector';
 import { ErrorCode } from '@/types/errorCodes';
-import { isTimeout, toAppError } from '@/types/errors';
 import { HandlerContext } from '@/types/handlers';
 import { SimpleResult } from '@/types/results';
 import { toError } from '@/types/typeGuards';
@@ -54,15 +55,26 @@ function getTargetNodeVersions(
 }
 
 /**
- * Determine which Node versions to pass to getInstallSteps
+ * Determine which Node versions to pass to getInstallSteps.
  *
- * Logic:
- * - Per-node-version prerequisites (e.g., Adobe CLI): Use all required Node versions
- * - Node.js prerequisite: Use explicit version if provided, otherwise all required versions
- * - Other prerequisites: No nodeVersions needed (undefined)
+ * - Per-node-version prerequisites (e.g. Adobe CLI): every required Node version, or a
+ *   single fallback when the project requires none
+ * - Everything else: no nodeVersions needed
+ *
+ * THE NODE PREREQUISITE NEVER REACHES HERE, which is why it has no case. Its only
+ * caller writes `targetVersions || determineNodeVersionsForInstall(...)`, and
+ * `targetVersions` is assigned in exactly one place — inside `if (prereq.id === 'node')`
+ * — from `resolveNodeTargetVersions`, which returns `earlyReturn` for every case where
+ * the list would be missing or empty. So for Node the left side is always a non-empty
+ * array and this function is never called; for anything else it is called and the id is
+ * never 'node'.
+ *
+ * It used to carry a Node case anyway. Mutation testing found it: five mutants there
+ * that no test could reach, because nothing can. Removed 2026-09-02 — do not re-add it
+ * without changing the caller first.
  */
 function determineNodeVersionsForInstall(
-    prereq: { id: string; perNodeVersion?: boolean },
+    prereq: { perNodeVersion?: boolean },
     nodeVersions: string[],
     version?: string,
 ): string[] | undefined {
@@ -71,15 +83,6 @@ function determineNodeVersionsForInstall(
         return nodeVersions.length ? nodeVersions : [version || '20'];
     }
 
-    // Node.js prerequisite: explicit version overrides, otherwise use all required versions
-    if (prereq.id === 'node') {
-        if (version) {
-            return [version];
-        }
-        return nodeVersions.length ? nodeVersions : undefined;
-    }
-
-    // Other prerequisites don't need nodeVersions
     return undefined;
 }
 
@@ -144,7 +147,10 @@ async function resolvePerNodeTargetVersions(
     const perNodeStatus = await checkPerNodeVersionStatus(prereq, versionsToCheck, context);
     const missingNodeVersions = perNodeStatus.missingVariantMajors;
 
-    const fnmInstalledVersions = await getInstalledNodeVersions(context.logger);
+    const fnmInstalledVersions = await getInstalledNodeVersions(
+        ServiceLocator.getCommandExecutor(),
+        context.logger,
+    );
     const fnmInstalledSet = new Set(fnmInstalledVersions);
     const installableVersions = missingNodeVersions.filter(v => fnmInstalledSet.has(v));
 
@@ -254,23 +260,21 @@ async function resolvePluginNodeVersions(
         }
     }
 
-    // Also check dependencies
-    const selection = context.sharedState.currentComponentSelection;
-    if (selection?.dependencies) {
-        for (const dep of selection.dependencies) {
-            if (requiredForComponents.includes(dep)) {
-                const depNodeVersion = Object.entries(nodeVersionMapping)
-                    .find(([_, compId]) => compId === dep)?.[0];
-                if (depNodeVersion && !pluginNodeVersions.includes(depNodeVersion)) {
-                    pluginNodeVersions.push(depNodeVersion);
-                    context.debugLogger.debug(`[Prerequisites] Plugin ${plugin.id} needed for dependency ${dep} (Node ${depNodeVersion})`);
-                }
-            }
-        }
-    }
+    // A second pass over `currentComponentSelection.dependencies` used to sit here,
+    // looking up each dependency that appears in `requiredFor` and adding its Node
+    // version. It could never add one: it found its version with
+    // `.find(([_, compId]) => compId === dep)`, so the mapping entry it landed on had
+    // `componentId === dep`, and `dep` was already known to be in `requiredFor` — which
+    // is exactly the condition the loop above tests for every mapping entry. Its
+    // `!pluginNodeVersions.includes(...)` guard was therefore always false. Ten mutants
+    // sat behind it that no test could reach. Removed 2026-09-04; the same finding as
+    // the two blocks the docstrings above record.
 
     if (pluginNodeVersions.length > 0) {
-        const fnmVersions = await getInstalledNodeVersions(context.logger);
+        const fnmVersions = await getInstalledNodeVersions(
+            ServiceLocator.getCommandExecutor(),
+            context.logger,
+        );
         const fnmSet = new Set(fnmVersions);
         const installablePluginVersions = pluginNodeVersions.filter(v => fnmSet.has(v));
 
@@ -329,7 +333,7 @@ async function installPlugins(
 
             for (const cmd of pluginCommands.commands) {
                 try {
-                    const commandManager = await import('@/core/di').then(m => m.ServiceLocator.getCommandExecutor());
+                    const commandManager = await import('@/core/di/serviceLocator').then(m => m.ServiceLocator.getCommandExecutor());
                     await commandManager.execute(cmd, { timeout: TIMEOUTS.LONG, useNodeVersion: nodeVer });
                     context.logger.debug(`[Prerequisites] Plugin ${plugin.name} installed${versionLabel}`);
                 } catch (pluginError) {
@@ -407,14 +411,19 @@ async function handleVerificationError(
 
 /**
  * Build the final status message after installation verification.
+ *
+ * `finalNodeVersionStatus` is only ever populated for the Node prerequisite — its single
+ * caller assigns it inside `if (prereq.id === 'node')` — so its presence already means
+ * "this is Node". A second `prereqId === 'node'` check used to say so again; it could not
+ * be independently false, and mutation testing found four mutants sitting behind it that
+ * no test could reach. Removed 2026-09-02 along with the parameter it was the only use of.
  */
 function buildFinalStatusMessage(
     prereqName: string,
-    prereqId: string,
     installResult: { installed: boolean; version?: string },
     finalNodeVersionStatus?: { version: string; component: string; installed: boolean }[],
 ): string {
-    if (prereqId === 'node' && finalNodeVersionStatus && finalNodeVersionStatus.length > 0) {
+    if (finalNodeVersionStatus && finalNodeVersionStatus.length > 0) {
         if (finalNodeVersionStatus.every(s => s.installed)) {
             const versions = finalNodeVersionStatus.map(s => s.version).join(', ');
             return `${prereqName} is installed: ${versions}`;
@@ -446,7 +455,7 @@ async function sendFinalInstallStatus(
         states.set(prereqId, { prereq, result: installResult, nodeVersionStatus: finalNodeVersionStatus });
     }
 
-    const finalMessage = buildFinalStatusMessage(prereq.name, prereq.id, installResult, finalNodeVersionStatus);
+    const finalMessage = buildFinalStatusMessage(prereq.name, installResult, finalNodeVersionStatus);
     const overallInstalled = prereq.perNodeVersion && finalPerNodeVersionStatus && finalPerNodeVersionStatus.length > 0
         ? finalPerNodeVersionStatus.every(s => s.installed)
         : installResult.installed;

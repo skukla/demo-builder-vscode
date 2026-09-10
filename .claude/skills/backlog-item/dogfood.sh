@@ -127,6 +127,19 @@ unchanged "$PL4" "  ...and does not write it"         -- "${T[@]}" set PL-4 stat
 exits 1    "set rejects an unknown area"              -- "${T[@]}" set PL-4 area=notanarea
 unchanged "$PL4" "  ...and does not write it"         -- "${T[@]}" set PL-4 area=notanarea
 exits 1    "set rejects epic shipped w/ open children" -- "${T[@]}" set AI-1 status=shipped
+
+# A LIST field set from the command line must become a LIST, not a string. It used to be
+# stored raw, and `validate` then iterated the STRING: `needs=PL-11` was refused with
+# `needs "1" does not exist`, because it was checking the character. A refusal whose
+# reason is nonsense is worse than an outright failure — it reads as a syntax to guess at.
+exits 0    "set accepts a list field by id"           -- "${T[@]}" set PL-4 needs=AI-1
+says       "  ...and stores it as a list, not characters" "AI-1" -- "${T[@]}" show PL-4
+exits 1    "set still rejects a needs id that does not exist" -- "${T[@]}" set PL-4 needs=ZZ-99
+# Put PL-4 back: the gated check below asserts that an item with NO blocker named is
+# refused, and a leftover `needs` from the assertions above would satisfy that blocker
+# and quietly invert the test. Shared-sandbox state is the classic way one assertion
+# breaks another — this one did, on the run that added it.
+exits 0    "  ...restore PL-4 to no blocker"           -- "${T[@]}" set PL-4 needs=
 unchanged "$EPIC" "  ...and does not write it"        -- "${T[@]}" set AI-1 status=shipped
 exits 1    "set rejects a malformed assignment"       -- "${T[@]}" set PL-4 nokeyvalue
 # A `gated`/`blocked` item must name what it waits on. Found by USING the tool:

@@ -60,7 +60,9 @@ function makeDeps(overrides: Record<string, unknown> = {}) {
                 .fn()
                 .mockResolvedValue({ clientId: 'cid-1', idIntegration: 'int-1' }),
             getSubscribedServiceCodes: jest.fn().mockResolvedValue(['GraphQLServiceSDK']),
-            subscribeOAuthServerToServerIntegrationToServices: jest.fn().mockResolvedValue(undefined),
+            subscribeOAuthServerToServerIntegrationToServices: jest
+                .fn()
+                .mockResolvedValue(undefined),
         },
         downloadWorkspaceJson: jest
             .fn()
@@ -77,7 +79,7 @@ describe('provisionAccsCredentials', () => {
     it('returns the pair from an end-to-end run', async () => {
         const { deps } = makeDeps();
 
-        const result = await provisionAccsCredentials(deps as never, TARGET);
+        const result = await provisionAccsCredentials(deps, TARGET);
 
         expect(result).toEqual({
             ok: true,
@@ -88,21 +90,21 @@ describe('provisionAccsCredentials', () => {
 
     it('creates the credential only when none exists', async () => {
         const { deps } = makeDeps();
-        (deps.auth.getWorkspaceS2SCredential as jest.Mock).mockResolvedValue(undefined);
+        deps.auth.getWorkspaceS2SCredential.mockResolvedValue(undefined);
 
-        await provisionAccsCredentials(deps as never, TARGET);
+        await provisionAccsCredentials(deps, TARGET);
 
         expect(deps.auth.createWorkspaceS2SCredentialFor).toHaveBeenCalledWith(
             TARGET.orgId,
             TARGET.projectId,
-            TARGET.workspaceId,
+            TARGET.workspaceId
         );
     });
 
     it('does not create when the credential already exists', async () => {
         const { deps } = makeDeps();
 
-        await provisionAccsCredentials(deps as never, TARGET);
+        await provisionAccsCredentials(deps, TARGET);
 
         expect(deps.auth.createWorkspaceS2SCredentialFor).not.toHaveBeenCalled();
     });
@@ -112,7 +114,7 @@ describe('provisionAccsCredentials', () => {
     it('subscribes the UNION of existing codes plus ACCS-REST-API', async () => {
         const { deps } = makeDeps();
 
-        await provisionAccsCredentials(deps as never, TARGET);
+        await provisionAccsCredentials(deps, TARGET);
 
         expect(deps.auth.subscribeOAuthServerToServerIntegrationToServices).toHaveBeenCalledWith(
             TARGET.orgId,
@@ -120,40 +122,91 @@ describe('provisionAccsCredentials', () => {
             [
                 { sdkCode: 'GraphQLServiceSDK', licenseConfigs: null, roles: null },
                 { sdkCode: 'ACCS-REST-API', licenseConfigs: null, roles: null },
-            ],
+            ]
         );
     });
 
     it('skips the subscribe entirely when ACCS-REST-API is already there', async () => {
         const { deps } = makeDeps();
-        (deps.auth.getSubscribedServiceCodes as jest.Mock).mockResolvedValue([
+        deps.auth.getSubscribedServiceCodes.mockResolvedValue([
             'GraphQLServiceSDK',
             'ACCS-REST-API',
         ]);
 
-        await provisionAccsCredentials(deps as never, TARGET);
+        await provisionAccsCredentials(deps, TARGET);
 
         expect(deps.auth.subscribeOAuthServerToServerIntegrationToServices).not.toHaveBeenCalled();
     });
 
     it('reports a workspace whose download carries no secret', async () => {
         const { deps } = makeDeps();
-        (deps.downloadWorkspaceJson as jest.Mock).mockResolvedValue(
-            JSON.stringify({ project: { workspace: { details: { credentials: [] } } } }),
+        deps.downloadWorkspaceJson.mockResolvedValue(
+            JSON.stringify({ project: { workspace: { details: { credentials: [] } } } })
         );
 
-        const result = await provisionAccsCredentials(deps as never, TARGET);
+        const result = await provisionAccsCredentials(deps, TARGET);
 
-        expect(result).toEqual({
+        // The WHOLE reason, not a substring of it: "Cannot read properties of
+        // undefined (reading 'client_secrets')" also contains "secret", so a
+        // looser assertion passes on a crash it was written to rule out.
+        expect(result).toStrictEqual({
             ok: false,
-            reason: expect.stringContaining('secret'),
+            reason: expect.stringContaining('carries no client secret'),
+        });
+    });
+
+    // A download can be well-formed JSON and still be missing any level of the
+    // path this reads. Each one must come back as the reason, not as a TypeError
+    // the outer catch turns into a message nobody can act on.
+    it.each([
+        ['no project at all', {}],
+        ['a project with no workspace', { project: {} }],
+        ['a workspace with no details', { project: { workspace: {} } }],
+        ['details with no credentials', { project: { workspace: { details: {} } } }],
+    ])('reports %s as a missing credential', async (_label, download) => {
+        const { deps } = makeDeps();
+        deps.downloadWorkspaceJson.mockResolvedValue(JSON.stringify(download));
+
+        const result = await provisionAccsCredentials(deps, TARGET);
+
+        expect(result).toStrictEqual({
+            ok: false,
+            reason: expect.stringContaining('carries no client secret'),
+        });
+    });
+
+    it('reports a credential that exists but carries no secrets list', async () => {
+        const { deps } = makeDeps();
+        deps.downloadWorkspaceJson.mockResolvedValue(
+            JSON.stringify({
+                project: {
+                    workspace: {
+                        details: {
+                            credentials: [
+                                {
+                                    integration_type: 'oauth_server_to_server',
+                                    oauth_server_to_server: { client_id: 'cid-1' },
+                                },
+                            ],
+                        },
+                    },
+                },
+            })
+        );
+
+        const result = await provisionAccsCredentials(deps, TARGET);
+
+        // Half a pair is not a pair: an id with no secret must not come back ok.
+        expect(result).toStrictEqual({
+            ok: false,
+            reason: expect.stringContaining('carries no client secret'),
         });
     });
 
     it('never passes the secret to the logger', async () => {
         const { deps } = makeDeps();
 
-        await provisionAccsCredentials(deps as never, TARGET);
+        await provisionAccsCredentials(deps, TARGET);
 
         const logged = (deps.log as jest.Mock).mock.calls.flat().join('\n');
         expect(logged).not.toContain('fake-test-secret-not-a-secret');
@@ -162,14 +215,12 @@ describe('provisionAccsCredentials', () => {
 
     it('reports a failed step as a reason, never a throw', async () => {
         const { deps } = makeDeps();
-        (deps.auth.getWorkspaceS2SCredential as jest.Mock).mockRejectedValue(
-            new Error('SDK not initialized'),
-        );
-        (deps.auth.createWorkspaceS2SCredentialFor as jest.Mock).mockRejectedValue(
-            new Error('SDK not initialized'),
+        deps.auth.getWorkspaceS2SCredential.mockRejectedValue(new Error('SDK not initialized'));
+        deps.auth.createWorkspaceS2SCredentialFor.mockRejectedValue(
+            new Error('SDK not initialized')
         );
 
-        const result = await provisionAccsCredentials(deps as never, TARGET);
+        const result = await provisionAccsCredentials(deps, TARGET);
 
         expect(result).toMatchObject({ ok: false });
     });
@@ -187,16 +238,24 @@ describe('a malformed workspace download', () => {
         const secret = 'fake-test-secret-not-a-secret';
         const lines: string[] = [];
         const { deps } = makeDeps({
-            downloadWorkspaceJson: jest.fn().mockResolvedValue(
-                `{"project":{"workspace":{"details":{"credentials":[{"client_secrets":["${secret}"`,
-            ),
+            downloadWorkspaceJson: jest
+                .fn()
+                .mockResolvedValue(
+                    `{"project":{"workspace":{"details":{"credentials":[{"client_secrets":["${secret}"`
+                ),
             log: (line: string) => lines.push(line),
         });
 
-        const result = await provisionAccsCredentials(deps as never, TARGET);
+        const result = await provisionAccsCredentials(deps, TARGET);
 
         expect(result.ok).toBe(false);
         expect(JSON.stringify(result)).not.toContain(secret);
         expect(lines.join('\n')).not.toContain(secret);
+        // The parse failure has to be ANSWERED here, not left to fall through to
+        // the outer catch — that one reports whatever message it was handed.
+        expect(result).toStrictEqual({
+            ok: false,
+            reason: expect.stringContaining('Download it again'),
+        });
     });
 });

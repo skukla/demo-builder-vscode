@@ -83,7 +83,10 @@ describe('PrerequisitesStep - Recheck Functionality', () => {
 
         // Should trigger at least 2 checks (initial + recheck)
         // Initial check uses isRecheck: false, recheck uses isRecheck: true
-        expect(mockPostMessage).toHaveBeenCalledWith('check-prerequisites', expect.objectContaining({ isRecheck: expect.any(Boolean) }));
+        expect(mockPostMessage).toHaveBeenCalledWith(
+            'check-prerequisites',
+            expect.objectContaining({ isRecheck: expect.any(Boolean) })
+        );
     });
 
     it('should disable recheck during checking', async () => {
@@ -115,8 +118,8 @@ describe('PrerequisitesStep - Recheck Functionality', () => {
         await act(async () => {
             loadedCallback({
                 prerequisites: [
-                    { id: 'node', name: 'Node.js', description: 'Runtime', optional: false }
-                ]
+                    { id: 'node', name: 'Node.js', description: 'Runtime', optional: false },
+                ],
             });
         });
 

@@ -30,6 +30,12 @@ case "$payload" in
     # 20-secret-files. `.env` admits the path guard; the rest are NECESSARY
     # substrings of each content pattern the rule can block on.
     *.env*|*"PRIVATE KEY"*|*ghp_*|*ghs_*|*github_pat_*|*AKIA*|*xox*|*mongodb*) ;;
+    # Rule 20's OpenAI/Anthropic arm. It was UNREACHABLE from the day it was written
+    # until 2026-09-08: the rule matches sk-(proj|ant)- and no token here admitted it,
+    # so a write carrying that shape exited 0 at this gate and the pattern had never
+    # once run. Found by writing the rule's proof, which is the argument for proofs.
+    # Both spellings, because the alternation in the rule is the necessary condition.
+    *sk-proj-*|*sk-ant-*) ;;
     # `npm test` / `npm run test:*` start jest without the string "jest" anywhere
     # in the command, so 15-jest-concurrent would never see them. Matched on the
     # two-word literal rather than a bare *test* — that would drag in every path
@@ -40,6 +46,38 @@ case "$payload" in
     # exactly like a guard that simply never matches — the failure this
     # pre-filter has already caused once (see the --exclude note below).
     *"git commit"*) ;;
+    # 32-test-authoring, 33-new-instrument, 34-css-baseline (added 2026-09-10).
+    # NECESSARY conditions for each, and the reason these rules exist at all: none
+    # of these tokens was admitted before, so a Write to a `.test.ts`, a new script
+    # or a stylesheet exited HERE and no rule could ever have seen it. That gate is
+    # why a test-file splitter was invented while the splitting playbook sat unread.
+    #
+    # `.test.ts` also covers `.test.tsx` (substring), which rule 40 already claims —
+    # the rules sort it out, the gate only has to let it through.
+    *.test.ts*|*.testUtils.ts*) ;;
+    *.mjs*|*/scripts/*) ;;
+    *.css*) ;;
+    # 35-wizard-step, 36-ai-bundle, 37-mcp-tool (added 2026-09-10). NECESSARY
+    # conditions for each — every one is a literal from the rule's own matcher, so
+    # the gate cannot hide a real hit. Kept this narrow deliberately: a bare *.ts*
+    # would admit most of the repo and make the pre-filter pointless.
+    *wizard-steps.json*|*buildYourProjectAreas*|*commerceSections*) ;;
+    *aiBundle*|*RegenerateAiFiles*) ;;
+    *Descriptors.ts*|*mcp-server.ts*) ;;
+    # 21-push-no-verify. NECESSARY: the rule only fires on a push.
+    *"git push"*) ;;
+    # 38/39/41/42/43/44 (added 2026-09-10). The four directory tokens are the kinds
+    # 41-god-file has a limit for, and they also admit 42/43/44, whose files all sit
+    # under services/. Broad on purpose: correctness before the ~55ms python parse
+    # this gate exists to avoid, and 41 has to measure a file before it can judge it.
+    */services/*|*/handlers/*|*/ui/components/*|*/utils/*|*/helpers/*) ;;
+    *messages.ts*|*app-builder-components.json*) ;;
+    # Two files the directory tokens above do NOT reach, each found by its rule's
+    # own proof rather than by review: `src/types/handlers.ts` has no `/handlers/`
+    # segment, and `core/shell/orgContextEnv.ts` is not under `/services/`. Both
+    # rules matched them and both were gated out — the fourth and fifth instance of
+    # the failure this pre-filter's docblock describes.
+    *handlers.ts*|*orgContextEnv*) ;;
     # 12-unquoted-glob. Each of these is a NECESSARY condition for that rule to
     # fire, so the gate cannot hide a real hit. Kept as the specific flag spellings
     # rather than a bare `*"*"*` (an asterisk appears in most payloads) — this stays
@@ -49,6 +87,53 @@ case "$payload" in
     # call. Caught by a test; it looked exactly like a rule that simply never
     # matched.
     *"--include="*|*"--exclude"*|*"-name "*|*"-iname "*|*"-path "*|*"-ipath "*) ;;
+    # 16-unsplit-var. The rule requires a variable assigned from a command
+    # substitution, so `=$(` is a NECESSARY condition and the gate cannot hide a
+    # real hit. Both spellings, because `F="$(ls)"` is as common as `F=$(ls)`.
+    #
+    # This rule's proof script failed 3 of its 4 blocking cases before this line
+    # existed, and the one that "passed" did so by ACCIDENT — its payload happened
+    # to contain `-name "x"`, a token rule 12 had already registered. Exactly the
+    # failure the note above predicts: a rule that is never reached is
+    # indistinguishable from a rule that never matches.
+    #
+    # SINGLE quotes, both. Written as *"=$("* first, which bash parses as the
+    # START of a command substitution inside the double quotes — the router
+    # stopped parsing and EVERY Bash, Edit and Write call in the session failed
+    # with "unexpected EOF". A broken router fails CLOSED against its own stated
+    # contract, and it gates the very tools needed to edit it back.
+    # The THIRD spelling is the JSON-escaped one. This gate reads the raw payload,
+    # where a command containing F="$(ls)" arrives as F=\"$(ls)\" — so the plain
+    # ="$( never appears and that case silently never reached the rule.
+    #
+    # `; do` admits the LOOP form, which carries no command substitution at all and
+    # so matched none of the tokens above. That gap made this rule's own proof PASS
+    # a case it must block — the third time a rule has been silently unreachable at
+    # this gate. `tests/hooks/rule-proofs.test.ts` now runs every proof on each
+    # build, which turns a recurring surprise into a red test.
+    *'=$('*|*'="$('*|*'=\"$('*|*'; do'*) ;;
+    # 13-piped-exit-code. The rule requires a pipe INTO head/tail/wc, so the pipe
+    # must be part of the token — a bare *head* would admit every path containing
+    # the word. Both spacings, because `|wc` and `| wc` are equally common.
+    *"| head"*|*"|head"*|*"| tail"*|*"|tail"*|*"| wc"*|*"|wc"*) ;;
+    # Same rule, its `grep -c` arm (added 2026-09-01). `grep -c` is a NECESSARY
+    # substring of every shape that arm matches, and it covers clusters like
+    # `grep -cE` too. `--count` spelled separately.
+    #
+    # THIRD time in one session that a rule was written, proved against its own
+    # harness, and found dead at this gate. Note what makes this one different and
+    # worse: rule 13 ALREADY had a passing probe in router.test.ts (the `| wc`
+    # case), so the reachability test stayed green while a whole new arm of the
+    # same rule was unreachable. That test proves one payload per RULE reaches it;
+    # it cannot prove every SHAPE does. The .proof.sh files are what cover that,
+    # which is the argument for running them rather than trusting them.
+    *"grep -c"*|*"grep --count"*) ;;
+    # 31-registry-dir. The rule fires on a Write whose path is under tests/sop/ or
+    # tests/helpers/ — plain .ts files, which the *.tsx* token above does NOT admit
+    # (".tsx" is not a substring of ".ts"). Without this line the rule would be the
+    # FOURTH written, proved, and found dead at this gate. The directory names are
+    # necessary conditions for it, so the gate cannot hide a real hit.
+    *tests/sop/*|*tests/helpers/*) ;;
     *) exit 0 ;;
 esac
 
@@ -79,33 +164,68 @@ IFS=$'\037' read -r TOOL CMD FILE CONTENT SESSION <<<"$fields"
 RULES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/rules"
 [ -d "$RULES_DIR" ] || exit 0
 
-for rule in "$RULES_DIR"/*.rule; do
-    [ -f "$rule" ] || continue
+# Evaluate every rule against one (tool, cmd, file, content). Returns 2 to block.
+evaluate() {
+    local T="$1" C="$2" F="$3" X="$4"
+    local rule rule_id rule_once marker
+    for rule in "$RULES_DIR"/*.rule; do
+        [ -f "$rule" ] || continue
 
-    # Each rule redefines these; clear them so a malformed rule cannot inherit
-    # the previous one's matcher and fire on its behalf.
-    unset -f rule_match rule_message 2>/dev/null
-    rule_id=""
-    rule_once=1
+        # Each rule redefines these; clear them so a malformed rule cannot inherit
+        # the previous one's matcher and fire on its behalf.
+        unset -f rule_match rule_message 2>/dev/null
+        rule_id=""
+        rule_once=1
 
-    # shellcheck disable=SC1090
-    . "$rule" 2>/dev/null || continue
-    [ -n "$rule_id" ] || continue
-    declare -f rule_match >/dev/null 2>&1 || continue
-    declare -f rule_message >/dev/null 2>&1 || continue
+        # shellcheck disable=SC1090
+        . "$rule" 2>/dev/null || continue
+        [ -n "$rule_id" ] || continue
+        declare -f rule_match >/dev/null 2>&1 || continue
+        declare -f rule_message >/dev/null 2>&1 || continue
 
-    rule_match "$TOOL" "$CMD" "$FILE" "$CONTENT" || continue
+        rule_match "$T" "$C" "$F" "$X" || continue
 
-    if [ "$rule_once" = "1" ]; then
-        marker="${TMPDIR:-/tmp}/.dbv-${rule_id}-${SESSION}"
-        # Already spent this session — fall through to the remaining rules rather
-        # than returning, so one rule's marker cannot suppress another's.
-        [ -f "$marker" ] && continue
-        touch "$marker" 2>/dev/null
+        if [ "$rule_once" = "1" ]; then
+            marker="${TMPDIR:-/tmp}/.dbv-${rule_id}-${SESSION}"
+            # Already spent this session — fall through to the remaining rules rather
+            # than returning, so one rule's marker cannot suppress another's.
+            [ -f "$marker" ] && continue
+            touch "$marker" 2>/dev/null
+        fi
+
+        rule_message >&2
+        return 2
+    done
+    return 0
+}
+
+# The payload as it arrived.
+evaluate "$TOOL" "$CMD" "$FILE" "$CONTENT" || exit 2
+
+# THEN THE SHELL WRITES. Every path-keyed rule matches on `tool_input.file_path`,
+# which only Write and Edit carry — so an agent editing through `cat >`, `sed -i` or
+# a heredoc'd python sends a Bash payload with no path, and all fifteen routing rules
+# stay silent. That is not hypothetical: on 2026-09-10 rule 49 did not fire on an
+# edit to a 910-line handler, because the edit went through python, and the same was
+# true of every other path rule for most of that session's work.
+#
+# So: pull the paths a Bash command actually WRITES to, and evaluate the rules again
+# for each as if it were the tool that matches its effect — Write for a path that
+# does not exist yet, Edit for one that does. The extractor is deliberately
+# conservative and only reports a path the write intent is ATTACHED to; it is proved
+# by `writtenPaths.proof.sh`.
+#
+# FAILS OPEN like everything else here: no python3, no extractor, or no output and
+# this does nothing.
+if [ "$TOOL" = "Bash" ] && [ -n "$CMD" ]; then
+    EXTRACT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/writtenPaths.py"
+    if [ -f "$EXTRACT" ]; then
+        while IFS= read -r written; do
+            [ -n "$written" ] || continue
+            if [ -e "$written" ]; then synth=Edit; else synth=Write; fi
+            evaluate "$synth" "$CMD" "$PWD/$written" "$CONTENT" || exit 2
+        done < <(printf '%s' "$CMD" | CLAUDE_PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$PWD}" python3 "$EXTRACT" 2>/dev/null)
     fi
-
-    rule_message >&2
-    exit 2
-done
+fi
 
 exit 0

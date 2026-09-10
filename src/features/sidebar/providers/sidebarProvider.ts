@@ -8,11 +8,16 @@
 import * as crypto from 'crypto';
 import * as vscode from 'vscode';
 import type { SidebarContext } from '../types';
-import { BaseWebviewCommand } from '@/core/base';
+import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
+import {
+    createWebviewCommunication,
+    WebviewCommunicationManager,
+} from '@/core/communication/webviewCommunicationManager';
 import { LAST_UPDATE_CHECK } from '@/core/constants';
-import type { StateManager } from '@/core/state/stateManager';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { toggleLogsPanel } from '@/features/lifecycle/services/lifecycleService';
 import type { Logger } from '@/types/logger';
+import type { StateManager } from '@/types/state';
 
 /**
  * Minimum gap between automatic update checks fired from sidebar activation.
@@ -22,6 +27,31 @@ import type { Logger } from '@/types/logger';
  * The palette command bypasses this throttle.
  */
 const UPDATE_CHECK_THROTTLE_MS = 60 * 60 * 1000;
+
+/**
+ * The message types the sidebar webview sends.
+ *
+ * This list and `handleMessage`'s switch must agree: a type here with no case
+ * warns as unknown, and a case missing from here is never delivered at all.
+ */
+const SIDEBAR_MESSAGE_TYPES = [
+    'getContext',
+    'navigate',
+    'back',
+    'createProject',
+    'openTools',
+    'openHelp',
+    'openSettings',
+    'openLogs',
+    'openAiChat',
+    'showPrompts',
+    'newAiChat',
+    'startDemo',
+    'stopDemo',
+    'openDashboard',
+    'openConfigure',
+    'checkUpdates',
+] as const;
 
 /**
  * SidebarProvider - WebviewViewProvider for the Demo Builder sidebar
@@ -35,6 +65,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     public readonly viewId = 'demoBuilder.sidebar';
 
     private view?: vscode.WebviewView;
+    private comm?: WebviewCommunicationManager;
     private extensionUri: vscode.Uri;
 
 
@@ -74,14 +105,41 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         // Set HTML content
         webviewView.webview.html = this.getHtmlContent(webviewView.webview);
 
-        // Set up message handling
-        const messageListener = webviewView.webview.onDidReceiveMessage(
-            (message) => this.handleMessage(message),
-        );
+        // The channel is the SHARED manager, not a hand-rolled listener (ADR-017 §4).
+        // It has to be: the webview side is `webviewClient`, which QUEUES every
+        // postMessage until it receives `__handshake_complete__`. Nothing else here
+        // sends that, so a raw listener leaves the sidebar on its spinner forever.
+        //
+        // Each type is registered rather than dispatched by a second switch — the
+        // manager silently ignores a type it does not know, while `handleMessage`
+        // warns, so routing everything through it would log `__webview_ready__` as
+        // unknown on every load.
+        // The shared FACTORY, not `new` — construction of a stateful class belongs
+        // at a boundary (ADR-015), and this is the same call the seven panels make
+        // through BaseWebviewCommand.
+        let channel: WebviewCommunicationManager | undefined;
+        // TIMEOUTS.NORMAL, the same budget BaseWebviewCommand gives the seven
+        // panels — not the factory's QUICK default. The sidebar loads an ~890KB
+        // bundle on a cold window, and a handshake it misses is not a slow
+        // sidebar, it is a permanently empty one until the view is re-resolved.
+        void createWebviewCommunication(webviewView, { handshakeTimeout: TIMEOUTS.NORMAL }, (comm) => {
+            channel = comm;
+            this.comm = comm;
+            for (const type of SIDEBAR_MESSAGE_TYPES) {
+                comm.on(type, (payload: unknown) => this.handleMessage({ type, payload }));
+            }
+        }).catch(() => {
+            // The factory disposes the manager when the handshake times out, so the
+            // reference has to go too or `sendMessage` posts into a dead channel.
+            // VS Code re-resolves the view the next time it is revealed.
+            if (this.comm === channel) this.comm = undefined;
+            this.logger.debug('[Sidebar] webview did not complete the handshake');
+        });
 
         // Clean up on dispose
         webviewView.onDidDispose(() => {
-            messageListener.dispose();
+            this.comm?.dispose();
+            this.comm = undefined;
             this.view = undefined;
         });
 
@@ -187,14 +245,14 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     /**
      * Send a message to the webview
      */
-    public async sendMessage(type: string, data?: unknown): Promise<void> {
-        if (!this.view) {
+    public async sendMessage(type: string, payload?: unknown): Promise<void> {
+        if (!this.comm) {
             this.logger.warn(`Cannot send message '${type}' - sidebar not available`);
             return;
         }
 
         try {
-            await this.view.webview.postMessage({ type, data });
+            await this.comm.sendMessage(type, payload);
         } catch {
             // Webview may be disposed during cleanup - this is expected
             this.logger.debug(`Cannot send message '${type}' - webview may be disposed`);
@@ -364,16 +422,9 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     private async handleBack(): Promise<void> {
         this.logger.info('Sidebar back navigation');
 
-        try {
-            // No-op for now — back navigation in surfaces that need it lives
-            // in the webview's own header, not the sidebar.
-            this.logger.debug('Back navigation: no-op');
-        } catch (error) {
-            this.logger.error(
-                'Back navigation failed',
-                error instanceof Error ? error : undefined,
-            );
-        }
+        // No-op for now — back navigation in surfaces that need it lives
+        // in the webview's own header, not the sidebar.
+        this.logger.debug('Back navigation: no-op');
     }
 
     /**

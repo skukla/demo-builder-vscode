@@ -7,26 +7,13 @@
  * - Error code-based detection (not message-based)
  */
 
-import { DeleteProjectCommand } from '@/features/lifecycle/commands/deleteProject';
-import { StateManager } from '@/core/state';
+import {
+    DeleteProjectCommand,
+    vscode,
+    setupDeleteProject,
+} from './deleteProject.testUtils';
+import type { StateManager } from '@/types/state';
 import type { Logger } from '@/types/logger';
-
-// Mock VS Code API with proper types
-jest.mock('vscode', () => ({
-    window: {
-        showInformationMessage: jest.fn(),
-        showWarningMessage: jest.fn(),
-        showErrorMessage: jest.fn(),
-        withProgress: jest.fn(),
-        setStatusBarMessage: jest.fn(),
-    },
-    commands: {
-        executeCommand: jest.fn(),
-    },
-    ProgressLocation: {
-        Notification: 15,
-    },
-}));
 
 // Mock fs/promises with explicit exports
 jest.mock('fs/promises', () => ({
@@ -35,88 +22,20 @@ jest.mock('fs/promises', () => ({
 import * as fs from 'fs/promises';
 const mockRm = fs.rm as jest.Mock;
 
-// Mock logging
-jest.mock('@/core/logging', () => ({
-    Logger: jest.fn().mockImplementation(() => ({
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        debug: jest.fn(),
-    })),
-    getLogger: jest.fn(() => ({
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        debug: jest.fn(),
-    })),
-}));
-
 // Import vscode after mock
-import * as vscode from 'vscode';
 
 describe('DeleteProjectCommand - Retry Logic', () => {
     let command: DeleteProjectCommand;
-    let mockContext: jest.Mocked<vscode.ExtensionContext>;
     let mockStateManager: jest.Mocked<StateManager>;
     let mockLogger: jest.Mocked<Logger>;
     const testProjectPath = '/tmp/test-project-retry';
 
     beforeEach(() => {
         jest.clearAllMocks();
-        // Ensure we're using real timers for setup
         jest.useRealTimers();
-
-        // Reset fs mocks
         mockRm.mockClear();
         mockRm.mockResolvedValue(undefined);
-
-        // Mock extension context
-        mockContext = {
-            subscriptions: [],
-            extensionPath: '/mock/extension/path',
-            globalState: {
-                get: jest.fn(),
-                update: jest.fn().mockResolvedValue(undefined),
-            },
-        } as any;
-
-        // Mock state manager
-        mockStateManager = {
-            getCurrentProject: jest.fn().mockResolvedValue({
-                name: 'test-project',
-                path: testProjectPath,
-                status: 'stopped',
-            }),
-            clearProject: jest.fn().mockResolvedValue(undefined),
-            removeFromRecentProjects: jest.fn().mockResolvedValue(undefined),
-        } as any;
-
-        // Mock logger
-        mockLogger = {
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            debug: jest.fn(),
-        } as any;
-
-        // Mock vscode.window.showInformationMessage for confirmation (returns 'Yes')
-        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Yes');
-
-        // Mock vscode.window.withProgress to execute task immediately
-        (vscode.window.withProgress as jest.Mock).mockImplementation(
-            async (_options: any, task: any) => {
-                return await task({ report: jest.fn() });
-            }
-        );
-
-        // Mock vscode.commands.executeCommand
-        (vscode.commands.executeCommand as jest.Mock).mockResolvedValue(undefined);
-
-        command = new DeleteProjectCommand(
-            mockContext,
-            mockStateManager,
-            mockLogger
-        );
+        ({ command, mockStateManager, mockLogger } = setupDeleteProject(testProjectPath));
     });
 
     afterEach(() => {

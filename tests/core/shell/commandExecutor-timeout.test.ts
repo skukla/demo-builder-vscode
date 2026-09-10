@@ -5,21 +5,6 @@ import { createMockExecaSubprocess, setupMockDependencies } from './commandExecu
 jest.mock('execa');
 import execa from 'execa';
 
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({
-        error: jest.fn(),
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn()
-    })
-}));
-
-jest.mock('@/core/shell/commandSequencer');
-jest.mock('@/core/shell/environmentSetup');
-jest.mock('@/core/shell/fileWatcher');
-jest.mock('@/core/shell/pollingService');
-jest.mock('@/core/shell/resourceLocker');
-jest.mock('@/core/shell/retryStrategyManager');
 
 describe('CommandExecutor - Timeout Handling', () => {
     let commandExecutor: CommandExecutor;
@@ -29,16 +14,16 @@ describe('CommandExecutor - Timeout Handling', () => {
         jest.clearAllMocks();
 
         // Setup mock implementations BEFORE creating instances
-        setupMockDependencies();
+        const mockDependencies = setupMockDependencies();
 
         // Now create CommandExecutor - it will use our mocks
-        commandExecutor = new CommandExecutor();
+        commandExecutor = new CommandExecutor(mockDependencies.deps);
     });
 
     describe('timeout handling', () => {
         it('should handle execa timeout errors', async () => {
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             // Use streaming mode for cleaner timeout testing (bypasses retry)
             const promise = commandExecutor.execute('sleep 100', {
@@ -49,8 +34,7 @@ describe('CommandExecutor - Timeout Handling', () => {
 
             // Simulate execa timeout error
             setImmediate(() => {
-                const timeoutError = new Error('Command timed out') as any;
-                timeoutError.timedOut = true;
+                const timeoutError = Object.assign(new Error('Command timed out'), { timedOut: true });
                 mockSubprocess._reject(timeoutError);
             });
 
@@ -59,7 +43,7 @@ describe('CommandExecutor - Timeout Handling', () => {
 
         it('should pass timeout option to execa', async () => {
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             const promise = commandExecutor.execute('echo test', {
                 timeout: 5000,
@@ -86,7 +70,7 @@ describe('CommandExecutor - Timeout Handling', () => {
 
         it('should handle canceled commands', async () => {
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             const promise = commandExecutor.execute('long-command', {
                 streaming: true,
@@ -95,8 +79,7 @@ describe('CommandExecutor - Timeout Handling', () => {
 
             // Simulate execa canceled error
             setImmediate(() => {
-                const canceledError = new Error('Command was canceled') as any;
-                canceledError.isCanceled = true;
+                const canceledError = Object.assign(new Error('Command was canceled'), { isCanceled: true });
                 mockSubprocess._reject(canceledError);
             });
 
@@ -105,7 +88,7 @@ describe('CommandExecutor - Timeout Handling', () => {
 
         it('should handle killed commands', async () => {
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             const promise = commandExecutor.execute('long-command', {
                 streaming: true,
@@ -114,8 +97,7 @@ describe('CommandExecutor - Timeout Handling', () => {
 
             // Simulate execa killed error
             setImmediate(() => {
-                const killedError = new Error('Command was killed') as any;
-                killedError.killed = true;
+                const killedError = Object.assign(new Error('Command was killed'), { killed: true });
                 mockSubprocess._reject(killedError);
             });
 

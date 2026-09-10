@@ -1,0 +1,418 @@
+/* ============================================
+   CUSTOM SPECTRUM OVERRIDES
+   Warning: These styles override React Spectrum defaults
+   and may break with future Spectrum updates.
+
+   This file provides a pragmatic solution for customizing
+   React Spectrum components while maintaining reusability.
+
+   IMPORTANT NOTE ON UNSAFE_className:
+   React Spectrum components require UNSAFE_className for custom styling.
+   This is the OFFICIAL way to apply custom CSS classes to React Spectrum components.
+   While marked as "unsafe" to discourage overriding the design system,
+   it's necessary and correct for customization beyond built-in props.
+   There is NO "safe" className prop in React Spectrum.
+   ============================================ */
+
+/* THE CASCADE ORDER — repeated here deliberately, byte-identical to the copy in
+   index.css. Layer precedence is fixed by the FIRST declaration a bundle sees, and
+   sheets arrive in whatever order the bundle graph produces; index.css reaches
+   seven of the eight entries and the sidebar reaches this one. Two identical
+   declarations are safe — whichever lands first says the same thing — and the
+   enforcer requires every declaration in src/ to match this text exactly. */
+@layer reset, vendor, theme, overrides;
+
+/* ============================================
+   UTILITY & COMPONENT CLASSES
+   Wrapped in @layer theme for cascade control
+   ============================================ */
+@layer theme {
+    /* ===========================================
+       Typography Classes
+       =========================================== */
+.text-xs { font-size: 11px; }
+.text-sm { font-size: 12px; }
+.text-base { font-size: 13px; }
+.text-md { font-size: 14px; }
+.text-lg { font-size: 16px; }
+.text-xl { font-size: 18px; }
+
+.font-normal { font-weight: 400; }
+.font-medium { font-weight: 500; }
+.font-semibold { font-weight: 600; }
+.font-mono { font-family: var(--spectrum-font-family-code, monospace); }
+
+.text-center { text-align: center; }
+.text-uppercase { text-transform: uppercase; }
+
+/* ===========================================
+   Color Classes (using Spectrum variables)
+   =========================================== */
+.text-gray-500 { color: var(--spectrum-global-color-gray-500); }
+.text-gray-600 { color: var(--spectrum-global-color-gray-600); }
+.text-gray-700 { color: var(--spectrum-global-color-gray-700); }
+.text-red-600 { color: var(--spectrum-global-color-red-600); }
+.text-green-600 { color: var(--spectrum-global-color-green-600); }
+.text-yellow-600 { color: var(--spectrum-global-color-yellow-600); }
+.text-blue-600 { color: var(--spectrum-global-color-blue-600); }
+
+.bg-gray-75 { background-color: var(--spectrum-global-color-gray-75); }
+
+/* ===========================================
+   Layout Classes
+   =========================================== */
+.w-full { width: 100%; }
+.h-full { height: 100%; }
+
+.min-w-0 { min-width: 0; }
+
+.flex { display: flex; }
+.flex-column { 
+    display: flex; 
+    flex-direction: column; 
+}
+.flex-1 { flex: 1; }
+.items-stretch { align-items: stretch; }
+
+.block { display: block; }
+.hidden { display: none; }
+
+.overflow-hidden { overflow: hidden; }
+.overflow-y-auto { overflow-y: auto; }
+.overflow-x-hidden { overflow-x: hidden; }
+
+/* ===========================================
+   Spacing Classes
+   =========================================== */
+.p-0 { padding: 0; }
+.p-2 { padding: 8px; }
+
+/* ===========================================
+   Border & Radius Classes
+   =========================================== */
+.border { border: 1px solid var(--spectrum-global-color-gray-300); }
+.border-radius { border-radius: 4px; }
+button[class*="spectrum-Button"]:not(:disabled),
+button[class*="spectrum-Button"]:not([disabled]),
+[class*="spectrum-Button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+}
+button[class*="spectrum-Button"]:disabled,
+button[class*="spectrum-Button"][disabled],
+[class*="spectrum-Button"][aria-disabled="true"] {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+} /* End of first @layer theme block */
+
+/* ============================================
+   CTA BUTTON OVERRIDES
+   Wrapped in @layer overrides for cascade control
+   ============================================ */
+@layer overrides {
+    button[class*="spectrum-Button"][class*="cta"] {
+        background-color: var(--db-cta-background);
+        border-color: var(--db-cta-background);
+    }
+    button[class*="spectrum-Button"][class*="cta"]:hover,
+    button[class*="spectrum-Button"][class*="cta"]:focus {
+        background-color: var(--db-cta-background-hover);
+        border-color: var(--db-cta-background-hover);
+    }
+    button[class*="spectrum-Button"][class*="cta"]:active {
+        background-color: var(--db-cta-background-active);
+        border-color: var(--db-cta-background-active);
+    }
+}
+
+/* ============================================
+   REMAINING UTILITY & COMPONENT CLASSES
+   Wrapped in @layer theme for cascade control
+   ============================================ */
+@layer theme {
+
+/* ===========================================
+   Utility Classes
+   =========================================== */
+.opacity-50 { opacity: 0.5; }
+.opacity-100 { opacity: 1; }
+
+.cursor-pointer { cursor: pointer; }
+.cursor-default { cursor: default; }
+
+.whitespace-pre-wrap { white-space: pre-wrap; }
+.whitespace-nowrap { white-space: nowrap; }
+
+/* ===========================================
+   Position Classes
+   =========================================== */
+.relative { position: relative; }
+.absolute { position: absolute; }
+.fixed { position: fixed; }
+.sticky { position: sticky; }
+
+/* ===========================================
+   Display Variations
+   =========================================== */
+.inline { display: inline; }
+.inline-block { display: inline-block; }
+.inline-flex { display: inline-flex; }
+.grid { display: grid; }
+
+.rounded { border-radius: 4px; }
+.rounded-full { border-radius: 50%; }
+
+.border-t { border-top: 1px solid var(--spectrum-global-color-gray-200); }
+.border-b { border-bottom: 1px solid var(--spectrum-global-color-gray-200); }
+
+.bg-gray-400 { background-color: var(--spectrum-global-color-gray-400); }
+
+/* ===========================================
+   Text Color Extensions
+   =========================================== */
+.text-white { color: var(--spectrum-global-color-gray-900); }
+.text-gray-800 { color: var(--spectrum-global-color-gray-800); }
+.text-blue-700 { color: var(--spectrum-global-color-blue-700); }
+
+/* ===========================================
+   Text Utilities
+   =========================================== */
+.letter-spacing-05 { letter-spacing: 0.5px; }
+
+.min-w-100 { min-width: 100px; }
+.max-w-800 { max-width: 800px; }
+
+/* ===========================================
+   Semantic Layout Classes
+   Replace utility class combinations with meaningful names
+   =========================================== */
+
+/* === Dedicated content layouts (ContentColumn / ContentWithSidebar) ===
+ * --content-width is the canonical, LEFT-ALIGNED content width shared across ALL
+ * wizard/app screens (including Commerce's nav + step-view zone) — a single source so
+ * a screen "chooses" a layout instead of re-configuring widths each time.
+ * 960 is the one app-wide content band: it fits Commerce's widest step (the Business
+ * Structure Website/Store/Store View row) so there is no per-step exception — the
+ * footer and every screen share this width. */
+:root {
+    --content-width: 960px;
+
+    /* Dashboard card family — ONE source for the metrics `.project-card-spectrum`
+       and `.integration-card` share. Both rules used to declare these separately
+       and each carried a comment promising it matched the other, which is a
+       convention, not a guarantee.
+
+       The floor is 128px, not 100px, because identical declarations do not make
+       two cards the same size when one has twice the rows. A project card is
+       name(20) + summary(17) + runtime(15) + deployment(15) + 3 gaps(24) +
+       padding(32) ~= 123px; an integration card is name + one status line, ~75px,
+       so it sat on the old 100px floor while the project card cleared it. Only a
+       shared floor above the richer card's content makes them equal. */
+    --card-min-height: 128px;
+    --card-min-width: 200px;
+    --card-padding: 16px;
+    --card-gap: 8px;
+}
+
+/* Footer grid cell alignment */
+.grid-align-start { justify-self: start; }
+.grid-align-center { justify-self: center; }
+.grid-align-end { justify-self: end; }
+
+/* --------------------------------------------------------------------------
+   Responsive layout: narrow-viewport adjustments for the wizard chrome and
+   the shared TwoColumnLayout primitive. On a 13-14" laptop at ideal zoom
+   (effective ~1280px logical width), the 280px progress rail leaves the
+   main column too narrow to fit the 960px left content + a 300px summary
+   side-by-side; the summary squeezes and its labels wrap to two and three
+   lines. Two breakpoints handle this:
+
+     <= 1280px viewport: collapse the SETUP PROGRESS rail to an icons-only
+       column (56px) and free up ~224px for content. Step names that were
+       inline are now provided on hover via a CSS-only `::after` tooltip
+       on each step — the data-step-name attribute is in TimelineNav.tsx
+       and the tooltip styles live ONLY inside this media query, so they
+       are structurally absent at wider viewports where the inline labels
+       are still visible.
+
+     <= 1180px viewport: stack TwoColumnLayout columns vertically so the
+       right column never falls below its rightMinWidth floor — even with
+       the rail collapsed, this viewport is too narrow for side-by-side.
+   -------------------------------------------------------------------------- */
+
+/* ========================================
+ * Expandable Brand Cards
+ * ======================================== */
+
+/* Individual architecture option (radio-like) - compact */
+
+/* Radio circle indicator */
+
+/* Architecture option text content */
+
+/* Architecture options in modal - more spacious */
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Picker dropdown menu: prevent item text wrapping, ensure items fit content */
+[role="listbox"] [role="option"] {
+    white-space: nowrap;
+    overflow: visible;
+    text-overflow: unset;
+    min-width: fit-content;
+}
+
+/* Optional addons section in architecture modal */
+
+/* Checkbox focus ring for keyboard navigation */
+
+/* Architecture modal footer with Done button */
+
+.min-h-0 { min-height: 0; }
+.min-h-48 { min-height: 48px; }
+
+/* ===========================================
+   Animation Classes
+   Note: @keyframes pulse is defined in index.css (canonical location)
+   =========================================== */
+
+.shadow { box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }
+
+/* AI badge + its capabilities link on one line. The link was a standalone row
+   beneath the badges, which cost the band a whole row to say one thing. */
+
+/* Dashboard action-tile geometry. Only the tile size + inter-cluster gaps are
+   tokens now — the dashboard no longer derives a bespoke content width. Every
+   block (status header, org banner, integrations) shares the standard --content-width
+   band like the rest of the app; the action tiles are intrinsically small and
+   simply sit left within that band (a compact cluster, the way a short wizard
+   form doesn't stretch to fill the column). */
+:root {
+    --dashboard-tile-size: 96px;
+    --dashboard-tile-gap: 16px;
+    }
+
+/* Org-mismatch banner — a dark, accent-bordered warning card that matches the
+   dashboard's bordered-tile attention idiom (cf. the Delete tile's accent
+   border) while calling attention. Spans the standard content band (like the
+   status header and integrations), below the status header. */
+/* ===========================================
+   Projects Dashboard Layout Prototypes
+   =========================================== */
+
+/* Option B: Button grid (matches dashboard action buttons) */
+
+.pb-6 { padding-bottom: 24px; }
+
+.grow { flex-grow: 1; }
+
+/* AI surface — drill-down row typography reuses the wizard's existing
+   utility classes (.text-sm, .font-semibold, .text-gray-700) for
+   name/description. Only the unique pieces live here: the source
+   classification badge pill and the row separator. */
+
+/* Progress bar entrance/exit animations */
+[class*="spectrum-ProgressBar"] {
+    animation: fadeInUp var(--spectrum-global-animation-duration-600) ease;
+    transition: opacity var(--spectrum-global-animation-duration-600) ease;
+}
+
+@keyframes fadeInUp {
+    from { 
+        opacity: 0;
+        transform: translateY(4px);
+    }
+    to { 
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Smooth progress bar value changes */
+[class*="spectrum-ProgressBar-fill"] {
+    transition: width var(--spectrum-global-animation-duration-600) ease;
+}
+
+/* Note: .animate-fade-in and @keyframes fadeIn defined in utility section above */
+
+/* Node version status lines transitions */
+
+/* Text color for errors */
+.text-red-700 { color: var(--spectrum-global-color-red-700); }
+
+/* ===========================================
+   Optional/Muted Label Styles
+   =========================================== */
+.text-muted-label {
+    font-weight: 400;
+    opacity: 0.7;
+}
+
+/* Flex End Container - Right-aligned flex child */
+.flex-end-container {
+    flex: 1;
+    display: flex;
+    justify-content: flex-end;
+}
+
+} /* End of second @layer theme block */
+
+/* ============================================
+   TEXT COLOUR UTILITIES  (unlayered — see below)
+   ============================================
+   Moved here from src/features/eds/ui/styles/eds-steps.css on 2026-08-29 by the
+   ADR-017 §6 check, which found core components depending on them from bundles
+   that never load that feature sheet: StatusDisplay (dashboard, dataInstaller,
+   integrations, projectsList) and AdobeAuthStep (integrations).
+
+   DELIBERATELY OUTSIDE `@layer theme`. eds-steps.css declares no layer, so these
+   rules were unlayered author rules and outranked every layered one. Putting them
+   in a layer here would preserve the text but change the cascade, which is a
+   different kind of bug from the one being fixed. */
+@layer theme {
+.text-orange-500 {
+    color: var(--spectrum-global-color-orange-500);
+}
+}
+
+@layer theme {
+.text-orange-600 {
+    color: var(--spectrum-global-color-orange-600);
+}
+}
+
+/* .text-orange-700 and .text-red-500 were USED but defined nowhere a component
+   could rely on — found 2026-08-29 by the ADR-017 §6 check's sibling rule.
+   Both render as "no colour applied", which is a visible bug rather than dead
+   markup: warning text that is not amber, and an ERROR icon that is not red.
+
+   .text-red-500 did exist, but only inside VerifiedField's inline <style>
+   block, so it applied wherever that component happened to be mounted and
+   nowhere else. AdobeAuthStep uses it on the auth-failure icon and never got
+   it. Defining it here made it real everywhere; the inline copy was deleted
+   with the rest of that block on 2026-09-09, when style blocks were banned. */
+@layer theme {
+.text-orange-700 {
+    color: var(--spectrum-global-color-orange-700);
+}
+}
+
+@layer theme {
+.text-red-500 {
+    color: var(--spectrum-semantic-negative-color-icon);
+}
+}
+
+/* ============================================
+   NUMBER BADGE  (moved 2026-08-29, ADR-017 §6)
+   ============================================
+   From src/core/ui/styles/wizard.css, which only 4 of the 8 bundle entries
+   import — while `NumberedInstructions` and `FieldHelpButton` are core
+   components any surface can render. Wrapped in `@layer theme` exactly as it was
+   at its old home, so the cascade position does not move with it. */
+@layer theme {
+}

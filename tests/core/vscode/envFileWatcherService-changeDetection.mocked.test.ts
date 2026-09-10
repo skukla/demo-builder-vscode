@@ -7,128 +7,20 @@
  * Reference: .rptc/plans/resource-lifecycle-management/TESTING-MOCKING-PATTERNS.md
  */
 
-// Mock logger FIRST (before any imports that might use it)
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    }),
-}));
-
-// Import mock exports from testUtils - must be before vscode mock for proper reference
 import {
+    EnvFileWatcherService,
+    WorkspaceWatcherManager,
+    vscode,
     mockWatchers,
     mockFileContents,
     mockStateManager,
     mockLogger,
     resetMocks,
-    commandCallbacks as _commandCallbacks,
+    settleFileChange,
 } from './envFileWatcherService.testUtils';
+import { createMockProject } from '../../helpers/projectFake';
 
-// Mock vscode API - must be in test file for proper hoisting
-jest.mock('vscode', () => {
-    const actual = jest.requireActual('vscode');
-    return {
-        ...actual,
-        workspace: {
-            workspaceFolders: [
-                { uri: { fsPath: '/project1', toString: () => 'file:///project1' }, name: 'project1', index: 0 },
-            ],
-            createFileSystemWatcher: jest.fn((pattern: string) => {
-                const watcher = {
-                    pattern,
-                    _disposed: false,
-                    _listeners: {
-                        onCreate: [] as ((...args: unknown[]) => unknown)[],
-                        onChange: [] as ((...args: unknown[]) => unknown)[],
-                        onDelete: [] as ((...args: unknown[]) => unknown)[]
-                    },
-                    onDidCreate: jest.fn((listener) => {
-                        watcher._listeners.onCreate.push(listener);
-                        return { dispose: () => {} };
-                    }),
-                    onDidChange: jest.fn((listener) => {
-                        watcher._listeners.onChange.push(listener);
-                        return { dispose: () => {} };
-                    }),
-                    onDidDelete: jest.fn((listener) => {
-                        watcher._listeners.onDelete.push(listener);
-                        return { dispose: () => {} };
-                    }),
-                    dispose: jest.fn(() => {
-                        watcher._disposed = true;
-                        const { mockWatchers } = require('./envFileWatcherService.testUtils');
-                        const idx = mockWatchers.indexOf(watcher);
-                        if (idx !== -1) mockWatchers.splice(idx, 1);
-                    }),
-                    _simulateChange: (uri: any) => {
-                        watcher._listeners.onChange.forEach((l: (...args: unknown[]) => unknown) => l(uri));
-                    }
-                };
-
-                const { mockWatchers } = require('./envFileWatcherService.testUtils');
-                mockWatchers.push(watcher);
-                return watcher;
-            })
-        },
-        window: {
-            showInformationMessage: jest.fn(() => Promise.resolve(undefined)),
-        },
-        commands: {
-            registerCommand: jest.fn((id, callback) => {
-                const { commandCallbacks } = require('./envFileWatcherService.testUtils');
-                commandCallbacks[id] = callback;
-                return { dispose: jest.fn() };
-            }),
-            executeCommand: jest.fn((id, ...args) => {
-                const { commandCallbacks } = require('./envFileWatcherService.testUtils');
-                const callback = commandCallbacks[id];
-                if (callback) {
-                    return Promise.resolve(callback(...args));
-                }
-                return Promise.resolve();
-            }),
-        },
-        Uri: {
-            file: (path: string) => ({
-                fsPath: path,
-                toString: () => `file://${path}`
-            }),
-        },
-        RelativePattern: jest.fn().mockImplementation((folder, pattern) => pattern),
-    };
-});
-
-// Mock fs.promises
-jest.mock('fs', () => ({
-    promises: {
-        readFile: jest.fn((filePath: string) => {
-            const { mockFileContents } = require('./envFileWatcherService.testUtils');
-            const content = mockFileContents.get(filePath);
-            if (content === undefined) {
-                return Promise.reject(new Error(`File not found: ${filePath}`));
-            }
-            return Promise.resolve(content);
-        }),
-    },
-}));
-
-// Mock WorkspaceWatcherManager
-jest.mock('@/core/vscode/workspaceWatcherManager', () => {
-    return {
-        WorkspaceWatcherManager: jest.fn().mockImplementation(() => ({
-            registerWatcher: jest.fn(),
-            dispose: jest.fn(),
-        })),
-    };
-});
-
-import * as vscode from 'vscode';
-import { EnvFileWatcherService } from '@/core/vscode/envFileWatcherService';
-import { WorkspaceWatcherManager } from '@/core/vscode/workspaceWatcherManager';
-
+import { createMockExtensionContext } from '../../helpers/extensionContextFake';
 describe('EnvFileWatcherService - Change Detection (Mocked)', () => {
     let mockContext: vscode.ExtensionContext;
     let mockWatcherManager: WorkspaceWatcherManager;
@@ -137,18 +29,17 @@ describe('EnvFileWatcherService - Change Detection (Mocked)', () => {
     beforeEach(() => {
         resetMocks();
 
-        mockContext = {
-            subscriptions: [],
-            extensionPath: '/test',
-        } as any;
+        // The canonical fake, with this suite's path. The literal it replaces named
+        // two of ExtensionContext's twenty-one members and cast the difference away.
+        mockContext = createMockExtensionContext({ subscriptions: [] }, '/test');
 
         mockWatcherManager = new WorkspaceWatcherManager();
 
         service = new EnvFileWatcherService(
             mockContext,
-            mockStateManager as any,
+            mockStateManager,
             mockWatcherManager,
-            mockLogger,
+            mockLogger
         );
 
         service.initialize();
@@ -166,27 +57,26 @@ describe('EnvFileWatcherService - Change Detection (Mocked)', () => {
             mockFileContents.set(filePath, content);
 
             // Initialize hash
-            await vscode.commands.executeCommand(
-                'demoBuilder._internal.initializeFileHashes',
-                [filePath]
-            );
+            await vscode.commands.executeCommand('demoBuilder._internal.initializeFileHashes', [
+                filePath,
+            ]);
 
             // Set demo as running
-            mockStateManager.getCurrentProject.mockResolvedValue({
-                status: 'running',
-            });
+            mockStateManager.getCurrentProject.mockResolvedValue(
+                createMockProject({ status: 'running' })
+            );
 
             // When: File event fires with same content
             const uri = vscode.Uri.file(filePath);
             mockWatchers[0]._simulateChange(uri);
 
             // Wait for async processing
-            await new Promise(resolve => process.nextTick(resolve));
+            await new Promise((resolve) => process.nextTick(resolve));
 
             // Then: No notification shown
             expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
             expect(mockLogger.debug).toHaveBeenCalledWith(
-                expect.stringContaining('Content unchanged'),
+                expect.stringContaining('Content unchanged')
             );
         });
 
@@ -197,15 +87,14 @@ describe('EnvFileWatcherService - Change Detection (Mocked)', () => {
             mockFileContents.set(filePath, initialContent);
 
             // Initialize hash
-            await vscode.commands.executeCommand(
-                'demoBuilder._internal.initializeFileHashes',
-                [filePath]
-            );
+            await vscode.commands.executeCommand('demoBuilder._internal.initializeFileHashes', [
+                filePath,
+            ]);
 
             // Set demo as running
-            mockStateManager.getCurrentProject.mockResolvedValue({
-                status: 'running',
-            });
+            mockStateManager.getCurrentProject.mockResolvedValue(
+                createMockProject({ status: 'running' })
+            );
 
             // When: File content changes
             const newContent = 'API_KEY=test456';
@@ -215,13 +104,78 @@ describe('EnvFileWatcherService - Change Detection (Mocked)', () => {
             mockWatchers[0]._simulateChange(uri);
 
             // Wait for async processing
-            await new Promise(resolve => process.nextTick(resolve));
+            await new Promise((resolve) => process.nextTick(resolve));
 
             // Then: Notification shown
             expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
                 expect.stringContaining('Environment configuration changed'),
-                'Restart Demo',
+                'Restart Demo'
             );
+        });
+    });
+
+    // What the hash map holds for a path decides whether the NEXT event is a change
+    // or a first sighting. These drive that map through the states it can reach and
+    // then read it the only way anything can: by whether the next event notifies.
+    describe('First Sighting and Unreadable Files', () => {
+        const filePath = '/project1/.env';
+
+        const changeFires = async (): Promise<void> => {
+            mockWatchers[0]._simulateChange(vscode.Uri.file(filePath));
+            await settleFileChange();
+        };
+
+        beforeEach(() => {
+            mockStateManager.getCurrentProject.mockResolvedValue(
+                createMockProject({ status: 'running' })
+            );
+        });
+
+        it('should record the hash without notifying the first time it sees a file', async () => {
+            mockFileContents.set(filePath, 'API_KEY=first');
+
+            await changeFires();
+
+            expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
+
+            // …and the hash really was recorded: the next change is a change.
+            mockFileContents.set(filePath, 'API_KEY=second');
+            await changeFires();
+
+            expect(vscode.window.showInformationMessage).toHaveBeenCalled();
+        });
+
+        it('should not record anything for a file it cannot read', async () => {
+            // No content registered, so the read rejects and the hash is null.
+            await changeFires();
+
+            expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
+
+            // The file becomes readable. This is still the FIRST time its content
+            // has been seen, so it must initialise quietly — not read as a change
+            // away from an unreadable file.
+            mockFileContents.set(filePath, 'API_KEY=first');
+            await changeFires();
+
+            expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
+
+            // …and the watcher has recovered: the edit after that is a real change.
+            mockFileContents.set(filePath, 'API_KEY=second');
+            await changeFires();
+
+            expect(vscode.window.showInformationMessage).toHaveBeenCalled();
+        });
+
+        it('should not record anything when asked to hash a file it cannot read', async () => {
+            await vscode.commands.executeCommand('demoBuilder._internal.initializeFileHashes', [
+                filePath,
+            ]);
+
+            mockFileContents.set(filePath, 'API_KEY=first');
+            await changeFires();
+
+            // Quiet: the failed hash must not have been stored as a previous value.
+            expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
         });
     });
 
@@ -233,10 +187,9 @@ describe('EnvFileWatcherService - Change Detection (Mocked)', () => {
             mockFileContents.set(filePath, content);
 
             // Initialize hash
-            await vscode.commands.executeCommand(
-                'demoBuilder._internal.initializeFileHashes',
-                [filePath]
-            );
+            await vscode.commands.executeCommand('demoBuilder._internal.initializeFileHashes', [
+                filePath,
+            ]);
 
             // Register programmatic write
             await vscode.commands.executeCommand(
@@ -245,9 +198,9 @@ describe('EnvFileWatcherService - Change Detection (Mocked)', () => {
             );
 
             // Set demo as running
-            mockStateManager.getCurrentProject.mockResolvedValue({
-                status: 'running',
-            });
+            mockStateManager.getCurrentProject.mockResolvedValue(
+                createMockProject({ status: 'running' })
+            );
 
             // When: File change event fires
             const newContent = 'API_KEY=test456';
@@ -257,12 +210,12 @@ describe('EnvFileWatcherService - Change Detection (Mocked)', () => {
             mockWatchers[0]._simulateChange(uri);
 
             // Wait for async processing
-            await new Promise(resolve => process.nextTick(resolve));
+            await new Promise((resolve) => process.nextTick(resolve));
 
             // Then: No notification shown
             expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
             expect(mockLogger.debug).toHaveBeenCalledWith(
-                expect.stringContaining('Ignoring programmatic write'),
+                expect.stringContaining('Ignoring programmatic write')
             );
         });
     });
@@ -329,6 +282,15 @@ describe('apply prompts are re-armed by a new config change', () => {
         expect(shouldShow('Storefront')).toBe(true);
     });
 
+    it('still re-arms the mesh prompt when the mesh action is taken', () => {
+        markShown('Mesh');
+        expect(shouldShow('Mesh')).toBe(false);
+
+        commandCallbacks['demoBuilder._internal.meshActionTaken']();
+
+        expect(shouldShow('Mesh')).toBe(true);
+    });
+
     it('does not touch the restart prompt', () => {
         // Scoped deliberately: restart is a different concern with its own
         // trigger, and re-arming it here would reintroduce notification spam.
@@ -338,7 +300,7 @@ describe('apply prompts are re-armed by a new config change', () => {
         configChanged();
 
         expect(commandCallbacks['demoBuilder._internal.shouldShowRestartNotification']()).toBe(
-            false,
+            false
         );
     });
 });

@@ -1,14 +1,13 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import React from 'react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { AdobeProjectPicker } from '@/features/authentication/ui/components/AdobeProjectPicker';
-import { WizardState } from '@/types/webview';
+import type { AdobeProject, WizardState } from '@/types/webview';
 import '@testing-library/jest-dom';
 import {
     mockProjects,
     baseState,
     createMockSelectionStep,
-    createManyProjects,
 } from './AdobeProjectPicker.testUtils';
 
 // Mock WebviewClient
@@ -21,7 +20,7 @@ jest.mock('@/core/ui/utils/WebviewClient', () => ({
 }));
 
 // Mock useSelectionStep hook
-jest.mock('@/core/ui/hooks', () => ({
+jest.mock('@/core/ui/hooks/useSelectionStep', () => ({
     useSelectionStep: jest.fn(),
 }));
 
@@ -40,11 +39,108 @@ jest.mock('@/core/ui/components/ui/FadeTransition', () => ({
     FadeTransition: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
-import { useSelectionStep } from '@/core/ui/hooks';
+import { useSelectionStep } from '@/core/ui/hooks/useSelectionStep';
 
 const mockUseSelectionStep = useSelectionStep as jest.Mock;
 
 describe('AdobeProjectPicker', () => {
+
+    /**
+     * WHAT THE PICKER HANDS THE HOOK.
+     *
+     * Everything else in this file mocks `useSelectionStep` and asserts what came
+     * back on screen — which the mock decides, not the component. Measured
+     * 2026-09-02 by breaking the wiring four ways: an emptied `searchFields`, a
+     * wrong `cacheKey`, and a `messageType` asking the backend for WORKSPACES all
+     * left seventeen tests green. Only the inverted auto-select flag was caught,
+     * and only because one test reads the config off the mock rather than the
+     * screen.
+     *
+     * A mock cannot see a malformed call. So the config is asserted directly.
+     */
+    describe('the configuration it hands useSelectionStep', () => {
+        function configPassed(): Record<string, unknown> {
+            mockUseSelectionStep.mockReturnValue(createMockSelectionStep({}));
+            render(
+                <Provider theme={defaultTheme}>
+                    <AdobeProjectPicker
+                        state={baseState as WizardState}
+                        updateState={mockUpdateState}
+                    />
+                </Provider>
+            );
+            return mockUseSelectionStep.mock.calls[0][0] as Record<string, unknown>;
+        }
+
+        it('asks the backend for PROJECTS, and caches them under the projects key', () => {
+            const config = configPassed();
+            expect(config.messageType).toBe('get-projects');
+            expect(config.cacheKey).toBe('projectsCache');
+            expect(config.errorMessageType).toBe('project-error');
+        });
+
+        it('searches the fields a person would type into — title, name, description', () => {
+            expect(configPassed().searchFields).toEqual(['title', 'name', 'description']);
+        });
+
+        it('stores the search text under the project search key', () => {
+            expect(configPassed().searchFilterKey).toBe('projectSearchFilter');
+        });
+
+        it('threads the selected org so the backend targets IT', () => {
+            expect(configPassed().messagePayload).toEqual({ orgId: 'org1' });
+        });
+
+        it('lets the load proceed once an org is selected', () => {
+            const validateBeforeLoad = configPassed().validateBeforeLoad as () => unknown;
+            expect(validateBeforeLoad()).toEqual({ valid: true });
+        });
+
+        it('auto-selects a lone project by default', () => {
+            expect(configPassed().autoSelectSingle).toBe(true);
+        });
+    });
+
+    /**
+     * The Add-Integration flow's pending-selection model: it hands
+     * `onProjectSelect` and takes the pick itself, and never wants a lone project
+     * auto-picked, because its Continue is what commits.
+     */
+    describe('Pending-selection overrides (onProjectSelect)', () => {
+        function configWithOverride(onProjectSelect: (p: AdobeProject) => void) {
+            mockUseSelectionStep.mockReturnValue(createMockSelectionStep({ items: mockProjects }));
+            render(
+                <Provider theme={defaultTheme}>
+                    <AdobeProjectPicker
+                        state={baseState as WizardState}
+                        updateState={mockUpdateState}
+                        onProjectSelect={onProjectSelect}
+                    />
+                </Provider>
+            );
+            return mockUseSelectionStep.mock.calls[0][0];
+        }
+
+        it('hands the picked project to the caller and writes NOTHING to state', () => {
+            const onProjectSelect = jest.fn();
+            const config = configWithOverride(onProjectSelect);
+
+            config.onSelect(mockProjects[1]);
+
+            expect(onProjectSelect).toHaveBeenCalledWith({
+                id: 'project2',
+                name: 'project-2',
+                title: 'Test Project 2',
+                description: 'Second test project',
+                org_id: 'org123',
+            });
+            expect(mockUpdateState).not.toHaveBeenCalled();
+        });
+
+        it('never auto-selects a lone project for a pending-selection caller', () => {
+            expect(configWithOverride(jest.fn()).autoSelectSingle).toBe(false);
+        });
+    });
     const mockUpdateState = jest.fn();
 
     beforeEach(() => {
@@ -71,29 +167,6 @@ describe('AdobeProjectPicker', () => {
             );
 
             expect(screen.getByText('Test Project 1')).toBeInTheDocument();
-        });
-
-        it('should display all projects in list', () => {
-            mockUseSelectionStep.mockReturnValue(
-                createMockSelectionStep({
-                    items: mockProjects,
-                    filteredItems: mockProjects,
-                    hasLoadedOnce: true,
-                })
-            );
-
-            render(
-                <Provider theme={defaultTheme}>
-                    <AdobeProjectPicker
-                        state={baseState as WizardState}
-                        updateState={mockUpdateState}
-                    />
-                </Provider>
-            );
-
-            expect(screen.getByText('Test Project 1')).toBeInTheDocument();
-            expect(screen.getByText('Test Project 2')).toBeInTheDocument();
-            expect(screen.getByText('Test Project 3')).toBeInTheDocument();
         });
 
         it('should write adobeProject to state on select', () => {
@@ -195,27 +268,6 @@ describe('AdobeProjectPicker', () => {
     });
 
     describe('Loading States', () => {
-        it('should display loading indicator when loading projects', () => {
-            mockUseSelectionStep.mockReturnValue(
-                createMockSelectionStep({
-                    isLoading: true,
-                    showLoading: true,
-                })
-            );
-
-            render(
-                <Provider theme={defaultTheme}>
-                    <AdobeProjectPicker
-                        state={baseState as WizardState}
-                        updateState={mockUpdateState}
-                    />
-                </Provider>
-            );
-
-            expect(screen.getByTestId('loading-display')).toBeInTheDocument();
-            expect(screen.getByText('Loading your Adobe projects...')).toBeInTheDocument();
-        });
-
         it('should show organization name in loading message', () => {
             mockUseSelectionStep.mockReturnValue(
                 createMockSelectionStep({
@@ -238,94 +290,9 @@ describe('AdobeProjectPicker', () => {
             ).toBeInTheDocument();
         });
 
-        it('should indicate refreshing state without hiding list', () => {
-            mockUseSelectionStep.mockReturnValue(
-                createMockSelectionStep({
-                    items: mockProjects,
-                    filteredItems: mockProjects,
-                    isLoading: true,
-                    isRefreshing: true,
-                    hasLoadedOnce: true,
-                })
-            );
-
-            render(
-                <Provider theme={defaultTheme}>
-                    <AdobeProjectPicker
-                        state={baseState as WizardState}
-                        updateState={mockUpdateState}
-                    />
-                </Provider>
-            );
-
-            expect(screen.getByText('Test Project 1')).toBeInTheDocument();
-        });
     });
 
     describe('Error Handling', () => {
-        it('should display error message when loading fails', () => {
-            mockUseSelectionStep.mockReturnValue(
-                createMockSelectionStep({
-                    error: 'Failed to load projects',
-                })
-            );
-
-            render(
-                <Provider theme={defaultTheme}>
-                    <AdobeProjectPicker
-                        state={baseState as WizardState}
-                        updateState={mockUpdateState}
-                    />
-                </Provider>
-            );
-
-            expect(screen.getByText('Error Loading Projects')).toBeInTheDocument();
-            expect(screen.getByText('Failed to load projects')).toBeInTheDocument();
-        });
-
-        it('should provide retry button on error', () => {
-            const mockLoad = jest.fn();
-            mockUseSelectionStep.mockReturnValue(
-                createMockSelectionStep({
-                    error: 'Failed to load projects',
-                    load: mockLoad,
-                })
-            );
-
-            render(
-                <Provider theme={defaultTheme}>
-                    <AdobeProjectPicker
-                        state={baseState as WizardState}
-                        updateState={mockUpdateState}
-                    />
-                </Provider>
-            );
-
-            fireEvent.click(screen.getByText('Try Again'));
-
-            expect(mockLoad).toHaveBeenCalled();
-        });
-
-        it('should display empty state when no projects available', () => {
-            mockUseSelectionStep.mockReturnValue(
-                createMockSelectionStep({
-                    hasLoadedOnce: true,
-                })
-            );
-
-            render(
-                <Provider theme={defaultTheme}>
-                    <AdobeProjectPicker
-                        state={baseState as WizardState}
-                        updateState={mockUpdateState}
-                    />
-                </Provider>
-            );
-
-            expect(screen.getByText('No Projects Found')).toBeInTheDocument();
-            expect(screen.getByText(/create a project in Adobe Console first/)).toBeInTheDocument();
-        });
-
         it('should validate organization before loading', () => {
             const stateWithoutOrg = {
                 ...baseState,
@@ -353,119 +320,8 @@ describe('AdobeProjectPicker', () => {
     });
 
     describe('Search and Filter', () => {
-        it('should display search field when more than 5 projects', () => {
-            const manyProjects = createManyProjects(10);
-
-            mockUseSelectionStep.mockReturnValue(
-                createMockSelectionStep({
-                    items: manyProjects,
-                    filteredItems: manyProjects,
-                    hasLoadedOnce: true,
-                })
-            );
-
-            render(
-                <Provider theme={defaultTheme}>
-                    <AdobeProjectPicker
-                        state={baseState as WizardState}
-                        updateState={mockUpdateState}
-                    />
-                </Provider>
-            );
-
-            expect(screen.getByPlaceholderText('Type to filter projects...')).toBeInTheDocument();
-        });
-
-        it('should filter projects based on search query', () => {
-            mockUseSelectionStep.mockReturnValue(
-                createMockSelectionStep({
-                    items: mockProjects,
-                    filteredItems: [mockProjects[0]], // Filtered to one project
-                    hasLoadedOnce: true,
-                    searchQuery: 'Project 1',
-                })
-            );
-
-            render(
-                <Provider theme={defaultTheme}>
-                    <AdobeProjectPicker
-                        state={baseState as WizardState}
-                        updateState={mockUpdateState}
-                    />
-                </Provider>
-            );
-
-            expect(screen.getByText('Showing 1 of 3 projects')).toBeInTheDocument();
-        });
-
-        it('should show no results message when search returns empty', () => {
-            mockUseSelectionStep.mockReturnValue(
-                createMockSelectionStep({
-                    items: mockProjects,
-                    filteredItems: [], // No matches
-                    hasLoadedOnce: true,
-                    searchQuery: 'nonexistent',
-                })
-            );
-
-            render(
-                <Provider theme={defaultTheme}>
-                    <AdobeProjectPicker
-                        state={baseState as WizardState}
-                        updateState={mockUpdateState}
-                    />
-                </Provider>
-            );
-
-            expect(screen.getByText(/No projects match "nonexistent"/)).toBeInTheDocument();
-        });
     });
 
     describe('Refresh Functionality', () => {
-        it('should provide refresh button', () => {
-            mockUseSelectionStep.mockReturnValue(
-                createMockSelectionStep({
-                    items: mockProjects,
-                    filteredItems: mockProjects,
-                    hasLoadedOnce: true,
-                })
-            );
-
-            render(
-                <Provider theme={defaultTheme}>
-                    <AdobeProjectPicker
-                        state={baseState as WizardState}
-                        updateState={mockUpdateState}
-                    />
-                </Provider>
-            );
-
-            expect(screen.getByLabelText('Refresh projects')).toBeInTheDocument();
-        });
-
-        it('should call refresh when refresh button is clicked', () => {
-            const mockRefresh = jest.fn();
-            mockUseSelectionStep.mockReturnValue(
-                createMockSelectionStep({
-                    items: mockProjects,
-                    filteredItems: mockProjects,
-                    hasLoadedOnce: true,
-                    refresh: mockRefresh,
-                })
-            );
-
-            render(
-                <Provider theme={defaultTheme}>
-                    <AdobeProjectPicker
-                        state={baseState as WizardState}
-                        updateState={mockUpdateState}
-                    />
-                </Provider>
-            );
-
-            fireEvent.click(screen.getByLabelText('Refresh projects'));
-
-            expect(mockRefresh).toHaveBeenCalled();
-        });
     });
 });

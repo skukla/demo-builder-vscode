@@ -6,42 +6,20 @@
  */
 
 import * as vscode from 'vscode';
-import { ShowAiCommand } from '@/features/dashboard/commands/openAi';
-import { BaseWebviewCommand } from '@/core/base';
-import { StateManager } from '@/core/state';
+import { ShowAiCommand, AI_MESSAGE_TYPES, createAiPanel } from './openAi.testUtils';
+import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
+import { StateManager } from '@/core/state/stateManager';
 import type { Logger } from '@/types/logger';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockProject } from '../../../helpers/projectFake';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 
 // Mock VS Code API
-jest.mock('vscode');
 
 // Mock dependencies
-jest.mock('@/core/state');
 
 // Mock logger
-jest.mock('@/core/logging', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    }),
-    Logger: jest.fn().mockImplementation(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
-}));
-
-// Mock the AI handler map so we can verify wiring
-jest.mock('@/features/dashboard/handlers/aiHandlers', () => ({
-    aiHandlers: {
-        'verify-ai-setup': jest.fn(),
-        'regenerate-ai-files': jest.fn(),
-        openInClaude: jest.fn(),
-    },
-}));
 
 describe('ShowAiCommand', () => {
     let command: ShowAiCommand;
@@ -49,54 +27,22 @@ describe('ShowAiCommand', () => {
     let mockStateManager: jest.Mocked<StateManager>;
     let mockLogger: Logger;
     let mockPanel: vscode.WebviewPanel;
-    let mockWebview: vscode.Webview;
 
     beforeEach(() => {
         jest.clearAllMocks();
 
-        mockWebview = {
-            asWebviewUri: jest.fn(
-                (uri: vscode.Uri) =>
-                    ({
-                        toString: () => `vscode-webview://authority${uri.fsPath}`,
-                        fsPath: uri.fsPath,
-                    }) as vscode.Uri
-            ),
-            cspSource: 'vscode-webview:',
-            postMessage: jest.fn(),
-            onDidReceiveMessage: jest.fn(),
-        } as unknown as vscode.Webview;
+        mockPanel = createAiPanel();
 
-        mockPanel = {
-            webview: mockWebview,
-            dispose: jest.fn(),
-            onDidDispose: jest.fn(),
-            reveal: jest.fn(),
-        } as unknown as vscode.WebviewPanel;
-
-        mockContext = {
-            subscriptions: [],
-            extensionPath: '/test/extension/path',
-            extensionUri: vscode.Uri.file('/test/extension/path'),
-            globalState: {
-                get: jest.fn(),
-                update: jest.fn(),
-            },
-        } as unknown as vscode.ExtensionContext;
+        mockContext = createMockExtensionContext();
 
         mockStateManager = {
-            getCurrentProject: jest.fn().mockResolvedValue({
+            getCurrentProject: jest.fn().mockResolvedValue(createMockProject({
                 name: 'Test Project',
                 path: '/test/project',
-            } as Project),
+            })),
         } as unknown as jest.Mocked<StateManager>;
 
-        mockLogger = {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as unknown as Logger;
+        mockLogger = createMockLogger() as unknown as Logger;
 
         command = new ShowAiCommand(
             mockContext,
@@ -187,12 +133,8 @@ describe('ShowAiCommand', () => {
             ).initializeMessageHandlers(mockComm);
 
             const calledTypes = onStreaming.mock.calls.map((call) => call[0]);
-            expect(calledTypes).toEqual(
-                expect.arrayContaining(['verify-ai-setup', 'regenerate-ai-files', 'openInClaude'])
-            );
-            // 4 → 3: inspect-mcp removed 2026-08-05. It was registered but
-            // unreachable — the AI surface has no Refresh action to send it.
-            expect(calledTypes).toHaveLength(3);
+            expect(calledTypes).toEqual(expect.arrayContaining(AI_MESSAGE_TYPES));
+            expect(calledTypes).toHaveLength(AI_MESSAGE_TYPES.length);
         });
 
         it('registers a cancel handler (footer Close) that disposes the panel', async () => {

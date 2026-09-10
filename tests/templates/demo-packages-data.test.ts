@@ -100,7 +100,7 @@ describe('demo-packages.json', () => {
     describe('structure validation - packages', () => {
         it('should have packages array with exactly 5 packages', () => {
             expect(Array.isArray(packagesConfig.packages)).toBe(true);
-            expect(packagesConfig.packages.length).toBe(5);
+            expect(packagesConfig.packages).toHaveLength(5);
         });
 
         it('should have unique package IDs', () => {
@@ -135,19 +135,19 @@ describe('demo-packages.json', () => {
         it('should have isle5 with 2 storefronts', () => {
             const isle5 = packagesConfig.packages.find(p => p.id === 'isle5');
             expect(isle5).toBeDefined();
-            expect(Object.keys(isle5!.storefronts).length).toBe(2);
+            expect(Object.keys(isle5!.storefronts)).toHaveLength(2);
         });
 
         it('should have citisignal with 3 storefronts', () => {
             const citisignal = packagesConfig.packages.find(p => p.id === 'citisignal');
             expect(citisignal).toBeDefined();
-            expect(Object.keys(citisignal!.storefronts).length).toBe(3);
+            expect(Object.keys(citisignal!.storefronts)).toHaveLength(3);
         });
 
         it('should have buildright with 1 storefront and coming-soon status', () => {
             const buildright = packagesConfig.packages.find(p => p.id === 'buildright');
             expect(buildright).toBeDefined();
-            expect(Object.keys(buildright!.storefronts).length).toBe(1);
+            expect(Object.keys(buildright!.storefronts)).toHaveLength(1);
             expect((buildright as unknown as Record<string, unknown>).status).toBe('coming-soon');
         });
 
@@ -184,17 +184,29 @@ describe('demo-packages.json', () => {
 
     describe('EDS storefronts - contentSource', () => {
         it('should have contentSource for branded EDS storefronts', () => {
-            packagesConfig.packages.forEach(pkg => {
+            const problems: string[] = [];
+            let checked = 0;
+            packagesConfig.packages.forEach((pkg, i) => {
                 if ((pkg as unknown as Record<string, unknown>).status === 'coming-soon') return;
                 Object.entries(pkg.storefronts).forEach(([stackId, storefront]) => {
-                    if (stackId.startsWith('eds-')) {
-                        expect((storefront as unknown as Record<string, unknown>).contentSource).toBeDefined();
-                        const contentSource = (storefront as unknown as Record<string, unknown>).contentSource as { org: string; site: string };
-                        expect(contentSource.org).toBeDefined();
-                        expect(contentSource.site).toBeDefined();
+                    if (!stackId.startsWith('eds-')) return;
+                    checked += 1;
+                    const where = `package[${i}].${stackId}`;
+                    const contentSource = (storefront as unknown as Record<string, unknown>)
+                        .contentSource as { org?: string; site?: string } | undefined;
+                    if (!contentSource) {
+                        problems.push(`${where}: no contentSource`);
+                        return;
                     }
+                    if (!contentSource.org) problems.push(`${where}: contentSource.org missing`);
+                    if (!contentSource.site) problems.push(`${where}: contentSource.site missing`);
                 });
             });
+
+            // Control: a config with no EDS storefronts would satisfy the check below
+            // while examining nothing.
+            expect(checked).toBeGreaterThan(0);
+            expect(problems).toStrictEqual([]);
         });
     });
 
@@ -368,16 +380,20 @@ describe('demo-packages.json', () => {
         });
 
         it('should have boolean featured field when present', () => {
-            packagesConfig.packages.forEach(pkg => {
-                if (pkg.featured !== undefined) {
-                    expect(typeof pkg.featured).toBe('boolean');
+            const problems: string[] = [];
+            packagesConfig.packages.forEach((pkg, i) => {
+                if (pkg.featured !== undefined && typeof pkg.featured !== 'boolean') {
+                    problems.push(`package[${i}].featured is ${typeof pkg.featured}`);
                 }
-                Object.values(pkg.storefronts).forEach(storefront => {
-                    if (storefront.featured !== undefined) {
-                        expect(typeof storefront.featured).toBe('boolean');
+                Object.entries(pkg.storefronts).forEach(([stackId, storefront]) => {
+                    if (storefront.featured !== undefined && typeof storefront.featured !== 'boolean') {
+                        problems.push(
+                            `package[${i}].${stackId}.featured is ${typeof storefront.featured}`
+                        );
                     }
                 });
             });
+            expect(problems).toStrictEqual([]);
         });
     });
 
@@ -465,16 +481,21 @@ describe('demo-packages.json', () => {
 
     describe('tags validation', () => {
         it('should have array of strings for tags when present', () => {
-            packagesConfig.packages.forEach(pkg => {
-                Object.values(pkg.storefronts).forEach(storefront => {
-                    if (storefront.tags) {
-                        expect(Array.isArray(storefront.tags)).toBe(true);
-                        storefront.tags.forEach(tag => {
-                            expect(typeof tag).toBe('string');
-                        });
+            const problems: string[] = [];
+            packagesConfig.packages.forEach((pkg, i) => {
+                Object.entries(pkg.storefronts).forEach(([stackId, storefront]) => {
+                    if (storefront.tags === undefined) return;
+                    const where = `package[${i}].${stackId}.tags`;
+                    if (!Array.isArray(storefront.tags)) {
+                        problems.push(`${where} is ${typeof storefront.tags}, not an array`);
+                        return;
                     }
+                    storefront.tags.forEach((tag, t) => {
+                        if (typeof tag !== 'string') problems.push(`${where}[${t}] is ${typeof tag}`);
+                    });
                 });
             });
+            expect(problems).toStrictEqual([]);
         });
     });
 });

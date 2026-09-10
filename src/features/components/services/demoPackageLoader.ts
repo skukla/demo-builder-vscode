@@ -16,7 +16,7 @@
 
 import demoPackagesConfig from '../config/demo-packages.json';
 import stacksConfig from '../config/stacks.json';
-import type { AddonSource, DemoPackage, DemoPackagesConfig, Storefront } from '@/types/demoPackages';
+import type { DemoPackage, DemoPackagesConfig, Storefront } from '@/types/demoPackages';
 import type { Stack, StacksConfig } from '@/types/stacks';
 
 /**
@@ -183,34 +183,12 @@ export async function getAllStorefronts(
 }
 
 /**
- * Get the source repository for an addon from global stacks.json definitions
- *
- * Resolves the AddonSource for addons that have a configured source
- * repository (e.g., commerce-block-collection -> isle5).
- * Source is defined globally in stacks.json, not per-package.
- *
- * @param addonId - The addon ID (e.g., "commerce-block-collection")
- * @returns The AddonSource, or undefined if the addon doesn't exist or has no source
- *
- * @example
- * const source = getAddonSource('commerce-block-collection');
- * if (source) {
- *   console.log(`Blocks from ${source.owner}/${source.repo}:${source.branch}`);
- * }
- */
-/**
  * Get a stack definition by ID (canonical lookup over stacks.json).
  * Consolidates the copies that lived in useSelectedStack, the prerequisites
  * check handler, the reset service, and the executor's component loading.
  */
 export function getStackById(stackId: string): Stack | undefined {
     return (stacksConfig.stacks as Stack[]).find((s) => s.id === stackId);
-}
-
-export function getAddonSource(addonId: string): AddonSource | undefined {
-    const config = stacksConfig as unknown as StacksConfig;
-    const addonDef = config.addonDefinitions?.[addonId];
-    return addonDef?.source;
 }
 
 /**

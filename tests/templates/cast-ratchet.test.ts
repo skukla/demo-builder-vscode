@@ -27,7 +27,9 @@ import * as path from 'path';
 // 34 `as unknown as`, every one verdicted (see codebase-sweep baselines).
 // 2026-08-26: 31 → 29. Deleting the dead `aiSkillBundle` lookup in skillsWriter
 // took its two registry casts with it.
-const BASELINE = 29;
+// 2026-09-05: 29 → 28. Deleting the dead `getAddonSource` in demoPackageLoader
+// took its `stacksConfig as unknown as StacksConfig` cast with it.
+const BASELINE = 28;
 
 const ROOT = path.join(__dirname, '../..');
 
@@ -59,8 +61,8 @@ function countCasts(): { total: number; asAny: string[]; sites: string[] } {
 describe('boundary-cast ratchet', () => {
     const { total, asAny, sites } = countCasts();
 
-    it('src has ZERO `as any`', () => {
-        expect(asAny).toEqual([]);
+    it('src has ZERO any-erasing casts', () => {
+        expect(asAny).toStrictEqual([]);
     });
 
     it(`cast count stays at or below the ${BASELINE} verdicted sites`, () => {

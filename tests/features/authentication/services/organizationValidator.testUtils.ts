@@ -1,6 +1,6 @@
-import type { CommandExecutor } from '@/core/shell';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
-import type { Logger } from '@/types/logger';
+import { createFailureResult } from '../../../helpers/commandResultFake';
+import type { CommandResult } from '@/core/shell/types';
 
 /**
  * OrganizationValidator Test Utilities
@@ -8,15 +8,8 @@ import type { Logger } from '@/types/logger';
  * Shared mocks, factories, and utilities for organizationValidator tests.
  */
 
-/**
- * Creates a mock CommandExecutor for tests.
- * CRITICAL: Returns a factory function to avoid closure issues.
- */
-export function createMockCommandExecutor(): jest.Mocked<CommandExecutor> {
-    return {
-        execute: jest.fn(),
-    } as any;
-}
+/** Canonical command-executor fake (ADR-016). */
+export { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 /**
  * Creates a mock AuthCacheManager for tests.
@@ -35,41 +28,16 @@ export function createMockCacheManager(): jest.Mocked<AuthCacheManager> {
         clearAll: jest.fn(),
         clearConsoleWhereCache: jest.fn(),
         setOrgClearedDueToValidation: jest.fn(),
-    } as any;
+    } as unknown as jest.Mocked<AuthCacheManager>;
 }
 
-/**
- * Creates a mock Logger for tests.
- */
-export function createMockLogger(): jest.Mocked<Logger> {
-    return {
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    } as any;
-}
+/** Canonical logger fake (ADR-016). Re-exported so existing imports keep working. */
+export { createMockLogger } from '../../../helpers/loggerFake';
 
-/**
- * Creates a successful command execution result.
- */
-export function createSuccessResult(data: any) {
-    return {
-        stdout: JSON.stringify(data),
-        stderr: '',
-        code: 0,
-        duration: 100
-    };
-}
+/** Canonical command result (ADR-016). */
+export { createSuccessResult } from '../../../helpers/commandResultFake';
 
-/**
- * Creates an error command execution result.
- */
-export function createErrorResult(stderr: string, code = 1) {
-    return {
-        stdout: '',
-        stderr,
-        code,
-        duration: 100
-    };
+/** The canonical failure result (ADR-016); `code` stays overridable. */
+export function createErrorResult(stderr: string, code = 1): CommandResult {
+    return { ...createFailureResult(stderr), code };
 }

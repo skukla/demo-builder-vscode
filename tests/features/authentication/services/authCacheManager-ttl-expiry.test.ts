@@ -20,14 +20,6 @@ import {
  */
 
 // Mock getLogger
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
-}));
 
 describe('AuthCacheManager - TTL & Expiry', () => {
     let cacheManager: AuthCacheManager;
@@ -126,8 +118,8 @@ describe('AuthCacheManager - TTL & Expiry', () => {
                 const manager = new AuthCacheManager();
                 manager.setCachedAuthStatus(true, baseTTL);
 
-                // Access private field via type assertion (for testing only)
-                const expiry = (manager as any).authCacheExpiry;
+                // Private field, read through its declared shape (for testing only)
+                const expiry = (manager as unknown as { authCacheExpiry: number }).authCacheExpiry;
                 const actualTTL = expiry - time.current;
                 samples.push(actualTTL);
             }
@@ -158,7 +150,8 @@ describe('AuthCacheManager - TTL & Expiry', () => {
                 const manager = new AuthCacheManager();
                 manager.setValidationCache('org123', true);
 
-                const cache = (manager as any).validationCache;
+                const cache = (manager as unknown as { validationCache: { expiry: number } })
+                    .validationCache;
                 const actualTTL = cache.expiry - time.current;
                 samples.push(actualTTL);
             }

@@ -96,6 +96,30 @@ describe('SuccessStateDisplay', () => {
         });
     });
 
+    describe('Centered Message', () => {
+        it('should center the message text', () => {
+            renderWithProviders(
+                <SuccessStateDisplay
+                    title="Completed"
+                    message="All steps finished successfully"
+                />
+            );
+            // centerMessage={true} is what adds text-center to the message class
+            expect(screen.getByText('All steps finished successfully')).toHaveClass('text-center');
+        });
+
+        it('should center each detail line', () => {
+            renderWithProviders(
+                <SuccessStateDisplay
+                    title="Completed"
+                    details={['Step 1 done', 'Step 2 done']}
+                />
+            );
+            expect(screen.getByText('Step 1 done')).toHaveClass('text-center');
+            expect(screen.getByText('Step 2 done')).toHaveClass('text-center');
+        });
+    });
+
     describe('Actions', () => {
         it('should render single action button', () => {
             const handleContinue = jest.fn();

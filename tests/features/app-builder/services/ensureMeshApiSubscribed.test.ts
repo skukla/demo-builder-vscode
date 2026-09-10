@@ -11,11 +11,12 @@
  * skip when the project has no mesh catalog row.
  */
 
-import { ensureMeshApiSubscribed } from '@/features/app-builder/services/ensureMeshApiSubscribed';
+import {
+    ensureMeshApiSubscribed,
+    subscriberTarget,
+} from '@/features/app-builder/services/ensureMeshApiSubscribed';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
-
-jest.mock('vscode');
 
 // Catalog loader — control the rows returned per project selection.
 jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => ({
@@ -24,15 +25,21 @@ jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () 
 import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
 
 // withOrgContext — spy that the subscribe runs inside it; passthrough-executes fn.
-jest.mock('@/core/shell', () => {
-    const actual = jest.requireActual('@/core/shell');
+
+// withOrgContext — spy that the subscribe runs inside it; passthrough-executes fn.
+jest.mock('@/core/shell/orgContextEnv', () => {
+    const actual = jest.requireActual('@/core/shell/orgContextEnv');
     return {
         ...actual,
         withOrgContext: jest.fn((_target: unknown, fn: () => Promise<unknown>) => fn()),
     };
 });
-import { withOrgContext } from '@/core/shell';
 
+import { withOrgContext } from '@/core/shell/orgContextEnv';
+import { createMockLogger } from '../../../helpers/loggerFake';
+
+import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 const MESH = 'GraphQLServiceSDK';
 const MGMT = 'AdobeIOManagementAPISDK';
 
@@ -59,14 +66,17 @@ function createProject(): Project {
                 path: '/p/f',
                 status: 'ready',
                 port: 3000,
-            } as any,
+            },
         },
         componentConfigs: {},
     };
 }
 
-function createAuthService() {
-    return {
+function createAuthService(): jest.Mocked<AuthenticationService> {
+    // The canonical fake, with the four methods this suite drives. It was a bare
+    // four-method literal reaching `ensureMeshApiSubscribed` through `as any` at
+    // nine call sites — and that param is typed `AuthenticationService`, which has 44.
+    return createMockAuthenticationService({
         getServicesForOrg: jest.fn().mockResolvedValue([
             { code: MESH, name: 'API Mesh', platformList: ['apiKey'], domainMandatory: true },
             { code: MGMT, name: 'I/O Management API', platformList: ['oauth_server_to_server'] },
@@ -78,7 +88,7 @@ function createAuthService() {
         // Default: nothing subscribed yet → the subscribe paths proceed.
         getSubscribedServiceCodes: jest.fn().mockResolvedValue([]),
         getCachedOrganization: jest.fn().mockReturnValue(undefined),
-    };
+    });
 }
 
 describe('ensureMeshApiSubscribed', () => {
@@ -86,13 +96,7 @@ describe('ensureMeshApiSubscribed', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-        logger = {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            trace: jest.fn(),
-        } as jest.Mocked<Logger>;
+        logger = createMockLogger();
         (withOrgContext as jest.Mock).mockImplementation(
             (_t: unknown, fn: () => Promise<unknown>) => fn()
         );
@@ -106,7 +110,7 @@ describe('ensureMeshApiSubscribed', () => {
 
         await ensureMeshApiSubscribed({
             project: createProject(),
-            authService: authService as any,
+            authService: authService,
             logger,
         });
 
@@ -128,7 +132,7 @@ describe('ensureMeshApiSubscribed', () => {
 
         await ensureMeshApiSubscribed({
             project: createProject(),
-            authService: authService as any,
+            authService: authService,
             logger,
         });
 
@@ -145,7 +149,7 @@ describe('ensureMeshApiSubscribed', () => {
 
         await ensureMeshApiSubscribed({
             project: createProject(),
-            authService: authService as any,
+            authService: authService,
             logger,
         });
 
@@ -160,7 +164,7 @@ describe('ensureMeshApiSubscribed', () => {
 
         await ensureMeshApiSubscribed({
             project: createProject(),
-            authService: authService as any,
+            authService: authService,
             logger,
         });
 
@@ -177,7 +181,7 @@ describe('ensureMeshApiSubscribed', () => {
         await expect(
             ensureMeshApiSubscribed({
                 project: createProject(),
-                authService: authService as any,
+                authService: authService,
                 logger,
             })
         ).resolves.toEqual(expect.any(Array));
@@ -189,7 +193,7 @@ describe('ensureMeshApiSubscribed', () => {
 
         const result = await ensureMeshApiSubscribed({
             project: createProject(),
-            authService: authService as any,
+            authService: authService,
             logger,
         });
 
@@ -208,11 +212,11 @@ describe('ensureMeshApiSubscribed', () => {
 
         const result = await ensureMeshApiSubscribed({
             project: createProject(),
-            authService: authService as any,
+            authService: authService,
             logger,
         });
 
-        expect(result).toEqual([]);
+        expect(result).toStrictEqual([]);
         expect(authService.getServicesForOrg).not.toHaveBeenCalled();
         expect(withOrgContext).not.toHaveBeenCalled();
     });
@@ -223,7 +227,7 @@ describe('ensureMeshApiSubscribed', () => {
 
         await ensureMeshApiSubscribed({
             project: createProject(),
-            authService: authService as any,
+            authService: authService,
             logger,
             onProgress: (event) => {
                 events.push(event);
@@ -232,6 +236,19 @@ describe('ensureMeshApiSubscribed', () => {
 
         expect(events).toContainEqual({ code: MGMT, done: true });
         expect(events).toContainEqual({ code: MESH, done: true });
+    });
+
+    it('reads the catalog with empty axes when the project has no component selections', async () => {
+        // The wizard builds a MeshSubscribeTarget from a payload, so both
+        // selections can be absent. Reaching through them must not throw, and the
+        // catalog must be asked with the empty axes rather than with undefined —
+        // the axis filter treats the two differently.
+        const authService = createAuthService();
+        const { componentSelections: _dropped, ...noSelections } = createProject();
+
+        await ensureMeshApiSubscribed({ project: noSelections, authService, logger });
+
+        expect(getAvailableAppBuilderComponents).toHaveBeenCalledWith('', '');
     });
 
     it('skips when only non-mesh entries match the axes (e.g. the unrestricted blank shell)', async () => {
@@ -245,12 +262,33 @@ describe('ensureMeshApiSubscribed', () => {
 
         const result = await ensureMeshApiSubscribed({
             project: createProject(),
-            authService: authService as any,
+            authService: authService,
             logger,
         });
 
-        expect(result).toEqual([]);
+        expect(result).toStrictEqual([]);
         expect(authService.getServicesForOrg).not.toHaveBeenCalled();
         expect(withOrgContext).not.toHaveBeenCalled();
+    });
+});
+
+describe('subscriberTarget', () => {
+    it('maps the project identity onto the three ids the subscriber takes', () => {
+        expect(subscriberTarget(createProject())).toStrictEqual({
+            orgId: 'org-1',
+            projectId: 'proj-1',
+            workspaceId: 'ws-1',
+        });
+    });
+
+    it('answers empty ids — never throws — for a target with no adobe block', () => {
+        // The wizard handler builds this shape from a payload, so `adobe` is
+        // genuinely absent there. The subscriber wants three strings; an
+        // exception here would abort the deploy before it reported anything.
+        expect(subscriberTarget({})).toStrictEqual({
+            orgId: '',
+            projectId: '',
+            workspaceId: '',
+        });
     });
 });

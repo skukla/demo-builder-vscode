@@ -1,14 +1,6 @@
 import { RetryStrategyManager } from '@/core/shell/retryStrategyManager';
 import type { RetryStrategy, CommandResult } from '@/core/shell/types';
-
-jest.mock('../../../src/core/logging/debugLogger', () => ({
-    getLogger: () => ({
-        error: jest.fn(),
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn()
-    })
-}));
+import { makeResult, makeStrategy } from './retryStrategyManager.testUtils';
 
 describe('RetryStrategyManager', () => {
     let retryManager: RetryStrategyManager;
@@ -92,12 +84,7 @@ describe('RetryStrategyManager', () => {
 
     describe('executeWithRetry', () => {
         it('should succeed on first attempt', async () => {
-            const mockResult: CommandResult = {
-                code: 0,
-                stdout: 'success',
-                stderr: '',
-                duration: 100
-            };
+            const mockResult: CommandResult = makeResult();
             const executeFn = jest.fn().mockResolvedValue(mockResult);
             const strategy = retryManager.getDefaultStrategy();
 
@@ -113,23 +100,13 @@ describe('RetryStrategyManager', () => {
 
         it('should retry on failure and eventually succeed', async () => {
             const mockError = new Error('Network error');
-            const mockResult: CommandResult = {
-                code: 0,
-                stdout: 'success',
-                stderr: '',
-                duration: 100
-            };
+            const mockResult: CommandResult = makeResult();
             const executeFn = jest.fn()
                 .mockRejectedValueOnce(mockError)
                 .mockRejectedValueOnce(mockError)
                 .mockResolvedValueOnce(mockResult);
 
-            const strategy: RetryStrategy = {
-                maxAttempts: 3,
-                initialDelay: 10,
-                maxDelay: 100,
-                backoffFactor: 2
-            };
+            const strategy: RetryStrategy = makeStrategy({ maxAttempts: 3, initialDelay: 10, maxDelay: 100, backoffFactor: 2 });
 
             const result = await retryManager.executeWithRetry(
                 executeFn,
@@ -145,12 +122,7 @@ describe('RetryStrategyManager', () => {
             const mockError = new Error('Persistent error');
             const executeFn = jest.fn().mockRejectedValue(mockError);
 
-            const strategy: RetryStrategy = {
-                maxAttempts: 2,
-                initialDelay: 10,
-                maxDelay: 100,
-                backoffFactor: 2
-            };
+            const strategy: RetryStrategy = makeStrategy({ maxAttempts: 2, initialDelay: 10, maxDelay: 100, backoffFactor: 2 });
 
             await expect(
                 retryManager.executeWithRetry(executeFn, strategy, 'test command')
@@ -163,12 +135,7 @@ describe('RetryStrategyManager', () => {
             const mockError = new Error('Operation timed out');
             const executeFn = jest.fn().mockRejectedValue(mockError);
 
-            const strategy: RetryStrategy = {
-                maxAttempts: 3,
-                initialDelay: 10,
-                maxDelay: 100,
-                backoffFactor: 2
-            };
+            const strategy: RetryStrategy = makeStrategy({ maxAttempts: 3, initialDelay: 10, maxDelay: 100, backoffFactor: 2 });
 
             await expect(
                 retryManager.executeWithRetry(executeFn, strategy, 'test command')
@@ -181,13 +148,7 @@ describe('RetryStrategyManager', () => {
             const mockError = new Error('No retry for me');
             const executeFn = jest.fn().mockRejectedValue(mockError);
 
-            const strategy: RetryStrategy = {
-                maxAttempts: 3,
-                initialDelay: 10,
-                maxDelay: 100,
-                backoffFactor: 2,
-                shouldRetry: () => false
-            };
+            const strategy: RetryStrategy = makeStrategy({ maxAttempts: 3, initialDelay: 10, maxDelay: 100, backoffFactor: 2, shouldRetry: () => false });
 
             await expect(
                 retryManager.executeWithRetry(executeFn, strategy, 'test command')
@@ -200,12 +161,7 @@ describe('RetryStrategyManager', () => {
             const mockError = new Error('Retry me');
             const executeFn = jest.fn().mockRejectedValue(mockError);
 
-            const strategy: RetryStrategy = {
-                maxAttempts: 3,
-                initialDelay: 100,
-                maxDelay: 1000,
-                backoffFactor: 2
-            };
+            const strategy: RetryStrategy = makeStrategy({ maxAttempts: 3, initialDelay: 100, maxDelay: 1000, backoffFactor: 2 });
 
             const startTime = Date.now();
 
@@ -224,12 +180,7 @@ describe('RetryStrategyManager', () => {
             const mockError = new Error('Retry me');
             const executeFn = jest.fn().mockRejectedValue(mockError);
 
-            const strategy: RetryStrategy = {
-                maxAttempts: 5,
-                initialDelay: 1000,
-                maxDelay: 100,
-                backoffFactor: 10
-            };
+            const strategy: RetryStrategy = makeStrategy({ maxAttempts: 5, initialDelay: 1000, maxDelay: 100, backoffFactor: 10 });
 
             const startTime = Date.now();
 
@@ -239,18 +190,16 @@ describe('RetryStrategyManager', () => {
 
             const duration = Date.now() - startTime;
 
-            // Delays should be capped at 100ms each (4 retries × 100ms = 400ms)
-            expect(duration).toBeLessThan(600);
+            // Capped, the four retries wait 100ms each — 400ms. UNCAPPED they
+            // would wait 1000ms, then 10s, then 100s, so any bound in seconds
+            // still fails loudly if the cap breaks. 600ms did not measure the
+            // cap, it measured whether the machine was busy (PL-41).
+            expect(duration).toBeLessThan(5_000);
         });
 
         it('should handle network errors with network strategy', async () => {
             const mockError = new Error('ECONNREFUSED');
-            const mockResult: CommandResult = {
-                code: 0,
-                stdout: 'success',
-                stderr: '',
-                duration: 100
-            };
+            const mockResult: CommandResult = makeResult();
 
             const executeFn = jest.fn()
                 .mockRejectedValueOnce(mockError)
@@ -270,12 +219,7 @@ describe('RetryStrategyManager', () => {
 
         it('should handle filesystem errors with filesystem strategy', async () => {
             const mockError = new Error('EBUSY: resource busy');
-            const mockResult: CommandResult = {
-                code: 0,
-                stdout: 'success',
-                stderr: '',
-                duration: 100
-            };
+            const mockResult: CommandResult = makeResult();
 
             const executeFn = jest.fn()
                 .mockRejectedValueOnce(mockError)
@@ -310,12 +254,7 @@ describe('RetryStrategyManager', () => {
 
         it('should retry token errors', async () => {
             const mockError = new Error('token expired');
-            const mockResult: CommandResult = {
-                code: 0,
-                stdout: 'success',
-                stderr: '',
-                duration: 100
-            };
+            const mockResult: CommandResult = makeResult();
 
             const executeFn = jest.fn()
                 .mockRejectedValueOnce(mockError)

@@ -6,9 +6,10 @@
  * preamble (mocks + SUT) lives in ImportDatapackModal.testUtils.
  */
 
-import { screen, fireEvent, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import {
+    press,
     mockRequest,
     renderModal,
     resetModalMocks,
@@ -17,7 +18,6 @@ import {
 } from './ImportDatapackModal.testUtils';
 
 const startButton = () => screen.getByRole('button', { name: /start import/i });
-
 
 /**
  * An activation id for the write calls, but the real target for the target call.
@@ -47,7 +47,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
         it('is offered once an instance and types are chosen', async () => {
             renderModal();
             await awaitForm();
-            fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
+            await press(screen.getByRole('checkbox', { name: 'Categories' }));
 
             expect(resetButton()).not.toHaveAttribute('aria-disabled', 'true');
         });
@@ -62,9 +62,9 @@ describe('ImportDatapackModal — job lifecycle', () => {
         it('sends NOTHING on the first press — it arms a confirmation', async () => {
             renderModal();
             await awaitForm();
-            fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
+            await press(screen.getByRole('checkbox', { name: 'Categories' }));
 
-            fireEvent.click(resetButton());
+            await press(resetButton());
 
             expect(resetCalls()).toHaveLength(0);
         });
@@ -72,9 +72,9 @@ describe('ImportDatapackModal — job lifecycle', () => {
         it('names the instance the data will be removed from, and says there is no undo', async () => {
             renderModal();
             await awaitForm();
-            fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
+            await press(screen.getByRole('checkbox', { name: 'Categories' }));
 
-            fireEvent.click(resetButton());
+            await press(resetButton());
 
             expect(await screen.findByText(/cannot be undone/i)).toBeInTheDocument();
             // The instance id exactly ('inst', per the shared fixture). This was
@@ -94,9 +94,9 @@ describe('ImportDatapackModal — job lifecycle', () => {
         it('lists the chosen data types by their labels, not their codes', async () => {
             renderModal();
             await awaitForm();
-            fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
+            await press(screen.getByRole('checkbox', { name: 'Categories' }));
 
-            fireEvent.click(resetButton());
+            await press(resetButton());
 
             await screen.findByText(/cannot be undone/i);
             expect(screen.getByText(/1 data type\b/)).toBeInTheDocument();
@@ -106,10 +106,10 @@ describe('ImportDatapackModal — job lifecycle', () => {
         it('can be backed out of without removing anything', async () => {
             renderModal();
             await awaitForm();
-            fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
+            await press(screen.getByRole('checkbox', { name: 'Categories' }));
 
-            fireEvent.click(resetButton());
-            fireEvent.click(screen.getByRole('button', { name: /keep the data/i }));
+            await press(resetButton());
+            await press(screen.getByRole('button', { name: /keep the data/i }));
 
             expect(resetCalls()).toHaveLength(0);
             expect(screen.getByRole('button', { name: /start import/i })).toBeInTheDocument();
@@ -120,10 +120,10 @@ describe('ImportDatapackModal — job lifecycle', () => {
         it('sends confirm with the same body a start would, only from the confirmation', async () => {
             renderModal();
             await awaitForm();
-            fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
+            await press(screen.getByRole('checkbox', { name: 'Categories' }));
 
-            fireEvent.click(resetButton());
-            fireEvent.click(screen.getByRole('button', { name: /remove the data/i }));
+            await press(resetButton());
+            await press(screen.getByRole('button', { name: /remove the data/i }));
 
             await waitFor(() => expect(resetCalls()).toHaveLength(1));
             expect(resetCalls()[0][1]).toMatchObject({
@@ -147,7 +147,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
         /** A request for `type` that never resolves, so loading stays true. */
         function neverResolve(type: string) {
             mockRequest.mockImplementation((t: string) =>
-                t === type ? new Promise(() => undefined) : defaultResponse(t),
+                t === type ? new Promise(() => undefined) : defaultResponse(t)
             );
         }
 
@@ -155,9 +155,9 @@ describe('ImportDatapackModal — job lifecycle', () => {
             neverResolve('validate-datapack-import');
             renderModal();
             await awaitForm();
-            fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
+            await press(screen.getByRole('checkbox', { name: 'Categories' }));
 
-            fireEvent.click(screen.getByRole('button', { name: /^dry run$/i }));
+            await press(screen.getByRole('button', { name: /^dry run$/i }));
 
             expect(await screen.findByRole('button', { name: /checking…/i })).toBeInTheDocument();
         });
@@ -166,9 +166,9 @@ describe('ImportDatapackModal — job lifecycle', () => {
             neverResolve('start-datapack-import');
             renderModal();
             await awaitForm();
-            fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
+            await press(screen.getByRole('checkbox', { name: 'Categories' }));
 
-            fireEvent.click(startButton());
+            await press(startButton());
 
             expect(await screen.findByText(/starting import/i)).toBeInTheDocument();
             expect(screen.getByRole('button', { name: /starting…/i })).toBeInTheDocument();
@@ -181,9 +181,9 @@ describe('ImportDatapackModal — job lifecycle', () => {
             neverResolve('validate-datapack-import');
             renderModal();
             await awaitForm();
-            fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
+            await press(screen.getByRole('checkbox', { name: 'Categories' }));
 
-            fireEvent.click(screen.getByRole('button', { name: /^dry run$/i }));
+            await press(screen.getByRole('button', { name: /^dry run$/i }));
 
             expect(await screen.findByText(/checking with the service/i)).toBeInTheDocument();
             expect(screen.queryByRole('checkbox', { name: 'Categories' })).not.toBeInTheDocument();
@@ -194,13 +194,19 @@ describe('ImportDatapackModal — job lifecycle', () => {
             neverResolve('validate-datapack-import');
             renderModal();
             await awaitForm();
-            fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
+            await press(screen.getByRole('checkbox', { name: 'Categories' }));
 
-            fireEvent.click(screen.getByRole('button', { name: /^dry run$/i }));
+            await press(screen.getByRole('button', { name: /^dry run$/i }));
             await screen.findByRole('button', { name: /checking…/i });
 
-            expect(screen.getByRole('button', { name: /start import/i })).toHaveAttribute('aria-disabled', 'true');
-            expect(screen.getByRole('button', { name: /^remove data/i })).toHaveAttribute('aria-disabled', 'true');
+            expect(screen.getByRole('button', { name: /start import/i })).toHaveAttribute(
+                'aria-disabled',
+                'true'
+            );
+            expect(screen.getByRole('button', { name: /^remove data/i })).toHaveAttribute(
+                'aria-disabled',
+                'true'
+            );
         });
     });
 
@@ -229,15 +235,15 @@ describe('ImportDatapackModal — job lifecycle', () => {
                           code: 'INVALID_OPERATION',
                           data: { needsAccsCredentials: true },
                       }
-                    : defaultResponse(type),
+                    : defaultResponse(type)
             );
         }
 
         async function dryRun() {
             renderModal();
             await awaitForm();
-            fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
-            fireEvent.click(screen.getByRole('button', { name: /^dry run$/i }));
+            await press(screen.getByRole('checkbox', { name: 'Categories' }));
+            await press(screen.getByRole('button', { name: /^dry run$/i }));
         }
 
         it('replaces the form — one view at a time, never a pile', async () => {
@@ -253,7 +259,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
             await dryRun();
             await screen.findByText(/dry run failed/i);
 
-            fireEvent.click(screen.getByRole('button', { name: /back/i }));
+            await press(screen.getByRole('button', { name: /back/i }));
 
             expect(screen.getByRole('checkbox', { name: 'Categories' })).toBeChecked();
             expect(screen.queryByText(/dry run failed/i)).not.toBeInTheDocument();
@@ -263,7 +269,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
             mockRequest.mockImplementation(async (type: string) =>
                 type === 'validate-datapack-import'
                     ? { success: true, data: { valid: true } }
-                    : defaultResponse(type),
+                    : defaultResponse(type)
             );
             await dryRun();
 
@@ -278,7 +284,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
             await screen.findByText(/dry run failed/i);
 
             expect(
-                screen.getByRole('button', { name: /set up credentials automatically/i }),
+                screen.getByRole('button', { name: /set up credentials automatically/i })
             ).toBeInTheDocument();
         });
 
@@ -300,12 +306,12 @@ describe('ImportDatapackModal — job lifecycle', () => {
             });
             renderModal();
             await awaitForm();
-            fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
-            fireEvent.click(screen.getByRole('button', { name: /^remove data/i }));
-            fireEvent.click(screen.getByRole('button', { name: /remove the data/i }));
+            await press(screen.getByRole('checkbox', { name: 'Categories' }));
+            await press(screen.getByRole('button', { name: /^remove data/i }));
+            await press(screen.getByRole('button', { name: /remove the data/i }));
 
             expect(await screen.findByText(/removal finished/i)).toBeInTheDocument();
-            fireEvent.click(screen.getByRole('button', { name: /back/i }));
+            await press(screen.getByRole('button', { name: /back/i }));
             expect(screen.getByRole('checkbox', { name: 'Categories' })).toBeInTheDocument();
         });
     });
@@ -314,8 +320,16 @@ describe('ImportDatapackModal — job lifecycle', () => {
         it('resumes a RUNNING job from a previous session', async () => {
             mockRequest.mockImplementation(async (type: string) =>
                 type === 'get-datapack-import-status'
-                    ? { success: true, data: { activationId: 'old', dataTypes: ['categories'], outcome: 'watching', perType: {} } }
-                    : defaultResponse(type),
+                    ? {
+                          success: true,
+                          data: {
+                              activationId: 'old',
+                              dataTypes: ['categories'],
+                              outcome: 'watching',
+                              perType: {},
+                          },
+                      }
+                    : defaultResponse(type)
             );
             renderModal();
 
@@ -325,8 +339,16 @@ describe('ImportDatapackModal — job lifecycle', () => {
         it('does NOT show a finished record from a previous session', async () => {
             mockRequest.mockImplementation(async (type: string) =>
                 type === 'get-datapack-import-status'
-                    ? { success: true, data: { activationId: 'old', dataTypes: ['categories'], outcome: 'success', perType: { categories: 'success' } } }
-                    : defaultResponse(type),
+                    ? {
+                          success: true,
+                          data: {
+                              activationId: 'old',
+                              dataTypes: ['categories'],
+                              outcome: 'success',
+                              perType: { categories: 'success' },
+                          },
+                      }
+                    : defaultResponse(type)
             );
             renderModal();
 
@@ -337,7 +359,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
             // outcome every chance to appear; only its absence-after-polling is
             // a statement about behaviour.
             await expect(
-                screen.findByText(/import finished/i, undefined, { timeout: 1500 }),
+                screen.findByText(/import finished/i, undefined, { timeout: 1500 })
             ).rejects.toThrow();
             // The form is what greets a fresh modal.
             expect(screen.getByRole('checkbox', { name: 'Categories' })).toBeInTheDocument();
@@ -360,15 +382,15 @@ describe('ImportDatapackModal — job lifecycle', () => {
                           code: 'INVALID_OPERATION',
                           data: { needsAccsCredentials: true },
                       }
-                    : defaultResponse(type),
+                    : defaultResponse(type)
             );
         }
 
         async function refuse() {
             renderModal();
             await awaitForm();
-            fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
-            fireEvent.click(screen.getByRole('button', { name: /^dry run$/i }));
+            await press(screen.getByRole('checkbox', { name: 'Categories' }));
+            await press(screen.getByRole('button', { name: /^dry run$/i }));
         }
 
         it('offers automatic setup on the credential refusal', async () => {
@@ -376,21 +398,25 @@ describe('ImportDatapackModal — job lifecycle', () => {
             await refuse();
 
             expect(
-                await screen.findByRole('button', { name: /set up credentials automatically/i }),
+                await screen.findByRole('button', { name: /set up credentials automatically/i })
             ).toBeInTheDocument();
         });
 
         it('does NOT offer it on other refusals', async () => {
             mockRequest.mockImplementation(async (type: string) =>
                 type === 'validate-datapack-import'
-                    ? { success: false, error: 'The Data Installer is turned off.', code: 'INVALID_OPERATION' }
-                    : defaultResponse(type),
+                    ? {
+                          success: false,
+                          error: 'The Data Installer is turned off.',
+                          code: 'INVALID_OPERATION',
+                      }
+                    : defaultResponse(type)
             );
             await refuse();
 
             await screen.findByText(/turned off/i);
             expect(
-                screen.queryByRole('button', { name: /set up credentials automatically/i }),
+                screen.queryByRole('button', { name: /set up credentials automatically/i })
             ).not.toBeInTheDocument();
         });
 
@@ -403,13 +429,11 @@ describe('ImportDatapackModal — job lifecycle', () => {
             await refuse();
             await screen.findByText(/dry run failed/i);
 
-            fireEvent.click(
-                screen.getByRole('button', { name: /set up credentials automatically/i }),
-            );
+            await press(screen.getByRole('button', { name: /set up credentials automatically/i }));
 
             await waitFor(() => {
                 const call = mockRequest.mock.calls.find(
-                    (entry) => entry[0] === 'provision-accs-credentials',
+                    (entry) => entry[0] === 'provision-accs-credentials'
                 );
                 expect(call?.[2]).toBeGreaterThanOrEqual(180_000);
             });
@@ -419,14 +443,14 @@ describe('ImportDatapackModal — job lifecycle', () => {
             refuseNeedingCredentials();
             await refuse();
 
-            fireEvent.click(
-                await screen.findByRole('button', { name: /set up credentials automatically/i }),
+            await press(
+                await screen.findByRole('button', { name: /set up credentials automatically/i })
             );
 
             await waitFor(() =>
                 expect(
-                    mockRequest.mock.calls.some((call) => call[0] === 'provision-accs-credentials'),
-                ).toBe(true),
+                    mockRequest.mock.calls.some((call) => call[0] === 'provision-accs-credentials')
+                ).toBe(true)
             );
         });
 
@@ -446,8 +470,8 @@ describe('ImportDatapackModal — job lifecycle', () => {
             });
             await refuse();
 
-            fireEvent.click(
-                await screen.findByRole('button', { name: /set up credentials automatically/i }),
+            await press(
+                await screen.findByRole('button', { name: /set up credentials automatically/i })
             );
 
             expect(await screen.findByText(/credentials configured/i)).toBeInTheDocument();
@@ -506,20 +530,34 @@ describe('ImportDatapackModal — job lifecycle', () => {
         // There is NO cancel endpoint. Both strings are pinned, because softening
         // either turns "we stopped looking" into "we cancelled your import".
         it('offers Stop watching, and says the job continues on the server', async () => {
-            withStatus({ activationId: 'act-1', dataTypes: ['categories'], outcome: 'watching', perType: {} });
+            withStatus({
+                activationId: 'act-1',
+                dataTypes: ['categories'],
+                outcome: 'watching',
+                perType: {},
+            });
             renderModal();
 
-            expect(await screen.findByRole('button', { name: /stop watching/i })).toBeInTheDocument();
+            expect(
+                await screen.findByRole('button', { name: /stop watching/i })
+            ).toBeInTheDocument();
             expect(screen.getByText(/continues on the server/i)).toBeInTheDocument();
         });
 
         it('never offers a Cancel affordance — there is no such endpoint', async () => {
-            withStatus({ activationId: 'act-1', dataTypes: ['categories'], outcome: 'watching', perType: {} });
+            withStatus({
+                activationId: 'act-1',
+                dataTypes: ['categories'],
+                outcome: 'watching',
+                perType: {},
+            });
             renderModal();
 
             await screen.findByRole('button', { name: /stop watching/i });
 
-            expect(screen.queryByRole('button', { name: /cancel import/i })).not.toBeInTheDocument();
+            expect(
+                screen.queryByRole('button', { name: /cancel import/i })
+            ).not.toBeInTheDocument();
         });
     });
 
@@ -537,7 +575,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
                               ...extra,
                           },
                       }
-                    : await activationOrTarget(type),
+                    : await activationOrTarget(type)
             );
         }
 
@@ -545,8 +583,8 @@ describe('ImportDatapackModal — job lifecycle', () => {
         async function startAJob() {
             renderModal();
             await awaitForm();
-            fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
-            fireEvent.click(startButton());
+            await press(screen.getByRole('checkbox', { name: 'Categories' }));
+            await press(startButton());
         }
 
         /**
@@ -590,7 +628,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
             expect(await screen.findByText(/import finished/i)).toBeInTheDocument();
             expect(screen.queryByRole('checkbox', { name: 'Categories' })).not.toBeInTheDocument();
 
-            fireEvent.click(screen.getByRole('button', { name: /back/i }));
+            await press(screen.getByRole('button', { name: /back/i }));
 
             expect(screen.getByRole('checkbox', { name: 'Categories' })).toBeChecked();
             expect(screen.getByRole('button', { name: /start import/i })).toBeInTheDocument();
@@ -611,13 +649,13 @@ describe('ImportDatapackModal — job lifecycle', () => {
                               operation: 'reset',
                           },
                       }
-                    : await activationOrTarget(type),
+                    : await activationOrTarget(type)
             );
             renderModal();
             await awaitForm();
-            fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
-            fireEvent.click(screen.getByRole('button', { name: /^remove data/i }));
-            fireEvent.click(screen.getByRole('button', { name: /remove the data/i }));
+            await press(screen.getByRole('checkbox', { name: 'Categories' }));
+            await press(screen.getByRole('button', { name: /^remove data/i }));
+            await press(screen.getByRole('button', { name: /remove the data/i }));
 
             expect(await screen.findByText(/removal finished/i)).toBeInTheDocument();
             expect(screen.queryByText(/import finished/i)).not.toBeInTheDocument();
@@ -639,7 +677,11 @@ describe('ImportDatapackModal — job lifecycle', () => {
         });
 
         it('explains a never-registered job with the service reason', async () => {
-            finished('never-registered', {}, { reason: 'Invalid input. Must provide one of: (datapack_name)' });
+            finished(
+                'never-registered',
+                {},
+                { reason: 'Invalid input. Must provide one of: (datapack_name)' }
+            );
             await startAJob();
 
             expect(await screen.findByText(/never started/i)).toBeInTheDocument();

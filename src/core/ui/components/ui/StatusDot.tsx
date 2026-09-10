@@ -25,48 +25,27 @@ export interface StatusDotProps {
  * <StatusDot variant="error" size={10} />
  * ```
  */
-export const StatusDot: React.FC<StatusDotProps> = ({
-    variant,
-    size = 8,
-    className,
-    testId,
-}) => {
-    // Each variant resolves to a design token WITH a literal fallback. The
-    // fallback is load-bearing, not cosmetic: the `--db-*` tokens live in
-    // `tokens.css` (reached via an `@import`), and when that token doesn't
-    // resolve in a given webview the bare `var()` collapses to a transparent
-    // background — a correctly-sized but invisible dot. The literal (identical
-    // to the token's current value) guarantees the dot is always visible while
-    // still honoring the token when it IS available.
-    const getColor = (): string => {
-        switch (variant) {
-            case 'success':
-                return 'var(--db-status-dot-success, #10b981)';
-            case 'error':
-                return 'var(--db-status-dot-error, #ef4444)';
-            case 'warning':
-                return 'var(--db-status-dot-warning, #f59e0b)';
-            case 'info':
-                return 'var(--db-status-dot-info, #3b82f6)';
-            case 'neutral':
-                return 'var(--db-status-dot-neutral, #6b7280)';
-            default:
-                return 'var(--db-status-dot-neutral, #6b7280)';
-        }
-    };
-
-    // SOP §11: static styles prefer utility classes — but `display` is pinned
-    // inline here too. A `<span>` defaults to `display: inline`, which IGNORES
-    // width/height; if the `.inline-block` utility ever fails to load the dot
-    // would collapse to a zero-size box. Setting it inline makes the dot
-    // self-sufficient (box + color) regardless of which stylesheets a webview
-    // loaded; the utility classes remain for shape/shrink.
+export function StatusDot({ variant, size = 8, className, testId }: StatusDotProps) {
+    // THE BOX AND THE COLOUR ARE CSS. Only the SIZE is a parameter.
+    //
+    // This used to set display/width/height/background inline, justified as making
+    // the dot "self-sufficient regardless of which stylesheets a webview loaded".
+    // Two things retire that argument. The colour was already
+    // `var(--spectrum-semantic-*)`, so a missing stylesheet gave a correctly-sized
+    // INVISIBLE dot — it was never self-sufficient, it just failed differently.
+    // And the failure it guarded against is the one ADR-017 §6 exists to prevent:
+    // a class used in a bundle must be styled by that bundle, checked on all
+    // eight. `.inline-block` is styled in every one.
+    //
+    // The colour needs no parameter either: `data-variant` is already on the
+    // element for testing, so `.status-dot[data-variant='success']` can say it.
     // THE STANDARD: `info` means "in progress", and in-progress PULSES — on every
     // surface, because motion belongs to the status rather than to whichever
     // component renders it. It used to be a class each caller applied, so the
     // integration card pulsed while the dashboard tile showed the same blue dot
     // sitting still (reported 2026-08-04). A caller cannot forget this one.
     const dotClasses = [
+        'status-dot',
         'inline-block',
         'rounded-full',
         'shrink-0',
@@ -79,15 +58,10 @@ export const StatusDot: React.FC<StatusDotProps> = ({
     return (
         <span
             className={dotClasses}
-            style={{
-                display: 'inline-block',
-                width: size,
-                height: size,
-                backgroundColor: getColor(),
-            }}
+            style={{ '--status-dot-size': typeof size === 'number' ? `${size}px` : size } as React.CSSProperties}
             role="presentation"
             data-variant={variant}
             data-testid={testId}
         />
     );
-};
+}

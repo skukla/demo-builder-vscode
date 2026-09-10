@@ -1,7 +1,3 @@
-/**
- * @jest-environment jsdom
- */
-
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
@@ -101,6 +97,49 @@ describe('DashboardEmptyState', () => {
             // Only the main CTA button should exist (utility icons are in the sidebar)
             const buttons = screen.getAllByRole('button');
             expect(buttons).toHaveLength(1);
+        });
+    });
+
+    describe('import action', () => {
+        it('offers no Import button when onImportFromFile is not wired', () => {
+            // The dashboard passes the callback only where importing is
+            // reachable; without it the empty state must not advertise it.
+            renderWithProvider(<DashboardEmptyState onCreate={jest.fn()} />);
+
+            expect(screen.queryByRole('button', { name: /import/i })).not.toBeInTheDocument();
+        });
+
+        it('adds an Import button, SECOND, when onImportFromFile is wired', () => {
+            const onImportFromFile = jest.fn();
+            renderWithProvider(
+                <DashboardEmptyState
+                    onCreate={jest.fn()}
+                    onImportFromFile={onImportFromFile}
+                />
+            );
+
+            const buttons = screen.getAllByRole('button');
+            expect(buttons).toHaveLength(2);
+            // Order is load-bearing: the first action is the one that takes
+            // auto-focus, and creating is the primary path.
+            expect(buttons[0]).toHaveTextContent('New');
+            expect(buttons[1]).toHaveTextContent('Import');
+        });
+
+        it('calls onImportFromFile when the Import button is clicked', () => {
+            const onImportFromFile = jest.fn();
+            const onCreate = jest.fn();
+            renderWithProvider(
+                <DashboardEmptyState
+                    onCreate={onCreate}
+                    onImportFromFile={onImportFromFile}
+                />
+            );
+
+            fireEvent.click(screen.getByRole('button', { name: /^import$/i }));
+
+            expect(onImportFromFile).toHaveBeenCalledTimes(1);
+            expect(onCreate).not.toHaveBeenCalled();
         });
     });
 

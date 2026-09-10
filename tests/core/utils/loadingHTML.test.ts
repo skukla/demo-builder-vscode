@@ -2,20 +2,8 @@ import { setLoadingState } from '@/core/utils/loadingHTML';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import * as vscode from 'vscode';
 
-// Mock vscode with ColorThemeKind
-jest.mock('vscode', () => ({
-    ColorThemeKind: {
-        Light: 1,
-        Dark: 2,
-        HighContrast: 3,
-        HighContrastLight: 4,
-    },
-    window: {
-        activeColorTheme: {
-            kind: 2, // Dark
-        },
-    },
-}));
+import { mockWindow } from '../../helpers/vscodeMockViews';
+import { createMockWebviewPanel } from '../../helpers/webviewPanelFake';
 
 describe('loadingHTML', () => {
     let mockPanel: vscode.WebviewPanel;
@@ -25,11 +13,7 @@ describe('loadingHTML', () => {
         jest.clearAllMocks();
         jest.useFakeTimers();
 
-        mockPanel = {
-            webview: {
-                html: '',
-            },
-        } as any;
+        mockPanel = createMockWebviewPanel();
 
         mockLogger = {
             info: jest.fn(),
@@ -201,7 +185,7 @@ describe('loadingHTML', () => {
         });
 
         it('should use dark theme by default', async () => {
-            (vscode.window as any).activeColorTheme = {
+            mockWindow.activeColorTheme = {
                 kind: vscode.ColorThemeKind.Dark,
             };
 
@@ -221,7 +205,7 @@ describe('loadingHTML', () => {
         });
 
         it('should use light theme when active', async () => {
-            (vscode.window as any).activeColorTheme = {
+            mockWindow.activeColorTheme = {
                 kind: vscode.ColorThemeKind.Light,
             };
 
@@ -458,6 +442,43 @@ describe('loadingHTML', () => {
             await advanceTime(200);
             await promise;
             expect(mockPanel.webview.html).toContain('Fast');
+        });
+
+        /**
+         * The boundary itself, at elapsed === MIN_DISPLAY_TIME exactly.
+         *
+         * Content is a deferred with no timer of its own, so after it resolves the
+         * ONLY thing that could still delay the swap is the minimum-display sleep.
+         * Asserting the swap happened without advancing timers again is what tells
+         * `elapsed < MIN` apart from `elapsed <= MIN` and from an unconditional wait.
+         */
+        it('swaps in content with no further wait once the spinner has had its minimum', async () => {
+            let resolveContent!: (html: string) => void;
+            const getContent = jest.fn(
+                () =>
+                    new Promise<string>((resolve) => {
+                        resolveContent = resolve;
+                    })
+            );
+
+            const promise = setLoadingState(mockPanel, getContent);
+
+            // Past INIT_DELAY: the spinner is up and the clock starts here.
+            await advanceTime(TIMEOUTS.WEBVIEW_INIT_DELAY);
+            expect(mockPanel.webview.html).toContain('Loading...');
+
+            // Burn exactly the minimum display time while content is still pending.
+            await advanceTime(TIMEOUTS.UI.MIN_LOADING);
+
+            resolveContent('<div>Boundary content</div>');
+            // Microtasks only — deliberately NOT advanceTime, so a residual sleep of
+            // any length (including 0) would leave the spinner on screen.
+            for (let i = 0; i < 4; i++) await Promise.resolve();
+
+            expect(mockPanel.webview.html).toBe('<div>Boundary content</div>');
+
+            await advanceTime(0);
+            await promise;
         });
 
         it('should not delay unnecessarily for slow loads', async () => {

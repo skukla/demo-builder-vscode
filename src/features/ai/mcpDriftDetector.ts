@@ -99,7 +99,7 @@ async function readUserMcpJson(): Promise<McpJsonShape | null> {
 async function missingArgsFor(
     args: string[] | undefined,
     toolsDir: string,
-    absoluteOnly = false,
+    absoluteOnly: boolean,
 ): Promise<string[]> {
     const missing: string[] = [];
     for (const arg of args ?? []) {

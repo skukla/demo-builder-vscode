@@ -23,9 +23,10 @@
  * Strict TDD: written BEFORE the component exists.
  */
 
-import { screen, fireEvent, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import {
+    press,
     mockRequest,
     renderModal,
     resetModalMocks,
@@ -79,14 +80,16 @@ describe('ImportDatapackModal', () => {
         it('sends the project instance without showing or asking for it', async () => {
             renderModal();
             await awaitForm();
-            fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
-            fireEvent.click(screen.getByRole('button', { name: /start import/i }));
+            await press(screen.getByRole('checkbox', { name: 'Categories' }));
+            await press(screen.getByRole('button', { name: /start import/i }));
 
             await waitFor(() => {
                 const call = mockRequest.mock.calls.find((c) => c[0] === 'start-datapack-import');
                 expect(call?.[1]).toMatchObject({ commerceInstance: 'inst' });
             });
-            expect(screen.queryByRole('textbox', { name: /commerce instance/i })).not.toBeInTheDocument();
+            expect(
+                screen.queryByRole('textbox', { name: /commerce instance/i })
+            ).not.toBeInTheDocument();
             expect(screen.queryByRole('button', { name: /change/i })).not.toBeInTheDocument();
         });
     });
@@ -103,7 +106,7 @@ describe('ImportDatapackModal', () => {
             renderModal();
             await awaitForm();
 
-            fireEvent.click(screen.getByRole('button', { name: /select all/i }));
+            await press(screen.getByRole('button', { name: /select all/i }));
 
             expect(screen.getByRole('checkbox', { name: 'Categories' })).toBeChecked();
             expect(screen.getByRole('checkbox', { name: 'Products' })).toBeChecked();
@@ -113,8 +116,8 @@ describe('ImportDatapackModal', () => {
             renderModal();
             await awaitForm();
 
-            fireEvent.click(screen.getByRole('button', { name: /select all/i }));
-            fireEvent.click(screen.getByRole('button', { name: /clear all/i }));
+            await press(screen.getByRole('button', { name: /select all/i }));
+            await press(screen.getByRole('button', { name: /clear all/i }));
 
             expect(screen.getByRole('checkbox', { name: 'Categories' })).not.toBeChecked();
             expect(screen.getByRole('checkbox', { name: 'Products' })).not.toBeChecked();
@@ -124,11 +127,11 @@ describe('ImportDatapackModal', () => {
             renderModal();
             await awaitForm();
 
-            fireEvent.click(screen.getByRole('button', { name: /select all/i }));
-            fireEvent.click(startButton());
+            await press(screen.getByRole('button', { name: /select all/i }));
+            await press(startButton());
 
             await waitFor(() =>
-                expect(startPayload()).toMatchObject({ dataTypes: ['categories', 'products'] }),
+                expect(startPayload()).toMatchObject({ dataTypes: ['categories', 'products'] })
             );
         });
     });
@@ -156,11 +159,13 @@ describe('ImportDatapackModal', () => {
             // depends on (see ImportDatapackModal.dependencies.test.tsx), so it
             // is the wrong probe for "unselected types stay out of the payload".
             // Categories depends on nothing, which is what makes it one.
-            fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
+            await press(screen.getByRole('checkbox', { name: 'Categories' }));
 
-            fireEvent.click(startButton());
+            await press(startButton());
 
-            await waitFor(() => expect(startPayload()).toMatchObject({ dataTypes: ['categories'] }));
+            await waitFor(() =>
+                expect(startPayload()).toMatchObject({ dataTypes: ['categories'] })
+            );
         });
     });
 
@@ -168,26 +173,29 @@ describe('ImportDatapackModal', () => {
         it('sends the datapack identity', async () => {
             renderModal();
             await awaitForm();
-            fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
+            await press(screen.getByRole('checkbox', { name: 'Categories' }));
 
-            fireEvent.click(startButton());
+            await press(startButton());
 
             await waitFor(() =>
-                expect(startPayload()).toMatchObject({ datapackName: 'bodea', version: 'main' }),
+                expect(startPayload()).toMatchObject({ datapackName: 'bodea', version: 'main' })
             );
         });
 
         it('shows the service refusal verbatim when the start is rejected', async () => {
             mockRequest.mockImplementation(async (type: string) =>
                 type === 'start-datapack-import'
-                    ? { success: false, error: 'Invalid input. Must provide one of: (datapack_name)' }
-                    : defaultResponse(type),
+                    ? {
+                          success: false,
+                          error: 'Invalid input. Must provide one of: (datapack_name)',
+                      }
+                    : defaultResponse(type)
             );
             renderModal();
             await awaitForm();
-            fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
+            await press(screen.getByRole('checkbox', { name: 'Categories' }));
 
-            fireEvent.click(startButton());
+            await press(startButton());
 
             expect(await screen.findByText(/Must provide one of/)).toBeInTheDocument();
         });
@@ -210,27 +218,31 @@ describe('ImportDatapackModal', () => {
         it('checks WITHOUT starting an import', async () => {
             renderModal();
             await awaitForm();
-            fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
+            await press(screen.getByRole('checkbox', { name: 'Categories' }));
 
-            fireEvent.click(validateButton());
+            await press(validateButton());
 
             await waitFor(() =>
                 expect(
-                    mockRequest.mock.calls.some((c) => c[0] === 'validate-datapack-import'),
-                ).toBe(true),
+                    mockRequest.mock.calls.some((c) => c[0] === 'validate-datapack-import')
+                ).toBe(true)
             );
-            expect(mockRequest.mock.calls.some((c) => c[0] === 'start-datapack-import')).toBe(false);
+            expect(mockRequest.mock.calls.some((c) => c[0] === 'start-datapack-import')).toBe(
+                false
+            );
         });
 
         it('sends the same body a start would', async () => {
             renderModal();
             await awaitForm();
-            fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
+            await press(screen.getByRole('checkbox', { name: 'Categories' }));
 
-            fireEvent.click(validateButton());
+            await press(validateButton());
 
             await waitFor(() => {
-                const call = mockRequest.mock.calls.find((c) => c[0] === 'validate-datapack-import');
+                const call = mockRequest.mock.calls.find(
+                    (c) => c[0] === 'validate-datapack-import'
+                );
                 expect(call?.[1]).toMatchObject({
                     datapackName: 'bodea',
                     version: 'main',
@@ -244,13 +256,13 @@ describe('ImportDatapackModal', () => {
             mockRequest.mockImplementation(async (type: string) =>
                 type === 'validate-datapack-import'
                     ? { success: true, data: { valid: true } }
-                    : defaultResponse(type),
+                    : defaultResponse(type)
             );
             renderModal();
             await awaitForm();
-            fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
+            await press(screen.getByRole('checkbox', { name: 'Categories' }));
 
-            fireEvent.click(validateButton());
+            await press(validateButton());
 
             expect(await screen.findByText(/dry run passed/i)).toBeInTheDocument();
         });
@@ -260,14 +272,20 @@ describe('ImportDatapackModal', () => {
         it('shows the refusal reason verbatim', async () => {
             mockRequest.mockImplementation(async (type: string) =>
                 type === 'validate-datapack-import'
-                    ? { success: true, data: { valid: false, reason: 'Invalid input. Must provide one of: (datapack_name)' } }
-                    : defaultResponse(type),
+                    ? {
+                          success: true,
+                          data: {
+                              valid: false,
+                              reason: 'Invalid input. Must provide one of: (datapack_name)',
+                          },
+                      }
+                    : defaultResponse(type)
             );
             renderModal();
             await awaitForm();
-            fireEvent.click(screen.getByRole('checkbox', { name: 'Categories' }));
+            await press(screen.getByRole('checkbox', { name: 'Categories' }));
 
-            fireEvent.click(validateButton());
+            await press(validateButton());
 
             expect(await screen.findByText(/Must provide one of/)).toBeInTheDocument();
         });

@@ -8,24 +8,35 @@
 import { Provider, defaultTheme, Flex, ProgressCircle } from '@adobe/react-spectrum';
 import React, { useState, useEffect, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
-import '@/core/ui/styles/custom-spectrum.css';
+// The base layers. They arrive as REAL imports, in this entry's graph, because
+// that is the only delivery this build resolves. index.css used to pull them in
+// with `@import './reset.css'` — which webpack's css-loader inlined at build
+// time, and which the esbuild plugin that replaced it (580495214, 2026-04-13)
+// passes through as literal text. The browser then tried to fetch them relative
+// to a vscode-webview:// URL and got nothing, so the reset and every design
+// token were absent from all eight bundles for five months. ADR-017 §6 asks for
+// exactly this: a stylesheet belongs to its bundle's GRAPH.
+import '@/core/ui/styles/reset.css';
+import '@/core/ui/styles/tokens.css';
+import '@/core/ui/styles/utilities.css';
+// .icon-* — the icon-above-label pattern.
+import '@/core/ui/styles/icon-label.css';
+// .sidebar-* — this panel's own styles, including its short-panel breakpoint.
+import './styles/sidebar.css';
 import type { SidebarContext } from '../types';
 import { Sidebar } from './Sidebar';
-
-// Acquire VS Code API
-declare const acquireVsCodeApi: () => {
-    postMessage: (message: unknown) => void;
-    getState: () => unknown;
-    setState: (state: unknown) => void;
-};
-
-const vscode = acquireVsCodeApi();
+import { webviewClient } from '@/core/ui/utils/WebviewClient';
 
 /**
- * Send message to extension
+ * Send message to extension.
+ *
+ * The shared client, like the other seven bundles (ADR-017 §4). It owns the one
+ * permitted `acquireVsCodeApi()` call and queues until the extension completes
+ * the handshake, which is why `SidebarProvider` runs a
+ * `WebviewCommunicationManager` rather than a bare listener.
  */
 function sendMessage(type: string, payload?: unknown): void {
-    vscode.postMessage({ type, payload });
+    webviewClient.postMessage(type, payload);
 }
 
 /**
@@ -35,30 +46,29 @@ function SidebarApp(): React.ReactElement {
     const [context, setContext] = useState<SidebarContext>({ type: 'projects' });
     const [isLoading, setIsLoading] = useState(true);
 
-    // Handle messages from extension
+    // Handle messages from extension.
+    //
+    // The client hands the handler `message.payload`, NOT `message.data` — the
+    // provider was changed to send that envelope in the same commit. Reading the
+    // wrong one is silent: the sidebar renders its spinner forever.
     useEffect(() => {
-        const handleMessage = (event: MessageEvent) => {
-            const message = event.data;
-
-            switch (message.type) {
-                case 'contextResponse':
-                case 'contextUpdate':
-                    if (message.data?.context) {
-                        setContext(message.data.context);
-                        setIsLoading(false);
-                    }
-                    break;
+        const onContext = (payload: unknown) => {
+            const context = (payload as { context?: SidebarContext } | undefined)?.context;
+            if (context) {
+                setContext(context);
+                setIsLoading(false);
             }
         };
 
-        window.addEventListener('message', handleMessage);
+        const unsubscribers = [
+            webviewClient.onMessage('contextResponse', onContext),
+            webviewClient.onMessage('contextUpdate', onContext),
+        ];
 
-        // Request initial context
+        // Request initial context. Queued by the client until the handshake lands.
         sendMessage('getContext');
 
-        return () => {
-            window.removeEventListener('message', handleMessage);
-        };
+        return () => unsubscribers.forEach((off) => off());
     }, []);
 
     // Handle navigation

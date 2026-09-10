@@ -6,19 +6,15 @@
  * which the backend component owns (mesh configs carry a stale duplicate).
  */
 
-jest.mock('@/core/constants', () => ({
-    isMeshComponentId: (id: string) => id.includes('mesh'),
-}));
-
 import { mergeComponentConfigs } from '@/features/eds/services/configGenerator';
 
 describe('mergeComponentConfigs', () => {
     it('should return empty object for undefined componentConfigs', () => {
-        expect(mergeComponentConfigs(undefined)).toEqual({});
+        expect(mergeComponentConfigs(undefined)).toStrictEqual({});
     });
 
     it('should return empty object for empty componentConfigs', () => {
-        expect(mergeComponentConfigs({})).toEqual({});
+        expect(mergeComponentConfigs({})).toStrictEqual({});
     });
 
     it('should merge all component env vars into flat object', () => {
@@ -182,5 +178,25 @@ describe('mergeComponentConfigs — the backend owns the scope, not the last non
         });
 
         expect(result.ACCS_WEBSITE_CODE).toBe('citisignal');
+    });
+    it('does NOT plant a MESH_ENDPOINT key when no deployed endpoint was supplied', () => {
+        // `merged.MESH_ENDPOINT = undefined` is not the same as no key: the
+        // merged map is spread into config params and iterated downstream, so a
+        // present-but-undefined key reads as "the mesh answered with nothing"
+        // rather than "there is no mesh".
+        const result = mergeComponentConfigs({
+            'adobe-commerce-accs': { ACCS_GRAPHQL_ENDPOINT: 'https://direct.example.com' },
+        });
+
+        expect(result).toStrictEqual({ ACCS_GRAPHQL_ENDPOINT: 'https://direct.example.com' });
+    });
+
+    it('overrides the merged endpoint with the deployed one when supplied', () => {
+        const result = mergeComponentConfigs(
+            { 'adobe-commerce-accs': { MESH_ENDPOINT: 'https://stale.example.com' } },
+            'https://deployed.example.com/graphql',
+        );
+
+        expect(result.MESH_ENDPOINT).toBe('https://deployed.example.com/graphql');
     });
 });

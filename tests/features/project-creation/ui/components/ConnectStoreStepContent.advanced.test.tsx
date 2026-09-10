@@ -8,6 +8,7 @@
  * See ConnectStoreStepContent.test.tsx for rendering/disclosure/discovery state tests.
  */
 
+import { mockLookupComponentConfigValue } from './ConnectStoreStepContent.testUtils';
 import React from 'react';
 import { render, screen, within, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -55,10 +56,35 @@ const paasServiceGroup: MockServiceGroup = {
     id: 'adobe-commerce',
     label: 'Adobe Commerce',
     fields: [
-        { key: PAAS_URL, label: 'Commerce URL', type: 'url', required: true, placeholder: 'https://...', componentIds: ['adobe-commerce'] },
-        { key: PAAS_ADMIN_USERNAME, label: 'Admin Username', type: 'text', required: true, componentIds: ['adobe-commerce'] },
-        { key: PAAS_ADMIN_PASSWORD, label: 'Admin Password', type: 'password', required: true, componentIds: ['adobe-commerce'] },
-        { key: 'ADOBE_COMMERCE_WEBSITE_CODE', label: 'Website Code', type: 'text', required: true, componentIds: ['adobe-commerce'] },
+        {
+            key: PAAS_URL,
+            label: 'Commerce URL',
+            type: 'url',
+            required: true,
+            placeholder: 'https://...',
+            componentIds: ['adobe-commerce'],
+        },
+        {
+            key: PAAS_ADMIN_USERNAME,
+            label: 'Admin Username',
+            type: 'text',
+            required: true,
+            componentIds: ['adobe-commerce'],
+        },
+        {
+            key: PAAS_ADMIN_PASSWORD,
+            label: 'Admin Password',
+            type: 'password',
+            required: true,
+            componentIds: ['adobe-commerce'],
+        },
+        {
+            key: 'ADOBE_COMMERCE_WEBSITE_CODE',
+            label: 'Website Code',
+            type: 'text',
+            required: true,
+            componentIds: ['adobe-commerce'],
+        },
     ],
 };
 
@@ -67,7 +93,14 @@ const accsServiceGroup: MockServiceGroup = {
     id: 'accs',
     label: 'Adobe Commerce Cloud',
     fields: [
-        { key: ACCS_ENDPOINT_KEY, label: 'GraphQL Endpoint', type: 'url', required: true, placeholder: 'https://...', componentIds: ['accs'] },
+        {
+            key: ACCS_ENDPOINT_KEY,
+            label: 'GraphQL Endpoint',
+            type: 'url',
+            required: true,
+            placeholder: 'https://...',
+            componentIds: ['accs'],
+        },
     ],
 };
 
@@ -76,7 +109,13 @@ const catalogServiceGroup: MockServiceGroup = {
     id: 'catalog',
     label: 'Catalog Service',
     fields: [
-        { key: 'ADOBE_CATALOG_API_KEY', label: 'API Key', type: 'text', required: true, componentIds: ['catalog-service'] },
+        {
+            key: 'ADOBE_CATALOG_API_KEY',
+            label: 'API Key',
+            type: 'text',
+            required: true,
+            componentIds: ['catalog-service'],
+        },
     ],
 };
 
@@ -152,27 +191,8 @@ jest.mock('@/features/components/ui/components/StoreSelectionRow', () => ({
     ),
 }));
 
-const mockLookupComponentConfigValue = jest.fn();
-jest.mock('@/features/components/services/envVarHelpers', () => ({
-    lookupComponentConfigValue: (...args: any[]) => mockLookupComponentConfigValue(...args),
-    // Derived from the mocked lookup rather than stubbed separately, so this cannot
-    // disagree with it. `useAutoStoreDetect` reads the admin pair through this now;
-    // a mock that omitted it failed with "readPaasAdminPair is not a function".
-    readPaasAdminPair: (configs: any) => {
-        const username = mockLookupComponentConfigValue(configs, 'ADOBE_COMMERCE_ADMIN_USERNAME');
-        const password = mockLookupComponentConfigValue(configs, 'ADOBE_COMMERCE_ADMIN_PASSWORD');
-        return username && password ? { username, password } : undefined;
-    },
-}));
-
 jest.mock('@/core/ui/components/feedback/LoadingDisplay', () => ({
     LoadingDisplay: ({ message }: any) => <div data-testid="loading-display">{message}</div>,
-}));
-
-jest.mock('@/core/ui/components/layout/CenteredFeedbackContainer', () => ({
-    CenteredFeedbackContainer: ({ children }: any) => (
-        <div data-testid="centered-feedback">{children}</div>
-    ),
 }));
 
 // ---------------------------------------------------------------------------
@@ -209,9 +229,7 @@ function configureAccsLookup() {
 let ConnectStoreStepContent: any;
 
 beforeAll(async () => {
-    const mod = await import(
-        '@/features/project-creation/ui/components/ConnectStoreStepContent'
-    );
+    const mod = await import('@/features/project-creation/ui/components/ConnectStoreStepContent');
     ConnectStoreStepContent = mod.ConnectStoreStepContent;
 });
 
@@ -244,7 +262,7 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
         mockUseStoreDiscovery.getStoreGroupItems.mockReturnValue([]);
         mockUseStoreDiscovery.getStoreViewItems.mockReturnValue([]);
         mockUseStoreDiscovery.isStoreGroup.mockImplementation(
-            (id: string) => id === 'accs' || id === 'adobe-commerce',
+            (id: string) => id === 'accs' || id === 'adobe-commerce'
         );
 
         mockLookupComponentConfigValue.mockReturnValue(undefined);
@@ -257,7 +275,7 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
     describe('field update propagation', () => {
         it('should call useComponentConfig.updateField when a field value changes', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            mockUseComponentConfig.serviceGroups = [paasServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [paasServiceGroup];
 
             renderWithProvider(<ConnectStoreStepContent {...defaultProps} />);
 
@@ -268,14 +286,14 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
         });
 
         it('should propagate componentConfigs changes via onComponentConfigsChange', () => {
-            mockUseComponentConfig.serviceGroups = [catalogServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [catalogServiceGroup];
             const onConfigsChange = jest.fn();
 
             renderWithProvider(
                 <ConnectStoreStepContent
                     {...defaultProps}
                     onComponentConfigsChange={onConfigsChange}
-                />,
+                />
             );
 
             expect(capturedUpdateState).toBeDefined();
@@ -294,14 +312,14 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
     describe('validation propagation', () => {
         it('reports every section valid when the error map is empty', () => {
             const onValidationChange = jest.fn();
-            mockUseComponentConfig.serviceGroups = [catalogServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [catalogServiceGroup];
             mockUseComponentConfig.validationErrors = {};
 
             renderWithProvider(
                 <ConnectStoreStepContent
                     {...defaultProps}
                     onValidationChange={onValidationChange}
-                />,
+                />
             );
 
             expect(onValidationChange).toHaveBeenCalledWith({
@@ -320,7 +338,7 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
             // Connection incomplete, because Catalog is locked until Connection
             // completes and its fields render nowhere else.
             const onValidationChange = jest.fn();
-            mockUseComponentConfig.serviceGroups = [catalogServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [catalogServiceGroup];
             mockUseComponentConfig.validationErrors = {
                 ADOBE_CATALOG_API_KEY: 'Catalog API Key is required',
             };
@@ -329,16 +347,16 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
                 <ConnectStoreStepContent
                     {...defaultProps}
                     onValidationChange={onValidationChange}
-                />,
+                />
             );
 
             expect(onValidationChange).toHaveBeenCalledWith(
-                expect.objectContaining({ connection: true, catalog: false }),
+                expect.objectContaining({ connection: true, catalog: false })
             );
         });
 
         it('should show validation error on touched field', () => {
-            mockUseComponentConfig.serviceGroups = [paasServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [paasServiceGroup];
             mockUseComponentConfig.validationErrors = {
                 [PAAS_URL]: 'Commerce URL is required',
             };
@@ -347,7 +365,7 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
             renderWithProvider(<ConnectStoreStepContent {...defaultProps} />);
 
             expect(screen.getByTestId(`error-${PAAS_URL}`)).toHaveTextContent(
-                'Commerce URL is required',
+                'Commerce URL is required'
             );
         });
     });
@@ -362,10 +380,7 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
             mockUseComponentConfig.serviceGroups = [];
 
             renderWithProvider(
-                <ConnectStoreStepContent
-                    {...defaultProps}
-                    packageConfigDefaults={defaults}
-                />,
+                <ConnectStoreStepContent {...defaultProps} packageConfigDefaults={defaults} />
             );
 
             expect(capturedSetCanProceed).toBeDefined();
@@ -381,10 +396,7 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
             mockUseComponentConfig.serviceGroups = [];
 
             renderWithProvider(
-                <ConnectStoreStepContent
-                    {...defaultProps}
-                    selectedStackId="headless-paas"
-                />,
+                <ConnectStoreStepContent {...defaultProps} selectedStackId="headless-paas" />
             );
 
             expect(capturedSetCanProceed).toBeDefined();
@@ -400,10 +412,7 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
             mockUseComponentConfig.serviceGroups = [];
 
             renderWithProvider(
-                <ConnectStoreStepContent
-                    {...defaultProps}
-                    adobeOrg={{ id: 'org-123' }}
-                />,
+                <ConnectStoreStepContent {...defaultProps} adobeOrg={{ id: 'org-123' }} />
             );
 
             expect(capturedSetCanProceed).toBeDefined();
@@ -416,7 +425,7 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
 
     describe('auto-detect store structure', () => {
         it('should trigger store discovery when PaaS connection fields are all filled', () => {
-            mockUseComponentConfig.serviceGroups = [paasServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [paasServiceGroup];
             configurePaasLookup();
 
             renderWithProvider(
@@ -430,14 +439,14 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
                             [PAAS_ADMIN_PASSWORD]: 'pass123',
                         },
                     }}
-                />,
+                />
             );
 
             expect(mockUseStoreDiscovery.fetchStores).toHaveBeenCalled();
         });
 
         it('should trigger store discovery for ACCS when endpoint contains /graphql', () => {
-            mockUseComponentConfig.serviceGroups = [accsServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [accsServiceGroup];
             configureAccsLookup();
 
             renderWithProvider(
@@ -448,14 +457,14 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
                             [ACCS_ENDPOINT_KEY]: 'https://accs.example.com/graphql',
                         },
                     }}
-                />,
+                />
             );
 
             expect(mockUseStoreDiscovery.fetchStores).toHaveBeenCalled();
         });
 
         it('should not trigger store discovery when connection fields are incomplete', () => {
-            mockUseComponentConfig.serviceGroups = [paasServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [paasServiceGroup];
             mockUseComponentConfig.getFieldValue.mockReturnValue('');
 
             renderWithProvider(
@@ -463,7 +472,7 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
                     {...defaultProps}
                     selectedStackId="headless-paas"
                     componentConfigs={{}}
-                />,
+                />
             );
 
             expect(mockUseStoreDiscovery.fetchStores).not.toHaveBeenCalled();
@@ -471,7 +480,7 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
 
         it('should not re-trigger discovery when hasStoreData is already true', () => {
             mockUseStoreDiscovery.hasStoreData = true;
-            mockUseComponentConfig.serviceGroups = [paasServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [paasServiceGroup];
             configurePaasLookup();
 
             renderWithProvider(
@@ -485,7 +494,7 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
                             [PAAS_ADMIN_PASSWORD]: 'pass123',
                         },
                     }}
-                />,
+                />
             );
 
             expect(mockUseStoreDiscovery.fetchStores).not.toHaveBeenCalled();
@@ -499,7 +508,7 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
     describe('URL normalization', () => {
         it('should call normalizeUrlField on blur for URL fields', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            mockUseComponentConfig.serviceGroups = [paasServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [paasServiceGroup];
 
             renderWithProvider(<ConnectStoreStepContent {...defaultProps} />);
 
@@ -519,14 +528,11 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
 
     describe('store discovery persistence', () => {
         it('should pass storeDiscoveryData to useStoreDiscovery as initialStoreData', () => {
-            const storeData = { websites: [], storeGroups: [], storeViews: [] } as any;
+            const storeData = { websites: [], storeGroups: [], storeViews: [] };
             mockUseComponentConfig.serviceGroups = [];
 
             renderWithProvider(
-                <ConnectStoreStepContent
-                    {...defaultProps}
-                    storeDiscoveryData={storeData}
-                />,
+                <ConnectStoreStepContent {...defaultProps} storeDiscoveryData={storeData} />
             );
 
             expect(capturedStoreDiscoveryConfig?.initialStoreData).toBe(storeData);
@@ -540,16 +546,18 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
                 <ConnectStoreStepContent
                     {...defaultProps}
                     onStoreDiscoveryDataChange={onStoreDiscoveryDataChange}
-                />,
+                />
             );
 
-            expect(capturedStoreDiscoveryConfig?.onStoreDataChange).toBe(onStoreDiscoveryDataChange);
+            expect(capturedStoreDiscoveryConfig?.onStoreDataChange).toBe(
+                onStoreDiscoveryDataChange
+            );
         });
 
         it('should not re-trigger auto-detect when storeDiscoveryData is provided (hasStoreData starts true)', () => {
-            const storeData = { websites: [], storeGroups: [], storeViews: [] } as any;
+            const storeData = { websites: [], storeGroups: [], storeViews: [] };
             mockUseStoreDiscovery.hasStoreData = true;
-            mockUseComponentConfig.serviceGroups = [paasServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [paasServiceGroup];
             configurePaasLookup();
 
             renderWithProvider(
@@ -564,7 +572,7 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
                             [PAAS_ADMIN_PASSWORD]: 'pass123',
                         },
                     }}
-                />,
+                />
             );
 
             expect(mockUseStoreDiscovery.fetchStores).not.toHaveBeenCalled();
@@ -578,7 +586,7 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
     describe('refresh button', () => {
         it('should show an enabled refresh button when hasStoreData is true and autoDetectKey is set', () => {
             mockUseStoreDiscovery.hasStoreData = true;
-            mockUseComponentConfig.serviceGroups = [paasServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [paasServiceGroup];
             configurePaasLookup();
 
             renderWithProvider(
@@ -592,7 +600,7 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
                             [PAAS_ADMIN_PASSWORD]: 'pass123',
                         },
                     }}
-                />,
+                />
             );
 
             expect(screen.getByRole('button', { name: /re-detect/i })).toBeEnabled();
@@ -602,7 +610,7 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
             // The spinner stands in for the whole row during detection — the
             // Re-detect button only appears once the dropdowns are populated.
             mockUseStoreDiscovery.hasStoreData = false;
-            mockUseComponentConfig.serviceGroups = [paasServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [paasServiceGroup];
             configurePaasLookup();
 
             renderWithProvider(
@@ -616,7 +624,7 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
                             [PAAS_ADMIN_PASSWORD]: 'pass123',
                         },
                     }}
-                />,
+                />
             );
 
             expect(screen.getByText('Detecting store structure...')).toBeInTheDocument();
@@ -626,7 +634,7 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
         it('should call fetchStores when refresh button is clicked', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             mockUseStoreDiscovery.hasStoreData = true;
-            mockUseComponentConfig.serviceGroups = [paasServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [paasServiceGroup];
             configurePaasLookup();
 
             renderWithProvider(
@@ -640,13 +648,13 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
                             [PAAS_ADMIN_PASSWORD]: 'pass123',
                         },
                     }}
-                />,
+                />
             );
 
             await user.click(screen.getByRole('button', { name: /re-detect/i }));
 
             expect(mockUseStoreDiscovery.fetchStores).toHaveBeenCalledWith(
-                expect.objectContaining({ backendType: 'paas' }),
+                expect.objectContaining({ backendType: 'paas' })
             );
         });
     });
@@ -657,21 +665,17 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
 
     describe('layout constraints', () => {
         it('should not render a navigation panel', () => {
-            mockUseComponentConfig.serviceGroups = [paasServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [paasServiceGroup];
 
-            const { container } = renderWithProvider(
-                <ConnectStoreStepContent {...defaultProps} />,
-            );
+            const { container } = renderWithProvider(<ConnectStoreStepContent {...defaultProps} />);
 
             expect(container.querySelector('.config-nav-panel')).not.toBeInTheDocument();
         });
 
         it('should not use TwoColumnLayout', () => {
-            mockUseComponentConfig.serviceGroups = [paasServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [paasServiceGroup];
 
-            const { container } = renderWithProvider(
-                <ConnectStoreStepContent {...defaultProps} />,
-            );
+            const { container } = renderWithProvider(<ConnectStoreStepContent {...defaultProps} />);
 
             expect(container.querySelector('[class*="two-column"]')).not.toBeInTheDocument();
         });

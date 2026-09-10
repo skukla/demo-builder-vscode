@@ -8,7 +8,6 @@
  * `selectedConsoleApis[componentId]` — even an EMPTY set clears the key. No
  * builder toggle runs (the integration already exists) and there is no Back.
  *
- * @jest-environment jsdom
  */
 
 import { renderHook, act } from '@testing-library/react';
@@ -21,13 +20,11 @@ import type {
 } from '@/features/project-creation/ui/components/integration-flow/useIntegrationFlow';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { WizardState } from '@/types/webview';
+import { makeFlowHarness } from './useIntegrationFlow.testUtils';
 
 // The picker fetch (list-org-console-apis) is issued by ApiPickerStage, not the
 // hook — the hook never calls webviewClient in api-edit — but the module is
 // imported transitively, so stub it to a no-op.
-jest.mock('@/core/ui/utils/vscode-api', () => ({
-    webviewClient: { request: jest.fn(), postMessage: jest.fn(), onMessage: () => () => {} },
-}));
 
 const EMPTY_CATALOG: AppBuilderComponentCatalogEntry[] = [];
 
@@ -49,25 +46,11 @@ interface Setup {
     stateRef: { current: WizardState };
 }
 
-function setup(editTarget: ApiEditTarget, initial: Partial<WizardState> = {}): Setup {
-    const stateRef: { current: WizardState } = {
-        current: {
-            currentStep: 'build-your-project',
-            projectName: '',
-            selectedPackage: 'citisignal',
-            selectedStack: 'headless-paas',
-            ...SIGNED_IN,
-            ...initial,
-        } as WizardState,
-    };
-    const updateState = jest.fn((partial: Partial<WizardState>) => {
-        stateRef.current = { ...stateRef.current, ...partial };
+function setup(editTarget?: ApiEditTarget, initial: Partial<WizardState> = {}): Setup {
+    const { stateRef, updateState, builder, onClose } = makeFlowHarness({
+        ...SIGNED_IN,
+        ...initial,
     });
-    const builder = {
-        onAppBuilderComponentToggle: jest.fn(),
-        onAddCustomAppBuilderComponent: jest.fn(),
-    };
-    const onClose = jest.fn();
     const { result } = renderHook(() =>
         useIntegrationFlow({
             state: stateRef.current,
@@ -76,7 +59,7 @@ function setup(editTarget: ApiEditTarget, initial: Partial<WizardState> = {}): S
             editTarget,
             meshComponent: undefined,
             catalog: EMPTY_CATALOG,
-                reservedIds: new Set<string>(),
+            reservedIds: new Set<string>(),
             builder,
             onClose,
         } as UseIntegrationFlowArgs)
@@ -132,5 +115,23 @@ describe('useIntegrationFlow — api-edit mode', () => {
         expect(s.updateState).toHaveBeenCalledWith({
             selectedConsoleApis: { 'acme-widget': ['FireflyServicesSDK'], 'erp-sync': ['ErpSDK'] },
         });
+    });
+
+    // Re-opening the picker edits an existing integration's APIs; it is not a
+    // destination change, so the flag the dest stages re-expand on stays down.
+    it('seeds the picker without flagging a destination change', () => {
+        const s = setup(TARGET);
+        expect(s.result.current.draft.changingDestination).toBe(false);
+    });
+
+    // The row that opens api-edit supplies the target; a modal opened without one
+    // has nothing to write, and must close rather than throw on the missing key.
+    it('Save with no edit target writes nothing and still closes', () => {
+        const s = setup(undefined, { selectedConsoleApis: { 'acme-widget': ['FireflyServicesSDK'] } });
+        act(() => s.result.current.onContinue()); // Save
+
+        expect(s.updateState).not.toHaveBeenCalled();
+        expect(s.builder.onAppBuilderComponentToggle).not.toHaveBeenCalled();
+        expect(s.onClose).toHaveBeenCalledTimes(1);
     });
 });

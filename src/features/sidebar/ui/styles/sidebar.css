@@ -1,0 +1,290 @@
+/**
+ * .sidebar-* styles — the panel, its action tiles, project card and utility bar.
+ *
+ * FEATURE-SCOPED (ADR-017 §6 and §7). Imported by the `sidebar` entry ALONE. It is
+ * the only surface that renders any of these, and until this move the sidebar was
+ * the one bundle carrying 2,300 lines of other screens' CSS to get them.
+ *
+ * `.sidebar-action-tile .icon-label` travels here rather than staying with
+ * `.icon-*`: its first class decides ownership, and it styles the tile.
+ *
+ * THE SHORT-PANEL BREAKPOINT WAS MOVED BY HAND, whole, and placed AFTER the plain
+ * rules. `--move` refuses a family with a rule inside a conditional at-rule for a
+ * reason this family taught the migration: on its FIRST cycle
+ * `.sidebar-tile-grid` was hoisted out of `@media (max-height: 640px)` and applied
+ * at every height, flipping the tiles from a column to a row — 48 elements, and it
+ * read as a styling opinion rather than a bug.
+ *
+ * Moved out of utilities.css by the CSS migration
+ * (.rptc/plans/css-architecture-migration), with the comment above each rule.
+ * Verbatim otherwise: a move is only correct when the visual diff is empty.
+ */
+
+@layer theme {
+/* Sidebar action tile — small square tile with icon above label, single
+   hover/focus target (the entire tile is one button). Visually echoes the
+   dashboard's `.dashboard-action-button` but smaller for the narrow
+   sidebar geometry. */
+/* Fixed px, deliberately — do NOT make these viewport-relative.
+ *
+ * Tried and reverted 2026-08-24: `clamp(40px, 7.5vh, 64px)`. `vh` is the panel
+ * height measured in CSS px, and editor zoom makes a CSS px physically bigger,
+ * so the viewport measured in them SHRINKS as you zoom in. The tiles therefore
+ * got smaller exactly when the user was zooming to make things bigger, while
+ * every neighbouring element — sized in px — grew. Labels started wrapping
+ * ("Prompt / s") beside full-size project cards.
+ *
+ * Fixed px is what keeps these in proportion with the rest of the UI at every
+ * zoom level, because everything else is px too. The cost is that at heavy zoom
+ * the stack can exceed a short panel; that is what `.sidebar-provider`'s
+ * overflow handles, and a scrollbar is the correct degradation — out-of-scale
+ * controls are not. */
+.sidebar-action-tile {
+    background: var(--spectrum-global-color-gray-50);
+    border-radius: 6px;
+    padding: 8px;
+    border: 1px solid var(--spectrum-global-color-gray-300);
+    transition: all var(--spectrum-global-animation-duration-300) ease;
+
+    width: 64px;
+    height: 64px;
+    flex-shrink: 0;
+    box-sizing: border-box;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+}
+
+.sidebar-action-tile svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+/* Menu caret on a tile — a TEXT GLYPH, not a Spectrum icon.
+ *
+ * Five attempts with `<ChevronDown>` failed on 2026-08-24, and they all share one
+ * cause: Spectrum's ActionButton slots any icon in its subtree into the button's
+ * icon slot, so the chevron's placement was never the stylesheet's to decide. It
+ * became its own row as a bare child (the tile is a column), and escaped to the
+ * tile's left edge when wrapped in a span. Pinning the label to `nowrap` and
+ * widening the tiles both missed for the same reason.
+ *
+ * A character in the label's own text run cannot be slotted, moved, or reflowed
+ * away from the word it follows — it IS the text. Matches the projects toolbar's
+ * `New ⌄` button, which is the pattern this is meant to echo. */
+.sidebar-tile-caret {
+    /* Larger than the label, not smaller. At 0.85em/0.55 opacity it was legible
+     * in a mockup and invisible on screen — a 9px glyph at half opacity against
+     * a dark tile is nothing. It has to read as an affordance from a glance, so
+     * it is sized UP against the 11px label and kept near full strength. */
+    font-size: 1.15em;
+    line-height: 1;
+    opacity: 0.9;
+    margin-left: 3px;
+}
+
+.sidebar-action-tile .icon-label {
+    font-size: 11px;
+    line-height: 1.1;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
+    /* Spectrum's ActionButton gives its label `padding: 0 12px 0 7px`, which is
+       sized for a normal button and means nothing inside a 64px square tile. The
+       label is laid out 46px wide, so those 19px have ALWAYS been wrong — under
+       content-box they pushed a 65px box through a 46px slot and `overflow:
+       visible` hid it. When reset.css finally reached the bundles on 2026-09-09
+       and `* { box-sizing: border-box }` began applying, the same 19px came out
+       of the INSIDE instead: 46px of text width became 27px and every tile label
+       wrapped to two lines, growing the panel from 498px to 534px.
+       Zeroing it fixes both the wrap and the overflow that preceded it.
+
+       NO `!important`, and that is the point. Every other declaration in this
+       block carries one because Spectrum's CSS was UNLAYERED and unlayered beats
+       any layer at any specificity. The sidebar is a LAYERED_VENDOR_ENTRIES entry
+       (ADR-018 step 3), so Spectrum now sits in `@layer vendor`, below `theme`,
+       and a plain declaration of ours wins on its own. This is the first rule in
+       the codebase written that way, and it is what step 3 is for. */
+    padding: 0;
+}
+
+.sidebar-action-tile:hover,
+.sidebar-action-tile:focus {
+    background: var(--spectrum-global-color-gray-75);
+    border-color: var(--spectrum-global-color-gray-400);
+    outline: none;
+}
+
+.sidebar-action-tile:focus-visible {
+    outline: 2px solid var(--spectrum-global-color-blue-400);
+    outline-offset: 2px;
+}
+
+/* Prevent internal Spectrum elements from showing their own hover states */
+.sidebar-action-tile:hover *,
+.sidebar-action-tile:focus * {
+    background: transparent;
+    background-color: transparent;
+}
+
+/* Sidebar loading state */
+.sidebar-loading {
+    padding: 16px;
+    color: var(--spectrum-global-color-gray-800);
+}
+
+/* Sidebar nav item base styles (static parts) */
+.sidebar-nav-item {
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+/* Sidebar provider - use Spectrum gray-75 for consistency */
+/* The sidebar's scroll container.
+ *
+ * `min-height: 100vh` alone painted the background for exactly one viewport, so
+ * as soon as the tile stack grew taller than the panel (a third tile, or any
+ * editor zoom level) the page scrolled and the background simply STOPPED
+ * partway down the column while tiles carried on past it.
+ *
+ * Owning the height and scrolling inside fixes both halves: the painted box is
+ * always exactly the panel, and overflow scrolls rather than clipping the last
+ * tile off the bottom. */
+.sidebar-provider {
+    background: var(--spectrum-global-color-gray-75);
+    height: 100%;
+    /* Safety net only. With the tiles clamped below, the stack should FIT; this
+     * exists so an extreme panel size degrades to a scrollbar rather than
+     * silently clipping a tile off the bottom, which is what it used to do. */
+    overflow-y: auto;
+}
+
+/* TOP-ALIGNED, so the slack pools at the bottom where a tile can use it.
+ *
+ * History, because this has moved three times and each move had a reason:
+ *
+ *   1. `padding-top: 80px` — a fixed offset that had to be re-derived every
+ *      time the tile count changed.
+ *   2. `justify-content: safe center` — simpler and self-adjusting, and it
+ *      fixed the re-derivation problem.
+ *   3. Top-aligned (here). Centring is self-adjusting but it SPLITS the leftover
+ *      space between the top and the bottom, so half of it sits above the "AI"
+ *      label doing nothing while the stack is treated as though it were out of
+ *      room. Owner, 2026-08-25: "there is room at the top and bottom, so you can
+ *      shift it up to fit additional tiles. And you should." Top-aligning gathers
+ *      all of that slack below the last tile, which is exactly where a new tile
+ *      extends into.
+ *
+ * `safe center` is no longer needed and its problem goes with it. Plain `center`
+ * overflowed a too-short panel in BOTH directions, pushing the first tile above
+ * the scroll origin where it could not be reached; `flex-start` cannot do that,
+ * because overflow only ever runs downward into `.sidebar-provider`'s scroll. */
+.sidebar-view {
+    padding-top: 20px;
+    padding-bottom: 16px;
+}
+
+/* One tile per row — the default, and what the sidebar looks like whenever there
+ * is room for it.
+ *
+ * A plain div rather than a Spectrum `Flex`, per the repo's width gotcha. */
+.sidebar-tile-grid {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+
+@media (max-height: 640px) {
+    .sidebar-tile-grid {
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: flex-start;
+    }
+}
+
+/* Sidebar welcome container - vertically centered */
+.sidebar-welcome {
+    padding: 16px;
+    min-height: calc(100vh - 40px);
+    justify-content: center;
+}
+
+/* Sidebar icon buttons - no background */
+.sidebar-icon-btn {
+    background: transparent;
+}
+
+.sidebar-icon-btn:hover {
+    background: var(--spectrum-global-color-gray-200);
+}
+
+/* Sidebar project view - full height with padding */
+.sidebar-project-view {
+    padding: 12px;
+    min-height: calc(100vh - 40px);
+}
+
+/* Sidebar project card - compact status display */
+.sidebar-project-card {
+    padding: 12px;
+    background: var(--spectrum-global-color-gray-100);
+    border: 1px solid var(--spectrum-global-color-gray-300);
+    border-radius: 6px;
+}
+
+/* Project name in sidebar */
+.sidebar-project-name {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    display: block;
+}
+
+/* Status indicator dot */
+.sidebar-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+/* Status text */
+.sidebar-status-text {
+    font-size: 12px;
+    color: var(--spectrum-global-color-gray-700);
+}
+
+/* Section header in sidebar */
+.sidebar-section-header {
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--spectrum-global-color-gray-600);
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+/* Sidebar wizard view - use Spectrum gray-75 for consistency */
+.sidebar-wizard-view {
+    min-height: calc(100vh - 40px);
+    background: var(--spectrum-global-color-gray-75);
+    /* No padding here - TimelineNav handles its own padding */
+}
+
+.sidebar-utility-footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 96px;
+    flex-shrink: 0;
+}
+}

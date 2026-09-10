@@ -13,7 +13,7 @@
  * the sign-in itself.
  */
 
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: { getAuthenticationService: jest.fn() },
 }));
 jest.mock(
@@ -31,6 +31,9 @@ jest.mock(
 
 import { handleForcedOrgSwitch } from '@/features/authentication/handlers/orgSwitchHandler';
 import type { HandlerContext } from '@/types/handlers';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 
 const PROJECT_ADOBE = {
     organization: 'org123',
@@ -39,16 +42,15 @@ const PROJECT_ADOBE = {
 };
 
 function makeContext(project: unknown = { adobe: PROJECT_ADOBE }): HandlerContext {
-    return {
-        stateManager: { getCurrentProject: jest.fn().mockResolvedValue(project) },
-        logger: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() },
-        debugLogger: { debug: jest.fn(), trace: jest.fn() },
-    } as unknown as HandlerContext;
+    return createMockHandlerContext({
+        stateManager: createMockStateManager({ getCurrentProject: jest.fn().mockResolvedValue(project) }),
+        debugLogger: createMockLogger(),
+    });
 }
 
 function mockLogin(result: boolean): jest.Mock {
     const loginAndRestoreProjectContext = jest.fn().mockResolvedValue(result);
-    const { ServiceLocator } = require('@/core/di');
+    const { ServiceLocator } = require('@/core/di/serviceLocator');
     ServiceLocator.getAuthenticationService.mockReturnValue({ loginAndRestoreProjectContext });
     return loginAndRestoreProjectContext;
 }
@@ -76,6 +78,22 @@ describe('handleForcedOrgSwitch', () => {
         const login = mockLogin(true);
 
         const result = await handleForcedOrgSwitch(makeContext(null));
+
+        expect(login).toHaveBeenCalledWith(
+            { organization: undefined, projectId: undefined, workspace: undefined },
+            true
+        );
+        expect(result.success).toBe(true);
+    });
+
+    // The hint is read off `project.adobe`, which the Project type makes optional.
+    // A project on disk with no Adobe block is not the wizard case (there IS a
+    // current project) and must not throw on the way to the sign-in: every hint
+    // field is simply undefined and the forced switch still runs.
+    it('still switches org for a project that has no Adobe context block', async () => {
+        const login = mockLogin(true);
+
+        const result = await handleForcedOrgSwitch(makeContext({ name: 'no-adobe-block' }));
 
         expect(login).toHaveBeenCalledWith(
             { organization: undefined, projectId: undefined, workspace: undefined },

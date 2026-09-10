@@ -7,18 +7,25 @@
  * import everything from here and never reach for the SUT directly.
  */
 
+import '../../../../helpers/webviewClientMock';
 import React from 'react';
-import { render, screen } from '@testing-library/react';
 
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: { request: jest.fn(), onMessage: jest.fn(() => jest.fn()) },
-}));
+// The canonical act-settling helpers (ADR-016) — re-exported so specs keep a
+// single import. The rule they encode: settle BEFORE a findBy*, never after.
+import { change, press, settle } from '../../../../helpers/reactSettle';
+
+export { change, press, settle };
+import { render, screen } from '@testing-library/react';
 
 // Below the mock on purpose — see the module docstring.
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { ImportDatapackModal } from '@/features/data-installer/ui/components/ImportDatapackModal';
 
 export const mockRequest = webviewClient.request as jest.Mock;
+
+// Re-exported so specs can rerender with new props without importing the SUT
+// themselves — see the module docstring for why that import must live here.
+export { ImportDatapackModal };
 
 export const DEFAULTS = {
     id: { name: 'bodea', version: 'main' },
@@ -70,5 +77,7 @@ export async function defaultResponse(type: string): Promise<unknown> {
  * there is nothing to type, and readiness means the seeded instance has landed.
  */
 export async function awaitForm(): Promise<void> {
+    await settle();
     await screen.findByRole('checkbox', { name: 'Categories' });
 }
+

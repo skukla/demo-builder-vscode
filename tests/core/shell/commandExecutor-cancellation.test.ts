@@ -12,21 +12,6 @@ import { createMockExecaSubprocess, setupMockDependencies } from './commandExecu
 jest.mock('execa');
 import execa from 'execa';
 
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({
-        error: jest.fn(),
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn()
-    })
-}));
-
-jest.mock('@/core/shell/commandSequencer');
-jest.mock('@/core/shell/environmentSetup');
-jest.mock('@/core/shell/fileWatcher');
-jest.mock('@/core/shell/pollingService');
-jest.mock('@/core/shell/resourceLocker');
-jest.mock('@/core/shell/retryStrategyManager');
 
 // Helper to wait for setImmediate
 const waitForImmediate = () => new Promise(resolve => setImmediate(resolve));
@@ -39,16 +24,16 @@ describe('CommandExecutor - Cancellation (AbortController)', () => {
         jest.clearAllMocks();
 
         // Setup mock implementations BEFORE creating instances
-        setupMockDependencies();
+        const mockDependencies = setupMockDependencies();
 
         // Now create CommandExecutor - it will use our mocks
-        commandExecutor = new CommandExecutor();
+        commandExecutor = new CommandExecutor(mockDependencies.deps);
     });
 
     describe('AbortController signal support', () => {
         it('should accept AbortSignal in execute options', async () => {
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             const controller = new AbortController();
 
@@ -68,7 +53,7 @@ describe('CommandExecutor - Cancellation (AbortController)', () => {
 
         it('should cancel command when AbortController is aborted', async () => {
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             const controller = new AbortController();
 
@@ -84,8 +69,7 @@ describe('CommandExecutor - Cancellation (AbortController)', () => {
 
             // Simulate execa's canceled error response (deferred to allow handler attachment)
             setImmediate(() => {
-                const canceledError = new Error('Command was canceled') as any;
-                canceledError.isCanceled = true;
+                const canceledError = Object.assign(new Error('Command was canceled'), { isCanceled: true });
                 mockSubprocess._reject(canceledError);
             });
 
@@ -95,7 +79,7 @@ describe('CommandExecutor - Cancellation (AbortController)', () => {
 
         it('should call subprocess.kill() when signal is aborted', async () => {
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             const controller = new AbortController();
 
@@ -114,8 +98,7 @@ describe('CommandExecutor - Cancellation (AbortController)', () => {
 
             // Complete the promise (deferred to allow handler attachment)
             setImmediate(() => {
-                const canceledError = new Error('Command was canceled') as any;
-                canceledError.isCanceled = true;
+                const canceledError = Object.assign(new Error('Command was canceled'), { isCanceled: true });
                 mockSubprocess._reject(canceledError);
             });
 
@@ -125,7 +108,7 @@ describe('CommandExecutor - Cancellation (AbortController)', () => {
 
         it('should clean up abort listener after command completes', async () => {
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             const controller = new AbortController();
             const removeEventListenerSpy = jest.spyOn(controller.signal, 'removeEventListener');
@@ -148,7 +131,7 @@ describe('CommandExecutor - Cancellation (AbortController)', () => {
 
         it('should work without signal option (backwards compatible)', async () => {
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             const promise = commandExecutor.execute('echo test', {
                 streaming: true,
@@ -168,7 +151,7 @@ describe('CommandExecutor - Cancellation (AbortController)', () => {
     describe('AbortController with non-streaming execution', () => {
         it('should support signal option in non-streaming mode', async () => {
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             const controller = new AbortController();
 
@@ -187,7 +170,7 @@ describe('CommandExecutor - Cancellation (AbortController)', () => {
 
         it('should cancel non-streaming command when aborted', async () => {
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             const controller = new AbortController();
 
@@ -204,8 +187,7 @@ describe('CommandExecutor - Cancellation (AbortController)', () => {
 
             // Simulate canceled error (deferred to allow handler attachment)
             setImmediate(() => {
-                const canceledError = new Error('Command was canceled') as any;
-                canceledError.isCanceled = true;
+                const canceledError = Object.assign(new Error('Command was canceled'), { isCanceled: true });
                 mockSubprocess._reject(canceledError);
             });
 

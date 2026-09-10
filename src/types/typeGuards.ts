@@ -5,10 +5,10 @@
  * Used when receiving data from external sources (webview, JSON, CLI output).
  */
 
-import { Project, ComponentInstance } from './index';
+import { Project, ComponentInstance } from './base';
+import { ADMIN_PANEL_URL, ACCS_GRAPHQL_ENDPOINT } from '@/core/config/envVarKeys';
 import { COMPONENT_IDS } from '@/core/constants';
 import { getMeshAppBuilderComponent } from '@/core/state/appBuilderComponentState';
-import { ADMIN_PANEL_URL, ACCS_GRAPHQL_ENDPOINT } from '@/features/components/config/envVarKeys';
 import {
     deriveAccsAdminUrl,
     lookupComponentConfigValue,

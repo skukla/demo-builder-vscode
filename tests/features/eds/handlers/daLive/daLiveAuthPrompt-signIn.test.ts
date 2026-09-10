@@ -90,15 +90,6 @@ jest.mock(
 );
 
 // Mock core logging (prevents "Logger not initialized" error)
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn().mockReturnValue({
-        info: jest.fn(),
-        debug: jest.fn(),
-        error: jest.fn(),
-        warn: jest.fn(),
-    }),
-    initializeLogger: jest.fn(),
-}));
 
 // Mock DaLiveAuthService
 const mockStoreToken = jest.fn().mockResolvedValue(undefined);
@@ -119,57 +110,22 @@ jest.mock('@/features/eds/services/daLive/daLiveAuthService', () => {
 });
 
 // Mock GitHub services (required by daLiveAuthPrompt to load)
-jest.mock('@/features/eds/services/github/githubTokenService');
-jest.mock('@/features/eds/services/github/githubRepoOperations');
-jest.mock('@/features/eds/services/github/githubFileOperations');
-jest.mock('@/features/eds/services/github/githubOAuthService');
-jest.mock('@/features/eds/services/daLive/daLiveOrgOperations');
-jest.mock('@/features/eds/services/daLive/daLiveContentOperations');
 
 // =============================================================================
 // Now import the modules under test (after all mocks are set up)
 // =============================================================================
 
 import * as vscode from 'vscode';
+import { validateDaLiveToken } from '@/features/eds/handlers/daLive/daLiveAuthPrompt';
 import {
+    createAuthPromptContext,
     showDaLiveAuthQuickPick,
-    validateDaLiveToken,
-} from '@/features/eds/handlers/daLive/daLiveAuthPrompt';
+} from './daLiveAuthPrompt.testUtils';
 
 // =============================================================================
 // Test Utilities
 // =============================================================================
 
-function createMockContext(): HandlerContext {
-    return {
-        panel: {
-            webview: { postMessage: jest.fn() },
-        } as unknown as HandlerContext['panel'],
-        stateManager: {
-            loadProjectFromPath: jest.fn(),
-            getCurrentProject: jest.fn(),
-        } as unknown as HandlerContext['stateManager'],
-        logger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-        } as unknown as HandlerContext['logger'],
-        debugLogger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-        } as unknown as HandlerContext['debugLogger'],
-        sendMessage: jest.fn(),
-        context: {
-            globalState: {
-                get: jest.fn(),
-                update: jest.fn().mockResolvedValue(undefined),
-            },
-        } as unknown as HandlerContext['context'],
-    } as unknown as HandlerContext;
-}
 
 function resetTrackingState(): void {
     showInputBoxCalls = [];
@@ -222,7 +178,7 @@ describe('showDaLiveAuthQuickPick', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         resetTrackingState();
-        mockContext = createMockContext();
+        mockContext = createAuthPromptContext();
         mockStoreToken.mockClear().mockResolvedValue(undefined);
         // Default: nothing pinned, so the org step runs. Tests about the
         // expiry path set a value.

@@ -50,16 +50,36 @@ describe('resolveIntegrationRows — mesh row (single-authority selection)', () 
     // yields a row — a package-seeded mesh arrives in selectedAppBuilderComponents.
     it('yields NO mesh row from the retired legacy dependency key alone', () => {
         const rows = resolveIntegrationRows(
-            state({ selectedOptionalDependencies: ['eds-accs-mesh'] } as never),
+            // `selectedOptionalDependencies` was REMOVED by D3; the cast is what
+            // lets the test put a value in a field that no longer exists.
+            state({ selectedOptionalDependencies: ['eds-accs-mesh'] } as unknown as WizardState),
             MESH_ENTRY,
             CATALOG
         );
 
-        expect(rows).toEqual([]);
+        expect(rows).toStrictEqual([]);
+    });
+
+    it('never doubles the mesh into a custom row, even when a source is keyed by its id', () => {
+        // The mesh id sits in selectedAppBuilderComponents (its single authority),
+        // so the resolver's per-id loop walks over it too. A source record keyed by
+        // that id must not produce a second, custom-kind row for the same mesh.
+        const rows = resolveIntegrationRows(
+            state({
+                selectedAppBuilderComponents: ['eds-accs-mesh'],
+                appBuilderComponentSources: {
+                    'eds-accs-mesh': { owner: 'skukla', repo: 'commerce-mesh' },
+                },
+            }),
+            MESH_ENTRY,
+            CATALOG
+        );
+
+        expect(rows).toEqual([expect.objectContaining({ id: 'eds-accs-mesh', kind: 'mesh' })]);
     });
 
     it('yields no mesh row when no mesh is selected', () => {
-        expect(resolveIntegrationRows(state(), MESH_ENTRY, CATALOG)).toEqual([]);
+        expect(resolveIntegrationRows(state(), MESH_ENTRY, CATALOG)).toStrictEqual([]);
     });
 
     it("stamps the mesh row required when the resolved requirement is 'required'", () => {
@@ -108,7 +128,7 @@ describe('resolveIntegrationRows — mesh row (single-authority selection)', () 
             CATALOG
         );
 
-        expect(rows).toEqual([]);
+        expect(rows).toStrictEqual([]);
     });
 
     it('mesh sourceLine reads the entry description', () => {
@@ -177,7 +197,7 @@ describe('resolveIntegrationRows — catalog rows', () => {
             [MESH_ENTRY, otherMesh]
         );
 
-        expect(rows).toEqual([]);
+        expect(rows).toStrictEqual([]);
     });
 
     it('excludes unknown ids (not in catalog, no custom source)', () => {
@@ -187,7 +207,7 @@ describe('resolveIntegrationRows — catalog rows', () => {
             CATALOG
         );
 
-        expect(rows).toEqual([]);
+        expect(rows).toStrictEqual([]);
     });
 });
 
@@ -250,6 +270,18 @@ describe('resolveIntegrationRows — blank starter ("Build custom") rows', () =>
         ]);
     });
 
+    it('blank sourceLine falls back to "Custom integration" when the entry has no description', () => {
+        const rows = resolveIntegrationRows(
+            state({ selectedAppBuilderComponents: ['app-builder-shell'] }),
+            MESH_ENTRY,
+            [MESH_ENTRY, { ...BLANK_ENTRY, description: '' }]
+        );
+
+        expect(rows).toEqual([
+            expect.objectContaining({ kind: 'blank', sourceLine: 'Custom integration' }),
+        ]);
+    });
+
     it('drops the blank shell when the component list omits it (the fixed IntegrationsStep bug)', () => {
         // Passing the blank-FILTERED catalog (the old bug) leaves the committed
         // shell with no matching entry → no row. The fix passes the FULL list.
@@ -259,7 +291,7 @@ describe('resolveIntegrationRows — blank starter ("Build custom") rows', () =>
             CATALOG
         );
 
-        expect(rows).toEqual([]);
+        expect(rows).toStrictEqual([]);
     });
 });
 
@@ -383,6 +415,6 @@ describe('resolveIntegrationRows — ordering, apis, needsSetup, reserved key', 
     });
 
     it('returns [] for empty state', () => {
-        expect(resolveIntegrationRows(state(), undefined, CATALOG)).toEqual([]);
+        expect(resolveIntegrationRows(state(), undefined, CATALOG)).toStrictEqual([]);
     });
 });

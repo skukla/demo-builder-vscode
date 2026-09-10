@@ -11,9 +11,9 @@ import * as fsPromises from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { BaseWebviewCommand } from '@/core/base';
+import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { openUrl } from '@/core/utils/browserUtils';
-import { validateURL } from '@/core/validation';
+import { validateURL } from '@/core/validation/URLValidator';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, HandlerContext } from '@/types/handlers';
 import { SimpleResult, DataResult } from '@/types/results';
@@ -130,10 +130,8 @@ export async function handleLog(
         case 'warn':
             context.logger.warn(`[Webview] ${message}`);
             break;
-        case 'debug':
-            context.logger.debug(`[Webview] ${message}`);
-            break;
         default:
+            // 'debug', 'info' and anything unrecognised all land here.
             context.logger.debug(`[Webview] ${message}`);
     }
     return { success: true };

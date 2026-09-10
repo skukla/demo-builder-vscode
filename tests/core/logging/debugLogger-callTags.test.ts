@@ -7,32 +7,9 @@
 import {
     mockLogsChannel,
     mockDebugChannel,
-    createMockContext,
+    createDebugLoggerContext,
     resetMocks,
 } from './debugLogger.testUtils';
-
-// Mock vscode — the same preamble the sibling suites use (hoisting rules).
-jest.mock('vscode', () => {
-    const originalModule = jest.requireActual('../../__mocks__/vscode');
-    return {
-        ...originalModule,
-        window: {
-            ...originalModule.window,
-            createOutputChannel: jest.fn((name: string, options?: { log: boolean }) => {
-                const utils = require('./debugLogger.testUtils');
-                if (options?.log) {
-                    if (name === 'Demo Builder: User Logs') return utils.mockLogsChannel;
-                    if (name === 'Demo Builder: Debug Logs') return utils.mockDebugChannel;
-                }
-                return { append: jest.fn(), appendLine: jest.fn(), clear: jest.fn(), show: jest.fn(), hide: jest.fn(), dispose: jest.fn(), name };
-            }),
-        },
-        workspace: {
-            ...originalModule.workspace,
-            getConfiguration: jest.fn().mockReturnValue({ get: jest.fn().mockReturnValue('trace') }),
-        },
-    };
-});
 
 import { nextCallTag, runWithCallTag } from '@/core/logging/callTagContext';
 import { DebugLogger, _resetLoggerForTesting } from '@/core/logging/debugLogger';
@@ -43,7 +20,7 @@ describe('DebugLogger call-tag stamping', () => {
     beforeEach(() => {
         resetMocks();
         _resetLoggerForTesting();
-        logger = new DebugLogger(createMockContext());
+        logger = new DebugLogger(createDebugLoggerContext());
         jest.clearAllMocks();
     });
 
@@ -89,6 +66,42 @@ describe('DebugLogger call-tag stamping', () => {
 
         expect(mockDebugChannel.info).toHaveBeenCalledWith('[debug] [Guards] 1/3 auth check…');
         expect(mockDebugChannel.info).toHaveBeenCalledWith('[AppBuilder] plain line');
+    });
+
+    // Regression. The level prefix and the subsystem bracket used to be matched
+    // by one pattern with the level half optional, so a line carrying a level
+    // prefix and NO subsystem backtracked and matched `[debug]` ITSELF as the
+    // subsystem: `[debug] deploy starting` came out as `[debug #47] deploy
+    // starting`. That rewrites the level prefix — against this module's own rule
+    // — and hides the line from anyone filtering the channel on `[debug] `.
+    it('leaves the level prefix alone on a line with no subsystem bracket', () => {
+        runWithCallTag(47, () => {
+            logger.debug('deploy starting');
+            logger.trace('deploy finished');
+        });
+
+        expect(mockDebugChannel.info).toHaveBeenCalledWith('[debug] [#47] deploy starting');
+        expect(mockDebugChannel.info).toHaveBeenCalledWith('[trace] [#47] deploy finished');
+    });
+
+    // The level prefix is recognised at the START of the line only. A message
+    // that merely MENTIONS one is prose, and treating it as the prefix would
+    // slice that many characters off the front of the line.
+    it('does not mistake a mid-line level prefix for the real one', () => {
+        runWithCallTag(5, () => {
+            logger.info('saw [debug] in the output');
+        });
+
+        expect(mockDebugChannel.info).toHaveBeenCalledWith('[#5] saw [debug] in the output');
+    });
+
+    // A bracket that is not at the START of the line is prose, not a subsystem.
+    it('does not treat a mid-line bracket as the subsystem', () => {
+        runWithCallTag(3, () => {
+            logger.info('waiting on [Guards] to finish');
+        });
+
+        expect(mockDebugChannel.info).toHaveBeenCalledWith('[#3] waiting on [Guards] to finish');
     });
 
     it('concurrent calls stamp their own tags — the interleaving case', async () => {

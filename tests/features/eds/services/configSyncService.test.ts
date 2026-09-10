@@ -19,12 +19,20 @@ jest.mock('@/core/utils/sleep', () => ({ sleep: jest.fn().mockResolvedValue(unde
 
 import {
     syncConfigToRemote,
+    verifyConfigOnCdn,
     describeCdnPropagation,
     CDN_VERIFY_BUDGET_SECONDS,
     ConfigSyncParams,
 } from '@/features/eds/services/configSyncService';
+import { sleep } from '@/core/utils/sleep';
+import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import { promises as fsPromises } from 'fs';
+import type * as vscode from 'vscode';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
 
+import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 // Mock the dependencies
 jest.mock('fs', () => ({
     promises: {
@@ -38,6 +46,18 @@ jest.mock('@/features/eds/services/github/githubTokenService', () => ({
     })),
 }));
 
+// The subject now asks the service cache instead of constructing its own token
+// service. This delegates to the SAME mocked class above, so the suite's
+// behaviour is unchanged — only the route to it is.
+jest.mock('@/features/eds/handlers/edsServiceCache', () => ({
+    getGitHubServices: jest.fn(() => {
+        const { GitHubTokenService } = jest.requireMock(
+            '@/features/eds/services/github/githubTokenService'
+        );
+        return { tokenService: new GitHubTokenService() };
+    }),
+}));
+
 jest.mock('@/features/eds/services/github/githubFileOperations', () => ({
     GitHubFileOperations: jest.fn().mockImplementation(() => ({
         getFileContent: jest.fn(),
@@ -45,65 +65,46 @@ jest.mock('@/features/eds/services/github/githubFileOperations', () => ({
     })),
 }));
 
-jest.mock('@/features/eds/services/helix/helixService', () => ({
-    HelixService: jest.fn().mockImplementation(() => ({
-        previewCode: jest.fn(),
-    })),
-}));
+// HelixService is NOT module-mocked. It arrives through the `makeHelix` seam on
+// ConfigSyncParams, so the suite hands in the one method this service calls.
+/** The one Helix call syncConfigToRemote makes, handed in through the seam. */
+const mockPreviewCode = jest.fn();
 
 // Mock global fetch for CDN verification
 const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
 describe('syncConfigToRemote', () => {
-    let mockLogger: {
-        debug: jest.Mock;
-        info: jest.Mock;
-        warn: jest.Mock;
-        error: jest.Mock;
-    };
+    let mockLogger: ReturnType<typeof createMockLogger>;
 
-    let mockSecrets: {
-        get: jest.Mock;
-        store: jest.Mock;
-        delete: jest.Mock;
-    };
+    let mockSecrets: jest.Mocked<vscode.SecretStorage>;
 
-    let mockAuthManager: {
-        getTokenManager: jest.Mock;
-    };
+    let mockAuthManager: jest.Mocked<AuthenticationService>;
 
     let baseParams: ConfigSyncParams;
 
     beforeEach(() => {
         jest.clearAllMocks();
+        mockPreviewCode.mockResolvedValue(undefined);
 
-        mockLogger = {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        };
+        mockLogger = createMockLogger();
 
-        mockSecrets = {
-            get: jest.fn(),
-            store: jest.fn(),
-            delete: jest.fn(),
-        };
+        mockSecrets = createMockSecretStorage().secrets;
 
-        mockAuthManager = {
+        mockAuthManager = createMockAuthenticationService({
             getTokenManager: jest.fn().mockReturnValue({
                 getAccessToken: jest.fn().mockResolvedValue('mock-access-token'),
             }),
-        };
+        });
 
         baseParams = {
             componentPath: '/path/to/eds-storefront',
             repoOwner: 'test-owner',
             repoName: 'test-repo',
-            logger: mockLogger as any,
-            secrets: mockSecrets as any,
-            authManager: mockAuthManager as any,
+            logger: mockLogger,
+            secrets: mockSecrets,
+            authManager: mockAuthManager,
+            makeHelix: () => ({ previewCode: mockPreviewCode }),
         };
 
         // Mock successful CDN verification response by default
@@ -135,13 +136,6 @@ describe('syncConfigToRemote', () => {
                 createOrUpdateFile: jest.fn().mockResolvedValue(undefined),
             };
             GitHubFileOperations.mockImplementation(() => mockGitHubFileOps);
-
-            // Mock Helix service
-            const { HelixService } = require('@/features/eds/services/helix/helixService');
-            const mockHelixService = HelixService.mock.results[0]?.value || {
-                previewCode: jest.fn().mockResolvedValue(undefined),
-            };
-            HelixService.mockImplementation(() => mockHelixService);
         });
 
         it('reads local config.json and pushes to GitHub', async () => {
@@ -191,6 +185,7 @@ describe('syncConfigToRemote', () => {
             expect(result.success).toBe(false);
             expect(result.githubPushed).toBe(false);
             expect(result.cdnPublished).toBe(false);
+            expect(result.cdnVerified).toBe(false);
             expect(result.error).toContain('Local config.json not found');
         });
 
@@ -215,6 +210,22 @@ describe('syncConfigToRemote', () => {
             expect(result.error).toContain('Failed to push config.json to GitHub');
         });
 
+        it('reports a failure raised before the GitHub step as a sync failure', async () => {
+            // The only work outside an inner try/catch: if the service cache
+            // cannot hand back a token service there is no push to report on,
+            // and the outer catch is the one that has to answer.
+            (fsPromises.readFile as jest.Mock).mockResolvedValue('{"public": {}}');
+            (getGitHubServices as jest.Mock).mockImplementationOnce(() => {
+                throw new Error('no secret storage');
+            });
+
+            const result = await syncConfigToRemote(baseParams);
+
+            expect(result.success).toBe(false);
+            expect(result.githubPushed).toBe(false);
+            expect(result.error).toBe('Config sync failed: no secret storage');
+        });
+
         it('returns partial success if CDN publish fails but GitHub succeeds', async () => {
             // Arrange
             (fsPromises.readFile as jest.Mock).mockResolvedValue('{"public": {}}');
@@ -227,10 +238,7 @@ describe('syncConfigToRemote', () => {
                 createOrUpdateFile: jest.fn().mockResolvedValue(undefined),
             }));
 
-            const { HelixService } = require('@/features/eds/services/helix/helixService');
-            HelixService.mockImplementation(() => ({
-                previewCode: jest.fn().mockRejectedValue(new Error('CDN API error')),
-            }));
+            mockPreviewCode.mockRejectedValue(new Error('CDN API error'));
 
             // Act
             const result = await syncConfigToRemote(baseParams);
@@ -239,8 +247,64 @@ describe('syncConfigToRemote', () => {
             expect(result.success).toBe(true); // Overall success because GitHub push succeeded
             expect(result.githubPushed).toBe(true);
             expect(result.cdnPublished).toBe(false);
+            expect(result.cdnVerified).toBe(false);
+            expect(result.cdnError).toBe('CDN API error');
             // No error set because GitHub (critical part) succeeded
             expect(result.error).toBeUndefined();
+        });
+    });
+
+    describe('the GitHub write', () => {
+        beforeEach(() => {
+            (fsPromises.readFile as jest.Mock).mockResolvedValue('{"public": {}}');
+        });
+
+        it('passes the existing SHA through so the push updates rather than duplicates', async () => {
+            const createOrUpdateFile = jest.fn().mockResolvedValue(undefined);
+            const {
+                GitHubFileOperations,
+            } = require('@/features/eds/services/github/githubFileOperations');
+            GitHubFileOperations.mockImplementation(() => ({
+                getFileContent: jest.fn().mockResolvedValue({ sha: 'existing-sha' }),
+                createOrUpdateFile,
+            }));
+
+            await syncConfigToRemote({ ...baseParams, componentPath: '/p' });
+
+            expect(createOrUpdateFile).toHaveBeenCalledWith(
+                'test-owner',
+                'test-repo',
+                'config.json',
+                '{"public": {}}',
+                'chore: sync config.json with mesh endpoint',
+                'existing-sha'
+            );
+        });
+
+        it('pushes with no SHA when config.json is not on GitHub yet', async () => {
+            // The repo has no config.json, so getFileContent answers null. Reading
+            // `.sha` off it without the optional chain throws, and the throw lands
+            // in the GitHub catch — a first-ever sync reported as a push failure.
+            const createOrUpdateFile = jest.fn().mockResolvedValue(undefined);
+            const {
+                GitHubFileOperations,
+            } = require('@/features/eds/services/github/githubFileOperations');
+            GitHubFileOperations.mockImplementation(() => ({
+                getFileContent: jest.fn().mockResolvedValue(null),
+                createOrUpdateFile,
+            }));
+
+            const result = await syncConfigToRemote(baseParams);
+
+            expect(result.githubPushed).toBe(true);
+            expect(createOrUpdateFile).toHaveBeenCalledWith(
+                'test-owner',
+                'test-repo',
+                'config.json',
+                '{"public": {}}',
+                'chore: sync config.json with mesh endpoint',
+                undefined
+            );
         });
     });
 
@@ -255,11 +319,6 @@ describe('syncConfigToRemote', () => {
             GitHubFileOperations.mockImplementation(() => ({
                 getFileContent: jest.fn().mockResolvedValue(null),
                 createOrUpdateFile: jest.fn().mockResolvedValue(undefined),
-            }));
-
-            const { HelixService } = require('@/features/eds/services/helix/helixService');
-            HelixService.mockImplementation(() => ({
-                previewCode: jest.fn().mockResolvedValue(undefined),
             }));
 
             // Act
@@ -302,11 +361,6 @@ describe('syncConfigToRemote', () => {
 
         it('sets cdnVerified to true when config.json is accessible with valid commerce-endpoint', async () => {
             // Arrange
-            const { HelixService } = require('@/features/eds/services/helix/helixService');
-            HelixService.mockImplementation(() => ({
-                previewCode: jest.fn().mockResolvedValue(undefined),
-            }));
-
             // CDN returns valid config immediately
             mockFetch.mockResolvedValue({
                 ok: true,
@@ -330,11 +384,6 @@ describe('syncConfigToRemote', () => {
 
         it('builds correct CDN URL from repo owner and name', async () => {
             // Arrange
-            const { HelixService } = require('@/features/eds/services/helix/helixService');
-            HelixService.mockImplementation(() => ({
-                previewCode: jest.fn().mockResolvedValue(undefined),
-            }));
-
             mockFetch.mockResolvedValue({
                 ok: true,
                 text: jest.fn().mockResolvedValue(
@@ -353,6 +402,118 @@ describe('syncConfigToRemote', () => {
                 expect.any(Object)
             );
         });
+    });
+});
+
+/**
+ * verifyConfigOnCdn — the retry loop the sync path leans on.
+ *
+ * Every wait here goes through the mocked `sleep`, so the loop's SHAPE is
+ * observable without any elapsed time: which cadence it slept at, and how many
+ * times. That is what these assert — never a duration.
+ */
+describe('verifyConfigOnCdn', () => {
+    /** Between attempts. Mirrors CDN_VERIFY_INTERVAL, which is module-private. */
+    const BETWEEN_ATTEMPTS_MS = 2000;
+    /** The extra settle after an early success — CDN_VERIFY_INTERVAL * 2. */
+    const EDGE_SETTLE_MS = 4000;
+    /** Mirrors CDN_VERIFY_ATTEMPTS. */
+    const ATTEMPTS = 10;
+
+    const sleepMock = sleep as jest.Mock;
+    let logger: ReturnType<typeof createMockLogger>;
+
+    /** A CDN answer carrying a config with the field the check looks for. */
+    function servedConfig(ok = true) {
+        return {
+            ok,
+            status: ok ? 200 : 404,
+            text: jest
+                .fn()
+                .mockResolvedValue(
+                    JSON.stringify({ public: { default: { 'commerce-endpoint': 'https://x/gql' } } })
+                ),
+        };
+    }
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        logger = createMockLogger();
+    });
+
+    it('requests the config over a signal that can abort the fetch', async () => {
+        mockFetch.mockResolvedValue(servedConfig());
+
+        await verifyConfigOnCdn('test-owner', 'test-repo', logger);
+
+        expect(mockFetch).toHaveBeenCalledWith(
+            'https://main--test-repo--test-owner.aem.live/config.json',
+            expect.objectContaining({ signal: expect.anything() })
+        );
+    });
+
+    it('settles for a further interval when the first attempt already succeeds', async () => {
+        // An edge that answers immediately is the one most likely to be a single
+        // fast node ahead of the rest, so the check waits again before believing it.
+        mockFetch.mockResolvedValue(servedConfig());
+
+        await expect(verifyConfigOnCdn('o', 'r', logger)).resolves.toBe(true);
+
+        expect(mockFetch).toHaveBeenCalledTimes(1);
+        expect(sleepMock).toHaveBeenCalledWith(EDGE_SETTLE_MS);
+    });
+
+    it('does not settle again once the third attempt is the one that succeeds', async () => {
+        mockFetch
+            .mockResolvedValueOnce({ ok: false, status: 503 })
+            .mockResolvedValueOnce({ ok: false, status: 503 })
+            .mockResolvedValue(servedConfig());
+
+        await expect(verifyConfigOnCdn('o', 'r', logger)).resolves.toBe(true);
+
+        expect(mockFetch).toHaveBeenCalledTimes(3);
+        expect(sleepMock).not.toHaveBeenCalledWith(EDGE_SETTLE_MS);
+    });
+
+    it('does not accept a body served under a non-OK status', async () => {
+        // A 404 page can still parse as the config we want if the edge is
+        // serving an error document; the status is what says it is not live.
+        mockFetch.mockResolvedValue(servedConfig(false));
+
+        await expect(verifyConfigOnCdn('o', 'r', logger)).resolves.toBe(false);
+
+        expect(mockFetch).toHaveBeenCalledTimes(ATTEMPTS);
+    });
+
+    it('does not accept a config that lacks the commerce endpoint', async () => {
+        mockFetch.mockResolvedValue({
+            ok: true,
+            status: 200,
+            text: jest.fn().mockResolvedValue(JSON.stringify({ public: { default: {} } })),
+        });
+
+        await expect(verifyConfigOnCdn('o', 'r', logger)).resolves.toBe(false);
+
+        expect(mockFetch).toHaveBeenCalledTimes(ATTEMPTS);
+    });
+
+    it('waits between attempts but not after the last one', async () => {
+        mockFetch.mockRejectedValue(new Error('network down'));
+
+        await expect(verifyConfigOnCdn('o', 'r', logger)).resolves.toBe(false);
+
+        expect(mockFetch).toHaveBeenCalledTimes(ATTEMPTS);
+        const waits = sleepMock.mock.calls.filter(([ms]) => ms === BETWEEN_ATTEMPTS_MS);
+        expect(waits).toHaveLength(ATTEMPTS - 1);
+    });
+
+    it('still accepts a config that only arrives on the final attempt', async () => {
+        for (let i = 1; i < ATTEMPTS; i++) mockFetch.mockRejectedValueOnce(new Error('not yet'));
+        mockFetch.mockResolvedValue(servedConfig());
+
+        await expect(verifyConfigOnCdn('o', 'r', logger)).resolves.toBe(true);
+
+        expect(mockFetch).toHaveBeenCalledTimes(ATTEMPTS);
     });
 });
 
@@ -378,7 +539,7 @@ describe('describeCdnPropagation', () => {
         // Guards the one detail this message can get wrong in a way nobody
         // notices: claiming we waited a length of time we did not.
         expect(describeCdnPropagation({ cdnVerified: false })).toContain(
-            `~${CDN_VERIFY_BUDGET_SECONDS}s`,
+            `~${CDN_VERIFY_BUDGET_SECONDS}s`
         );
         expect(CDN_VERIFY_BUDGET_SECONDS).toBe(20);
     });

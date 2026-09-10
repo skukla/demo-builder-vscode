@@ -6,18 +6,10 @@
  * change left the header naming the OLD target for the rest of the session while
  * every card deployed to the new one (reported live 2026-08-07).
  *
- * @jest-environment jsdom
  */
 
+import '../../../../helpers/webviewClientMock';
 import { renderHook, act } from '@testing-library/react';
-
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        postMessage: jest.fn(),
-        onMessage: jest.fn(),
-        request: jest.fn(),
-    },
-}));
 
 import { useLiveDestination } from '@/features/dashboard/ui/hooks/useLiveDestination';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';

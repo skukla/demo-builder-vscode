@@ -48,17 +48,16 @@ jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     createDaLiveServiceTokenProvider: jest.fn(() => ({ getToken: jest.fn() })),
 }));
 
-jest.mock('@/features/eds/services/helix/helixService', () => ({
-    HelixService: jest.fn().mockImplementation(() => ({})),
-}));
-
+import type { HelixService } from '@/features/eds/services/helix/helixService';
 import { refreshBlockLibraryHeadless } from '@/features/eds/services/refreshBlockLibraryHeadless';
 import { executeEdsPipeline } from '@/features/eds/services/edsPipeline';
 import { ensureDaLiveAuth, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { extractResetParams } from '@/features/eds/services/reset/edsResetParams';
 import { DaLiveAuthError } from '@/features/eds/services/types';
 import type { Logger } from '@/types/logger';
-import type { Project } from '@/types/base';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockProject } from '../../../helpers/projectFake';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 
 const pipelineMock = executeEdsPipeline as jest.Mock;
 const ensureAuthMock = ensureDaLiveAuth as jest.Mock;
@@ -66,22 +65,26 @@ const extractParamsMock = extractResetParams as jest.Mock;
 const getGitHubServicesMock = getGitHubServices as jest.Mock;
 
 function makeLogger(): Logger {
-    return {
-        info: jest.fn(),
-        debug: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        trace: jest.fn(),
-    } as unknown as Logger;
+    return createMockLogger() as unknown as Logger;
 }
 
-const PROJECT = { name: 'Demo', path: '/p' } as unknown as Project;
+const PROJECT = createMockProject({ name: 'Demo', path: '/p' });
+
+/**
+ * Helix arrives through the deps object rather than by mocking the module. The old
+ * mock returned `() => ({})` and asserted nothing — it existed only so the real
+ * constructor would not run, which is the definition of a module wall (ADR-016).
+ * Nothing in this file reads the service; the pipeline it is forwarded to is itself
+ * faked, so an empty object typed at the seam is honest about that.
+ */
+const fakeHelix = {} as unknown as HelixService;
 
 function deps(overrides: Record<string, unknown> = {}) {
     return {
         project: PROJECT,
-        context: {} as never,
+        context: createMockExtensionContext(),
         logger: makeLogger(),
+        helixService: fakeHelix,
         ...overrides,
     };
 }
@@ -119,7 +122,7 @@ describe('refreshBlockLibraryHeadless', () => {
         expect(params.includeBlockLibrary).toBe(true);
         expect(params.skipContent).toBe(true);
         expect(params.skipPublish).toBe(false);
-        expect(params.blockCollectionIds).toEqual([]);
+        expect(params.blockCollectionIds).toStrictEqual([]);
 
         expect(result).toEqual({
             success: true,
@@ -166,6 +169,67 @@ describe('refreshBlockLibraryHeadless', () => {
         expect(pipelineMock).toHaveBeenCalledTimes(2);
         expect(ensureAuthMock).toHaveBeenCalledTimes(1);
         expect(result.success).toBe(true);
+    });
+
+    it('returns the re-auth failure reason when the re-auth itself fails', async () => {
+        pipelineMock.mockRejectedValueOnce(new DaLiveAuthError('DA.live authentication expired'));
+        ensureAuthMock.mockResolvedValueOnce({ authenticated: false, error: 'IMS refused' });
+
+        const result = await refreshBlockLibraryHeadless(deps());
+
+        expect(result).toEqual({
+            success: false,
+            error: 'DA.live re-authentication failed: IMS refused',
+        });
+        expect(result.cancelled).toBeUndefined();
+        expect(pipelineMock).toHaveBeenCalledTimes(1);
+    });
+
+    // Only a DA.live token expiry is retryable. Anything else is the caller's
+    // answer straight away — retrying it would run the destructive rebuild a
+    // second time and then prompt for a sign-in that has nothing to do with the
+    // failure.
+    it('does not retry a failure that is not a DA.live token expiry', async () => {
+        pipelineMock.mockRejectedValueOnce(new Error('GitHub rate limit exceeded'));
+
+        const result = await refreshBlockLibraryHeadless(deps());
+
+        expect(result).toEqual({ success: false, error: 'GitHub rate limit exceeded' });
+        expect(pipelineMock).toHaveBeenCalledTimes(1);
+        expect(ensureAuthMock).not.toHaveBeenCalled();
+    });
+
+    it('reports a thrown non-Error as an unknown failure', async () => {
+        pipelineMock.mockRejectedValueOnce('a string, not an Error');
+
+        const result = await refreshBlockLibraryHeadless(deps());
+
+        expect(result).toEqual({ success: false, error: 'Unknown error' });
+    });
+
+    // The retry is bounded at ONE. A second expiry gives up rather than looping
+    // the SC through re-authentication for as long as the token keeps dying.
+    it('gives up after the single retry rather than re-authenticating again', async () => {
+        pipelineMock
+            .mockRejectedValueOnce(new DaLiveAuthError('expired'))
+            .mockRejectedValueOnce(new DaLiveAuthError('expired again'));
+        ensureAuthMock.mockResolvedValue({ authenticated: true });
+
+        const result = await refreshBlockLibraryHeadless(deps());
+
+        expect(result).toEqual({ success: false, error: 'expired again' });
+        expect(pipelineMock).toHaveBeenCalledTimes(2);
+        expect(ensureAuthMock).toHaveBeenCalledTimes(1);
+    });
+
+    // The command passes onProgress; the MCP tool does not. Progress arriving
+    // for a caller that asked for none must pass silently rather than take the
+    // whole refresh into the catch.
+    it('survives pipeline progress when the caller wants none', async () => {
+        await refreshBlockLibraryHeadless(deps({ onProgress: undefined }));
+
+        const reportProgress = pipelineMock.mock.calls[0][2];
+        expect(() => reportProgress({ operation: 'block-library', message: 'configuring...' })).not.toThrow();
     });
 
     it('returns a cancelled result when the user declines re-auth', async () => {

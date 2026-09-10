@@ -5,7 +5,6 @@
  * toggle buttons (`aria-pressed`); native libraries are locked, always-selected (disabled)
  * cards. Tests pin that contract for native, available, and custom libraries.
  *
- * @jest-environment jsdom
  */
 
 import React from 'react';
@@ -40,6 +39,18 @@ const customLib: CustomBlockLibrary = {
 const customLib2: CustomBlockLibrary = {
     name: 'Another Custom Lib',
     source: { owner: 'otherorg', repo: 'other-blocks', branch: 'main' },
+};
+
+/** Same repo NAME as customLib, different owner — a different library. */
+const sameRepoOtherOwner: CustomBlockLibrary = {
+    name: 'Their My-Blocks',
+    source: { owner: 'otherorg', repo: 'my-blocks', branch: 'main' },
+};
+
+/** Same owner as customLib, different repo — also a different library. */
+const sameOwnerOtherRepo: CustomBlockLibrary = {
+    name: 'My Other Blocks',
+    source: { owner: 'myorg', repo: 'other-blocks', branch: 'main' },
 };
 
 const noop = jest.fn();
@@ -188,6 +199,39 @@ describe('BlockLibrariesStepContent', () => {
                     {...defaultProps}
                     customBlockLibraryDefaults={[customLib]}
                     customBlockLibraries={[]}
+                />
+            );
+
+            expect(screen.getByRole('button', { name: /My Custom Lib/i })).toHaveAttribute(
+                'aria-pressed',
+                'false',
+            );
+        });
+
+        // A card is selected only when BOTH halves of its source match. Half a match
+        // is a different library, and showing it as selected would tell the SC a
+        // library is going into the storefront when a different one is.
+        it('should stay unselected when only the repo name matches a selection', () => {
+            render(
+                <BlockLibrariesStepContent
+                    {...defaultProps}
+                    customBlockLibraryDefaults={[customLib]}
+                    customBlockLibraries={[sameRepoOtherOwner]}
+                />
+            );
+
+            expect(screen.getByRole('button', { name: /My Custom Lib/i })).toHaveAttribute(
+                'aria-pressed',
+                'false',
+            );
+        });
+
+        it('should stay unselected when only the owner matches a selection', () => {
+            render(
+                <BlockLibrariesStepContent
+                    {...defaultProps}
+                    customBlockLibraryDefaults={[customLib]}
+                    customBlockLibraries={[sameOwnerOtherRepo]}
                 />
             );
 

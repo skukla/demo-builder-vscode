@@ -17,9 +17,8 @@
  * `DATAPACK_ALL_ITEMS` / `DATAPACK_SPECIFIC_ITEMS`, so a mapping table would
  * blank exactly the values that occur.
  *
- * No table. `docs/development/ui-patterns.md` has no table component and neither
- * does `core/ui`; rows carry four short facts, which a table's chrome would cost
- * more than it organised.
+ * No table. `core/ui` has no table component; rows carry four short facts, which a
+ * table's chrome would cost more than it organised.
  *
  * @module features/data-installer/ui/views/DatapackActivityView
  */

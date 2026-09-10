@@ -219,7 +219,23 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // guidance 2/2, taking the door that skips secret-refusal and
 // staleness-marking. Two templates even showed a key/value call signature the
 // raw tool never had.
-export const AI_CONTEXT_VERSION = 29;
+// v30 (2026-08-28): the token-first theming rule generalizes beyond type.
+// commerce-block-mapper and refine-visual-match taught the bounded-choice rule
+// for `--type-*` only; the shipped styles.css defines the WHOLE theme as tokens
+// (~114 in a real project: color/type/spacing/shape/grid). Both skills now say:
+// read the file for the real inventory, edit tokens, literals only where no
+// token covers the property. AI-1a design axis, step 1 (constraints where
+// feedback is impossible).
+// v31 (2026-08-28): extend-app-builder-app routes kit knowledge to the
+// commerce-extensibility server FIRST. Both ERP journeys measured that server
+// at zero calls while the kit build re-derived its rules from source — the
+// routing lead the journey measurement's calls-by-server line exists to catch.
+// v32 (2026-08-30): sync-changes named the mesh deploy command `aio api:mesh:update`.
+// No such command exists — the topic is `api-mesh`, and that spelling appeared in
+// exactly one file in the repo: this shipped template. An agent following it got
+// "command not found" in every project generated since. Found by reading every
+// document; the fix only reaches existing projects because of this bump.
+export const AI_CONTEXT_VERSION = 32;
 
 /**
  * Component IDs for standardized component instance access

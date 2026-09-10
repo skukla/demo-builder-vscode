@@ -9,14 +9,6 @@
  */
 
 // Step-level debug logging (AI-5) — no logger singleton exists under jest.
-jest.mock('@/core/logging', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    }),
-}));
 
 import { teardownConsoleProject } from '@/features/authentication/services/consoleProjectTeardown';
 import { PROPAGATION_RETRY_DELAYS } from '@/features/authentication/services/consoleProjectTeardownEvents';

@@ -61,13 +61,13 @@ export interface PageFooterProps {
  * Uses CSS Grid instead of Flexbox space-between to ensure columns maintain
  * their position regardless of content presence (no placeholder divs needed).
  */
-export const PageFooter: React.FC<PageFooterProps> = ({
+export function PageFooter({
     leftContent,
     centerContent,
     rightContent,
     constrainWidth = true,
     className,
-}) => {
+}: PageFooterProps) {
     const gridContent = (
         <div className="footer-grid">
             <div className="grid-align-start">{leftContent}</div>
@@ -89,4 +89,4 @@ export const PageFooter: React.FC<PageFooterProps> = ({
             )}
         </View>
     );
-};
+}

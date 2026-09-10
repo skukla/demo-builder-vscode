@@ -29,8 +29,6 @@ export interface TimelineNavProps {
     currentStepIndex: number;
     /** Array of completed step indices */
     completedStepIndices: number[];
-    /** Array of confirmed step indices (in edit mode, user clicked Continue on these) */
-    confirmedStepIndices?: number[];
     /** Callback when step is clicked (receives step index) */
     onStepClick?: (stepIndex: number) => void;
     /** Whether to show the header (default: true) */
@@ -39,8 +37,6 @@ export interface TimelineNavProps {
     headerText?: string;
     /** Whether to use compact mode (smaller padding, for sidebar) */
     compact?: boolean;
-    /** Whether we're in edit mode (reviewing existing project) */
-    isEditMode?: boolean;
     /**
      * Optional sub-steps rendered as a single indented level beneath the
      * current (active) parent step only. One level — no recursion.
@@ -61,12 +57,10 @@ export function TimelineNav({
     steps,
     currentStepIndex,
     completedStepIndices,
-    confirmedStepIndices: _confirmedStepIndices = [],
     onStepClick,
     showHeader = true,
     headerText = 'Setup Progress',
     compact = false,
-    isEditMode: _isEditMode = false,
     childSteps,
     childStatusById,
     activeChildId,
@@ -167,7 +161,7 @@ export function TimelineNav({
                         >
                             {/* Step item - role/tabIndex/keyboard conditionally applied when clickable */}
                             {/* The `data-step-name` attribute powers a CSS-only `::after` tooltip in
-                                custom-spectrum.css, scoped to the rail-collapse media query — it shows
+                                utilities.css, scoped to the rail-collapse media query — it shows
                                 each step's name on hover ONLY when the rail is collapsed (labels are
                                 hidden by then), and is structurally inert at wider viewports. */}
                             {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- role and tabIndex are conditionally set when isClickable; non-clickable steps are inert */}
@@ -178,11 +172,23 @@ export function TimelineNav({
                                 tabIndex={isClickable ? 0 : undefined}
                                 aria-current={!step.isExiting && actualIndex === currentStepIndex ? 'step' : undefined}
                                 aria-label={step.name}
-                                style={{
-                                    marginBottom: displayIndex < displaySteps.length - 1 && !isCurrentWithChildren ? stepSpacing : undefined,
-                                    // Staggered animation delay for cascade effect
-                                    animationDelay: isEntering ? `${displayIndex * 40}ms` : undefined,
-                                }}
+                                // Both values are PARAMETERS: the spacing applies only
+                                // between steps, and the delay staggers the cascade. They
+                                // arrive as custom properties so `margin-bottom` and
+                                // `animation-delay` stay declared in CSS, where a rule can
+                                // still reach them.
+                                style={
+                                    {
+                                        '--timeline-step-spacing':
+                                            displayIndex < displaySteps.length - 1 &&
+                                            !isCurrentWithChildren
+                                                ? stepSpacing
+                                                : '0px',
+                                        '--timeline-step-delay': isEntering
+                                            ? `${displayIndex * 40}ms`
+                                            : '0ms',
+                                    } as React.CSSProperties
+                                }
                                 // NO opacity here. This element hosts the collapsed-rail
                                 // `::after` name tooltip, and opacity below 1 would both dim
                                 // the tooltip and create a stacking context that traps its

@@ -163,3 +163,9 @@ comments.
 `custom/code-patches.json` has no SKU patches (Custom-package storefronts keep
 current behavior). PaaS catalog prewarm is still a follow-up (ADR-005); the
 storefront-side encoding applies regardless of backend.
+
+## Reference notes
+
+- `scripts/commerce.js`, `rootLink` — belong to the generated EDS storefront repository,
+  not to this one. This decision spans both repos and names the storefront side
+  deliberately.

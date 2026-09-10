@@ -15,7 +15,7 @@
  */
 
 import { RESERVED_EXISTING_KEY, type BlankInstance } from './flowStages';
-import { COMPONENT_IDS, MESH_COMPONENT_IDS } from '@/core/constants';
+import { COMPONENT_IDS } from '@/core/constants';
 import { normalizeProjectName } from '@/core/validation/normalizers';
 
 const EMPTY_SLUG_MESSAGE = 'Enter a name that includes at least one letter.';
@@ -50,6 +50,10 @@ export function deriveInstanceId(name: string): string {
 /**
  * Assemble the full collision domain for instance-id validation.
  *
+ * The baked-in half is every `COMPONENT_IDS` value plus `'__existing__'`. That
+ * already covers the mesh ids: `MESH_COMPONENT_IDS` is built FROM `COMPONENT_IDS`,
+ * so unioning it as well was a no-op.
+ *
  * @param inputs - the caller-supplied id classes (see {@link ReservedIdInputs})
  * @returns the reserved-id set, always including component ids and `'__existing__'`
  */
@@ -59,7 +63,6 @@ export function buildReservedIds(inputs: ReservedIdInputs): Set<string> {
         ...inputs.sourceIds,
         ...inputs.catalogIds,
         ...Object.values(COMPONENT_IDS),
-        ...MESH_COMPONENT_IDS,
         ...inputs.selectedAddons,
         RESERVED_EXISTING_KEY,
     ]);

@@ -22,36 +22,14 @@ import {
     applyCanonicalCodePatches,
     applyBlockCodePatches,
 } from '@/features/eds/services/patches/codePatchPipelineHelpers';
-import { _clearCodePatchCacheForTests } from '@/features/eds/services/patches/codePatchRegistry';
 import type { GitHubFileOperations } from '@/features/eds/services/github/githubFileOperations';
-import type { Logger } from '@/types';
-import type { CodePatchSource } from '@/types/demoPackages';
+import {
+    SOURCE,
+    mockLogger,
+    installCodePatchFetchLifecycle,
+} from './codePatchPipelineHelpers.testUtils';
 
-const mockLogger: Logger = {
-    trace: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    debug: jest.fn(),
-};
-
-const SOURCE: CodePatchSource = {
-    owner: 'skukla',
-    repo: 'eds-demo-patches',
-    path: 'citisignal',
-};
-
-const originalFetch = global.fetch;
-
-beforeEach(() => {
-    jest.clearAllMocks();
-    _clearCodePatchCacheForTests();
-    global.fetch = jest.fn();
-});
-
-afterEach(() => {
-    global.fetch = originalFetch;
-});
+installCodePatchFetchLifecycle();
 
 // `mockLedger` helper removed — tests inline their fetch mocks (each test
 // sets up the ledger + per-target fetch behavior it needs, keeping the
@@ -72,7 +50,7 @@ describe('applyCanonicalCodePatches', () => {
             SOURCE,
             mockLogger
         );
-        expect(results).toEqual([]);
+        expect(results).toStrictEqual([]);
         expect(global.fetch).not.toHaveBeenCalled();
     });
 
@@ -334,7 +312,7 @@ describe('applyBlockCodePatches', () => {
     it('returns empty results when no patch IDs requested', async () => {
         const ops = makeFileOps({});
         const results = await applyBlockCodePatches(ops, 'owner', 'repo', [], SOURCE, mockLogger);
-        expect(results).toEqual([]);
+        expect(results).toStrictEqual([]);
     });
 
     it('filters in only block-phase patches (target starts with blocks/)', async () => {
@@ -512,7 +490,7 @@ describe('applyBlockCodePatches', () => {
             mockLogger
         );
 
-        expect(results).toEqual([]);
+        expect(results).toStrictEqual([]);
         expect(ops.getFileContent).not.toHaveBeenCalled();
         expect(ops.createOrUpdateFile).not.toHaveBeenCalled();
     });

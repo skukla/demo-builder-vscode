@@ -33,7 +33,7 @@ import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { vscode } from '@/core/ui/utils/vscode-api';
-import { GitHubAppInstallDialog } from '@/features/eds/ui/components';
+import { GitHubAppInstallDialog } from '@/features/eds/ui/components/GitHubAppInstallDialog';
 import type { WizardState } from '@/types/webview';
 import type {
     StorefrontGitHubAppRequiredPayload,
@@ -441,8 +441,11 @@ export function StorefrontSetupStep({
         return () => {
             // On unmount, if setup was running, send cancel message to abort backend operations
             if (isSetupRunningRef.current) {
-                // eslint-disable-next-line no-console
-                console.log('[StorefrontSetupStep] Unmounting during active setup, sending cancel');
+                // No log here: `handleCancelStorefrontSetup` writes
+                // '[Storefront Setup] Cancel requested' through the extension's
+                // logger the moment it receives this, which is the side that can
+                // actually persist it. A console.log here only reached the
+                // webview devtools and fired in every test that unmounted.
                 vscode.postMessage('storefront-setup-cancel', {
                     partialState: partialStateRef.current,
                     edsConfig: {

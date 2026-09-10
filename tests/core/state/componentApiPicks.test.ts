@@ -13,10 +13,12 @@
  */
 
 import { UNATTRIBUTED_PICKS_KEY, applyDesiredApis, migrateApiPicks, resolveDesiredApis } from '@/core/state/componentApiPicks';
+import { RESERVED_EXISTING_KEY } from '@/features/project-creation/ui/components/integration-flow/flowStages';
 import type { Project } from '@/types/base';
+import { createMockProject } from '../../helpers/projectFake';
 
 function project(overrides: Partial<Project> = {}): Project {
-    return { name: 'p', path: '/p', ...overrides } as unknown as Project;
+    return createMockProject({ name: 'p', path: '/p', ...overrides });
 }
 
 describe('resolveDesiredApis', () => {
@@ -26,23 +28,21 @@ describe('resolveDesiredApis', () => {
                 'erp-sync': ['AssetsSDK', 'FireflySDK'],
                 loyalty: ['AssetsSDK', 'EventsSDK'],
             },
-        } as Partial<Project>);
+        });
 
         expect(resolveDesiredApis(p).sort()).toEqual(['AssetsSDK', 'EventsSDK', 'FireflySDK']);
     });
 
     it('returns an empty list when nothing is picked', () => {
-        expect(resolveDesiredApis(project())).toEqual([]);
-        expect(resolveDesiredApis(project({ componentApiPicks: {} } as Partial<Project>))).toEqual(
-            []
-        );
+        expect(resolveDesiredApis(project())).toStrictEqual([]);
+        expect(resolveDesiredApis(project({ componentApiPicks: {} }))).toStrictEqual([]);
     });
 
     it('reads the LEGACY flat field when the keyed map is absent', () => {
         // Un-migrated project (older manifest, or one loaded by a path that does
         // not migrate). The union must still be correct, not empty — an empty
         // desired set would unsubscribe everything on the next PUT.
-        const p = project({ additionalConsoleApis: ['AssetsSDK'] } as Partial<Project>);
+        const p = project({ additionalConsoleApis: ['AssetsSDK'] });
 
         expect(resolveDesiredApis(p)).toEqual(['AssetsSDK']);
     });
@@ -51,7 +51,7 @@ describe('resolveDesiredApis', () => {
         const p = project({
             componentApiPicks: { 'erp-sync': ['FireflySDK'] },
             additionalConsoleApis: ['AssetsSDK'],
-        } as Partial<Project>);
+        });
 
         expect(resolveDesiredApis(p)).toEqual(['FireflySDK']);
     });
@@ -59,20 +59,26 @@ describe('resolveDesiredApis', () => {
     it('drops empty entries so a cleared component contributes nothing', () => {
         const p = project({
             componentApiPicks: { 'erp-sync': [], loyalty: ['AssetsSDK'] },
-        } as Partial<Project>);
+        });
 
         expect(resolveDesiredApis(p)).toEqual(['AssetsSDK']);
     });
 });
 
 describe('migrateApiPicks', () => {
+    it('files unattributed picks under the SAME key the wizard reserves for them', () => {
+        // Two modules model "we already lost the owner once"; a project written
+        // by one and read by the other must agree on the spelling.
+        expect(UNATTRIBUTED_PICKS_KEY).toBe(RESERVED_EXISTING_KEY);
+    });
+
     it('moves the flat array under the unattributed key', () => {
         // The picks predate attribution and CANNOT be assigned an owner —
         // no owner is guessed. `__existing__` is the shape the wizard already
         // models (RESERVED_EXISTING_KEY) for exactly this case.
         const p = project({
             additionalConsoleApis: ['AssetsSDK', 'FireflySDK'],
-        } as Partial<Project>);
+        });
 
         const migrated = migrateApiPicks(p);
 
@@ -86,7 +92,7 @@ describe('migrateApiPicks', () => {
         const p = project({
             componentApiPicks: picks,
             additionalConsoleApis: ['FireflySDK'],
-        } as Partial<Project>);
+        });
 
         expect(migrateApiPicks(p).componentApiPicks).toBe(picks);
     });
@@ -96,13 +102,13 @@ describe('migrateApiPicks', () => {
         // empty object would persist a meaningless field into every manifest.
         expect(migrateApiPicks(project()).componentApiPicks).toBeUndefined();
         expect(
-            migrateApiPicks(project({ additionalConsoleApis: [] } as Partial<Project>))
+            migrateApiPicks(project({ additionalConsoleApis: [] }))
                 .componentApiPicks
         ).toBeUndefined();
     });
 
     it('does not mutate the input project', () => {
-        const p = project({ additionalConsoleApis: ['AssetsSDK'] } as Partial<Project>);
+        const p = project({ additionalConsoleApis: ['AssetsSDK'] });
 
         migrateApiPicks(p);
 
@@ -122,7 +128,7 @@ describe('migration is UNION-PRESERVING', () => {
         [['AssetsSDK', 'FireflySDK', 'EventsSDK']],
         [['AssetsSDK', 'AssetsSDK']], // a duplicated legacy entry
     ])('resolveDesiredApis(migrate(p)) === the pre-migration set: %j', (flat) => {
-        const before = project({ additionalConsoleApis: flat } as Partial<Project>);
+        const before = project({ additionalConsoleApis: flat });
 
         const beforeSet = [...new Set(resolveDesiredApis(before))].sort();
         const afterSet = [...new Set(resolveDesiredApis(migrateApiPicks(before)))].sort();
@@ -192,5 +198,17 @@ describe('applyDesiredApis — editing the union without losing attribution', ()
         ]);
 
         expect(next[UNATTRIBUTED_PICKS_KEY]).toEqual(['LegacySDK', 'NewSDK']);
+    });
+
+    it('keeps surviving legacy picks in their recorded order, ahead of additions', () => {
+        // The legacy list is migrated (deduped, order kept) BEFORE the edit is
+        // applied, so a surviving pick keeps its place and an addition appends —
+        // even when the user's desired list names the addition first.
+        const next = applyDesiredApis(
+            { additionalConsoleApis: ['SharedSDK', 'LegacySDK', 'LegacySDK'] },
+            ['NewSDK', 'LegacySDK', 'SharedSDK'],
+        );
+
+        expect(next).toEqual({ [UNATTRIBUTED_PICKS_KEY]: ['SharedSDK', 'LegacySDK', 'NewSDK'] });
     });
 });

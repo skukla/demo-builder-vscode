@@ -5,8 +5,8 @@
  * Replaces `any` types with proper state interfaces.
  */
 
-import * as vscode from 'vscode';
-import { Project, ProcessInfo } from './base';
+import type * as vscode from 'vscode';
+import type { Project, ProcessInfo } from './base';
 import type { CustomBlockLibrary } from './blockLibraries';
 
 /**

@@ -9,14 +9,13 @@ import { OpenInClaudeCommand } from './openInClaude';
 import { OpenModernizationAgentCommand } from './openModernizationAgent';
 import { RefreshBlockLibraryCommand } from './refreshBlockLibrary';
 import { RepairSiteConfigurationCommand } from './repairSiteConfiguration';
+import { ResetAiOnboardingCommand } from './ResetAiOnboardingCommand';
+import { ResetAllCommand } from './ResetAllCommand';
 import { ShowPromptsPickerCommand } from './showPromptsPicker';
-import { BaseWebviewCommand } from '@/core/base';
-import { ResetAiOnboardingCommand } from '@/core/commands/ResetAiOnboardingCommand';
-import { ResetAllCommand } from '@/core/commands/ResetAllCommand';
+import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import { StateManager } from '@/core/state';
-import { formatMinutes } from '@/core/utils';
 import { openUrl } from '@/core/utils/browserUtils';
+import { formatMinutes } from '@/core/utils/timeFormatting';
 import { ConfigureProjectWebviewCommand } from '@/features/dashboard/commands/configure';
 import { ShowAiCommand } from '@/features/dashboard/commands/openAi';
 import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
@@ -34,8 +33,9 @@ import { CreateProjectWebviewCommand } from '@/features/project-creation/command
 import { registerGlobalMcp } from '@/features/project-creation/services/aiBundle/globalMcpRegistration';
 import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
 import { CheckUpdatesCommand } from '@/features/updates/commands/checkUpdates';
-import { Project } from '@/types';
+import { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
+import type { StateManager } from '@/types/state';
 
 export class CommandManager {
     private context: vscode.ExtensionContext;
@@ -256,8 +256,10 @@ export class CommandManager {
         const checkUpdates = new CheckUpdatesCommand(this.context, this.stateManager, this.logger);
         this.registerCommand('demoBuilder.checkForUpdates', () => checkUpdates.execute());
 
-        // Open in Claude Code (CLI) — URI launch when the Claude Code extension is
-        // installed; terminal launch otherwise. Pathway driven by `demoBuilder.ai.harness`.
+        // Open in Claude Code (CLI) — terminal launch, always. The URI-handler surface
+        // was retired (ADR-019), and with it `demoBuilder.ai.harness`, which this comment
+        // named as the pathway for months after the setting stopped existing.
+        // `demoBuilder.ai.engine` selects the tool; `'claude-code'` is its only value.
         const openInClaude = new OpenInClaudeCommand(this.context, this.stateManager, this.logger);
         this.registerCommand('demoBuilder.openInClaude', async (...args: unknown[]) => {
             const project = args[0] as Project | undefined;
@@ -352,7 +354,7 @@ export class CommandManager {
         }
 
         // Diagnostics
-        const diagnostics = new DiagnosticsCommand(this.context);
+        const diagnostics = new DiagnosticsCommand(this.context, this.stateManager, this.logger);
         this.registerCommand('demoBuilder.diagnostics', () => diagnostics.execute());
 
         // Sign in to Adobe (PL-5). Until now the only doors were the wizard's

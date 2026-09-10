@@ -16,7 +16,7 @@ import {
     createComponentModels,
     createDestComponentModels,
     createBlockFileEntries,
-    delegateCommitTreeToBranch,
+    setupBlockCollectionMocks,
 } from './blockCollectionHelpers.testUtils';
 
 describe('installBlockCollections (single library)', () => {
@@ -24,29 +24,38 @@ describe('installBlockCollections (single library)', () => {
     let mockGithubFileOps: jest.Mocked<GitHubFileOperations>;
     let mockLogger: jest.Mocked<Logger>;
 
+    /**
+     * Install the collection and read the merged `component-models.json`.
+     *
+     * PL-9 lane A: this tail was written twice, differing only in the fixtures
+     * above it and the assertions below. Returns both the parsed models and their
+     * ids, because callers use each.
+     */
+    async function installAndReadModels(): Promise<{
+        merged: Array<{ id: string; fields?: unknown[] }>;
+        ids: string[];
+    }> {
+        const result = await installBlockCollections(
+            mockGithubFileOps, 'dest-owner', 'dest-repo',
+            [{ source: TEST_SOURCE, name: 'block collection' }],
+            mockLogger,
+        );
+        expect(result.success).toBe(true);
+
+        const treeEntries = mockGithubFileOps.createTree.mock.calls[0][2] as Array<{
+            path: string;
+            content?: string;
+        }>;
+        const modelsEntry = treeEntries.find((e) => e.path === 'component-models.json');
+        expect(modelsEntry).toBeDefined();
+
+        const merged = JSON.parse(modelsEntry!.content!);
+        return { merged, ids: merged.map((m: { id: string }) => m.id) };
+    }
+
     beforeEach(() => {
         jest.clearAllMocks();
-
-        mockLogger = {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as unknown as jest.Mocked<Logger>;
-
-        mockGithubFileOps = {
-            listRepoFiles: jest.fn(),
-            getBlobContent: jest.fn(),
-            getFileContent: jest.fn(),
-            getBranchInfo: jest.fn(),
-            createTree: jest.fn(),
-            createCommit: jest.fn(),
-            updateBranchRef: jest.fn(),
-            commitTreeToBranch: jest.fn(),
-        } as unknown as jest.Mocked<GitHubFileOperations>;
-        delegateCommitTreeToBranch(
-            mockGithubFileOps as unknown as Parameters<typeof delegateCommitTreeToBranch>[0],
-        );
+        ({ mockLogger, mockGithubFileOps } = setupBlockCollectionMocks());
     });
 
     describe('component-models merge', () => {
@@ -106,21 +115,7 @@ describe('installBlockCollections (single library)', () => {
                 destModels,
             });
 
-            const result = await installBlockCollections(
-                mockGithubFileOps, 'dest-owner', 'dest-repo',
-                [{ source: TEST_SOURCE, name: 'block collection' }],
-                mockLogger,
-            );
-
-            expect(result.success).toBe(true);
-
-            const createTreeCall = mockGithubFileOps.createTree.mock.calls[0];
-            const treeEntries = createTreeCall[2] as Array<{ path: string; content?: string }>;
-            const modelsEntry = treeEntries.find(e => e.path === 'component-models.json');
-            expect(modelsEntry).toBeDefined();
-
-            const merged = JSON.parse(modelsEntry!.content!);
-            const ids = merged.map((m: { id: string }) => m.id);
+            const { ids } = await installAndReadModels();
             expect(ids).toContain('hero-v2');
             expect(ids).toContain('tabs');
             // Existing models should still be present
@@ -217,21 +212,7 @@ describe('installBlockCollections (single library)', () => {
                 destModels,
             });
 
-            const result = await installBlockCollections(
-                mockGithubFileOps, 'dest-owner', 'dest-repo',
-                [{ source: TEST_SOURCE, name: 'block collection' }],
-                mockLogger,
-            );
-
-            expect(result.success).toBe(true);
-
-            const createTreeCall = mockGithubFileOps.createTree.mock.calls[0];
-            const treeEntries = createTreeCall[2] as Array<{ path: string; content?: string }>;
-            const modelsEntry = treeEntries.find(e => e.path === 'component-models.json');
-            expect(modelsEntry).toBeDefined();
-
-            const merged = JSON.parse(modelsEntry!.content!);
-            const ids = merged.map((m: { id: string }) => m.id);
+            const { ids } = await installAndReadModels();
             expect(ids).toContain('tabs');
             expect(ids).toContain('tabs-item');
         });

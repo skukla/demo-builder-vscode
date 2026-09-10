@@ -13,7 +13,7 @@
  * it in exactly the same way.
  */
 
-import { stripManifestSecrets, SECRET_ENV_KEYS } from '@/features/components/config/envVarKeys';
+import { stripManifestSecrets, SECRET_ENV_KEYS } from '@/core/config/envVarKeys';
 
 const SECRET = 'fake-test-pw-not-a-secret';
 

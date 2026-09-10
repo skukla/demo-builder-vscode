@@ -20,15 +20,21 @@ jest.mock('@/features/eds/services/credentialServiceProbe', () => ({
 import { handleCheckCredentialService } from '@/features/eds/handlers/credentialServiceHandler';
 import { probeCredentialService } from '@/features/eds/services/credentialServiceProbe';
 import type { HandlerContext } from '@/types/handlers';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 const mockedProbe = probeCredentialService as jest.MockedFunction<typeof probeCredentialService>;
 
 function context(currentProject?: unknown): HandlerContext {
-    return {
-        authManager: { getTokenManager: () => ({ inspectToken: async () => ({}) }) },
-        stateManager: { getCurrentProject: async () => currentProject },
-        logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
-    } as unknown as HandlerContext;
+    return createMockHandlerContext({
+        authManager: createMockAuthenticationService({
+            getTokenManager: jest.fn().mockReturnValue({ inspectToken: async () => ({}) }),
+        }),
+        stateManager: createMockStateManager({
+            getCurrentProject: jest.fn().mockResolvedValue(currentProject),
+        }),
+    });
 }
 
 beforeEach(() => {
@@ -137,11 +143,54 @@ describe('org resolution', () => {
         expect(mockedProbe.mock.calls[0][0]).not.toHaveProperty('orgId');
     });
 
+    it('survives a project whose manifest has no adobe block', async () => {
+        // Projects created before the org was recorded still load. Reaching for
+        // the org must yield "no org" rather than throwing the handler out.
+        mockedProbe.mockResolvedValue({ configured: false, verdict: 'x' });
+
+        const res = await handleCheckCredentialService(context({ name: 'legacy-demo' }), {});
+
+        expect(res.success).toBe(true);
+        expect(mockedProbe.mock.calls[0][0]).not.toHaveProperty('orgId');
+    });
+
     it('survives having no project at all', async () => {
         mockedProbe.mockResolvedValue({ configured: false, verdict: 'x' });
 
         const res = await handleCheckCredentialService(context(undefined), {});
 
         expect(res.success).toBe(true);
+    });
+});
+
+describe('what the probe is handed', () => {
+    it('passes the auth manager through, so the probe can mint a token', async () => {
+        // Without it the probe makes an unauthenticated request and every org
+        // reads as "unreachable" — the same verdict as a genuine outage, so
+        // nothing about the result would look wrong.
+        mockedProbe.mockResolvedValue({ configured: false, verdict: 'x' });
+
+        const ctx = context();
+        await handleCheckCredentialService(ctx, {});
+
+        expect(mockedProbe).toHaveBeenCalledWith(
+            expect.objectContaining({ auth: ctx.authManager }),
+        );
+    });
+
+    it('omits auth entirely when the context has no auth manager', async () => {
+        // authManager is optional on HandlerContext. Passing `auth: undefined`
+        // is not the same as omitting it — the probe branches on the key.
+        mockedProbe.mockResolvedValue({ configured: false, verdict: 'x' });
+
+        const ctx = createMockHandlerContext({
+            authManager: undefined,
+            stateManager: createMockStateManager({
+                getCurrentProject: jest.fn().mockResolvedValue(undefined),
+            }),
+        });
+        await handleCheckCredentialService(ctx, {});
+
+        expect(mockedProbe.mock.calls[0][0]).not.toHaveProperty('auth');
     });
 });

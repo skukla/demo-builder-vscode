@@ -130,14 +130,19 @@ describe('State Ownership Audit - Documentation Completeness', () => {
         });
     });
 
-    describe('Remediation Items', () => {
-        it('should include a remediation section or findings', () => {
-            // Given: The audit was performed
-            // When: We search for remediation/findings
-            // Then: There should be actionable items or findings documented
-            expect(sharedDocumentContent).toMatch(/remediation|findings|action.*items|violations/i);
-        });
-    });
+    /**
+     * REMOVED 2026-08-30: an assertion that the document contains a "remediation" or
+     * "findings" section.
+     *
+     * It required the doc to keep an AUDIT'S ACTION LIST — point-in-time content from
+     * the 2025-12-30 pass, whose items are all done. Requiring the section forever
+     * meant the document could never stop being an audit record and become a
+     * description of how state ownership works.
+     *
+     * The assertions above still hold it to the durable part: the principle, and the
+     * ownership of each field by name. That is what a reader needs; a remediation
+     * list from a finished audit is what git history is for.
+     */
 });
 
 describe('State Ownership Audit - No Duplicate Writes Pattern', () => {

@@ -15,7 +15,7 @@
  * @module core/ui/hooks/useActivateOnKey
  */
 
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 
 /**
  * Build the keydown handler for a div-role button.
@@ -32,14 +32,25 @@ export function useActivateOnKey(
     options: { disabled?: boolean } = {},
 ): (event: React.KeyboardEvent) => void {
     const { disabled = false } = options;
+
+    /**
+     * `onActivate` is written inline at every one of the five tile call sites, so
+     * naming it as a dependency handed each tile a NEW keydown handler on every
+     * render — the memo did nothing. Held by reference, the returned handler is
+     * stable and still calls whatever the caller means at the moment a key
+     * arrives, which is the only thing a keydown handler needs.
+     */
+    const latest = useRef(onActivate);
+    latest.current = onActivate;
+
     return useCallback(
         (event: React.KeyboardEvent): void => {
             if (disabled) return;
             if (event.key !== 'Enter' && event.key !== ' ') return;
             // Space scrolls the page otherwise — the reason this cannot be skipped.
             event.preventDefault();
-            onActivate(event);
+            latest.current(event);
         },
-        [onActivate, disabled],
+        [disabled],
     );
 }

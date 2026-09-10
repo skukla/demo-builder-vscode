@@ -49,12 +49,25 @@ import { STATUS_DESCRIPTORS } from '@/features/ai/server/statusDescriptors';
 import { ACTION_DESCRIPTORS } from '@/features/ai/server/actionDescriptors';
 import { registerDescriptorTools } from '@/features/ai/server/toolDescriptors';
 import { registerValidateSelectionTool } from '@/features/ai/server/validateSelectionTool';
-import type { StateManager } from '@/core/state';
-import type { HandlerContext } from '@/types/handlers';
+import type { McpToolSchema, McpToolServer } from '@/features/ai/server/mcpToolServer';
+import { ToolTraceRecorder } from '@/features/ai/server/toolTraceRecorder';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 
-const server = () => new McpServer({ name: 'test', version: '0.0.0' });
-const ctxFactory = () => ({ sendMessage: async () => {} }) as unknown as HandlerContext;
-const stateManager = { getCurrentProject: async () => null } as unknown as StateManager;
+/**
+ * A REAL SDK server, handed over as our narrowed `McpToolServer`.
+ *
+ * The cast is unavoidable and is the sanctioned form — it NAMES the target. The
+ * SDK's own `registerTool` is generic over its zod schema, and asking tsc to
+ * structurally match that against our surface makes it give up with "type
+ * instantiation is excessively deep". Casting once here keeps the point of this
+ * file intact: every registration below still runs against the REAL SDK, which is
+ * the only thing that catches a bad inputSchema at all.
+ */
+const server = () => new McpServer({ name: 'test', version: '0.0.0' }) as unknown as McpToolServer;
+const ctxFactory = () => createMockHandlerContext({ sendMessage: async () => {} });
+// The builder's `getCurrentProject` already resolves null, so there is nothing to override.
+const stateManager = createMockStateManager();
 
 describe('registration against the real MCP SDK', () => {
     it('accepts every descriptor row', () => {
@@ -68,20 +81,20 @@ describe('registration against the real MCP SDK', () => {
     });
 
     it.each([
-        ['get_component_requirements', (s: McpServer) => registerComponentRequirementsTool(s)],
+        ['get_component_requirements', (s: McpToolServer) => registerComponentRequirementsTool(s)],
         [
             'validate_component_selection',
-            (s: McpServer) => registerValidateSelectionTool(s, ctxFactory),
+            (s: McpToolServer) => registerValidateSelectionTool(s, ctxFactory),
         ],
-        ['get_project_status', (s: McpServer) => registerProjectStatusTool(s, stateManager)],
+        ['get_project_status', (s: McpToolServer) => registerProjectStatusTool(s, stateManager)],
         [
             'get_commerce_endpoints',
-            (s: McpServer) => registerCommerceEndpointsTool(s, stateManager),
+            (s: McpToolServer) => registerCommerceEndpointsTool(s, stateManager),
         ],
-        ['discovery tools', (s: McpServer) => registerDiscoveryTools(s)],
-        ['adobe resource tools', (s: McpServer) => registerAdobeResourceTools(s, ctxFactory)],
-        ['configure_project', (s: McpServer) => registerConfigureProjectTool(s, stateManager)],
-        ['cloud resource tools', (s: McpServer) => registerCloudResourceTools(s, ctxFactory)],
+        ['discovery tools', (s: McpToolServer) => registerDiscoveryTools(s)],
+        ['adobe resource tools', (s: McpToolServer) => registerAdobeResourceTools(s, ctxFactory)],
+        ['configure_project', (s: McpToolServer) => registerConfigureProjectTool(s, stateManager)],
+        ['cloud resource tools', (s: McpToolServer) => registerCloudResourceTools(s, ctxFactory)],
     ])('accepts %s', (_name, register) => {
         expect(() => register(server())).not.toThrow();
     });
@@ -112,14 +125,10 @@ describe('registration against the real MCP SDK', () => {
             registerAdobeTools(s, ctxFactory);
             registerCreateProjectTool(s, ctxFactory);
             registerCurrentProjectTool(s, ctxFactory);
-            registerAgentTraceTool(
-                s,
-                { all: () => [], repeats: () => [] } as never,
-                '/nonexistent-trace-dir',
-            );
+            registerAgentTraceTool(s, new ToolTraceRecorder(), '/nonexistent-trace-dir');
             registerProjectStatusTool(s, stateManager);
             registerCommerceEndpointsTool(s, stateManager);
-            registerCommerceQueryTool(s, {} as never);
+            registerCommerceQueryTool(s, stateManager);
             registerValidateSelectionTool(s, ctxFactory);
             registerComponentRequirementsTool(s);
             registerAdobeResourceTools(s, ctxFactory);
@@ -169,7 +178,7 @@ describe('registration against the real MCP SDK', () => {
         const uncovered = calls.filter(
             (name) => !new RegExp(`${name}\\(\\s*s[,)]`).test(thisSuite)
         );
-        expect(uncovered).toEqual([]);
+        expect(uncovered).toStrictEqual([]);
     });
 
     // The control. Without it, "does not throw" would pass even if the SDK
@@ -179,9 +188,13 @@ describe('registration against the real MCP SDK', () => {
             server().registerTool(
                 'raw_json_schema',
                 {
+                    needsAuth: false,
                     description: 'the e26bd01e mistake',
 
-                    inputSchema: { componentId: { type: 'string' } } as any,
+                    // Deliberately the wrong shape: a raw JSON Schema where zod is declared.
+                    inputSchema: {
+                        componentId: { type: 'string' },
+                    } as unknown as McpToolSchema['inputSchema'],
                 },
                 async () => ({ content: [] })
             )

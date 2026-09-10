@@ -184,7 +184,7 @@ export function InlineRenameField({
     return (
         // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- containment only; interaction lives on the child input
         <span
-            className="inline-rename inline-rename--editing"
+            className="inline-rename"
             onClick={stopPropagation}
             onKeyDown={stopPropagation}
         >

@@ -1,3 +1,6 @@
+import './ConfigureScreen.mocks';
+import './ConfigureScreen.storeDiscoveryMocks';
+
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
@@ -11,34 +14,13 @@ import {
     railTabLabels,
 } from './ConfigureScreen.testUtils';
 
-// Mock hooks
-jest.mock('@/core/ui/hooks', () => ({
-    useSelectableDefault: jest.fn(() => ({})),
-    useFocusTrap: jest.fn(() => ({ current: null })),
-}));
-
 jest.mock('@/core/ui/hooks/useSelectableDefault', () => ({
     useSelectableDefault: jest.fn(() => ({})),
 }));
 
-// Mock WebviewClient
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        postMessage: jest.fn(),
-        request: jest.fn(),
-        onMessage: jest.fn(() => jest.fn()),
-    },
-}));
-
 // Mock layout components. The shell + rail are NOT mocked (direct-path imports) so the
 // Authoring tab these tests click is the real one.
-jest.mock('@/core/ui/components/layout', () => ({
-    PageHeader: ({ title, subtitle }: any) => (
-        <div data-testid="page-header">
-            <h1>{title}</h1>
-            {subtitle && <h3>{subtitle}</h3>}
-        </div>
-    ),
+jest.mock('@/core/ui/components/layout/PageFooter', () => ({
     PageFooter: ({ leftContent, rightContent }: any) => (
         <div data-testid="page-footer">
             <div data-testid="footer-left">{leftContent}</div>
@@ -47,21 +29,13 @@ jest.mock('@/core/ui/components/layout', () => ({
     ),
 }));
 
-jest.mock('@/features/components/ui/hooks/useStoreDiscovery', () => ({
-    useStoreDiscovery: () => ({
-        isFetching: false,
-        fetchError: null,
-        hasStoreData: false,
-        fetchStores: jest.fn(),
-        getWebsiteItems: () => [],
-        getStoreGroupItems: () => [],
-        getStoreViewItems: () => [],
-        isStoreGroup: () => false,
-    }),
-}));
-
-jest.mock('@/features/components/ui/hooks/useAutoStoreDetect', () => ({
-    useAutoStoreDetect: () => ({ autoDetectKey: undefined, forceFetch: jest.fn() }),
+jest.mock('@/core/ui/components/layout/PageHeader', () => ({
+    PageHeader: ({ title, subtitle }: any) => (
+        <div data-testid="page-header">
+            <h1>{title}</h1>
+            {subtitle && <h3>{subtitle}</h3>}
+        </div>
+    ),
 }));
 
 jest.mock('@/features/components/ui/components/StoreConfigFieldRow', () => ({
@@ -94,11 +68,7 @@ jest.mock('@/features/components/ui/components/StoreConfigFieldRow', () => ({
 Element.prototype.scrollIntoView = jest.fn();
 
 const renderWithProvider = (component: React.ReactElement) => {
-    return render(
-        <Provider theme={defaultTheme}>
-            {component}
-        </Provider>
-    );
+    return render(<Provider theme={defaultTheme}>{component}</Provider>);
 };
 
 // A valid config so the Save button is enabled.
@@ -128,7 +98,7 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
     it('renders the Authoring Experience radio group for an EDS project', () => {
         renderWithProvider(
             <ConfigureScreen
-                project={mockProject as any}
+                project={mockProject}
                 componentsData={mockComponentsData}
                 isEds
                 authoringExperience="da-live-classic"
@@ -136,7 +106,9 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
         );
 
         selectSection('Authoring');
-        expect(screen.getByRole('radiogroup', { name: 'Authoring Experience' })).toBeInTheDocument();
+        expect(
+            screen.getByRole('radiogroup', { name: 'Authoring Experience' })
+        ).toBeInTheDocument();
         expect(screen.getByText('DA.live Classic')).toBeInTheDocument();
         expect(screen.getByText('Experience Workspace')).toBeInTheDocument();
     });
@@ -144,7 +116,7 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
     it('adds an "Authoring" tab to the rail for EDS, last', () => {
         renderWithProvider(
             <ConfigureScreen
-                project={mockProject as any}
+                project={mockProject}
                 componentsData={mockComponentsData}
                 isEds
                 authoringExperience="da-live-classic"
@@ -161,10 +133,7 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
 
     it('adds NO "Authoring" tab for a non-EDS project (the control)', () => {
         renderWithProvider(
-            <ConfigureScreen
-                project={mockProject as any}
-                componentsData={mockComponentsData}
-            />
+            <ConfigureScreen project={mockProject} componentsData={mockComponentsData} />
         );
 
         expect(railTabLabels()).not.toContain('Authoring');
@@ -173,7 +142,7 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
     it('defaults the selection to the initial authoringExperience value', () => {
         renderWithProvider(
             <ConfigureScreen
-                project={mockProject as any}
+                project={mockProject}
                 componentsData={mockComponentsData}
                 isEds
                 authoringExperience="experience-workspace"
@@ -190,14 +159,11 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
 
     it('does NOT render the radio group for a non-EDS project', () => {
         renderWithProvider(
-            <ConfigureScreen
-                project={mockProject as any}
-                componentsData={mockComponentsData}
-            />
+            <ConfigureScreen project={mockProject} componentsData={mockComponentsData} />
         );
 
         expect(
-            screen.queryByRole('radiogroup', { name: 'Authoring Experience' }),
+            screen.queryByRole('radiogroup', { name: 'Authoring Experience' })
         ).not.toBeInTheDocument();
     });
 
@@ -206,7 +172,7 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
 
         renderWithProvider(
             <ConfigureScreen
-                project={mockProject as any}
+                project={mockProject}
                 componentsData={mockComponentsData}
                 existingEnvValues={validConfig}
                 isEds
@@ -227,16 +193,19 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
         await user.click(screen.getByText('Save Changes'));
 
         await waitFor(() => {
-            expect(mockRequest).toHaveBeenCalledWith('save-configuration', expect.objectContaining({
-                authoringExperience: 'experience-workspace',
-            }));
+            expect(mockRequest).toHaveBeenCalledWith(
+                'save-configuration',
+                expect.objectContaining({
+                    authoringExperience: 'experience-workspace',
+                })
+            );
         });
     });
 
     it('renders the DA.live & authoring settings link inside the Authoring section', () => {
         renderWithProvider(
             <ConfigureScreen
-                project={mockProject as any}
+                project={mockProject}
                 componentsData={mockComponentsData}
                 isEds
                 authoringExperience="da-live-classic"
@@ -244,11 +213,12 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
         );
 
         selectSection('Authoring');
-        const authoringSection = screen.getByRole('radiogroup', { name: 'Authoring Experience' })
+        const authoringSection = screen
+            .getByRole('radiogroup', { name: 'Authoring Experience' })
             .closest('#section-authoring-experience') as HTMLElement;
         expect(authoringSection).toBeInTheDocument();
         expect(
-            within(authoringSection).getByText(/DA\.live & authoring settings are configured in/i),
+            within(authoringSection).getByText(/DA\.live & authoring settings are configured in/i)
         ).toBeInTheDocument();
         expect(within(authoringSection).getByText('Extension Settings')).toBeInTheDocument();
     });
@@ -259,7 +229,7 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
 
         renderWithProvider(
             <ConfigureScreen
-                project={mockProject as any}
+                project={mockProject}
                 componentsData={mockComponentsData}
                 isEds
                 authoringExperience="da-live-classic"
@@ -275,7 +245,7 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
     it('no longer renders the old "Universal Editor settings" footer text', () => {
         renderWithProvider(
             <ConfigureScreen
-                project={mockProject as any}
+                project={mockProject}
                 componentsData={mockComponentsData}
                 isEds
                 authoringExperience="da-live-classic"
@@ -283,19 +253,18 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
         );
 
         selectSection('Authoring');
-        expect(screen.queryByText(/Universal Editor settings are configured in/i)).not.toBeInTheDocument();
+        expect(
+            screen.queryByText(/Universal Editor settings are configured in/i)
+        ).not.toBeInTheDocument();
     });
 
     it('does NOT render the authoring settings link for a non-EDS project', () => {
         renderWithProvider(
-            <ConfigureScreen
-                project={mockProject as any}
-                componentsData={mockComponentsData}
-            />
+            <ConfigureScreen project={mockProject} componentsData={mockComponentsData} />
         );
 
         expect(
-            screen.queryByText(/DA\.live & authoring settings are configured in/i),
+            screen.queryByText(/DA\.live & authoring settings are configured in/i)
         ).not.toBeInTheDocument();
     });
 
@@ -304,7 +273,7 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
 
         renderWithProvider(
             <ConfigureScreen
-                project={mockProject as any}
+                project={mockProject}
                 componentsData={mockComponentsData}
                 existingEnvValues={validConfig}
             />
@@ -319,7 +288,7 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
         await waitFor(() => {
             expect(mockRequest).toHaveBeenCalledWith(
                 'save-configuration',
-                expect.not.objectContaining({ authoringExperience: expect.anything() }),
+                expect.not.objectContaining({ authoringExperience: expect.anything() })
             );
         });
     });

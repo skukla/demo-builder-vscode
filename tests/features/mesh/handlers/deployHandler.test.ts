@@ -21,32 +21,43 @@ jest.mock('@/features/dashboard/commands/showDashboard', () => ({
     },
 }));
 
-jest.mock(
-    'vscode',
-    () => ({
-        window: {
-            withProgress: jest.fn(async (_o: unknown, task: (p: unknown) => unknown) =>
-                task({ report: jest.fn() })
-            ),
-        },
-        ProgressLocation: { Notification: 15 },
-    }),
-    { virtual: true }
-);
 
 import { handleDeployApiMesh } from '@/features/mesh/handlers/deployHandler';
 import type { HandlerContext } from '@/types/handlers';
+import { ServiceLocator } from '@/core/di/serviceLocator';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+
+/**
+ * ADR-015 (2026-08-28): the handler resolves the auth manager and executor at
+ * the boundary, which is where fetching is allowed. The shared node setup empties
+ * the registry after EVERY test, so the fakes are seeded per-test.
+ */
+function seedRegistry(): void {
+    ServiceLocator.setAuthenticationService(createMockAuthenticationService());
+    ServiceLocator.setCommandExecutor(createMockCommandExecutor());
+}
 
 function ctx(project: unknown): HandlerContext {
-    return {
-        stateManager: { getCurrentProject: jest.fn().mockResolvedValue(project) },
-        logger: { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() },
-        context: { extensionPath: '/ext' },
-    } as unknown as HandlerContext;
+    return createMockHandlerContext({
+        stateManager: createMockStateManager({
+            getCurrentProject: jest.fn().mockResolvedValue(project),
+        }),
+        logger: createMockLogger(),
+        context: createMockExtensionContext({ extensionPath: '/ext' }),
+    });
 }
 
 describe('handleDeployApiMesh', () => {
-    beforeEach(() => jest.clearAllMocks());
+    beforeEach(() => {
+        jest.clearAllMocks();
+        seedRegistry();
+    });
 
     it('errors when no project is loaded', async () => {
         const result = await handleDeployApiMesh(ctx(undefined));
@@ -84,10 +95,37 @@ describe('handleDeployApiMesh', () => {
         expect(result.success).toBe(false);
         expect(result.error).toContain('boom');
     });
+
+    it('still says something when the core fails with neither an error nor a block', async () => {
+        // The blocked branch and the plain-failure branch return the SAME shape,
+        // so every failure with an `error` set reads identically through either.
+        // A bare `{ success: false }` is the only input that tells them apart.
+        mockDeployMeshHeadless.mockResolvedValue({ success: false });
+
+        const result = await handleDeployApiMesh(ctx({ name: 'p', path: '/p' }));
+
+        expect(result).toEqual({ success: false, error: 'Mesh deployment failed' });
+    });
+
+    it('hands the registered SecretStorage to the core, not undefined', async () => {
+        // Asserted on the ARGUMENT: the handler resolves secrets at the boundary
+        // and the core is mocked, so a call that drops the storage returns the
+        // same result as one that passes it.
+        const { secrets } = createMockSecretStorage();
+        ServiceLocator.setSecretStorage(secrets);
+        mockDeployMeshHeadless.mockResolvedValue({ success: true });
+
+        await handleDeployApiMesh(ctx({ name: 'p', path: '/p' }));
+
+        expect(mockDeployMeshHeadless.mock.calls[0][0].secrets).toBe(secrets);
+    });
 });
 
 describe('handleDeployApiMesh — an agent-triggered deploy reports itself', () => {
-    beforeEach(() => jest.clearAllMocks());
+    beforeEach(() => {
+        jest.clearAllMocks();
+        seedRegistry();
+    });
 
     it('opens the progress notification', async () => {
         mockDeployMeshHeadless.mockResolvedValue({ success: true });

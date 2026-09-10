@@ -3,16 +3,9 @@ import { PollingService } from '@/core/shell/pollingService';
 import * as vscode from 'vscode';
 import { EventEmitter } from 'events';
 
-jest.mock('vscode');
-jest.mock('@/core/shell/pollingService');
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({
-        error: jest.fn(),
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn()
-    })
-}));
+// CONVERTED 2026-08-28 (ADR-015): FileWatcher takes its poller, so the fake is
+// handed in. The module mock stays only because this suite builds its fake via
+// `new PollingService()` and relies on the automock for the method surface.
 
 describe('FileWatcher', () => {
     let fileWatcher: FileWatcher;
@@ -25,26 +18,26 @@ describe('FileWatcher', () => {
         mockPollingService = new PollingService() as jest.Mocked<PollingService>;
         mockPollingService.pollUntilCondition = jest.fn().mockResolvedValue(undefined);
 
-        fileWatcher = new FileWatcher();
-        (fileWatcher as any).pollingService = mockPollingService;
+        fileWatcher = new FileWatcher(mockPollingService);
 
         // Mock vscode.workspace.createFileSystemWatcher to return proper event methods
         const mockWatcherFactory = () => {
-            const watcher = new EventEmitter() as any;
-            watcher.dispose = jest.fn();
-            watcher.onDidChange = jest.fn((cb) => {
-                watcher.on('change', cb);
-                return { dispose: jest.fn() };
+            const emitter = new EventEmitter();
+            return Object.assign(emitter, {
+                dispose: jest.fn(),
+                onDidChange: jest.fn((cb: () => void) => {
+                    emitter.on('change', cb);
+                    return { dispose: jest.fn() };
+                }),
+                onDidCreate: jest.fn((cb: () => void) => {
+                    emitter.on('create', cb);
+                    return { dispose: jest.fn() };
+                }),
+                onDidDelete: jest.fn((cb: () => void) => {
+                    emitter.on('delete', cb);
+                    return { dispose: jest.fn() };
+                }),
             });
-            watcher.onDidCreate = jest.fn((cb) => {
-                watcher.on('create', cb);
-                return { dispose: jest.fn() };
-            });
-            watcher.onDidDelete = jest.fn((cb) => {
-                watcher.on('delete', cb);
-                return { dispose: jest.fn() };
-            });
-            return watcher;
         };
         (vscode.workspace.createFileSystemWatcher as jest.Mock).mockImplementation(mockWatcherFactory);
     });
@@ -67,7 +60,13 @@ describe('FileWatcher', () => {
             // Advance fake timers to trigger the setTimeout callback
             jest.advanceTimersByTime(100);
 
-            await promise;
+            // Resolving IS the claim; a hang or rejection fails here. The watcher
+            // must also be torn down — waitForFileSystem disposes it on the event,
+            // and a leaked watcher is the defect this suite exists to catch.
+            await expect(promise).resolves.toBeUndefined();
+            const watcher = (vscode.workspace.createFileSystemWatcher as jest.Mock).mock.results[0]
+                .value as { dispose: jest.Mock };
+            expect(watcher.dispose).toHaveBeenCalled();
         });
 
         it('should wait for file creation', async () => {
@@ -82,7 +81,13 @@ describe('FileWatcher', () => {
             // Advance fake timers to trigger the setTimeout callback
             jest.advanceTimersByTime(100);
 
-            await promise;
+            // Resolving IS the claim; a hang or rejection fails here. The watcher
+            // must also be torn down — waitForFileSystem disposes it on the event,
+            // and a leaked watcher is the defect this suite exists to catch.
+            await expect(promise).resolves.toBeUndefined();
+            const watcher = (vscode.workspace.createFileSystemWatcher as jest.Mock).mock.results[0]
+                .value as { dispose: jest.Mock };
+            expect(watcher.dispose).toHaveBeenCalled();
         });
 
         it('should wait for file deletion', async () => {
@@ -97,7 +102,13 @@ describe('FileWatcher', () => {
             // Advance fake timers to trigger the setTimeout callback
             jest.advanceTimersByTime(100);
 
-            await promise;
+            // Resolving IS the claim; a hang or rejection fails here. The watcher
+            // must also be torn down — waitForFileSystem disposes it on the event,
+            // and a leaked watcher is the defect this suite exists to catch.
+            await expect(promise).resolves.toBeUndefined();
+            const watcher = (vscode.workspace.createFileSystemWatcher as jest.Mock).mock.results[0]
+                .value as { dispose: jest.Mock };
+            expect(watcher.dispose).toHaveBeenCalled();
         });
 
         it('should timeout if no change occurs', async () => {

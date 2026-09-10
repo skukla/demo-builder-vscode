@@ -7,22 +7,20 @@
  * away instead of visible on arrival — so it must survive hover, and it must
  * never be outvoted by healthier siblings.
  *
- * Worst-status precedence (most alarming wins): error > stale > deploying >
- * not-deployed > deployed.
+ * Worst-status precedence (most alarming wins): error > needs-auth > stale >
+ * config-incomplete > deploying > not-deployed > deployed. `checking` ranks
+ * nowhere — it is in flight, not health.
  *
  * Strict TDD: written BEFORE the component exists.
  */
 
+import '../../../../helpers/webviewClientMock';
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { IntegrationsSummaryTile } from '@/features/dashboard/ui/components/IntegrationsSummaryTile';
 import type { AppBuilderComponentState } from '@/types/base';
 import '@testing-library/jest-dom';
-
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: { postMessage: jest.fn(), onMessage: jest.fn(() => jest.fn()) },
-}));
 
 jest.mock('@adobe/react-spectrum', () => ({
     // The tile now routes through DashboardTile, which wraps it in a
@@ -195,6 +193,31 @@ describe('IntegrationsSummaryTile', () => {
             );
         });
 
+        // BOTH of these were invisible here until 2026-09-06: the precedence
+        // table ranked five states and the mesh can be in seven, so a mesh
+        // needing sign-in or missing required config showed a warning dot on its
+        // card on the integrations surface and NO dot on this tile. The tile
+        // exists to stop the dashboard looking healthy while the mesh is not.
+        it.each<[string, string, string]>([
+            ['needs-auth', 'warning', 'Session expired'],
+            ['config-incomplete', 'warning', 'Incomplete'],
+        ])('reports a %s mesh with the same words its card uses', (status, variant, label) => {
+            render(
+                <IntegrationsSummaryTile
+                    hasAdobeContext
+                    hasMesh
+                    meshStatus={status as 'needs-auth'}
+                    appBuilderComponents={components('deployed')}
+                />
+            );
+
+            expect(screen.getByTestId('integrations-tile-dot')).toHaveAttribute(
+                'data-variant',
+                variant
+            );
+            expect(screen.getByRole('tooltip')).toHaveTextContent(label);
+        });
+
         it('ignores mesh status entirely when the project has no mesh', () => {
             render(
                 <IntegrationsSummaryTile
@@ -211,9 +234,45 @@ describe('IntegrationsSummaryTile', () => {
         });
     });
 
-    // The dot reports HEALTH. With nothing deployed there is no health to report,
-    // and worstStatusVariant's `?? 'success'` fallback painted an empty project
-    // green — "all good" about nothing at all.
+    // The keyed map holds BOTH kinds. A `kind: 'mesh'` entry is the mesh's
+    // persisted record, and the mesh reaches the dot through `hasMesh` +
+    // `meshStatus` instead — counting the record too would let a torn-down mesh
+    // keep voting through a stale row nothing else reads.
+    describe('the persisted mesh record is not an integration', () => {
+        it('ignores a failed mesh RECORD on a project with no mesh', () => {
+            render(
+                <IntegrationsSummaryTile
+                    hasAdobeContext
+                    appBuilderComponents={{
+                        'api-mesh': { ...DEPLOYED, kind: 'mesh', status: 'error' },
+                        'app-0': DEPLOYED,
+                    }}
+                />
+            );
+
+            expect(screen.getByTestId('integrations-tile-dot')).toHaveAttribute(
+                'data-variant',
+                'success'
+            );
+        });
+
+        it('shows no dot at all when the mesh record is the only entry', () => {
+            render(
+                <IntegrationsSummaryTile
+                    hasAdobeContext
+                    appBuilderComponents={{
+                        'api-mesh': { ...DEPLOYED, kind: 'mesh', status: 'error' },
+                    }}
+                />
+            );
+
+            expect(screen.queryByTestId('integrations-tile-dot')).not.toBeInTheDocument();
+        });
+    });
+
+    // The dot reports HEALTH. With nothing deployed there is no health to
+    // report, and a `?? 'success'` fallback on the precedence lookup painted an
+    // empty project green — "all good" about nothing at all.
     describe('nothing to report → no dot', () => {
         it('shows no dot when the project has no integrations and no mesh', () => {
             render(<IntegrationsSummaryTile hasAdobeContext appBuilderComponents={{}} />);
@@ -309,13 +368,13 @@ describe('IntegrationsSummaryTile', () => {
  * disagree with the card the surface shows for the same state.
  */
 describe('IntegrationsSummaryTile — the dot explains itself', () => {
-    const integration = (status: string) => ({
-        kind: 'integration' as const,
+    const integration = (status: AppBuilderComponentState['status']): AppBuilderComponentState => ({
+        kind: 'integration',
         status,
         source: { owner: 'acme', repo: 'widget' },
     });
 
-    it.each([
+    it.each<[AppBuilderComponentState['status'], string]>([
         ['error', 'Deploy failed'],
         ['stale', 'Update needed'],
         ['not-deployed', 'Not deployed'],
@@ -324,7 +383,7 @@ describe('IntegrationsSummaryTile — the dot explains itself', () => {
         render(
             <IntegrationsSummaryTile
                 hasAdobeContext
-                appBuilderComponents={{ a: integration(status) } as never}
+                appBuilderComponents={{ a: integration(status) }}
             />
         );
 
@@ -337,13 +396,11 @@ describe('IntegrationsSummaryTile — the dot explains itself', () => {
         render(
             <IntegrationsSummaryTile
                 hasAdobeContext
-                appBuilderComponents={
-                    {
-                        a: integration('deployed'),
-                        b: integration('error'),
-                        c: integration('deployed'),
-                    } as never
-                }
+                appBuilderComponents={{
+                    a: integration('deployed'),
+                    b: integration('error'),
+                    c: integration('deployed'),
+                }}
             />
         );
 

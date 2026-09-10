@@ -15,9 +15,16 @@ import { screen, waitFor, fireEvent, act } from '@testing-library/react';
 import { setupTestContext, renderDashboard, TestContext } from './ProjectDashboardScreen.testUtils';
 
 /** Past the org-check minimum-display gate (FRONTEND_TIMEOUTS.ORG_CHECK_MIN_DISPLAY = 700ms). */
-const advancePastOrgCheckGate = () => act(() => { jest.advanceTimersByTime(1000); });
+const advancePastOrgCheckGate = () =>
+    act(() => {
+        jest.advanceTimersByTime(1000);
+    });
 
-const ORG_MISMATCH = { expectedOrg: 'org-A', expectedOrgName: 'CitiSignal Org', currentOrg: 'Org B' };
+const ORG_MISMATCH = {
+    expectedOrg: 'org-A',
+    expectedOrgName: 'CitiSignal Org',
+    currentOrg: 'Org B',
+};
 
 describe('ProjectDashboardScreen - Org Context (badge + banner)', () => {
     let ctx: TestContext;
@@ -145,7 +152,11 @@ describe('ProjectDashboardScreen - Org Context (badge + banner)', () => {
 
         expect(screen.getByText(/Wrong Adobe organization/i)).toBeInTheDocument();
         // Banner message names BOTH the current org and the project's expected org.
-        expect(screen.getByText(/You're signed into Org B, but this project was created in CitiSignal Org/i)).toBeInTheDocument();
+        expect(
+            screen.getByText(
+                /You're signed into Org B, but this project was created in CitiSignal Org/i
+            )
+        ).toBeInTheDocument();
         expect(screen.queryByText(/another browser tab/i)).not.toBeInTheDocument();
     });
 
@@ -180,12 +191,15 @@ describe('ProjectDashboardScreen - Org Context (badge + banner)', () => {
 
         // Re-query each time: after the first press the button flips to a disabled
         // "Switching…" state — a second press must not fire the round-trip again.
-        const liveSwitchButton = () => screen.getByText(/Switch IMS Org|Switching/i).closest('button')!;
+        const liveSwitchButton = () =>
+            screen.getByText(/Switch IMS Org|Switching/i).closest('button')!;
         fireEvent.click(liveSwitchButton());
         fireEvent.click(liveSwitchButton());
 
         // `request` is also used for verify-ai-setup on mount, so scope to switchOrg.
-        const switchCalls = (webviewClient.request as jest.Mock).mock.calls.filter(c => c[0] === 'switchOrg');
+        const switchCalls = (webviewClient.request as jest.Mock).mock.calls.filter(
+            (c) => c[0] === 'switchOrg'
+        );
         expect(switchCalls).toHaveLength(1);
     });
 

@@ -105,6 +105,42 @@ describe('helixApiClient', () => {
                 status: 500,
             });
         });
+
+        // The trim rule, inherited from helixService when the two spellings were
+        // unified. A path the caller wrote with a trailing slash addresses the
+        // same resource, and admin.hlx.page does not agree — so it is trimmed
+        // here rather than at each of the four call sites.
+        it('trims a trailing slash, leaving the root path alone', async () => {
+            await previewPage('myorg', 'mysite', '/products/', 'main', TOKENS);
+            await previewPage('myorg', 'mysite', '/', 'main', TOKENS);
+
+            expect(mockFetch.mock.calls[0][0]).toBe(
+                'https://admin.hlx.page/preview/myorg/mysite/main/products',
+            );
+            expect(mockFetch.mock.calls[1][0]).toBe(
+                'https://admin.hlx.page/preview/myorg/mysite/main/',
+            );
+        });
+
+        // Each status gets its OWN diagnosis, and the status code alone cannot
+        // tell them apart: strip the 401 arm and the generic non-OK arm answers
+        // with the same 401, so only the message says whether the client knew
+        // what it was looking at.
+        it('names the 401 as an authentication failure, not a generic non-OK', async () => {
+            mockFetch.mockResolvedValueOnce({ ok: false, status: 401, statusText: 'Unauthorized' });
+
+            await expect(previewPage('o', 's', '/', 'main', TOKENS)).rejects.toThrow(
+                /authentication failed/,
+            );
+        });
+
+        it('names the 403 as denied permission, not a generic non-OK', async () => {
+            mockFetch.mockResolvedValueOnce({ ok: false, status: 403, statusText: 'Forbidden' });
+
+            await expect(previewPage('o', 's', '/', 'main', TOKENS)).rejects.toThrow(
+                /access denied/,
+            );
+        });
     });
 
     describe('publishPage', () => {
@@ -135,7 +171,7 @@ describe('helixApiClient', () => {
         });
 
         it('defaults path to "/" and branch to "main"', async () => {
-            await previewAndPublishPage('o', 's', undefined as never, undefined as never, TOKENS);
+            await previewAndPublishPage('o', 's', undefined, undefined, TOKENS);
 
             const previewUrl = mockFetch.mock.calls[0][0] as string;
             expect(previewUrl).toBe('https://admin.hlx.page/preview/o/s/main/');
@@ -222,6 +258,15 @@ describe('helixApiClient', () => {
             await expect(unpublishPage('o', 's', '/p', 'main', TOKENS)).resolves.toBe(false);
         });
 
+        // 401 is as non-fatal as 403 — an expired DA.live token during an
+        // unregister is a partial result, not a reason to abort the flow. The
+        // 403 test alone leaves that half of the pair free.
+        it('returns false (non-fatal) on a 401 auth failure', async () => {
+            mockFetch.mockResolvedValueOnce({ ok: false, status: 401, statusText: 'Unauthorized' });
+
+            await expect(unpublishPage('o', 's', '/p', 'main', TOKENS)).resolves.toBe(false);
+        });
+
         it('throws HelixApiError on a 5xx response', async () => {
             mockFetch.mockResolvedValueOnce({ ok: false, status: 503, statusText: 'Unavailable' });
 
@@ -229,7 +274,7 @@ describe('helixApiClient', () => {
         });
 
         it('defaults path to "/" and branch to "main"', async () => {
-            await unpublishPage('o', 's', undefined as never, undefined as never, TOKENS);
+            await unpublishPage('o', 's', undefined, undefined, TOKENS);
 
             expect(mockFetch.mock.calls[0][0]).toBe('https://admin.hlx.page/live/o/s/main/');
         });

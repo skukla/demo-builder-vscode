@@ -4,7 +4,7 @@
  * - findNpmGlobalPaths
  */
 import { EnvironmentSetup } from '@/core/shell/environmentSetup';
-import { DEFAULT_SHELL } from '@/types/shell';
+import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import * as fsSync from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -12,7 +12,6 @@ import {
     createEnvironmentSetup,
     mockFnmInstallation,
     resetAllMocks,
-    mockLogger
 } from './environmentSetup.testUtils';
 
 jest.mock('fs');
@@ -20,12 +19,8 @@ jest.mock('os', () => ({
     homedir: jest.fn(() => '/mock/home'),
     platform: jest.fn(() => process.platform),
 }));
-jest.mock('vscode');
 jest.mock('child_process', () => ({
     execSync: jest.fn()
-}));
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => mockLogger
 }));
 
 describe('EnvironmentSetup - Path Discovery', () => {
@@ -46,11 +41,9 @@ describe('EnvironmentSetup - Path Discovery', () => {
         });
 
         it('should use correct shell for platform', () => {
-            if (process.platform === 'win32') {
-                expect(DEFAULT_SHELL).toBe('cmd.exe');
-            } else {
-                expect(DEFAULT_SHELL).toBe('/bin/bash');
-            }
+            // The platform picks the EXPECTED VALUE; the assertion itself always runs.
+            const expected = process.platform === 'win32' ? 'cmd.exe' : '/bin/bash';
+            expect(DEFAULT_SHELL).toBe(expected);
         });
     });
 

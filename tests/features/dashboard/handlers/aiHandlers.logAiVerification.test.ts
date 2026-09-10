@@ -11,8 +11,9 @@
  */
 
 import { logAiVerification } from '@/features/dashboard/handlers/aiHandlers';
-import { createMockContext } from './aiHandlers.testUtils';
-import type { AiVerificationResult } from '@/features/ai';
+import { createAiHandlerContext } from './aiHandlers.testUtils';
+import type { AiVerificationResult } from '@/features/ai/aiSetupVerifier';
+import { githubTokenShape } from '../../../helpers/credentialShapes';
 
 function resultWithMcpError(error: string): AiVerificationResult {
     return {
@@ -32,8 +33,11 @@ function mcpWarnText(warn: jest.Mock): string {
 }
 
 it('redacts a credential-bearing env in the MCP stderr tail', () => {
-    const ctx = createMockContext();
-    const secret = 'ghp_0123456789abcdef0123456789abcdef';
+    const ctx = createAiHandlerContext();
+    // BUILT, not written: `ghp_` followed by hex is GitHub's real token format and a
+    // scanner matches it whatever the hex spells. The subject must still be handed
+    // something that LOOKS like a token, or the redaction it proves is untested.
+    const secret = githubTokenShape();
     const stderr = [
         'Error: connect ECONNREFUSED /var/folders/ab/xyz/demo-builder-mcp.sock',
         '    at TCPConnectWrap.afterConnect',
@@ -48,7 +52,7 @@ it('redacts a credential-bearing env in the MCP stderr tail', () => {
 });
 
 it('preserves the multi-line connect diagnostic (does not collapse to one line)', () => {
-    const ctx = createMockContext();
+    const ctx = createAiHandlerContext();
     const stderr = [
         'Error: connect ECONNREFUSED demo-builder-mcp.sock',
         '    at TCPConnectWrap.afterConnect',
@@ -65,7 +69,7 @@ it('preserves the multi-line connect diagnostic (does not collapse to one line)'
 });
 
 it('does not throw on a missing stderr tail', () => {
-    const ctx = createMockContext();
+    const ctx = createAiHandlerContext();
     const result = {
         status: 'error',
         checks: [],

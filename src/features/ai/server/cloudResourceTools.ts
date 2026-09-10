@@ -19,7 +19,8 @@ import { z } from 'zod';
 import { runWithAdobeTarget } from './adobeTargetStore';
 import { isOrgMismatchError, orgMismatchResult } from './adobeTools';
 import { asText } from './mcpToolResult';
-import { ServiceLocator } from '@/core/di';
+import type { McpToolServer } from './mcpToolServer';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
 import { DaLiveOrgOperations } from '@/features/eds/services/daLive/daLiveOrgOperations';
@@ -28,7 +29,7 @@ import type { HandlerContext } from '@/types/handlers';
 /** Silent GitHub auth pre-flight → `true` when a valid token is present. */
 async function githubAuthed(ctx: HandlerContext): Promise<boolean> {
     try {
-        return (await getGitHubServices(ctx).tokenService.validateToken()).valid;
+        return (await getGitHubServices(ctx.context.secrets).tokenService.validateToken()).valid;
     } catch {
         return false;
     }
@@ -78,13 +79,13 @@ async function buildDaLiveOps(
  * @param ctxFactory Builds a headless HandlerContext for each invocation.
  */
 export function registerCloudResourceTools(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    server: any,
+    server: McpToolServer,
     ctxFactory: () => HandlerContext,
 ): void {
     server.registerTool(
         'list_github_repos',
         {
+            needsAuth: ['github'],
             annotations: { readOnlyHint: true, destructiveHint: false },
             description: 'List GitHub repositories you can push to (paginated summary)',
             inputSchema: {
@@ -98,7 +99,7 @@ export function registerCloudResourceTools(
             if (!(await githubAuthed(ctx))) {
                 return asText(NEEDS_GITHUB);
             }
-            const repos = await getGitHubServices(ctx).repoOperations.listUserRepositories();
+            const repos = await getGitHubServices(ctx.context.secrets).repoOperations.listUserRepositories();
             const offset = Math.max(0, Math.trunc(args?.offset ?? 0));
             const limit = Math.min(100, Math.max(1, Math.trunc(args?.limit ?? 30)));
             const page = repos.slice(offset, offset + limit).map((r) => ({
@@ -113,6 +114,7 @@ export function registerCloudResourceTools(
     server.registerTool(
         'create_github_repo',
         {
+            needsAuth: ['github'],
             annotations: { readOnlyHint: false, destructiveHint: false },
             description:
                 'Create a GitHub repo from a template (the EDS storefront path). Returns the repo and whether its content has finished materialising.',
@@ -149,7 +151,7 @@ export function registerCloudResourceTools(
                 return asText(NEEDS_GITHUB);
             }
 
-            const { repoOperations } = getGitHubServices(ctx);
+            const { repoOperations } = getGitHubServices(ctx.context.secrets);
             let repo;
             try {
                 repo = await repoOperations.createFromTemplate(
@@ -205,6 +207,7 @@ export function registerCloudResourceTools(
     server.registerTool(
         'delete_github_repo',
         {
+            needsAuth: ['github'],
             annotations: { readOnlyHint: false, destructiveHint: true },
             description:
                 'Permanently delete a GitHub repository (irreversible). Requires confirm:true and confirmName="owner/repo".',
@@ -237,7 +240,7 @@ export function registerCloudResourceTools(
                 return asText(NEEDS_GITHUB);
             }
             try {
-                await getGitHubServices(ctx).repoOperations.deleteRepository(owner, repo);
+                await getGitHubServices(ctx.context.secrets).repoOperations.deleteRepository(owner, repo);
                 return asText({ deleted: true, repo: fullName });
             } catch (err) {
                 return asText({
@@ -252,6 +255,7 @@ export function registerCloudResourceTools(
     server.registerTool(
         'list_dalive_sites',
         {
+            needsAuth: ['adobe'],
             annotations: { readOnlyHint: true, destructiveHint: false },
             description: 'List DA.live sites in an organization (paginated summary)',
             inputSchema: {
@@ -290,6 +294,7 @@ export function registerCloudResourceTools(
     server.registerTool(
         'cleanup_dalive_site',
         {
+            needsAuth: ['adobe'],
             annotations: { readOnlyHint: false, destructiveHint: true },
             description:
                 'Delete all content for a DA.live site (irreversible). Requires confirm:true and confirmName="org/site".',

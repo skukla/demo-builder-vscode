@@ -1,0 +1,1772 @@
+# Architecture handbook
+
+How this codebase is built, and how to write code that fits it.
+
+Read it start to finish once. It builds: what the program is, how it is arranged, how
+code inside it gets what it needs, and then the specifics — configuration, state, the
+user interface, agents, tests.
+
+Conventions appear as callouts where they apply, like this:
+
+> **Convention.** The rule itself.
+> *Why:* one line on what it buys you.
+> Where it is stated · and what catches you if you break it.
+
+This file describes how things are today. When something changes, change it here.
+
+---
+
+## 1. This is two programs
+
+**Position.** One repository, two programs, two sets of rules. Code does not cross between
+them; anything shared has to be written to run in both.
+
+Start here, because everything else depends on it.
+
+The extension runs in two places. **The host** is Node: it talks to VS Code, the file
+system, and Adobe's APIs. **The webviews** are browser pages — eight of them, each a
+separate React bundle with no access to Node or VS Code. They communicate by passing
+messages.
+
+Code does not move freely between them. A service that imports `vscode` cannot run in a
+webview. A React component cannot read a file. The two halves have separate rules,
+because a rule written for one is usually meaningless for the other.
+
+> **Convention.** Host code follows the dependency rules for the extension host.
+> *Why:* a service has no DOM and can reach the file system; its rules are about what it may
+> fetch. [ADR-015](../architecture/adr/015-dependency-architecture.md) ·
+> Enforced by `tests/sop/architecture-rules.test.ts`.
+
+> **Convention.** Webview code follows the webview rules.
+> *Why:* a webview has no file system and no VS Code API; its rules are about composition and
+> what crosses the message boundary.
+> [ADR-017](../architecture/adr/017-webview-architecture.md) ·
+> Enforced by `tests/sop/webview-architecture-rules.test.ts`.
+
+---
+
+## 2. Code is grouped by what it does for the user
+
+**Position.** Grouped by feature, not by kind. A feature owns its whole vertical slice and
+does not reach into its neighbours; anything two features need moves to `core/`.
+
+Within each half, code is arranged by feature, not by kind. Everything about Edge
+Delivery storefronts lives in one folder: its services, its message handlers, its UI.
+
+```
+src/features/eds/            storefronts
+src/features/prerequisites/  checking and installing tools
+src/core/                    shared infrastructure — logging, state, shell, UI primitives
+src/commands/                the entry points VS Code calls
+```
+
+A feature uses `core/`. A feature does not reach into another feature — if two features
+need the same thing, it moves to `core/`. Commands are the exception: their job is to
+orchestrate, so they may use any feature.
+
+That arrangement only holds if it points one way. Features and commands are built on
+core, so core must not know either of them exists; the moment it does, the graph can
+close into a cycle and "move it to `core/`" stops being a safe answer.
+
+> **Convention.** Nothing under `src/core/` imports `@/features` or `@/commands`.
+> [src/core/CLAUDE.md](../../src/core/CLAUDE.md) · Enforced by the `layerDirection`
+> ledger in `tests/sop/architecture-rules.exemptions.json` — seven predate the rule
+> and the set may only shrink.
+> *Why:* it is what keeps the dependency graph acyclic, which is the premise the cycle
+> scan and "move it to core" both rest on.
+>
+> **This rule was ratified on 2026-08-30, and how it got here is worth knowing.** It had
+> been stated as absolute law in `src/core/CLAUDE.md` — with a "❌", which reads as a
+> guarantee — while appearing in no handbook entry, no ADR and no convention, enforced by
+> nothing, and violated seven times. Two of the seven are commands that merely live in the
+> wrong directory, one is `import type` only, and four are real. A prohibition that exists
+> in one directory's prose is a wish; this is the version with a check behind it.
+
+> **Convention.** Features do not import other features; commands may.
+> [src/features/CLAUDE.md](../../src/features/CLAUDE.md) · enforced by eslint.
+> *Why:* it keeps a feature replaceable. Cross-feature imports are how two features quietly become one.
+
+> **Convention.** A module is imported by the path that DEFINES the symbol. No
+> re-export-only `index.ts` — not in `core/`, not in a feature. **The ledger is
+> CLOSED**: all 43 that predated the rule were retired on 2026-08-31, so this is now
+> a ban with nowhere to write an exception down.
+> [ADR-022](../architecture/adr/022-barrel-files.md) · Enforced by
+> `tests/sop/architecture-rules.test.ts` through `expectBanned`, which asserts both
+> halves: no violations, AND no ledger key to write one into.
+>
+> That second half arrived on 2026-09-01, and this entry is why it was needed. It
+> already SAID "a ban with nowhere to write an exception down" while
+> `reExportIndex: {}` and `featureBarrels: {}` sat in the exemptions file — empty, but
+> still keys. An empty ledger already fails a new violation, so nothing was
+> undetected; what remained was the SLOT. The next person to trip the rule could add
+> a row with a reason and stay green, and the rule would quietly go back to being
+> negotiable. Seven rules that had reached zero were in that state; all seven are now
+> banned outright, and re-adding an exemption to any of them fails the build naming
+> the rule.
+> *Why:* a symbol reachable by two paths is a symbol whose home nobody can name. It is
+> also the rule this codebase already follows: **1,935 imports reach into a module from
+> outside it, against 162 from within**, so the barrels were the minority report, not the
+> convention. Seven of the eight webview bundle entries are `index.tsx` by necessity
+> and are read from `WEBVIEW_ENTRIES`, so the check cannot drift from the build. The
+> eighth — the dashboard — is `main.tsx`, because an `index.ts` barrel used to sit
+> beside it and tsc keeps only one file per basename. That barrel is gone, so the
+> constraint is too; the rename is simply not worth an entry-point change.
+>
+> **This replaced an earlier convention that said the opposite for `core/`, and the
+> correction is worth keeping.** The old rule — core is "a shared surface worth curating",
+> features get nothing — was measured on 2026-08-31 and the curation was not happening:
+> 103 of 165 named exports were never imported through their barrel. Research then found
+> the accepted industry rule is about PLACEMENT, not layer: a barrel is the public API of
+> a unit, and files inside it import each other directly. Against that rule this codebase
+> was not split between two conventions; it was already on the far side of the line, with
+> a dozen barrels that a minority of callers used.
+>
+> **The published performance case was checked and does NOT apply here** — that check is
+> the reason the rule is scoped to legibility. Atlassian measured -75% build minutes
+> removing barrels across 90,000 files; Angular removed them from its linker for 500ms-1s.
+> Our whole typecheck is 3.95s over 2,202 files, and the suite runs in full rather than
+> selecting affected tests, so the mechanism behind those wins has nothing to bite on.
+> Adopted for one reason, not three.
+
+> **Convention.** A PascalCase `.tsx` exports a component of that name, and an
+> exported ALL-CAPS const is `UPPER_SNAKE_CASE`. Files are otherwise named for their
+> SUBJECT — `WizardContainer.tsx`, `loadingHTML.ts`, `commerceSections.ts`.
+> *Why:* the first makes a component findable from its filename and guessable from
+> its symbol, which is the part that actually pays. Enforced by
+> `tests/sop/naming-conventions.test.ts`; two files are exempt, each with its reason,
+> and the list may only shrink.
+>
+> **This replaced a four-row rule that contradicted itself, and the correction is the
+> interesting part.** It read "commands are `camelCase`, React components
+> `PascalCase`, constants `UPPER_SNAKE_CASE`, and a file is named for what it
+> exports", and claimed nobody had ever broken it. Measured 2026-08-31: nobody could,
+> because the rows disagree. `ResetAllCommand.ts` exports `class ResetAllCommand` —
+> PascalCase, which the commands row forbids and the export row requires. Eleven
+> `.tsx` files export functions rather than components, so camelCase is right by one
+> row and wrong by another. And "named for what it exports" holds for **40%** of
+> `src/` (343 of 848): most files are named for their subject and export several
+> related symbols, which is the real convention and was not what was written.
+>
+> A rule that cannot be broken because it contradicts itself reads like a guarantee
+> and holds nothing. That is the same failure `src/core/CLAUDE.md`'s "❌" already cost
+> once.
+
+---
+
+## 3. Code gets what it needs handed to it
+
+**Position.** Functional by default — roughly nine functions for every class. Dependencies
+are handed in rather than fetched, except at the four edges the platform calls into.
+
+That is the arrangement. This is the rule that keeps it working, and it is the one most
+often broken.
+
+**Fetch at the edges. Pass down. Build in one place.**
+
+Four kinds of file may reach out and fetch a service: `extension.ts`, commands, handlers,
+and MCP tool registrations. VS Code calls into these directly, so nothing can hand them
+anything — they have to go and get it.
+
+Below that line, a function receives what it needs as arguments. A service never fetches.
+If a service needs three collaborators, its caller passes three collaborators. This is
+also what makes the tests in section 9 possible: you can only hand in a fake if the code
+accepts one.
+
+Services are built in `extension.ts` or in a feature's `create...Deps` file. Section 5
+covers the single exception.
+
+> **Convention.** Services are fetched only at the boundary; below it, dependencies arrive
+> as arguments. [ADR-015](../architecture/adr/015-dependency-architecture.md) · enforced by
+> `tests/sop/architecture-rules.test.ts`.
+> *Why:* a function that fetches its own dependencies cannot be tested without the whole world, and hides what it actually uses.
+
+> **Convention.** A service takes one dependency bundle per feature. Plain data —
+> configuration, identifiers, callbacks — arrives as ordinary arguments.
+> [ADR-021](../architecture/adr/021-dependency-envelope.md) · Enforced by
+> `tests/sop/architecture-rules.test.ts` — no signature takes two dependency bundles.
+> *Why:* six services once received the same collaborator six different ways, so none could be changed without touching all six.
+
+### When to write a class
+
+Rarely. There are around 1,350 exported functions here and 150 exported classes, and the
+classes fall into four groups:
+
+- **Commands** — VS Code expects an object with a lifecycle
+- **Errors** — so failures can be caught by type
+- **Things holding state between calls** — a cache, a registry, a queue
+- **Infrastructure wrappers** — the command executor, the loggers
+
+Everything else is a function. A class used only to group functions that share no state
+should be functions.
+
+> **Convention.** Commands extend `BaseCommand` or `BaseWebviewCommand`, which give them
+> context, disposal and panel lifecycle. Enforced by `tests/sop/architecture-rules.test.ts`.
+> *Why:* a command that acquires its own context and disposal is the implicit dependency this architecture removes everywhere else.
+
+> **Convention.** Files in `src/types/` use `import type` only — a runtime import there
+> pulls executable code into every module that wanted a shape. Enforced by
+> `tests/sop/architecture-rules.test.ts`.
+> *Why:* it keeps type files leaves. A runtime import there can form a cycle a type-only import never could.
+
+> **Convention.** Never pass an argument as `any` or `never`. If a cast is needed to
+> make a call compile, the shape is wrong — build the object the callee declares.
+> *Why:* a cast in argument position switches off the one check that catches a caller
+> and callee disagreeing. Four times it hid a field the callee dispatches on, and each
+> time the result was a silent no-op in production that twelve tests agreed with.
+> Enforced by `tests/sop/architecture-rules.test.ts`.
+
+> **Convention.** A shape that crosses a boundary — a message, a payload, a fixture —
+> lives in a typechecked file and is typed to the real interface.
+> *Why:* a literal in a `.mjs`, a `.json` or a template string has opted out of the only
+> check that works, and an invented shape still parses and still passes review. Five were
+> invented in one afternoon; each had an exported type that would have refused to compile.
+> [tests/helpers/webviewFixtures.ts](../../tests/helpers/webviewFixtures.ts) is the worked
+> example · enforced by `npm run typecheck:tests` in CI for anything under `tests/`.
+
+---
+
+#### Also checked here
+
+Enforced automatically. You do not need to hold these in your head — if you break one, the
+check says so and names the file.
+
+> **Convention.** Time values come from the shared `TIMEOUTS` constants, never a literal.
+> *Why:* a bare `5000` says nothing about which timeout it is or why that length.
+> [sop/code-patterns.md](sop/code-patterns.md) for the constants and how to add one ·
+> enforced by `tests/sop/magic-timeouts.test.ts`.
+
+> **Convention.** Sleeps route through the shared `sleep()`.
+> *Why:* a hand-rolled sleep cannot be faked, so it makes tests slow and flaky.
+> Enforced by `tests/sop/no-bare-sleep.test.ts`.
+
+> **Convention.** A complex inline expression becomes a named function.
+> *Why:* the name is the explanation. Without it every reader re-derives the intent.
+> [sop/code-patterns.md](sop/code-patterns.md) for where the line is ·
+> enforced by `tests/sop/complex-expressions.test.ts`.
+
+> **Convention.** A file stays under 500 lines; 750 fails the build. Past that it is
+> doing more than one job — split it by responsibility, not by line count.
+> *Why:* nobody holds a 700-line file in their head, so changes get made in the part
+> that is understood and the rest quietly rots.
+> [sop/god-file-decomposition.md](sop/god-file-decomposition.md) for how to split ·
+> enforced by `max-lines` in `eslint.config.mjs` (warns at 500) and
+> `scripts/check-test-file-sizes.js` (fails CI at 750).
+
+## 4. Much of the behaviour is data, not code
+
+**Position.** Prefer a row in a registry to a new class. Twelve schema-backed JSON files
+describe what the extension supports, and most additions are edits to them.
+
+Before writing a class, check whether the thing you want is a row in a file.
+
+Twelve JSON registries define components, prerequisites, stacks, demo packages, block
+libraries, wizard steps, API services and AI defaults. Each has a schema beside it. They
+live in `src/features/*/config/`.
+
+Adding a supported component or a new prerequisite is usually an edit to one of these,
+not new code. The mechanism generally exists already and takes another entry.
+
+> **Convention.** A registry edit matches the `*.schema.json` beside it. Enforced by the
+> template suites under `tests/templates/`.
+> *Why:* the registries are user-facing behaviour. A malformed entry fails at runtime, in someone's demo.
+
+> **Where to start.** [component-system.md](../architecture/component-system.md) ·
+> [prerequisites-system.md](../systems/prerequisites-system.md)
+
+---
+
+#### Also checked here
+
+Enforced automatically. You do not need to hold these in your head — if you break one, the
+check says so and names the file.
+
+> **Convention.** A credential environment variable is registered as a secret.
+> *Why:* an unregistered one is written in the clear and read back by anything.
+> Enforced by `tests/sop/credential-env-vars-registered.test.ts`.
+
+> **Convention.** A setting that receives credentials is scoped to the user, never the
+> workspace.
+> *Why:* a workspace-scoped credential setting gets committed by someone eventually, and
+> this repository is public.
+> Enforced by `tests/sop/credential-sink-settings-scoped.test.ts`.
+
+## 5. What survives between calls
+
+**Position.** Anything cached exists once per session, is built on first use, and can be
+reset. Nothing stateful is built by code that runs repeatedly.
+
+Some things must outlive a single operation, and that is where this architecture has a
+specific rule — because it was got wrong first.
+
+Project state is persisted by `StateManager`, kept small and serializable. Webviews hold
+view state in React and ask the host for anything real.
+
+Caches are the interesting case. An authentication cache, the component registry,
+prerequisite results — each must be built once and reused. If two parts of the code each
+build their own, each gets a private cache and none of them helps. So there is exactly
+one sanctioned exception to "build in one place": a **session accessor**, a small module
+exposing `getX()` that builds on first call and returns the same instance afterwards,
+plus `resetX()` so tests can start clean.
+
+The matching trap is subtler. Anything that runs repeatedly — a context factory invoked
+per message, say — must not build a stateful object, because then "cached" means "rebuilt
+every time" and nothing tells you.
+
+> **Convention.** A session accessor is the only construction site outside the root, and
+> only for something whose state must outlive one call.
+> [ADR-020](../architecture/adr/020-session-accessors.md) · Enforced by the exemption ledger
+> in `tests/sop/architecture-rules.exemptions.json`.
+> *Why:* two instances mean two caches and neither is used. One instance is the entire benefit.
+
+> **Convention.** Anything that runs repeatedly builds nothing stateful.
+> [ADR-020](../architecture/adr/020-session-accessors.md) · enforced by
+> `tests/sop/architecture-rules.test.ts`.
+> *Why:* a cache rebuilt per message is not a cache, and nothing reports it — the code looks correct and the work is done twice.
+
+> **Also relevant.** [state-ownership.md](../architecture/state-ownership.md) ·
+> [state-management.md](../patterns/state-management.md)
+
+---
+
+## 6. The two halves talk by message
+
+**Position.** The webview asks, the host answers. Handlers translate a message into service
+calls and return a result — they hold no logic and render nothing.
+
+A webview sends a message; the host answers.
+
+On the host side each feature keeps a **handler map** — message type to a function
+returning `{ success, data?, error? }`. A handler translates one message into service
+calls and returns the result. It does not render, and it holds no business logic of its
+own.
+
+The channel performs a handshake and queues anything sent before it is ready. An async
+handler that is not awaited returns a promise to the webview, which will not be what you
+meant.
+
+> **Convention.** A handler translates and returns. It never renders.
+> [ADR-015](../architecture/adr/015-dependency-architecture.md) · Enforced by
+> `tests/sop/architecture-rules.test.ts` — no handler imports React.
+> *Why:* a handler that renders cannot be called by anything else — including an agent, which needs the same capability.
+
+> **Convention.** A handler answers by RETURNING its result — **Pattern B**.
+> `sendMessage` is for progress pushes only, never for the answer itself.
+> [where-code-goes.md](../architecture/where-code-goes.md) row 2 · Enforced by the
+> `patternBSendMessageCeiling` ratchet in
+> `tests/sop/architecture-rules.exemptions.json` — the count may not grow.
+> *Why:* a returned result has one caller waiting for it. A pushed one has whoever
+> happens to be listening, which is nobody when the caller is an agent or a test.
+>
+> **Catalogued 2026-08-30.** The rule and its ratchet already existed; the name
+> "Pattern B" was used across fifteen files — including two source files and two
+> per-directory `CLAUDE.md`s — and defined in none of them. An enforced convention
+> absent from this handbook makes the scorecard below an undercount, which is worth
+> more than the wording: it means "57 of 63 enforced" was measuring the catalogue,
+> not the codebase.
+
+> **Convention.** Message shapes come from a typed file, never written from memory into a
+> string or a `.mjs`. [CLAUDE.md](../../CLAUDE.md) · enforced by `npm run typecheck:tests`.
+> *Why:* an invented shape typechecks and passes its tests while agreeing with nothing. It has cost this repo whole screens.
+
+> **How to add one.** [webview-command-handler](../../.claude/skills/webview-command-handler/SKILL.md)
+
+---
+
+## 7. The user interface
+
+**Position.** One composition root per surface. Logic lives in hooks, rendering in
+components, and styling in cascade layers rather than in specificity fights.
+
+Each of the eight webviews has one entry file. That entry mounts the app, reads the
+initial data, and decides which stylesheets load — it is the only place that does. Below
+it, components receive what they need as props.
+
+**Business logic goes in hooks.** There are about 65 hooks to 110 components. A component
+renders and handles interaction; a hook holds the state machine, the calls to the host,
+and the derived data. When a component starts growing conditionals about what the data
+*means*, that has become a hook's job.
+
+The UI is Adobe Spectrum. CSS uses cascade layers — `reset`, `vendor`, `theme`,
+`overrides`, in that order — declared in one place. Spectrum's own CSS goes into
+`vendor`, above our reset and below everything else we write.
+
+> **Convention.** The bundle entry is the composition root; dependencies arrive as props;
+> hooks are the service layer. [ADR-017](../architecture/adr/017-webview-architecture.md) ·
+> enforced by `tests/sop/webview-architecture-rules.test.ts`.
+> *Why:* it puts the wiring in one readable place per surface, and keeps components testable without a running extension.
+
+**React's own rules are enforced, and it is worth knowing which.** `rules-of-hooks` is an
+ERROR: a hook called conditionally, or below a return, fails the build. `jsx-key`,
+`no-deprecated`, `jsx-no-target-blank` and the a11y checks on `alt-text` and `aria-props`
+are errors too. `exhaustive-deps` is a WARNING — and CI allows warnings, so what actually
+catches it is the zero-warning bar the `gate` skill sets on changed files, not the build.
+Know the difference before relying on it.
+
+> **Convention.** A value passed into a hook is stable across renders. No inline array,
+> object or arrow literal as a prop that will reach a dependency array — hoist it to a
+> module-level constant or wrap it.
+> *Why:* a literal is a NEW reference every render, so an effect that depends on it runs
+> every render, and one that sets state loops forever. It has already happened here.
+> **The EMPTY form is enforced**; the rest is not, and cannot be by the obvious rule —
+> `exhaustive-deps` reads the dependency array inside the hook and cannot see across the
+> prop boundary to the caller that created the value. The compiler cannot see it either:
+> the types are identical.
+>
+> `prop={[]}` and `prop={{}}` carry no data, so the only reason to write one is "this
+> component wants a collection and I have none" — which is exactly the shape that loops.
+> That is checkable without following the prop anywhere, and it is the case this repo has
+> actually been bitten by. Enforced by `tests/sop/webview-architecture-rules.test.ts`
+> (`emptyLiteralProps`), seeded EMPTY on 2026-08-31 because `src/` had none: a flat ban,
+> not a ledger.
+>
+> What stays a judgement, with the counts that make it one: 90 inline arrows
+> (overwhelmingly event handlers, harmless) and 34 non-empty array/object literals
+> (presentational lists and `UNSAFE_style`, covered by their own rules). Whether one of
+> those reaches a dependency array cannot be decided without following it into the
+> receiving hook.
+
+> **Convention.** The cascade order is `reset < vendor < theme < overrides`, declared
+> once and carried by every bundle.
+> *Why:* layer precedence is fixed by the FIRST declaration a bundle sees, and sheets
+> arrive in whatever order the bundle graph produces. The declaration lived only in
+> `index.css`, which seven of the eight entries import — the SIDEBAR carried none and
+> took whatever order its own graph emitted. It worked by luck, which is the failure
+> ADR-018 named in advance and nothing was checking for.
+> **The order was `vendor < reset` until 2026-09-09 and that was wrong**: a reset
+> neutralises the BROWSER, so it belongs BELOW the component library, and `reset.css`
+> claimed to be the lowest layer while the declaration made it second-lowest. It cost
+> nothing only while Spectrum's CSS was unlayered. `@layer vendor` now carries that CSS
+> for the entries named in `LAYERED_VENDOR_ENTRIES` (esbuild.config.js) — two so far,
+> each measured at ZERO moved elements; under the old order the projects list moved 45
+> of 77, all of it from one `font: inherit` in the reset.
+> [ADR-018 §1](../architecture/adr/018-css-architecture.md) · Enforced by `layerOrder`
+> in `tests/sop/stylesheet-bundles.test.ts` — every declaration byte-identical, every
+> `@layer` block naming a declared layer, every BUILT bundle carrying the line, with a
+> planted-violation control.
+
+> **Convention.** Every rule sits inside a cascade layer. None may sit outside one.
+> *Why:* unlayered beats layered for a normal declaration, so a loose rule silently
+> outranks everything in `theme` — which is why a rule that looks like it should win
+> sometimes does not. **This shipped as a ratchet at 135 and closed to 0 the same
+> day**, because the prediction behind the ratchet was wrong: layering them was
+> supposed to demote 128 plain rules below Spectrum and break them, and it moved
+> NOTHING — empty diff across 2,700 elements and 168 interaction cells. Being
+> unlayered only matters where a vendor rule actually competes for the same property
+> on the same element, and for these it never did.
+> **A component's `<style>` block counts.** Five files build CSS that way; three
+> assemble a standalone `<!DOCTYPE html>` page which loads none of our sheets, where
+> layers mean nothing. The other two render into a webview beside the layered sheets,
+> and their six rules sat outside every layer — invisible to a check that reads `.css`
+> only, while this convention said "every rule". Both are layered now and the check
+> reads style blocks too.
+> [ADR-018 §1](../architecture/adr/018-css-architecture.md) · Enforced by the
+> `unlayeredRuleCeiling` pin at 0 in `tests/sop/stylesheet-bundles.test.ts`, plus a
+> style-block check with a planted-violation control.
+
+> **Convention.** Vendor CSS sits in the lowest cascade layer.
+> *Why:* layers settle specificity by declaration order rather than by escalation, so
+> nothing downstream has to out-shout the vendor.
+> [ADR-018](../architecture/adr/018-css-architecture.md) · enforced by
+> `tests/sop/stylesheet-bundles.test.ts`.
+>
+> **This was the last unenforced rule on this page, and it was unenforced because it was
+> not yet TRUE.** `@layer vendor` was declared on 2026-09-09 and empty; nothing wrapped
+> Spectrum's CSS in it, so a check would have failed the build rather than protected
+> anything. All eight bundles wrap it as of 2026-09-10 — `vendorLayerBundles` 0 → 8 — and
+> the rule is now checked two ways: the exact set of layered entries is pinned, so an
+> entry added to `WEBVIEW_ENTRIES` and quietly left out fails, and the floor is compared
+> against reality.
+>
+> **The floor was cited here as evidence while no test read it.** For two days
+> `vendorLayerBundles` sat at 0 in the ledger, the eight bundles were layered, and this
+> paragraph pointed at the number as the thing that made the rule enforceable. A metric
+> nothing reads is a citation that looks checked; it has a reader now.
+>
+> It was not optional tidying — cascade layers are the ONLY thing that removes the
+> `!important` count, measured three ways on 2026-09-08, and the count is now 0. Scoping
+> (CSS Modules) does not help and is deliberately not being adopted; see ADR-018 "The
+> approach, settled".
+
+> **Convention.** `!important` is not how you win a specificity argument. The count may
+> not grow.
+> *Why:* it is the escalation the layers exist to make unnecessary, and each one makes the
+> next harder to avoid. The migration is authorised and running, so the count now falls
+> rather than merely holding: 1,965 -> 1,923 on 2026-09-08 when 47 selectors that had
+> matched nothing since before Spectrum 3.16 were deleted. It stays a ratchet rather than
+> a ban until the layer fix lands, because until then `!important` is genuinely the only
+> way a layered rule of ours beats Spectrum.
+> [ADR-018](../architecture/adr/018-css-architecture.md) · Enforced by the
+> `importantCeiling` pin in `tests/sop/stylesheet-bundles.test.ts`.
+
+> **Read before your first component.** [spectrum-webview-ui skill](../../.claude/skills/spectrum-webview-ui/SKILL.md) ·
+> [styling-guide.md](styling-guide.md) — Spectrum has specific traps.
+
+---
+
+> **Convention.** Hooks are the webview's service layer. A component renders and handles
+> interaction; the state machine, the calls to the host and the derived data live in a hook.
+> *Why:* it is what makes a component testable without a running extension, and it stops
+> render code growing opinions about what the data means.
+> [ADR-017](../architecture/adr/017-webview-architecture.md) · Enforced by the `hookRefs`
+> ledger in `tests/sop/webview-architecture-rules.exemptions.json`.
+
+> **Convention.** One message channel per bundle, and it is a singleton.
+> *Why:* `acquireVsCodeApi()` can only be called once per webview, so there is nothing to
+> vary. A second channel is not a design choice, it is a bug waiting for a race.
+> [ADR-017](../architecture/adr/017-webview-architecture.md) · Enforced by the
+> `messageChannelOwners` ledger in `tests/sop/webview-architecture-rules.exemptions.json`.
+
+> **Convention.** A CSS class a component uses is defined somewhere.
+> *Why:* an undefined class fails silently — the element simply renders unstyled, on one
+> surface, with no error anywhere.
+> [ADR-018](../architecture/adr/018-css-architecture.md) · Enforced by the
+> `classesDefinedNowhere` ledger in `tests/sop/stylesheet-bundles.test.ts`.
+
+> **Convention.** A class used by shared components lives in a sheet every bundle that
+> RENDERS it loads.
+> *Why:* a shared component appears on several surfaces; a class defined in one bundle
+> styles it on that surface and nowhere else. **Amended 2026-09-09** — this said
+> "a globally-loaded sheet", which was stricter than the check enforcing it and pinned
+> 321 feature rules in one file for a guarantee already provided. Reach, not global.
+> [ADR-018 §3](../architecture/adr/018-css-architecture.md) · Enforced by the cross-bundle
+> check in `tests/sop/stylesheet-bundles.test.ts`.
+
+> **Convention.** A stylesheet lives where its OWNER lives, and there are three owners: a
+> feature, a shared component, or the base layer.
+> *Why:* §6 says which bundles must LOAD a sheet and never said where the sheet should
+> sit, so for a year the answer was "the one file everything imports". A sheet under
+> `src/core/ui/styles/` may hold a class used by a shared component or by MORE THAN ONE
+> feature; a class used by exactly one feature belongs in that feature's directory.
+> [ADR-017 §7](../architecture/adr/017-webview-architecture.md) · Enforced by the
+> `stylesheetOwner` check in `tests/sop/stylesheet-bundles.test.ts`, with a
+> planted-violation control.
+
+#### Also checked here
+
+Enforced automatically. You do not need to hold these in your head — if you break one, the
+check says so and names the file.
+
+> **Convention.** No inline styles.
+> *Why:* they escape the cascade layers, so they cannot be themed or overridden.
+> Enforced by `tests/sop/inline-styles.test.ts`.
+
+> **Convention.** Markup repeated in three or more places becomes a component.
+> *Why:* three is where copies start drifting apart instead of being found.
+> Enforced by `tests/sop/component-extraction.test.ts`.
+>
+> **Two thresholds live here and they are not in conflict**, which is worth stating
+> because they look it. CREATING a component from repeated markup waits for the third
+> site — that is this rule. PROMOTING a component that already exists from a feature
+> into `core/` happens at the SECOND consumer
+> ([where-code-goes.md](../architecture/where-code-goes.md) rows 7, 8 and 11). Different
+> decisions: the first is "is this pattern real yet", the second is "does this belong to
+> one feature or to everyone", and the second question is already answered the moment a
+> second feature needs it.
+>
+> The **override** — extract at two when the same behaviour has already been FIXED
+> separately on two surfaces — is judgement rather than law, and is stated where you
+> meet it (`src/core/ui/components/CLAUDE.md`, the `reuse-first` skill). It has no
+> violation condition, so it can have no enforcer: a bug fixed twice is evidence the
+> copies must agree, which is the thing the count of three is a proxy for.
+
+> **Convention.** A `HandlerContext` is built by a factory — `createPanelHandlerContext`
+> or `createHeadlessHandlerContext` — never assembled as an object literal at the surface.
+> *Why:* every manager on the type is optional, so a hand-built context typechecks while
+> missing one, and the miss surfaces only when some handler on that surface asks for it.
+> The wizard hand-listed its managers, so when `componentRegistry` was added to the factory
+> the wizard alone did not get it — its Connection view crashed on 2026-09-02.
+> Enforced by `tests/sop/handler-context-from-factory.test.ts`.
+
+> **Convention.** Modals are hosted in one place, not mounted wherever they are opened.
+> *Why:* ad-hoc mounting produces stacking and focus bugs that only appear in combination.
+> Enforced by `tests/sop/modal-hosting.test.ts`.
+
+> **Convention.** A CSS class used in a bundle is styled by that bundle.
+> *Why:* a stylesheet only reaches bundles whose entry imports it, so a class can be styled
+> on one surface and silently bare on the next, with no error anywhere.
+> Enforced by `tests/sop/stylesheet-bundles.test.ts`.
+
+> **Convention.** Before writing a new UI component, check whether the shared vocabulary
+> already has it.
+> *Why:* this codebase has repeatedly grown a second version of a component that already
+> existed.
+> Enforced by `.claude/hooks/rules/30-reuse-first.rule`, which interrupts at the moment you
+> create the file.
+
+> **Convention.** Before adding a file to a curated directory, read what is already in it.
+> *Why:* a second enforcer or a second canonical fake does not fail anything. It passes, it
+> reads as coverage, and it is maintained forever. Detection cannot save you here: measured
+> recall for independently-written same-behaviour code is under 1% (Juergens et al., CSMR
+> 2010), and the benchmark that suggested otherwise turned out 93% mislabelled. The only
+> intervention with a positive result behind it delivers the existing candidates while you
+> write (Ye & Fischer, ICSE 2002).
+> Enforced by `.claude/hooks/rules/31-registry-dir.rule`, which lists the directory's
+> contents at the moment you create the file.
+
+> **Convention.** Before creating a test file, read the splitting playbook.
+> *Why:* line count is a trigger, not a reason, and the mistakes are specific enough to
+> be listed: split by responsibility and name the file for it (never `-part2`), extract
+> shared setup into `.testUtils` FIRST, and keep the test count identical across the
+> move — a dropped `describe` is invisible in a green run. Measured 2026-09-10: a
+> session that had not read it invented a splitter, cut 11 files at their arithmetic
+> midpoint and broke 167 tests, while every one of those rules sat written down.
+> Enforced by `.claude/hooks/rules/32-test-authoring.rule`, which delivers the rules
+> themselves at the moment you create the file.
+
+> **Convention.** Before adding a script to `scripts/`, read what the instrument
+> registry already runs.
+> *Why:* `tests/sop/toolingRegistry.ts` lists 39 instruments and a suite fails the build
+> when it and the disk disagree — but nothing stops a fortieth being written for a job
+> one of the 39 already does. On 2026-09-10 four throwaway scanners were written for
+> measurements registered instruments already report, twice producing a wrong number.
+> Enforced by `.claude/hooks/rules/33-new-instrument.rule`, which lists the registry's
+> contents at the moment you create the file.
+
+> **Convention.** Capture a visual baseline before changing a stylesheet.
+> *Why:* a CSS change that breaks a surface produces no error anywhere. Eight bundles
+> exist and a feature stylesheet reaches only the ones whose entry imports it, so a class
+> can be styled on one surface and absent on the next with everything still green.
+> [ADR-018](../architecture/adr/018-css-architecture.md) sets this as the evidence bar
+> for changing existing CSS.
+> Enforced by `.claude/hooks/rules/34-css-baseline.rule`.
+
+> **Convention.** Wizard step order, area order and step bodies change together.
+> *Why:* `wizard-steps.json`, `buildYourProjectAreas.ts` and `commerceSections.ts` must
+> agree, and nothing compares them while you edit. A change to one typechecks, passes,
+> and silently disagrees with the others.
+> Enforced by `.claude/hooks/rules/35-wizard-step.rule`.
+
+> **Convention.** The AI-bundle gate has four seams; change all or none.
+> *Why:* `buildMcpConfig`, `installAiDefaultsMcpTools`, `componentInstallationOrchestrator`
+> and `handleRegenerateAiFiles` each apply the same predicate over separate call chains.
+> Miss one and project creation and "Regenerate AI Files" produce different bundles,
+> silently — and the flow you are testing exercises only one of them.
+> Enforced by `.claude/hooks/rules/36-ai-bundle.rule`.
+
+> **Convention.** A change to the MCP tool surface is made through its skill.
+> *Why:* a descriptor row cannot tell you the three things that decide whether a tool
+> works for an agent — headless safety, read-vs-action honesty, and the required
+> `needsAuth` declaration. The first two fail silently on the agent side; the third
+> fails the build.
+> Enforced by `.claude/hooks/rules/37-mcp-tool.rule`.
+
+> **Convention.** A source file that is already over its size limit does not grow.
+> *Why:* the thresholds — service >400, component >350, handler >500, util >300 —
+> have been stated for a long time and enforced by nothing. `godFile` in `tests/sop/`
+> refers only to the CSS god file, the tooling registry holds no source-size
+> instrument, and the sweep runs none, so the check has only ever run when a person
+> invoked `/sop-scan`. Measured 2026-09-10: 67 files over, the worst at 1,156 lines
+> against 400.
+> Enforced two ways: `.claude/hooks/rules/49-god-file.rule` measures the file you are
+> editing and states the number (numbered last so a specific route wins over a generic
+> size notice), and `tests/sop/god-file-ratchet.test.ts` pins the counts so they can
+> only fall — `godFileCandidates` at 68 (the population) and `godFileCoupled` at 31
+> (the ones that also show a coupling signal, which is the actual work list).
+>
+> Two numbers because line count alone is not a finding: `decompose-god-file` says a
+> file over threshold WITHOUT coupling should be left alone, and pinning only the
+> population would reward splitting cohesive files to move a number.
+> `appBuilderComponentRunner.ts` is 1,122 lines with 11 imports and a 7-symbol public
+> surface; it is long and it is not a god file.
+
+> **Convention.** Never push with the pre-push gate disabled.
+> *Why:* the gate runs pre-push rather than pre-commit because several enforcers
+> enumerate files with `git ls-files` and cannot see a new suite until it is
+> committed. Measured 2026-09-03: a `--no-verify` push put a red family-rule state on
+> the remote.
+> Enforced by `.claude/hooks/rules/21-push-no-verify.rule`, which blocks every time
+> rather than once per session.
+
+> **Convention.** A new webview message is wired through its skill.
+> *Why:* a message is only live when the MessageType, the handler, the feature's
+> handler map and the webview call site all agree. Miss one and the message is sent
+> and never answered — which presents as a surface that never finishes loading, not
+> as an error, and nothing typechecks the gap.
+> Enforced by `.claude/hooks/rules/38-webview-handler.rule`.
+
+> **Convention.** App Builder catalog edits go through the authoring skill.
+> *Why:* a catalog row drives the deploy/subscribe spine, where a partial
+> subscription PUT silently drops other components' subscriptions. And a config field
+> lives in three places — the JSON, its schema, and its TypeScript type.
+> Enforced by `.claude/hooks/rules/39-appbuilder-component.rule`.
+
+> **Convention.** Helix, DA.live and Config Service work goes through its skill.
+> *Why:* all three return SUCCESS for writes that did not take effect, which is why
+> every mutation in that feature is confirmed by a re-read. The auth and scoping rules
+> are not guessable — only the DA.live IMS bearer token bypasses a `/live` DELETE 403,
+> and `aem.repositoryId` must be written to the SITE config or AEM Assets silently
+> does not bind.
+> Enforced by `.claude/hooks/rules/42-eds-publish.rule`.
+
+> **Convention.** Storefront config and dropin delivery go through their skill.
+> *Why:* dropins reach the browser through the head.html import map and a vendored
+> `__dropins__` directory committed in the STOREFRONT repo (not this one), and they
+> share internal chunks — mixing generations blank-pages the storefront with no error
+> message.
+> Enforced by `.claude/hooks/rules/43-eds-dropin.rule`.
+
+> **Convention.** Org and auth guard code follows the canonical org-context model.
+> *Why:* IMS tokens are ORG-BOUND. The flow is `ensureOrgContext` +
+> `detectProjectOrgMismatch` + per-operation `withOrgContext`, with a forced re-login
+> as the recovery. There is no in-app org picker and no place to compare org ids by
+> hand; ad-hoc org handling is what this exists to prevent.
+> Enforced by `.claude/hooks/rules/44-org-context.rule`.
+
+> **Convention.** A webview component defines no CSS in a `<style>` block. Its styles go
+> in a stylesheet.
+> *Why:* a class defined in a style block exists only while that component is MOUNTED, so
+> anyone else using it gets the styling on some screens and not others, with no error
+> anywhere. `.text-red-500` was exactly that — the error icon on the Adobe sign-in step
+> rendered colourless because the component that defined red was not on screen. The
+> weaker version of this rule banned only SHARING a block's classes, which left that
+> hazard in place; the ban replaced it on 2026-09-09 once the last two blocks were gone
+> (five of their six rules were byte-identical to copies already in a sheet, and the
+> sixth was used by nothing).
+> [ADR-018](../architecture/adr/018-css-architecture.md) · Enforced by
+> `tests/sop/stylesheet-bundles.test.ts`. Standalone `<!DOCTYPE html>` pages are out of
+> scope — they load none of our sheets, so a block is the only styling they can have.
+
+> **Convention.** There is ONE design system — Adobe Spectrum's. Our own tokens map
+> the user's VS Code theme onto a few semantic names, or hold a constant Spectrum has
+> no opinion about. They never restate a colour Spectrum already defines.
+> *Why:* a second palette does not replace the first, it fights it. `--db-status-*`
+> held `#10b981`/`#ef4444`/`#f59e0b`/`#3b82f6` — Tailwind — and `vscode-theme.css` used
+> them to repaint elements Spectrum had ALREADY coloured through its own
+> `color="positive"` prop. Measured 2026-09-09: 519 uses of `--spectrum-*` against 30
+> of `--db-*`, and 65 of the 101 `--db-*` tokens were referenced by nothing at all —
+> a system nobody adopted, which reached no bundle for five months without being
+> missed. Where the USER'S theme should win, defer to `--vscode-*` with our value as
+> the fallback (terminal colours, the number badge).
+> [ADR-018 §7](../architecture/adr/018-css-architecture.md) · Enforced by
+> `tests/core/ui/styles/tokens.test.ts` — every token reachable, terminal
+> colours deferring to `--vscode-*`, and no `--db-status-*` at all, with a
+> planted-violation control.
+
+> **Convention.** A `prefers-reduced-motion: reduce` block sits directly in
+> `@layer overrides`, and needs no `!important`.
+> *Why:* it is a kill switch, so it has to beat every animation rule we wrote. These
+> blocks used to sit in `@layer reset` — the LOWEST layer — and in `@layer theme`,
+> fighting upward, and carried `!important` to win. That reads as "reduced motion
+> needs `!important`"; it does not. It needed it because the block was in the wrong
+> layer. A kill switch is not a reset. Probed live, control first: the theme rule
+> alone gives `2s infinite`; `@layer reset` plain still gives `2s infinite`;
+> `@layer reset` with `!important` gives `0.01ms`; **`@layer overrides` plain gives
+> `0.01ms` with nothing added.** Verified end-to-end with `prefers-reduced-motion`
+> emulated against the real bundle: all 170 elements read `1e-05s`, nothing has real
+> motion, and the repo contains ZERO `!important`.
+> This is what took the count from 1,294 to **0** rather than to 6 — those six were
+> not a legitimate residue, they were evidence of a misplaced block, and keeping them
+> would have written the mistake down as a rule.
+> [ADR-018 §2](../architecture/adr/018-css-architecture.md) · Enforced by
+> `tests/sop/css-declarations.test.ts`, with a control that tells a misplaced block
+> from a correct one.
+
+> **Convention.** Motion timings come from Spectrum's scale, not hand-written
+> milliseconds. Loop durations (>= 1s) are exempt.
+> *Why:* 72 animation/transition declarations carried **11 distinct durations** and 6
+> easing curves, and `--db-motion-*` was three constants with four consumers while 68
+> others typed `0.2s ease`. 39 values were already exactly Spectrum's; the largest
+> shift for a UI timing was 30ms, on one declaration. A 1.2s pulse is a designed
+> rhythm rather than a UI transition, and the scale would move it by 500ms.
+> [ADR-018 §7](../architecture/adr/018-css-architecture.md) · Enforced by
+> `tests/sop/css-declarations.test.ts`, with a planted-violation control.
+
+> **Convention.** Every stylesheet parses — no selector list is interrupted by an
+> at-rule.
+> *Why:* a comma-separated list broken by `@layer` never closes, and the browser
+> discards the whole rule. Three sheets shipped that way; Chrome kept ZERO rules from
+> the block, measured against the correct form as a control. Nothing caught it because
+> esbuild injects CSS as a string and never parses it, and the visual baseline had
+> captured the broken state as its own "before".
+> [ADR-018](../architecture/adr/018-css-architecture.md) · Enforced by
+> `tests/sop/css-declarations.test.ts`, with a planted-violation control.
+
+> **Convention.** Utility classes live in the overrides layer, not scattered through
+> component sheets.
+> *Why:* a utility defined beside a component is invisible to everyone who could reuse it,
+> so it gets written again.
+> [ADR-018](../architecture/adr/018-css-architecture.md) · Enforced by
+> `tests/sop/inline-styles.test.ts`.
+
+> **Convention.** Styling reaches Spectrum through `UNSAFE_className` and the `cn()`
+> helper, not through style objects.
+> *Why:* it keeps styling in the cascade layers where it can be themed and overridden.
+> [styling-guide.md](styling-guide.md) · Enforced by the `staticInlineStyleCeiling` and
+> `dynamicInlineStyleCeiling` pins in `tests/sop/inline-styles.test.ts`. The per-file cap
+> of five bounds any one file; the pins stop the total growing.
+
+> **Convention.** Class names are not assembled dynamically beyond a small ceiling.
+> *Why:* a class built from a variable cannot be traced to a definition, so the check that
+> every class exists goes blind.
+> Enforced by the `dynamicClassSiteCeiling` ledger in
+> `tests/sop/webview-architecture-rules.exemptions.json`.
+
+## 8. Agents are a second door, never the only one
+
+**Position.** Agents call the same functions the buttons call. Every capability has a human
+surface; the agent path is additional.
+
+An AI agent reaches the extension through MCP tools, which call the same functions the
+buttons call.
+
+That is the point: a capability is not finished until a person can reach it without an
+agent, through a command, a button, or something rendered. The agent path is the one that
+silently disappears — a misconfigured server, a colleague who does not use Claude — so it
+cannot be the only path. Agents gather evidence and compose reports; they do not apply
+fixes on their own.
+
+> **Convention.** Every capability has a human surface. MCP tools are additional.
+> [ADR-012](../architecture/adr/012-diagnostic-surfaces.md) · Enforced by measurement —
+> `.claude/skills/ai-coverage-scan` reports the gap at release cuts.
+> *Why:* not everyone uses an agent, and the agent channel is the one that silently disappears.
+
+Every tool answers in one shape, and that shape is built for you. `mcpToolResult.ts`
+exports two builders — `asText(value)` serializes, `asRawText(text)` wraps a string that is
+already final — and a tool that hand-rolls `{content:[{type:'text',…}]}` fails the build.
+The helper was extracted once to kill exactly this duplication and had grown back into ten
+registrar modules within a month, one of them a byte-identical copy under the same name.
+Note that the surface is not all JSON: refusals answer prose, so never write guidance
+promising an agent that every response parses.
+
+> **Convention.** A tool response is built by `mcpToolResult.ts`'s `asText`/`asRawText`,
+> never by hand. Enforced by `tests/features/ai/server/responseEnvelope.test.ts`, which
+> checks descriptor rows at runtime and every registrar module at the source, in both
+> halves of the server.
+> *Why:* one envelope is what lets an agent parse any tool's answer the same way — and the
+> helper has already been re-duplicated once after being extracted.
+
+> **Convention.** A tool requires an explicit `confirm: true` when its effect is hard to
+> walk back: it DELETES something, or it PUSHES to a live site. Merely mutating is
+> deliberately not the bar — deploys, lifecycle and config writes stay ungated, because
+> they are reversible and gating them would make the agent surface useless for routine
+> work. Three irreversible tools go further and require the resource's name echoed back.
+> *Why:* reach decides, not the verb. `promote_block_to_library` was ungated because it
+> only *adds* things and `refresh_block_library` because "rebuild" sounds local; both push
+> to a live site. `set_console_apis` says "set" and removes — a delete wearing a setter's
+> name. Judge against the rule, never against how the name reads.
+> Enforced in part by `tests/sop/tool-catalog-gating.test.ts`, which stops the published
+> catalog understating a gate. **Nothing checks that the RIGHT tools carry the flag** —
+> that is the judgement above, made per tool.
+
+> **Convention.** A tool needing credentials pre-flights and returns a structured
+> `needsAuth` handoff rather than erroring, so the agent can drive sign-in and retry.
+> Every tool DECLARES which sign-ins it needs, or `false` for none.
+> *Why:* interactive browser sign-in cannot be refreshed silently, and an error tells the
+> agent nothing about what to do next.
+> Enforced by the COMPILER: `needsAuth` is a required field on `McpToolSchema` and on
+> `ToolDescriptor`, so a tool cannot be registered without answering the question.
+>
+> **IT WAS A LEDGER FIRST, AND THE LEDGER IS NOW DELETED.** No static check can tell
+> whether a tool touches credentials — compliance is reached three ways (`runGuards`, a
+> bespoke pre-flight, or nothing because none is needed) and two scans failed in opposite
+> directions trying: a file-level one gave 37 tools each other's signals because 23 share
+> a descriptor file, and a per-handler one reported nothing for `add_console_apis`, whose
+> handler demonstrably calls `runGuards`.
+>
+> So all 114 tools were reviewed one at a time against a shrink-only ledger, each row
+> carrying a verdict and a reason. When it reached zero unreviewed (2026-09-01) every
+> verdict moved into the code as a `needsAuth` declaration and the ledger was deleted —
+> the arc `featureBarrels` took, and the one the type-erasing-cast ceiling is on.
+>
+> The declarations were transcribed mechanically and then VERIFIED against the ledger
+> row by row: 114 found in code, zero mismatches, zero missing. The field is an ARRAY
+> because four tools need two sign-ins — `check_github_app`, `create_project`,
+> `republish` and `sync_content` each need GitHub AND DA.live, and a single value would
+> have dropped exactly the sign-in an agent then fails to offer.
+>
+> **The surface is 114 tools, and no previous count was right**: the `tool-verdicts`
+> skill says 107, an earlier pass said 102. Both missed `dataInstallerDescriptors.ts`
+> (8) and `statusDescriptors.ts` (4).
+>
+> **THE REVIEW FOUND THREE HANDOFF SHAPES, AND THIS RULE NAMED ONE.** `needsAuth` is
+> the shape for a sign-in an AGENT can drive. It is not the only honest answer:
+>
+> - **`needsUser`** (`src/features/ai/server/handoff.ts`) is the more general form, for
+>   work only a PERSON can finish — the DA.live bookmarklet-and-paste, the IMS browser
+>   login, a GitHub App install approval. Its own docblock says it "generalises" the
+>   `needsAuth` convention. `connect_dalive` is right to use it: no agent can click a
+>   bookmarklet.
+> - **A domain status** — `siteAccessManagerHeadless` returns `{status:'no_credential'}`,
+>   which is structured and deliberately separates "not signed in" from "refused". Its
+>   comment records why: merging the two once sent users to the Debug Logs instead of to
+>   sign-in.
+>
+> So the rule is really *return a structured handoff naming what will fix it*, and
+> `needsAuth` is one of its shapes.
+>
+> **A SYSTEMIC BREACH, found by the review on 2026-08-31 and FIXED on 2026-09-01.**
+> Every DESCRIPTOR-registered tool failed the rule, and one function did it.
+> `defaultShape` in `toolDescriptors.ts` rendered any failure as the string
+> `Error: <message> [CODE]` and discarded every other field on the response.
+>
+> The sharp part: `dataInstallerHandlers` was already doing it right. Its headless
+> branch returns `{success:false, error, code, needsAuth:'adobe'}` deliberately, with a
+> docblock explaining that an agent must be TOLD rather than prompted. That marker never
+> reached the agent — the projector threw it away one layer up. The best auth handoff in
+> the repo was invisible, and `ErrorCode.AUTH_REQUIRED` appears nowhere in
+> `src/features/ai` to translate it.
+>
+> `defaultShape` now returns a failure WHOLE when it carries more than `error`/`code`.
+> The terse string stays for the common case, because it is deliberate — this output is
+> billed as context tokens on every call. All three custom shapes delegate to it on
+> failure, so the one change reaches every descriptor tool. Guarded by a regression test
+> that asserts the `needsAuth` marker survives, and a control that a plain failure still
+> gets the terse string.
+>
+> **A worse one, also fixed on 2026-09-01: `check_mesh` and `delete_mesh` BLOCKED.**
+> `ensureAuthenticated` in `features/mesh/handlers/shared.ts` always awaited
+> `showWarningMessage(..., 'Open Dashboard')`, so an unauthenticated call from an MCP
+> tool put a notification on the user's window and stopped the tool until somebody
+> dismissed it. An agent cannot click, and the user had no idea what was waiting on
+> them. It now branches on `context.panel` — prompt for a webview, return the
+> `needsAuth` marker for an agent — which is the rule `dataInstallerHandlers` had
+> already written down and the mesh handlers never got.
+>
+> **The last two, fixed the same day: `promote_block_to_library` and
+> `remove_block_from_library` THREW** when the DA.live token was missing. The message
+> named the recovery, so an agent was not stranded — but erroring is the one thing the
+> rule asks tools not to do, and an MCP error is not a result a caller can branch on.
+> Both now answer with `needsAuth: 'dalive'`.
+>
+> Promote carried a second defect the throw hid: the token check ran AFTER
+> `applyComponentDefinitionEntry` had rewritten `component-definition.json`, so a
+> signed-out caller got the error with a half-done promotion left on disk. The check
+> runs first now. Its test asserts `writeFile` was never called — the old test could not
+> have caught this, because a rejected promise says nothing about what happened before
+> it. Restoring the old order fails that assertion, and only that one.
+>
+> **All 114 tools now satisfy this rule.** It went from a scan finding to a fact about
+> the surface in one day; what made that possible was reading every tool rather than
+> trying to detect the breaches statically, which failed three times.
+
+> **How to add one.** [mcp-tool-authoring](../../.claude/skills/mcp-tool-authoring/SKILL.md) ·
+> registration is pinned by `tests/features/ai/server/realSdkRegistration.test.ts`.
+
+---
+
+## 9. Tests
+
+**Position.** Unit tests by default, with dependencies handed in as fakes and assertions on
+how they were called. Contract tests only where something crosses a network boundary.
+Effectiveness is measured by mutation testing, not coverage.
+
+Around 15,400 tests across 1,200 files, mirroring the source layout.
+
+Three kinds, chosen by what you are testing:
+
+- **Unit** — the default. Hand the dependencies in as fakes and assert how they were
+  called. Section 3 is what makes this possible.
+- **Contract** — for anything crossing a network boundary. The fixture is captured from a
+  real response, never written from memory.
+- **Live** — journeys against the real thing, used sparingly.
+
+Two things to know before you write one here. A fake cannot notice it was called wrongly,
+so when the point is *how* a collaborator was used, assert the arguments rather than the
+result. And coverage does not tell you a test would catch a bug: `npm run test:mutation`
+breaks the code on purpose and reports what nothing noticed.
+
+> **Convention.** The mutation ratchet's "score rose without constraining anything"
+> rule keeps controls in both directions, and they run with the suite.
+> *Why:* that rule exists to catch a score raised by asserting log strings rather than
+> behaviour, and it is a heuristic, so it fails in two ways that look nothing alike. It
+> can go quiet, and then the number it guards can be padded. Or it can fire on real
+> work, which is what happened on 2026-09-02: six mutants died on two `.sort()`
+> comparators — as text, Node 8 sorts after Node 20, a defect a user would see — and
+> the run was reported as padding, because the rule counted only branch and block
+> survivors and a comparator is neither. The two instruments had also drifted apart:
+> the worklist that steers the work ranked those same comparators as decisions worth
+> constraining, so the loop was aimed at work the ratchet then refused to credit.
+> Enforced by `tests/sop/ratchet-controls.test.ts`, which runs the controls in
+> `scripts/mutationBaseline.selftest.mjs`; breaking the rule makes one of them print
+> FAIL and exit non-zero, which is how the file's own value was checked.
+
+> **Convention.** A mutant recorded as unkillable names its code by source TEXT, not
+> by line number, and carries the argument for why no test can kill it.
+> *Why:* a module is finished when every surviving mutant is either killed or proved
+> equivalent — so the second half has to be recordable, or no module can ever read as
+> done and the count never reaches zero. It was not recordable until 2026-09-03: the
+> baseline tracked seven fields per module and none of them was "triaged", so a day's
+> triage went into a prose handoff note the instrument could not read, and
+> `updateManager` sat at 51.4% with seventeen misses that were one deliberate
+> swallowed log line. The ledger that fixes it can also rot, which is why entries are
+> anchored to text: two of the six migrated from that note had already drifted by line
+> number within a day. A stale entry is worse than a missing one, because it quietly
+> subtracts from a module's open-gap count on the strength of an argument about code
+> that is no longer there. The ratchet still gates on behavioural survivors and never
+> on `openGaps`, so adding a ledger row can never be what makes a run pass.
+> Ratified 2026-09-03 as the definition of done, with the tier floors as targets rather
+> than a gate — the full shape is at the top of the mutation plan.
+> Enforced by `tests/sop/mutation-equivalents-ledger.test.ts`, which fails when an
+> anchor no longer resolves to exactly one line of its module.
+
+> **Convention.** A measurement runs the tests a module ACTUALLY has — every one of
+> them, in the environment they need — or it does not run.
+> *Why:* every wrong answer this instrument has produced has the same shape, a plausible
+> number from a run that never executed the tests. Seven modules reported 0% in 19
+> seconds because their suites were not selected. installHandler reported 49% on 12 of
+> its 13 suites and integrationCardModel 43% on 1 of its 5; corrected, the second was
+> 91.90% and had never been badly tested. And for months the focused runner built its
+> config from the node jest project alone, so 156 files — a third of the codebase — could
+> not be measured: 115 `.tsx` sources, which the scope rule at least blocked by
+> extension, plus 41 `.ts` sources whose suites are React suites, which it did not block
+> and which failed one after another inside Stryker. `focusModule.mjs` now picks the
+> project from the module's suites, and runs a module with suites in both environments
+> under jsdom, because Stryker's jest runner ignores a `projects` array and collapses to
+> one environment. The rule that follows from all four: never let a run proceed against a
+> subset of a module's tests — refuse, or run them all.
+> Enforced by `tests/sop/mutation-config-pairing.test.ts`, which fails the build when a
+> mutated module has a suite on disk that its jest config does not name.
+
+> **Convention.** A test file's environment is decided by a rule in `jest.config.js`,
+> never by a `@jest-environment` docblock in the file.
+> *Why:* the docblock works for jest and silently defeats mutation testing. Stryker
+> measures per-test coverage through an environment of its own, substituted for the
+> project's at run time; a per-file docblock names plain `jsdom`, bypasses the
+> substitution, and the run fails with "Missing coverage results" behind a stack trace
+> that names none of this. Found 2026-09-03, the first day the React layer was
+> measured: 61 files carried one, and every module they covered failed one after
+> another. Forty-three were redundant — already in the jsdom project by `testMatch`.
+> Eighteen were load-bearing, feature hook suites named `use*.test.ts` that the
+> extension rule handed to node; they are now placed by a rule in the config, which is
+> where the decision belongs — made once, and read by jest and by
+> `scripts/mutationScope.mjs` through jest's own matcher, so the two cannot disagree.
+> Enforced by `tests/sop/no-jest-environment-docblocks.test.ts`.
+
+> **Convention.** A test may not assert a LOGGER call's arguments — no
+> `expect(logger.x).toHaveBeenCalledWith(...)` — beyond its file's recorded ceiling, and
+> the ceilings only fall.
+> *Why:* such an assertion pins log wording, not behaviour. The mutation ratchet exists
+> to refuse a score raised that way, and it cannot see it when the padding is mixed
+> with genuine kills: on 2026-09-03 four log-wording assertions hid behind 53 real
+> kills in one run, and were caught only by a person reading the file. The triage of
+> that same module a day earlier had deliberately not written them — all four HTTP
+> failure branches produce an identical outcome — and asserting the message would have
+> entrenched an open product question. 286 such assertions existed in 123 files when
+> this landed, so the ledger pins each file's count rather than demanding a rewrite;
+> `tests/core/logging/` is exempt by rule, because there the logger is the subject. If
+> the only observable difference is which log line prints, the mutant belongs in the
+> equivalents ledger, not in a test.
+> Enforced by `tests/sop/no-logger-wording-assertions.test.ts`.
+
+> **Convention.** No credential-SHAPED string under `tests/` — not a `user:password@host`
+> URL, not a `Basic <base64>` header — even a fake one. Build the value by parts.
+> *Why:* this repository is public and its secret scanner matches the shape, not the
+> secret. On 2026-09-03 a fixture written minutes earlier — a clone URL whose "token"
+> was the literal word `gh-token` — raised an alert on a pushed commit. Nothing to
+> rotate, but the rule is never-enters, and an alert triaged by hand each time teaches
+> people to dismiss alerts. Two helper tests that assert an injected-URL contract and
+> two validators that must accept a credentialed URL now build the value with
+> `new URL()` and set `.username`/`.password` — the same proof, spelled by no literal.
+> Prose counts too: write "user-colon-password-at-host", not the shape.
+> Enforced by `tests/sop/no-credential-shaped-fixtures.test.ts`.
+
+> **Convention.** A test may not put an upper bound on a wall-clock duration.
+> *Why:* on 2026-09-03 three suites failed `npm run gate` inside the pre-push hook on
+> commits that could not have caused it, one of them docs-only. Measured on an idle
+> 16-core machine the full suite passes at every `maxWorkers` setting, so the worker
+> ratio was never the cause: the flakes needed another run overlapping — a goal
+> session's Stryker, or a second gate — AND a test asserting something finished within
+> N milliseconds. Starved of CPU the assertion fails while the code is fine, and a gate
+> that fails for reasons unrelated to the change teaches people to re-run rather than
+> read. Only upper bounds are banned, because load makes things slower and never
+> faster, so a LOWER bound on a duration asserts real behaviour and cannot flake.
+> Every one of the five assertions removed when this rule landed had a behavioural
+> claim underneath it, twice already asserted on the next line: "resolves immediately"
+> meant no kill signal was sent, "returns instantly from cache" meant the stored object
+> came back by identity, "generates nonces efficiently" meant a thousand nonces are a
+> thousand DISTINCT nonces — a property the timing version would have passed on a
+> constant. A deadline with an order-of-magnitude margin is not a performance bound and
+> is ledgered with its reason.
+> Enforced by `tests/sop/no-wall-clock-bounds.test.ts`.
+
+> **Convention.** Assert emptiness with `toStrictEqual`, never `toEqual`.
+> *Why:* `toEqual` treats an ABSENT value and a PRESENT-but-empty one as the same thing,
+> so `expect(result).toEqual([])` is satisfied by a list holding one empty entry and
+> `toEqual({})` by an object whose every key is unset. On 2026-09-04 a goal session
+> working `installHandler` found a real mutant surviving behind exactly that. The whole
+> form is banned rather than ledgered because the strict version is strictly stronger and
+> never wrong — there is no test that wants "empty, or holding one undefined". 834
+> assertions were switched on 2026-09-07 and every one of the 1,555 suites passed
+> unchanged, so the stricter form costs nothing. What it buys is that the failure cannot
+> recur silently in 834 places, in a suite that had 54 strict comparisons against 3,150
+> lenient ones when the defect was found. Non-empty comparisons are untouched.
+> Enforced by `tests/sop/no-lenient-emptiness.test.ts`.
+
+> **Convention.** An assertion may not be a disjunction — `expect(a || b).toBe(true)`.
+> *Why:* it passes when either side holds, so it cannot say which happened, and a change
+> that flips the outcome from one side to the other keeps it green. Three were found by
+> reading five test files on 2026-09-07 and two were hiding something. One sat above a
+> comment explaining that `withTimeout` ignores an AbortSignal that is ALREADY aborted —
+> documenting a real defect instead of failing on it, and that defect reached a
+> thirty-minute timeout on project creation, where a build the user had cancelled reported
+> a timeout instead. Another claimed milestone percentages were matched while accepting
+> either of two that the test's own mock both emits; replaced with the exact list, it
+> passed first time, because the code was always doing more than the test asked. When the
+> either/or is REAL — every write belongs under the root or under `<root>/.claude` — filter
+> to the violations and assert `toStrictEqual([])`, which proves the same property and
+> names the item that broke it rather than reporting "expected true, got false". The rule
+> is narrow: only a disjunction asserted TRUE is banned, never the operator itself.
+> Enforced by `tests/sop/no-disjunction-assertions.test.ts`.
+
+> **Convention.** A canonical fake covers its subject's WHOLE public surface, and
+> invents nothing.
+> *Why:* both halves have failed here. A fake NARROWER than the need is one nobody
+> adopts — `stateManagerFake` answered a single method for months while fifty suites
+> hand-rolled their own in 22 distinct shapes, so the builder grew the divergence it
+> existed to stop. A fake with INVENTED members is worse because it is silent: five
+> appeared in hand-rolled StateManager fakes that are not on StateManager at all, and
+> two Logger fakes carried `setContext`, `with`, `show` and `dispose`, none of which
+> exist and none of which anything calls.
+> `jest.Mocked<T>` catches the invented half at compile time, which is why every
+> builder is typed. It CANNOT catch the missing half, because each one ends in a cast
+> to satisfy the mock type. Enforced by
+> `tests/sop/fake-mirrors-subject.test.ts`, which reads the subject from source
+> and compares in both directions.
+
+> **Convention.** A split test family shares one `.testUtils` file, which owns the mocks
+> and the subject import. [webview-test-authoring](../../.claude/skills/webview-test-authoring/SKILL.md) ·
+> enforced by `tests/sop/test-family-setup.test.ts`.
+> *Why:* the copies drift otherwise, and a spec that keeps its own copy can silently stop mocking anything.
+
+> **Convention.** A suite imports its shared mock wall BEFORE it imports the code under
+> test. Enforced by `tests/sop/mock-wall-import-order.test.ts` (shrink-only ledger).
+> *Why:* `jest.mock` hoists above the imports of the module it appears in, not across
+> modules, so a wall imported second registers after the subject has already bound to
+> the real thing. Moving one such import down failed 61 of 63 tests in
+> `skillsWriter.test.ts` with nothing in the file looking wrong. `import/order` is an
+> auto-fixable warning here, so the ordering needed a check rather than a comment.
+
+> **Convention.** Before designing a way to hand a mocked collaborator in — or to share
+> one between suites — delete the mock and run the suite. If it still passes, the mock was
+> the whole problem.
+> *Why:* asked twice and answered the same way both times. 28 suites mocked a service
+> module and 22 needed no injection at all. Then eleven split-suite families were merged
+> and **79 of their shared mocks were dead** — deleted from every suite that carried them
+> with nothing failing. Two working sessions went into designing seams for files that only
+> needed a deletion, because the question asked was "how would this suite hand the service
+> in?" rather than "does this mock change anything?". The check costs one suite run.
+> **Half enforced, and the half that is was buildable all along.** "A question to ask,
+> not a state to hold" is true of the probe — delete the mock, re-run, see if anything
+> notices — and false of the static rule underneath it: a BARE automock of a module
+> `moduleNameMapper` already redirects is dead by construction, and that is a state in
+> the tree. `tests/sop/redundant-automocks.test.ts` bans it outright (a flat ban, not a
+> ceiling — the corpus was already zero when it was written). The probe half stays a
+> habit, and stays in `dead-mock-scan` at the periodic cadence.
+>
+> Three things only that check shows. `jest.mock('vscode')` is a no-op here — `jest.config.js`
+> already maps it — and four families carried copies. Mocks can serve only each other: twice,
+> a service-locator mock plus the line wiring a fake into it were both dead, because the
+> subject takes that fake by constructor; probed one at a time the mock looks essential, so
+> probe the SET. And a mock the SPEC imports cannot move to a shared file at all — a
+> `jest.mock` only hoists above the imports of the module it appears in, which cost 23
+> failing tests to learn.
+
+A mocked service module turns out to be four different things wearing one shape, and the
+remedy differs for each:
+
+| What it is | What it needs |
+|---|---|
+| The mock changes nothing | Delete it. Most common by far |
+| The suite genuinely needs the collaborator and cannot hand it in | A seam — an optional parameter defaulting to the real construction |
+| The suite asserts the service was BUILT with the right credentials | A *factory* seam. An instance seam skips construction and deletes the property being tested |
+| The suite re-mocks mid-test via `require()` | A seam, which removes the ability entirely |
+
+Where a seam is the answer, type it to the methods the code actually calls rather than to
+the class. A parameter wider than the need is usually why the mock existed.
+
+**And it is usually why the DUPLICATION existed, which is the same finding pointed at
+production code.** When several files each build their own copy of something a shared
+accessor already provides, the question to ask first is not "how do I hand this to each
+of them?" but "why can none of them call the accessor?" Twice now the answer has been
+that the accessor asked for more than it reads:
+
+| Accessor | Asked for | Actually read | Files that built their own instead |
+|---|---|---|---|
+| `getGitHubServices` | a whole `HandlerContext` | `context.context.secrets` | 5 |
+| `componentRegistryFrom` | a whole `HandlerContext` | `.componentRegistry` | *(7 constructions exist; not yet adjudicated)* |
+
+In the first case the width was the whole cause: four of the five callers hold a
+`SecretStorage` and no context, so they *could not* call it. Narrowing the accessor
+turned four separate threading jobs into four one-line calls, and left exactly one
+construction in the codebase — inside the cache, where it belongs.
+
+This is a diagnostic, not a law, and deliberately so — at two instances it has not
+earned one. **Do not turn "reads one field of its parameter" into a check.** Ten
+functions here do that and most are correct: `MessageHandler` fixes the handler
+signature by contract, so a handler that reads one field cannot narrow without
+breaking the dispatch map. The signal worth acting on is the conjunction — a shared
+accessor exists AND files construct the thing anyway — which is what the architecture
+ledger already records.
+
+---
+
+#### Also checked here
+
+Enforced automatically. You do not need to hold these in your head — if you break one, the
+check says so and names the file.
+
+> **Convention.** No test file over 750 lines.
+> [test-file-splitting-playbook.md](../testing/test-file-splitting-playbook.md) · enforced by
+> `npm run validate:test-file-sizes`.
+> *Why:* past that nobody reads the whole file, so tests get duplicated rather than found.
+
+> **Convention.** No test file repeats another file's tests wholesale.
+> *Why:* the rule above predicted this and it happened anyway. One 2025-11-18 commit split
+> four oversized suites by COPYING tests into the new files instead of moving them, and four
+> whole files sat as byte-identical duplicates for nine months —
+> `installHandler-shellOptions`, `-adobeCLI`, `-sharedUtilities` and
+> `ComponentRegistryManager-registration`, the last of which never tested registration at all
+> because the class has no such method. They cost time on every run and quietly inflated
+> coverage and mutation scores by killing the same mutants twice. The clone scan could not
+> say so: jscpd counts duplicated line RANGES, so a wholly redundant file reads as an
+> ordinary mid-table clone pair — the census had recorded one of these as "4 clones", which
+> looks like an extraction job rather than a deletion. Enforced by
+> `tests/sop/duplicate-test-files.test.ts`, which compares whole test sets within a
+> directory.
+
+> **Convention.** A fake standing in for a real type comes from the builder for that
+> type. `{...} as unknown as Project` is a fake with the type check switched off.
+> Enforced by the `castCeilings` pins in `tests/sop/canonical-fakes.ledger.json` —
+> nine types that already have a builder, and the count for each may only fall.
+> *Why:* every fixture defect found on 2026-08-31 was hiding behind one of these
+> casts, and none of them was visible to any check. Twenty-six StateManager members
+> faked for methods that DO NOT EXIST — three called nowhere in `src/`, one belonging
+> to the authentication service. A whole HandlerContext that was `{}`. An argument
+> passed `as never`. `{ status: 'running' }` standing in for a Project. Each one
+> typechecked, each one passed, because a cast is an instruction to stop checking.
+>
+> **The target is zero for these nine, and only these nine.** They are not the
+> reasonable-looking casts — they are the ones with a builder sitting next to them:
+> `Project` (198), `HandlerContext` (59), `Logger`, `StateManager`, and friends, 410
+> in total. A cast to a type with NO builder is not counted and is often right: a
+> fetch `Response` stub carrying three of its twenty members is correct when the code
+> reads three. The rule is *use the builder that exists*, not *never cast*.
+>
+> A ceiling rather than a file ledger, because 324 files carry one of these and that
+> is too many rows to keep honest, while nine numbers maintain themselves. The pin
+> demands EXACT equality: lowering a count means lowering the pin in the same commit,
+> so the ratchet cannot slacken and a regression cannot hide beneath a stale number.
+>
+> **And the inverse, so this is not read as "literals are bad".** A fake of a
+> ONE-METHOD interface is complete by construction and needs no builder. Measured
+> 2026-08-31: `{ dispose }` (78 uses), `{ getAccessToken }` (65), `{ report }` (41)
+> and `{ executeCommand }` (38) each stand in for an interface with exactly one
+> member — `vscode.Disposable`, `TokenProvider`, `vscode.Progress`, the vscode
+> commands bridge. 222 literals, all correct as written. The smell is
+> INCOMPLETENESS relative to the real type, not hand-writing; a one-method
+> interface cannot be incomplete, and building those four builders would add
+> indirection with nothing behind it.
+
+> **Convention.** A test file lives at the path mirroring the source file it covers.
+> *Why:* it is how you find the tests for a file without searching, and how a missing suite
+> becomes visible. Enforced by `tests/sop/mirror-placement.test.ts`.
+
+> **Convention.** A fixture builder name has exactly one definition.
+> *Why:* twenty-six different fakes of one object means nobody knows what the fake should be.
+> Enforced by `tests/sop/builder-uniqueness.test.ts`.
+
+> **Convention.** A fake that has a builder in `tests/helpers/` is imported, not written
+> again inline. Enforced by `tests/sop/canonical-fakes.test.ts` — a shrink-only ledger
+> grandfathers the files that already do, so it stops new copies rather than demanding a
+> sweep.
+> *Why:* 420 files hand-roll a logger, and the count was still climbing — about twenty new
+> hand-rolled fakes appeared in one day of dependency-injection work, because each newly
+> converted service needs a fake and typing one is faster than finding the builder. The
+> pool is a chore; the rate is the problem.
+
+> **Convention.** A fake that a SECOND feature directory needs lives in `tests/helpers/`.
+> A `*.testUtils.ts` beside a suite is for setup specific to that subject.
+> *Why:* the test is mechanical — does another feature need it? The suite already holds
+> 98 builder functions; the problem was never unwillingness to share but that 14 of those
+> NAMES are defined in more than one file, so there is no canonical one to find and
+> writing another is cheaper than searching.
+> [ADR-016](../architecture/adr/016-test-strategy.md) · Enforced by
+> `tests/sop/canonical-fakes.test.ts` § "a fake two feature directories need lives in
+> tests/helpers/".
+>
+> **It was filed as unenforceable — "where a builder belongs is a judgement about who
+> needs it" — and that was wrong.** The rule's own wording gives the test: *does a
+> SECOND feature directory need it?* is mechanical once you resolve imports instead of
+> matching names. Measured 2026-08-31: 139 builders live outside `tests/helpers/` and
+> ZERO are imported from a second feature directory, so it is a flat ban with nothing
+> to grandfather.
+>
+> Counting IMPORTS rather than CALLS is the whole check. A first pass matched call
+> sites by name and reported nine violations; the worst was `createProject`, which is
+> also a production function, so every handler test calling the real one looked like a
+> consumer of the fake.
+
+> **Convention.** Every MCP tool declares which sign-ins it needs, and the declared
+> providers are real ones.
+> *Why:* `needsAuth` is what an agent reads to decide which sign-in to offer before
+> calling a tool. A wrong or dropped provider is the sign-in the agent then fails to
+> offer — which is the failure the field was introduced to prevent.
+>
+> The compiler already requires the field to be PRESENT. It cannot check the VALUE,
+> and for a while nothing did: the 114 declarations were transcribed from a review
+> ledger, verified against it row by row, and then the ledger was deleted on the
+> reasoning that a required field beats a list. True for presence, silent for
+> correctness — after that, nothing knew the right answers.
+>
+> The gap was found by the mutation pilot, not by review: `siteTools.ts` fell from
+> 57.33% to 54.33% with its mutant count unchanged, and the survivors were exactly the
+> six `needsAuth` lines that had just been added.
+>
+> What is enforced is the checkable part — every provider named is one the extension
+> can actually offer, each tool is declared exactly once, and the per-provider totals
+> move only deliberately. It does NOT prove a tool asks for the sign-in it truly
+> needs; that judgement was in the ledger and is not recoverable from the source.
+> Enforced by `tests/sop/tool-auth-declarations.test.ts`.
+
+> **Convention.** A value handed to a hook that DEPENDS on it must be stable
+> across renders.
+> *Why:* an inline `[]`, `{}` or `() => …` is a new reference every render. If the
+> hook names it in a dependency array, the effect re-runs every render — and one
+> that sets state never settles.
+>
+> This was listed for months as the rule nothing could enforce, and that was half
+> right. `exhaustive-deps` reads the dependency array from INSIDE the hook while the
+> value's freshness is decided OUTSIDE by the caller; neither end sees the other, and
+> the types are identical either way, so the compiler is silent too. But the TYPE
+> CHECKER crosses that boundary — it resolves the call to the hook's declaration, and
+> the dependency arrays are then plain text to read.
+>
+> Three things are NOT violations, and each was a false positive before it was a
+> rule: a **destructured** parameter (the object is torn apart in the signature, so
+> nothing depends on it), a **spread** dependency (`[...conditions, setX]` depends on
+> the elements), and **React's own hooks** — `useState([])` reads its argument once
+> and the `[]` in `useMemo(fn, [])` IS the dependency array (1,077 correct sites).
+>
+> The fix is one of three: hoist it to a module constant when it is genuinely
+> constant, memoise it when it derives from state, or hold it in a ref inside the
+> hook when what the hook wants is "whatever the caller means right now".
+> Enforced by `tests/sop/stable-hook-arguments.test.ts`; the corpus was emptied by
+> `scripts/codemod/survey-unstable-refs.mjs` (12 findings to zero).
+
+> **Convention.** A component is declared ONE way: `function Name(props: NameProps)`.
+> `React.FC` is banned.
+> *Why:* the repo had both — 98 files as plain functions, 31 as `React.FC` — and two
+> ways of doing one thing is what a convention exists to stop. Both compile and both
+> work; the cost is that every reader holds two shapes, every example has a dialect,
+> and a new component copies whichever neighbour it landed beside.
+>
+> The plain function won on numbers before it won on merit. On merit: `React.FC` used
+> to add an implicit `children` prop, which React 18's types dropped and which is most
+> of why it fell out of favour; it pins the return type; and it obstructs generic
+> components. Nothing here needs what it offers.
+>
+> **`React.memo(...)` is unaffected.** Memoisation is a per-component performance
+> decision, not a house style, and five components use it correctly.
+> Enforced by `tests/sop/one-component-form.test.ts`; the corpus was emptied by
+> `scripts/codemod/react-fc-to-function.mjs` (37 sites, 33 files).
+
+> **Convention.** PRODUCTION erases no types. `as any` and `as never` are banned in
+> `src/` outright.
+> *Why:* `src/` was already at zero when this was adopted, so the ban cost nothing —
+> and leaving it to habit plus a warn-level lint rule that reports nothing is how a
+> property that took effort to reach comes quietly undone. Enforced by
+> `tests/sop/src-erases-no-types.test.ts`.
+>
+> **What is still allowed, because banning the wrong thing teaches people to work
+> around the check rather than write better types:**
+>
+> | form | when | in this codebase |
+> |---|---|---|
+> | `unknown` + a type guard | you do not know the type yet | the correct default |
+> | `: never` as a RETURN type | the function does not return | `handleStreamingError(...): never` |
+> | `(args: any)` at a real interop boundary | the input is genuinely untyped | the MCP SDK hands over untyped args — 51 of the 61 `: any` in `src/` |
+> | `as unknown as X` | the value cannot be expressed in the target's terms | `children as unknown as CollectionChildren<object>` |
+>
+> That last row is why `src/` reached zero: `CardActionsMenu` held the final
+> `as never`, silencing a real Spectrum collection-type mismatch. Both spellings
+> silence the same error; only one tells the next reader what the value is being
+> treated as. **`as any` names nothing, and that is the whole objection to it.**
+
+> **Convention.** No test erases a type. `as any` and `as never` are banned anywhere in
+> `tests/`. A builder is declared as the REAL type it stands for; where the structural
+> fake cannot satisfy that type honestly, cast the object literal INTO it at the
+> builder's boundary as `as unknown as X` — once, where it is visible.
+> *Why:* `as any` and `as never` are not casts, they are the absence of one. Both leave
+> every DOWNSTREAM use unchecked as well, because what comes out has no type left to
+> check against. `as unknown as X` still names X, so the lie stays local to the
+> construction site and callers stay honest. `as never` is the worse of the pair:
+> `never` is assignable to every type, so it is a skeleton key that reads like a locked
+> door.
+>
+> A builder typed `(): Logger` also stops compiling the day `Logger` gains a method —
+> one failure, one fix, at the one place that needs changing. A fake cast to `never`
+> fails nothing and silently ceases to resemble what it stands for.
+>
+> **Watched pay off on 2026-08-31.** Converting `publishKeyRegistrar`'s suite off its
+> module mock let it pass a typed logger, and typing it FAILED THE BUILD on
+> `logger.debug.mock` — a real `Logger` has no `.mock`. Eleven `as never` casts had been
+> hiding that. The answer is `jest.Mocked<Logger>`: assignable to `Logger`, so no cast at
+> the call, with the mock still reachable.
+>
+> The line is not a theory — the canonical builders already fake types no object literal
+> can satisfy (`CommandExecutor` and `StateManager` are CLASSES with private fields) and,
+> measured the same day, `tests/helpers/` contains ZERO of either banned form. The right
+> way was already in use; it had just never been written down, while
+> `@typescript-eslint/no-explicit-any` sat switched OFF for `tests/`.
+>
+> Enforced by `tests/sop/type-erasing-casts.test.ts` — a shrink-only ceiling, because
+> there were 1,916 across 341 files when the rule was adopted and a ban that emits 1,916
+> errors gets switched off within a week. `npm run typecheck:tests` catches the builder
+> half the moment a builder is honestly typed. When both counts reach zero, that suite is
+> deleted and replaced by a `no-restricted-syntax` ban, exactly as the feature-barrel
+> ledger became a ban when it emptied.
+> [ADR-016](../architecture/adr/016-test-strategy.md)
+
+> **Convention.** Do not mock a configuration leaf.
+> *Why:* the test then checks the mock rather than the shipped configuration.
+> Enforced by `tests/sop/no-config-leaf-mocks.test.ts`.
+
+> **Convention.** Never assign a `jest.fn()` onto a Node builtin's namespace
+> (`fs`, `fs.promises`, `os`, …). Use `jest.spyOn`, and restore in `afterEach`.
+> *Why:* a builtin is ONE object per worker process, and jest resets its module
+> registry between files but does not rebuild Node's builtins — so the assignment is a
+> global mutation every later suite in that worker inherits. `restoreMocks` cannot undo
+> it, because jest restores only the spies it created. Measured 2026-09-10: an
+> unrestored `fs.unlink` mock made a DIFFERENT suite fail with four calls it never
+> made, only when the two files shared a worker, so it read as flakiness and passed in
+> isolation. A hand-rolled restore at the end of the test body is not enough either —
+> it never runs when an assertion above it throws.
+> Enforced by `tests/sop/no-builtin-namespace-mock-assignment.test.ts`.
+
+> **Convention.** Do not lower one test's timeout below the file's budget.
+> *Why:* it hides a slow path instead of fixing it, and fails on a busier machine.
+> Enforced by `tests/sop/no-lowered-test-timeout.test.ts`.
+
+> **Convention.** Never pipe jest through `tail`, `head` or `grep`. Redirect to a file with
+> `> file 2>&1` and read that.
+> *Why:* buffering makes a finished run look hung, and the redirect order matters — the
+> other way round produces an empty file that reads as a clean pass.
+> Enforced by `.claude/hooks/rules/10-jest-pipe.rule` and
+> `.claude/hooks/rules/11-jest-redirect.rule`.
+
+> **Convention.** Never start a jest run while another is in flight.
+> *Why:* measured — one at a time failed nothing across ten runs; two at once failed four
+> to six suites every time, in different suites each run. A concurrent result is noise.
+> Enforced by `.claude/hooks/rules/15-jest-concurrent.rule`.
+> *Why:* both mistakes report success. A pipe hides the exit code; two concurrent runs fail suites at random.
+
+## 10. What stops this drifting
+
+**Position.** A convention without an enforcer will drift. Each one below says which kind
+it is, and the count of unenforced rules is stated rather than hidden.
+
+Conventions decay unless something checks them. Four layers do:
+
+- **Hooks** stop a bad action as it happens — 25 rules in `.claude/hooks/rules/`
+- **Enforcer suites** fail the build when code drifts — 49 in `tests/sop/`
+- **Typecheck and lint** run over the whole repository in CI
+- **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
+
+**This handbook states 110 conventions. 110 of them are enforced; 0 are not.**
+
+The last one to get there was "vendor CSS sits in the lowest cascade layer", and it was
+outstanding because it was **not yet true**: `@layer vendor` existed in no bundle, so a
+check would have failed the build rather than protected anything. It was a rule with a
+start date, not debt. The CSS migration (PL-21) reached all eight bundles on 2026-09-10
+and the check went in with it.
+
+Everything else on this page has something that fails the build when it is broken.
+
+**Nine rules left this list on 2026-09-01 and are now [§11 Working
+discipline](#11-working-discipline).** None was deleted. They turn on a judgement no
+check can make — whether you aimed a command at the right question, whether a matching
+string has been read back to its source, whether a fixture's shape was read or
+remembered — and counting them here made the score describe two different things at
+once. The owner's directive that started it was *"if it cannot be enforced, it probably
+shouldn't be a convention"*, and the honest reading of "probably" is the second half of
+the test: a rule that cannot be enforced AND prevents no defect anyone can name should
+go. All nine prevent one that is named and dated, so all nine stayed — under a heading
+that claims nothing about the build.
+
+**This paragraph is why the scorecard above it is generated.** It once read "the fifteen
+that remain" and "fourteen cannot have an enforcer" beside a count of eleven, and listed
+five rules that had since been enforced. Nothing caught that, because a number written
+in prose is checked by nothing — the same defect these rules keep warning about, in the
+document that warns about it. Counts come from `npm run docs:conventions` now, and
+`tests/sop/handbook-links.test.ts` fails when a sentence here disagrees with them.
+
+The count of unenforced conventions **tripled** across 2026-08-30/31, and that is the
+scorecard getting honest rather than the codebase getting worse. Every one of them was
+already a rule somewhere — in an ADR, in a directory guide, in `CLAUDE.md` — being
+followed and going unexplained. Writing them here does not weaken enforcement; it stops
+the handbook implying that "documented" and "checked" are the same word.
+
+The last three joined on 2026-08-30 and had lived only in `CLAUDE.md` until then — seen by
+every agent session, never explained to a human reader. One of them was violated the same
+day it was written down here, which is the honest measure of what a handbook entry does:
+it explains a rule and pins it against drift. It does not make anyone follow it.
+
+Twelve were unenforced on the morning of 2026-08-30 and seven closed that day: feature
+barrels, the dependency envelope, handlers not rendering, the message-channel singleton,
+the `!important` ceiling, inline-style totals, and component style blocks staying local.
+An eighth — exit codes read through a pipe — became the tenth hook rule.
+
+The numbers above are checked by `tests/sop/handbook-links.test.ts`, because a count
+written in prose is a claim like any other — this document says so two sections up.
+
+A convention here is **one thing you can violate, with one thing that catches you**. If a
+callout names two enforcers, it is two conventions, unless both guard the same rule.
+
+### Checking things
+
+The rules above are checked by tools. The tools are checked by these, which this
+programme learned the hard way — five separate times a measurement looked clean and was
+not.
+
+> **Convention.** Every scan declares a control: something it is known to find. A
+> detector that has silently stopped detecting reports "all clear" in exactly the same
+> words as one that verified.
+> *Why:* a first sweep printed "clean" over a scan that had just measured a 34% gap.
+> Enforced by `tests/sop/every-scan-declares-a-control.test.ts`, and — for the
+> instruments that live OUTSIDE the scan directory — by
+> `tests/hooks/rule-proofs.test.ts` and `tests/sop/eslint-type-aware.test.ts`.
+>
+> `tests/sop/codemod-harness.test.ts` is the same rule applied to the tool that
+> REWRITES the code: it runs `scripts/codemod/selftest.mjs`, which ends in a
+> deliberately false assertion, and asserts the exact failure count — so a self-test
+> reporting zero failures fails the build, because a checker that cannot fail is not
+> a checker.
+>
+> Those three were added on 2026-09-01, after the same failure appeared three times in
+> one day: a hook rule that never reached its own guard, a blocking rule with no proof
+> harness at all, and a bracket expression that had silently stopped matching. All
+> three exited 0 and looked fine. An instrument whose dependencies live elsewhere —
+> a router pre-filter, a rule name owned by a third party, a tsconfig that must still
+> cover the tree — needs a planted defect it must find AND a clean case it must
+> ignore, or it can degrade into a command that reports nothing and reads as good
+> news.
+
+> **Convention.** Never publish an identifier you have not read from the source. Setting
+> keys, env vars, command ids, file paths and function names are cheap to grep and
+> expensive to get wrong in something a user reads.
+> *Why:* `demoBuilder.eds.defaultDaLiveOrg` went into release notes from memory; the key it
+> should have named was `demoBuilder.daLive.defaultOrg`. Caught only by diffing
+> `package.json` against the previous tag.
+>
+> **This entry then broke its own rule**, and that is why it is now enforced. It said "the
+> real key IS `demoBuilder.daLive.defaultOrg`" in the present tense long after that setting
+> was DROPPED (`6e14114b9` — the DA.live org became a GitHub-namespace picker with no
+> setting at all). A correction naming a second dead identifier is the original defect
+> wearing the fix's clothes.
+>
+> Enforced by `tests/sop/cited-identifiers.test.ts`: every `demoBuilder.*` key a
+> CURRENT-TENSE document names must exist in `package.json` or be registered in `src/`.
+> Historical genres (CHANGELOG, research, ADRs) are excluded, and a deliberate mention of
+> a removed identifier goes in the ledger with its reason.
+> `tests/sop/doc-module-refs.test.ts` covers file paths.
+
+> **Convention.** Capture an exit code in a variable. Never read one through a pipe.
+> *Why:* `head`, `tail`, `grep` and `wc` all exit 0 on empty input, so the pipe reports its
+> own success and hides the failure underneath.
+> Enforced by `.claude/hooks/rules/13-piped-exit-code.rule`, which blocks branching on
+> a pipe into `head`, `tail` or `wc` — those exit 0 whatever they were fed, so a failure
+> and an empty result are indistinguishable. `grep` is deliberately not blocked:
+> `cmd | grep -q x && …` is correct, because there grep's own exit code is the answer.
+
+> **Convention.** A list of paths reaches a command through `xargs`, never as a bare
+> `$VAR`. Quote the variable when one argument is what you meant.
+> *Why:* bash word-splits an unquoted variable and **zsh does not**, so
+> `FILES=$(...)` followed by `eslint --fix $FILES` passes ONE argument containing
+> newlines instead of N paths. The command then runs against a path that cannot exist,
+> most tools call that nothing to do, and exit 0 — the failure reads exactly like
+> success. Three incidents: a seven-path `git rm` that deleted nothing while the echo
+> after it announced success; the same shape again the same session; and on 2026-09-01
+> an `eslint --fix` over 18 files that fixed none, where the unchanged recount was read
+> as "these warnings are not auto-fixable" — a wrong conclusion drawn from a command
+> that never ran. Through `xargs` it fixed all 18 and went five below the baseline.
+> Enforced by `.claude/hooks/rules/16-unsplit-var.rule`, which fires only when the
+> variable was assigned from `$(...)` AND is passed bare to a command that takes a list
+> of files. `[ $n -gt 0 ]` does not fire; `echo $VAR` does not fire; a quoted `"$VAR"`
+> never fires. This rule was in prose here since August and was broken a third time by
+> the session that had just read it, which is the argument for mechanising it.
+
+> **Convention.** Quote glob arguments passed to `grep` or `find`. In zsh an unquoted
+> pattern is expanded before the command sees it, and an unquoted variable is not split
+> into separate arguments.
+> *Why:* both fail in ways that look like a clean result rather than an error — with no
+> match, zsh aborts and the command never runs at all.
+> Enforced by `.claude/hooks/rules/12-unquoted-glob.rule`.
+
+> **Convention.** Anything claiming to be an instrument is in the registry, and the
+> registry and the disk must agree in both directions. A count written in prose has
+> something checking it.
+> *Why:* two scans were once in no list at all, and a validator had been failing silently
+> for months because nothing ran it.
+> Enforced by `tests/sop/tooling-registry.test.ts`.
+
+> **Convention.** A module path named in a document resolves. A citation must reach a
+> file or directory; an `import` in a code example must reach something importable.
+> *Why:* a path inside a markdown file is invisible to the compiler, to lint and to every
+> test, so a rename is silently right in the code and silently wrong in every document
+> that named the old path. An audit found fifty dead ones, thirty-seven of them in example
+> code a reader would copy.
+> Enforced by `tests/sop/doc-module-refs.test.ts`.
+
+> **Convention.** Delete obsolete code. No deprecated stubs, no accepted-but-ignored
+> options. [CLAUDE.md](../../CLAUDE.md) · Enforced by measurement — `.claude/skills/dead-code-scan`.
+> *Why:* a deprecated stub still has to be read, understood and skipped by everyone who meets it.
+
+> **Convention.** Secrets live in VS Code settings, never in code. This repository is
+> public. [CLAUDE.md](../../CLAUDE.md) · Enforced by
+> `.claude/hooks/rules/20-secret-files.rule`, which blocks a write of any `.env` file or
+> secret-shaped content headed for the repo tree; GitGuardian scans every push as the
+> second line.
+> *Why:* git history is permanent and this repository is public, so a secret committed
+> once is public forever — deleting it later does not help.
+
+> **Convention.** Commit to `develop`. Reach `master` only through a release.
+> [cut-release](../../.claude/skills/cut-release/SKILL.md) · enforced by `.githooks/commit-msg`.
+> *Why:* master is what ships to beta users automatically.
+
+> **Convention.** No backticks inside a double-quoted `git commit -m`. Write the message
+> to a file and use `git commit -F`.
+> *Why:* bash treats `` `x` `` inside double quotes as command substitution, so naming a
+> file in backticks — the natural way to write it — silently executes the word and drops
+> it from the message.
+> Enforced by `.claude/hooks/rules/14-commit-backtick.rule`.
+
+> **Convention.** A new React + Spectrum webview test starts from the webview-test skill.
+> *Why:* the suite runs on fake timers, and a test that does not know it hangs or resolves
+> before React flushes — presenting as a timeout or a phantom missing element, never as a
+> timer error.
+> [webview-test-authoring](../../.claude/skills/webview-test-authoring/SKILL.md) ·
+> Enforced by `.claude/hooks/rules/40-webview-test.rule`.
+
+> **Convention.** An Adobe documentation lookup goes through the routing skill before the
+> first search.
+> *Why:* five sources cover different corpora and picking wrong returns confident,
+> plausible, off-target results rather than an error. App Builder concepts live on a domain
+> neither doc server indexes.
+> [adobe-docs-lookup](../../.claude/skills/adobe-docs-lookup/SKILL.md) ·
+> Enforced by `.claude/hooks/rules/50-adobe-docs.rule`.
+
+Every link in this file is checked by `tests/sop/handbook-links.test.ts`.
+
+---
+
+## 11. Working discipline
+
+The nine rules below were counted as conventions until 2026-09-01, and the count was
+the problem. A convention here is a statement about the CODE, and every one of them is
+checked by something that fails the build. These nine turn on a judgement no check can
+make — mostly about how you investigate a question, once about the code but resting on
+the same kind of call. Averaging the two made "70 of 80 enforced" a number that
+described neither.
+
+**They are not weaker for being here, and none of them was deleted.** Each names a
+specific failure it would have prevented, with a date, and several were written the day
+that failure cost something. What changes is only the claim: nothing on this page fails
+the build, so nothing on this page is counted as if it did. The conventions list now
+means one thing — a rule stated there has an enforcer — and this list means another: a
+habit you have to keep yourself.
+
+The test for keeping one is the owner's, from the directive that started this: a rule
+that cannot be enforced AND that nobody can point at a defect for should be deleted, not
+preserved because it reads well. All nine pass the second half. If one ever stops
+passing it, delete it.
+
+> **Discipline.** Before writing a check, ask whether a tool here already performs
+> it. When a change repeats across more than about ten sites, drive it from a SYNTAX
+> TREE — never from a regex over source text.
+> *Why:* text cannot tell code from a string literal or a comment, and that is not a
+> care problem. On 2026-09-01 a regex converter deleted ` as never` from inside a
+> detector's own control fixtures — the strings that prove the argument-cast detector
+> can see a cast — silently disabling the proof while the enforcer kept passing. The
+> same day, a hand-rolled "is this import still used?" scan was wrong twice where
+> eslint's parsed output was right, and a prior about which casts were redundant was
+> wrong 29 times out of 36. A ts-morph probe over a file holding a cast in code, a
+> cast in a string and a cast in a comment returned exactly the two real ones.
+> [toolchain.md](toolchain.md) says which tool answers which question;
+> `ask-the-tool` is the procedure. **Not enforced** — no check can ask why you
+> reached for a regex.
+
+> **Discipline.** A comment describing what ANOTHER module does must cite the code that
+> makes it true. If you cannot cite it, write what you verified instead.
+> *Why:* nothing keeps such a comment true — not the compiler, not the tests — and it reads
+> to the next person as verified fact. Two comments once asserted a scheduled re-registration
+> that did not exist; they were false the day they were written, and they suppressed the
+> question that would have found a shipped bug. **Not enforced** — no check can read intent.
+
+> **Discipline.** When a parent selection changes, clear the state that depends on it.
+> Change the Adobe project and the workspace selection goes with it.
+> *Why:* a stale child selection is how an operation targets a resource nobody chose —
+> the failure `withOrgContext` and the org-mismatch guard exist to catch downstream. The
+> place it belongs is the selection handler's `onSelect`, where `useSelectionStep` puts
+> it. Obeyed at 7 sites today.
+> **Not enforced**, and this one cannot be: 14 sites assign the parent field and reading
+> them shows most are not selections at all — one preserves a previous value, one builds
+> a display object, one assembles a payload from already-resolved context. A detector
+> written from the field name would report eight violations of which roughly none are
+> real, and a check that cries wolf gets switched off.
+
+> **Discipline.** The three tiers, and which applies.
+> [ADR-016](../architecture/adr/016-test-strategy.md) · **Not enforced** — which tier fits is
+> a judgement about what you are testing.
+> *Why:* matching the test to the risk. A live test for pure logic is slow and flaky; a unit test for a network contract proves nothing.
+
+> **Discipline.** When you change a test's structure, diff the set of things it asserts
+> before and after — and prove shared setup is load-bearing by breaking it on purpose and
+> checking the right suites fail.
+> *Why:* the failure mode of a test refactor is a suite that still passes while checking
+> nothing. Nothing else catches that. **Not enforced** — it is a habit, and the only guard
+> is doing it.
+
+> **Discipline.** A fixture's shape is READ, not remembered. A builder's method list
+> comes from the real interface plus what callers actually use; a data fixture is copied
+> from a real artifact on disk. And a domain fixture is CONTENT over a canonical shape,
+> never a re-implementation of one the suite already has a builder for.
+> *Why:* an invented shape typechecks, parses, passes review, and fails only when a real
+> accessor touches it. `componentInstances` is the one that catches people — a record
+> keyed by component id, not an array, and a fixture inventing `components: [...]`
+> compiles cleanly because the field is optional.
+> [ADR-016](../architecture/adr/016-test-strategy.md) · **Not enforced** — the tell is
+> being able to state a shape without naming the file you read it from, which no check
+> can ask.
+
+> **Discipline.** A control proves the tool works, not that you aimed it right. Before
+> trusting a result of nothing, say where the answer would be if it existed, and confirm
+> the command actually reads there.
+> *Why:* a correct command pointed at the wrong place passes every control it has, because
+> the control shares the mistake. Five wrong answers in one day on 2026-08-11 were all this
+> — and on 2026-08-30 a status summary reported two tracks of work as "not started" because
+> it grepped for whether a backlog item was TITLED "Track 4", while seven ratified ADRs, a
+> 709-line handbook and twenty-four shipped test plans sat on disk. The grep was right; the
+> question it answered was not the question asked. **Not enforced** — no check can ask
+> whether you aimed at the right thing.
+
+> **Discipline.** A named field in a response, a matching string, or a green check is a
+> LEAD. Read the source before it becomes a finding.
+> *Why:* `enabled: false` was read as "this org lacks the entitlement" and was wrong; a
+> `confirm: true` sitting eight lines past a grep window was read as "this destructive tool
+> is ungated" and was wrong. Both were one read away from correct. **Not enforced** — this
+> is a habit, and the cost of skipping it is a confident wrong answer.
+
+> **Discipline.** A count that measures what code *looks like* is not a count of what is
+> wrong with it. Before working a scan's list, ask what defect it would catch and whether
+> a clean file could score badly.
+> *Why:* three measures in this repo were found to describe style rather than defects.
+> Extracting duplicated setup into a helper — plainly an improvement — made one of them
+> worse. **Not enforced.** It is the question to ask, not a thing a test can check.
+
+> **Discipline.** Before naming a cause, name the command that would prove you wrong, and
+> run that first.
+> *Why:* a cause is cheap to assert, expensive to retract, and the reader usually cannot
+> check it. **Not enforced.**
+
+## Where the reasoning lives
+
+This file says what to do, with one line on why each rule earns its place. It does not
+carry the full argument, and that is deliberate — the two have different lifespans.
+
+An **architecture decision record** explains why a choice was made and what was rejected.
+It records one moment and is not edited afterwards; when a decision changes, a new record
+supersedes it. The index is [docs/architecture/adr/README.md](../architecture/adr/README.md).
+
+Reach for one when a rule here looks arbitrary and you are about to remove it. That is
+what they are for. ADR-007 exists because the obvious way to encode a product URL
+silently breaks every product page — the rule alone would not have told you that.

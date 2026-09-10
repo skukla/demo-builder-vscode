@@ -5,16 +5,18 @@
  * Replaces `any` types in HandlerContext with specific types.
  */
 
-import * as vscode from 'vscode';
+import type * as vscode from 'vscode';
 import type { CustomBlockLibrary } from './blockLibraries';
-import { ComponentSelection, ComponentConfigs } from './components';
-import { Logger } from './logger';
-import { StateManager } from './state';
-import { WebviewCommunicationManager } from '@/core/communication';
-import { ErrorLogger, StepLogger } from '@/core/logging';
-import { ProgressUnifier } from '@/core/utils/progressUnifier';
-import { AuthenticationService } from '@/features/authentication';
-import {
+import type { ComponentSelection, ComponentConfigs } from './components';
+import type { Logger } from './logger';
+import type { StateManager } from './state';
+import type { WebviewCommunicationManager } from '@/core/communication/webviewCommunicationManager';
+import type { ErrorLogger } from '@/core/logging/errorLogger';
+import type { StepLogger } from '@/core/logging/stepLogger';
+import type { ProgressUnifier } from '@/core/utils/progressUnifier/ProgressUnifier';
+import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
+import type { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
+import type {
     PrerequisitesManager,
     PrerequisiteDefinition,
     PrerequisiteStatus,
@@ -166,6 +168,16 @@ export interface SharedState {
 export interface HandlerContext {
     // Managers (optional - not all handlers need all managers)
     prereqManager?: PrerequisitesManager;
+    /**
+     * The component registry, built once at the composition point.
+     *
+     * Four files used to construct their own — `new ComponentRegistryManager(
+     * extensionPath)`, five times between them, three behind a dynamic import.
+     * That put an 18-suite module-mock wall around a class whose entire
+     * constructor is one string. Read it with `componentRegistryFrom(context)`,
+     * which fails loudly rather than silently rebuilding one.
+     */
+    componentRegistry?: ComponentRegistryManager;
     authManager?: AuthenticationService;
     errorLogger?: ErrorLogger;
     progressUnifier?: ProgressUnifier;

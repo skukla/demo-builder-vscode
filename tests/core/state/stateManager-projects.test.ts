@@ -10,13 +10,13 @@ import * as path from 'path';
 import {
     setupMocks,
     mockStateFile,
-    createMockProject,
+    createStateManagerProject,
     type TestMocks,
 } from './stateManager.testUtils';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
+import { assertDefined } from '../../helpers/resultAssertions';
 
 // Re-declare mocks to ensure proper typing and hoisting
-jest.mock('vscode');
 jest.mock('fs/promises');
 jest.mock('os');
 
@@ -32,7 +32,7 @@ describe('StateManager - Project Management', () => {
             const { stateManager } = testMocks;
             await stateManager.initialize();
 
-            const project = createMockProject('new-project');
+            const project = createStateManagerProject('new-project');
             project.componentSelections = {
                 frontend: 'headless',
                 backend: 'adobe-commerce-paas',
@@ -59,7 +59,7 @@ describe('StateManager - Project Management', () => {
             const { stateManager } = testMocks;
             await stateManager.initialize();
 
-            const project = createMockProject();
+            const project = createStateManagerProject();
             await stateManager.saveProject(project as Project);
 
             expect(fs.mkdir).toHaveBeenCalledWith(project.path, { recursive: true });
@@ -69,7 +69,7 @@ describe('StateManager - Project Management', () => {
             const { stateManager } = testMocks;
             await stateManager.initialize();
 
-            const project = createMockProject();
+            const project = createStateManagerProject();
             project.adobe = {
                 projectId: 'proj123',
                 projectName: 'Test Project',
@@ -84,21 +84,19 @@ describe('StateManager - Project Management', () => {
             const manifestCall = (fs.writeFile as jest.Mock).mock.calls.find(
                 (call) => typeof call[0] === 'string' && call[0].endsWith('.demo-builder.json.tmp')
             );
-            expect(manifestCall).toBeDefined();
+            assertDefined(manifestCall);
 
             // Verify the manifest content includes expected fields
-            if (manifestCall) {
-                const manifestContent = JSON.parse(manifestCall[1]);
-                expect(manifestContent.name).toBe('Test Project');
-                expect(manifestContent.adobe).toEqual(project.adobe);
-            }
+            const manifestContent = JSON.parse(manifestCall[1]);
+            expect(manifestContent.name).toBe('Test Project');
+            expect(manifestContent.adobe).toEqual(project.adobe);
         });
 
         it('should create .env file with project configuration', async () => {
             const { stateManager } = testMocks;
             await stateManager.initialize();
 
-            const project = createMockProject();
+            const project = createStateManagerProject();
             project.commerce = {
                 type: 'platform-as-a-service',
                 instance: {
@@ -128,7 +126,7 @@ describe('StateManager - Project Management', () => {
             const eventHandler = jest.fn();
             stateManager.onProjectChanged(eventHandler);
 
-            const project = createMockProject();
+            const project = createStateManagerProject();
             await stateManager.saveProject(project as Project);
 
             expect(eventHandler).toHaveBeenCalledWith(project);
@@ -145,7 +143,7 @@ describe('StateManager - Project Management', () => {
                 return Promise.resolve();
             });
 
-            const project = createMockProject();
+            const project = createStateManagerProject();
 
             // FIXED: Errors should now be propagated (not swallowed)
             await expect(stateManager.saveProject(project as Project)).rejects.toThrow(
@@ -157,7 +155,7 @@ describe('StateManager - Project Management', () => {
             const { stateManager } = testMocks;
             await stateManager.initialize();
 
-            const project = createMockProject();
+            const project = createStateManagerProject();
 
             // Capture time before save
             const timeBefore = new Date().toISOString();
@@ -175,16 +173,14 @@ describe('StateManager - Project Management', () => {
                 (call) => typeof call[0] === 'string' && call[0].endsWith('.demo-builder.json.tmp')
             );
 
-            expect(manifestCall).toBeDefined();
+            assertDefined(manifestCall);
 
-            if (manifestCall) {
-                const manifestContent = JSON.parse(manifestCall[1]);
-                const manifestLastModified = manifestContent.lastModified;
+            const manifestContent = JSON.parse(manifestCall[1]);
+            const manifestLastModified = manifestContent.lastModified;
 
-                // Verify the manifest's lastModified is between timeBefore and timeAfter
-                expect(manifestLastModified >= timeBefore).toBe(true);
-                expect(manifestLastModified <= timeAfter).toBe(true);
-            }
+            // Verify the manifest's lastModified is between timeBefore and timeAfter
+            expect(manifestLastModified >= timeBefore).toBe(true);
+            expect(manifestLastModified <= timeAfter).toBe(true);
         });
     });
 
@@ -193,7 +189,7 @@ describe('StateManager - Project Management', () => {
             const { stateManager } = testMocks;
             await stateManager.initialize();
 
-            const project = createMockProject();
+            const project = createStateManagerProject();
             await stateManager.saveProject(project as Project);
             expect(await stateManager.getCurrentProject()).toBeDefined();
 
@@ -254,7 +250,7 @@ describe('StateManager - Project Management', () => {
             const { stateManager, mockWorkspaceState } = testMocks;
             await stateManager.initialize();
 
-            const project = createMockProject();
+            const project = createStateManagerProject();
             await stateManager.saveProject(project as Project);
             await stateManager.clearAll();
 

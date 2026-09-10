@@ -40,6 +40,28 @@ import { paginate } from './projectToolHandlers';
 import { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
 
 /** The block tool handlers (spread into `toolHandlers` in mcp-server). */
+/**
+ * The answer a block tool gives when DA.live is not signed in.
+ *
+ * A missing credential is the caller's NORMAL state, not an exceptional one — an
+ * agent reaches these tools before signing in all the time. Both tools used to
+ * throw here, which is the one thing the "tools do not error on a missing
+ * credential" rule asks them not to do: an MCP error is not a result the caller
+ * can branch on, and the recovery is buried in prose.
+ *
+ * The shape matches the confirm refusals a few lines away in `mcp-server.ts` —
+ * JSON with an `error` — plus the `needsAuth` marker every other credential-
+ * guarded tool now returns, so one field answers "which sign-in?" for all of them.
+ */
+function missingDaLiveToken(toolName: string): string {
+    return JSON.stringify({
+        error:
+            `${toolName} needs DA.live sign-in. Check get_auth_status, then ` +
+            'sign_in(provider:"dalive", confirm:true) once the user agrees.',
+        needsAuth: 'dalive',
+    });
+}
+
 export const blockToolHandlers = {
     async listBlocks(
         projectsDir: string,
@@ -222,6 +244,20 @@ export const blockToolHandlers = {
 
         await verifyBlockSourceExists(ctx.storefrontPath, blockId);
 
+        // Credentials come from the live extension session (DaLiveAuthService /
+        // GitHubTokenService), injected by registerProjectTools.
+        //
+        // This check sat BELOW applyComponentDefinitionEntry until 2026-09-01 and
+        // threw. Both were wrong: the write had already happened, so a signed-out
+        // agent got an error AND a modified component-definition.json it never
+        // asked for and could not complete. Checked first now, and answered
+        // rather than thrown — see missingDaLiveToken().
+        const daLiveToken = tokens?.daLiveToken;
+        if (!daLiveToken) {
+            return missingDaLiveToken('promote_block_to_library');
+        }
+        const githubToken = tokens?.githubToken ?? undefined;
+
         // Defense-in-depth: sanitize AI-supplied HTML before it lands in two
         // persistent stores (component-definition.json + published doc page).
         // See sanitizeBlockHtml() for the allowlist rationale.
@@ -234,17 +270,6 @@ export const blockToolHandlers = {
             safeHtml,
             description,
         );
-
-        // Credentials come from the live extension session (DaLiveAuthService /
-        // GitHubTokenService), injected by registerProjectTools.
-        const daLiveToken = tokens?.daLiveToken;
-        if (!daLiveToken) {
-            throw new Error(
-                'DA.live token unavailable — sign in to DA.live first ' +
-                    '(check get_auth_status, then the sign_in tool with provider:"dalive").',
-            );
-        }
-        const githubToken = tokens?.githubToken ?? undefined;
 
         // Logger is unused for the MCP stdio flow — supply a no-op shim. The
         // DA.live operations log to stderr in the real flow; the MCP wrapper
@@ -313,10 +338,7 @@ export const blockToolHandlers = {
 
         const daLiveToken = tokens?.daLiveToken;
         if (!daLiveToken) {
-            throw new Error(
-                'DA.live token unavailable — sign in to DA.live first ' +
-                    '(check get_auth_status, then the sign_in tool with provider:"dalive").',
-            );
+            return missingDaLiveToken('remove_block_from_library');
         }
         const githubToken = tokens?.githubToken ?? undefined;
 

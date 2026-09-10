@@ -35,7 +35,7 @@ Gates the Evaluation Mode dry run, the chat's opening line and the phase sinks.
 - **Descriptor row**: `readOnly: true | false`. Required by `ToolDescriptor`, so a
   missing one is a compile error.
 - **Direct registration**: `annotations: { readOnlyHint: <bool>, destructiveHint: <bool> }`
-  in the config object. Enforced by a SOURCE scan in `toolAnnotations.test.ts`, because
+  in the config object. Enforced by a SOURCE scan in `inExtensionMcpServer-toolAnnotations.test.ts`, because
   most registrars cannot be booted in a unit test.
 
 Missing means "assume it writes" — over-blocked under a dry run, which is the safe
@@ -194,7 +194,18 @@ registerTool(name: string, _def: unknown, handler) { tools.set(name, handler); }
 
 That is correct for what those tests do — drive a handler and assert its output. It is also
 completely blind to the argument it discards, which is where the SDK contract lives: the input
-schema. `tsc` cannot cover the gap either, because `server` is typed `any`.
+schema.
+
+**`tsc` NOW COVERS HALF OF THAT GAP, as of 2026-08-31.** This section used to end "`tsc`
+cannot cover the gap either, because `server` is typed `any`" — and that was true of all 30
+registrar sites. They now take `McpToolServer`
+(`src/features/ai/server/mcpToolServer.ts`), a narrowed surface that types `description` and
+`inputSchema` exactly. Both defects below are now COMPILE ERRORS: a raw JSON Schema is
+rejected with "'type' does not exist in type 'ZodType'", and a missing `description` is
+rejected outright. Verified by planting each one against the interface.
+
+What the type still cannot see: whether a shape should have been `.strict()`. That remains
+`realSdkRegistration.test.ts`'s job, and the stub's job is unchanged — behaviour.
 
 Two defects shipped through that hole on 2026-08-17, both with green suites:
 
@@ -230,13 +241,13 @@ esbuild renames identifiers, so `grep registerContentAuthoringTools dist/extensi
 
 ## What else moves (the checklist)
 
-- `dashboardHandlersMap.test.ts` pins the EXACT handler count — bump it with the
+- `dashboardHandlers-map.test.ts` pins the EXACT handler count — bump it with the
   arithmetic comment.
 - `inExtensionMcpServer.test.ts` pins the `registerProjectTools` tool list BY NAME
   ("serves the N project tools over the socket") — add yours and update the count word.
 - Descriptor suites: `readDescriptors`/`actionDescriptors`/`toolDescriptors` tests.
 - **The three declarations** (see above), each with a test that fails without it:
-  `toolAnnotations.test.ts` (read/write, both registration paths),
+  `inExtensionMcpServer-toolAnnotations.test.ts` (read/write, both registration paths),
   `toolNarration.test.ts` (a phrase, and no orphan phrase left behind), and
   `agentAlertTargets.test.ts` (only if the tool raises a dialog).
 - `docs/systems/mcp-server.md` — the descriptor-driven tool list (§ "Descriptor-driven

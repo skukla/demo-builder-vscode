@@ -26,7 +26,7 @@ import {
     ACCS_GRAPHQL_ENDPOINT as ACCS_ENDPOINT_KEY,
     ACCS_OAUTH_CLIENT_ID,
     ACCS_OAUTH_CLIENT_SECRET,
-} from './envVarKeys';
+} from '@/core/config/envVarKeys';
 
 /** Service group IDs for PaaS and ACCS commerce backends */
 export const STORE_GROUP_IDS = {

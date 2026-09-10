@@ -12,13 +12,11 @@ import PinOn from '@spectrum-icons/workflow/PinOn';
 import React, { useMemo } from 'react';
 import { useProjectSelectHandlers } from '../hooks/useProjectSelectHandlers';
 import { ProjectActionsMenu, type ProjectActions } from './ProjectActionsMenu';
-import { InlineRenameField } from '@/core/ui/components/forms';
+import { InlineRenameField } from '@/core/ui/components/forms/InlineRenameField';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { getComponentSummary } from '@/features/projects-dashboard/utils/componentSummaryUtils';
-import {
-    getProjectStatusDisplay,
-} from '@/features/projects-dashboard/utils/projectStatusUtils';
+import { getProjectStatusDisplay } from '@/features/projects-dashboard/utils/projectStatusUtils';
 import type { Project } from '@/types/base';
 
 export interface ProjectRowProps {
@@ -39,12 +37,12 @@ export interface ProjectRowProps {
 /**
  * ProjectRow - Displays a project as a clickable row with Spectrum styling
  */
-export const ProjectRow: React.FC<ProjectRowProps> = ({
+export function ProjectRow({
     project,
     isRunning = false,
     onSelect,
     actions = {},
-}) => {
+}: ProjectRowProps) {
     const { handleClick, handleKeyDown } = useProjectSelectHandlers(project, onSelect);
 
     const { statusText, statusVariant } = getProjectStatusDisplay(project);
@@ -69,11 +67,10 @@ export const ProjectRow: React.FC<ProjectRowProps> = ({
                         <span
                             data-testid="project-row-pin-indicator"
                             aria-label="Pinned"
-                            style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                color: 'var(--spectrum-global-color-gray-700)',
-                            }}
+                            className="pin-indicator"
+                            // ProjectRow's pin was the one WITHOUT `flex: 0 0 auto`,
+                            // so it keeps the default shrink behaviour it had.
+                            style={{ '--pin-flex': '0 1 auto' } as React.CSSProperties}
                         >
                             <PinOn size="XS" />
                         </span>
@@ -106,7 +103,6 @@ export const ProjectRow: React.FC<ProjectRowProps> = ({
                         project={project}
                         isRunning={isRunning}
                         actions={actions}
-                        className="project-row-menu-button"
                     />
                     <Text UNSAFE_className="project-row-status">{statusText}</Text>
                     <ChevronRight size="S" UNSAFE_className="project-row-chevron" />
@@ -114,4 +110,4 @@ export const ProjectRow: React.FC<ProjectRowProps> = ({
             </Flex>
         </div>
     );
-};
+}

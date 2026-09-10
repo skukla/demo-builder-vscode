@@ -4,17 +4,7 @@
  */
 
 // Mock debugLogger FIRST to prevent "Logger not initialized" errors
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    }),
-}));
-
 jest.mock('@/core/config/ConfigurationLoader');
-jest.mock('@/core/di');
 
 import { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
 import {
@@ -23,6 +13,7 @@ import {
     mockConfig,
     type TestMocks,
 } from './PrerequisitesManager.testUtils';
+import { PrerequisitesCacheManager } from '@/features/prerequisites/services/prerequisitesCacheManager';
 
 describe('PrerequisitesManager - Prerequisite Checking', () => {
     let manager: PrerequisitesManager;
@@ -31,7 +22,7 @@ describe('PrerequisitesManager - Prerequisite Checking', () => {
     beforeEach(() => {
         mocks = setupMocks();
         setupConfigLoader();
-        manager = new PrerequisitesManager('/mock/extension/path', mocks.logger);
+        manager = new PrerequisitesManager('/mock/extension/path', mocks.logger, mocks.executor, new PrerequisitesCacheManager());
     });
 
     describe('checkPrerequisite', () => {
@@ -188,7 +179,7 @@ describe('PrerequisitesManager - Prerequisite Checking', () => {
         it('should handle empty mapping', async () => {
             const result = await manager.checkMultipleNodeVersions({});
 
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
         });
 
         it('should handle ENOENT errors in PrerequisitesManager gracefully', async () => {

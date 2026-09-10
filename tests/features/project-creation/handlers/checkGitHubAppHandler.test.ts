@@ -14,8 +14,13 @@
  */
 
 import { checkGitHubApp } from '@/features/project-creation/handlers/checkGitHubAppHandler';
+import type { CheckGitHubAppServices } from '@/features/project-creation/handlers/checkGitHubAppHandler';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 
 const mockIsAppInstalled = jest.fn();
 const mockPreviewCode = jest.fn();
@@ -27,30 +32,27 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     tryCreateDaLiveTokenProvider: jest.fn(() => undefined),
 }));
 
-jest.mock('@/features/eds/services/github/githubAppService', () => ({
-    GitHubAppService: jest.fn().mockImplementation(() => ({
-        isAppInstalled: mockIsAppInstalled,
-        getInstallUrl: jest
-            .fn()
-            .mockReturnValue('https://github.com/apps/aem-code-sync/installations/select_target'),
-    })),
-}));
-
-jest.mock('@/features/eds/services/helix/helixService', () => ({
-    HelixService: jest.fn().mockImplementation(() => ({ previewCode: mockPreviewCode })),
-}));
+// Neither service is module-mocked. Both arrive through the `services` seam — a third
+// optional parameter on the handler — so the suite hands in exactly the three methods
+// this handler calls, typed to the interfaces the handler itself declares.
+const mockMakeGitHubAppService = jest.fn();
+const SERVICES: CheckGitHubAppServices = {
+    makeHelix: () => ({ previewCode: mockPreviewCode }),
+    makeGitHubAppService: (...args) => {
+        mockMakeGitHubAppService(...args);
+        return {
+            isAppInstalled: mockIsAppInstalled,
+            getInstallUrl: () =>
+                'https://github.com/apps/aem-code-sync/installations/select_target',
+        };
+    },
+};
 
 function makeContext(): HandlerContext {
-    return {
-        logger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-            trace: jest.fn(),
-        } as unknown as Logger,
-        context: { secrets: {} },
-    } as unknown as HandlerContext;
+    return createMockHandlerContext({
+        logger: createMockLogger() as unknown as Logger,
+        context: createMockExtensionContext({ secrets: createMockSecretStorage().secrets }),
+    });
 }
 
 function allLogs(context: HandlerContext): string {
@@ -72,7 +74,7 @@ describe('checkGitHubApp handler', () => {
         mockIsAppInstalled.mockResolvedValue({ isInstalled: true, codeStatus: 200 });
         const context = makeContext();
 
-        const result = await checkGitHubApp(context, REQUEST);
+        const result = await checkGitHubApp(context, REQUEST, SERVICES);
 
         expect(result.success).toBe(true);
         expect(result.isInstalled).toBe(true);
@@ -87,7 +89,7 @@ describe('checkGitHubApp handler', () => {
         });
         const context = makeContext();
 
-        await checkGitHubApp(context, REQUEST);
+        await checkGitHubApp(context, REQUEST, SERVICES);
 
         expect(mockPreviewCode).toHaveBeenCalled();
     });
@@ -100,7 +102,7 @@ describe('checkGitHubApp handler', () => {
         });
         const context = makeContext();
 
-        const result = await checkGitHubApp(context, REQUEST);
+        const result = await checkGitHubApp(context, REQUEST, SERVICES);
 
         expect(mockPreviewCode).not.toHaveBeenCalled();
         expect(result.codeSyncTriggered).toBe(false);
@@ -114,7 +116,7 @@ describe('checkGitHubApp handler', () => {
         });
         const context = makeContext();
 
-        await checkGitHubApp(context, REQUEST);
+        await checkGitHubApp(context, REQUEST, SERVICES);
 
         expect(allLogs(context)).not.toContain('HTTP 404');
     });
@@ -127,7 +129,7 @@ describe('checkGitHubApp handler', () => {
         });
         const context = makeContext();
 
-        await checkGitHubApp(context, REQUEST);
+        await checkGitHubApp(context, REQUEST, SERVICES);
 
         expect(allLogs(context)).toContain('401');
     });
@@ -148,7 +150,7 @@ describe('checkGitHubApp handler', () => {
         });
         const context = makeContext();
 
-        const result = await checkGitHubApp(context, REQUEST);
+        const result = await checkGitHubApp(context, REQUEST, SERVICES);
 
         expect(result.undetermined).toBe(true);
     });
@@ -161,7 +163,7 @@ describe('checkGitHubApp handler', () => {
         });
         const context = makeContext();
 
-        const result = await checkGitHubApp(context, REQUEST);
+        const result = await checkGitHubApp(context, REQUEST, SERVICES);
 
         // No install URL means no "Install App" button to send the user down.
         expect(result.installUrl).toBeUndefined();
@@ -175,7 +177,7 @@ describe('checkGitHubApp handler', () => {
         });
         const context = makeContext();
 
-        const result = await checkGitHubApp(context, REQUEST);
+        const result = await checkGitHubApp(context, REQUEST, SERVICES);
 
         expect(String(result.reason)).toMatch(/401/);
         expect(String(result.reason)).toMatch(/sign-in|credential/i);
@@ -185,7 +187,7 @@ describe('checkGitHubApp handler', () => {
         mockIsAppInstalled.mockResolvedValue({ isInstalled: false, codeStatus: 404 });
         const context = makeContext();
 
-        const result = await checkGitHubApp(context, REQUEST);
+        const result = await checkGitHubApp(context, REQUEST, SERVICES);
 
         expect(result.undetermined).toBeFalsy();
         expect(result.installUrl).toContain('aem-code-sync');
@@ -197,7 +199,7 @@ describe('checkGitHubApp handler', () => {
         mockIsAppInstalled.mockResolvedValue({ isInstalled: false, codeStatus: 404 });
         const context = makeContext();
 
-        await checkGitHubApp(context, REQUEST);
+        await checkGitHubApp(context, REQUEST, SERVICES);
 
         expect(mockPreviewCode).not.toHaveBeenCalled();
     });
@@ -245,7 +247,7 @@ describe('checkGitHubApp handler', () => {
                 .mockResolvedValueOnce({ isInstalled: true, codeStatus: 200 });
             const context = makeContext();
 
-            await checkGitHubApp(context, REQUEST);
+            await checkGitHubApp(context, REQUEST, SERVICES);
 
             expect(mockIsAppInstalled).toHaveBeenCalledTimes(2);
         });
@@ -256,7 +258,7 @@ describe('checkGitHubApp handler', () => {
                 .mockResolvedValueOnce({ isInstalled: true, codeStatus: 200 });
             const context = makeContext();
 
-            const result = await checkGitHubApp(context, REQUEST);
+            const result = await checkGitHubApp(context, REQUEST, SERVICES);
 
             expect(result.isInstalled).toBe(true);
             expect(result.codeStatus).toBe(200);
@@ -274,7 +276,7 @@ describe('checkGitHubApp handler', () => {
             mockPreviewCode.mockRejectedValue(new Error('Failed to preview code: 403 Forbidden'));
             const context = makeContext();
 
-            const result = await checkGitHubApp(context, REQUEST);
+            const result = await checkGitHubApp(context, REQUEST, SERVICES);
 
             expect(mockIsAppInstalled).toHaveBeenCalledTimes(1);
             expect(result.isInstalled).toBe(false);
@@ -288,7 +290,7 @@ describe('checkGitHubApp handler', () => {
             });
             const context = makeContext();
 
-            const result = await checkGitHubApp(context, REQUEST);
+            const result = await checkGitHubApp(context, REQUEST, SERVICES);
 
             expect(mockIsAppInstalled).toHaveBeenCalledTimes(2);
             expect(result.isInstalled).toBe(false);
@@ -304,7 +306,7 @@ describe('checkGitHubApp handler', () => {
                 httpStatus: 404,
             });
 
-            await checkGitHubApp(makeContext(), { ...REQUEST, skipTrigger: true });
+            await checkGitHubApp(makeContext(), { ...REQUEST, skipTrigger: true }, SERVICES);
 
             expect(mockPreviewCode).not.toHaveBeenCalled();
         });
@@ -316,7 +318,11 @@ describe('checkGitHubApp handler', () => {
                 httpStatus: 404,
             });
 
-            const res = await checkGitHubApp(makeContext(), { ...REQUEST, skipTrigger: true });
+            const res = await checkGitHubApp(
+                makeContext(),
+                { ...REQUEST, skipTrigger: true },
+                SERVICES
+            );
 
             expect(res.isInstalled).toBe(false);
         });
@@ -328,7 +334,7 @@ describe('checkGitHubApp handler', () => {
                 httpStatus: 404,
             });
 
-            await checkGitHubApp(makeContext(), REQUEST);
+            await checkGitHubApp(makeContext(), REQUEST, SERVICES);
 
             expect(mockPreviewCode).toHaveBeenCalled();
         });
@@ -348,25 +354,127 @@ describe('checkGitHubApp handler', () => {
  * Without this assertion the wiring is invisible: the service-level tests pass a
  * provider directly, so the handler could stop supplying one and nothing would fail.
  */
+/**
+ * What the handler ASKS FOR, and what it answers with.
+ *
+ * The tests above drive the handler through its branches and read the verdict.
+ * These pin the two things a mock cannot see on its own: the arguments the
+ * service is called with, and the shape returned when the call throws. A mode
+ * flag that never reaches `isAppInstalled` is invisible to every assertion that
+ * only reads the answer, because the fake answers the same either way.
+ */
+describe('checkGitHubApp handler — the call it makes and the answer it gives', () => {
+    // These queue per-call answers; `jest.clearAllMocks()` clears calls, not the
+    // `mockResolvedValueOnce` queue, so an unconsumed answer would leak forward.
+    beforeEach(() => {
+        mockIsAppInstalled.mockReset();
+    });
+
+    it('asks in strict mode when the request does not say otherwise', async () => {
+        mockIsAppInstalled.mockResolvedValue({ isInstalled: true, codeStatus: 200 });
+
+        await checkGitHubApp(makeContext(), REQUEST, SERVICES);
+
+        expect(mockIsAppInstalled).toHaveBeenCalledWith('acme-demos', 'aircraft-demo', {
+            lenient: false,
+        });
+    });
+
+    it('passes lenient through to the service when the request asks for it', async () => {
+        mockIsAppInstalled.mockResolvedValue({ isInstalled: true, codeStatus: 200 });
+
+        await checkGitHubApp(makeContext(), { ...REQUEST, lenient: true }, SERVICES);
+
+        expect(mockIsAppInstalled).toHaveBeenCalledWith('acme-demos', 'aircraft-demo', {
+            lenient: true,
+        });
+    });
+
+    it('re-asks in the SAME mode after the trigger', async () => {
+        mockIsAppInstalled
+            .mockResolvedValueOnce({ isInstalled: false, httpNotFound: true, httpStatus: 404 })
+            .mockResolvedValueOnce({ isInstalled: true, codeStatus: 200 });
+
+        await checkGitHubApp(makeContext(), { ...REQUEST, lenient: true }, SERVICES);
+
+        // A re-check that silently reverted to strict mode would reject the very
+        // status the lenient caller asked to accept.
+        expect(mockIsAppInstalled).toHaveBeenNthCalledWith(2, 'acme-demos', 'aircraft-demo', {
+            lenient: true,
+        });
+    });
+
+    it('reports that a code sync was triggered', async () => {
+        mockIsAppInstalled.mockResolvedValue({
+            isInstalled: false,
+            httpNotFound: true,
+            httpStatus: 404,
+        });
+
+        const result = await checkGitHubApp(makeContext(), REQUEST, SERVICES);
+
+        // The wizard uses this to say "indexing started" instead of "not installed".
+        expect(result.codeSyncTriggered).toBe(true);
+    });
+
+    it('names the repository in the undetermined reason', async () => {
+        mockIsAppInstalled.mockResolvedValue({
+            isInstalled: false,
+            transient: true,
+            httpStatus: 401,
+        });
+
+        const result = await checkGitHubApp(makeContext(), REQUEST, SERVICES);
+
+        // The reason is user-facing text; without the repo in it the SC cannot tell
+        // which of several storefronts AEM refused.
+        expect(String(result.reason)).toContain('acme-demos/aircraft-demo');
+    });
+
+    it('answers with the failure instead of throwing when the service rejects', async () => {
+        mockIsAppInstalled.mockRejectedValue(new Error('admin.hlx.page unreachable'));
+
+        const result = await checkGitHubApp(makeContext(), REQUEST, SERVICES);
+
+        expect(result).toEqual({
+            success: false,
+            isInstalled: false,
+            error: 'admin.hlx.page unreachable',
+        });
+    });
+
+    it('builds its own service when no seam is handed in', async () => {
+        // The production call passes no `services`. The real GitHubAppService is
+        // reached here and answers from the fake token service the suite installs —
+        // no credential, so no network — which makes the default factory's OUTPUT
+        // observable rather than merely constructed.
+        const result = await checkGitHubApp(makeContext(), REQUEST);
+
+        expect(result.success).toBe(true);
+        expect(result.undetermined).toBe(true);
+        expect(String(result.reason)).toContain("not signed in to GitHub");
+    });
+});
+
 describe('checkGitHubApp handler — DA.live session wiring', () => {
     it('constructs the service WITH the DA.live token provider', async () => {
-        const { GitHubAppService } = jest.requireMock(
-            '@/features/eds/services/github/githubAppService',
-        ) as { GitHubAppService: jest.Mock };
         const { tryCreateDaLiveTokenProvider } = jest.requireMock(
-            '@/features/eds/handlers/edsHelpers',
-        ) as { tryCreateDaLiveTokenProvider: jest.Mock };
+            '@/features/eds/handlers/edsHelpers'
+        );
         const provider = { getAccessToken: jest.fn() };
         tryCreateDaLiveTokenProvider.mockReturnValue(provider);
         mockIsAppInstalled.mockResolvedValue({ isInstalled: true, codeStatus: 200 });
 
-        await checkGitHubApp(makeContext(), REQUEST);
+        await checkGitHubApp(makeContext(), REQUEST, SERVICES);
 
-        expect(GitHubAppService).toHaveBeenCalledWith(
-            expect.anything(),
-            expect.anything(),
-            provider,
+        // Asserted on the FACTORY the handler was given, not on a mocked constructor.
+        // Same property, and it can now name all three arguments instead of two
+        // `expect.anything()` placeholders — a module mock could not see the token
+        // service or the logger it was handed.
+        expect(mockMakeGitHubAppService).toHaveBeenCalledWith(
+            expect.objectContaining({ getToken: expect.any(Function) }),
+            expect.objectContaining({ info: expect.any(Function) }),
+            provider
         );
     });
 });
-

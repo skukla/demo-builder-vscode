@@ -14,43 +14,13 @@
  * - Add mesh type handling in the lookup logic
  */
 
+import './executorComponentLoading.testUtils';
 import * as meshDeployment from '@/features/mesh/services/meshDeployment';
 import * as stalenessDetector from '@/features/mesh/services/stalenessDetector';
 import { HandlerContext } from '@/types/handlers';
 
 // Track getComponentById calls to verify fallback is being used
 let getComponentByIdCalls: string[] = [];
-
-// Mock dependencies
-jest.mock('@/features/mesh/services/meshDeployment');
-jest.mock('@/features/mesh/services/stalenessDetector');
-jest.mock('@/core/di', () => ({
-    ServiceLocator: {
-        getCommandExecutor: jest.fn().mockReturnValue({
-            execute: jest.fn().mockResolvedValue({ code: 0, stdout: '', stderr: '' }),
-        }),
-        getAuthenticationService: jest.fn().mockReturnValue({
-            testDeveloperPermissions: jest.fn().mockResolvedValue({ hasPermissions: true }),
-        }),
-    },
-}));
-
-// executeMeshPhase gates App Builder operations on projectRequiresAppBuilder.
-// These tests don't exercise the permission gate — stub the predicate so the
-// gate is a no-op and the flow under test proceeds.
-jest.mock('@/features/components/services/projectAppBuilderPredicate', () => ({
-    projectRequiresAppBuilder: jest.fn(() => false),
-}));
-
-// Mock fs/promises for file operations
-jest.mock('fs/promises', () => ({
-    mkdir: jest.fn().mockResolvedValue(undefined),
-    writeFile: jest.fn().mockResolvedValue(undefined),
-    access: jest.fn().mockRejectedValue(new Error('Not found')),
-    readdir: jest.fn().mockResolvedValue([]),
-    rm: jest.fn().mockResolvedValue(undefined),
-    rmdir: jest.fn().mockResolvedValue(undefined),
-}));
 
 // Mock ComponentManager
 jest.mock('@/features/components/services/componentManager', () => ({
@@ -75,12 +45,14 @@ jest.mock('@/features/components/services/componentManager', () => ({
 jest.mock('@/features/components/services/ComponentRegistryManager', () => ({
     ComponentRegistryManager: jest.fn().mockImplementation(() => ({
         loadRegistry: jest.fn().mockResolvedValue({ envVars: {} }),
-        getFrontends: jest.fn().mockResolvedValue([{
-            id: 'headless',
-            name: 'CitiSignal Next.js',
-            type: 'frontend',
-            source: { type: 'git', url: 'https://github.com/test/headless' },
-        }]),
+        getFrontends: jest.fn().mockResolvedValue([
+            {
+                id: 'headless',
+                name: 'CitiSignal Next.js',
+                type: 'frontend',
+                source: { type: 'git', url: 'https://github.com/test/headless' },
+            },
+        ]),
         // headless-commerce-mesh is in dependencies section for stack-based resolution
         getDependencies: jest.fn().mockResolvedValue([
             {
@@ -94,16 +66,18 @@ jest.mock('@/features/components/services/ComponentRegistryManager', () => ({
                 },
             },
         ]),
-        getMesh: jest.fn().mockResolvedValue([{
-            id: 'headless-commerce-mesh',
-            name: 'Headless Commerce API Mesh',
-            type: 'mesh',
-            source: { type: 'git', url: 'https://github.com/skukla/headless-citisignal-mesh' },
-            configuration: {
-                nodeVersion: '20',
-                requiresDeployment: true,
+        getMesh: jest.fn().mockResolvedValue([
+            {
+                id: 'headless-commerce-mesh',
+                name: 'Headless Commerce API Mesh',
+                type: 'mesh',
+                source: { type: 'git', url: 'https://github.com/skukla/headless-citisignal-mesh' },
+                configuration: {
+                    nodeVersion: '20',
+                    requiresDeployment: true,
+                },
             },
-        }]),
+        ]),
         // getComponentById searches ALL sections (frontends, backends, dependencies, mesh, etc.)
         // This is used as fallback when type-specific lookup doesn't find the component
         getComponentById: jest.fn().mockImplementation((id: string) => {
@@ -113,7 +87,10 @@ jest.mock('@/features/components/services/ComponentRegistryManager', () => ({
                     id: 'headless-commerce-mesh',
                     name: 'Headless Commerce API Mesh',
                     type: 'mesh',
-                    source: { type: 'git', url: 'https://github.com/skukla/headless-citisignal-mesh' },
+                    source: {
+                        type: 'git',
+                        url: 'https://github.com/skukla/headless-citisignal-mesh',
+                    },
                 };
             }
             if (id === 'headless') {
@@ -129,27 +106,6 @@ jest.mock('@/features/components/services/ComponentRegistryManager', () => ({
     })),
 }));
 
-// Mock envFileGenerator
-jest.mock('@/features/project-creation/helpers/envFileGenerator', () => ({
-    generateComponentEnvFile: jest.fn().mockResolvedValue(undefined),
-    generateComponentConfigFiles: jest.fn().mockResolvedValue(undefined),
-}));
-
-// Mock vscode
-jest.mock('vscode', () => ({
-    workspace: {
-        getConfiguration: jest.fn().mockReturnValue({
-            get: jest.fn().mockReturnValue(3000),
-        }),
-    },
-    window: {
-        setStatusBarMessage: jest.fn(),
-    },
-    commands: {
-        executeCommand: jest.fn(),
-    },
-}), { virtual: true });
-
 // Cast mocked modules for type safety
 const mockDeployMeshComponent = meshDeployment.deployMeshComponent as jest.Mock;
 const mockUpdateMeshState = stalenessDetector.updateMeshState as jest.Mock;
@@ -158,28 +114,25 @@ const mockReadMeshEnvVarsFromFile = stalenessDetector.readMeshEnvVarsFromFile as
 
 // Import executor AFTER mocks are set up (top-level import gets mocked modules)
 import { executeProjectCreation } from '@/features/project-creation/handlers/executor';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockWebviewPanel } from '../../../helpers/webviewPanelFake';
 describe('Executor - Mesh Component Loading', () => {
     let mockContext: Partial<HandlerContext>;
 
     const createMockContext = (): Partial<HandlerContext> => {
         return {
-            context: { extensionPath: '/test/extension' } as any,
-            logger: {
-                info: jest.fn(),
-                debug: jest.fn(),
-                warn: jest.fn(),
-                error: jest.fn(),
-                trace: jest.fn(),
-            } as any,
-            stateManager: {
+            context: createMockExtensionContext({}, '/test/extension'),
+            logger: createMockLogger(),
+            stateManager: createMockStateManager({
                 getCurrentProject: jest.fn().mockResolvedValue(null),
                 saveProject: jest.fn().mockResolvedValue(undefined),
-                addRecentProject: jest.fn().mockResolvedValue(undefined),
-            } as any,
+            }),
             sharedState: { isAuthenticating: false },
             sendMessage: jest.fn(),
-            panel: { visible: false, dispose: jest.fn() } as any,
+            panel: createMockWebviewPanel({ visible: false }),
         };
     };
 
@@ -187,6 +140,12 @@ describe('Executor - Mesh Component Loading', () => {
         jest.clearAllMocks();
         getComponentByIdCalls = [];
         mockContext = createMockContext();
+        // The registry now arrives ON the context (ADR-015): the handler stopped
+        // constructing one. Reuse this suite's existing module-mock fake rather
+        // than inventing a second — the mock stays, it just gets handed in now.
+        mockContext.componentRegistry = new (jest.requireMock(
+            '@/features/components/services/ComponentRegistryManager'
+        ).ComponentRegistryManager)();
 
         // Default mock implementations for mesh services
         mockDeployMeshComponent.mockResolvedValue({ success: true });

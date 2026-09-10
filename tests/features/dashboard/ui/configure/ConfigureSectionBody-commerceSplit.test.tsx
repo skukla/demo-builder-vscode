@@ -26,10 +26,9 @@
  */
 
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { ConfigureSectionBody } from '@/features/dashboard/ui/configure/ConfigureSectionBody';
-import type { ServiceGroup, UniqueField } from '@/features/dashboard/ui/configure/configureTypes';
+import type { ServiceGroup } from '@/features/dashboard/ui/configure/configureTypes';
 
 jest.mock('@adobe/react-spectrum', () => ({
     TextField: ({ label }: any) => <div>{label}</div>,
@@ -43,64 +42,23 @@ jest.mock('@adobe/react-spectrum', () => ({
     Divider: () => <hr />,
 }));
 
-const field = (key: string): UniqueField =>
-    ({ key, label: key, type: 'text', required: false, componentIds: ['c'] }) as UniqueField;
-
-const COMMERCE: ServiceGroup = {
-    id: 'adobe-commerce',
-    label: 'Adobe Commerce',
-    fields: [
-        field('ADOBE_COMMERCE_URL'),
-        field('ADOBE_COMMERCE_ADMIN_USERNAME'),
-        field('ADOBE_COMMERCE_WEBSITE_CODE'),
-        field('ADOBE_COMMERCE_STORE_CODE'),
-    ],
-};
-
-/** The ACCS half: the only backend with the brokered OAuth pair. */
-const ACCS: ServiceGroup = {
-    id: 'accs',
-    label: 'Adobe Commerce Cloud Service',
-    fields: [
-        field('ACCS_GRAPHQL_ENDPOINT'),
-        field('ACCS_OAUTH_CLIENT_ID'),
-        field('ACCS_OAUTH_CLIENT_SECRET'),
-        field('ACCS_WEBSITE_CODE'),
-    ],
-};
-
-const CATALOG: ServiceGroup = {
-    id: 'catalog-service',
-    label: 'Catalog Service',
-    fields: [field('ADOBE_CATALOG_API_KEY')],
-};
-
-/** Records which group each field row was handed — the cascade depends on it. */
-const seen: { key: string; groupId: string }[] = [];
+// Below the mock deliberately: testUtils owns the component import, so the
+// Spectrum mock above has to be registered before this line runs.
+import {
+    ACCS,
+    CATALOG,
+    COMMERCE,
+    renderSectionBody,
+    seen,
+    serviceGroupSection,
+} from './ConfigureSectionBody.testUtils';
 
 function renderBody(group: ServiceGroup, storeStructureReady = true) {
-    seen.length = 0;
-    return render(
-        <ConfigureSectionBody
-            section={{ id: group.id, label: group.label, kind: 'serviceGroup' } as never}
-            serviceGroups={[group, CATALOG]}
-            renderFieldRow={(f, g) => {
-                seen.push({ key: f.key, groupId: g.id });
-                return <div data-testid={`row-${f.key}`} />;
-            }}
-            projectName="p"
-            onProjectNameChange={jest.fn()}
-            projectNameTouched={false}
-            appBuilderComponentCatalog={[]}
-            componentConfigs={{}}
-            providedEnvVars={{}}
-            appBuilderComponentSecretFlags={{}}
-            onAppBuilderValueChange={jest.fn()}
-            authoringExperience="da-live-classic"
-            onAuthoringExperienceChange={jest.fn()}
-            storeStructureReady={storeStructureReady}
-        />
-    );
+    return renderSectionBody({
+        section: serviceGroupSection(group.id, group.label),
+        serviceGroups: [group, CATALOG],
+        storeStructureReady,
+    });
 }
 
 describe('ConfigureSectionBody — the Commerce tab splits into two sub-sections', () => {
@@ -164,34 +122,14 @@ describe('ConfigureSectionBody — the Commerce tab splits into two sub-sections
 describe('the Business Structure tab', () => {
     /** Render the sliced section id the rail now emits for the store cascade. */
     function renderBusinessStructure(storeStructureReady: boolean) {
-        seen.length = 0;
-        return render(
-            <ConfigureSectionBody
-                section={
-                    {
-                        id: 'adobe-commerce:business-structure',
-                        label: 'Business Structure',
-                        kind: 'serviceGroup',
-                    } as never
-                }
-                serviceGroups={[COMMERCE, CATALOG]}
-                renderFieldRow={(f, g) => {
-                    seen.push({ key: f.key, groupId: g.id });
-                    return <div data-testid={`row-${f.key}`} />;
-                }}
-                projectName="p"
-                onProjectNameChange={jest.fn()}
-                projectNameTouched={false}
-                appBuilderComponentCatalog={[]}
-                componentConfigs={{}}
-                providedEnvVars={{}}
-                appBuilderComponentSecretFlags={{}}
-                onAppBuilderValueChange={jest.fn()}
-                authoringExperience="da-live-classic"
-                onAuthoringExperienceChange={jest.fn()}
-                storeStructureReady={storeStructureReady}
-            />,
-        );
+        return renderSectionBody({
+            section: serviceGroupSection(
+                'adobe-commerce:business-structure',
+                'Business Structure'
+            ),
+            serviceGroups: [COMMERCE, CATALOG],
+            storeStructureReady,
+        });
     }
 
     it('names itself, like every other section does', () => {

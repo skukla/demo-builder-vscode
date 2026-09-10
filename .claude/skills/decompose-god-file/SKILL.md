@@ -4,7 +4,7 @@ description: Split an oversized multi-responsibility file (service, component, h
 ---
 # Decompose a God File
 
-Full pattern catalog, worked examples, and anti-patterns: `.rptc/sop/god-file-decomposition.md`.
+Full pattern catalog, worked examples, and anti-patterns: `docs/development/sop/god-file-decomposition.md`.
 This skill is the tight workflow — read the SOP for the how of each pattern.
 
 ## When NOT to use
@@ -53,9 +53,11 @@ find src -name "*.tsx" -not -name "*.test.tsx" -exec wc -l {} + | awk '$1 > 350'
 5. **Keep tests in sync** (project rule): moving a method moves its tests to the new unit's test
    file; the facade keeps a delegation/integration test. Don't leave orphaned tests behind.
 
-## Gotchas (anti-patterns — SOP §4)
-- **Premature extraction**: don't extract a helper with a single use case. Rule of Three — inline
-  until 2+ real callers.
+## Gotchas
+- **Premature extraction**: don't extract a helper with a single use case. This said "Rule
+  of Three — inline until 2+ real callers", which is two thresholds in one sentence: 2+
+  includes two, and the Rule of Three waits for the third. The rule is the handbook's, and
+  it is three.
 - **Facade accumulation**: NEW behavior goes into the appropriate specialized service, never as a
   new method bolted onto the facade — that just recreates the god file behind a thin front.
 - **Shared mutable state**: extracted units must not reach into each other's private caches. Give

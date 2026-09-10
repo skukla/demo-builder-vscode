@@ -21,6 +21,7 @@
 import { Button, Text } from '@adobe/react-spectrum';
 import Add from '@spectrum-icons/workflow/Add';
 import React, { useEffect, useCallback, useState } from 'react';
+import { edsConfigStringDefaults, type WizardEdsConfig } from '../helpers/edsConfigDefaults';
 import {
     CodeSyncStatusView,
     NewRepoForm,
@@ -35,8 +36,8 @@ import {
     type GitHubAppStatus,
     type RepoCreationState,
 } from './repoSelectionInline.helpers';
-import { SelectionStepContent } from '@/core/ui/components/selection';
-import { useSelectionStep } from '@/core/ui/hooks';
+import { SelectionStepContent } from '@/core/ui/components/selection/SelectionStepContent';
+import { useSelectionStep } from '@/core/ui/hooks/useSelectionStep';
 import { vscode, webviewClient } from '@/core/ui/utils/vscode-api';
 import {
     isValidRepositoryName,
@@ -47,13 +48,14 @@ import type { GitHubRepoItem } from '@/types/webview';
 import type { BaseStepProps } from '@/types/wizard';
 import '../styles/eds-steps.css';
 
-/** The wizard's edsConfig, exactly as state carries it (optional included). */
-type WizardEdsConfig = BaseStepProps['state']['edsConfig'];
 
 /** Which part of the repo/code-sync flow to render (validities stay live for both). */
 export type RepoSelectionPhase = 'repository' | 'code-sync';
 
 /** Props: state-driven like the parent step, but validity flows OUT to the parent. */
+/** Constant per call site — see PROJECT_SEARCH_FIELDS in AdobeProjectPicker. */
+const REPO_SEARCH_FIELDS: ReadonlyArray<keyof GitHubRepoItem> = ['name', 'fullName', 'description'];
+
 export interface RepoSelectionInlineProps extends Pick<BaseStepProps, 'state' | 'updateState'> {
     /** Which sub-step body to render: the repo pick/create UI or the Code Sync UI. */
     phase: RepoSelectionPhase;
@@ -64,36 +66,6 @@ export interface RepoSelectionInlineProps extends Pick<BaseStepProps, 'state' | 
 }
 
 
-
-/**
- * The string fields every `edsConfig` write must carry, defaulted to `''`.
- *
- * Both writers below spread this before applying their own changes. It was
- * written out twice — six near-identical `|| ''` lines each — which is most of
- * what pushed this component past the complexity limit, and meant a new required
- * field had to be remembered in two places.
- *
- * `undefined` is not an acceptable value for these: they feed controlled inputs,
- * and React silently switches an input to uncontrolled the moment its value goes
- * undefined, discarding what the user typed with no error anywhere.
- */
-function edsConfigStringDefaults(edsConfig: WizardEdsConfig): {
-    accsHost: string;
-    storeViewCode: string;
-    customerGroup: string;
-    repoName: string;
-    daLiveOrg: string;
-    daLiveSite: string;
-} {
-    return {
-        accsHost: edsConfig?.accsHost || '',
-        storeViewCode: edsConfig?.storeViewCode || '',
-        customerGroup: edsConfig?.customerGroup || '',
-        repoName: edsConfig?.repoName || '',
-        daLiveOrg: edsConfig?.daLiveOrg || '',
-        daLiveSite: edsConfig?.daLiveSite || '',
-    };
-}
 
 /**
  * The repo-selection values this component derives from `edsConfig`.
@@ -196,7 +168,7 @@ export function RepoSelectionInline({
         selectedItem: selectedRepo,
         searchFilterKey: 'githubRepoSearchFilter',
         autoSelectSingle: false,
-        searchFields: ['name', 'fullName', 'description'],
+        searchFields: REPO_SEARCH_FIELDS,
         onSelect: (repo) => {
             updateState({
                 edsConfig: {

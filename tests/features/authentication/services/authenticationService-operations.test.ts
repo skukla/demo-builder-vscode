@@ -1,13 +1,11 @@
 import { AuthenticationService } from '@/features/authentication/services/authenticationService';
-import type { CommandExecutor } from '@/core/shell';
-import type { StepLogger } from '@/core/logging';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import type { Logger } from '@/types/logger';
+import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
 import {
-    createMockCommandExecutor,
-    createMockLogger,
-    createMockStepLogger,
     createSuccessResult,
     mockOrg,
+    setupAuthServiceSuite,
 } from './authenticationService.testUtils';
 
 /**
@@ -23,7 +21,6 @@ import {
  */
 
 // Only mock external dependencies
-jest.mock('@/core/logging');
 jest.mock('@/features/authentication/services/adobeSDKClient');
 jest.mock('@/features/authentication/services/adobeEntityService');
 // Mocked so the assertion is on the CALL, not on cache state in another feature.
@@ -31,7 +28,7 @@ jest.mock('@/features/data-installer/services/commerceCredentialBroker', () => (
     clearSharedCredentialCache: jest.fn(),
 }));
 
-import { getLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
 import { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import { createEntityServices } from '@/features/authentication/services/adobeEntityService';
 import { clearSharedCredentialCache } from '@/features/data-installer/services/commerceCredentialBroker';
@@ -40,39 +37,22 @@ describe('AuthenticationService - Login/Logout Operations', () => {
     let authService: AuthenticationService;
     let mockCommandExecutor: jest.Mocked<CommandExecutor>;
     let mockLogger: jest.Mocked<Logger>;
-    let mockStepLogger: jest.Mocked<StepLogger>;
     let mockSDKClient: jest.Mocked<AdobeSDKClient>;
 
     beforeEach(() => {
         jest.clearAllMocks();
-
-        mockCommandExecutor = createMockCommandExecutor();
-        mockLogger = createMockLogger();
-        mockStepLogger = createMockStepLogger();
-
-        // Mock getLogger
-        (getLogger as jest.Mock).mockReturnValue(mockLogger);
-
-        // Mock StepLogger.create
-        const StepLoggerMock = require('@/core/logging').StepLogger;
-        StepLoggerMock.create = jest.fn().mockResolvedValue(mockStepLogger);
-
-        // Setup mock SDK client
-        mockSDKClient = {
-            initialize: jest.fn().mockResolvedValue(undefined),
-            ensureInitialized: jest.fn().mockResolvedValue(true),
-            clear: jest.fn(),
-        } as any;
-
-        // Mock constructors
-        (AdobeSDKClient as jest.MockedClass<typeof AdobeSDKClient>).mockImplementation(() => mockSDKClient);
-        (createEntityServices as jest.Mock).mockReturnValue({
-            fetcher: { getOrganizations: jest.fn().mockResolvedValue([mockOrg]) },
-            resolver: {},
-            selector: {},
-        });
-
-        authService = new AuthenticationService('/mock/extension/path', mockLogger, mockCommandExecutor);
+        ({
+            authService,
+            commandExecutor: mockCommandExecutor,
+            logger: mockLogger,
+            sdkClient: mockSDKClient,
+        } = setupAuthServiceSuite({
+            AdobeSDKClient: AdobeSDKClient as unknown as jest.MockedClass<
+                typeof AdobeSDKClient
+            >,
+            createEntityServices: createEntityServices as jest.Mock,
+            getLogger: getLogger as jest.Mock,
+        }));
     });
 
     describe('login', () => {
@@ -274,7 +254,8 @@ describe('AuthenticationService - Login/Logout Operations', () => {
 
         beforeEach(() => {
             // Spy on cache manager methods
-            const cacheManager = (authService as any).cacheManager;
+            const cacheManager = (authService as unknown as { cacheManager: AuthCacheManager })
+                .cacheManager;
             clearAuthStatusCacheSpy = jest.spyOn(cacheManager, 'clearAuthStatusCache');
             clearValidationCacheSpy = jest.spyOn(cacheManager, 'clearValidationCache');
             clearTokenInspectionCacheSpy = jest.spyOn(cacheManager, 'clearTokenInspectionCache');
@@ -316,7 +297,8 @@ describe('AuthenticationService - Login/Logout Operations', () => {
             // getOrganizations(), which is org-list-cache-first — so the org LIST must be
             // cleared too, else the org re-derives from a stale list (~60s TTL). The forced
             // path already clears both via clearAll.
-            const cacheManager = (authService as any).cacheManager;
+            const cacheManager = (authService as unknown as { cacheManager: AuthCacheManager })
+                .cacheManager;
             cacheManager.setCachedOrganization(mockOrg); // seed a stale org
             cacheManager.setCachedOrgList([mockOrg]); // seed a stale org list
 
@@ -357,6 +339,79 @@ describe('AuthenticationService - Login/Logout Operations', () => {
             expect(clearAuthStatusCacheSpy).toHaveBeenCalledTimes(1);
             expect(clearValidationCacheSpy).toHaveBeenCalledTimes(1);
             expect(clearTokenInspectionCacheSpy).toHaveBeenCalledTimes(1);
+        });
+    });
+
+    describe('login — exit code, token shape and the forced path', () => {
+        const validToken = 'x'.repeat(150);
+
+        it('a non-zero exit is a failed login — no retry, no forced attempt', async () => {
+            mockCommandExecutor.execute.mockResolvedValue({
+                code: 1,
+                stdout: '',
+                stderr: 'denied',
+                duration: 0,
+            });
+
+            await expect(authService.login()).resolves.toBe(false);
+
+            expect(mockCommandExecutor.execute).toHaveBeenCalledTimes(1);
+        });
+
+        it('whitespace cannot pad a short token past the floor — the output is trimmed first', async () => {
+            mockCommandExecutor.execute
+                .mockResolvedValueOnce({
+                    code: 0,
+                    stdout: `short${' '.repeat(120)}`,
+                    stderr: '',
+                    duration: 0,
+                })
+                .mockResolvedValueOnce(createSuccessResult(validToken));
+
+            await expect(authService.login()).resolves.toBe(true);
+
+            expect(mockCommandExecutor.execute).toHaveBeenCalledTimes(2);
+            expect(mockCommandExecutor.execute).toHaveBeenNthCalledWith(
+                2,
+                'aio auth login -f',
+                expect.objectContaining({ encoding: 'utf8' }),
+            );
+        });
+
+        it('a forced login that yields no token stops — it does not force again', async () => {
+            mockCommandExecutor.execute.mockResolvedValue(createSuccessResult('short'));
+
+            await expect(authService.login(true)).resolves.toBe(false);
+
+            expect(mockCommandExecutor.execute).toHaveBeenCalledTimes(1);
+        });
+
+        it('a forced login clears everything once and does not clear the caches again after', async () => {
+            const cacheManager = (authService as unknown as { cacheManager: AuthCacheManager })
+                .cacheManager;
+            const clearAll = jest.spyOn(cacheManager, 'clearAll');
+            const clearAuthStatus = jest.spyOn(cacheManager, 'clearAuthStatusCache');
+            const clearValidation = jest.spyOn(cacheManager, 'clearValidationCache');
+            const clearInspection = jest.spyOn(cacheManager, 'clearTokenInspectionCache');
+            mockCommandExecutor.execute.mockResolvedValue(createSuccessResult(validToken));
+
+            await expect(authService.login(true)).resolves.toBe(true);
+
+            // clearAll clears the three itself; a second round would count them twice.
+            expect(clearAll).toHaveBeenCalledTimes(1);
+            expect(clearAuthStatus).toHaveBeenCalledTimes(1);
+            expect(clearValidation).toHaveBeenCalledTimes(1);
+            expect(clearInspection).toHaveBeenCalledTimes(1);
+        });
+
+        it('answers false when the step logger cannot be created', async () => {
+            const StepLoggerClass = require('@/core/logging/stepLogger').StepLogger;
+            StepLoggerClass.create = jest.fn().mockRejectedValue(new Error('no templates'));
+            mockCommandExecutor.execute.mockResolvedValue(createSuccessResult(validToken));
+
+            await expect(authService.login()).resolves.toBe(false);
+
+            expect(mockCommandExecutor.execute).not.toHaveBeenCalled();
         });
     });
 });

@@ -4,30 +4,15 @@
  * Tests for AEM Code Sync GitHub App detection and installation URL generation.
  */
 
+import { createMockLogger } from '../../../../helpers/loggerFake';
+
 // Mock fetch globally
 const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
 // Mock timeoutConfig
-jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: {
-        NORMAL: 30000,
-        POLL: {
-            INTERVAL: 5000,
-        },
-    },
-}));
 
 // Mock logger
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn(() => ({
-        trace: jest.fn(),
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
-}));
 
 describe('GitHub App Service', () => {
     let GitHubAppService: any;
@@ -345,13 +330,7 @@ describe('GitHub App Service', () => {
         // leak a secret into a file users paste into tickets.
 
         it('should log the credential type but never the credential itself', async () => {
-            const logger = {
-                trace: jest.fn(),
-                debug: jest.fn(),
-                info: jest.fn(),
-                warn: jest.fn(),
-                error: jest.fn(),
-            };
+            const logger = createMockLogger();
             mockTokenService.getToken.mockResolvedValue({
                 token: 'gho_SUPERSECRETVALUE',
                 tokenType: 'bearer',
@@ -365,8 +344,11 @@ describe('GitHub App Service', () => {
 
             await service.isAppInstalled('test-owner', 'test-repo');
 
-            const logged = ['trace', 'debug', 'info', 'warn', 'error']
-                .flatMap((lvl) => (logger as never as Record<string, jest.Mock>)[lvl].mock.calls)
+            // `as never as Record<string, jest.Mock>` stood here to index the fake by
+            // level name. The canonical builder returns `jest.Mocked<Logger>`, so a
+            // const-asserted tuple indexes it with no cast at all.
+            const logged = (['trace', 'debug', 'info', 'warn', 'error'] as const)
+                .flatMap((lvl) => logger[lvl].mock.calls)
                 .map((c) => String(c[0]))
                 .join('\n');
             expect(logged).toContain('gho_');
@@ -462,7 +444,7 @@ describe('GitHubAppService — access-protected sites', () => {
     // Same dynamic-import setup the suite above uses: the module is loaded after
     // `jest.resetModules()` so the mocked logger/timeouts take effect.
     let GitHubAppService: any;
-    const tokenService = { getToken: jest.fn() } as never;
+    const tokenService = { getToken: jest.fn() };
     const daLive = { getAccessToken: jest.fn() };
 
     const headersOfLastCall = () => mockFetch.mock.calls.at(-1)?.[1]?.headers ?? {};
@@ -485,7 +467,7 @@ describe('GitHubAppService — access-protected sites', () => {
     });
 
     it('sends the DA.live Bearer alongside the GitHub token', async () => {
-        const service = new GitHubAppService(tokenService, undefined, daLive as never);
+        const service = new GitHubAppService(tokenService, undefined, daLive);
 
         await service.isAppInstalled('skukla', 'demo-builder-test');
 
@@ -499,7 +481,7 @@ describe('GitHubAppService — access-protected sites', () => {
         // An unprotected site never needed the Bearer, and a signed-out user must
         // not have a working check turned into a hard failure.
         daLive.getAccessToken.mockResolvedValue(undefined);
-        const service = new GitHubAppService(tokenService, undefined, daLive as never);
+        const service = new GitHubAppService(tokenService, undefined, daLive);
 
         await service.isAppInstalled('skukla', 'foobar');
 
@@ -508,7 +490,7 @@ describe('GitHubAppService — access-protected sites', () => {
 
     it('degrades when the DA.live provider itself throws', async () => {
         daLive.getAccessToken.mockRejectedValue(new Error('keychain unavailable'));
-        const service = new GitHubAppService(tokenService, undefined, daLive as never);
+        const service = new GitHubAppService(tokenService, undefined, daLive);
 
         const result = await service.isAppInstalled('skukla', 'foobar');
 
@@ -517,3 +499,99 @@ describe('GitHubAppService — access-protected sites', () => {
     });
 });
 
+
+/**
+ * The three decisions this module makes that nothing else constrained.
+ *
+ * Each one was a surviving mutant on 2026-09-05: the token-prefix regex could
+ * lose its `^` anchor, the `.get?.()` guard on a header bag could be dropped, and
+ * the "Helix gave us no code.status" guard could be deleted whole — all three
+ * with every existing test still green.
+ */
+describe('GitHubAppService — decisions with a consequence', () => {
+    let describeTokenType: (token: string) => string;
+    let GitHubAppService: any;
+    const tokenService = { getToken: jest.fn() };
+
+    beforeEach(async () => {
+        jest.clearAllMocks();
+        jest.resetModules();
+        const module = await import('@/features/eds/services/github/githubAppService');
+        describeTokenType = module.describeTokenType;
+        GitHubAppService = module.GitHubAppService;
+        tokenService.getToken.mockResolvedValue({ token: 'ghp_xxx', tokenType: 'bearer' });
+    });
+
+    /**
+     * The prefix must be at the START. GitHub credentials are self-identifying by
+     * their leading marker; a `ghp_` appearing anywhere inside an opaque secret is
+     * not a type declaration, and reporting one would put a wrong diagnosis in
+     * front of a 401 the user is trying to read.
+     */
+    it('only recognises a credential marker at the start of the token', () => {
+        expect(describeTokenType('ghp_abc123')).toBe('ghp_');
+        expect(describeTokenType('github_pat_abc123')).toBe('github_pat_');
+        // Same markers, not at position 0 — not a type.
+        expect(describeTokenType('xghp_abc123')).toBe('unrecognized');
+        expect(describeTokenType('AAAAgithub_pat_abc')).toBe('unrecognized');
+    });
+
+    /**
+     * A header bag without a `get` method must not turn an HTTP error into a
+     * thrown one. Both routes end up "transient", so the only thing that tells
+     * them apart is whether the caller still learns WHICH status Helix returned:
+     * the throw path loses `httpStatus` entirely, and the retry logic upstream
+     * reads it.
+     */
+    it('keeps httpStatus when the response carries no usable headers object', async () => {
+        mockFetch.mockResolvedValue({ ok: false, status: 500, headers: {} });
+        const service = new GitHubAppService(tokenService);
+
+        const result = await service.isAppInstalled('skukla', 'demo');
+
+        expect(result).toEqual({
+            isInstalled: false,
+            transient: true,
+            httpStatus: 500,
+            helixError: undefined,
+        });
+    });
+
+    /** CONTROL — a real headers object still yields the `x-error` reason. */
+    it('CONTROL — reads x-error when the headers object supports get', async () => {
+        mockFetch.mockResolvedValue({
+            ok: false,
+            status: 401,
+            headers: { get: jest.fn().mockReturnValue('[admin] not authenticated') },
+        });
+        const service = new GitHubAppService(tokenService);
+
+        const result = await service.isAppInstalled('skukla', 'demo');
+
+        expect(result).toEqual({
+            isInstalled: false,
+            transient: true,
+            httpStatus: 401,
+            helixError: '[admin] not authenticated',
+        });
+    });
+
+    /**
+     * LENIENT mode is where a missing `code.status` is dangerous. Lenient reads
+     * "installed" as "anything that is not 404", and `undefined !== 404` is true —
+     * so without the explicit guard, a response Helix never filled in would be
+     * reported as a working App and post-install verification would pass on
+     * nothing at all.
+     */
+    it('does not read a missing code.status as installed in lenient mode', async () => {
+        mockFetch.mockResolvedValue({
+            ok: true,
+            json: jest.fn().mockResolvedValue({ preview: { status: 200 } }),
+        });
+        const service = new GitHubAppService(tokenService);
+
+        const result = await service.isAppInstalled('skukla', 'demo', { lenient: true });
+
+        expect(result).toEqual({ isInstalled: false, transient: true });
+    });
+});

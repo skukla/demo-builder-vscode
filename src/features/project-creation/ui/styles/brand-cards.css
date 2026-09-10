@@ -1,0 +1,271 @@
+/**
+ * .brand-* and .expandable-* styles — the demo-package cards on the Welcome step.
+ *
+ * FEATURE-SCOPED (ADR-017 §6). Imported by the `wizard` entry ALONE — the only one
+ * whose graph reaches BrandGallery or WelcomeStep.
+ *
+ * TWO FAMILIES, one sheet, and they belong together: `.expandable-brand-card` IS a
+ * brand card. They were moved in one commit under the belief that they could not be
+ * split, which was wrong (see that commit's correction in the ledger) — but the
+ * shared home is right either way.
+ *
+ * Moved out of utilities.css by the CSS migration
+ * (.rptc/plans/css-architecture-migration), each rule with the comment above it.
+ * Verbatim otherwise: a move is only correct when the visual diff is empty.
+ */
+
+@layer theme {
+/* Brand section container */
+.brand-section {
+    margin-bottom: 24px;
+}
+
+/* Base brand card - expandable variant */
+/* Demo Setup renders BrandGallery in a SingleColumnLayout whose padding is an INLINE
+   style (24px). !important overrides just the top to size-400 (32px) so its content
+   starts at the same inset below the header as every other flow step; sides/bottom keep
+   the layout's default 24px. */
+.brand-gallery-column {
+    /* ALL FOUR SIDES. BrandGallery passes `padding={null}`, so
+       `.single-column-layout`'s padding rule excludes itself and this is the only
+       padding declaration on the element. It used to set just the top and inherit
+       24px from SingleColumnLayout's inline default — a prop and this stylesheet
+       each owning part of one element's padding, and the top could only win with
+       `!important`. */
+    padding: var(--spectrum-global-dimension-size-400) 24px 24px;
+}
+
+/* Brand card header area */
+.brand-card-header {
+    margin-bottom: 0;
+}
+
+.brand-card-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+
+.brand-card-name {
+    display: block;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--spectrum-global-color-gray-900);
+}
+
+.brand-card-description {
+    display: block;
+    font-size: 12px;
+    color: var(--spectrum-global-color-gray-600);
+    line-height: 1.4;
+}
+
+/* Architecture options section (inside expanded card) slides + fades down on expand.
+ * Its own keyframe (was a second `fadeIn` definition that the later plain `fadeIn`
+ * silently shadowed — so this slide never actually ran; renamed to restore it). */
+.brand-card-architectures {
+    animation: fadeInDown var(--spectrum-global-animation-duration-300) var(--spectrum-global-animation-ease-out);
+}
+
+.brand-card-section-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--spectrum-global-color-gray-700);
+    margin-bottom: 12px;
+}
+
+/* Compact selection summary in expanded brand card */
+/* A quiet secondary line — no divider / uppercase micro-label — so the package card's
+   architecture summary reads in the same tone as the backend card's description. */
+.brand-card-selection {
+    margin-top: 6px;
+    animation: fadeIn var(--spectrum-global-animation-duration-300) ease-out;
+}
+
+.brand-card-selection-summary {
+    font-size: 12px;
+    color: var(--spectrum-global-color-gray-600);
+    line-height: 1.4;
+}
+
+.brand-card-selection-sep {
+    color: var(--spectrum-global-color-gray-400);
+}
+
+.brand-card-selection-label {
+    display: block;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--spectrum-global-color-gray-600);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+}
+
+.brand-card-selection-value {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--spectrum-global-color-gray-900);
+}
+
+/* Hover tooltip for block library details */
+.brand-card-detail-trigger {
+    position: relative;
+    /* Inline on the architecture summary line (was a block below it). */
+    white-space: nowrap;
+}
+
+.brand-card-detail-link {
+    display: inline-block;
+    font-size: 12px;
+    color: var(--spectrum-global-color-blue-500);
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-underline-offset: 2px;
+    cursor: default;
+}
+
+.brand-card-detail-tooltip {
+    display: none;
+    position: absolute;
+    left: 0;
+    bottom: calc(100% + 6px);
+    width: max-content;
+    padding: 10px 14px;
+    background: var(--spectrum-global-color-gray-50);
+    border: 1px solid var(--spectrum-global-color-gray-300);
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    z-index: 20;
+    white-space: nowrap;
+}
+
+.brand-card-detail-trigger:hover .brand-card-detail-tooltip {
+    display: block;
+}
+
+/* Edit hint for expanded card */
+.brand-card-edit-hint {
+    display: block;
+    font-size: 11px;
+    color: var(--spectrum-global-color-blue-400);
+    margin-top: 8px;
+    opacity: 0.7;
+    transition: opacity var(--spectrum-global-animation-duration-200) ease;
+}
+
+/* Self-reflowing CSS grid (mirrors .projects-grid / .selector-grid above): the
+   browser fits as many 220px-min columns as the container allows with zero JS.
+   `align-items: start` so an expanded card doesn't stretch its row-mates. */
+.expandable-brand-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 20px;
+    align-items: start;
+    margin-bottom: 24px;
+}
+
+.expandable-brand-card {
+    position: relative;
+    background: var(--spectrum-global-color-gray-50);
+    border-radius: 8px;
+    padding: 16px;
+    border: 1px solid var(--spectrum-global-color-gray-300);
+    cursor: pointer;
+    transition: all var(--spectrum-global-animation-duration-300) ease-out;
+    /* Grid items default to min-width:auto (=min-content); without this a card
+       refuses to shrink into its reflowing-grid track and overflows. */
+    min-width: 0;
+    box-sizing: border-box;
+    /* Shared card-family height floor so package cards and stack (selector) cards
+       read at a consistent height across steps. */
+    min-height: 100px;
+}
+
+.expandable-brand-card:hover {
+    background: var(--spectrum-global-color-gray-75);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.expandable-brand-card:focus-visible {
+    outline: 2px solid var(--spectrum-global-color-blue-400);
+    outline-offset: 2px;
+}
+
+/* Selected state - brand chosen, shows blue border */
+.expandable-brand-card.selected {
+    border-color: var(--spectrum-global-color-blue-400);
+    outline: 2px solid var(--spectrum-global-color-blue-400);
+    outline-offset: 2px;
+}
+
+/* Expanded state - shows architecture selection */
+.expandable-brand-card.expanded {
+    background: var(--spectrum-global-color-gray-50);
+    border-color: var(--spectrum-global-color-blue-400);
+    outline: 2px solid var(--spectrum-global-color-blue-400);
+    outline-offset: 2px;
+    transform: none;
+    cursor: pointer;
+}
+
+/* Dimmed state - other cards when one is expanded */
+.expandable-brand-card.dimmed {
+    opacity: 0.5;
+    transform: none;
+}
+
+.expandable-brand-card.dimmed:hover {
+    opacity: 0.7;
+    transform: none;
+    box-shadow: none;
+}
+
+.expandable-brand-card.coming-soon {
+    position: relative;
+    opacity: 0.45;
+    cursor: default;
+    pointer-events: none;
+}
+
+.expandable-brand-card.expanded .brand-card-header {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    /* No border here - selection section has its own border-top */
+}
+
+.expandable-brand-card.expanded:hover .brand-card-edit-hint {
+    opacity: 1;
+}
+
+/* Merged 2 declarations of this selector that the sheet carried separately.
+   Kept at the LAST one's position; for a property declared twice the winner
+   survives (!important over plain, then later over earlier). */
+/* Expanded card hover - re-open modal */
+.expandable-brand-card.expanded:hover {
+    transform: none;
+    box-shadow: none;
+    background: var(--spectrum-global-color-gray-75);
+}
+}
+
+/* The animation(s) the rules above name. Moved out of the utility sheet
+   2026-09-09: a @keyframes is resolved by NAME, so it only has to live in a
+   sheet the consuming bundle loads — and this is the ONLY sheet that names it.
+   Sitting in the all-bundles sheet shipped it to eight bundles to serve one. */
+@layer theme {
+    @keyframes fadeInDown {
+        from {
+            opacity: 0;
+            transform: translateY(-8px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+}

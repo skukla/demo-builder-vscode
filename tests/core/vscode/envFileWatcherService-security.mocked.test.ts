@@ -7,127 +7,22 @@
  * Reference: .rptc/plans/resource-lifecycle-management/TESTING-MOCKING-PATTERNS.md
  */
 
-// Mock logger FIRST (before any imports that might use it)
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    }),
-}));
-
-// Import mock exports from testUtils - must be before vscode mock for proper reference
 import {
-    mockWatchers as _mockWatchers,
+    EnvFileWatcherService,
+    WorkspaceWatcherManager,
+    vscode,
+    mockWatchers,
     mockFileContents,
     mockStateManager,
     mockLogger,
     resetMocks,
-    commandCallbacks as _commandCallbacks,
+    settleFileChange,
 } from './envFileWatcherService.testUtils';
 
-// Mock vscode API - must be in test file for proper hoisting
-jest.mock('vscode', () => {
-    const actual = jest.requireActual('vscode');
-    return {
-        ...actual,
-        workspace: {
-            workspaceFolders: [
-                { uri: { fsPath: '/project1', toString: () => 'file:///project1' }, name: 'project1', index: 0 },
-            ],
-            createFileSystemWatcher: jest.fn((pattern: string) => {
-                const watcher = {
-                    pattern,
-                    _disposed: false,
-                    _listeners: {
-                        onCreate: [] as ((...args: unknown[]) => unknown)[],
-                        onChange: [] as ((...args: unknown[]) => unknown)[],
-                        onDelete: [] as ((...args: unknown[]) => unknown)[]
-                    },
-                    onDidCreate: jest.fn((listener) => {
-                        watcher._listeners.onCreate.push(listener);
-                        return { dispose: () => {} };
-                    }),
-                    onDidChange: jest.fn((listener) => {
-                        watcher._listeners.onChange.push(listener);
-                        return { dispose: () => {} };
-                    }),
-                    onDidDelete: jest.fn((listener) => {
-                        watcher._listeners.onDelete.push(listener);
-                        return { dispose: () => {} };
-                    }),
-                    dispose: jest.fn(() => {
-                        watcher._disposed = true;
-                        const { mockWatchers } = require('./envFileWatcherService.testUtils');
-                        const idx = mockWatchers.indexOf(watcher);
-                        if (idx !== -1) mockWatchers.splice(idx, 1);
-                    }),
-                    _simulateChange: (uri: any) => {
-                        watcher._listeners.onChange.forEach((l: (...args: unknown[]) => unknown) => l(uri));
-                    }
-                };
-
-                const { mockWatchers } = require('./envFileWatcherService.testUtils');
-                mockWatchers.push(watcher);
-                return watcher;
-            })
-        },
-        window: {
-            showInformationMessage: jest.fn(() => Promise.resolve(undefined)),
-        },
-        commands: {
-            registerCommand: jest.fn((id, callback) => {
-                const { commandCallbacks } = require('./envFileWatcherService.testUtils');
-                commandCallbacks[id] = callback;
-                return { dispose: jest.fn() };
-            }),
-            executeCommand: jest.fn((id, ...args) => {
-                const { commandCallbacks } = require('./envFileWatcherService.testUtils');
-                const callback = commandCallbacks[id];
-                if (callback) {
-                    return Promise.resolve(callback(...args));
-                }
-                return Promise.resolve();
-            }),
-        },
-        Uri: {
-            file: (path: string) => ({
-                fsPath: path,
-                toString: () => `file://${path}`
-            }),
-        },
-        RelativePattern: jest.fn().mockImplementation((folder, pattern) => pattern),
-    };
-});
-
-// Mock fs.promises
-jest.mock('fs', () => ({
-    promises: {
-        readFile: jest.fn((filePath: string) => {
-            const { mockFileContents } = require('./envFileWatcherService.testUtils');
-            const content = mockFileContents.get(filePath);
-            if (content === undefined) {
-                return Promise.reject(new Error(`File not found: ${filePath}`));
-            }
-            return Promise.resolve(content);
-        }),
-    },
-}));
-
-// Mock WorkspaceWatcherManager
-jest.mock('@/core/vscode/workspaceWatcherManager', () => {
-    return {
-        WorkspaceWatcherManager: jest.fn().mockImplementation(() => ({
-            registerWatcher: jest.fn(),
-            dispose: jest.fn(),
-        })),
-    };
-});
-
-import * as vscode from 'vscode';
-import { EnvFileWatcherService } from '@/core/vscode/envFileWatcherService';
-import { WorkspaceWatcherManager } from '@/core/vscode/workspaceWatcherManager';
+import { createMockExtensionContext } from '../../helpers/extensionContextFake';
+import { createMockProject } from '../../helpers/projectFake';
+import { mockWorkspace } from '../../helpers/vscodeMockViews';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 describe('EnvFileWatcherService - Security and Resource Management (Mocked)', () => {
     let mockContext: vscode.ExtensionContext;
@@ -137,10 +32,9 @@ describe('EnvFileWatcherService - Security and Resource Management (Mocked)', ()
         jest.useFakeTimers();
         resetMocks();
 
-        mockContext = {
-            subscriptions: [],
-            extensionPath: '/test',
-        } as any;
+        // The canonical fake, with this suite's path. The literal it replaces named
+        // two of ExtensionContext's twenty-one members and cast the difference away.
+        mockContext = createMockExtensionContext({ subscriptions: [] }, '/test');
 
         mockWatcherManager = new WorkspaceWatcherManager();
     });
@@ -155,9 +49,9 @@ describe('EnvFileWatcherService - Security and Resource Management (Mocked)', ()
             // Given: Service initialized
             const service = new EnvFileWatcherService(
                 mockContext,
-                mockStateManager as any,
+                mockStateManager,
                 mockWatcherManager,
-                mockLogger,
+                mockLogger
             );
             service.initialize();
 
@@ -179,13 +73,13 @@ describe('EnvFileWatcherService - Security and Resource Management (Mocked)', ()
         it('should reject all paths when no workspace folders exist', async () => {
             // Given: No workspace folders
             const originalFolders = vscode.workspace.workspaceFolders;
-            (vscode.workspace as any).workspaceFolders = [];
+            mockWorkspace.workspaceFolders = [];
 
             const _service = new EnvFileWatcherService(
                 mockContext,
-                mockStateManager as any,
+                mockStateManager,
                 mockWatcherManager,
-                mockLogger,
+                mockLogger
             );
 
             // When: Internal command called
@@ -200,16 +94,16 @@ describe('EnvFileWatcherService - Security and Resource Management (Mocked)', ()
             );
 
             // Restore
-            (vscode.workspace as any).workspaceFolders = originalFolders;
+            mockWorkspace.workspaceFolders = originalFolders;
         });
 
         it('should validate paths for initializeFileHashes command', async () => {
             // Given: Service initialized
             const service = new EnvFileWatcherService(
                 mockContext,
-                mockStateManager as any,
+                mockStateManager,
                 mockWatcherManager,
-                mockLogger,
+                mockLogger
             );
             service.initialize();
 
@@ -217,10 +111,10 @@ describe('EnvFileWatcherService - Security and Resource Management (Mocked)', ()
             mockFileContents.set('/project1/.env', 'VALID=true');
 
             // When: Initialize hashes with mixed paths
-            await vscode.commands.executeCommand(
-                'demoBuilder._internal.initializeFileHashes',
-                ['/outside/workspace/.env', '/project1/.env']
-            );
+            await vscode.commands.executeCommand('demoBuilder._internal.initializeFileHashes', [
+                '/outside/workspace/.env',
+                '/project1/.env',
+            ]);
 
             // Then: Only workspace path processed (outside path rejected)
             expect(mockLogger.warn).toHaveBeenCalledWith(
@@ -232,9 +126,9 @@ describe('EnvFileWatcherService - Security and Resource Management (Mocked)', ()
             // Given: Service initialized
             const service = new EnvFileWatcherService(
                 mockContext,
-                mockStateManager as any,
+                mockStateManager,
                 mockWatcherManager,
-                mockLogger,
+                mockLogger
             );
             service.initialize();
 
@@ -254,9 +148,9 @@ describe('EnvFileWatcherService - Security and Resource Management (Mocked)', ()
             // Given: Service initialized with workspace at /project1
             const service = new EnvFileWatcherService(
                 mockContext,
-                mockStateManager as any,
+                mockStateManager,
                 mockWatcherManager,
-                mockLogger,
+                mockLogger
             );
             service.initialize();
 
@@ -271,6 +165,69 @@ describe('EnvFileWatcherService - Security and Resource Management (Mocked)', ()
                 expect.stringContaining('Rejected path outside workspace: /project1-fake/.env')
             );
         });
+
+        it('should survive a window with no workspace at all', async () => {
+            // workspaceFolders is undefined, not empty, before any folder is opened.
+            // The fallback has to produce a real empty list: anything else reaches
+            // folder.uri on a value that has none and throws out of the command.
+            const originalFolders = mockWorkspace.workspaceFolders;
+            mockWorkspace.workspaceFolders = undefined;
+
+            try {
+                new EnvFileWatcherService(
+                    mockContext,
+                    mockStateManager,
+                    mockWatcherManager,
+                    mockLogger
+                );
+
+                await expect(
+                    vscode.commands.executeCommand(
+                        'demoBuilder._internal.registerProgrammaticWrites',
+                        ['/project1/.env']
+                    )
+                ).resolves.toBeUndefined();
+            } finally {
+                mockWorkspace.workspaceFolders = originalFolders;
+            }
+        });
+
+        it('should accept a path in ANY open workspace folder, not just the first', async () => {
+            const originalFolders = mockWorkspace.workspaceFolders;
+            mockWorkspace.workspaceFolders = [
+                { uri: vscode.Uri.file('/project1'), name: 'project1', index: 0 },
+                { uri: vscode.Uri.file('/project2'), name: 'project2', index: 1 },
+            ];
+
+            try {
+                const service = new EnvFileWatcherService(
+                    mockContext,
+                    mockStateManager,
+                    mockWatcherManager,
+                    mockLogger
+                );
+                service.initialize();
+
+                // Hashing the path is what proves it passed validation: a rejected
+                // path records nothing, so its next change reads as a first sighting.
+                const filePath = '/project2/.env';
+                mockFileContents.set(filePath, 'API_KEY=test123');
+                await vscode.commands.executeCommand('demoBuilder._internal.initializeFileHashes', [
+                    filePath,
+                ]);
+
+                mockStateManager.getCurrentProject.mockResolvedValue(
+                    createMockProject({ status: 'running' })
+                );
+                mockFileContents.set(filePath, 'API_KEY=test456');
+                mockWatchers[0]._simulateChange(vscode.Uri.file(filePath));
+                await settleFileChange();
+
+                expect(vscode.window.showInformationMessage).toHaveBeenCalled();
+            } finally {
+                mockWorkspace.workspaceFolders = originalFolders;
+            }
+        });
     });
 
     describe('Resource Management: Timeout Cleanup', () => {
@@ -278,9 +235,9 @@ describe('EnvFileWatcherService - Security and Resource Management (Mocked)', ()
             // Given: Service initialized
             const service = new EnvFileWatcherService(
                 mockContext,
-                mockStateManager as any,
+                mockStateManager,
                 mockWatcherManager,
-                mockLogger,
+                mockLogger
             );
             service.initialize();
 
@@ -298,21 +255,75 @@ describe('EnvFileWatcherService - Security and Resource Management (Mocked)', ()
             );
         });
 
+        it('should stop suppressing a path once the cleanup delay has passed', async () => {
+            // The suppression is a safety net for watcher events that never arrive.
+            // Without the cleanup the path stays muted for the rest of the session,
+            // so a real edit by the SC would go unnoticed.
+            const service = new EnvFileWatcherService(
+                mockContext,
+                mockStateManager,
+                mockWatcherManager,
+                mockLogger
+            );
+            service.initialize();
+
+            const filePath = '/project1/.env';
+            mockFileContents.set(filePath, 'API_KEY=test123');
+            await vscode.commands.executeCommand('demoBuilder._internal.initializeFileHashes', [
+                filePath,
+            ]);
+            await vscode.commands.executeCommand(
+                'demoBuilder._internal.registerProgrammaticWrites',
+                [filePath]
+            );
+
+            jest.advanceTimersByTime(TIMEOUTS.PROGRAMMATIC_WRITE_CLEANUP);
+
+            mockStateManager.getCurrentProject.mockResolvedValue(
+                createMockProject({ status: 'running' })
+            );
+            mockFileContents.set(filePath, 'API_KEY=test456');
+            mockWatchers[0]._simulateChange(vscode.Uri.file(filePath));
+            await settleFileChange();
+
+            expect(vscode.window.showInformationMessage).toHaveBeenCalled();
+        });
+
+        it('should leave no pending timer behind after disposal', async () => {
+            const service = new EnvFileWatcherService(
+                mockContext,
+                mockStateManager,
+                mockWatcherManager,
+                mockLogger
+            );
+            service.initialize();
+
+            await vscode.commands.executeCommand(
+                'demoBuilder._internal.registerProgrammaticWrites',
+                ['/project1/.env']
+            );
+            expect(jest.getTimerCount()).toBeGreaterThan(0);
+
+            service.dispose();
+
+            // A timer surviving disposal fires into a service that no longer exists.
+            expect(jest.getTimerCount()).toBe(0);
+        });
+
         it('should clear all timeouts on disposal', () => {
             // Given: Service with active timeouts
             const service = new EnvFileWatcherService(
                 mockContext,
-                mockStateManager as any,
+                mockStateManager,
                 mockWatcherManager,
-                mockLogger,
+                mockLogger
             );
             service.initialize();
 
             // Create programmatic write (triggers timeout)
-            vscode.commands.executeCommand(
-                'demoBuilder._internal.registerProgrammaticWrites',
-                ['/project1/.env']
-            );
+            vscode.commands.executeCommand('demoBuilder._internal.registerProgrammaticWrites', [
+                '/project1/.env',
+            ]);
 
             // When: Service disposed
             service.dispose();

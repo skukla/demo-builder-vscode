@@ -32,7 +32,7 @@
 import React, { useCallback } from 'react';
 import { IntegrationActionsMenu } from './IntegrationActionsMenu';
 import type { CardAction, IntegrationCardModel } from './integrationCardModel.types';
-import { InlineRenameField } from '@/core/ui/components/forms';
+import { InlineRenameField } from '@/core/ui/components/forms/InlineRenameField';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import { useActivateOnKey } from '@/core/ui/hooks/useActivateOnKey';
 import { cn } from '@/core/ui/utils/classNames';

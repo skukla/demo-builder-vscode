@@ -83,12 +83,15 @@ describe('config contracts — bundled JSON vs sibling schema', () => {
 
             it("the data's $schema pointer resolves to this schema", () => {
                 const data = JSON.parse(fs.readFileSync(dataFile, 'utf-8'));
-                // Optional — but when present it must not dangle.
+                // Optional — but when present it must not dangle. Absent is expressed
+                // as "no problems" rather than as a skipped assertion.
+                const problems: string[] = [];
                 if (typeof data.$schema === 'string') {
                     const resolved = path.resolve(path.dirname(dataFile), data.$schema);
-                    expect(fs.existsSync(resolved)).toBe(true);
-                    expect(resolved).toBe(schemaFile);
+                    if (!fs.existsSync(resolved)) problems.push(`$schema points at a missing file: ${resolved}`);
+                    if (resolved !== schemaFile) problems.push(`$schema resolves to ${resolved}, expected ${schemaFile}`);
                 }
+                expect(problems).toStrictEqual([]);
             });
         }
     );

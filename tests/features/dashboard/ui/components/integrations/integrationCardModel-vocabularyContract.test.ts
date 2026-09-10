@@ -31,10 +31,6 @@ import { deriveMeshCard, display, meshEntry } from './integrationCardModel.testU
 import { getMeshStatusDisplay } from '@/core/ui/utils/meshStatusDisplay';
 import type { MeshStatus } from '@/features/dashboard/ui/hooks/useDashboardStatus';
 
-jest.mock('@/core/logging', () => ({
-    getLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() }),
-}));
-
 /**
  * The persisted mesh states — every one a project can still be in after a reload.
  * The transient three (checking / needs-auth / deploying) are excluded on purpose:

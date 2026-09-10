@@ -10,6 +10,7 @@
 
 import * as vscode from 'vscode';
 import { handleRequestStatus } from './statusHandlers';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import { deleteProject } from '@/features/projects-dashboard/services/projectDeletionService';
 import { ErrorCode } from '@/types/errorCodes';
 import { MessageHandler } from '@/types/handlers';
@@ -28,7 +29,9 @@ export const handleEditProject: MessageHandler = async (context) => {
         return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
     }
 
-    const { extractSettingsFromProject } = await import('@/features/projects-dashboard/services');
+    const { extractSettingsFromProject } = await import(
+        '@/features/projects-dashboard/services/settingsSerializer'
+    );
     // Include secrets — this is a local edit of the user's own project.
     const settings = extractSettingsFromProject(project, true);
 
@@ -83,9 +86,22 @@ export const handleResetProject: MessageHandler = async (context) => {
     if (isEdsProject(project)) {
         const { resetEdsProjectWithUI } = await import('@/features/eds/services/reset/edsResetUI');
         return resetEdsProjectWithUI({
+            meshDeps: {
+                commandManager: ServiceLocator.getCommandExecutor(),
+                authManager: ServiceLocator.getAuthenticationService(),
+            },
             project,
             context,
             logPrefix: '[Dashboard]',
+            // Same reset as the projects list performs. These three defaulted to
+            // false here until 2026-09-02, so the same project reset from the
+            // dashboard kept its block library configuration, skipped the CDN
+            // check, and hid "Show Logs" on failure — while the projects list
+            // did all three. A reset that leaves configuration behind has not
+            // returned the project to zero.
+            includeBlockLibrary: true,
+            verifyCdn: true,
+            showLogsOnError: true,
         });
     }
 
@@ -93,6 +109,8 @@ export const handleResetProject: MessageHandler = async (context) => {
         '@/features/lifecycle/services/projectResetService'
     );
     return resetProjectWithUI({
+        commandManager: ServiceLocator.getCommandExecutor(),
+        authManager: ServiceLocator.getAuthenticationService(),
         project,
         context,
         logPrefix: '[Dashboard]',
@@ -110,7 +128,9 @@ export const handleExportProject: MessageHandler = async (context) => {
         return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
     }
 
-    const { exportProjectSettings } = await import('@/features/projects-dashboard/services');
+    const { exportProjectSettings } = await import(
+        '@/features/projects-dashboard/services/settingsTransferService'
+    );
     return exportProjectSettings(context, project);
 };
 
@@ -133,7 +153,9 @@ export const handleRenameProject: MessageHandler<{ newName: string }> = async (c
         return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
     }
 
-    const { renameProjectCore } = await import('@/features/projects-dashboard/services');
+    const { renameProjectCore } = await import(
+        '@/features/projects-dashboard/services/projectRenameService'
+    );
     const result = await renameProjectCore(context, project, newName);
 
     // Refresh the dashboard title after a successful rename (folder/name changed).
@@ -161,7 +183,9 @@ export const handleExportProjectSettings: MessageHandler<{
         return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
     }
 
-    const { exportProjectSettingsToFile } = await import('@/features/projects-dashboard/services');
+    const { exportProjectSettingsToFile } = await import(
+        '@/features/projects-dashboard/services/settingsTransferService'
+    );
     try {
         const result = await exportProjectSettingsToFile(project, {
             path: data?.path,

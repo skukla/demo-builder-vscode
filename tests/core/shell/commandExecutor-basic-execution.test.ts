@@ -1,25 +1,12 @@
 import { CommandExecutor } from '@/core/shell/commandExecutor';
+import type { CommandQueue } from '@/core/shell/commandQueue';
+import type { FileWatcher } from '@/core/shell/fileWatcher';
 import { createMockExecaSubprocess, setupMockDependencies, simulateSubprocessComplete } from './commandExecutor.testUtils';
 
 // Mock execa - must be before importing CommandExecutor
 jest.mock('execa');
 import execa from 'execa';
 
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({
-        error: jest.fn(),
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn()
-    })
-}));
-
-jest.mock('@/core/shell/commandSequencer');
-jest.mock('@/core/shell/environmentSetup');
-jest.mock('@/core/shell/fileWatcher');
-jest.mock('@/core/shell/pollingService');
-jest.mock('@/core/shell/resourceLocker');
-jest.mock('@/core/shell/retryStrategyManager');
 
 describe('CommandExecutor - Basic Execution', () => {
     let commandExecutor: CommandExecutor;
@@ -33,13 +20,13 @@ describe('CommandExecutor - Basic Execution', () => {
         mockDependencies = setupMockDependencies();
 
         // Now create CommandExecutor - it will use our mocks
-        commandExecutor = new CommandExecutor();
+        commandExecutor = new CommandExecutor(mockDependencies.deps);
     });
 
     describe('execute', () => {
         it('should execute a basic command successfully', async () => {
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             const promise = commandExecutor.execute('echo hello');
 
@@ -56,7 +43,7 @@ describe('CommandExecutor - Basic Execution', () => {
 
         it('should handle command with non-zero exit code', async () => {
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             const promise = commandExecutor.execute('false');
 
@@ -71,7 +58,7 @@ describe('CommandExecutor - Basic Execution', () => {
 
         it('should handle command errors (timeout)', async () => {
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             // Use streaming mode to bypass retry mechanism for cleaner timeout testing
             const promise = commandExecutor.execute('slow-command', {
@@ -81,8 +68,7 @@ describe('CommandExecutor - Basic Execution', () => {
 
             // Simulate timeout error from execa
             setImmediate(() => {
-                const timeoutError = new Error('Command timed out') as any;
-                timeoutError.timedOut = true;
+                const timeoutError = Object.assign(new Error('Command timed out'), { timedOut: true });
                 mockSubprocess._reject(timeoutError);
             });
 
@@ -91,7 +77,7 @@ describe('CommandExecutor - Basic Execution', () => {
 
         it('should handle streaming output with onOutput callback', async () => {
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             const outputLines: string[] = [];
             const promise = commandExecutor.execute('echo test', {
@@ -117,7 +103,7 @@ describe('CommandExecutor - Basic Execution', () => {
 
         it('should use exclusive execution when exclusive option is set', async () => {
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             const promise = commandExecutor.execute('echo test', {
                 exclusive: 'test-resource'
@@ -145,7 +131,7 @@ describe('CommandExecutor - Basic Execution', () => {
 
         it('should allow valid command names', async () => {
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             const promise = commandExecutor.commandExists('node');
 
@@ -159,7 +145,7 @@ describe('CommandExecutor - Basic Execution', () => {
 
         it('should return false for non-existent commands', async () => {
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             const promise = commandExecutor.commandExists('nonexistent');
 
@@ -186,7 +172,7 @@ describe('CommandExecutor - Basic Execution', () => {
     describe('queueCommand', () => {
         it('should queue and execute commands', async () => {
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             const promise = commandExecutor.queueCommand('echo test');
 
@@ -215,7 +201,7 @@ describe('CommandExecutor - Basic Execution', () => {
                     simulateSubprocessComplete(mockSubprocess, `output${currentCall}\n`, '', 0);
                 });
 
-                return mockSubprocess as any;
+                return mockSubprocess;
             });
 
             const promise1 = commandExecutor.queueCommand('echo 1');
@@ -242,14 +228,14 @@ describe('CommandExecutor - Basic Execution', () => {
             expect(mockDependencies.mockEnvironmentSetup().resetSession).toHaveBeenCalled();
 
             // FileWatcher disposal is called on internal instance
-            const fileWatcher = (commandExecutor as any).fileWatcher;
+            const { fileWatcher } = commandExecutor as unknown as { fileWatcher: FileWatcher };
             expect(fileWatcher.disposeAll).toBeDefined();
         });
 
         it('should reject queued commands on dispose', async () => {
             // Set isProcessing on the internal CommandQueue to prevent immediate processing
-            const commandQueue = (commandExecutor as any).commandQueue;
-            (commandQueue as any).isProcessing = true;
+            const { commandQueue } = commandExecutor as unknown as { commandQueue: CommandQueue };
+            (commandQueue as unknown as { isProcessing: boolean }).isProcessing = true;
 
             // Now queue a command - it won't start because queue is locked
             const promise = commandExecutor.queueCommand('echo test');

@@ -105,6 +105,7 @@ function addIntegrationPreflight(
 export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
     {
         tool: 'regenerate_ai_files',
+        needsAuth: false,
         readOnly: false,
         description: "Regenerate the project's AI context files (AGENTS.md, .mcp.json, skills)",
         map: aiHandlers,
@@ -112,6 +113,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'start_demo',
+        needsAuth: false,
         readOnly: false,
         description: "Start the current project's demo server",
         map: dashboardHandlers,
@@ -119,6 +121,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'add_integration',
+        needsAuth: ['adobe'],
         readOnly: false,
         description:
             'Add an App Builder integration to the current project: clone it, subscribe its ' +
@@ -136,6 +139,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'rename_integration',
+        needsAuth: false,
         readOnly: false,
         description:
             "Change one App Builder integration's DISPLAY NAME on the current project. The id, " +
@@ -160,6 +164,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'set_console_apis',
+        needsAuth: ['adobe'],
         readOnly: false,
         description:
             "Set the OPTIONAL Adobe API subscriptions on this project's Developer Console " +
@@ -187,6 +192,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'set_project_destination',
+        needsAuth: ['adobe'],
         readOnly: false,
         description:
             'Point the current project at a different Adobe Console project + workspace, and MOVE ' +
@@ -225,6 +231,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'deploy_integration',
+        needsAuth: ['adobe'],
         readOnly: false,
         description:
             'Deploy (or redeploy) one App Builder integration on the current ' +
@@ -244,6 +251,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'redeploy_integration',
+        needsAuth: ['adobe'],
         readOnly: false,
         description:
             'Redeploy one App Builder integration by its id (idempotent re-run of its deploy). ' +
@@ -262,6 +270,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'install_integration',
+        needsAuth: ['adobe'],
         readOnly: false,
         description:
             'Re-run the Commerce install/associate pass for a DEPLOYED App Management ' +
@@ -278,6 +287,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'remove_integration',
+        needsAuth: ['adobe'],
         readOnly: false,
         description:
             'Remove one App Builder integration by its id. DESTRUCTIVE: undeploys it remotely ' +
@@ -292,6 +302,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'stop_demo',
+        needsAuth: false,
         readOnly: false,
         description: "Stop the current project's running demo server",
         map: dashboardHandlers,
@@ -299,6 +310,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'restart_demo',
+        needsAuth: false,
         readOnly: false,
         description:
             "Stop and restart the current project's demo server. Use after a config change that " +
@@ -309,6 +321,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'set_current_project',
+        needsAuth: false,
         readOnly: false,
         description:
             'Make a project the CURRENT one, which is what every project-scoped tool acts on ' +
@@ -330,6 +343,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'set_project_pinned',
+        needsAuth: false,
         readOnly: false,
         description:
             'Pin or unpin a project. Pinned projects sort first on the projects dashboard. ' +
@@ -343,6 +357,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'rename_project',
+        needsAuth: false,
         readOnly: false,
         description:
             'Rename the current project — the folder on disk, saved state, and the ' +
@@ -359,6 +374,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'save_ai_prompt',
+        needsAuth: false,
         readOnly: false,
         description: 'Create or update a saved AI prompt',
         map: aiHandlers,
@@ -379,6 +395,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'delete_ai_prompt',
+        needsAuth: false,
         readOnly: false,
         description: 'Delete a saved AI prompt by id',
         map: aiHandlers,
@@ -388,6 +405,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'deploy_mesh',
+        needsAuth: ['adobe'],
         readOnly: false,
         description:
             "Deploy (or redeploy) the current project's API Mesh. Runs the guard " +
@@ -399,6 +417,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'export_project_settings',
+        needsAuth: false,
         readOnly: false,
         description:
             "Export the current project's settings to a JSON file on disk (folder, saved state, " +
@@ -424,6 +443,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'refresh_block_library',
+        needsAuth: false,
         readOnly: false,
         description:
             "Rebuild the current EDS project's DA.live authoring block library from its " +
@@ -441,6 +461,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'delete_mesh',
+        needsAuth: ['adobe'],
         readOnly: false,
         description: 'Delete the API Mesh for an Adobe I/O workspace',
         map: meshHandlers,
@@ -452,6 +473,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'add_console_apis',
+        needsAuth: ['adobe'],
         readOnly: false,
         description:
             "Subscribe Adobe APIs (sdk codes from list_console_apis) on this project's Developer " +
@@ -469,6 +491,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'install_prerequisite',
+        needsAuth: false,
         readOnly: false,
         description:
             'Install one missing prerequisite (Node, aio CLI, plugins) by its prereqId from ' +

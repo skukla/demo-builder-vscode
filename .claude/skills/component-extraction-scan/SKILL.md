@@ -5,6 +5,8 @@ description: Find component-extraction opportunities — the same hand-written m
 
 # Component-Extraction Scan
 
+
+
 Detect where the SAME UI markup is hand-written across enough places to deserve a shared component. The SOP scan flags components that are too BIG; this flags markup that is too DUPLICATED — the other half of "right-sized component".
 
 ## When to use

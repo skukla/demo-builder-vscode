@@ -20,14 +20,7 @@
  */
 
 import configTemplate from '../config/config-template.json';
-import { isMeshComponentId, COMPONENT_IDS } from '@/core/constants';
-import {
-    getProvidedEnvVars,
-    getMeshAppBuilderComponent,
-} from '@/core/state/appBuilderComponentState';
-import { applyBackendOwnedScope } from '@/features/components/config/backendOwnedScope';
-import componentsConfig from '@/features/components/config/components.json';
-import demoPackagesConfig from '@/features/components/config/demo-packages.json';
+import { applyBackendOwnedScope } from '@/core/config/backendOwnedScope';
 import {
     PAAS_GRAPHQL_ENDPOINT,
     PAAS_ENVIRONMENT_ID,
@@ -42,8 +35,16 @@ import {
     ACCS_STORE_CODE,
     ACCS_WEBSITE_CODE,
     ACCS_CUSTOMER_GROUP,
-} from '@/features/components/config/envVarKeys';
-import type { Logger, Project } from '@/types';
+} from '@/core/config/envVarKeys';
+import { isMeshComponentId, COMPONENT_IDS } from '@/core/constants';
+import {
+    getProvidedEnvVars,
+    getMeshAppBuilderComponent,
+} from '@/core/state/appBuilderComponentState';
+import componentsConfig from '@/features/components/config/components.json';
+import demoPackagesConfig from '@/features/components/config/demo-packages.json';
+import type { Project } from '@/types/base';
+import type { Logger } from '@/types/logger';
 
 // Bundled template - single source of truth
 
@@ -497,9 +498,6 @@ export function generateConfigJson(
         // Deep clone the template to avoid mutating the imported object
         const config = JSON.parse(JSON.stringify(configTemplate));
 
-        // Build replacement map for placeholders
-        const storeUrl = `https://main--${params.repoName}--${params.githubOwner}.aem.live/`;
-
         // Determine commerce endpoints based on environment type
         // PaaS has both commerce-core-endpoint (catalog service) and commerce-endpoint (mesh)
         // ACCS/ACO have commerce-endpoint only
@@ -509,7 +507,18 @@ export function generateConfigJson(
                 ? params.catalogServiceEndpoint || commerceEndpoint
                 : commerceEndpoint;
 
-        // Replace placeholders throughout the config
+        // Replace placeholders throughout the config.
+        //
+        // EXACTLY the placeholders config-template.json contains. Seven more
+        // lived here — the store scope ({STORE_VIEW_CODE}, {STORE_CODE},
+        // {WEBSITE_CODE}, {COMMERCE_API_KEY}, {COMMERCE_ENVIRONMENT_ID},
+        // {CUSTOMER_GROUP}) and {DOMAIN} — and none of those tokens appears in
+        // the template or anywhere else in the repo, so each was a no-op
+        // split/join carrying a SECOND copy of generateHeaders' defaults.
+        // The store scope reaches config.json through generateHeaders, which
+        // owns those defaults; the domain reaches it as the {ORG}/{REPO} pair
+        // already substituted into analytics.store-url.
+        //
         // Note: {ORG} and {REPO} are used in analytics.store-url, robots.txt, and sidekick plugin URLs.
         // Site-level config (code, content, folders, cdn) lives in fstab.yaml, not config.json.
         const replacements: Record<string, string> = {
@@ -517,13 +526,6 @@ export function generateConfigJson(
             '{REPO}': params.repoName,
             '{COMMERCE_ENDPOINT}': commerceEndpoint,
             '{CS_ENDPOINT}': catalogServiceEndpoint,
-            '{STORE_VIEW_CODE}': params.storeViewCode || 'default',
-            '{STORE_CODE}': params.storeCode || 'default',
-            '{WEBSITE_CODE}': params.websiteCode || 'base',
-            '{COMMERCE_API_KEY}': params.commerceApiKey || '',
-            '{COMMERCE_ENVIRONMENT_ID}': params.commerceEnvironmentId || '',
-            '{CUSTOMER_GROUP}': params.customerGroup || '',
-            '{DOMAIN}': storeUrl,
             '{AEM_ASSETS_ENABLED}': params.aemAssetsEnabled ? 'true' : 'false',
         };
 

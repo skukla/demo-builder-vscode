@@ -1,6 +1,10 @@
-import type { CommandExecutor, CommandResult } from '@/core/shell';
-import type { StepLogger } from '@/core/logging';
+import { AuthenticationService } from '@/features/authentication/services/authenticationService';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import type { Logger } from '@/types/logger';
+import { createMockCommandExecutor as createMockCommandExecutorLocal } from '../../../helpers/commandExecutorFake';
+import { createMockLogger as createMockLoggerLocal } from '../../../helpers/loggerFake';
+import type { CommandResult } from '@/core/shell/types';
+import type { StepLogger } from '@/core/logging/stepLogger';
 import type { AdobeOrg, AdobeProject, AdobeWorkspace } from '@/features/authentication/services/types';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import type { EntityServices } from '@/features/authentication/services/adobeEntityService';
@@ -27,47 +31,31 @@ export const mockWorkspace: AdobeWorkspace = {
 };
 
 // Mock factory functions
-export const createMockCommandExecutor = (): jest.Mocked<CommandExecutor> => ({
-    execute: jest.fn(),
-    executeCommand: jest.fn(),
-    executeWithNodeVersion: jest.fn(),
-    testCommand: jest.fn(),
-    getNodeVersionForComponent: jest.fn(),
-    getCachedBinaryPath: jest.fn(),
-    invalidateBinaryPathCache: jest.fn(),
-    getCachedNodeVersion: jest.fn(),
-    invalidateNodeVersionCache: jest.fn(),
-} as any);
+/** Canonical command-executor fake (ADR-016). */
+export { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
-export const createMockLogger = (): jest.Mocked<Logger> => ({
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    trace: jest.fn(),
-} as any);
+/** Canonical logger fake (ADR-016). */
+export { createMockLogger } from '../../../helpers/loggerFake';
 
+/**
+ * Method list read from `src/core/logging/stepLogger.ts`. The previous literal
+ * carried three methods the class does not have (`logMessage`, `setCurrentStep`,
+ * `setStepName`); the cast is to the class because it has private fields.
+ */
 export const createMockStepLogger = (): jest.Mocked<StepLogger> => ({
+    getStepName: jest.fn(),
+    logStatus: jest.fn(),
     logTemplate: jest.fn(),
-    logMessage: jest.fn(),
-    setCurrentStep: jest.fn(),
-    setStepName: jest.fn(),
-} as any);
+    logStepStart: jest.fn(),
+    logStepComplete: jest.fn(),
+    forStep: jest.fn(),
+} as unknown as jest.Mocked<StepLogger>);
 
 // Command result helpers
-export const createSuccessResult = (stdout: string): CommandResult => ({
-    code: 0,
-    stdout,
-    stderr: '',
-    duration: 0,
-});
+import { createSuccessResult } from '../../../helpers/commandResultFake';
+export { createSuccessResult };
 
-export const createFailureResult = (stderr: string): CommandResult => ({
-    code: 1,
-    stdout: '',
-    stderr,
-    duration: 0,
-});
+export { createFailureResult } from '../../../helpers/commandResultFake';
 
 // `createValidTokenResult` / `createInvalidTokenResult` lived here. They staged a
 // token as fake `aio config get` STDOUT, which stopped being how the token is read
@@ -91,7 +79,7 @@ export const createMockSDKClient = (): jest.Mocked<AdobeSDKClient> => ({
     initialize: jest.fn().mockResolvedValue(undefined),
     ensureInitialized: jest.fn().mockResolvedValue(true),
     clear: jest.fn(),
-} as any);
+} as unknown as jest.Mocked<AdobeSDKClient>);
 
 /**
  * Creates mock entity services matching the EntityServices shape.
@@ -107,7 +95,7 @@ export const createMockEntityServices = (): {
         getOrganizations: jest.fn().mockResolvedValue([mockOrg]),
         getProjects: jest.fn().mockResolvedValue([mockProject]),
         getWorkspaces: jest.fn().mockResolvedValue([mockWorkspace]),
-    } as any;
+    } as unknown as jest.Mocked<EntityServices['fetcher']>;
 
     const resolver = {
         getCurrentOrganization: jest.fn().mockResolvedValue(mockOrg),
@@ -116,11 +104,11 @@ export const createMockEntityServices = (): {
         getCurrentContext: jest.fn().mockResolvedValue({
             org: mockOrg, project: mockProject, workspace: mockWorkspace,
         }),
-    } as any;
+    } as unknown as jest.Mocked<EntityServices['resolver']>;
 
     const selector = {
         clearConsoleContext: jest.fn().mockResolvedValue(undefined),
-    } as any;
+    } as unknown as jest.Mocked<EntityServices['selector']>;
 
     return {
         entities: { fetcher, resolver, selector },
@@ -129,3 +117,58 @@ export const createMockEntityServices = (): {
         selector,
     };
 };
+
+/** What a suite gets back from `setupAuthServiceSuite`. */
+export interface AuthServiceHarness {
+    authService: AuthenticationService;
+    commandExecutor: jest.Mocked<CommandExecutor>;
+    logger: jest.Mocked<Logger>;
+    stepLogger: jest.Mocked<StepLogger>;
+    sdkClient: jest.Mocked<AdobeSDKClient>;
+}
+
+/**
+ * The `beforeEach` the context and operations suites shared.
+ *
+ * THE MOCKED CLASSES ARE HANDED IN rather than imported here, and that is
+ * deliberate. This file declares no `jest.mock` of its own — each suite does —
+ * so a binding imported here would not reliably be the one the suite's wall
+ * replaced. An earlier extraction in `componentHandlers.testUtils` hit exactly
+ * that and failed two tests with the REAL collaborator running; passing the
+ * suite's own bindings removes the question rather than answering it.
+ *
+ * @param deps - the suite's own mocked bindings, and the fetcher it needs
+ */
+export function setupAuthServiceSuite(deps: {
+    AdobeSDKClient: { mockImplementation: (fn: () => AdobeSDKClient) => unknown };
+    createEntityServices: jest.Mock;
+    getLogger: jest.Mock;
+    /** The context suite also needs `getOrganizationsSdkOnly`; operations does not. */
+    fetcher?: Record<string, unknown>;
+}): AuthServiceHarness {
+    const commandExecutor = createMockCommandExecutorLocal();
+    const logger = createMockLoggerLocal();
+    const stepLogger = createMockStepLogger();
+
+    deps.getLogger.mockReturnValue(logger);
+
+    // StepLogger.create is a static, so it is replaced on the class itself.
+    const StepLoggerClass = require('@/core/logging/stepLogger').StepLogger;
+    StepLoggerClass.create = jest.fn().mockResolvedValue(stepLogger);
+
+    const sdkClient = {
+        initialize: jest.fn().mockResolvedValue(undefined),
+        ensureInitialized: jest.fn().mockResolvedValue(true),
+        clear: jest.fn(),
+    } as unknown as jest.Mocked<AdobeSDKClient>;
+    deps.AdobeSDKClient.mockImplementation(() => sdkClient);
+
+    deps.createEntityServices.mockReturnValue({
+        fetcher: deps.fetcher ?? { getOrganizations: jest.fn().mockResolvedValue([mockOrg]) },
+        resolver: {},
+        selector: {},
+    });
+
+    const authService = new AuthenticationService('/mock/extension/path', logger, commandExecutor);
+    return { authService, commandExecutor, logger, stepLogger, sdkClient };
+}

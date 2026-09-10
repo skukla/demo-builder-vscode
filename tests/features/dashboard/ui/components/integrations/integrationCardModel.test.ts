@@ -93,7 +93,7 @@ describe('deriveIntegrationCard — status matrix', () => {
         // both set would print the same step twice in the flyout.
         expect(model.message).toBeUndefined();
         // Nothing is offered mid-deploy: every item would race the runner.
-        expect(model.menuActions).toEqual([]);
+        expect(model.menuActions).toStrictEqual([]);
     });
 
     it('deploying with no step reported yet: falls back to the static label', () => {
@@ -185,16 +185,21 @@ describe('deriveIntegrationCard — status matrix', () => {
     });
 
     it('Remove is present on every status EXCEPT deploying', () => {
+        const problems: string[] = [];
         for (const status of INTEGRATION_STATUSES) {
             const model = deriveIntegrationCard(integration({ status: 'not-deployed' }), {
                 status,
             });
-            if (status === 'deploying') {
-                expect(model.menuActions).not.toContain('remove');
-            } else {
-                expect(model.menuActions).toContain('remove');
+            const offersRemove = model.menuActions.includes('remove');
+            const shouldOffer = status !== 'deploying';
+            if (offersRemove !== shouldOffer) {
+                problems.push(
+                    `${status}: remove ${offersRemove ? 'present' : 'absent'}, expected ` +
+                        `${shouldOffer ? 'present' : 'absent'}`
+                );
             }
         }
+        expect(problems).toStrictEqual([]);
     });
 
     it('Manage APIs is present on not-deployed/deployed/stale/error (workspace-scoped, pre-deploy included)', () => {
@@ -475,7 +480,7 @@ describe('deriveIntegrationCard — url + lastDeployed derivation', () => {
             // 'deploying' is transient and arrives via the override channel,
             // never the persisted entry (normalizeIntegrationStatus's docblock).
             const model = deriveIntegrationCard(integration(), { status: 'deploying' });
-            expect(model.menuActions).toEqual([]);
+            expect(model.menuActions).toStrictEqual([]);
         });
     });
 });

@@ -5,6 +5,7 @@ import {
     mockSuccessfulFileRead,
     mockSuccessfulVerification,
 } from './meshDeployment.testUtils';
+import type { CommandResult } from '@/core/shell/types';
 
 /**
  * MeshDeployment — create→update fallback (regression)
@@ -57,17 +58,20 @@ describe('MeshDeployment — create→update fallback', () => {
 
     /** Route the executor mock by command: build succeeds; create/update per config. */
     function routeCommands(config: {
-        create?: { code: number; stdout?: string; stderr?: string };
-        update?: { code: number; stdout?: string; stderr?: string };
+        // Partial<CommandResult> & the code: callers supply only what they vary,
+        // and the defaults below complete it — the fake is typed now, so an
+        // incomplete result no longer slips through.
+        create?: Partial<CommandResult> & { code: number };
+        update?: Partial<CommandResult> & { code: number };
     }): void {
         mockCommandManager.execute.mockImplementation((command: string) => {
             if (command.includes('api-mesh:create')) {
-                return Promise.resolve(config.create ?? { code: 0, stdout: 'created' });
+                return Promise.resolve({ stdout: 'created', stderr: '', duration: 0, code: 0, ...config.create });
             }
             if (command.includes('api-mesh:update')) {
-                return Promise.resolve(config.update ?? { code: 0, stdout: 'updated' });
+                return Promise.resolve({ stdout: 'updated', stderr: '', duration: 0, code: 0, ...config.update });
             }
-            return Promise.resolve({ code: 0, stdout: '' }); // build etc.
+            return Promise.resolve({ code: 0, stdout: '', stderr: '', duration: 0 }); // build etc.
         });
     }
 
@@ -93,8 +97,8 @@ describe('MeshDeployment — create→update fallback', () => {
 
         const result = await deployMeshComponent(
             '/test/mesh',
-            mockCommandManager as never,
-            mockLogger as never
+            mockCommandManager,
+            mockLogger
         );
 
         expect(commandsMatching('api-mesh:create')).toHaveLength(1);
@@ -111,8 +115,8 @@ describe('MeshDeployment — create→update fallback', () => {
 
         await deployMeshComponent(
             '/test/mesh',
-            mockCommandManager as never,
-            mockLogger as never,
+            mockCommandManager,
+            mockLogger,
             onProgress
         );
 
@@ -127,8 +131,8 @@ describe('MeshDeployment — create→update fallback', () => {
 
         const result = await deployMeshComponent(
             '/test/mesh',
-            mockCommandManager as never,
-            mockLogger as never
+            mockCommandManager,
+            mockLogger
         );
 
         expect(commandsMatching('api-mesh:create')).toHaveLength(1);
@@ -143,8 +147,8 @@ describe('MeshDeployment — create→update fallback', () => {
 
         const result = await deployMeshComponent(
             '/test/mesh',
-            mockCommandManager as never,
-            mockLogger as never,
+            mockCommandManager,
+            mockLogger,
             undefined,
             'mesh-123' // existing mesh → update strategy from the start
         );
@@ -154,6 +158,38 @@ describe('MeshDeployment — create→update fallback', () => {
         expect(result.success).toBe(false);
     });
 
+    // The signature can arrive on EITHER stream — the live incident had it on
+    // stdout with a generic stderr, and the CLI is free to swap them.
+    it('recognises the signature when it arrives on stderr alone', async () => {
+        routeCommands({
+            create: {
+                code: 2,
+                stdout: 'Starting mesh interpolation process.',
+                stderr: ' \u203a   Error: Selected org, project and workspace already has a mesh',
+            },
+            update: { code: 0, stdout: 'Successfully updated mesh' },
+        });
+
+        const result = await deployMeshComponent('/test/mesh', mockCommandManager, mockLogger);
+
+        expect(commandsMatching('api-mesh:update')).toHaveLength(1);
+        expect(result.success).toBe(true);
+    });
+
+    // The retry is gated on FAILURE, not on the message: a create that
+    // succeeded is finished, whatever its output happened to say.
+    it('does not retry a create that SUCCEEDED, whatever its output said', async () => {
+        routeCommands({
+            create: { code: 0, stdout: ALREADY_HAS_MESH_STDOUT },
+        });
+
+        const result = await deployMeshComponent('/test/mesh', mockCommandManager, mockLogger);
+
+        expect(commandsMatching('api-mesh:create')).toHaveLength(1);
+        expect(commandsMatching('api-mesh:update')).toHaveLength(0);
+        expect(result.success).toBe(true);
+    });
+
     it('surfaces the CLI error content on the FIRST line of the failure (not blank)', async () => {
         routeCommands({
             create: { code: 1, stdout: '', stderr: ' ›   Error: Invalid mesh configuration' },
@@ -161,8 +197,8 @@ describe('MeshDeployment — create→update fallback', () => {
 
         const result = await deployMeshComponent(
             '/test/mesh',
-            mockCommandManager as never,
-            mockLogger as never
+            mockCommandManager,
+            mockLogger
         );
 
         expect(result.success).toBe(false);
@@ -184,17 +220,17 @@ describe('MeshDeployment — update→create fallback (remote mesh vanished)', (
     let mockLogger: ReturnType<typeof createMockLogger>;
 
     function routeCommands(config: {
-        create?: { code: number; stdout?: string; stderr?: string };
-        update?: { code: number; stdout?: string; stderr?: string };
+        create?: Partial<CommandResult> & { code: number };
+        update?: Partial<CommandResult> & { code: number };
     }): void {
         mockCommandManager.execute.mockImplementation((command: string) => {
             if (command.includes('api-mesh:create')) {
-                return Promise.resolve(config.create ?? { code: 0, stdout: 'created' });
+                return Promise.resolve({ stdout: 'created', stderr: '', duration: 0, code: 0, ...config.create });
             }
             if (command.includes('api-mesh:update')) {
-                return Promise.resolve(config.update ?? { code: 0, stdout: 'updated' });
+                return Promise.resolve({ stdout: 'updated', stderr: '', duration: 0, code: 0, ...config.update });
             }
-            return Promise.resolve({ code: 0, stdout: '' });
+            return Promise.resolve({ code: 0, stdout: '', stderr: '', duration: 0 });
         });
     }
 
@@ -220,8 +256,8 @@ describe('MeshDeployment — update→create fallback (remote mesh vanished)', (
 
         const result = await deployMeshComponent(
             '/test/mesh',
-            mockCommandManager as never,
-            mockLogger as never,
+            mockCommandManager,
+            mockLogger,
             undefined,
             'stale-mesh-id', // stored id → update strategy from the start
         );
@@ -238,8 +274,8 @@ describe('MeshDeployment — update→create fallback (remote mesh vanished)', (
 
         const result = await deployMeshComponent(
             '/test/mesh',
-            mockCommandManager as never,
-            mockLogger as never,
+            mockCommandManager,
+            mockLogger,
             undefined,
             'stale-mesh-id',
         );
@@ -260,12 +296,67 @@ describe('MeshDeployment — update→create fallback (remote mesh vanished)', (
 
         const result = await deployMeshComponent(
             '/test/mesh',
-            mockCommandManager as never,
-            mockLogger as never,
+            mockCommandManager,
+            mockLogger,
         );
 
         expect(commandsMatching('api-mesh:create')).toHaveLength(1);
         expect(commandsMatching('api-mesh:update')).toHaveLength(1);
+        expect(result.success).toBe(false);
+    });
+
+    it('recognises "No mesh found" when it arrives on stdout alone', async () => {
+        routeCommands({
+            update: {
+                code: 2,
+                stdout: 'Unable to update. No mesh found for Org(285361)',
+                stderr: '',
+            },
+            create: { code: 0, stdout: 'Successfully created mesh' },
+        });
+
+        const result = await deployMeshComponent(
+            '/test/mesh',
+            mockCommandManager,
+            mockLogger,
+            undefined,
+            'stale-mesh-id',
+        );
+
+        expect(commandsMatching('api-mesh:create')).toHaveLength(1);
+        expect(result.success).toBe(true);
+    });
+
+    // Same gate in this direction: an update that SUCCEEDED is finished.
+    it('does not retry an update that SUCCEEDED, whatever its output said', async () => {
+        routeCommands({
+            update: { code: 0, stdout: NO_MESH_FOUND_STDERR },
+        });
+
+        const result = await deployMeshComponent(
+            '/test/mesh',
+            mockCommandManager,
+            mockLogger,
+            undefined,
+            'stale-mesh-id',
+        );
+
+        expect(commandsMatching('api-mesh:update')).toHaveLength(1);
+        expect(commandsMatching('api-mesh:create')).toHaveLength(0);
+        expect(result.success).toBe(true);
+    });
+
+    // Each fallback answers ONE direction. A failing CREATE that reports "no
+    // mesh found" is not the update→create case and must not retry as create.
+    it('does not retry a failing CREATE that reports "No mesh found"', async () => {
+        routeCommands({
+            create: { code: 2, stdout: '', stderr: NO_MESH_FOUND_STDERR },
+        });
+
+        const result = await deployMeshComponent('/test/mesh', mockCommandManager, mockLogger);
+
+        expect(commandsMatching('api-mesh:create')).toHaveLength(1);
+        expect(commandsMatching('api-mesh:update')).toHaveLength(0);
         expect(result.success).toBe(false);
     });
 
@@ -278,8 +369,8 @@ describe('MeshDeployment — update→create fallback (remote mesh vanished)', (
 
         await deployMeshComponent(
             '/test/mesh',
-            mockCommandManager as never,
-            mockLogger as never,
+            mockCommandManager,
+            mockLogger,
             onProgress,
             'stale-mesh-id',
         );

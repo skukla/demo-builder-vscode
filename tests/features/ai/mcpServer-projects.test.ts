@@ -107,7 +107,7 @@ describe('toolHandlers.listProjects', () => {
 
         const result = await toolHandlers.listProjects(PROJECTS_DIR);
 
-        expect(JSON.parse(result)).toEqual([]);
+        expect(JSON.parse(result)).toStrictEqual([]);
     });
 
     it('skips directories that do not contain .demo-builder.json', async () => {
@@ -154,7 +154,7 @@ describe('toolHandlers.listProjects', () => {
 
         const result = await toolHandlers.listProjects(PROJECTS_DIR);
 
-        expect(JSON.parse(result)).toEqual([]);
+        expect(JSON.parse(result)).toStrictEqual([]);
     });
 
     it('applies offset and limit when paginating', async () => {

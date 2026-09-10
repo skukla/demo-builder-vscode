@@ -474,6 +474,75 @@ export function browserProbeCommand(platform: string): { binary: string; probe: 
     return { binary, probe: `command -v ${binary}` };
 }
 
+/** One line per tool, installed or not. */
+function toolLines(tools: DiagnosticsReport['tools']): string[] {
+    // SOP §4: for...of instead of Object.entries().forEach()
+    const lines: string[] = [];
+    for (const [tool, info] of Object.entries(tools)) {
+        const status = info.installed ? '✅' : '❌';
+        lines.push(`  ${status} ${tool}: ${info.installed ? info.output : 'Not installed'}`);
+    }
+    return lines;
+}
+
+/** Adobe CLI section — empty when the CLI is not installed. */
+function adobeLines(adobe: DiagnosticsReport['adobe']): string[] {
+    if (!adobe.installed) return [];
+
+    const lines = [
+        '',
+        'Adobe CLI Status:',
+        `  Version: ${adobe.version}`,
+        `  Authenticated: ${adobe.authConfigured ? 'Yes' : 'No'}`,
+    ];
+    if (!adobe.authConfigured) return lines;
+
+    lines.push(`  Token Valid: ${!adobe.tokenExpired ? 'Yes' : 'No'}`);
+    // "Yes" only proves the command ran — an empty org list still prints Yes. The
+    // count is the finding (a token reaching 0 orgs is exactly what the org badge
+    // greys out on), so print it whenever it's known.
+    const knownCount = adobe.canListOrgs && adobe.organizationCount !== undefined;
+    const plural = adobe.organizationCount === 1 ? '' : 's';
+    const orgCount = knownCount ? ` (${adobe.organizationCount} org${plural})` : '';
+    lines.push(`  Can List Orgs: ${adobe.canListOrgs ? 'Yes' : 'No'}${orgCount}`);
+    return lines;
+}
+
+/** In-extension MCP server: reachable, with what, or why not. */
+function mcpLines(mcp: DiagnosticsReport['mcp']): string[] {
+    if (!mcp.running) {
+        return ['  Reachable: No', `  Reason: ${mcp.error ?? 'unknown'}`];
+    }
+    const tools = mcp.tools ?? [];
+    // The full roster is ~680 characters on one line. Pasted into Slack or a
+    // terminal it is silently elided mid-string, which reads as a corrupted tool
+    // name rather than as truncation. The count is the actionable part; the roster
+    // stays in the debug report dump.
+    return [
+        `  Reachable: Yes (${tools.length} tool${tools.length === 1 ? '' : 's'})`,
+        `  sign_in tool: ${mcp.hasSignIn ? '✅ present' : '❌ missing'}`,
+    ];
+}
+
+/** Settings the user has set that nothing reads any more. */
+function orphanedSettingsLines(orphaned: string[] | undefined): string[] {
+    if (!orphaned?.length) return [];
+    return [
+        '',
+        'Settings you have set that this extension NO LONGER READS:',
+        ...orphaned.map((key) => `  ⚠️  ${key}`),
+        '  These were renamed or removed. Their values are being ignored, and any',
+        '  replacement setting is falling back to its default — silently.',
+    ];
+}
+
+/**
+ * Assemble the summary.
+ *
+ * Every section is its own function returning its lines, including the empty case,
+ * which is what keeps this one a list rather than a branch tree — it was over the
+ * complexity limit at 26 while the later half already used this shape.
+ */
 export function buildSummaryLines(report: DiagnosticsReport): string[] {
     const lines: string[] = [
         '=== DIAGNOSTICS SUMMARY ===',
@@ -481,31 +550,8 @@ export function buildSummaryLines(report: DiagnosticsReport): string[] {
         `VS Code: ${report.vscode.version}`,
         '',
         'Tools Status:',
-    ];
-
-    // SOP §4: for...of instead of Object.entries().forEach()
-    for (const [tool, info] of Object.entries(report.tools)) {
-        const status = info.installed ? '✅' : '❌';
-        lines.push(`  ${status} ${tool}: ${info.installed ? info.output : 'Not installed'}`);
-    }
-
-    if (report.adobe.installed) {
-        lines.push('', 'Adobe CLI Status:', `  Version: ${report.adobe.version}`);
-        lines.push(`  Authenticated: ${report.adobe.authConfigured ? 'Yes' : 'No'}`);
-        if (report.adobe.authConfigured) {
-            lines.push(`  Token Valid: ${!report.adobe.tokenExpired ? 'Yes' : 'No'}`);
-            // "Yes" only proves the command ran — an empty org list still prints
-            // Yes. The count is the finding (a token reaching 0 orgs is exactly
-            // what the org badge greys out on), so print it whenever it's known.
-            const orgCount =
-                report.adobe.canListOrgs && report.adobe.organizationCount !== undefined
-                    ? ` (${report.adobe.organizationCount} org${report.adobe.organizationCount === 1 ? '' : 's'})`
-                    : '';
-            lines.push(`  Can List Orgs: ${report.adobe.canListOrgs ? 'Yes' : 'No'}${orgCount}`);
-        }
-    }
-
-    lines.push(
+        ...toolLines(report.tools),
+        ...adobeLines(report.adobe),
         '',
         'Diagnostic Tests:',
         `  Browser Launch: ${report.tests.browserLaunch.available ? 'Available' : 'Not available'}`,
@@ -513,35 +559,16 @@ export function buildSummaryLines(report: DiagnosticsReport): string[] {
         `  File System Access: ${report.tests.fileSystem.canWrite ? 'OK' : 'Failed'}`,
         '',
         'MCP Server (in-extension):',
-    );
+        ...mcpLines(report.mcp),
+        ...orphanedSettingsLines(report.orphanedSettings),
+        ...credentialLines(report.githubCredential),
+    ];
 
-    if (report.mcp.running) {
-        const tools = report.mcp.tools ?? [];
-        lines.push(`  Reachable: Yes (${tools.length} tool${tools.length === 1 ? '' : 's'})`);
-        lines.push(`  sign_in tool: ${report.mcp.hasSignIn ? '✅ present' : '❌ missing'}`);
-        // The full roster is ~680 characters on one line. Pasted into Slack or a
-        // terminal it is silently elided mid-string, which reads as a corrupted
-        // tool name rather than as truncation. The count above is the actionable
-        // part; the roster stays in the debug report dump.
-    } else {
-        lines.push('  Reachable: No', `  Reason: ${report.mcp.error ?? 'unknown'}`);
-    }
-
-    if (report.orphanedSettings?.length) {
-        lines.push(
-            '',
-            'Settings you have set that this extension NO LONGER READS:',
-            ...report.orphanedSettings.map((key) => `  ⚠️  ${key}`),
-            '  These were renamed or removed. Their values are being ignored, and any',
-            '  replacement setting is falling back to its default — silently.',
-        );
-    }
-
-    lines.push(...credentialLines(report.githubCredential));
     if (report.credentialService) lines.push(...credentialServiceLines(report.credentialService));
     if (report.configService) lines.push(...configServiceLines(report.configService));
-    if (report.storefront)
+    if (report.storefront) {
         lines.push(...storefrontLines(report.storefront, report.storefrontScope));
+    }
     if (report.claudeCode) lines.push(...claudeFootprintLines(report.claudeCode));
     lines.push('', 'Use VS Code\'s "Set Log Level..." command to see debug/trace details');
     return lines;

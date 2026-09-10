@@ -15,41 +15,18 @@
 import { render, screen } from '@testing-library/react';
 import React from 'react';
 import '@testing-library/jest-dom';
-import { StoreConfigFieldRow } from '@/features/components/ui/components/StoreConfigFieldRow';
-import type { ServiceGroup, UniqueField } from '@/features/components/ui/hooks/useComponentConfig';
 
-// Mock StoreSelectionRow — surface the isLoading prop so we can assert the
-// fields render disabled during fetch and enabled after data lands.
-interface StoreSelectionRowMockProps {
-    isLoading?: boolean;
-}
-jest.mock('@/features/components/ui/components/StoreSelectionRow', () => ({
-    StoreSelectionRow: ({ isLoading }: StoreSelectionRowMockProps) => (
-        <div data-testid="store-selection-row" data-loading={isLoading ? 'true' : 'false'} />
-    ),
-}));
-
-// Mock ConfigFieldRenderer — a simple marker keyed by field for fallback paths.
-interface ConfigFieldRendererMockProps {
-    field: { key: string };
-}
-jest.mock('@/features/components/ui/components/ConfigFieldRenderer', () => ({
-    ConfigFieldRenderer: ({ field }: ConfigFieldRendererMockProps) => (
-        <div data-testid={`config-field-${field.key}`} />
-    ),
-}));
+// The mocks and the subject import live in the shared harness — see the note at
+// the top of it for why the doubles surface what they were handed.
+import {
+    StoreConfigFieldRow,
+    makeField,
+    type ServiceGroup,
+} from './StoreConfigFieldRow.testUtils';
 
 // ── Fixtures ────────────────────────────────────────────────────────────────
 
 const ACCS_WEBSITE_CODE = 'ACCS_WEBSITE_CODE';
-
-const makeField = (key: string): UniqueField => ({
-    key,
-    componentIds: ['test-component'],
-    label: key,
-    type: 'text',
-    required: false,
-});
 
 const accsGroup: ServiceGroup = {
     id: 'accs',

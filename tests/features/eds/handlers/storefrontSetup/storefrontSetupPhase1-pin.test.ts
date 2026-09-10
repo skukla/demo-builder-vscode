@@ -20,8 +20,10 @@
  */
 
 import { executePhaseGitHubRepo } from '@/features/eds/handlers/storefrontSetup/storefrontSetupPhase1';
-import type { HandlerContext } from '@/types/handlers';
-import type { RepoInfo, SetupServices } from '@/features/eds/handlers/storefrontSetup/storefrontSetupTypes';
+import type {
+    RepoInfo,
+    SetupServices,
+} from '@/features/eds/handlers/storefrontSetup/storefrontSetupTypes';
 import type { StorefrontSetupStartPayload } from '@/features/eds/handlers/storefrontSetup/storefrontSetupHandlers';
 
 // Mock the pin helper at the lkg module boundary — the helper is the
@@ -31,15 +33,9 @@ jest.mock('@/features/eds/services/patches/lkgPinHelper', () => ({
     pinRepoToLkg: jest.fn().mockResolvedValue(true),
 }));
 import { pinRepoToLkg } from '@/features/eds/services/patches/lkgPinHelper';
-const mockPinRepoToLkg = pinRepoToLkg as jest.Mock;
+import { makeContext, TEMPLATE } from './storefrontSetupPhase1.testUtils';
 
-function makeContext(): HandlerContext {
-    return {
-        logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() },
-        sendMessage: jest.fn().mockResolvedValue(undefined),
-        context: { secrets: {}, globalState: { get: jest.fn(), update: jest.fn() } },
-    } as unknown as HandlerContext;
-}
+const mockPinRepoToLkg = pinRepoToLkg as jest.Mock;
 
 function makeServices(): SetupServices {
     return {
@@ -63,7 +59,6 @@ const THIN_LAYER_CONFIG_PATCH_FIELDS = {
 };
 
 const FRESH_REPO_INFO: RepoInfo = { repoOwner: '', repoName: '', repoUrl: '' };
-const TEMPLATE = { owner: 'adobe-commerce', repo: 'boilerplate-b2b-template' };
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -76,7 +71,11 @@ describe('executePhaseGitHubRepo — Step 4b pin coverage', () => {
             // runs and must NOT skip the pin step just because the repo exists.
             const edsConfig = {
                 repoMode: 'new',
-                createdRepo: { owner: 'skukla', name: 'b2b-tester', url: 'https://github.com/skukla/b2b-tester' },
+                createdRepo: {
+                    owner: 'skukla',
+                    name: 'b2b-tester',
+                    url: 'https://github.com/skukla/b2b-tester',
+                },
                 ...THIN_LAYER_CONFIG_PATCH_FIELDS,
             } as unknown as StorefrontSetupStartPayload['edsConfig'];
 
@@ -88,7 +87,7 @@ describe('executePhaseGitHubRepo — Step 4b pin coverage', () => {
                 new AbortController().signal,
                 TEMPLATE.owner,
                 TEMPLATE.repo,
-                undefined,
+                undefined
             );
 
             expect(mockPinRepoToLkg).toHaveBeenCalledTimes(1);
@@ -109,7 +108,11 @@ describe('executePhaseGitHubRepo — Step 4b pin coverage', () => {
             // — verify the branch wiring honors that.
             const edsConfig = {
                 repoMode: 'new',
-                createdRepo: { owner: 'skukla', name: 'legacy-fork', url: 'https://github.com/skukla/legacy-fork' },
+                createdRepo: {
+                    owner: 'skukla',
+                    name: 'legacy-fork',
+                    url: 'https://github.com/skukla/legacy-fork',
+                },
                 // codePatches / codePatchSource intentionally absent
             } as unknown as StorefrontSetupStartPayload['edsConfig'];
 
@@ -121,7 +124,7 @@ describe('executePhaseGitHubRepo — Step 4b pin coverage', () => {
                 new AbortController().signal,
                 TEMPLATE.owner,
                 TEMPLATE.repo,
-                undefined,
+                undefined
             );
 
             expect(mockPinRepoToLkg).not.toHaveBeenCalled();
@@ -133,19 +136,30 @@ describe('executePhaseGitHubRepo — Step 4b pin coverage', () => {
             const ctx = makeContext();
             const edsConfig = {
                 repoMode: 'new',
-                createdRepo: { owner: 'skukla', name: 'b2b-tester', url: 'https://github.com/skukla/b2b-tester' },
+                createdRepo: {
+                    owner: 'skukla',
+                    name: 'b2b-tester',
+                    url: 'https://github.com/skukla/b2b-tester',
+                },
                 ...THIN_LAYER_CONFIG_PATCH_FIELDS,
             } as unknown as StorefrontSetupStartPayload['edsConfig'];
 
             await executePhaseGitHubRepo(
-                ctx, edsConfig, makeServices(), { ...FRESH_REPO_INFO },
-                new AbortController().signal, TEMPLATE.owner, TEMPLATE.repo, undefined,
+                ctx,
+                edsConfig,
+                makeServices(),
+                { ...FRESH_REPO_INFO },
+                new AbortController().signal,
+                TEMPLATE.owner,
+                TEMPLATE.repo,
+                undefined
             );
 
             const sendMessage = ctx.sendMessage as jest.Mock;
             const pinMessage = sendMessage.mock.calls.find(
-                ([type, payload]) => type === 'storefront-setup-progress'
-                    && payload?.message === 'Pinning to verified canonical state...',
+                ([type, payload]) =>
+                    type === 'storefront-setup-progress' &&
+                    payload?.message === 'Pinning to verified canonical state...'
             );
             expect(pinMessage).toBeDefined();
             expect(pinMessage?.[1]).toMatchObject({ progress: 12 });

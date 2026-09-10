@@ -11,63 +11,21 @@
  * Split from skillsWriter.test.ts (that file sits at the max-lines cap).
  */
 
+import { fsPromises } from './aiBundleFsMock';
 import { createHash } from 'crypto';
+import { makeEdsProject } from './aiBundleFixtures';
 import * as path from 'path';
-import * as fsPromises from 'fs/promises';
 import {
     enoentError,
     makeTestWriter as makeWriter,
     mcpToolsManifest,
 } from './generatedFileWriter.testUtils';
 import { writeSkillFiles } from '@/features/project-creation/services/aiBundle/skillsWriter';
-import type { Project, ComponentInstance } from '@/types/base';
-
-jest.mock('fs/promises', () => {
-    const writeFile = jest.fn().mockResolvedValue(undefined);
-    return {
-        lstat: jest.fn().mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
-        realpath: jest.fn(async (p: string) => p),
-        mkdir: jest.fn().mockResolvedValue(undefined),
-        writeFile,
-        readdir: jest.fn(),
-        readFile: jest.fn(),
-        unlink: jest.fn().mockResolvedValue(undefined),
-        // O_NOFOLLOW writes go through open(); the returned handle delegates to
-        // the writeFile mock WITH the path, so path-based assertions keep working.
-        open: jest.fn(async (p: unknown) => ({
-            writeFile: jest.fn(async (d: unknown, e: unknown) => writeFile(p as string, d, e)),
-            close: jest.fn(async () => undefined),
-        })),
-    };
-});
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function sha256(content: string): string {
     return createHash('sha256').update(content, 'utf-8').digest('hex');
-}
-
-function makeEdsInstance(): ComponentInstance {
-    return {
-        id: 'eds-storefront',
-        name: 'EDS Storefront',
-        status: 'ready',
-        path: '/projects/test/components/eds-storefront',
-        metadata: { githubRepo: 'owner/my-repo', daLiveOrg: 'my-org', daLiveSite: 'my-site' },
-    };
-}
-
-function makeEdsProject(overrides: Partial<Project> = {}): Project {
-    return {
-        name: 'test-project',
-        created: new Date('2026-01-01'),
-        lastModified: new Date('2026-01-01'),
-        path: '/projects/test-project',
-        status: 'ready',
-        selectedStack: 'eds-paas',
-        componentInstances: { 'eds-storefront': makeEdsInstance() },
-        ...overrides,
-    };
 }
 
 function writtenFiles(): string[] {

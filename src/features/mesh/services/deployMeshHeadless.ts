@@ -17,13 +17,15 @@
 
 import { deployMeshCreateOrUpdate } from './meshRedeploy';
 import { updateMeshState } from './stalenessDetector';
-import { ServiceLocator } from '@/core/di';
-import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell';
-import { sanitizeErrorForLogging } from '@/core/validation';
+import type { SecretStorageLike } from '@/core/di/serviceLocator';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
+import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell/orgContextEnv';
+import { sanitizeErrorForLogging } from '@/core/validation/SensitiveDataRedactor';
 import { recordDeployOutcome } from '@/features/app-builder/services/appBuilderDeployOutcome';
 import { ensureMeshApiSubscribed } from '@/features/app-builder/services/ensureMeshApiSubscribed';
+import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { ensureProjectAdobeContext } from '@/features/authentication/services/ensureProjectAdobeContext';
-import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
+import { getComponentRegistryManager } from '@/features/components/services/componentRegistryInstance';
 import { projectRequiresAppBuilder } from '@/features/components/services/projectAppBuilderPredicate';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
@@ -53,6 +55,11 @@ export interface DeployMeshHeadlessDeps {
     logger: Logger;
     /** Extension path — the App Builder permission gate loads the registry. */
     extensionPath: string;
+    /** ADR-015: collaborators supplied by whichever boundary starts the deploy. */
+    authManager: AuthenticationService;
+    commandManager: CommandExecutor;
+    /** ADR-015: the secret store, for the mesh .env regeneration step. */
+    secrets: SecretStorageLike | undefined;
     /** Status telegraph (dashboard badge). No-op for headless callers. */
     onStatus?: (
         status: MeshDeployStatus,
@@ -73,7 +80,7 @@ export async function deployMeshHeadless(
     deps: DeployMeshHeadlessDeps,
 ): Promise<DeployMeshHeadlessResult> {
     const { project, stateManager, logger, extensionPath, onStatus, onProgress } = deps;
-    const authManager = ServiceLocator.getAuthenticationService();
+    const { authManager } = deps;
 
     await onStatus?.('deploying', 'Checking requirements...');
 
@@ -98,7 +105,7 @@ export async function deployMeshHeadless(
 
     // App Builder permission gate — IMS role membership can change between the
     // create-time gate and now; re-verify to surface the friendly error.
-    const registry = await new ComponentRegistryManager(extensionPath).loadRegistry();
+    const registry = await getComponentRegistryManager(extensionPath).loadRegistry();
     if (projectRequiresAppBuilder(project, registry)) {
         const permission = await authManager.testDeveloperPermissions();
         if (!permission.hasPermissions) {
@@ -135,7 +142,7 @@ export async function deployMeshHeadless(
     // subscribe step kept succeeding while the deploy beside it failed.
     const orgTarget = buildOrgTargetFromProjectAdobe(
         project.adobe,
-        authManager.getCachedOrganization?.(),
+        authManager.getCachedOrganization(),
     );
 
     try {
@@ -167,6 +174,7 @@ export async function deployMeshHeadless(
                         logger,
                         meshComponentId,
                         meshComponent.path as string,
+                        deps.secrets,
                     );
                 } catch (envError) {
                     logger.warn(
@@ -186,6 +194,7 @@ export async function deployMeshHeadless(
             // — sending a live mesh down the create path.
             const result = await deployMeshCreateOrUpdate(
                 meshComponent.path as string,
+                deps.commandManager,
                 logger,
                 (message: string, subMessage?: string) => onProgress?.(message, subMessage),
             );

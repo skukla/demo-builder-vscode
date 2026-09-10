@@ -13,7 +13,7 @@ import PinOn from '@spectrum-icons/workflow/PinOn';
 import React, { useMemo } from 'react';
 import { useProjectSelectHandlers } from '../hooks/useProjectSelectHandlers';
 import { ProjectActionsMenu, type ProjectActions } from './ProjectActionsMenu';
-import { InlineRenameField } from '@/core/ui/components/forms';
+import { InlineRenameField } from '@/core/ui/components/forms/InlineRenameField';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { getBrandStackSummary } from '@/features/projects-dashboard/utils/componentSummaryUtils';
@@ -43,12 +43,12 @@ export interface ProjectCardProps {
  *
  * Layout: Gray-50 base with gray-75 hover, lift animation, and uppercase status
  */
-export const ProjectCard: React.FC<ProjectCardProps> = ({
+export function ProjectCard({
     project,
     isRunning = false,
     onSelect,
     actions = {},
-}) => {
+}: ProjectCardProps) {
     const { handleClick, handleKeyDown } = useProjectSelectHandlers(project, onSelect);
 
     const brandStackSummary = useMemo(() => getBrandStackSummary(project), [project]);
@@ -65,7 +65,12 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
     // project at rest has no runtime line, and a project with nothing deployed has
     // no deployment line. Joining what exists keeps the spoken label matching the
     // visible card instead of hard-coding a slot that may be empty.
-    const ariaLabel = [getProjectDisplayName(project), runtime?.text, deployment?.text, brandStackSummary]
+    const ariaLabel = [
+        getProjectDisplayName(project),
+        runtime?.text,
+        deployment?.text,
+        brandStackSummary,
+    ]
         .filter(Boolean)
         .join(', ');
 
@@ -85,12 +90,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
                         <span
                             data-testid="project-card-pin-indicator"
                             aria-label="Pinned"
-                            style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                flex: '0 0 auto',
-                                color: 'var(--spectrum-global-color-gray-700)',
-                            }}
+                            className="pin-indicator"
                         >
                             <PinOn size="XS" />
                         </span>
@@ -118,7 +118,6 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
                     project={project}
                     isRunning={isRunning}
                     actions={actions}
-                    className="project-card-menu-button"
                 />
             </Flex>
 
@@ -153,4 +152,4 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
             )}
         </div>
     );
-};
+}

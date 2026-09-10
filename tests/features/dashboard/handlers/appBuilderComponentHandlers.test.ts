@@ -24,7 +24,6 @@ import {
     handleAddAppBuilderComponent,
     handleDeployAppBuilderComponent,
     handleRedeployAppBuilderComponent,
-    handleRemoveAppBuilderComponent,
     handleRenameAppBuilderComponent,
     mockAddAppBuilderComponent,
     mockBuildDefaultRunnerDeps,
@@ -33,17 +32,21 @@ import {
     mockDetectProjectOrgMismatch,
     mockEnsureAdobeIOAuth,
     mockGetAppBuilderComponentEntry,
-    mockRemoveAppBuilderComponent,
     mockSendAppBuilderComponentStatusUpdate,
     mockTestDeveloperPermissions,
     resetHandlerMocks,
     setupMocks,
     mockBuildCustomIntegrationEntry,
 } from './appBuilderComponentHandlers.testUtils';
+import type { AppBuilderComponentState } from '@/types/base';
 
 beforeEach(() => {
     resetHandlerMocks();
 });
+
+
+
+
 
 describe('handleAddAppBuilderComponent', () => {
     it('resolves the catalog entry, assembles deps, and calls addAppBuilderComponent', async () => {
@@ -53,7 +56,15 @@ describe('handleAddAppBuilderComponent', () => {
         const result = await handleAddAppBuilderComponent(mockContext, { id: 'erp-sync' });
 
         expect(result.success).toBe(true);
-        expect(mockBuildRunnerDepsContext).toHaveBeenCalledWith(mockContext, mockProject);
+        expect(mockBuildRunnerDepsContext).toHaveBeenCalledWith(
+            mockContext,
+            mockProject,
+            // ADR-015: the shared services the handler resolves at the boundary.
+            expect.objectContaining({
+                authManager: expect.anything(),
+                commandManager: expect.anything(),
+            })
+        );
         expect(mockBuildDefaultRunnerDeps).toHaveBeenCalledWith(
             expect.objectContaining({
                 subscriberClient: expect.anything(),
@@ -170,7 +181,7 @@ describe('handleAddAppBuilderComponent', () => {
                     source: { owner: 'adobe', repo: 'commerce-integration-starter-kit' },
                 },
             },
-        } as never);
+        });
         mockTestDeveloperPermissions(true);
         mockGetAppBuilderComponentEntry.mockReturnValue({
             ...ERP_ENTRY,
@@ -196,7 +207,7 @@ describe('handleAddAppBuilderComponent', () => {
                     source: { owner: 'acme', repo: 'erp-sync' },
                 },
             },
-        } as never);
+        });
         mockTestDeveloperPermissions(true);
         mockGetAppBuilderComponentEntry.mockReturnValue({ ...ERP_ENTRY, id: 'my-app-b' });
 
@@ -361,35 +372,6 @@ describe('handleDeployAppBuilderComponent / handleRedeployAppBuilderComponent', 
     });
 });
 
-describe('handleRemoveAppBuilderComponent', () => {
-    it('routes to the runner removeAppBuilderComponent with the id', async () => {
-        const { mockContext, mockProject } = setupMocks();
-        mockTestDeveloperPermissions(true);
-
-        const result = await handleRemoveAppBuilderComponent(mockContext, { id: 'erp-sync' });
-
-        expect(result.success).toBe(true);
-        expect(mockRemoveAppBuilderComponent).toHaveBeenCalledWith(
-            mockProject,
-            'erp-sync',
-            expect.anything()
-        );
-    });
-
-    it('surfaces the runner error', async () => {
-        const { mockContext } = setupMocks();
-        mockTestDeveloperPermissions(true);
-        mockRemoveAppBuilderComponent.mockResolvedValue({
-            success: false,
-            error: 'undeploy failed',
-        });
-
-        const result = await handleRemoveAppBuilderComponent(mockContext, { id: 'erp-sync' });
-
-        expect(result.success).toBe(false);
-        expect(result.error).toBe('undeploy failed');
-    });
-});
 
 describe('handleRenameAppBuilderComponent (display name only — shell instancing Step 10)', () => {
     /** The keyed integration entry under rename (deployed, already named). */
@@ -401,13 +383,13 @@ describe('handleRenameAppBuilderComponent (display name only — shell instancin
         url: 'https://firefly.example.com',
     };
 
-    function setupRename(entryOverrides: Partial<typeof KEYED_ENTRY> | null = {}) {
+    function setupRename(entryOverrides: Partial<AppBuilderComponentState> | null = {}) {
         const mocks = setupMocks({
             appBuilderComponents:
                 entryOverrides === null
                     ? {}
                     : { 'firefly-image-gen': { ...KEYED_ENTRY, ...entryOverrides } },
-        } as never);
+        });
         // An AI-built instance id never resolves in the catalog (the beforeEach
         // default returns ERP_ENTRY for the add path — rename must see undefined).
         mockGetAppBuilderComponentEntry.mockReturnValue(undefined);
@@ -554,7 +536,7 @@ describe('handleRenameAppBuilderComponent (display name only — shell instancin
                     source: { owner: 'acme', repo: 'unnamed-import', branch: 'main' },
                 },
             },
-        } as never);
+        });
         mockGetAppBuilderComponentEntry.mockReturnValue(undefined);
         const vscode = require('vscode');
         vscode.window.showInputBox = jest.fn().mockResolvedValue(undefined);
@@ -570,7 +552,7 @@ describe('handleRenameAppBuilderComponent (display name only — shell instancin
     });
 
     it('never prompts for a mesh-kind entry (fixed "API Mesh" identity)', async () => {
-        const { mockContext, showInputBox } = setupRename({ kind: 'mesh' as never });
+        const { mockContext, showInputBox } = setupRename({ kind: 'mesh' });
 
         const result = await handleRenameAppBuilderComponent(mockContext, {
             id: 'firefly-image-gen',
@@ -621,9 +603,9 @@ describe('handleAddAppBuilderComponent — duplicate ids', () => {
     it('refuses a catalog entry already present, without calling the runner', async () => {
         const { mockContext } = setupMocks({
             appBuilderComponents: {
-                'erp-sync': { kind: 'integration', status: 'deployed' },
+                'erp-sync': { kind: 'integration', status: 'deployed', source: { owner: 'acme', repo: 'erp-sync', branch: 'main' } },
             },
-        } as never);
+        });
         mockTestDeveloperPermissions(true);
 
         const result = await handleAddAppBuilderComponent(mockContext, { id: 'erp-sync' });
@@ -643,9 +625,9 @@ describe('handleAddAppBuilderComponent — duplicate ids', () => {
         });
         const { mockContext } = setupMocks({
             appBuilderComponents: {
-                'acme-erp-sync': { kind: 'integration', status: 'deployed' },
+                'acme-erp-sync': { kind: 'integration', status: 'deployed', source: { owner: 'acme', repo: 'erp-sync', branch: 'main' } },
             },
-        } as never);
+        });
         mockTestDeveloperPermissions(true);
 
         const result = await handleAddAppBuilderComponent(mockContext, {
@@ -662,9 +644,9 @@ describe('handleAddAppBuilderComponent — duplicate ids', () => {
         // recovers, so the duplicate guard must not stand in the way.
         const { mockContext } = setupMocks({
             appBuilderComponents: {
-                'erp-sync': { kind: 'integration', status: 'error' },
+                'erp-sync': { kind: 'integration', status: 'error', source: { owner: 'acme', repo: 'erp-sync', branch: 'main' } },
             },
-        } as never);
+        });
         mockTestDeveloperPermissions(true);
 
         const result = await handleAddAppBuilderComponent(mockContext, { id: 'erp-sync' });
@@ -675,8 +657,14 @@ describe('handleAddAppBuilderComponent — duplicate ids', () => {
 
     it('still allows an add whose id is NOT present', async () => {
         const { mockContext } = setupMocks({
-            appBuilderComponents: { 'other-thing': { kind: 'integration' } },
-        } as never);
+            appBuilderComponents: {
+                'other-thing': {
+                    kind: 'integration',
+                    status: 'deployed',
+                    source: { owner: 'acme', repo: 'other-thing', branch: 'main' },
+                },
+            },
+        });
         mockTestDeveloperPermissions(true);
 
         const result = await handleAddAppBuilderComponent(mockContext, { id: 'erp-sync' });

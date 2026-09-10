@@ -10,12 +10,12 @@
  * (measured by the 2026-08-17 codebase sweep).
  *
  * **Not `PageLayout` + `PageHeader`.** Those are the WIZARD's page shell — a title,
- * subtitle and back affordance in `page-header-inner` — and render neither the
+ * subtitle and back affordance in the header’s inner row — and render neither the
  * sticky band nor the padded content column. Different job, checked before this
  * was written.
  *
  * **The class names are load-bearing and stay literal.** `pageContentAlignment`
- * and `DashboardStatusHeader-layout` parse `custom-spectrum.css` as TEXT for these
+ * and `DashboardStatusHeader-layout` parse `utilities.css` as TEXT for these
  * selectors and their px values, because jsdom resolves no layout and a rendering
  * test would pass either way. Renaming them here would not fail those suites — it
  * would silently leave the surfaces unstyled.

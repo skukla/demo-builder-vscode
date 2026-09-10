@@ -9,47 +9,35 @@
  * lands in the wrong org again the banner persists instead of silently looping.
  */
 
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(),
-        getStateManager: jest.fn(() => ({ saveProjectConfigOnly: jest.fn().mockResolvedValue(undefined) })),
+        getStateManager: jest.fn(() => ({
+            saveProjectConfigOnly: jest.fn().mockResolvedValue(undefined),
+        })),
     },
 }));
 jest.mock('@/features/mesh/services/stalenessDetector');
-jest.mock('@/features/authentication');
 jest.mock('@/features/mesh/services/meshVerifier', () => ({
     verifyMeshDeployment: jest.fn().mockResolvedValue(undefined),
     syncMeshStatus: jest.fn().mockResolvedValue(undefined),
 }));
-jest.mock('@/core/validation', () => ({
-    validateOrgId: jest.fn(),
-    validateProjectId: jest.fn(),
-    validateWorkspaceId: jest.fn(),
-    validateURL: jest.fn(),
-}));
-jest.mock('vscode', () => ({
-    window: {
-        activeColorTheme: { kind: 1 },
-        showWarningMessage: jest.fn().mockResolvedValue('Cancel'),
-        // The forced sign-in runs behind the browser-opening notification
-        // (withBrowserSignInNotice) — run the task straight through.
-        withProgress: jest.fn(async (_options: unknown, task: () => unknown) => task()),
-    },
-    ProgressLocation: { Notification: 15, Window: 10, SourceControl: 1 },
-    ColorThemeKind: { Dark: 2, Light: 1 },
-    commands: { executeCommand: jest.fn() },
-    env: { openExternal: jest.fn() },
-    Uri: { parse: jest.fn((url: string) => ({ toString: () => url })) },
-}), { virtual: true });
 
+import './dashboardValidatorMocks';
 import { handleSwitchOrg } from '@/features/dashboard/handlers/dashboardHandlers';
 import { CHECK_RESULT_MESSAGE } from '@/types/messages';
 import { setupMocks } from './dashboardHandlers.testUtils';
 
+// The barrel this suite used to automock was retired (ADR-022), so the mock now
+// names the module that declares the handler.
+jest.mock('@/features/authentication/handlers/orgSwitchHandler');
+
 describe('dashboardHandlers - handleSwitchOrg', () => {
     /** The authentication-owned forced sign-in this handler composes around. */
     function forcedSwitch(): jest.Mock {
-        const { handleForcedOrgSwitch } = require('@/features/authentication');
+        const {
+            handleForcedOrgSwitch,
+        } = require('@/features/authentication/handlers/orgSwitchHandler');
         return handleForcedOrgSwitch as jest.Mock;
     }
 
@@ -61,8 +49,8 @@ describe('dashboardHandlers - handleSwitchOrg', () => {
     });
 
     it('delegates the forced sign-in, then refreshes status to trigger an org re-check', async () => {
-        const { mockContext } = setupMocks({ meshStatusSummary: 'deployed' } as any);
-        const { ServiceLocator } = require('@/core/di');
+        const { mockContext } = setupMocks({ meshStatusSummary: 'deployed' });
+        const { ServiceLocator } = require('@/core/di/serviceLocator');
         ServiceLocator.getAuthenticationService.mockReturnValue({
             isAuthenticated: jest.fn().mockResolvedValue(true),
             // SDK-only read (the non-interactive on-open probe).
@@ -82,7 +70,7 @@ describe('dashboardHandlers - handleSwitchOrg', () => {
             expect.objectContaining({
                 type: CHECK_RESULT_MESSAGE,
                 payload: expect.objectContaining({ checkId: 'org-context', status: 'pending' }),
-            }),
+            })
         );
     });
 
@@ -98,7 +86,7 @@ describe('dashboardHandlers - handleSwitchOrg', () => {
         expect(mockContext.panel!.webview.postMessage).not.toHaveBeenCalledWith(
             expect.objectContaining({
                 payload: expect.objectContaining({ checkId: 'org-context' }),
-            }),
+            })
         );
     });
 

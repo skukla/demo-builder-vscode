@@ -4,12 +4,12 @@ import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { PrerequisitesStep } from '@/features/prerequisites/ui/steps/PrerequisitesStep';
 import '@testing-library/jest-dom';
 import {
-    mockPostMessage,
-    mockOnMessage,
     baseState,
     baseStateWithSelectedStack,
-    setupScrollMock,
+    mockPostMessage,
     resetAllMocks,
+    setupMessageCallbacks,
+    setupScrollMock,
 } from './PrerequisitesStep.testUtils';
 import { WizardState } from '@/types/webview';
 
@@ -60,7 +60,11 @@ describe('PrerequisitesStep - Happy Path Checking', () => {
             </Provider>
         );
 
-        expect(screen.getByText('Checking required tools. Missing tools can be installed automatically.')).toBeInTheDocument();
+        expect(
+            screen.getByText(
+                'Checking required tools. Missing tools can be installed automatically.'
+            )
+        ).toBeInTheDocument();
     });
 
     it('should trigger check on mount without selectedStack when no stack selected', () => {
@@ -108,13 +112,7 @@ describe('PrerequisitesStep - Happy Path Checking', () => {
     });
 
     it('should display loaded prerequisites', async () => {
-        let loadedCallback: (data: any) => void = () => {};
-        mockOnMessage.mockImplementation((type: string, callback: (data: any) => void) => {
-            if (type === 'prerequisites-loaded') {
-                loadedCallback = callback;
-            }
-            return jest.fn();
-        });
+        const fire = setupMessageCallbacks();
 
         render(
             <Provider theme={defaultTheme}>
@@ -129,11 +127,16 @@ describe('PrerequisitesStep - Happy Path Checking', () => {
             </Provider>
         );
 
-        loadedCallback({
+        fire.fireLoaded({
             prerequisites: [
                 { id: 'node', name: 'Node.js', description: 'JavaScript runtime', optional: false },
-                { id: 'docker', name: 'Docker', description: 'Container platform', optional: false }
-            ]
+                {
+                    id: 'docker',
+                    name: 'Docker',
+                    description: 'Container platform',
+                    optional: false,
+                },
+            ],
         });
 
         await waitFor(() => {
@@ -143,13 +146,7 @@ describe('PrerequisitesStep - Happy Path Checking', () => {
     });
 
     it('should show success icons when prerequisites pass', async () => {
-        let statusCallback: (data: any) => void = () => {};
-        mockOnMessage.mockImplementation((type: string, callback: (data: any) => void) => {
-            if (type === 'prerequisite-status') {
-                statusCallback = callback;
-            }
-            return jest.fn();
-        });
+        const fire = setupMessageCallbacks();
 
         const { container: _container } = render(
             <Provider theme={defaultTheme}>
@@ -165,11 +162,11 @@ describe('PrerequisitesStep - Happy Path Checking', () => {
         );
 
         // Simulate prerequisite success
-        statusCallback({
+        fire.fireStatus({
             index: 0,
             status: 'success',
             message: 'Installed',
-            version: '20.0.0'
+            version: '20.0.0',
         });
 
         await waitFor(() => {
@@ -178,17 +175,7 @@ describe('PrerequisitesStep - Happy Path Checking', () => {
     });
 
     it('should enable continue when all required prerequisites pass', async () => {
-        let loadedCallback: (data: any) => void = () => {};
-        let statusCallback: (data: any) => void = () => {};
-
-        mockOnMessage.mockImplementation((type: string, callback: (data: any) => void) => {
-            if (type === 'prerequisites-loaded') {
-                loadedCallback = callback;
-            } else if (type === 'prerequisite-status') {
-                statusCallback = callback;
-            }
-            return jest.fn();
-        });
+        const fire = setupMessageCallbacks();
 
         render(
             <Provider theme={defaultTheme}>
@@ -203,11 +190,11 @@ describe('PrerequisitesStep - Happy Path Checking', () => {
             </Provider>
         );
 
-        loadedCallback({
+        fire.fireLoaded({
             prerequisites: [
                 { id: 'node', name: 'Node.js', description: 'Runtime', optional: false },
-                { id: 'npm', name: 'npm', description: 'Package manager', optional: false }
-            ]
+                { id: 'npm', name: 'npm', description: 'Package manager', optional: false },
+            ],
         });
 
         await waitFor(() => {
@@ -215,8 +202,8 @@ describe('PrerequisitesStep - Happy Path Checking', () => {
         });
 
         // Mark both as success
-        statusCallback({ index: 0, status: 'success', message: 'Installed' });
-        statusCallback({ index: 1, status: 'success', message: 'Installed' });
+        fire.fireStatus({ index: 0, status: 'success', message: 'Installed' });
+        fire.fireStatus({ index: 1, status: 'success', message: 'Installed' });
 
         await waitFor(() => {
             expect(mockSetCanProceed).toHaveBeenCalledWith(true);

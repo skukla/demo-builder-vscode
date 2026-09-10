@@ -20,20 +20,17 @@
  * facts about the environment — so the stack sits close to its own edges.
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
+import { ruleFor } from '../../../../helpers/cssRules';
 
-const CSS = fs.readFileSync(
-    path.join(__dirname, '../../../../../src/core/ui/styles/custom-spectrum.css'),
-    'utf8'
-);
-
-/** The declarations of one top-level rule, comments stripped. */
-function rule(selector: string): string {
-    const start = CSS.indexOf(`${selector} {`);
-    expect(start).toBeGreaterThan(-1);
-    return CSS.slice(start, CSS.indexOf('}', start)).replace(/\/\*[\s\S]*?\*\//g, '');
-}
+/**
+ * Read the rule from WHEREVER it ships, not from a named sheet.
+ *
+ * This suite used to read `utilities.css` directly and broke the day the
+ * `.dashboard-*` family moved to the dashboard feature's own sheet — a change that
+ * moved no pixel on any surface. The shared helper reads every stylesheet under
+ * `src/`, so a rule's LOCATION stops being something a layout test asserts.
+ */
+const rule = (selector: string): string => ruleFor(selector);
 
 describe('dashboard status band — vertical cost', () => {
     it('STACKS the badges, so their values line up', () => {

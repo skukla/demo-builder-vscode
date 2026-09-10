@@ -13,13 +13,17 @@
  */
 
 const mockDiscover = jest.fn();
-jest.mock('@/features/eds', () => ({
+jest.mock('@/features/eds/handlers/edsHandlers', () => ({
     handleDiscoverStoreStructure: (...args: unknown[]) => mockDiscover(...args),
 }));
 
 import { handleDiscoverStoreStructureAndPersist } from '@/features/dashboard/handlers/configureHandlers';
 import type { HandlerContext } from '@/types/handlers';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockProject } from '../../../helpers/projectFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 
 const STRUCTURE = {
     websites: [{ id: 2, code: 'citisignal', name: 'CitiSignal' }],
@@ -38,19 +42,19 @@ function discoveryEmits(result: unknown): void {
 function makeContext(project: Project | null) {
     const saveProject = jest.fn().mockResolvedValue(undefined);
     const sendMessage = jest.fn().mockResolvedValue(undefined);
-    const context = {
+    const context = createMockHandlerContext({
         sendMessage,
-        logger: { warn: jest.fn(), error: jest.fn(), info: jest.fn(), debug: jest.fn(), trace: jest.fn() },
-        stateManager: {
+        logger: createMockLogger(),
+        stateManager: createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(project),
             saveProject,
-        },
-    } as unknown as HandlerContext;
+        }),
+    });
     return { context, saveProject, sendMessage };
 }
 
 function projectFixture(): Project {
-    return { name: 'p', path: '/p' } as Project;
+    return createMockProject({ name: 'p', path: '/p' });
 }
 
 beforeEach(() => {
@@ -103,6 +107,11 @@ describe('handleDiscoverStoreStructureAndPersist', () => {
             success: true,
         });
         expect(saveProject).not.toHaveBeenCalled();
+        // Silence matters: "no project open" is the ordinary case on this
+        // surface, not a failure. Writing onto a missing project and letting
+        // the catch mop it up would still return success — and would fill the
+        // support trail with a warning on every discovery.
+        expect(context.logger.warn).not.toHaveBeenCalled();
     });
 
     it('survives a save failure — the picker already has its data', async () => {

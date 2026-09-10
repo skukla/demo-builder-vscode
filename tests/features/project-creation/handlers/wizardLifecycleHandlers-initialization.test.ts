@@ -6,32 +6,11 @@
  * - Component loading on wizard ready
  */
 
+import { createWizardLifecycleContext } from './wizardLifecycleHandlers.testUtils';
 import { handleReady } from '@/features/project-creation/handlers/wizardLifecycleHandlers';
 import { HandlerContext as _HandlerContext } from '@/types/handlers';
-import { createMockContext } from './wizardLifecycleHandlers.testUtils';
 
-// Mock vscode inline to avoid hoisting issues
-jest.mock('vscode', () => ({
-    Uri: {
-        file: jest.fn((path: string) => ({ fsPath: path, path })),
-        parse: jest.fn((uri: string) => ({ fsPath: uri, path: uri }))
-    },
-    window: {
-        showErrorMessage: jest.fn(),
-        showInformationMessage: jest.fn(),
-        showWarningMessage: jest.fn()
-    },
-    workspace: {
-        updateWorkspaceFolders: jest.fn()
-    },
-    commands: {
-        executeCommand: jest.fn()
-    },
-    env: {
-        openExternal: jest.fn()
-    }
-}), { virtual: true });
-jest.mock('@/core/validation');
+jest.mock('@/core/validation/URLValidator');
 
 // Mock component handlers module
 jest.mock('@/features/components/handlers/componentHandlers', () => ({
@@ -46,7 +25,7 @@ describe('lifecycleHandlers - Initialization', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-        mockContext = createMockContext();
+        mockContext = createWizardLifecycleContext();
     });
 
     describe('handleReady', () => {
@@ -71,6 +50,43 @@ describe('lifecycleHandlers - Initialization', () => {
                 'componentsLoaded',
                 { components: ['component1', 'component2'] }
             );
+        });
+
+        it('does NOT push a componentsLoaded message when the load failed', async () => {
+            // A failed load still carries a `data` field; pushing it would blank the
+            // component step with an empty catalog instead of leaving it alone.
+            const { handleLoadComponents } = require('@/features/components/handlers/componentHandlers');
+            (handleLoadComponents as jest.Mock).mockResolvedValue({
+                success: false,
+                data: { components: [] },
+            });
+
+            const result = await handleReady(mockContext);
+
+            expect(mockContext.communicationManager.sendMessage).not.toHaveBeenCalled();
+            expect(result.success).toBe(true);
+        });
+
+        it('does NOT push a componentsLoaded message when the load returned no data', async () => {
+            const { handleLoadComponents } = require('@/features/components/handlers/componentHandlers');
+            (handleLoadComponents as jest.Mock).mockResolvedValue({ success: true });
+
+            await handleReady(mockContext);
+
+            expect(mockContext.communicationManager.sendMessage).not.toHaveBeenCalled();
+        });
+
+        it('skips the push when the webview has no communication manager', async () => {
+            const { handleLoadComponents } = require('@/features/components/handlers/componentHandlers');
+            (handleLoadComponents as jest.Mock).mockResolvedValue({
+                success: true,
+                data: { components: ['component1'] },
+            });
+            mockContext.communicationManager = undefined;
+
+            const result = await handleReady(mockContext);
+
+            expect(result.success).toBe(true);
         });
 
         it('should handle component loading error gracefully', async () => {

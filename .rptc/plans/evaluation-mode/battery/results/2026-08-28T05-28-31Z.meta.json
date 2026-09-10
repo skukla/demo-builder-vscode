@@ -1,0 +1,16 @@
+{
+  "startedAt": "2026-08-28T05-28-31Z",
+  "serving": "loop/2026-08-28-journeys-battery@f6c0fba49 built 2026-08-28T05:22:58.004Z from /Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode",
+  "adobeAuthBefore": {
+    "authenticated": true,
+    "expiresInMinutes": 778
+  },
+  "promptCount": 12,
+  "allowlist": 95,
+  "cache": "unspecified",
+  "adobeAuthAfter": {
+    "authenticated": true,
+    "expiresInMinutes": 772
+  },
+  "authChangedMidRun": false
+}

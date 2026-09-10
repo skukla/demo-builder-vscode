@@ -92,9 +92,9 @@ export function setAppBuilderComponent(
 export function getProvidedEnvVars(project: Project): Record<string, string> {
     const provided: Record<string, string> = {};
     for (const state of Object.values(project.appBuilderComponents ?? {})) {
-        if (state.providesEnvVars) {
-            Object.assign(provided, state.providesEnvVars);
-        }
+        // Object.assign skips an undefined source, so a component that provides
+        // nothing needs no guard.
+        Object.assign(provided, state.providesEnvVars);
     }
     return provided;
 }
@@ -137,7 +137,9 @@ export function hasMeshDeploymentRecord(project: Project): boolean {
  */
 export function getMeshEndpoint(project: Project): string | undefined {
     const endpoint = getMeshEndpointUrl(project);
-    if (endpoint && typeof endpoint === 'string' && endpoint.trim() !== '') {
+    // A manifest is untyped JSON on disk, so the typeof check is real: a
+    // non-string endpoint must read as "none", not throw on trim.
+    if (typeof endpoint === 'string' && endpoint.trim() !== '') {
         return endpoint;
     }
 

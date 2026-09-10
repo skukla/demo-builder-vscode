@@ -24,10 +24,14 @@ AI Native DevCon, June 2026).
    that project only the fields you need, then reason over the digest.
 
 ## When NOT to use
-- Reducing permission prompts specifically — `fewer-permission-prompts` already does that
-  scan; don't duplicate it. Reference its output instead.
 - Finding code problems (dead code, duplication, cycles, god files) — those are the
   `*-scan` skills. This skill audits **instructions to the agent**, not the codebase.
+
+> Removed 2026-08-30: a row here routed permission-prompt work to a
+> `fewer-permission-prompts` skill and said to reference its output. No such skill exists
+> — not in `.claude/skills/`, not in `~/.claude/skills/` — so the instruction sent readers
+> to nothing. Permission-prompt noise has no owning skill today; if that work comes back,
+> it needs one written, not a route restored.
 
 ## 0. Version first
 

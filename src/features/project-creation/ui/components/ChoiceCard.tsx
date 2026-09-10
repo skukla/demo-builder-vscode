@@ -7,7 +7,7 @@
  * classes. Consolidates the pattern previously duplicated across the Commerce backend
  * picker, the block-libraries step, and the add-integration flow.
  *
- * The `.choice-card*` styling lives in `custom-spectrum.css` and is an implementation
+ * The `.choice-card*` styling lives in `utilities.css` and is an implementation
  * detail of this component — consumers should not reference those classes directly.
  *
  * @module features/project-creation/ui/components/ChoiceCard

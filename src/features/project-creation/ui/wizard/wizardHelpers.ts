@@ -631,17 +631,6 @@ export function buildProjectConfig(
     const stack = wizardState.selectedStack ? getStackById(wizardState.selectedStack) : undefined;
     validateStackLookup(wizardState, stack);
 
-    // Debug: trace EDS config values at project creation time
-    // eslint-disable-next-line no-console
-    console.log('[buildProjectConfig] Package/Stack/EDS config:', {
-        selectedPackage: wizardState.selectedPackage,
-        selectedStack: wizardState.selectedStack,
-        hasEdsConfig: !!wizardState.edsConfig,
-        repoUrl: wizardState.edsConfig?.repoUrl,
-        daLiveOrg: wizardState.edsConfig?.daLiveOrg,
-        daLiveSite: wizardState.edsConfig?.daLiveSite,
-    });
-
     return {
         projectName: wizardState.projectName,
         projectTitle: wizardState.projectTitle,

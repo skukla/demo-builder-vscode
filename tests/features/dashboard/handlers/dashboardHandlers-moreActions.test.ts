@@ -8,8 +8,19 @@
  * - handleRenameProject: rename current project (reuses shared rename core)
  */
 
+import './dashboardValidatorMocks';
+
+jest.mock('@/core/validation/validators/ProjectNameValidator', () => ({
+    validateProjectNameSecurity: jest.fn(),
+}));
+
+// Imported by the dashboardHandlers module, so it has to answer even when unused.
+jest.mock('@/features/projects-dashboard/services/projectDeletionService', () => ({
+    deleteProject: jest.fn().mockResolvedValue({ success: true }),
+}));
+
 import { HandlerContext } from '@/types/handlers';
-import { Project } from '@/types';
+import { Project } from '@/types/base';
 
 jest.setTimeout(5000);
 
@@ -17,53 +28,21 @@ jest.setTimeout(5000);
 // Mock Setup - All mocks must be defined before imports
 // =============================================================================
 
-jest.mock(
-    'vscode',
-    () => ({
-        commands: {
-            executeCommand: jest.fn().mockResolvedValue(undefined),
-        },
-        window: {
-            activeColorTheme: { kind: 1 },
-            showInformationMessage: jest.fn(),
-            showErrorMessage: jest.fn(),
-            withProgress: jest.fn(),
-        },
-        ColorThemeKind: { Dark: 2, Light: 1 },
-        ProgressLocation: { Notification: 15 },
-        env: {
-            clipboard: { writeText: jest.fn().mockResolvedValue(undefined) },
-            openExternal: jest.fn(),
-        },
-        Uri: { parse: jest.fn((url: string) => ({ toString: () => url })) },
-    }),
-    { virtual: true }
-);
 
 jest.mock('@/features/mesh/services/stalenessDetector');
-jest.mock('@/features/authentication');
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: { getAuthenticationService: jest.fn() },
 }));
-jest.mock('@/core/validation', () => ({
-    validateOrgId: jest.fn(),
-    validateProjectId: jest.fn(),
-    validateWorkspaceId: jest.fn(),
-    validateURL: jest.fn(),
-    validateProjectNameSecurity: jest.fn(),
-}));
-
-// Mock the shared services barrel (reused, not duplicated). Both the export and
-// rename handlers dynamically import from this barrel.
+// The export and rename handlers each dynamically import the module that
+// DECLARES what they need. These were one mock of a shared barrel until
+// 2026-08-31 (PL-31) — which is why the two unrelated services were fused here.
 const mockRenameProjectCore = jest.fn();
-jest.mock('@/features/projects-dashboard/services', () => ({
+jest.mock('@/features/projects-dashboard/services/settingsTransferService', () => ({
     exportProjectSettings: jest.fn().mockResolvedValue({ success: true }),
-    renameProjectCore: (...args: unknown[]) => mockRenameProjectCore(...args),
 }));
 
-// Mock deletion service (imported by dashboardHandlers module)
-jest.mock('@/features/projects-dashboard/services/projectDeletionService', () => ({
-    deleteProject: jest.fn().mockResolvedValue({ success: true }),
+jest.mock('@/features/projects-dashboard/services/projectRenameService', () => ({
+    renameProjectCore: (...args: unknown[]) => mockRenameProjectCore(...args),
 }));
 
 // =============================================================================
@@ -74,14 +53,20 @@ import {
     handleExportProject,
     handleRenameProject,
 } from '@/features/dashboard/handlers/dashboardHandlers';
-import { exportProjectSettings } from '@/features/projects-dashboard/services';
+import { exportProjectSettings } from '@/features/projects-dashboard/services/settingsTransferService';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockProject } from '../../../helpers/projectFake';
 
 // =============================================================================
 // Test Utilities
 // =============================================================================
 
-function createMockProject(overrides?: Partial<Project>): Project {
-    return {
+function localProject(overrides?: Partial<Project>): Project {
+    return createMockProject({
         name: 'test-project',
         path: '/path/to/test-project',
         status: 'ready',
@@ -89,26 +74,21 @@ function createMockProject(overrides?: Partial<Project>): Project {
         lastModified: new Date('2025-01-26T12:00:00.000Z'),
         componentInstances: {},
         ...overrides,
-    } as unknown as Project;
+    });
 }
 
 function createMockContext(project: Project | undefined): HandlerContext {
-    return {
+    return createMockHandlerContext({
         panel: { webview: { postMessage: jest.fn() } } as unknown as HandlerContext['panel'],
-        stateManager: {
+        stateManager: createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(project),
             saveProject: jest.fn().mockResolvedValue(undefined),
             removeFromRecentProjects: jest.fn().mockResolvedValue(undefined),
-        } as unknown as HandlerContext['stateManager'],
-        logger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-        } as unknown as HandlerContext['logger'],
+        }),
+        logger: createMockLogger() as unknown as HandlerContext['logger'],
         sendMessage: jest.fn(),
-        context: { secrets: {} },
-    } as unknown as HandlerContext;
+        context: createMockExtensionContext({ secrets: createMockSecretStorage().secrets }),
+    });
 }
 
 // =============================================================================
@@ -119,7 +99,7 @@ describe('handleExportProject', () => {
     beforeEach(() => jest.clearAllMocks());
 
     it('should delegate to exportProjectSettings with the current project', async () => {
-        const project = createMockProject();
+        const project = localProject();
         const context = createMockContext(project);
 
         const result = await handleExportProject(context);
@@ -157,7 +137,7 @@ describe('handleRenameProject', () => {
     });
 
     it('should return error when newName is missing', async () => {
-        const project = createMockProject();
+        const project = localProject();
         const context = createMockContext(project);
 
         const result = await handleRenameProject(context, { newName: '' });
@@ -167,7 +147,7 @@ describe('handleRenameProject', () => {
     });
 
     it('should delegate to renameProjectCore with the current project and new name', async () => {
-        const project = createMockProject();
+        const project = localProject();
         const context = createMockContext(project);
 
         await handleRenameProject(context, { newName: 'renamed' });
@@ -176,7 +156,7 @@ describe('handleRenameProject', () => {
     });
 
     it('should return the result from renameProjectCore', async () => {
-        const project = createMockProject();
+        const project = localProject();
         const context = createMockContext(project);
         mockRenameProjectCore.mockResolvedValue({
             success: true,
@@ -189,7 +169,7 @@ describe('handleRenameProject', () => {
     });
 
     it('should refresh dashboard status after a successful rename', async () => {
-        const project = createMockProject();
+        const project = localProject();
         const context = createMockContext(project);
 
         await handleRenameProject(context, { newName: 'renamed' });
@@ -202,7 +182,7 @@ describe('handleRenameProject', () => {
     });
 
     it('should not refresh when rename fails', async () => {
-        const project = createMockProject();
+        const project = localProject();
         const context = createMockContext(project);
         mockRenameProjectCore.mockResolvedValue({ success: false, error: 'boom' });
 

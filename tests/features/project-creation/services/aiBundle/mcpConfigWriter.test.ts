@@ -12,86 +12,13 @@
  * pick up `.mcp.json` natively and need no per-tool file.
  */
 
-import * as fsPromises from 'fs/promises';
+import { fsPromises, writeMcpConfigs } from './mcpConfigWriter.testUtils';
+import { makeEdsProject, EDS_STOREFRONT_PATH, makeHeadlessProject } from './aiBundleFixtures';
 import * as path from 'path';
 import { makeTestWriter } from './generatedFileWriter.testUtils';
-import { writeMcpConfigs } from '@/features/project-creation/services/aiBundle/mcpConfigWriter';
 import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
-import type { Project, ComponentInstance } from '@/types/base';
-
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        trace: jest.fn(),
-    })),
-}));
-
-jest.mock('fs/promises', () => {
-    const writeFile = jest.fn().mockResolvedValue(undefined);
-    return {
-        lstat: jest.fn().mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
-        realpath: jest.fn(async (p: string) => p),
-        mkdir: jest.fn().mockResolvedValue(undefined),
-        writeFile,
-        readFile: jest
-            .fn()
-            .mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
-        appendFile: jest.fn().mockResolvedValue(undefined),
-        // O_NOFOLLOW writes go through open(); the returned handle delegates to
-        // the writeFile mock WITH the path, so path-based assertions keep working.
-        open: jest.fn(async (p: unknown) => ({
-            writeFile: jest.fn(async (d: unknown, e: unknown) => writeFile(p as string, d, e)),
-            close: jest.fn(async () => undefined),
-        })),
-    };
-});
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-const EDS_STOREFRONT_PATH = '/projects/test/components/eds-storefront';
-
-function makeEdsInstance(): ComponentInstance {
-    return {
-        id: 'eds-storefront',
-        name: 'EDS Storefront',
-        status: 'ready',
-        path: EDS_STOREFRONT_PATH,
-        metadata: {
-            githubRepo: 'owner/my-repo',
-        },
-    };
-}
-
-function makeEdsProject(overrides: Partial<Project> = {}): Project {
-    return {
-        name: 'test-project',
-        created: new Date('2026-01-01'),
-        lastModified: new Date('2026-01-01'),
-        path: '/projects/test-project',
-        status: 'ready',
-        selectedStack: 'eds-paas',
-        componentInstances: {
-            'eds-storefront': makeEdsInstance(),
-        },
-        ...overrides,
-    };
-}
-
-function makeHeadlessProject(overrides: Partial<Project> = {}): Project {
-    return {
-        name: 'headless-project',
-        created: new Date('2026-01-01'),
-        lastModified: new Date('2026-01-01'),
-        path: '/projects/headless-project',
-        status: 'ready',
-        selectedStack: 'headless-paas',
-        componentInstances: {},
-        ...overrides,
-    };
-}
 
 const EXTENSION_DIST = '/path/to/extension/dist';
 
@@ -250,7 +177,7 @@ describe('MCP config content', () => {
                     path: '/projects/headless-project/components/headless-commerce-mesh',
                 },
             },
-        } as Partial<Project>);
+        });
         await writeMcpConfigs(
             '/projects/headless-project',
             project,
@@ -360,7 +287,7 @@ describe('writeMcpConfigs', () => {
         );
 
         const writeFileMock = fsPromises.writeFile as jest.Mock;
-        const writtenPaths = writeFileMock.mock.calls.map(([p]: [string]) => p as string);
+        const writtenPaths = writeFileMock.mock.calls.map(([p]: [string]) => p);
 
         expect(writtenPaths.some((p: string) => p.endsWith('/.mcp.json'))).toBe(true);
     });
@@ -502,6 +429,28 @@ describe('writeMcpConfigs', () => {
         await writeMcpConfigs(
             '/projects/test',
             project,
+            EXTENSION_DIST,
+            makeTestWriter('/projects/test'),
+            NODE_PATH
+        );
+
+        expect(fsPromises.appendFile as jest.Mock).not.toHaveBeenCalled();
+    });
+
+    it('recognises an existing entry through CRLF line endings and padding', async () => {
+        // A .gitignore written on Windows, or hand-indented, still contains the
+        // entry. Comparing the raw split line would miss it and append a second
+        // copy of the whole block on every activation sweep.
+        const existingGitignore =
+            '  .mcp.json  \r\n\t.claude/mcp.json\r\n.claude/settings.json \r\n';
+        (fsPromises.readFile as jest.Mock).mockImplementation(async (p: string) => {
+            if (String(p).endsWith('.gitignore')) return existingGitignore;
+            throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
+        });
+
+        await writeMcpConfigs(
+            '/projects/test',
+            makeEdsProject(),
             EXTENSION_DIST,
             makeTestWriter('/projects/test'),
             NODE_PATH

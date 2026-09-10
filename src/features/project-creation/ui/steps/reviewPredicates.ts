@@ -29,7 +29,7 @@ export function hasRequiredReviewData(state: ReviewState): boolean {
 
     // Adobe I/O selections required when mesh is included. The mesh lives in
     // selectedAppBuilderComponents (D3); non-mesh integrations don't trip this.
-    if (hasMeshInDependencies(state.selectedAppBuilderComponents ?? [])) {
+    if (hasMeshInDependencies(state.selectedAppBuilderComponents)) {
         if (!state.adobeOrg?.id) return false;
         if (!state.adobeProject?.id) return false;
         if (!state.adobeWorkspace?.id) return false;

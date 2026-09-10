@@ -4,8 +4,8 @@
 
 import { promises as fsPromises } from 'fs';
 import * as path from 'path';
-import type { CommandExecutor } from '@/core/shell';
 import { buildComponent } from '@/core/shell/buildComponent';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { getMeshNodeVersion } from '@/core/utils/meshConfig';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { MeshDeploymentResult } from '@/features/mesh/services/types';
@@ -222,6 +222,10 @@ export async function deployMeshComponent(
         const { waitForMeshDeployment } = await import('./meshDeploymentVerifier');
 
         const verificationResult = await waitForMeshDeployment({
+            // ADR-015: the spine already HOLDS an executor — it arrives as
+            // this function's own parameter — so the verifier receives it
+            // rather than fetching a second one.
+            commandManager,
             onProgress: () => {
                 onProgress?.('Verifying deployment...', 'Checking deployment status...');
             },

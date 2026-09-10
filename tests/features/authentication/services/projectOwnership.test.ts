@@ -213,7 +213,7 @@ describe('stampProjectsDeletable', () => {
     });
 
     it('should return an empty list for an empty input', async () => {
-        await expect(stampProjectsDeletable(ownedAuthService(), [])).resolves.toEqual([]);
+        await expect(stampProjectsDeletable(ownedAuthService(), [])).resolves.toStrictEqual([]);
     });
 });
 

@@ -76,17 +76,39 @@ describe('dataInstallerConfig', () => {
 
         it('rejects http — this is a remote service, not a local dev server', () => {
             setupConfig({ apiBaseUrl: 'http://example-namespace.adobeioruntime.net/api' });
-            expect(resolveDataInstallerBaseUrl()).toMatchObject({ ok: false, reason: 'invalid-url' });
+            expect(resolveDataInstallerBaseUrl()).toMatchObject({
+                ok: false,
+                reason: 'invalid-url',
+            });
         });
 
         it('rejects a URL longer than the cap', () => {
-            setupConfig({ apiBaseUrl: `https://example.invalid/${'a'.repeat(DATA_INSTALLER_MAX_URL_LENGTH)}` });
-            expect(resolveDataInstallerBaseUrl()).toMatchObject({ ok: false, reason: 'invalid-url' });
+            setupConfig({
+                apiBaseUrl: `https://example.invalid/${'a'.repeat(DATA_INSTALLER_MAX_URL_LENGTH)}`,
+            });
+            expect(resolveDataInstallerBaseUrl()).toMatchObject({
+                ok: false,
+                reason: 'invalid-url',
+            });
+        });
+
+        // The cap is inclusive: a URL exactly at it is still usable. Pinned so the
+        // boundary cannot drift by one and start rejecting a legal setting.
+        it('accepts a URL exactly at the cap', () => {
+            const prefix = 'https://example.invalid/';
+            const atCap = prefix + 'a'.repeat(DATA_INSTALLER_MAX_URL_LENGTH - prefix.length);
+            expect(atCap).toHaveLength(DATA_INSTALLER_MAX_URL_LENGTH);
+            setupConfig({ apiBaseUrl: atCap });
+
+            expect(resolveDataInstallerBaseUrl()).toEqual({ ok: true, baseUrl: atCap });
         });
 
         it('rejects a value that is not URL-shaped', () => {
             setupConfig({ apiBaseUrl: 'not a url' });
-            expect(resolveDataInstallerBaseUrl()).toMatchObject({ ok: false, reason: 'invalid-url' });
+            expect(resolveDataInstallerBaseUrl()).toMatchObject({
+                ok: false,
+                reason: 'invalid-url',
+            });
         });
 
         it('reports not-configured for an empty setting', () => {
@@ -125,13 +147,15 @@ describe('dataInstallerConfig', () => {
         });
 
         it('does not double the slash when the base already ends in one', () => {
-            expect(actionUrl(`${STAGE_URL}/`, 'find-datapacks')).toBe(`${STAGE_URL}/find-datapacks`);
+            expect(actionUrl(`${STAGE_URL}/`, 'find-datapacks')).toBe(
+                `${STAGE_URL}/find-datapacks`
+            );
         });
 
         it('appends a path parameter after the action, for the status endpoints', () => {
-            expect(actionUrl(STAGE_URL, 'datapack-process-status', undefined, 'activation-01')).toBe(
-                `${STAGE_URL}/datapack-process-status/activation-01`,
-            );
+            expect(
+                actionUrl(STAGE_URL, 'datapack-process-status', undefined, 'activation-01')
+            ).toBe(`${STAGE_URL}/datapack-process-status/activation-01`);
         });
 
         it('serializes query values and encodes them', () => {
@@ -141,7 +165,7 @@ describe('dataInstallerConfig', () => {
                 shared: true,
             });
             expect(url).toBe(
-                `${STAGE_URL}/find-datapacks?datapack_name=citisignal+new&limit=100&shared=true`,
+                `${STAGE_URL}/find-datapacks?datapack_name=citisignal+new&limit=100&shared=true`
             );
         });
 
@@ -157,13 +181,13 @@ describe('dataInstallerConfig', () => {
 
         it('keeps a false query value, which is meaningful for shared=false', () => {
             expect(actionUrl(STAGE_URL, 'find-datapacks', { shared: false })).toBe(
-                `${STAGE_URL}/find-datapacks?shared=false`,
+                `${STAGE_URL}/find-datapacks?shared=false`
             );
         });
 
         it('emits no query string when every value is omitted', () => {
             expect(actionUrl(STAGE_URL, 'health-check', { limit: undefined })).toBe(
-                `${STAGE_URL}/health-check`,
+                `${STAGE_URL}/health-check`
             );
         });
     });
@@ -180,6 +204,14 @@ describe('dataInstallerConfig', () => {
 
         it('reports scheme and host, which are safe and diagnostic', () => {
             expect(fingerprintUrl(SECRET_URL)).toBe('scheme="https", host="host.example.invalid"');
+        });
+
+        // Same inclusive boundary as the resolver's cap: at the limit the value is
+        // still described, only past it is it reduced to a length.
+        it('still reports scheme and host at exactly the length cap', () => {
+            expect(fingerprintUrl(SECRET_URL, SECRET_URL.length)).toBe(
+                'scheme="https", host="host.example.invalid"'
+            );
         });
 
         it('reports length instead of content when the value is over-long', () => {

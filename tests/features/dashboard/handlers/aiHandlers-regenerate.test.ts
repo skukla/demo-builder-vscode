@@ -12,10 +12,11 @@ import {
     generateAIContextFiles,
     installAiDefaultsMcpTools,
     clearMcpCache,
-    createMockContext,
+    createAiHandlerContext,
+    seedCommandExecutor,
 } from './aiHandlers.testUtils';
-import type { HandlerContext } from './aiHandlers.testUtils';
 import { COMPONENT_IDS } from '@/core/constants';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 const STOREFRONT_PATH = '/projects/test/components/eds-storefront';
 const PROJECT_WITH_STOREFRONT = {
@@ -36,6 +37,7 @@ const PROJECT_HEADLESS = {
 describe('aiHandlers — regenerating AI files', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        seedCommandExecutor();
     });
 
     describe('handleRegenerateAiFiles', () => {
@@ -50,11 +52,11 @@ describe('aiHandlers — regenerating AI files', () => {
                     throw new Error('step 2 failed');
                 }
             );
-            const context = createMockContext({
-                stateManager: {
+            const context = createAiHandlerContext({
+                stateManager: createMockStateManager({
                     getCurrentProject: jest.fn().mockResolvedValue(PROJECT_HEADLESS),
                     saveProjectConfigOnly,
-                } as unknown as HandlerContext['stateManager'],
+                }),
             });
 
             await expect(handleRegenerateAiFiles(context)).rejects.toThrow('step 2 failed');
@@ -66,11 +68,11 @@ describe('aiHandlers — regenerating AI files', () => {
         it('calls generateAIContextFiles using server-side project.path (ignores payload)', async () => {
             (generateAIContextFiles as jest.Mock).mockResolvedValue(undefined);
 
-            const context = createMockContext({
-                stateManager: {
+            const context = createAiHandlerContext({
+                stateManager: createMockStateManager({
                     getCurrentProject: jest.fn().mockResolvedValue(PROJECT_HEADLESS),
                     saveProjectConfigOnly: jest.fn(),
-                } as unknown as HandlerContext['stateManager'],
+                }),
             });
 
             (generateAIContextFiles as jest.Mock).mockResolvedValue({ skills: [] });
@@ -98,11 +100,11 @@ describe('aiHandlers — regenerating AI files', () => {
                 },
             });
 
-            const context = createMockContext({
-                stateManager: {
+            const context = createAiHandlerContext({
+                stateManager: createMockStateManager({
                     getCurrentProject: jest.fn().mockResolvedValue(PROJECT_HEADLESS),
                     saveProjectConfigOnly: jest.fn(),
-                } as unknown as HandlerContext['stateManager'],
+                }),
             });
 
             const result = await handleRegenerateAiFiles(context);
@@ -126,11 +128,11 @@ describe('aiHandlers — regenerating AI files', () => {
                 },
             });
 
-            const context = createMockContext({
-                stateManager: {
+            const context = createAiHandlerContext({
+                stateManager: createMockStateManager({
                     getCurrentProject: jest.fn().mockResolvedValue(PROJECT_HEADLESS),
                     saveProjectConfigOnly: jest.fn(),
-                } as unknown as HandlerContext['stateManager'],
+                }),
             });
 
             await handleRegenerateAiFiles(context);
@@ -145,11 +147,11 @@ describe('aiHandlers — regenerating AI files', () => {
             (generateAIContextFiles as jest.Mock).mockResolvedValue({ skills: [] });
 
             const saveProjectConfigOnly = jest.fn().mockResolvedValue(undefined);
-            const context = createMockContext({
-                stateManager: {
+            const context = createAiHandlerContext({
+                stateManager: createMockStateManager({
                     getCurrentProject: jest.fn().mockResolvedValue(PROJECT_HEADLESS),
                     saveProjectConfigOnly,
-                } as unknown as HandlerContext['stateManager'],
+                }),
             });
 
             const result = await handleRegenerateAiFiles(context);
@@ -166,10 +168,10 @@ describe('aiHandlers — regenerating AI files', () => {
         });
 
         it('returns error when project is not found', async () => {
-            const context = createMockContext({
-                stateManager: {
+            const context = createAiHandlerContext({
+                stateManager: createMockStateManager({
                     getCurrentProject: jest.fn().mockResolvedValue(null),
-                } as unknown as HandlerContext['stateManager'],
+                }),
             });
 
             const result = await handleRegenerateAiFiles(context);
@@ -182,11 +184,11 @@ describe('aiHandlers — regenerating AI files', () => {
             (generateAIContextFiles as jest.Mock).mockResolvedValue(undefined);
             (installAiDefaultsMcpTools as jest.Mock).mockResolvedValue({ success: true });
 
-            const context = createMockContext({
-                stateManager: {
+            const context = createAiHandlerContext({
+                stateManager: createMockStateManager({
                     getCurrentProject: jest.fn().mockResolvedValue(PROJECT_WITH_STOREFRONT),
                     saveProjectConfigOnly: jest.fn(),
-                } as unknown as HandlerContext['stateManager'],
+                }),
             });
 
             const result = await handleRegenerateAiFiles(context);
@@ -197,7 +199,11 @@ describe('aiHandlers — regenerating AI files', () => {
             expect(installAiDefaultsMcpTools).toHaveBeenCalledWith(
                 PROJECT_WITH_STOREFRONT.path,
                 PROJECT_WITH_STOREFRONT,
-                expect.any(Function)
+                expect.anything(),
+                expect.any(Function),
+                // The installer needs a logger or an npm EBADENGINE warning reaches
+                // no channel at all — npm exits 0 on it.
+                { debug: expect.any(Function), warn: expect.any(Function) }
             );
             // Order matters: the install must complete before context files are written
             // (so .mcp.json's isolated-dir-anchored paths resolve to real files).
@@ -212,11 +218,11 @@ describe('aiHandlers — regenerating AI files', () => {
         it('does NOT run the tooling install for bare projects (no storefront, mesh, or app-builder component)', async () => {
             (generateAIContextFiles as jest.Mock).mockResolvedValue(undefined);
 
-            const context = createMockContext({
-                stateManager: {
+            const context = createAiHandlerContext({
+                stateManager: createMockStateManager({
                     getCurrentProject: jest.fn().mockResolvedValue(PROJECT_HEADLESS),
                     saveProjectConfigOnly: jest.fn(),
-                } as unknown as HandlerContext['stateManager'],
+                }),
             });
 
             await handleRegenerateAiFiles(context);
@@ -234,11 +240,11 @@ describe('aiHandlers — regenerating AI files', () => {
                 error: 'npm install exited with code 1: 404 Not Found',
             });
 
-            const context = createMockContext({
-                stateManager: {
+            const context = createAiHandlerContext({
+                stateManager: createMockStateManager({
                     getCurrentProject: jest.fn().mockResolvedValue(PROJECT_WITH_STOREFRONT),
                     saveProjectConfigOnly: jest.fn(),
-                } as unknown as HandlerContext['stateManager'],
+                }),
             });
 
             const result = await handleRegenerateAiFiles(context);
@@ -254,11 +260,11 @@ describe('aiHandlers — regenerating AI files', () => {
             (installAiDefaultsMcpTools as jest.Mock).mockResolvedValue({ success: true });
             (generateAIContextFiles as jest.Mock).mockResolvedValue(undefined);
 
-            const context = createMockContext({
-                stateManager: {
+            const context = createAiHandlerContext({
+                stateManager: createMockStateManager({
                     getCurrentProject: jest.fn().mockResolvedValue(PROJECT_WITH_STOREFRONT),
                     saveProjectConfigOnly: jest.fn(),
-                } as unknown as HandlerContext['stateManager'],
+                }),
             });
 
             await handleRegenerateAiFiles(context);
@@ -276,11 +282,11 @@ describe('aiHandlers — regenerating AI files', () => {
                 (installAiDefaultsMcpTools as jest.Mock).mockResolvedValue({ success: true });
                 (generateAIContextFiles as jest.Mock).mockResolvedValue(undefined);
 
-                const context = createMockContext({
-                    stateManager: {
+                const context = createAiHandlerContext({
+                    stateManager: createMockStateManager({
                         getCurrentProject: jest.fn().mockResolvedValue(PROJECT_WITH_STOREFRONT),
                         saveProjectConfigOnly: jest.fn(),
-                    } as unknown as HandlerContext['stateManager'],
+                    }),
                 });
 
                 await handleRegenerateAiFiles(context);
@@ -302,11 +308,11 @@ describe('aiHandlers — regenerating AI files', () => {
                 (installAiDefaultsMcpTools as jest.Mock).mockResolvedValue({ success: true });
                 (generateAIContextFiles as jest.Mock).mockResolvedValue(undefined);
 
-                const context = createMockContext({
-                    stateManager: {
+                const context = createAiHandlerContext({
+                    stateManager: createMockStateManager({
                         getCurrentProject: jest.fn().mockResolvedValue(PROJECT_WITH_STOREFRONT),
                         saveProjectConfigOnly: jest.fn(),
-                    } as unknown as HandlerContext['stateManager'],
+                    }),
                 });
 
                 await handleRegenerateAiFiles(context);
@@ -320,11 +326,11 @@ describe('aiHandlers — regenerating AI files', () => {
             it('skips the install-deps step for headless projects (no EDS Storefront)', async () => {
                 (generateAIContextFiles as jest.Mock).mockResolvedValue(undefined);
 
-                const context = createMockContext({
-                    stateManager: {
+                const context = createAiHandlerContext({
+                    stateManager: createMockStateManager({
                         getCurrentProject: jest.fn().mockResolvedValue(PROJECT_HEADLESS),
                         saveProjectConfigOnly: jest.fn(),
-                    } as unknown as HandlerContext['stateManager'],
+                    }),
                 });
 
                 await handleRegenerateAiFiles(context);
@@ -340,11 +346,11 @@ describe('aiHandlers — regenerating AI files', () => {
                 (installAiDefaultsMcpTools as jest.Mock).mockResolvedValue({ success: true });
                 (generateAIContextFiles as jest.Mock).mockResolvedValue(undefined);
 
-                const context = createMockContext({
-                    stateManager: {
+                const context = createAiHandlerContext({
+                    stateManager: createMockStateManager({
                         getCurrentProject: jest.fn().mockResolvedValue(PROJECT_WITH_STOREFRONT),
                         saveProjectConfigOnly: jest.fn(),
-                    } as unknown as HandlerContext['stateManager'],
+                    }),
                 });
 
                 await handleRegenerateAiFiles(context);
@@ -362,11 +368,11 @@ describe('aiHandlers — regenerating AI files', () => {
             it('logs the start line at info', async () => {
                 (generateAIContextFiles as jest.Mock).mockResolvedValue({ skills: [] });
 
-                const context = createMockContext({
-                    stateManager: {
+                const context = createAiHandlerContext({
+                    stateManager: createMockStateManager({
                         getCurrentProject: jest.fn().mockResolvedValue(PROJECT_HEADLESS),
                         saveProjectConfigOnly: jest.fn(),
-                    } as unknown as HandlerContext['stateManager'],
+                    }),
                 });
 
                 await handleRegenerateAiFiles(context);
@@ -381,11 +387,11 @@ describe('aiHandlers — regenerating AI files', () => {
                     skills: ['add-component.md', 'sync-changes.md'],
                 });
 
-                const context = createMockContext({
-                    stateManager: {
+                const context = createAiHandlerContext({
+                    stateManager: createMockStateManager({
                         getCurrentProject: jest.fn().mockResolvedValue(PROJECT_HEADLESS),
                         saveProjectConfigOnly: jest.fn(),
-                    } as unknown as HandlerContext['stateManager'],
+                    }),
                 });
 
                 await handleRegenerateAiFiles(context);

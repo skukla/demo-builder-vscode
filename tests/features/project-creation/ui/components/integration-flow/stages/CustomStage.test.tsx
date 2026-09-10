@@ -6,7 +6,6 @@
  * the parsed {owner, repo}; anything else emits undefined (with an inline message for
  * invalid/duplicate input). There is NO Add button — the footer's Continue commits.
  *
- * @jest-environment jsdom
  */
 
 import React from 'react';
@@ -104,6 +103,13 @@ describe('CustomStage', () => {
         const { onSourceChange } = renderStage();
         fireEvent.change(urlField(), { target: { value: `  ${VALID_URL}  ` } });
         expect(onSourceChange).toHaveBeenCalledWith({ owner: 'acme', repo: 'widget' });
+    });
+
+    it('a whitespace-only value is treated as empty, not as an invalid URL', () => {
+        const { onSourceChange } = renderStage();
+        fireEvent.change(urlField(), { target: { value: '   ' } });
+        expect(onSourceChange).toHaveBeenLastCalledWith(undefined);
+        expect(screen.queryByTestId('spectrum-textfield-error')).not.toBeInTheDocument();
     });
 
     it('a valid edit after a duplicate clears the message and emits the new source', () => {

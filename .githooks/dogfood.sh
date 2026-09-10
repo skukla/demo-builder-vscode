@@ -58,6 +58,14 @@ Backlog: AI-3a, ZZ-99"
 try blocked "trailer only inside a comment" "feat: x
 
 # Backlog: none"
+try blocked "AI co-author trailer"          "feat: x
+
+Backlog: none
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
+try blocked "'Generated with' line"         "feat: x
+
+Backlog: none
+Generated with Claude Code"
 
 echo
 echo "MUST PASS"
@@ -73,6 +81,13 @@ Backlog: AI-3a, PL-1"
 try ok "case-insensitive"                   "feat: x
 
 backlog: none"
+# The AI-trailer rule must not cost us real co-authorship. A human collaborator
+# is exactly what the trailer is FOR, and a rule that blocked those would be
+# worse than the drift it prevents.
+try ok "a HUMAN co-author still passes"     "feat: x
+
+Backlog: none
+Co-Authored-By: Steve Kukla <stevenjkukla@gmail.com>"
 
 echo
 echo "MUST NOT BLOCK — the cases that break unrelated work"
@@ -114,6 +129,32 @@ grep -q 'What you could be working on' "$SB/cap.txt" && ok "in-flight items are 
 if [[ "$(awk '/^Backlog: $/{b=NR} /^# Please enter/{c=NR} END{print (b>0 && c>0 && b<c) ? "yes" : "no"}' "$SB/cap.txt")" == "yes" ]]; then
   ok "  ...above git own comments"
 else bad "  ...above git own comments" "it landed below them"; fi
+
+echo
+echo "PRE-PUSH — the gate runs before a push, not after"
+# Not run against the REAL gate here: this harness works in a throwaway repo with no
+# node_modules, and a two-minute suite has no place in a hook test. What is asserted is
+# the hook's own logic — that it skips a delete-only push, and that a failing gate stops
+# the push — with the gate itself stubbed.
+PP="$SB/pre-push"
+sed 's|npm run gate|"$GATE_STUB"|' "$HOOKS/pre-push" > "$PP"
+chmod +x "$PP"
+
+GATE_STUB="$SB/gate-ok"; printf '#!/usr/bin/env bash\nexit 0\n' > "$GATE_STUB"; chmod +x "$GATE_STUB"
+export GATE_STUB
+if printf 'refs/heads/x 0000000000000000000000000000000000000000 refs/heads/x abc\n' | "$PP" >/dev/null 2>&1; then
+  ok "a delete-only push skips the gate"
+else bad "a delete-only push skips the gate" "it ran anyway"; fi
+
+if printf 'refs/heads/x deadbeef refs/heads/x abc\n' | "$PP" >/dev/null 2>&1; then
+  ok "a real push with a passing gate is allowed"
+else bad "a real push with a passing gate is allowed" "it was blocked"; fi
+
+GATE_STUB="$SB/gate-fail"; printf '#!/usr/bin/env bash\nexit 1\n' > "$GATE_STUB"; chmod +x "$GATE_STUB"
+export GATE_STUB
+if printf 'refs/heads/x deadbeef refs/heads/x abc\n' | "$PP" >/dev/null 2>&1; then
+  bad "a failing gate REFUSES the push" "the push was allowed"
+else ok "a failing gate REFUSES the push"; fi
 
 echo
 echo "CONTROL — proves this harness can see a failure"

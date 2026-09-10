@@ -60,10 +60,14 @@ describe('stripOrphanedComponentConfigs', () => {
             },
             selectedAddons: ['adobe-commerce-aco'],
             componentInstances: {
-                'instance-only': { id: 'instance-only' },
+                'instance-only': { id: 'instance-only', name: 'Instance Only', status: 'ready' },
             },
             appBuilderComponents: {
-                'keyed-only': { kind: 'integration', status: 'deployed' },
+                'keyed-only': {
+                    kind: 'integration',
+                    status: 'deployed',
+                    source: { owner: 'acme', repo: 'keyed-only' },
+                },
             },
             componentConfigs: {
                 'eds-storefront': { A: '1' },
@@ -75,12 +79,30 @@ describe('stripOrphanedComponentConfigs', () => {
                 'instance-only': { G: '7' },
                 'keyed-only': { H: '8' },
             },
-        } as never);
+        });
 
         const changed = stripOrphanedComponentConfigs(p);
 
         expect(changed).toBe(false);
         expect(Object.keys(p.componentConfigs ?? {})).toHaveLength(8);
+    });
+
+    it('treats every selection as absent when the project has no selections', () => {
+        const p = project({
+            componentSelections: undefined,
+            componentInstances: {
+                'instance-only': { id: 'instance-only', name: 'Instance Only', status: 'ready' },
+            },
+            componentConfigs: {
+                'instance-only': { A: '1' },
+                'eds-storefront': { B: '2' },
+            },
+        });
+
+        const changed = stripOrphanedComponentConfigs(p);
+
+        expect(changed).toBe(true);
+        expect(p.componentConfigs).toEqual({ 'instance-only': { A: '1' } });
     });
 
     it('is a no-op when componentConfigs is absent', () => {

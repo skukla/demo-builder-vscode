@@ -12,7 +12,7 @@
 import * as vscode from 'vscode';
 import { readDaAuthHelperToken, writeDaAuthHelperToken } from '../daAuthHelperToken';
 import { DA_LIVE_BASE_URL } from './daLiveConstants';
-import { getLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
 
 // ==========================================================
 // Constants

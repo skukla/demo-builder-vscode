@@ -18,20 +18,13 @@ import {
     handleListAiPrompts,
     handleSaveAiPrompt,
 } from './aiPromptHandlers';
-import { sanitizeErrorForLogging } from '@/core/validation';
-import {
-    clearMcpCache,
-    verifyAiSetup,
-    type AiVerificationResult,
-} from '@/features/ai';
-import {
-    applicableMcpPackages,
-    generateAIContextFiles,
-    installAiDefaultsMcpTools,
-    readInstalledMcpPackages,
-    projectNeedsAppBuilderTooling,
-} from '@/features/project-creation/services';
-import { gatedSkillReasons } from '@/features/project-creation/services/aiBundle/aiToolingGate';
+import { ServiceLocator } from '@/core/di/serviceLocator';
+import { sanitizeErrorForLogging } from '@/core/validation/SensitiveDataRedactor';
+import { verifyAiSetup, type AiVerificationResult } from '@/features/ai/aiSetupVerifier';
+import { clearMcpCache } from '@/features/ai/mcpInspector';
+import { generateAIContextFiles } from '@/features/project-creation/services/aiBundle/aiBundleService';
+import { applicableMcpPackages, installAiDefaultsMcpTools, readInstalledMcpPackages } from '@/features/project-creation/services/aiBundle/aiDefaultsInstaller';
+import { projectNeedsAppBuilderTooling , gatedSkillReasons } from '@/features/project-creation/services/aiBundle/aiToolingGate';
 import { SKILL_MCP_TOOL_DEPENDENCIES } from '@/types/ai';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
@@ -219,8 +212,18 @@ export async function handleRegenerateAiFiles(context: HandlerContext): Promise<
         emit('Downloading AI tool packages', `Fetching ${packages.join(', ')}…`);
         // MCP tools install into the per-project isolated dir (keyed to
         // project.path), decoupled from the storefront manifest.
-        const installResult = await installAiDefaultsMcpTools(project.path, project, (line) =>
-            emit('Downloading AI tool packages', line),
+        const installResult = await installAiDefaultsMcpTools(
+            project.path,
+            project,
+            ServiceLocator.getCommandExecutor(),
+            (line) => emit('Downloading AI tool packages', line),
+            // Warnings to the visible channel, the full output to the debug one.
+            // npm exits 0 on a warning, so before this an EBADENGINE reached
+            // neither — see the installer.
+            {
+                debug: (m: string) => context.debugLogger.debug(m),
+                warn: (m: string) => context.logger.warn(m),
+            },
         );
         if (!installResult.success) {
             return {

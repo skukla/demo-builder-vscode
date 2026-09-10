@@ -26,7 +26,7 @@ import { AppBuilderComponentRemoveDialog } from '../AppBuilderComponentRemoveDia
 import { ManageApisModal } from '../ManageApisModal';
 import { type CardAction, type IntegrationCardModel } from './integrationCardModel';
 import { IntegrationDetailPanel } from './IntegrationDetailPanel';
-import { IntegrationCard } from '@/core/ui/components/integrations';
+import { IntegrationCard } from '@/core/ui/components/integrations/IntegrationCard';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 
 export interface IntegrationsGridProps {
@@ -184,7 +184,7 @@ export function IntegrationsGrid({
         <div className="integrations-surface">
             {/* The grid owns the full width; the detail FLYOUT overlays it rather
                 than taking a column beside it. Plain divs — a Spectrum Flex caps
-                at 450px (custom-spectrum.css). */}
+                at 450px (utilities.css). */}
             <div className="integrations-grid">
                 {cards.map((model) => (
                     <IntegrationCard

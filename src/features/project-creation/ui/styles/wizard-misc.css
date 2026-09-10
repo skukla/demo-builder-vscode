@@ -1,0 +1,218 @@
+/**
+ * The wizard's small families — 14 of them, 27 rules, none big enough to earn a
+ * file of its own.
+ *
+ * FEATURE-SCOPED (ADR-017 §6). Imported by the `wizard` entry ALONE. Every family
+ * here was measured to reach that one bundle and no other:
+ * `.transition-*`, `.action-*`, `.animate-*`, `.github-*`, `.review-*`, `.user-*`,
+ * `.empty-*`, `.box-*`, `.my-*`, `.line-*`, `.nav-*`, `.architecture-*`,
+ * `.settings-*`, `.placeholder-*`.
+ *
+ * BATCHED ON PURPOSE, against the plan's usual one-family-per-cycle rule. Nothing
+ * left in the mover lane is bigger than nine rules, and 46 separate cycles for 129
+ * rules buys precision nobody needs — the cost is that a non-empty diff would name
+ * several families at once, and the answer to that is to split the batch and
+ * bisect rather than to guess.
+ *
+ * Moved out of utilities.css by the CSS migration
+ * (.rptc/plans/css-architecture-migration), with the comment above each rule.
+ * Verbatim otherwise: a move is only correct when the visual diff is empty.
+ */
+
+@layer theme {
+/* ===========================================
+   Transition Classes
+   =========================================== */
+.transition-all {
+    transition: all var(--spectrum-global-animation-duration-600) ease;
+}
+
+.transition-colors {
+    transition: color var(--spectrum-global-animation-duration-600) ease, background-color var(--spectrum-global-animation-duration-600) ease;
+}
+
+.transition-opacity {
+    transition: opacity var(--spectrum-global-animation-duration-600) ease;
+}
+
+/* Small accent pill button for inline actions */
+.action-pill {
+    background: var(--spectrum-accent-background-color-default, var(--spectrum-global-color-blue-400));
+    border: none;
+    border-radius: 11px;
+    padding: 3px 9px;
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--spectrum-global-color-gray-900);
+    cursor: pointer;
+    transition: background var(--spectrum-global-animation-duration-200) ease;
+}
+
+.action-pill:hover {
+    background: var(--spectrum-accent-background-color-hover, var(--spectrum-global-color-blue-500));
+}
+
+.action-pill:active {
+    background: var(--spectrum-accent-background-color-down, var(--spectrum-global-color-blue-600));
+}
+
+.animate-pulse { animation: pulse 2s infinite; }
+
+.animate-fade-in { animation: fadeIn var(--spectrum-global-animation-duration-600) ease; }
+
+.animate-slide-down { animation: slide-down var(--spectrum-global-animation-duration-600) ease; }
+
+/* ===========================================
+   GitHub Avatar with Badge
+   Used in GitHubSetupStep connected state
+   Sized to match the L checkmark icon (~36px)
+   =========================================== */
+.github-avatar-container {
+    position: relative;
+    display: inline-block;
+}
+
+.github-avatar-container img {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.github-avatar-badge {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    background: var(--spectrum-global-color-gray-50);
+    border-radius: 50%;
+    padding: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+/* Label width for label/value pairs (ReviewStep, etc.) */
+.review-label-width { min-width: 100px; }
+
+/* Review label - label/value pair label.
+   `width` and `flex-shrink` moved here from ReviewStep.tsx on 2026-09-10; they
+   were an UNSAFE_style bolted onto this very class, so one label's sizing lived
+   half here and half in the JSX. The fixed 120px overrides the 100px floor and
+   is what actually applied. */
+.review-label {
+    font-size: 14px;
+    color: var(--spectrum-global-color-gray-500);
+    min-width: 100px;
+    width: 120px;
+    flex-shrink: 0;
+}
+
+.user-select-none { user-select: none; }
+
+.user-select-text { user-select: text; }
+
+/* Empty state text with padding */
+.empty-state-text {
+    color: var(--spectrum-global-color-gray-500);
+    padding-top: 16px;
+    padding-bottom: 16px;
+}
+
+/* ===========================================
+   Empty State Styles
+   =========================================== */
+.empty-state-container {
+    text-align: center;
+    background: var(--spectrum-global-color-gray-100);
+    border-radius: 8px;
+    border: 1px solid var(--spectrum-global-color-gray-400);
+}
+
+/* ===========================================
+   Box Model Utilities
+   =========================================== */
+.box-border { box-sizing: border-box; }
+
+.box-content { box-sizing: content-box; }
+
+.my-2 { margin-top: 8px; margin-bottom: 8px; }
+
+.my-5 { margin-top: 20px; margin-bottom: 20px; }
+
+.line-height-16 { line-height: 16px; }
+
+/* Navigation item row - larger gap for nav items */
+.nav-item-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.architecture-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--spectrum-global-color-gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.settings-link {
+    margin-top: var(--spectrum-global-dimension-size-200);
+    font-size: var(--spectrum-global-dimension-font-size-75);
+}
+
+/* ===========================================
+   Placeholder Icon (for pending/unknown states)
+   =========================================== */
+.placeholder-icon {
+    width: 20px;
+    height: 20px;
+}
+}
+
+/* The animation(s) the rules above name. Moved out of the utility sheet
+   2026-09-09: a @keyframes is resolved by NAME, so it only has to live in a
+   sheet the consuming bundle loads — and this is the ONLY sheet that names it.
+   Sitting in the all-bundles sheet shipped it to eight bundles to serve one. */
+@layer theme {
+    @keyframes slide-down {
+        from { transform: translateY(-10px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+}
+
+/* ==========================================================================
+   ReviewStep panel + summary grid — moved out of ReviewStep.tsx 2026-09-10.
+   Both were static declarations in a style object; neither had anything dynamic
+   about it.
+
+   `--spectrum-gray-75` is kept verbatim from the original. It is a real Spectrum
+   token, but it is the ONLY use of that naming in this repo — everything else
+   says `--spectrum-global-color-gray-*`. Changing it is a colour decision, not
+   part of moving the declaration, so it moved unchanged.
+   ========================================================================== */
+@layer theme {
+.review-panel {
+    background-color: var(--spectrum-gray-75);
+}
+}
+
+@layer theme {
+.review-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spectrum-global-dimension-size-200);
+}
+}
+
+@layer theme {
+/* The project-configuration card spans both columns when no Adobe I/O card
+   shares the row with it. */
+.review-grid > [data-span-columns='true'] {
+    grid-column: 1 / -1;
+}
+}

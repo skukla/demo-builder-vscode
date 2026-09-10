@@ -12,8 +12,9 @@
  * AIO_CONSOLE_* env — without clobbering concurrent processes.
  */
 
+import './edsResetService.sharedMocks';
+
 import type { Project } from '@/types/base';
-import type { HandlerContext } from '@/types/handlers';
 
 jest.setTimeout(5000);
 
@@ -27,49 +28,10 @@ jest.mock('@/core/auth/adobeAuthGuard', () => ({
 }));
 
 // withOrgContext records the target then runs the callback (no global mutation).
-const mockWithOrgContext = jest.fn(
-    (_target: unknown, fn: () => Promise<unknown>) => fn(),
-);
-jest.mock('@/core/shell', () => ({
-    ...jest.requireActual('@/core/shell'),
-    withOrgContext: (target: unknown, fn: () => Promise<unknown>) =>
-        mockWithOrgContext(target, fn),
-}));
-
-
-jest.mock('vscode', () => ({
-    window: { showWarningMessage: jest.fn(), showInformationMessage: jest.fn() },
-    ProgressLocation: { Notification: 15 },
-    Uri: { parse: jest.fn((url: string) => ({ toString: () => url })) },
-}), { virtual: true });
-
-jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: { QUICK: 5000, NORMAL: 30000, PREREQUISITE_CHECK: 10000, UI: { MIN_LOADING: 200 } },
-}));
-
-jest.mock('@/core/constants', () => ({
-    COMPONENT_IDS: { EDS_STOREFRONT: 'eds-storefront' },
-}));
-
-jest.mock('@/core/di', () => ({
-    ServiceLocator: {
-        getAuthenticationService: jest.fn(() => ({
-            isAuthenticated: jest.fn().mockResolvedValue(true),
-            loginAndRestoreProjectContext: jest.fn().mockResolvedValue(true),
-            getCachedOrganization: jest.fn().mockReturnValue(undefined),
-        })),
-        getCommandExecutor: jest.fn(() => ({})),
-    },
-}));
-
-jest.mock('@/types/typeGuards', () => ({
-    getMeshComponentInstance: jest.fn((project: Project) => {
-        if (!project?.componentInstances) return undefined;
-        return Object.values(project.componentInstances).find(
-            (c) => (c as { subType?: string }).subType === 'mesh',
-        );
-    }),
-    hasEntries: jest.fn((obj: any) => obj && Object.keys(obj).length > 0),
+const mockWithOrgContext = jest.fn((_target: unknown, fn: () => Promise<unknown>) => fn());
+jest.mock('@/core/shell/orgContextEnv', () => ({
+    ...jest.requireActual('@/core/shell/orgContextEnv'),
+    withOrgContext: (target: unknown, fn: () => Promise<unknown>) => mockWithOrgContext(target, fn),
 }));
 
 jest.mock('@/features/components/services/blockLibraryLoader', () => ({
@@ -79,77 +41,21 @@ jest.mock('@/features/components/services/blockLibraryLoader', () => ({
     isBlockLibraryAvailableForPackage: jest.fn().mockReturnValue(true),
 }));
 
-jest.mock('@/features/eds/services/fstabGenerator', () => ({
-    generateFstabContent: jest.fn().mockReturnValue('mock-fstab'),
-}));
-
-jest.mock('@/features/eds/services/configGenerator', () => ({
-    generateConfigJson: jest.fn().mockReturnValue({ success: true, content: '{}' }),
-    extractConfigParams: jest.fn().mockReturnValue({}),
-    buildConfigGeneratorParams: jest.fn().mockReturnValue({}),
-}));
-
-jest.mock('@/features/eds/services/blockCollectionHelpers', () => ({
-    installBlockCollections: jest.fn(),
-}));
-
-jest.mock('@/features/eds/handlers/edsHelpers', () => ({
-    getGitHubServices: jest.fn().mockReturnValue({
-        tokenService: {},
-        fileOperations: {
-            resetRepoToTemplate: jest.fn().mockResolvedValue({ fileCount: 10, commitSha: 'abc1234567' }),
-            getFileContent: jest.fn().mockResolvedValue(null),
-            createOrUpdateFile: jest.fn().mockResolvedValue(undefined),
-        },
-    }),
-    configureDaLivePermissions: jest.fn().mockResolvedValue({ success: true }),
-    getDaLiveAuthService: jest.fn().mockReturnValue({
-        getAccessToken: jest.fn().mockResolvedValue('token'),
-        getUserEmail: jest.fn().mockResolvedValue('test@example.com'),
-    }),
-}));
-
-jest.mock('@/features/eds/services/inspectorHelpers', () => ({
-    generateInspectorTreeEntries: jest.fn().mockResolvedValue([]),
-    installInspectorTagging: jest.fn().mockResolvedValue({ success: true }),
-}));
-
-jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
-    DaLiveContentOperations: jest.fn().mockImplementation(() => ({})),
-}));
-
-jest.mock('@/features/eds/services/helix/helixService', () => ({
-    HelixService: jest.fn().mockImplementation(() => ({
-        previewCode: jest.fn().mockResolvedValue(undefined),
-    })),
-}));
-
-jest.mock('@/features/eds/services/daLive/daLiveAuthService', () => ({
-    DaLiveAuthService: jest.fn().mockImplementation(() => ({
-        getAccessToken: jest.fn().mockResolvedValue('token'),
-        getUserEmail: jest.fn().mockResolvedValue('test@example.com'),
-    })),
-}));
+// NOT mocked, and it does not need to be: the collaborator is constructed on this
+// path and never touched, so the mock silenced nothing. Measured 2026-08-31 by
+// stripping it and re-running this suite.
 
 jest.mock('@/features/eds/services/edsPipeline', () => ({
     executeEdsPipeline: jest.fn().mockResolvedValue({
-        success: true, contentFilesCopied: 5, libraryPaths: [],
+        success: true,
+        contentFilesCopied: 5,
+        libraryPaths: [],
     }),
 }));
 
-jest.mock('@/features/eds/services/storefront/storefrontStalenessDetector', () => ({
-    updateStorefrontState: jest.fn(),
-}));
-
-jest.mock('@/features/eds/services/configService/configurationService', () => ({
-    ConfigurationService: jest.fn().mockImplementation(() => ({
-        updateSiteConfig: jest.fn().mockResolvedValue({ success: true }),
-    })),
-    buildSiteConfigParams: (owner: string, repo: string, org: string, site: string) => ({
-        org, site, codeOwner: owner, codeRepo: repo,
-        contentSourceUrl: `https://content.da.live/${org}/${site}/`,
-    }),
-}));
+// NOT mocked, and it does not need to be: the collaborator is constructed on this
+// path and never touched, so the mock silenced nothing. Measured 2026-08-31 by
+// stripping it and re-running this suite.
 
 jest.mock('@/features/mesh/services/meshDeployment', () => ({
     deployMeshComponent: jest.fn().mockResolvedValue({
@@ -158,25 +64,23 @@ jest.mock('@/features/mesh/services/meshDeployment', () => ({
     }),
 }));
 
-jest.mock('@/features/mesh/services/stalenessDetector', () => ({
-    updateMeshState: jest.fn(),
-}));
-
 // Mock fetch for placeholder files
-global.fetch = jest.fn().mockResolvedValue({ ok: false }) as jest.Mock;
+global.fetch = jest.fn().mockResolvedValue({ ok: false });
 
 // =============================================================================
 // Imports (after mocks)
 // =============================================================================
 
 import { executeEdsReset } from '@/features/eds/services/reset/edsResetService';
+import { createResetContext, meshDeps, resetParams } from './edsResetService.testUtils';
+import { createMockProject } from '../../../../helpers/projectFake';
 
 // =============================================================================
 // Helpers
 // =============================================================================
 
 function createProjectWithMesh(): Project {
-    return {
+    return createMockProject({
         name: 'test-project',
         path: '/test/project',
         status: 'ready',
@@ -211,29 +115,7 @@ function createProjectWithMesh(): Project {
                 metadata: { meshId: 'mesh-123' },
             },
         },
-    } as unknown as Project;
-}
-
-function createMockContext(): HandlerContext {
-    return {
-        panel: { webview: { postMessage: jest.fn() } } as unknown as HandlerContext['panel'],
-        stateManager: {
-            getCurrentProject: jest.fn().mockResolvedValue(null),
-            saveProject: jest.fn().mockResolvedValue(undefined),
-        } as unknown as HandlerContext['stateManager'],
-        logger: {
-            info: jest.fn(), debug: jest.fn(), error: jest.fn(), warn: jest.fn(),
-        } as unknown as HandlerContext['logger'],
-        debugLogger: {
-            info: jest.fn(), debug: jest.fn(), error: jest.fn(), warn: jest.fn(),
-        } as unknown as HandlerContext['debugLogger'],
-        sendMessage: jest.fn(),
-        context: { secrets: {} },
-        sharedState: {},
-        authManager: {
-            getAccessToken: jest.fn().mockResolvedValue('mock-token'),
-        },
-    } as unknown as HandlerContext;
+    });
 }
 
 const mockTokenProvider = { getAccessToken: jest.fn().mockResolvedValue('mock-token') };
@@ -252,7 +134,7 @@ describe('EDS Reset Service - Mesh Redeployment Auth', () => {
     it('should call ensureAdobeIOAuth before wrapping the mesh redeploy in withOrgContext', async () => {
         // Given: Project with mesh component and redeployMesh enabled
         const project = createProjectWithMesh();
-        const context = createMockContext();
+        const context = createResetContext();
         const callOrder: string[] = [];
 
         mockEnsureAdobeIOAuth.mockImplementation(async () => {
@@ -266,13 +148,10 @@ describe('EDS Reset Service - Mesh Redeployment Auth', () => {
 
         // When: Executing reset with mesh redeployment
         await executeEdsReset(
-            {
-                repoOwner: 'test-owner', repoName: 'test-repo',
-                daLiveOrg: 'test-org', daLiveSite: 'test-repo',
-                templateOwner: 'template-owner', templateRepo: 'template-repo',
-                project, redeployMesh: true,
-            },
-            context, mockTokenProvider,
+            resetParams(project, { redeployMesh: true }),
+            context,
+            mockTokenProvider,
+            meshDeps
         );
 
         // Then: auth runs BEFORE the targeted redeploy
@@ -284,19 +163,16 @@ describe('EDS Reset Service - Mesh Redeployment Auth', () => {
     it('should target the project org/project/workspace via withOrgContext', async () => {
         // Given: Project with Adobe org/project/workspace
         const project = createProjectWithMesh();
-        const context = createMockContext();
+        const context = createResetContext();
 
         mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: true });
 
         // When
         await executeEdsReset(
-            {
-                repoOwner: 'test-owner', repoName: 'test-repo',
-                daLiveOrg: 'test-org', daLiveSite: 'test-repo',
-                templateOwner: 'template-owner', templateRepo: 'template-repo',
-                project, redeployMesh: true,
-            },
-            context, mockTokenProvider,
+            resetParams(project, { redeployMesh: true }),
+            context,
+            mockTokenProvider,
+            meshDeps
         );
 
         // Then: the redeploy is targeted at the project's known org/project/workspace
@@ -306,26 +182,23 @@ describe('EDS Reset Service - Mesh Redeployment Auth', () => {
                 projectId: 'proj-456',
                 workspaceId: 'ws-789',
             }),
-            expect.any(Function),
+            expect.any(Function)
         );
     });
 
     it('should pass project adobe context to ensureAdobeIOAuth', async () => {
         // Given: Project with Adobe org/project/workspace
         const project = createProjectWithMesh();
-        const context = createMockContext();
+        const context = createResetContext();
 
         mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: true });
 
         // When
         await executeEdsReset(
-            {
-                repoOwner: 'test-owner', repoName: 'test-repo',
-                daLiveOrg: 'test-org', daLiveSite: 'test-repo',
-                templateOwner: 'template-owner', templateRepo: 'template-repo',
-                project, redeployMesh: true,
-            },
-            context, mockTokenProvider,
+            resetParams(project, { redeployMesh: true }),
+            context,
+            mockTokenProvider,
+            meshDeps
         );
 
         // Then: Should pass project context for loginAndRestoreProjectContext
@@ -337,26 +210,23 @@ describe('EDS Reset Service - Mesh Redeployment Auth', () => {
                     workspace: 'ws-789',
                 }),
                 warningMessage: expect.stringContaining('expired'),
-            }),
+            })
         );
     });
 
     it('should return partial success when auth fails during mesh redeployment', async () => {
         // Given: Auth fails (user cancelled or token expired)
         const project = createProjectWithMesh();
-        const context = createMockContext();
+        const context = createResetContext();
 
         mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: false, cancelled: true });
 
         // When
         const result = await executeEdsReset(
-            {
-                repoOwner: 'test-owner', repoName: 'test-repo',
-                daLiveOrg: 'test-org', daLiveSite: 'test-repo',
-                templateOwner: 'template-owner', templateRepo: 'template-repo',
-                project, redeployMesh: true,
-            },
-            context, mockTokenProvider,
+            resetParams(project, { redeployMesh: true }),
+            context,
+            mockTokenProvider,
+            meshDeps
         );
 
         // Then: Should return partial success (reset completed, mesh failed)
@@ -369,17 +239,14 @@ describe('EDS Reset Service - Mesh Redeployment Auth', () => {
     it('should not call ensureAdobeIOAuth when redeployMesh is false', async () => {
         // Given: Project with mesh but redeployMesh disabled
         const project = createProjectWithMesh();
-        const context = createMockContext();
+        const context = createResetContext();
 
         // When
         await executeEdsReset(
-            {
-                repoOwner: 'test-owner', repoName: 'test-repo',
-                daLiveOrg: 'test-org', daLiveSite: 'test-repo',
-                templateOwner: 'template-owner', templateRepo: 'template-repo',
-                project, redeployMesh: false,
-            },
-            context, mockTokenProvider,
+            resetParams(project, { redeployMesh: false }),
+            context,
+            mockTokenProvider,
+            meshDeps
         );
 
         // Then: ensureAdobeIOAuth should NOT be called (mesh step skipped)

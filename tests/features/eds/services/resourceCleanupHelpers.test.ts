@@ -3,9 +3,8 @@
  */
 
 import { COMPONENT_IDS } from '@/core/constants';
-import type { Project, ComponentInstance } from '@/types';
+import type { ComponentInstance, Project } from '@/types/base';
 import type { StateManager } from '@/types/state';
-import type { Logger } from '@/types/logger';
 import type { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
 import {
     isEdsProject,
@@ -16,6 +15,8 @@ import {
     summarizeCleanupResults,
     type CleanupResultItem,
 } from '@/features/eds/services/resourceCleanupHelpers';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 // ==========================================================
 // Test Helpers
@@ -38,16 +39,6 @@ function createEdsComponentInstance(metadata?: Record<string, unknown>): Compone
         name: 'EDS Storefront',
         status: 'ready',
         metadata,
-    };
-}
-
-function createMockLogger(): Logger {
-    return {
-        trace: jest.fn(),
-        info: jest.fn(),
-        debug: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
     };
 }
 
@@ -210,8 +201,11 @@ describe('extractEdsMetadata', () => {
 // ==========================================================
 
 describe('getLinkedEdsProjects', () => {
-    function createMockStateManager(projects: Project[]): StateManager {
-        return {
+    // Renamed from `createMockStateManager` on 2026-09-01: it shadowed the
+    // canonical builder it now delegates to, and its real subject is the project
+    // list, not the state manager.
+    function stateManagerWithProjects(projects: Project[]): StateManager {
+        return createMockStateManager({
             getAllProjects: jest.fn().mockResolvedValue(
                 projects.map(p => ({ name: p.name, path: p.path, lastModified: new Date() }))
             ),
@@ -219,7 +213,7 @@ describe('getLinkedEdsProjects', () => {
                 const project = projects.find(p => p.path === path);
                 return Promise.resolve(project || null);
             }),
-        } as unknown as StateManager;
+        });
     }
 
     it('should return all EDS projects with metadata', async () => {
@@ -247,7 +241,7 @@ describe('getLinkedEdsProjects', () => {
             },
         });
 
-        const stateManager = createMockStateManager([edsProject1, edsProject2]);
+        const stateManager = stateManagerWithProjects([edsProject1, edsProject2]);
 
         const result = await getLinkedEdsProjects(stateManager);
 
@@ -262,6 +256,29 @@ describe('getLinkedEdsProjects', () => {
                 backendType: undefined,
             },
         });
+    });
+
+    it('loads each project read-only, with no catalog to resolve against', async () => {
+        // A listing must not rewrite state on the way past, and it has no
+        // component catalog to hand the loader — both are arguments, and both
+        // are invisible to any assertion about what came back.
+        const edsProject = createMockProject({
+            name: 'eds-project-1',
+            path: '/path/to/eds1',
+            componentInstances: {
+                [COMPONENT_IDS.EDS_STOREFRONT]: createEdsComponentInstance({
+                    githubRepo: 'owner/repo1',
+                }),
+            },
+        });
+        const stateManager = stateManagerWithProjects([edsProject]);
+
+        await getLinkedEdsProjects(stateManager);
+
+        const call = (stateManager.loadProjectFromPath as jest.Mock).mock.calls[0];
+        expect(call[0]).toBe('/path/to/eds1');
+        expect(call[1]()).toStrictEqual([]);
+        expect(call[2]).toEqual({ persistAfterLoad: false });
     });
 
     it('should exclude non-EDS projects', async () => {
@@ -287,7 +304,7 @@ describe('getLinkedEdsProjects', () => {
             },
         });
 
-        const stateManager = createMockStateManager([edsProject, nonEdsProject]);
+        const stateManager = stateManagerWithProjects([edsProject, nonEdsProject]);
 
         const result = await getLinkedEdsProjects(stateManager);
 
@@ -296,7 +313,7 @@ describe('getLinkedEdsProjects', () => {
     });
 
     it('should return empty array when no projects exist', async () => {
-        const stateManager = createMockStateManager([]);
+        const stateManager = stateManagerWithProjects([]);
 
         const result = await getLinkedEdsProjects(stateManager);
 
@@ -314,7 +331,7 @@ describe('getLinkedEdsProjects', () => {
             },
         });
 
-        const stateManager = {
+        const stateManager = createMockStateManager({
             getAllProjects: jest.fn().mockResolvedValue([
                 { name: 'eds-project', path: '/path/to/eds', lastModified: new Date() },
                 { name: 'broken-project', path: '/path/to/broken', lastModified: new Date() },
@@ -323,7 +340,7 @@ describe('getLinkedEdsProjects', () => {
                 if (path === '/path/to/eds') return Promise.resolve(edsProject);
                 return Promise.resolve(null); // Broken project fails to load
             }),
-        } as unknown as StateManager;
+        });
 
         const result = await getLinkedEdsProjects(stateManager);
 
@@ -476,6 +493,31 @@ describe('formatCleanupResults', () => {
         expect(formatted).toBe('No cleanup operations performed.');
     });
 
+    it('lists every outcome exactly once, each under its own heading', () => {
+        // The three groups are built by three filters over the same array. A
+        // filter that stops filtering puts every resource under every heading,
+        // and no `toContain` assertion can see that.
+        const results: CleanupResultItem[] = [
+            { type: 'github', name: 'owner/repo', success: true },
+            { type: 'daLive', name: 'org/site', success: false, error: 'Access denied' },
+            { type: 'backend', name: 'commerce', success: false, skipped: true },
+        ];
+
+        expect(formatCleanupResults(results)).toBe(
+            '\u2713 Cleaned up: GitHub repo (owner/repo)\n' +
+                '\u2717 Failed: DA.live site (org/site) - Access denied\n' +
+                '\u25cb Skipped: Backend data (commerce)'
+        );
+    });
+
+    it('leaves out the skipped heading entirely when nothing was skipped', () => {
+        const results: CleanupResultItem[] = [
+            { type: 'github', name: 'owner/repo', success: true },
+        ];
+
+        expect(formatCleanupResults(results)).toBe('\u2713 Cleaned up: GitHub repo (owner/repo)');
+    });
+
     it('should format all failed results', () => {
         const results: CleanupResultItem[] = [
             { type: 'github', name: 'owner/repo', success: false, error: 'Token missing' },
@@ -560,6 +602,28 @@ describe('summarizeCleanupResults', () => {
         expect(summary.failed).toBe(0);
         expect(summary.skipped).toBe(1);
         expect(summary.message).toBe('Successfully cleaned up 1 resource.');
+    });
+
+    it('pluralises the cleaned count and not the failed one in a mixed run', () => {
+        const results: CleanupResultItem[] = [
+            { type: 'github', name: 'owner/repo', success: true },
+            { type: 'daLive', name: 'org/site', success: true },
+            { type: 'helix', name: 'owner/repo', success: false },
+        ];
+
+        expect(summarizeCleanupResults(results).message).toBe(
+            'Cleaned up 2 resources, 1 failed.'
+        );
+    });
+
+    it('does not pluralise a run where the single resource failed', () => {
+        const results: CleanupResultItem[] = [
+            { type: 'github', name: 'owner/repo', success: false },
+        ];
+
+        expect(summarizeCleanupResults(results).message).toBe(
+            'Failed to clean up 1 resource.'
+        );
     });
 
     it('should handle empty results', () => {

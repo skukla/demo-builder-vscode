@@ -1,10 +1,7 @@
 import * as path from 'path';
-import { getInstallSteps } from './installation';
 import { PrerequisitesCacheManager } from './prerequisitesCacheManager';
 import type {
     PrerequisiteCheck,
-    ProgressMilestone,
-    InstallStep,
     PrerequisiteInstall,
     PrerequisitePlugin,
     PrerequisiteDefinition,
@@ -12,19 +9,18 @@ import type {
     PrerequisitesConfig,
     PrerequisiteStatus,
 } from './types';
-import {
-    checkVersionSatisfaction,
-    checkMultipleNodeVersions,
-    getInstalledNodeVersions,
-    getLatestInFamily,
-    resolveDependencies,
-} from './versioning';
 import { ConfigurationLoader } from '@/core/config/ConfigurationLoader';
-import { ServiceLocator } from '@/core/di';
-import { TIMEOUTS, formatDuration } from '@/core/utils';
-import { isTimeout, toAppError } from '@/types/errors';
+import { isTimeout, toAppError } from '@/core/errors';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
+import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
+import { formatDuration } from '@/core/utils/timeFormatting';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { getInstallSteps } from '@/features/prerequisites/services/installation/InstallStepBuilder';
+import { resolveDependencies } from '@/features/prerequisites/services/versioning/DependencyResolver';
+import { checkMultipleNodeVersions, getInstalledNodeVersions, getLatestInFamily } from '@/features/prerequisites/services/versioning/MultiVersionDetector';
+import { checkVersionSatisfaction } from '@/features/prerequisites/services/versioning/VersionSatisfactionChecker';
 import { Logger } from '@/types/logger';
-import { DEFAULT_SHELL } from '@/types/shell';
+import type { InstallStep, ProgressMilestone } from '@/types/prerequisites';
 import { toError } from '@/types/typeGuards';
 
 // Extracted modules
@@ -55,9 +51,27 @@ export type {
 export class PrerequisitesManager {
     private configLoader: ConfigurationLoader<PrerequisitesConfig>;
     private logger: Logger;
-    private cacheManager = new PrerequisitesCacheManager();
+    /**
+     * The result cache, handed in rather than built here.
+     *
+     * It is STATEFUL — a bounded Map plus hit/miss stats — and this class is a
+     * session singleton, so the instance it gets is the one the whole session
+     * shares. Building it in a field initialiser put a stateful construction in a
+     * service, which is the thing ADR-015 keeps out of the middle of the graph.
+     */
+    private readonly cacheManager: PrerequisitesCacheManager;
 
-    constructor(extensionPath: string, logger: Logger) {
+    /**
+     * ADR-015: the shell executor arrives here rather than being fetched at
+     * each of the six call sites that used to reach for it.
+     */
+    constructor(
+        extensionPath: string,
+        logger: Logger,
+        private commandManager: CommandExecutor,
+        cacheManager: PrerequisitesCacheManager,
+    ) {
+        this.cacheManager = cacheManager;
         const configPath = path.join(
             extensionPath,
             'src',
@@ -187,7 +201,10 @@ export class PrerequisitesManager {
             `[Prerequisites] ${prereq.id}: Using fnm-aware detection (perNodeVersion=true)`,
         );
 
-        const installedNodeVersions = await getInstalledNodeVersions(this.logger);
+        const installedNodeVersions = await getInstalledNodeVersions(
+            this.commandManager,
+            this.logger,
+        );
 
         if (installedNodeVersions.length === 0) {
             this.logger.debug(`[Prerequisites] ${prereq.id}: No Node versions installed`);
@@ -247,10 +264,9 @@ export class PrerequisitesManager {
         prereq: PrerequisiteDefinition,
         status: PrerequisiteStatus,
     ): Promise<void> {
-        const commandManager = ServiceLocator.getCommandExecutor();
         const isNodeOrNpm = prereq.id === 'node' || prereq.id === 'npm';
 
-        const checkResult = await commandManager.execute(prereq.check.command, {
+        const checkResult = await this.commandManager.execute(prereq.check.command, {
             ...(isNodeOrNpm ? { useNodeVersion: 'current' as const } : { shell: DEFAULT_SHELL }),
             timeout: TIMEOUTS.PREREQUISITE_CHECK,
         });
@@ -348,8 +364,7 @@ export class PrerequisitesManager {
         plugin: PrerequisitePlugin,
     ): Promise<{ id: string; name: string; installed: boolean }> {
         try {
-            const commandManager = ServiceLocator.getCommandExecutor();
-            const { stdout } = await commandManager.execute(plugin.check.command, {
+                const { stdout } = await this.commandManager.execute(plugin.check.command, {
                 timeout: TIMEOUTS.PREREQUISITE_CHECK,
                 retryStrategy: {
                     maxAttempts: 1,
@@ -415,19 +430,27 @@ export class PrerequisitesManager {
 
     // Delegate to extracted module
     async getLatestInFamily(versionFamily: string): Promise<string | null> {
-        return getLatestInFamily(versionFamily, this.logger);
+        return getLatestInFamily(versionFamily, this.commandManager, this.logger);
     }
 
     // Delegate to extracted module
     async checkMultipleNodeVersions(
         versionToComponentMapping: Record<string, string>,
     ): Promise<{ version: string; component: string; installed: boolean }[]> {
-        return checkMultipleNodeVersions(versionToComponentMapping, this.logger);
+        return checkMultipleNodeVersions(
+            versionToComponentMapping,
+            this.commandManager,
+            this.logger,
+        );
     }
 
     // Delegate to extracted module
     async checkVersionSatisfaction(requiredFamily: string): Promise<boolean> {
-        const result = await checkVersionSatisfaction(requiredFamily, this.logger);
+        const result = await checkVersionSatisfaction(
+            requiredFamily,
+            this.commandManager,
+            this.logger,
+        );
         return result.satisfied;
     }
 

@@ -1,0 +1,26 @@
+{
+  "takenAt": "2026-08-28T12:35Z (CLEAN BASELINE: owner-ordered removal of all integrations; supersedes the pre-journey-A snapshot \u2014 that one is in git history)",
+  "componentInstances": {
+    "eds-storefront": {
+      "id": "eds-storefront",
+      "type": "frontend",
+      "subType": null,
+      "status": "ready",
+      "version": "6.0.0"
+    }
+  },
+  "componentSelections": {
+    "frontend": "eds-storefront",
+    "backend": "adobe-commerce-accs",
+    "dependencies": [],
+    "integrations": [],
+    "appBuilder": []
+  },
+  "adobe": {
+    "organization": "285361",
+    "projectId": "4566206088345738527",
+    "projectName": "KuklaBodeaMesh",
+    "workspace": "4566206088345780697",
+    "workspaceName": "Stage"
+  }
+}

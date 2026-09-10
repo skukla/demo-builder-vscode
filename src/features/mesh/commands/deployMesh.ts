@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
-import { BaseCommand } from '@/core/base';
-import { StateManager } from '@/core/state';
-import { ExecutionLock } from '@/core/utils';
+import { BaseCommand } from '@/core/base/baseCommand';
+import { ServiceLocator } from '@/core/di/serviceLocator';
+import { ExecutionLock } from '@/core/utils/executionLock';
 import type { Logger } from '@/types/logger';
+import type { StateManager } from '@/types/state';
 
 /**
  * Deploy (or redeploy) API Mesh.
@@ -54,6 +55,9 @@ export class DeployMeshCommand extends BaseCommand {
                 // the same as this one. The command keeps only what is its own:
                 // the lock (above), the toasts and result mapping (below).
                 const result = await deployMeshWithFeedback({
+                    authManager: ServiceLocator.getAuthenticationService(),
+                    secrets: ServiceLocator.getSecretStorage() ?? undefined,
+                    commandManager: ServiceLocator.getCommandExecutor(),
                     project,
                     stateManager: this.stateManager,
                     logger: this.logger,

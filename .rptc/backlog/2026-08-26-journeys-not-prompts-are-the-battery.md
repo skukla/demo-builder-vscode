@@ -5,7 +5,7 @@ area: ai
 parent: AI-1
 needs: [AI-1c]
 value: high
-status: active
+status: shipped
 layer: B
 ---
 # Journeys, not prompts, are what the battery should measure
@@ -124,3 +124,5 @@ Filed 2026-08-26.
 - 2026-08-26  fix(mcp): list_projects says which project is current, and stops saying "unknown" (`b27a5d363`)
 - 2026-08-26  fix(ai): get_current_project answers the question the agent asks next (`048bef4d1`)
 - 2026-08-26  feat(gap-scan): judge the tools that ARE used, not just count the ones that are not (`e8ba7c703`)
+- 2026-08-28  Staleness check at loop pickup (2026-08-28): corpus intact (both ERP sessions on disk), scan --session mode intact. NEW since filing: the agent activity record (AI-2c, beta.145) is a second journey corpus — the extension's own per-session trace JSONL records every MCP call (tool, ms, bytes, call tag) from ANY agent. Next slice: the four journey metrics the item names.
+- 2026-08-28  Metrics slice SHIPPED: the four journey metrics (first action, re-orientations, bash-by-arc-third, interventions) open every journey read; self-checked against row flags and run over both ERP sessions. Reference numbers: 264-turn journey = first action at call 6, 4 re-orientations, 94 Bash spread 33/36/25 (sustained capability gap, not discovery). Both open questions now answered: journeys are OBSERVATIONAL (a 264-turn session cannot re-run; execution stays parked), and the held-out set is future real journeys — checked tonight: every post-fix session in the corpus is a battery run, so the fixes' effect on journey shape is not yet measurable. New journeys accrue passively via the agent trace (AI-2c). No src touched this slice — mechanical scans not triggered.

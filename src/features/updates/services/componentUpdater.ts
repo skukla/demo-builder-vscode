@@ -1,12 +1,15 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { mergeEnvContent, parseEnvFile } from './envMerge';
 import { isMeshComponentId } from '@/core/constants';
+import { toAppError, isTimeout, isNetwork } from '@/core/errors';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
+import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { Project } from '@/types';
-import { toAppError, isTimeout, isNetwork } from '@/types/errors';
+import { Project } from '@/types/base';
+import type { TransformedComponentDefinition } from '@/types/components';
 import type { Logger } from '@/types/logger';
-import { DEFAULT_SHELL } from '@/types/shell';
 import { parseJSON } from '@/types/typeGuards';
 
 /**
@@ -18,12 +21,22 @@ import { parseJSON } from '@/types/typeGuards';
  */
 const BUILD_OUTPUT_LOG_LIMIT = 500;
 
+/** The node version a catalog entry asks for, or null when it does not say. */
+function nodeVersionOf(componentDef: TransformedComponentDefinition | undefined): string | null {
+    return componentDef?.configuration?.nodeVersion || null;
+}
+
 export class ComponentUpdater {
     private logger: Logger;
     private extensionPath: string;
     private updatingComponents = new Set<string>(); // Concurrent update lock
 
-    constructor(logger: Logger, extensionPath: string) {
+    /** ADR-015: the executor arrives with the logger and extension path. */
+    constructor(
+        logger: Logger,
+        extensionPath: string,
+        private commandManager: CommandExecutor,
+    ) {
         this.logger = logger;
         this.extensionPath = extensionPath;
     }
@@ -139,46 +152,29 @@ export class ComponentUpdater {
           
                     // Reinstall node_modules (not included in snapshot)
                     this.logger.debug('[Updates] Reinstalling dependencies after rollback...');
-                    const { ServiceLocator } = await import('@/core/di');
-                    const commandManager = ServiceLocator.getCommandExecutor();
                     
                     // Try to get node version from registry, but don't fail if we can't
                     // During rollback, we just want to get dependencies installed
                     let nodeVersion: string | null = null;
                     try {
-                        const { ComponentRegistryManager } = await import('@/features/components/services/ComponentRegistryManager');
-                        const registryManager = new ComponentRegistryManager(this.extensionPath);
-                        const registry = await registryManager.loadRegistry();
-                        // Search for component across all categories
-                        const allComponents = [
-                            ...(registry.components.frontends || []),
-                            ...(registry.components.backends || []),
-                            ...(registry.components.dependencies || []),
-                            ...(registry.components.mesh || []),
-                            ...(registry.components.integrations || []),
-                        ];
-                        const componentDef = allComponents.find(c => c.id === componentId);
-                        nodeVersion = componentDef?.configuration?.nodeVersion || null;
+                        nodeVersion = nodeVersionOf(await this.componentDefinition(componentId));
                     } catch (_error) {
                         this.logger.debug('[Updates] Could not determine node version from registry, using default');
                     }
-                    
-                    const installResult = await commandManager.execute('npm install --no-fund', {
+
+                    const installResult = await this.commandManager.execute('npm install --no-fund', {
                         cwd: component.path,
                         timeout: TIMEOUTS.VERY_LONG,
                         shell: DEFAULT_SHELL,
                         enhancePath: true,
                         useNodeVersion: nodeVersion,
                     });
-                    
+
                     if (installResult.code !== 0) {
                         this.logger.warn(`[Updates] Failed to reinstall dependencies after rollback: ${installResult.stderr}`);
                     } else {
                         this.logger.debug('[Updates] ✓ Dependencies reinstalled');
                     }
-          
-                    // RESILIENCE: Format user-friendly error message
-                    throw new Error(this.formatUpdateError(error as Error));
                 } catch (rollbackError) {
                     // Rollback itself failed - critical situation
                     this.logger.error('[Updates] CRITICAL: Rollback failed', rollbackError as Error);
@@ -186,6 +182,11 @@ export class ComponentUpdater {
                         `Update failed AND rollback failed. Manual recovery required. Snapshot at: ${snapshotPath}`,
                     );
                 }
+
+                // RESILIENCE: Format user-friendly error message. Thrown OUTSIDE the
+                // rollback try: inside it, the rollback catch caught this very throw and
+                // every failed update — rollback included — reported "rollback failed".
+                throw new Error(this.formatUpdateError(error as Error));
             }
         } finally {
             // Always release lock
@@ -281,33 +282,19 @@ export class ComponentUpdater {
      * runs the build script if one is configured.
      */
     private async runPostUpdateBuild(componentPath: string, componentId: string): Promise<void> {
-        // Get component configuration from registry
-        const { ComponentRegistryManager } = await import('@/features/components/services/ComponentRegistryManager');
-        const registryManager = new ComponentRegistryManager(this.extensionPath);
-        const componentDef = await registryManager.getComponentById(componentId);
+        const componentDef = await this.componentDefinition(componentId);
 
-        const nodeVersion = componentDef?.configuration?.nodeVersion || null;
+        const nodeVersion = nodeVersionOf(componentDef);
         const skipNpmInstall = componentDef?.configuration?.skipNpmInstall === true;
         const buildScript = componentDef?.configuration?.buildScript;
 
-        // Check if package.json exists (no package.json = nothing to install)
-        const hasPackageJson = await this.fileExists(path.join(componentPath, 'package.json'));
-
-        if (!hasPackageJson || skipNpmInstall) {
-            this.logger.debug(`[Updates] Skipping npm install for ${componentId} (packageJson=${hasPackageJson}, skipNpmInstall=${skipNpmInstall})`);
-            // If there's also no build script, nothing left to do
-            if (!buildScript) return;
-            // Otherwise fall through to run the build step only
-        }
-
-        const { ServiceLocator } = await import('@/core/di');
-        const commandManager = ServiceLocator.getCommandExecutor();
-
+        // No package.json check here: verifyComponentStructure has already required
+        // one, so a guard on it could never be false when this runs.
         try {
             // 1. Install dependencies (always after zipball extraction, unless skipped)
-            if (hasPackageJson && !skipNpmInstall) {
+            if (!skipNpmInstall) {
                 this.logger.debug(`[Updates] Installing dependencies for ${componentId}...`);
-                const installResult = await commandManager.execute('npm install --no-fund', {
+                const installResult = await this.commandManager.execute('npm install --no-fund', {
                     cwd: componentPath,
                     timeout: TIMEOUTS.VERY_LONG,
                     shell: DEFAULT_SHELL,
@@ -324,7 +311,7 @@ export class ComponentUpdater {
             // 2. Run configured build script (only if buildScript is set)
             if (buildScript) {
                 this.logger.debug(`[Updates] Running build script: ${buildScript}`);
-                const buildResult = await commandManager.execute(`npm run ${buildScript} -- --force`, {
+                const buildResult = await this.commandManager.execute(`npm run ${buildScript} -- --force`, {
                     cwd: componentPath,
                     timeout: TIMEOUTS.VERY_LONG,
                     shell: DEFAULT_SHELL,
@@ -355,14 +342,14 @@ export class ComponentUpdater {
         }
     }
 
-    /** Check if a file exists without throwing */
-    private async fileExists(filePath: string): Promise<boolean> {
-        try {
-            await fs.access(filePath);
-            return true;
-        } catch {
-            return false;
-        }
+    /** The catalog entry for a component id — the one lookup both the build and the rollback use. */
+    private async componentDefinition(
+        componentId: string,
+    ): Promise<TransformedComponentDefinition | undefined> {
+        const { getComponentRegistryManager } = await import(
+            '@/features/components/services/componentRegistryInstance'
+        );
+        return getComponentRegistryManager(this.extensionPath).getComponentById(componentId);
     }
 
     /**
@@ -396,7 +383,7 @@ export class ComponentUpdater {
         componentId: string,
     ): Promise<void> {
         // SECURITY: Validate GitHub URL before downloading
-        const { validateGitHubDownloadURL } = await import('@/core/validation');
+        const { validateGitHubDownloadURL } = await import('@/core/validation/URLValidator');
         try {
             validateGitHubDownloadURL(downloadUrl);
         } catch (error) {
@@ -404,8 +391,6 @@ export class ComponentUpdater {
             throw new Error(`Security check failed: ${(error as Error).message}`);
         }
 
-        const { ServiceLocator } = await import('@/core/di');
-        const commandManager = ServiceLocator.getCommandExecutor();
 
         const tempZip = path.join(path.dirname(targetPath), `${componentId}-temp.zip`);
 
@@ -440,7 +425,7 @@ export class ComponentUpdater {
             // GitHub archives have a root folder (e.g., "skukla-commerce-mesh-abc123/")
             // We need to: 1) extract, 2) move contents up, 3) remove the root folder
             // Uses rm -rf (not rmdir) because hidden files like .github/ may remain after mv
-            const extractResult = await commandManager.execute(
+            const extractResult = await this.commandManager.execute(
                 `unzip -q "${tempZip}" -d "${targetPath}" && mv "${targetPath}"/*/* "${targetPath}"/ && rm -rf "${targetPath}"/*/`,
                 {
                     shell: DEFAULT_SHELL,    // CRITICAL FIX: Required for command chaining (&&) and glob expansion (*/*)
@@ -503,21 +488,12 @@ export class ComponentUpdater {
                 continue;
             }
       
-            // Parse both files
-            const oldVars = this.parseEnvFile(oldContent);
-            const templateVars = this.parseEnvFile(newTemplate);
+            const mergedContent = mergeEnvContent(oldContent, newTemplate);
+            await fs.writeFile(envPath, mergedContent, 'utf-8');
       
-            // Merge strategy: keep all old values, add new keys with default values
-            const merged = new Map([...templateVars, ...oldVars]);
-      
-            // Write merged content
-            const mergedContent = Array.from(merged.entries())
-                .map(([key, value]) => `${key}=${value}`)
-                .join('\n');
-      
-            await fs.writeFile(envPath, mergedContent + '\n', 'utf-8');
-      
-            const addedKeys = Array.from(templateVars.keys()).filter(k => !oldVars.has(k));
+            const addedKeys = Array.from(parseEnvFile(newTemplate).keys()).filter(
+                (k) => !parseEnvFile(oldContent).has(k),
+            );
             if (addedKeys.length > 0) {
                 this.logger.debug(`[Updates] Merged ${filename}: added ${addedKeys.length} new variables (${addedKeys.join(', ')})`);
             } else {
@@ -529,20 +505,5 @@ export class ComponentUpdater {
     /**
    * Parse .env file content into key-value pairs
    */
-    private parseEnvFile(content: string): Map<string, string> {
-        const vars = new Map<string, string>();
-    
-        content.split('\n').forEach(line => {
-            line = line.trim();
-            if (!line || line.startsWith('#')) return;
-      
-            const [key, ...valueParts] = line.split('=');
-            if (key) {
-                vars.set(key.trim(), valueParts.join('=').trim());
-            }
-        });
-    
-        return vars;
-    }
 }
 

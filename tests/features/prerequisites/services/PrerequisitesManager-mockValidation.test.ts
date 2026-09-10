@@ -14,6 +14,8 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import type { InstallStep } from '@/types/prerequisites';
+import type { PrerequisitePlugin } from '@/features/prerequisites/services/types';
 
 // Note: We can't import from the testUtils file directly because it has top-level jest.mock calls
 // that cause side effects. Instead, we re-declare the mock structures here for validation.
@@ -28,10 +30,10 @@ describe('Mock Structure Validation - Prerequisites', () => {
             depends?: string[];
             perNodeVersion?: boolean;
             check: { command: string; parseVersion?: string; contains?: string };
-            install?: { dynamic?: boolean; steps?: unknown[]; requires?: string[] };
+            install?: { dynamic?: boolean; steps?: InstallStep[]; requires?: string[] };
             multiVersion?: boolean;
             versionCheck?: { command: string; parseInstalledVersions?: string };
-            plugins?: unknown[];
+            plugins?: PrerequisitePlugin[];
         }>;
         componentRequirements: Record<string, { prerequisites: string[]; plugins?: string[] }>;
     };
@@ -61,7 +63,7 @@ describe('Mock Structure Validation - Prerequisites', () => {
             actualPrerequisitesJson.prerequisites.forEach(prereq => {
                 expect(typeof prereq.check.command).toBe('string');
                 // Note: 'args' is NOT part of the actual structure - only 'command', 'parseVersion', 'contains'
-                expect((prereq.check as any).args).toBeUndefined();
+                expect(prereq.check).not.toHaveProperty('args');
             });
         });
 
@@ -78,7 +80,7 @@ describe('Mock Structure Validation - Prerequisites', () => {
 
             prereqsWithInstall.forEach(prereq => {
                 expect(Array.isArray(prereq.install!.steps)).toBe(true);
-                prereq.install!.steps!.forEach((step: any) => {
+                prereq.install!.steps!.forEach((step) => {
                     // Steps should have name field
                     expect(step.name).toBeDefined();
                     // Steps should have either commands or commandTemplate
@@ -120,12 +122,12 @@ describe('Mock Structure Validation - Prerequisites', () => {
 
             // The mock should include these fields for each prerequisite
             const samplePrereq = actualPrerequisitesJson.prerequisites[0];
-            requiredFields.forEach(field => {
-                // optional field may be implicitly false (undefined)
-                if (field !== 'optional') {
-                    expect(samplePrereq[field as keyof typeof samplePrereq]).toBeDefined();
-                }
-            });
+            // `optional` may be implicitly false (undefined), so it is excluded from
+            // the list rather than skipped inside the loop.
+            const missing = requiredFields
+                .filter((field) => field !== 'optional')
+                .filter((field) => samplePrereq[field as keyof typeof samplePrereq] === undefined);
+            expect(missing).toStrictEqual([]);
         });
 
         it('documents check structure (command string, not args array)', () => {
@@ -140,7 +142,7 @@ describe('Mock Structure Validation - Prerequisites', () => {
             // parseVersion is optional
             expect(['string', 'undefined']).toContain(typeof sampleCheck.parseVersion);
             // 'args' should NOT exist
-            expect((sampleCheck as any).args).toBeUndefined();
+            expect(sampleCheck).not.toHaveProperty('args');
         });
 
         it('documents componentRequirements structure', () => {
@@ -148,17 +150,15 @@ describe('Mock Structure Validation - Prerequisites', () => {
             const sampleReq = Object.values(actualPrerequisitesJson.componentRequirements)[0];
 
             expect(Array.isArray(sampleReq.prerequisites)).toBe(true);
-            // plugins is optional
-            if (sampleReq.plugins) {
-                expect(Array.isArray(sampleReq.plugins)).toBe(true);
-            }
+            // plugins is optional — absent is fine, present-but-not-an-array is not.
+            expect(sampleReq.plugins === undefined || Array.isArray(sampleReq.plugins)).toBe(true);
         });
 
         it('documents install.steps structure for dynamic prerequisites', () => {
             const nodePrereq = actualPrerequisitesJson.prerequisites.find(p => p.id === 'node');
             expect(nodePrereq?.install?.dynamic).toBe(true);
 
-            const step = nodePrereq?.install?.steps?.[0] as any;
+            const step = nodePrereq?.install?.steps?.[0];
             expect(step?.name).toBeDefined();
             expect(step?.commandTemplate).toBeDefined(); // dynamic uses commandTemplate
             expect(step?.estimatedDuration).toBeDefined();
@@ -177,7 +177,7 @@ describe('Mock Structure Validation - Prerequisites', () => {
 
         it('should have plugins with id, name, check, install, requiredFor', () => {
             const aioCli = actualPrerequisitesJson.prerequisites.find(p => p.id === 'aio-cli');
-            const plugin = aioCli!.plugins![0] as any;
+            const plugin = aioCli!.plugins![0];
 
             expect(plugin.id).toBeDefined();
             expect(plugin.name).toBeDefined();

@@ -17,41 +17,39 @@
 
 import * as fs from 'fs/promises';
 import { ProjectConfigWriter } from '@/core/state/projectConfigWriter';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import * as path from 'path';
 
+import { codedError } from '../../helpers/codedErrorFake';
+import { createMockLogger } from '../../helpers/loggerFake';
+import { createMockProject } from '../../helpers/projectFake';
 // Mock fs/promises
 jest.mock('fs/promises');
 
 const mockFs = fs as jest.Mocked<typeof fs>;
 
-// Create a detailed mock logger that captures all calls for debugging
+// The canonical logger, plus the one view of its calls these tests read.
 const createDetailedMockLogger = () => {
-    const calls: Array<{ level: string; message: string; args: unknown[] }> = [];
+    const logger = createMockLogger();
     return {
-        debug: jest.fn((...args: unknown[]) => calls.push({ level: 'debug', message: String(args[0]), args })),
-        info: jest.fn((...args: unknown[]) => calls.push({ level: 'info', message: String(args[0]), args })),
-        warn: jest.fn((...args: unknown[]) => calls.push({ level: 'warn', message: String(args[0]), args })),
-        error: jest.fn((...args: unknown[]) => calls.push({ level: 'error', message: String(args[0]), args })),
-        getCalls: () => calls,
-        getDebugCalls: () => calls.filter((c) => c.level === 'debug'),
-        getErrorCalls: () => calls.filter((c) => c.level === 'error'),
-        printCalls: () => calls.forEach((c) => console.log(`[${c.level}] ${c.message}`)),
+        ...logger,
+        getErrorCalls: () =>
+            logger.error.mock.calls.map(([message]) => ({ message: String(message) })),
     };
 };
 
 // Create a minimal valid project for testing
 function createTestProject(overrides: Partial<Project> = {}): Project {
-    return {
+    return createMockProject({
         name: 'test-project',
         path: '/test/path/my-project',
         created: new Date('2024-01-01T00:00:00Z'),
         componentSelections: {},
-        componentInstances: [],
+        componentInstances: {},
         componentConfigs: {},
         componentVersions: {},
         ...overrides,
-    } as Project;
+    });
 }
 
 describe('Manifest Error Investigation', () => {
@@ -61,7 +59,7 @@ describe('Manifest Error Investigation', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         mockLogger = createDetailedMockLogger();
-        writer = new ProjectConfigWriter(mockLogger as any);
+        writer = new ProjectConfigWriter(mockLogger);
 
         // Default mock implementations
         mockFs.access.mockResolvedValue(undefined);
@@ -77,15 +75,19 @@ describe('Manifest Error Investigation', () => {
             const project = createTestProject({ path: '' });
 
             // When: Attempting to save
-            await expect(writer.saveProjectConfig(project, project.path)).rejects.toThrow('Invalid project path');
+            await expect(writer.saveProjectConfig(project, project.path)).rejects.toThrow(
+                'Invalid project path'
+            );
         });
 
         it('should reject undefined path', async () => {
             // Given: A project with undefined path
-            const project = createTestProject({ path: undefined as any });
+            const project = createTestProject({ path: undefined as unknown as string });
 
             // When: Attempting to save
-            await expect(writer.saveProjectConfig(project, project.path)).rejects.toThrow('Invalid project path');
+            await expect(writer.saveProjectConfig(project, project.path)).rejects.toThrow(
+                'Invalid project path'
+            );
         });
 
         it('should reject whitespace-only path', async () => {
@@ -93,15 +95,19 @@ describe('Manifest Error Investigation', () => {
             const project = createTestProject({ path: '   ' });
 
             // When: Attempting to save
-            await expect(writer.saveProjectConfig(project, project.path)).rejects.toThrow('Invalid project path');
+            await expect(writer.saveProjectConfig(project, project.path)).rejects.toThrow(
+                'Invalid project path'
+            );
         });
 
         it('should reject null path', async () => {
             // Given: A project with null path
-            const project = createTestProject({ path: null as any });
+            const project = createTestProject({ path: null as unknown as string });
 
             // When: Attempting to save
-            await expect(writer.saveProjectConfig(project, project.path)).rejects.toThrow('Invalid project path');
+            await expect(writer.saveProjectConfig(project, project.path)).rejects.toThrow(
+                'Invalid project path'
+            );
         });
 
         it('should accept valid path', async () => {
@@ -145,7 +151,9 @@ describe('Manifest Error Investigation', () => {
 
             // Then: Error should be logged
             const errorCalls = mockLogger.getErrorCalls();
-            expect(errorCalls.some((c) => c.message.includes('Failed to update project manifest'))).toBe(true);
+            expect(
+                errorCalls.some((c) => c.message.includes('Failed to update project manifest'))
+            ).toBe(true);
         });
 
         it('should verify temp file exists before rename', async () => {
@@ -162,8 +170,10 @@ describe('Manifest Error Investigation', () => {
         it('should handle ENOENT during rename', async () => {
             // Given: rename fails with ENOENT (the exact error we see in production)
             const project = createTestProject();
-            const enoentError = new Error("ENOENT: no such file or directory, rename '/test/path/.demo-builder.json.tmp' -> '/test/path/.demo-builder.json'");
-            (enoentError as any).code = 'ENOENT';
+            const enoentError = codedError(
+                "ENOENT: no such file or directory, rename '/test/path/.demo-builder.json.tmp' -> '/test/path/.demo-builder.json'",
+                { code: 'ENOENT' }
+            );
 
             mockFs.rename.mockRejectedValue(enoentError);
 
@@ -172,7 +182,9 @@ describe('Manifest Error Investigation', () => {
 
             // Then: Error should be logged
             const errorCalls = mockLogger.getErrorCalls();
-            expect(errorCalls.some((c) => c.message.includes('Failed to update project manifest'))).toBe(true);
+            expect(
+                errorCalls.some((c) => c.message.includes('Failed to update project manifest'))
+            ).toBe(true);
         });
     });
 
@@ -285,17 +297,24 @@ describe('Manifest Error Investigation', () => {
             mockFs.rename.mockRejectedValue(specificError);
 
             // When: Saving fails
-            try {
-                await writer.saveProjectConfig(project, project.path);
-                fail('Should have thrown');
-            } catch (error) {
-                // Then: Original error preserved
-                expect(error).toBe(specificError);
-            }
+            // The REJECTION is the claim. Captured with .then(resolve, reject) and
+            // asserted outside any catch, so the assertions always run — inside a
+            // catch they are skipped entirely if the call ever stops throwing, and
+            // `fail()` in the try is the only thing that was noticing.
+            const error = await writer.saveProjectConfig(project, project.path).then(
+                () => {
+                    throw new Error('expected a rejection, but the call resolved');
+                },
+                (caught: unknown) => caught as NodeJS.ErrnoException,
+            );
+            // Then: Original error preserved
+            expect(error).toBe(specificError);
 
             // And: Error should be logged
             const errorCalls = mockLogger.getErrorCalls();
-            expect(errorCalls.some((c) => c.message.includes('Failed to update project manifest'))).toBe(true);
+            expect(
+                errorCalls.some((c) => c.message.includes('Failed to update project manifest'))
+            ).toBe(true);
         });
     });
 
@@ -363,6 +382,6 @@ describe('StateManager Save Chain Investigation', () => {
 
         // This chain is the source of the manifest error
         // The debug logging we added will reveal which step has invalid path
-        expect(callChain.length).toBe(7);
+        expect(callChain).toHaveLength(7);
     });
 });

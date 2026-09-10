@@ -1,0 +1,95 @@
+/**
+ * .sum-* styles — the cross-area summary column in Build Your Project.
+ *
+ * FEATURE-SCOPED (ADR-017 §6). Imported by the `wizard` entry ALONE — the only one
+ * whose graph reaches BuildYourProjectSummary.
+ *
+ * Moved out of utilities.css by the CSS migration
+ * (.rptc/plans/css-architecture-migration), each rule with the comment above it.
+ * Verbatim otherwise: a move is only correct when the visual diff is empty.
+ */
+
+@layer theme {
+.sum-title {
+    font-size: var(--spectrum-global-dimension-font-size-50);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--spectrum-global-color-gray-600);
+    margin-bottom: var(--spectrum-global-dimension-size-150);
+}
+
+.sum-arch {
+    font-size: var(--spectrum-global-dimension-font-size-100);
+    font-weight: 600;
+    color: var(--spectrum-global-color-gray-900);
+    padding-bottom: var(--spectrum-global-dimension-size-125);
+    margin-bottom: var(--spectrum-global-dimension-size-75);
+    border-bottom: 1px solid var(--spectrum-global-color-gray-300);
+}
+
+.sum-arch .empty {
+    color: var(--spectrum-global-color-gray-600);
+    font-weight: 400;
+    font-style: italic;
+}
+
+.sum-group-h {
+    font-size: var(--spectrum-global-dimension-font-size-50);
+    color: var(--spectrum-global-color-gray-700);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: var(--spectrum-global-dimension-size-150) 0 var(--spectrum-global-dimension-size-40);
+}
+
+.sum-row {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--spectrum-global-dimension-size-125);
+    padding: var(--spectrum-global-dimension-size-50) 0;
+    font-size: var(--spectrum-global-dimension-font-size-75);
+}
+
+.sum-row + .sum-row {
+    border-top: 1px solid var(--spectrum-global-color-gray-200);
+}
+
+/* Left group: the shared small CheckmarkCircle (done only) + the row label. */
+.sum-rowlabel {
+    display: flex;
+    align-items: center;
+    gap: var(--spectrum-global-dimension-size-65);
+    min-width: 0;
+}
+
+.sum-label {
+    color: var(--spectrum-global-color-gray-600);
+    white-space: nowrap;
+}
+
+.sum-value {
+    color: var(--spectrum-global-color-gray-900);
+    text-align: right;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sum-value.empty {
+    color: var(--spectrum-global-color-gray-600);
+    font-style: italic;
+}
+
+.sum-check {
+    animation: sum-check-in var(--spectrum-global-animation-duration-300) var(--spectrum-global-animation-ease-out);
+}
+
+/* Completion feedback: the shared ✓ renders only when a row is done, so it mounts
+ * on completion and this pop fires once — a subtle reward as each sub-step lands.
+ * Zeroed under the global prefers-reduced-motion reset. Moved here from
+ * utilities.css 2026-09-09 to sit with the rule that names it. */
+@keyframes sum-check-in {
+    from { opacity: 0; transform: scale(0.6); }
+    to { opacity: 1; transform: scale(1); }
+}
+}

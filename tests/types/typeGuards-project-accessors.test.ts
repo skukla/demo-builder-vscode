@@ -17,11 +17,9 @@ import {
     getComponentConfigPort,
     isEdsStackId,
     isEdsProject,
-    getEdsLiveUrl,
-    getEdsPreviewUrl,
     getAdminPanelUrl,
 } from '@/types/typeGuards';
-import { Project } from '@/types/base';
+import { createMockProject } from '../helpers/projectFake';
 
 describe('typeGuards - Project Accessors', () => {
     // =================================================================
@@ -30,11 +28,11 @@ describe('typeGuards - Project Accessors', () => {
 
     describe('getComponentVersion', () => {
         it('should return version when component exists', () => {
-            const project = {
+            const project = createMockProject({
                 componentVersions: {
                     headless: { version: '1.2.3', lastUpdated: '' },
                 },
-            } as Partial<Project> as Project;
+            });
             expect(getComponentVersion(project, 'headless')).toBe('1.2.3');
         });
 
@@ -47,16 +45,18 @@ describe('typeGuards - Project Accessors', () => {
         });
 
         it('should return undefined when component not found', () => {
-            const project = {
+            const project = createMockProject({
                 componentVersions: {
                     'other-component': { version: '1.0.0', lastUpdated: '' },
                 },
-            } as Partial<Project> as Project;
+            });
             expect(getComponentVersion(project, 'headless')).toBeUndefined();
         });
 
         it('should return undefined when componentVersions is undefined', () => {
-            const project = {} as Project;
+            // EXPLICITLY undefined: the canonical fixture supplies `{}`, so a bare
+            // createMockProject() never reaches the `?.` this test is named for.
+            const project = createMockProject({ componentVersions: undefined });
             expect(getComponentVersion(project, 'headless')).toBeUndefined();
         });
     });
@@ -67,11 +67,11 @@ describe('typeGuards - Project Accessors', () => {
 
     describe('getProjectFrontendPort', () => {
         it('should return port when frontend component exists', () => {
-            const project = {
+            const project = createMockProject({
                 componentInstances: {
                     headless: { id: 'headless', name: 'Headless', status: 'ready', type: 'frontend', port: 3000 },
                 },
-            } as Partial<Project> as Project;
+            });
             expect(getProjectFrontendPort(project)).toBe(3000);
         });
 
@@ -84,16 +84,17 @@ describe('typeGuards - Project Accessors', () => {
         });
 
         it('should return undefined when frontend component not found', () => {
-            const project = {
+            const project = createMockProject({
                 componentInstances: {
                     'other-component': { id: 'other-component', name: 'Other', status: 'ready', port: 8080 },
                 },
-            } as Partial<Project> as Project;
+            });
             expect(getProjectFrontendPort(project)).toBeUndefined();
         });
 
         it('should return undefined when componentInstances is undefined', () => {
-            const project = {} as Project;
+            // EXPLICITLY undefined — see the componentVersions note above.
+            const project = createMockProject({ componentInstances: undefined });
             expect(getProjectFrontendPort(project)).toBeUndefined();
         });
     });
@@ -112,15 +113,15 @@ describe('typeGuards - Project Accessors', () => {
         });
 
         it('should return empty array for undefined', () => {
-            expect(getComponentIds(undefined)).toEqual([]);
+            expect(getComponentIds(undefined)).toStrictEqual([]);
         });
 
         it('should return empty array for null', () => {
-            expect(getComponentIds(null)).toEqual([]);
+            expect(getComponentIds(null)).toStrictEqual([]);
         });
 
         it('should return empty array for empty object', () => {
-            expect(getComponentIds({})).toEqual([]);
+            expect(getComponentIds({})).toStrictEqual([]);
         });
     });
 
@@ -203,27 +204,27 @@ describe('typeGuards - Project Accessors', () => {
 
     describe('isEdsProject', () => {
         it('should return true for eds-dalive stack', () => {
-            const project = { selectedStack: 'eds-dalive' } as Project;
+            const project = createMockProject({ selectedStack: 'eds-dalive' });
             expect(isEdsProject(project)).toBe(true);
         });
 
         it('should return true for eds-github stack', () => {
-            const project = { selectedStack: 'eds-github' } as Project;
+            const project = createMockProject({ selectedStack: 'eds-github' });
             expect(isEdsProject(project)).toBe(true);
         });
 
         it('should return true for any eds- prefixed stack', () => {
-            const project = { selectedStack: 'eds-future-variant' } as Project;
+            const project = createMockProject({ selectedStack: 'eds-future-variant' });
             expect(isEdsProject(project)).toBe(true);
         });
 
         it('should return false for headless stack', () => {
-            const project = { selectedStack: 'headless' } as Project;
+            const project = createMockProject({ selectedStack: 'headless' });
             expect(isEdsProject(project)).toBe(false);
         });
 
         it('should return false for headless-paas stack', () => {
-            const project = { selectedStack: 'headless-paas' } as Project;
+            const project = createMockProject({ selectedStack: 'headless-paas' });
             expect(isEdsProject(project)).toBe(false);
         });
 
@@ -236,81 +237,8 @@ describe('typeGuards - Project Accessors', () => {
         });
 
         it('should return false when selectedStack is undefined', () => {
-            const project = {} as Project;
+            const project = createMockProject();
             expect(isEdsProject(project)).toBe(false);
-        });
-    });
-
-    // =================================================================
-    // getEdsLiveUrl Tests (SOP §4 compliance - EDS metadata access)
-    // =================================================================
-
-    describe('getEdsLiveUrl', () => {
-        it('should return live URL from EDS component metadata', () => {
-            const project = {
-                selectedStack: 'eds-dalive',
-                componentInstances: {
-                    'eds-storefront': {
-                        id: 'eds-storefront',
-                        name: 'Edge Delivery Services',
-                        status: 'deployed',
-                        metadata: {
-                            liveUrl: 'https://main--my-site--owner.aem.live',
-                        },
-                    },
-                },
-            } as unknown as Project;
-            expect(getEdsLiveUrl(project)).toBe('https://main--my-site--owner.aem.live');
-        });
-
-        it('should return undefined for undefined project', () => {
-            expect(getEdsLiveUrl(undefined)).toBeUndefined();
-        });
-
-        it('should return undefined for null project', () => {
-            expect(getEdsLiveUrl(null)).toBeUndefined();
-        });
-
-        it('should return undefined when not an EDS project', () => {
-            const project = {
-                selectedStack: 'headless',
-                componentInstances: {
-                    eds: {
-                        metadata: {
-                            liveUrl: 'https://main--my-site--owner.aem.live',
-                        },
-                    },
-                },
-            } as unknown as Project;
-            expect(getEdsLiveUrl(project)).toBeUndefined();
-        });
-
-        it('should return undefined when EDS component has no metadata', () => {
-            const project = {
-                selectedStack: 'eds-dalive',
-                componentInstances: {
-                    eds: {
-                        id: 'eds',
-                        status: 'deployed',
-                    },
-                },
-            } as unknown as Project;
-            expect(getEdsLiveUrl(project)).toBeUndefined();
-        });
-
-        it('should return undefined when no EDS component exists', () => {
-            const project = {
-                selectedStack: 'eds-dalive',
-                componentInstances: {},
-            } as unknown as Project;
-            expect(getEdsLiveUrl(project)).toBeUndefined();
-        });
-
-        it('should return undefined when componentInstances is undefined', () => {
-            const project = {
-                selectedStack: 'eds-dalive',
-            } as Project;
-            expect(getEdsLiveUrl(project)).toBeUndefined();
         });
     });
 
@@ -320,25 +248,25 @@ describe('typeGuards - Project Accessors', () => {
 
     describe('getAdminPanelUrl', () => {
         it('should return admin URL stored under the backend component config', () => {
-            const project = {
+            const project = createMockProject({
                 componentSelections: { backend: 'adobe-commerce-paas' },
                 componentConfigs: {
                     'adobe-commerce-paas': {
                         ADOBE_COMMERCE_ADMIN_URL: 'https://my-store.adobedemo.com/admin',
                     },
                 },
-            } as unknown as Project;
+            });
             expect(getAdminPanelUrl(project)).toBe('https://my-store.adobedemo.com/admin');
         });
 
         it('should return admin URL stored under any other component config', () => {
-            const project = {
+            const project = createMockProject({
                 componentConfigs: {
                     headless: {
                         ADOBE_COMMERCE_ADMIN_URL: 'https://other.adobedemo.com/admin',
                     },
                 },
-            } as unknown as Project;
+            });
             expect(getAdminPanelUrl(project)).toBe('https://other.adobedemo.com/admin');
         });
 
@@ -351,44 +279,44 @@ describe('typeGuards - Project Accessors', () => {
         });
 
         it('should return undefined when the key is absent from all configs', () => {
-            const project = {
+            const project = createMockProject({
                 componentConfigs: {
                     'adobe-commerce-paas': { ADOBE_COMMERCE_URL: 'https://my-store.adobedemo.com' },
                 },
-            } as unknown as Project;
+            });
             expect(getAdminPanelUrl(project)).toBeUndefined();
         });
 
         it('should return undefined when the stored value is an empty string', () => {
-            const project = {
+            const project = createMockProject({
                 componentConfigs: {
                     'adobe-commerce-paas': { ADOBE_COMMERCE_ADMIN_URL: '' },
                 },
-            } as unknown as Project;
+            });
             expect(getAdminPanelUrl(project)).toBeUndefined();
         });
 
         it('should return undefined when componentConfigs is undefined', () => {
-            const project = {} as Project;
+            const project = createMockProject();
             expect(getAdminPanelUrl(project)).toBeUndefined();
         });
 
         it('should derive the SaaS admin URL from the ACCS GraphQL endpoint when no explicit URL is set', () => {
-            const project = {
+            const project = createMockProject({
                 componentConfigs: {
                     'adobe-commerce-accs': {
                         ACCS_GRAPHQL_ENDPOINT:
                             'https://na1-sandbox.api.commerce.adobe.com/UoGYsHrcxMyeoVd2zUktZi/graphql',
                     },
                 },
-            } as unknown as Project;
+            });
             expect(getAdminPanelUrl(project)).toBe(
                 'https://na1-sandbox.admin.commerce.adobe.com/UoGYsHrcxMyeoVd2zUktZi/admin/admin/dashboard/'
             );
         });
 
         it('should prefer an explicit admin URL over the derived ACCS one', () => {
-            const project = {
+            const project = createMockProject({
                 componentConfigs: {
                     'adobe-commerce-accs': {
                         ACCS_GRAPHQL_ENDPOINT:
@@ -396,72 +324,20 @@ describe('typeGuards - Project Accessors', () => {
                         ADOBE_COMMERCE_ADMIN_URL: 'https://custom.example.com/admin',
                     },
                 },
-            } as unknown as Project;
+            });
             expect(getAdminPanelUrl(project)).toBe('https://custom.example.com/admin');
         });
 
         it('should return undefined when the ACCS endpoint is not derivable', () => {
-            const project = {
+            const project = createMockProject({
                 componentConfigs: {
                     'adobe-commerce-accs': {
                         ACCS_GRAPHQL_ENDPOINT: 'https://my-own-host.example.com/graphql',
                     },
                 },
-            } as unknown as Project;
+            });
             expect(getAdminPanelUrl(project)).toBeUndefined();
         });
     });
 
-    // =================================================================
-    // getEdsPreviewUrl Tests (SOP §4 compliance - EDS metadata access)
-    // =================================================================
-
-    describe('getEdsPreviewUrl', () => {
-        it('should return preview URL from EDS component metadata', () => {
-            const project = {
-                selectedStack: 'eds-dalive',
-                componentInstances: {
-                    'eds-storefront': {
-                        id: 'eds-storefront',
-                        name: 'Edge Delivery Services',
-                        status: 'deployed',
-                        metadata: {
-                            previewUrl: 'https://main--my-site--owner.aem.page',
-                        },
-                    },
-                },
-            } as unknown as Project;
-            expect(getEdsPreviewUrl(project)).toBe('https://main--my-site--owner.aem.page');
-        });
-
-        it('should return undefined for undefined project', () => {
-            expect(getEdsPreviewUrl(undefined)).toBeUndefined();
-        });
-
-        it('should return undefined for null project', () => {
-            expect(getEdsPreviewUrl(null)).toBeUndefined();
-        });
-
-        it('should return undefined when not an EDS project', () => {
-            const project = {
-                selectedStack: 'headless',
-            } as Project;
-            expect(getEdsPreviewUrl(project)).toBeUndefined();
-        });
-
-        it('should return undefined when EDS component has no previewUrl', () => {
-            const project = {
-                selectedStack: 'eds-dalive',
-                componentInstances: {
-                    eds: {
-                        metadata: {
-                            liveUrl: 'https://main--my-site--owner.aem.live',
-                            // no previewUrl
-                        },
-                    },
-                },
-            } as unknown as Project;
-            expect(getEdsPreviewUrl(project)).toBeUndefined();
-        });
-    });
 });

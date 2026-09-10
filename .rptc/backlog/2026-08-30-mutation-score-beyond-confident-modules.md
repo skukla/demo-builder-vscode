@@ -1,0 +1,538 @@
+---
+id: PL-22
+kind: question
+area: platform
+parent: PL-11
+needs: [PL-9]
+value: med
+status: shipped
+layer: A
+---
+
+# 93% was the ceiling, not the norm — mutation scores fall as async density rises
+
+**Answered 2026-08-30: no.** It stays open because answering it started a burn-down that
+is not finished, and because the thresholds the answer implies are proposed rather than
+ratified. See "What keeps this open".
+
+## The answer
+
+The pilot's 93.37% came from four modules picked because we believed they were well
+tested. Pointed at eight modules picked for importance instead, the same instrument
+scored **59.29%** — 1,329 planted defects, 16m15s. So 93% was the ceiling, not the norm.
+
+Two qualifications on that headline number, both found afterwards and both recorded here
+rather than quietly dropped:
+
+- **59.29% is understated.** The run's jest config named 12 of installHandler's 13 suites
+  and 1 of integrationCardModel's 5, so mutants counted as uncovered were merely unrun.
+  Corrected, integrationCardModel went 42.96% → 91.90% — it had never been badly tested.
+  `tests/sop/mutation-config-pairing.test.ts` now fails when a mutated module's suites are
+  not all named, so this cannot recur.
+- **The answer survives the correction.** The corrected distribution still runs from
+  43.77% to 100%, which is the finding.
+
+**The cause is structural, not carelessness.** Across the measured modules, score
+correlates with async density at **r = −0.72**. A mock cannot see a malformed call — it
+answers the same however it is invoked — so a mutant in *how* a collaborator is called
+survives unless the test asserts the arguments. Four production defects in this repo hid
+in exactly that gap with twelve tests staying green.
+
+## What is measured now
+
+**610 of 622 measurable modules — 98% — pinned in `reports/mutation/baseline.json`**
+(sweep completed 2026-09-03; `npm run test:mutation:sweep`, resumable, skips a pinned
+module so a re-measure can never silently lower a floor). The 12 unpinned: 11 have no
+test suite at all; 1 has a suite named for it that never touches it.
+
+| Tier | n | Median score | 25th–75th | At proposed floor | Done (0 gaps) | Open gaps |
+|---|---|---|---|---|---|---|
+| pure | 286 | 79.6% | 58.7–93.0 | 96 (34%) | 57 (20%) | 4,775 |
+| mixed | 109 | 65.5% | 52.2–77.5 | 23 (21%) | 3 (3%) | 3,744 |
+| orchestration | 215 | 63.4% | 44.1–73.5 | 68 (32%) | 11 (5%) | 8,956 |
+| **all** | **610** | **69.2%** | 52.3–84.5 | 187 (31%) | 71 (12%) | **17,475** |
+
+**17,475 real gaps** — surviving or uncovered mutants that are not wording changes and not
+recorded as equivalent. By area, ranked: eds 3,926 (103 modules) · project-creation
+2,257 · dashboard 1,521 · ai 1,242 · data-installer 909 · core/ui 812 · authentication
+812 · prerequisites 775 · updates 734 · components 731 · projects-dashboard 617 · mesh 532.
+
+Worst twelve by open gaps: `daLiveContentCopy.ts` 437 (6.31%), `dashboard/commands/
+configure.ts` 262, `projects-dashboard/handlers/dashboardHandlers.ts` 205,
+`RepoSelectionInline.tsx` 201, `envFileGenerator.ts` 194, `useWizardState.ts` 186,
+`projectDeletionService.ts` 183, `useComponentConfig.ts` 181,
+`adobeWorkspaceCredentials.ts` 178, `ReviewStep.tsx` 166, `createProject.ts` 163,
+`prerequisites/handlers/shared.ts` 152.
+
+## What the burn-down has moved
+
+Four modules were worked end to end, each score change tied to commits that added tests:
+
+| Module | First pinned | Now | Notes |
+|---|---|---|---|
+| `prerequisites/handlers/installHandler.ts` | 41.77% | **71.16%** | six commits; ~8 points of the rise was the config correction above, the rest new tests |
+| `eds/handlers/daLive/daLiveAuthPrompt.ts` | 67.04% | **82.58%** | dipped 0.19 when dead code was deleted — tested code removed, not coverage lost |
+| `ai/server/siteTools.ts` | 57.33% | **69.20%** | complete at 69.2%: one survivor left, triaged |
+| `core/state/stateManager.ts` | 56.49% | **66.88%** | |
+
+Barely started: `authenticationService.ts` 39.25% → 43.77%, `componentUpdater.ts`
+44.60% → 46.34%. Unmoved by design: `updateManager.ts` at 51.40%, whose 17 misses are all
+one swallowed log line — killable only by asserting log text, which the ratchet exists to
+refuse to reward.
+
+## Thresholds — RATIFIED 2026-09-03: tiers as measured, floors as targets, `openGaps` as the gate
+
+One number cannot fit, so the plan proposes three, by tier. `tierOf()` in
+`scripts/mutationScope.mjs` assigns them mechanically: no `await` is pure, async density
+above 4% is orchestration, the rest is mixed.
+
+| Tier | Observed (n) | Median | Proposed floor | Currently passing |
+|---|---|---|---|---|
+| pure | 77.8 · 88.2 · 91.9 · 94.4 · 100 · 100 (6) | 93.2% | **90%** | 4 of 6 |
+| mixed | 69.2 · 84.5 (2) | 76.9% | **80%** | 1 of 2 |
+| orchestration | 43.8 · 46.3 · 51.4 · 66.9 · 71.2 · 82.6 · 83.3 · 95.7 (8) | 69.0% | **70%** | 4 of 8 |
+
+The plan's own table lists pure as n=5 with a 94.4% median; it omits `spectrumTokens.ts`
+at 88.24%. Recomputed over all six, the median is 93.2% — which still supports a 90% floor,
+but two of six modules fail it rather than one of five.
+
+### Why the floors must not be the gate
+
+The baseline records `highValueSurvivors` beside each score — surviving mutants that are
+not wording-only. That field, not the score, is what the plan's definition of "done"
+actually describes. **The two disagree on 7 of the 16 pinned modules.**
+
+| Module | Score vs floor | High-value survivors |
+|---|---|---|
+| `prerequisites/handlers/installHandler.ts` | **PASS** 71.16% | **55** — the most of any module |
+| `updates/services/updateManager.ts` | FAIL 51.40% | 52 |
+| `core/utils/mcpSocketPath.ts` | **FAIL** 77.78% | **0** — finished |
+| `ai/server/siteTools.ts` | **FAIL** 69.20% | **1** — finished |
+
+`installHandler` cleared its floor after six commits of test work while holding more real
+untested decisions than `updateManager`, which fails its floor. Ratifying the floors as a
+pass/fail gate would grade those two the wrong way round.
+
+`mcpSocketPath` additionally **cannot reach 90%**: it has 9 mutants, so the only attainable
+scores near the floor are 77.8%, 88.9% and 100%. A hard floor on a small module is
+unreachable by arithmetic, not by neglect.
+
+### The recommendation
+
+- **Ratify the tier model.** It is mechanical, objective, and grounded — score correlates
+  with async density at r = −0.72.
+- **Ratify the floors as TARGETS** — what a properly worked module of that tier should
+  reach. `mixed` stays provisional at n=2.
+- **Do NOT gate on the floors.** Gate on `highValueSurvivors` falling to zero, which the
+  baseline already records and the ratchet already guards. A module is done when every
+  remaining survivor is triaged as equivalent or wording-only — a file at 69% can be done
+  and a file at 85% can be neglected.
+
+### The same question at 610 modules
+
+The 16-module medians the floors were fitted to were the BEST-tested code in the repo,
+not the middle of it. At 610: the pure median is 79.6% against a 90% floor (34% pass),
+mixed 65.5% against 80% (21%), orchestration 63.4% against 70% (32%). Ratified as a gate
+today, the floors would fail two modules in three.
+
+And the floor still answers the wrong question. Across 610 modules the floor verdict and
+"zero open gaps" **disagree on 126** — 121 modules clear their floor with real gaps
+left, 5 fall short of it with none. The recommendation stands and is now grounded in
+the full set rather than sixteen: the tiers are right, the floors are targets, and
+`openGaps` is the gate.
+
+## What keeps this open
+
+1. ~~Nothing is ratified yet.~~ **Ratified 2026-09-03** in the shape stated at the top of
+   `.rptc/plans/mutation-scope-and-thresholds/overview.md`: tiers as measured, floors as
+   targets, `openGaps` zero as done, the per-change ratchet unchanged.
+2. ~~The burn-down is at 3.2%.~~ **The map exists — 98% measured.** What remains is
+   working it: 17,475 open gaps, 71 modules done. The plan's step 6 says order by
+   consequence, not score; the area table above is the input to that ordering.
+3. ~~115 React files are invisible to the instrument.~~ **FIXED 2026-09-03**, and it was
+   156 files rather than 115 — the 115 `.tsx` sources plus 41 `.ts` sources whose suites
+   are all React suites, a group no count had included. The focused runner now picks its
+   jest project from the module's suites instead of always using the node one. Measurable
+   set: 466 -> **622**.
+4. **70 files have no tests at all.** A coverage question, not a mutation one. (The plan
+   says 72; `mutationScope.mjs` reports 70 and 120-with-no-own-suite as of today.)
+
+~~The plan states PL-22 closes once every included module is measured and ratcheted, at
+which point the cadence drops to release cuts.~~
+
+**CLOSED 2026-09-07 on exactly that condition.** All **622** measurable modules are measured
+and ratcheted, and every one reads zero open gaps. Item 2 above last recorded 17,475 gaps
+across 71 finished modules; the remaining 551 were worked over four days of goal-queue runs.
+
+Two things the burn-down changed about the question itself, both worth keeping:
+
+- **The map grew while it was being worked.** 610 modules at zero on 2026-09-06 became 622,
+  because fixing test ATTRIBUTION exposed twelve modules the instrument could not see — one
+  with 217 mutants, one with four suites, one reading 0% because its only suite tested a
+  stylesheet. A score is only as honest as the set it is measured over. That work is [[PL-45]].
+- **The async correlation held.** The hardest modules in the tail were the async ones, exactly
+  as r = -0.72 predicted: `executorMeshPhase` opened at 22.73% and `diagnosticsReport` at
+  41.53%, both orchestration-heavy.
+
+Item 4 stays out of scope by its own terms — files with no tests at all are a coverage
+question, not a mutation one, and closing this item does not answer it.
+
+The cadence now drops to release cuts.
+
+## Tooling that now exists
+
+`scripts/focusModule.mjs` (one module in 1–3 minutes), `scripts/mutationWorklist.mjs`,
+`scripts/mutationScope.mjs` + `scripts/mutation-scope.ledger.json`,
+`stryker.focus.config.json` + `jest.focus.config.js`, and the pairing enforcer above.
+
+## Related
+
+- `.claude/skills/mutation-test-pilot/SKILL.md` — how to run it, how to read survivors,
+  and the three things a surviving mutant can mean (real gap / equivalent mutant /
+  dead defensiveness)
+- ADR-016 — names mutation testing as how test effectiveness is measured
+- PL-11 — the convergence programme this belongs to
+
+## Shipped so far
+
+- 2026-08-30  Filed. The pilot and its 93.37% baseline landed the same day
+  (`c4118338e`); this asks the question that number cannot answer on its own.
+- 2026-08-30  docs(plan): file PL-22 — does 93% hold outside the modules we already trusted? (`0c1b8bf7e`)
+- 2026-08-30  Sample run mis-scoped: 7 of 8 modules had no test selected (jest config hard-codes the pilot's 4 paths), reported 0% in 19s. Fixed with jest.pl22.config.js + tests/sop/mutation-config-pairing.test.ts; real run in flight.
+- 2026-08-30  ANSWERED: no. Pilot 93.37% (4 pure modules, mean 1 await); representative 8-module sample 59.29% (1329 mutants, 16m15s). Control envMerge reproduced 100% exactly. Score falls monotonically with await count: installHandler (41 awaits) 41.77%. Finding: async+mocked code is what tests fail to constrain.
+- 2026-08-30  test(mutation): PL-22 answered — the pilot's 93% does not generalise (`48b61956e`)
+- 2026-08-30  test(prerequisites): cover the plugin install path, untested until now (`385d7d6ff`)
+- 2026-08-30  test(prerequisites): assert what installHandler's mocks already record (`8568d532e`)
+- 2026-08-30  test(mutation): ratchet the score before improving it, and guard against gaming it (`0fd0974ce`)
+- 2026-08-31  feat(tooling): widen the mutation sample to the UI layer, and split duplication into two floors (`3ab1d0328`)
+- 2026-08-31  2026-08-31  Mutation numbers CORRECTED, not improved: jest.pl22.config.js named 12 of installHandler's 13 suites and 1 of integrationCardModel's 5. integrationCardModel 42.96% -> 91.90% (comes off the target list, was never badly tested); installHandler 49.17% -> 57.12% and remains the real worst, its NoCoverage 112 -> 36 converting into Survived. Ten unmoved modules are the control. Baseline carries _supersedes + _correction so this cannot be counted as progress. mutation-config-pairing now requires EVERY suite for a mutated module.
+- 2026-08-31  chore(health): snapshot, with the mutation half marked as a correction (`3b0223654`)
+- 2026-08-31  docs(backlog): record the mutation correction against PL-22 (`02cfbea46`)
+- 2026-09-03  Item rewritten to lead with the ANSWER rather than the question. Documents: the 59.29% representative sample and the two qualifications on it (config undercount, corrected); r=-0.72 async correlation; the 16 pinned modules (min 43.77, median 83.33) = 3.2% of the 507-file included set; the four modules the burn-down moved (installHandler 41.77->71.16, daLiveAuthPrompt 67.04->82.58, siteTools 57.33->69.20, stateManager 56.49->66.88); the three PROPOSED tier floors (pure 90 / mixed 80 / orchestration 70) marked unratified; and the four things keeping it open.
+- 2026-09-03  Thresholds assessed against the data rather than accepted from the plan. Finding: the tier model is sound (mechanical, r=-0.72) but the floors are the WRONG GATE — floor verdict and highValueSurvivors disagree on 7 of 16 pinned modules. installHandler PASSES at 71.16% holding 55 high-value survivors (most of any module) while updateManager FAILS at 51.40% holding 52; mcpSocketPath FAILS the 90% pure floor at 77.78% with ZERO high-value survivors and cannot reach 90% at all (9 mutants, steps of 11.1pt). Also corrected the plan's pure tier: n=6 not n=5 (spectrumTokens 88.24 omitted), median 93.2 not 94.4. Recommendation recorded: ratify tiers + floors-as-targets, gate on highValueSurvivors. Title now states the answer.
+- 2026-09-03  feat(mutation): make "finished" recordable, and a sweep that can measure all 507 (`6017a6c15`)
+- 2026-09-03  fix(mutation): a per-file jest environment defeats Stryker — decide it in config instead (`b59512bd1`)
+- 2026-09-03  feat(mutation): the runner picks its jest project, unblocking a third of the codebase (`c3dadd694`)
+- 2026-09-03  Baseline sweep COMPLETE: 610 of 622 included modules pinned (98%). Tally across runs: 11 skipped (no mirrored suite), 1 name-only suite that never exercises its module (DashboardStatusHeader.tsx — Stryker 'No tests were executed', now filed as a skip rather than a failure), 0 timeouts. Three runner defects found and fixed on the way: React modules unmeasurable (jest project chosen from suites now; +156 files), @jest-environment docblocks defeating Stryker's coverage hook (61 files, decided in jest.config.js now, enforcer added), and openGaps ignoring uncovered mutants (4 modules read finished that no test entered). Two text heuristics for 'does the suite exercise the module' were tried and both refused modules that measure fine; that decision is left to Stryker. 48 early rows being re-measured for the uncovered breakdown.
+- 2026-09-03  feat(mutation): the full baseline — 610 of 622 modules measured, 17,475 open gaps (`6b692c330`)
+- 2026-09-03  RATIFIED by the owner 2026-09-03: tiers as measured (tierOf, async density); floors 90/80/70 are targets not a gate; done = openGaps 0 (survivors killed or in the equivalents ledger with a reason); per-change ratchet unchanged. Next: the burn-down pass, ordered by consequence, run as a goal queue.
+- 2026-09-03  feat(mutation): ratify the tiers and the gate, and generate the burn-down queue (`102a9cf47`)
+- 2026-09-03  test(updates): bring updateExecutor to zero open mutation gaps (`1c7ab26a5`)
+- 2026-09-03  fix(overnight): cut the branch from HEAD, verify goals after checkout, never exit 0 having run nothing (`7b5c00af2`)
+- 2026-09-03  test(updates): bring checkUpdates to zero open mutation gaps (`1aa446690`)
+- 2026-09-03  test(updates): bring templateSyncService to zero open mutation gaps (`23b3aae84`)
+- 2026-09-03  fix(updates): a failed component update reported "rollback failed" even when the rollback worked (`f83e47d89`)
+- 2026-09-03  fix(tests): assert the injected clone URL by part, not as a credential-shaped literal (`06f45af6a`)
+- 2026-09-03  test(updates): bring updateApplyService to zero open mutation gaps (`e251295e9`)
+- 2026-09-03  test(updates): bring updateManager to zero open mutation gaps (`39cea6edd`)
+- 2026-09-03  test(updates): bring templateUpdateChecker to zero open mutation gaps (`15299ba5b`)
+- 2026-09-03  test(updates): share the templateUpdateChecker family setup, repairing the pushed family-rule failure (`605718810`)
+- 2026-09-03  test(updates): bring addonUpdateChecker to zero open mutation gaps (`b488b68bb`)
+- 2026-09-03  test(updates): bring adobeMcpUpdateChecker to zero open mutation gaps (`25ecb921f`)
+- 2026-09-03  test(updates): bring forkSyncService to zero open mutation gaps (`54f3b51b7`)
+- 2026-09-03  test(updates): bring collaboratorGate to zero open mutation gaps (`137525a36`)
+- 2026-09-03  test(updates): bring githubApiClient to zero open mutation gaps (`8673b1ba3`)
+- 2026-09-03  test(updates): bring releaseTrack to zero open mutation gaps (`7a66d62fd`)
+- 2026-09-03  test(updates): bring componentRepositoryResolver to zero open mutation gaps (`fc45b3f5a`)
+- 2026-09-03  refactor(updates): drop the dead optional chain in adobeMcpUpdateCore (`245c18e89`)
+- 2026-09-03  test(updates): bring extensionUpdater to zero open mutation gaps (`9a56fd7bb`)
+- 2026-09-03  test(auth): bring adobeWorkspaceCredentials to zero open mutation gaps (`2b190a9c8`)
+- 2026-09-03  test(auth): bring projectHandlers to zero open mutation gaps (`d1060d458`)
+- 2026-09-03  test(auth): bring adobeContextResolver to zero open mutation gaps (`8a7b1e20e`)
+- 2026-09-03  test(auth): bring authenticationHandlers to zero open mutation gaps (`8a8c5c038`)
+- 2026-09-03  test(auth): bring adobeOrgServices to zero open mutation gaps (`cffd26752`)
+- 2026-09-03  docs(backlog): log the collaboratorGate commit against PL-22 (`162ead74a`)
+- 2026-09-03  docs(backlog): log the forkSyncService commit against PL-22 (`66701fb76`)
+- 2026-09-03  docs(backlog): log the adobeMcpUpdateChecker commit against PL-22 (`013b04128`)
+- 2026-09-03  docs(backlog): log the addonUpdateChecker commit against PL-22 (`f62a47a67`)
+- 2026-09-03  docs(backlog): log the templateUpdateChecker family repair against PL-22 (`88abab260`)
+- 2026-09-03  docs(backlog): log the templateUpdateChecker commit against PL-22 (`a7ef056ef`)
+- 2026-09-03  docs(backlog): log the updateManager commit against PL-22 (`b084c40ec`)
+- 2026-09-03  docs(backlog): log the updateApplyService commit against PL-22 (`37b906283`)
+- 2026-09-03  test(auth): bring authenticationService to zero open mutation gaps (`96f2ec2cf`)
+- 2026-09-03  test(auth): bring useAuthStatus to zero open mutation gaps (`270042ffb`)
+- 2026-09-03  test(auth): bring AdobeEntityFields to zero open mutation gaps (`937915b26`)
+- 2026-09-03  test(auth): bring tokenManager to zero open mutation gaps (`26229dc2d`)
+- 2026-09-03  fix(overnight): resume on the branch already checked out instead of trying to recut it (`d8e93608e`)
+- 2026-09-03  test(auth): bring deleteAdobeProjectHandler to zero open mutation gaps (`eb78824d4`)
+- 2026-09-03  test(auth): bring AdobeProjectPicker to zero open mutation gaps (`7a9d79775`)
+- 2026-09-03  test(auth): bring authCacheManager to zero open mutation gaps (`72006b633`)
+- 2026-09-03  test(auth): bring AdobeAuthStep to zero open mutation gaps (`d65ad63be`)
+- 2026-09-03  test(auth): bring AdobeWorkspacePicker to zero open mutation gaps (`fb4d3d170`)
+- 2026-09-03  test(auth): bring workspaceHandlers to zero open mutation gaps (`a7e94e2ff`)
+- 2026-09-03  chore(mutation): the second queue — 40 modules, the rest of the consequence tier (`56e85b1fc`)
+- 2026-09-03  test(auth): bring adobeSDKClient to zero open mutation gaps (`ba9383a52`)
+- 2026-09-03  test(auth): bring eventProviderLifecycle to zero open mutation gaps (`e24d74934`)
+- 2026-09-03  test(auth): bring ensureProjectOrgContext to zero open mutation gaps (`7c35219c8`)
+- 2026-09-03  test(auth): bring organizationHandlers to zero open mutation gaps (`cc93b8502`)
+- 2026-09-03  test(auth): bring imsTokenClaims to zero open mutation gaps (`822ec92a9`)
+- 2026-09-03  docs(backlog): log the MUT-01 batch commits against PL-22 (`07a93cf8f`)
+- 2026-09-03  test(auth): bring ioEventsClient to zero open mutation gaps (`1c20b2a7c`)
+- 2026-09-03  test(auth): bring apiAccessCatalog to zero open mutation gaps (`786da3b2f`)
+- 2026-09-03  test(auth): bring adobeEntityFetcher to zero open mutation gaps (`5053f4da3`)
+- 2026-09-03  test(auth): bring projectOwnership to zero open mutation gaps (`d89aad82c`)
+- 2026-09-03  test(auth): bring adobeEntityService to zero open mutation gaps (`f56f07822`)
+- 2026-09-03  test(auth): bring ensureProjectAdobeContext to zero open mutation gaps (`7494e7e38`)
+- 2026-09-03  test(auth): bring detectProjectOrgMismatch to zero open mutation gaps (`3b68d8655`)
+- 2026-09-03  test(auth): bring consoleProjectTeardown to zero open mutation gaps (`50002157b`)
+- 2026-09-03  test(auth): bring orgSwitchHandler to zero open mutation gaps (`3e3d16594`)
+- 2026-09-03  test(state): bring projectFileLoader to zero open mutation gaps (`1d3474f1a`)
+- 2026-09-03  test(auth): bring performanceTracker to zero open mutation gaps (`72b86f2cf`)
+- 2026-09-03  test(auth): bring ensureOrgContext to zero open mutation gaps (`a9705a05a`)
+- 2026-09-03  test(sop): guard the builder-uniqueness walker against a vanishing probe dir (`35e710818`)
+- 2026-09-03  test(auth): bring authenticationErrorFormatter to zero open mutation gaps (`1da3773c7`)
+- 2026-09-03  test(auth): bring adobeEntityName to zero open mutation gaps (`5b8c721e6`)
+- 2026-09-03  docs(backlog): log the MUT-02 batch commits against PL-22 and the flake fix against PL-41 (`29bb8d3eb`)
+- 2026-09-03  test(state): bring projectConfigWriter to zero open mutation gaps (`6a53f2206`)
+- 2026-09-03  docs(backlog): log the MUT-04 batch commits against PL-22 (`441ea5381`)
+- 2026-09-03  test(state): bring stateManager to zero open mutation gaps (`586a35f7a`)
+- 2026-09-03  test(state): bring appBuilderComponentState to zero open mutation gaps (`afd8e0d62`)
+- 2026-09-03  test(state): bring manifestFormatSweep to zero open mutation gaps (`d0384136c`)
+- 2026-09-03  test(state): bring apiRowState to zero open mutation gaps (`f212bdf6f`)
+- 2026-09-03  test(state): bring appBuilderComponentMigration to zero open mutation gaps (`d0a46dc39`)
+- 2026-09-03  test(state): bring componentApiPicks to zero open mutation gaps (`50b87e875`)
+- 2026-09-03  test(state): bring componentSelectionReconcile to zero open mutation gaps (`10c837194`)
+- 2026-09-03  test(state): bring manifestValidation to zero open mutation gaps (`4f2b79eb5`)
+- 2026-09-03  test(state): bring projectDirectoryScanner to zero open mutation gaps (`6379e432e`)
+- 2026-09-03  docs(backlog): log the MUT-05 batch commits against PL-22 (`716adea80`)
+- 2026-09-03  feat(mutation): the instrument stops manufacturing ledger rows, and two more things can no longer enter tests (`4fe3b38ab`)
+- 2026-09-03  test(eds): bring edsResetUI to zero open mutation gaps (`099ba1fc7`)
+- 2026-09-03  test(eds): bring edsResetRepoHelper to zero open mutation gaps (`8477191db`)
+- 2026-09-04  Test REDUNDANCY is now measurable exactly (bail off, per module): scripts/mutationRedundancySweep.mjs + a greedy minimal cover in mutationRedundantTests.mjs. First results: envMerge 7 of 15 tests droppable together without losing a kill; edsResetUI 36 of 76 (the whole sample-data suite). A candidate list for a human read, not a deletion list — a test can pin behaviour no mutant probes. Full sweep over all finished modules queued as the night's last job.
+- 2026-09-03  test(eds): bring edsResetParams to zero open mutation gaps (`d1c223715`)
+- 2026-09-03  feat(mutation): measure test REDUNDANCY exactly — bail off, per module, with a minimal cover (`7b446298f`)
+- 2026-09-03  test(eds): bring edsResetService to zero open mutation gaps (`19724eeae`)
+- 2026-09-03  test(eds): bring edsResetMeshHelper to zero open mutation gaps (`3d25bc7b4`)
+- 2026-09-03  test(eds): bring edsResetConfigStep to zero open mutation gaps (`a5daae431`)
+- 2026-09-04  test(lifecycle): bring projectResetService to zero open mutation gaps (`b41b894c7`)
+- 2026-09-04  chore(overnight): runs.sh — run mutation queues back to back until nothing is left (`221c444a8`)
+- 2026-09-04  test(lifecycle): bring syncStorefront to zero open mutation gaps (`6d40bb7f8`)
+- 2026-09-04  test(lifecycle): bring startDemo to zero open mutation gaps (`6b809148f`)
+- 2026-09-04  test(lifecycle): bring stopDemo to zero open mutation gaps (`059639eb5`)
+- 2026-09-04  test(prerequisites): bring shared.ts to zero open mutation gaps (`f7c7919c0`)
+- 2026-09-04  test(lifecycle): bring managedStorefrontFiles to zero open mutation gaps (`fa2a266cb`)
+- 2026-09-04  test(lifecycle): bring deleteProject to zero open mutation gaps (`748eaa283`)
+- 2026-09-04  chore(overnight): runs.sh commits each regenerated queue before running it (`37c0fd1c3`)
+- 2026-09-04  chore(overnight): run 3 queue — 40 modules, lifecycle tail then prerequisites (`46dc1ea84`)
+- 2026-09-04  test(project-creation): bring WelcomeStep to zero open mutation gaps (`004fe1014`)
+- 2026-09-04  test(project-creation): bring StorefrontStep to zero open mutation gaps (`f284ef02d`)
+- 2026-09-04  test(project-creation): bring wizardHelpers to zero open mutation gaps (`c5642bd84`)
+- 2026-09-04  test(project-creation): bring WizardContainer to zero open mutation gaps (`962840277`)
+- 2026-09-04  test(project-creation): cover the wizard shell's stack change and timeline jump (`7e5782a2f`)
+- 2026-09-04  chore(mutation): a proven row-wise merge so two burn-down lanes can run at once (`240c0ae39`)
+- 2026-09-04  test(project-creation): bring ProjectCreationStep to zero open mutation gaps (`c08b9943a`)
+- 2026-09-04  test(project-creation): bring meshSetupService to zero open mutation gaps (`375aa489f`)
+- 2026-09-04  test(project-creation): bring createProject to zero open mutation gaps (`3172e9eeb`)
+- 2026-09-04  test(project-creation): bring ReviewStep to zero open mutation gaps (`4dcb8c3d7`)
+- 2026-09-04  test(project-creation): cover ReviewStep's Edge Delivery and Adobe I/O cards (`8776fb0dd`)
+- 2026-09-04  test(project-creation): bring useWizardState to zero open mutation gaps (`755cab1ef`)
+- 2026-09-04  test(project-creation): bring envFileGenerator to zero open mutation gaps (`34c4c8d7a`)
+- 2026-09-04  test(prerequisites): record VersionSatisfactionChecker's log-only survivors (`e7d66edf1`)
+- 2026-09-04  test(prerequisites): bring PrerequisitesStep to zero open mutation gaps (`d8c0c6ab0`)
+- 2026-09-04  test(prerequisites): bring installHandler to zero open mutation gaps (`3ff4ae2bc`)
+- 2026-09-04  chore(overnight): stop the poll-loop stall reaching the remaining batches (`21b1096ac`)
+- 2026-09-04  test(prerequisites): bring prerequisiteRenderers to zero open mutation gaps (`b27edc255`)
+- 2026-09-04  test(prerequisites): bring PrerequisitesManager to zero open mutation gaps (`79f1f7999`)
+- 2026-09-04  test(prerequisites): bring checkHandler to zero open mutation gaps (`1696c67f9`)
+- 2026-09-04  test(project-creation): bring BrandGallery to zero open mutation gaps (`09f1ddfea`)
+- 2026-09-04  test(project-creation): bring IntegrationsStep to zero open mutation gaps (`69a9db810`)
+- 2026-09-04  test(project-creation): constrain executor's initial-project assembly (`b79528c16`)
+- 2026-09-04  test(project-creation): bring areaSubSteps to zero open mutation gaps (`50925ae6d`)
+- 2026-09-04  test(project-creation): bring areaSubSteps to zero open mutation gaps (`1c822b3d2`)
+- 2026-09-04  chore(overnight): stop batches on evidence, not on a turn count (`944a96ea5`)
+- 2026-09-04  test(project-creation): bring executor to zero open mutation gaps (`de4c12240`)
+- 2026-09-04  test(project-creation): bring wizardLifecycleHandlers to zero open mutation gaps (`d45f2bcb3`)
+- 2026-09-04  chore(backlog): log the MUT-04 commits against PL-22 (`844e4ebd8`)
+- 2026-09-04  test(project-creation): bring projectFinalizationService to zero open mutation gaps (`041c324d2`)
+- 2026-09-04  test(project-creation): bring stepFiltering to 100% mutation score (`2a7541d71`)
+- 2026-09-04  test(project-creation): bring stepFiltering to 100% mutation score (`d4512ffba`)
+- 2026-09-04  test(project-creation): bring buildSummary to zero open mutation gaps (`84e031da3`)
+- 2026-09-04  test(project-creation): bring ApiPickerStage to zero open mutation gaps (`b22e2d011`)
+- 2026-09-04  test(project-creation): bring componentInstallationOrchestrator to zero open mutation gaps (`b2b4c8705`)
+- 2026-09-04  test(project-creation): bring createHandler to zero open mutation gaps (`a088057e8`)
+- 2026-09-04  test(prerequisites): bring MultiVersionDetector to zero open mutation gaps (`0da0adeb3`)
+- 2026-09-04  test(prerequisites): bring prerequisitesCacheManager to zero open mutation gaps (`847504c6c`)
+- 2026-09-04  test(prerequisites): bring continueHandler to zero open mutation gaps (`a4a730351`)
+- 2026-09-04  chore(overnight): start the driver in its own session so a task stop cannot end it (`ea262a3bd`)
+- 2026-09-04  chore(overnight): run 1 queue — 40 modules, regenerated from the baseline (`ba9204154`)
+- 2026-09-04  fix(overnight): cap a batch in wall-clock time so a hang cannot stall the queue (`43650fc4d`)
+- 2026-09-04  test(aiBundle): bring globalMcpRegistration to zero open mutation gaps (`55840b419`)
+- 2026-09-04  test(aiBundle): bring aiDefaultsInstaller to zero open mutation gaps (`5a21e0156`)
+- 2026-09-04  test(project-creation): bring commerceSections to zero open mutation gaps (`2a493af0c`)
+- 2026-09-04  chore(mutation): log MUT-05 against PL-22 and leave the focus config on stepFiltering (`8b5f3e6cc`)
+- 2026-09-04  test(project-creation): bring useProjectCreationPhases to zero open mutation gaps (`2fd87a894`)
+- 2026-09-04  chore(backlog): log PL-22 commits from batch MUT-01 (`a200c6da5`)
+- 2026-09-04  test(project-creation): bring useIntegrationFlow to zero open mutation gaps (`455f872fb`)
+- 2026-09-04  chore(mutation): halve measurement workers while the machine is in use (`dd572ebc2`)
+- 2026-09-04  test(project-creation): bring aiToolingGate to zero open mutation gaps (`48ecb690d`)
+- 2026-09-04  test(project-creation): bring SampleDataStep to zero open mutation gaps (`428f44260`)
+- 2026-09-04  test(project-creation): bring useProjectBuilder to zero open mutation gaps (`9d2ac1654`)
+- 2026-09-04  test(project-creation): bring checkGitHubAppHandler to zero open mutation gaps (`66397673c`)
+- 2026-09-04  test(project-creation): bring claudeSettingsWriter to zero open mutation gaps (`3438dc2df`)
+- 2026-09-04  test(project-creation): bring edsContentSetup to zero open mutation gaps (`42517ed09`)
+- 2026-09-04  test(project-creation): bring CommerceStep to zero open mutation gaps (`f548772d0`)
+- 2026-09-04  test(project-creation): bring ProjectSetupContext to zero open mutation gaps (`249d0b77a`)
+- 2026-09-04  test(project-creation): bring aiBundleActivationRefresh to zero open mutation gaps (`7623ee9a1`)
+- 2026-09-04  test(project-creation): bring skillsWriter to zero open mutation gaps (`e8386f8ce`)
+- 2026-09-04  test(project-creation): bring mcpConfigWriter to zero open mutation gaps (`3fee85736`)
+- 2026-09-04  test(project-creation): bring ConnectStoreStepContent to zero open mutation gaps (`99cb0abf5`)
+- 2026-09-04  test(project-creation): bring BlankStage to zero open mutation gaps (`b28077bef`)
+- 2026-09-04  test(project-creation): bring stackHelpers to zero open mutation gaps (`f3ab6e5a3`)
+- 2026-09-04  test(project-creation): bring AddIntegrationFlowModal to zero open mutation gaps (`736e39b5a`)
+- 2026-09-04  test(project-creation): bring generatedFileWriter to zero open mutation gaps (`63f33b918`)
+- 2026-09-04  test(project-creation): bring tileStatus to zero open mutation gaps (`3581d9725`)
+- 2026-09-04  test(project-creation): bring homeAiContextWriter to zero open mutation gaps (`aa110c287`)
+- 2026-09-04  test(project-creation): bring BlankStage to zero open mutation gaps (`60c995d1e`)
+- 2026-09-04  test(project-creation): bring ConnectStoreStepContent to zero open mutation gaps (`b98faa044`)
+- 2026-09-04  test(project-creation): bring mcpConfigWriter to zero open mutation gaps (`5d34e5601`)
+- 2026-09-04  test(project-creation): bring skillsWriter to zero open mutation gaps (`b3b7d2951`)
+- 2026-09-04  test(project-creation): bring aiBundleActivationRefresh to zero open mutation gaps (`c54158b98`)
+- 2026-09-04  test(project-creation): bring consoleApiHandlers to zero open mutation gaps (`035f7c7de`)
+- 2026-09-04  test(project-creation): bring BuildYourProjectStep to zero open mutation gaps (`dd512304f`)
+- 2026-09-04  test(integration-flow): bring DestinationStage to zero open mutation gaps (`f1f27028f`)
+- 2026-09-04  test(integration-flow): bring flowStages to zero open mutation gaps (`d5e22b4ed`)
+- 2026-09-04  test(project-creation): bring reviewPredicates to zero open mutation gaps (`bb4847c0f`)
+- 2026-09-04  test(project-creation): bring BuildYourProjectSummary to zero open mutation gaps (`07cd27386`)
+- 2026-09-04  test(project-creation): bring BlockLibrariesStepContent to zero open mutation gaps (`4bacc6d21`)
+- 2026-09-04  test(project-creation): bring customBlockLibraryUtils to zero open mutation gaps (`552fd174b`)
+- 2026-09-04  test(project-creation): bring catalogPrewarmPhase to zero open mutation gaps (`56d39f045`)
+- 2026-09-04  test(project-creation): bring aiBundleService to zero open mutation gaps (`2dd5bc22a`)
+- 2026-09-04  test(project-creation): bring aiContextWriter to zero open mutation gaps (`ace73dc33`)
+- 2026-09-04  test(project-creation): bring addIntegrationFlowHandlers to zero open mutation gaps (`2de0ec96c`)
+- 2026-09-04  test(project-creation): bring KindStage to zero open mutation gaps (`938d1c6a9`)
+- 2026-09-04  test(project-creation): bring integrationRows to zero open mutation gaps (`48161837c`)
+- 2026-09-04  test(project-creation): bring ChoiceCard to zero open mutation gaps (`236ba91e9`)
+- 2026-09-04  test(project-creation): bring CatalogStage to zero open mutation gaps (`365033395`)
+- 2026-09-04  test(project-creation): bring integrationCards to zero open mutation gaps (`1e2ee2e92`)
+- 2026-09-04  test(project-creation): bring instanceId to zero open mutation gaps (`8cb2b72be`)
+- 2026-09-04  test(project-creation): bring appBuilderComponentSelection to zero open mutation gaps (`44204480b`)
+- 2026-09-04  test(project-creation): bring useStepValidation to zero open mutation gaps (`4e9d59767`)
+- 2026-09-04  chore(overnight): run 2 queue — 40 modules, regenerated from the baseline (`879bea611`)
+- 2026-09-04  test(eds): bring RepoSelectionInline to zero open mutation gaps (`2db6a8942`)
+- 2026-09-04  chore(mutation): restore measurement workers to four (`1e976d846`)
+- 2026-09-04  test(eds): bring daLiveContentCopy to zero open mutation gaps (`74cc1d1e1`)
+- 2026-09-04  test(project-creation): record storefrontSections optional chain as equivalent (`609f05762`)
+- 2026-09-04  test(project-creation): record buildYourProjectAreas packages default as equivalent (`85494587a`)
+- 2026-09-04  test(project-creation): bring CustomStage to zero open mutation gaps (`2e0746f1b`)
+- 2026-09-05  test(eds): bring daLiveConfigOperations to zero open mutation gaps (`ab1800c2f`)
+- 2026-09-05  test(eds): bring useDaLiveAuth to zero open mutation gaps (`7feb3dc8a`)
+- 2026-09-05  test(eds): bring edsPipeline to zero open mutation gaps (`e39c7aba5`)
+- 2026-09-05  test(eds): bring storefrontSetupPhases to zero open mutation gaps (`12534bc56`)
+- 2026-09-04  test(eds): bring storefrontSetupHandlers to zero open mutation gaps (`e0c78ae92`)
+- 2026-09-04  test(eds): bring githubRepoOperations to zero open mutation gaps (`6168f48a8`)
+- 2026-09-05  test(eds): bring storefrontSetupPhase1 to zero open mutation gaps (`f8386bc91`)
+- 2026-09-05  test(eds): bring blockCollectionHelpers to zero open mutation gaps (`49e2c968a`)
+- 2026-09-05  test(eds): bring daLiveConfigService to zero open mutation gaps (`ab0aa8632`)
+- 2026-09-05  test(eds): bring errorFormatters to zero open mutation gaps (`6f33b5fe1`)
+- 2026-09-05  test(eds): bring helixService to zero open mutation gaps (`51fe04496`)
+- 2026-09-05  test(eds): bring catalogPrewarmService to zero open mutation gaps (`a951db84f`)
+- 2026-09-05  test(eds): bring daLiveSourceOperations to zero open mutation gaps (`bca671a75`)
+- 2026-09-05  test(eds): bring configServiceProbe to zero open mutation gaps (`67bff2814`)
+- 2026-09-05  test(eds): bring edsDaLiveAuthHandlers to zero open mutation gaps (`94652dc0f`)
+- 2026-09-05  test(eds): bring cleanupService to zero open mutation gaps (`e490b0f88`)
+- 2026-09-05  test(eds): bring toolManager to zero open mutation gaps (`4cb8334b6`)
+- 2026-09-05  test(eds): bring configServiceAccess to zero open mutation gaps (`0163bdcdb`)
+- 2026-09-05  test(eds): bring DaLiveServiceCard to zero open mutation gaps (`3162bae62`)
+- 2026-09-05  test(eds): bring daLiveAuthService to zero open mutation gaps (`172ba6571`)
+- 2026-09-05  test(eds): bring configurationService to zero open mutation gaps (`9175f248f`)
+- 2026-09-05  test(eds): bring toolManager to zero open mutation gaps (`f881ec1ee`)
+- 2026-09-05  test(eds): bring siteAccessManagerHeadless to zero open mutation gaps (`7e6578538`)
+- 2026-09-05  test(eds): bring githubTokenService to zero open mutation gaps (`17c613a2a`)
+- 2026-09-05  test(eds): bring configGenerator to zero open mutation gaps (`0d686661a`)
+- 2026-09-05  test(eds): bring useGitHubAuth to zero open mutation gaps (`0b81d2a8f`)
+- 2026-09-05  test(eds): bring configAccessRecovery to zero open mutation gaps (`3a39cdeb2`)
+- 2026-09-05  test(eds): bring StorefrontSetupStep to zero open mutation gaps (`dee41ca0a`)
+- 2026-09-05  chore(overnight): run 3 queue — 40 modules, regenerated from the baseline (`24221e11d`)
+- 2026-09-05  test(eds): bring edsHandlers to zero open mutation gaps (`1ec0ae48e`)
+- 2026-09-05  test(eds): bring storefrontSetupPhase2 to zero open mutation gaps (`731afa776`)
+- 2026-09-05  test(eds): bring githubFileOperations to zero open mutation gaps (`0c04b6352`)
+- 2026-09-05  test(eds): bring commerceStoreDiscovery to zero open mutation gaps (`89a07ce91`)
+- 2026-09-05  test(eds): share the commerceStoreDiscovery suites' setup (`162d1bffe`)
+- 2026-09-05  test(eds): bring storefrontSetupPhase3 to zero open mutation gaps (`2c522f661`)
+- 2026-09-05  test(eds): bring resourceCleanupHelpers to zero open mutation gaps (`7a63d10c8`)
+- 2026-09-05  test(eds): bring githubCredentialProbe to zero open mutation gaps (`ffb3df517`)
+- 2026-09-05  test(eds): bring configSyncService to zero open mutation gaps (`b2e164b6e`)
+- 2026-09-05  test(eds): bring helixBulkJobs to zero open mutation gaps (`170f95cf3`)
+- 2026-09-05  test(eds): bring patchReportHelper to zero open mutation gaps (`79ee7ec8a`)
+- 2026-09-05  chore(backlog): log the MUT-02 commits against PL-22 (`100d3b650`)
+- 2026-09-05  test(eds): bring storefrontStalenessDetector to zero open mutation gaps (`49180ae85`)
+- 2026-09-05  test(eds): bring byomOverlay to zero open mutation gaps (`d698fc3f1`)
+- 2026-09-05  test(eds): bring byomOverlay to zero open mutation gaps (`43b768973`)
+- 2026-09-05  test(eds): bring daLiveAuthPrompt to zero open mutation gaps (`9fbcd4f78`)
+- 2026-09-05  test(eds): bring daLiveApiClient to zero open mutation gaps (`08edf0a59`)
+- 2026-09-05  test(eds): bring githubAppService to zero open mutation gaps (`2eddc2f6e`)
+- 2026-09-05  chore(backlog): log the daLiveApiClient commit against PL-22 (`b58810fc9`)
+- 2026-09-05  test(eds): bring codePatchPipelineHelpers to zero open mutation gaps (`4b3d03964`)
+- 2026-09-05  test(eds): bring daLiveContentOperations to zero open mutation gaps (`c235d7129`)
+- 2026-09-05  test(eds): bring storefrontProbe to zero open mutation gaps (`f7ade1299`)
+- 2026-09-05  test(eds): bring ewSettingChangeListener to zero open mutation gaps (`174ac71ce`)
+- 2026-09-05  chore(overnight): let a session read while the measurement runs (`a11b0a2fc`)
+- 2026-09-05  test(ai): bring actionDescriptors to zero open mutation gaps (`730f12729`)
+- 2026-09-05  test(ai): bring actionDescriptors to zero open mutation gaps (`138d83367`)
+- 2026-09-05  docs(backlog): record why two lanes do not work here (`1e0dbf044`)
+- 2026-09-05  test(eds): close accsDiscoveryConfig's mutation gaps (`e56fd25cb`)
+- 2026-09-05  test(eds): close codePatchRegistry's mutation gaps (`657489cae`)
+- 2026-09-05  test(eds): close b2bReadinessDetection's mutation gaps (`19ef1fbd3`)
+- 2026-09-05  test(eds): close storefrontSetupPhaseHelpers' mutation gaps (`ef5706350`)
+- 2026-09-05  fix(sop): ban token-shaped literals, and build the one that fired (`ca89b3bc8`)
+- 2026-09-05  test(eds): close publishKeyRegistrar's mutation gaps (`979326bb0`)
+- 2026-09-05  perf(mutation): gate each module scoped, run the full gate once per batch (`12bfab3e5`)
+- 2026-09-05  perf(mutation): order the queue by size, and let small modules share a measurement (`d81c5e738`)
+- 2026-09-05  test(configure): close useConfigureFieldValues' mutation gaps (`115d7d521`)
+- 2026-09-05  test(dashboard): close showDashboard.ts's mutation gaps (`09e43df0d`)
+- 2026-09-05  test(dashboard): close configure.ts's mutation gaps (`22e9ed2f6`)
+- 2026-09-05  fix(mutation): the scoped per-module check missed the test-file-size limit (`1851fe63d`)
+- 2026-09-05  test(eds): close refreshBlockLibraryHandler's mutation gap (`7751eedfa`)
+- 2026-09-05  test(eds): close GitHubServiceCard's mutation gaps (`80b6bbb37`)
+- 2026-09-05  test(eds): close storefrontNameMigrationForProject's mutation gaps (`6421804da`)
+- 2026-09-05  test(eds): close repoStorefrontReadiness' mutation gaps (`77522acd1`)
+- 2026-09-05  test(eds): close githubHelpers' mutation gaps (`be03a97bc`)
+- 2026-09-05  test(eds): close VerifiedField's mutation gaps (`642c53646`)
+- 2026-09-05  test(eds): close storefrontNameMigration's mutation gaps (`dbdab9722`)
+- 2026-09-05  test(eds): close credentialServiceHandler's mutation gaps (`c6d858b20`)
+- 2026-09-05  test(eds): close authoringExperience's mutation gaps (`5ebccce7e`)
+- 2026-09-05  test(eds): close lkgReader's mutation gaps (`9ae61a0fc`)
+- 2026-09-06  Burn-down complete: 610 of 610 modules at zero open gaps. Every behavioural mutant is killed by a test asserting the decision or recorded in the equivalence ledger. Runs 6-7 pushed green; batch size raised 5->10 after measuring that 80% of a batch was fixed setup cost.
+- 2026-09-07  chore(overnight): empty the queue — every tracked module is at zero again (`7d4fff72e`)
+- 2026-09-07  test(core): pin every decision envParser makes about a line (`a9e5219f8`)
+- 2026-09-07  test(commands): pin every line the diagnostics report prints (`8dc681f96`)
+- 2026-09-07  test(project-creation): pin every line the sample-data phase says (`218852dcc`)
+- 2026-09-07  test(project-creation): share the executorAppBuilderPhase family's fixtures (`b0478699b`)
+- 2026-09-07  test(project-creation): drive ensureWorkspaceRuntimeReady's three gates (`c0e6ced04`)
+- 2026-09-07  test(project-creation): drive executeMeshPhase and populateMeshComponentConfigs (`b974132f4`)
+- 2026-09-07  chore(overnight): run 1 queue — 5 modules, regenerated from the baseline (`0df36c810`)
+- 2026-09-07  chore(overnight): empty the queue — every tracked module is at zero again (`3039e3717`)
+- 2026-09-07  test(ui): close SuccessStateDisplay — 1 open gap to zero (`b2b7e0b70`)
+- 2026-09-07  test(eds): close pdp404Snippet — 6 open gaps to zero (`c2533722b`)
+- 2026-09-07  test(configure): close AppBuilderComponentFieldsSection — 8 open gaps to zero (`b2305d820`)
+- 2026-09-07  test(dashboard): close DashboardStatusHeader — 16 open gaps to zero (`b728bb4ff`)
+- 2026-09-07  test(dashboard): close aiPromptHandlers — 45 open gaps to zero (`035f80790`)
+- 2026-09-07  fix(sop): clear three ledger failures the earlier attribution commits left red (`fff11a8d6`)
+- 2026-09-07  test(ui): move the useSelectionStep suites to the module they test (`ec520d3bd`)
+- 2026-09-07  test(ui): close useSelectionStep — 80 open gaps to zero, and one term that could never matter (`d9d1bc8bc`)
+- 2026-09-07  chore(overnight): run 1 queue — 6 modules, regenerated from the baseline (`b878cafe8`)
+- 2026-09-07  perf(mutation): one module a batch — the work dominates again, so there is nothing to amortise (`4a7517e08`)
+- 2026-09-07  CLOSED 2026-09-07 on its own stated condition: every included module measured and ratcheted. 622 modules, all at zero open gaps. The measurable set grew from 610 to 622 during the work because fixing attribution exposed modules the instrument could not see. The async correlation held - the tail's hardest modules were the orchestration-heavy ones. Cadence drops to release cuts.
+
+## Two lanes were tried and reverted — the gate is what blocks it (2026-09-05)
+
+The obvious speed-up is a second lane on a second checkout. The data problem is solved:
+`scripts/mergeMutationLanes.mjs` merges two lanes' baseline and ledger row by row and
+REFUSES rather than guesses when both sides touched one row. Its self-test passes,
+controls included.
+
+That is not what breaks it. **`npm run gate` is repository-wide**, so every lane runs the
+whole suite before it can commit and therefore sees violations anywhere — including ones
+the other lane introduced seconds earlier and is already fixing. In the 2026-09-05 trial,
+lane 2 spent its run repairing a split test family in lane 1's module that lane 1 had
+ALREADY fixed in a commit made after lane 2's branch point. Two lanes, same repair,
+different shapes, guaranteed conflict.
+
+Both fixes cost more than the speed is worth: rebasing lane 2 onto lane 1 continuously
+destroys the isolation that made the split safe, and narrowing the gate to one module
+removes the repo-wide check that caught a stale mock, a suite family without shared setup,
+and a probe-file race in the same 24 hours.
+
+**Verdict: one lane.** Measured rate on 2026-09-05 was 5.5 modules/hour, steady across
+seven hours, which puts the remaining work near 60 hours of running. The trial cost one
+module's uncommitted work and did not disturb the running lane.

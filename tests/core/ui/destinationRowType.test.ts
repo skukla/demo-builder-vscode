@@ -23,22 +23,16 @@
  * Stylesheet-asserted — jsdom resolves no computed type.
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
+import { ruleFor } from '../../helpers/cssRules';
 
-const CSS = fs
-    .readFileSync(path.join(__dirname, '../../../src/core/ui/styles/custom-spectrum.css'), 'utf8')
-    .replace(/\/\*[\s\S]*?\*\//g, '');
-
-function ruleFor(selectorList: string): string {
-    const norm = (t: string) => t.replace(/\s+/g, ' ').trim();
-    for (const block of CSS.split('}')) {
-        const open = block.indexOf('{');
-        if (open === -1) continue;
-        if (norm(block.slice(0, open)) === norm(selectorList)) return block.slice(open);
-    }
-    throw new Error(`no rule for: ${selectorList}`);
-}
+/**
+ * Read the rule from WHEREVER it ships, not from a named sheet.
+ *
+ * This suite read `utilities.css` by path and hand-rolled its own `ruleFor`.
+ * It broke the day `.page-*` moved to index.css — a change that moved no pixel on
+ * any surface. The shared helper reads every stylesheet under `src/`, so a rule's
+ * LOCATION stops being something a layout test asserts.
+ */
 
 const size = (rule: string): string =>
     rule

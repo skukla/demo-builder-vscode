@@ -1,4 +1,6 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
+
+import { settle } from '../../../../helpers/reactSettle';
 import React from 'react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { PrerequisitesStep } from '@/features/prerequisites/ui/steps/PrerequisitesStep';
@@ -84,9 +86,18 @@ export const setupMessageCallbacks = () => {
         }
         return jest.fn();
     });
+    // Wrapped in act(): these push a message straight into the component's
+    // subscriber, which is a state update with no React event behind it. Bare,
+    // every delivery warned — and the component really was mid-update while the
+    // spec asserted. A synchronous act is the right one; the handlers set state
+    // directly rather than awaiting anything.
     return {
-        fireLoaded: (data: any): void => current.loaded(data),
-        fireStatus: (data: any): void => current.status(data),
+        fireLoaded: (data: any): void => {
+            act(() => current.loaded(data));
+        },
+        fireStatus: (data: any): void => {
+            act(() => current.status(data));
+        },
     };
 };
 
@@ -103,6 +114,9 @@ export const renderLoadedStep = async (
     const fire = setupMessageCallbacks();
     renderPrerequisitesStep(state);
     fire.fireLoaded({ prerequisites });
+    // Settle BEFORE the wait, so anything the delivery kicked off lands inside
+    // act() rather than in waitFor's yield gap (tests/helpers/reactSettle.ts).
+    await settle();
     await waitFor(() => {
         screen.getByText(awaitName);
     });

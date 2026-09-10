@@ -16,15 +16,21 @@ import { checkGitHubApp } from './checkGitHubAppHandler';
 import { handleCreateProject } from './createHandler';
 import { handleValidate } from './validateHandler';
 import * as lifecycle from './wizardLifecycleHandlers';
-import * as authentication from '@/features/authentication';
+import { handleReDetectContext } from '@/features/authentication/handlers/organizationHandlers';
+import { handleCheckProjectApis, handleEnsureOrgSelected } from '@/features/authentication/handlers/projectHandlers';
 import * as components from '@/features/components/handlers/componentHandlers';
-import {
-    dataInstallerHandlers,
-    handleOpenDataInstallerSettings,
-} from '@/features/data-installer/handlers';
-import * as eds from '@/features/eds/handlers';
+import { dataInstallerHandlers } from '@/features/data-installer/handlers/dataInstallerHandlers';
+import { handleOpenDataInstallerSettings } from '@/features/data-installer/handlers/settingsHandlers';
+import { handleCheckRepoReadiness } from '@/features/eds/handlers/checkRepoReadinessHandler';
+import { handleCheckCredentialService } from '@/features/eds/handlers/credentialServiceHandler';
+import { handleCheckDaLiveAuth, handleClearDaLiveAuth, handleOpenDaLiveLogin, handleStoreDaLiveTokenWithOrg } from '@/features/eds/handlers/daLive/edsDaLiveHandlers';
+import { handleCheckGitHubAuth, handleCreateGitHubRepo, handleGetGitHubRepos, handleGitHubChangeAccount, handleGitHubOAuth } from '@/features/eds/handlers/edsGitHubHandlers';
+import { handleDiscoverStoreStructure } from '@/features/eds/handlers/edsHandlers';
+import { handleCancelStorefrontSetup, handleStartStorefrontSetup } from '@/features/eds/handlers/storefrontSetup/storefrontSetupHandlers';
 import { meshHandlers } from '@/features/mesh/handlers/meshHandlers';
-import * as prerequisites from '@/features/prerequisites/handlers';
+import { handleCheckPrerequisites } from '@/features/prerequisites/handlers/checkHandler';
+import { handleContinuePrerequisites } from '@/features/prerequisites/handlers/continueHandler';
+import { handleInstallPrerequisite } from '@/features/prerequisites/handlers/installHandler';
 import { defineHandlers } from '@/types/handlers';
 
 /**
@@ -49,9 +55,9 @@ export const projectCreationHandlers = defineHandlers({
     openExternal: lifecycle.handleOpenExternal,
 
     // Prerequisite handlers
-    'check-prerequisites': prerequisites.handleCheckPrerequisites,
-    'continue-prerequisites': prerequisites.handleContinuePrerequisites,
-    'install-prerequisite': prerequisites.handleInstallPrerequisite,
+    'check-prerequisites': handleCheckPrerequisites,
+    'continue-prerequisites': handleContinuePrerequisites,
+    'install-prerequisite': handleInstallPrerequisite,
 
     // Component handlers
     'update-component-selection': components.handleUpdateComponentSelection,
@@ -64,11 +70,11 @@ export const projectCreationHandlers = defineHandlers({
     validateSelection: components.handleValidateSelection,
 
     // Re-detect Adobe context after an external auth/org change
-    're-detect-context': authentication.handleReDetectContext,
+    're-detect-context': handleReDetectContext,
 
     // Project handlers
-    'ensure-org-selected': authentication.handleEnsureOrgSelected,
-    'check-project-apis': authentication.handleCheckProjectApis,
+    'ensure-org-selected': handleEnsureOrgSelected,
+    'check-project-apis': handleCheckProjectApis,
 
     // Workspace handlers
     // Mesh handlers
@@ -92,29 +98,29 @@ export const projectCreationHandlers = defineHandlers({
     'open-data-installer-settings': handleOpenDataInstallerSettings,
 
     // EDS handlers - GitHub
-    'check-github-auth': eds.handleCheckGitHubAuth,
+    'check-github-auth': handleCheckGitHubAuth,
     'check-github-app': checkGitHubApp,
-    'check-repo-readiness': eds.handleCheckRepoReadiness,
-    'create-github-repo': eds.handleCreateGitHubRepo,
-    'github-oauth': eds.handleGitHubOAuth,
-    'github-change-account': eds.handleGitHubChangeAccount,
-    'get-github-repos': eds.handleGetGitHubRepos,
+    'check-repo-readiness': handleCheckRepoReadiness,
+    'create-github-repo': handleCreateGitHubRepo,
+    'github-oauth': handleGitHubOAuth,
+    'github-change-account': handleGitHubChangeAccount,
+    'get-github-repos': handleGetGitHubRepos,
     // EDS handlers - DA.live
-    'check-dalive-auth': eds.handleCheckDaLiveAuth,
-    'open-dalive-login': eds.handleOpenDaLiveLogin,
-    'store-dalive-token-with-org': eds.handleStoreDaLiveTokenWithOrg,
-    'clear-dalive-auth': eds.handleClearDaLiveAuth,
+    'check-dalive-auth': handleCheckDaLiveAuth,
+    'open-dalive-login': handleOpenDaLiveLogin,
+    'store-dalive-token-with-org': handleStoreDaLiveTokenWithOrg,
+    'clear-dalive-auth': handleClearDaLiveAuth,
     // EDS handlers - ACCS
     // EDS handlers - Store Discovery
-    'discover-store-structure': eds.handleDiscoverStoreStructure,
+    'discover-store-structure': handleDiscoverStoreStructure,
     // Whether the shared service supplies the Commerce credential, so the
     // Connection step can say the OAuth fields need no filling in. Status only —
     // the pair never crosses to the webview.
-    'check-credential-service': eds.handleCheckCredentialService,
+    'check-credential-service': handleCheckCredentialService,
 
     // EDS handlers - Storefront Setup (renamed from Preflight)
-    'storefront-setup-start': eds.handleStartStorefrontSetup,
-    'storefront-setup-cancel': eds.handleCancelStorefrontSetup,
+    'storefront-setup-start': handleStartStorefrontSetup,
+    'storefront-setup-cancel': handleCancelStorefrontSetup,
 
     // Project creation handlers
     validate: handleValidate,

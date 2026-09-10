@@ -8,13 +8,8 @@ import { ProjectDashboardScreen } from '@/features/dashboard/ui/ProjectDashboard
 import '@testing-library/jest-dom';
 
 // Mock the webview-ui utilities and hooks
-jest.mock('@/core/ui/hooks', () => ({
+jest.mock('@/core/ui/hooks/useFocusTrap', () => ({
     useFocusTrap: jest.fn(() => ({ current: null })),
-    useSingleTimer: jest.fn(() => ({
-        ref: { current: null },
-        set: jest.fn(),
-        clear: jest.fn(),
-    })),
 }));
 
 // Mock the WebviewClient
@@ -27,20 +22,7 @@ jest.mock('@/core/ui/utils/WebviewClient', () => ({
 }));
 
 // Mock layout components
-jest.mock('@/core/ui/components/layout', () => ({
-    GridLayout: ({ children }: any) => <div data-testid="grid-layout">{children}</div>,
-    PageLayout: ({ header, children }: any) => (
-        <div data-testid="page-layout">
-            <div data-testid="page-layout-header">{header}</div>
-            <div data-testid="page-layout-content">{children}</div>
-        </div>
-    ),
-    PageHeader: ({ title, subtitle }: any) => (
-        <div data-testid="page-header">
-            <h1>{title}</h1>
-            {subtitle && <h3>{subtitle}</h3>}
-        </div>
-    ),
+jest.mock('@/core/ui/components/layout/ControlPanelLayout', () => ({
     ControlPanelLayout: ({ masthead, primary, secondary }: any) => (
         <div data-testid="control-panel">
             <div data-testid="control-panel-masthead">{masthead}</div>
@@ -50,8 +32,30 @@ jest.mock('@/core/ui/components/layout', () => ({
     ),
 }));
 
+jest.mock('@/core/ui/components/layout/GridLayout', () => ({
+    GridLayout: ({ children }: any) => <div data-testid="grid-layout">{children}</div>,
+}));
+
+jest.mock('@/core/ui/components/layout/PageHeader', () => ({
+    PageHeader: ({ title, subtitle }: any) => (
+        <div data-testid="page-header">
+            <h1>{title}</h1>
+            {subtitle && <h3>{subtitle}</h3>}
+        </div>
+    ),
+}));
+
+jest.mock('@/core/ui/components/layout/PageLayout', () => ({
+    PageLayout: ({ header, children }: any) => (
+        <div data-testid="page-layout">
+            <div data-testid="page-layout-header">{header}</div>
+            <div data-testid="page-layout-content">{children}</div>
+        </div>
+    ),
+}));
+
 // Mock feedback components
-jest.mock('@/core/ui/components/feedback', () => ({
+jest.mock('@/core/ui/components/feedback/InlineNotice', () => ({
     // OrgContextNotice now renders through the shared InlineNotice (extracted
     // 2026-08-20). Stubbed to its structure — title, body, optional hint and
     // action — so the suite keeps asserting on CONTENT rather than on the
@@ -64,6 +68,9 @@ jest.mock('@/core/ui/components/feedback', () => ({
             {action}
         </div>
     ),
+}));
+
+jest.mock('@/core/ui/components/feedback/StatusCard', () => ({
     StatusCard: ({ label, status, color, action }: any) => (
         <div data-testid={`status-card-${label}`} data-color={color}>
             {label}: {status}
@@ -78,80 +85,140 @@ jest.mock('@/core/ui/components/feedback', () => ({
 
 // Mock dashboard predicates
 jest.mock('@/features/dashboard/ui/dashboardPredicates', () => ({
-    isStartActionDisabled: () => false,
+    // A jest.fn, not `() => false`: the screen's decision is WHICH arguments it
+    // hands the predicate (notably `status || 'ready'`), and a bare arrow cannot
+    // see a malformed call. ProjectDashboardScreen-wiring asserts them.
+    isStartActionDisabled: jest.fn(() => false),
 }));
 
 // Mock Adobe React Spectrum components
-jest.mock('@adobe/react-spectrum', () => ({
-    View: ({ children, ...props }: any) => <div {...props}>{children}</div>,
-    Flex: ({ children, ...props }: any) => <div style={{ display: 'flex' }} {...props}>{children}</div>,
-    Heading: ({ children, level, ...props }: any) => {
-        const Tag = `h${level || 1}` as keyof React.JSX.IntrinsicElements;
-        return <Tag {...props}>{children}</Tag>;
-    },
-    Text: ({ children, ...props }: any) => <span {...props}>{children}</span>,
-    Button: ({ children, onPress, variant, isDisabled, ...props }: any) => (
-        <button onClick={onPress} disabled={isDisabled} data-variant={variant} data-testid="back-button" {...props}>{children}</button>
-    ),
-    ActionButton: ({ children, onPress, _isQuiet, isDisabled, ...props }: any) => (
-        <button onClick={onPress} disabled={isDisabled} {...props}>{children}</button>
-    ),
-    MenuTrigger: ({ children }: any) => <div data-testid="menu-trigger">{children}</div>,
-    Menu: ({ children, onAction }: any) => (
-        <div role="menu">
-            {React.Children.map(children, (child: any) => {
-                if (!child) return null;
-                const key = child.key ?? child.props?.['data-key'];
-                return (
-                    <button key={key} role="menuitem" onClick={() => onAction?.(key)}>
-                        {child.props?.children}
+jest.mock('@adobe/react-spectrum', () => {
+    // The SHARED filter (tests/__mocks__/@adobe/react-spectrum.tsx). Required
+    // inside the factory because jest.mock is hoisted above imports.
+    const { filterSpectrumProps } = jest.requireActual('../../../__mocks__/@adobe/react-spectrum');
+    return {
+        View: ({ children, ...props }: any) => (
+            <div {...filterSpectrumProps(props)}>{children}</div>
+        ),
+        Flex: ({ children, ...props }: any) => (
+            <div style={{ display: 'flex' }} {...filterSpectrumProps(props)}>
+                {children}
+            </div>
+        ),
+        Heading: ({ children, level, ...props }: any) => {
+            const Tag = `h${level || 1}` as keyof React.JSX.IntrinsicElements;
+            return <Tag {...filterSpectrumProps(props)}>{children}</Tag>;
+        },
+        Text: ({ children, ...props }: any) => (
+            <span {...filterSpectrumProps(props)}>{children}</span>
+        ),
+        Button: ({ children, onPress, variant, isDisabled, ...props }: any) => (
+            <button
+                onClick={onPress}
+                disabled={isDisabled}
+                data-variant={variant}
+                data-testid="back-button"
+                {...filterSpectrumProps(props)}
+            >
+                {children}
+            </button>
+        ),
+        ActionButton: ({ children, onPress, _isQuiet, isDisabled, ...props }: any) => (
+            <button onClick={onPress} disabled={isDisabled} {...filterSpectrumProps(props)}>
+                {children}
+            </button>
+        ),
+        MenuTrigger: ({ children }: any) => <div data-testid="menu-trigger">{children}</div>,
+        Menu: ({ children, onAction }: any) => (
+            <div role="menu">
+                {React.Children.map(children, (child: any) => {
+                    if (!child) return null;
+                    const key = child.key ?? child.props?.['data-key'];
+                    return (
+                        <button key={key} role="menuitem" onClick={() => onAction?.(key)}>
+                            {child.props?.children}
+                        </button>
+                    );
+                })}
+            </div>
+        ),
+        Item: ({ children }: any) => <>{children}</>,
+        // The ActionGrid's lifecycle and remedy tiles wrap their buttons in a
+        // TooltipTrigger; both render inline so the tooltip text is queryable
+        // without a hover. Added when the runtime status moved off the surface and
+        // into these tooltips.
+        TooltipTrigger: ({ children }: any) => <>{children}</>,
+        Tooltip: ({ children }: any) => <span role="tooltip">{children}</span>,
+        Divider: () => <hr />,
+        Link: ({ children, onPress, _isQuiet, ...props }: any) => (
+            <a onClick={onPress} data-testid="sign-in-link" {...filterSpectrumProps(props)}>
+                {children}
+            </a>
+        ),
+        DialogContainer: ({ children, onDismiss }: any) => (
+            <div data-testid="dialog-container">
+                {onDismiss && (
+                    <button data-testid="dialog-dismiss" onClick={() => onDismiss()}>
+                        Dismiss
                     </button>
-                );
-            })}
-        </div>
-    ),
-    Item: ({ children }: any) => <>{children}</>,
-    // The ActionGrid's lifecycle and remedy tiles wrap their buttons in a
-    // TooltipTrigger; both render inline so the tooltip text is queryable
-    // without a hover. Added when the runtime status moved off the surface and
-    // into these tooltips.
-    TooltipTrigger: ({ children }: any) => <>{children}</>,
-    Tooltip: ({ children }: any) => <span role="tooltip">{children}</span>,
-    Divider: () => <hr />,
-    Link: ({ children, onPress, _isQuiet, ...props }: any) => (
-        <a onClick={onPress} data-testid="sign-in-link" {...props}>{children}</a>
-    ),
-    DialogContainer: ({ children }: any) => <div data-testid="dialog-container">{children}</div>,
-    TextField: ({ label, value, onChange, ...props }: any) => (
-        <input aria-label={label} value={value ?? ''} onChange={(e) => onChange?.(e.target.value)} {...props} />
-    ),
-    ProgressCircle: ({ ...props }: any) => <div data-testid="progress-circle" {...props} />,
-}));
+                )}
+                {children}
+            </div>
+        ),
+        TextField: ({ label, value, onChange, ...props }: any) => (
+            <input
+                aria-label={label}
+                value={value ?? ''}
+                onChange={(e) => onChange?.(e.target.value)}
+                {...filterSpectrumProps(props)}
+            />
+        ),
+        ProgressCircle: ({ ...props }: any) => (
+            <div data-testid="progress-circle" {...filterSpectrumProps(props)} />
+        ),
+    };
+});
 
 // Stub the capabilities modal — its real implementation renders the shared
 // Modal (Spectrum internals not covered by this file's minimal mock). The real
 // AiCapabilitiesModal is exercised in its own test; here we only assert the
 // dashboard opens it and wires its props.
 jest.mock('@/features/dashboard/ui/components/AiCapabilitiesModal', () => ({
-    AiCapabilitiesModal: ({ skills, mcps, hasSkillsError, hasMcpsError, onClose, onRegenerate, isBusy }: any) => (
+    AiCapabilitiesModal: ({
+        skills,
+        mcps,
+        hasSkillsError,
+        hasMcpsError,
+        onClose,
+        onRegenerate,
+        isBusy,
+        progress,
+    }: any) => (
         <div
             data-testid="ai-capabilities-modal"
             data-skills-error={String(Boolean(hasSkillsError))}
             data-mcps-error={String(Boolean(hasMcpsError))}
             data-busy={String(Boolean(isBusy))}
+            data-progress-operation={progress?.currentOperation ?? 'none'}
         >
             <span data-testid="ai-capabilities-modal-skills-count">{skills.length}</span>
             <span data-testid="ai-capabilities-modal-mcps-count">{mcps.length}</span>
             {skills.map((s: any) => (
-                <div key={s.path} data-testid="ai-capabilities-modal-skill">{s.name}</div>
+                <div key={s.path} data-testid="ai-capabilities-modal-skill">
+                    {s.name}
+                </div>
             ))}
             {mcps.map((m: any) => (
-                <div key={m.id} data-testid="ai-capabilities-modal-mcp">{m.id}</div>
+                <div key={m.id} data-testid="ai-capabilities-modal-mcp">
+                    {m.id}
+                </div>
             ))}
             <button data-testid="ai-capabilities-modal-regenerate" onClick={() => onRegenerate()}>
                 Regenerate AI files
             </button>
-            <button data-testid="ai-capabilities-modal-close" onClick={onClose}>Close</button>
+            <button data-testid="ai-capabilities-modal-close" onClick={onClose}>
+                Close
+            </button>
         </div>
     ),
 }));
@@ -257,5 +324,11 @@ export function setupTestContext(): TestContext {
 }
 
 export function renderDashboard(props: Parameters<typeof ProjectDashboardScreen>[0] = {}) {
-    return render(<ProjectDashboardScreen {...props} />);
+    const utils = render(<ProjectDashboardScreen {...props} />);
+    return {
+        ...utils,
+        /** Re-render the SAME instance with different props. */
+        rerenderWith: (next: Parameters<typeof ProjectDashboardScreen>[0]) =>
+            utils.rerender(<ProjectDashboardScreen {...next} />),
+    };
 }

@@ -14,10 +14,12 @@
  */
 
 import * as vscode from 'vscode';
-import { validateProjectId } from '@/core/validation';
+import type { TokenManager } from '@/features/authentication/services/tokenManager';
+import { validateProjectId } from '@/core/validation/validators/AdobeResourceValidator';
 import {
     handleDeleteAdobeProject,
     createTeardownDeps,
+    type DeleteAdobeProjectPayload,
 } from '@/features/authentication/handlers/deleteAdobeProjectHandler';
 import { teardownConsoleProject } from '@/features/authentication/services/consoleProjectTeardown';
 import type { ConsoleProjectTeardownResult } from '@/features/authentication/services/consoleProjectTeardown';
@@ -31,7 +33,7 @@ import {
 import { createMockContext } from './projectHandlers.testUtils';
 
 jest.mock('@/core/di/serviceLocator');
-jest.mock('@/core/validation');
+jest.mock('@/core/validation/validators/AdobeResourceValidator');
 jest.mock('@/types/typeGuards', () => ({
     toError: jest.fn((error: any) => (error instanceof Error ? error : new Error(String(error)))),
     parseJSON: jest.fn((str: string) => JSON.parse(str)),
@@ -62,6 +64,7 @@ const DELETED_RESULT: ConsoleProjectTeardownResult = {
     items: [
         { kind: 'registration', id: 'reg-1', outcome: 'deleted' },
         { kind: 'registration', id: 'reg-2', outcome: 'deleted' },
+        { kind: 'registration', id: 'reg-3', outcome: 'skipped' },
         { kind: 'provider', id: 'prov-1', outcome: 'deleted' },
         { kind: 'project', id: 'proj-1', outcome: 'deleted' },
     ],
@@ -73,7 +76,13 @@ const FAILED_RESULT: ConsoleProjectTeardownResult = {
     shouldClearConsoleSelection: false,
     items: [
         { kind: 'registration', id: 'reg-1', outcome: 'deleted' },
-        { kind: 'provider', id: 'prov-1', label: 'My Provider', outcome: 'failed', error: 'HTTP 500' },
+        {
+            kind: 'provider',
+            id: 'prov-1',
+            label: 'My Provider',
+            outcome: 'failed',
+            error: 'HTTP 500',
+        },
     ],
 };
 
@@ -99,7 +108,9 @@ function createDeleteContext() {
     context.authManager.deleteConsoleProject = jest.fn();
     context.authManager.subscribeOAuthServerToServerIntegrationToServices = jest.fn();
     context.authManager.getTokenManager = jest.fn().mockReturnValue({
-        inspectToken: jest.fn().mockResolvedValue({ valid: true, expiresIn: 60, token: USER_TOKEN }),
+        inspectToken: jest
+            .fn()
+            .mockResolvedValue({ valid: true, expiresIn: 60, token: USER_TOKEN }),
     });
     return context;
 }
@@ -113,7 +124,8 @@ describe('handleDeleteAdobeProject', () => {
         mockTeardown.mockResolvedValue(DELETED_RESULT);
         mockShowWarning.mockResolvedValue('Delete Project');
         mockWithProgress.mockImplementation(async (_options: any, task: any) =>
-            task({ report: jest.fn() }));
+            task({ report: jest.fn() })
+        );
     });
 
     describe('payload validation', () => {
@@ -123,15 +135,22 @@ describe('handleDeleteAdobeProject', () => {
         ])('returns a shaped error and shows no modal when %s', async (_label, payload) => {
             const result = await handleDeleteAdobeProject(mockContext, payload);
 
-            expect(result.success).toBe(false);
-            expect(result.error).toBeTruthy();
-            expect(result.code).toBeTruthy();
+            expect(result).toEqual({
+                success: false,
+                error: 'projectId and orgId are required to delete an Adobe project.',
+                code: ErrorCode.PROJECT_INVALID,
+            });
+            // Rejected BEFORE the org gate: no org lookup, no modal, no teardown.
+            expect(mockContext.authManager.getOrganizations).not.toHaveBeenCalled();
             expect(mockShowWarning).not.toHaveBeenCalled();
             expect(mockTeardown).not.toHaveBeenCalled();
         });
 
         it('returns a shaped error when the payload is missing entirely', async () => {
-            const result = await handleDeleteAdobeProject(mockContext, undefined as any);
+            const result = await handleDeleteAdobeProject(
+                mockContext,
+                undefined as unknown as DeleteAdobeProjectPayload,
+            );
 
             expect(result.success).toBe(false);
             expect(mockShowWarning).not.toHaveBeenCalled();
@@ -153,7 +172,7 @@ describe('handleDeleteAdobeProject', () => {
         });
 
         it('returns an error when authManager is missing', async () => {
-            const ctx = { ...mockContext, authManager: undefined } as any;
+            const ctx = { ...mockContext, authManager: undefined };
 
             const result = await handleDeleteAdobeProject(ctx, PAYLOAD);
 
@@ -186,7 +205,7 @@ describe('handleDeleteAdobeProject', () => {
             await handleDeleteAdobeProject(mockContext, PAYLOAD);
 
             const call = mockContext.sendMessage.mock.calls.find(
-                (c: unknown[]) => c[0] === 'delete-adobe-project',
+                (c: unknown[]) => c[0] === 'delete-adobe-project'
             );
             expect(call).toBeDefined();
             const payload = call![1] as { error: string; code: string; targetOrg?: { id: string } };
@@ -240,7 +259,12 @@ describe('handleDeleteAdobeProject', () => {
         it('rejects when no valid access token is available', async () => {
             mockContext.authManager.getTokenManager.mockReturnValue({
                 inspectToken: jest.fn().mockResolvedValue({ valid: false, expiresIn: 0 }),
-            });
+                // `TokenManager` is a CLASS with private fields, so no object
+                // literal can satisfy it and no builder is warranted for the three
+                // sites that stub it (PL-34). `as unknown as` is the allowed form:
+                // it NAMES what this is pretending to be, so every read below is
+                // still checked against the real class.
+            } as unknown as TokenManager);
 
             const result = await handleDeleteAdobeProject(mockContext, PAYLOAD);
 
@@ -255,8 +279,9 @@ describe('handleDeleteAdobeProject', () => {
 
             // The ownership fetch targets the payload org and runs before the modal.
             expect(mockContext.authManager.getProjects).toHaveBeenCalledWith({ orgId: 'org-123' });
-            expect(mockContext.authManager.getProjects.mock.invocationCallOrder[0])
-                .toBeLessThan(mockShowWarning.mock.invocationCallOrder[0]);
+            expect(mockContext.authManager.getProjects.mock.invocationCallOrder[0]).toBeLessThan(
+                mockShowWarning.mock.invocationCallOrder[0]
+            );
         });
 
         it('matches who_created case-insensitively (owned → proceeds to the modal)', async () => {
@@ -284,8 +309,11 @@ describe('handleDeleteAdobeProject', () => {
 
             expect(mockShowWarning).toHaveBeenCalledWith(
                 'Delete "My Project"?',
-                expect.objectContaining({ modal: true, detail: expect.stringContaining('cannot be undone') }),
-                'Delete Project',
+                expect.objectContaining({
+                    modal: true,
+                    detail: expect.stringContaining('cannot be undone'),
+                }),
+                'Delete Project'
             );
         });
 
@@ -323,17 +351,16 @@ describe('handleDeleteAdobeProject', () => {
         it('signals the webview with the projectId once the user confirms', async () => {
             await handleDeleteAdobeProject(mockContext, PAYLOAD);
 
-            expect(mockContext.sendMessage).toHaveBeenCalledWith(
-                'project-delete-started',
-                { projectId: 'proj-1' },
-            );
+            expect(mockContext.sendMessage).toHaveBeenCalledWith('project-delete-started', {
+                projectId: 'proj-1',
+            });
         });
 
         it('sends the signal AFTER the confirm modal and BEFORE the teardown', async () => {
             await handleDeleteAdobeProject(mockContext, PAYLOAD);
 
             const index = mockContext.sendMessage.mock.calls.findIndex(
-                (c: unknown[]) => c[0] === 'project-delete-started',
+                (c: unknown[]) => c[0] === 'project-delete-started'
             );
             const signalOrder = mockContext.sendMessage.mock.invocationCallOrder[index];
             expect(signalOrder).toBeGreaterThan(mockShowWarning.mock.invocationCallOrder[0]);
@@ -386,7 +413,11 @@ describe('handleDeleteAdobeProject', () => {
             expect(typeof deps.deleteConsoleProject).toBe('function');
             expect(typeof deps.getAccessToken).toBe('function');
             expect(typeof deps.createEventsClient).toBe('function');
-            expect(target).toEqual({ orgId: 'org-123', projectId: 'proj-1', projectTitle: 'My Project' });
+            expect(target).toEqual({
+                orgId: 'org-123',
+                projectId: 'proj-1',
+                projectTitle: 'My Project',
+            });
         });
 
         it('returns the teardown result as data', async () => {
@@ -405,14 +436,15 @@ describe('handleDeleteAdobeProject', () => {
                     title: expect.stringContaining('Deleting Adobe project'),
                     cancellable: false,
                 }),
-                expect.any(Function),
+                expect.any(Function)
             );
         });
 
         it('reports teardown progress as "Step N/M: message"', async () => {
             const report = jest.fn();
             mockWithProgress.mockImplementation(async (_options: any, task: any) =>
-                task({ report }));
+                task({ report })
+            );
             mockTeardown.mockImplementation(async (_deps, _target, onProgress) => {
                 onProgress?.({ step: 1, totalSteps: 4, message: 'Finding workspaces…' });
                 return DELETED_RESULT;
@@ -441,24 +473,47 @@ describe('handleDeleteAdobeProject', () => {
 
             await handleDeleteAdobeProject(mockContext, PAYLOAD);
 
-            expect(mockContext.authManager.getProjects).toHaveBeenCalledWith({ orgId: 'org-123' });
+            // The first call is the ownership gate; the refresh is the second, and
+            // must carry the org too (toHaveBeenCalledWith would match the first).
+            expect(mockContext.authManager.getProjects.mock.calls[1][0]).toEqual({ orgId: 'org-123' });
             // The refresh push goes through the same deletable stamping as get-projects.
             expect(mockContext.sendMessage).toHaveBeenCalledWith('get-projects', [
                 { ...OWNED_PROJECT, deletable: true },
-                { id: 'proj-2', name: 'Other', title: 'Other', who_created: OTHER_USER_ID, deletable: false },
+                {
+                    id: 'proj-2',
+                    name: 'Other',
+                    title: 'Other',
+                    who_created: OTHER_USER_ID,
+                    deletable: false,
+                },
             ]);
         });
 
         it('clears the console selection when the cached project IS the deleted one', async () => {
-            mockContext.authManager.getCachedProject.mockReturnValue({ id: 'proj-1', name: 'My Project' });
+            mockContext.authManager.getCachedProject.mockReturnValue({
+                id: 'proj-1',
+                name: 'My Project',
+            });
 
             await handleDeleteAdobeProject(mockContext, PAYLOAD);
 
             expect(mockContext.authManager.clearConsoleContext).toHaveBeenCalledTimes(1);
         });
 
+        it('does NOT clear the selection when the teardown says not to, even for the cached project', async () => {
+            mockTeardown.mockResolvedValue({ ...DELETED_RESULT, shouldClearConsoleSelection: false });
+            mockContext.authManager.getCachedProject.mockReturnValue({ id: 'proj-1', name: 'My Project' });
+
+            await handleDeleteAdobeProject(mockContext, PAYLOAD);
+
+            expect(mockContext.authManager.clearConsoleContext).not.toHaveBeenCalled();
+        });
+
         it('does NOT clear the console selection when the cached project differs', async () => {
-            mockContext.authManager.getCachedProject.mockReturnValue({ id: 'proj-other', name: 'Other' });
+            mockContext.authManager.getCachedProject.mockReturnValue({
+                id: 'proj-other',
+                name: 'Other',
+            });
 
             await handleDeleteAdobeProject(mockContext, PAYLOAD);
 
@@ -472,8 +527,13 @@ describe('handleDeleteAdobeProject', () => {
         });
 
         it('still succeeds when the selection clear fails (best-effort)', async () => {
-            mockContext.authManager.getCachedProject.mockReturnValue({ id: 'proj-1', name: 'My Project' });
-            mockContext.authManager.clearConsoleContext.mockRejectedValue(new Error('clear failed'));
+            mockContext.authManager.getCachedProject.mockReturnValue({
+                id: 'proj-1',
+                name: 'My Project',
+            });
+            mockContext.authManager.clearConsoleContext.mockRejectedValue(
+                new Error('clear failed')
+            );
 
             const result = await handleDeleteAdobeProject(mockContext, PAYLOAD);
 
@@ -511,20 +571,27 @@ describe('handleDeleteAdobeProject', () => {
             // First call is the confirm modal; the outcome warning follows it.
             const warning = mockShowWarning.mock.calls[1][0] as string;
             expect(warning).toContain('My Provider');
+            expect(warning).not.toContain('reg-1'); // deleted fine — not a failure
             expect(warning).toContain('NOT deleted');
             expect(warning).toContain('run Delete again');
             expect(mockShowInfo).not.toHaveBeenCalled();
         });
 
         it('neither clears the selection nor refreshes the project list', async () => {
-            mockContext.authManager.getCachedProject.mockReturnValue({ id: 'proj-1', name: 'My Project' });
+            mockContext.authManager.getCachedProject.mockReturnValue({
+                id: 'proj-1',
+                name: 'My Project',
+            });
 
             await handleDeleteAdobeProject(mockContext, PAYLOAD);
 
             expect(mockContext.authManager.clearConsoleContext).not.toHaveBeenCalled();
             // Exactly ONE getProjects call — the ownership gate; no refresh fetch or push.
             expect(mockContext.authManager.getProjects).toHaveBeenCalledTimes(1);
-            expect(mockContext.sendMessage).not.toHaveBeenCalledWith('get-projects', expect.anything());
+            expect(mockContext.sendMessage).not.toHaveBeenCalledWith(
+                'get-projects',
+                expect.anything()
+            );
         });
     });
 
@@ -540,7 +607,7 @@ describe('handleDeleteAdobeProject', () => {
             expect(result.code).toBe(ErrorCode.UNKNOWN);
             expect(mockContext.logger.error).toHaveBeenCalledWith(
                 expect.any(String),
-                expect.objectContaining({ message: 'kaboom internals' }),
+                expect.objectContaining({ message: 'kaboom internals' })
             );
         });
     });
@@ -549,17 +616,24 @@ describe('handleDeleteAdobeProject', () => {
 describe('createTeardownDeps', () => {
     const inspectToken = jest.fn();
 
-    const createAuthService = () => ({
-        getWorkspaces: jest.fn().mockResolvedValue([
-            { id: 'ws-1', name: 'Stage', title: 'Stage' },
-            { id: 'ws-2', name: 'Production', title: 'Production' },
-        ]),
-        getWorkspaceS2SCredential: jest.fn().mockResolvedValue({ clientId: 'cid', idIntegration: 'iid' }),
-        createWorkspaceS2SCredentialFor: jest.fn().mockResolvedValue({ clientId: 'cid2', idIntegration: 'iid2' }),
-        subscribeOAuthServerToServerIntegrationToServices: jest.fn().mockResolvedValue(undefined),
-        deleteConsoleProject: jest.fn().mockResolvedValue(undefined),
-        getTokenManager: jest.fn().mockReturnValue({ inspectToken }),
-    }) as unknown as AuthenticationService;
+    const createAuthService = () =>
+        ({
+            getWorkspaces: jest.fn().mockResolvedValue([
+                { id: 'ws-1', name: 'Stage', title: 'Stage' },
+                { id: 'ws-2', name: 'Production', title: 'Production' },
+            ]),
+            getWorkspaceS2SCredential: jest
+                .fn()
+                .mockResolvedValue({ clientId: 'cid', idIntegration: 'iid' }),
+            createWorkspaceS2SCredentialFor: jest
+                .fn()
+                .mockResolvedValue({ clientId: 'cid2', idIntegration: 'iid2' }),
+            subscribeOAuthServerToServerIntegrationToServices: jest
+                .fn()
+                .mockResolvedValue(undefined),
+            deleteConsoleProject: jest.fn().mockResolvedValue(undefined),
+            getTokenManager: jest.fn().mockReturnValue({ inspectToken }),
+        }) as unknown as AuthenticationService;
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -575,7 +649,7 @@ describe('createTeardownDeps', () => {
         expect(authService.subscribeOAuthServerToServerIntegrationToServices).toHaveBeenCalledWith(
             'org-1',
             'integ-1',
-            [{ sdkCode: 'AdobeIOManagementAPISDK', licenseConfigs: null, roles: null }],
+            [{ sdkCode: 'AdobeIOManagementAPISDK', licenseConfigs: null, roles: null }]
         );
     });
 
@@ -605,7 +679,10 @@ describe('createTeardownDeps', () => {
 
         const workspaces = await deps.getWorkspaces({ orgId: 'org-1', projectId: 'proj-1' });
 
-        expect(authService.getWorkspaces).toHaveBeenCalledWith({ orgId: 'org-1', projectId: 'proj-1' });
+        expect(authService.getWorkspaces).toHaveBeenCalledWith({
+            orgId: 'org-1',
+            projectId: 'proj-1',
+        });
         expect(workspaces).toEqual([
             { id: 'ws-1', name: 'Stage' },
             { id: 'ws-2', name: 'Production' },
@@ -616,10 +693,14 @@ describe('createTeardownDeps', () => {
         const authService = createAuthService();
         const deps = createTeardownDeps(authService);
 
-        await expect(deps.getWorkspaceS2SCredential('o', 'p', 'w'))
-            .resolves.toEqual({ clientId: 'cid', idIntegration: 'iid' });
-        await expect(deps.createWorkspaceS2SCredentialFor('o', 'p', 'w'))
-            .resolves.toEqual({ clientId: 'cid2', idIntegration: 'iid2' });
+        await expect(deps.getWorkspaceS2SCredential('o', 'p', 'w')).resolves.toEqual({
+            clientId: 'cid',
+            idIntegration: 'iid',
+        });
+        await expect(deps.createWorkspaceS2SCredentialFor('o', 'p', 'w')).resolves.toEqual({
+            clientId: 'cid2',
+            idIntegration: 'iid2',
+        });
         await deps.deleteConsoleProject('o', 'p');
 
         expect(authService.getWorkspaceS2SCredential).toHaveBeenCalledWith('o', 'p', 'w');

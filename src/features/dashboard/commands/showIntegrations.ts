@@ -27,20 +27,20 @@
 
 import * as vscode from 'vscode';
 import { createPanelHandlerContext } from '@/commands/handlerContextFactory';
-import { BaseWebviewCommand } from '@/core/base';
-import { WebviewCommunicationManager } from '@/core/communication';
-import { dispatchHandler, getRegisteredTypes } from '@/core/handlers';
-import { StateManager } from '@/core/state';
+import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
+import { WebviewCommunicationManager } from '@/core/communication/webviewCommunicationManager';
+import { dispatchHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 import { getBundleUri } from '@/core/utils/bundleUri';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
 import { asDisplayName, getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
 import { addIntegrationFlowHandlers } from '@/features/project-creation/handlers/addIntegrationFlowHandlers';
-import type { Project } from '@/types';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
+import type { Project } from '@/types/base';
 import { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
+import type { StateManager } from '@/types/state';
 import type { IntegrationsInitialData } from '@/types/webviewPayloads';
 
 export class ShowIntegrationsCommand extends BaseWebviewCommand<IntegrationsInitialData> {

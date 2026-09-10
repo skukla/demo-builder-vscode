@@ -8,8 +8,6 @@
  * + lock reasons + values). Side-effect-free; derives from persisted wizard state.
  */
 
-import stacksConfig from '@/features/components/config/stacks.json';
-import demoPackagesConfig from '@/features/components/config/demo-packages.json';
 import {
     resolveStackForBackend,
     provisionalStackForBackend,
@@ -21,29 +19,8 @@ import {
     isCommerceStepComplete,
     type CommerceSectionId,
 } from '@/features/project-creation/ui/steps/commerceSections';
-import type { DemoPackage, DemoPackagesConfig } from '@/types/demoPackages';
-import type { StacksConfig } from '@/types/stacks';
 import type { WizardState } from '@/types/webview';
-
-const STACKS = (stacksConfig as StacksConfig).stacks;
-// Widen through `unknown` as demoPackageLoader and aiContextWriter both do: the
-// inferred JSON literal is a union of per-package shapes, so each member is missing
-// storefront keys the others declare and a direct cast stops overlapping once a
-// package with a distinct storefront set is added.
-const PACKAGES = (demoPackagesConfig as unknown as DemoPackagesConfig).packages;
-
-const PAAS = 'adobe-commerce-paas';
-const ACCS = 'adobe-commerce-accs';
-
-function pkg(id: string): DemoPackage {
-    const found = PACKAGES.find((p) => p.id === id);
-    if (!found) throw new Error(`test package not found: ${id}`);
-    return found;
-}
-
-function state(overrides: Partial<WizardState> = {}): WizardState {
-    return overrides as WizardState;
-}
+import { ACCS, PAAS, pkg, state, STACKS } from './commerceSections.testUtils';
 
 describe('resolveStackForBackend', () => {
     it('resolves a unique stack for citisignal + ACCS (only eds-accs)', () => {

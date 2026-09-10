@@ -37,27 +37,9 @@ jest.mock('vscode', () => {
     };
 }, { virtual: true });
 
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn().mockReturnValue({
-        info: jest.fn(),
-        debug: jest.fn(),
-        error: jest.fn(),
-        warn: jest.fn(),
-    }),
-    initializeLogger: jest.fn(),
-}));
-
-// Service imports required by the authoringExperience module to load.
-jest.mock('@/features/eds/services/github/githubTokenService');
-jest.mock('@/features/eds/services/github/githubRepoOperations');
-jest.mock('@/features/eds/services/github/githubFileOperations');
-jest.mock('@/features/eds/services/github/githubOAuthService');
-jest.mock('@/features/eds/services/daLive/daLiveAuthService');
-jest.mock('@/features/eds/services/daLive/daLiveOrgOperations', () => ({
-    hasWriteAccess: jest.fn(),
-}));
-
-import { resolveAuthoringExperience } from '@/features/eds/handlers/authoringExperience';
+import {
+    resolveAuthoringExperience,
+} from './authoringExperience.testUtils';
 import * as vscode from 'vscode';
 
 describe('resolveAuthoringExperience', () => {
@@ -94,6 +76,15 @@ describe('resolveAuthoringExperience', () => {
         mockAuthoringExperienceValue = undefined;
 
         expect(resolveAuthoringExperience('garbage')).toBe('da-live-classic');
+    });
+
+    it('coerces a corrupted global setting to da-live-classic (fail-safe)', () => {
+        // Nothing validates settings.json. A value that is not a union member
+        // must never reach the Author button as-is, or it builds a URL for an
+        // authoring experience that does not exist.
+        mockAuthoringExperienceValue = 'ue';
+
+        expect(resolveAuthoringExperience(undefined)).toBe('da-live-classic');
     });
 
     it('reads from the demoBuilder.daLive configuration section', () => {

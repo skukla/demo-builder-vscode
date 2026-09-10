@@ -11,25 +11,28 @@
  * to "Main Website" prompted + republished, but switching back to CitiSignal did not).
  */
 
-import { ConfigureProjectWebviewCommand } from '@/features/dashboard/commands/configure';
+import { ConfigureProjectWebviewCommand } from './configure.testUtils';
 import * as vscode from 'vscode';
 import type { Logger } from '@/types/logger';
-import { StateManager } from '@/core/state';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockProject } from '../../../helpers/projectFake';
 
-jest.mock('vscode');
-jest.mock('@/core/state');
-jest.mock('@/core/logging', () => ({
-    getLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() }),
-    Logger: jest.fn().mockImplementation(() => ({
-        debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(),
-    })),
-}));
 
 const mockRepublishStorefrontConfig = jest.fn();
-jest.mock('@/features/eds', () => ({
+// The '@/features/eds' barrel was retired under ADR-022, so these names are mocked
+// at the modules that declare them. isEdsProject is a type guard and lives in
+// @/types/typeGuards, whose other guards stay real.
+jest.mock('@/types/typeGuards', () => ({
+    ...jest.requireActual('@/types/typeGuards'),
     isEdsProject: jest.fn(() => true),
+}));
+jest.mock('@/features/eds/services/storefront/storefrontStalenessDetector', () => ({
     detectStorefrontChanges: jest.fn(() => ({ hasChanges: false })),
+}));
+jest.mock('@/features/eds/services/storefront/storefrontRepublishService', () => ({
     republishStorefrontConfig: (...args: unknown[]) => mockRepublishStorefrontConfig(...args),
 }));
 
@@ -42,7 +45,7 @@ jest.mock('@/features/dashboard/commands/showDashboard', () => ({
 const STOREFRONT_ACTION_TAKEN = 'demoBuilder._internal.storefrontActionTaken';
 
 function makeProject(): Project {
-    return { name: 'Test Project', path: '/test/project', componentConfigs: {} } as unknown as Project;
+    return createMockProject({ name: 'Test Project', path: '/test/project', componentConfigs: {} });
 }
 
 describe('ConfigureProjectWebviewCommand - storefront republish resets notification flag', () => {
@@ -50,19 +53,9 @@ describe('ConfigureProjectWebviewCommand - storefront republish resets notificat
 
     beforeEach(() => {
         jest.clearAllMocks();
-        const mockContext = {
-            subscriptions: [],
-            extensionPath: '/test/extension/path',
-            extensionUri: vscode.Uri.file('/test/extension/path'),
-            secrets: { get: jest.fn(), store: jest.fn() },
-            globalState: { get: jest.fn(), update: jest.fn() },
-        } as unknown as vscode.ExtensionContext;
-        const mockStateManager = {
-            saveProject: jest.fn().mockResolvedValue(undefined),
-        } as unknown as StateManager;
-        const mockLogger = {
-            debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(),
-        } as unknown as Logger;
+        const mockContext = createMockExtensionContext();
+        const mockStateManager = createMockStateManager();
+        const mockLogger = createMockLogger() as unknown as Logger;
         command = new ConfigureProjectWebviewCommand(mockContext, mockStateManager, mockLogger);
     });
 

@@ -21,7 +21,6 @@ jest.mock('@/core/ui/utils/WebviewClient', () => ({
  * Tests dynamic progress updates, step indexing, and multi-version integration
  */
 describe('PrerequisitesStep - Progress Updates and Multi-Version', () => {
-
     beforeAll(() => {
         setupScrollMock();
     });
@@ -32,7 +31,10 @@ describe('PrerequisitesStep - Progress Updates and Multi-Version', () => {
     });
 
     it('should update detail text dynamically in place', async () => {
-        const { fireStatus } = await renderLoadedStep([{ id: 'node', name: 'Node.js', description: 'JavaScript runtime', optional: false }], 'Node.js');
+        const { fireStatus } = await renderLoadedStep(
+            [{ id: 'node', name: 'Node.js', description: 'JavaScript runtime', optional: false }],
+            'Node.js'
+        );
 
         // First detail text - Installing Node.js 20
         fireStatus({
@@ -40,18 +42,25 @@ describe('PrerequisitesStep - Progress Updates and Multi-Version', () => {
             status: 'checking',
             message: 'Installing...',
             unifiedProgress: {
-                overall: { percent: 25, currentStep: 1, totalSteps: 2, stepName: 'Installing Node.js' },
+                overall: {
+                    percent: 25,
+                    currentStep: 1,
+                    totalSteps: 2,
+                    stepName: 'Installing Node.js',
+                },
                 command: {
                     type: 'determinate' as const,
                     percent: 50,
                     detail: 'Installing Node.js 20',
-                    confidence: 'exact' as const
-                }
-            }
+                    confidence: 'exact' as const,
+                },
+            },
         });
 
         await waitFor(() => {
-            expect(screen.getByText(/Step 1\/2: Installing Node\.js - Installing Node\.js 20/)).toBeInTheDocument();
+            expect(
+                screen.getByText(/Step 1\/2: Installing Node\.js - Installing Node\.js 20/)
+            ).toBeInTheDocument();
         });
 
         // Detail text updates IN PLACE - now showing Installing Node.js 24
@@ -60,25 +69,35 @@ describe('PrerequisitesStep - Progress Updates and Multi-Version', () => {
             status: 'checking',
             message: 'Installing...',
             unifiedProgress: {
-                overall: { percent: 75, currentStep: 2, totalSteps: 2, stepName: 'Installing Node.js' },
+                overall: {
+                    percent: 75,
+                    currentStep: 2,
+                    totalSteps: 2,
+                    stepName: 'Installing Node.js',
+                },
                 command: {
                     type: 'determinate' as const,
                     percent: 50,
                     detail: 'Installing Node.js 24',
-                    confidence: 'exact' as const
-                }
-            }
+                    confidence: 'exact' as const,
+                },
+            },
         });
 
         await waitFor(() => {
-            expect(screen.getByText(/Step 2\/2: Installing Node\.js - Installing Node\.js 24/)).toBeInTheDocument();
+            expect(
+                screen.getByText(/Step 2\/2: Installing Node\.js - Installing Node\.js 24/)
+            ).toBeInTheDocument();
             // Old text should be replaced
             expect(screen.queryByText(/Installing Node\.js 20/)).not.toBeInTheDocument();
         });
     });
 
     it('should use 1-based indexing for step display', async () => {
-        const { fireStatus } = await renderLoadedStep([{ id: 'node', name: 'Node.js', description: 'JavaScript runtime', optional: false }], 'Node.js');
+        const { fireStatus } = await renderLoadedStep(
+            [{ id: 'node', name: 'Node.js', description: 'JavaScript runtime', optional: false }],
+            'Node.js'
+        );
 
         // Test with step 1 (should display as 1, not 0)
         fireStatus({
@@ -86,14 +105,19 @@ describe('PrerequisitesStep - Progress Updates and Multi-Version', () => {
             status: 'checking',
             message: 'Installing...',
             unifiedProgress: {
-                overall: { percent: 33, currentStep: 1, totalSteps: 3, stepName: 'Installing Node.js' },
+                overall: {
+                    percent: 33,
+                    currentStep: 1,
+                    totalSteps: 3,
+                    stepName: 'Installing Node.js',
+                },
                 command: {
                     type: 'determinate' as const,
                     percent: 50,
                     detail: 'Installing Node.js 20',
-                    confidence: 'exact' as const
-                }
-            }
+                    confidence: 'exact' as const,
+                },
+            },
         });
 
         await waitFor(() => {
@@ -104,7 +128,17 @@ describe('PrerequisitesStep - Progress Updates and Multi-Version', () => {
     });
 
     it('should integrate with multi-version Node installation flow', async () => {
-        const { fireStatus } = await renderLoadedStep([{ id: 'node', name: 'Node.js (20, 24)', description: 'JavaScript runtime', optional: false }], 'Node.js (20, 24)');
+        const { fireStatus } = await renderLoadedStep(
+            [
+                {
+                    id: 'node',
+                    name: 'Node.js (20, 24)',
+                    description: 'JavaScript runtime',
+                    optional: false,
+                },
+            ],
+            'Node.js (20, 24)'
+        );
 
         // Installing Node 20 (first of 2 steps)
         fireStatus({
@@ -112,19 +146,26 @@ describe('PrerequisitesStep - Progress Updates and Multi-Version', () => {
             status: 'checking',
             message: 'Installing...',
             unifiedProgress: {
-                overall: { percent: 25, currentStep: 1, totalSteps: 2, stepName: 'Installing Node.js' },
+                overall: {
+                    percent: 25,
+                    currentStep: 1,
+                    totalSteps: 2,
+                    stepName: 'Installing Node.js',
+                },
                 command: {
                     type: 'determinate' as const,
                     percent: 50,
                     detail: 'Installing Node.js 20',
-                    confidence: 'exact' as const
-                }
-            }
+                    confidence: 'exact' as const,
+                },
+            },
         });
 
         // Check unified format shows step 1 with Node 20 detail
         await waitFor(() => {
-            expect(screen.getByText(/Step 1\/2: Installing Node\.js - Installing Node\.js 20/)).toBeInTheDocument();
+            expect(
+                screen.getByText(/Step 1\/2: Installing Node\.js - Installing Node\.js 20/)
+            ).toBeInTheDocument();
         });
 
         // Installing Node 24 (second of 2 steps)
@@ -133,19 +174,26 @@ describe('PrerequisitesStep - Progress Updates and Multi-Version', () => {
             status: 'checking',
             message: 'Installing...',
             unifiedProgress: {
-                overall: { percent: 75, currentStep: 2, totalSteps: 2, stepName: 'Installing Node.js' },
+                overall: {
+                    percent: 75,
+                    currentStep: 2,
+                    totalSteps: 2,
+                    stepName: 'Installing Node.js',
+                },
                 command: {
                     type: 'determinate' as const,
                     percent: 50,
                     detail: 'Installing Node.js 24',
-                    confidence: 'exact' as const
-                }
-            }
+                    confidence: 'exact' as const,
+                },
+            },
         });
 
         // Check unified format updated to step 2 with Node 24 detail
         await waitFor(() => {
-            expect(screen.getByText(/Step 2\/2: Installing Node\.js - Installing Node\.js 24/)).toBeInTheDocument();
+            expect(
+                screen.getByText(/Step 2\/2: Installing Node\.js - Installing Node\.js 24/)
+            ).toBeInTheDocument();
             // Old text should be replaced
             expect(screen.queryByText(/Installing Node\.js 20/)).not.toBeInTheDocument();
         });

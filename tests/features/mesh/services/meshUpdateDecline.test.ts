@@ -12,16 +12,17 @@ import {
     isMeshUpdateDeclined,
 } from '@/features/mesh/services/meshUpdateDecline';
 import type { Project, AppBuilderComponentState } from '@/types/base';
+import { createMockProject } from '../../../helpers/projectFake';
 
 function makeProject(overrides: Partial<Project> = {}): Project {
-    return {
+    return createMockProject({
         name: 'demo',
         path: '/tmp/demo',
         status: 'ready',
         created: new Date(),
         lastModified: new Date(),
         ...overrides,
-    } as Project;
+    });
 }
 
 function keyedMesh(overrides: Record<string, unknown> = {}): AppBuilderComponentState {
@@ -82,6 +83,14 @@ describe('isMeshUpdateDeclined (keyed-only read)', () => {
         });
 
         expect(isMeshUpdateDeclined(project)).toBe(true);
+    });
+
+    it('returns false — not a crash — for a project with no keyed mesh entry at all', () => {
+        // The configure command asks this before a mesh has ever been deployed, so
+        // the absent-entry read is a live path, not a defensive one.
+        const project = makeProject();
+
+        expect(isMeshUpdateDeclined(project)).toBe(false);
     });
 
     it('returns false when the keyed entry lacks the flag', () => {

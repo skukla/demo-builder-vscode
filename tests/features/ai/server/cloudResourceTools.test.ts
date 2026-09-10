@@ -1,104 +1,34 @@
 /**
- * cloud-resource tools — GitHub repo list/delete adapters. The EDS service layer
- * is mocked (no real GitHub calls); covers auth handoff, pagination/projection,
- * and the extra-strict (confirm + confirmName echo) gate on the irreversible
- * delete.
+ * cloud-resource tools — the five GitHub / DA.live adapters end to end. The EDS
+ * and DA.live service layers are mocked in `cloudResourceTools.testUtils` (no
+ * real GitHub calls); this suite covers auth handoff, pagination/projection, and
+ * the extra-strict (confirm + confirmName echo) gate on the irreversible
+ * deletions.
+ *
+ * The sibling `-arguments` suite covers what each tool does with the ARGUMENTS
+ * an agent sends — a missing object, whitespace, one field of three — and the
+ * declarations it registers itself with.
  */
 
-jest.mock('@/features/eds/handlers/edsHelpers', () => ({
-    getGitHubServices: jest.fn(),
-}));
-
-const mockInspectToken = jest.fn();
-const mockListOrgSites = jest.fn();
-const mockDeleteAllSiteContent = jest.fn();
-
-jest.mock('@/core/di', () => ({
-    ServiceLocator: {
-        getAuthenticationService: jest.fn(() => ({
-            getTokenManager: () => ({ inspectToken: mockInspectToken }),
-        })),
-    },
-}));
-jest.mock('@/features/eds/services/daLive/daLiveOrgOperations', () => ({
-    DaLiveOrgOperations: jest.fn(() => ({ listOrgSites: mockListOrgSites })),
-}));
-jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
-    DaLiveContentOperations: jest.fn(() => ({ deleteAllSiteContent: mockDeleteAllSiteContent })),
-}));
-jest.mock('@/features/ai/server/adobeTargetStore', () => ({
-    getAdobeTarget: jest.fn(() => ({ orgId: 'org-stored' })),
-    runWithAdobeTarget: jest.fn(async (fn: () => Promise<unknown>) => fn()),
-}));
-
-import { registerCloudResourceTools } from '@/features/ai/server/cloudResourceTools';
-import { runWithAdobeTarget } from '@/features/ai/server/adobeTargetStore';
-import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';
+import {
+    ctxFactory,
+    fakeServer,
+    getGitHubServicesMock,
+    gh,
+    mockDeleteAllSiteContent,
+    mockInspectToken,
+    mockListOrgSites,
+    registerCloudResourceTools,
+    resetCloudResourceMocks,
+    runWithAdobeTarget,
+} from './cloudResourceTools.testUtils';
+import { AuthError } from '@/core/errors';
 import { ErrorCode } from '@/types/errorCodes';
-import { AuthError } from '@/types/errors';
-import type { HandlerContext } from '@/types/handlers';
 import { expectWithinCeiling } from './responseCeilings';
 
-const getGitHubServicesMock = getGitHubServices as jest.Mock;
-
 beforeEach(() => {
-    jest.clearAllMocks();
-    mockInspectToken.mockResolvedValue({ valid: true, expiresIn: 60, token: 'ims-token' });
-    mockListOrgSites.mockResolvedValue([]);
-    mockDeleteAllSiteContent.mockResolvedValue({ success: true, deletedCount: 0 });
+    resetCloudResourceMocks();
 });
-
-function fakeServer() {
-
-    const tools = new Map<string, (args: any) => Promise<{ content: Array<{ text: string }> }>>();
-    return {
-
-        registerTool(name: string, _def: unknown, handler: (args: any) => Promise<{ content: Array<{ text: string }> }>) {
-            tools.set(name, handler);
-        },
-
-        async call(name: string, args?: unknown): Promise<any> {
-            return JSON.parse((await tools.get(name)!(args)).content[0].text);
-        },
-    };
-}
-
-const ctxFactory = () => ({}) as unknown as HandlerContext;
-
-/** Build a GitHub services double; override pieces per test. */
-function gh(overrides: {
-    valid?: boolean;
-    validateThrows?: boolean;
-    repos?: Array<{ fullName: string; isPrivate: boolean; updatedAt: string }>;
-    deleteRepository?: jest.Mock;
-    createFromTemplate?: jest.Mock;
-    waitForContent?: jest.Mock;
-} = {}) {
-    const validateToken = overrides.validateThrows
-        ? jest.fn(async () => { throw new Error('network'); })
-        : jest.fn(async () => ({ valid: overrides.valid ?? true }));
-    return {
-        tokenService: { validateToken },
-        repoOperations: {
-            listUserRepositories: jest.fn(async () => overrides.repos ?? []),
-            deleteRepository: overrides.deleteRepository ?? jest.fn(async () => undefined),
-            // Shape from GitHubRepo (`types.ts:47-66`): fullName/htmlUrl/defaultBranch,
-            // and NO `owner` field — the tool derives the owner from fullName.
-            createFromTemplate:
-                overrides.createFromTemplate ??
-                jest.fn(async () => ({
-                    id: 1,
-                    name: 'my-site',
-                    fullName: 'acme/my-site',
-                    htmlUrl: 'https://github.com/acme/my-site',
-                    cloneUrl: 'https://github.com/acme/my-site.git',
-                    defaultBranch: 'main',
-                    isPrivate: false,
-                })),
-            waitForContent: overrides.waitForContent ?? jest.fn(async () => true),
-        },
-    };
-}
 
 describe('cloud-resource tools (GitHub)', () => {
     describe('list_github_repos', () => {
@@ -139,7 +69,6 @@ describe('cloud-resource tools (GitHub)', () => {
             });
         });
     });
-
 
     describe('create_github_repo', () => {
         const ARGS = { templateOwner: 'adobe', templateRepo: 'boilerplate', name: 'my-site' };
@@ -199,7 +128,7 @@ describe('cloud-resource tools (GitHub)', () => {
         it('still reports the repo when content never becomes ready', async () => {
             const res = await serve({ waitForContent: jest.fn(async () => false) }).call(
                 'create_github_repo',
-                ARGS,
+                ARGS
             );
             expect(res.created).toBe(true);
             expect(res.contentReady).toBe(false);
@@ -217,8 +146,13 @@ describe('cloud-resource tools (GitHub)', () => {
 
         it('passes the target namespace and privacy through', async () => {
             const createFromTemplate = jest.fn(async () => ({
-                id: 2, name: 'my-site', fullName: 'my-org/my-site',
-                htmlUrl: 'u', cloneUrl: 'c', defaultBranch: 'main', isPrivate: true,
+                id: 2,
+                name: 'my-site',
+                fullName: 'my-org/my-site',
+                htmlUrl: 'u',
+                cloneUrl: 'c',
+                defaultBranch: 'main',
+                isPrivate: true,
             }));
             await serve({ createFromTemplate }).call('create_github_repo', {
                 ...ARGS,
@@ -226,7 +160,11 @@ describe('cloud-resource tools (GitHub)', () => {
                 isPrivate: true,
             });
             expect(createFromTemplate).toHaveBeenCalledWith(
-                'adobe', 'boilerplate', 'my-site', true, 'my-org',
+                'adobe',
+                'boilerplate',
+                'my-site',
+                true,
+                'my-org'
             );
         });
 
@@ -268,7 +206,12 @@ describe('cloud-resource tools (GitHub)', () => {
             const s = fakeServer();
             registerCloudResourceTools(s, ctxFactory);
 
-            const res = await s.call('delete_github_repo', { owner: 'me', repo: 'r', confirm: true, confirmName: 'me/WRONG' });
+            const res = await s.call('delete_github_repo', {
+                owner: 'me',
+                repo: 'r',
+                confirm: true,
+                confirmName: 'me/WRONG',
+            });
             expect(res).toMatchObject({ irreversible: true });
             expect(deleteRepository).not.toHaveBeenCalled();
         });
@@ -279,7 +222,12 @@ describe('cloud-resource tools (GitHub)', () => {
             const s = fakeServer();
             registerCloudResourceTools(s, ctxFactory);
 
-            const res = await s.call('delete_github_repo', { owner: 'me', repo: 'r', confirm: true, confirmName: 'me/r' });
+            const res = await s.call('delete_github_repo', {
+                owner: 'me',
+                repo: 'r',
+                confirm: true,
+                confirmName: 'me/r',
+            });
             expect(res).toMatchObject({ needsAuth: 'github' });
             expect(deleteRepository).not.toHaveBeenCalled();
         });
@@ -290,19 +238,35 @@ describe('cloud-resource tools (GitHub)', () => {
             const s = fakeServer();
             registerCloudResourceTools(s, ctxFactory);
 
-            const res = await s.call('delete_github_repo', { owner: 'me', repo: 'r', confirm: true, confirmName: 'me/r' });
+            const res = await s.call('delete_github_repo', {
+                owner: 'me',
+                repo: 'r',
+                confirm: true,
+                confirmName: 'me/r',
+            });
             expect(res).toEqual({ deleted: true, repo: 'me/r' });
             expect(deleteRepository).toHaveBeenCalledWith('me', 'r');
         });
 
         it('returns deleted:false with the error when the service throws', async () => {
-            const deleteRepository = jest.fn(async () => { throw new Error('insufficient scope'); });
+            const deleteRepository = jest.fn(async () => {
+                throw new Error('insufficient scope');
+            });
             getGitHubServicesMock.mockReturnValue(gh({ deleteRepository }));
             const s = fakeServer();
             registerCloudResourceTools(s, ctxFactory);
 
-            const res = await s.call('delete_github_repo', { owner: 'me', repo: 'r', confirm: true, confirmName: 'me/r' });
-            expect(res).toMatchObject({ deleted: false, repo: 'me/r', error: 'insufficient scope' });
+            const res = await s.call('delete_github_repo', {
+                owner: 'me',
+                repo: 'r',
+                confirm: true,
+                confirmName: 'me/r',
+            });
+            expect(res).toMatchObject({
+                deleted: false,
+                repo: 'me/r',
+                error: 'insufficient scope',
+            });
         });
     });
 });
@@ -321,7 +285,9 @@ describe('cloud-resource tools (DA.live)', () => {
             mockInspectToken.mockResolvedValueOnce({ valid: false, expiresIn: 0 });
             const s = fakeServer();
             registerCloudResourceTools(s, ctxFactory);
-            expect(await s.call('list_dalive_sites', { org: 'acme' })).toMatchObject({ needsAuth: 'adobe' });
+            expect(await s.call('list_dalive_sites', { org: 'acme' })).toMatchObject({
+                needsAuth: 'adobe',
+            });
             expect(mockListOrgSites).not.toHaveBeenCalled();
         });
 
@@ -345,7 +311,9 @@ describe('cloud-resource tools (DA.live)', () => {
         });
 
         it('maps an ORG_MISMATCH error to a typed non-retryable result', async () => {
-            mockListOrgSites.mockRejectedValueOnce(new AuthError(ErrorCode.ORG_MISMATCH, 'wrong org'));
+            mockListOrgSites.mockRejectedValueOnce(
+                new AuthError(ErrorCode.ORG_MISMATCH, 'wrong org')
+            );
             const s = fakeServer();
             registerCloudResourceTools(s, ctxFactory);
             expect(await s.call('list_dalive_sites', { org: 'acme' })).toMatchObject({
@@ -384,7 +352,12 @@ describe('cloud-resource tools (DA.live)', () => {
         it('refuses when confirmName does not echo org/site exactly', async () => {
             const s = fakeServer();
             registerCloudResourceTools(s, ctxFactory);
-            const res = await s.call('cleanup_dalive_site', { org: 'acme', site: 'shop', confirm: true, confirmName: 'acme/WRONG' });
+            const res = await s.call('cleanup_dalive_site', {
+                org: 'acme',
+                site: 'shop',
+                confirm: true,
+                confirmName: 'acme/WRONG',
+            });
             expect(res).toMatchObject({ irreversible: true });
             expect(mockDeleteAllSiteContent).not.toHaveBeenCalled();
         });
@@ -393,7 +366,12 @@ describe('cloud-resource tools (DA.live)', () => {
             mockInspectToken.mockResolvedValueOnce({ valid: false, expiresIn: 0 });
             const s = fakeServer();
             registerCloudResourceTools(s, ctxFactory);
-            const res = await s.call('cleanup_dalive_site', { org: 'acme', site: 'shop', confirm: true, confirmName: 'acme/shop' });
+            const res = await s.call('cleanup_dalive_site', {
+                org: 'acme',
+                site: 'shop',
+                confirm: true,
+                confirmName: 'acme/shop',
+            });
             expect(res).toMatchObject({ needsAuth: 'adobe' });
             expect(mockDeleteAllSiteContent).not.toHaveBeenCalled();
         });
@@ -402,16 +380,28 @@ describe('cloud-resource tools (DA.live)', () => {
             mockDeleteAllSiteContent.mockResolvedValueOnce({ success: true, deletedCount: 7 });
             const s = fakeServer();
             registerCloudResourceTools(s, ctxFactory);
-            const res = await s.call('cleanup_dalive_site', { org: 'acme', site: 'shop', confirm: true, confirmName: 'acme/shop' });
+            const res = await s.call('cleanup_dalive_site', {
+                org: 'acme',
+                site: 'shop',
+                confirm: true,
+                confirmName: 'acme/shop',
+            });
             expect(res).toEqual({ deleted: true, site: 'acme/shop', deletedCount: 7 });
             expect(mockDeleteAllSiteContent).toHaveBeenCalledWith('acme', 'shop');
         });
 
         it('maps an ORG_MISMATCH error to a typed non-retryable result', async () => {
-            mockDeleteAllSiteContent.mockRejectedValueOnce(new AuthError(ErrorCode.ORG_MISMATCH, 'wrong org'));
+            mockDeleteAllSiteContent.mockRejectedValueOnce(
+                new AuthError(ErrorCode.ORG_MISMATCH, 'wrong org')
+            );
             const s = fakeServer();
             registerCloudResourceTools(s, ctxFactory);
-            const res = await s.call('cleanup_dalive_site', { org: 'acme', site: 'shop', confirm: true, confirmName: 'acme/shop' });
+            const res = await s.call('cleanup_dalive_site', {
+                org: 'acme',
+                site: 'shop',
+                confirm: true,
+                confirmName: 'acme/shop',
+            });
             expect(res).toMatchObject({ error_type: 'ORG_MISMATCH', non_retryable: true });
         });
 
@@ -419,7 +409,12 @@ describe('cloud-resource tools (DA.live)', () => {
             mockDeleteAllSiteContent.mockResolvedValueOnce({ success: true, deletedCount: 0 });
             const s = fakeServer();
             registerCloudResourceTools(s, ctxFactory);
-            await s.call('cleanup_dalive_site', { org: 'acme', site: 'shop', confirm: true, confirmName: 'acme/shop' });
+            await s.call('cleanup_dalive_site', {
+                org: 'acme',
+                site: 'shop',
+                confirm: true,
+                confirmName: 'acme/shop',
+            });
             expect(runWithAdobeTarget).toHaveBeenCalled();
         });
     });
@@ -441,13 +436,16 @@ describe('response-size ceilings', () => {
                         fullName: `owner-name/repository-number-${i}`,
                         isPrivate: false,
                         updatedAt: '2026-08-16T18:05:45Z',
-                    })),
+                    }))
                 ),
             },
         });
         registerCloudResourceTools(s, ctxFactory);
 
-        expectWithinCeiling('list_github_repos', JSON.stringify(await s.call('list_github_repos', {})));
+        expectWithinCeiling(
+            'list_github_repos',
+            JSON.stringify(await s.call('list_github_repos', {}))
+        );
     });
 
     it.each([

@@ -40,22 +40,23 @@ import {
     republishStorefrontConfig,
 } from '@/features/eds/services/storefront/storefrontRepublishService';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
-const logger = {
-    info: jest.fn(),
-    debug: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-} as unknown as Logger;
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import { createMockProject } from '../../../helpers/projectFake';
+const logger = createMockLogger() as unknown as Logger;
 
 /** A project the extractor accepts: repo, DA.live pair and a component path. */
 function edsProject(metadata: Record<string, unknown> = {}) {
-    return {
+    return createMockProject({
         name: 'p',
         path: '/p',
         componentInstances: {
             'eds-storefront': {
                 id: 'eds-storefront',
+                name: 'EDS Storefront',
+                type: 'frontend',
+                status: 'ready',
                 path: '/p/storefront',
                 metadata: {
                     githubRepo: 'me/shop',
@@ -65,7 +66,7 @@ function edsProject(metadata: Record<string, unknown> = {}) {
                 },
             },
         },
-    } as never;
+    });
 }
 
 function run(over: Record<string, unknown> = {}, project = edsProject()) {
@@ -75,11 +76,11 @@ function run(over: Record<string, unknown> = {}, project = edsProject()) {
         persist,
         result: republishStorefrontConfig({
             project,
-            secrets: {} as never,
+            secrets: createMockSecretStorage().secrets,
             logger,
             persist,
             ...over,
-        } as never),
+        }),
     };
 }
 
@@ -113,7 +114,7 @@ describe('republishStorefrontConfig — persisting the cleared flag', () => {
         // The early return that made this worth checking: a successful CONTENT
         // republish tolerates this step failing, so a flag cleared here on a
         // metadata-less project would be a lie.
-        const bare = { name: 'p', path: '/p', componentInstances: {} } as never;
+        const bare = createMockProject({ name: 'p', path: '/p', componentInstances: {} });
         const { project, persist, result } = run({}, bare);
         await result;
 
@@ -131,9 +132,7 @@ describe('extractRepublishParams — daLiveSite fallback', () => {
 
         const result = extractRepublishParams(project);
 
-        expect(result).toEqual(
-            expect.objectContaining({ success: true, daLiveSite: 'shop' })
-        );
+        expect(result).toEqual(expect.objectContaining({ success: true, daLiveSite: 'shop' }));
     });
 
     it('an explicit daLiveSite (unmigrated legacy project) still wins over the repo name', () => {

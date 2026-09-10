@@ -1,0 +1,202 @@
+/**
+ * .modal-* styles — the shared Modal shell: content box, scrolling body, footer.
+ *
+ * FEATURE-SCOPED DESPITE LIVING IN core/ui (ADR-017 §6, and §3 as amended
+ * 2026-09-09: reach, not global). `Modal` is in core/ui/components/ui, but only
+ * FIVE entries render it — wizard, dashboard, integrations, aiOverview and
+ * dataInstaller. `configure`, `sidebar` and `projectsList` do not, and do not
+ * import this sheet.
+ *
+ * `.modal-body:has(.manage-apis-body)` travels with this family, not with
+ * `.manage-*`: its first class decides ownership, and it styles the modal body.
+ *
+ * Moved out of utilities.css by the CSS migration
+ * (.rptc/plans/css-architecture-migration), with the comment above each rule.
+ * Verbatim otherwise: a move is only correct when the visual diff is empty.
+ */
+
+@layer theme {
+/* Modal footer - separator with action buttons */
+/* The dialog's scroll region. Its bottom padding would sit BELOW the sticky footer and let
+   scrolling content bleed through that strip, so zero it — the footer owns the bottom gap. */
+.modal-content {
+    padding-bottom: 0;
+    /* Column flex so .modal-body can grow and push the footer to the true bottom on a
+       SHORT modal (sticky only pins against an overflowing container — see below). */
+    display: flex;
+    flex-direction: column;
+}
+
+/* The scrollable body. `flex: 1` claims the leftover height so the footer never floats
+   mid-dialog; `min-height: 0` lets it shrink below its content so overflow still engages
+   and the footer's sticky behaviour keeps working on a TALL modal. */
+.modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    /* THE scroll container. Without this the body just grows: a long list (the
+       ~90-row Adobe API picker) overflows the dialog, and the sticky footer pins
+       against a container that no longer scrolls — so the buttons land in the
+       MIDDLE of the list with content spilling past them.
+       `min-height: 0` above is the other half of the pattern: a flex child
+       defaults to min-height:auto and refuses to shrink below its content, which
+       would make overflow-y here do nothing. */
+    overflow-y: auto;
+}
+
+/* ONE scroller in the Manage APIs dialog: the API row list.
+ *
+ * `.modal-body` is a scroll container for every modal (long content has to go
+ * somewhere), which meant this dialog had two: a gesture over the search box or
+ * the product pills fell through to the body and scrolled the whole thing, while
+ * the same gesture over the rows scrolled only the list. Two scroll surfaces a few
+ * pixels apart, behaving differently.
+ *
+ * Turning it off here is safe because this dialog's content is height-bounded by
+ * `.manage-apis-body` — there is nothing for the body to scroll that the list is
+ * not already scrolling. Scoped with `:has()` so no other modal loses its scroll
+ * (precedent: the architecture-addons checkbox rule above).
+ *
+ * This also removes the need for `overscroll-behavior` anywhere in this dialog: a
+ * non-scrollable ancestor is nothing to chain INTO, so the list bottoming out has
+ * nowhere to hand the gesture and the header simply stays put. */
+.modal-body:has(.manage-apis-body) {
+    overflow: hidden;
+}
+
+/* Content-aware height — opt-in via Modal's `fitContent`.
+   Spectrum's modal Dialog claims a height independent of its content, which is why
+   .modal-body grows to push the footer to the bottom. For a SHORT body that leaves a
+   tall dialog with dead space below the footer (the Add Integration kind/name/
+   destination stages: ~250px of content in a ~950px dialog). Releasing the height
+   lets the dialog collapse to its content.
+   The sticky footer is unaffected: sticky is a no-op when nothing overflows, and a
+   LONG body still hits the dialog's max-height and scrolls as before. */
+.modal-fit-content {
+    height: auto;
+    min-height: 0;
+    /* `height: auto` alone did NOT collapse the dialog (verified 2026-07-31: the
+       footer rose to the content but the panel stayed tall). The height is not on
+       the dialog's own box — Spectrum's modal wrapper is a flex/grid container whose
+       default `align-items: stretch` makes the dialog fill the cross axis whatever
+       its height says. Opting this child out of the stretch is what lets `auto`
+       take effect. */
+    align-self: center;
+    flex: 0 0 auto;
+}
+
+/* A dialog wider than Spectrum's largest `size`.
+   Same shape of problem as `.modal-fit-content` above, on the other axis: the
+   width is enforced by Spectrum's modal wrapper, not by the dialog's own box, so
+   both `width` and `max-width` have to be overridden on the element the wrapper
+   sizes. Capped against the viewport so a narrow editor pane still fits.
+   Added for the Data Installer's export type list — 18 names, the longest 38
+   characters, which cannot be broken and do not fit at `size="L"`. */
+.modal-wide {
+    width: min(980px, 92vw);
+    max-width: min(980px, 92vw);
+}
+
+.modal-fit-content .modal-content {
+    /* No leftover height to claim, so the body must not stretch. */
+    flex: 0 1 auto;
+}
+
+.modal-fit-content .modal-body {
+    flex: 0 1 auto;
+}
+
+.modal-footer-actions {
+    /* Pin to the bottom of the dialog's scroll area so the primary action stays visible while
+       a tall body (e.g. the integration catalog grid) scrolls. With .modal-content's bottom
+       padding removed, the footer pins flush to the true bottom — no bleed-through strip. On a
+       short modal that doesn't overflow, sticky is a no-op and it sits normally. */
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    margin-top: 24px;
+    padding-top: 16px;
+    padding-bottom: 16px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    border-top: 1px solid var(--spectrum-global-color-gray-200);
+    background: var(--spectrum-global-color-gray-100);
+}
+
+/* Modal step crossfade transition (architecture ↔ block libraries) */
+.modal-step-content {
+    opacity: 1;
+    transform: translateX(0);
+    transition: opacity var(--spectrum-global-animation-duration-300) ease, transform var(--spectrum-global-animation-duration-300) ease;
+}
+
+.modal-step-content.transitioning {
+    opacity: 0;
+}
+
+.modal-step-content.transitioning.forward {
+    transform: translateX(-20px);
+}
+
+.modal-step-content.transitioning.backward {
+    transform: translateX(20px);
+}
+
+/* Modal button - focusable button matching Spectrum design language */
+.modal-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 32px;
+    padding: 0 14px;
+    border-radius: 16px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color var(--spectrum-global-animation-duration-100) ease, border-color var(--spectrum-global-animation-duration-100) ease;
+    border: 2px solid transparent;
+    box-sizing: border-box;
+}
+
+.modal-button-secondary {
+    background: transparent;
+    color: var(--spectrum-global-color-gray-800);
+    border-color: var(--spectrum-global-color-gray-300);
+}
+
+.modal-button-secondary:hover {
+    background: rgba(255, 255, 255, 0.07);
+    border-color: var(--spectrum-global-color-gray-200);
+}
+
+.modal-button-secondary:active {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.modal-button-primary {
+    background: var(--spectrum-accent-background-color-default, var(--spectrum-global-color-blue-400));
+    color: white;
+    border-color: var(--spectrum-accent-background-color-default, var(--spectrum-global-color-blue-400));
+}
+
+.modal-button-primary:hover {
+    background: var(--spectrum-accent-background-color-hover, var(--spectrum-global-color-blue-500));
+    border-color: var(--spectrum-accent-background-color-hover, var(--spectrum-global-color-blue-500));
+}
+
+.modal-button-primary:active {
+    background: var(--spectrum-accent-background-color-down, var(--spectrum-global-color-blue-600));
+    border-color: var(--spectrum-accent-background-color-down, var(--spectrum-global-color-blue-600));
+}
+
+.modal-button:focus-visible {
+    outline: 2px solid var(--spectrum-global-color-blue-400);
+    outline-offset: 2px;
+}
+
+.modal-button-disabled {
+    opacity: 0.4;
+    cursor: default;
+    pointer-events: none;
+}
+}

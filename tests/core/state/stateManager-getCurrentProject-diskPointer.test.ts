@@ -15,9 +15,9 @@
  */
 
 import * as fs from 'fs/promises';
-import { setupMocks, createMockProject, type TestMocks } from './stateManager.testUtils';
+import type { Project } from '@/types/base';
+import { setupMocks, createStateManagerProject, type TestMocks } from './stateManager.testUtils';
 
-jest.mock('vscode');
 jest.mock('fs/promises');
 jest.mock('os');
 
@@ -30,7 +30,7 @@ describe('StateManager.getCurrentProject — disk pointer', () => {
 
     /** Initialize holding `heldPath` as the in-memory pointer. */
     async function initHolding(heldPath: string) {
-        const held = createMockProject();
+        const held = createStateManagerProject();
         held.path = heldPath;
         (fs.readFile as jest.Mock).mockResolvedValue(
             JSON.stringify({
@@ -53,10 +53,8 @@ describe('StateManager.getCurrentProject — disk pointer', () => {
         );
     }
 
-    function stubLoad(project: unknown) {
-        return jest
-            .spyOn(testMocks.stateManager, 'loadProjectFromPath')
-            .mockResolvedValue(project as never);
+    function stubLoad(project: Project | null) {
+        return jest.spyOn(testMocks.stateManager, 'loadProjectFromPath').mockResolvedValue(project);
     }
 
     it('resolves the project another window selected, not the one held in memory', async () => {
@@ -64,7 +62,7 @@ describe('StateManager.getCurrentProject — disk pointer', () => {
         await initHolding('/projects/held-at-startup');
 
         diskPointsAt('/projects/selected-elsewhere');
-        const fresh = createMockProject();
+        const fresh = createStateManagerProject();
         fresh.path = '/projects/selected-elsewhere';
         const load = stubLoad(fresh);
 
@@ -83,7 +81,7 @@ describe('StateManager.getCurrentProject — disk pointer', () => {
         (fs.readFile as jest.Mock).mockResolvedValue(
             JSON.stringify({ version: 1, currentProject: { path: '/projects/legacy' } })
         );
-        const load = stubLoad(createMockProject());
+        const load = stubLoad(createStateManagerProject());
 
         await stateManager.getCurrentProject();
 
@@ -102,7 +100,7 @@ describe('StateManager.getCurrentProject — disk pointer', () => {
             await initHolding('/projects/held-at-startup');
 
             diskPointsAt(undefined);
-            const load = stubLoad(createMockProject());
+            const load = stubLoad(createStateManagerProject());
 
             await stateManager.getCurrentProject();
 
@@ -118,7 +116,7 @@ describe('StateManager.getCurrentProject — disk pointer', () => {
             await initHolding('/projects/held-at-startup');
 
             (fs.readFile as jest.Mock).mockRejectedValue(new Error('EACCES'));
-            const load = stubLoad(createMockProject());
+            const load = stubLoad(createStateManagerProject());
 
             await stateManager.getCurrentProject();
 

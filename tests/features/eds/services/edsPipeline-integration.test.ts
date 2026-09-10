@@ -7,12 +7,17 @@
  * - Full pipeline execution order
  */
 
+import { createMockLogger } from '../../../helpers/loggerFake';
 import {
+    basePipelineParams,
     executeEdsPipeline,
+    pipelineHelixFake,
+    pipelineServices,
     type EdsPipelineParams,
     type EdsPipelineServices,
-} from '@/features/eds/services/edsPipeline';
+} from './edsPipeline.testUtils';
 
+import { createMockProject } from '../../../helpers/projectFake';
 // Mock edsHelpers
 const mockApplyDaLiveOrgConfigSettings = jest.fn().mockResolvedValue(undefined);
 const mockPublishLibraryPaths = jest.fn().mockResolvedValue(undefined);
@@ -61,34 +66,17 @@ describe('executeEdsPipeline - integration', () => {
             getFileContent: jest.fn().mockResolvedValue(null),
         } as unknown as EdsPipelineServices['githubFileOps'];
 
-        mockHelixService = {
-            purgeCacheAll: jest.fn().mockResolvedValue(undefined),
-            publishAllSiteContent: jest.fn().mockResolvedValue(undefined),
-        } as unknown as EdsPipelineServices['helixService'];
+        mockHelixService = pipelineHelixFake();
+        mockLogger = createMockLogger();
 
-        mockLogger = {
-            trace: jest.fn(),
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as unknown as EdsPipelineServices['logger'];
-
-        services = {
+        services = pipelineServices({
             daLiveContentOps: mockDaLiveContentOps,
             githubFileOps: mockGithubFileOps,
             helixService: mockHelixService,
             logger: mockLogger,
-        };
+        });
 
-        baseParams = {
-            repoOwner: 'test-owner',
-            repoName: 'test-repo',
-            daLiveOrg: 'test-org',
-            daLiveSite: 'test-site',
-            templateOwner: 'template-owner',
-            templateRepo: 'template-repo',
-        };
+        baseParams = basePipelineParams();
     });
 
     describe('progress callback', () => {
@@ -488,7 +476,7 @@ describe('executeEdsPipeline - integration', () => {
                     ...baseParams,
                     contentSource: { org: 'o', site: 's' },
                     byomOverlayUrl: 'https://overlay.example',
-                    project: { name: 'p' } as never,
+                    project: createMockProject({ name: 'p' }),
                 },
                 services
             );

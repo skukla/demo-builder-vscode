@@ -10,22 +10,26 @@
  */
 
 import * as net from 'net';
-import type { Logger } from '@/types/logger';
 
-export function makeLogger(): Logger {
-    return {
-        info: jest.fn(),
-        debug: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    } as unknown as Logger;
-}
+/** Canonical logger fake (ADR-016); local name kept so consumers are unchanged. */
+export { createMockLogger as makeLogger } from '../../../helpers/loggerFake';
 
 /** Minimal newline-delimited JSON-RPC client over a connected socket. */
+/**
+ * Ceiling on one request/response over the test socket.
+ *
+ * Deliberately BELOW jest's 10s default: the point is that the RPC names what
+ * failed before jest can only name the test.
+ */
+const RPC_TIMEOUT_MS = 4000;
+
 export class SocketRpc {
     private buf = '';
 
-    private readonly pending = new Map<number, (msg: any) => void>();
+    private readonly pending = new Map<
+        number,
+        { resolve: (msg: any) => void; reject: (err: Error) => void }
+    >();
 
     /**
      * Server→client messages with no `id` — notifications. Previously dropped on
@@ -35,8 +39,53 @@ export class SocketRpc {
      */
     readonly notifications: any[] = [];
 
+    /** Rejects every in-flight request once the peer goes away. */
+    private failure: Error | undefined;
+
+    /**
+     * How to answer a request the SERVER sends US.
+     *
+     * MCP is bidirectional: the consent gate asks the chat by sending the client
+     * an `elicitation/create` request and waiting for its result. Without a
+     * reply the server waits out its two-minute timeout and reports the ask as
+     * unavailable, so a test that means to exercise "the user said yes" would
+     * silently exercise "nobody was there" instead.
+     */
+    private answers = new Map<string, (params: any) => unknown>();
+
+    /** Answer every server-sent request of `method` with `reply(params)`. */
+    answerRequest(method: string, reply: (params: any) => unknown): void {
+        this.answers.set(method, reply);
+    }
+
     constructor(private readonly socket: net.Socket) {
         socket.setEncoding('utf8');
+
+        /**
+         * A CLOSED socket must fail the pending requests, not leave them hanging.
+         *
+         * This class listened only for `data` until 2026-09-01, so a peer that
+         * accepted the connection and then closed WITHOUT replying left the promise
+         * in `pending` unsettled forever. That is not hypothetical: the reload race
+         * this suite exists to test produces exactly it — a client connects to the
+         * outgoing server, writes `initialize`, and the outgoing server is disposed
+         * before it answers.
+         *
+         * The result was a 10-second jest timeout naming the TEST, with no
+         * indication of what hung, which is why the flake was recorded twice as
+         * unreproduced. A failure that says "socket closed with 1 request in
+         * flight" is a finding; a timeout is a mystery.
+         */
+        const fail = (reason: string) => {
+            this.failure ??= new Error(
+                `SocketRpc: ${reason} with ${this.pending.size} request(s) in flight`
+            );
+            for (const [, entry] of this.pending) entry.reject(this.failure);
+            this.pending.clear();
+        };
+        socket.on('close', () => fail('socket closed'));
+        socket.on('error', (err: Error) => fail(`socket error (${err.message})`));
+
         socket.on('data', (chunk: string) => {
             this.buf += chunk;
             let idx: number;
@@ -49,18 +98,55 @@ export class SocketRpc {
                     this.notifications.push(msg);
                     continue;
                 }
-                const resolve = this.pending.get(msg.id);
-                if (resolve) {
+                // A message with an id AND a method is the server asking US.
+                // Only answered when a test registered a reply: suites that
+                // attach their own `data` listener answer these themselves, and
+                // replying here as well would race them (it did — consentViaChat
+                // saw a cancel it never sent).
+                if (typeof msg.method === 'string') {
+                    const reply = this.answers.get(msg.method);
+                    if (reply) {
+                        this.socket.write(
+                            JSON.stringify({
+                                jsonrpc: '2.0',
+                                id: msg.id,
+                                result: reply(msg.params),
+                            }) + '\n'
+                        );
+                    }
+                    continue;
+                }
+                const entry = this.pending.get(msg.id);
+                if (entry) {
                     this.pending.delete(msg.id);
-                    resolve(msg);
+                    entry.resolve(msg);
                 }
             }
         });
     }
 
     request(id: number, method: string, params: unknown): Promise<any> {
-        return new Promise((resolve) => {
-            this.pending.set(id, resolve);
+        if (this.failure) return Promise.reject(this.failure);
+        return new Promise((resolve, reject) => {
+            // Bounded. Without this a server that stays CONNECTED but never answers
+            // hangs just as silently as a closed one did — same mystery, different
+            // cause — and the ceiling has to sit below jest's own limit or the
+            // timeout still lands on the test rather than on the reason.
+            const timer = setTimeout(() => {
+                this.pending.delete(id);
+                reject(new Error(`SocketRpc: no reply to "${method}" within ${RPC_TIMEOUT_MS}ms`));
+            }, RPC_TIMEOUT_MS);
+
+            this.pending.set(id, {
+                resolve: (msg) => {
+                    clearTimeout(timer);
+                    resolve(msg);
+                },
+                reject: (err) => {
+                    clearTimeout(timer);
+                    reject(err);
+                },
+            });
             this.socket.write(JSON.stringify({ jsonrpc: '2.0', id, method, params }) + '\n');
         });
     }
@@ -71,7 +157,8 @@ export class SocketRpc {
 }
 
 export async function connectAndInit(
-    socketPath: string
+    socketPath: string,
+    capabilities: Record<string, unknown> = {}
 ): Promise<{ socket: net.Socket; rpc: SocketRpc }> {
     const socket = net.connect(socketPath);
     await new Promise<void>((resolve, reject) => {
@@ -81,7 +168,7 @@ export async function connectAndInit(
     const rpc = new SocketRpc(socket);
     await rpc.request(1, 'initialize', {
         protocolVersion: '2024-11-05',
-        capabilities: {},
+        capabilities,
         clientInfo: { name: 'test', version: '0.0.0' },
     });
     rpc.notify('notifications/initialized');

@@ -1,19 +1,19 @@
 import { handleCreateProject } from '@/features/project-creation/handlers/createHandler';
-import * as validation from '@/core/validation';
+import { validateProjectNameSecurity } from '@/core/validation/validators/ProjectNameValidator';
 import * as executor from '@/features/project-creation/handlers/executor';
 import * as promiseUtils from '@/core/utils/promiseUtils';
-import { ServiceLocator as _ServiceLocator } from '@/core/di';
+import { ServiceLocator as _ServiceLocator } from '@/core/di/serviceLocator';
 import * as vscode from 'vscode';
 import * as _fs from 'fs';
 import { promises as _fsPromises } from 'fs';
-import { createMockContext, setupDefaultMocks, mockConfig } from './createHandler.testUtils';
+import { createProjectCreationContext, setupDefaultMocks, mockConfig } from './createHandler.testUtils';
 
+import { mockWorkspace } from '../../../helpers/vscodeMockViews';
 // Mock all dependencies
-jest.mock('@/core/validation');
+jest.mock('@/core/validation/validators/ProjectNameValidator');
 jest.mock('@/features/project-creation/handlers/executor');
 jest.mock('@/core/utils/promiseUtils');
-jest.mock('@/core/di');
-jest.mock('vscode');
+jest.mock('@/core/di/serviceLocator');
 jest.mock('fs', () => ({
     existsSync: jest.fn(),
     promises: {
@@ -22,12 +22,12 @@ jest.mock('fs', () => ({
 }));
 
 describe('Project Creation - Create Handler - Happy Path', () => {
-    let mockContext: ReturnType<typeof createMockContext>;
+    let mockContext: ReturnType<typeof createProjectCreationContext>;
     let _mockCommandExecutor: ReturnType<typeof setupDefaultMocks>;
 
     beforeEach(() => {
         _mockCommandExecutor = setupDefaultMocks();
-        mockContext = createMockContext();
+        mockContext = createProjectCreationContext();
     });
 
     describe('successful project creation', () => {
@@ -35,7 +35,7 @@ describe('Project Creation - Create Handler - Happy Path', () => {
             const result = await handleCreateProject(mockContext, mockConfig);
 
             expect(result.success).toBe(true);
-            expect(validation.validateProjectNameSecurity).toHaveBeenCalledWith('test-project');
+            expect(validateProjectNameSecurity).toHaveBeenCalledWith('test-project');
             expect(executor.executeProjectCreation).toHaveBeenCalledWith(mockContext, mockConfig);
             expect(mockContext.sendMessage).toHaveBeenCalledWith(
                 'creationProgress',
@@ -66,7 +66,7 @@ describe('Project Creation - Create Handler - Happy Path', () => {
 
     describe('workspace trust prompts', () => {
         it('should show workspace trust tip on first run', async () => {
-            (vscode.workspace as any).isTrusted = false;
+            mockWorkspace.isTrusted = false;
 
             // Create function that captures the mocked return value
             const tipShown = false;
@@ -97,7 +97,7 @@ describe('Project Creation - Create Handler - Happy Path', () => {
         });
 
         it('should not show workspace trust tip if already shown', async () => {
-            (vscode.workspace as any).isTrusted = false;
+            mockWorkspace.isTrusted = false;
 
             // Create function that returns true for tipShown
             const getMock = jest.fn().mockImplementation((key: string, defaultValue: boolean) => {
@@ -115,7 +115,7 @@ describe('Project Creation - Create Handler - Happy Path', () => {
         });
 
         it('should not show workspace trust tip if workspace already trusted', async () => {
-            (vscode.workspace as any).isTrusted = true;
+            mockWorkspace.isTrusted = true;
 
             await handleCreateProject(mockContext, mockConfig);
 
@@ -123,7 +123,7 @@ describe('Project Creation - Create Handler - Happy Path', () => {
         });
 
         it('should show detailed instructions if user clicks "Learn How"', async () => {
-            (vscode.workspace as any).isTrusted = false;
+            mockWorkspace.isTrusted = false;
 
             // Create function that returns false for tipShown
             const getMock = jest.fn().mockImplementation((key: string, defaultValue: boolean) => {
@@ -149,7 +149,7 @@ describe('Project Creation - Create Handler - Happy Path', () => {
         });
 
         it('should handle user clicking "Skip for Now"', async () => {
-            (vscode.workspace as any).isTrusted = false;
+            mockWorkspace.isTrusted = false;
 
             // Create function that returns false for tipShown
             const getMock = jest.fn().mockImplementation((key: string, defaultValue: boolean) => {

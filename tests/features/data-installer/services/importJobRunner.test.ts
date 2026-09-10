@@ -31,23 +31,11 @@ jest.mock('@/core/utils/sleep');
 // `PollingService` reaches for the global logger at construction
 // (`private logger = getLogger()`), which throws in a bare node test. Same stub
 // shape `fileWatcher`'s suite uses.
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() }),
-}));
 
+import { pollingStub, snap } from './importJobRunner.testUtils';
 import { watchImportJob, IMPORT_POLL } from '@/features/data-installer/services/importJobRunner';
 import type { JobStatusSnapshot } from '@/features/data-installer/types';
 import { PollingService } from '@/core/shell/pollingService';
-
-/** A status snapshot with the given per-type map. */
-function snap(perType: Record<string, string>, extra: Partial<JobStatusSnapshot> = {}): JobStatusSnapshot {
-    return {
-        activationId: 'act-1',
-        perType: perType as JobStatusSnapshot['perType'],
-        hasRecord: Object.keys(perType).length > 0,
-        ...extra,
-    };
-}
 
 /** Runner with a scripted sequence of status responses. */
 function runWith(
@@ -58,7 +46,7 @@ function runWith(
         graceMs?: number;
         abortSignal?: AbortSignal;
         onProgress?: (perType: JobStatusSnapshot['perType']) => void;
-    } = {},
+    } = {}
 ) {
     let call = 0;
     const getJobStatus = jest.fn(async () => sequence[Math.min(call++, sequence.length - 1)]);
@@ -66,7 +54,7 @@ function runWith(
     const clock = { now: 0 };
 
     const promise = watchImportJob({
-        client: { getJobStatus, getJobFailureReason } as never,
+        client: { getJobStatus, getJobFailureReason },
         activationId: 'act-1',
         requestedTypes: opts.requestedTypes ?? ['categories', 'products'],
         polling: new PollingService(),
@@ -85,7 +73,7 @@ function runWith(
 // name the OPERATION: a reset's polls logged as "data-installer import", live.
 describe('the poll task name', () => {
     it('names a reset a reset', async () => {
-        const polling = { pollUntilCondition: jest.fn().mockResolvedValue(undefined) };
+        const pollUntilCondition = jest.fn().mockResolvedValue(undefined);
         const client = {
             getJobStatus: jest.fn().mockResolvedValue({
                 hasRecord: true,
@@ -95,21 +83,21 @@ describe('the poll task name', () => {
         };
 
         await watchImportJob({
-            client: client as never,
-            polling: polling as never,
+            client,
+            polling: pollingStub(pollUntilCondition),
             activationId: 'act-1',
             requestedTypes: ['categories'],
             operation: 'reset',
         });
 
-        expect(polling.pollUntilCondition).toHaveBeenCalledWith(
+        expect(pollUntilCondition).toHaveBeenCalledWith(
             expect.anything(),
-            expect.objectContaining({ name: 'data-installer reset act-1' }),
+            expect.objectContaining({ name: 'data-installer reset act-1' })
         );
     });
 
     it('defaults to import for records that predate the field', async () => {
-        const polling = { pollUntilCondition: jest.fn().mockResolvedValue(undefined) };
+        const pollUntilCondition = jest.fn().mockResolvedValue(undefined);
         const client = {
             getJobStatus: jest.fn().mockResolvedValue({
                 hasRecord: true,
@@ -119,15 +107,15 @@ describe('the poll task name', () => {
         };
 
         await watchImportJob({
-            client: client as never,
-            polling: polling as never,
+            client,
+            polling: pollingStub(pollUntilCondition),
             activationId: 'act-1',
             requestedTypes: ['categories'],
         });
 
-        expect(polling.pollUntilCondition).toHaveBeenCalledWith(
+        expect(pollUntilCondition).toHaveBeenCalledWith(
             expect.anything(),
-            expect.objectContaining({ name: 'data-installer import act-1' }),
+            expect.objectContaining({ name: 'data-installer import act-1' })
         );
     });
 });
@@ -153,7 +141,7 @@ describe('watchImportJob', () => {
                     snap({ categories: 'success', products: 'processing' }),
                     snap({ categories: 'success', products: 'success' }),
                 ],
-                { onProgress: (perType) => seen.push({ ...perType }) },
+                { onProgress: (perType) => seen.push({ ...perType }) }
             );
 
             await promise;
@@ -169,7 +157,7 @@ describe('watchImportJob', () => {
                     snap({ categories: 'processing' }),
                     snap({ categories: 'success', products: 'success' }),
                 ],
-                { onProgress: (perType) => seen.push({ ...perType }) },
+                { onProgress: (perType) => seen.push({ ...perType }) }
             );
 
             await promise;
@@ -183,9 +171,12 @@ describe('watchImportJob', () => {
         /** An empty map is "not started", not progress. Reporting it would blank the line. */
         it('stays quiet while the job has no record yet', async () => {
             const onProgress = jest.fn();
-            const { promise } = runWith([snap({}), snap({ categories: 'success', products: 'success' })], {
-                onProgress,
-            });
+            const { promise } = runWith(
+                [snap({}), snap({ categories: 'success', products: 'success' })],
+                {
+                    onProgress,
+                }
+            );
 
             await promise;
 
@@ -196,14 +187,11 @@ describe('watchImportJob', () => {
 
         /** Watching must survive a bad listener — a render error cannot fail an import. */
         it('finishes the job even when the callback throws', async () => {
-            const { promise } = runWith(
-                [snap({ categories: 'success', products: 'success' })],
-                {
-                    onProgress: () => {
-                        throw new Error('render blew up');
-                    },
+            const { promise } = runWith([snap({ categories: 'success', products: 'success' })], {
+                onProgress: () => {
+                    throw new Error('render blew up');
                 },
-            );
+            });
 
             await expect(promise).resolves.toMatchObject({ outcome: 'success' });
         });
@@ -242,9 +230,12 @@ describe('watchImportJob', () => {
         });
 
         it('ignores extra types the service reports that nobody requested', async () => {
-            const { promise } = runWith([snap({ categories: 'success', products: 'success', extra: 'processing' })], {
-                requestedTypes: ['categories', 'products'],
-            });
+            const { promise } = runWith(
+                [snap({ categories: 'success', products: 'success', extra: 'processing' })],
+                {
+                    requestedTypes: ['categories', 'products'],
+                }
+            );
 
             expect((await promise).outcome).toBe('success');
         });
@@ -287,17 +278,28 @@ describe('watchImportJob', () => {
         it('keeps waiting while the map is empty and the grace window is open', async () => {
             const { promise, getJobStatus } = runWith(
                 [snap({}), snap({}), snap({ categories: 'success', products: 'success' })],
-                { graceMs: 120_000 },
+                { graceMs: 120_000 }
             );
 
             expect((await promise).outcome).toBe('success');
             expect(getJobStatus.mock.calls.length).toBeGreaterThan(2);
         });
 
-        it('gives up as never-registered once the window closes', async () => {
+        it('gives up, treating the job as unregistered, once the window closes', async () => {
             const { promise } = runWith([snap({})], { graceMs: 60_000 });
 
             expect((await promise).outcome).toBe('never-registered');
+        });
+
+        // The window is CLOSED at its own length, not one poll later. Each poll
+        // here advances the clock 40s, so a 40s window is spent exactly when the
+        // first status comes back — and the runner must not buy itself another
+        // round by treating the boundary as still open.
+        it('closes the window at the boundary, not one poll past it', async () => {
+            const { promise, getJobStatus } = runWith([snap({})], { graceMs: 40_000 });
+
+            expect((await promise).outcome).toBe('never-registered');
+            expect(getJobStatus).toHaveBeenCalledTimes(1);
         });
 
         // The echo explains why nothing happened. It is NOT polled: it lies about
@@ -326,9 +328,12 @@ describe('watchImportJob', () => {
         // Keyed on the EMPTY MAP, not on the documented error body — the service
         // returns 200 with an empty map, never the error shape the docs describe.
         it('keys on the empty map, not on any error field', async () => {
-            const { promise } = runWith([snap({}), snap({ categories: 'success', products: 'success' })], {
-                graceMs: 120_000,
-            });
+            const { promise } = runWith(
+                [snap({}), snap({ categories: 'success', products: 'success' })],
+                {
+                    graceMs: 120_000,
+                }
+            );
 
             expect((await promise).outcome).toBe('success');
         });
@@ -362,7 +367,9 @@ describe('watchImportJob', () => {
 
     describe('exhaustion', () => {
         it('reports still-running rather than failing when the horizon is reached', async () => {
-            const { promise } = runWith([snap({ categories: 'processing', products: 'processing' })]);
+            const { promise } = runWith([
+                snap({ categories: 'processing', products: 'processing' }),
+            ]);
 
             const result = await promise;
 

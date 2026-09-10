@@ -28,15 +28,20 @@ below it is superseded.
 
 ## Baseline — 2026-08-24, `develop` @ beta.141 (fixed extractor)
 
-| | |
-|---|---|
-| Handler-map keys (the human surface) | 123 |
-| Reachable by an MCP tool, by name | 59 |
-| Uncovered | 64 (23 UI-only, **41 agent-relevant**) |
-| **Agent-relevant name gap** | **41 — 33% of the surface** |
+| | 2026-08-24 @ beta.141 | 2026-08-30 @ beta.145 |
+|---|---|---|
+| Handler-map keys (the human surface) | 123 | **127** |
+| Reachable by an MCP tool, by name | 59 | **61** |
+| Uncovered | 64 (23 UI-only, 41 agent-relevant) | 66 (23 UI-only, **43 agent-relevant**) |
+| **Agent-relevant name gap** | 41 — 33% | **43 — 34%** |
 
-By area: `ProjectCreationHandlerRegistry` (14), `edsHandlers` (9), `dashboardHandlers` (7),
-`addIntegrationFlowHandlers` (5), the rest 1–2 each.
+By area (2026-08-30): `ProjectCreationHandlerRegistry` (14), `edsHandlers` (9),
+`dashboardHandlers` (9), `addIntegrationFlowHandlers` (5), the rest 1–2 each.
+
+**Both columns are kept on purpose.** The gap grew by two in six days, and a single
+replaced number would have hidden that the surface moved on BOTH sides — four new
+handlers, two newly covered. A one-column table cannot tell "we added features" from
+"we lost coverage", and those call for opposite responses.
 
 ## The number is an UPPER BOUND, not a work list — read this before sizing anything
 

@@ -23,8 +23,9 @@
  * source at the bottom, with a positive control on the loader import.
  */
 
+import { fsPromises } from './aiBundleFsMock';
 import { createHash } from 'crypto';
-import * as fsPromises from 'fs/promises';
+import { makeEdsProject, makeEdsStorefrontInstance } from './aiBundleFixtures';
 import * as childProcess from 'child_process';
 import * as path from 'path';
 import {
@@ -36,26 +37,6 @@ import { AI_CONTEXT_VERSION } from '@/core/constants';
 import { refreshAiBundlesOnActivation } from '@/features/project-creation/services/aiBundle/aiBundleActivationRefresh';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
-
-jest.mock('fs/promises', () => {
-    const writeFile = jest.fn().mockResolvedValue(undefined);
-    return {
-        lstat: jest.fn().mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
-        realpath: jest.fn(async (p: string) => p),
-        mkdir: jest.fn().mockResolvedValue(undefined),
-        writeFile,
-        readFile: jest.fn(),
-        appendFile: jest.fn().mockResolvedValue(undefined),
-        unlink: jest.fn().mockResolvedValue(undefined),
-        readdir: jest.fn(),
-        // O_NOFOLLOW writes go through open(); the returned handle delegates to
-        // the writeFile mock WITH the path, so path-based assertions keep working.
-        open: jest.fn(async (p: unknown) => ({
-            writeFile: jest.fn(async (d: unknown, e: unknown) => writeFile(p as string, d, e)),
-            close: jest.fn(async () => undefined),
-        })),
-    };
-});
 
 // `resolveNode` is injected in every test, so the sweep itself never shells
 // out — but `browserUtils` (loaded transitively via aiContextWriter)
@@ -74,15 +55,6 @@ jest.mock('child_process', () => ({
 
 // generateAIContextFiles (not under test) builds its writer via getLogger();
 // jest never calls initializeLogger, so the module must not reach the real one.
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn(() => ({
-        trace: jest.fn(),
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
-}));
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -108,16 +80,15 @@ function makeProject(overrides: Partial<Project> = {}): Project {
     };
 }
 
-function makeEdsProject(overrides: Partial<Project> = {}): Project {
-    return makeProject({
+function makeEdsProjectAtA(overrides: Partial<Project> = {}): Project {
+    return makeEdsProject({
+        name: 'demo-a',
+        path: PROJECT_A,
         componentInstances: {
-            'eds-storefront': {
-                id: 'eds-storefront',
-                name: 'EDS Storefront',
-                status: 'ready',
-                path: `${PROJECT_A}/components/eds-storefront`,
-                metadata: { githubRepo: 'owner/my-repo' },
-            },
+            'eds-storefront': makeEdsStorefrontInstance(
+                { githubRepo: 'owner/my-repo' },
+                `${PROJECT_A}/components/eds-storefront`
+            ),
         },
         ...overrides,
     });
@@ -185,7 +156,10 @@ function loggedLines(logger: Logger, level: 'debug' | 'info' | 'warn'): string[]
  * written contents (plus the appended .gitignore) as the disk for the next
  * run. Returns the recorded hash map a healthy manifest would carry.
  */
-async function provisionHealthyDisk(): Promise<{ hashes: Record<string, string> }> {
+async function provisionHealthyDisk(): Promise<{
+    hashes: Record<string, string>;
+    disk: Record<string, string>;
+}> {
     mockDisk({});
     const project = makeProject({ aiContextVersion: AI_CONTEXT_VERSION });
     const deps = makeDeps({ [PROJECT_A]: project });
@@ -202,7 +176,7 @@ async function provisionHealthyDisk(): Promise<{ hashes: Record<string, string> 
 
     jest.clearAllMocks();
     mockDisk(disk);
-    return { hashes };
+    return { hashes, disk };
 }
 
 async function runHealthySweep(): Promise<{
@@ -268,14 +242,14 @@ describe('healthy project (fresh stamp, configs current)', () => {
         const perProjectActions = loggedLines(logger, 'info').filter(
             (line) => line.includes('repaired ') || line.includes('refreshed ')
         );
-        expect(perProjectActions).toEqual([]);
+        expect(perProjectActions).toStrictEqual([]);
     });
 
     it('never reads the tools manifest (tier-1-only runs stay manifest-read-free)', async () => {
         await runHealthySweep();
 
         const manifestReads = readPaths().filter((p) => p.includes('.demo-builder-mcp'));
-        expect(manifestReads).toEqual([]);
+        expect(manifestReads).toStrictEqual([]);
     });
 });
 
@@ -293,6 +267,54 @@ describe('save-only-when-moved', () => {
         const project = makeProject({
             aiContextVersion: AI_CONTEXT_VERSION,
             aiFileHashes: withoutSettings,
+        });
+        const deps = makeDeps({ [PROJECT_A]: project });
+        const saved = captureSaves(deps);
+
+        await refreshAiBundlesOnActivation(EXTENSION_PATH, makeMockLogger(), deps);
+
+        expect(fsPromises.writeFile).not.toHaveBeenCalled();
+        expect(saved).toHaveLength(1);
+        expect(saved[0].aiFileHashes?.['.claude/settings.json']).toBe(
+            hashes['.claude/settings.json']
+        );
+    });
+
+    it('saves when a write landed even though every recorded hash is unchanged', async () => {
+        // A generated file deleted from disk regenerates byte-identically, so
+        // the hash map is untouched — a write DID land and the manifest must
+        // still be saved. This is the ONE case where `report.written` is the
+        // sole reason the sweep counts the run as movement, so dropping that
+        // operand from `moved` silently turns the run into "healthy".
+        const { hashes, disk } = await provisionHealthyDisk();
+        const withoutMcpJson = { ...disk };
+        delete withoutMcpJson[path.join(PROJECT_A, '.mcp.json')];
+        mockDisk(withoutMcpJson);
+        const project = makeProject({
+            aiContextVersion: AI_CONTEXT_VERSION,
+            aiFileHashes: { ...hashes },
+        });
+        const deps = makeDeps({ [PROJECT_A]: project });
+        const saved = captureSaves(deps);
+
+        await refreshAiBundlesOnActivation(EXTENSION_PATH, makeMockLogger(), deps);
+
+        expect(writtenPaths()).toContain(path.join(PROJECT_A, '.mcp.json'));
+        expect(saved).toHaveLength(1);
+        // Every hash identical to what was recorded — the write is the movement.
+        expect(saved[0].aiFileHashes).toEqual(hashes);
+    });
+
+    it('saves when a recorded hash is wrong for a file that needed no write', async () => {
+        // The manifest carries a WRONG hash for settings.json while the file on
+        // disk is already current: the merge corrects the hash without touching
+        // the disk. Nothing is written, nothing removed, the stamp is current —
+        // the changed VALUE in an otherwise identical key set is the only
+        // movement, so `sameHashMap` has to compare values, not just key counts.
+        const { hashes } = await provisionHealthyDisk();
+        const project = makeProject({
+            aiContextVersion: AI_CONTEXT_VERSION,
+            aiFileHashes: { ...hashes, '.claude/settings.json': 'a-hash-we-never-wrote' },
         });
         const deps = makeDeps({ [PROJECT_A]: project });
         const saved = captureSaves(deps);
@@ -389,7 +411,7 @@ describe('stale .mcp.json (dead dist path, provably ours)', () => {
         // Acting is not healthy — the debug decision line must not also fire.
         expect(
             loggedLines(logger, 'debug').filter((line) => line.includes('tier1 ok'))
-        ).toEqual([]);
+        ).toStrictEqual([]);
     });
 });
 
@@ -454,7 +476,7 @@ describe('stale aiContextVersion stamp', () => {
                 '@playwright/mcp',
             ]),
         });
-        const deps = makeDeps({ [PROJECT_A]: makeEdsProject({ aiContextVersion: 3 }) });
+        const deps = makeDeps({ [PROJECT_A]: makeEdsProjectAtA({ aiContextVersion: 3 }) });
 
         await refreshAiBundlesOnActivation(EXTENSION_PATH, makeMockLogger(), deps);
 
@@ -470,7 +492,7 @@ describe('stale aiContextVersion stamp', () => {
         const skillRel = '.claude/skills/scrape-reference-site/SKILL.md';
         const skillAbs = path.join(PROJECT_A, skillRel);
         mockDisk({ [skillAbs]: 'previously generated content' });
-        const project = makeEdsProject({
+        const project = makeEdsProjectAtA({
             aiContextVersion: 3,
             aiFileHashes: { [skillRel]: sha256('previously generated content') },
         });
@@ -631,7 +653,7 @@ describe('failure isolation', () => {
         expect(deps.configWriter.saveProjectConfig).not.toHaveBeenCalled();
         expect(
             loggedLines(logger, 'info').filter((line) => line.includes('Activation sweep:'))
-        ).toEqual([]);
+        ).toStrictEqual([]);
     });
 });
 
@@ -672,5 +694,34 @@ describe('partial failure persistence', () => {
 
         // The sweep survives (never-throws contract) AND persisted what landed.
         expect(saved.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('does not save when the failing refresh landed no hash change', async () => {
+        // Tier 1 is a no-op on a healthy disk and tier 2 dies on its first
+        // read, so nothing landed. The best-effort persist must stay silent:
+        // saving here would rewrite the manifest on every activation of a
+        // project whose refresh cannot complete.
+        const { hashes } = await provisionHealthyDisk();
+        const project = makeProject({
+            aiContextVersion: AI_CONTEXT_VERSION - 1,
+            aiFileHashes: { ...hashes },
+        });
+        const deps = makeDeps({ [PROJECT_A]: project });
+        const readFile = fsPromises.readFile as jest.Mock;
+        const healthyRead = readFile.getMockImplementation()!;
+        readFile.mockImplementation(async (target: string) => {
+            if (String(target).endsWith('/AGENTS.md')) {
+                const err = new Error('EACCES: permission denied') as NodeJS.ErrnoException;
+                err.code = 'EACCES';
+                throw err;
+            }
+            return healthyRead(target);
+        });
+
+        await expect(
+            refreshAiBundlesOnActivation(EXTENSION_PATH, makeMockLogger(), deps)
+        ).resolves.toBeUndefined();
+
+        expect(deps.configWriter.saveProjectConfig).not.toHaveBeenCalled();
     });
 });

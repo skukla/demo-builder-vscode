@@ -17,29 +17,30 @@
  * prevented by these tests, not by a token.
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
+import { ruleFor as ruleAnywhere } from '../../../helpers/cssRules';
 
-const SRC = path.join(__dirname, '../../../../src');
+/**
+ * Read the rule from WHEREVER it ships, not from a named sheet.
+ *
+ * This suite read `utilities.css` by path and hand-rolled its own `ruleFor`.
+ * It broke when `.projects-*` and `.integrations-*` moved to shared-ui.css — a
+ * change that moved no pixel on any surface. The shared helper reads every
+ * stylesheet under `src/`, so a rule's LOCATION stops being something a layout
+ * test asserts.
+ */
 
-function loadCss(relativePath: string): string {
-    return fs
-        .readFileSync(path.join(SRC, relativePath), 'utf8')
-        .replace(/\/\*[\s\S]*?\*\//g, '');
-}
 
-const FEATURE_CSS = loadCss('features/data-installer/ui/styles/data-installer.css');
-const SHARED_CSS = loadCss('core/ui/styles/custom-spectrum.css');
 
-function ruleFor(css: string, selectorList: string): string {
-    const norm = (t: string) => t.replace(/\s+/g, ' ').trim();
-    for (const block of css.split('}')) {
-        const open = block.indexOf('{');
-        if (open === -1) continue;
-        if (norm(block.slice(0, open)) === norm(selectorList)) return block.slice(open);
-    }
-    throw new Error(`no rule for: ${selectorList}`);
-}
+
+/**
+ * The sheet argument is gone — the helper reads every stylesheet under src/.
+ * The call sites keep their shape so the assertions below are untouched; the
+ * first argument now only records which sheet the rule USED to be read from.
+ */
+const ruleFor = (_sheet: 'feature' | 'shared', selectorList: string): string =>
+    ruleAnywhere(selectorList);
+const FEATURE_CSS = 'feature' as const;
+const SHARED_CSS = 'shared' as const;
 
 /** px value of a single-valued declaration, e.g. `gap`. */
 function px(rule: string, prop: string): number {

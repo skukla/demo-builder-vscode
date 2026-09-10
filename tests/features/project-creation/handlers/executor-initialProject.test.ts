@@ -17,11 +17,14 @@
 
 import { buildInitialProject } from '@/features/project-creation/handlers/executor';
 import type { Project } from '@/types/base';
+import type { CommerceStoreStructure } from '@/types/commerceStore';
+import type { ProjectCreationConfig } from '@/types/webviewRequests';
+import { createMockProject } from '../../../helpers/projectFake';
 
 const PROJECT_PATH = '/home/user/.demo-builder/projects/demo';
 
-function config(overrides: Record<string, unknown> = {}) {
-    return { projectName: 'demo', ...overrides } as never;
+function config(overrides: Partial<ProjectCreationConfig> = {}): ProjectCreationConfig {
+    return { projectName: 'demo', ...overrides };
 }
 
 describe('buildInitialProject', () => {
@@ -31,13 +34,13 @@ describe('buildInitialProject', () => {
         expect(project.name).toBe('demo');
         expect(project.path).toBe(PROJECT_PATH);
         expect(project.status).toBe('created');
-        expect(project.componentInstances).toEqual({});
-        expect(project.componentSelections?.appBuilder).toEqual([]);
+        expect(project.componentInstances).toStrictEqual({});
+        expect(project.componentSelections?.appBuilder).toStrictEqual([]);
     });
 
     it('preserves the original creation date in edit mode', () => {
         const created = new Date('2024-01-15T00:00:00Z');
-        const existing = { created } as Project;
+        const existing = createMockProject({ created });
 
         const project = buildInitialProject(config(), PROJECT_PATH, existing);
 
@@ -167,43 +170,94 @@ describe('buildInitialProject', () => {
  * recovery is a Configure open the user has no reason to suspect they need.
  */
 describe('buildInitialProject — commerceStoreStructure across an edit', () => {
-    const STRUCTURE = {
+    const STRUCTURE: CommerceStoreStructure = {
         websites: [{ id: 2, code: 'citisignal', name: 'CitiSignal' }],
         storeGroups: [],
         storeViews: [],
     };
 
     it('keeps the existing structure when the edit session discovered none', () => {
-        const existing = { commerceStoreStructure: STRUCTURE } as never;
+        const existing = createMockProject({ commerceStoreStructure: STRUCTURE });
 
-        const project = buildInitialProject(
-            { projectName: 'p' } as never,
-            '/p',
-            existing,
-        );
+        const project = buildInitialProject(config({ projectName: 'p' }), '/p', existing);
 
         expect(project.commerceStoreStructure).toEqual(STRUCTURE);
     });
 
     it('prefers a freshly discovered structure over the stored one', () => {
-        const fresh = {
+        const fresh: CommerceStoreStructure = {
             websites: [{ id: 3, code: 'renamed', name: 'Renamed' }],
             storeGroups: [],
             storeViews: [],
         };
 
         const project = buildInitialProject(
-            { projectName: 'p', commerceStoreStructure: fresh } as never,
+            config({ projectName: 'p', commerceStoreStructure: fresh }),
             '/p',
-            { commerceStoreStructure: STRUCTURE } as never,
+            createMockProject({ commerceStoreStructure: STRUCTURE })
         );
 
         expect(project.commerceStoreStructure).toEqual(fresh);
     });
 
     it('carries none on a fresh create with no discovery — control', () => {
-        const project = buildInitialProject({ projectName: 'p' } as never, '/p');
+        const project = buildInitialProject(config({ projectName: 'p' }), '/p');
 
         expect(project.commerceStoreStructure).toBeUndefined();
+    });
+});
+
+describe('buildInitialProject — the fields the wire config decides', () => {
+    it('records a title the SC actually set', () => {
+        const project = buildInitialProject(config({ projectTitle: 'My Demo' }), PROJECT_PATH);
+
+        expect(project.title).toBe('My Demo');
+    });
+
+    it('leaves the title OFF when none was set, rather than seeding it from the slug', () => {
+        // A slug seeded as a real title would render identically and then move the
+        // folder on the next rename, leaving the old name on screen.
+        const project = buildInitialProject(config(), PROJECT_PATH);
+
+        expect('title' in project).toBe(false);
+    });
+
+    it('carries the selected dependencies and integrations through verbatim', () => {
+        const project = buildInitialProject(
+            config({
+                components: {
+                    dependencies: ['commerce-mesh'],
+                    integrations: ['adobe-analytics'],
+                },
+            } as Partial<ProjectCreationConfig>),
+            PROJECT_PATH
+        );
+
+        expect(project.componentSelections?.dependencies).toEqual(['commerce-mesh']);
+        expect(project.componentSelections?.integrations).toEqual(['adobe-analytics']);
+    });
+
+    it('starts both lists EMPTY when the config names none', () => {
+        const project = buildInitialProject(config(), PROJECT_PATH);
+
+        expect(project.componentSelections?.dependencies).toStrictEqual([]);
+        expect(project.componentSelections?.integrations).toStrictEqual([]);
+    });
+
+    it('takes the datapack from the config, not from a project that has none', () => {
+        const chosen = { name: 'citisignal', version: '2.0.0' };
+
+        const project = buildInitialProject(config({ datapack: chosen }), PROJECT_PATH);
+
+        expect(project.datapack).toEqual(chosen);
+    });
+
+    it('falls back to the existing project’s datapack when the config names none', () => {
+        const kept = { name: 'citisignal', version: '1.0.0' };
+        const existing = createMockProject({ datapack: kept });
+
+        const project = buildInitialProject(config(), PROJECT_PATH, existing);
+
+        expect(project.datapack).toEqual(kept);
     });
 });

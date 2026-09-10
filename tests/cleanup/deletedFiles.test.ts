@@ -8,6 +8,18 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
+/*
+ * These checks COLLECT their violations into `problems` and assert
+ * `expect(problems).toStrictEqual([])`, rather than throwing on the first one.
+ *
+ * Both fail the test. Collecting is better for two reasons: jest prints every
+ * offending entry in one run instead of dying on the first, and an `expect` is
+ * visible to `jest/expect-expect` where a `throw` is not — 31 tests here were
+ * reported as assertion-free while they were doing real work, and that noise is
+ * what let 20 genuinely assertion-free tests elsewhere sit unread.
+ */
+
+
 const projectRoot = path.resolve(__dirname, '..', '..');
 
 describe('Deleted Files - Step 8 Final Cleanup', () => {
@@ -94,6 +106,8 @@ describe('No Deprecated Imports Remain', () => {
     }
 
     it('should not import AbstractCacheManager in any source file', () => {
+        const problems: string[] = [];
+
         const srcDir = path.join(projectRoot, 'src');
         const files = getAllTsFiles(srcDir);
 
@@ -108,12 +122,16 @@ describe('No Deprecated Imports Remain', () => {
             const hasExtends = /extends\s+AbstractCacheManager/.test(content);
 
             if (hasImport || hasExtends) {
-                throw new Error(`File ${file} still imports/extends AbstractCacheManager`);
+                problems.push(`File ${file} still imports/extends AbstractCacheManager`);
             }
         }
+
+        expect(problems).toStrictEqual([]);
     });
 
     it('should not import deprecated strategy classes in any source file', () => {
+        const problems: string[] = [];
+
         const srcDir = path.join(projectRoot, 'src');
         const files = getAllTsFiles(srcDir);
 
@@ -134,13 +152,17 @@ describe('No Deprecated Imports Remain', () => {
             for (const strategy of deprecatedStrategies) {
                 const hasImport = new RegExp(`from\\s+['"].*${strategy}['"]`).test(content);
                 if (hasImport) {
-                    throw new Error(`File ${file} still imports ${strategy}`);
+                    problems.push(`File ${file} still imports ${strategy}`);
                 }
             }
         }
+
+        expect(problems).toStrictEqual([]);
     });
 
     it('should not import CommandResolver or ElapsedTimeTracker in any source file', () => {
+        const problems: string[] = [];
+
         const srcDir = path.join(projectRoot, 'src');
         const files = getAllTsFiles(srcDir);
 
@@ -155,49 +177,27 @@ describe('No Deprecated Imports Remain', () => {
             const hasElapsedTimeTrackerImport = /from\s+['"].*ElapsedTimeTracker['"]/.test(content);
 
             if (hasCommandResolverImport) {
-                throw new Error(`File ${file} still imports CommandResolver`);
+                problems.push(`File ${file} still imports CommandResolver`);
             }
             if (hasElapsedTimeTrackerImport) {
-                throw new Error(`File ${file} still imports ElapsedTimeTracker`);
+                problems.push(`File ${file} still imports ElapsedTimeTracker`);
             }
         }
+
+        expect(problems).toStrictEqual([]);
     });
 });
 
-describe('Canonical Exports Only', () => {
-    it('should not export AbstractCacheManager from cache index', async () => {
-        // Dynamic import to get actual exports
-        const cacheModule = await import('@/core/cache');
-
-        // AbstractCacheManager should NOT be exported
-        expect((cacheModule as Record<string, unknown>).AbstractCacheManager).toBeUndefined();
-
-        // But cache utilities should still be exported
-        expect(cacheModule.getCacheTTLWithJitter).toBeDefined();
-        expect(cacheModule.isExpired).toBeDefined();
-        expect(cacheModule.createCacheEntry).toBeDefined();
-    });
-
-    it('should not export strategy classes from progressUnifier index', async () => {
-        const progressModule = await import('@/core/utils/progressUnifier');
-
-        // Strategy classes should NOT be exported
-        expect((progressModule as Record<string, unknown>).IProgressStrategy).toBeUndefined();
-        expect((progressModule as Record<string, unknown>).ExactProgressStrategy).toBeUndefined();
-        expect((progressModule as Record<string, unknown>).MilestoneProgressStrategy).toBeUndefined();
-        expect((progressModule as Record<string, unknown>).SyntheticProgressStrategy).toBeUndefined();
-        expect((progressModule as Record<string, unknown>).ImmediateProgressStrategy).toBeUndefined();
-
-        // But ProgressUnifier should still be exported
-        expect(progressModule.ProgressUnifier).toBeDefined();
-        expect(progressModule.formatElapsedTime).toBeDefined();
-    });
-
-    it('should not export CommandResolver or ElapsedTimeTracker from progressUnifier index', async () => {
-        const progressModule = await import('@/core/utils/progressUnifier');
-
-        // Helper classes should NOT be exported
-        expect((progressModule as Record<string, unknown>).CommandResolver).toBeUndefined();
-        expect((progressModule as Record<string, unknown>).ElapsedTimeTracker).toBeUndefined();
-    });
-});
+/**
+ * `describe('Canonical Exports Only')` was DELETED here on 2026-08-31 (PL-31).
+ *
+ * It asserted what `@/core/cache` and `@/core/utils/progressUnifier` did and did
+ * not re-export — that internals like AbstractCacheManager and the progress
+ * strategy classes stayed out of the barrel. That intent is now enforced far more
+ * strongly: a module is imported by the path that DECLARES the symbol, so there is
+ * no barrel through which an internal could leak, and the `reExportIndex` ledger
+ * fails the build if a new one appears.
+ *
+ * The block could not survive its own subject. Both barrels it imported are on the
+ * ledger and going; a test of a barrel is not a test of behaviour.
+ */

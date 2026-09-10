@@ -14,7 +14,7 @@
 
 import type { DaLiveContentOperations } from './daLive/daLiveContentOperations';
 import { COMPONENT_IDS } from '@/core/constants';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import type { StateManager } from '@/types/state';
 

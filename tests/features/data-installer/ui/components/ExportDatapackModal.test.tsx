@@ -15,79 +15,26 @@
  *   that cost a day of investigation.
  *
  * Strict TDD: written BEFORE the component exists.
+ *
+ * Mocks, fixtures and helpers live in `ExportDatapackModal.testUtils.tsx`; the
+ * form gating and the result view have their own suites.
  */
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: { request: jest.fn() },
-}));
-
-// Below the mock on purpose — see webview-test-authoring §3.
-import { webviewClient } from '@/core/ui/utils/WebviewClient';
-import { ExportDatapackModal } from '@/features/data-installer/ui/components/ExportDatapackModal';
-
-const mockRequest = webviewClient.request as jest.Mock;
-
-/**
- * The export type catalog, as `list-datapack-data-types` really answers it.
- *
- * `dataTypes` is a STRING ARRAY — `getProcessorOrder` returns names. An earlier
- * fixture here used `[{dataType: '…'}]`, which matched the component's wrong
- * assumption and let an empty Data Types section ship. Caught only in the
- * Extension Dev Host.
- */
-const EXPORT_TYPES = {
-    mode: 'export',
-    dataTypes: ['attribute_sets', 'categories'],
-};
-
-function withService(over: Record<string, unknown> = {}) {
-    mockRequest.mockImplementation(async (type: string, payload?: Record<string, unknown>) => {
-        if (type === 'list-datapack-data-types') {
-            // HONOURS the payload, exactly as the handler does. A mock that
-            // answers regardless of the key let `mode` instead of
-            // `operationMode` ship — the section rendered empty in the Dev Host
-            // while all seven tests passed.
-            return payload?.operationMode
-                ? { success: true, data: EXPORT_TYPES }
-                : {
-                      success: false,
-                      error: 'An operation mode is required (import, export, delete or validate).',
-                  };
-        }
-        if (type === 'get-datapack-import-target') {
-            return { success: true, data: { instance: 'inst-1', projectName: 'demo-1' } };
-        }
-        if (type in over) return over[type];
-        return { success: true, data: null };
-    });
-}
-
-function renderModal() {
-    return render(<ExportDatapackModal onClose={jest.fn()} />);
-}
-
-/**
- * The house Modal renders its action buttons as `div role="button"` with
- * `aria-disabled`, not native `<button disabled>` — so assert the attribute.
- */
-function expectExportDisabled(disabled: boolean): void {
-    expect(screen.getByRole('button', { name: /^export$/i })).toHaveAttribute(
-        'aria-disabled',
-        String(disabled),
-    );
-}
-
-/** Fill the identity the export requires, then press Export. */
-async function exportAs(name: string, version: string) {
-    fireEvent.change(screen.getByRole('textbox', { name: /datapack name/i }), { target: { value: name } });
-    fireEvent.change(screen.getByRole('textbox', { name: /version/i }), { target: { value: version } });
-    fireEvent.click(await screen.findByRole('checkbox', { name: 'Attribute sets' }));
-    fireEvent.click(screen.getByRole('button', { name: /^export$/i }));
-}
+import { settle } from '../../../../helpers/reactSettle';
+import {
+    ExportDatapackModal,
+    exportAs,
+    exportCall,
+    exportResult,
+    expectExportDisabled,
+    mockRequest,
+    renderModal,
+    withService,
+} from './ExportDatapackModal.testUtils';
 
 beforeEach(() => {
     mockRequest.mockReset();
@@ -96,10 +43,10 @@ beforeEach(() => {
 
 describe('ExportDatapackModal', () => {
     it('offers the EXPORT type list, which is not the import one', async () => {
-        renderModal();
+        await renderModal();
 
         await waitFor(() =>
-            expect(screen.getByRole('checkbox', { name: 'Attribute sets' })).toBeInTheDocument(),
+            expect(screen.getByRole('checkbox', { name: 'Attribute sets' })).toBeInTheDocument()
         );
         const call = mockRequest.mock.calls.find((c) => c[0] === 'list-datapack-data-types');
         // `operationMode` is the handler's key; `mode` is refused.
@@ -108,15 +55,19 @@ describe('ExportDatapackModal', () => {
 
     /** Naming the target is the user's job — nothing here guesses it. */
     it('cannot export until a name, a version and a type are given', async () => {
-        renderModal();
+        await renderModal();
         await screen.findByRole('checkbox', { name: 'Attribute sets' });
 
         expectExportDisabled(true);
 
-        fireEvent.change(screen.getByRole('textbox', { name: /datapack name/i }), { target: { value: 'captured' } });
+        fireEvent.change(screen.getByRole('textbox', { name: /datapack name/i }), {
+            target: { value: 'captured' },
+        });
         expectExportDisabled(true);
 
-        fireEvent.change(screen.getByRole('textbox', { name: /version/i }), { target: { value: 'v1' } });
+        fireEvent.change(screen.getByRole('textbox', { name: /version/i }), {
+            target: { value: 'v1' },
+        });
         expectExportDisabled(true);
 
         fireEvent.click(screen.getByRole('checkbox', { name: 'Attribute sets' }));
@@ -124,14 +75,13 @@ describe('ExportDatapackModal', () => {
     });
 
     it('sends the typed identity and the chosen types', async () => {
-        renderModal();
+        await renderModal();
         await screen.findByRole('checkbox', { name: 'Attribute sets' });
 
         await exportAs('captured-pack', 'v1');
 
         await waitFor(() => {
-            const call = mockRequest.mock.calls.find((c) => c[0] === 'start-datapack-export');
-            expect(call?.[1]).toMatchObject({
+            expect(exportCall()).toMatchObject({
                 datapackName: 'captured-pack',
                 version: 'v1',
                 dataTypes: ['attribute_sets'],
@@ -140,18 +90,10 @@ describe('ExportDatapackModal', () => {
     });
 
     it('reports what each type captured', async () => {
-        withService({
-            'start-datapack-export': {
-                success: true,
-                data: {
-                    success: true,
-                    perType: [
-                        { dataType: 'attribute_sets', success: true, exported: 8, excluded: 1 },
-                    ],
-                },
-            },
-        });
-        renderModal();
+        withService(
+            exportResult([{ dataType: 'attribute_sets', success: true, exported: 8, excluded: 1 }])
+        );
+        await renderModal();
         await screen.findByRole('checkbox', { name: 'Attribute sets' });
 
         await exportAs('captured-pack', 'v1');
@@ -166,24 +108,21 @@ describe('ExportDatapackModal', () => {
      * is what made this take a day to diagnose.
      */
     it('shows the per-type REASON when the service refuses to store', async () => {
-        withService({
-            'start-datapack-export': {
-                success: true,
-                data: {
-                    success: false,
-                    perType: [
-                        {
-                            dataType: 'attribute_sets',
-                            success: false,
-                            exported: 0,
-                            excluded: 0,
-                            reason: 'Failed to store exported data: MongoDB connection URI required.',
-                        },
-                    ],
-                },
-            },
-        });
-        renderModal();
+        withService(
+            exportResult(
+                [
+                    {
+                        dataType: 'attribute_sets',
+                        success: false,
+                        exported: 0,
+                        excluded: 0,
+                        reason: 'Failed to store exported data: MongoDB connection URI required.',
+                    },
+                ],
+                false
+            )
+        );
+        await renderModal();
         await screen.findByRole('checkbox', { name: 'Attribute sets' });
 
         await exportAs('captured-pack', 'v1');
@@ -195,7 +134,7 @@ describe('ExportDatapackModal', () => {
         withService({
             'start-datapack-export': { success: false, error: 'Open a project before exporting.' },
         });
-        renderModal();
+        await renderModal();
         await screen.findByRole('checkbox', { name: 'Attribute sets' });
 
         await exportAs('captured-pack', 'v1');
@@ -204,13 +143,10 @@ describe('ExportDatapackModal', () => {
     });
 
     it('offers Back from a result rather than stranding the user', async () => {
-        withService({
-            'start-datapack-export': {
-                success: true,
-                data: { success: true, perType: [{ dataType: 'attribute_sets', success: true, exported: 8, excluded: 0 }] },
-            },
-        });
-        renderModal();
+        withService(
+            exportResult([{ dataType: 'attribute_sets', success: true, exported: 8, excluded: 0 }])
+        );
+        await renderModal();
         await screen.findByRole('checkbox', { name: 'Attribute sets' });
 
         await exportAs('captured-pack', 'v1');
@@ -219,7 +155,7 @@ describe('ExportDatapackModal', () => {
         fireEvent.click(back);
 
         await waitFor(() =>
-            expect(screen.getByRole('button', { name: /^export$/i })).toBeInTheDocument(),
+            expect(screen.getByRole('button', { name: /^export$/i })).toBeInTheDocument()
         );
     });
 
@@ -239,7 +175,7 @@ describe('ExportDatapackModal', () => {
      */
     describe('type list, shared with the import modal', () => {
         it('lays the types out in the shared grid, not a private copy', async () => {
-            const { container } = renderModal();
+            const { container } = await renderModal();
             await screen.findByRole('checkbox', { name: 'Attribute sets' });
 
             expect(container.querySelector('.datapack-type-grid')).toBeInTheDocument();
@@ -247,7 +183,7 @@ describe('ExportDatapackModal', () => {
         });
 
         it('offers Select all, the way the import list does', async () => {
-            renderModal();
+            await renderModal();
             await screen.findByRole('checkbox', { name: 'Attribute sets' });
 
             fireEvent.click(screen.getByRole('button', { name: /select all/i }));
@@ -257,7 +193,7 @@ describe('ExportDatapackModal', () => {
         });
 
         it('turns into Clear all once everything is selected', async () => {
-            renderModal();
+            await renderModal();
             await screen.findByRole('checkbox', { name: 'Attribute sets' });
 
             fireEvent.click(screen.getByRole('button', { name: /select all/i }));
@@ -269,7 +205,7 @@ describe('ExportDatapackModal', () => {
 
         /** Selecting all must send CODES — the labels are presentation only. */
         it('sends the codes it selected, never the names it showed', async () => {
-            renderModal();
+            await renderModal();
             await screen.findByRole('checkbox', { name: 'Attribute sets' });
 
             fireEvent.click(screen.getByRole('button', { name: /select all/i }));
@@ -282,18 +218,23 @@ describe('ExportDatapackModal', () => {
             fireEvent.click(screen.getByRole('button', { name: /^export$/i }));
 
             await waitFor(() => {
-                const call = mockRequest.mock.calls.find((c) => c[0] === 'start-datapack-export');
-                expect(call?.[1]).toMatchObject({
+                expect(exportCall()).toMatchObject({
                     dataTypes: ['attribute_sets', 'categories'],
                 });
             });
         });
 
         /** No list yet, nothing to act on — a bulk toggle over zero types is noise. */
-        it('withholds Select all while the types are still loading', () => {
-            renderModal();
+        it('withholds Select all while the types are still loading', async () => {
+            // Deliberately NOT `renderModal()`: that settles, and settling loads
+            // the types — which is the exact state this test exists to rule out.
+            // Bare render, assert the in-flight view, then settle at the end so
+            // the response still commits inside act().
+            render(<ExportDatapackModal onClose={jest.fn()} />);
 
             expect(screen.queryByRole('button', { name: /select all/i })).not.toBeInTheDocument();
+
+            await settle();
         });
     });
 
@@ -305,7 +246,7 @@ describe('ExportDatapackModal', () => {
         mockRequest.mockImplementation(async (type: string) =>
             type === 'list-datapack-data-types'
                 ? { success: false, error: 'An operation mode is required.' }
-                : { success: true, data: null },
+                : { success: true, data: null }
         );
         render(<ExportDatapackModal onClose={jest.fn()} />);
 

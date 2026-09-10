@@ -7,27 +7,22 @@
  * via applyDaLiveOrgConfigSettings (non-fatal).
  */
 
-import { ConfigureProjectWebviewCommand } from '@/features/dashboard/commands/configure';
+import { ConfigureProjectWebviewCommand } from './configure.testUtils';
 import * as vscode from 'vscode';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { Logger } from '@/types/logger';
-import { StateManager } from '@/core/state';
-import type { Project } from '@/types';
+import { StateManager } from '@/core/state/stateManager';
+import type { Project } from '@/types/base';
+import { ServiceLocator } from '@/core/di/serviceLocator';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 
-jest.mock('vscode');
-jest.mock('@/core/state');
-jest.mock('@/features/components/services/ComponentRegistryManager');
 
-jest.mock('@/core/logging', () => ({
-    getLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() }),
-    Logger: jest.fn().mockImplementation(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
-}));
 
+import { internals } from '../../../helpers/commandInternals';
+import { createMockProject } from '../../../helpers/projectFake';
 // Mesh / storefront staleness — return "no changes" so the save path stays simple.
 jest.mock('@/features/mesh/services/stalenessDetector', () => ({
     detectMeshChanges: jest.fn().mockResolvedValue({ hasChanges: false }),
@@ -37,9 +32,17 @@ jest.mock('@/features/mesh/services/stalenessDetector', () => ({
 // republishStorefrontConfig — that's what lands the quick-edit Sidekick plugin
 // (the EW canvas reads plugins from config.json).
 const mockRepublishStorefrontConfig = jest.fn().mockResolvedValue({ success: true });
-jest.mock('@/features/eds', () => ({
+// The '@/features/eds' barrel was retired under ADR-022, so these names are mocked
+// at the modules that declare them. isEdsProject is a type guard and lives in
+// @/types/typeGuards, whose other guards stay real.
+jest.mock('@/types/typeGuards', () => ({
+    ...jest.requireActual('@/types/typeGuards'),
     isEdsProject: jest.fn(() => true),
+}));
+jest.mock('@/features/eds/services/storefront/storefrontStalenessDetector', () => ({
     detectStorefrontChanges: jest.fn(() => ({ hasChanges: false })),
+}));
+jest.mock('@/features/eds/services/storefront/storefrontRepublishService', () => ({
     republishStorefrontConfig: (...args: unknown[]) => mockRepublishStorefrontConfig(...args),
 }));
 
@@ -76,9 +79,9 @@ jest.mock('@/features/eds/services/quickEditPublisher', () => ({
 // HelixService — after vendoring, the flip previews the code ('/*') so the
 // committed Quick Edit change goes live (the EW Layout view). Non-fatal.
 const mockPreviewCode = jest.fn().mockResolvedValue(undefined);
-jest.mock('@/features/eds/services/helix/helixService', () => ({
-    HelixService: jest.fn().mockImplementation(() => ({ previewCode: mockPreviewCode })),
-}));
+// HelixService is NOT module-mocked. It arrives through the command's `helixService`
+// seam, which the flip forwards — so the suite hands in the one method the Quick Edit
+// vendoring calls.
 
 // GitHub services constructed by ensureQuickEditVendored. Constructors are
 // stubbed so no real Octokit/secrets access occurs; installQuickEdit is mocked
@@ -114,7 +117,7 @@ function makeEdsProject(
     githubRepo: string | typeof NO_REPO = 'acme-org/acme-storefront'
 ): Project {
     const repo = githubRepo === NO_REPO ? undefined : githubRepo;
-    return {
+    return createMockProject({
         name: 'Test Project',
         path: '/test/project',
         // EDS stack id so the real getEdsDaLiveUrl (typeGuards.isEdsProject) resolves
@@ -122,6 +125,9 @@ function makeEdsProject(
         selectedStack: 'eds-citisignal',
         componentInstances: {
             [COMPONENT_IDS.EDS_STOREFRONT]: {
+                id: COMPONENT_IDS.EDS_STOREFRONT,
+                name: 'EDS Storefront',
+                status: 'ready',
                 metadata: {
                     daLiveOrg: 'my-org',
                     daLiveSite: 'my-site',
@@ -130,7 +136,7 @@ function makeEdsProject(
                 },
             },
         },
-    } as unknown as Project;
+    });
 }
 
 /** Capture the save-configuration streaming handler registered by the command. */
@@ -162,6 +168,22 @@ function captureSaveHandler(
     };
 }
 
+
+/**
+ * ADR-015 (2026-08-28): this boundary resolves its collaborators from the
+ * registry, which the shared node setup empties after EVERY test — so the fakes
+ * are seeded per-test rather than mocked at the module level.
+ */
+beforeEach(() => {
+    ServiceLocator.setCommandExecutor(createMockCommandExecutor());
+    ServiceLocator.setAuthenticationService(
+        createMockAuthenticationService({
+            getCachedOrganization: jest.fn(),
+            getTokenStatus: jest.fn(async () => ({ isAuthenticated: true, expiresInMinutes: 60 })),
+        })
+    );
+});
+
 describe('ConfigureProjectWebviewCommand - save-configuration authoring experience', () => {
     let command: ConfigureProjectWebviewCommand;
     let mockContext: vscode.ExtensionContext;
@@ -173,20 +195,9 @@ describe('ConfigureProjectWebviewCommand - save-configuration authoring experien
         jest.clearAllMocks();
         savedProject = undefined;
 
-        mockContext = {
-            subscriptions: [],
-            extensionPath: '/test/extension/path',
-            extensionUri: vscode.Uri.file('/test/extension/path'),
-            secrets: { get: jest.fn(), store: jest.fn() },
-            globalState: { get: jest.fn(), update: jest.fn() },
-        } as unknown as vscode.ExtensionContext;
+        mockContext = createMockExtensionContext();
 
-        mockLogger = {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as unknown as Logger;
+        mockLogger = createMockLogger() as unknown as Logger;
 
         mockStateManager = {
             getCurrentProject: jest.fn(),
@@ -201,11 +212,18 @@ describe('ConfigureProjectWebviewCommand - save-configuration authoring experien
             mockStateManager as unknown as StateManager,
             mockLogger
         );
+        command.helixService = { previewCode: mockPreviewCode };
+        // Same seam, same reason: unset, the command resolves the shared GitHub
+        // services, and that path calls getLogger() — which throws in a suite that
+        // initialises no logger.
+        command.githubTokenService = {} as NonNullable<
+            typeof command.githubTokenService
+        >;
 
         // Stub side-effecting private methods so the save path doesn't touch disk.
-        (command as any).registerProgrammaticWrites = jest.fn().mockResolvedValue(undefined);
-        (command as any).regenerateEnvFiles = jest.fn().mockResolvedValue(undefined);
-        (command as any).showPostSaveNotifications = jest.fn();
+        internals(command).registerProgrammaticWrites = jest.fn().mockResolvedValue(undefined);
+        internals(command).regenerateEnvFiles = jest.fn().mockResolvedValue(undefined);
+        internals(command).showPostSaveNotifications = jest.fn();
     });
 
     it('persists the changed authoringExperience into EDS metadata', async () => {

@@ -4,7 +4,15 @@
  * Tests for handler context type exports and usage
  */
 
-import { HandlerContext, SharedState, type MessageHandler, type HandlerResponse, PrerequisiteCheckState, ApiServicesConfig } from '@/types/handlers';
+import {
+    HandlerContext,
+    SharedState,
+    type MessageHandler,
+    type HandlerResponse,
+    PrerequisiteCheckState,
+    ApiServicesConfig,
+} from '@/types/handlers';
+import { createMockHandlerContext } from '../../helpers/handlerContextTestHelpers';
 
 describe('HandlerContext', () => {
     describe('Type Exports', () => {
@@ -16,7 +24,7 @@ describe('HandlerContext', () => {
 
         it('should export SharedState type', () => {
             const state: SharedState = {
-                isAuthenticating: false
+                isAuthenticating: false,
             };
             expect(state).toBeDefined();
             expect(state.isAuthenticating).toBe(false);
@@ -33,7 +41,7 @@ describe('HandlerContext', () => {
             const response: HandlerResponse = {
                 success: true,
                 data: { test: 'data' },
-                message: 'Success'
+                message: 'Success',
             };
             expect(response).toBeDefined();
             expect(response.success).toBe(true);
@@ -47,8 +55,8 @@ describe('HandlerContext', () => {
                     description: 'Test',
                     check: {
                         command: 'test --version',
-                        parseVersion: 'v(\\d+\\.\\d+\\.\\d+)'
-                    }
+                        parseVersion: 'v(\\d+\\.\\d+\\.\\d+)',
+                    },
                 },
                 result: {
                     id: 'test',
@@ -57,8 +65,8 @@ describe('HandlerContext', () => {
                     installed: true,
                     version: '1.0.0',
                     optional: false,
-                    canInstall: true
-                }
+                    canInstall: true,
+                },
             };
             expect(checkState).toBeDefined();
             expect(checkState.result.installed).toBe(true);
@@ -69,9 +77,9 @@ describe('HandlerContext', () => {
                 services: {
                     apiMesh: {
                         enabled: true,
-                        endpoint: 'https://test.com'
-                    }
-                }
+                        endpoint: 'https://test.com',
+                    },
+                },
             };
             expect(config).toBeDefined();
             expect(config.services?.apiMesh?.enabled).toBe(true);
@@ -85,8 +93,8 @@ describe('HandlerContext', () => {
                 currentComponentSelection: {
                     frontend: 'react',
                     backend: 'adobe-app-builder',
-                    dependencies: ['adobe-commerce']
-                }
+                    dependencies: ['adobe-commerce'],
+                },
             };
             expect(state.currentComponentSelection?.frontend).toBe('react');
         });
@@ -101,11 +109,11 @@ describe('HandlerContext', () => {
                         description: 'Test',
                         check: {
                             command: 'node --version',
-                            parseVersion: 'v(\\d+\\.\\d+\\.\\d+)'
-                        }
-                    }
+                            parseVersion: 'v(\\d+\\.\\d+\\.\\d+)',
+                        },
+                    },
                 ],
-                currentPrerequisiteStates: new Map()
+                currentPrerequisiteStates: new Map(),
             };
             expect(state.currentPrerequisites).toHaveLength(1);
             expect(state.currentPrerequisiteStates).toBeInstanceOf(Map);
@@ -113,7 +121,7 @@ describe('HandlerContext', () => {
 
         it('should allow authentication state', () => {
             const state: SharedState = {
-                isAuthenticating: true
+                isAuthenticating: true,
             };
             expect(state.isAuthenticating).toBe(true);
         });
@@ -122,7 +130,7 @@ describe('HandlerContext', () => {
             const abortController = new AbortController();
             const state: SharedState = {
                 isAuthenticating: false,
-                projectCreationAbortController: abortController
+                projectCreationAbortController: abortController,
             };
             expect(state.projectCreationAbortController).toBe(abortController);
         });
@@ -131,7 +139,7 @@ describe('HandlerContext', () => {
             const state: SharedState = {
                 isAuthenticating: false,
                 meshCreatedForWorkspace: 'workspace-123',
-                meshExistedBeforeSession: 'workspace-456'
+                meshExistedBeforeSession: 'workspace-456',
             };
             expect(state.meshCreatedForWorkspace).toBe('workspace-123');
             expect(state.meshExistedBeforeSession).toBe('workspace-456');
@@ -144,10 +152,10 @@ describe('HandlerContext', () => {
                     services: {
                         apiMesh: {
                             enabled: true,
-                            endpoint: 'https://api.adobe.io'
-                        }
-                    }
-                }
+                            endpoint: 'https://api.adobe.io',
+                        },
+                    },
+                },
             };
             expect(state.apiServicesConfig?.services?.apiMesh?.enabled).toBe(true);
         });
@@ -156,7 +164,7 @@ describe('HandlerContext', () => {
     describe('HandlerResponse Structure', () => {
         it('should allow success response', () => {
             const response: HandlerResponse = {
-                success: true
+                success: true,
             };
             expect(response.success).toBe(true);
         });
@@ -164,7 +172,7 @@ describe('HandlerContext', () => {
         it('should allow success response with data', () => {
             const response: HandlerResponse = {
                 success: true,
-                data: { projects: ['project1', 'project2'] }
+                data: { projects: ['project1', 'project2'] },
             };
             expect(response.success).toBe(true);
             expect(response.data).toEqual({ projects: ['project1', 'project2'] });
@@ -173,7 +181,7 @@ describe('HandlerContext', () => {
         it('should allow error response', () => {
             const response: HandlerResponse = {
                 success: false,
-                error: 'Something went wrong'
+                error: 'Something went wrong',
             };
             expect(response.success).toBe(false);
             expect(response.error).toBe('Something went wrong');
@@ -183,7 +191,7 @@ describe('HandlerContext', () => {
             const response: HandlerResponse = {
                 success: true,
                 customField: 'custom value',
-                anotherField: 123
+                anotherField: 123,
             };
             expect(response.success).toBe(true);
             expect(response.customField).toBe('custom value');
@@ -197,7 +205,7 @@ describe('HandlerContext', () => {
                 return { success: true };
             };
 
-            const mockContext = {} as HandlerContext;
+            const mockContext = createMockHandlerContext();
             const result = await handler(mockContext);
 
             expect(result.success).toBe(true);
@@ -208,7 +216,7 @@ describe('HandlerContext', () => {
                 return { success: true, data: payload?.value };
             };
 
-            const mockContext = {} as HandlerContext;
+            const mockContext = createMockHandlerContext();
             const result = await handler(mockContext, { value: 'test' });
 
             expect(result.success).toBe(true);
@@ -224,14 +232,14 @@ describe('HandlerContext', () => {
             const handler: MessageHandler<TestPayload> = async (_context, payload) => {
                 return {
                     success: true,
-                    data: `${payload?.projectId}/${payload?.workspaceId}`
+                    data: `${payload?.projectId}/${payload?.workspaceId}`,
                 };
             };
 
-            const mockContext = {} as HandlerContext;
+            const mockContext = createMockHandlerContext();
             const result = await handler(mockContext, {
                 projectId: 'proj-123',
-                workspaceId: 'ws-456'
+                workspaceId: 'ws-456',
             });
 
             expect(result.success).toBe(true);

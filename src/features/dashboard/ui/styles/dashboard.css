@@ -1,0 +1,309 @@
+/**
+ * .dashboard-* styles — the status band, zone grid and action buttons.
+ *
+ * FEATURE-SCOPED (ADR-017 §6). Imported by the `dashboard` entry ALONE
+ * (ui/main.tsx) — the only one of the eight whose graph reaches ActionGrid,
+ * DashboardTile, DashboardStatusHeader or ProjectDashboardScreen. Note that the
+ * dashboard FEATURE owns three entries; the other two do not get this sheet.
+ *
+ * Moved out of utilities.css by the CSS migration
+ * (.rptc/plans/css-architecture-migration), each rule with the comment above it.
+ * Verbatim otherwise: a move is only correct when the visual diff is empty.
+ */
+
+@layer theme {
+/* Dashboard status header - middle layer between header and content for depth */
+.dashboard-status-header {
+    background-color: var(--spectrum-global-color-gray-50);
+    border-bottom: 1px solid var(--spectrum-global-color-gray-300);
+    margin-bottom: 12px;
+}
+
+/* The band is ambient context, not content — it should not claim the vertical
+   space of a section header. Scoped to this header rather than changed on
+   `.page-header-section`, which the projects dashboard and integrations screen
+   also use for their real titles. */
+.dashboard-status-header .page-header-section {
+    padding-top: 4px;
+    padding-bottom: 4px;
+}
+
+/* Match the height of the Projects List search header so content aligns */
+.dashboard-status-header > div {
+    min-height: 122px;
+    display: flex;
+    align-items: center;
+}
+
+/* Status header spans the standard content band (its padded container), badges
+   left-aligned with the title; the inner flex pushes "All Projects" to the right
+   edge — a header-row pattern (content left, action right). */
+.dashboard-status-content {
+    width: 100%;
+    margin: 0;
+}
+
+/* Dashboard status — the badge row plus the "View AI Capabilities" link below it. */
+.dashboard-status-grid {
+    display: flex;
+    flex-direction: column;
+    /* Was 8px to separate the badge stack from the capabilities-link row below
+       it. Both are gone — the link moved onto the AI badge line and the badges
+       onto one row — so this now only ever spaces the single badge line from the
+       org-mismatch notice, which appears on mismatch only. */
+    gap: 4px;
+}
+
+/* Badges STACKED one per line (2026-07-09, reversing the earlier inline row):
+   mixed-length statuses read as a scannable column. */
+/* STACKED, deliberately. The column came in on 2026-07-09 so the values line
+   up — "READY" and "ADOBE DEMO SYSTEM" starting at the same x — which is what
+   lets two facts read as a scannable pair rather than a sentence.
+
+   A stale markup comment claimed the opposite ("a single horizontal row…
+   instead of stacking") and briefly got this flattened to a row to match. Wrong
+   direction: the comment predated the column and was the thing out of date.
+   Both say stacked now.
+
+   The height to save here is PADDING, not rows — see the scoped
+   `.page-header-section` override above. Pinned by
+   tests/features/dashboard/ui/components/DashboardStatusHeader-layout.test.ts,
+   which reads this stylesheet because jsdom resolves no layout. */
+.dashboard-status-badges {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    row-gap: 4px;
+}
+
+/* Each badge is a self-contained inline unit: dot · label · value (· action). */
+.dashboard-status-badges .status-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Fixed label column so the stacked badges' VALUE texts align vertically.
+   80px clears the widest label (FRONTEND/API MESH/IMS ORG at 11px uppercase);
+   scoped to the masthead stack — other StatusCard uses keep natural widths. */
+.dashboard-status-badges .status-label {
+    min-width: 80px;
+}
+
+/* "View AI Capabilities" on its own line, indented to the status column so it
+   reads as a continuation of the AI row above it rather than a new fact.
+
+   102px = the dot (6px at StatusCard size="S" — see getSizeInPixels) + the
+   .status-row gap (8) + the reserved label column (80) + gap (8), i.e. exactly
+   where "READY" starts. An earlier 104 used 8px for the dot, which is the size
+   "M" value.
+
+   This replaced a min-width reservation on the AI row's status text. That could
+   not work: the link followed the StatusCard, and the Regenerate remediation
+   renders INSIDE that card, after the status text — so an unhealthy AI badge
+   displaced the link no matter how much room the text was given. Taking the link
+   out of the row removes the coupling instead of padding around it. */
+.dashboard-status-capabilities-link {
+    margin-left: 102px;
+    font-size: 12px;
+}
+
+/* Dashboard status badges - match card grid style */
+.dashboard-status-badge .status-label,
+.dashboard-status-badge .status-text {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.dashboard-status-badge .status-label {
+    font-weight: 600;
+    color: var(--spectrum-global-color-gray-700);
+}
+
+.dashboard-status-badge .status-text {
+    color: var(--spectrum-global-color-gray-600);
+}
+
+/* Dashboard grid - left-align the stacked action zones so their left edge
+   matches the project title and status badges above. */
+.dashboard-grid-container {
+    display: flex;
+    justify-content: flex-start;
+    padding: 8px; /* Shadow overflow padding */
+}
+
+/* Stacked, labeled rows + isolated delete footer. No fixed width — the zones
+   take their intrinsic content width and sit left within the standard band (a
+   compact action cluster); the delete divider spans that cluster, not the band. */
+.dashboard-zones {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    width: fit-content;
+}
+
+/* The action row lays its groups (Primary + Storefront + Build) side by side.
+   Wraps only if the viewport is too narrow. Inter-group gap EQUALS the tile
+   gap (2026-07-09): with the zone headings gone, the row reads as one even
+   strip — grouping semantics are not communicated visually. */
+.dashboard-zone-row {
+    display: flex;
+    flex-flow: row wrap;
+    gap: var(--dashboard-tile-gap);
+    align-items: flex-start;
+}
+
+.dashboard-zone-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Each zone lays its tiles out in a horizontal row, wrapping only if the
+   row runs out of width. Flex (not auto-fit grid) because the parent is
+   fit-content — an auto-fit grid with no width target collapses to a single
+   column (tiles stack vertically). */
+.dashboard-zone-grid {
+    display: flex;
+    flex-flow: row wrap;
+    gap: var(--dashboard-tile-gap);
+}
+
+/* ===========================================
+   Dashboard Action Buttons - Spectrum Style
+   Matches project-card-spectrum patterns
+   =========================================== */
+.dashboard-action-button {
+    /* Base - lighter background matching cards */
+    background: var(--spectrum-global-color-gray-50);
+    border-radius: 8px;
+    padding: 12px;
+    border: 1px solid var(--spectrum-global-color-gray-300);
+
+    /* Smoother transition matching cards */
+    transition: all var(--spectrum-global-animation-duration-600) ease;
+
+    /* Layout — compact square tiles (icon over label) */
+    text-align: center;
+    width: var(--dashboard-tile-size);
+    height: auto;
+    aspect-ratio: 1 / 1; /* Square buttons */
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+}
+
+/* Scale icons proportionally to the smaller tile */
+.dashboard-action-button svg {
+    width: 20px;
+    height: 20px;
+}
+
+/* Hero accent — emphasize the top-tier actions (Start/Stop, Open, AI).
+   A modifier class, NOT a Spectrum variant, to keep the icon-over-label tile look. */
+.dashboard-action-button--hero {
+    background: var(--spectrum-global-color-blue-100);
+    border-color: var(--spectrum-global-color-blue-400);
+}
+
+.dashboard-action-button--hero:hover,
+.dashboard-action-button--hero:focus {
+    background: var(--spectrum-global-color-blue-200);
+    border-color: var(--spectrum-global-color-blue-500);
+}
+
+.dashboard-action-button--hero svg,
+.dashboard-action-button--hero .icon-label {
+    color: var(--spectrum-global-color-blue-700);
+}
+
+.dashboard-action-button:hover,
+.dashboard-action-button:focus {
+    /* Layered depth matching cards */
+    background: var(--spectrum-global-color-gray-75);
+    border-color: var(--spectrum-global-color-gray-400);
+
+    /* Lift animation matching cards */
+    transform: translateY(-2px);
+
+    /* Shadow matching cards */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+
+    outline: none;
+}
+
+.dashboard-action-button:focus-visible {
+    outline: 2px solid var(--spectrum-global-color-blue-400);
+    outline-offset: 2px;
+}
+
+/* Prevent internal Spectrum elements from showing their own hover states.
+ *
+ * Exempts status indicators: this suppresses Spectrum's own hover fills, but it
+ * matched EVERY descendant, and an indicator whose colour IS its background got
+ * blanked to transparent — so the integrations dot vanished on the one gesture a
+ * user makes right before clicking through to check on it. Any future dot needs
+ * the same exemption, hence the shared `.tile-status-dot` marker. */
+.dashboard-action-button:hover *:not(.tile-status-dot),
+.dashboard-action-button:focus *:not(.tile-status-dot) {
+    background: transparent;
+    background-color: transparent;
+}
+
+/* Merged 3 declarations of this selector that the sheet carried separately.
+   Kept at the LAST one's position; for a property declared twice the winner
+   survives (!important over plain, then later over earlier). */
+/* Labels clamp to two lines so a long label can never stretch a tile past its
+   square (the aspect-ratio is the uniform height; content overflow beats it). */
+/* Tile label — smaller to fit the compact tile. Wraps to multiple lines
+   instead of truncating with an ellipsis (Spectrum's Text otherwise clips
+   long labels like "Open in Browser" / "Manage Commerce"). */
+/* Labels for dashboard buttons (4-column layout) */
+.dashboard-action-button .icon-label {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    line-height: 1.2;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
+    font-size: 12px;
+    margin-top: 8px;
+    /* Spectrum's ActionButton gives its label `padding: 0 12px 0 7px`, sized for
+       a normal button and meaningless inside a 96px square tile. The label is
+       laid out 70px wide, so those 19px have ALWAYS been wrong — under
+       content-box they pushed the text outside the box and `overflow: visible`
+       hid it. When reset.css reached the bundles on 2026-09-09 and
+       `* { box-sizing: border-box }` began applying, the same 19px came out of
+       the INSIDE instead: 70px of text width became 51px, and single-word labels
+       ("Configure", "Republish", "Datapacks") started breaking mid-word on
+       `overflow-wrap: anywhere`.
+
+       This is the same defect, from the same commit, as the one fixed on
+       `.sidebar-action-tile .icon-label` — that block carries the long-form
+       version of this note. The sidebar was fixed and the dashboard was not.
+
+       NO `!important`: the dashboard is a LAYERED_VENDOR_ENTRIES entry
+       (ADR-018 step 3), so Spectrum sits in `@layer vendor`, below `theme`, and
+       a plain declaration of ours wins. Verified in the browser, not assumed. */
+    padding: 0;
+}
+
+/* ControlPanelLayout single-column fallback (no detail panel): pad the action
+ * column to match the two-column left padding (TwoColumnLayout leftPadding
+ * size-400) so the tiles still align under the masthead content. */
+.control-panel-single {
+    padding: var(--spectrum-global-dimension-size-400);
+}
+
+/* Destructive overflow-menu entry (Delete lives at the bottom of "More"). */
+.menu-item-destructive {
+    color: var(--spectrum-global-color-red-600);
+}
+}

@@ -29,15 +29,6 @@ jest.mock('@/features/project-creation/services/aiBundle/skillsWriter', () => ({
 // The real createGeneratedFileWriter is used (it only touches disk when a
 // writer method runs, and the three writers above are mocked) — but it needs
 // a logger, and jest never calls initializeLogger.
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn(() => ({
-        trace: jest.fn(),
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
-}));
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -139,7 +130,7 @@ describe('generateAIContextFiles', () => {
 
         await generateAIContextFiles('/projects/test', project, '/ext/path');
 
-        expect(project.aiFileHashes).toEqual({});
+        expect(project.aiFileHashes).toStrictEqual({});
     });
 
     it('stamps AI_CONTEXT_VERSION onto the passed project (single point for all callers)', async () => {

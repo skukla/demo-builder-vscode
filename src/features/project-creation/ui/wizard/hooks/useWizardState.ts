@@ -9,7 +9,7 @@ import {
 } from '../wizardHelpers';
 import { isMeshComponentId } from '@/core/constants';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
-import { RESERVED_EXISTING_KEY } from '@/features/project-creation/ui/components/integration-flow';
+import { RESERVED_EXISTING_KEY } from '@/features/project-creation/ui/components/integration-flow/flowStages';
 import type { Stack } from '@/types/stacks';
 import type { WizardState, WizardStep, ComponentSelection } from '@/types/webview';
 import type { GetComponentsDataResponse } from '@/types/webviewRequests';

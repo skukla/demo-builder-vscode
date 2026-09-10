@@ -6,20 +6,11 @@ import { promises as fsPromises } from 'fs';
 
 export const mockFs = fsPromises as jest.Mocked<typeof fsPromises>;
 
-export function createMockCommandManager() {
-    return {
-        execute: jest.fn(),
-    };
-}
+/** Canonical command-executor fake (ADR-016). */
+export { createMockCommandExecutor as createMockCommandManager } from '../../../helpers/commandExecutorFake';
 
-export function createMockLogger() {
-    return {
-        info: jest.fn(),
-        debug: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    };
-}
+/** Canonical logger fake (ADR-016). Re-exported so existing imports keep working. */
+export { createMockLogger } from '../../../helpers/loggerFake';
 
 export function setupMeshDeploymentVerifierMock() {
     jest.mock('@/features/mesh/services/meshDeploymentVerifier', () => ({

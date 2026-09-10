@@ -6,47 +6,29 @@
  * blockCollectionHelpers.testUtils.ts.
  */
 
-import {
-    installBlockCollections,
-} from '@/features/eds/services/blockCollectionHelpers';
+import { installBlockCollections } from '@/features/eds/services/blockCollectionHelpers';
 import type { Logger } from '@/types/logger';
 import type { GitHubFileOperations } from '@/features/eds/services/github/githubFileOperations';
 import type { AddonSource } from '@/types/demoPackages';
 import {
     createDestComponentDef,
     createBlockFileEntries,
-    delegateCommitTreeToBranch,
+    setupBlockCollectionMocks,    primeCommitPath,
 } from './blockCollectionHelpers.testUtils';
 
 describe('installBlockCollections (single library)', () => {
-    const TEST_SOURCE: AddonSource = { owner: 'stephen-garner-adobe', repo: 'isle5', branch: 'main' };
+    const TEST_SOURCE: AddonSource = {
+        owner: 'stephen-garner-adobe',
+        repo: 'isle5',
+        branch: 'main',
+    };
     const DEFAULT_BLOCKS = ['hero-cta', 'newsletter', 'search-bar'];
     let mockGithubFileOps: jest.Mocked<GitHubFileOperations>;
     let mockLogger: jest.Mocked<Logger>;
 
     beforeEach(() => {
         jest.clearAllMocks();
-
-        mockLogger = {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as unknown as jest.Mocked<Logger>;
-
-        mockGithubFileOps = {
-            listRepoFiles: jest.fn(),
-            getBlobContent: jest.fn(),
-            getFileContent: jest.fn(),
-            getBranchInfo: jest.fn(),
-            createTree: jest.fn(),
-            createCommit: jest.fn(),
-            updateBranchRef: jest.fn(),
-            commitTreeToBranch: jest.fn(),
-        } as unknown as jest.Mocked<GitHubFileOperations>;
-        delegateCommitTreeToBranch(
-            mockGithubFileOps as unknown as Parameters<typeof delegateCommitTreeToBranch>[0],
-        );
+        ({ mockLogger, mockGithubFileOps } = setupBlockCollectionMocks());
     });
 
     /**
@@ -56,7 +38,7 @@ describe('installBlockCollections (single library)', () => {
     function setupSuccessfulInstall(
         sourceComponentDef: string | null,
         destComponentDef: string = createDestComponentDef(),
-        blockIds: string[] = DEFAULT_BLOCKS,
+        blockIds: string[] = DEFAULT_BLOCKS
     ): void {
         mockGithubFileOps.listRepoFiles
             .mockResolvedValueOnce([]) // destination (empty — no existing blocks)
@@ -67,13 +49,19 @@ describe('installBlockCollections (single library)', () => {
         mockGithubFileOps.getFileContent.mockImplementation(
             async (owner: string, repo: string, path: string) => {
                 // Return null for filters/models (not tested by comp-def tests)
-                if (path === 'component-filters.json' || path === 'component-models.json') return null;
+                if (path === 'component-filters.json' || path === 'component-models.json')
+                    return null;
                 if (owner === 'stephen-garner-adobe' && repo === 'isle5') {
                     if (sourceComponentDef === null) return null;
-                    return { content: sourceComponentDef, sha: 'source-sha', path, encoding: 'base64' };
+                    return {
+                        content: sourceComponentDef,
+                        sha: 'source-sha',
+                        path,
+                        encoding: 'base64',
+                    };
                 }
                 return { content: destComponentDef, sha: 'dest-sha', path, encoding: 'base64' };
-            },
+            }
         );
 
         mockGithubFileOps.getBranchInfo.mockResolvedValue({
@@ -93,9 +81,11 @@ describe('installBlockCollections (single library)', () => {
 
             // When
             const result = await installBlockCollections(
-                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                mockGithubFileOps,
+                'dest-owner',
+                'dest-repo',
                 [{ source: TEST_SOURCE, name: 'block collection' }],
-                mockLogger,
+                mockLogger
             );
 
             // Then: blocksCount should be 3 (discovered)
@@ -110,9 +100,11 @@ describe('installBlockCollections (single library)', () => {
 
             // When
             const result = await installBlockCollections(
-                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                mockGithubFileOps,
+                'dest-owner',
+                'dest-repo',
                 [{ source: TEST_SOURCE, name: 'block collection' }],
-                mockLogger,
+                mockLogger
             );
 
             // Then: blockIds should be sorted alphabetically
@@ -125,22 +117,31 @@ describe('installBlockCollections (single library)', () => {
                 .mockResolvedValueOnce([]) // destination (empty)
                 .mockResolvedValueOnce([
                     { path: 'blocks/hero-cta/hero-cta.js', type: 'blob' as const, sha: 'sha-1' },
-                    { path: 'blocks/hero-cta/styles/main.css', type: 'blob' as const, sha: 'sha-2' },
-                    { path: 'blocks/newsletter/newsletter.js', type: 'blob' as const, sha: 'sha-3' },
-                    { path: 'blocks/newsletter/templates/default.html', type: 'blob' as const, sha: 'sha-4' },
+                    {
+                        path: 'blocks/hero-cta/styles/main.css',
+                        type: 'blob' as const,
+                        sha: 'sha-2',
+                    },
+                    {
+                        path: 'blocks/newsletter/newsletter.js',
+                        type: 'blob' as const,
+                        sha: 'sha-3',
+                    },
+                    {
+                        path: 'blocks/newsletter/templates/default.html',
+                        type: 'blob' as const,
+                        sha: 'sha-4',
+                    },
                 ]);
-            mockGithubFileOps.getBlobContent.mockResolvedValue('content');
-            mockGithubFileOps.getFileContent.mockResolvedValue(null);
-            mockGithubFileOps.getBranchInfo.mockResolvedValue({ treeSha: 'tree-sha', commitSha: 'commit-sha' });
-            mockGithubFileOps.createTree.mockResolvedValue('new-tree-sha');
-            mockGithubFileOps.createCommit.mockResolvedValue('new-commit-sha');
-            mockGithubFileOps.updateBranchRef.mockResolvedValue(undefined);
+            primeCommitPath(mockGithubFileOps);
 
             // When
             const result = await installBlockCollections(
-                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                mockGithubFileOps,
+                'dest-owner',
+                'dest-repo',
                 [{ source: TEST_SOURCE, name: 'block collection' }],
-                mockLogger,
+                mockLogger
             );
 
             // Then: Should discover 2 blocks and install all 4 files
@@ -159,18 +160,15 @@ describe('installBlockCollections (single library)', () => {
                     { path: 'blocks/README.md', type: 'blob' as const, sha: 'sha-readme' },
                     { path: 'blocks/hero-cta/hero-cta.js', type: 'blob' as const, sha: 'sha-1' },
                 ]);
-            mockGithubFileOps.getBlobContent.mockResolvedValue('content');
-            mockGithubFileOps.getFileContent.mockResolvedValue(null);
-            mockGithubFileOps.getBranchInfo.mockResolvedValue({ treeSha: 'tree-sha', commitSha: 'commit-sha' });
-            mockGithubFileOps.createTree.mockResolvedValue('new-tree-sha');
-            mockGithubFileOps.createCommit.mockResolvedValue('new-commit-sha');
-            mockGithubFileOps.updateBranchRef.mockResolvedValue(undefined);
+            primeCommitPath(mockGithubFileOps);
 
             // When
             const result = await installBlockCollections(
-                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                mockGithubFileOps,
+                'dest-owner',
+                'dest-repo',
                 [{ source: TEST_SOURCE, name: 'block collection' }],
-                mockLogger,
+                mockLogger
             );
 
             // Then: Only hero-cta should be discovered (not README.md as a "block")
@@ -188,9 +186,11 @@ describe('installBlockCollections (single library)', () => {
 
             // When
             const result = await installBlockCollections(
-                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                mockGithubFileOps,
+                'dest-owner',
+                'dest-repo',
                 [{ source: TEST_SOURCE, name: 'block collection' }],
-                mockLogger,
+                mockLogger
             );
 
             // Then: Both blocks should be discovered and installed
@@ -207,9 +207,11 @@ describe('installBlockCollections (single library)', () => {
 
             // When
             const result = await installBlockCollections(
-                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                mockGithubFileOps,
+                'dest-owner',
+                'dest-repo',
                 [{ source: TEST_SOURCE, name: 'block collection' }],
-                mockLogger,
+                mockLogger
             );
 
             // Then: All 3 block files should be fetched
@@ -220,8 +222,8 @@ describe('installBlockCollections (single library)', () => {
             const createTreeCall = mockGithubFileOps.createTree.mock.calls[0];
             const treeEntries = createTreeCall[2] as Array<{ path: string }>;
             const blockPaths = treeEntries
-                .filter(e => e.path.startsWith('blocks/'))
-                .map(e => e.path);
+                .filter((e) => e.path.startsWith('blocks/'))
+                .map((e) => e.path);
             expect(blockPaths).toContain('blocks/hero-cta/hero-cta.js');
             expect(blockPaths).toContain('blocks/newsletter/newsletter.js');
             expect(blockPaths).toContain('blocks/product-grid/product-grid.js');
@@ -234,13 +236,15 @@ describe('installBlockCollections (single library)', () => {
 
             // When
             await installBlockCollections(
-                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                mockGithubFileOps,
+                'dest-owner',
+                'dest-repo',
                 [{ source: TEST_SOURCE, name: 'block collection' }],
-                mockLogger,
+                mockLogger
             );
 
             // Then: Commit message should say "5 blocks"
-            const commitMessage = mockGithubFileOps.createCommit.mock.calls[0][2] as string;
+            const commitMessage = mockGithubFileOps.createCommit.mock.calls[0][2];
             expect(commitMessage).toContain('5 blocks');
         });
 
@@ -250,13 +254,15 @@ describe('installBlockCollections (single library)', () => {
 
             // When: libraryName is passed
             await installBlockCollections(
-                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                mockGithubFileOps,
+                'dest-owner',
+                'dest-repo',
                 [{ source: TEST_SOURCE, name: 'Commerce Block Collection' }],
-                mockLogger,
+                mockLogger
             );
 
             // Then: Commit message should use the library name
-            const commitMessage = mockGithubFileOps.createCommit.mock.calls[0][2] as string;
+            const commitMessage = mockGithubFileOps.createCommit.mock.calls[0][2];
             expect(commitMessage).toBe('chore: add Commerce Block Collection (3 blocks)');
         });
 
@@ -266,13 +272,15 @@ describe('installBlockCollections (single library)', () => {
 
             // When: no libraryName passed
             await installBlockCollections(
-                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                mockGithubFileOps,
+                'dest-owner',
+                'dest-repo',
                 [{ source: TEST_SOURCE, name: 'block collection' }],
-                mockLogger,
+                mockLogger
             );
 
             // Then: Commit message should use the default 'block collection' label
-            const commitMessage = mockGithubFileOps.createCommit.mock.calls[0][2] as string;
+            const commitMessage = mockGithubFileOps.createCommit.mock.calls[0][2];
             expect(commitMessage).toBe('chore: add block collection (3 blocks)');
         });
 
@@ -283,9 +291,11 @@ describe('installBlockCollections (single library)', () => {
 
             // When
             const result = await installBlockCollections(
-                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                mockGithubFileOps,
+                'dest-owner',
+                'dest-repo',
                 [{ source: TEST_SOURCE, name: 'block collection' }],
-                mockLogger,
+                mockLogger
             );
 
             // Then: blockIds should be the discovered blocks
@@ -301,19 +311,24 @@ describe('installBlockCollections (single library)', () => {
                     { path: 'README.md', type: 'blob' as const, sha: 'sha-1' },
                     { path: 'package.json', type: 'blob' as const, sha: 'sha-2' },
                 ]);
-            mockGithubFileOps.getBranchInfo.mockResolvedValue({ treeSha: 'tree-sha', commitSha: 'commit-sha' });
+            mockGithubFileOps.getBranchInfo.mockResolvedValue({
+                treeSha: 'tree-sha',
+                commitSha: 'commit-sha',
+            });
 
             // When
             const result = await installBlockCollections(
-                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                mockGithubFileOps,
+                'dest-owner',
+                'dest-repo',
                 [{ source: TEST_SOURCE, name: 'block collection' }],
-                mockLogger,
+                mockLogger
             );
 
             // Then: Should fail — source had no blocks at all
             expect(result.success).toBe(false);
             expect(result.blocksCount).toBe(0);
-            expect(result.blockIds).toEqual([]);
+            expect(result.blockIds).toStrictEqual([]);
             expect(result.error).toBe('No blocks found in source libraries');
         });
 
@@ -322,19 +337,24 @@ describe('installBlockCollections (single library)', () => {
             mockGithubFileOps.listRepoFiles
                 .mockResolvedValueOnce([]) // destination (empty)
                 .mockResolvedValueOnce([]); // source (empty too)
-            mockGithubFileOps.getBranchInfo.mockResolvedValue({ treeSha: 'tree-sha', commitSha: 'commit-sha' });
+            mockGithubFileOps.getBranchInfo.mockResolvedValue({
+                treeSha: 'tree-sha',
+                commitSha: 'commit-sha',
+            });
 
             // When
             const result = await installBlockCollections(
-                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                mockGithubFileOps,
+                'dest-owner',
+                'dest-repo',
                 [{ source: TEST_SOURCE, name: 'block collection' }],
-                mockLogger,
+                mockLogger
             );
 
             // Then: Should fail gracefully
             expect(result.success).toBe(false);
             expect(result.blocksCount).toBe(0);
-            expect(result.blockIds).toEqual([]);
+            expect(result.blockIds).toStrictEqual([]);
         });
 
         it('should succeed when all library blocks already exist in destination', async () => {
@@ -344,27 +364,40 @@ describe('installBlockCollections (single library)', () => {
                 .mockResolvedValueOnce([
                     // destination already has hero-cta and newsletter from template
                     { path: 'blocks/hero-cta/hero-cta.js', type: 'blob' as const, sha: 'sha-d1' },
-                    { path: 'blocks/newsletter/newsletter.js', type: 'blob' as const, sha: 'sha-d2' },
+                    {
+                        path: 'blocks/newsletter/newsletter.js',
+                        type: 'blob' as const,
+                        sha: 'sha-d2',
+                    },
                 ])
                 .mockResolvedValueOnce([
                     // source library has the same blocks — all duplicates
                     { path: 'blocks/hero-cta/hero-cta.js', type: 'blob' as const, sha: 'sha-s1' },
                     { path: 'blocks/hero-cta/hero-cta.css', type: 'blob' as const, sha: 'sha-s2' },
-                    { path: 'blocks/newsletter/newsletter.js', type: 'blob' as const, sha: 'sha-s3' },
+                    {
+                        path: 'blocks/newsletter/newsletter.js',
+                        type: 'blob' as const,
+                        sha: 'sha-s3',
+                    },
                 ]);
-            mockGithubFileOps.getBranchInfo.mockResolvedValue({ treeSha: 'tree-sha', commitSha: 'commit-sha' });
+            mockGithubFileOps.getBranchInfo.mockResolvedValue({
+                treeSha: 'tree-sha',
+                commitSha: 'commit-sha',
+            });
 
             // When
             const result = await installBlockCollections(
-                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                mockGithubFileOps,
+                'dest-owner',
+                'dest-repo',
                 [{ source: TEST_SOURCE, name: 'Demo Team Block Collection' }],
-                mockLogger,
+                mockLogger
             );
 
             // Then: success — nothing to copy, blocks were already there
             expect(result.success).toBe(true);
             expect(result.blocksCount).toBe(0);
-            expect(result.blockIds).toEqual([]);
+            expect(result.blockIds).toStrictEqual([]);
             // No GitHub commit should be created (nothing to write)
             expect(mockGithubFileOps.createCommit).not.toHaveBeenCalled();
         });
@@ -376,21 +409,26 @@ describe('installBlockCollections (single library)', () => {
                 .mockResolvedValueOnce([
                     { path: 'blocks/hero-cta/hero-cta.js', type: 'blob' as const, sha: 'sha-1' },
                     { path: 'blocks/hero-cta/hero-cta.css', type: 'blob' as const, sha: 'sha-2' },
-                    { path: 'blocks/hero-cta/icons/arrow.svg', type: 'blob' as const, sha: 'sha-3' },
-                    { path: 'blocks/newsletter/newsletter.js', type: 'blob' as const, sha: 'sha-4' },
+                    {
+                        path: 'blocks/hero-cta/icons/arrow.svg',
+                        type: 'blob' as const,
+                        sha: 'sha-3',
+                    },
+                    {
+                        path: 'blocks/newsletter/newsletter.js',
+                        type: 'blob' as const,
+                        sha: 'sha-4',
+                    },
                 ]);
-            mockGithubFileOps.getBlobContent.mockResolvedValue('content');
-            mockGithubFileOps.getFileContent.mockResolvedValue(null);
-            mockGithubFileOps.getBranchInfo.mockResolvedValue({ treeSha: 'tree-sha', commitSha: 'commit-sha' });
-            mockGithubFileOps.createTree.mockResolvedValue('new-tree-sha');
-            mockGithubFileOps.createCommit.mockResolvedValue('new-commit-sha');
-            mockGithubFileOps.updateBranchRef.mockResolvedValue(undefined);
+            primeCommitPath(mockGithubFileOps);
 
             // When
             const result = await installBlockCollections(
-                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                mockGithubFileOps,
+                'dest-owner',
+                'dest-repo',
                 [{ source: TEST_SOURCE, name: 'block collection' }],
-                mockLogger,
+                mockLogger
             );
 
             // Then: Should discover 2 unique blocks (not 4)
@@ -404,9 +442,11 @@ describe('installBlockCollections (single library)', () => {
 
             // When
             const result = await installBlockCollections(
-                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                mockGithubFileOps,
+                'dest-owner',
+                'dest-repo',
                 [{ source: TEST_SOURCE, name: 'block collection' }],
-                mockLogger,
+                mockLogger
             );
 
             // Then
@@ -425,18 +465,15 @@ describe('installBlockCollections (single library)', () => {
                     { path: 'styles/global.css', type: 'blob' as const, sha: 'sha-3' },
                     { path: 'component-definition.json', type: 'blob' as const, sha: 'sha-4' },
                 ]);
-            mockGithubFileOps.getBlobContent.mockResolvedValue('content');
-            mockGithubFileOps.getFileContent.mockResolvedValue(null);
-            mockGithubFileOps.getBranchInfo.mockResolvedValue({ treeSha: 'tree-sha', commitSha: 'commit-sha' });
-            mockGithubFileOps.createTree.mockResolvedValue('new-tree-sha');
-            mockGithubFileOps.createCommit.mockResolvedValue('new-commit-sha');
-            mockGithubFileOps.updateBranchRef.mockResolvedValue(undefined);
+            primeCommitPath(mockGithubFileOps);
 
             // When
             const result = await installBlockCollections(
-                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                mockGithubFileOps,
+                'dest-owner',
+                'dest-repo',
                 [{ source: TEST_SOURCE, name: 'block collection' }],
-                mockLogger,
+                mockLogger
             );
 
             // Then: Only 1 block file fetched, non-blocks/ files excluded
@@ -445,7 +482,7 @@ describe('installBlockCollections (single library)', () => {
 
             const createTreeCall = mockGithubFileOps.createTree.mock.calls[0];
             const treeEntries = createTreeCall[2] as Array<{ path: string }>;
-            const blockPaths = treeEntries.filter(e => e.path.startsWith('blocks/'));
+            const blockPaths = treeEntries.filter((e) => e.path.startsWith('blocks/'));
             expect(blockPaths).toHaveLength(1);
         });
 
@@ -456,16 +493,18 @@ describe('installBlockCollections (single library)', () => {
 
             // When
             await installBlockCollections(
-                mockGithubFileOps, 'dest-owner', 'dest-repo',
+                mockGithubFileOps,
+                'dest-owner',
+                'dest-repo',
                 [{ source: TEST_SOURCE, name: 'block collection' }],
-                mockLogger,
+                mockLogger
             );
 
             // Then: Log message should reference 4 blocks
             const infoCalls = (mockLogger.info as jest.Mock).mock.calls.map(
-                (c: unknown[]) => c[0] as string,
+                (c: unknown[]) => c[0] as string
             );
-            const completedLog = infoCalls.find(msg => msg.includes('Installed'));
+            const completedLog = infoCalls.find((msg) => msg.includes('Installed'));
             expect(completedLog).toContain('4 blocks');
         });
     });

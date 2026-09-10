@@ -12,7 +12,6 @@ import {
     createEnvironmentSetup,
     mockVSCodeExtension,
     resetAllMocks,
-    mockLogger
 } from './environmentSetup.testUtils';
 
 jest.mock('fs');
@@ -20,12 +19,8 @@ jest.mock('os', () => ({
     homedir: jest.fn(() => '/mock/home'),
     platform: jest.fn(() => process.platform),
 }));
-jest.mock('vscode');
 jest.mock('child_process', () => ({
     execSync: jest.fn()
-}));
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => mockLogger
 }));
 
 describe('EnvironmentSetup - Node Version Management', () => {
@@ -39,8 +34,12 @@ describe('EnvironmentSetup - Node Version Management', () => {
 
         // Create a fresh instance and explicitly clear all caches
         environmentSetup = createEnvironmentSetup(mockHomeDir);
-        (environmentSetup as any).cachedAdobeCLINodeVersion = undefined;
-        (environmentSetup as any).cachedFnmPath = undefined;
+        const caches = environmentSetup as unknown as {
+            cachedAdobeCLINodeVersion: string | null | undefined;
+            cachedFnmPath: string | null | undefined;
+        };
+        caches.cachedAdobeCLINodeVersion = undefined;
+        caches.cachedFnmPath = undefined;
     });
 
     describe('getInfrastructureNodeVersion', () => {

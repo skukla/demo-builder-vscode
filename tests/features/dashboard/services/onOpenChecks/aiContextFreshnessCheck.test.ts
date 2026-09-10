@@ -18,17 +18,13 @@
 
 import { createAiContextFreshnessCheck } from '@/features/dashboard/services/onOpenChecks/aiContextFreshnessCheck';
 import { CHECK_IDS } from '@/types/messages';
-import type { OnOpenCheckContext } from '@/features/dashboard/services/onOpenChecks';
-import type { Project } from '@/types';
+import type { OnOpenCheckContext } from '@/features/dashboard/services/onOpenChecks/types';
+import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../../helpers/loggerFake';
+import { createMockProject } from '../../../../helpers/projectFake';
 
-const mockLogger: Logger = {
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    debug: jest.fn(),
-    trace: jest.fn(),
-};
+const mockLogger: Logger = createMockLogger();
 
 const CURRENT_VERSION = 2;
 
@@ -51,7 +47,7 @@ function makeCtx(aiContextVersion?: number): { ctx: OnOpenCheckContext; post: je
     const post = jest.fn();
     return {
         ctx: {
-            project: { path: '/proj', aiContextVersion } as Project,
+            project: createMockProject({ path: '/proj', aiContextVersion }),
             logger: mockLogger,
             post,
         },
@@ -78,6 +74,11 @@ it('fresh (stamp == current) → ok, no side effects', async () => {
 
     expect(outcome.status).toBe('ok');
     expect(post).not.toHaveBeenCalled();
+    // The boundary is `stamp < current`, so an EQUAL stamp is fresh. Reading it
+    // as stale would put "the sweep is failing" in the support trail for every
+    // healthy project on every open, which is the one thing that trail cannot
+    // survive.
+    expect(mockLogger.info).not.toHaveBeenCalled();
 });
 
 it('fresh (stamp newer than current) → ok', async () => {
@@ -104,6 +105,10 @@ describe('version axis — logged-only, repair owned by the activation sweep', (
         expect(outcome.status).toBe('ok');
         expect(outcome.message).toBeUndefined();
         expect(post).not.toHaveBeenCalled();
+        // Stale goes to info (the support trail) and NOT to debug. The two are
+        // different channels in Debug Logs, and the healthy "ok — stamp N >= N"
+        // line appearing beside a stale one would read as a contradiction.
+        expect(mockLogger.debug).not.toHaveBeenCalled();
     });
 
     it('version-stale (absent stamp, pre-feature project) → ok', async () => {
@@ -225,8 +230,9 @@ describe('decision logging — silence must stop being ambiguous', () => {
         const outcome = await check.run(ctx);
 
         expect(outcome.status).toBe('ok');
-        const debugCalls = (mockLogger.debug as jest.Mock).mock.calls.length;
-        const infoCalls = (mockLogger.info as jest.Mock).mock.calls.length;
-        expect(debugCalls + infoCalls).toBeGreaterThan(0);
+        // Healthy speaks on the DEBUG channel only: routine per-open noise there,
+        // and nothing on info, which is reserved for the two unhappy axes.
+        expect(mockLogger.debug).toHaveBeenCalled();
+        expect(mockLogger.info).not.toHaveBeenCalled();
     });
 });

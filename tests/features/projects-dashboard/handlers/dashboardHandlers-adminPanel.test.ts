@@ -5,59 +5,8 @@
  * repo's file-size limit (see docs/testing/test-file-splitting-playbook.md).
  */
 
-import { handleOpenAdminPanel } from '@/features/projects-dashboard/handlers/dashboardHandlers';
-import { createMockProject, createMockHandlerContext } from '../testUtils';
-
-// Mock mesh staleness detection (module-eval safety; unused by these tests).
-jest.mock('@/core/state/appBuilderComponentState', () => ({
-    ...jest.requireActual('@/core/state/appBuilderComponentState'),
-    hasMeshDeploymentRecord: jest.fn().mockReturnValue(false),
-}));
-jest.mock('@/features/mesh/services/meshStatusResolver', () => ({
-    determineMeshStatus: jest.fn().mockResolvedValue('deployed'),
-}));
-
-// Make filesystem path-safety checks deterministic and independent of the host.
-// validateProjectPath() canonicalizes via fs.realpathSync; identity realpathSync
-// keeps the security prefix check intact while letting valid in-tree project
-// paths through regardless of what exists on disk.
-jest.mock('fs', () => ({
-    ...jest.requireActual('fs'),
-    realpathSync: jest.fn((p: string) => p),
-}));
-
-jest.mock('@/features/mesh/services/stalenessDetector', () => ({
-    detectMeshChanges: jest.fn().mockResolvedValue({ hasChanges: false }),
-}));
-
-// Mock vscode
-jest.mock(
-    'vscode',
-    () => ({
-        commands: {
-            executeCommand: jest.fn(),
-        },
-        workspace: {
-            getConfiguration: jest.fn().mockReturnValue({
-                get: jest.fn().mockReturnValue('cards'),
-            }),
-        },
-        Uri: {
-            file: jest.fn((p: string) => ({ fsPath: p, path: p })),
-            parse: jest.fn((s: string) => ({ toString: () => s, url: s })),
-        },
-        env: {
-            clipboard: {
-                writeText: jest.fn(),
-            },
-            openExternal: jest.fn(),
-        },
-        window: {
-            showInformationMessage: jest.fn(),
-        },
-    }),
-    { virtual: true }
-);
+import { handleOpenAdminPanel } from './dashboardHandlers.testUtils';
+import { createProjectsDashboardProject, createProjectsDashboardContext } from '../testUtils';
 
 describe('dashboardHandlers', () => {
     beforeEach(() => {
@@ -75,12 +24,12 @@ describe('dashboardHandlers', () => {
 
         /** Project whose componentConfigs carry the optional admin-panel env var. */
         function projectWithAdminUrl(url: string) {
-            return createMockProject({
+            return createProjectsDashboardProject({
                 name: 'Admin Target',
                 componentConfigs: {
                     'citisignal-nextjs': { ADOBE_COMMERCE_ADMIN_URL: url },
                 },
-            } as any);
+            });
         }
 
         /** Flush the fire-and-forget notification .then chain. */
@@ -93,10 +42,10 @@ describe('dashboardHandlers', () => {
         });
 
         it('returns error when projectPath is missing', async () => {
-            const context = createMockHandlerContext([]);
+            const context = createProjectsDashboardContext([]);
             const vscode = require('vscode');
 
-            const result = await handleOpenAdminPanel(context as any, undefined);
+            const result = await handleOpenAdminPanel(context, undefined);
 
             expect(result.success).toBe(false);
             expect(result.error).toMatch(/path is required/i);
@@ -104,10 +53,10 @@ describe('dashboardHandlers', () => {
         });
 
         it('rejects a path outside the projects directory before loading', async () => {
-            const context = createMockHandlerContext([]);
+            const context = createProjectsDashboardContext([]);
             const vscode = require('vscode');
 
-            const result = await handleOpenAdminPanel(context as any, {
+            const result = await handleOpenAdminPanel(context, {
                 projectPath: '/nonexistent/path',
             });
 
@@ -117,7 +66,7 @@ describe('dashboardHandlers', () => {
         });
 
         it('returns error when the project cannot be loaded', async () => {
-            const context = createMockHandlerContext([]);
+            const context = createProjectsDashboardContext([]);
             const vscode = require('vscode');
             const os = require('os');
             const path = require('path');
@@ -128,7 +77,7 @@ describe('dashboardHandlers', () => {
                 'nonexistent'
             );
 
-            const result = await handleOpenAdminPanel(context as any, {
+            const result = await handleOpenAdminPanel(context, {
                 projectPath: validButEmptyPath,
             });
 
@@ -139,10 +88,10 @@ describe('dashboardHandlers', () => {
 
         it('opens the configured admin URL externally when set', async () => {
             const project = projectWithAdminUrl(ADMIN_URL);
-            const context = createMockHandlerContext([project]);
+            const context = createProjectsDashboardContext([project]);
             const vscode = require('vscode');
 
-            const result = await handleOpenAdminPanel(context as any, {
+            const result = await handleOpenAdminPanel(context, {
                 projectPath: project.path,
             });
 
@@ -157,10 +106,10 @@ describe('dashboardHandlers', () => {
             // localhost fails validateURL's SSRF guard even though http is an
             // allowed protocol (the Configure field accepts http and https).
             const project = projectWithAdminUrl('http://localhost:8080/admin');
-            const context = createMockHandlerContext([project]);
+            const context = createProjectsDashboardContext([project]);
             const vscode = require('vscode');
 
-            const result = await handleOpenAdminPanel(context as any, {
+            const result = await handleOpenAdminPanel(context, {
                 projectPath: project.path,
             });
 
@@ -172,10 +121,10 @@ describe('dashboardHandlers', () => {
         it('opens an http admin URL (Configure accepts http, so open-time must too)', async () => {
             const httpUrl = 'http://my-instance.example.com/admin';
             const project = projectWithAdminUrl(httpUrl);
-            const context = createMockHandlerContext([project]);
+            const context = createProjectsDashboardContext([project]);
             const vscode = require('vscode');
 
-            const result = await handleOpenAdminPanel(context as any, {
+            const result = await handleOpenAdminPanel(context, {
                 projectPath: project.path,
             });
 
@@ -185,11 +134,11 @@ describe('dashboardHandlers', () => {
         });
 
         it('shows a notification with an Open Configure action when no URL is set', async () => {
-            const project = createMockProject({ name: 'No Admin URL' });
-            const context = createMockHandlerContext([project]);
+            const project = createProjectsDashboardProject({ name: 'No Admin URL' });
+            const context = createProjectsDashboardContext([project]);
             const vscode = require('vscode');
 
-            const result = await handleOpenAdminPanel(context as any, {
+            const result = await handleOpenAdminPanel(context, {
                 projectPath: project.path,
             });
             await flushPromises();
@@ -206,12 +155,12 @@ describe('dashboardHandlers', () => {
         });
 
         it('sets the current-project pointer then opens Configure when the action is selected', async () => {
-            const project = createMockProject({ name: 'No Admin URL' });
-            const context = createMockHandlerContext([project]);
+            const project = createProjectsDashboardProject({ name: 'No Admin URL' });
+            const context = createProjectsDashboardContext([project]);
             const vscode = require('vscode');
             vscode.window.showInformationMessage.mockResolvedValue('Open Configure');
 
-            const result = await handleOpenAdminPanel(context as any, {
+            const result = await handleOpenAdminPanel(context, {
                 projectPath: project.path,
             });
             await flushPromises();

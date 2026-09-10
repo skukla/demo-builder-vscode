@@ -18,6 +18,7 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { NewRepoForm } from '@/features/eds/ui/steps/repoSelectionInline.helpers';
+import type { RepoCreationState } from '@/features/eds/ui/steps/repoSelectionInline.helpers';
 
 // A stand-in that exposes the two things this behaviour lives in: the validation
 // state Spectrum turns into a checkmark, and the description text.
@@ -56,12 +57,12 @@ const baseProps = {
     onCreateRepository: jest.fn(),
 };
 
-const renderForm = (repoCreationState: Record<string, unknown>, extra = {}) =>
+const renderForm = (repoCreationState: RepoCreationState, extra = {}) =>
     render(
         <NewRepoForm
             {...baseProps}
             {...extra}
-            repoCreationState={repoCreationState as never}
+            repoCreationState={repoCreationState}
         />,
     );
 

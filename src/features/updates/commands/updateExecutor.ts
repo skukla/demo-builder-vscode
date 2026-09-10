@@ -16,9 +16,9 @@ import {
     type ProjectUpdateItem,
     type TemplateUpdateItem,
 } from './updateTypes';
-import { TIMEOUTS } from '@/core/utils';
 import { sleep } from '@/core/utils/sleep';
-import { sanitizeErrorForLogging } from '@/core/validation';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { sanitizeErrorForLogging } from '@/core/validation/SensitiveDataRedactor';
 import { applyAdobeMcpUpdate } from '@/features/updates/services/adobeMcpUpdateCore';
 import { ComponentUpdater } from '@/features/updates/services/componentUpdater';
 import { ForkSyncService } from '@/features/updates/services/forkSyncService';
@@ -149,7 +149,7 @@ export async function performTemplateUpdates(
             cancellable: false,
         },
         async (progress) => {
-            const templateSyncService = new TemplateSyncService(ctx.secrets, ctx.logger);
+            const templateSyncService = new TemplateSyncService(ctx.secrets, ctx.logger, ctx.commandManager);
             let successCount = 0;
             let failCount = 0;
 
@@ -254,7 +254,7 @@ export async function performComponentUpdates(
             cancellable: false,
         },
         async (progress) => {
-            const componentUpdater = new ComponentUpdater(ctx.logger, ctx.extensionPath);
+            const componentUpdater = new ComponentUpdater(ctx.logger, ctx.extensionPath, ctx.commandManager);
             let successCount = 0;
             let failCount = 0;
 

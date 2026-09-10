@@ -25,32 +25,8 @@
 
 import * as os from 'os';
 import * as path from 'path';
-import { handleGetProjects } from '@/features/projects-dashboard/handlers/dashboardHandlers';
-import { createMockProject, createMockHandlerContext } from '../testUtils';
-
-// Mock mesh staleness detection
-jest.mock('@/core/state/appBuilderComponentState', () => ({
-    ...jest.requireActual('@/core/state/appBuilderComponentState'),
-    hasMeshDeploymentRecord: jest.fn().mockReturnValue(false),
-}));
-jest.mock('@/features/mesh/services/meshStatusResolver', () => ({
-    determineMeshStatus: jest.fn().mockResolvedValue('deployed'),
-}));
-
-// Make filesystem path-safety checks deterministic and independent of the host.
-// validateProjectPath() canonicalizes via fs.realpathSync; on a machine without
-// a real ~/.demo-builder/projects directory the validator would reject otherwise
-// valid in-tree paths. Identity realpathSync keeps the security prefix check
-// intact (traversal paths still resolve outside the base) while letting valid
-// project paths through regardless of what exists on disk.
-jest.mock('fs', () => ({
-    ...jest.requireActual('fs'),
-    realpathSync: jest.fn((p: string) => p),
-}));
-
-jest.mock('@/features/mesh/services/stalenessDetector', () => ({
-    detectMeshChanges: jest.fn().mockResolvedValue({ hasChanges: false }),
-}));
+import { handleGetProjects } from './dashboardHandlers.testUtils';
+import { createProjectsDashboardProject, createProjectsDashboardContext } from '../testUtils';
 
 // Org targeting is ambient (AsyncLocalStorage), so the only way to observe it is
 // to watch the wrapper. Pass-through, so the wrapped work still runs.
@@ -58,42 +34,12 @@ const mockWithOrgContext = jest.fn((_t: unknown, fn: () => Promise<unknown>) => 
 const mockBuildOrgTarget = jest.fn((adobe?: { organization?: string }) => ({
     orgId: adobe?.organization ?? '',
 }));
-jest.mock('@/core/shell', () => ({
-    ...jest.requireActual('@/core/shell'),
+jest.mock('@/core/shell/orgContextEnv', () => ({
+    ...jest.requireActual('@/core/shell/orgContextEnv'),
     withOrgContext: (t: unknown, fn: () => Promise<unknown>) => mockWithOrgContext(t, fn),
     buildOrgTargetFromProjectAdobe: (adobe?: { organization?: string }) =>
         mockBuildOrgTarget(adobe),
 }));
-
-
-// Mock vscode
-jest.mock(
-    'vscode',
-    () => ({
-        commands: {
-            executeCommand: jest.fn(),
-        },
-        workspace: {
-            getConfiguration: jest.fn().mockReturnValue({
-                get: jest.fn().mockReturnValue('cards'),
-            }),
-        },
-        Uri: {
-            file: jest.fn((p: string) => ({ fsPath: p, path: p })),
-            parse: jest.fn((s: string) => ({ toString: () => s, url: s })),
-        },
-        env: {
-            clipboard: {
-                writeText: jest.fn(),
-            },
-            openExternal: jest.fn(),
-        },
-        window: {
-            showInformationMessage: jest.fn(),
-        },
-    }),
-    { virtual: true }
-);
 
 describe('handleGetProjects — org targeting', () => {
     describe('mesh staleness enrichment', () => {
@@ -109,17 +55,17 @@ describe('handleGetProjects — org targeting', () => {
             const { determineMeshStatus } = require('@/features/mesh/services/meshStatusResolver');
             const { detectMeshChanges } = require('@/features/mesh/services/stalenessDetector');
 
-            const project = createMockProject({
+            const project = createProjectsDashboardProject({
                 componentConfigs: { 'api-mesh': { SOME_VAR: 'value' } },
                 adobe: { organization: 'org-A', projectId: 'p1', projectName: 'p1', workspace: 'w1', authenticated: true },
             });
-            const context = createMockHandlerContext([project]);
+            const context = createProjectsDashboardContext([project]);
 
             hasMeshDeploymentRecord.mockReturnValue(true);
             detectMeshChanges.mockResolvedValue({ hasChanges: false });
             determineMeshStatus.mockResolvedValue('deployed');
 
-            await handleGetProjects(context as any);
+            await handleGetProjects(context);
 
             expect(mockWithOrgContext).toHaveBeenCalled();
             expect(mockBuildOrgTarget).toHaveBeenCalledWith(
@@ -135,25 +81,25 @@ describe('handleGetProjects — org targeting', () => {
             const { determineMeshStatus } = require('@/features/mesh/services/meshStatusResolver');
             const { detectMeshChanges } = require('@/features/mesh/services/stalenessDetector');
 
-            const projectA = createMockProject({
+            const projectA = createProjectsDashboardProject({
                 name: 'a',
                 path: path.join(os.homedir(), '.demo-builder', 'projects', 'a'),
                 componentConfigs: { 'api-mesh': { V: '1' } },
                 adobe: { organization: 'org-A', projectId: 'p1', projectName: 'p1', workspace: 'w1', authenticated: true },
             });
-            const projectB = createMockProject({
+            const projectB = createProjectsDashboardProject({
                 name: 'b',
                 path: path.join(os.homedir(), '.demo-builder', 'projects', 'b'),
                 componentConfigs: { 'api-mesh': { V: '2' } },
                 adobe: { organization: 'org-B', projectId: 'p2', projectName: 'p2', workspace: 'w2', authenticated: true },
             });
-            const context = createMockHandlerContext([projectA, projectB]);
+            const context = createProjectsDashboardContext([projectA, projectB]);
 
             hasMeshDeploymentRecord.mockReturnValue(true);
             detectMeshChanges.mockResolvedValue({ hasChanges: false });
             determineMeshStatus.mockResolvedValue('deployed');
 
-            await handleGetProjects(context as any);
+            await handleGetProjects(context);
 
             const orgs = mockBuildOrgTarget.mock.calls.map(([adobe]) => adobe?.organization);
             expect(orgs).toEqual(expect.arrayContaining(['org-A', 'org-B']));

@@ -12,56 +12,27 @@
  *   - Unreachable LKG → returns null (no update offered, no false positives).
  */
 
-import { TemplateUpdateChecker } from '@/features/updates/services/templateUpdateChecker';
-import { COMPONENT_IDS } from '@/core/constants';
-import type { Project } from '@/types';
-import type { Logger } from '@/types/logger';
-
-// Mock the GitHub API client used for the forked path
-jest.mock('@/features/updates/services/githubApiClient', () => ({
-    getLatestBranchCommit: jest.fn(),
-    compareCommits: jest.fn(),
-}));
-
+// The shared mock wall FIRST, so its jest.mock calls register before the subject binds.
+import { TemplateUpdateChecker } from './templateUpdateChecker.testUtils';
 import {
-    getLatestBranchCommit,
-    compareCommits,
-} from '@/features/updates/services/githubApiClient';
+    NEW_SHA,
+    OLD_SHA,
+    edsProject as makeProject,
+    mockCompareCommits,
+    mockGetLatestBranchCommit,
+    mockReadLkgSha,
+} from './templateUpdateChecker.testUtils';
+import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockProject } from '../../../helpers/projectFake';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
 
-const mockGetLatestBranchCommit = getLatestBranchCommit as jest.Mock;
-const mockCompareCommits = compareCommits as jest.Mock;
+const mockLogger: Logger = createMockLogger();
 
-// Mock the LKG reader (path-dependent dynamic import inside checker)
-jest.mock('@/features/eds/services/patches/lkgReader', () => ({
-    readLkgSha: jest.fn(),
-}));
-
-import { readLkgSha } from '@/features/eds/services/patches/lkgReader';
-const mockReadLkgSha = readLkgSha as jest.Mock;
-
-const mockLogger: Logger = {
-    trace: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    debug: jest.fn(),
-};
-
-const mockSecrets = {} as never;
-
-const OLD_SHA = 'a'.repeat(40);
-const NEW_SHA = 'b'.repeat(40);
-
-function makeProject(metadata: Record<string, unknown>): Project {
-    return {
-        name: 'test-storefront',
-        componentInstances: {
-            [COMPONENT_IDS.EDS_STOREFRONT]: {
-                metadata,
-            },
-        },
-    } as unknown as Project;
-}
+// The canonical SecretStorage fake, Map-backed. `{} as never` claimed an
+// empty object was a SecretStorage and switched off checking of every call
+// it was passed to — eleven of them in this file.
+const mockSecrets = createMockSecretStorage().secrets;
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -214,10 +185,10 @@ describe('checkForUpdates — forked path (legacy)', () => {
 describe('checkForUpdates — preconditions', () => {
     it('returns null when no EDS instance is present', async () => {
         const checker = new TemplateUpdateChecker(mockSecrets, mockLogger);
-        const result = await checker.checkForUpdates({
+        const result = await checker.checkForUpdates(createMockProject({
             name: 'no-eds',
             componentInstances: {},
-        } as unknown as Project);
+        }));
         expect(result).toBeNull();
     });
 

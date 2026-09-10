@@ -4,16 +4,12 @@
  * Handles deleting API Mesh instances.
  */
 
-import { ServiceLocator } from '@/core/di';
-import {
-    buildOrgTargetFromProjectAdobe,
-    withOrgContext,
-    type OrgContextTarget,
-} from '@/core/shell';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import { MESH_DELETE_COMMAND } from '@/core/shell/meshDeleteCommand';
+import { buildOrgTargetFromProjectAdobe, withOrgContext, type OrgContextTarget } from '@/core/shell/orgContextEnv';
 import { getMeshNodeVersion } from '@/core/utils/meshConfig';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { validateWorkspaceId } from '@/core/validation';
+import { validateWorkspaceId } from '@/core/validation/validators/AdobeResourceValidator';
 import { ensureAuthenticated } from '@/features/mesh/handlers/shared';
 import { ErrorCode } from '@/types/errorCodes';
 import { HandlerContext } from '@/types/handlers';
@@ -50,12 +46,15 @@ export async function handleDeleteApiMesh(
         context.logger.debug('[API Mesh] Deleting mesh for workspace', { workspaceId });
 
         // PRE-FLIGHT: Check authentication before any Adobe CLI operations
-        const authResult = await ensureAuthenticated(context.logger, 'delete mesh');
+        const authResult = await ensureAuthenticated(context, 'delete mesh');
         if (!authResult.authenticated) {
             return {
                 success: false,
                 error: authResult.error,
                 code: authResult.code,
+                // Carried through so the AGENT is told which sign-in to offer;
+                // defaultShape returns a failure whole when it has more than error/code.
+                ...(authResult.needsAuth ? { needsAuth: authResult.needsAuth } : {}),
             };
         }
 

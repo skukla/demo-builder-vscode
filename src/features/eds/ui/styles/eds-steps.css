@@ -6,78 +6,82 @@
  */
 
 /* ========== Typography Utilities ========== */
-.font-medium {
-    font-weight: 500;
-}
 
-.font-semibold {
-    font-weight: 600;
-}
 
-.text-sm {
-    font-size: 0.875rem;
-}
 
-.text-xs {
-    font-size: 0.75rem;
-}
 
-.text-uppercase {
-    text-transform: uppercase;
-}
 
-.letter-spacing-05 {
-    letter-spacing: 0.05em;
-}
 
 /* ========== Color Utilities (Spectrum Design Tokens) ========== */
+@layer theme {
 .text-gray-400 {
     color: var(--spectrum-global-color-gray-400);
 }
-
-.text-gray-500 {
-    color: var(--spectrum-global-color-gray-500);
 }
 
-.text-gray-600 {
-    color: var(--spectrum-global-color-gray-600);
-}
 
-.text-gray-700 {
-    color: var(--spectrum-global-color-gray-700);
-}
 
+
+@layer theme {
 .text-gray-900 {
     color: var(--spectrum-global-color-gray-900);
 }
-
-.text-green-600 {
-    color: var(--spectrum-global-color-green-600);
 }
 
+
+@layer theme {
 .text-blue-500 {
     color: var(--spectrum-global-color-blue-500);
 }
-
-.text-orange-500 {
-    color: var(--spectrum-global-color-orange-500);
 }
 
-.text-orange-600 {
-    color: var(--spectrum-global-color-orange-600);
-}
+/* .text-orange-500 / .text-orange-600 moved to utilities.css (ADR-017 §6).
+   They are used by CORE components — StatusDisplay, AdobeAuthStep — which render
+   on surfaces whose bundles never load this feature sheet, so the colour simply
+   did not apply there. Kept UNLAYERED at the destination: this file declares no
+   @layer, so these rules currently outrank layered ones, and moving them into
+   `@layer theme` would have quietly lowered their priority. */
+
+/* The typography and colour utilities that lived here — .text-sm, .text-xs,
+   .letter-spacing-05, .font-medium, .font-semibold, .text-uppercase,
+   .text-gray-500/600/700, .text-green-600 — were REMOVED 2026-09-08 (PL-21 phase 2).
+   utilities.css defines every one of them and reaches all eight bundles,
+   where this sheet reaches only the wizard.
+
+   THEY WERE INERT, and the reason is the one thing about this cascade that is
+   easy to get backwards. This file declares no @layer, and an unlayered NORMAL
+   rule does beat a layered normal one — but every core copy carries !important,
+   and author-important beats author-normal whatever the layers say. So the core
+   values always won and these duplicates styled nothing. Proved by deleting them
+   under the visual baseline: 48 surface/theme/width captures, 2,700 elements,
+   ZERO moved. On the wizard .text-sm computes to core's 12px, .text-xs to 11px
+   and .letter-spacing-05 to 0.5px, not to the 0.875rem/0.75rem/0.05em that were
+   written here.
+
+   WHY DELETING THEM FIRST MATTERS. They were inert only because of the
+   !important. The moment ADR-018's sweep removes !important from the core copies,
+   an unlayered normal duplicate would start winning and the wizard would silently
+   diverge. Removing the duplicates is therefore a PREREQUISITE for that sweep,
+   not tidying to do afterwards.
+
+   Add a utility to utilities.css, not to a feature sheet. */
 
 /* ========== Layout Utilities ========== */
+@layer theme {
 .flex-shrink-0 {
     flex-shrink: 0;
 }
+}
 
+@layer theme {
 .py-4 {
     padding-top: 1rem;
     padding-bottom: 1rem;
 }
+}
 
 /* ========== GitHub Repository List Styling ========== */
+@layer theme {
 .repo-private-badge {
     display: inline-flex;
     align-items: center;
@@ -90,16 +94,21 @@
     text-transform: uppercase;
     letter-spacing: 0.02em;
 }
+}
 
+@layer theme {
 .repo-no-description {
     font-style: italic;
 }
+}
 
 /* ========== DA.live Site List Styling ========== */
+@layer theme {
 .site-list {
     max-height: 320px;
     border: 1px solid var(--spectrum-global-color-gray-300);
     border-radius: 4px;
+}
 }
 
 /* ========== Repository picker: reset-to-template option (top of the list) ========== */
@@ -113,11 +122,13 @@
  * area instead: always visible, no scroll, zero layout dependency. A bottom rule separates
  * it from the search/list below.
  */
+@layer theme {
 .reset-to-template-top {
-    margin-top: 0 !important;
+    margin-top: 0;
     margin-bottom: var(--spectrum-global-dimension-size-100);
     padding-bottom: var(--spectrum-global-dimension-size-100);
     border-bottom: 1px solid var(--spectrum-global-color-gray-200);
+}
 }
 
 /* Keep the reset checkbox + search bar in view by giving the repo LIST its own
@@ -125,8 +136,10 @@
    area scrolling as one block. The checkbox and search sit ABOVE this container,
    so they stay put. The cap reserves room for the wizard chrome (header, tabs,
    checkbox, search, footer) — tune the subtrahend if it feels tall/short. */
+@layer theme {
 .repo-selection-inline .list-refresh-container {
     max-height: calc(100vh - 24rem);
+}
 }
 
 /* ========== Reset Warning Animation ========== */
@@ -134,22 +147,28 @@
  * Smooth fade in/out transition for the "Reset to template" warning message.
  * Used in both GitHub and DA.live steps when the reset checkbox is toggled.
  */
+@layer theme {
 .reset-warning-container {
     /* Fixed height container prevents layout jump during animation */
+}
 }
 
 /* The warning collapses its own height when unchecked (rather than reserving a
    permanent empty line), reclaiming vertical space; it animates open on check. */
+@layer theme {
 .reset-warning-visible {
     max-height: 3em;
     opacity: 1;
     overflow: hidden;
-    transition: max-height 0.15s ease-out, opacity 0.15s ease-out;
+    transition: max-height var(--spectrum-global-animation-duration-200) ease-out, opacity var(--spectrum-global-animation-duration-200) ease-out;
+}
 }
 
+@layer theme {
 .reset-warning-hidden {
     max-height: 0;
     opacity: 0;
     overflow: hidden;
-    transition: max-height 0.15s ease-out, opacity 0.15s ease-out;
+    transition: max-height var(--spectrum-global-animation-duration-200) ease-out, opacity var(--spectrum-global-animation-duration-200) ease-out;
+}
 }

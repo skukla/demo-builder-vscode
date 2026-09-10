@@ -50,9 +50,10 @@
 import { z } from 'zod';
 import { needsUser } from './handoff';
 import { asText } from './mcpToolResult';
-import type { StateManager } from '@/core/state';
+import type { McpToolServer } from './mcpToolServer';
 import componentsConfig from '@/features/components/config/components.json';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
+import type { StateManager } from '@/types/state';
 import { getMeshComponentInstance } from '@/types/typeGuards';
 
 const CONFIG = componentsConfig as unknown as Record<string, unknown>;
@@ -193,13 +194,13 @@ function applyToProject(
 }
 
 export function registerConfigureProjectTool(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    server: any,
+    server: McpToolServer,
     stateManager: StateManager,
 ): void {
     server.registerTool(
         'configure_project',
         {
+            needsAuth: false,
             annotations: { readOnlyHint: false, destructiveHint: false },
             description:
                 'Configure the current project: datapack, addons, block libraries, store scope and non-secret env vars. Returns what changed and what is still unset. Secrets must be entered by the user.',

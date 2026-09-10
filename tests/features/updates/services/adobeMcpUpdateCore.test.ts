@@ -10,16 +10,24 @@
  */
 
 import { applyAdobeMcpUpdate } from '@/features/updates/services/adobeMcpUpdateCore';
-import { generateAIContextFiles } from '@/features/project-creation/services';
+import { generateAIContextFiles } from '@/features/project-creation/services/aiBundle/aiBundleService';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
+import { createMockProject } from '../../../helpers/projectFake';
 const executeMock = jest.fn();
 
 jest.mock('vscode', () => ({ workspace: { getConfiguration: jest.fn() } }), { virtual: true });
-jest.mock('@/core/di', () => ({
-    ServiceLocator: { getCommandExecutor: () => ({ execute: executeMock }) },
-}));
-jest.mock('@/features/project-creation/services', () => ({
+/**
+ * CONVERTED 2026-08-28 (ADR-015): the executor arrives in the context, so this
+ * suite no longer mocks the service registry.
+ */
+const executor = createMockCommandExecutor({ execute: executeMock });
+jest.mock('@/features/project-creation/services/aiBundle/aiBundleService', () => ({
     generateAIContextFiles: jest.fn(),
+}));
+
+jest.mock('@/features/project-creation/services/aiBundle/aiDefaultsInstaller', () => ({
     // The MCP packages live in a per-project ISOLATED tools dir, never the
     // storefront's node_modules — this resolver is the single source of truth.
     resolveMcpToolsDir: (projectPath: string) => `${projectPath}/.demo-builder-mcp`,
@@ -28,19 +36,14 @@ jest.mock('@/features/project-creation/services', () => ({
 const generateMock = generateAIContextFiles as jest.Mock;
 
 const PKG = '@adobe-commerce/commerce-extensibility-tools';
-const project = { name: 'demo', path: '/p/demo' } as never;
+const project = createMockProject({ name: 'demo', path: '/p/demo' });
 
 function makeCtx() {
     return {
         extensionPath: '/ext',
         stateManager: { saveProjectConfigOnly: jest.fn(async () => undefined) },
-        logger: {
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            debug: jest.fn(),
-            trace: jest.fn(),
-        },
+        commandManager: executor,
+        logger: createMockLogger(),
     };
 }
 type Ctx = ReturnType<typeof makeCtx>;
@@ -58,7 +61,7 @@ describe('applyAdobeMcpUpdate', () => {
     });
 
     it('runs npm update in the isolated MCP tools dir', async () => {
-        await applyAdobeMcpUpdate(project, PKG, '2.0.0', ctx as never);
+        await applyAdobeMcpUpdate(project, PKG, '2.0.0', ctx);
 
         expect(executeMock).toHaveBeenCalledWith(
             `npm update ${PKG} --no-fund`,
@@ -72,7 +75,7 @@ describe('applyAdobeMcpUpdate', () => {
     it('throws with the npm output when the update exits non-zero (no regenerate)', async () => {
         executeMock.mockResolvedValue({ code: 1, stdout: '', stderr: 'E404 not found' });
 
-        await expect(applyAdobeMcpUpdate(project, PKG, '2.0.0', ctx as never)).rejects.toThrow(
+        await expect(applyAdobeMcpUpdate(project, PKG, '2.0.0', ctx)).rejects.toThrow(
             /npm update failed: E404 not found/
         );
         expect(generateMock).not.toHaveBeenCalled();
@@ -80,7 +83,7 @@ describe('applyAdobeMcpUpdate', () => {
     });
 
     it('regenerates the AI bundle and persists the freshness stamp on success', async () => {
-        await applyAdobeMcpUpdate(project, PKG, '2.0.0', ctx as never);
+        await applyAdobeMcpUpdate(project, PKG, '2.0.0', ctx);
 
         expect(generateMock).toHaveBeenCalledWith('/p/demo', project, '/ext');
         expect(ctx.stateManager.saveProjectConfigOnly).toHaveBeenCalledWith(project);
@@ -89,7 +92,7 @@ describe('applyAdobeMcpUpdate', () => {
     it('logs the skipped (user-edited) files in the WHY line', async () => {
         generateMock.mockResolvedValue({ report: { skipped: ['AGENTS.md'] } });
 
-        await applyAdobeMcpUpdate(project, PKG, '2.0.0', ctx as never);
+        await applyAdobeMcpUpdate(project, PKG, '2.0.0', ctx);
 
         const infoLines = ctx.logger.info.mock.calls.map((c) => String(c[0]));
         expect(infoLines.some((l) => l.includes('AGENTS.md'))).toBe(true);
@@ -98,9 +101,7 @@ describe('applyAdobeMcpUpdate', () => {
     it('persists landed hashes best-effort and rethrows when the regenerate fails', async () => {
         generateMock.mockRejectedValue(new Error('gen broke'));
 
-        await expect(applyAdobeMcpUpdate(project, PKG, '2.0.0', ctx as never)).rejects.toThrow(
-            'gen broke'
-        );
+        await expect(applyAdobeMcpUpdate(project, PKG, '2.0.0', ctx)).rejects.toThrow('gen broke');
         // Landed hashes must survive a partial failure (Phase-4 review).
         expect(ctx.stateManager.saveProjectConfigOnly).toHaveBeenCalledWith(project);
     });
@@ -109,8 +110,6 @@ describe('applyAdobeMcpUpdate', () => {
         generateMock.mockRejectedValue(new Error('gen broke'));
         ctx.stateManager.saveProjectConfigOnly.mockRejectedValue(new Error('save broke'));
 
-        await expect(applyAdobeMcpUpdate(project, PKG, '2.0.0', ctx as never)).rejects.toThrow(
-            'gen broke'
-        );
+        await expect(applyAdobeMcpUpdate(project, PKG, '2.0.0', ctx)).rejects.toThrow('gen broke');
     });
 });

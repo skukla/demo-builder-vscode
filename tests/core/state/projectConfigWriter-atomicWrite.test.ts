@@ -9,7 +9,9 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { ProjectConfigWriter } from '@/core/state/projectConfigWriter';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
+import { createMockLogger } from '../../helpers/loggerFake';
+import { createMockProject } from '../../helpers/projectFake';
 
 // Mock fs/promises
 jest.mock('fs/promises');
@@ -17,25 +19,20 @@ jest.mock('fs/promises');
 const mockFs = fs as jest.Mocked<typeof fs>;
 
 // Create a minimal mock logger
-const mockLogger = {
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-};
+const mockLogger = createMockLogger();
 
 // Create a minimal valid project for testing
 function createTestProject(overrides: Partial<Project> = {}): Project {
-    return {
+    return createMockProject({
         name: 'test-project',
         path: '/test/path',
         created: new Date('2024-01-01T00:00:00Z'),
         componentSelections: {},
-        componentInstances: [],
+        componentInstances: {},
         componentConfigs: {},
         componentVersions: {},
         ...overrides,
-    } as Project;
+    });
 }
 
 describe('ProjectConfigWriter atomic writes', () => {
@@ -43,7 +40,7 @@ describe('ProjectConfigWriter atomic writes', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-        writer = new ProjectConfigWriter(mockLogger as any);
+        writer = new ProjectConfigWriter(mockLogger);
 
         // Default mock implementations for directory checks
         mockFs.access.mockResolvedValue(undefined);
@@ -138,9 +135,7 @@ describe('ProjectConfigWriter atomic writes', () => {
             // Given: A project with specific data
             const project = createTestProject({
                 name: 'my-demo-project',
-                adobe: {
-                    organization: { id: 'org-123', name: 'Test Org' },
-                } as any,
+                adobe: { organization: 'org-123', organizationName: 'Test Org' },
             });
 
             // When: Saving project config

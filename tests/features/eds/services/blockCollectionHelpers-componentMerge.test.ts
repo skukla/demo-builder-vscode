@@ -18,81 +18,55 @@ import {
     createComponentFilters,
     createDestComponentFilters,
     createBlockFileEntries,
-    delegateCommitTreeToBranch,
+    setupBlockCollectionMocks,
+    setupSuccessfulInstall,
 } from './blockCollectionHelpers.testUtils';
 
 describe('installBlockCollections (single library)', () => {
     const TEST_SOURCE: AddonSource = { owner: 'stephen-garner-adobe', repo: 'isle5', branch: 'main' };
-    const DEFAULT_BLOCKS = ['hero-cta', 'newsletter', 'search-bar'];
     let mockGithubFileOps: jest.Mocked<GitHubFileOperations>;
     let mockLogger: jest.Mocked<Logger>;
 
+    /**
+     * Install the collection and read the merged `component-filters.json`'s
+     * `section` filter. PL-9 lane A: this tail was written twice.
+     */
+    async function installAndReadSectionFilter(): Promise<{ components: string[] }> {
+        const result = await installBlockCollections(
+            mockGithubFileOps, 'dest-owner', 'dest-repo',
+            [{ source: TEST_SOURCE, name: 'block collection' }],
+            mockLogger,
+        );
+        expect(result.success).toBe(true);
+
+        const treeEntries = mockGithubFileOps.createTree.mock.calls[0][2] as Array<{
+            path: string;
+            content?: string;
+        }>;
+        const filtersEntry = treeEntries.find((e) => e.path === 'component-filters.json');
+        expect(filtersEntry).toBeDefined();
+
+        const merged = JSON.parse(filtersEntry!.content!);
+        const section = merged.find((f: { id: string }) => f.id === 'section');
+        if (!section) {
+            throw new Error(
+                `no "section" filter in the merged component-filters; found: ` +
+                    merged.map((f: { id: string }) => f.id).join(', '),
+            );
+        }
+        return section;
+    }
+
     beforeEach(() => {
         jest.clearAllMocks();
-
-        mockLogger = {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as unknown as jest.Mocked<Logger>;
-
-        mockGithubFileOps = {
-            listRepoFiles: jest.fn(),
-            getBlobContent: jest.fn(),
-            getFileContent: jest.fn(),
-            getBranchInfo: jest.fn(),
-            createTree: jest.fn(),
-            createCommit: jest.fn(),
-            updateBranchRef: jest.fn(),
-            commitTreeToBranch: jest.fn(),
-        } as unknown as jest.Mocked<GitHubFileOperations>;
-        delegateCommitTreeToBranch(
-            mockGithubFileOps as unknown as Parameters<typeof delegateCommitTreeToBranch>[0],
-        );
+        ({ mockLogger, mockGithubFileOps } = setupBlockCollectionMocks());
     });
-
-    /**
-     * Set up mocks for a successful single-library install call.
-     * Accepts variable block lists for testing dynamic discovery.
-     */
-    function setupSuccessfulInstall(
-        sourceComponentDef: string | null,
-        destComponentDef: string = createDestComponentDef(),
-        blockIds: string[] = DEFAULT_BLOCKS,
-    ): void {
-        mockGithubFileOps.listRepoFiles
-            .mockResolvedValueOnce([]) // destination (empty — no existing blocks)
-            .mockResolvedValueOnce(createBlockFileEntries(blockIds));
-
-        mockGithubFileOps.getBlobContent.mockResolvedValue('export default function() {}');
-
-        mockGithubFileOps.getFileContent.mockImplementation(
-            async (owner: string, repo: string, path: string) => {
-                // Return null for filters/models (not tested by comp-def tests)
-                if (path === 'component-filters.json' || path === 'component-models.json') return null;
-                if (owner === 'stephen-garner-adobe' && repo === 'isle5') {
-                    if (sourceComponentDef === null) return null;
-                    return { content: sourceComponentDef, sha: 'source-sha', path, encoding: 'base64' };
-                }
-                return { content: destComponentDef, sha: 'dest-sha', path, encoding: 'base64' };
-            },
-        );
-
-        mockGithubFileOps.getBranchInfo.mockResolvedValue({
-            treeSha: 'tree-sha',
-            commitSha: 'commit-sha',
-        });
-        mockGithubFileOps.createTree.mockResolvedValue('new-tree-sha');
-        mockGithubFileOps.createCommit.mockResolvedValue('new-commit-sha');
-        mockGithubFileOps.updateBranchRef.mockResolvedValue(undefined);
-    }
 
     describe('discovery with component definition merge', () => {
         it('should not add metadata when source component-def is missing', async () => {
             // Given: Source has 2 blocks, no source component-def
             const blocks = ['hero-cta', 'newsletter'];
-            setupSuccessfulInstall(null, createDestComponentDef(), blocks);
+            setupSuccessfulInstall(mockGithubFileOps, null, createDestComponentDef(), blocks);
 
             // When
             const result = await installBlockCollections(
@@ -113,7 +87,7 @@ describe('installBlockCollections (single library)', () => {
         it('should not add metadata for blocks without source entries', async () => {
             // Given: Source has a block with NO entry in source comp-def
             const blocks = ['product-grid'];
-            setupSuccessfulInstall(null, createDestComponentDef(), blocks);
+            setupSuccessfulInstall(mockGithubFileOps, null, createDestComponentDef(), blocks);
 
             // When
             const result = await installBlockCollections(
@@ -144,7 +118,7 @@ describe('installBlockCollections (single library)', () => {
             const sourceComponentDef = createComponentDef([
                 { title: 'Product Grid', id: 'product-grid', unsafeHTML: '<div class="product-grid">Grid</div>' },
             ]);
-            setupSuccessfulInstall(sourceComponentDef, createDestComponentDef(), blocks);
+            setupSuccessfulInstall(mockGithubFileOps, sourceComponentDef, createDestComponentDef(), blocks);
 
             // When
             const result = await installBlockCollections(
@@ -176,7 +150,7 @@ describe('installBlockCollections (single library)', () => {
             const sourceComponentDef = createComponentDef([
                 { title: 'Hero CTA', id: 'hero-cta', unsafeHTML: '<div class="hero-cta">source</div>' },
             ]);
-            setupSuccessfulInstall(sourceComponentDef, createDestComponentDef(), blocks);
+            setupSuccessfulInstall(mockGithubFileOps, sourceComponentDef, createDestComponentDef(), blocks);
 
             // When
             const result = await installBlockCollections(
@@ -219,7 +193,7 @@ describe('installBlockCollections (single library)', () => {
                     ],
                 }],
             });
-            setupSuccessfulInstall(sourceComponentDef, createDestComponentDef(), blocks);
+            setupSuccessfulInstall(mockGithubFileOps, sourceComponentDef, createDestComponentDef(), blocks);
 
             // When
             const result = await installBlockCollections(
@@ -251,7 +225,7 @@ describe('installBlockCollections (single library)', () => {
             const sourceComponentDef = createComponentDef([
                 { title: 'Hero CTA Custom', id: 'hero-cta', unsafeHTML: sourceHtml },
             ]);
-            setupSuccessfulInstall(sourceComponentDef, createDestComponentDef(), blocks);
+            setupSuccessfulInstall(mockGithubFileOps, sourceComponentDef, createDestComponentDef(), blocks);
 
             // When
             const result = await installBlockCollections(
@@ -282,7 +256,7 @@ describe('installBlockCollections (single library)', () => {
                 { title: 'Top Banner', id: 'top-banner', unsafeHTML: '<div class="top-banner">source</div>' },
                 { title: 'Hero CTA', id: 'hero-cta', unsafeHTML: '<div class="hero-cta">source</div>' },
             ]);
-            setupSuccessfulInstall(sourceComponentDef, createDestComponentDef(), twoBlocks);
+            setupSuccessfulInstall(mockGithubFileOps, sourceComponentDef, createDestComponentDef(), twoBlocks);
 
             // When
             const result = await installBlockCollections(
@@ -370,21 +344,7 @@ describe('installBlockCollections (single library)', () => {
                 destFilters,
             });
 
-            const result = await installBlockCollections(
-                mockGithubFileOps, 'dest-owner', 'dest-repo',
-                [{ source: TEST_SOURCE, name: 'block collection' }],
-                mockLogger,
-            );
-
-            expect(result.success).toBe(true);
-
-            const createTreeCall = mockGithubFileOps.createTree.mock.calls[0];
-            const treeEntries = createTreeCall[2] as Array<{ path: string; content?: string }>;
-            const filtersEntry = treeEntries.find(e => e.path === 'component-filters.json');
-            expect(filtersEntry).toBeDefined();
-
-            const merged = JSON.parse(filtersEntry!.content!);
-            const sectionFilter = merged.find((f: { id: string }) => f.id === 'section');
+            const sectionFilter = await installAndReadSectionFilter();
             expect(sectionFilter.components).toContain('hero-cta');
             expect(sectionFilter.components).toContain('newsletter');
         });
@@ -435,21 +395,7 @@ describe('installBlockCollections (single library)', () => {
                 destFilters,
             });
 
-            const result = await installBlockCollections(
-                mockGithubFileOps, 'dest-owner', 'dest-repo',
-                [{ source: TEST_SOURCE, name: 'block collection' }],
-                mockLogger,
-            );
-
-            expect(result.success).toBe(true);
-
-            const createTreeCall = mockGithubFileOps.createTree.mock.calls[0];
-            const treeEntries = createTreeCall[2] as Array<{ path: string; content?: string }>;
-            const filtersEntry = treeEntries.find(e => e.path === 'component-filters.json');
-            expect(filtersEntry).toBeDefined();
-
-            const merged = JSON.parse(filtersEntry!.content!);
-            const sectionFilter = merged.find((f: { id: string }) => f.id === 'section');
+            const sectionFilter = await installAndReadSectionFilter();
             // 'hero' should appear only once
             const heroCount = sectionFilter.components.filter((c: string) => c === 'hero').length;
             expect(heroCount).toBe(1);

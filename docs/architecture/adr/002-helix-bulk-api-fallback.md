@@ -276,3 +276,8 @@ The DA.live IMS token (Adobe IMS with client_id "darkalley") **bypasses the "sou
 | **GitHub Token** | Personal access token for repository write verification |
 | **Job Polling** | Checking async job status endpoint until operation completes |
 
+## Reference notes
+
+- `scripts/test-bulk-helix-api.ts`, `scripts/test-fstab-codesync-timing.ts` — throwaway
+  probe scripts written to characterise the bulk API's behaviour, deleted once the
+  finding was recorded here. Named so the measurement can be reproduced, not resolved.

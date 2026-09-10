@@ -79,6 +79,20 @@ function jsonResponse(status: number, body: unknown): Response {
     } as unknown as Response;
 }
 
+/**
+ * A real 204 carries NO body, so `json()` rejects. Stubbing it as JSON-that-
+ * resolves-undefined made the 204 short-circuit indistinguishable from falling
+ * through to `parseJson` — both answered `undefined`.
+ */
+function noContentResponse(): Response {
+    return {
+        ok: true,
+        status: 204,
+        statusText: 'No Content',
+        json: jest.fn().mockRejectedValue(new SyntaxError('Unexpected end of JSON input')),
+    } as unknown as Response;
+}
+
 /** Build a stub fetch Response whose body is not valid JSON. */
 function nonJsonResponse(status: number): Response {
     return {
@@ -122,6 +136,19 @@ describe('appManagementClient', () => {
             await expect(makeClient(mockFetch).getInstallationState()).resolves.toBeUndefined();
         });
 
+        /**
+         * The 204 is decided from the STATUS, before anything reads the body. A
+         * real 204 has no body at all, so falling through to `parseJson` would
+         * throw rather than answer `undefined`.
+         */
+        it('never reads the body of a 204', async () => {
+            const response = noContentResponse();
+            mockFetch.mockResolvedValue(response);
+
+            await expect(makeClient(mockFetch).getInstallationState()).resolves.toBeUndefined();
+            expect(response.json).not.toHaveBeenCalled();
+        });
+
         it('passes a succeeded state through (spec-required fields intact)', async () => {
             // GET /installation 200, "succeeded" variant — required:
             // id, status, startedAt, completedAt, step, data.
@@ -148,6 +175,16 @@ describe('appManagementClient', () => {
             mockFetch.mockResolvedValue(jsonResponse(204, undefined));
 
             await makeClient(mockFetch, `${BASE_URL}/`).getInstallationState();
+
+            expect(mockFetch.mock.calls[0][0]).toBe(`${BASE_URL}/installation`);
+        });
+
+        // EVERY trailing slash, not just the last one: a base URL pasted from a
+        // browser can end in more than one, and `//installation` is a 404.
+        it('trims a run of trailing slashes, not only the final one', async () => {
+            mockFetch.mockResolvedValue(jsonResponse(204, undefined));
+
+            await makeClient(mockFetch, `${BASE_URL}///`).getInstallationState();
 
             expect(mockFetch.mock.calls[0][0]).toBe(`${BASE_URL}/installation`);
         });
@@ -313,14 +350,20 @@ describe('appManagementClient', () => {
                 jsonResponse(409, { reason: 'not-installed', message: 'Nothing installed.' })
             );
 
-            try {
-                await makeClient(mockFetch).startUninstallation(VALIDATE_REQUEST);
-                throw new Error('expected a rejection');
-            } catch (error) {
-                const apiError = error as AppManagementApiError;
-                expect(apiError.status).toBe(409);
-                expect(apiError.reason).toBe('not-installed');
-            }
+            // Captured with .then(resolve, reject) so the assertions live outside
+            // the catch and always run. Inside one they are skipped entirely if the
+            // call stops rejecting, and only the throw above would notice.
+            const apiError = await makeClient(mockFetch)
+                .startUninstallation(VALIDATE_REQUEST)
+                .then(
+                    () => {
+                        throw new Error('expected a rejection, but the call resolved');
+                    },
+                    (caught: unknown) => caught as AppManagementApiError,
+                );
+
+            expect(apiError.status).toBe(409);
+            expect(apiError.reason).toBe('not-installed');
         });
 
         it('DELETEs the uninstallation record and the association (no body)', async () => {
@@ -353,19 +396,134 @@ describe('appManagementClient', () => {
                 'Clear association failed (HTTP 500)'
             );
         });
+
+        // The uninstallation record's own clear has its own label, so a failure
+        // says WHICH delete failed rather than borrowing the association's.
+        it('a non-2xx clear of the uninstallation record throws under its own label', async () => {
+            mockFetch.mockResolvedValue(jsonResponse(502, { message: 'boom' }));
+
+            const failure = makeClient(mockFetch).clearUninstallationState();
+
+            await expect(failure).rejects.toThrow(AppManagementApiError);
+            await expect(failure).rejects.toThrow(
+                'Clear uninstallation state failed (HTTP 502)'
+            );
+        });
+
+        it('never reads the body of the uninstallation state 204', async () => {
+            const response = noContentResponse();
+            mockFetch.mockResolvedValue(response);
+
+            await expect(makeClient(mockFetch).getUninstallationState()).resolves.toBeUndefined();
+            expect(response.json).not.toHaveBeenCalled();
+        });
+    });
+
+    /**
+     * What a 409 body is allowed to carry OUT of this module, and what every
+     * other status is not.
+     *
+     * The LIVE API answers no-op 409s with a message and NO `reason` field
+     * ("Installation has already completed successfully.", measured 2026-08-27),
+     * so the message is the only thing that classifies them — which is why it is
+     * kept, bounded, and kept for the 409 alone.
+     */
+    describe('409 no-op bodies', () => {
+        it('keeps a 409 body message, bounded to 200 characters', async () => {
+            const long = `x`.repeat(500);
+            mockFetch.mockResolvedValue(jsonResponse(409, { message: long }));
+
+            const failure = makeClient(mockFetch).reconcileInstallation(RECONCILE_REQUEST);
+
+            await expect(failure).rejects.toMatchObject({
+                status: 409,
+                reason: undefined,
+                noOpMessage: 'x'.repeat(200),
+            });
+        });
+
+        it('reports a 409 reason with no message as a reason and nothing else', async () => {
+            mockFetch.mockResolvedValue(jsonResponse(409, { reason: 'not-associated' }));
+
+            await expect(
+                makeClient(mockFetch).reconcileInstallation(RECONCILE_REQUEST)
+            ).rejects.toMatchObject({
+                status: 409,
+                reason: 'not-associated',
+                noOpMessage: undefined,
+            });
+        });
+
+        /**
+         * `noOpMessage` is typed `string | undefined` and is read as text by the
+         * callers that classify a no-op. A 409 body whose `message` is an array
+         * or an object must be dropped, not passed through — the type guard is
+         * the only thing standing between a body and the error object.
+         */
+        it('drops a 409 message that is not a string', async () => {
+            mockFetch.mockResolvedValue(
+                jsonResponse(409, { reason: 'not-installed', message: ['a', 'b', 'c'] })
+            );
+
+            await expect(
+                makeClient(mockFetch).reconcileInstallation(RECONCILE_REQUEST)
+            ).rejects.toMatchObject({
+                status: 409,
+                reason: 'not-installed',
+                noOpMessage: undefined,
+            });
+        });
+
+        it('reports a 409 with no JSON body at all as a bare 409', async () => {
+            mockFetch.mockResolvedValue(nonJsonResponse(409));
+
+            await expect(
+                makeClient(mockFetch).reconcileInstallation(RECONCILE_REQUEST)
+            ).rejects.toMatchObject({
+                status: 409,
+                reason: undefined,
+                noOpMessage: undefined,
+            });
+        });
+
+        /**
+         * The 409 is the ONLY status whose body is retained. Any other failure
+         * carries an upstream body that may name internal hosts or ids, and this
+         * error object is what reaches logs and tickets.
+         */
+        it('keeps nothing from the body of a non-409 failure', async () => {
+            mockFetch.mockResolvedValue(
+                jsonResponse(400, { message: 'internal detail', reason: 'already-current' })
+            );
+
+            const failure = makeClient(mockFetch).reconcileInstallation(RECONCILE_REQUEST);
+
+            await expect(failure).rejects.toMatchObject({
+                status: 400,
+                reason: undefined,
+                noOpMessage: undefined,
+            });
+        });
     });
 
     describe('sanitization', () => {
         it('never leaks the access token into error messages', async () => {
             mockFetch.mockResolvedValue(jsonResponse(500, { message: 'boom' }));
 
-            try {
-                await makeClient(mockFetch).getInstallationState();
-                throw new Error('expected a rejection');
-            } catch (error) {
-                expect((error as Error).message).not.toContain(FAKE_TOKEN);
-                expect((error as Error).message).toBe('Get installation state failed (HTTP 500)');
-            }
+            const error = await makeClient(mockFetch)
+                .getInstallationState()
+                .then(
+                    () => {
+                        throw new Error('expected a rejection, but the call resolved');
+                    },
+                    (caught: unknown) => caught as Error,
+                );
+
+            // The token check matters most here, and it is the one that was inside
+            // the catch — a call that stopped throwing would have leaked without
+            // failing anything.
+            expect(error.message).not.toContain(FAKE_TOKEN);
+            expect(error.message).toBe('Get installation state failed (HTTP 500)');
         });
 
         it('reports a non-JSON 200 as a typed, sanitized error', async () => {

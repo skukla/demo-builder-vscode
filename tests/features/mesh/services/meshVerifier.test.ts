@@ -1,7 +1,13 @@
 import { recordDeployOutcome } from '@/features/app-builder/services/appBuilderDeployOutcome';
-import { verifyMeshDeployment, syncMeshStatus } from '@/features/mesh/services/meshVerifier';
-import type { Project } from '@/types';
 import { getMeshEndpointUrl } from '@/types/typeGuards';
+import {
+    createMockProject,
+    setupMeshVerifier,
+    syncMeshStatus,
+    verifyMeshDeployment,
+    type MeshCommandExecutorFake,
+} from './meshVerifier.testUtils';
+import { createSuccessResult, createFailureResult } from '../../../helpers/commandResultFake';
 
 /**
  * MeshVerifier Test Suite
@@ -17,47 +23,14 @@ import { getMeshEndpointUrl } from '@/types/typeGuards';
  */
 
 // Mock dependencies
-jest.mock('@/core/logging', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    }),
-}));
 
-jest.mock('@/core/di', () => ({
-    ServiceLocator: {
-        getCommandExecutor: jest.fn(),
-    },
-}));
 
-jest.mock('@/core/utils/meshConfig', () => ({
-    getMeshNodeVersion: () => '20',
-}));
 
 describe('MeshVerifier', () => {
-    let mockCommandManager: any;
-
-    // Helper to create complete Project objects
-    const createMockProject = (overrides: Partial<Project> = {}): Project => ({
-        name: 'Test Project',
-        path: '/test',
-        created: new Date('2024-01-01'),
-        lastModified: new Date('2024-01-01'),
-        status: 'ready' as const,
-        ...overrides,
-    });
+    let mockCommandManager: MeshCommandExecutorFake;
 
     beforeEach(() => {
-        jest.clearAllMocks();
-
-        mockCommandManager = {
-            execute: jest.fn(),
-        };
-
-        const { ServiceLocator } = require('@/core/di');
-        ServiceLocator.getCommandExecutor.mockReturnValue(mockCommandManager);
+        ({ mockCommandManager } = setupMeshVerifier());
     });
 
     describe('verifyMeshDeployment', () => {
@@ -77,12 +50,9 @@ describe('MeshVerifier', () => {
                 },
             });
 
-            mockCommandManager.execute.mockResolvedValue({
-                code: 0,
-                stdout: 'Mesh ID: mesh123\nEndpoint: https://example.com/graphql',
-            });
+            mockCommandManager.execute.mockResolvedValue(createSuccessResult('Mesh ID: mesh123\nEndpoint: https://example.com/graphql'));
 
-            const result = await verifyMeshDeployment(project);
+            const result = await verifyMeshDeployment(project, mockCommandManager);
 
             expect(result.success).toBe(true);
             expect(result.data?.exists).toBe(true);
@@ -106,15 +76,12 @@ describe('MeshVerifier', () => {
                 },
             });
 
-            mockCommandManager.execute.mockResolvedValue({
-                code: 0,
-                stdout: JSON.stringify({
+            mockCommandManager.execute.mockResolvedValue(createSuccessResult(JSON.stringify({
                     meshId: 'mesh123',
                     endpoint: 'https://example.com/graphql',
-                }),
-            });
+                })));
 
-            const result = await verifyMeshDeployment(project);
+            const result = await verifyMeshDeployment(project, mockCommandManager);
 
             expect(result.success).toBe(true);
             expect(result.data?.exists).toBe(true);
@@ -125,7 +92,7 @@ describe('MeshVerifier', () => {
         it('should return exists=false when no mesh component', async () => {
             const project = createMockProject();
 
-            const result = await verifyMeshDeployment(project);
+            const result = await verifyMeshDeployment(project, mockCommandManager);
 
             expect(result.success).toBe(true);
             expect(result.data?.exists).toBe(false);
@@ -144,7 +111,7 @@ describe('MeshVerifier', () => {
                 },
             });
 
-            const result = await verifyMeshDeployment(project);
+            const result = await verifyMeshDeployment(project, mockCommandManager);
 
             expect(result.success).toBe(false);
             expect(result.error).toContain('No mesh ID found');
@@ -166,12 +133,9 @@ describe('MeshVerifier', () => {
                 },
             });
 
-            mockCommandManager.execute.mockResolvedValue({
-                code: 1,
-                stderr: 'Mesh not found',
-            });
+            mockCommandManager.execute.mockResolvedValue(createFailureResult('Mesh not found'));
 
-            const result = await verifyMeshDeployment(project);
+            const result = await verifyMeshDeployment(project, mockCommandManager);
 
             expect(result.success).toBe(false);
             expect(result.error).toContain('Mesh not found');
@@ -193,12 +157,9 @@ describe('MeshVerifier', () => {
                 },
             });
 
-            mockCommandManager.execute.mockResolvedValue({
-                code: 0,
-                stdout: 'meshId: abc456\nendpoint: https://example.com/graphql',
-            });
+            mockCommandManager.execute.mockResolvedValue(createSuccessResult('meshId: abc456\nendpoint: https://example.com/graphql'));
 
-            const result = await verifyMeshDeployment(project);
+            const result = await verifyMeshDeployment(project, mockCommandManager);
 
             expect(result.success).toBe(false);
             expect(result.error).toContain('mismatch');
@@ -222,7 +183,7 @@ describe('MeshVerifier', () => {
 
             mockCommandManager.execute.mockRejectedValue(new Error('Network error'));
 
-            const result = await verifyMeshDeployment(project);
+            const result = await verifyMeshDeployment(project, mockCommandManager);
 
             expect(result.success).toBe(false);
             expect(result.error).toContain('Network error');
@@ -246,12 +207,9 @@ describe('MeshVerifier', () => {
 
             // Use stdout that doesn't contain mesh ID pattern at all
             // Avoid "mesh ID" text followed by hex chars which could false-positive match
-            mockCommandManager.execute.mockResolvedValue({
-                code: 0,
-                stdout: 'API configuration loaded successfully\nGraphQL URL: https://example.com/graphql',
-            });
+            mockCommandManager.execute.mockResolvedValue(createSuccessResult('API configuration loaded successfully\nGraphQL URL: https://example.com/graphql'));
 
-            const result = await verifyMeshDeployment(project);
+            const result = await verifyMeshDeployment(project, mockCommandManager);
 
             expect(result.success).toBe(true);
             expect(result.data?.meshId).toBe('mesh123');
@@ -273,12 +231,9 @@ describe('MeshVerifier', () => {
                 },
             });
 
-            mockCommandManager.execute.mockResolvedValue({
-                code: 0,
-                stdout: 'Mesh ID: mesh123',
-            });
+            mockCommandManager.execute.mockResolvedValue(createSuccessResult('Mesh ID: mesh123'));
 
-            const result = await verifyMeshDeployment(project);
+            const result = await verifyMeshDeployment(project, mockCommandManager);
 
             expect(result.success).toBe(true);
             expect(result.data?.exists).toBe(true);

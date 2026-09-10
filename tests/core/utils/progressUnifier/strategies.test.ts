@@ -20,7 +20,8 @@ describe('ProgressUnifier - Progress Tracking Strategies', () => {
     describe('Elapsed time display for operations >30s', () => {
         it('should show elapsed time after 35 seconds', async () => {
             const { onProgress, progressUpdates } = progressCollectorFactory();
-            const { progressUnifier, advanceTime, mocks, createMockProcess } = createTestableProgressUnifier(mockLogger);
+            const { progressUnifier, advanceTime, mocks, createMockProcess } =
+                createTestableProgressUnifier(mockLogger);
 
             const step = createMockStep(
                 'Installing Adobe I/O CLI',
@@ -37,14 +38,14 @@ describe('ProgressUnifier - Progress Tracking Strategies', () => {
                 mocks.timers.setTimeout(async () => {
                     await process.triggerClose(0);
                 }, 40000);
-                return process as any;
+                return process;
             });
 
             // Start execution (don't await yet)
             const executePromise = progressUnifier.executeStep(step, 0, 1, onProgress);
 
             // Let spawn complete before advancing time
-            await new Promise(resolve => setImmediate(resolve));
+            await new Promise((resolve) => setImmediate(resolve));
 
             // Fast-forward time to 35 seconds (triggers progress intervals)
             await advanceTime(35000);
@@ -54,8 +55,8 @@ describe('ProgressUnifier - Progress Tracking Strategies', () => {
             await executePromise;
 
             // Verify elapsed time is shown in detail
-            const progressWith35s = progressUpdates.find(
-                p => p.command?.detail?.includes('(35s)')
+            const progressWith35s = progressUpdates.find((p) =>
+                p.command?.detail?.includes('(35s)')
             );
 
             expect(progressWith35s).toBeDefined();
@@ -79,15 +80,15 @@ describe('ProgressUnifier - Progress Tracking Strategies', () => {
             const executePromise = progressUnifier.executeStep(step, 0, 1, onProgress);
 
             // Let spawn complete before advancing time
-            await new Promise(resolve => setImmediate(resolve));
+            await new Promise((resolve) => setImmediate(resolve));
 
             // Advance time by 2 seconds (quick operation)
             await advanceTime(2000);
             await executePromise;
 
             // Verify no elapsed time is shown in any progress updates
-            const progressWithElapsedTime = progressUpdates.find(
-                p => p.command?.detail?.match(/\(\d+s\)/)
+            const progressWithElapsedTime = progressUpdates.find((p) =>
+                p.command?.detail?.match(/\(\d+s\)/)
             );
 
             expect(progressWithElapsedTime).toBeUndefined();
@@ -97,7 +98,8 @@ describe('ProgressUnifier - Progress Tracking Strategies', () => {
     describe('Elapsed time formatting', () => {
         it('should format elapsed time as "1m 15s" for 75-second operation', async () => {
             const { onProgress, progressUpdates } = progressCollectorFactory();
-            const { progressUnifier, advanceTime, mocks, createMockProcess } = createTestableProgressUnifier(mockLogger);
+            const { progressUnifier, advanceTime, mocks, createMockProcess } =
+                createTestableProgressUnifier(mockLogger);
 
             const step = createMockStep(
                 'Installing Package',
@@ -114,14 +116,14 @@ describe('ProgressUnifier - Progress Tracking Strategies', () => {
                 mocks.timers.setTimeout(async () => {
                     await process.triggerClose(0);
                 }, 80000);
-                return process as any;
+                return process;
             });
 
             // Start execution
             const executePromise = progressUnifier.executeStep(step, 0, 1, onProgress);
 
             // Let spawn complete before advancing time
-            await new Promise(resolve => setImmediate(resolve));
+            await new Promise((resolve) => setImmediate(resolve));
 
             // Fast-forward time to 75 seconds (1m 15s)
             await advanceTime(75000);
@@ -131,8 +133,8 @@ describe('ProgressUnifier - Progress Tracking Strategies', () => {
             await executePromise;
 
             // Verify "1m 15s" format in detail
-            const progressWithElapsedTime = progressUpdates.find(
-                p => p.command?.detail?.includes('(1m 15s)')
+            const progressWithElapsedTime = progressUpdates.find((p) =>
+                p.command?.detail?.includes('(1m 15s)')
             );
 
             expect(progressWithElapsedTime).toBeDefined();
@@ -143,7 +145,8 @@ describe('ProgressUnifier - Progress Tracking Strategies', () => {
     describe('Elapsed time updates every second', () => {
         it('should update elapsed time dynamically', async () => {
             const { onProgress, progressUpdates } = progressCollectorFactory();
-            const { progressUnifier, advanceTime, mocks, createMockProcess } = createTestableProgressUnifier(mockLogger);
+            const { progressUnifier, advanceTime, mocks, createMockProcess } =
+                createTestableProgressUnifier(mockLogger);
 
             const step = createMockStep(
                 'Long Operation',
@@ -160,28 +163,24 @@ describe('ProgressUnifier - Progress Tracking Strategies', () => {
                 mocks.timers.setTimeout(async () => {
                     await process.triggerClose(0);
                 }, 35000);
-                return process as any;
+                return process;
             });
 
             // Start execution
             const executePromise = progressUnifier.executeStep(step, 0, 1, onProgress);
 
             // Let spawn complete before advancing time
-            await new Promise(resolve => setImmediate(resolve));
+            await new Promise((resolve) => setImmediate(resolve));
 
             // Fast-forward to 31 seconds (just past threshold)
             await advanceTime(31000);
 
-            const updates31s = progressUpdates.filter(
-                p => p.command?.detail?.includes('(31s)')
-            );
+            const updates31s = progressUpdates.filter((p) => p.command?.detail?.includes('(31s)'));
 
             // Fast-forward to 32 seconds
             await advanceTime(1000);
 
-            const updates32s = progressUpdates.filter(
-                p => p.command?.detail?.includes('(32s)')
-            );
+            const updates32s = progressUpdates.filter((p) => p.command?.detail?.includes('(32s)'));
 
             // Complete execution (need to reach 35s total: 31 + 1 + 3 = 35)
             await advanceTime(3000);

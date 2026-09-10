@@ -10,9 +10,6 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { isMeshUpdateDeclined } from './meshUpdateDecline';
-import { COMPONENT_IDS } from '@/core/constants';
-import { getMeshEndpoint } from '@/core/state/appBuilderComponentState';
-import { parseEnvFile } from '@/core/utils/envParser';
 import {
     PAAS_URL,
     PAAS_GRAPHQL_ENDPOINT,
@@ -26,8 +23,11 @@ import {
     ACCS_WEBSITE_CODE,
     ACCS_STORE_CODE,
     ACCS_STORE_VIEW_CODE,
-} from '@/features/components/config/envVarKeys';
-import { Project, ComponentInstance } from '@/types';
+} from '@/core/config/envVarKeys';
+import { COMPONENT_IDS } from '@/core/constants';
+import { getMeshEndpoint } from '@/core/state/appBuilderComponentState';
+import { parseEnvFile } from '@/core/utils/envParser';
+import { ComponentInstance, Project } from '@/types/base';
 
 /**
  * Required environment variables for mesh deployment (INPUT variables)
@@ -105,7 +105,10 @@ export async function checkMeshConfigCompleteness(
     // Check INPUT variables from .env file (backend-specific)
     for (const field of requiredVars) {
         const value = envConfig[field];
-        if (value === undefined || value === null || value === '') {
+        // No `=== null` arm: `parseEnvFile` returns `Record<string, string>` and
+        // only ever assigns strings, so the only two absent shapes are a key that
+        // is not there at all and one whose value is empty.
+        if (value === undefined || value === '') {
             missingFields.push(field);
         }
     }

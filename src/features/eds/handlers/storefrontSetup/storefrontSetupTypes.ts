@@ -7,7 +7,7 @@
  * @module features/eds/handlers/storefrontSetup/storefrontSetupTypes
  */
 
-import type { ConfigurationService } from '../../services/configService/configurationService';
+import type { RegistrarConfigService } from '../../services/configService/siteConfigRegistrar';
 import type { DaLiveAuthService } from '../../services/daLive/daLiveAuthService';
 import type { DaLiveContentOperations } from '../../services/daLive/daLiveContentOperations';
 import type { GitHubAppService } from '../../services/github/githubAppService';
@@ -40,15 +40,28 @@ export interface StorefrontSetupResult {
 /**
  * Services bundle for storefront setup phases
  */
+/**
+ * The GitHub App calls storefront setup makes: the install URL it shows the user, and
+ * the installation probe `resolveAppInstallation` runs. Narrower than the class so a
+ * caller can hand in two functions; the real service satisfies it.
+ */
+export type SetupGitHubAppService = Pick<GitHubAppService, 'getInstallUrl' | 'isAppInstalled'>;
+
 export interface SetupServices {
     githubRepoOps: GitHubRepoOperations;
     githubFileOps: GitHubFileOperations;
-    githubAppService: GitHubAppService;
+    githubAppService: SetupGitHubAppService;
     daLiveContentOps: DaLiveContentOperations;
     helixService: HelixService;
     daLiveAuthService: DaLiveAuthService;
     daLiveTokenProvider: { getAccessToken: () => Promise<string | null> };
-    configurationService: ConfigurationService;
+    /**
+     * Narrowed to the two calls `registerSiteConfig` makes. The other three fields
+     * above are still whole classes because they are forwarded to
+     * `executeEdsPipeline`, which declares them that way — narrowing THAT is a
+     * separate piece of work (24 methods across three services).
+     */
+    configurationService: RegistrarConfigService;
 }
 
 /**

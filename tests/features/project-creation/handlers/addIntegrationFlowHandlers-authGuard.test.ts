@@ -20,10 +20,13 @@
  */
 
 import { addIntegrationFlowHandlers } from '@/features/project-creation/handlers/addIntegrationFlowHandlers';
+import { dispatchHandler } from '@/core/handlers/dispatchHandler';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext } from '@/types/handlers';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 
-jest.mock('vscode');
 
 const mockEnsureAdobeIOAuth = jest.fn();
 jest.mock('@/core/auth/adobeAuthGuard', () => ({
@@ -59,17 +62,9 @@ const ENTITY_HANDLERS = [
  */
 const AUTH_HANDLERS = ['check-auth', 'authenticate', 'switchOrg'] as const;
 
-function createContext(): HandlerContext & { sendMessage: jest.Mock } {
-    return {
-        logger: {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            trace: jest.fn(),
-        },
-        sendMessage: jest.fn().mockResolvedValue(undefined),
-        authManager: {
+function createContext(): jest.Mocked<HandlerContext> {
+    return createMockHandlerContext({
+        authManager: createMockAuthenticationService({
             // If a guard is missing, the handler reaches these — the fetch that
             // drops to the CLI and opens a browser. They must never be called
             // while unauthenticated.
@@ -80,9 +75,9 @@ function createContext(): HandlerContext & { sendMessage: jest.Mock } {
             getWorkspacesSdkOnly: jest.fn().mockResolvedValue([]),
             getWorkspaces: jest.fn().mockResolvedValue([]),
             getCurrentOrganization: jest.fn().mockResolvedValue({ name: 'Org' }),
-        },
-        stateManager: { getCurrentProject: jest.fn().mockResolvedValue(undefined) },
-    } as unknown as HandlerContext & { sendMessage: jest.Mock };
+        }),
+        stateManager: createMockStateManager({ getCurrentProject: jest.fn().mockResolvedValue(undefined) }),
+    });
 }
 
 beforeEach(() => {
@@ -98,8 +93,14 @@ describe('Adobe entity handlers refuse before fetching when sign-in is declined'
     it.each(ENTITY_HANDLERS)('%s consults the sign-in guard', async (type) => {
         const context = createContext();
         // Calling through the union makes the payload param the intersection of
-        // every handler's payload; the guard fires before any payload is read.
-        await addIntegrationFlowHandlers[type](context, {} as never);
+        // every handler's payload, so this carries each one's required field.
+        // The values never matter: the guard fires before any payload is read.
+        await addIntegrationFlowHandlers[type](context, {
+            orgId: 'org',
+            projectId: 'project',
+            workspaceId: 'workspace',
+            name: 'name',
+        });
 
         expect(mockEnsureAdobeIOAuth).toHaveBeenCalledTimes(1);
     });
@@ -131,13 +132,57 @@ describe('Adobe entity handlers refuse before fetching when sign-in is declined'
     // A guard that only RETURNS leaves the picker spinning forever: it resolves
     // on the inbound message, not on the handler's return value. Silence is the
     // failure mode this whole handler map exists to prevent.
-    it('sends the refusal on the wire so the picker stops loading', async () => {
+    // Every handler, not just get-projects: each names its OWN wire message when
+    // it is wrapped, and a refusal announced on the wrong one is the same silence
+    // as no refusal at all — the stage waiting on that message spins forever.
+    it.each(ENTITY_HANDLERS)('%s sends the refusal on ITS wire message', async (type) => {
         const context = createContext();
-        await addIntegrationFlowHandlers['get-projects'](context, {});
+        await addIntegrationFlowHandlers[type](context, {
+            orgId: 'org',
+            projectId: 'project',
+            workspaceId: 'workspace',
+            name: 'name',
+        });
 
-        const sent = context.sendMessage.mock.calls.find((c) => c[0] === 'get-projects');
+        const sent = context.sendMessage.mock.calls.find((c) => c[0] === type);
         expect(sent).toBeDefined();
         expect(sent?.[1]).toMatchObject({ code: ErrorCode.AUTH_REQUIRED });
+    });
+});
+
+describe('what the guard hands the sign-in prompt', () => {
+    // The guard builds ensureAdobeIOAuth's argument itself; nothing downstream
+    // type-checks it, and an empty object would silently prompt against no auth
+    // service and log nowhere. Assert the two collaborators it must carry.
+    it('passes the located auth service and the context logger', async () => {
+        mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: true });
+        const context = createContext();
+
+        await addIntegrationFlowHandlers['get-projects'](context, {});
+
+        expect(mockEnsureAdobeIOAuth).toHaveBeenCalledWith(
+            expect.objectContaining({ authManager: mockAuthService, logger: context.logger })
+        );
+    });
+});
+
+describe('the guard is total over its payload', () => {
+    // `guarded` declares `payload: unknown` and the hosts reach it through
+    // dispatchHandler, which forwards whatever the caller passed. A payload-less
+    // call must refuse like any other, not throw before the guard ever runs.
+    it('refuses a payload-less call instead of throwing', async () => {
+        mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: false, cancelled: true });
+        const context = createContext();
+
+        const result = await dispatchHandler(
+            addIntegrationFlowHandlers,
+            context,
+            'get-projects',
+            undefined
+        );
+
+        expect(result).toMatchObject({ success: false, code: ErrorCode.AUTH_REQUIRED });
+        expect(context.authManager?.getProjects).not.toHaveBeenCalled();
     });
 });
 

@@ -22,75 +22,19 @@ import {
     createComponentDef,
     createDestComponentDef,
     createBlockFileEntries,
-    delegateCommitTreeToBranch,
+    setupBlockCollectionMocks,
+    setupSuccessfulInstall,
 } from './blockCollectionHelpers.testUtils';
 
 describe('installBlockCollections (single library)', () => {
     const TEST_SOURCE: AddonSource = { owner: 'stephen-garner-adobe', repo: 'isle5', branch: 'main' };
-    const DEFAULT_BLOCKS = ['hero-cta', 'newsletter', 'search-bar'];
     let mockGithubFileOps: jest.Mocked<GitHubFileOperations>;
     let mockLogger: jest.Mocked<Logger>;
 
     beforeEach(() => {
         jest.clearAllMocks();
-
-        mockLogger = {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as unknown as jest.Mocked<Logger>;
-
-        mockGithubFileOps = {
-            listRepoFiles: jest.fn(),
-            getBlobContent: jest.fn(),
-            getFileContent: jest.fn(),
-            getBranchInfo: jest.fn(),
-            createTree: jest.fn(),
-            createCommit: jest.fn(),
-            updateBranchRef: jest.fn(),
-            commitTreeToBranch: jest.fn(),
-        } as unknown as jest.Mocked<GitHubFileOperations>;
-        delegateCommitTreeToBranch(
-            mockGithubFileOps as unknown as Parameters<typeof delegateCommitTreeToBranch>[0],
-        );
+        ({ mockLogger, mockGithubFileOps } = setupBlockCollectionMocks());
     });
-
-    /**
-     * Set up mocks for a successful single-library install call.
-     * Accepts variable block lists for testing dynamic discovery.
-     */
-    function setupSuccessfulInstall(
-        sourceComponentDef: string | null,
-        destComponentDef: string = createDestComponentDef(),
-        blockIds: string[] = DEFAULT_BLOCKS,
-    ): void {
-        mockGithubFileOps.listRepoFiles
-            .mockResolvedValueOnce([]) // destination (empty — no existing blocks)
-            .mockResolvedValueOnce(createBlockFileEntries(blockIds));
-
-        mockGithubFileOps.getBlobContent.mockResolvedValue('export default function() {}');
-
-        mockGithubFileOps.getFileContent.mockImplementation(
-            async (owner: string, repo: string, path: string) => {
-                // Return null for filters/models (not tested by comp-def tests)
-                if (path === 'component-filters.json' || path === 'component-models.json') return null;
-                if (owner === 'stephen-garner-adobe' && repo === 'isle5') {
-                    if (sourceComponentDef === null) return null;
-                    return { content: sourceComponentDef, sha: 'source-sha', path, encoding: 'base64' };
-                }
-                return { content: destComponentDef, sha: 'dest-sha', path, encoding: 'base64' };
-            },
-        );
-
-        mockGithubFileOps.getBranchInfo.mockResolvedValue({
-            treeSha: 'tree-sha',
-            commitSha: 'commit-sha',
-        });
-        mockGithubFileOps.createTree.mockResolvedValue('new-tree-sha');
-        mockGithubFileOps.createCommit.mockResolvedValue('new-commit-sha');
-        mockGithubFileOps.updateBranchRef.mockResolvedValue(undefined);
-    }
 
     describe('component definition merge', () => {
         it('should use source entries when they exist', async () => {
@@ -99,7 +43,7 @@ describe('installBlockCollections (single library)', () => {
                 { title: 'Circle Carousel', id: 'circle-carousel', unsafeHTML: isle5Html },
             ]);
 
-            setupSuccessfulInstall(sourceComponentDef, createDestComponentDef(), ['circle-carousel']);
+            setupSuccessfulInstall(mockGithubFileOps, sourceComponentDef, createDestComponentDef(), ['circle-carousel']);
 
             const result = await installBlockCollections(
                 mockGithubFileOps, 'dest-owner', 'dest-repo',
@@ -128,7 +72,7 @@ describe('installBlockCollections (single library)', () => {
                 { title: 'Columns', id: 'columns' },
             ]);
 
-            setupSuccessfulInstall(sourceComponentDef);
+            setupSuccessfulInstall(mockGithubFileOps, sourceComponentDef);
 
             const result = await installBlockCollections(
                 mockGithubFileOps, 'dest-owner', 'dest-repo',
@@ -156,7 +100,7 @@ describe('installBlockCollections (single library)', () => {
                 { title: 'Columns', id: 'columns' },
             ]);
 
-            setupSuccessfulInstall(sourceComponentDef);
+            setupSuccessfulInstall(mockGithubFileOps, sourceComponentDef);
 
             const result = await installBlockCollections(
                 mockGithubFileOps, 'dest-owner', 'dest-repo',
@@ -187,7 +131,7 @@ describe('installBlockCollections (single library)', () => {
         });
 
         it('should not add component-definition.json when source file is missing', async () => {
-            setupSuccessfulInstall(null);
+            setupSuccessfulInstall(mockGithubFileOps, null);
 
             const result = await installBlockCollections(
                 mockGithubFileOps, 'dest-owner', 'dest-repo',
@@ -208,7 +152,7 @@ describe('installBlockCollections (single library)', () => {
                 groups: [{ id: 'other', title: 'Other', components: [] }],
             });
 
-            setupSuccessfulInstall(sourceComponentDef);
+            setupSuccessfulInstall(mockGithubFileOps, sourceComponentDef);
 
             const result = await installBlockCollections(
                 mockGithubFileOps, 'dest-owner', 'dest-repo',
@@ -243,7 +187,7 @@ describe('installBlockCollections (single library)', () => {
             });
 
             const blocks = ['circle-carousel', 'store-locator', 'hero-cta'];
-            setupSuccessfulInstall(sourceComponentDef, createDestComponentDef(), blocks);
+            setupSuccessfulInstall(mockGithubFileOps, sourceComponentDef, createDestComponentDef(), blocks);
 
             const result = await installBlockCollections(
                 mockGithubFileOps, 'dest-owner', 'dest-repo',
@@ -310,7 +254,7 @@ describe('installBlockCollections (single library)', () => {
                 { title: 'Hero CTA', id: 'hero-cta' },
             ]);
 
-            setupSuccessfulInstall(sourceComponentDef, destDef, ['hero-cta']);
+            setupSuccessfulInstall(mockGithubFileOps, sourceComponentDef, destDef, ['hero-cta']);
 
             const result = await installBlockCollections(
                 mockGithubFileOps, 'dest-owner', 'dest-repo',
@@ -342,7 +286,7 @@ describe('installBlockCollections (single library)', () => {
                 { title: 'Newsletter', id: 'newsletter', unsafeHTML: '<div class="newsletter">source</div>' },
             ]);
 
-            setupSuccessfulInstall(sourceComponentDef, destDef, ['hero-cta', 'newsletter']);
+            setupSuccessfulInstall(mockGithubFileOps, sourceComponentDef, destDef, ['hero-cta', 'newsletter']);
 
             const result = await installBlockCollections(
                 mockGithubFileOps, 'dest-owner', 'dest-repo',
@@ -380,7 +324,7 @@ describe('installBlockCollections (single library)', () => {
                 { title: 'Newsletter', id: 'newsletter' },
             ]);
 
-            setupSuccessfulInstall(sourceComponentDef, destDef, ['hero-cta', 'newsletter']);
+            setupSuccessfulInstall(mockGithubFileOps, sourceComponentDef, destDef, ['hero-cta', 'newsletter']);
 
             const result = await installBlockCollections(
                 mockGithubFileOps, 'dest-owner', 'dest-repo',
@@ -424,7 +368,7 @@ describe('installBlockCollections (single library)', () => {
                 ],
             });
 
-            setupSuccessfulInstall(sourceComponentDef, destDef, ['hero-cta', 'product-teaser']);
+            setupSuccessfulInstall(mockGithubFileOps, sourceComponentDef, destDef, ['hero-cta', 'product-teaser']);
 
             const result = await installBlockCollections(
                 mockGithubFileOps, 'dest-owner', 'dest-repo',
@@ -472,7 +416,7 @@ describe('installBlockCollections (single library)', () => {
                 ],
             });
 
-            setupSuccessfulInstall(sourceComponentDef, destDef, ['product-teaser']);
+            setupSuccessfulInstall(mockGithubFileOps, sourceComponentDef, destDef, ['product-teaser']);
 
             const result = await installBlockCollections(
                 mockGithubFileOps, 'dest-owner', 'dest-repo',
@@ -515,11 +459,11 @@ describe('installBlockCollections (single library)', () => {
             expect(result.success).toBe(false);
             expect(result.error).toBe('API rate limit');
             expect(result.blocksCount).toBe(0);
-            expect(result.blockIds).toEqual([]);
+            expect(result.blockIds).toStrictEqual([]);
         });
 
         it('should return error result on commit failure', async () => {
-            setupSuccessfulInstall(null);
+            setupSuccessfulInstall(mockGithubFileOps, null);
             mockGithubFileOps.createCommit.mockRejectedValue(new Error('Commit failed'));
 
             const result = await installBlockCollections(
@@ -550,7 +494,7 @@ describe('installBlockCollections (single library)', () => {
      */
     describe('how the commit is landed', () => {
         it('goes through commitTreeToBranch', async () => {
-            setupSuccessfulInstall(createComponentDef([
+            setupSuccessfulInstall(mockGithubFileOps, createComponentDef([
                 { title: 'Circle Carousel', id: 'circle-carousel' },
             ]), createDestComponentDef(), ['circle-carousel']);
 
@@ -566,7 +510,7 @@ describe('installBlockCollections (single library)', () => {
         it('writes the discovered blocks through that call, onto main', async () => {
             // A guard that only checked WHICH method was called would pass on an
             // empty commit.
-            setupSuccessfulInstall(createComponentDef([
+            setupSuccessfulInstall(mockGithubFileOps, createComponentDef([
                 { title: 'Circle Carousel', id: 'circle-carousel' },
             ]), createDestComponentDef(), ['circle-carousel']);
 

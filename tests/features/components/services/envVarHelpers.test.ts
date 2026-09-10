@@ -9,6 +9,7 @@ import {
     deriveGraphqlEndpoint,
     deriveAccsAdminUrl,
     deriveAccsTenantId,
+    lookupComponentConfigValue,
     readAccsOAuthPair,
     readPaasAdminPair,
 } from '@/features/components/services/envVarHelpers';
@@ -86,6 +87,53 @@ describe('envVarHelpers', () => {
         it('returns nothing for no configs at all', () => {
             expect(readPaasAdminPair(undefined)).toBeUndefined();
             expect(readAccsOAuthPair(undefined)).toBeUndefined();
+        });
+    });
+
+    /**
+     * The scan underneath every pair read. Its two guards decide which component
+     * answers, and both of them only show up once more than one component is in
+     * the map — which is the normal case for a project.
+     */
+    describe('lookupComponentConfigValue', () => {
+        // A component that carries the key but leaves it blank has not answered.
+        // Taking its empty string would stop the scan and hand a caller '' as
+        // though it were a credential, and the pair reads above would then treat
+        // the pair as half-present rather than absent.
+        it('keeps scanning past a component whose value is empty or absent', () => {
+            expect(
+                lookupComponentConfigValue(
+                    {
+                        'mesh': {},
+                        'adobe-commerce-paas': { ADOBE_COMMERCE_ADMIN_USERNAME: '' },
+                        'eds-storefront': { ADOBE_COMMERCE_ADMIN_USERNAME: 'admin' },
+                    },
+                    'ADOBE_COMMERCE_ADMIN_USERNAME',
+                ),
+            ).toBe('admin');
+        });
+
+        it('returns undefined when every component leaves the key empty', () => {
+            expect(
+                lookupComponentConfigValue(
+                    { a: { K: '' }, b: { K: undefined } },
+                    'K',
+                ),
+            ).toBeUndefined();
+        });
+
+        // A componentInstances map can carry an id with no config object at all.
+        // Reading through it is the difference between "no value" and a
+        // TypeError thrown out of a pure helper the WEBVIEW also calls.
+        it('steps over a component with no config object rather than throwing', () => {
+            const configs = {
+                'no-config-yet': undefined,
+                'adobe-commerce-paas': { ADOBE_COMMERCE_ADMIN_USERNAME: 'admin' },
+            } as unknown as Parameters<typeof lookupComponentConfigValue>[0];
+
+            expect(
+                lookupComponentConfigValue(configs, 'ADOBE_COMMERCE_ADMIN_USERNAME'),
+            ).toBe('admin');
         });
     });
 
@@ -189,6 +237,23 @@ describe('envVarHelpers', () => {
         it('returns undefined when the endpoint carries no tenant segment', () => {
             expect(
                 deriveAccsTenantId('https://na1-sandbox.api.commerce.adobe.com/graphql')
+            ).toBeUndefined();
+        });
+
+        // The host match is ANCHORED. An ACCS endpoint that merely APPEARS inside
+        // another URL — pasted out of a redirect or a docs link — is not this
+        // tenant's endpoint, and the id lifted out of it would be sent somewhere
+        // as a write target.
+        it('returns undefined when the ACCS endpoint is embedded in another URL', () => {
+            expect(
+                deriveAccsTenantId(
+                    'https://sso.example.com/login?next=https://na1.api.commerce.adobe.com/AbCdEf123/graphql'
+                )
+            ).toBeUndefined();
+            expect(
+                deriveAccsAdminUrl(
+                    'https://sso.example.com/login?next=https://na1.api.commerce.adobe.com/AbCdEf123/graphql'
+                )
             ).toBeUndefined();
         });
 

@@ -22,17 +22,23 @@ const ThrowingComponent: React.FC<{ shouldThrow?: boolean; errorMessage?: string
 };
 
 describe('ErrorBoundary', () => {
-    // Suppress console.error for expected errors in these tests
-    beforeAll(() => {
-        jest.spyOn(console, 'error').mockImplementation(() => {});
-    });
-
     afterAll(() => {
         jest.restoreAllMocks();
     });
 
     beforeEach(() => {
         jest.clearAllMocks();
+        // ABSORB the expected errors. An ErrorBoundary's job is to catch a
+        // throw and report it, so React and jsdom both log — that is the
+        // component working, not noise.
+        //
+        // This spy lives in beforeEach, NOT beforeAll, and the difference is
+        // load-bearing: the console gate installs its own wrapper in a
+        // beforeEach registered by the setup file, which runs FIRST. A spy
+        // installed in beforeAll is therefore wrapped BY the gate and its calls
+        // are still counted; one installed here replaces the gate's wrapper,
+        // which is the escape hatch the gate documents.
+        jest.spyOn(console, 'error').mockImplementation(() => {});
     });
 
     describe('normal rendering', () => {
@@ -237,9 +243,12 @@ describe('ErrorBoundary', () => {
                 </ErrorBoundary>
             );
 
-            // The error boundary shows componentStack in a monospace text element
-            // We verify the error UI is rendered (which includes the stack)
+            // The stack is the whole reason componentDidCatch stores errorInfo:
+            // it names the component that threw, which is what the Debug Logs
+            // reader is looking for. Asserting only the heading passed just as
+            // well with the stack block never rendered at all.
             expect(screen.getByText('Something went wrong')).toBeInTheDocument();
+            expect(screen.getByText(/at ErrorBoundary/)).toBeInTheDocument();
         });
 
         it('handles error with no message gracefully', () => {
@@ -253,8 +262,10 @@ describe('ErrorBoundary', () => {
                 </ErrorBoundary>
             );
 
-            // Should show default message or empty message without crashing
+            // A message-less error leaves the body empty, so the boundary says
+            // something rather than showing a heading over a blank line.
             expect(screen.getByText('Something went wrong')).toBeInTheDocument();
+            expect(screen.getByText('An unexpected error occurred')).toBeInTheDocument();
         });
     });
 });

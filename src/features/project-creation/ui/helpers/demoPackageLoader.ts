@@ -13,7 +13,6 @@ export {
     getStorefrontForStack,
     getAvailableStacksForPackage,
     getAllStorefronts,
-    getAddonSource,
 } from '@/features/components/services/demoPackageLoader';
 
 export type { StorefrontWithContext } from '@/features/components/services/demoPackageLoader';

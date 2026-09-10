@@ -39,6 +39,8 @@ import {
     setupMocks,
 } from './appBuilderComponentHandlers.testUtils';
 
+import type { Project } from '@/types/base';
+import type { HandlerContext } from '@/types/handlers';
 beforeEach(() => {
     resetHandlerMocks();
 });
@@ -53,7 +55,7 @@ describe('handleRenameAppBuilderComponent — inline payload name (drawer rename
         url: 'https://firefly.example.com',
     };
 
-    function setupPayloadRename(components?: Record<string, unknown>) {
+    function setupPayloadRename(components?: Project['appBuilderComponents']) {
         const mocks = setupMocks({
             appBuilderComponents: components ?? {
                 'firefly-image-gen': { ...KEYED_ENTRY },
@@ -64,7 +66,7 @@ describe('handleRenameAppBuilderComponent — inline payload name (drawer rename
                     source: { owner: 'skukla', repo: 'app-builder-shell', branch: 'main' },
                 },
             },
-        } as never);
+        });
         // A non-catalog instance id (rename must see undefined for the gate).
         mockGetAppBuilderComponentEntry.mockReturnValue(undefined);
         const vscode = require('vscode');
@@ -232,7 +234,7 @@ describe('appBuilderComponentsSnapshot channel (fresh persisted map after termin
         await handleAddAppBuilderComponent(mockContext, {
             id: 'erp-sync',
             apis: ['AdobeIOEventsSDK'],
-        } as never);
+        });
 
         const project = mockAddAppBuilderComponent.mock.calls.at(-1)?.[0] as {
             componentApiPicks?: Record<string, string[]>;
@@ -258,7 +260,7 @@ describe('appBuilderComponentsSnapshot channel (fresh persisted map after termin
     it('still posts the snapshot after a FAILED add (the entry may have persisted)', async () => {
         const { mockContext } = setupMocks({
             appBuilderComponents: { 'erp-sync': { ...DEPLOYED_ENTRY, status: 'error' } },
-        } as never);
+        });
         mockTestDeveloperPermissions(true);
         mockAddAppBuilderComponent.mockResolvedValue({ success: false, error: 'clone failed' });
 
@@ -282,7 +284,7 @@ describe('appBuilderComponentsSnapshot channel (fresh persisted map after termin
     it('posts the snapshot after a deploy reaches a terminal status (success)', async () => {
         const { mockContext } = setupMocks({
             appBuilderComponents: { 'erp-sync': DEPLOYED_ENTRY },
-        } as never);
+        });
         mockTestDeveloperPermissions(true);
 
         await handleDeployAppBuilderComponent(mockContext, { id: 'erp-sync' });
@@ -295,7 +297,7 @@ describe('appBuilderComponentsSnapshot channel (fresh persisted map after termin
     it('posts the snapshot after a deploy reaches a terminal status (failure)', async () => {
         const { mockContext } = setupMocks({
             appBuilderComponents: { 'erp-sync': DEPLOYED_ENTRY },
-        } as never);
+        });
         mockTestDeveloperPermissions(true);
         mockDeployAppBuilderComponent.mockResolvedValue({ success: false, error: 'deploy failed' });
 
@@ -323,7 +325,7 @@ describe('appBuilderComponentsSnapshot channel (fresh persisted map after termin
     it('does NOT post a snapshot when remove fails', async () => {
         const { mockContext } = setupMocks({
             appBuilderComponents: { 'erp-sync': DEPLOYED_ENTRY },
-        } as never);
+        });
         mockTestDeveloperPermissions(true);
         mockRemoveAppBuilderComponent.mockResolvedValue({
             success: false,
@@ -338,7 +340,7 @@ describe('appBuilderComponentsSnapshot channel (fresh persisted map after termin
     it('posts the snapshot after a successful payload rename', async () => {
         const { mockContext } = setupMocks({
             appBuilderComponents: { 'custom-app': { ...DEPLOYED_ENTRY, name: 'Old Name' } },
-        } as never);
+        });
         mockGetAppBuilderComponentEntry.mockReturnValue(undefined);
 
         await handleRenameAppBuilderComponent(mockContext, { id: 'custom-app', name: 'New Name' });
@@ -349,7 +351,7 @@ describe('appBuilderComponentsSnapshot channel (fresh persisted map after termin
     it('posts the snapshot after a successful input-box rename', async () => {
         const { mockContext } = setupMocks({
             appBuilderComponents: { 'custom-app': { ...DEPLOYED_ENTRY, name: 'Old Name' } },
-        } as never);
+        });
         mockGetAppBuilderComponentEntry.mockReturnValue(undefined);
         const vscode = require('vscode');
         vscode.window.showInputBox = jest.fn().mockResolvedValue('New Name');
@@ -362,7 +364,7 @@ describe('appBuilderComponentsSnapshot channel (fresh persisted map after termin
     it('does NOT post a snapshot on a cancelled input-box rename (nothing written)', async () => {
         const { mockContext } = setupMocks({
             appBuilderComponents: { 'custom-app': { ...DEPLOYED_ENTRY, name: 'Old Name' } },
-        } as never);
+        });
         mockGetAppBuilderComponentEntry.mockReturnValue(undefined);
         const vscode = require('vscode');
         vscode.window.showInputBox = jest.fn().mockResolvedValue(undefined);
@@ -375,7 +377,7 @@ describe('appBuilderComponentsSnapshot channel (fresh persisted map after termin
     it('does NOT post a snapshot on a rejected payload rename (validation failed, no write)', async () => {
         const { mockContext } = setupMocks({
             appBuilderComponents: { 'custom-app': { ...DEPLOYED_ENTRY, name: 'Old Name' } },
-        } as never);
+        });
         mockGetAppBuilderComponentEntry.mockReturnValue(undefined);
 
         await handleRenameAppBuilderComponent(mockContext, { id: 'custom-app', name: '   ' });
@@ -444,7 +446,7 @@ describe('progress register', () => {
                     source: { owner: 'acme', repo: 'erp-sync' },
                 },
             },
-        } as never);
+        });
         mockTestDeveloperPermissions(true);
         const vscode = require('vscode');
 
@@ -516,7 +518,7 @@ describe('progress register', () => {
             (call: unknown[]) =>
                 typeof call[2] === 'string' && /Checking requirements/.test(call[2])
         );
-        expect(stepPushes).toEqual([]);
+        expect(stepPushes).toStrictEqual([]);
     });
 });
 
@@ -566,14 +568,14 @@ describe('status refresh after a set-changing operation', () => {
     // The context must be built INSIDE the test, after the permission mock —
     // an it.each table is evaluated at describe time, before any beforeEach.
     it.each([
-        ['add', (ctx: never) => handleAddAppBuilderComponent(ctx, { id: 'erp-sync' })],
-        ['deploy', (ctx: never) => handleDeployAppBuilderComponent(ctx, { id: 'erp-sync' })],
-        ['remove', (ctx: never) => handleRemoveAppBuilderComponent(ctx, { id: 'erp-sync' })],
+        ['add', (ctx: HandlerContext) => handleAddAppBuilderComponent(ctx, { id: 'erp-sync' })],
+        ['deploy', (ctx: HandlerContext) => handleDeployAppBuilderComponent(ctx, { id: 'erp-sync' })],
+        ['remove', (ctx: HandlerContext) => handleRemoveAppBuilderComponent(ctx, { id: 'erp-sync' })],
     ])('%s re-runs the project status', async (_label, run) => {
         const { mockContext } = setupMocks();
         mockTestDeveloperPermissions(true);
 
-        await run(mockContext as never);
+        await run(mockContext);
 
         expect(mockHandleRequestStatus).toHaveBeenCalled();
     });
@@ -594,7 +596,7 @@ describe('status refresh after a set-changing operation', () => {
                     source: { owner: 'skukla', repo: 'app-builder-shell' },
                 },
             },
-        } as never);
+        });
         mockGetAppBuilderComponentEntry.mockReturnValue(undefined);
 
         await handleRenameAppBuilderComponent(mockContext, {

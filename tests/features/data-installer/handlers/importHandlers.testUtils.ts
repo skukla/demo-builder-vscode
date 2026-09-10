@@ -13,7 +13,6 @@ import * as vscode from 'vscode';
 import { DataInstallerWriteClient } from '@/features/data-installer/services/dataInstallerWriteClient';
 import { watchImportJob } from '@/features/data-installer/services/importJobRunner';
 import type { Project } from '@/types/base';
-import type { HandlerContext } from '@/types/handlers';
 
 jest.mock('@/core/auth/adobeAuthGuard', () => ({
     ensureAdobeIOAuth: jest.fn().mockResolvedValue({ authenticated: true }),
@@ -22,10 +21,6 @@ jest.mock('@/core/auth/adobeAuthGuard', () => ({
 // host initializes that at activation — which no handler test does. Without this
 // the detached watch dies in its own try/catch and simply never starts, showing
 // up as "watchImportJob was not called" rather than as a logger error.
-jest.mock('@/core/logging/debugLogger', () => ({
-    ...jest.requireActual('@/core/logging/debugLogger'),
-    getLogger: () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }),
-}));
 jest.mock('@/features/data-installer/services/dataInstallerWriteClient');
 jest.mock('@/features/data-installer/services/importJobRunner', () => ({
     watchImportJob: jest.fn(),
@@ -35,6 +30,16 @@ jest.mock('@/features/data-installer/services/importJobRunner', () => ({
 // Below the mocks on purpose — see the module docstring. `import/first` is not a
 // registered rule here, so this needs no disable comment.
 import { importHandlers } from '@/features/data-installer/handlers/importHandlers';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
+import {
+    createMockExtensionContext,
+    createStatefulGlobalState,
+} from '../../../helpers/extensionContextFake';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import { createMockWebviewPanel } from '../../../helpers/webviewPanelFake';
 
 export { importHandlers };
 
@@ -53,17 +58,9 @@ export function setupSettings(): void {
 
 /** In-memory globalState + secrets, standing in for the extension context. */
 export function makeStores() {
-    const mem = new Map<string, unknown>();
-    return {
-        globalState: {
-            get: jest.fn((k: string, d?: unknown) => (mem.has(k) ? mem.get(k) : d)),
-            update: jest.fn(async (k: string, v: unknown) => void mem.set(k, v)),
-            keys: jest.fn(() => [...mem.keys()]),
-            setKeysForSync: jest.fn(),
-        },
-        secrets: { get: jest.fn(async () => undefined), store: jest.fn(), delete: jest.fn() },
-        peek: (k: string) => mem.get(k),
-    };
+    const { globalState, store: mem } = createStatefulGlobalState();
+    const { secrets } = createMockSecretStorage();
+    return { globalState, secrets, peek: (k: string) => mem.get(k) };
 }
 
 /**
@@ -86,21 +83,32 @@ export const PAAS_PROJECT: Partial<Project> = {
     },
 };
 
-export function makeContext(project: unknown = PAAS_PROJECT) {
+/**
+ * RENAMED from `makeImportHarness` 2026-08-28: this returns a HARNESS
+ * ({ context, stores }), not a context. It shared a name with eleven builders
+ * that do return one, which is what made a family of unrelated fixtures look
+ * like a single duplicated helper.
+ */
+export function makeImportHarness(project: unknown = PAAS_PROJECT) {
     const stores = makeStores();
-    const tokenManager = { inspectToken: jest.fn().mockResolvedValue({ valid: true, token: 'tok' }) };
-    const context = {
-        logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
-        debugLogger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
-        authManager: {
+    const tokenManager = {
+        inspectToken: jest.fn().mockResolvedValue({ valid: true, token: 'tok' }),
+    };
+    const context = createMockHandlerContext({
+        debugLogger: createMockLogger(),
+        authManager: createMockAuthenticationService({
             isAuthenticated: jest.fn().mockResolvedValue(true),
             getTokenManager: jest.fn().mockReturnValue(tokenManager),
-        },
-        panel: {} as vscode.WebviewPanel,
-        context: stores as unknown as vscode.ExtensionContext,
-        stateManager: { getCurrentProject: jest.fn().mockResolvedValue(project) },
-        sendMessage: jest.fn().mockResolvedValue(undefined),
-    } as unknown as HandlerContext;
+        }),
+        panel: createMockWebviewPanel(),
+        context: createMockExtensionContext({
+            globalState: stores.globalState,
+            secrets: stores.secrets,
+        }),
+        stateManager: createMockStateManager({
+            getCurrentProject: jest.fn().mockResolvedValue(project),
+        }),
+    });
     return { context, stores };
 }
 
@@ -111,15 +119,21 @@ export const PAYLOAD = {
     dataTypes: ['categories', 'products'],
 };
 
+/**
+ * Install a partial write client. The class carries private state no literal can
+ * supply, so the methods a test hands in stand for the whole instance.
+ */
+export function stubWriteClient(methods: Partial<DataInstallerWriteClient>): void {
+    MockedWriteClient.mockImplementation(() => methods as DataInstallerWriteClient);
+}
+
 /** A write client whose validate passes and whose start is accepted. */
 export function happyClient() {
     const validateImport = jest.fn().mockResolvedValue({ valid: true });
     const startImport = jest.fn().mockResolvedValue({ activationId: 'act-1' });
     const startDelete = jest.fn().mockResolvedValue({ activationId: 'act-9' });
     const checkCredentials = jest.fn().mockResolvedValue({ usable: true });
-    MockedWriteClient.mockImplementation(
-        () => ({ validateImport, startImport, startDelete, checkCredentials }) as never,
-    );
+    stubWriteClient({ validateImport, startImport, startDelete, checkCredentials });
     return { validateImport, startImport, startDelete, checkCredentials };
 }
 
@@ -130,5 +144,5 @@ export function happyClient() {
 export function resetImportHandlerMocks(): void {
     jest.clearAllMocks();
     setupSettings();
-    mockedWatch.mockResolvedValue({ outcome: 'success', perType: {} } as never);
+    mockedWatch.mockResolvedValue({ outcome: 'success', perType: {} });
 }

@@ -9,39 +9,18 @@
  * - parseEnvFile edge cases
  */
 
-import { ComponentUpdater } from '@/features/updates/services/componentUpdater';
 import type { Logger } from '@/types/logger';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 
-// Mock dependencies
-jest.mock('@/core/logging');
-jest.mock('@/core/di');
-jest.mock('@/core/validation');
-jest.mock('fs/promises');
-jest.mock(
-    'vscode',
-    () => ({
-        commands: {
-            executeCommand: jest.fn(),
-        },
-    }),
-    { virtual: true }
-);
-jest.mock('@/features/components/services/ComponentRegistryManager', () => ({
-    ComponentRegistryManager: jest.fn().mockImplementation(() => ({
-        getComponentById: jest.fn().mockResolvedValue({
-            id: 'test-component',
-            name: 'Test Component',
-            configuration: {
-                // No buildScript means build step will be skipped
-            },
-        }),
-    })),
-}));
-
-import * as fs from 'fs/promises';
-import * as vscode from 'vscode';
-import { ServiceLocator } from '@/core/di';
+import {
+    CommandExecutor,
+    ComponentUpdater,
+    fs,
+    vscode,
+    setupUpdater,
+} from './componentUpdater.testUtils';
+import { createMockProject } from '../../../helpers/projectFake';
+jest.mock('@/core/validation/URLValidator');
 
 describe('ComponentUpdater - Extended Coverage', () => {
     let updater: ComponentUpdater;
@@ -50,59 +29,12 @@ describe('ComponentUpdater - Extended Coverage', () => {
     let mockExecutor: Record<string, jest.Mock>;
 
     beforeEach(() => {
-        jest.clearAllMocks();
-
-        mockLogger = {
-            info: jest.fn(),
-            debug: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as unknown as jest.Mocked<Logger>;
-
-        mockExecutor = {
-            execute: jest.fn().mockResolvedValue({
-                stdout: '',
-                stderr: '',
-                code: 0,
-                duration: 100,
-            }),
-        };
-
-        (ServiceLocator.getCommandExecutor as jest.Mock) = jest.fn().mockReturnValue(mockExecutor);
-
-        const securityValidation = require('@/core/validation');
-        securityValidation.validateGitHubDownloadURL = jest.fn();
-
-        jest.spyOn(fs, 'cp').mockResolvedValue(undefined);
-        jest.spyOn(fs, 'rm').mockResolvedValue(undefined);
-        jest.spyOn(fs, 'mkdir').mockResolvedValue(undefined);
-        jest.spyOn(fs, 'readFile').mockResolvedValue('{"name": "test"}');
-        jest.spyOn(fs, 'writeFile').mockResolvedValue(undefined);
-        jest.spyOn(fs, 'access').mockResolvedValue(undefined);
-        jest.spyOn(fs, 'unlink').mockResolvedValue(undefined);
-        jest.spyOn(fs, 'rename').mockResolvedValue(undefined);
-
-        (vscode.commands.executeCommand as jest.Mock).mockResolvedValue(undefined);
-
-        global.fetch = jest.fn().mockResolvedValue({
-            ok: true,
-            arrayBuffer: jest.fn().mockResolvedValue(new ArrayBuffer(1024)),
-        }) as unknown as typeof fetch;
-
-        updater = new ComponentUpdater(mockLogger, '/mock/extension/path');
-
-        mockProject = {
-            path: '/path/to/project',
-            name: 'test-project',
-            componentInstances: {
-                'test-component': {
-                    id: 'test-component',
-                    path: '/path/to/project/components/test-component',
-                    port: 3000,
-                },
-            },
-            componentVersions: {},
-        } as unknown as Project;
+        ({
+            updater,
+            logger: mockLogger,
+            executor: mockExecutor,
+            project: mockProject,
+        } = setupUpdater());
     });
 
     describe('.env file preservation', () => {
@@ -177,8 +109,7 @@ describe('ComponentUpdater - Extended Coverage', () => {
             // Find the writeFile call for .env
             const writeFileCalls = (fs.writeFile as jest.Mock).mock.calls;
             const envWriteCall = writeFileCalls.find(
-                (call: unknown[]) =>
-                    typeof call[0] === 'string' && (call[0] as string).endsWith('.env')
+                (call: unknown[]) => typeof call[0] === 'string' && call[0].endsWith('.env')
             );
 
             expect(envWriteCall).toBeDefined();
@@ -227,6 +158,30 @@ describe('ComponentUpdater - Extended Coverage', () => {
             });
         });
 
+        it('keeps the INSTALLED component in step with the version record', async () => {
+            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
+
+            await updater.updateComponent(mockProject, 'test-component', downloadUrl, '1.0.0');
+
+            // Two places record a version and the project loader PREFERS this one. If it
+            // is not moved, a successful update leaves the dashboard showing the old
+            // version while the version record says the new one — and nothing fails.
+            expect(mockProject.componentInstances?.['test-component']?.version).toBe('1.0.0');
+        });
+
+        it('updates a project that has no version record yet', async () => {
+            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
+            // Older projects predate the field entirely. The default fixture already has
+            // an empty one, so the branch that CREATES it was never taken.
+            delete (mockProject as { componentVersions?: unknown }).componentVersions;
+
+            await updater.updateComponent(mockProject, 'test-component', downloadUrl, '1.0.0');
+
+            expect(mockProject.componentVersions?.['test-component']).toMatchObject({
+                version: '1.0.0',
+            });
+        });
+
         it('should NOT update version when verification fails', async () => {
             const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
             const newVersion = '1.0.0';
@@ -243,108 +198,79 @@ describe('ComponentUpdater - Extended Coverage', () => {
         });
     });
 
-    describe('formatUpdateError error formatting (tested via failed updates)', () => {
-        it('should detect network error and format with helpful message', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
-            const newVersion = '1.0.0';
+    describe('formatUpdateError — what the user is told after a rolled-back failure', () => {
+        // The friendly message is the REJECTION. Until 2026-09-03 it was thrown inside
+        // the rollback's own try, so the rollback catch swallowed it and every failed
+        // update — successful rollback included — surfaced as "Update failed AND
+        // rollback failed. Manual recovery required." These tests used to find the
+        // friendly text inside that CRITICAL log line, which is how the bug hid.
+        const DOWNLOAD = 'https://github.com/test/repo/archive/v1.0.0.zip';
 
+        async function failedUpdate(): Promise<string> {
+            let message = '';
+            await updater
+                .updateComponent(mockProject, 'test-component', DOWNLOAD, '1.0.0')
+                .catch((e: Error) => { message = e.message; });
+            expect(message).not.toBe('');
+            expect(mockLogger.error).not.toHaveBeenCalledWith(
+                '[Updates] CRITICAL: Rollback failed',
+                expect.anything()
+            );
+            return message;
+        }
+
+        it('network failure', async () => {
             (global.fetch as jest.Mock).mockRejectedValueOnce(new Error('fetch failed'));
 
-            await expect(
-                updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion)
-            ).rejects.toThrow();
-
+            expect(await failedUpdate()).toBe(
+                'Update failed: No internet connection. Please check your network and try again.'
+            );
             expect(mockLogger.error).toHaveBeenCalledWith(
                 '[Updates] Update failed, rolling back to snapshot',
                 expect.any(Error)
             );
-
-            expect(mockLogger.error).toHaveBeenCalledWith(
-                '[Updates] CRITICAL: Rollback failed',
-                expect.objectContaining({
-                    message: expect.stringContaining('internet connection'),
-                })
-            );
         });
 
-        it('should detect timeout error and format with helpful message', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
-            const newVersion = '1.0.0';
-
+        it('timeout', async () => {
             (global.fetch as jest.Mock).mockRejectedValueOnce(new Error('operation timed out'));
 
-            await expect(
-                updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion)
-            ).rejects.toThrow();
-
-            expect(mockLogger.error).toHaveBeenCalledWith(
-                '[Updates] CRITICAL: Rollback failed',
-                expect.objectContaining({
-                    message: expect.stringContaining('timed out'),
-                })
+            expect(await failedUpdate()).toBe(
+                'Update failed: Download timed out. Please try again with a better connection.'
             );
         });
 
-        it('should detect HTTP 404 error and format with version removed message', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
-            const newVersion = '1.0.0';
+        it('HTTP 404', async () => {
+            (global.fetch as jest.Mock).mockResolvedValueOnce({ ok: false, status: 404 });
 
-            (global.fetch as jest.Mock).mockResolvedValueOnce({
-                ok: false,
-                status: 404,
-            });
-
-            await expect(
-                updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion)
-            ).rejects.toThrow();
-
-            expect(mockLogger.error).toHaveBeenCalledWith(
-                '[Updates] CRITICAL: Rollback failed',
-                expect.objectContaining({
-                    message: expect.stringContaining('not found'),
-                })
+            expect(await failedUpdate()).toBe(
+                'Update failed: Release not found on GitHub. The version may have been removed.'
             );
         });
 
-        it('should detect HTTP 403 error and format with rate limit message', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
-            const newVersion = '1.0.0';
+        it('HTTP 403', async () => {
+            (global.fetch as jest.Mock).mockResolvedValueOnce({ ok: false, status: 403 });
 
-            (global.fetch as jest.Mock).mockResolvedValueOnce({
-                ok: false,
-                status: 403,
-            });
-
-            await expect(
-                updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion)
-            ).rejects.toThrow();
-
-            expect(mockLogger.error).toHaveBeenCalledWith(
-                '[Updates] CRITICAL: Rollback failed',
-                expect.objectContaining({
-                    message: expect.stringMatching(/rate limit|access denied/i),
-                })
+            expect(await failedUpdate()).toBe(
+                'Update failed: Access denied. GitHub rate limit may be exceeded.'
             );
         });
 
-        it('should detect generic HTTP error and format with server error message', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
-            const newVersion = '1.0.0';
+        it('any other HTTP status', async () => {
+            (global.fetch as jest.Mock).mockResolvedValueOnce({ ok: false, status: 500 });
 
-            (global.fetch as jest.Mock).mockResolvedValueOnce({
-                ok: false,
-                status: 500,
+            expect(await failedUpdate()).toBe(
+                'Update failed: Server error (Download failed: HTTP 500). Please try again later.'
+            );
+        });
+
+        it('anything else: the original reason, after a rollback', async () => {
+            mockExecutor.execute.mockResolvedValueOnce({
+                stdout: '', stderr: 'unzip: cannot open file', code: 1, duration: 1,
             });
 
-            await expect(
-                updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion)
-            ).rejects.toThrow();
-
-            expect(mockLogger.error).toHaveBeenCalledWith(
-                '[Updates] CRITICAL: Rollback failed',
-                expect.objectContaining({
-                    message: expect.stringMatching(/server error/i),
-                })
+            expect(await failedUpdate()).toBe(
+                'Update failed and was rolled back: '
+                + 'Extraction failed (exit code 1): unzip: cannot open file'
             );
         });
     });
@@ -374,18 +300,24 @@ describe('ComponentUpdater - Extended Coverage', () => {
                 }),
             }));
 
-            const meshProject = {
+            const meshProject = createMockProject({
                 ...mockProject,
                 componentInstances: {
                     'eds-commerce-mesh': {
+                        name: 'eds-commerce-mesh',
+                        status: 'ready',
                         id: 'eds-commerce-mesh',
                         path: '/path/to/project/components/commerce-mesh',
                         port: 3000,
                     },
                 },
-            } as unknown as Project;
+            });
 
-            const meshUpdater = new ComponentUpdater(mockLogger, '/mock/extension/path');
+            const meshUpdater = new ComponentUpdater(
+                mockLogger,
+                '/mock/extension/path',
+                mockExecutor as unknown as CommandExecutor
+            );
 
             await meshUpdater.updateComponent(
                 meshProject,
@@ -443,19 +375,14 @@ describe('ComponentUpdater - Extended Coverage', () => {
 
             await expect(
                 updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion)
-            ).rejects.toThrow();
+            ).rejects.toThrow(
+                'Update failed: Downloaded component is incomplete or corrupted. Please try again.'
+            );
 
             expect(mockLogger.error).toHaveBeenCalledWith(
                 '[Updates] Update failed, rolling back to snapshot',
                 expect.objectContaining({
                     message: expect.stringContaining('package.json is invalid'),
-                })
-            );
-
-            expect(mockLogger.error).toHaveBeenCalledWith(
-                '[Updates] CRITICAL: Rollback failed',
-                expect.objectContaining({
-                    message: expect.stringContaining('incomplete or corrupted'),
                 })
             );
         });
@@ -487,8 +414,7 @@ describe('ComponentUpdater - Extended Coverage', () => {
 
             const writeFileCalls = (fs.writeFile as jest.Mock).mock.calls;
             const envWriteCall = writeFileCalls.find(
-                (call: unknown[]) =>
-                    typeof call[0] === 'string' && (call[0] as string).endsWith('.env')
+                (call: unknown[]) => typeof call[0] === 'string' && call[0].endsWith('.env')
             );
 
             expect(envWriteCall).toBeDefined();
@@ -522,8 +448,7 @@ describe('ComponentUpdater - Extended Coverage', () => {
 
             const writeFileCalls = (fs.writeFile as jest.Mock).mock.calls;
             const envWriteCall = writeFileCalls.find(
-                (call: unknown[]) =>
-                    typeof call[0] === 'string' && (call[0] as string).endsWith('.env')
+                (call: unknown[]) => typeof call[0] === 'string' && call[0].endsWith('.env')
             );
 
             expect(envWriteCall).toBeDefined();

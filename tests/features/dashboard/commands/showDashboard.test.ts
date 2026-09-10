@@ -8,70 +8,26 @@
 
 import * as vscode from 'vscode';
 import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
-import { BaseWebviewCommand } from '@/core/base';
-import { StateManager } from '@/core/state';
-import type { Logger } from '@/types/logger';
+import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
-// Mock dependencies
-jest.mock('@/core/logging/debugLogger');
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import { createMockExtensionContext as createMockExtensionContextBase } from '../../../helpers/extensionContextFake';
+import { internals } from '../../../helpers/commandInternals';
 
-/**
- * Create mock ExtensionContext
- */
+/** The canonical ExtensionContext fake, at this suite's extension path. */
 function createMockExtensionContext(): vscode.ExtensionContext {
-    return {
-        subscriptions: [],
-        extensionPath: '/mock/extension/path',
-        globalState: {
-            get: jest.fn(),
-            update: jest.fn(),
-            keys: jest.fn(() => []),
-            setKeysForSync: jest.fn(),
-        } as any,
-        workspaceState: {
-            get: jest.fn(),
-            update: jest.fn(),
-            keys: jest.fn(() => []),
-        } as any,
-        extensionUri: vscode.Uri.file('/mock/extension/path'),
-        extensionMode: vscode.ExtensionMode.Test,
-        environmentVariableCollection: {} as any,
-        asAbsolutePath: (relativePath: string) => `/mock/extension/path/${relativePath}`,
-        storageUri: undefined,
-        globalStorageUri: vscode.Uri.file('/mock/storage'),
-        logUri: vscode.Uri.file('/mock/logs'),
-        storagePath: '/mock/storage',
-        globalStoragePath: '/mock/global/storage',
-        logPath: '/mock/logs',
-        secrets: {} as any,
-        extension: {} as any,
-        languageModelAccessInformation: {} as any,
-    } as vscode.ExtensionContext;
+    return createMockExtensionContextBase(
+        { secrets: createMockSecretStorage().secrets },
+        '/mock/extension/path'
+    );
 }
 
-/**
- * Create mock StateManager
- */
-function createMockStateManager(): StateManager {
-    return {
-        getState: jest.fn(),
-        setState: jest.fn(),
-        clearState: jest.fn(),
-        getCurrentProject: jest.fn(),
-    } as any;
-}
 
 /**
  * Create mock Logger
  */
-function createMockLogger(): Logger {
-    return {
-        info: jest.fn(),
-        debug: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    } as any;
-}
 
 /**
  * Helper to create dashboard command instance
@@ -102,12 +58,12 @@ describe('ProjectDashboardWebviewCommand - Bundle Loading', () => {
             cspSource: 'vscode-webview://test',
             asWebviewUri: jest.fn((uri: vscode.Uri) => uri),
         };
-        (command as any).panel = {
+        internals(command).panel = {
             webview: mockWebview,
         };
 
         // When: Webview HTML is generated
-        const html = await (command as any).getWebviewContent();
+        const html = await internals(command).getWebviewContent();
 
         // Then: Contains single script tag for the feature bundle
         expect(html).toContain('dashboard-bundle.js');
@@ -125,12 +81,12 @@ describe('ProjectDashboardWebviewCommand - Bundle Loading', () => {
             cspSource: 'vscode-webview://test',
             asWebviewUri: jest.fn((uri: vscode.Uri) => uri),
         };
-        (command as any).panel = {
+        internals(command).panel = {
             webview: mockWebview,
         };
 
         // When: HTML content is parsed
-        const html = await (command as any).getWebviewContent();
+        const html = await internals(command).getWebviewContent();
 
         // Then: Single script tag has nonce attribute
         const scriptMatches = html.match(/<script nonce="([^"]+)"/g);
@@ -177,7 +133,7 @@ describe('ProjectDashboardWebviewCommand - getInitialData (keyed-only project)',
             },
         });
 
-        const data = await (command as any).getInitialData();
+        const data = await internals(command).getInitialData();
 
         expect(data.hasMesh).toBe(true);
     });
@@ -199,7 +155,7 @@ describe('ProjectDashboardWebviewCommand - getInitialData (keyed-only project)',
             appBuilderComponents: keyed,
         });
 
-        const data = await (command as any).getInitialData();
+        const data = await internals(command).getInitialData();
 
         expect(data.appBuilderComponents).toEqual(keyed);
         // The singular app-card seed retired with the AppBuilderCard (D3 Step 08).

@@ -6,28 +6,17 @@
  * Target Coverage: 75%+
  */
 
-import { WebviewCommunicationManager } from '@/core/communication/webviewCommunicationManager';
-import * as vscode from 'vscode';
+import {
+    WebviewCommunicationManager,
+    vscode,
+} from './webviewCommunicationManager.testUtils';
 import { Message } from '@/types/messages';
-
-// Mock VS Code API
-jest.mock('vscode');
-
-// Mock debugLogger
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn()
-    })
-}));
 
 describe('WebviewCommunicationManager - Handshake & Lifecycle', () => {
     let mockPanel: vscode.WebviewPanel;
     let mockWebview: vscode.Webview;
     let manager: WebviewCommunicationManager;
-    let messageListener: (message: Message) => void;
+    let messageListener: (message: Message) => Promise<void>;
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -150,7 +139,11 @@ describe('WebviewCommunicationManager - Handshake & Lifecycle', () => {
                 timestamp: Date.now()
             });
 
-            await initPromise;
+            // Resolving IS the claim: at 999ms the custom 1000ms timeout has not
+            // fired, so the late ready message is still accepted. A default 30s
+            // timeout would also pass this, which is why the companion test
+            // advances past 1000 and expects a rejection.
+            await expect(initPromise).resolves.toBeUndefined();
         });
 
         it('should queue messages until handshake complete', async () => {
@@ -432,20 +425,33 @@ describe('WebviewCommunicationManager - Handshake & Lifecycle', () => {
         });
 
         it('should clear all pending requests', async () => {
-            void manager.request('request-1');
-            void manager.request('request-2');
+            const first = manager.request('request-1');
+            const second = manager.request('request-2');
+            // Nothing will answer these; without the catch, disposal turns them
+            // into unhandled rejections that fail a LATER test.
+            first.catch(() => undefined);
+            second.catch(() => undefined);
+
+            expect(jest.getTimerCount()).toBeGreaterThan(0);
 
             manager.dispose();
 
-            // Pending requests should have their timeouts cleared
-            // They may reject or remain pending, but should not cause issues
+            // dispose() clears every pending request's timeout. That is the claim,
+            // and it is directly countable — "should not cause issues" was not.
+            expect(jest.getTimerCount()).toBe(0);
         });
 
         it('should clear message queue', async () => {
             manager.dispose();
 
-            // Queued messages should be cleared
-            // Attempting to send after dispose should fail gracefully
+            // "Fail gracefully" means the send is refused without throwing, and
+            // nothing reaches the webview. Both halves are checked; a send that
+            // silently succeeded would pass the first alone.
+            (mockWebview.postMessage as jest.Mock).mockClear();
+
+            await expect(manager.sendMessage('after-dispose', {})).resolves.toBeUndefined();
+
+            expect(mockWebview.postMessage).not.toHaveBeenCalled();
         });
 
         it('should dispose event listeners', () => {
@@ -459,7 +465,7 @@ describe('WebviewCommunicationManager - Handshake & Lifecycle', () => {
             manager.dispose();
 
             // Verify isDisposed is set (access private field for testing)
-            expect((manager as any).isDisposed).toBe(true);
+            expect((manager as unknown as { isDisposed: boolean }).isDisposed).toBe(true);
         });
 
         it('should not throw error when sending to disposed webview', async () => {
@@ -471,7 +477,7 @@ describe('WebviewCommunicationManager - Handshake & Lifecycle', () => {
             ).resolves.not.toThrow();
 
             // Verify isDisposed flag remains true
-            expect((manager as any).isDisposed).toBe(true);
+            expect((manager as unknown as { isDisposed: boolean }).isDisposed).toBe(true);
         });
     });
 });

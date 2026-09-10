@@ -1,3 +1,12 @@
+/**
+ * ComponentRegistryManager - Node Version Resolution and Compatibility Tests
+ *
+ * Absorbs `ComponentRegistryManager-configuration.test.ts`, deleted on 2026-08-31:
+ * all eight of its tests were already here by name, five byte-identical and three
+ * differing only by their `// Given:` / `// When:` / `// Then:` narration. That
+ * comment-only difference is why the duplicate-file check now strips comments.
+ */
+
 import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
 import { mockRawRegistry, getMockLoader } from './ComponentRegistryManager.testUtils';
 
@@ -71,7 +80,7 @@ describe('Component Registry Manager - Node Version Resolution', () => {
             const mapping = await manager.getNodeVersionToComponentMapping('eds', 'adobe-commerce-paas');
 
             // Then: No Node version mappings
-            expect(Object.keys(mapping).length).toBe(0);
+            expect(Object.keys(mapping)).toHaveLength(0);
         });
 
         it('should aggregate component names when multiple components share same version', async () => {

@@ -27,7 +27,7 @@ import type {
     RawAdobeWorkspace,
     SDKResponse,
 } from './types';
-import { getLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
 
 /**
  * Creates, renames, and deletes Console projects and workspaces.

@@ -22,6 +22,13 @@ node_modules/**
 .jest-cache/**
 # Editor config, same reasoning.
 .cursor/**
+# Added 2026-09-08 with PL-46's UI tier, for exactly the reason above. ExTester
+# downloads a VS Code build and the extension under test into these; measured the
+# day they appeared, `.test-extensions/` alone was 329 MB across 1,571 files. Both
+# are in .gitignore, which does NOT help — vsce reads THIS file instead whenever
+# it exists, which is what let beta.129 ship a 58.6 MB jest cache.
+.test-extensions/**
+test-resources/**
 
 # TypeScript-compiled individual JS files are redundant: esbuild bundles
 # everything into dist/extension.js. Only the esbuild outputs are needed.
@@ -34,18 +41,24 @@ dist/utils/**
 # Source maps (development only)
 dist/**/*.map
 
-# Build / tooling config
+# Build / tooling config.
+#
+# GLOBS, not individual names. This list named each config file one by one, and
+# every sibling added since slipped through: on 2026-09-08 `vsce ls` showed eleven
+# dev-tooling files being packaged — four jest configs, four stryker configs, two
+# extra eslint configs and tsconfig.test.json. Only 26 KB, so the cost was noise
+# rather than size, but naming files individually guarantees the next one ships
+# too. Patterns cover the siblings that do not exist yet.
 .gitignore
 .eslintrc.json
-tsconfig.json
-tsconfig.build.json
-tsconfig.webview.json
+tsconfig*.json
 webpack.config.js
 esbuild.config.js
-eslint.config.mjs
+eslint*.mjs
+stryker*.json
+jest*.config.js
 .prettierignore
 .swcrc
-jest.config.js
 package.json.backup
 package-lock.json
 
@@ -57,12 +70,32 @@ test/**
 tests/**
 docs/**
 coverage/**
-report/**
 .rptc/**
 .claude/**
+.githooks/**
 
-# Scripts (except required ones)
-scripts/keys.json
+# Measurement output. This said `report/**` — SINGULAR — and the directory has
+# always been `reports/`, so beta.145 packaged 625 mutation-report files, 144 MB
+# on disk. Found 2026-09-08 by reading what `npm run test:ui` packaged, which is
+# the third time a local artifact directory has shipped this way after the jest
+# cache and the ExTester downloads above. The lesson each time is the same: a
+# directory being in `.gitignore` does nothing, because vsce reads THIS file
+# instead whenever it exists.
+reports/**
+
+# Build and quality tooling. Nothing in `scripts/` runs at extension runtime —
+# checked 2026-09-08: every `scripts/` path in `src/` refers to a file inside a
+# STOREFRONT repo, not this one, and no code spawns a node script from the
+# extension directory. This previously excluded one file by name and shipped the
+# other 72.
+scripts/**
+
+# Dev-tooling dotfiles at the root, by pattern rather than by name for the same
+# reason as the config globs above.
+.gitguardian.yaml
+.madgerc
+.pre-commit-config.yaml
+.testfilesizerc.json
 
 # Documentation (keep README and CHANGELOG)
 *.md

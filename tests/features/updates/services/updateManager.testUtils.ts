@@ -1,4 +1,37 @@
 /**
+ * Shared setup for the updateManager suites — THE AGREED PART ONLY.
+ *
+ * This family does NOT agree about how to fake all of its dependencies, and
+ * picking a winner would change what some suites exercise while every one of
+ * them stayed green. So only the mocks that EVERY spec already declared
+ * IDENTICALLY were moved here. Each spec keeps its own disputed mocks inline,
+ * and therefore ends up with exactly the set it started with.
+ *
+ * Moved here (all specs agreed): @/core/logging, @/core/utils/timeoutConfig, @/core/validation, vscode
+ * Left inline (specs disagree):  @/features/updates/services/componentRepositoryResolver, fs/promises
+ *
+ * Extracted 2026-08-30 (lane C2). Resolving the disputed ones is a separate
+ * decision, deliberately not taken here.
+ */
+
+import { UpdateManager } from '@/features/updates/services/updateManager';
+
+// Mock security validation
+jest.mock('@/core/validation/SensitiveDataRedactor', () => ({
+    sanitizeErrorForLogging: jest.fn((msg: string) => msg),
+}));
+
+jest.mock('@/core/validation/URLValidator', () => ({
+    validateGitHubDownloadURL: jest.fn().mockReturnValue(true),
+}));
+
+export { UpdateManager };
+export * as vscode from 'vscode';
+
+import type { Extension } from 'vscode';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockProject as createMockProjectBase } from '../../../helpers/projectFake';
+/**
  * Shared test utilities for UpdateManager tests
  *
  * Provides:
@@ -10,37 +43,25 @@
  * This file only exports helper functions.
  */
 
-/**
- * Creates a mock context with extension package info
- */
-export function createMockContext(version: string = '1.0.0'): any {
-    return {
+/** Base from the canonical fake (ADR-016); the specifics below are this suite's. */
+export function createUpdateManagerContext(version: string = '1.0.0'): any {
+    return createMockExtensionContext({
         extensionPath: '/mock/extension/path',
-        extension: {
-            packageJSON: {
-                version,
-            },
-        },
+        // Only `packageJSON.version` is read; the rest of `Extension` is not built.
+        extension: { packageJSON: { version } } as unknown as Extension<unknown>,
+        // This suite's own: the GitHub token must resolve, or update checks
+        // take the unauthenticated path and the assertions change.
         secrets: {
             get: jest.fn().mockResolvedValue('mock-github-token'),
             store: jest.fn(),
             delete: jest.fn(),
             onDidChange: jest.fn(),
         },
-    };
+    });
 }
 
-/**
- * Creates a mock logger instance
- */
-export function createMockLogger(): any {
-    return {
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    };
-}
+/** Canonical logger fake (ADR-016). Re-exported so existing imports keep working. */
+export { createMockLogger } from '../../../helpers/loggerFake';
 
 /**
  * Creates a mock workspace configuration object
@@ -134,7 +155,7 @@ export function createMockReleasesArray(options?: {
 /**
  * Creates a mock project with components
  */
-export function createMockProject(components: { id: string; version: string; repoUrl?: string; path?: string; name?: string }[]): any {
+export function createUpdateManagerProject(components: { id: string; version: string; repoUrl?: string; path?: string; name?: string }[]): any {
     const componentInstances: any = {};
     const componentVersions: any = {};
 
@@ -148,10 +169,10 @@ export function createMockProject(components: { id: string; version: string; rep
         componentVersions[comp.id] = { version: comp.version };
     });
 
-    return {
+    return createMockProjectBase({
         componentInstances,
         componentVersions,
-    };
+    });
 }
 
 /**
@@ -185,7 +206,7 @@ export function mockFetchNetworkError(message: string = 'Network timeout'): void
  * Sets up security validation mock to allow all URLs
  */
 export function mockSecurityValidationPass(): void {
-    const { validateGitHubDownloadURL } = require('@/core/validation');
+    const { validateGitHubDownloadURL } = require('@/core/validation/URLValidator');
     validateGitHubDownloadURL.mockReturnValue(true);
 }
 
@@ -193,6 +214,6 @@ export function mockSecurityValidationPass(): void {
  * Sets up security validation mock to reject URLs
  */
 export function mockSecurityValidationFail(): void {
-    const { validateGitHubDownloadURL } = require('@/core/validation');
+    const { validateGitHubDownloadURL } = require('@/core/validation/URLValidator');
     validateGitHubDownloadURL.mockReturnValue(false);
 }

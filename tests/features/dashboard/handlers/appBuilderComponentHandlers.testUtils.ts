@@ -16,6 +16,8 @@
  */
 
 import { setupMocks } from './dashboardHandlers.testUtils';
+import { createMockProject as createMockProjectBase } from '../../../helpers/projectFake';
+import type { AppBuilderComponentState, Project } from '@/types/base';
 
 // ---- D1 runner (the live engine — fully mocked) ----------------------------
 export const mockAddAppBuilderComponent = jest.fn();
@@ -75,6 +77,8 @@ jest.mock('@/features/authentication/services/detectProjectOrgMismatch', () => (
 // ---- dashboard status channels (mocked — no live webview) ------------------
 export const mockSendAppBuilderComponentStatusUpdate = jest.fn();
 export const mockSendAppBuilderComponentsSnapshot = jest.fn();
+export const mockSendMeshStatusUpdate = jest.fn();
+export const mockSendProjectDestinationUpdate = jest.fn();
 /**
  * The status re-run after a set-changing op. Mocked because the real one is a
  * heavy handler (auth guard + mesh checks) and this suite only cares WHETHER the
@@ -91,19 +95,49 @@ jest.mock('@/features/dashboard/commands/showDashboard', () => ({
             mockSendAppBuilderComponentStatusUpdate(...a),
         sendAppBuilderComponentsSnapshot: (...a: unknown[]) =>
             mockSendAppBuilderComponentsSnapshot(...a),
+        sendMeshStatusUpdate: (...a: unknown[]) => mockSendMeshStatusUpdate(...a),
+        sendProjectDestinationUpdate: (...a: unknown[]) => mockSendProjectDestinationUpdate(...a),
         refreshStatus: jest.fn(),
     },
 }));
 
 export {
+    buildToolchainConsent,
+    guardOrBlock,
     handleAddAppBuilderComponent,
     handleDeployAppBuilderComponent,
     handleRedeployAppBuilderComponent,
     handleRemoveAppBuilderComponent,
     handleRenameAppBuilderComponent,
+    postComponentsSnapshot,
+    postDestination,
+    postMeshStatus,
+    postRowStatus,
+    resolveAddEntry,
+    resolveComponentTarget,
+    runGuards,
+    userSuppliedEnvVars,
+    withComponentProgress,
 } from '@/features/dashboard/handlers/appBuilderComponentHandlers';
 
 export { setupMocks };
+
+/**
+ * The MOCKED vscode module, resolved through jest rather than imported.
+ *
+ * A spec that writes `import * as vscode from 'vscode'` binds BEFORE this
+ * module's `jest.mock('vscode', ...)` has run — imports evaluate in source order
+ * and a jest.mock only hoists within its own module — so it gets the
+ * moduleNameMapper's copy and watches a different object than the handler calls.
+ * That presented as "Number of calls: 0" on an assertion that was right.
+ */
+export const vscodeMock = jest.requireMock('vscode') as {
+    window: {
+        showWarningMessage: jest.Mock;
+        withProgress: jest.Mock;
+    };
+    commands: { executeCommand: jest.Mock };
+};
 
 export const ERP_ENTRY = {
     id: 'erp-sync',
@@ -114,7 +148,7 @@ export const ERP_ENTRY = {
 };
 
 export function mockTestDeveloperPermissions(hasPermissions: boolean, error?: string) {
-    const { ServiceLocator } = require('@/core/di');
+    const { ServiceLocator } = require('@/core/di/serviceLocator');
     const svc = ServiceLocator.getAuthenticationService();
     svc.testDeveloperPermissions = jest.fn().mockResolvedValue({ hasPermissions, error });
     return svc;
@@ -132,11 +166,11 @@ export function resetHandlerMocks(): void {
     mockHandleRequestStatus.mockResolvedValue({ success: true });
 }
 
-/** Minimal fresh-project factory for snapshot freshness assertions. */
-export function createFreshProject(components: Record<string, unknown>) {
-    return {
+/** The canonical project fixture (ADR-016) with this suite's components. */
+export function createFreshProject(components: Record<string, AppBuilderComponentState>): Project {
+    return createMockProjectBase({
         name: 'test-project',
         path: '/path/to/project',
         appBuilderComponents: components,
-    } as never;
+    });
 }

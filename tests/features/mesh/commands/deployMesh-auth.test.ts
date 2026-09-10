@@ -12,26 +12,15 @@
 
 import * as vscode from 'vscode';
 import * as fs from 'fs/promises';
-import { DeployMeshCommand } from '@/features/mesh/commands/deployMesh';
-import { StateManager } from '@/core/state';
-import { ServiceLocator } from '@/core/di';
+import { DeployMeshCommand } from './deployMesh.testUtils';
+import { StateManager } from '@/core/state/stateManager';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import type { Logger } from '@/types/logger';
 import type { Project, ComponentInstance } from '@/types/base';
 
 // =============================================================================
 // Mocks
 // =============================================================================
-
-jest.mock('vscode');
-jest.mock('fs/promises');
-jest.mock('@/core/di/serviceLocator');
-jest.mock('@/features/mesh/utils/errorFormatter', () => ({
-    formatAdobeCliError: jest.fn((s: string) => s),
-    extractMeshErrorSummary: jest.fn((s: string) => s),
-}));
-jest.mock('@/core/utils/meshConfig', () => ({
-    getMeshNodeVersion: jest.fn(() => '18'),
-}));
 
 // Mock the shared auth guard
 jest.mock('@/core/auth/adobeAuthGuard', () => ({
@@ -50,16 +39,18 @@ jest.mock('@/features/dashboard/commands/showDashboard', () => ({
 jest.mock('@/features/mesh/services/stalenessDetector', () => ({
     updateMeshState: jest.fn().mockResolvedValue(undefined),
 }));
-jest.mock('@/features/mesh/services/meshDeploymentVerifier', () => ({
-    waitForMeshDeployment: jest.fn().mockResolvedValue({
-        deployed: true,
-        meshId: 'mesh-test-123',
-        endpoint: 'https://test-mesh.adobe.io/graphql',
-    }),
-}));
 
 // Import the mock after jest.mock hoisting
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+
+// MUST stay in this file: this spec imports fs/promises directly, and a
+// jest.mock only hoists above the imports of the module it appears in. Moved to
+// the shared harness it applied too late and every test failed on
+// `access.mockResolvedValue is not a function`.
+jest.mock('fs/promises');
 const mockEnsureAdobeIOAuth = ensureAdobeIOAuth as jest.MockedFunction<typeof ensureAdobeIOAuth>;
 
 // =============================================================================
@@ -112,31 +103,22 @@ describe('DeployMeshCommand - Auth Refactor (ensureAdobeIOAuth)', () => {
     beforeEach(() => {
         jest.clearAllMocks();
 
-        mockContext = {
-            subscriptions: [],
-            extensionPath: '/test/extension',
-        } as unknown as vscode.ExtensionContext;
+        mockContext = createMockExtensionContext();
 
-        mockStateManager = {
+        mockStateManager = createMockStateManager({
             getCurrentProject: jest.fn(),
             saveProject: jest.fn(),
-        } as unknown as jest.Mocked<StateManager>;
+        }) as unknown as jest.Mocked<StateManager>;
 
-        mockLogger = {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            trace: jest.fn(),
-        } as jest.Mocked<Logger>;
+        mockLogger = createMockLogger();
 
         mockAuthManager = {
             isAuthenticated: jest.fn().mockResolvedValue(true),
             // Canonical org-reachability check (detectProjectOrgMismatch) lists the
             // token's reachable orgs; org-123 matches the project → no mismatch.
-            getOrganizations: jest.fn().mockResolvedValue([
-                { id: 'org-123', code: 'ORG123@AdobeOrg', name: 'Org 123' },
-            ]),
+            getOrganizations: jest
+                .fn()
+                .mockResolvedValue([{ id: 'org-123', code: 'ORG123@AdobeOrg', name: 'Org 123' }]),
             getCurrentOrganization: jest.fn().mockResolvedValue({ id: 'org-123', name: 'Org 123' }),
         };
 
@@ -163,9 +145,11 @@ describe('DeployMeshCommand - Auth Refactor (ensureAdobeIOAuth)', () => {
         (vscode.commands.executeCommand as jest.Mock).mockResolvedValue(undefined);
 
         (fs.access as jest.Mock).mockResolvedValue(undefined);
-        (fs.readFile as jest.Mock).mockResolvedValue(JSON.stringify({
-            meshConfig: { sources: [] },
-        }));
+        (fs.readFile as jest.Mock).mockResolvedValue(
+            JSON.stringify({
+                meshConfig: { sources: [] },
+            })
+        );
     });
 
     // =========================================================================
@@ -194,7 +178,7 @@ describe('DeployMeshCommand - Auth Refactor (ensureAdobeIOAuth)', () => {
                     projectId: 'proj-123',
                     workspace: 'ws-123',
                 }),
-            }),
+            })
         );
 
         // And: org reachability check should have run (means we proceeded past auth)
@@ -241,7 +225,7 @@ describe('DeployMeshCommand - Auth Refactor (ensureAdobeIOAuth)', () => {
         // And: Should NOT show error message (cancelled, not failed)
         expect(vscode.window.showErrorMessage).not.toHaveBeenCalledWith(
             expect.stringContaining('Sign-in failed'),
-            expect.anything(),
+            expect.anything()
         );
 
         // And: Should NOT proceed to org reachability check
@@ -267,7 +251,7 @@ describe('DeployMeshCommand - Auth Refactor (ensureAdobeIOAuth)', () => {
 
         // And: Error message should be shown
         expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
-            'Sign-in failed or was cancelled. Please try again.',
+            'Sign-in failed or was cancelled. Please try again.'
         );
 
         // And: Should NOT proceed to org reachability check
@@ -303,7 +287,7 @@ describe('DeployMeshCommand - Auth Refactor (ensureAdobeIOAuth)', () => {
                     projectId: 'custom-proj',
                     workspace: 'custom-ws',
                 },
-            }),
+            })
         );
     });
 });

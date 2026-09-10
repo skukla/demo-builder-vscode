@@ -1,5 +1,5 @@
 import { getRequiredNodeVersions } from '@/features/prerequisites/handlers/shared';
-import { createMockContext, createComponentSelection } from './testHelpers';
+import { createPrereqHandlerContext, createComponentSelection } from './testHelpers';
 
 /**
  * Prerequisites Handlers - Required Node Versions Test Suite
@@ -28,7 +28,7 @@ describe('Prerequisites Handlers - getRequiredNodeVersions', () => {
         const mockVersions = new Set(['20', '18', '24']);
         mockGetRequiredNodeVersions.mockResolvedValue(mockVersions);
 
-        const context = createMockContext({
+        const context = createPrereqHandlerContext({
             sharedState: {
                 isAuthenticating: false,
                 currentComponentSelection: createComponentSelection({
@@ -44,11 +44,11 @@ describe('Prerequisites Handlers - getRequiredNodeVersions', () => {
     });
 
     it('should return empty array if no component selection', async () => {
-        const context = createMockContext();
+        const context = createPrereqHandlerContext();
 
         const result = await getRequiredNodeVersions(context);
 
-        expect(result).toEqual([]);
+        expect(result).toStrictEqual([]);
         expect(mockGetRequiredNodeVersions).not.toHaveBeenCalled();
     });
 
@@ -56,7 +56,7 @@ describe('Prerequisites Handlers - getRequiredNodeVersions', () => {
         const mockVersions = new Set(['24', '18', '20']);
         mockGetRequiredNodeVersions.mockResolvedValue(mockVersions);
 
-        const context = createMockContext({
+        const context = createPrereqHandlerContext({
             sharedState: {
                 isAuthenticating: false,
                 currentComponentSelection: createComponentSelection({
@@ -74,7 +74,7 @@ describe('Prerequisites Handlers - getRequiredNodeVersions', () => {
     it('should handle ComponentRegistryManager failure', async () => {
         mockGetRequiredNodeVersions.mockRejectedValue(new Error('Failed'));
 
-        const context = createMockContext({
+        const context = createPrereqHandlerContext({
             sharedState: {
                 isAuthenticating: false,
                 currentComponentSelection: createComponentSelection(),
@@ -83,13 +83,13 @@ describe('Prerequisites Handlers - getRequiredNodeVersions', () => {
 
         const result = await getRequiredNodeVersions(context);
 
-        expect(result).toEqual([]);
+        expect(result).toStrictEqual([]);
     });
 
     it('should pass all component selection parameters', async () => {
         mockGetRequiredNodeVersions.mockResolvedValue(new Set());
 
-        const context = createMockContext({
+        const context = createPrereqHandlerContext({
             sharedState: {
                 isAuthenticating: false,
                 currentComponentSelection: createComponentSelection({
@@ -109,5 +109,24 @@ describe('Prerequisites Handlers - getRequiredNodeVersions', () => {
             ['dep1'],
             ['mesh']
         );
+    });
+
+    it('does not ask the registry when there is no selection', async () => {
+        const context = createPrereqHandlerContext();
+
+        await getRequiredNodeVersions(context);
+
+        expect(mockGetRequiredNodeVersions).not.toHaveBeenCalled();
+    });
+
+    it('treats the absent selection as a normal outcome, not a failure it swallows', async () => {
+        const context = createPrereqHandlerContext();
+
+        expect(await getRequiredNodeVersions(context)).toStrictEqual([]);
+        // The catch also returns an empty list, so the value proves nothing. What
+        // separates the two routes is that the early return reports once and the
+        // catch reports not at all. The count is the discriminator; the wording is
+        // deliberately not asserted.
+        expect(context.debugLogger.debug).toHaveBeenCalledTimes(1);
     });
 });

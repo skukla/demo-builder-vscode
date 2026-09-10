@@ -18,13 +18,19 @@ jest.mock('@/types/typeGuards', () => ({
 import { handleRefreshBlockLibraryHeadless } from '@/features/eds/handlers/refreshBlockLibraryHandler';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext } from '@/types/handlers';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 
 function ctx(project: unknown): HandlerContext {
-    return {
-        stateManager: { getCurrentProject: jest.fn().mockResolvedValue(project) },
-        logger: { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() },
-        context: { extensionPath: '/ext' },
-    } as unknown as HandlerContext;
+    return createMockHandlerContext({
+        stateManager: createMockStateManager({
+            getCurrentProject: jest.fn().mockResolvedValue(project),
+        }),
+        logger: createMockLogger(),
+        context: createMockExtensionContext({ extensionPath: '/ext' }),
+    });
 }
 
 describe('handleRefreshBlockLibraryHeadless', () => {
@@ -59,11 +65,29 @@ describe('handleRefreshBlockLibraryHeadless', () => {
 
         const call = mockRefresh.mock.calls[0][0];
         expect(call.onProgress).toBeUndefined();
-        expect(call.context).toEqual({ extensionPath: '/ext' });
+        // Asserts the FIELD, not the whole object. It read
+        // `toEqual({ extensionPath: '/ext' })`, which also asserted that nothing
+        // else was on the context — a claim about the FAKE's shape rather than
+        // about the handler, and one that broke the moment the context became a
+        // real `createMockExtensionContext`. What this test means is that the
+        // extension context is threaded through with the right path.
+        expect(call.context.extensionPath).toBe('/ext');
         expect(result).toEqual({
             success: true,
             data: { libraryPaths: ['/.da/library/blocks/hero'] },
         });
+    });
+
+    it('reports an empty path list, not undefined, when nothing was published', async () => {
+        // The agent surface reads data.libraryPaths and iterates it. A core that
+        // succeeded without publishing anything omits the field, and handing the
+        // caller `undefined` where it expects a list breaks the tool rather than
+        // reporting "nothing to publish".
+        mockRefresh.mockResolvedValue({ success: true });
+
+        const result = await handleRefreshBlockLibraryHeadless(ctx({ name: 'p', path: '/p' }));
+
+        expect(result).toEqual({ success: true, data: { libraryPaths: [] } });
     });
 
     it('surfaces a refresh failure error', async () => {

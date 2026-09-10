@@ -13,22 +13,16 @@
  */
 
 import { ComponentManager } from '@/features/components/services/componentManager';
-import { Project } from '@/types';
+import { Project } from '@/types/base';
 import { TransformedComponentDefinition } from '@/types/components';
 import { Logger } from '@/types/logger';
-import { ServiceLocator } from '@/core/di/serviceLocator';
-import { CommandExecutor } from '@/core/shell';
+import { CommandExecutor } from '@/core/shell/commandExecutor';
 import {
-    createMockCommandExecutor,
-    createMockLogger,
-    createMockProject,
-    mockSuccessfulExecution,
     mockFileNotFound,
-    mockFileExists
+    mockFileExists,
 } from './testHelpers';
+import { setupComponentManager } from './componentManager.testUtils';
 
-// Mock ServiceLocator
-jest.mock('@/core/di/serviceLocator');
 
 // Mock fs/promises
 jest.mock('fs/promises');
@@ -40,21 +34,8 @@ describe('ComponentManager - Installation (Simple Components)', () => {
     let mockCommandExecutor: CommandExecutor;
 
     beforeEach(() => {
-        jest.clearAllMocks();
-
-        // Create mocks
-        mockLogger = createMockLogger();
-        mockProject = createMockProject();
-        mockCommandExecutor = createMockCommandExecutor();
-
-        // Mock ServiceLocator
-        (ServiceLocator.getCommandExecutor as jest.Mock).mockReturnValue(mockCommandExecutor);
-
-        // Create ComponentManager instance
-        componentManager = new ComponentManager(mockLogger);
-
-        // Mock successful command execution by default
-        mockSuccessfulExecution(mockCommandExecutor);
+        ({ componentManager, mockLogger, mockProject, mockCommandExecutor } =
+            setupComponentManager());
     });
 
     describe('configuration-only components', () => {

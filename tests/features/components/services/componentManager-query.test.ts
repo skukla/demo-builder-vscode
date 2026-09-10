@@ -10,45 +10,19 @@
  */
 
 import { ComponentManager } from '@/features/components/services/componentManager';
-import { Project } from '@/types';
-import { Logger } from '@/types/logger';
-import { ServiceLocator } from '@/core/di/serviceLocator';
-import { CommandExecutor } from '@/core/shell';
-import {
-    createMockCommandExecutor,
-    createMockLogger,
-    createMockProject,
-    mockSuccessfulExecution
-} from './testHelpers';
+import { Project } from '@/types/base';
+import { setupComponentManager } from './componentManager.testUtils';
 
-// Mock ServiceLocator
-jest.mock('@/core/di/serviceLocator');
 
 // Mock fs/promises
 jest.mock('fs/promises');
 
 describe('ComponentManager - Query', () => {
     let componentManager: ComponentManager;
-    let mockLogger: Logger;
     let mockProject: Project;
-    let mockCommandExecutor: CommandExecutor;
 
     beforeEach(() => {
-        jest.clearAllMocks();
-
-        // Create mocks
-        mockLogger = createMockLogger();
-        mockProject = createMockProject();
-        mockCommandExecutor = createMockCommandExecutor();
-
-        // Mock ServiceLocator
-        (ServiceLocator.getCommandExecutor as jest.Mock).mockReturnValue(mockCommandExecutor);
-
-        // Create ComponentManager instance
-        componentManager = new ComponentManager(mockLogger);
-
-        // Mock successful command execution by default
-        mockSuccessfulExecution(mockCommandExecutor);
+        ({ componentManager, mockProject } = setupComponentManager());
     });
 
     describe('getComponent', () => {
@@ -119,7 +93,7 @@ describe('ComponentManager - Query', () => {
         it('should return empty array for non-matching type', () => {
             const components = componentManager.getComponentsByType(mockProject, 'dependency');
 
-            expect(components).toEqual([]);
+            expect(components).toStrictEqual([]);
         });
 
         it('should return empty array if componentInstances is undefined', () => {
@@ -127,7 +101,7 @@ describe('ComponentManager - Query', () => {
 
             const components = componentManager.getComponentsByType(mockProject, 'frontend');
 
-            expect(components).toEqual([]);
+            expect(components).toStrictEqual([]);
         });
     });
 

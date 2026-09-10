@@ -23,7 +23,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { SECRET_ENV_KEYS } from '@/features/components/config/envVarKeys';
+import { SECRET_ENV_KEYS } from '@/core/config/envVarKeys';
 
 const CATALOG = path.join(
     __dirname,
@@ -61,7 +61,7 @@ function catalogEnvVarNames(): string[] {
 }
 
 describe('SOP: credential env vars are registered as secrets', () => {
-    it('reads the catalog at all — the check is pointed somewhere real', () => {
+    it('CONTROL: reads the catalog at all — the check is pointed somewhere real', () => {
         // Positive control. A wrong path makes every assertion below pass over an
         // empty list, which is the "clean result from a check that never ran"
         // failure this repo keeps hitting.
@@ -74,7 +74,7 @@ describe('SOP: credential env vars are registered as secrets', () => {
             .filter((name) => !NOT_CREDENTIALS[name])
             .filter((name) => !SECRET_ENV_KEYS.includes(name));
 
-        expect(unregistered).toEqual([]);
+        expect(unregistered).toStrictEqual([]);
     });
 
     it('lists nothing in SECRET_ENV_KEYS that the catalog no longer defines', () => {
@@ -83,7 +83,7 @@ describe('SOP: credential env vars are registered as secrets', () => {
         const names = new Set(catalogEnvVarNames());
         const stale = SECRET_ENV_KEYS.filter((key) => !names.has(key));
 
-        expect(stale).toEqual([]);
+        expect(stale).toStrictEqual([]);
     });
 
     it('documents every credential-shaped name it deliberately excuses', () => {
@@ -91,6 +91,6 @@ describe('SOP: credential env vars are registered as secrets', () => {
         const names = new Set(catalogEnvVarNames());
         const gone = Object.keys(NOT_CREDENTIALS).filter((name) => !names.has(name));
 
-        expect(gone).toEqual([]);
+        expect(gone).toStrictEqual([]);
     });
 });

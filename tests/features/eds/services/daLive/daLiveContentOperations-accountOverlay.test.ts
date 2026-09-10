@@ -12,6 +12,7 @@ import {
     type TokenProvider,
 } from '@/features/eds/services/daLive/daLiveContentOperations';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
 jest.mock('@/core/utils/timeoutConfig', () => ({ TIMEOUTS: { NORMAL: 30000, QUICK: 5000 } }));
 
@@ -44,7 +45,7 @@ describe('overlayAccountChrome', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-        logger = { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() } as unknown as Logger;
+        logger = createMockLogger() as unknown as Logger;
         const tokenProvider: TokenProvider = { getAccessToken: jest.fn().mockResolvedValue('mock-ims-token') };
         service = new DaLiveContentOperations(tokenProvider, logger);
     });

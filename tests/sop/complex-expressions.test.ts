@@ -8,10 +8,11 @@
  * - Nested ternary operators (§3)
  * - Boolean expressions with 4+ conditions in JSX (§10)
  *
- * @see .rptc/sop/code-patterns.md - Helper Functions, Ternaries, Predicates
+ * @see docs/development/sop/code-patterns.md - Helper Functions, Ternaries, Predicates
  */
 
 import * as fs from 'fs';
+import { sourceFilesUnder } from './architectureScan';
 import * as path from 'path';
 
 describe('SOP: Complex Expression Extraction', () => {
@@ -103,35 +104,17 @@ describe('SOP: Complex Expression Extraction', () => {
         return violations;
     }
 
-    function getTypeScriptFiles(dir: string, extensions: string[] = ['.ts', '.tsx']): string[] {
-        const files: string[] = [];
-
-        function walkDir(currentDir: string) {
-            if (!fs.existsSync(currentDir)) return;
-
-            const entries = fs.readdirSync(currentDir, { withFileTypes: true });
-            for (const entry of entries) {
-                const fullPath = path.join(currentDir, entry.name);
-                if (entry.isDirectory() && entry.name !== 'node_modules') {
-                    walkDir(fullPath);
-                } else if (
-                    entry.isFile() &&
-                    extensions.some(ext => entry.name.endsWith(ext)) &&
-                    !entry.name.includes('.test.') &&
-                    !entry.name.includes('.spec.')
-                ) {
-                    files.push(fullPath);
-                }
-            }
-        }
-
-        walkDir(dir);
-        return files;
-    }
-
     describe('Nested ternary operators', () => {
+
+        it('CONTROL: the scan sees a corpus worth scanning', () => {
+            // Without this, a walk that returned nothing would make every assertion
+            // below pass while checking no files at all.
+            const srcDir = path.resolve(__dirname, '../../src');
+            expect(sourceFilesUnder(srcDir).length).toBeGreaterThan(300);
+        });
+
         it('should not have nested ternary operators in source files', () => {
-            const files = getTypeScriptFiles(srcDir);
+            const files = sourceFilesUnder(srcDir);
             const allViolations: { file: string; violations: { line: number; content: string }[] }[] = [];
 
             for (const file of files) {
@@ -144,13 +127,13 @@ describe('SOP: Complex Expression Extraction', () => {
                 }
             }
 
-            expect(allViolations).toEqual([]);
+            expect(allViolations).toStrictEqual([]);
         });
     });
 
     describe('Long boolean chains in JSX', () => {
         it('should not have 4+ condition && chains in JSX conditionals', () => {
-            const tsxFiles = getTypeScriptFiles(srcDir, ['.tsx']);
+            const tsxFiles = sourceFilesUnder(srcDir, ['.tsx']);
             const allViolations: { file: string; violations: { line: number; content: string }[] }[] = [];
 
             for (const file of tsxFiles) {
@@ -163,7 +146,7 @@ describe('SOP: Complex Expression Extraction', () => {
                 }
             }
 
-            expect(allViolations).toEqual([]);
+            expect(allViolations).toStrictEqual([]);
         });
     });
 

@@ -180,7 +180,7 @@ describe('brandGalleryHelpers', () => {
                 const result = filterPackagesBySearchQuery(mockPackages, searchQuery);
 
                 // Then: Should return empty array
-                expect(result).toEqual([]);
+                expect(result).toStrictEqual([]);
                 expect(result).toHaveLength(0);
             });
         });
@@ -195,7 +195,7 @@ describe('brandGalleryHelpers', () => {
                 const result = filterPackagesBySearchQuery(emptyPackages, searchQuery);
 
                 // Then: Should return empty array
-                expect(result).toEqual([]);
+                expect(result).toStrictEqual([]);
             });
 
             it('should handle special characters in search query', () => {
@@ -206,7 +206,7 @@ describe('brandGalleryHelpers', () => {
                 const result = filterPackagesBySearchQuery(mockPackages, searchQuery);
 
                 // Then: Should treat as literal characters, no match expected
-                expect(result).toEqual([]);
+                expect(result).toStrictEqual([]);
             });
 
             it('should preserve original array order in results', () => {
@@ -468,7 +468,7 @@ describe('brandGalleryHelpers', () => {
             const result = sortPackages([]);
 
             // Then: Empty result
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
         });
 
         it('should not mutate the original array', () => {

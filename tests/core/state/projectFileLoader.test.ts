@@ -13,20 +13,17 @@ import { resolveDesiredApis } from '@/core/state/componentApiPicks';
 import { ProjectFileLoader } from '@/core/state/projectFileLoader';
 import { getMeshAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import { extractSettingsFromProject } from '@/features/projects-dashboard/services/settingsSerializer';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../helpers/loggerFake';
+import { createMockProject } from '../../helpers/projectFake';
 
 jest.mock('fs/promises');
 
 const mockedFs = fs as jest.Mocked<typeof fs>;
 
 function makeLogger(): Logger {
-    return {
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        debug: jest.fn(),
-    } as unknown as Logger;
+    return createMockLogger() as unknown as Logger;
 }
 
 const PROJECT_PATH = '/tmp/legacy-demo';
@@ -248,7 +245,7 @@ describe('ProjectFileLoader — persisted appBuilderComponents (ADR-011 D3 Step 
         mockedFs.rename.mockResolvedValue(undefined);
         mockedFs.unlink.mockResolvedValue(undefined);
 
-        const project = {
+        const project = createMockProject({
             name: 'round-trip',
             path: PROJECT_PATH,
             created: new Date('2026-07-15T00:00:00Z'),
@@ -257,7 +254,7 @@ describe('ProjectFileLoader — persisted appBuilderComponents (ADR-011 D3 Step 
             componentConfigs: {},
             componentVersions: {},
             appBuilderComponents: persistedMap,
-        } as unknown as Project;
+        });
 
         const writer = new ProjectConfigWriter(makeLogger());
         await writer.saveProjectConfig(project, PROJECT_PATH);
@@ -295,7 +292,7 @@ describe('ProjectFileLoader — persisted appBuilderComponents (ADR-011 D3 Step 
                 status: 'deployed',
             },
         });
-        mockedFs.mkdir.mockResolvedValue(undefined as never);
+        mockedFs.mkdir.mockResolvedValue(undefined);
         mockedFs.rename.mockResolvedValue(undefined);
         mockedFs.unlink.mockResolvedValue(undefined);
 
@@ -340,7 +337,7 @@ describe('ProjectFileLoader — persisted appBuilderComponents (ADR-011 D3 Step 
 // redeploy silently dropped the user's picked APIs.
 describe('additionalConsoleApis — manifest persistence (§E)', () => {
     function baseProject(overrides: Record<string, unknown> = {}): Project {
-        return {
+        return createMockProject({
             name: 'apis-demo',
             path: PROJECT_PATH,
             created: new Date('2026-07-15T00:00:00Z'),
@@ -349,12 +346,12 @@ describe('additionalConsoleApis — manifest persistence (§E)', () => {
             componentConfigs: {},
             componentVersions: {},
             ...overrides,
-        } as unknown as Project;
+        });
     }
 
     async function writeAndCaptureManifest(project: Project): Promise<Record<string, unknown>> {
         mockedFs.access.mockResolvedValue(undefined);
-        mockedFs.mkdir.mockResolvedValue(undefined as never);
+        mockedFs.mkdir.mockResolvedValue(undefined);
         mockedFs.writeFile.mockResolvedValue(undefined);
         mockedFs.rename.mockResolvedValue(undefined);
         mockedFs.unlink.mockResolvedValue(undefined);
@@ -507,13 +504,13 @@ describe('§E edit-mode round-trip — keyed instances → manifest → edit set
         };
 
         mockedFs.access.mockResolvedValue(undefined);
-        mockedFs.mkdir.mockResolvedValue(undefined as never);
+        mockedFs.mkdir.mockResolvedValue(undefined);
         mockedFs.writeFile.mockResolvedValue(undefined);
         mockedFs.rename.mockResolvedValue(undefined);
         mockedFs.unlink.mockResolvedValue(undefined);
         mockedFs.writeFile.mockClear();
 
-        const project = {
+        const project = createMockProject({
             name: 'round-trip-e2e',
             path: PROJECT_PATH,
             created: new Date('2026-07-15T00:00:00Z'),
@@ -525,7 +522,7 @@ describe('§E edit-mode round-trip — keyed instances → manifest → edit set
             // Keyed picks are what persist since step 07; the loader migrates
             // legacy flat-only manifests into this shape on load anyway.
             componentApiPicks: { __existing__: ['FireflySDK'] },
-        } as unknown as Project;
+        });
 
         const writer = new ProjectConfigWriter(makeLogger());
         await writer.saveProjectConfig(project, PROJECT_PATH);

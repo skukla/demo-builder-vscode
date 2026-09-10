@@ -13,38 +13,10 @@
  *    component is produced from the addons (the regression being removed).
  */
 
+import './executorComponentLoading.testUtils';
 import * as meshDeployment from '@/features/mesh/services/meshDeployment';
 import * as stalenessDetector from '@/features/mesh/services/stalenessDetector';
 import { HandlerContext } from '@/types/handlers';
-
-// Mock dependencies
-jest.mock('@/features/mesh/services/meshDeployment');
-jest.mock('@/features/mesh/services/stalenessDetector');
-jest.mock('@/core/di', () => ({
-    ServiceLocator: {
-        getCommandExecutor: jest.fn().mockReturnValue({
-            execute: jest.fn().mockResolvedValue({ code: 0, stdout: '', stderr: '' }),
-        }),
-        getAuthenticationService: jest.fn().mockReturnValue({
-            testDeveloperPermissions: jest.fn().mockResolvedValue({ hasPermissions: true }),
-        }),
-    },
-}));
-
-// Stub the App Builder permission gate so the mesh phase is a no-op.
-jest.mock('@/features/components/services/projectAppBuilderPredicate', () => ({
-    projectRequiresAppBuilder: jest.fn(() => false),
-}));
-
-// Mock fs/promises for file operations
-jest.mock('fs/promises', () => ({
-    mkdir: jest.fn().mockResolvedValue(undefined),
-    writeFile: jest.fn().mockResolvedValue(undefined),
-    access: jest.fn().mockRejectedValue(new Error('Not found')),
-    readdir: jest.fn().mockResolvedValue([]),
-    rm: jest.fn().mockResolvedValue(undefined),
-    rmdir: jest.fn().mockResolvedValue(undefined),
-}));
 
 // Capture every definition passed to installComponent so we can assert on the
 // component list produced by loadComponentDefinitions.
@@ -52,20 +24,31 @@ const installedDefinitions: Array<{ id: string; type?: string; subType?: string 
 
 jest.mock('@/features/components/services/componentManager', () => ({
     ComponentManager: jest.fn().mockImplementation(() => ({
-        installComponent: jest.fn().mockImplementation((_project: unknown, definition: { id: string; type?: string; subType?: string; name?: string }) => {
-            installedDefinitions.push({ id: definition.id, type: definition.type, subType: definition.subType });
-            return Promise.resolve({
-                success: true,
-                component: {
-                    id: definition.id,
-                    name: definition.name || definition.id,
-                    type: definition.type || 'unknown',
-                    status: 'installed',
-                    path: `/tmp/test-project/components/${definition.id}`,
-                    lastUpdated: new Date(),
-                },
-            });
-        }),
+        installComponent: jest
+            .fn()
+            .mockImplementation(
+                (
+                    _project: unknown,
+                    definition: { id: string; type?: string; subType?: string; name?: string }
+                ) => {
+                    installedDefinitions.push({
+                        id: definition.id,
+                        type: definition.type,
+                        subType: definition.subType,
+                    });
+                    return Promise.resolve({
+                        success: true,
+                        component: {
+                            id: definition.id,
+                            name: definition.name || definition.id,
+                            type: definition.type || 'unknown',
+                            status: 'installed',
+                            path: `/tmp/test-project/components/${definition.id}`,
+                            lastUpdated: new Date(),
+                        },
+                    });
+                }
+            ),
         installNpmDependencies: jest.fn().mockResolvedValue({ success: true }),
     })),
 }));
@@ -76,22 +59,26 @@ let getAppBuilderCalled = false;
 jest.mock('@/features/components/services/ComponentRegistryManager', () => ({
     ComponentRegistryManager: jest.fn().mockImplementation(() => ({
         loadRegistry: jest.fn().mockResolvedValue({ envVars: {} }),
-        getFrontends: jest.fn().mockResolvedValue([{
-            id: 'headless',
-            name: 'CitiSignal Next.js',
-            type: 'frontend',
-            source: { type: 'git', url: 'https://github.com/test/headless' },
-        }]),
+        getFrontends: jest.fn().mockResolvedValue([
+            {
+                id: 'headless',
+                name: 'CitiSignal Next.js',
+                type: 'frontend',
+                source: { type: 'git', url: 'https://github.com/test/headless' },
+            },
+        ]),
         getDependencies: jest.fn().mockResolvedValue([]),
         getMesh: jest.fn().mockResolvedValue([]),
         getAppBuilder: jest.fn().mockImplementation(() => {
             getAppBuilderCalled = true;
-            return Promise.resolve([{
-                id: 'my-app',
-                name: 'My App Builder App',
-                type: 'app-builder',
-                source: { type: 'git', url: 'https://github.com/test/my-app' },
-            }]);
+            return Promise.resolve([
+                {
+                    id: 'my-app',
+                    name: 'My App Builder App',
+                    type: 'app-builder',
+                    source: { type: 'git', url: 'https://github.com/test/my-app' },
+                },
+            ]);
         }),
         getComponentById: jest.fn().mockImplementation((id: string) => {
             if (id === 'headless') {
@@ -107,27 +94,6 @@ jest.mock('@/features/components/services/ComponentRegistryManager', () => ({
     })),
 }));
 
-// Mock envFileGenerator
-jest.mock('@/features/project-creation/helpers/envFileGenerator', () => ({
-    generateComponentEnvFile: jest.fn().mockResolvedValue(undefined),
-    generateComponentConfigFiles: jest.fn().mockResolvedValue(undefined),
-}));
-
-// Mock vscode
-jest.mock('vscode', () => ({
-    workspace: {
-        getConfiguration: jest.fn().mockReturnValue({
-            get: jest.fn().mockReturnValue(3000),
-        }),
-    },
-    window: {
-        setStatusBarMessage: jest.fn(),
-    },
-    commands: {
-        executeCommand: jest.fn(),
-    },
-}), { virtual: true });
-
 const mockDeployMeshComponent = meshDeployment.deployMeshComponent as jest.Mock;
 const mockUpdateMeshState = stalenessDetector.updateMeshState as jest.Mock;
 const mockFetchDeployedMeshConfig = stalenessDetector.fetchDeployedMeshConfig as jest.Mock;
@@ -135,27 +101,24 @@ const mockReadMeshEnvVarsFromFile = stalenessDetector.readMeshEnvVarsFromFile as
 
 // Import executor AFTER mocks are set up
 import { executeProjectCreation } from '@/features/project-creation/handlers/executor';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockWebviewPanel } from '../../../helpers/webviewPanelFake';
 describe('Executor - App Builder Component Loading', () => {
     let mockContext: Partial<HandlerContext>;
 
     const createMockContext = (): Partial<HandlerContext> => ({
-        context: { extensionPath: '/test/extension' } as any,
-        logger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            trace: jest.fn(),
-        } as any,
-        stateManager: {
+        context: createMockExtensionContext({}, '/test/extension'),
+        logger: createMockLogger(),
+        stateManager: createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(null),
             saveProject: jest.fn().mockResolvedValue(undefined),
-            addRecentProject: jest.fn().mockResolvedValue(undefined),
-        } as any,
+        }),
         sharedState: { isAuthenticating: false },
         sendMessage: jest.fn(),
-        panel: { visible: false, dispose: jest.fn() } as any,
+        panel: createMockWebviewPanel({ visible: false }),
     });
 
     beforeEach(() => {
@@ -163,6 +126,12 @@ describe('Executor - App Builder Component Loading', () => {
         installedDefinitions.length = 0;
         getAppBuilderCalled = false;
         mockContext = createMockContext();
+        // The registry now arrives ON the context (ADR-015): the handler stopped
+        // constructing one. Reuse this suite's existing module-mock fake rather
+        // than inventing a second — the mock stays, it just gets handed in now.
+        mockContext.componentRegistry = new (jest.requireMock(
+            '@/features/components/services/ComponentRegistryManager'
+        ).ComponentRegistryManager)();
 
         mockDeployMeshComponent.mockResolvedValue({ success: true });
         mockUpdateMeshState.mockResolvedValue(undefined);
@@ -186,7 +155,7 @@ describe('Executor - App Builder Component Loading', () => {
 
         await executeProjectCreation(mockContext as HandlerContext, config);
 
-        const appDef = installedDefinitions.find(d => d.id === 'my-app');
+        const appDef = installedDefinitions.find((d) => d.id === 'my-app');
         expect(appDef).toBeDefined();
         expect(appDef?.type).toBe('app-builder');
     });
@@ -208,7 +177,7 @@ describe('Executor - App Builder Component Loading', () => {
         await executeProjectCreation(mockContext as HandlerContext, config);
 
         expect(getAppBuilderCalled).toBe(true);
-        const appDef = installedDefinitions.find(d => d.id === 'my-app');
+        const appDef = installedDefinitions.find((d) => d.id === 'my-app');
         expect(appDef?.subType).toBe('app');
     });
 
@@ -230,15 +199,15 @@ describe('Executor - App Builder Component Loading', () => {
 
         await executeProjectCreation(mockContext as HandlerContext, config);
 
-        const appBuilderDefs = installedDefinitions.filter(d => d.type === 'app-builder');
+        const appBuilderDefs = installedDefinitions.filter((d) => d.type === 'app-builder');
         expect(appBuilderDefs).toHaveLength(0);
-        const addonDef = installedDefinitions.find(d => d.id === 'adobe-commerce-aco');
+        const addonDef = installedDefinitions.find((d) => d.id === 'adobe-commerce-aco');
         expect(addonDef).toBeUndefined();
         // The old derivation would have produced an app-builder component for the
         // addon id and tried to resolve it (warning when unresolved). The addon id
         // must never enter the app-builder resolution path now.
         expect(mockContext.logger?.warn).not.toHaveBeenCalledWith(
-            expect.stringContaining('adobe-commerce-aco'),
+            expect.stringContaining('adobe-commerce-aco')
         );
     });
 });

@@ -17,9 +17,9 @@ import {
     hasHandler,
     getRegisteredTypes,
     verifyAiSetup,
-    createMockContext,
+    createAiHandlerContext,
 } from './aiHandlers.testUtils';
-import type { HandlerContext } from './aiHandlers.testUtils';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 
 describe('aiHandlers — setup & verification', () => {
@@ -96,7 +96,7 @@ describe('aiHandlers — setup & verification', () => {
             const mockResult = { status: 'ok', checks: [] };
             (verifyAiSetup as jest.Mock).mockResolvedValue(mockResult);
 
-            const context = createMockContext();
+            const context = createAiHandlerContext();
             const result = await handleVerifyAiSetup(context);
 
             expect(verifyAiSetup).toHaveBeenCalledWith(
@@ -113,8 +113,8 @@ describe('aiHandlers — setup & verification', () => {
         it('forwards the project\'s recorded hashes so the inventory can flag edited files (ADR-013)', async () => {
             (verifyAiSetup as jest.Mock).mockResolvedValue({ status: 'ok', checks: [] });
             const aiFileHashes = { 'AGENTS.md': 'abc123' };
-            const context = createMockContext({
-                stateManager: {
+            const context = createAiHandlerContext({
+                stateManager: createMockStateManager({
                     getCurrentProject: jest.fn().mockResolvedValue({
                         name: 'Test Project',
                         path: '/projects/test',
@@ -122,7 +122,7 @@ describe('aiHandlers — setup & verification', () => {
                         aiFileHashes,
                     }),
                     saveProjectConfigOnly: jest.fn(),
-                } as unknown as HandlerContext['stateManager'],
+                }),
             });
 
             await handleVerifyAiSetup(context);
@@ -134,11 +134,32 @@ describe('aiHandlers — setup & verification', () => {
             );
         });
 
+        it('returns the verifier inventory with gatedSkills merged onto it', async () => {
+            const skills = [
+                { name: 'add-component', description: null, path: '/p', source: 'demo-builder' },
+            ];
+            (verifyAiSetup as jest.Mock).mockResolvedValue({
+                status: 'ok',
+                checks: [],
+                inventory: { skills, mcps: [], sessionMcps: [] },
+            });
+
+            const context = createAiHandlerContext();
+            const result = await handleVerifyAiSetup(context);
+
+            // The verifier's own fields survive the merge...
+            expect(result.inventory).toMatchObject({ skills, mcps: [], sessionMcps: [] });
+            // ...and the gate's answer is added beside them, so the modal can say
+            // WHY a tool-driving skill is absent instead of omitting it silently.
+            expect(Array.isArray((result.inventory as { gatedSkills?: unknown }).gatedSkills))
+                .toBe(true);
+        });
+
         it('returns error when stateManager has no current project', async () => {
-            const context = createMockContext({
-                stateManager: {
+            const context = createAiHandlerContext({
+                stateManager: createMockStateManager({
                     getCurrentProject: jest.fn().mockResolvedValue(null),
-                } as unknown as HandlerContext['stateManager'],
+                }),
             });
             const result = await handleVerifyAiSetup(context);
 
@@ -149,7 +170,7 @@ describe('aiHandlers — setup & verification', () => {
         it('propagates errors from verifyAiSetup', async () => {
             (verifyAiSetup as jest.Mock).mockRejectedValue(new Error('fs error'));
 
-            const context = createMockContext();
+            const context = createAiHandlerContext();
             await expect(handleVerifyAiSetup(context)).rejects.toThrow('fs error');
         });
     });
@@ -181,7 +202,7 @@ describe('aiHandlers — setup & verification', () => {
         it('logs the start line with the project path before verifying', async () => {
             (verifyAiSetup as jest.Mock).mockResolvedValue(makeResult());
 
-            const context = createMockContext();
+            const context = createAiHandlerContext();
             await handleVerifyAiSetup(context);
 
             expect(context.logger.info).toHaveBeenCalledWith(
@@ -192,7 +213,7 @@ describe('aiHandlers — setup & verification', () => {
         it('logs the skills summary count at info when there is no skillsError', async () => {
             (verifyAiSetup as jest.Mock).mockResolvedValue(makeResult());
 
-            const context = createMockContext();
+            const context = createAiHandlerContext();
             await handleVerifyAiSetup(context);
 
             expect(context.logger.info).toHaveBeenCalledWith(
@@ -212,7 +233,7 @@ describe('aiHandlers — setup & verification', () => {
                 })
             );
 
-            const context = createMockContext();
+            const context = createAiHandlerContext();
             await handleVerifyAiSetup(context);
 
             expect(context.logger.warn).toHaveBeenCalledWith(
@@ -233,7 +254,7 @@ describe('aiHandlers — setup & verification', () => {
                 })
             );
 
-            const context = createMockContext();
+            const context = createAiHandlerContext();
             await handleVerifyAiSetup(context);
 
             const warnArgs = (context.logger.warn as jest.Mock).mock.calls.flat().join('\n');
@@ -256,7 +277,7 @@ describe('aiHandlers — setup & verification', () => {
                 })
             );
 
-            const context = createMockContext();
+            const context = createAiHandlerContext();
             await handleVerifyAiSetup(context);
 
             expect(context.logger.warn).toHaveBeenCalledWith(
@@ -267,7 +288,7 @@ describe('aiHandlers — setup & verification', () => {
         it('does NOT warn for an ok mcp entry (uses debug instead)', async () => {
             (verifyAiSetup as jest.Mock).mockResolvedValue(makeResult());
 
-            const context = createMockContext();
+            const context = createAiHandlerContext();
             await handleVerifyAiSetup(context);
 
             const warnArgs = (context.logger.warn as jest.Mock).mock.calls.flat().join('\n');

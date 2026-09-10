@@ -1,0 +1,127 @@
+{
+ "rows": [
+  {
+   "unit": "src/features/data-installer/handlers/dataInstallerHandlers.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/features/data-installer/handlers/dataInstallerHandlers.test.ts",
+    "tests/features/data-installer/services/sampleDataInstallDeps.test.ts"
+   ]
+  },
+  {
+   "unit": "src/features/eds/services/authoringExperienceFlip.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/features/eds/services/authoringExperienceFlip.test.ts",
+    "tests/features/eds/services/ewSettingChangeListener.test.ts"
+   ]
+  },
+  {
+   "unit": "src/features/eds/services/configSyncService.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/features/eds/services/configJsonFatalFailure.test.ts",
+    "tests/features/eds/services/configSyncService.test.ts",
+    "tests/features/eds/services/storefrontRepublishConfig-persist.test.ts",
+    "tests/features/eds/services/storefrontRepublishContent.test.ts",
+    "tests/features/projects-dashboard/handlers/dashboardHandlers-dalive-auth.test.ts"
+   ]
+  },
+  {
+   "unit": "src/features/lifecycle/services/projectResetService.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/features/lifecycle/services/projectResetService-componentList.test.ts",
+    "tests/features/lifecycle/services/projectResetService-meshContext.test.ts"
+   ]
+  },
+  {
+   "unit": "src/features/mesh/services/deployMeshHeadless.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/features/mesh/handlers/deployHandler.test.ts",
+    "tests/features/mesh/services/deployMeshHeadless.test.ts",
+    "tests/features/mesh/services/deployMeshWithFeedback.test.ts"
+   ]
+  },
+  {
+   "unit": "src/features/prerequisites/services/PrerequisitesManager.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/core/utils/progressUnifier/testUtils.ts",
+    "tests/features/ai/server/headlessHandlerContext.test.ts",
+    "tests/features/authentication/handlers/testUtils.ts",
+    "tests/features/prerequisites/handlers/checkHandler.testUtils.ts",
+    "tests/features/prerequisites/handlers/security-validation.test.ts",
+    "tests/features/prerequisites/handlers/shared-dependencies.test.ts",
+    "tests/features/prerequisites/handlers/shared-per-node-status.test.ts",
+    "tests/features/prerequisites/services/PrerequisitesManager-checking.test.ts",
+    "tests/features/prerequisites/services/PrerequisitesManager-edgeCases.test.ts",
+    "tests/features/prerequisites/services/PrerequisitesManager-installation.test.ts",
+    "tests/features/prerequisites/services/PrerequisitesManager-progress.test.ts",
+    "tests/features/prerequisites/services/PrerequisitesManager-stateManagement.test.ts",
+    "tests/features/prerequisites/services/parallelExecution.test.ts",
+    "tests/features/prerequisites/services/prerequisiteCacheLifetime.test.ts",
+    "tests/features/project-creation/commands/createProject-configListener.test.ts",
+    "tests/features/project-creation/commands/createProject-context.test.ts",
+    "tests/features/project-creation/commands/createProject-initialData.test.ts",
+    "tests/features/project-creation/commands/createProject.test.ts"
+   ]
+  },
+  {
+   "unit": "src/features/project-creation/services/catalogPrewarmPhase.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/features/project-creation/services/catalogPrewarmPhase.test.ts"
+   ]
+  },
+  {
+   "unit": "src/features/project-creation/services/edsContentSetup.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/features/project-creation/services/edsContentSetup.test.ts"
+   ]
+  },
+  {
+   "unit": "src/features/updates/services/componentUpdater.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/features/updates/commands/checkUpdates-graduation.test.ts",
+    "tests/features/updates/commands/checkUpdates-upstream-addons.test.ts",
+    "tests/features/updates/commands/checkUpdates-upstream-forkSync.test.ts",
+    "tests/features/updates/commands/checkUpdates.test.ts",
+    "tests/features/updates/services/componentUpdater-core.test.ts",
+    "tests/features/updates/services/componentUpdater-extended.test.ts",
+    "tests/features/updates/services/updateApplyService.test.ts"
+   ]
+  },
+  {
+   "unit": "src/features/updates/services/templateSyncService.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/features/updates/commands/checkUpdates-upstream-addons.test.ts",
+    "tests/features/updates/commands/checkUpdates-upstream-forkSync.test.ts",
+    "tests/features/updates/services/templateSyncService-safety.test.ts",
+    "tests/features/updates/services/updateApplyService.test.ts"
+   ]
+  },
+  {
+   "unit": "src/features/updates/services/updateCore.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/features/updates/services/updateApplyService.test.ts"
+   ]
+  },
+  {
+   "unit": "src/features/dashboard/commands/configure.ts",
+   "verdict": "WITNESS",
+   "suites": [
+    "tests/core/commands/commandManager.test.ts",
+    "tests/features/dashboard/commands/configure-authoring-experience.test.ts",
+    "tests/features/dashboard/commands/configure-initialData.test.ts",
+    "tests/features/dashboard/commands/configure-storefront-notification.test.ts",
+    "tests/features/dashboard/commands/configure.test.ts"
+   ]
+  }
+ ]
+}

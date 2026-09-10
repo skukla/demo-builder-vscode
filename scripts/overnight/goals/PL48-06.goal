@@ -1,0 +1,47 @@
+Work backlog item PL-48, candidate PL48-06: src/features/project-creation/ui/components/integration-flow/instanceId.ts
+It ranks 27 of 31 tests redundant (87%) over 40 mutable decisions.
+
+READ scripts/overnight/PL48.md FIRST. It carries the evidence for every rule below and does
+not change between candidates.
+
+THE RANKING IS A READING ORDER, NOT A WORKLIST. A high ratio means "many tests, few
+decisions", which happens both when a suite repeats itself AND when a module simply has
+little to decide. Consolidation does NOT move the metric — measured. The payoff is what
+reading finds.
+
+DONE is either of these, and the second is a complete success:
+  (a) real repetition -> converted to it.each tables, exact assertions, ratchet held
+  (b) arithmetic -> recorded on PL-48 with the reason, nothing changed
+
+FIRST: read the module. Count its actual decisions. A thin factory, a constants file or an
+already-table-driven suite explains the ratio by itself — say so and stop.
+
+IF IT IS REAL REPETITION:
+  - rows are the INPUTS; keep each test's name as the row LABEL when it carries a reason
+  - assert EXACT values, derived from the source, never `not.toContain` or `toBeDefined`
+    where the exact result is knowable
+  - do NOT target the minimal covering set — a case worth naming is worth keeping
+
+WHILE READING, these are the finds that matter more than the tidying: an assertion that
+cannot fail, an assertion too weak to catch a mutant, a decision nothing covers, a test whose
+subject is declared in another module, dead code with no importer. Fix what you find and say
+so in the commit. A defect in src/ may be fixed — say which.
+
+CHECK, SCOPED: the module's suites, `npx tsc --noEmit`, `npm run typecheck:tests`, eslint on
+changed files, and `npm run validate:test-file-sizes`. Exit codes in variables, never read
+through a pipe. Then re-measure:
+  rm -f reports/mutation/focus-incremental.json
+  node scripts/focusModule.mjs src/features/project-creation/ui/components/integration-flow/instanceId.ts
+  npx stryker run stryker.focus.config.json > /tmp/focus.txt 2>&1   (wait on `Done in`)
+  node scripts/checkMutationBaseline.mjs --report reports/mutation/focus.json
+The open-gap count must not RISE. If the score moves, say why in the commit.
+
+RULES. Stay on the work branch; never checkout or merge develop. One commit for this
+candidate, `Backlog: PL-48` trailer, explicit pathspec (`git commit -- <paths>`), never bare
+`git commit` or `-a`. No cloud writes. No attribution trailers. Commit only on a green check.
+
+If a rename or a new suite forms a test family, `tests/sop/test-family-setup.test.ts` needs a
+shared .testUtils — and it reads GIT-TRACKED files, so `git add` before trusting it.
+
+FINISH with two or three plain sentences: which of (a) or (b), what changed, what reading
+found.

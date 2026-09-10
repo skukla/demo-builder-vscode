@@ -20,19 +20,14 @@ jest.mock('@/features/eds/services/patches/codePatchPipelineHelpers', () => ({
 
 import { readLkgSha } from '@/features/eds/services/patches/lkgReader';
 import { applyCanonicalCodePatches } from '@/features/eds/services/patches/codePatchPipelineHelpers';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
 const mockReadLkgSha = readLkgSha as jest.Mock;
 const mockApplyCanonicalCodePatches = applyCanonicalCodePatches as jest.Mock;
 
-const mockLogger: Logger = {
-    trace: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    debug: jest.fn(),
-};
+const mockLogger: Logger = createMockLogger();
 
-function makeMockGithubFileOps(): GitHubFileOperations {
+function makeBrandAssetGithubFileOps(): GitHubFileOperations {
     return {
         resetRepoToTemplate: jest.fn().mockResolvedValue({ commitSha: 'newcommit', fileCount: 2261 }),
     } as unknown as GitHubFileOperations;
@@ -53,7 +48,7 @@ beforeEach(() => {
 describe('pinRepoToLkg — happy path', () => {
     it('reads LKG, applies canonical patches, and calls resetRepoToTemplate with LKG SHA', async () => {
         mockReadLkgSha.mockResolvedValue(LKG_SHA);
-        const ops = makeMockGithubFileOps();
+        const ops = makeBrandAssetGithubFileOps();
 
         const result = await pinRepoToLkg(
             {
@@ -117,7 +112,7 @@ describe('pinRepoToLkg — patch report', () => {
                 codePatchSource: SOURCE,
                 patchReport: report,
             },
-            makeMockGithubFileOps(),
+            makeBrandAssetGithubFileOps(),
             mockLogger,
         );
 
@@ -144,7 +139,7 @@ describe('pinRepoToLkg — patch report', () => {
                     codePatches: ['p'],
                     codePatchSource: SOURCE,
                 },
-                makeMockGithubFileOps(),
+                makeBrandAssetGithubFileOps(),
                 mockLogger,
             ),
         ).resolves.toBe(true);
@@ -158,7 +153,7 @@ describe('pinRepoToLkg — patch report', () => {
 describe('pinRepoToLkg — LKG unreachable (D1 proceed-and-warn)', () => {
     it('returns false and skips the bulk reset when LKG fetch fails', async () => {
         mockReadLkgSha.mockResolvedValue(undefined);
-        const ops = makeMockGithubFileOps();
+        const ops = makeBrandAssetGithubFileOps();
 
         const result = await pinRepoToLkg(
             {
@@ -207,7 +202,7 @@ describe('pinRepoToLkg — LKG unreachable (D1 proceed-and-warn)', () => {
 describe('pinRepoToLkg — target/template separation', () => {
     it('passes the storefront repo as target and canonical as template (NOT the other way around)', async () => {
         mockReadLkgSha.mockResolvedValue(LKG_SHA);
-        const ops = makeMockGithubFileOps();
+        const ops = makeBrandAssetGithubFileOps();
 
         await pinRepoToLkg(
             {

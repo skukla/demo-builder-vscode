@@ -5,11 +5,11 @@ import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { PrerequisitesStep } from '@/features/prerequisites/ui/steps/PrerequisitesStep';
 import '@testing-library/jest-dom';
 import {
-    mockPostMessage,
-    mockOnMessage,
     baseState,
-    setupScrollMock,
+    mockPostMessage,
     resetAllMocks,
+    setupMessageCallbacks,
+    setupScrollMock,
 } from './PrerequisitesStep.testUtils';
 import { WizardState } from '@/types/webview';
 
@@ -46,18 +46,16 @@ describe('PrerequisitesStep - Installation Flow', () => {
         jest.clearAllMocks();
     });
 
-    it('should show install button for failed prerequisites', async () => {
-        let loadedCallback: (data: any) => void = () => {};
-        let statusCallback: (data: any) => void = () => {};
-
-        mockOnMessage.mockImplementation((type: string, callback: (data: any) => void) => {
-            if (type === 'prerequisites-loaded') {
-                loadedCallback = callback;
-            } else if (type === 'prerequisite-status') {
-                statusCallback = callback;
-            }
-            return jest.fn();
-        });
+    /**
+     * Render the step, load a single Docker prerequisite, put it into the
+     * error-with-install state, and wait for the Install button to appear.
+     *
+     * PL-9 lane A: all three tests opened with these same 25 lines. Returns the
+     * message-firing handle so each test can drive what happens NEXT, which is
+     * the only thing they actually differ on.
+     */
+    async function renderWithDockerNeedingInstall() {
+        const fire = setupMessageCallbacks();
 
         render(
             <Provider theme={defaultTheme}>
@@ -72,17 +70,28 @@ describe('PrerequisitesStep - Installation Flow', () => {
             </Provider>
         );
 
-        loadedCallback({
+        fire.fireLoaded({
             prerequisites: [
-                { id: 'docker', name: 'Docker', description: 'Container', optional: false }
-            ]
+                { id: 'docker', name: 'Docker', description: 'Container', optional: false },
+            ],
         });
 
         await waitFor(() => {
             expect(screen.getByText('Docker')).toBeInTheDocument();
         });
 
-        statusCallback({ index: 0, status: 'error', message: 'Not installed', canInstall: true });
+        fire.fireStatus({ index: 0, status: 'error', message: 'Not installed', canInstall: true });
+
+        await waitFor(() => {
+            expect(screen.getByText('Install')).toBeInTheDocument();
+        });
+
+        return fire;
+    }
+
+    it('should show install button for failed prerequisites', async () => {
+        const fire = await renderWithDockerNeedingInstall();
+        fire.fireStatus({ index: 0, status: 'error', message: 'Not installed', canInstall: true });
 
         await waitFor(() => {
             expect(screen.getByText('Install')).toBeInTheDocument();
@@ -91,42 +100,9 @@ describe('PrerequisitesStep - Installation Flow', () => {
 
     it('should trigger installation when Install button clicked', async () => {
         const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-        let loadedCallback: (data: any) => void = () => {};
-        let statusCallback: (data: any) => void = () => {};
 
-        mockOnMessage.mockImplementation((type: string, callback: (data: any) => void) => {
-            if (type === 'prerequisites-loaded') {
-                loadedCallback = callback;
-            } else if (type === 'prerequisite-status') {
-                statusCallback = callback;
-            }
-            return jest.fn();
-        });
-
-        render(
-            <Provider theme={defaultTheme}>
-                <PrerequisitesStep
-                    state={baseState as WizardState}
-                    updateState={mockUpdateState}
-                    onNext={mockOnNext}
-                    onBack={mockOnBack}
-                    setCanProceed={mockSetCanProceed}
-                    currentStep="prerequisites"
-                />
-            </Provider>
-        );
-
-        loadedCallback({
-            prerequisites: [
-                { id: 'docker', name: 'Docker', description: 'Container', optional: false }
-            ]
-        });
-
-        await waitFor(() => {
-            expect(screen.getByText('Docker')).toBeInTheDocument();
-        });
-
-        statusCallback({ index: 0, status: 'error', message: 'Not installed', canInstall: true });
+        const fire = await renderWithDockerNeedingInstall();
+        fire.fireStatus({ index: 0, status: 'error', message: 'Not installed', canInstall: true });
 
         await waitFor(() => {
             expect(screen.getByText('Install')).toBeInTheDocument();
@@ -143,48 +119,14 @@ describe('PrerequisitesStep - Installation Flow', () => {
         });
         // Verify it was actually called (may not be the first call due to check-prerequisites)
         const installCalls = mockPostMessage.mock.calls.filter(
-            call => call[0] === 'install-prerequisite'
+            (call) => call[0] === 'install-prerequisite'
         );
         expect(installCalls.length).toBeGreaterThan(0);
     });
 
     it('should show installation progress', async () => {
-        let loadedCallback: (data: any) => void = () => {};
-        let statusCallback: (data: any) => void = () => {};
-
-        mockOnMessage.mockImplementation((type: string, callback: (data: any) => void) => {
-            if (type === 'prerequisites-loaded') {
-                loadedCallback = callback;
-            } else if (type === 'prerequisite-status') {
-                statusCallback = callback;
-            }
-            return jest.fn();
-        });
-
-        render(
-            <Provider theme={defaultTheme}>
-                <PrerequisitesStep
-                    state={baseState as WizardState}
-                    updateState={mockUpdateState}
-                    onNext={mockOnNext}
-                    onBack={mockOnBack}
-                    setCanProceed={mockSetCanProceed}
-                    currentStep="prerequisites"
-                />
-            </Provider>
-        );
-
-        loadedCallback({
-            prerequisites: [
-                { id: 'docker', name: 'Docker', description: 'Container', optional: false }
-            ]
-        });
-
-        await waitFor(() => {
-            expect(screen.getByText('Docker')).toBeInTheDocument();
-        });
-
-        statusCallback({ index: 0, status: 'checking', message: 'Installing...' });
+        const fire = await renderWithDockerNeedingInstall();
+        fire.fireStatus({ index: 0, status: 'checking', message: 'Installing...' });
 
         await waitFor(() => {
             expect(screen.getByText('Installing...')).toBeInTheDocument();

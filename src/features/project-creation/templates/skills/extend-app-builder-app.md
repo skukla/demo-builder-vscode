@@ -35,9 +35,13 @@ edits and deploys below are per-integration, scoped to that folder.
    If the tool reports the service needs a product profile, direct the user to
    the Adobe Developer Console (Project → Workspace → Add API) instead.
 5. **Build the action(s).** Add code under that integration's `actions/`
-   directory and register each action in its `app.config.yaml`. Prefer the
-   `commerce-extensibility` MCP tools (`aio-app-dev`, `search-commerce-docs`)
-   over guessing App Builder patterns.
+   directory and register each action in its `app.config.yaml`.
+   **Ask the `commerce-extensibility` server BEFORE reading kit source to
+   derive patterns**: `search-commerce-docs` ships the starter kit's own
+   rules — eventing, PaaS/SaaS differences, action structure, onboarding.
+   Measured 2026-08-28: a full starter-kit build session spent most of its
+   cost re-deriving from source files what that server answers in one call,
+   with the server sitting at zero uses.
 6. **Deploy and verify.** Deploys are per-integration: run `aio app deploy`
    from that integration's `components/<id>/` directory (or the extensibility
    tooling's deploy tool), then hit the action URL (`aio app get-url`) before

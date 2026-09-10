@@ -36,7 +36,6 @@ import ViewGrid from '@spectrum-icons/workflow/ViewGrid';
 import ViewList from '@spectrum-icons/workflow/ViewList';
 import React from 'react';
 import { Spinner } from '../ui/Spinner';
-
 /** Available view modes */
 export type ViewMode = 'cards' | 'rows';
 
@@ -130,14 +129,7 @@ function renderViewToggle(
                     onPress={() => onViewModeChange('cards')}
                     aria-label="Card view"
                     aria-pressed={viewMode === 'cards'}
-                    UNSAFE_className={`cursor-pointer ${viewMode === 'cards' ? 'is-selected' : ''}`}
-                    UNSAFE_style={{
-                        backgroundColor:
-                            viewMode === 'cards'
-                                ? 'var(--spectrum-global-color-gray-200)'
-                                : undefined,
-                        borderRadius: '4px',
-                    }}
+                    UNSAFE_className="cursor-pointer search-header-toggle"
                 >
                     <ViewGrid />
                 </ActionButton>
@@ -149,14 +141,7 @@ function renderViewToggle(
                     onPress={() => onViewModeChange('rows')}
                     aria-label="List view"
                     aria-pressed={viewMode === 'rows'}
-                    UNSAFE_className={`cursor-pointer ${viewMode === 'rows' ? 'is-selected' : ''}`}
-                    UNSAFE_style={{
-                        backgroundColor:
-                            viewMode === 'rows'
-                                ? 'var(--spectrum-global-color-gray-200)'
-                                : undefined,
-                        borderRadius: '4px',
-                    }}
+                    UNSAFE_className="cursor-pointer search-header-toggle"
                 >
                     <ViewList />
                 </ActionButton>
@@ -230,7 +215,7 @@ function computeDisplayValues(props: SearchHeaderProps) {
     };
 }
 
-export const SearchHeader: React.FC<SearchHeaderProps> = (props) => {
+export function SearchHeader(props: SearchHeaderProps) {
     const {
         searchQuery,
         onSearchQueryChange,
@@ -285,4 +270,4 @@ export const SearchHeader: React.FC<SearchHeaderProps> = (props) => {
             )}
         </div>
     );
-};
+}

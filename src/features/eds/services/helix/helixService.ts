@@ -30,7 +30,7 @@ import { HelixApiKeys } from './helixApiKeys';
 import type { BulkProgressCallback } from './helixBulkJobs';
 import * as keyStore from './helixKeyStore';
 import { HelixSiteContent, SITE_PUBLISH_PHASES, type SitePublishProgress } from './helixSiteContent';
-import { getLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
 import { runInBatches } from '@/core/utils/promiseUtils';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';

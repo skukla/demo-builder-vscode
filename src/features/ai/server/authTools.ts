@@ -15,7 +15,8 @@ import * as vscode from 'vscode';
 import { z } from 'zod';
 import { clearAdobeTarget } from './adobeTargetStore';
 import { asRawText, asText } from './mcpToolResult';
-import { dispatchHandler } from '@/core/handlers';
+import type { McpToolServer } from './mcpToolServer';
+import { dispatchHandler } from '@/core/handlers/dispatchHandler';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
 import {
@@ -23,6 +24,7 @@ import {
     getGitHubServices,
     showDaLiveAuthQuickPick,
 } from '@/features/eds/handlers/edsHelpers';
+import { GITHUB_SCOPES } from '@/features/eds/services/types';
 import type { HandlerContext } from '@/types/handlers';
 
 interface ProviderStatus {
@@ -33,6 +35,11 @@ interface ProviderStatus {
     login?: string;
     /** GitHub only: orgs this user belongs to — the namespaces a repo can be created in. */
     orgs?: string[];
+    /** GitHub only: where the credential lives — 'stored-token' (extension storage) or
+     * 'vscode-session' (VS Code's account system; adopted by GitHub operations on use). */
+    via?: 'stored-token' | 'vscode-session';
+    /** GitHub only, when unauthenticated: why `false` may not mean "signed out". */
+    note?: string;
     /** DA.live only: the pinned namespace every DA.live write targets. */
     orgName?: string;
     /** Set when the status could not be determined (e.g. EDS services unavailable). */
@@ -46,17 +53,18 @@ interface ProviderStatus {
  * VS Code GitHub session that handler calls `tokenService.storeToken(...)`
  * (`edsGitHubHandlers.ts:79-83`), persisting a credential. Correct mid-setup,
  * wrong under a `get_*` name — an agent pre-flighting auth would silently adopt a
- * session into extension storage. Reading the services reports only what is
- * already stored, and writes nothing.
+ * session into extension storage. Reading here reports the stored token, and
+ * falls back to a SILENT VS Code session read (no prompt, no adoption) —
+ * writes nothing either way.
  *
  * `orgs` earns its place beyond diagnostics: a repo can only be created in a
  * namespace the user belongs to, and nothing else on the agent surface exposes
  * that list.
  */
 async function githubStatus(ctx: HandlerContext): Promise<ProviderStatus> {
-    const { tokenService } = getGitHubServices(ctx);
+    const { tokenService } = getGitHubServices(ctx.context.secrets);
     const validation = await tokenService.validateToken();
-    if (!validation.valid) return { authenticated: false };
+    if (!validation.valid) return githubVsCodeSessionStatus();
 
     // Orgs are ENRICHMENT, so their failure must not unseat the answer. Folding
     // this call into the outer `safeStatus` would report `authenticated: false`
@@ -71,8 +79,38 @@ async function githubStatus(ctx: HandlerContext): Promise<ProviderStatus> {
 
     return {
         authenticated: true,
+        via: 'stored-token',
         login: validation.user?.login,
         ...(orgs ? { orgs } : {}),
+    };
+}
+
+/**
+ * No stored token — ask VS Code's account system, SILENTLY (no prompt, no
+ * adoption, no storage; the wizard's `handleCheckGitHubAuth` is the path that
+ * adopts). Twice an agent read a bare `authenticated: false` here as "signed
+ * out" and recommended a needless sign-in; VS Code holding the session is the
+ * common case, so the answer must say where the credential actually lives.
+ */
+async function githubVsCodeSessionStatus(): Promise<ProviderStatus> {
+    let session: vscode.AuthenticationSession | undefined;
+    try {
+        session = await vscode.authentication.getSession('github', [...GITHUB_SCOPES], {
+            createIfNone: false,
+            silent: true,
+        });
+    } catch {
+        session = undefined;
+    }
+    if (session) {
+        return { authenticated: true, via: 'vscode-session', login: session.account.label };
+    }
+    return {
+        authenticated: false,
+        note:
+            'No stored token and no silently-readable VS Code session. GitHub auth is ' +
+            'managed by VS Code and adopted when a GitHub operation runs — this does ' +
+            'not necessarily mean the user must sign in.',
     };
 }
 
@@ -119,11 +157,11 @@ async function safeStatus(fn: () => Promise<ProviderStatus>): Promise<ProviderSt
  * @param server     McpServer (typed `any`; see registerProjectTools docstring).
  * @param ctxFactory Builds a headless HandlerContext per call.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function registerAuthTools(server: any, ctxFactory: () => HandlerContext): void {
+export function registerAuthTools(server: McpToolServer, ctxFactory: () => HandlerContext): void {
     server.registerTool(
         'get_auth_status',
         {
+            needsAuth: false,
             annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'Get Auth Status',
             description:
@@ -142,6 +180,7 @@ export function registerAuthTools(server: any, ctxFactory: () => HandlerContext)
     server.registerTool(
         'sign_in',
         {
+            needsAuth: false,
             // NOT read-only: writes credentials and opens an auth window.
             annotations: { readOnlyHint: false, destructiveHint: false },
             title: 'Sign In',

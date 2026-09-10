@@ -108,7 +108,7 @@ export function VerifiedField({
                             size="S"
                             UNSAFE_className="text-green-600"
                         />
-                        <Text UNSAFE_style={{ color: 'var(--spectrum-semantic-positive-color-text-small)' }}>
+                        <Text UNSAFE_className="text-positive">
                             Verified
                         </Text>
                     </Flex>
@@ -121,16 +121,11 @@ export function VerifiedField({
                         size="S"
                         UNSAFE_className="text-red-500"
                     />
-                    <Text UNSAFE_style={{ color: 'var(--spectrum-semantic-negative-color-text-small)' }}>
+                    <Text UNSAFE_className="text-negative">
                         {error}
                     </Text>
                 </Flex>
             )}
-
-            <style>{`
-                .text-green-500 { color: var(--spectrum-semantic-positive-color-icon); }
-                .text-red-500 { color: var(--spectrum-semantic-negative-color-icon); }
-            `}</style>
         </Flex>
     );
 }

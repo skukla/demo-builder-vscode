@@ -8,11 +8,14 @@ import type { HandlerContext } from '@/types/handlers';
 import type { AdobeOrg, AdobeProject } from '@/features/authentication/services/types';
 import type { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
 import type { ErrorLogger } from '@/core/logging/errorLogger';
-import type { ProgressUnifier } from '@/core/utils/progressUnifier';
+import type { ProgressUnifier } from '@/core/utils/progressUnifier/ProgressUnifier';
 import type { StepLogger } from '@/core/logging/stepLogger';
-import type { StateManager } from '@/core/state/stateManager';
-import type { ExtensionContext } from 'vscode';
+import { createMockHandlerContext as createMockHandlerContextBase } from '../../../helpers/handlerContextTestHelpers';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 // Test data
 export const mockOrg: AdobeOrg = {
     id: 'org123',
@@ -39,51 +42,27 @@ export const mockOrgs: AdobeOrg[] = [
  * @param overrides - Partial overrides for specific properties
  * @returns A fully mocked HandlerContext
  */
-export function createMockHandlerContext(overrides?: Partial<HandlerContext>): jest.Mocked<HandlerContext> {
-    return {
+export function createAuthHandlerContext(overrides?: Partial<HandlerContext>): jest.Mocked<HandlerContext> {
+    return createMockHandlerContextBase({
         prereqManager: {} as PrerequisitesManager,
-        authManager: {
-            isAuthenticated: jest.fn(),
-            isFullyAuthenticated: jest.fn(),
-            ensureSDKInitialized: jest.fn(),
-            getCurrentOrganization: jest.fn(),
-            getCurrentProject: jest.fn(),
-            getCachedOrganization: jest.fn(),
-            getCachedProject: jest.fn(),
-            getValidationCache: jest.fn(),
-            wasOrgClearedDueToValidation: jest.fn(),
-            login: jest.fn(),
-            clearCache: jest.fn(),
-            getOrganizations: jest.fn(),
-            setCachedOrganization: jest.fn(),
-            setOrgRejectedFlag: jest.fn(),
-            testDeveloperPermissions: jest.fn(),
-        } as any, // Simplified mock - full AuthenticationService interface not needed for tests
+        // The FULL interface, mocked. The literal here named fourteen of the
+        // service's methods and cast the rest away under a comment saying the full
+        // interface was "not needed" — which was true only because the cast meant
+        // nothing checked.
+        authManager: createMockAuthenticationService(),
         errorLogger: {} as ErrorLogger,
         progressUnifier: {} as ProgressUnifier,
         stepLogger: {} as StepLogger,
-        logger: {
-            trace: jest.fn(),
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as any, // Simplified mock
-        debugLogger: {
-            trace: jest.fn(),
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as any, // Simplified mock
-        context: {} as ExtensionContext,
+        logger: createMockLogger(), // Simplified mock
+        debugLogger: createMockLogger(), // Simplified mock
+        context: createMockExtensionContext(),
         panel: undefined,
-        stateManager: {} as StateManager,
+        stateManager: createMockStateManager(),
         communicationManager: undefined,
         sendMessage: jest.fn().mockResolvedValue(undefined),
         sharedState: {
             isAuthenticating: false,
         },
         ...overrides,
-    } as jest.Mocked<HandlerContext>;
+    })
 }

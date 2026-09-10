@@ -33,9 +33,8 @@ async function readEdsToken(secrets: vscode.SecretStorage): Promise<string | nul
     if (!stored) return null;
     try {
         const parsed = JSON.parse(stored) as { token?: unknown };
-        return typeof parsed.token === 'string' && parsed.token.length > 0
-            ? parsed.token
-            : null;
+        // An empty string is returned as-is: the caller's `!token` check rejects it.
+        return typeof parsed.token === 'string' ? parsed.token : null;
     } catch {
         return null;
     }
@@ -72,12 +71,16 @@ async function computeIsCollaborator(
     try {
         const token = await readEdsToken(secrets);
         if (!token) {
-            logger.debug('[Updates] Early-access gate: no GitHub token; treating as non-collaborator');
+            logger.debug(
+                '[Updates] Early-access gate: no GitHub token; treating as non-collaborator',
+            );
             return false;
         }
         const login = await fetchLogin(token);
         if (!login) {
-            logger.debug('[Updates] Early-access gate: identity check failed; treating as non-collaborator');
+            logger.debug(
+                '[Updates] Early-access gate: identity check failed; treating as non-collaborator',
+            );
             return false;
         }
         const isCollab = await fetchIsCollaborator(token, login);

@@ -13,14 +13,6 @@ jest.mock('tree-kill', () => mockTreeKill);
 import { ProcessCleanup } from '@/core/shell/processCleanup';
 
 // Mock logger
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    }),
-}));
 
 describe('ProcessCleanup - Mocked Tests', () => {
     let originalKill: typeof process.kill;
@@ -35,60 +27,68 @@ describe('ProcessCleanup - Mocked Tests', () => {
         processExists = new Set([1000, 2000, 3000]); // Mock PIDs that exist
 
         // Configure tree-kill mock to simulate killing processes (synchronous to avoid timer leaks)
-        mockTreeKill.mockImplementation((pid: number, signal: string, callback: (err?: Error) => void) => {
-            // Simulate tree-kill sending signal and process exiting
-            if (processExists.has(pid)) {
-                // Both SIGTERM and SIGKILL kill the process immediately in the mock
-                if (signal === 'SIGTERM' || signal === 'TERM' || signal === 'SIGKILL' || signal === 'KILL') {
-                    processExists.delete(pid);
-                    callback();
+        mockTreeKill.mockImplementation(
+            (pid: number, signal: string, callback: (err?: Error) => void) => {
+                // Simulate tree-kill sending signal and process exiting
+                if (processExists.has(pid)) {
+                    // Both SIGTERM and SIGKILL kill the process immediately in the mock
+                    if (
+                        signal === 'SIGTERM' ||
+                        signal === 'TERM' ||
+                        signal === 'SIGKILL' ||
+                        signal === 'KILL'
+                    ) {
+                        processExists.delete(pid);
+                        callback();
+                    } else {
+                        callback();
+                    }
+                } else {
+                    // Process doesn't exist
+                    const error: any = new Error('No such process');
+                    error.message = 'ESRCH';
+                    callback(error);
                 }
-                else {
-                    callback();
-                }
-            } else {
-                // Process doesn't exist
-                const error: any = new Error('No such process');
-                error.message = 'ESRCH';
-                callback(error);
             }
-        });
+        );
 
         // Mock process.kill to track calls and simulate process behavior
-        process.kill = jest.fn().mockImplementation((pid: number, signal: NodeJS.Signals | number = 'SIGTERM') => {
-            killCalls.push({ pid, signal });
+        process.kill = jest
+            .fn()
+            .mockImplementation((pid: number, signal: NodeJS.Signals | number = 'SIGTERM') => {
+                killCalls.push({ pid, signal });
 
-            // Signal 0 just checks existence
-            if (signal === 0) {
+                // Signal 0 just checks existence
+                if (signal === 0) {
+                    if (!processExists.has(pid)) {
+                        const error: any = new Error('No such process');
+                        error.code = 'ESRCH';
+                        throw error;
+                    }
+                    return true;
+                }
+
+                // Check if process exists
                 if (!processExists.has(pid)) {
                     const error: any = new Error('No such process');
                     error.code = 'ESRCH';
                     throw error;
                 }
+
+                // Simulate SIGTERM - process exits immediately in mock
+                if (signal === 'SIGTERM') {
+                    processExists.delete(pid);
+                    return true;
+                }
+
+                // Simulate SIGKILL - immediate exit
+                if (signal === 'SIGKILL') {
+                    processExists.delete(pid);
+                    return true;
+                }
+
                 return true;
-            }
-
-            // Check if process exists
-            if (!processExists.has(pid)) {
-                const error: any = new Error('No such process');
-                error.code = 'ESRCH';
-                throw error;
-            }
-
-            // Simulate SIGTERM - process exits immediately in mock
-            if (signal === 'SIGTERM') {
-                processExists.delete(pid);
-                return true;
-            }
-
-            // Simulate SIGKILL - immediate exit
-            if (signal === 'SIGKILL') {
-                processExists.delete(pid);
-                return true;
-            }
-
-            return true;
-        }) as any;
+            });
     });
 
     afterEach(() => {
@@ -108,11 +108,7 @@ describe('ProcessCleanup - Mocked Tests', () => {
             await killPromise;
 
             // Should have called tree-kill with SIGTERM
-            expect(mockTreeKill).toHaveBeenCalledWith(
-                pid,
-                'SIGTERM',
-                expect.any(Function)
-            );
+            expect(mockTreeKill).toHaveBeenCalledWith(pid, 'SIGTERM', expect.any(Function));
 
             // Process should be gone
             expect(processExists.has(pid)).toBe(false);
@@ -138,29 +134,31 @@ describe('ProcessCleanup - Mocked Tests', () => {
             const pid = 3000;
 
             // Make tree-kill ignore SIGTERM (process stays alive)
-            mockTreeKill.mockImplementation((pid: number, signal: string, callback: (err?: Error) => void) => {
-                if (!processExists.has(pid)) {
-                    const error: any = new Error('No such process');
-                    error.message = 'ESRCH';
-                    callback(error);
-                    return;
-                }
+            mockTreeKill.mockImplementation(
+                (pid: number, signal: string, callback: (err?: Error) => void) => {
+                    if (!processExists.has(pid)) {
+                        const error: any = new Error('No such process');
+                        error.message = 'ESRCH';
+                        callback(error);
+                        return;
+                    }
 
-                // SIGTERM ignored (process stays alive) - just call callback without killing
-                if (signal === 'SIGTERM' || signal === 'TERM') {
+                    // SIGTERM ignored (process stays alive) - just call callback without killing
+                    if (signal === 'SIGTERM' || signal === 'TERM') {
+                        callback();
+                        return;
+                    }
+
+                    // SIGKILL works immediately
+                    if (signal === 'SIGKILL' || signal === 'KILL') {
+                        processExists.delete(pid);
+                        callback();
+                        return;
+                    }
+
                     callback();
-                    return;
                 }
-
-                // SIGKILL works immediately
-                if (signal === 'SIGKILL' || signal === 'KILL') {
-                    processExists.delete(pid);
-                    callback();
-                    return;
-                }
-
-                callback();
-            });
+            );
 
             const killPromise = cleanup.killProcessTree(pid, 'SIGTERM');
             await jest.runAllTimersAsync();
@@ -176,15 +174,14 @@ describe('ProcessCleanup - Mocked Tests', () => {
             const cleanup = new ProcessCleanup();
             const nonExistentPid = 999999;
 
-            const startTime = Date.now();
             await cleanup.killProcessTree(nonExistentPid);
-            const duration = Date.now() - startTime;
 
-            // Should complete immediately (< 50ms)
-            expect(duration).toBeLessThan(50);
+            // "Immediately" means it took the existence-check path and stopped.
+            // That is what the kill-signal assertion below proves; a wall-clock
+            // bound only proved the machine was not busy (PL-41).
 
             // Should not have sent any kill signals (only existence check)
-            const actualKills = killCalls.filter(c => c.signal !== 0);
+            const actualKills = killCalls.filter((c) => c.signal !== 0);
             expect(actualKills).toHaveLength(0);
         });
     });
@@ -198,11 +195,13 @@ describe('ProcessCleanup - Mocked Tests', () => {
             processExists.add(protectedPid);
 
             // Make tree-kill return EPERM error
-            mockTreeKill.mockImplementation((pid: number, signal: string, callback: (err?: Error) => void) => {
-                const error: any = new Error('Operation not permitted');
-                error.code = 'EPERM';
-                callback(error);
-            });
+            mockTreeKill.mockImplementation(
+                (pid: number, signal: string, callback: (err?: Error) => void) => {
+                    const error: any = new Error('Operation not permitted');
+                    error.code = 'EPERM';
+                    callback(error);
+                }
+            );
 
             await expect(cleanup.killProcessTree(protectedPid, 'SIGTERM')).rejects.toThrow();
         });
@@ -215,20 +214,27 @@ describe('ProcessCleanup - Mocked Tests', () => {
             processExists.add(testPid);
 
             // Make tree-kill return error
-            mockTreeKill.mockImplementation((pid: number, signal: string, callback: (err?: Error) => void) => {
-                const error: any = new Error('EPERM: operation not permitted');
-                error.code = 'EPERM';
-                callback(error);
-            });
+            mockTreeKill.mockImplementation(
+                (pid: number, signal: string, callback: (err?: Error) => void) => {
+                    const error: any = new Error('EPERM: operation not permitted');
+                    error.code = 'EPERM';
+                    callback(error);
+                }
+            );
 
-            try {
-                await cleanup.killProcessTree(testPid, 'SIGTERM');
-                fail('Should have thrown');
-            } catch (error: any) {
-                // Error may not include PID if tree-kill threw
-                // Main thing is it throws an error
-                expect(error).toBeDefined();
-            }
+            // The REJECTION is the claim. Captured with .then(resolve, reject) and
+            // asserted outside any catch, so the assertions always run — inside a
+            // catch they are skipped entirely if the call ever stops throwing, and
+            // `fail()` in the try is the only thing that was noticing.
+            const error = await cleanup.killProcessTree(testPid, 'SIGTERM').then(
+                () => {
+                    throw new Error('expected a rejection, but the call resolved');
+                },
+                (caught: unknown) => caught as NodeJS.ErrnoException,
+            );
+            // Error may not include PID if tree-kill threw
+            // Main thing is it throws an error
+            expect(error).toBeDefined();
         });
     });
 
@@ -263,11 +269,7 @@ describe('ProcessCleanup - Mocked Tests', () => {
             await killPromise;
 
             // tree-kill should have been called with SIGTERM
-            expect(mockTreeKill).toHaveBeenCalledWith(
-                1000,
-                'SIGTERM',
-                expect.any(Function)
-            );
+            expect(mockTreeKill).toHaveBeenCalledWith(1000, 'SIGTERM', expect.any(Function));
         });
 
         it('should accept SIGKILL signal', async () => {
@@ -277,11 +279,7 @@ describe('ProcessCleanup - Mocked Tests', () => {
             await killPromise;
 
             // tree-kill should have been called with SIGKILL
-            expect(mockTreeKill).toHaveBeenCalledWith(
-                1000,
-                'SIGKILL',
-                expect.any(Function)
-            );
+            expect(mockTreeKill).toHaveBeenCalledWith(1000, 'SIGKILL', expect.any(Function));
         });
 
         it('should use SIGTERM by default', async () => {
@@ -291,11 +289,7 @@ describe('ProcessCleanup - Mocked Tests', () => {
             await killPromise;
 
             // tree-kill should have been called with SIGTERM (default)
-            expect(mockTreeKill).toHaveBeenCalledWith(
-                1000,
-                'SIGTERM',
-                expect.any(Function)
-            );
+            expect(mockTreeKill).toHaveBeenCalledWith(1000, 'SIGTERM', expect.any(Function));
         });
     });
 
@@ -305,7 +299,7 @@ describe('ProcessCleanup - Mocked Tests', () => {
             await cleanup.killProcessTree(999999);
 
             // Should have called with signal 0 to check existence
-            expect(killCalls.some(c => c.signal === 0)).toBe(true);
+            expect(killCalls.some((c) => c.signal === 0)).toBe(true);
         });
 
         it('should handle ESRCH error gracefully', async () => {
@@ -325,7 +319,9 @@ describe('ProcessCleanup - Mocked Tests', () => {
             await jest.runAllTimersAsync();
             await killPromise;
 
-            // Test passes if Jest doesn't complain about open handles
+            // "Jest doesn't complain about open handles" was the whole check, and
+            // jest complains about that AFTER the suite, if at all. Ask directly.
+            expect(jest.getTimerCount()).toBe(0);
         });
 
         it('should clean up on error', async () => {
@@ -335,11 +331,13 @@ describe('ProcessCleanup - Mocked Tests', () => {
             processExists.add(1000);
 
             // Make tree-kill throw error immediately
-            mockTreeKill.mockImplementation((pid: number, signal: string, callback: (err?: Error) => void) => {
-                const error: any = new Error('EPERM');
-                error.code = 'EPERM';
-                callback(error);
-            });
+            mockTreeKill.mockImplementation(
+                (pid: number, signal: string, callback: (err?: Error) => void) => {
+                    const error: any = new Error('EPERM');
+                    error.code = 'EPERM';
+                    callback(error);
+                }
+            );
 
             try {
                 await cleanup.killProcessTree(1000);
@@ -347,7 +345,8 @@ describe('ProcessCleanup - Mocked Tests', () => {
                 // Expected to throw
             }
 
-            // Test passes if no hanging handles
+            // The error path has to clean up too — that is the actual claim here.
+            expect(jest.getTimerCount()).toBe(0);
         });
     });
 });

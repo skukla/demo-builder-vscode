@@ -71,6 +71,48 @@ describe('BuildYourProjectSummary', () => {
         expect(container.querySelectorAll('.sum-row.done')).toHaveLength(2);
     });
 
+    // The ✓ is the only signal that a row is FINISHED rather than merely filled in,
+    // and it renders inside the row label — so it has to be counted where it sits,
+    // not just totalled. A ✓ on an unfinished row tells the SC the step is done.
+    it('renders the ✓ on the done rows and on no others', () => {
+        const { container } = renderWithProvider(
+            <BuildYourProjectSummary architectureLabel={null} groups={GROUPS} />,
+        );
+
+        expect(container.querySelectorAll('.sum-check')).toHaveLength(2);
+        expect(container.querySelectorAll('.sum-row.done .sum-check')).toHaveLength(2);
+        expect(container.querySelectorAll('.sum-row:not(.done) .sum-check')).toHaveLength(0);
+    });
+
+    // done is a CLAIM the provider makes; the value is the evidence. A row needs
+    // both, so neither half alone marks the row complete.
+    it('does not mark a row done when it has a value but done is false', () => {
+        const groups: SummaryGroup[] = [
+            { heading: 'Commerce', rows: [{ label: 'Catalog', value: 'Citisignal', done: false }] },
+        ];
+
+        const { container } = renderWithProvider(
+            <BuildYourProjectSummary architectureLabel={null} groups={groups} />,
+        );
+
+        expect(container.querySelectorAll('.sum-row.done')).toHaveLength(0);
+        expect(container.querySelectorAll('.sum-check')).toHaveLength(0);
+    });
+
+    it('does not mark a row done when it is flagged done but has no value', () => {
+        const groups: SummaryGroup[] = [
+            { heading: 'Commerce', rows: [{ label: 'Catalog', done: true }] },
+        ];
+
+        const { container } = renderWithProvider(
+            <BuildYourProjectSummary architectureLabel={null} groups={groups} />,
+        );
+
+        expect(container.querySelectorAll('.sum-row.done')).toHaveLength(0);
+        expect(container.querySelectorAll('.sum-check')).toHaveLength(0);
+        expect(screen.getByText('Not set')).toBeInTheDocument();
+    });
+
     it('renders nothing for groups when none are provided (architecture line only)', () => {
         renderWithProvider(<BuildYourProjectSummary architectureLabel="X" groups={[]} />);
         expect(screen.queryByText('Commerce')).not.toBeInTheDocument();

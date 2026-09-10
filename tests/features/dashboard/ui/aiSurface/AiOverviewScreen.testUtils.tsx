@@ -12,6 +12,7 @@
  * exported helpers, never imported directly by the test files.
  */
 
+import '../../../../helpers/webviewClientMock';
 import { render, act } from '@testing-library/react';
 import React from 'react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
@@ -19,19 +20,36 @@ import { AiOverviewScreen } from '@/features/dashboard/ui/aiSurface/AiOverviewSc
 import '@testing-library/jest-dom';
 import type { Project } from '@/types/base';
 import type { AiInventory, SkillInventoryEntry } from '@/types/ai';
+import { createMockProject as createMockProjectBase } from '../../../../helpers/projectFake';
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
 
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        postMessage: jest.fn(),
-        request: jest.fn(),
-        onMessage: jest.fn(() => jest.fn()),
-    },
+// Mock the page chrome to keep tests focused on composition.
+jest.mock('@/core/ui/components/layout/PageFooter', () => ({
+    PageFooter: ({
+        leftContent,
+        rightContent,
+    }: {
+        leftContent?: React.ReactNode;
+        rightContent?: React.ReactNode;
+    }) => (
+        <div data-testid="page-footer">
+            <div data-testid="footer-left">{leftContent}</div>
+            <div data-testid="footer-right">{rightContent}</div>
+        </div>
+    ),
 }));
 
-// Mock the page chrome to keep tests focused on composition.
-jest.mock('@/core/ui/components/layout', () => ({
+jest.mock('@/core/ui/components/layout/PageHeader', () => ({
+    PageHeader: ({ title, subtitle }: { title: string; subtitle?: string }) => (
+        <div data-testid="page-header">
+            <h1>{title}</h1>
+            {subtitle && <h3 data-testid="page-header-subtitle">{subtitle}</h3>}
+        </div>
+    ),
+}));
+
+jest.mock('@/core/ui/components/layout/PageLayout', () => ({
     PageLayout: ({
         header,
         footer,
@@ -47,28 +65,16 @@ jest.mock('@/core/ui/components/layout', () => ({
             <div data-testid="page-layout-footer">{footer}</div>
         </div>
     ),
-    PageHeader: ({ title, subtitle }: { title: string; subtitle?: string }) => (
-        <div data-testid="page-header">
-            <h1>{title}</h1>
-            {subtitle && <h3 data-testid="page-header-subtitle">{subtitle}</h3>}
-        </div>
-    ),
-    PageFooter: ({ leftContent, rightContent }: { leftContent?: React.ReactNode; rightContent?: React.ReactNode }) => (
-        <div data-testid="page-footer">
-            <div data-testid="footer-left">{leftContent}</div>
-            <div data-testid="footer-right">{rightContent}</div>
-        </div>
-    ),
 }));
 
 // ─── Fixtures ──────────────────────────────────────────────────────────────────
 
-export function makeProject(overrides: Partial<Project> = {}): Project {
-    return {
+export function makeAiOverviewProject(overrides: Partial<Project> = {}): Project {
+    return createMockProjectBase({
         name: 'My Demo Project',
         path: '/projects/my-demo',
         ...overrides,
-    } as Project;
+    });
 }
 
 function makeSkill(overrides: Partial<SkillInventoryEntry> = {}): SkillInventoryEntry {
@@ -109,31 +115,31 @@ export function makeFullInventory(): AiInventory {
 }
 
 export function makeProjectWithUserPrompts(): Project {
-    return makeProject({
+    return makeAiOverviewProject({
         aiPrompts: [
             { id: 'u1', title: 'My first user prompt', prompt: 'Do thing one' },
             { id: 'u2', title: 'My second user prompt', prompt: 'Do thing two' },
         ],
-    } as Partial<Project>);
+    });
 }
 
 // ─── Render helpers ──────────────────────────────────────────────────────────
 
-export async function renderScreen(opts: {
-    projectOverrides?: Partial<Project>;
-    inventory?: AiInventory;
-    status?: 'ok' | 'warning' | 'error';
-    /**
-     * Override the response for specific request types. Used in handful of
-     * cases where the default verify-ai-setup response shape is wrong for
-     * the test.
-     */
-    requestOverrides?: Record<string, unknown>;
-} = {}) {
-    const { webviewClient } = jest.requireMock('@/core/ui/utils/WebviewClient') as {
-        webviewClient: { request: jest.Mock; postMessage: jest.Mock; onMessage: jest.Mock };
-    };
-    const project = makeProject(opts.projectOverrides);
+export async function renderScreen(
+    opts: {
+        projectOverrides?: Partial<Project>;
+        inventory?: AiInventory;
+        status?: 'ok' | 'warning' | 'error';
+        /**
+         * Override the response for specific request types. Used in handful of
+         * cases where the default verify-ai-setup response shape is wrong for
+         * the test.
+         */
+        requestOverrides?: Record<string, unknown>;
+    } = {}
+) {
+    const { webviewClient } = jest.requireMock('@/core/ui/utils/WebviewClient');
+    const project = makeAiOverviewProject(opts.projectOverrides);
     const defaultVerifyResponse = {
         success: true,
         status: opts.status ?? 'ok',
@@ -156,13 +162,12 @@ export async function renderScreen(opts: {
         return Promise.resolve(defaultVerifyResponse);
     });
 
-
     let result!: ReturnType<typeof render>;
     await act(async () => {
         result = render(
             <Provider theme={defaultTheme}>
                 <AiOverviewScreen project={project} />
-            </Provider>,
+            </Provider>
         );
         jest.runAllTimers();
     });
@@ -171,4 +176,64 @@ export async function renderScreen(opts: {
         await Promise.resolve();
     });
     return { ...result, project, webviewClient };
+}
+
+/**
+ * Render with the project prop under the spec's control, so it can be CHANGED.
+ *
+ * `renderScreen` above builds its own project and answers every request the same
+ * way for the life of the test. The mount effect keys on `project.path`, and the
+ * response it ignores when that key changes is a decision nothing could reach
+ * through that helper.
+ */
+export async function renderWithProject(
+    project: Project,
+    respond: (type: string) => Promise<unknown>
+) {
+    const { webviewClient } = jest.requireMock('@/core/ui/utils/WebviewClient');
+    webviewClient.request.mockImplementation((type: string) => respond(type));
+
+    const tree = (p: Project) => (
+        <Provider theme={defaultTheme}>
+            <AiOverviewScreen project={p} />
+        </Provider>
+    );
+
+    let result!: ReturnType<typeof render>;
+    await act(async () => {
+        result = render(tree(project));
+        jest.runAllTimers();
+    });
+    await settleScreen();
+
+    return {
+        ...result,
+        webviewClient,
+        async showProject(next: Project) {
+            await act(async () => {
+                result.rerender(tree(next));
+                jest.runAllTimers();
+            });
+            await settleScreen();
+        },
+    };
+}
+
+/** Drain the in-flight requests inside act(), the way `reactSettle` prescribes. */
+export async function settleScreen(): Promise<void> {
+    await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+    });
+}
+
+/** A promise the spec resolves by hand, for responses that must arrive LATE. */
+export function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
+    let resolve!: (value: T) => void;
+    const promise = new Promise<T>((r) => {
+        resolve = r;
+    });
+    return { promise, resolve };
 }

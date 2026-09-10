@@ -3,10 +3,69 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { WizardContainer } from './WizardContainer';
 import { WebviewApp } from '@/core/ui/components/WebviewApp';
+// The base layers. They arrive as REAL imports, in this entry's graph, because
+// that is the only delivery this build resolves. index.css used to pull them in
+// with `@import './reset.css'` — which webpack's css-loader inlined at build
+// time, and which the esbuild plugin that replaced it (580495214, 2026-04-13)
+// passes through as literal text. The browser then tried to fetch them relative
+// to a vscode-webview:// URL and got nothing, so the reset and every design
+// token were absent from all eight bundles for five months. ADR-017 §6 asks for
+// exactly this: a stylesheet belongs to its bundle's GRAPH.
+import '@/core/ui/styles/reset.css';
+import '@/core/ui/styles/tokens.css';
 import '@/core/ui/styles/index.css';
 import '@/core/ui/styles/vscode-theme.css';
 import '@/core/ui/styles/wizard.css';
-import '@/core/ui/styles/custom-spectrum.css';
+import '@/core/ui/styles/utilities.css';
+// .datapack-* rules, moved out of utilities.css by the CSS migration.
+// The wizard and the data installer both render a component using them; kept
+// separate from data-installer.css so the wizard does not drag in that
+// surface's unrelated rules.
+import '@/features/data-installer/ui/styles/datapack.css';
+// The .prerequisite-* rules, moved out of utilities.css by the CSS
+// migration (.rptc/plans/css-architecture-migration). The wizard is the only
+// entry whose import graph reaches PrerequisitesStep.
+import '@/features/prerequisites/ui/styles/prerequisites.css';
+// .brand-* and .expandable-* rules, moved out of utilities.css by the CSS
+// migration. They share a sheet because `.expandable-brand-card` IS a brand card,
+// not because they could not be separated — the refusal that forced them to move
+// together was a false one (corrected 2026-09-09). The wizard is the only entry
+// whose graph reaches a component using either.
+import '../styles/brand-cards.css';
+// .int-* (integration flow) and .sum-* (build summary), moved out of
+// utilities.css by the CSS migration. Wizard-only families.
+import '../styles/integration-results.css';
+import '../styles/build-summary.css';
+// .intflow-* — the Add Integration modal. TWO entries render it; the dedicated
+// integrations surface imports this same sheet.
+import '../styles/add-integration-flow.css';
+// .timeline-* and .wizard-* — the SETUP PROGRESS rail and the wizard shell,
+// including the rail-collapse breakpoint. Wizard-only.
+import '../styles/wizard-timeline.css';
+// .integration-* — IntegrationCard lives in core/ui and three entries render it.
+import '@/core/ui/styles/integration-cards.css';
+// .modal-* — the shared Modal shell. Five of the eight entries render it.
+import '@/core/ui/styles/modal.css';
+// The wizard's 14 small families, batched into one sheet — see its header.
+import '../styles/wizard-misc.css';
+// Step/form scaffolding shared with Configure and the Data Installer.
+import '@/core/ui/styles/step-scaffold.css';
+// .vsteplist-* — the vertical step list, shared with Configure.
+import '@/core/ui/styles/vstep-list.css';
+// .choice-* — the option cards, also rendered on the integrations surface.
+import '../styles/choice-cards.css';
+// .db-* — the shared detail drawer.
+import '@/core/ui/styles/drawer.css';
+// .two-* — the shared two-column layout's stacking breakpoint.
+import '@/core/ui/styles/two-column-layout.css';
+// .build-* — the Build Your Project area and its summary column.
+import '../styles/build-areas.css';
+// .inline-notice-*, .inline-rename-* — two small shared components.
+import '@/core/ui/styles/inline-controls.css';
+// The shared UI vocabulary — 19 small families. Seven of the eight entries.
+import '@/core/ui/styles/shared-ui.css';
+// .icon-* — the icon-above-label pattern.
+import '@/core/ui/styles/icon-label.css';
 import type { WizardInitialData } from '@/types/webviewPayloads';
 
 // Get root element

@@ -14,21 +14,6 @@ import { createMockExecaSubprocess, setupMockDependencies, simulateSubprocessCom
 jest.mock('execa');
 import execa from 'execa';
 
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({
-        error: jest.fn(),
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-    }),
-}));
-
-jest.mock('@/core/shell/commandSequencer');
-jest.mock('@/core/shell/environmentSetup');
-jest.mock('@/core/shell/fileWatcher');
-jest.mock('@/core/shell/pollingService');
-jest.mock('@/core/shell/resourceLocker');
-jest.mock('@/core/shell/retryStrategyManager');
 
 const TARGET = {
     orgId: '285361@AdobeOrg',
@@ -42,13 +27,13 @@ describe('CommandExecutor - org-context env injection', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-        setupMockDependencies();
-        commandExecutor = new CommandExecutor();
+        const mockDependencies = setupMockDependencies();
+        commandExecutor = new CommandExecutor(mockDependencies.deps);
     });
 
     const runAio = async (command: string, wrap: boolean) => {
         const mockSubprocess = createMockExecaSubprocess();
-        mockExeca.mockReturnValue(mockSubprocess as any);
+        mockExeca.mockReturnValue(mockSubprocess);
 
         const exec = () => {
             const p = commandExecutor.execute(command, { configureTelemetry: false });

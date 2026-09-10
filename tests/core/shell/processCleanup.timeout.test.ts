@@ -9,14 +9,6 @@ import { ProcessCleanup } from '@/core/shell/processCleanup';
 import { spawn } from 'child_process';
 
 // Mock logger
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    }),
-}));
 
 /**
  * These suites drive REAL child processes: node spawn + a 5s graceful-shutdown

@@ -589,7 +589,12 @@ describe('RepoSelectionInline - GitHub App Check', () => {
  * users whose credential AEM refuses, which is the bug class that started this.
  */
 describe('computeCodeSyncValid — existing repos (2026-08-06)', () => {
-    const repo = { fullName: 'o/r' } as never;
+    const repo: GitHubRepoItem = {
+        id: 'o/r',
+        name: 'r',
+        fullName: 'o/r',
+        htmlUrl: 'https://github.com/o/r',
+    };
 
     it('blocks when Helix definitively reports the App missing', () => {
         expect(

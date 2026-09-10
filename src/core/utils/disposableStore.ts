@@ -42,7 +42,7 @@
  */
 
 import * as vscode from 'vscode';
-import { getLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
 
 export class DisposableStore implements vscode.Disposable {
     private disposables: vscode.Disposable[] = [];

@@ -1,0 +1,404 @@
+import { renderHook, act } from '@testing-library/react';
+import { useSearchFilter } from '@/core/ui/hooks/useSearchFilter';
+import { rowWithNoTitle, testItems, type TestItem } from './useSearchFilter.testUtils';
+
+describe('useSearchFilter', () => {
+
+    describe('initial state', () => {
+        it('returns all items when query is empty', () => {
+            const { result } = renderHook(() =>
+                useSearchFilter(testItems, {
+                    searchFields: ['title', 'description'],
+                })
+            );
+
+            expect(result.current.query).toBe('');
+            expect(result.current.filteredItems).toEqual(testItems);
+            expect(result.current.isFiltering).toBe(false);
+        });
+
+        it('accepts initial query', () => {
+            const { result } = renderHook(() =>
+                useSearchFilter(testItems, {
+                    initialQuery: 'React',
+                    searchFields: ['title'],
+                })
+            );
+
+            expect(result.current.query).toBe('React');
+            expect(result.current.isFiltering).toBe(true);
+        });
+    });
+
+    describe('search by single field', () => {
+        it('filters by title field', () => {
+            const { result } = renderHook(() =>
+                useSearchFilter(testItems, { searchFields: ['title'] })
+            );
+
+            act(() => {
+                result.current.setQuery('TypeScript');
+            });
+
+            expect(result.current.filteredItems).toHaveLength(1);
+            expect(result.current.filteredItems[0].id).toBe('2');
+        });
+
+        it('filters by description field', () => {
+            const { result } = renderHook(() =>
+                useSearchFilter(testItems, { searchFields: ['description'] })
+            );
+
+            act(() => {
+                result.current.setQuery('Test');
+            });
+
+            expect(result.current.filteredItems).toHaveLength(1);
+            expect(result.current.filteredItems[0].id).toBe('3');
+        });
+    });
+
+    describe('search by multiple fields', () => {
+        it('searches across all specified fields', () => {
+            const { result } = renderHook(() =>
+                useSearchFilter(testItems, {
+                    searchFields: ['title', 'description'],
+                })
+            );
+
+            act(() => {
+                result.current.setQuery('React');
+            });
+
+            // Should match items with 'React' in title OR description
+            expect(result.current.filteredItems).toHaveLength(2);
+            expect(result.current.filteredItems.map((i) => i.id)).toEqual(['1', '3']);
+        });
+
+        it('returns item if any field matches', () => {
+            const { result } = renderHook(() =>
+                useSearchFilter(testItems, {
+                    searchFields: ['title', 'description'],
+                })
+            );
+
+            act(() => {
+                result.current.setQuery('Node');
+            });
+
+            expect(result.current.filteredItems).toHaveLength(1);
+            expect(result.current.filteredItems[0].id).toBe('4');
+        });
+    });
+
+    describe('case sensitivity', () => {
+        it('is case-insensitive by default', () => {
+            const { result } = renderHook(() =>
+                useSearchFilter(testItems, { searchFields: ['title'] })
+            );
+
+            act(() => {
+                result.current.setQuery('REACT');
+            });
+
+            // Matches both "React Hooks" and "Testing React" (case-insensitive)
+            expect(result.current.filteredItems).toHaveLength(2);
+            expect(result.current.filteredItems.map((i) => i.id)).toEqual(['1', '3']);
+        });
+
+        it('respects case-sensitive option', () => {
+            const { result } = renderHook(() =>
+                useSearchFilter(testItems, {
+                    searchFields: ['title'],
+                    caseSensitive: true,
+                })
+            );
+
+            act(() => {
+                result.current.setQuery('REACT');
+            });
+
+            expect(result.current.filteredItems).toHaveLength(0);
+
+            act(() => {
+                result.current.setQuery('React');
+            });
+
+            // Matches both "React Hooks" and "Testing React" (case-sensitive)
+            expect(result.current.filteredItems).toHaveLength(2);
+        });
+    });
+
+    describe('partial matching', () => {
+        it('matches partial strings', () => {
+            const { result } = renderHook(() =>
+                useSearchFilter(testItems, { searchFields: ['title'] })
+            );
+
+            act(() => {
+                result.current.setQuery('Type');
+            });
+
+            expect(result.current.filteredItems).toHaveLength(1);
+            expect(result.current.filteredItems[0].title).toBe('TypeScript Guide');
+        });
+
+        it('matches substring anywhere in field', () => {
+            const { result } = renderHook(() =>
+                useSearchFilter(testItems, { searchFields: ['title'] })
+            );
+
+            act(() => {
+                result.current.setQuery('Basics');
+            });
+
+            expect(result.current.filteredItems).toHaveLength(1);
+            expect(result.current.filteredItems[0].title).toBe('Node.js Basics');
+        });
+    });
+
+    describe('edge cases', () => {
+        it('handles empty items array', () => {
+            const { result } = renderHook(() => useSearchFilter([], { searchFields: ['title'] }));
+
+            act(() => {
+                result.current.setQuery('test');
+            });
+
+            expect(result.current.filteredItems).toStrictEqual([]);
+        });
+
+        it('handles null field values', () => {
+            const itemsWithNulls = [
+                { id: '1', title: 'Test', description: null },
+                { id: '2', title: null, description: 'Description' },
+            ];
+
+            const { result } = renderHook(() =>
+                useSearchFilter(itemsWithNulls, {
+                    searchFields: ['title', 'description'],
+                })
+            );
+
+            act(() => {
+                result.current.setQuery('Test');
+            });
+
+            expect(result.current.filteredItems).toHaveLength(1);
+            expect(result.current.filteredItems[0].id).toBe('1');
+        });
+
+        it('handles undefined field values', () => {
+            const itemsWithUndefined = [
+                { id: '1', title: 'Test', description: undefined },
+                { id: '2', title: undefined, description: 'Description' },
+            ];
+
+            const { result } = renderHook(() =>
+                useSearchFilter(itemsWithUndefined, {
+                    searchFields: ['title', 'description'],
+                })
+            );
+
+            act(() => {
+                result.current.setQuery('Description');
+            });
+
+            expect(result.current.filteredItems).toHaveLength(1);
+            expect(result.current.filteredItems[0].id).toBe('2');
+        });
+
+        // String(null) is the four-letter word "null", so without the guard a
+        // person searching for it is handed every row that is MISSING the field
+        // they searched — the exact opposite of what they asked for.
+        it('never lets a null field match the text "null"', () => {
+            const { result } = renderHook(() =>
+                useSearchFilter([rowWithNoTitle], { searchFields: ['title'] })
+            );
+
+            act(() => {
+                result.current.setQuery('null');
+            });
+
+            expect(result.current.filteredItems).toStrictEqual([]);
+        });
+
+        it('never lets an undefined field match the text "undefined"', () => {
+            const { result } = renderHook(() =>
+                useSearchFilter([{ id: '1', title: undefined }], { searchFields: ['title'] })
+            );
+
+            act(() => {
+                result.current.setQuery('undefined');
+            });
+
+            expect(result.current.filteredItems).toStrictEqual([]);
+        });
+
+        it('handles whitespace-only query', () => {
+            const { result } = renderHook(() =>
+                useSearchFilter(testItems, { searchFields: ['title'] })
+            );
+
+            act(() => {
+                result.current.setQuery('   ');
+            });
+
+            // Should return all items (whitespace-only is treated as empty)
+            expect(result.current.filteredItems).toEqual(testItems);
+            expect(result.current.isFiltering).toBe(false);
+        });
+    });
+
+    describe('custom filter function', () => {
+        it('uses custom filter when provided', () => {
+            const customFilter = jest.fn((item: TestItem, query: string) => {
+                return item.id === query;
+            });
+
+            const { result } = renderHook(() =>
+                useSearchFilter(testItems, {
+                    searchFields: ['title'], // Ignored when customFilter provided
+                    customFilter,
+                })
+            );
+
+            act(() => {
+                result.current.setQuery('2');
+            });
+
+            expect(customFilter).toHaveBeenCalled();
+            expect(result.current.filteredItems).toHaveLength(1);
+            expect(result.current.filteredItems[0].id).toBe('2');
+        });
+
+        it('custom filter receives correct arguments', () => {
+            const customFilter = jest.fn(() => true);
+
+            const { result } = renderHook(() =>
+                useSearchFilter(testItems, {
+                    searchFields: ['title'],
+                    customFilter,
+                })
+            );
+
+            act(() => {
+                result.current.setQuery('test query');
+            });
+
+            expect(customFilter).toHaveBeenCalledWith(testItems[0], 'test query');
+        });
+    });
+
+    describe('clearQuery', () => {
+        it('clears query and shows all items', () => {
+            const { result } = renderHook(() =>
+                useSearchFilter(testItems, { searchFields: ['title'] })
+            );
+
+            act(() => {
+                result.current.setQuery('React');
+            });
+            // Matches both "React Hooks" and "Testing React"
+            expect(result.current.filteredItems).toHaveLength(2);
+
+            act(() => {
+                result.current.clearQuery();
+            });
+
+            expect(result.current.query).toBe('');
+            expect(result.current.filteredItems).toEqual(testItems);
+            expect(result.current.isFiltering).toBe(false);
+        });
+    });
+
+    describe('isFiltering flag', () => {
+        it('is false when query is empty', () => {
+            const { result } = renderHook(() =>
+                useSearchFilter(testItems, { searchFields: ['title'] })
+            );
+
+            expect(result.current.isFiltering).toBe(false);
+        });
+
+        it('is true when query has value', () => {
+            const { result } = renderHook(() =>
+                useSearchFilter(testItems, { searchFields: ['title'] })
+            );
+
+            act(() => {
+                result.current.setQuery('React');
+            });
+
+            expect(result.current.isFiltering).toBe(true);
+        });
+
+        it('is false after clearing query', () => {
+            const { result } = renderHook(() =>
+                useSearchFilter(testItems, {
+                    initialQuery: 'React',
+                    searchFields: ['title'],
+                })
+            );
+
+            expect(result.current.isFiltering).toBe(true);
+
+            act(() => {
+                result.current.clearQuery();
+            });
+
+            expect(result.current.isFiltering).toBe(false);
+        });
+    });
+
+    describe('items update', () => {
+        it('updates filtered results when items change', () => {
+            const { result, rerender } = renderHook(
+                ({ items }) => useSearchFilter(items, { searchFields: ['title'] }),
+                { initialProps: { items: testItems } }
+            );
+
+            act(() => {
+                result.current.setQuery('React');
+            });
+            // Initially matches "React Hooks" and "Testing React"
+            expect(result.current.filteredItems).toHaveLength(2);
+
+            // Update items
+            const newItems = [
+                ...testItems,
+                { id: '5', title: 'React Native', description: 'Mobile with React' },
+            ];
+            rerender({ items: newItems });
+
+            // Should now match 3 items (React Hooks, Testing React, React Native)
+            expect(result.current.filteredItems).toHaveLength(3);
+        });
+    });
+
+    describe('memoization', () => {
+        it('memoizes filtered results', () => {
+            // Create options outside to maintain reference
+            const searchFields: Array<keyof TestItem> = ['title'];
+            const options = { searchFields };
+
+            const { result, rerender } = renderHook(
+                ({ opts }) => useSearchFilter(testItems, opts),
+                { initialProps: { opts: options } }
+            );
+
+            act(() => {
+                result.current.setQuery('React');
+            });
+
+            const firstResult = result.current.filteredItems;
+
+            // Rerender with same options (same reference)
+            rerender({ opts: options });
+            const secondResult = result.current.filteredItems;
+
+            // Should be the same reference (memoized)
+            expect(firstResult).toBe(secondResult);
+        });
+    });
+});

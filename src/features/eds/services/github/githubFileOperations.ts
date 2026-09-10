@@ -24,7 +24,7 @@ import type {
 } from '../types';
 import { createAuthenticatedOctokit } from './githubHelpers';
 import type { GitHubTokenService } from './githubTokenService';
-import { getLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
 import type { Logger } from '@/types/logger';
 
 /** Error messages for file operations */

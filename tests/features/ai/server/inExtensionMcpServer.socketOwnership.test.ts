@@ -66,8 +66,111 @@ jest.mock('fs/promises', () => {
  */
 const GATE_WAIT_MS = 300;
 
+/**
+ * Total time `waitForReachable` may spend, and it is now genuinely total.
+ *
+ * Kept below jest's 10s default so a failure here names the socket rather than
+ * the test.
+ */
+const REACHABLE_BUDGET_MS = 5_000;
+
+/**
+ * This file binds and rebinds REAL unix sockets, so its steps are at the mercy
+ * of whatever else the run is doing. Raised above the 10s project default —
+ * never below it, which `tests/sop/no-lowered-test-timeout.test.ts` bans — so a
+ * slow machine reports a slow step instead of a failed suite.
+ */
+jest.setTimeout(30_000);
+
+/**
+ * Ceiling on one `start()` — a HANG detector, not a performance assertion.
+ *
+ * Set twice too low already: 3s, then 8s, and both failed a full run while the
+ * file passed alone in 1.26s. That is not a slow `start()`. `start()` is a
+ * mkdir, a liveness probe capped at 500ms, and a bind — nothing in it can take
+ * seconds. What takes seconds is CPU starvation: under 1,222 suites this worker
+ * gets a fraction of a core, and every await measures the machine.
+ *
+ * So the budget is no longer guessed from observed timings, which is what made
+ * it wrong twice. It is bounded by the only number here that is not a guess —
+ * the file's own 30s timeout — and set well below it. A genuine hang still
+ * fails as `start() did not settle` rather than a bare jest timeout naming
+ * nothing, which is the entire reason this exists; a starved worker no longer
+ * fails at all.
+ *
+ * The contention itself is a real finding and is filed separately: three suites
+ * in this repo now fail only under full-suite load.
+ */
+const STEP_BUDGET_MS = 20_000;
+
 /** Let the socket close / cleanup callbacks settle before asserting. */
 const SETTLE_MS = 50;
+
+/**
+ * Wait until the shared socket answers again, rather than guessing how long the
+ * outgoing instance's floating cleanup takes.
+ *
+ * `SETTLE_MS` was a flat 50ms here. Disposal fires its cleanup as a floating
+ * promise, so 50ms is a hope, and under load the assertions ran while the
+ * successor was still mid-bind — this test failed a full-suite run on
+ * 2026-09-02 while passing in isolation. Its sibling file had the same defect
+ * and was fixed the same day; this one was missed because only the sibling was
+ * on the clone list.
+ */
+async function waitForReachable(socket: string): Promise<string[]> {
+    const deadline = Date.now() + REACHABLE_BUDGET_MS;
+    let lastError: unknown;
+    while (Date.now() < deadline) {
+        const remaining = deadline - Date.now();
+        try {
+            // Bound each ATTEMPT by the time actually left, not just the gap
+            // between attempts. One request may take up to the RPC ceiling (4s)
+            // before it gives up, so a deadline checked only at the top of the
+            // loop lets two attempts run 8s inside a 5s budget — which is how
+            // this test spent the whole 10s jest allowance and reported a bare
+            // "Exceeded timeout" naming nothing. It failed two full-suite runs
+            // that way on 2026-09-02 while passing alone every time.
+            const names = await Promise.race([
+                listToolsOverSocket(socket),
+                new Promise<never>((_, reject) =>
+                    setTimeout(
+                        () => reject(new Error(`attempt exceeded the remaining ${remaining}ms`)),
+                        remaining
+                    )
+                ),
+            ]);
+            if (names.length > 0) return names;
+        } catch (error) {
+            lastError = error;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    throw new Error(`socket never became reachable: ${String(lastError)}`);
+}
+
+/**
+ * Await `step`, or fail naming it.
+ *
+ * Bounding `waitForReachable` was not enough: this test still spent its whole
+ * 10s jest allowance and reported a bare "Exceeded timeout" naming nothing, on
+ * a full-suite run, twice. The remaining unbounded awaits are the two
+ * `server.start()` calls and the RPC helpers' `net.connect`, which has no
+ * timeout of its own. Whatever hangs, the failure should say which step it was.
+ *
+ * @param label - what is being awaited, quoted back in the failure
+ * @param step - the promise to bound
+ */
+async function within<T>(label: string, step: Promise<T>): Promise<T> {
+    return Promise.race([
+        step,
+        new Promise<never>((_, reject) =>
+            setTimeout(
+                () => reject(new Error(`${label} did not settle within ${STEP_BUDGET_MS}ms`)),
+                STEP_BUDGET_MS
+            )
+        ),
+    ]);
+}
 
 describe('InExtensionMcpServer socket ownership', () => {
     let socketPath: string;
@@ -94,7 +197,7 @@ describe('InExtensionMcpServer socket ownership', () => {
     it('leaves the successor reachable when disposal interleaves with the successor bind', async () => {
         const outgoing = new InExtensionMcpServer(socketPath, projectsDir, makeLogger());
         servers.push(outgoing);
-        await outgoing.start();
+        await within('outgoing.start()', outgoing.start());
 
         // Arm the gate on the SHARED path only. A bind stats its PRIVATE name
         // (`<socket>.<pid>`), so the two are told apart by the path alone.
@@ -123,14 +226,16 @@ describe('InExtensionMcpServer socket ownership', () => {
         // The reload: a second host renames its own socket over the shared name.
         const successor = new InExtensionMcpServer(socketPath, projectsDir, makeLogger());
         servers.push(successor);
-        await successor.start();
+        await within('successor.start()', successor.start());
 
         // Release the outgoing instance to act on the identity it read earlier.
         release();
-        await new Promise((resolve) => setTimeout(resolve, SETTLE_MS));
+
+        // Poll for the end state — the successor answering — rather than waiting
+        // a fixed time for a floating cleanup promise.
+        const names = await waitForReachable(socketPath);
 
         expect(fs.existsSync(socketPath)).toBe(true);
-        const names = await listToolsOverSocket(socketPath);
         expect(names.length).toBeGreaterThan(0);
     });
 

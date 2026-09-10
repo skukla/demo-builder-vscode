@@ -50,6 +50,34 @@ function walk(dir: string): string[] {
     });
 }
 
+/**
+ * SCOPE: `src/` ONLY, and that is a stated hole rather than an oversight.
+ *
+ * Measured 2026-09-02: 23 files under `tests/` contain a bare sleep. Most are
+ * legitimate — fake-timer helpers, deliberate delays inside a mock, a polling
+ * interval — so turning this on wholesale would be a project, not a fix.
+ *
+ * THE FOUR THAT MATTER ARE KNOWN, and all four are now fixed. Triaged by asking
+ * which files sleep while holding a REAL resource — a spawned process, a bound
+ * socket — with no fake timers to make the wait instant:
+ *
+ *   inExtensionMcpServer.test.ts              2 waits, now poll for a refused connection
+ *   inExtensionMcpServer.socketOwnership.ts   1 wait, now polls for the successor answering
+ *   processCleanup.error.test.ts              2 waits, now await the child's exit event
+ *   processCleanup.test.ts                    1 wait, the parent now announces readiness
+ *
+ * Both suites that failed a full run that day were on that list, which is what
+ * makes the triage worth repeating rather than the count worth watching: a bare
+ * sleep beside a fake timer is free, and a bare sleep beside a real process is a
+ * flake waiting for a busy afternoon.
+ *
+ * But the hole has a cost, and it was paid the same day: a flat
+ * `setTimeout(50)` between disposing an MCP server and binding its successor
+ * failed two full-suite runs while passing 8/8 in isolation, and nothing here
+ * could see it because it lived in a test. It is now a poll for a refused
+ * connection. If you are extending this check, that file is the worked example
+ * of the difference between a guess and a signal.
+ */
 describe('SOP: sleeps route through the shared sleep()', () => {
     const files = walk(SRC).filter((f) => !ALLOWED.includes(f));
 
@@ -71,10 +99,10 @@ describe('SOP: sleeps route through the shared sleep()', () => {
             });
         }
 
-        expect(violations).toEqual([]);
+        expect(violations).toStrictEqual([]);
     });
 
-    it('still recognises the idiom it is meant to catch', () => {
+    it('CONTROL: still recognises the idiom it is meant to catch', () => {
         // Without this, a broken regex would make the check above vacuously pass —
         // which is exactly how a guard rots into decoration.
         expect(BARE_SLEEP.test('await new Promise(resolve => setTimeout(resolve, 100));')).toBe(

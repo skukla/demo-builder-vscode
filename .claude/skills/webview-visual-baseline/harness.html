@@ -1,0 +1,148 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>vr</title>
+<style>
+  /* THEME VARIABLES, READ FROM VS CODE'S SHIPPED THEMES — not invented.
+     Both sets come from
+     /Applications/Visual Studio Code.app/.../extensions/theme-defaults/themes/,
+     dark_modern.json and light_modern.json. The dark set is byte-identical to
+     what this harness always carried, which is how the pairing was confirmed:
+     guessing a light palette would make every light-mode diff meaningless.
+
+     Scoped to a body CLASS rather than :root so the theme can be switched per
+     capture. VS Code puts the same classes on its own webview bodies, so a rule
+     keyed on `.vscode-light` behaves here as it does in the product.
+
+     HIGH CONTRAST IS DELIBERATELY ABSENT. hc_black.json defines only 11 colours
+     and inherits the rest through a chain this harness would have to resolve;
+     inventing the remainder is exactly the failure the note above avoids. Add it
+     by reading the resolved values out of a running VS Code, not by hand. */
+  :root {
+    --vscode-font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    --vscode-font-size: 13px;
+  }
+  body.vscode-dark {
+    --vscode-foreground: #cccccc;
+    --vscode-editor-background: #1f1f1f; --vscode-descriptionForeground: #9d9d9d;
+    --vscode-badge-background: #616161; --vscode-badge-foreground: #f8f8f8;
+    --vscode-button-background: #0078d4; --vscode-button-foreground: #ffffff;
+    --vscode-panel-border: #2b2b2b; --vscode-focusBorder: #0078d4;
+    --vscode-errorForeground: #f85149; --vscode-textLink-foreground: #4daafc;
+    --vscode-input-background: #313131; --vscode-input-foreground: #cccccc;
+    --vscode-sideBar-background: #181818; --vscode-list-hoverBackground: #2a2d2e;
+  }
+  body.vscode-light {
+    --vscode-foreground: #3b3b3b;
+    --vscode-editor-background: #ffffff; --vscode-descriptionForeground: #3b3b3b;
+    --vscode-badge-background: #cccccc; --vscode-badge-foreground: #3b3b3b;
+    --vscode-button-background: #005fb8; --vscode-button-foreground: #ffffff;
+    --vscode-panel-border: #e5e5e5; --vscode-focusBorder: #005fb8;
+    --vscode-errorForeground: #f85149; --vscode-textLink-foreground: #005fb8;
+    --vscode-input-background: #ffffff; --vscode-input-foreground: #3b3b3b;
+    --vscode-sideBar-background: #f8f8f8; --vscode-list-hoverBackground: #f2f2f2;
+  }
+  *, *::before, *::after { caret-color: transparent !important; }
+  body { margin:0; background:var(--vscode-editor-background); color:var(--vscode-foreground);
+         font-family:var(--vscode-font-family); font-size:var(--vscode-font-size); }
+</style></head><body>
+<div id="root"></div>
+<script>
+  window.__SENT__ = [];
+  const post = (m) => window.dispatchEvent(new MessageEvent('message', { data: m }));
+  window.acquireVsCodeApi = () => ({
+    postMessage: (m) => {
+      window.__SENT__.push(m);
+      if (m.type === '__webview_ready__') {
+        // 30ms, not 0. The client registers its message listener during the same
+        // initialize() that sends ready, and a 0ms reply can land in the gap.
+        setTimeout(() => { post({ id:'h', type:'__handshake_complete__', timestamp:Date.now() });
+                           post({ id:'i', type:'init', payload: window.__INIT__ || { theme:'dark' }, timestamp:Date.now() }); }, 30);
+      }
+      // A plain postMessage the surface expects a PUSH back for — the sidebar's
+      // getContext, the dashboard's requestStatus. Neither uses request/response.
+      const push = (window.__PUSHED__ || {})[m.type];
+      if (push && !m.expectsResponse) {
+        setTimeout(() => post({ id: m.id + '-p', ...push, timestamp: Date.now() }), 0);
+      }
+      if (m.expectsResponse) {
+        // A named answer when we have one; otherwise a benign empty success.
+        // Unanswered requests are what leave a surface on its loading state.
+        // ENVELOPE READ FROM WebviewClient.ts:106 — the client matches a
+        // response on `isResponse` + `responseToId`, NOT on `type:'response'`
+        // and `requestId`. The first version of this harness used the latter, so
+        // NO request was ever answered and every one timed out silently. The
+        // surfaces still rendered from their init payloads, which is exactly why
+        // it went unnoticed: a broken reply path looks like a slow surface.
+        const answer = (window.__ANSWERS__ || {})[m.type] || { success: true, data: null };
+        setTimeout(() => post({ id: m.id + '-r', isResponse: true, responseToId: m.id,
+          payload: answer, timestamp: Date.now() }), 0);
+      }
+    },
+    getState: () => undefined, setState: () => {},
+  });
+  const params = new URLSearchParams(location.search);
+  const bundle = params.get('b') || 'dataInstaller';
+
+  // Theme, applied BEFORE the bundle script is appended so the first paint is
+  // already themed. A surface that reads the class on mount (the sidebar does)
+  // would otherwise see the wrong one.
+  const theme = params.get('t') === 'light' ? 'light' : 'dark';
+  document.body.classList.add('vscode-' + theme);
+
+  // Per-surface init payload, generated by build-fixtures.mjs from REAL
+  // artifacts (a manifest on disk, wizard-steps.json, components.json).
+  // Without it four surfaces render near-empty and their "identical" verdict
+  // means nothing — which is what the ADR-018 audit found.
+  //
+  // Loaded synchronously so the bundle cannot start before it is here.
+  const xhr = new XMLHttpRequest();
+  xhr.open('GET', './fixtures.json', false);
+  try { xhr.send(null); window.__FIXTURES__ = JSON.parse(xhr.responseText); }
+  catch (e) { window.__FIXTURES__ = { init: {}, requests: {} }; window.__FIXTURE_ERROR__ = String(e); }
+  // The fixture's init payload carries a theme too; the URL parameter wins, or a
+  // light capture would render dark chrome around light-themed content.
+  window.__INIT__ = { ...((window.__FIXTURES__.init || {})[bundle] || {}), theme };
+  window.__ANSWERS__ = window.__FIXTURES__.requests || {};
+  window.__PUSHED__ = window.__FIXTURES__.pushed || {};
+
+  /**
+   * Freeze every running animation — call BEFORE reading computed styles.
+   *
+   * The CSS freeze in <head> is not sufficient on its own, and the reason is
+   * the very rule ADR-018 §1 is about: `.animate-pulse` is
+   * `animation: pulse 2s infinite !important` inside `@layer theme`
+   * (utilities.css:1883), and a LAYERED !important beats the UNLAYERED
+   * !important in this file. The harness was bitten by the cascade bug it
+   * exists to help fix.
+   *
+   * The Web Animations API sidesteps the cascade entirely: pausing an animation
+   * and pinning its time is not a specificity contest. The CSS rule stays as a
+   * cheap first pass for transitions.
+   */
+  /**
+   * Read motion properties with the CSS freeze OFF, then put it back.
+   *
+   * `transition-duration` under the freeze reads `0s` for anything the freeze
+   * can reach, which is indistinguishable from a `var()` that failed — the exact
+   * failure a motion fingerprint exists to catch. So the freeze is lifted for
+   * this read alone.
+   */
+  window.__MOTION__ = (read) => {
+    const sheet = document.getElementById('vr-freeze');
+    if (sheet) sheet.disabled = true;
+    try { return read(); } finally { if (sheet) sheet.disabled = false; }
+  };
+
+  window.__FREEZE__ = () => {
+    try {
+      for (const a of document.getAnimations()) { a.pause(); a.currentTime = 0; }
+    } catch (e) { /* getAnimations is Chrome 84+; the target is Chrome 91 */ }
+  };
+  document.head.insertAdjacentHTML('beforeend', "<style id=\"vr-freeze\">\n  /* FREEZE EVERYTHING TIME-DEPENDENT.\n     Without this a snapshot is not reproducible: the dashboard's .status-dot\n     pulses, and two captures 2s apart caught opacity 0.736 vs 0.766.\n\n     IT LIVES IN ITS OWN SHEET so `__MOTION__()` can switch it off, read the\n     motion properties, and switch it back on. Folded into the main <style> it\n     was unreachable, and `transition-duration` was therefore uncapturable —\n     the fingerprint had no motion coverage at all until 2026-09-10.\n\n     IT IS ALSO ONLY PARTIAL, and always was: this is an UNLAYERED !important,\n     and a LAYERED !important beats it. Rules inside `@layer theme` keep their\n     real durations, which is why a hand-written probe here disagreed with the\n     elements next to it. `__FREEZE__()` below is what actually stops animation,\n     via the Web Animations API, where the cascade cannot reach. */\n  *, *::before, *::after {\n    animation: none !important;\n    transition: none !important;\n  }\n</style>");
+  const s = document.createElement('script');
+  // CACHE-BUST THE BUNDLE, not just the page. Without this the browser serves
+  // the previously-fetched bundle and a before/after comparison silently
+  // compares a build against ITSELF — which reports "no change" for a change
+  // that is definitely present. Caught by a planted-change control 2026-08-29.
+  const cb = new URLSearchParams(location.search).get('cb') || '';
+  s.src = './' + bundle + '-bundle.js' + (cb ? '?cb=' + cb : '');
+  document.body.appendChild(s);
+</script></body></html>

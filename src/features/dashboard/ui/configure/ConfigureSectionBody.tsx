@@ -17,7 +17,7 @@ import React from 'react';
 import { AppBuilderComponentFieldsSection } from './AppBuilderComponentFieldsSection';
 import { slicedSectionId, type ConfigureSection } from './configureSections';
 import type { ServiceGroup, UniqueField } from './configureTypes';
-import { ConfigSection } from '@/core/ui/components/forms';
+import { ConfigSection } from '@/core/ui/components/forms/ConfigSection';
 import { getValidationState } from '@/core/ui/utils/validationState';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import {
@@ -267,6 +267,7 @@ export function ConfigureSectionBody({
     onProjectNameChange,
     projectNameError,
     projectNameTouched,
+    projectFolder,
     appBuilderComponentCatalog,
     componentConfigs,
     providedEnvVars,
@@ -283,6 +284,7 @@ export function ConfigureSectionBody({
                 onProjectNameChange={onProjectNameChange}
                 projectNameError={projectNameError}
                 projectNameTouched={projectNameTouched}
+                projectFolder={projectFolder}
                 hasServiceGroups={serviceGroups.length > 0}
             />
         );

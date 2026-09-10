@@ -11,6 +11,10 @@
  * - It MUST NEVER call the store-mutating `aio console * select`.
  */
 import { ensureOrgContext } from '@/features/authentication/services/ensureOrgContext';
+import {
+    getActiveOrgContext,
+    type OrgContextTarget,
+} from '@/features/authentication/services/orgContextEnv';
 
 const enterpriseOrg = { id: 'org-entp', code: 'ENTP@AdobeOrg', name: 'Enterprise Org', type: 'entp' };
 const developerRuntimeOrg = {
@@ -84,15 +88,23 @@ describe('ensureOrgContext', () => {
         expect(probe).toHaveBeenCalledTimes(1);
     });
 
-    it('runs the probe under org-context targeting (probe sees the active target)', async () => {
-        const probe = jest.fn().mockImplementation(async (seenTarget: { orgId: string }) => {
-            expect(seenTarget.orgId).toBe('org-entp');
+    it('runs the probe INSIDE org-context targeting, handing it the active target', async () => {
+        const probe = jest.fn().mockImplementation(async (seenTarget: OrgContextTarget) => {
+            // Read the real env-targeting store: the probe must run inside
+            // withOrgContext, and the object it is handed must be the one in effect.
+            expect(getActiveOrgContext()).toBe(seenTarget);
             return { forbidden: false };
         });
 
         await ensureOrgContext('org-entp', { listSelectableOrgs, runSelect, probe });
 
-        expect(probe).toHaveBeenCalled();
+        expect(probe).toHaveBeenCalledTimes(1);
+        expect(probe).toHaveBeenCalledWith({
+            orgId: enterpriseOrg.id,
+            orgCode: enterpriseOrg.code,
+            orgName: enterpriseOrg.name,
+        });
+        expect(getActiveOrgContext()).toBeUndefined();
     });
 
     it('treats a non-selectable target as needs_relogin even when other orgs exist', async () => {

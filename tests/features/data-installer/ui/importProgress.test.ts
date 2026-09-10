@@ -88,6 +88,27 @@ describe('summarizeProgress', () => {
         expect(progress).toMatchObject({ done: 4, total: 4, percent: 100 });
     });
 
+    /**
+     * The ring must move in PROPORTION, not merely reach 100 at the end. A
+     * percentage that only agrees with the count at 0 and at completion draws a
+     * bar that sits empty and then jumps, which is what a spinner already says.
+     */
+    it('reports the fraction of the request that is done, part-way through', () => {
+        const progress = summarizeProgress(statuses({ attribute_sets: 'success' }), REQUESTED);
+
+        expect(progress.percent).toBe(25);
+    });
+
+    it('rounds a fraction that has no whole percentage to the nearest one', () => {
+        // 2 of 3 is 66.66…; the ring takes an integer, and 67 is the honest one.
+        const progress = summarizeProgress(
+            statuses({ categories: 'success', products: 'error' }),
+            ['categories', 'products', 'customers'],
+        );
+
+        expect(progress.percent).toBe(67);
+    });
+
     /** The service can report a dependency the request never named. */
     it('never exceeds 100 when the service reports an unrequested type', () => {
         const progress = summarizeProgress(

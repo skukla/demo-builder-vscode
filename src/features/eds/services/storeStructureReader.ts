@@ -19,18 +19,18 @@
 import { selectDiscoveryService } from './accsDiscoveryConfig';
 import { discoverStoreStructure } from './commerceStoreDiscovery';
 import { extractConfigParams } from './configGenerator';
-import { validateURL } from '@/core/validation';
 import {
     ACCS_GRAPHQL_ENDPOINT,
     PAAS_URL,
-} from '@/features/components/config/envVarKeys';
+} from '@/core/config/envVarKeys';
+import { validateURL } from '@/core/validation/URLValidator';
 import {
     resolvePaasAdminPair,
     type CommercePairDeps,
     type SecretReader,
 } from '@/features/components/services/commerceCredentialStore';
 import { lookupComponentConfigValue } from '@/features/components/services/envVarHelpers';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import type { CommerceStoreStructure, StoreDiscoveryParams } from '@/types/commerceStore';
 
 /** Whether a configured scope code was found in the discovered structure. */
@@ -74,8 +74,10 @@ function toSafeOrigin(rawUrl: string | undefined): string | undefined {
     } catch {
         return undefined;
     }
-    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return undefined;
-
+    // The protocol check lives in validateURL below and nowhere else. A second
+    // copy here read the same allowlist off a different value, and could only
+    // ever agree with it: the origin is built from `parsed.protocol`, so a
+    // scheme this line rejected was a scheme validateURL rejected too.
     const origin = `${parsed.protocol}//${parsed.host}`;
     try {
         validateURL(origin, ['http', 'https']);

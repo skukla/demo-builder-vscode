@@ -45,7 +45,7 @@ describe('envFileGenerator - Basic Generation', () => {
             } as TransformedComponentDefinition;
 
             const setupContext = createMockSetupContext({
-                registry: { envVars: sharedEnvVars } as any,
+                registry: { envVars: sharedEnvVars },
                 config: { projectName: 'test-project' },
             });
 
@@ -78,7 +78,7 @@ describe('envFileGenerator - Basic Generation', () => {
             } as TransformedComponentDefinition;
 
             const setupContext = createMockSetupContext({
-                registry: { envVars: sharedEnvVars } as any,
+                registry: { envVars: sharedEnvVars },
                 config: { projectName: 'test-project' },
             });
 
@@ -102,7 +102,7 @@ describe('envFileGenerator - Basic Generation', () => {
             } as TransformedComponentDefinition;
 
             const setupContext = createMockSetupContext({
-                registry: { envVars: sharedEnvVars } as any,
+                registry: { envVars: sharedEnvVars },
                 config: { projectName: 'test-project' },
             });
 
@@ -132,7 +132,7 @@ describe('envFileGenerator - Basic Generation', () => {
             } as TransformedComponentDefinition;
 
             const setupContext = createMockSetupContext({
-                registry: { envVars: sharedEnvVars } as any,
+                registry: { envVars: sharedEnvVars },
                 config: { projectName: 'test-project' },
             });
 

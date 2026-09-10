@@ -1,4 +1,6 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import './ConfigureScreen.mocks';
+import { webviewClientHandlers } from '../../../../helpers/webviewClientMock';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
@@ -6,39 +8,27 @@ import { ConfigureScreen } from '@/features/dashboard/ui/configure/ConfigureScre
 import '@testing-library/jest-dom';
 import { mockProject, mockComponentsData, selectSection } from './ConfigureScreen.testUtils';
 
-// Mock hooks
-jest.mock('@/core/ui/hooks', () => ({
-    useSelectableDefault: jest.fn(() => ({})),
-    useFocusTrap: jest.fn(() => ({ current: null })),
-}));
-
 jest.mock('@/core/ui/hooks/useSelectableDefault', () => ({
     useSelectableDefault: jest.fn(() => ({})),
-}));
-
-// Mock WebviewClient
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        postMessage: jest.fn(),
-        request: jest.fn(),
-        onMessage: jest.fn(() => jest.fn()),
-    },
 }));
 
 // Mock layout components
 // The shell + rail are NOT mocked (direct-path imports), so these tests drive the
 // real rail when they need to reach a section other than Project.
-jest.mock('@/core/ui/components/layout', () => ({
-    PageHeader: ({ title, subtitle }: any) => (
-        <div data-testid="page-header" className="border-b bg-gray-75">
-            <h1>{title}</h1>
-            {subtitle && <h3>{subtitle}</h3>}
-        </div>
-    ),
+jest.mock('@/core/ui/components/layout/PageFooter', () => ({
     PageFooter: ({ leftContent, rightContent }: any) => (
         <div data-testid="page-footer" className="border-t bg-gray-75 max-w-800">
             <div data-testid="footer-left">{leftContent}</div>
             <div data-testid="footer-right">{rightContent}</div>
+        </div>
+    ),
+}));
+
+jest.mock('@/core/ui/components/layout/PageHeader', () => ({
+    PageHeader: ({ title, subtitle }: any) => (
+        <div data-testid="page-header" className="border-b bg-gray-75">
+            <h1>{title}</h1>
+            {subtitle && <h3>{subtitle}</h3>}
         </div>
     ),
 }));
@@ -97,11 +87,7 @@ Element.prototype.scrollIntoView = jest.fn();
 
 // Helper to wrap component in Provider
 const renderWithProvider = (component: React.ReactElement) => {
-    return render(
-        <Provider theme={defaultTheme}>
-            {component}
-        </Provider>
-    );
+    return render(<Provider theme={defaultTheme}>{component}</Provider>);
 };
 
 describe('ConfigureScreen - Operations', () => {
@@ -137,7 +123,7 @@ describe('ConfigureScreen - Operations', () => {
 
             renderWithProvider(
                 <ConfigureScreen
-                    project={mockProject as any}
+                    project={mockProject}
                     componentsData={mockComponentsData}
                     existingEnvValues={validConfig}
                 />
@@ -180,7 +166,7 @@ describe('ConfigureScreen - Operations', () => {
 
             renderWithProvider(
                 <ConfigureScreen
-                    project={mockProject as any}
+                    project={mockProject}
                     componentsData={mockComponentsData}
                     existingEnvValues={validConfig}
                 />
@@ -219,7 +205,7 @@ describe('ConfigureScreen - Operations', () => {
 
             renderWithProvider(
                 <ConfigureScreen
-                    project={mockProject as any}
+                    project={mockProject}
                     componentsData={mockComponentsData}
                     existingEnvValues={validConfig}
                 />
@@ -235,14 +221,61 @@ describe('ConfigureScreen - Operations', () => {
         });
     });
 
+    /**
+     * The extension pushes `deployment-status` while a mesh or storefront deploy
+     * is running, and Configure has to hold BOTH buttons until it clears — a save
+     * landing mid-deploy is what the push exists to prevent.
+     */
+    describe('Deployment status', () => {
+        function pushDeploying(isDeploying: boolean): void {
+            act(() => {
+                webviewClientHandlers.get('deployment-status')?.({ isDeploying });
+            });
+        }
+
+        it('renames Save to Deploying and disables it', () => {
+            renderWithProvider(
+                <ConfigureScreen project={mockProject} componentsData={mockComponentsData} />
+            );
+
+            pushDeploying(true);
+
+            const button = screen.getByText('Deploying...').closest('button');
+            expect(button).toBeDisabled();
+        });
+
+        // Close too: leaving the panel mid-deploy is the other way to lose the
+        // operation. Saving is NOT in flight here, so a rule needing both would
+        // leave this button live.
+        it('disables Close while a deploy is running', () => {
+            renderWithProvider(
+                <ConfigureScreen project={mockProject} componentsData={mockComponentsData} />
+            );
+            expect(screen.getByText('Close').closest('button')).not.toBeDisabled();
+
+            pushDeploying(true);
+
+            expect(screen.getByText('Close').closest('button')).toBeDisabled();
+        });
+
+        it('hands both back when the deploy finishes', () => {
+            renderWithProvider(
+                <ConfigureScreen project={mockProject} componentsData={mockComponentsData} />
+            );
+            pushDeploying(true);
+
+            pushDeploying(false);
+
+            expect(screen.getByText('Save Changes')).toBeInTheDocument();
+            expect(screen.getByText('Close').closest('button')).not.toBeDisabled();
+        });
+    });
+
     describe('Close Functionality', () => {
         it('should send cancel message when Close clicked', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             renderWithProvider(
-                <ConfigureScreen
-                    project={mockProject as any}
-                    componentsData={mockComponentsData}
-                />
+                <ConfigureScreen project={mockProject} componentsData={mockComponentsData} />
             );
 
             const closeButton = screen.getByText('Close');
@@ -272,7 +305,7 @@ describe('ConfigureScreen - Operations', () => {
 
             renderWithProvider(
                 <ConfigureScreen
-                    project={mockProject as any}
+                    project={mockProject}
                     componentsData={mockComponentsData}
                     existingEnvValues={existingValues}
                 />
@@ -309,7 +342,7 @@ describe('ConfigureScreen - Operations', () => {
 
             renderWithProvider(
                 <ConfigureScreen
-                    project={mockProject as any}
+                    project={mockProject}
                     componentsData={mockComponentsData}
                     existingEnvValues={existingValues}
                 />
@@ -354,7 +387,7 @@ describe('ConfigureScreen - Operations', () => {
 
             renderWithProvider(
                 <ConfigureScreen
-                    project={mockProject as any}
+                    project={mockProject}
                     componentsData={mockComponentsData}
                     existingEnvValues={validConfig}
                 />
@@ -384,7 +417,7 @@ describe('ConfigureScreen - Operations', () => {
                                 ADOBE_COMMERCE_URL: 'https://edited.example.com',
                             }),
                         }),
-                    }),
+                    })
                 );
             });
         });

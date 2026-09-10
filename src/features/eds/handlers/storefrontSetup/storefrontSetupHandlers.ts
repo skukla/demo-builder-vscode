@@ -20,8 +20,6 @@ import {
     createDaLiveServiceTokenProvider,
 } from '../../services/daLive/daLiveContentOperations';
 import { DaLiveOrgOperations } from '../../services/daLive/daLiveOrgOperations';
-import { GitHubRepoOperations } from '../../services/github/githubRepoOperations';
-import { GitHubTokenService } from '../../services/github/githubTokenService';
 import { ToolManager } from '../../services/toolManager';
 import type { EdsMetadata, EdsCleanupOptions } from '../../services/types';
 import {
@@ -35,7 +33,9 @@ import { executeStorefrontSetupPhases } from './storefrontSetupPhases';
 import type { StorefrontSetupResult } from './storefrontSetupTypes';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { hasMeshInDependencies } from '@/core/constants';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import { redactUrlUserParam } from '@/core/utils/maskEmail';
+import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 import type {
     StorefrontSetupCompletePayload,
@@ -431,8 +431,10 @@ async function createCleanupService(context: HandlerContext): Promise<CleanupSer
     }
 
     // Create service dependencies
-    const githubTokenService = new GitHubTokenService(context.context.secrets, context.logger);
-    const githubRepoOps = new GitHubRepoOperations(githubTokenService, context.logger);
+    // Both come from the cache — it builds the repo operations FROM the same
+    // token service, so building them here produced a second pair with a cold
+    // validation cache (D-2).
+    const { repoOperations: githubRepoOps } = getGitHubServices(context.context.secrets);
 
     // Create TokenProvider adapter from AuthenticationService if available
     const tokenProvider = createDaLiveTokenProvider(context.authManager);
@@ -443,7 +445,7 @@ async function createCleanupService(context: HandlerContext): Promise<CleanupSer
     // DA.live uses separate IMS auth from Adobe Console - must use DA.live token
     const daLiveAuthService = getDaLiveAuthService(context.context);
     const daLiveTokenProvider = createDaLiveServiceTokenProvider(daLiveAuthService);
-    const toolManager = new ToolManager(context.logger);
+    const toolManager = new ToolManager(ServiceLocator.getCommandExecutor(), context.logger);
     const configurationService = new ConfigurationService(daLiveTokenProvider, context.logger);
 
     return new CleanupService(

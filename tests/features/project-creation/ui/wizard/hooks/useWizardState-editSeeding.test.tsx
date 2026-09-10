@@ -14,8 +14,8 @@
 import { renderHook } from '@testing-library/react';
 import { resolveIntegrationRows } from '@/features/project-creation/ui/components/integration-flow/integrationRows';
 import { isMeshSelected } from '@/features/project-creation/ui/steps/tileStatus';
-import { useWizardState } from '@/features/project-creation/ui/wizard/hooks/useWizardState';
 import type { EditProjectConfig, ImportedSettings } from '@/types/wizard';
+import { useWizardState } from './useWizardState.testUtils';
 
 jest.mock('@/core/ui/utils/vscode-api', () => ({
     vscode: { postMessage: jest.fn(), request: jest.fn() },
@@ -50,7 +50,7 @@ describe('useWizardState - edit-mode App Builder seeding', () => {
     it('leaves selectedAppBuilderComponents unset when selections carry no appBuilder ids', () => {
         const state = renderWizardState(makeEditProject({ selections: {} }));
 
-        expect(state.selectedAppBuilderComponents ?? []).toEqual([]);
+        expect(state.selectedAppBuilderComponents ?? []).toStrictEqual([]);
     });
 
     it('seeds appBuilderComponentSources from the extracted settings', () => {

@@ -1,13 +1,13 @@
 import { handleCreateProject } from '@/features/project-creation/handlers/createHandler';
-import * as _validation from '@/core/validation';
+
 import * as executor from '@/features/project-creation/handlers/executor';
 import * as _promiseUtils from '@/core/utils/promiseUtils';
-import { ServiceLocator as _ServiceLocator } from '@/core/di';
+import { ServiceLocator as _ServiceLocator } from '@/core/di/serviceLocator';
 import * as _vscode from 'vscode';
 import * as _fs from 'fs';
 import { promises as fsPromises } from 'fs';
 import {
-    createMockContext,
+    createProjectCreationContext,
     setupDefaultMocks,
     mockCancellation,
     setupMeshCleanupScenario,
@@ -16,11 +16,10 @@ import {
 } from './createHandler.testUtils';
 
 // Mock all dependencies
-jest.mock('@/core/validation');
+jest.mock('@/core/validation/validators/ProjectNameValidator');
 jest.mock('@/features/project-creation/handlers/executor');
 jest.mock('@/core/utils/promiseUtils');
-jest.mock('@/core/di');
-jest.mock('vscode');
+jest.mock('@/core/di/serviceLocator');
 jest.mock('fs', () => ({
     existsSync: jest.fn(),
     promises: {
@@ -29,12 +28,12 @@ jest.mock('fs', () => ({
 }));
 
 describe('Project Creation - Create Handler - Cancellation', () => {
-    let mockContext: ReturnType<typeof createMockContext>;
+    let mockContext: ReturnType<typeof createProjectCreationContext>;
     let mockCommandExecutor: ReturnType<typeof setupDefaultMocks>;
 
     beforeEach(() => {
         mockCommandExecutor = setupDefaultMocks();
-        mockContext = createMockContext();
+        mockContext = createProjectCreationContext();
     });
 
     describe('user cancellation', () => {

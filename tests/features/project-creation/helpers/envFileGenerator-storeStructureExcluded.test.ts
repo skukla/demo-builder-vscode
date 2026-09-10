@@ -13,9 +13,10 @@
 
 import { promises as fsPromises } from 'fs';
 import { generateComponentEnvFile } from '@/features/project-creation/helpers/envFileGenerator';
-import { TransformedComponentDefinition } from '@/types/components';
+import type { EnvVarDefinition, TransformedComponentDefinition } from '@/types/components';
 import { createMockSetupContext, TEST_COMPONENT_PATH } from './envFileGenerator.testUtils';
 
+import { createMockProject } from '../../../helpers/projectFake';
 jest.mock('fs', () => ({ promises: { writeFile: jest.fn() } }));
 jest.mock('@/features/project-creation/helpers/formatters', () => ({
     formatGroupName: (g: string) => g,
@@ -23,7 +24,7 @@ jest.mock('@/features/project-creation/helpers/formatters', () => ({
 
 const BACKEND_ID = 'adobe-commerce-accs';
 
-const ENV_VARS = {
+const ENV_VARS: Record<string, Omit<EnvVarDefinition, 'key'>> = {
     ACCS_WEBSITE_CODE: { label: 'Website', type: 'text', description: 'Website code' },
 };
 
@@ -41,7 +42,7 @@ beforeEach(() => jest.clearAllMocks());
 
 it('writes the store CODE and never the name it was picked by', async () => {
     const componentConfigs = { [BACKEND_ID]: { ACCS_WEBSITE_CODE: 'citisignal' } };
-    const project = {
+    const project = createMockProject({
         name: 'p',
         path: '/p',
         componentConfigs,
@@ -52,11 +53,15 @@ it('writes the store CODE and never the name it was picked by', async () => {
             storeViews: [],
         },
         componentSelections: { backend: BACKEND_ID },
-    };
+    });
     const context = createMockSetupContext({
-        registry: { envVars: ENV_VARS } as never,
-        project: project as never,
-        config: { projectName: 'test-project', componentConfigs, components: { backend: BACKEND_ID } },
+        registry: { envVars: ENV_VARS },
+        project,
+        config: {
+            projectName: 'test-project',
+            componentConfigs,
+            components: { backend: BACKEND_ID },
+        },
     });
 
     await generateComponentEnvFile(TEST_COMPONENT_PATH, 'eds-accs-mesh', meshComponent, context);

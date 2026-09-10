@@ -5,29 +5,16 @@
  * site registration, folder mapping, and site deletion.
  */
 
-// Mock timeoutConfig
-jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: {
-        NORMAL: 30000,
-    },
-}));
-
-import { ConfigurationService, buildSiteConfigParams } from '@/features/eds/services/configService/configurationService';
-import type { SiteRegistrationParams } from '@/features/eds/services/configService/configurationService';
-
-// Test fixtures
-const mockLogger = {
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-};
-
-const mockTokenProvider = {
-    getAccessToken: jest.fn(),
-};
-
-const MOCK_IMS_TOKEN = 'eyJhbGciOiJSUzI1NiIsIng1dSI6Imltc19uYTEta2V5LWF0LTEuY2VyIn0.mock-ims-token';
+import {
+    ConfigurationService,
+    buildSiteConfigParams,
+    MOCK_IMS_TOKEN,
+    mockLogger,
+    mockTokenProvider,
+    spyOnFetch,
+} from './configurationService.testUtils';
+import { createMockLogger } from '../../../../helpers/loggerFake';
+import type { SiteRegistrationParams } from './configurationService.testUtils';
 
 describe('ConfigurationService', () => {
     let service: ConfigurationService;
@@ -38,15 +25,10 @@ describe('ConfigurationService', () => {
 
         mockTokenProvider.getAccessToken.mockResolvedValue(MOCK_IMS_TOKEN);
 
-        service = new ConfigurationService(
-            mockTokenProvider as any,
-            mockLogger as any,
-        );
+        service = new ConfigurationService(mockTokenProvider, mockLogger);
 
         // Mock global fetch
-        fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue(
-            new Response(null, { status: 200 }),
-        );
+        fetchSpy = spyOnFetch();
     });
 
     afterEach(() => {
@@ -78,7 +60,7 @@ describe('ConfigurationService', () => {
                         Authorization: `Bearer ${MOCK_IMS_TOKEN}`,
                         'content-type': 'application/json',
                     }),
-                }),
+                })
             );
 
             // Verify request body
@@ -111,9 +93,7 @@ describe('ConfigurationService', () => {
         });
 
         it('should return error for 401 unauthorized', async () => {
-            fetchSpy.mockResolvedValueOnce(
-                new Response('Unauthorized', { status: 401 }),
-            );
+            fetchSpy.mockResolvedValueOnce(new Response('Unauthorized', { status: 401 }));
 
             const result = await service.registerSite(params);
 
@@ -123,9 +103,7 @@ describe('ConfigurationService', () => {
         });
 
         it('should return error for 403 forbidden', async () => {
-            fetchSpy.mockResolvedValueOnce(
-                new Response('Forbidden', { status: 403 }),
-            );
+            fetchSpy.mockResolvedValueOnce(new Response('Forbidden', { status: 403 }));
 
             const result = await service.registerSite(params);
 
@@ -135,15 +113,44 @@ describe('ConfigurationService', () => {
         });
 
         it('should return error for 409 conflict (site exists)', async () => {
-            fetchSpy.mockResolvedValueOnce(
-                new Response('Conflict', { status: 409 }),
-            );
+            fetchSpy.mockResolvedValueOnce(new Response('Conflict', { status: 409 }));
 
             const result = await service.registerSite(params);
 
             expect(result.success).toBe(false);
             expect(result.error).toContain('already exists');
             expect(result.statusCode).toBe(409);
+        });
+
+        // A 404 is only "already gone, treat as success" for a DELETE. On a PUT it is
+        // a real failure, and the guard that says so is one `&&` away from turning
+        // every failed registration into a silent success.
+        it('reports a 404 on the PUT as a failure, not as an already-deleted config', async () => {
+            fetchSpy.mockResolvedValueOnce(new Response('Not Found', { status: 404 }));
+
+            const result = await service.registerSite(params);
+
+            expect(result).toEqual({
+                success: false,
+                statusCode: 404,
+                error: 'Configuration Service error (404): Not Found',
+            });
+        });
+
+        it('carries the response body out for a status it has no specific message for', async () => {
+            fetchSpy.mockResolvedValueOnce(new Response('upstream exploded', { status: 500 }));
+
+            const result = await service.registerSite(params);
+
+            expect(result.error).toBe('Configuration Service error (500): upstream exploded');
+        });
+
+        it('says "Unknown error" when such a response carries no body', async () => {
+            fetchSpy.mockResolvedValueOnce(new Response('', { status: 500 }));
+
+            const result = await service.registerSite(params);
+
+            expect(result.error).toBe('Configuration Service error (500): Unknown error');
         });
 
         it('should handle network errors', async () => {
@@ -218,7 +225,10 @@ describe('ConfigurationService', () => {
 
         it('includes contentOverlayUrl when an overlay URL is provided', () => {
             const params = buildSiteConfigParams(
-                'owner', 'repo', 'org', 'https://byom.example.com',
+                'owner',
+                'repo',
+                'org',
+                'https://byom.example.com'
             );
             expect(params.contentOverlayUrl).toBe('https://byom.example.com');
         });
@@ -256,7 +266,7 @@ describe('ConfigurationService', () => {
                 const params = buildSiteConfigParams('my-owner', 'my-repo', 'my-dalive-org');
 
                 expect(params.contentSourceUrl).toBe(
-                    'https://content.da.live/my-dalive-org/my-repo/',
+                    'https://content.da.live/my-dalive-org/my-repo/'
                 );
             });
         });
@@ -278,7 +288,7 @@ describe('ConfigurationService', () => {
                     headers: expect.objectContaining({
                         Authorization: `Bearer ${MOCK_IMS_TOKEN}`,
                     }),
-                }),
+                })
             );
         });
 
@@ -290,9 +300,7 @@ describe('ConfigurationService', () => {
         });
 
         it('should treat 404 as success (already deleted)', async () => {
-            fetchSpy.mockResolvedValueOnce(
-                new Response('Not Found', { status: 404 }),
-            );
+            fetchSpy.mockResolvedValueOnce(new Response('Not Found', { status: 404 }));
 
             const result = await service.deleteSiteConfig('test-user', 'my-site');
 
@@ -301,9 +309,7 @@ describe('ConfigurationService', () => {
         });
 
         it('should return error for non-404 failures', async () => {
-            fetchSpy.mockResolvedValueOnce(
-                new Response('Forbidden', { status: 403 }),
-            );
+            fetchSpy.mockResolvedValueOnce(new Response('Forbidden', { status: 403 }));
 
             const result = await service.deleteSiteConfig('test-user', 'my-site');
 
@@ -315,8 +321,6 @@ describe('ConfigurationService', () => {
     // ==========================================================
     // updateSiteConfig
     // ==========================================================
-
-
 
     // ==========================================================
     // Authentication
@@ -352,7 +356,7 @@ describe('ConfigurationService', () => {
  * remedy the evidence contradicts.
  */
 describe('ConfigurationService — failure reporting', () => {
-    const logger = { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() };
+    const logger = createMockLogger();
     const tokenProvider = { getAccessToken: jest.fn().mockResolvedValue('ims-token') };
     const params: SiteRegistrationParams = {
         org: 'acme-corp',
@@ -370,23 +374,23 @@ describe('ConfigurationService — failure reporting', () => {
     }
 
     function loggedText(): string {
-        return ['debug', 'info', 'warn', 'error']
-            .flatMap((lvl) => (logger as never as Record<string, jest.Mock>)[lvl].mock.calls)
+        return (['debug', 'info', 'warn', 'error'] as const)
+            .flatMap((lvl) => logger[lvl].mock.calls)
             .map((c) => String(c[0]))
             .join('\n');
     }
 
     beforeEach(() => {
         jest.clearAllMocks();
-        service = new ConfigurationService(tokenProvider as never, logger as never);
+        service = new ConfigurationService(tokenProvider, logger);
     });
 
     afterEach(() => fetchSpy?.mockRestore());
 
     it("records Adobe's stated reason from x-error", async () => {
-        fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue(
-            forbidden({ 'x-error': '[admin] not authorized' }),
-        );
+        fetchSpy = jest
+            .spyOn(global, 'fetch')
+            .mockResolvedValue(forbidden({ 'x-error': '[admin] not authorized' }));
 
         await service.registerSite(params);
 
@@ -394,9 +398,9 @@ describe('ConfigurationService — failure reporting', () => {
     });
 
     it("records Adobe's request id, which is what support needs", async () => {
-        fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue(
-            forbidden({ 'x-invocation-id': 'abc-123' }),
-        );
+        fetchSpy = jest
+            .spyOn(global, 'fetch')
+            .mockResolvedValue(forbidden({ 'x-invocation-id': 'abc-123' }));
 
         await service.registerSite(params);
 

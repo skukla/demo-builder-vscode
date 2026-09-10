@@ -20,9 +20,9 @@
 
 import type { CommandExecutor } from './commandExecutor';
 import { EnvironmentSetup } from './environmentSetup';
+import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
-import { DEFAULT_SHELL } from '@/types/shell';
 
 /**
  * Ensure fnm can supply Node `<major>`. Returns an error string when it

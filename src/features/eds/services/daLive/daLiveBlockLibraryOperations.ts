@@ -438,10 +438,6 @@ export class DaLiveBlockLibraryOperations {
         libraryContentSources?: Array<{ org: string; site: string }>,
         installedBlockIds?: string[],
     ): Promise<{ success: boolean; blocksCount: number; paths: string[]; error?: string }> {
-        if (blocks.length === 0) {
-            return { success: true, blocksCount: 0, paths: [] };
-        }
-
         try {
             // Create doc pages for blocks that have exampleHtml but no existing page
             await this.ensureBlockDocPages(org, site, blocks);

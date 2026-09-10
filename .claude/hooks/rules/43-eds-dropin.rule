@@ -1,0 +1,41 @@
+# Routes storefront config/dropin delivery work to its skill.
+#
+# Dropins reach the browser through the head.html import map and committed
+# `scripts/__dropins__/`. Mixing generations blank-pages the storefront, because
+# dropins share internal chunks — a failure with no error message.
+rule_id=eds-dropin
+rule_once=1
+
+rule_match() {
+    case "$1" in
+        Edit|Write) ;;
+        *) return 1 ;;
+    esac
+    [ -n "$3" ] || return 1
+    case "$3" in
+        */eds/services/configGenerator.ts) return 0 ;;
+        */eds/services/quickEditPublisher.ts) return 0 ;;
+        */eds/services/placeholderStubs.ts) return 0 ;;
+    esac
+    return 1
+}
+
+rule_message() {
+    cat <<'MSG'
+You are editing storefront config / dropin delivery. Invoke the
+`eds-dropin-vendoring` skill (Skill tool, skill: "eds-dropin-vendoring") first.
+
+Dropins reach the browser through the head.html import map and the committed
+`scripts/__dropins__/` directory, vendored by the storefront's postinstall — the
+edge serves them from GitHub. The failure mode has no error message: dropins share
+internal chunks, so mixing generations blank-pages the storefront.
+
+Two things that are settled and must not be re-derived: the feature-pack mechanism
+was DELETED and additive vendoring RETIRED — B2B ships through the
+`boilerplate-b2b-template` packages. And a B2B storefront needs
+`commerce-b2b-enabled` in its generated config.json, or account navigation builds
+no links at all.
+
+This hook fires only once per session.
+MSG
+}

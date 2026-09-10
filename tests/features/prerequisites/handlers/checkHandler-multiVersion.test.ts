@@ -5,7 +5,7 @@ import {
     mockNodeResult,
     mockNpmResult,
     mockAdobeCliPrereq,
-    createMockContext,
+    createCheckHandlerContext,
     createComponentSelection,
     setupStandardMocks,
     cleanupTests,
@@ -58,10 +58,10 @@ describe('Prerequisites Check Handler - Multi-Version Node.js Support', () => {
         const nodeMapping = { '18': 'commerce-paas', '20': 'adobe-app-builder' };
         (shared.getNodeVersionMapping as jest.Mock).mockResolvedValue(nodeMapping);
 
-        const context = createMockContext({
+        const context = createCheckHandlerContext({
             sharedState: {
                 isAuthenticating: false,
-                currentComponentSelection: createComponentSelection('commerce-paas'),
+                currentComponentSelection: createComponentSelection({ backend: 'commerce-paas' }),
             },
         });
         (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
@@ -97,10 +97,10 @@ describe('Prerequisites Check Handler - Multi-Version Node.js Support', () => {
             prerequisites: [mockConfig.prerequisites[0], mockAdobeCliPrereq],
         };
 
-        const context = createMockContext({
+        const context = createCheckHandlerContext({
             sharedState: {
                 isAuthenticating: false,
-                currentComponentSelection: createComponentSelection('commerce-paas'),
+                currentComponentSelection: createComponentSelection({ backend: 'commerce-paas' }),
             },
         });
         (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(configWithCli);
@@ -124,7 +124,7 @@ describe('Prerequisites Check Handler - Multi-Version Node.js Support', () => {
         const nodeMapping = { '18': 'commerce-paas', '20': 'adobe-app-builder' };
         (shared.getNodeVersionMapping as jest.Mock).mockResolvedValue(nodeMapping);
 
-        const context = createMockContext();
+        const context = createCheckHandlerContext();
         (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
         (context.prereqManager!.resolveDependencies as jest.Mock).mockReturnValue(
             mockConfig.prerequisites
@@ -165,10 +165,10 @@ describe('Prerequisites Check Handler - Multi-Version Node.js Support', () => {
             prerequisites: [mockConfig.prerequisites[0], mockAdobeCliPrereq],
         };
 
-        const context = createMockContext({
+        const context = createCheckHandlerContext({
             sharedState: {
                 isAuthenticating: false,
-                currentComponentSelection: createComponentSelection('commerce-paas', ['action']),
+                currentComponentSelection: createComponentSelection({ backend: 'commerce-paas', appBuilder: ['action'] }),
             },
         });
         (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(configWithCli);

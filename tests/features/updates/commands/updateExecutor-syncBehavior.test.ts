@@ -6,40 +6,23 @@
  * instead of silently bumping `commitSha`.
  */
 
+import { makeUpdateContext as makeCtx } from './updateExecutor.testUtils';
 import * as vscode from 'vscode';
 import { performAddonUpdates } from '@/features/updates/commands/updateExecutor';
 import { installBlockCollections } from '@/features/eds/services/blockCollectionHelpers';
 import type { BlockLibraryUpdateItem } from '@/features/updates/commands/updateTypes';
 import type { Project } from '@/types/base';
 import type { InstalledBlockLibrary } from '@/types/blockLibraries';
-
 // ─── Module mocks ────────────────────────────────────────────────────────────
 
-jest.mock('@/features/eds/services/blockCollectionHelpers', () => ({
-    installBlockCollections: jest.fn(),
+// The block-library update path reaches the shared GitHub services for a token.
+// The real accessor calls getLogger(), which throws in a suite that initialises
+// none — so the cache is mocked to the one thing this path reads.
+jest.mock('@/features/eds/handlers/edsServiceCache', () => ({
+    getGitHubServices: jest.fn(() => ({
+        tokenService: { getToken: jest.fn().mockResolvedValue({ token: 'gh-token' }) },
+    })),
 }));
-
-jest.mock('@/features/eds/services/github/githubTokenService', () => ({
-    GitHubTokenService: jest.fn(),
-}));
-
-jest.mock('@/features/eds/services/github/githubFileOperations', () => ({
-    GitHubFileOperations: jest.fn(),
-}));
-
-jest.mock(
-    'vscode',
-    () => ({
-        window: {
-            showInformationMessage: jest.fn(),
-            showErrorMessage: jest.fn(),
-        },
-        workspace: {
-            getConfiguration: jest.fn(),
-        },
-    }),
-    { virtual: true }
-);
 
 const installMock = installBlockCollections as jest.Mock;
 const showInfoMock = vscode.window.showInformationMessage as jest.Mock;
@@ -97,32 +80,6 @@ function makeItem(project: Project): BlockLibraryUpdateItem {
     };
 }
 
-function makeCtx(saveImpl?: () => Promise<void>): {
-    secrets: vscode.SecretStorage;
-    extensionPath: string;
-    stateManager: { saveProject: jest.Mock };
-    logger: {
-        info: jest.Mock;
-        warn: jest.Mock;
-        error: jest.Mock;
-        debug: jest.Mock;
-        trace: jest.Mock;
-    };
-} {
-    return {
-        secrets: {} as vscode.SecretStorage,
-        extensionPath: '/ext',
-        stateManager: { saveProject: jest.fn(saveImpl ?? (() => Promise.resolve())) },
-        logger: {
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            debug: jest.fn(),
-            trace: jest.fn(),
-        },
-    };
-}
-
 // ─── Tests ──────────────────────────────────────────────────────────────────
 
 describe('performAddonUpdates — block library syncBehavior policy', () => {
@@ -137,7 +94,7 @@ describe('performAddonUpdates — block library syncBehavior policy', () => {
             const project = makeProject();
             const ctx = makeCtx();
 
-            await performAddonUpdates([makeItem(project)], [], new Set(), ctx as never);
+            await performAddonUpdates([makeItem(project)], [], new Set(), ctx);
 
             const lib = project.installedBlockLibraries![0];
             expect(lib.syncDisabledMarker).toBeDefined();
@@ -150,7 +107,7 @@ describe('performAddonUpdates — block library syncBehavior policy', () => {
             const project = makeProject();
             const ctx = makeCtx();
 
-            await performAddonUpdates([makeItem(project)], [], new Set(), ctx as never);
+            await performAddonUpdates([makeItem(project)], [], new Set(), ctx);
 
             expect(installMock).not.toHaveBeenCalled();
         });
@@ -160,7 +117,7 @@ describe('performAddonUpdates — block library syncBehavior policy', () => {
             const project = makeProject();
             const ctx = makeCtx();
 
-            await performAddonUpdates([makeItem(project)], [], new Set(), ctx as never);
+            await performAddonUpdates([makeItem(project)], [], new Set(), ctx);
 
             expect(project.installedBlockLibraries![0].commitSha).toBe('aaa111');
         });
@@ -172,7 +129,7 @@ describe('performAddonUpdates — block library syncBehavior policy', () => {
             const project = makeProject();
             const ctx = makeCtx();
 
-            await performAddonUpdates([makeItem(project)], [], new Set(), ctx as never);
+            await performAddonUpdates([makeItem(project)], [], new Set(), ctx);
 
             expect(installMock).toHaveBeenCalledTimes(1);
             const [, destOwner, destRepo, libs] = installMock.mock.calls[0];
@@ -191,7 +148,7 @@ describe('performAddonUpdates — block library syncBehavior policy', () => {
             const project = makeProject();
             const ctx = makeCtx();
 
-            await performAddonUpdates([makeItem(project)], [], new Set(), ctx as never);
+            await performAddonUpdates([makeItem(project)], [], new Set(), ctx);
 
             expect(project.installedBlockLibraries![0].commitSha).toBe('bbb222');
         });
@@ -207,7 +164,7 @@ describe('performAddonUpdates — block library syncBehavior policy', () => {
             const project = makeProject();
             const ctx = makeCtx();
 
-            await performAddonUpdates([makeItem(project)], [], new Set(), ctx as never);
+            await performAddonUpdates([makeItem(project)], [], new Set(), ctx);
 
             expect(project.installedBlockLibraries![0].commitSha).toBe('aaa111');
         });
@@ -226,7 +183,7 @@ describe('performAddonUpdates — block library syncBehavior policy', () => {
             });
             const ctx = makeCtx();
 
-            await performAddonUpdates([makeItem(project)], [], new Set(), ctx as never);
+            await performAddonUpdates([makeItem(project)], [], new Set(), ctx);
 
             expect(project.installedBlockLibraries![0].syncDisabledMarker).toBeUndefined();
         });
@@ -239,7 +196,7 @@ describe('performAddonUpdates — block library syncBehavior policy', () => {
             const project = makeProject();
             const ctx = makeCtx();
 
-            await performAddonUpdates([makeItem(project)], [], new Set(), ctx as never);
+            await performAddonUpdates([makeItem(project)], [], new Set(), ctx);
 
             expect(showInfoMock).toHaveBeenCalledTimes(1);
             const [, ...buttons] = showInfoMock.mock.calls[0];
@@ -252,7 +209,7 @@ describe('performAddonUpdates — block library syncBehavior policy', () => {
             const project = makeProject();
             const ctx = makeCtx();
 
-            await performAddonUpdates([makeItem(project)], [], new Set(), ctx as never);
+            await performAddonUpdates([makeItem(project)], [], new Set(), ctx);
 
             expect(installMock).toHaveBeenCalledTimes(1);
             expect(project.installedBlockLibraries![0].commitSha).toBe('bbb222');
@@ -264,7 +221,7 @@ describe('performAddonUpdates — block library syncBehavior policy', () => {
             const project = makeProject();
             const ctx = makeCtx();
 
-            await performAddonUpdates([makeItem(project)], [], new Set(), ctx as never);
+            await performAddonUpdates([makeItem(project)], [], new Set(), ctx);
 
             expect(installMock).not.toHaveBeenCalled();
             expect(project.installedBlockLibraries![0].syncDisabledMarker).toBeDefined();
@@ -277,11 +234,84 @@ describe('performAddonUpdates — block library syncBehavior policy', () => {
             const project = makeProject();
             const ctx = makeCtx();
 
-            await performAddonUpdates([makeItem(project)], [], new Set(), ctx as never);
+            await performAddonUpdates([makeItem(project)], [], new Set(), ctx);
 
             expect(installMock).not.toHaveBeenCalled();
             expect(project.installedBlockLibraries![0].commitSha).toBe('aaa111');
             expect(project.installedBlockLibraries![0].syncDisabledMarker).toBeUndefined();
+        });
+    });
+
+    describe('template-sync dedup', () => {
+        // The project's EDS metadata names the same repo the library came from.
+        function projectSyncedFromLibrarySource(): Project {
+            return makeProject({
+                componentInstances: {
+                    'eds-storefront': {
+                        id: 'eds-storefront',
+                        name: 'EDS Storefront',
+                        status: 'ready',
+                        path: '/projects/demo/components/eds-storefront',
+                        metadata: {
+                            githubRepo: 'demo-org/demo-repo',
+                            templateOwner: 'stephen-garner-adobe',
+                            templateRepo: 'isle5',
+                        },
+                    },
+                },
+            });
+        }
+
+        it('skips a library the template sync just covered — no install, no SHA bump, no prompt', async () => {
+            setSyncBehavior('ask');
+            const project = projectSyncedFromLibrarySource();
+            const ctx = makeCtx();
+
+            await performAddonUpdates([makeItem(project)], [], new Set([project.path]), ctx);
+
+            expect(installMock).not.toHaveBeenCalled();
+            expect(showInfoMock).not.toHaveBeenCalled();
+            expect(project.installedBlockLibraries![0].commitSha).toBe('aaa111');
+        });
+
+        it('still applies the library when the template sync did NOT succeed for that project', async () => {
+            setSyncBehavior('enabled');
+            const project = projectSyncedFromLibrarySource();
+            const ctx = makeCtx();
+
+            await performAddonUpdates([makeItem(project)], [], new Set(['/projects/other']), ctx);
+
+            expect(installMock).toHaveBeenCalledTimes(1);
+            expect(project.installedBlockLibraries![0].commitSha).toBe('bbb222');
+        });
+    });
+
+    describe('library not installed in the project', () => {
+        it('returns before prompting when the selection names a library the project lacks', async () => {
+            setSyncBehavior('ask');
+            const project = makeProject();
+            const ctx = makeCtx();
+            const item = { ...makeItem(project), library: makeLibrary({ name: 'Ghost' }) };
+
+            await performAddonUpdates([item], [], new Set(), ctx);
+
+            expect(showInfoMock).not.toHaveBeenCalled();
+            expect(installMock).not.toHaveBeenCalled();
+            expect(ctx.logger.warn).toHaveBeenCalledTimes(1);
+            expect(vscode.window.showErrorMessage).not.toHaveBeenCalled();
+        });
+
+        it('treats a project with no installedBlockLibraries at all the same way, without throwing', async () => {
+            setSyncBehavior('enabled');
+            const project = makeProject({ installedBlockLibraries: undefined });
+            const ctx = makeCtx();
+            const item = { ...makeItem(makeProject()), project };
+
+            await expect(performAddonUpdates([item], [], new Set(), ctx)).resolves.toBeUndefined();
+
+            expect(installMock).not.toHaveBeenCalled();
+            expect(ctx.logger.warn).toHaveBeenCalledTimes(1);
+            expect(vscode.window.showErrorMessage).not.toHaveBeenCalled();
         });
     });
 
@@ -301,7 +331,7 @@ describe('performAddonUpdates — block library syncBehavior policy', () => {
             });
             const ctx = makeCtx();
 
-            await performAddonUpdates([makeItem(project)], [], new Set(), ctx as never);
+            await performAddonUpdates([makeItem(project)], [], new Set(), ctx);
 
             expect(installMock).not.toHaveBeenCalled();
             expect(project.installedBlockLibraries![0].commitSha).toBe('aaa111');

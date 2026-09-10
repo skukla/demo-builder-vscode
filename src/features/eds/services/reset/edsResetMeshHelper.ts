@@ -9,17 +9,20 @@
  */
 
 import type { EdsResetResult } from './edsResetParams';
-import { ServiceLocator } from '@/core/di';
-import {
-    buildOrgTargetFromProjectAdobe,
-    withOrgContext,
-    type OrgContextTarget,
-} from '@/core/shell';
+import { CommandExecutor } from '@/core/shell/commandExecutor';
+import { buildOrgTargetFromProjectAdobe, withOrgContext, type OrgContextTarget } from '@/core/shell/orgContextEnv';
+import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { deployMeshCreateOrUpdate } from '@/features/mesh/services/meshRedeploy';
 import { updateMeshState } from '@/features/mesh/services/stalenessDetector';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 import { getMeshComponentInstance } from '@/types/typeGuards';
+
+/** ADR-015: what the mesh-redeploy step needs, supplied by the reset caller. */
+export interface MeshRedeployDeps {
+    commandManager: CommandExecutor;
+    authManager: AuthenticationService;
+}
 
 // ==========================================================
 // Helpers
@@ -38,6 +41,7 @@ async function deployMeshAndPersist(
     report: (step: number, message: string) => void,
     filesReset: number,
     contentCopied: number,
+    deps: MeshRedeployDeps,
 ): Promise<EdsResetResult | null> {
     report(12, 'Redeploying API Mesh...');
     context.logger.info(`[EdsReset] Redeploying mesh for ${repoOwner}/${repoName}`);
@@ -49,6 +53,7 @@ async function deployMeshAndPersist(
         // workspace. meshComponent.path is non-null: redeployApiMesh checked.
         const meshDeployResult = await deployMeshCreateOrUpdate(
             meshComponent.path as string,
+            deps.commandManager,
             context.logger,
             (msg, sub) => report(12, sub || msg),
         );
@@ -93,13 +98,14 @@ export async function redeployApiMesh(
     report: (step: number, message: string) => void,
     filesReset: number,
     contentCopied: number,
+    deps: MeshRedeployDeps,
 ): Promise<EdsResetResult | null> {
     const meshComponent = getMeshComponentInstance(project);
     if (!meshComponent?.path) {
         return null;
     }
 
-    const authService = ServiceLocator.getAuthenticationService();
+    const authService = deps.authManager;
 
     report(12, 'Checking Adobe organization access...');
     const { ensureProjectAdobeContext } = await import(
@@ -149,6 +155,7 @@ export async function redeployApiMesh(
             report,
             filesReset,
             contentCopied,
+            deps,
         ),
     );
 }

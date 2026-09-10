@@ -9,7 +9,8 @@
  */
 
 import { HandlerContext } from '@/types/handlers';
-import { Project } from '@/types';
+import { fakeExtractResetParams } from '../../../helpers/edsResetParamsFake';
+import { Project } from '@/types/base';
 
 // Explicit test timeout to prevent hanging
 jest.setTimeout(5000);
@@ -33,32 +34,6 @@ const mockQuickPick = {
 };
 
 // Mock vscode
-jest.mock('vscode', () => ({
-    commands: {
-        executeCommand: jest.fn().mockResolvedValue(undefined),
-    },
-    window: {
-        activeColorTheme: { kind: 1 },
-        showWarningMessage: jest.fn(),
-        showErrorMessage: jest.fn().mockResolvedValue(undefined),
-        showInformationMessage: jest.fn().mockResolvedValue(undefined),
-        withProgress: jest.fn(),
-        createQuickPick: jest.fn(() => mockQuickPick),
-    },
-    ColorThemeKind: { Dark: 2, Light: 1 },
-    ProgressLocation: {
-        Notification: 15,
-    },
-    env: {
-        openExternal: jest.fn(),
-        clipboard: {
-            readText: jest.fn(),
-        },
-    },
-    Uri: {
-        parse: jest.fn((url: string) => ({ toString: () => url })),
-    },
-}), { virtual: true });
 
 // Mock DaLiveAuthService
 const mockIsAuthenticated = jest.fn();
@@ -70,15 +45,17 @@ jest.mock('@/features/eds/services/daLive/daLiveAuthService', () => ({
     })),
 }));
 
-// Mock ServiceLocator (both import paths used in the code)
-jest.mock('@/core/di', () => ({
-    ServiceLocator: {
-        getAuthenticationService: jest.fn(),
-    },
-}));
+// Mock ServiceLocator. There used to be TWO of these — the comment here read
+// "both import paths used in the code", because the same class was reachable
+// through `@/core/di` and `@/core/di/serviceLocator`. The two factories had
+// DRIFTED: only one declared getCommandExecutor, and jest keeps the last
+// registration, so which one won depended on their order in this file. That is
+// precisely the defect ADR-022's rule names — a symbol reachable by two paths is
+// a symbol whose home nobody can name. One path now, so one mock.
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(),
+        getCommandExecutor: jest.fn(() => ({ execute: jest.fn() })),
     },
 }));
 
@@ -89,10 +66,14 @@ jest.mock('@/features/eds/services/helix/helixService');
 jest.mock('@/features/mesh/services/stalenessDetector');
 
 // Mock authentication
-jest.mock('@/features/authentication');
 
 // Mock showDaLiveAuthQuickPick result holder
-const mockQuickPickAuthResult: { success: boolean; cancelled?: boolean; email?: string; error?: string } = { success: false, cancelled: true };
+const mockQuickPickAuthResult: {
+    success: boolean;
+    cancelled?: boolean;
+    email?: string;
+    error?: string;
+} = { success: false, cancelled: true };
 
 // Mock edsHelpers - getGitHubServices, validateDaLiveToken, getDaLiveAuthService, showDaLiveAuthQuickPick
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
@@ -104,7 +85,9 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
             deleteFile: jest.fn(),
             getFileContent: jest.fn().mockResolvedValue(null),
             createOrUpdateFile: jest.fn(),
-            resetRepoToTemplate: jest.fn().mockResolvedValue({ commitSha: 'abc1234567890', fileCount: 50 }),
+            resetRepoToTemplate: jest
+                .fn()
+                .mockResolvedValue({ commitSha: 'abc1234567890', fileCount: 50 }),
         },
         oauthService: {},
     }),
@@ -112,7 +95,9 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     getDaLiveAuthService: jest.fn().mockReturnValue({
         storeToken: jest.fn().mockResolvedValue(undefined),
     }),
-    showDaLiveAuthQuickPick: jest.fn().mockImplementation(() => Promise.resolve(mockQuickPickAuthResult)),
+    showDaLiveAuthQuickPick: jest
+        .fn()
+        .mockImplementation(() => Promise.resolve(mockQuickPickAuthResult)),
     clearServiceCache: jest.fn(),
     getAppliedPatchPaths: jest.fn().mockReturnValue([]),
     publishPatchedCodeToLive: jest.fn().mockResolvedValue(undefined),
@@ -138,33 +123,25 @@ jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
 }));
 
 // Mock core logging (prevents "Logger not initialized" error)
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn().mockReturnValue({
-        info: jest.fn(),
-        debug: jest.fn(),
-        error: jest.fn(),
-        warn: jest.fn(),
-        show: jest.fn(),
-    }),
-    initializeLogger: jest.fn(),
-}));
 
 // Mock validation
-jest.mock('@/core/validation', () => ({
+jest.mock('@/core/validation/PathSafetyValidator', () => ({
+    validateProjectPath: jest.fn(),
+}));
+
+jest.mock('@/core/validation/URLValidator', () => ({
+    validateURL: jest.fn(),
+}));
+
+jest.mock('@/core/validation/validators/AdobeResourceValidator', () => ({
     validateOrgId: jest.fn(),
     validateProjectId: jest.fn(),
     validateWorkspaceId: jest.fn(),
-    validateURL: jest.fn(),
-    validateProjectPath: jest.fn(), // Allow all paths in tests
 }));
 
 // Mock GitHubAppService (dynamically imported for Code Sync verification)
-jest.mock('@/features/eds/services/github/githubAppService', () => ({
-    GitHubAppService: jest.fn().mockImplementation(() => ({
-        isAppInstalled: jest.fn().mockResolvedValue({ isInstalled: true }),
-        getInstallUrl: jest.fn().mockReturnValue('https://github.com/apps/aem-code-sync/installations/new'),
-    })),
-}));
+// GitHubAppService is NOT mocked. Measured 2026-08-31: removing the mock changes
+// nothing this suite observes — it was silencing a construction with no side effects.
 
 // Mock configGenerator (dynamically imported for config.json generation)
 jest.mock('@/features/eds/services/configGenerator', () => ({
@@ -206,10 +183,14 @@ jest.mock('@/features/eds/services/reset/edsResetService', () => ({
 
 import * as vscode from 'vscode';
 import { handleResetProject } from '@/features/projects-dashboard/handlers/dashboardHandlers';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import { ServiceLocator as ServiceLocatorDirect } from '@/core/di/serviceLocator';
 import { HelixService } from '@/features/eds/services/helix/helixService';
 import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockProject } from '../../../helpers/projectFake';
 
 // =============================================================================
 // Test Utilities
@@ -219,7 +200,7 @@ import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';
  * Create a mock EDS project with full metadata for reset operations
  */
 function createMockEdsProject(overrides?: Partial<Project>): Project {
-    return {
+    return createMockProject({
         name: 'test-eds-project',
         path: '/Users/test/.demo-builder/projects/test-eds',
         status: 'running',
@@ -245,35 +226,25 @@ function createMockEdsProject(overrides?: Partial<Project>): Project {
             },
         },
         ...overrides,
-    } as unknown as Project;
+    });
 }
 
 /**
  * Create mock handler context with required dependencies
  */
 function createMockContext(project: Project | undefined): HandlerContext {
-    return {
+    return createMockHandlerContext({
         panel: {
             webview: {
                 postMessage: jest.fn(),
             },
         } as unknown as HandlerContext['panel'],
-        stateManager: {
+        stateManager: createMockStateManager({
             loadProjectFromPath: jest.fn().mockResolvedValue(project),
             saveProject: jest.fn().mockResolvedValue(undefined),
-        } as unknown as HandlerContext['stateManager'],
-        logger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-        } as unknown as HandlerContext['logger'],
-        debugLogger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-        } as unknown as HandlerContext['debugLogger'],
+        }),
+        logger: createMockLogger() as unknown as HandlerContext['logger'],
+        debugLogger: createMockLogger() as unknown as HandlerContext['debugLogger'],
         sendMessage: jest.fn(),
         context: {
             globalState: {
@@ -281,7 +252,7 @@ function createMockContext(project: Project | undefined): HandlerContext {
                 update: jest.fn(),
             },
         } as unknown as HandlerContext['context'],
-    } as unknown as HandlerContext;
+    });
 }
 
 // =============================================================================
@@ -313,7 +284,9 @@ describe('handleResetProject DA.live auth (confirmation-first flow)', () => {
 
         // Wire up ServiceLocator (both import paths)
         (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue(mockAuthService);
-        (ServiceLocatorDirect.getAuthenticationService as jest.Mock).mockReturnValue(mockAuthService);
+        (ServiceLocatorDirect.getAuthenticationService as jest.Mock).mockReturnValue(
+            mockAuthService
+        );
 
         // Make HelixService constructor return our mock
         (HelixService as unknown as jest.Mock).mockImplementation(() => mockHelixService);
@@ -353,43 +326,7 @@ describe('handleResetProject DA.live auth (confirmation-first flow)', () => {
 
         // Setup edsResetService mocks
         // Default: extractResetParams returns success with valid params
-        mockExtractResetParams.mockImplementation((project: Project) => {
-            const edsInstance = project?.componentInstances?.['eds-storefront'];
-            const metadata = edsInstance?.metadata || {};
-
-            // Validate required fields (mirrors real implementation)
-            if (!metadata.githubRepo) {
-                return {
-                    success: false,
-                    error: 'Missing EDS metadata: GitHub repository not configured',
-                };
-            }
-            if (!metadata.daLiveOrg || !metadata.daLiveSite) {
-                return {
-                    success: false,
-                    error: 'Missing DA.live configuration: org and site are required',
-                };
-            }
-
-            const [repoOwner, repoName] = (metadata.githubRepo as string).split('/');
-            return {
-                success: true,
-                params: {
-                    repoOwner,
-                    repoName,
-                    daLiveOrg: metadata.daLiveOrg,
-                    daLiveSite: metadata.daLiveSite,
-                    templateOwner: 'skukla',
-                    templateRepo: 'citisignal-eds-boilerplate',
-                    contentSource: {
-                        org: 'demo-system-stores',
-                        site: 'accs-citisignal',
-                        indexPath: 'full-index.json',
-                    },
-                    project,
-                },
-            };
-        });
+        mockExtractResetParams.mockImplementation(fakeExtractResetParams);
 
         // Default: executeEdsReset returns success
         mockExecuteEdsReset.mockResolvedValue({
@@ -448,6 +385,8 @@ describe('handleResetProject DA.live auth (confirmation-first flow)', () => {
 
         // Then: Should delegate to resetEdsProjectWithUI
         expect(mockResetEdsProjectWithUI).toHaveBeenCalledWith({
+            // ADR-015: collaborators the mesh-redeploy step receives.
+            meshDeps: expect.anything(),
             project,
             context,
             logPrefix: '[ProjectsList]',

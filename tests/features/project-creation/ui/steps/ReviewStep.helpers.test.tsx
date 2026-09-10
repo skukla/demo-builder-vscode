@@ -16,6 +16,12 @@ import type {
     ComponentData,
     ComponentsData,
 } from '@/features/project-creation/ui/steps/ReviewStep';
+import type { WizardState } from '@/types/webview';
+
+/** The house WizardState fixture shape (see tileStatus.test.ts, buildSummary.test.tsx). */
+function wizardState(overrides: Partial<WizardState> = {}): WizardState {
+    return overrides as WizardState;
+}
 
 describe('reviewStepHelpers', () => {
     describe('resolveServiceNames', () => {
@@ -59,22 +65,22 @@ describe('reviewStepHelpers', () => {
 
         it('should return empty array when backendId is undefined', () => {
             const result = resolveServiceNames(undefined, mockBackends, mockServices);
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
         });
 
         it('should return empty array when backends is undefined', () => {
             const result = resolveServiceNames('adobe-commerce-paas', undefined, mockServices);
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
         });
 
         it('should return empty array when services is undefined', () => {
             const result = resolveServiceNames('adobe-commerce-paas', mockBackends, undefined);
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
         });
 
         it('should return empty array when backend is not found', () => {
             const result = resolveServiceNames('unknown-backend', mockBackends, mockServices);
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
         });
 
         it('should filter out services not found in registry', () => {
@@ -394,7 +400,7 @@ describe('reviewStepHelpers', () => {
                     {
                         integrations: ['analytics'],
                         appBuilder: ['custom-app'],
-                    } as never,
+                    } as unknown as Parameters<typeof buildComponentInfoList>[0],
                     undefined,
                     mockComponentsData,
                     []
@@ -411,7 +417,7 @@ describe('reviewStepHelpers', () => {
                 const result = buildComponentInfoList(undefined, undefined, mockComponentsData, []);
 
                 // Then: Should return empty array
-                expect(result).toEqual([]);
+                expect(result).toStrictEqual([]);
             });
 
             it('should return empty array when componentsData is undefined', () => {
@@ -426,7 +432,7 @@ describe('reviewStepHelpers', () => {
                 const result = buildComponentInfoList(state.components, undefined, undefined, []);
 
                 // Then: Should return empty array
-                expect(result).toEqual([]);
+                expect(result).toStrictEqual([]);
             });
 
             it('should handle empty components object', () => {
@@ -434,7 +440,7 @@ describe('reviewStepHelpers', () => {
                 const result = buildComponentInfoList({}, undefined, mockComponentsData, []);
 
                 // Then: Should return empty array
-                expect(result).toEqual([]);
+                expect(result).toStrictEqual([]);
             });
         });
 
@@ -485,7 +491,7 @@ describe('reviewStepHelpers', () => {
                 },
             };
 
-            expect(resolveReviewIntegrationNames(state as never, [], [])).toEqual([
+            expect(resolveReviewIntegrationNames(wizardState(state), [], [])).toEqual([
                 'ERP Sync',
                 'crm-connector',
             ]);
@@ -498,7 +504,7 @@ describe('reviewStepHelpers', () => {
                 appBuilderComponentSources: {},
             };
 
-            expect(resolveReviewIntegrationNames(state as never, [], [])).toEqual([
+            expect(resolveReviewIntegrationNames(wizardState(state), [], [])).toEqual([
                 'Custom Integration',
             ]);
         });
@@ -511,8 +517,8 @@ describe('reviewStepHelpers', () => {
                 appBuilderComponentSources: {},
             };
 
-            expect(resolveReviewIntegrationNames(state as never, [], [])).toEqual([]);
-            expect(resolveReviewIntegrationNames({} as never, [], [])).toEqual([]);
+            expect(resolveReviewIntegrationNames(wizardState(state), [], [])).toStrictEqual([]);
+            expect(resolveReviewIntegrationNames(wizardState(), [], [])).toStrictEqual([]);
         });
     });
 });

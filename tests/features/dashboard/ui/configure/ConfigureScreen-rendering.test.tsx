@@ -1,3 +1,6 @@
+import './ConfigureScreen.mocks';
+import './ConfigureScreen.storeDiscoveryMocks';
+
 import { render, screen } from '@testing-library/react';
 import React from 'react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
@@ -11,36 +14,15 @@ import {
     railTabLabels,
 } from './ConfigureScreen.testUtils';
 
-// Mock hooks
-jest.mock('@/core/ui/hooks', () => ({
-    useSelectableDefault: jest.fn(() => ({})),
-    useFocusTrap: jest.fn(() => ({ current: null })),
-}));
-
 jest.mock('@/core/ui/hooks/useSelectableDefault', () => ({
     useSelectableDefault: jest.fn(() => ({})),
-}));
-
-// Mock WebviewClient
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        postMessage: jest.fn(),
-        request: jest.fn(),
-        onMessage: jest.fn(() => jest.fn()),
-    },
 }));
 
 // Mock layout components. NOTE: the shell (`layout/StepAreaShell`) and the rail
 // (`navigation/StepRail`) are deliberately NOT mocked — ConfigureScreen imports them by
 // direct path and they are plain presentational markup, so these tests exercise the real
 // rail the user clicks.
-jest.mock('@/core/ui/components/layout', () => ({
-    PageHeader: ({ title, subtitle }: any) => (
-        <div data-testid="page-header" className="border-b bg-gray-75">
-            <h1>{title}</h1>
-            {subtitle && <h3>{subtitle}</h3>}
-        </div>
-    ),
+jest.mock('@/core/ui/components/layout/PageFooter', () => ({
     PageFooter: ({ leftContent, rightContent }: any) => (
         <div data-testid="page-footer" className="border-t bg-gray-75 max-w-800">
             <div data-testid="footer-left">{leftContent}</div>
@@ -49,23 +31,13 @@ jest.mock('@/core/ui/components/layout', () => ({
     ),
 }));
 
-// Mock store discovery hooks & row — tested separately in ConfigureScreen-store-discovery.test.tsx.
-// Here we just need them to render benignly so the existing rendering assertions still pass.
-jest.mock('@/features/components/ui/hooks/useStoreDiscovery', () => ({
-    useStoreDiscovery: () => ({
-        isFetching: false,
-        fetchError: null,
-        hasStoreData: false,
-        fetchStores: jest.fn(),
-        getWebsiteItems: () => [],
-        getStoreGroupItems: () => [],
-        getStoreViewItems: () => [],
-        isStoreGroup: () => false,
-    }),
-}));
-
-jest.mock('@/features/components/ui/hooks/useAutoStoreDetect', () => ({
-    useAutoStoreDetect: () => ({ autoDetectKey: undefined, forceFetch: jest.fn() }),
+jest.mock('@/core/ui/components/layout/PageHeader', () => ({
+    PageHeader: ({ title, subtitle }: any) => (
+        <div data-testid="page-header" className="border-b bg-gray-75">
+            <h1>{title}</h1>
+            {subtitle && <h3>{subtitle}</h3>}
+        </div>
+    ),
 }));
 
 // Minimal stand-in for StoreConfigFieldRow — renders label + input so existing
@@ -103,21 +75,21 @@ describe('ConfigureScreen - Rendering', () => {
     describe('Basic Rendering', () => {
         it('should render project name', () => {
             renderWithProvider(
-                <ConfigureScreen project={mockProject as any} componentsData={mockComponentsData} />
+                <ConfigureScreen project={mockProject} componentsData={mockComponentsData} />
             );
             expect(screen.getByText('Test Project')).toBeInTheDocument();
         });
 
         it('should render "Configure Project" heading', () => {
             renderWithProvider(
-                <ConfigureScreen project={mockProject as any} componentsData={mockComponentsData} />
+                <ConfigureScreen project={mockProject} componentsData={mockComponentsData} />
             );
             expect(screen.getByText('Configure Project')).toBeInTheDocument();
         });
 
         it('should render Save button', () => {
             renderWithProvider(
-                <ConfigureScreen project={mockProject as any} componentsData={mockComponentsData} />
+                <ConfigureScreen project={mockProject} componentsData={mockComponentsData} />
             );
             expect(screen.getByText('Save Changes')).toBeInTheDocument();
         });
@@ -126,7 +98,7 @@ describe('ConfigureScreen - Rendering', () => {
     describe('Configuration Fields', () => {
         it("should render the active section's fields for selected components", () => {
             renderWithProvider(
-                <ConfigureScreen project={mockProject as any} componentsData={mockComponentsData} />
+                <ConfigureScreen project={mockProject} componentsData={mockComponentsData} />
             );
 
             selectSection('Adobe Commerce');
@@ -145,7 +117,7 @@ describe('ConfigureScreen - Rendering', () => {
 
         it('should display existing values from project config', () => {
             renderWithProvider(
-                <ConfigureScreen project={mockProject as any} componentsData={mockComponentsData} />
+                <ConfigureScreen project={mockProject} componentsData={mockComponentsData} />
             );
 
             selectSection('Adobe Commerce');
@@ -159,7 +131,7 @@ describe('ConfigureScreen - Rendering', () => {
     describe('Section rail', () => {
         it('renders one tab per configurable section, Project first', () => {
             renderWithProvider(
-                <ConfigureScreen project={mockProject as any} componentsData={mockComponentsData} />
+                <ConfigureScreen project={mockProject} componentsData={mockComponentsData} />
             );
 
             expect(railTabLabels()).toEqual(['Project', 'Adobe Commerce', 'Catalog Service']);
@@ -167,7 +139,7 @@ describe('ConfigureScreen - Rendering', () => {
 
         it('starts on Project and marks the clicked tab selected', () => {
             renderWithProvider(
-                <ConfigureScreen project={mockProject as any} componentsData={mockComponentsData} />
+                <ConfigureScreen project={mockProject} componentsData={mockComponentsData} />
             );
 
             expect(railTab('Project')).toHaveAttribute('aria-selected', 'true');
@@ -179,7 +151,7 @@ describe('ConfigureScreen - Rendering', () => {
 
         it('leaves every tab reachable — Configure is not a linear wizard', () => {
             renderWithProvider(
-                <ConfigureScreen project={mockProject as any} componentsData={mockComponentsData} />
+                <ConfigureScreen project={mockProject} componentsData={mockComponentsData} />
             );
 
             for (const tab of screen.getAllByRole('tab')) {
@@ -189,7 +161,7 @@ describe('ConfigureScreen - Rendering', () => {
 
         it('no longer renders the Sections sidebar it replaced', () => {
             renderWithProvider(
-                <ConfigureScreen project={mockProject as any} componentsData={mockComponentsData} />
+                <ConfigureScreen project={mockProject} componentsData={mockComponentsData} />
             );
 
             expect(screen.queryByTestId('navigation-panel')).not.toBeInTheDocument();
@@ -199,7 +171,7 @@ describe('ConfigureScreen - Rendering', () => {
     describe('PageHeader Integration', () => {
         it('should render PageHeader with "Configure Project" title', () => {
             renderWithProvider(
-                <ConfigureScreen project={mockProject as any} componentsData={mockComponentsData} />
+                <ConfigureScreen project={mockProject} componentsData={mockComponentsData} />
             );
 
             const header = screen.getByTestId('page-header');
@@ -209,7 +181,7 @@ describe('ConfigureScreen - Rendering', () => {
 
         it('should render PageHeader with project name as subtitle', () => {
             renderWithProvider(
-                <ConfigureScreen project={mockProject as any} componentsData={mockComponentsData} />
+                <ConfigureScreen project={mockProject} componentsData={mockComponentsData} />
             );
 
             const header = screen.getByTestId('page-header');
@@ -221,7 +193,7 @@ describe('ConfigureScreen - Rendering', () => {
     describe('PageFooter Integration', () => {
         it('should render PageFooter with Close button on left', () => {
             renderWithProvider(
-                <ConfigureScreen project={mockProject as any} componentsData={mockComponentsData} />
+                <ConfigureScreen project={mockProject} componentsData={mockComponentsData} />
             );
 
             const footer = screen.getByTestId('page-footer');
@@ -233,7 +205,7 @@ describe('ConfigureScreen - Rendering', () => {
 
         it('should render PageFooter with Save Changes button on right', () => {
             renderWithProvider(
-                <ConfigureScreen project={mockProject as any} componentsData={mockComponentsData} />
+                <ConfigureScreen project={mockProject} componentsData={mockComponentsData} />
             );
 
             const footer = screen.getByTestId('page-footer');
@@ -252,7 +224,7 @@ describe('ConfigureScreen - Rendering', () => {
 
         it('does not render an AI tab or AI sidebar inside Configure', () => {
             renderWithProvider(
-                <ConfigureScreen project={mockProject as any} componentsData={mockComponentsData} />
+                <ConfigureScreen project={mockProject} componentsData={mockComponentsData} />
             );
 
             expect(screen.queryByTestId('ai-setup-tab')).not.toBeInTheDocument();
@@ -265,7 +237,7 @@ describe('ConfigureScreen - Rendering', () => {
         it('should handle empty components data', () => {
             renderWithProvider(
                 <ConfigureScreen
-                    project={mockProject as any}
+                    project={mockProject}
                     componentsData={{ frontends: [], backends: [], dependencies: [], envVars: {} }}
                 />
             );
@@ -278,7 +250,7 @@ describe('ConfigureScreen - Rendering', () => {
         it('should handle missing existing env values', () => {
             renderWithProvider(
                 <ConfigureScreen
-                    project={mockProject as any}
+                    project={mockProject}
                     componentsData={mockComponentsData}
                     existingEnvValues={undefined}
                 />
@@ -298,7 +270,7 @@ describe('ConfigureScreen - Rendering', () => {
 
             renderWithProvider(
                 <ConfigureScreen
-                    project={mockProject as any}
+                    project={mockProject}
                     componentsData={mockComponentsData}
                     existingEnvValues={configWithLongValue}
                 />

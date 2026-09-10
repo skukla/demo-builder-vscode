@@ -146,3 +146,31 @@ it('server with env-only / non-path args → not drifted (nothing to stat)', asy
     expect(result).toEqual({ drifted: false, missing: [] });
     expect(access).not.toHaveBeenCalled();
 });
+
+it('only stats args that END in a js extension — a .js.bak is not a module path', async () => {
+    // The anchor is load-bearing. Without it a backup or a log file whose name
+    // merely CONTAINS `.js` is resolved and reported as drift, and the SC is
+    // told to re-run a heal for a file nothing was ever going to load.
+    mockMcpJson({ playwright: { command: 'node', args: ['/tools/index.js.bak'] } });
+    existsOnly([]);
+
+    const result = await detectMcpDrift(PROJECT);
+
+    expect(access).not.toHaveBeenCalled();
+    expect(result).toEqual({ drifted: false, missing: [] });
+});
+
+it('reports a retired entry point WITHOUT touching the disk, even where it exists', async () => {
+    // esbuild builds one MCP entry point, mcp-proxy.js. An entry still naming
+    // mcp-server.js is stale whatever the directory holds, so the name is
+    // checked before fs.access rather than after — a build that happens to
+    // still carry the old file must not read as healthy.
+    const retired = '/ext/skukla.adobe-demo-builder-1.0.0-beta.128/dist/mcp-server.js';
+    mockMcpJson({ 'demo-builder': { command: 'node', args: [retired] } });
+    existsOnly([retired]); // it IS on disk
+
+    const result = await detectMcpDrift(PROJECT);
+
+    expect(access).not.toHaveBeenCalledWith(retired);
+    expect(result).toEqual({ drifted: true, missing: [retired] });
+});

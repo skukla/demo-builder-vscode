@@ -111,8 +111,8 @@ describe('wizardHelpers - state & config', () => {
         });
 
         it('should return empty object when no imported settings', () => {
-            expect(initializeAdobeContextFromImport(null)).toEqual({});
-            expect(initializeAdobeContextFromImport(undefined)).toEqual({});
+            expect(initializeAdobeContextFromImport(null)).toStrictEqual({});
+            expect(initializeAdobeContextFromImport(undefined)).toStrictEqual({});
         });
 
         it('should return partial context when some fields missing', () => {
@@ -213,6 +213,13 @@ describe('wizardHelpers - state & config', () => {
             const state: WizardState = {
                 ...REVIEW_BASE,
                 selectedStack: 'eds-accs',
+                // A stack with no package is a state production WARNS about
+                // (wizardHelpers.ts:477) — "architecture is selected but
+                // brand/package is missing". The warning was right; the fixture
+                // was the unrealistic half. Naming a package here makes this a
+                // state the wizard can actually reach, and the mesh-derivation
+                // claim below is unaffected by it.
+                selectedPackage: 'bodea',
                 selectedAppBuilderComponents: ['eds-accs-mesh', 'erp-sync'],
             };
 
@@ -225,12 +232,14 @@ describe('wizardHelpers - state & config', () => {
             const state: WizardState = {
                 ...REVIEW_BASE,
                 selectedStack: 'eds-accs',
+                // See the note above: stack without package is a warned state.
+                selectedPackage: 'bodea',
                 selectedAppBuilderComponents: ['erp-sync'],
             };
 
             const config = buildProjectConfig(state);
 
-            expect(config.components?.dependencies).toEqual([]);
+            expect(config.components?.dependencies).toStrictEqual([]);
         });
 
         it('should include selectedAddons in the config', () => {
@@ -256,7 +265,7 @@ describe('wizardHelpers - state & config', () => {
 
             const config = buildProjectConfig(state);
 
-            expect(config.selectedAddons).toEqual([]);
+            expect(config.selectedAddons).toStrictEqual([]);
         });
 
         it('should include package and stack selections', () => {
@@ -452,8 +461,8 @@ describe('wizardHelpers - state & config', () => {
 
             const config = buildProjectConfig(state);
 
-            expect(config.selectedAppBuilderComponents).toEqual([]);
-            expect(config.appBuilderComponentSources).toEqual({});
+            expect(config.selectedAppBuilderComponents).toStrictEqual([]);
+            expect(config.appBuilderComponentSources).toStrictEqual({});
         });
 
         it('should default customBlockLibraries to empty array when not set', () => {
@@ -464,7 +473,7 @@ describe('wizardHelpers - state & config', () => {
 
             const config = buildProjectConfig(state);
 
-            expect(config.customBlockLibraries).toEqual([]);
+            expect(config.customBlockLibraries).toStrictEqual([]);
         });
 
         it('should handle missing frontendSource and contentSource gracefully', () => {

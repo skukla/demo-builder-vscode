@@ -16,6 +16,7 @@ import {
     sublineFor,
     toIntegrationCards,
 } from '@/features/project-creation/ui/components/integration-flow/integrationCards';
+import type { IntegrationCardModel } from '@/core/ui/components/integrations/integrationCardModel.types';
 import type { IntegrationRow } from '@/features/project-creation/ui/components/integration-flow/integrationRows';
 
 function row(overrides: Partial<IntegrationRow> = {}): IntegrationRow {
@@ -51,7 +52,7 @@ describe('toIntegrationCards', () => {
     });
 
     it('returns an empty list for no rows', () => {
-        expect(toIntegrationCards([])).toEqual([]);
+        expect(toIntegrationCards([])).toStrictEqual([]);
     });
 
     // Nothing is deployed yet. A status would be the same on every card, so the
@@ -68,6 +69,17 @@ describe('toIntegrationCards', () => {
             const [card] = toIntegrationCards([row()]);
 
             expect(card[key as keyof typeof card]).toBeUndefined();
+        });
+
+        // dotVariant and urlLabel are UNIONS on IntegrationCardModel, so the
+        // shared card renders whatever arrives — an empty string would give it a
+        // dot with no variant and an unlabelled url slot. The wizard's cards are
+        // App Builder apps, never mesh endpoints, so the label is the app one.
+        it('fills the shared shape with legal values, not empty placeholders', () => {
+            const [card] = toIntegrationCards([row()]);
+
+            expect(card.dotVariant).toBe('neutral');
+            expect(card.urlLabel).toBe('App URL');
         });
 
         it('pins status to not-deployed with an empty label', () => {
@@ -109,7 +121,7 @@ describe('toIntegrationCards', () => {
             // established "no kebab" signal (IntegrationActionsMenu returns
             // null on length 0).
             const [card] = toIntegrationCards([row({ kind: 'mesh', required: true })]);
-            expect(card.menuActions).toEqual([]);
+            expect(card.menuActions).toStrictEqual([]);
             expect(card.required).toBe(true);
         });
     });
@@ -204,6 +216,16 @@ describe('sublineFor', () => {
         expect(sublineFor(toIntegrationCards([row({ apis: [] })])[0])).toBe(
             'Custom integration · acme/erp-sync'
         );
+    });
+
+    // `apis` is OPTIONAL on IntegrationCardModel — the dashboard's producer omits
+    // it entirely on cards that provision nothing — so the helper has to survive
+    // a card that carries no key at all, not merely an empty array.
+    it('survives a card with no apis key at all', () => {
+        const { apis: _apis, ...withoutApis } = toIntegrationCards([row()])[0];
+        const card: IntegrationCardModel = withoutApis;
+
+        expect(sublineFor(card)).toBe('Custom integration · acme/erp-sync');
     });
 
     it('explains a required mesh — the card with no kebab must say why', () => {

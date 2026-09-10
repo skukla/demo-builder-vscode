@@ -14,19 +14,18 @@
  * `id_integration ?? id`.
  */
 
+import {
+    MESH,
+    MGMT,
+    StepLogger,
+    getLogger,
+} from './adobeEntityFetcher.testUtils';
 import { AdobeEntityFetcher } from '@/features/authentication/services/adobeEntityFetcher';
-import type { CommandExecutor } from '@/core/shell';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
-import type { StepLogger } from '@/core/logging';
 import type { Logger } from '@/types/logger';
-
-jest.mock('@/core/logging');
-
-import { getLogger } from '@/core/logging';
-
-const MESH = 'GraphQLServiceSDK';
-const MGMT = 'AdobeIOManagementAPISDK';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 describe('AdobeEntityFetcher — API-service wrappers', () => {
     let fetcher: AdobeEntityFetcher;
@@ -43,9 +42,7 @@ describe('AdobeEntityFetcher — API-service wrappers', () => {
     let mockCacheManager: jest.Mocked<AuthCacheManager>;
 
     beforeEach(() => {
-        (getLogger as jest.Mock).mockReturnValue({
-            trace: jest.fn(), debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(),
-        });
+        (getLogger as jest.Mock).mockReturnValue(createMockLogger());
 
         sdk = {
             getServicesForOrg: jest.fn(),
@@ -72,10 +69,10 @@ describe('AdobeEntityFetcher — API-service wrappers', () => {
         } as unknown as jest.Mocked<AuthCacheManager>;
 
         fetcher = new AdobeEntityFetcher(
-            { execute: jest.fn() } as unknown as jest.Mocked<CommandExecutor>,
+            createMockCommandExecutor(),
             mockSDKClient,
             mockCacheManager,
-            { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() } as unknown as jest.Mocked<Logger>,
+            createMockLogger() as unknown as jest.Mocked<Logger>,
             { logTemplate: jest.fn() } as unknown as jest.Mocked<StepLogger>,
         );
     });
@@ -210,12 +207,12 @@ describe('AdobeEntityFetcher — API-service wrappers', () => {
 
         it('returns [] when sdkList is absent', async () => {
             sdk.getIntegration.mockResolvedValue({ body: {} });
-            expect(await fetcher.getSubscribedServiceCodes('org1', 'int-1')).toEqual([]);
+            expect(await fetcher.getSubscribedServiceCodes('org1', 'int-1')).toStrictEqual([]);
         });
 
         it('returns [] (never throws) when the SDK call fails', async () => {
             sdk.getIntegration.mockRejectedValue(new Error('boom'));
-            expect(await fetcher.getSubscribedServiceCodes('org1', 'int-1')).toEqual([]);
+            expect(await fetcher.getSubscribedServiceCodes('org1', 'int-1')).toStrictEqual([]);
         });
     });
 

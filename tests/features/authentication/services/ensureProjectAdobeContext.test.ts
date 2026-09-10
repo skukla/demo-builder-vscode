@@ -19,6 +19,8 @@ import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { ensureProjectOrgContext } from '@/features/authentication/services/ensureProjectOrgContext';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockProject } from '../../../helpers/projectFake';
 
 jest.mock('@/core/auth/adobeAuthGuard', () => ({ ensureAdobeIOAuth: jest.fn() }));
 jest.mock('@/features/authentication/services/ensureProjectOrgContext', () => ({
@@ -29,11 +31,11 @@ const mockAuth = ensureAdobeIOAuth as jest.MockedFunction<typeof ensureAdobeIOAu
 const mockOrg = ensureProjectOrgContext as jest.MockedFunction<typeof ensureProjectOrgContext>;
 
 function createLogger(): Logger {
-    return { trace: jest.fn(), debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() } as unknown as Logger;
+    return createMockLogger() as unknown as Logger;
 }
 
 function createProject(): Project {
-    return {
+    return createMockProject({
         name: 'Acme Demo',
         path: '/test/acme',
         status: 'ready',
@@ -42,7 +44,7 @@ function createProject(): Project {
         adobe: { organization: 'org-expected', projectId: 'proj-1', workspace: 'ws-1' },
         componentInstances: {},
         componentConfigs: {},
-    } as unknown as Project;
+    });
 }
 
 describe('ensureProjectAdobeContext', () => {
@@ -90,6 +92,23 @@ describe('ensureProjectAdobeContext', () => {
         const result = await ensureProjectAdobeContext({ authManager, project, logger });
 
         expect(result).toEqual({ ready: true, currentOrg: 'Expected Org' });
+    });
+
+    // `Project.adobe` is optional. A project with no Adobe block is still a valid
+    // pre-flight input: the auth guard gets an empty hint rather than a throw, and
+    // the org guard (which treats "no org" as nothing to check) still runs.
+    it('hands the auth guard an all-undefined hint for a project with no Adobe block', async () => {
+        mockAuth.mockResolvedValue({ authenticated: true });
+        mockOrg.mockResolvedValue({ reachable: true });
+        const bare = createMockProject({ name: 'Bare', path: '/test/bare', adobe: undefined });
+
+        const result = await ensureProjectAdobeContext({ authManager, project: bare, logger });
+
+        expect(mockAuth).toHaveBeenCalledWith(expect.objectContaining({
+            projectContext: { organization: undefined, projectId: undefined, workspace: undefined },
+        }));
+        expect(mockOrg).toHaveBeenCalledWith(expect.objectContaining({ project: bare }));
+        expect(result).toEqual({ ready: true, currentOrg: undefined });
     });
 
     it('forwards project context + options to the auth guard, and project + prefix to the org guard', async () => {

@@ -13,15 +13,10 @@ import * as path from 'path';
 import { InExtensionMcpServer } from '@/features/ai/server/inExtensionMcpServer';
 import { probeInExtensionMcpTools } from '@/features/ai/server/mcpToolProbe';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 function makeLogger(): Logger {
-    return {
-        info: jest.fn(),
-        debug: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        trace: jest.fn(),
-    } as unknown as Logger;
+    return createMockLogger() as unknown as Logger;
 }
 
 describe('probeInExtensionMcpTools', () => {

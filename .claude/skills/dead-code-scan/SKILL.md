@@ -5,6 +5,7 @@ description: Find dead code — unused exports, unimported files, self-declared 
 
 # Dead-Code Scan
 
+
 Detect code that nothing reaches: exports no one imports, symbols left over after a
 supersession, and comments that admit the code is obsolete. This repo's rule is **no soft
 deprecation** — when something is obsolete you DELETE it, you never leave a `(Deprecated)`

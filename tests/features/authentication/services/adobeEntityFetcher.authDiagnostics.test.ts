@@ -30,22 +30,20 @@
 // The fetcher logs through the module-level `getLogger()`, NOT its injected
 // logger — so that is the object these tests have to watch. (Name must start with
 // `mock` for jest to allow the reference inside a hoisted factory.)
-const mockDebugLogger = {
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    trace: jest.fn(),
-};
+const mockDebugLogger = createMockLogger();
 
-jest.mock('@/core/logging', () => ({ getLogger: () => mockDebugLogger }));
+jest.mock('@/core/logging/debugLogger', () => ({
+    getLogger: () => mockDebugLogger,
+}));
 
 import { AdobeEntityFetcher } from '@/features/authentication/services/adobeEntityFetcher';
-import type { CommandExecutor } from '@/core/shell';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
-import type { StepLogger } from '@/core/logging';
+import type { StepLogger } from '@/core/logging/stepLogger';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 let fetcher: AdobeEntityFetcher;
 let mockCommandExecutor: jest.Mocked<CommandExecutor>;
@@ -56,19 +54,13 @@ let mockLogger: jest.Mocked<Logger>;
 const UNAUTHORIZED = ' ›   Error: [CoreConsoleAPISDK] 401 - Unauthorized';
 
 function build(config: Record<string, unknown> = {}) {
-    mockCommandExecutor = { execute: jest.fn() } as unknown as jest.Mocked<CommandExecutor>;
+    mockCommandExecutor = createMockCommandExecutor({ execute: jest.fn() });
     mockSDKClient = {
         isInitialized: jest.fn().mockReturnValue(false),
         getClient: jest.fn(),
         ensureInitialized: jest.fn().mockResolvedValue(true),
     } as unknown as jest.Mocked<AdobeSDKClient>;
-    mockLogger = {
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        trace: jest.fn(),
-    } as unknown as jest.Mocked<Logger>;
+    mockLogger = createMockLogger() as unknown as jest.Mocked<Logger>;
 
     fetcher = new AdobeEntityFetcher(
         mockCommandExecutor,
@@ -119,7 +111,8 @@ describe('a 401 from the CLI', () => {
             code: 2,
             stdout: '',
             stderr: UNAUTHORIZED,
-        } as never);
+            duration: 0,
+        });
 
         await expect(fetcher.getOrganizations()).rejects.not.toThrow(/AUTH_EXPIRED/);
     });
@@ -130,7 +123,8 @@ describe('a 401 from the CLI', () => {
             code: 2,
             stdout: '',
             stderr: UNAUTHORIZED,
-        } as never);
+            duration: 0,
+        });
 
         await expect(fetcher.getOrganizations()).rejects.toThrow(/AUTH_EXPIRED/);
     });
@@ -141,7 +135,8 @@ describe('a 401 from the CLI', () => {
             code: 2,
             stdout: '',
             stderr: UNAUTHORIZED,
-        } as never);
+            duration: 0,
+        });
 
         await expect(fetcher.getOrganizations()).rejects.toThrow(/AUTH_EXPIRED/);
     });
@@ -155,7 +150,8 @@ describe('what the logs must show', () => {
             code: 2,
             stdout: 'not json',
             stderr: UNAUTHORIZED,
-        } as never);
+            duration: 0,
+        });
 
         await expect(fetcher.getOrganizations()).rejects.toThrow();
 
@@ -167,7 +163,8 @@ describe('what the logs must show', () => {
             code: 2,
             stdout: '',
             stderr: ' ›   Error: 403 - Forbidden',
-        } as never);
+            duration: 0,
+        });
 
         await expect(fetcher.getOrganizations()).rejects.toThrow();
 

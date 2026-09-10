@@ -16,56 +16,20 @@
  * could clobber a live storefront, and there is no safe write test: the only
  * non-mutating write probe would be a PUT that 409s, which stops being safe the
  * moment Adobe changes it to an upsert.
+ *
+ * The mock preamble, fetch routers and fixtures live in
+ * `configServiceProbe.testUtils.ts`, shared with `configServiceProbe-legs.test.ts`.
  */
 
-// BYOM is a user setting, so the action leg is off unless a test turns it on.
-// Only `resolveByomOverlayUrl` is imported from this module by the probe.
-jest.mock('@/features/eds/handlers/edsHelpers', () => ({
-    resolveByomOverlayUrl: jest.fn(() => undefined),
-}));
-
-import { probeConfigService } from '@/features/eds/services/configService/configServiceProbe';
-import { resolveByomOverlayUrl } from '@/features/eds/handlers/edsHelpers';
-
-const mockResolveOverlayUrl = resolveByomOverlayUrl as jest.MockedFunction<
-    typeof resolveByomOverlayUrl
->;
-
-const logger = {
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    debug: jest.fn(),
-    trace: jest.fn(),
-};
-const TOKEN = 'ims-token-value-never-logged';
-
-function tokenProvider() {
-    return { getAccessToken: jest.fn().mockResolvedValue(TOKEN) };
-}
-
-/**
- * The no-credential case needs its own factory. Passing `undefined` to a
- * defaulted parameter triggers the default, so `tokenProvider(undefined)`
- * quietly handed back a valid token and the test asserted nothing.
- */
-function tokenProviderWithNoCredential() {
-    return { getAccessToken: jest.fn().mockResolvedValue(undefined) };
-}
-
-/** Build a fetch stub keyed on which host the probe is calling. */
-function fetchStub(byHost: Record<string, { status: number; headers?: Record<string, string> }>) {
-    return jest.fn().mockImplementation((url: string) => {
-        const key = Object.keys(byHost).find((k) => url.includes(k));
-        if (!key) return Promise.reject(new Error(`unstubbed host: ${url}`));
-        const { status, headers = {} } = byHost[key];
-        return Promise.resolve({
-            ok: status >= 200 && status < 300,
-            status,
-            headers: { get: (n: string) => headers[n.toLowerCase()] ?? null },
-        });
-    });
-}
+import {
+    fetchStub,
+    logger,
+    mockResolveOverlayUrl,
+    probeConfigService,
+    TOKEN,
+    tokenProvider,
+    tokenProviderWithNoCredential,
+} from './configServiceProbe.testUtils';
 
 describe('probeConfigService', () => {
     const org = 'skukla';
@@ -85,7 +49,7 @@ describe('probeConfigService', () => {
             tokenProviderWithNoCredential(),
             org,
             site,
-            logger as never
+            logger
         );
 
         expect(result.token.present).toBe(false);
@@ -97,7 +61,7 @@ describe('probeConfigService', () => {
         // handled undefined would sail past this and probe with "Bearer null".
         const provider = { getAccessToken: jest.fn().mockResolvedValue(null) };
 
-        const result = await probeConfigService(provider, org, site, logger as never);
+        const result = await probeConfigService(provider, org, site, logger);
 
         expect(result.token.present).toBe(false);
         expect(result.verdict).toMatch(/sign in/i);
@@ -108,9 +72,9 @@ describe('probeConfigService', () => {
         globalThis.fetch = fetchStub({
             'admin.hlx.page': { status: 200 },
             'admin.da.live': { status: 200 },
-        }) as never;
+        });
 
-        const result = await probeConfigService(tokenProvider(), org, site, logger as never);
+        const result = await probeConfigService(tokenProvider(), org, site, logger);
 
         expect(JSON.stringify(result)).not.toContain(TOKEN);
     });
@@ -122,9 +86,9 @@ describe('probeConfigService', () => {
             'admin.hlx.page': { status: 200 },
             'admin.da.live': { status: 200 },
         });
-        globalThis.fetch = stub as never;
+        globalThis.fetch = stub;
 
-        await probeConfigService(tokenProvider(), org, site, logger as never);
+        await probeConfigService(tokenProvider(), org, site, logger);
 
         for (const [, init] of stub.mock.calls) {
             expect((init?.method ?? 'GET').toUpperCase()).toBe('GET');
@@ -138,9 +102,9 @@ describe('probeConfigService', () => {
                 headers: { 'x-error': '[admin] forbidden', 'x-invocation-id': 'abc-123' },
             },
             'admin.da.live': { status: 200 },
-        }) as never;
+        });
 
-        const result = await probeConfigService(tokenProvider(), org, site, logger as never);
+        const result = await probeConfigService(tokenProvider(), org, site, logger);
 
         expect(result.configService?.httpStatus).toBe(403);
         expect(result.configService?.xError).toBe('[admin] forbidden');
@@ -153,9 +117,9 @@ describe('probeConfigService', () => {
         globalThis.fetch = fetchStub({
             'admin.hlx.page': { status: 403 },
             'admin.da.live': { status: 200 },
-        }) as never;
+        });
 
-        const result = await probeConfigService(tokenProvider(), org, site, logger as never);
+        const result = await probeConfigService(tokenProvider(), org, site, logger);
 
         expect(result.daLive?.httpStatus).toBe(200);
         expect(result.verdict).toMatch(/install/i);
@@ -166,9 +130,9 @@ describe('probeConfigService', () => {
         globalThis.fetch = fetchStub({
             'admin.hlx.page': { status: 401 },
             'admin.da.live': { status: 401 },
-        }) as never;
+        });
 
-        const result = await probeConfigService(tokenProvider(), org, site, logger as never);
+        const result = await probeConfigService(tokenProvider(), org, site, logger);
 
         expect(result.verdict).toMatch(/sign in|credential/i);
         expect(result.verdict).not.toMatch(/install the AEM Code Sync/i);
@@ -178,9 +142,9 @@ describe('probeConfigService', () => {
         globalThis.fetch = fetchStub({
             'admin.hlx.page': { status: 200 },
             'admin.da.live': { status: 200 },
-        }) as never;
+        });
 
-        const result = await probeConfigService(tokenProvider(), org, site, logger as never);
+        const result = await probeConfigService(tokenProvider(), org, site, logger);
 
         expect(result.configService?.httpStatus).toBe(200);
         expect(result.verdict).toMatch(/no problem|healthy|can read/i);
@@ -192,9 +156,9 @@ describe('probeConfigService', () => {
         globalThis.fetch = fetchStub({
             'admin.hlx.page': { status: 404 },
             'admin.da.live': { status: 200 },
-        }) as never;
+        });
 
-        const result = await probeConfigService(tokenProvider(), org, site, logger as never);
+        const result = await probeConfigService(tokenProvider(), org, site, logger);
 
         expect(result.verdict).toMatch(/not registered|no site config/i);
         expect(result.verdict).not.toMatch(/forbidden|refused/i);
@@ -208,9 +172,9 @@ describe('probeConfigService', () => {
                 status: 200,
                 headers: { get: () => null },
             });
-        }) as never;
+        });
 
-        const result = await probeConfigService(tokenProvider(), org, site, logger as never);
+        const result = await probeConfigService(tokenProvider(), org, site, logger);
 
         expect(result.configService?.httpStatus).toBe(200);
         expect(result.daLive?.error).toContain('ENOTFOUND');
@@ -220,9 +184,9 @@ describe('probeConfigService', () => {
         globalThis.fetch = fetchStub({
             'admin.hlx.page': { status: 403 },
             'admin.da.live': { status: 200 },
-        }) as never;
+        });
 
-        const result = await probeConfigService(tokenProvider(), org, site, logger as never);
+        const result = await probeConfigService(tokenProvider(), org, site, logger);
 
         expect(result.verdict.length).toBeLessThan(400);
     });
@@ -275,7 +239,7 @@ describe('probeConfigService — org roster leg', () => {
             { getAccessToken: jest.fn().mockResolvedValue(TOKEN) },
             org,
             site,
-            logger as never
+            logger
         );
 
         expect(result.orgAdmins?.status).toBe('ok');
@@ -291,7 +255,7 @@ describe('probeConfigService — org roster leg', () => {
             { getAccessToken: jest.fn().mockResolvedValue(TOKEN) },
             org,
             site,
-            logger as never
+            logger
         );
 
         expect(result.orgAdmins?.status).toBe('not_authorized');
@@ -351,11 +315,11 @@ describe('probeConfigService — action key leg', () => {
             { getAccessToken: jest.fn().mockResolvedValue(TOKEN) },
             org,
             site,
-            logger as never
+            logger
         );
 
     it('reports the action holding a readable key', async () => {
-        globalThis.fetch = stub({ status: 200, body: { registered: true } }) as never;
+        globalThis.fetch = stub({ status: 200, body: { registered: true } });
 
         const result = await run();
 
@@ -363,7 +327,7 @@ describe('probeConfigService — action key leg', () => {
     });
 
     it('reports the action holding NO readable key', async () => {
-        globalThis.fetch = stub({ status: 200, body: { registered: false } }) as never;
+        globalThis.fetch = stub({ status: 200, body: { registered: false } });
 
         const result = await run();
 
@@ -372,7 +336,7 @@ describe('probeConfigService — action key leg', () => {
 
     it('asks about the right site', async () => {
         const fetchMock = stub({ status: 200, body: { registered: true } });
-        globalThis.fetch = fetchMock as never;
+        globalThis.fetch = fetchMock;
 
         await run();
 
@@ -384,7 +348,7 @@ describe('probeConfigService — action key leg', () => {
 
     it('reads with a GET, never a write', async () => {
         const fetchMock = stub({ status: 200, body: { registered: true } });
-        globalThis.fetch = fetchMock as never;
+        globalThis.fetch = fetchMock;
 
         await run();
 
@@ -396,7 +360,7 @@ describe('probeConfigService — action key leg', () => {
     it('records an unreachable action as an error, not as "no key"', async () => {
         // Reporting `registered: false` here would send someone to re-register a
         // key that is probably fine, and hide that the action never answered.
-        globalThis.fetch = stub('reject') as never;
+        globalThis.fetch = stub('reject');
 
         const result = await run();
 
@@ -405,7 +369,7 @@ describe('probeConfigService — action key leg', () => {
     });
 
     it('records a non-2xx from the action as an error', async () => {
-        globalThis.fetch = stub({ status: 401 }) as never;
+        globalThis.fetch = stub({ status: 401 });
 
         const result = await run();
 
@@ -415,7 +379,7 @@ describe('probeConfigService — action key leg', () => {
     it('skips the leg entirely when BYOM is off', async () => {
         mockResolveOverlayUrl.mockReturnValue(undefined);
         const fetchMock = stub({ status: 200, body: { registered: true } });
-        globalThis.fetch = fetchMock as never;
+        globalThis.fetch = fetchMock;
 
         const result = await run();
 

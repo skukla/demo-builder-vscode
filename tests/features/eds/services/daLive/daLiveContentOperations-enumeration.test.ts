@@ -10,60 +10,27 @@
  * only covers spreadsheets.
  */
 
+import {
+    createContentOperationsHarness,
+    mockFetch,
+    mockFetchResponse,
+} from './daLiveContentOperations.testUtils';
 import type { DaLiveContentDiscovery } from '@/features/eds/services/daLive/daLiveContentDiscovery';
-import { DaLiveContentOperations, type TokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
+import { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
 import type { Logger } from '@/types/logger';
 
-// Mock the timeout config
-jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: {
-        NORMAL: 30000,
-        QUICK: 5000,
-    },
-}));
-
-// Mock global fetch
-const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
 describe('DaLiveContentOperations - Content Enumeration', () => {
     let service: DaLiveContentOperations;
     let discovery: DaLiveContentDiscovery;
-    let mockTokenProvider: TokenProvider;
     let mockLogger: Logger;
 
     beforeEach(() => {
         jest.clearAllMocks();
-
-        mockTokenProvider = {
-            getAccessToken: jest.fn().mockResolvedValue('mock-ims-token'),
-        };
-
-        mockLogger = {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as unknown as Logger;
-
-        service = new DaLiveContentOperations(mockTokenProvider, mockLogger);
-        discovery = (service as unknown as { discoveryOps: DaLiveContentDiscovery }).discoveryOps;
+        ({ service, discovery, logger: mockLogger } =
+            createContentOperationsHarness());
     });
-
-    function mockFetchResponse(status: number, body?: unknown, contentType = 'text/html'): Response {
-        const headers = new Map([['content-type', contentType]]);
-        return {
-            ok: status >= 200 && status < 300,
-            status,
-            statusText: status === 200 ? 'OK' : status === 404 ? 'Not Found' : 'Error',
-            headers: {
-                get: (key: string) => headers.get(key.toLowerCase()) || null,
-            } as unknown as Headers,
-            json: jest.fn().mockResolvedValue(body),
-            blob: jest.fn().mockResolvedValue(new Blob(['test content'])),
-            text: jest.fn().mockResolvedValue(typeof body === 'string' ? body : ''),
-        } as unknown as Response;
-    }
 
     describe('copyContentFromSource - DA.live list integration', () => {
         it('should use DA.live list API and include nav/footer without essentialConfigs (regression)', async () => {

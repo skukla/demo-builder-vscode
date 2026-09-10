@@ -8,12 +8,24 @@
  */
 
 import * as vscode from 'vscode';
+// First: `dashboardHandlers.testUtils` installs this family's module wall, and
+// jest.mock hoists above the imports of the module it appears in — not across
+// modules — so it has to register before the handlers below bind.
+import { setupMocks } from './dashboardHandlers.testUtils';
 import {
     handleRestartDemo,
     handleStartDemo,
     handleStopDemo,
 } from '@/features/dashboard/handlers/dashboardHandlers';
-import { setupMocks } from './dashboardHandlers.testUtils';
+import { sendDemoStatusUpdate } from '@/features/dashboard/handlers/meshStatusHelpers';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+
+// Only the deferred refresh is faked; the rest of the module stays real so the
+// other suites' view of it is unchanged.
+jest.mock('@/features/dashboard/handlers/meshStatusHelpers', () => ({
+    ...jest.requireActual('@/features/dashboard/handlers/meshStatusHelpers'),
+    sendDemoStatusUpdate: jest.fn(),
+}));
 
 // Mock vscode
 jest.mock('vscode', () => ({
@@ -32,26 +44,7 @@ jest.mock('vscode', () => ({
     },
 }), { virtual: true });
 
-// Mock stalenessDetector
-jest.mock('@/features/mesh/services/stalenessDetector');
-
 // Mock authentication
-jest.mock('@/features/authentication');
-
-// Mock ServiceLocator
-jest.mock('@/core/di', () => ({
-    ServiceLocator: {
-        getAuthenticationService: jest.fn(),
-    },
-}));
-
-// Mock validation
-jest.mock('@/core/validation', () => ({
-    validateOrgId: jest.fn(),
-    validateProjectId: jest.fn(),
-    validateWorkspaceId: jest.fn(),
-    validateURL: jest.fn(),
-}));
 
 describe('Dashboard Lifecycle Handlers', () => {
     const mockExecuteCommand = vscode.commands.executeCommand as jest.Mock;
@@ -132,6 +125,38 @@ describe('Dashboard Lifecycle Handlers', () => {
 
             expect(result).toEqual({ success: true });
             expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.startDemo');
+        });
+    });
+
+    /**
+     * The refresh is DEFERRED on purpose: the command has to get the server into
+     * its new state before the dashboard asks what that state is. Asserting the
+     * argument, not just the call — the handler's own context is what carries the
+     * panel the update is pushed to, and a mock answers the same either way.
+     */
+    describe('deferred demo-status refresh', () => {
+        it.each([
+            ['start', handleStartDemo],
+            ['stop', handleStopDemo],
+            ['restart', handleRestartDemo],
+        ])('%s refreshes demo status once the delay has passed', async (_verb, handler) => {
+            const { mockContext } = setupMocks();
+
+            await handler(mockContext);
+            expect(sendDemoStatusUpdate).not.toHaveBeenCalled();
+
+            jest.advanceTimersByTime(TIMEOUTS.DEMO_STATUS_UPDATE_DELAY);
+
+            expect(sendDemoStatusUpdate).toHaveBeenCalledWith(mockContext);
+        });
+
+        it('schedules nothing when the refusal path returns early', async () => {
+            const { mockContext } = setupMocks({ selectedStack: 'eds-accs' });
+
+            await handleStartDemo(mockContext);
+            jest.advanceTimersByTime(TIMEOUTS.DEMO_STATUS_UPDATE_DELAY);
+
+            expect(sendDemoStatusUpdate).not.toHaveBeenCalled();
         });
     });
 

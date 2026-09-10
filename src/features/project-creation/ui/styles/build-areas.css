@@ -1,0 +1,46 @@
+/**
+ * .build-* styles — the Build Your Project two-column area and its summary column.
+ *
+ * FEATURE-SCOPED (ADR-017 §6 and §7). Imported by the `wizard` entry ALONE.
+ *
+ * `.build-two-col .two-column-layout-right` belongs here, not to `.two-*`: its
+ * first class decides ownership, and it is this area's override of the shared
+ * layout at the 1180px breakpoint.
+ *
+ * Moved out of utilities.css by the CSS migration
+ * (.rptc/plans/css-architecture-migration), in source order, with the comment
+ * above each rule. Verbatim otherwise.
+ */
+
+@layer theme {
+/* ---- Commerce body (.commerce-body) — the [left nav | active view] row.
+ * The left nav (.step-nav = area label + vertical step list) takes its intrinsic
+ * width (~200-240px); the step-view flexes to fill the rest so the choice-grid cards
+ * read spacious. */
+/* The Build step owns ONE two-column [ active area body | unified summary ] (.build-two-col).
+ * The content band max applies to the CONTENT, not the column: .step-nav is a full-bleed
+ * toolbar whose fill and bottom divider must reach the column's right edge. Capping the
+ * COLUMN clipped that strip short — invisible at 100% zoom (panel narrower than the cap),
+ * visible as a gap at reduced zoom (panel wider than the 960px cap). So the column runs
+ * full width and each content region below carries the cap itself. */
+.build-two-col .two-column-layout-left {
+    min-width: 0;
+}
+
+/* Non-nav area bodies (Storefront / Integrations) supply their own padding since the
+ * Build two-column drops the left padding (so Commerce's nav can bleed to the edge). */
+.build-area-pad {
+    padding: var(--spectrum-global-dimension-size-400);
+    /* Fill the (overflow:hidden) left column and scroll its own content — area bodies
+       without an inner scroll (e.g. Integrations) were otherwise clipped. */
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+@media (max-width: 1180px) { /* bp: two-column stack — Build summary hidden */
+    .build-two-col .two-column-layout-right {
+        display: none;
+    }
+}
+}

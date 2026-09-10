@@ -12,7 +12,7 @@
 
 import { Text, View } from '@adobe/react-spectrum';
 import React, { useCallback, useMemo, useState } from 'react';
-import { PromptCard, PROMPT_CARD_HEIGHT } from './PromptCard';
+import { PromptCard } from './PromptCard';
 import { GridLayout } from '@/core/ui/components/layout/GridLayout';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
 import type { AiPrompt } from '@/types/base';
@@ -35,26 +35,6 @@ export interface PromptGridProps {
     /** Kebab action — copy the prompt body to clipboard. Optional. */
     onCopy?: (promptBody: string) => void;
 }
-
-const STYLE_NEW_TILE = {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '100%',
-    // Fixed height matches PromptCard so the tile is identical in size
-    // whether the grid is empty or already contains prompts. minHeight would
-    // let the tile shrink when alone in the grid and stretch when sharing a
-    // row with populated cards — visible inconsistency.
-    height: PROMPT_CARD_HEIGHT,
-    padding: '10px 12px',
-    border: '1px dashed var(--spectrum-global-color-gray-400)',
-    borderRadius: '4px',
-    background: 'transparent',
-    cursor: 'pointer',
-    font: 'inherit',
-    color: 'inherit',
-    boxSizing: 'border-box' as const,
-} as const;
 
 /**
  * Sort prompts pinned-first, alphabetical (case-insensitive) within each group.
@@ -143,7 +123,7 @@ export function PromptGrid({
                     type="button"
                     data-testid="ai-new-prompt-tile"
                     onClick={onNew}
-                    style={STYLE_NEW_TILE}
+                    className="prompt-new-tile"
                 >
                     <Text UNSAFE_className="text-sm">+ New prompt</Text>
                 </button>

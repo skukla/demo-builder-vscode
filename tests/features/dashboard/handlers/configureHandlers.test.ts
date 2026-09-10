@@ -20,30 +20,14 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
     },
 }));
 
-// Mock validateURL (used by handleOpenExternal and transitive imports)
-jest.mock('@/core/validation', () => ({
-    validateURL: jest.fn(),
-}));
-
 // Mock store discovery service
 jest.mock('@/features/eds/services/commerceStoreDiscovery', () => ({
     discoverStoreStructure: jest.fn(),
     extractTenantId: jest.fn(),
 }));
 
-// Mock vscode
-jest.mock('vscode', () => ({
-    env: {
-        openExternal: jest.fn().mockResolvedValue(undefined),
-    },
-    Uri: {
-        parse: jest.fn((url: string) => ({ toString: () => url })),
-    },
-    commands: {
-        executeCommand: jest.fn().mockResolvedValue(undefined),
-    },
-}));
 
+import './dashboardValidatorMocks';
 import * as vscode from 'vscode';
 import {
     configureHandlers,
@@ -52,51 +36,45 @@ import {
     handleOpenEdsSettings,
 } from '@/features/dashboard/handlers/configureHandlers';
 import { hasHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
+import { validateURL } from '@/core/validation/URLValidator';
 import type { HandlerContext } from '@/types/handlers';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockWebviewPanel } from '../../../helpers/webviewPanelFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import {
+    createStatefulGlobalState,
+    createMockExtensionContext,
+} from '../../../helpers/extensionContextFake';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
 
 // ==========================================================
 // Test Helpers
 // ==========================================================
 
 function createMockContext(overrides?: Partial<HandlerContext>): HandlerContext {
-    return {
-        context: {
+    return createMockHandlerContext({
+        context: createMockExtensionContext({
             extensionPath: '/mock/extension/path',
-            secrets: {
-                get: jest.fn(),
-                store: jest.fn(),
-                delete: jest.fn(),
-                onDidChange: jest.fn(),
-            },
-            globalState: { get: jest.fn(), update: jest.fn(), keys: jest.fn().mockReturnValue([]) },
+            secrets: createMockSecretStorage().secrets,
+            globalState: createStatefulGlobalState().globalState,
             subscriptions: [],
-        },
-        logger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        },
-        debugLogger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        },
-        stateManager: {
+        }),
+        logger: createMockLogger(),
+        debugLogger: createMockLogger(),
+        stateManager: createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue({
                 name: 'Test Project',
                 path: '/projects/test',
                 stack: 'paas',
             }),
-        },
+        }),
         sendMessage: jest.fn().mockResolvedValue(undefined),
-        panel: {
+        panel: createMockWebviewPanel({
             dispose: jest.fn(),
-        },
-        sharedState: {},
+        }),
         ...overrides,
-    } as unknown as HandlerContext;
+    });
 }
 
 // ==========================================================
@@ -167,6 +145,16 @@ describe('configureHandlers', () => {
             expect(context.panel?.dispose).toHaveBeenCalled();
             expect(result.success).toBe(true);
         });
+
+        it('succeeds when there is no panel to dispose', async () => {
+            // Cancel is reachable from a context with no panel attached (the
+            // handler map is dispatched headlessly by the MCP surface, which
+            // never opens one). Optional access is what keeps that a no-op
+            // rather than a TypeError.
+            const context = createMockContext({ panel: undefined });
+
+            await expect(handleCancelConfigure(context)).resolves.toEqual({ success: true });
+        });
     });
 
     describe('handleOpenExternal', () => {
@@ -178,12 +166,31 @@ describe('configureHandlers', () => {
             expect(result.success).toBe(true);
         });
 
+        it('validates against exactly the two web schemes before opening', async () => {
+            // The scheme allow-list is the whole guard: an empty list, or one
+            // that dropped http, would let a `file:`/`vscode:` URL through to
+            // openExternal. Assert the ARGUMENT, not that the call happened.
+            const context = createMockContext();
+            await handleOpenExternal(context, { url: 'http://example.com' });
+
+            expect(validateURL).toHaveBeenCalledWith('http://example.com', ['https', 'http']);
+        });
+
         it('should handle missing URL gracefully', async () => {
             const context = createMockContext();
             const result = await handleOpenExternal(context, {});
 
             expect(vscode.env.openExternal).not.toHaveBeenCalled();
             expect(result.success).toBe(true);
+        });
+
+        it('should handle a missing payload entirely', async () => {
+            // `payload` is optional on the handler signature, so a sender that
+            // omits it must get the same no-op, not a TypeError.
+            const context = createMockContext();
+
+            await expect(handleOpenExternal(context)).resolves.toEqual({ success: true });
+            expect(vscode.env.openExternal).not.toHaveBeenCalled();
         });
     });
 

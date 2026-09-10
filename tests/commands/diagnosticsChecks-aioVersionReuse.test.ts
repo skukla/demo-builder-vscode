@@ -12,23 +12,10 @@
  * checked the version would pass whether or not the command ran.
  */
 
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn(() => ({
-        info: jest.fn(),
-        debug: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        logCommand: jest.fn(),
-    })),
-}));
-
-const mockExecute = jest.fn();
-jest.mock('@/core/di', () => ({
-    ServiceLocator: {
-        getCommandExecutor: () => ({ execute: (...a: unknown[]) => mockExecute(...a) }),
-    },
-}));
-
+import {
+    mockExecute,
+    ranCommands,
+} from './diagnosticsChecks.testUtils';
 import { checkAdobeCLI } from '@/commands/diagnosticsChecks';
 import type { CommandCheckResult } from '@/commands/diagnosticsReport';
 
@@ -46,7 +33,6 @@ function aioTool(output?: string): CommandCheckResult {
 }
 
 /** Every command string the executor was asked to run. */
-const ranCommands = (): string[] => mockExecute.mock.calls.map((c) => String(c[0]));
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -57,7 +43,7 @@ describe('checkAdobeCLI — reusing the version checkTools already fetched', () 
     it('does not run `aio --version` when handed the tool result', async () => {
         await checkAdobeCLI(aioTool('@adobe/aio-cli/11.1.2'));
 
-        expect(ranCommands().filter((c) => c === 'aio --version')).toEqual([]);
+        expect(ranCommands().filter((c) => c === 'aio --version')).toStrictEqual([]);
     });
 
     it('reports the handed-in version rather than re-deriving it', async () => {
@@ -72,7 +58,7 @@ describe('checkAdobeCLI — reusing the version checkTools already fetched', () 
         // not-installed result has to gate them the same way the local check did.
         await checkAdobeCLI(aioTool(undefined));
 
-        expect(ranCommands()).toEqual([]);
+        expect(ranCommands()).toStrictEqual([]);
     });
 
     it('still probes auth and orgs when aio IS installed', async () => {

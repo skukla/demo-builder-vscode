@@ -1,0 +1,37 @@
+Work `.rptc/plans/unmeasured-fifth/overview.md` STEP 2 — size the unmeasured fifth honestly.
+
+The current estimate (~18,600 gaps over 160 modules) came from five modules chosen as the
+LARGEST, with a crude gap count. Both biases push it high. Replace it with a defensible
+number.
+
+Sample 15-20 modules ACROSS THE SIZE RANGE — not the top. The population: modules that carry
+real behaviour, have no baseline row, and no mirroring suite of their own. Reproduce that list
+first and say how you built it; the filter has been wrong twice, most recently by asking for
+`function|=>|if|switch` and so skipping a CLASS with async methods and no branches.
+
+For each sampled module, measure it against the FULL set of suites that reach it — never a
+truncation. Sampling three suites from a module whose ten other consumers mock it reported
+0.00% for a module that actually scores 31.29%.
+
+THE PROBE CONFIG MUST LIVE IN THE REPO ROOT and use a relative `require('./jest.config.js')`
+with `**/tests/...` globs, so it resolves inside Stryker's sandbox. A config in /tmp with an
+absolute rootDir runs jest against the ORIGINAL source while Stryker mutates a copy: every
+mutant survives and the module reads 0.00%. A 0% where EVERY mutant survives means the module
+never ran, until proven otherwise — check for jest.mock and for injected doubles before
+believing it.
+
+Report real openGaps per module, not survivors-minus-string-mutants. Write the result into
+`.rptc/plans/unmeasured-fifth/overview.md` as a table, and log the headline to PL-50. Delete
+any probe configs you create; leave the tree clean.
+
+RAILS (the standing unattended contract). Stay on the work branch; never checkout or merge
+develop. NO CLOUD WRITES and no live calls — tests and local measurement only. Commit only on
+a GREEN check, exit codes captured in variables and never read through a pipe. Explicit
+pathspec (`git commit -- <paths>`), never bare `git commit` or `-a`. `Backlog: PL-50` trailer.
+No attribution trailers. If blocked, record what you learned and stop — do not force it.
+
+CHECK before each commit: the suites you touched, `npx tsc --noEmit`, `npm run
+typecheck:tests`, eslint on changed files, `npm run validate:test-file-sizes`.
+
+FINISH with three or four plain sentences a tired reader understands: what you did, what you
+found, what you did NOT do.

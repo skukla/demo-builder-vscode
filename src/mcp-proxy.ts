@@ -33,11 +33,10 @@
 
 import * as net from 'net';
 import {
-    LineBuffer,
-    classifyHandshake,
-    isInitResponse,
-} from '@/features/ai/server/mcpProxyFraming';
-import { isRetryableConnectError } from '@/features/ai/server/mcpProxyRetry';
+    decideOnClose,
+    decideOnConnectError,
+} from '@/features/ai/server/mcpProxyReconnect';
+import { createProxySession } from '@/features/ai/server/mcpProxySession';
 import { resolveProxyTarget } from '@/features/ai/server/mcpSocketDiscovery';
 
 // Resolved by main() before the first connect(); every connect()/reconnect
@@ -47,67 +46,30 @@ let socketPath = '';
 
 // Per-drop reconnect window (~23s total). Long enough to ride out a window
 // reload, short enough to fail clearly when VS Code has actually closed.
-const RETRY_DELAYS_MS = [250, 500, 1000, 1500, 2000, 2000, 3000, 3000, 5000, 5000];
 // Small pause before reconnecting after a clean close, to avoid a hot loop if
 // the server is crash-restarting.
-const RECONNECT_PAUSE_MS = 250;
 
 let socket: net.Socket | undefined;
-let connected = false;
 
-// Captured client→server handshake, replayed after the server restarts.
-let initLine: string | undefined;
-let initId: string | number | null = null;
-let initializedLine: string | undefined;
-let handshakeCaptured = false;
-
-// Client→server lines buffered while disconnected (e.g. during a reload gap).
-const pending: string[] = [];
-const stdinLines = new LineBuffer();
-
-// Server→client framing — needed to drop the one replayed init response.
-const socketLines = new LineBuffer();
-let swallowInitId: string | number | null | undefined; // defined only during a replay
+/**
+ * The session state machine — handshake capture, disconnect buffering, replay,
+ * and swallowing the duplicate init response.
+ *
+ * It lives in `features/ai/server/mcpProxySession.ts` rather than here because
+ * this file is a SCRIPT: it wires stdin and a socket at import time, so nothing
+ * defined in it can be reached from a test. That is why the orchestration sat at
+ * 0% coverage while its own helpers were fully covered.
+ */
+const session = createProxySession({
+    toServer: (line) => socket?.write(line),
+    toClient: (line) => process.stdout.write(line),
+});
 
 // ---- Client → server (stdin) ----
-process.stdin.on('data', (chunk: Buffer) => {
-    for (const line of stdinLines.push(chunk.toString('utf8'))) {
-        if (!handshakeCaptured) {
-            const h = classifyHandshake(line.trim());
-            if (h.kind === 'initialize') {
-                initLine = line;
-                initId = h.id ?? null;
-            } else if (h.kind === 'initialized') {
-                initializedLine = line;
-                handshakeCaptured = true;
-            }
-        }
-        if (connected && socket) {
-            socket.write(line);
-        } else {
-            pending.push(line);
-        }
-    }
-});
+process.stdin.on('data', (chunk: Buffer) => session.fromClient(chunk.toString('utf8')));
+
 // Client closed stdin → Claude Code is shutting the server down for real.
 process.stdin.on('end', () => process.exit(0));
-
-// ---- Server → client (socket) ----
-function onSocketData(chunk: Buffer): void {
-    for (const line of socketLines.push(chunk.toString('utf8'))) {
-        if (swallowInitId !== undefined && isInitResponse(line.trim(), swallowInitId)) {
-            swallowInitId = undefined; // ate the duplicate; resume passthrough
-            continue;
-        }
-        process.stdout.write(line);
-    }
-}
-
-function flushPending(): void {
-    while (pending.length && socket) {
-        socket.write(pending.shift() as string);
-    }
-}
 
 function connect(attempt: number, isReconnect: boolean): void {
     const s = net.connect(socketPath);
@@ -125,55 +87,38 @@ function connect(attempt: number, isReconnect: boolean): void {
 
     s.once('connect', () => {
         connectedThisCycle = true;
-        connected = true;
-        // Session-directory preamble — FIRST bytes on every connection
-        // (reconnects included: the fresh server end sniffs each connection
-        // anew). The server scopes current-project tools to the project this
-        // session sits in (connectionScope.ts); MCP lines all start with '{',
-        // so the '#cwd:' line is unambiguous and old/bare clients that skip
-        // it are handed to the transport untouched.
-        s.write(`#cwd:${process.cwd()}\n`);
-        // Re-establish the session on the freshly-restarted server, then hide
-        // the reconnection from the client by swallowing the init response.
-        if (isReconnect && handshakeCaptured && initLine) {
-            swallowInitId = initId;
-            s.write(initLine);
-            if (initializedLine) {
-                s.write(initializedLine);
-            }
-        }
-        flushPending();
+        // The session decides WHAT goes out on a fresh connection — the
+        // '#cwd:' preamble, the replayed handshake when this is a reconnect,
+        // and anything buffered during the gap — and writes each through the
+        // same `toServer` sink the steady-state path uses.
+        session.onConnected(isReconnect, process.cwd());
     });
 
-    s.on('data', onSocketData);
+    s.on('data', (chunk: Buffer) => session.fromServer(chunk.toString('utf8')));
 
     s.on('error', (err: NodeJS.ErrnoException) => {
-        const retryable = isRetryableConnectError(err.code);
-        if (retryable && attempt < RETRY_DELAYS_MS.length) {
-            setTimeout(() => connect(attempt + 1, isReconnect), RETRY_DELAYS_MS[attempt]);
+        const decision = decideOnConnectError(err.code, err.message, attempt);
+        if (decision.action === 'retry') {
+            setTimeout(() => connect(decision.nextAttempt, isReconnect), decision.delayMs);
             return;
         }
-        if (retryable) {
-            process.stderr.write(
-                'Demo Builder MCP server is not running. Open this project in VS Code ' +
-                    '(the Demo Builder extension hosts the MCP server), then retry.\n',
-            );
-        } else {
-            process.stderr.write(`Demo Builder MCP proxy error: ${err.message}\n`);
+        if (decision.action === 'fail') {
+            process.stderr.write(decision.message);
+            process.exit(1);
         }
-        process.exit(1);
     });
 
     s.once('close', () => {
-        connected = false;
+        session.onDisconnected();
         socket = undefined;
         // Only schedule a reconnect when this socket actually established at
         // some point — i.e. the extension restarted and dropped us. If 'connect'
         // never fired, the error handler above already owns the retry policy;
         // letting close also schedule one creates the parallel-timer cascade
         // described at the top of this function.
-        if (connectedThisCycle) {
-            setTimeout(() => connect(0, true), RECONNECT_PAUSE_MS);
+        const decision = decideOnClose(connectedThisCycle);
+        if (decision.action === 'reconnect') {
+            setTimeout(() => connect(0, true), decision.delayMs);
         }
     });
 }

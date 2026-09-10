@@ -1,0 +1,314 @@
+/**
+ * Screen scaffolding shared by the wizard, Configure and the Data Installer —
+ * step layout, containers, text buttons, content blocks, instructions and images.
+ *
+ * FEATURE-SCOPED (ADR-017 §6, §3 as amended 2026-09-09: reach, not global).
+ * Imported by THREE entries — `wizard`, `configure` and `dataInstaller` — which is
+ * the union of what these ten families reach. Four of them
+ * (`.container-*`, `.btn-*`, `.content-*`, `.section-*`) reach only wizard and
+ * configure; giving each its exact reach would have meant a sheet per family.
+ *
+ * Ten families, 31 rules: `.step-*`, `.container-*`, `.btn-*`, `.content-*`,
+ * `.section-*`, `.clickable-*`, `.instruction-*`, `.image-*`, `.screenshot-*`,
+ * `.number-*`.
+ *
+ * Two `.commerce-*` rules still name `.step-view` in utilities.css. They
+ * belong to that family, not this move.
+ *
+ * Moved out of utilities.css by the CSS migration
+ * (.rptc/plans/css-architecture-migration), with the comment above each rule.
+ * Verbatim otherwise: a move is only correct when the visual diff is empty.
+ */
+
+@layer theme {
+/* Step container - full width with max constraint */
+.step-content-container {
+    max-width: var(--content-width);
+    width: 100%;
+    margin: 0;
+    padding: 20px;
+}
+
+/* Step main content area */
+.step-main-content {
+    flex: 1;
+    display: flex;
+    width: 100%;
+}
+
+.step-content-area {
+    width: 100%;
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    position: relative;
+}
+
+.step-inner {
+    height: 100%;
+    width: 100%;
+}
+
+/* Step Counter - Modal header step indicator */
+.step-counter {
+    font-size: 13px;
+    font-weight: normal;
+    color: var(--spectrum-global-color-gray-500);
+}
+
+/* ---- Sub-step nav (.step-nav) — a horizontal strip across the top of the area
+ * body: the all-caps area label inline at the left, then the sub-step tabs. The
+ * label names the area the user is configuring now that the area sub-nav left the
+ * wizard timeline. (Was a vertical left rail — promoted the small-screen strip to
+ * the default.) */
+.step-nav {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex: 0 0 auto;
+    width: 100%;
+    box-sizing: border-box;
+    /* Thinner rail: trim the vertical padding (keep the horizontal content padding so
+       the label + tabs stay aligned with the content band). */
+    padding: var(--spectrum-global-dimension-size-150) var(--wizard-content-pad);
+    gap: var(--spectrum-global-dimension-size-300);
+    /* Matched toolbar — gray-75 fill + a bottom divider (was a right border on the
+     * left rail) so the strip and summary still read as the same panel family. */
+    background: var(--spectrum-global-color-gray-75);
+    border-bottom: 1px solid var(--spectrum-global-color-gray-200);
+}
+
+/* All-caps area label — pinned at the strip's left edge (doesn't scroll with tabs). */
+.step-nav-area {
+    font-size: var(--spectrum-global-dimension-font-size-50);
+    color: var(--spectrum-global-color-gray-700);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 0;
+    flex: 0 0 auto;
+}
+
+/* ---- Dedicated view (.step-view) — the active step's roomy full-width body ----
+ * Transparent (no box framing empty space): the content sits in the column over the
+ * column background, with generous top padding for breathing room. */
+.step-view {
+    width: 100%;
+    box-sizing: border-box;
+    /* Content sits size-400 (32px) below the flush sub-step nav rail — the rail is chrome,
+       this view is the content. Horizontal + bottom stay at --wizard-content-pad (24px). */
+    padding: var(--spectrum-global-dimension-size-400) var(--wizard-content-pad) var(--wizard-content-pad);
+}
+
+/* Sub-step view crossfade: the active view body fades + slides up when the sub-step
+ * (or area) changes. The body is wrapped in a `.step-view-anim` element keyed on the
+ * active sub-step, so React remounts it on each change → this entrance fires. Reuses
+ * the existing `fadeInUp` (opacity + 4px). Zeroed under prefers-reduced-motion. */
+.step-view-anim {
+    animation: fadeInUp var(--spectrum-global-animation-duration-300) var(--spectrum-global-animation-ease-out);
+    /* Pass the pane's height DOWN. An area body that wants to centre itself in the
+       view (the Code Sync states) cannot: a percentage height resolves against the
+       nearest definite ancestor, and this wrapper was auto-height, so `100%` two
+       levels below it computed to zero and the body sat at the top of a tall pane.
+       A flex column with a 100% MINIMUM makes this box at least the pane and lets a
+       body opt in with `flex-1` — while taller content still grows and scrolls,
+       because it is a minimum and .step-view owns the scroll. */
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+}
+
+/* ===========================================
+   Container Patterns
+   =========================================== */
+.container-wizard {
+    max-width: var(--content-width);
+    width: 100%;
+    margin: 0;
+    /* Content starts size-400 (32px) below the header (no nav rail on these steps). */
+    padding: var(--spectrum-global-dimension-size-400) 24px 24px;
+}
+
+.container-dashboard {
+    padding: var(--spectrum-global-dimension-size-400);
+    height: 100vh;
+    max-width: 500px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.container-form {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* ===========================================
+   Configure Screen Container
+   =========================================== */
+.container-configure {
+    background-color: var(--spectrum-global-color-gray-50);
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    overflow: hidden;
+    /* Configure renders the SAME StepAreaShell as the wizard's areas, and .step-nav /
+     * .step-view-anim reference these two tokens in their padding and max-width. They
+     * are declared on .wizard-main-content, which Configure is not inside — so without
+     * this block the whole declaration is invalid and DROPPED: the rail still renders,
+     * every test still passes, and the padding is silently gone. Redeclared here rather
+     * than promoted to :root so the two surfaces stay independently adjustable. */
+    --wizard-content-pad: var(--spectrum-global-dimension-size-300); /* 24px content padding */
+    --commerce-zone-max: var(--content-width); /* same 960 band as every screen */
+}
+
+/* Button size variations */
+.btn-compact {
+    height: 28px;
+    font-size: 12px;
+    padding: 0 12px;
+    min-width: 60px;
+}
+
+.btn-standard {
+    height: 32px;
+    font-size: 13px;
+    padding: 0 16px;
+}
+
+.btn-large {
+        height: 40px;
+        font-size: 14px;
+        padding: 0 20px;
+    }
+
+.content-column {
+    width: 100%;
+    max-width: var(--content-width);
+    box-sizing: border-box;
+    /* Content starts size-400 (32px) below the header; sides/bottom stay size-300 (24px). */
+    padding: var(--spectrum-global-dimension-size-400) var(--spectrum-global-dimension-size-300) var(--spectrum-global-dimension-size-300);
+}
+
+/* Cap the LEFT column at the canonical width (overrides TwoColumnLayout's inline
+ * leftMaxWidth so it's single-sourced); the right column flex-grows to the screen edge
+ * (TwoColumnLayout default), with the sidebar's inner content capped by the component. */
+.content-with-sidebar .two-column-layout-left {
+    max-width: var(--content-width);
+}
+
+.content-area {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    height: 100%;
+    width: 100%;
+}
+
+
+/* ===========================================
+   ClickableUrl Component Styles
+   URLs in help text that open in browser
+   =========================================== */
+.clickable-url {
+    font-family: var(--spectrum-alias-body-text-font-family, monospace);
+    font-size: 0.9em;
+    background-color: var(--db-code-background);
+    padding: 2px 8px;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    text-decoration: underline;
+    color: var(--spectrum-global-color-blue-600);
+    transition: background-color var(--spectrum-global-animation-duration-200) ease, color var(--spectrum-global-animation-duration-200) ease;
+}
+
+.clickable-url:hover {
+    background-color: var(--spectrum-global-color-gray-200);
+    color: var(--spectrum-global-color-blue-700);
+}
+
+.clickable-url:focus {
+    outline: 2px solid var(--spectrum-global-color-blue-400);
+    outline-offset: 2px;
+}
+
+/* ===========================================
+   Instruction Card Styles
+   =========================================== */
+.instruction-card {
+    padding: 16px;
+    border-radius: 6px;
+}
+
+/* Instruction step title */
+.instruction-title {
+    font-size: 15px;
+}
+
+/* Instruction details line height */
+.instruction-details {
+    line-height: 2.0;
+}
+
+/* ===========================================
+   Image Zoom Overlay - FieldHelpButton
+   Fullscreen overlay for zoomed images
+   =========================================== */
+.image-zoom-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    cursor: zoom-out;
+    padding: 20px;
+}
+
+.image-zoom-image {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 4px;
+    cursor: zoom-out;
+}
+
+.image-zoom-hint {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    color: white;
+    font-size: 14px;
+    opacity: 0.7;
+}
+
+/* Screenshot Thumbnail - FieldHelpButton step images */
+.screenshot-thumbnail {
+    width: 100%;
+    max-height: 380px;
+    object-fit: contain;
+    border-radius: 4px;
+    border: 1px solid var(--spectrum-global-color-gray-300);
+    cursor: zoom-in;
+}
+
+    .number-badge {
+        min-width: 32px;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background-color: var(--vscode-badge-background, var(--spectrum-semantic-informative-color-default));
+        color: var(--vscode-badge-foreground, #ffffff);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 16px;
+        flex-shrink: 0;
+    }
+}

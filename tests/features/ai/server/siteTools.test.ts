@@ -1,6 +1,9 @@
 /**
- * Group 6's site tools — the storefront's Configuration Service admin list, the
- * repair for a refused registration, and the DA.live handoff.
+ * Group 6's site tools — what each one DOES.
+ *
+ * The shared harness, mocks and fixtures live in `siteTools.testUtils.ts`; what these
+ * tools declare about themselves, and how big their answers are, live in
+ * `siteTools-contract.test.ts`. Split 2026-09-02 at the 750-line CI limit.
  *
  * What is pinned here, and why each would otherwise fail silently:
  *
@@ -8,123 +11,36 @@
  *   checking the service was never called, not just that an error came back — a
  *   gate that refuses after the write is not a gate.
  * - `repair_site_configuration` does NOT republish, and says `republish` is what
- *   remains. Registration writes a routing rule; an agent that stopped at
- *   `repaired` would report a storefront fixed that still serves the old config.
+ *   remains. An agent that stopped at `repaired` would report a storefront fixed
+ *   that still serves the old config.
  * - `set_site_admin` routes on `admin`, and the two directions are different
  *   services. Crossed, a grant would revoke.
- * - `connect_dalive` never dispatches. It is a handoff by construction, because
- *   the credential arrives by bookmarklet and paste.
+ * - `connect_dalive` never dispatches. It is a handoff by construction.
  */
 
-const mockListSiteAccess = jest.fn();
-const mockAddSiteAdmin = jest.fn();
-const mockRemoveSiteAdmin = jest.fn();
-const mockRepairSiteConfigForProject = jest.fn();
-
-jest.mock('@/features/eds/services/configService/siteAccessManagerHeadless', () => ({
-    listSiteAccess: (...a: unknown[]) => mockListSiteAccess(...a),
-    addSiteAdmin: (...a: unknown[]) => mockAddSiteAdmin(...a),
-    removeSiteAdmin: (...a: unknown[]) => mockRemoveSiteAdmin(...a),
-}));
-
-jest.mock('@/features/eds/services/configService/repairSiteConfigForProject', () => ({
-    repairSiteConfigForProject: (...a: unknown[]) => mockRepairSiteConfigForProject(...a),
-}));
-
-const mockFindStorefrontNameMismatch = jest.fn();
-const mockMigrateStorefrontNameForProject = jest.fn();
-
-jest.mock('@/features/eds/services/storefront/storefrontNameMigrationForProject', () => ({
-    findStorefrontNameMismatch: (...a: unknown[]) => mockFindStorefrontNameMismatch(...a),
-    migrateStorefrontNameForProject: (...a: unknown[]) =>
-        mockMigrateStorefrontNameForProject(...a),
-}));
-
-import { expectWithinCeiling } from './responseCeilings';
-import { registerSiteTools } from '@/features/ai/server/siteTools';
-import type { HandlerContext } from '@/types/handlers';
-
-type Tool = (args: unknown) => Promise<{ content: Array<{ text: string }> }>;
-
-// `selectedStack` is load-bearing, not decoration: site configuration is an EDS
-// concept (a Configuration Service entry keyed by the storefront's GitHub
-// owner/repo), and these tools now refuse a project that is not one. The fixture
-// previously carried only name+path, which describes a project with NO stack —
-// a shape these tools were never meant to answer for.
-const project = { name: 'demo', path: '/projects/demo', selectedStack: 'eds-accs' };
-/** A project these tools do not apply to. */
-const headlessProject = { name: 'headless', path: '/projects/headless', selectedStack: 'headless-accs' };
-const extensionContext = { secrets: {} };
-const logger = { warn: jest.fn() };
-
-/** Projects the scan walks. Overwritten per test. */
-let allProjects: Array<{ name: string; path: string }> = [];
-/** What `loadProjectFromPath` resolves to, keyed by path. */
-let projectsOnDisk: Record<string, unknown> = {};
-const loadProjectFromPath = jest.fn(async (path: string) => projectsOnDisk[path]);
-const saveProject = jest.fn().mockResolvedValue(undefined);
-
-/**
- * Built with the current project passed explicitly rather than defaulted — a
- * default parameter treats an explicit `undefined` as "not supplied", so
- * `harnessWithNoProject()` would have quietly kept the project and the no-project
- * tests would have measured the happy path.
- */
-function buildHarness(currentProject: unknown) {
-    const tools = new Map<string, Tool>();
-    const server = {
-        registerTool(name: string, _def: never, handler: Tool) {
-            tools.set(name, handler);
-        },
-    };
-    registerSiteTools(
-        server,
-        () =>
-            ({
-                context: extensionContext,
-                logger,
-                stateManager: {
-                    getCurrentProject: async () => currentProject,
-                    getAllProjects: async () => allProjects,
-                    loadProjectFromPath,
-                    saveProject,
-                },
-            }) as unknown as HandlerContext,
-    );
-    return {
-        names: () => [...tools.keys()],
-        async callRaw(name: string, args: Record<string, unknown> = {}): Promise<string> {
-            return (await tools.get(name)!(args)).content[0].text;
-        },
-        async call(name: string, args: Record<string, unknown> = {}): Promise<Record<string, unknown>> {
-            const out = await tools.get(name)!(args);
-            return JSON.parse(out.content[0].text);
-        },
-    };
-}
-
-const harness = () => buildHarness(project);
-/** `getCurrentProject()` resolves undefined when no project is open. */
-const harnessWithNoProject = () => buildHarness(undefined);
+import {
+    buildHarness,
+    candidate,
+    harness,
+    harnessWithNoProject,
+    headlessProject,
+    extensionContext,
+    logger,
+    loadProjectFromPath,
+    saveProject,
+    project,
+    resetSiteToolsMocks,
+    world,
+    mockListSiteAccess,
+    mockAddSiteAdmin,
+    mockRemoveSiteAdmin,
+    mockRepairSiteConfigForProject,
+    mockFindStorefrontNameMismatch,
+    mockMigrateStorefrontNameForProject,
+} from './siteTools.testUtils';
 
 beforeEach(() => {
-    jest.clearAllMocks();
-    mockListSiteAccess.mockResolvedValue({ status: 'ok', site: 'acme/store', canManage: true });
-    mockAddSiteAdmin.mockResolvedValue({ status: 'ok', verified: true, canManage: true });
-    mockRemoveSiteAdmin.mockResolvedValue({ status: 'ok', verified: true, canManage: true });
-    mockRepairSiteConfigForProject.mockResolvedValue({ status: 'repaired', verified: true });
-    allProjects = [];
-    projectsOnDisk = {};
-    // Restored explicitly: `clearAllMocks` clears recorded calls but NOT an
-    // implementation set with `mockImplementation`, so the throwing one below
-    // would leak into every test after it.
-    loadProjectFromPath.mockImplementation(async (path: string) => projectsOnDisk[path]);
-    mockFindStorefrontNameMismatch.mockReturnValue(null);
-    mockMigrateStorefrontNameForProject.mockResolvedValue({
-        skipped: false,
-        migrated: true,
-        publishKeyRenewed: true,
-    });
+    resetSiteToolsMocks();
 });
 
 it('registers the six Group 6 tools', () => {
@@ -234,6 +150,17 @@ describe('set_site_admin', () => {
         expect(out.siteAdmins).toHaveLength(2);
     });
 
+    // A client may invoke a tool with no arguments at all. `call({})` cannot reach
+    // this: an empty object still answers every `args.x` read with undefined, while
+    // a missing argument object makes the same read throw.
+    it('refuses a call that carries no arguments at all', async () => {
+        const out = await harness().callBare('set_site_admin');
+
+        expect(String(out.error)).toMatch(/confirm:true/);
+        expect(mockAddSiteAdmin).not.toHaveBeenCalled();
+        expect(mockRemoveSiteAdmin).not.toHaveBeenCalled();
+    });
+
     it('refuses with no current project', async () => {
         const out = await harnessWithNoProject().call('set_site_admin', {
             email: 'someone@example.test',
@@ -287,6 +214,17 @@ describe('repair_site_configuration', () => {
         expect(out.lostGrants).toEqual(['o***r@example.test']);
     });
 
+    it('hands the repair a way to persist the project it changed', async () => {
+        await harness().call('repair_site_configuration', { confirm: true });
+
+        // The repair updates the project as it goes and cannot save it itself. If the
+        // callback it is handed does nothing, the repair appears to succeed and the
+        // change is gone at the next reload.
+        const persist = mockRepairSiteConfigForProject.mock.calls[0][3] as (p: unknown) => unknown;
+        persist(project);
+        expect(saveProject).toHaveBeenCalledWith(project);
+    });
+
     it('does not republish', async () => {
         const out = await harness().call('repair_site_configuration', { confirm: true });
 
@@ -294,6 +232,13 @@ describe('repair_site_configuration', () => {
         // push a config change under whoever is presenting the demo.
         expect(out.cdnPublished).toBeUndefined();
         expect(out.githubPushed).toBeUndefined();
+    });
+
+    it('refuses a call that carries no arguments at all', async () => {
+        const out = await harness().callBare('repair_site_configuration');
+
+        expect(String(out.error)).toMatch(/confirm:true/);
+        expect(mockRepairSiteConfigForProject).not.toHaveBeenCalled();
     });
 
     it('refuses with no current project', async () => {
@@ -305,16 +250,6 @@ describe('repair_site_configuration', () => {
 });
 
 /** A candidate as `findStorefrontNameMismatch` returns it. */
-const candidate = {
-    project,
-    projectName: 'demo',
-    projectPath: '/projects/demo',
-    repoOwner: 'someone',
-    repoName: 'demo-builder-test',
-    daLiveOrg: 'someone',
-    daLiveSite: 'citisignal-one',
-};
-
 describe('project shape', () => {
     // These tools answer questions about a Configuration Service site entry,
     // which only EDS storefront projects have. `storefrontTools` already refused
@@ -347,8 +282,8 @@ describe('project shape', () => {
 
 describe('find_storefront_name_mismatches', () => {
     it('reports each mismatched project with where it moves from and to', async () => {
-        allProjects = [{ name: 'demo', path: '/projects/demo' }];
-        projectsOnDisk = { '/projects/demo': project };
+        world.allProjects = [{ name: 'demo', path: '/projects/demo' }];
+        world.projectsOnDisk = { '/projects/demo': project };
         mockFindStorefrontNameMismatch.mockReturnValue(candidate);
 
         const out = await harness().call('find_storefront_name_mismatches');
@@ -368,8 +303,8 @@ describe('find_storefront_name_mismatches', () => {
     });
 
     it('does not rewrite the manifests it inspects', async () => {
-        allProjects = [{ name: 'demo', path: '/projects/demo' }];
-        projectsOnDisk = { '/projects/demo': project };
+        world.allProjects = [{ name: 'demo', path: '/projects/demo' }];
+        world.projectsOnDisk = { '/projects/demo': project };
 
         await harness().call('find_storefront_name_mismatches');
 
@@ -379,26 +314,73 @@ describe('find_storefront_name_mismatches', () => {
             persistAfterLoad: false,
         });
         expect(saveProject).not.toHaveBeenCalled();
+
+        // `expect.any(Function)` passes for ANY function, so it does not check what the
+        // second argument ANSWERS. It is the loader's terminal provider, and a headless
+        // MCP tool has no VS Code terminals to hand back — its default reaches for
+        // `vscode.window.terminals`, which does not exist here.
+        const [, terminals] = loadProjectFromPath.mock.calls[0];
+        expect(terminals!()).toStrictEqual([]);
+    });
+
+    it('skips a project whose manifest resolves to nothing, and keeps scanning', async () => {
+        world.allProjects = [
+            { name: 'gone', path: '/projects/gone' },
+            { name: 'demo', path: '/projects/demo' },
+        ];
+        // '/projects/gone' is absent from the map, so the loader resolves undefined
+        // rather than throwing — a different case from the unreadable manifest below,
+        // and the one a deleted directory produces.
+        world.projectsOnDisk = { '/projects/demo': project };
+        mockFindStorefrontNameMismatch.mockReturnValue(candidate);
+
+        const out = await harness().call('find_storefront_name_mismatches');
+
+        expect(out).toMatchObject({ scanned: 2, total: 1 });
+    });
+
+    it('lists only the projects that actually mismatch', async () => {
+        world.allProjects = [
+            { name: 'fine', path: '/projects/fine' },
+            { name: 'demo', path: '/projects/demo' },
+        ];
+        // Two DISTINCT projects, so the mismatch check can answer differently for each
+        // without depending on call order.
+        const alreadyCorrect = { ...project, name: 'fine' };
+        world.projectsOnDisk = { '/projects/fine': alreadyCorrect, '/projects/demo': project };
+        mockFindStorefrontNameMismatch.mockImplementation((p: unknown) =>
+            p === project ? candidate : undefined
+        );
+
+        const out = await harness().call('find_storefront_name_mismatches');
+
+        // Both scanned, one reported — a scan that listed every project it read would
+        // send the user migrating things that are already correct.
+        expect(out).toMatchObject({ scanned: 2, total: 1 });
     });
 
     it('reports an empty list rather than an error when nothing needs migrating', async () => {
-        allProjects = [{ name: 'demo', path: '/projects/demo' }];
-        projectsOnDisk = { '/projects/demo': project };
+        world.allProjects = [{ name: 'demo', path: '/projects/demo' }];
+        world.projectsOnDisk = { '/projects/demo': project };
 
         const out = await harness().call('find_storefront_name_mismatches');
 
         expect(out).toEqual({ scanned: 1, total: 0, mismatches: [] });
+        // Silence matters here, not wording: a project with no mismatch must be
+        // passed over, not read as unreadable. Both produce the same empty list,
+        // and the skip warning is the only thing that tells them apart.
+        expect(logger.warn).not.toHaveBeenCalled();
     });
 
     it('one unreadable project does not hide the others', async () => {
-        allProjects = [
+        world.allProjects = [
             { name: 'broken', path: '/projects/broken' },
             { name: 'demo', path: '/projects/demo' },
         ];
-        projectsOnDisk = { '/projects/demo': project };
+        world.projectsOnDisk = { '/projects/demo': project };
         loadProjectFromPath.mockImplementation(async (path: string) => {
             if (path === '/projects/broken') throw new Error('unreadable manifest');
-            return projectsOnDisk[path];
+            return world.projectsOnDisk[path];
         });
         mockFindStorefrontNameMismatch.mockReturnValue(candidate);
 
@@ -409,11 +391,11 @@ describe('find_storefront_name_mismatches', () => {
     });
 
     it('pages the list rather than trusting it to stay small', async () => {
-        allProjects = Array.from({ length: 25 }, (_, i) => ({
+        world.allProjects = Array.from({ length: 25 }, (_, i) => ({
             name: `p${i}`,
             path: `/projects/p${i}`,
         }));
-        projectsOnDisk = Object.fromEntries(allProjects.map((p) => [p.path, project]));
+        world.projectsOnDisk = Object.fromEntries(world.allProjects.map((p) => [p.path, project]));
         mockFindStorefrontNameMismatch.mockReturnValue(candidate);
 
         const out = await harness().call('find_storefront_name_mismatches');
@@ -427,7 +409,7 @@ describe('migrate_storefront_name', () => {
     const atDemo = { projectPath: '/projects/demo' };
 
     beforeEach(() => {
-        projectsOnDisk = { '/projects/demo': project };
+        world.projectsOnDisk = { '/projects/demo': project };
         mockFindStorefrontNameMismatch.mockReturnValue(candidate);
     });
 
@@ -437,6 +419,19 @@ describe('migrate_storefront_name', () => {
         expect(String(out.error)).toMatch(/confirmName:"demo"/);
         expect(out.irreversible).toBe(true);
         expect(out.from).toBe('someone/citisignal-one');
+        expect(mockMigrateStorefrontNameForProject).not.toHaveBeenCalled();
+    });
+
+    it('refuses when the name echo is right but confirm was never given', async () => {
+        // Both halves of the gate have to hold. An agent that has read the refusal
+        // knows the exact name to echo, so the echo alone is not evidence a human
+        // agreed — and this is the call that deletes the old DA.live site root.
+        const out = await harness().call('migrate_storefront_name', {
+            ...atDemo,
+            confirmName: 'demo',
+        });
+
+        expect(String(out.error)).toMatch(/confirm/i);
         expect(mockMigrateStorefrontNameForProject).not.toHaveBeenCalled();
     });
 
@@ -470,6 +465,23 @@ describe('migrate_storefront_name', () => {
         expect(out.migrated).toBe(true);
         expect(out.publishKeyRenewed).toBe(true);
         expect(out.to).toBe('someone/demo-builder-test');
+    });
+
+    it('hands the migration a way to persist the project it renamed', async () => {
+        await harness().call('migrate_storefront_name', {
+            ...atDemo,
+            confirm: true,
+            confirmName: 'demo',
+        });
+
+        // Same rule as the repair: the rename changes the project and the tool owns
+        // saving it. A callback that drops the update loses the new site name.
+        const persist = mockMigrateStorefrontNameForProject.mock.calls[0][3] as (
+            p: unknown
+        ) => unknown;
+        const renamed = { ...project, name: 'renamed' };
+        persist(renamed);
+        expect(saveProject).toHaveBeenCalledWith(renamed);
     });
 
     it('reports a publish key that was NOT re-minted', async () => {
@@ -509,6 +521,30 @@ describe('migrate_storefront_name', () => {
         expect(out.lostGrants).toEqual(['o***r@example.test']);
     });
 
+    it('reads the target manifest without rewriting it', async () => {
+        await harness().call('migrate_storefront_name', atDemo);
+
+        // Same rule as the scan: resolving WHICH project to migrate must not persist
+        // the manifest as a side effect of reading it.
+        expect(loadProjectFromPath).toHaveBeenCalledWith('/projects/demo', expect.any(Function), {
+            persistAfterLoad: false,
+        });
+        const [, terminals] = loadProjectFromPath.mock.calls[0];
+        expect(terminals!()).toStrictEqual([]);
+    });
+
+    it('accepts a project path with stray whitespace around it', async () => {
+        // Paths arrive from an agent, which may well have copied one out of prose with
+        // a trailing newline. Untrimmed, this resolves to nothing and the tool reports
+        // the project as missing.
+        const out = await harness().call('migrate_storefront_name', {
+            projectPath: '  /projects/demo\n',
+        });
+
+        expect(String(out.error ?? '')).not.toMatch(/No project found/);
+        expect(out.from).toBe('someone/citisignal-one');
+    });
+
     it('says "nothing to do" rather than erroring on an already-correct project', async () => {
         mockFindStorefrontNameMismatch.mockReturnValue(null);
 
@@ -541,6 +577,13 @@ describe('migrate_storefront_name', () => {
 
         expect(String(out.error)).toMatch(/projectPath is required/);
     });
+
+    it('requires a projectPath even when no arguments arrive at all', async () => {
+        const out = await harness().callBare('migrate_storefront_name');
+
+        expect(String(out.error)).toMatch(/projectPath is required/);
+        expect(mockMigrateStorefrontNameForProject).not.toHaveBeenCalled();
+    });
 });
 
 /**
@@ -553,97 +596,6 @@ describe('migrate_storefront_name', () => {
  * these back to `{status:'ok'}`; the roster and the overlay URL are what the
  * ceilings are actually about.
  */
-describe('response ceilings', () => {
-    it('get_site_access stays under its ceiling with both rosters populated', async () => {
-        mockListSiteAccess.mockResolvedValue({
-            status: 'ok',
-            site: 'someone/demo-builder-test',
-            siteAdmins: ['first.admin@example.test'],
-            orgAdmins: ['first.admin@example.test'],
-            canManage: true,
-        });
-
-        expectWithinCeiling('get_site_access', await harness().callRaw('get_site_access'));
-    });
-
-    it('set_site_admin stays under its ceiling', async () => {
-        mockAddSiteAdmin.mockResolvedValue({
-            status: 'ok',
-            site: 'someone/demo-builder-test',
-            siteAdmins: ['first.admin@example.test', 'mcp-probe@example.test'],
-            canManage: true,
-            verified: true,
-        });
-
-        const raw = await harness().callRaw('set_site_admin', {
-            email: 'mcp-probe@example.test',
-            admin: true,
-            confirm: true,
-        });
-        expectWithinCeiling('set_site_admin', raw);
-    });
-
-    it('repair_site_configuration stays under its ceiling, overlay URL and all', async () => {
-        mockRepairSiteConfigForProject.mockResolvedValue({
-            status: 'repaired',
-            verified: true,
-            org: 'someone',
-            site: 'demo-builder-test',
-            // Length matters more than the value: the overlay URL was most of
-            // the 241 bytes measured live.
-            overlayUrl:
-                'https://000000-exampleworkspace-stage.adobeioruntime.net/api/v1/web/' +
-                'accs-discovery/render-pdp?org=someone&site=demo-builder-test',
-        });
-
-        const raw = await harness().callRaw('repair_site_configuration', { confirm: true });
-        expectWithinCeiling('repair_site_configuration', raw);
-    });
-
-    it('connect_dalive stays under its ceiling', async () => {
-        expectWithinCeiling('connect_dalive', await harness().callRaw('connect_dalive'));
-    });
-
-    it('find_storefront_name_mismatches stays under its ceiling at a FULL page', async () => {
-        // The live measurement was 0 mismatches across 2 projects — 39 bytes,
-        // which proves nothing about the bound. This drives a full page of the
-        // widest realistic row instead.
-        allProjects = Array.from({ length: 25 }, (_, i) => ({
-            name: `project-${i}`,
-            path: `/Users/someone/.demo-builder/projects/a-fairly-long-project-name-${i}`,
-        }));
-        projectsOnDisk = Object.fromEntries(allProjects.map((p) => [p.path, project]));
-        mockFindStorefrontNameMismatch.mockImplementation((p: { path: string }) => ({
-            ...candidate,
-            projectName: 'a-fairly-long-project-name',
-            projectPath: p.path,
-        }));
-
-        const raw = await harness().callRaw('find_storefront_name_mismatches');
-        expectWithinCeiling('find_storefront_name_mismatches', raw);
-    });
-
-    it('migrate_storefront_name stays under its ceiling on the SUCCESS branch', async () => {
-        // The branch the live probe could NOT reach: no project with a name
-        // mismatch exists to run it against.
-        projectsOnDisk = { '/projects/demo': project };
-        mockFindStorefrontNameMismatch.mockReturnValue(candidate);
-        mockMigrateStorefrontNameForProject.mockResolvedValue({
-            skipped: false,
-            migrated: true,
-            publishKeyRenewed: true,
-            lostGrants: ['f***t@example.test', 's***d@example.test'],
-        });
-
-        const raw = await harness().callRaw('migrate_storefront_name', {
-            projectPath: '/projects/demo',
-            confirm: true,
-            confirmName: 'demo',
-        });
-        expectWithinCeiling('migrate_storefront_name', raw);
-    });
-});
-
 describe('connect_dalive', () => {
     it('always hands back, pointing at the bookmarklet setup command', async () => {
         const out = (await harness().call('connect_dalive')) as {

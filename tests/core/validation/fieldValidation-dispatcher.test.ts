@@ -1,131 +1,98 @@
 /**
  * Field Validation Tests - Dispatcher
  *
- * Tests for validateFieldUI dispatcher function.
- * Routes field validation requests to appropriate validators.
+ * Tests for validateFieldUI, a switch over the field name with two cases and a
+ * permissive default.
  *
- * Target Coverage: 90%+
+ * THE TRAP THIS SUITE HAS TO AVOID: a VALID value cannot tell routing from
+ * fall-through. `validateProjectNameUI('my-project')` and the default arm both
+ * return `{isValid: true, message: ''}`, so a test that routes a good value
+ * passes just as happily when the case label is broken. Only a value the
+ * delegate would REJECT distinguishes the two, which is why every routing case
+ * below carries one, and why the unknown-field cases pass values that would
+ * fail if they were wrongly routed.
+ *
+ * Routing is asserted by comparing against the delegate's own output rather
+ * than by repeating its message text — the delegate owns its wording, and this
+ * suite owns only the question of which one was called.
  */
 
-import { validateFieldUI } from '@/core/validation/fieldValidation';
+import {
+    validateFieldUI,
+    validateProjectNameUI,
+    validateCommerceUrlUI,
+} from '@/core/validation/fieldValidation';
+
+/** Values a delegate rejects, so the assertion can see which one ran. */
+const REJECTED_BY_PROJECT_NAME = ['invalid project', ''];
+const REJECTED_BY_COMMERCE_URL = ['not-a-url', 'ftp://example.com'];
+
+/**
+ * Field names that must reach the default arm. Each is paired with a value the
+ * projectName rule would REJECT, so a mis-routed field fails here instead of
+ * passing quietly.
+ */
+const UNROUTED_FIELDS: ReadonlyArray<readonly [string, string]> = [
+    ['an unknown name', 'unknownField'],
+    ['a custom name', 'customField'],
+    ['a differently cased name', 'ProjectName'],
+    ['a snake_case variant', 'project_name'],
+    ['an empty name', ''],
+];
 
 describe('validateFieldUI', () => {
-    describe('projectName field', () => {
-        it('should route to validateProjectNameUI', () => {
-            const result = validateFieldUI('projectName', 'valid-project');
-            expect(result.isValid).toBe(true);
-            expect(result.message).toBe('');
+    describe('routes projectName to its validator', () => {
+        it.each(REJECTED_BY_PROJECT_NAME)('for the rejected value %p', (value) => {
+            expect(validateFieldUI('projectName', value)).toEqual(validateProjectNameUI(value));
+            expect(validateFieldUI('projectName', value).isValid).toBe(false);
         });
 
-        it('should return error for invalid project name', () => {
-            const result = validateFieldUI('projectName', 'invalid project');
-            expect(result.isValid).toBe(false);
-            expect(result.message).toContain('can only contain');
-        });
-
-        it('should handle empty project name', () => {
-            const result = validateFieldUI('projectName', '');
-            expect(result.isValid).toBe(false);
-            expect(result.message).toBe('Project name is required');
+        it('and passes a good value through', () => {
+            expect(validateFieldUI('projectName', 'my-project')).toEqual({
+                isValid: true,
+                message: '',
+            });
         });
     });
 
-    describe('commerceUrl field', () => {
-        it('should route to validateCommerceUrlUI', () => {
-            const result = validateFieldUI('commerceUrl', 'https://example.com');
-            expect(result.isValid).toBe(true);
-            expect(result.message).toBe('');
+    describe('routes commerceUrl to its validator', () => {
+        it.each(REJECTED_BY_COMMERCE_URL)('for the rejected value %p', (value) => {
+            expect(validateFieldUI('commerceUrl', value)).toEqual(validateCommerceUrlUI(value));
+            expect(validateFieldUI('commerceUrl', value).isValid).toBe(false);
         });
 
-        it('should return error for invalid URL', () => {
-            const result = validateFieldUI('commerceUrl', 'not-a-url');
-            expect(result.isValid).toBe(false);
-            expect(result.message).toBe('Invalid URL format. Must start with http:// or https://');
+        it('and passes a good value through', () => {
+            expect(validateFieldUI('commerceUrl', 'https://example.com')).toEqual({
+                isValid: true,
+                message: '',
+            });
         });
 
-        it('should accept empty commerce URL', () => {
-            const result = validateFieldUI('commerceUrl', '');
-            expect(result.isValid).toBe(true);
-            expect(result.message).toBe('');
+        it('accepts an empty URL, because that field is optional', () => {
+            expect(validateFieldUI('commerceUrl', '')).toEqual({ isValid: true, message: '' });
         });
     });
 
-    describe('unknown fields', () => {
-        it('should return valid for unknown field types', () => {
-            const result = validateFieldUI('unknownField', 'any value');
-            expect(result.isValid).toBe(true);
-            expect(result.message).toBe('');
+    describe('validates nothing for a field it does not know', () => {
+        it.each(UNROUTED_FIELDS)('%s (%p)', (_label, field) => {
+            // The value would FAIL the projectName rule. Getting a pass back is
+            // what proves the default arm ran rather than a case label matching.
+            expect(validateFieldUI(field, 'invalid value!')).toEqual({
+                isValid: true,
+                message: '',
+            });
         });
 
-        it('should not validate unknown fields', () => {
-            const result = validateFieldUI('customField', '<script>alert(1)</script>');
-            expect(result.isValid).toBe(true);
-            expect(result.message).toBe('');
-        });
+        // Callers reach this from untyped webview messages, so a missing field
+        // name is a real input rather than a type-system impossibility. The
+        // cast states that deliberately.
+        it.each([
+            ['null', null],
+            ['undefined', undefined],
+        ])('a %s field name', (_label, field) => {
+            const result = validateFieldUI(field as unknown as string, 'invalid value!');
 
-        it('should handle empty string for unknown fields', () => {
-            const result = validateFieldUI('otherField', '');
-            expect(result.isValid).toBe(true);
-            expect(result.message).toBe('');
-        });
-    });
-
-    describe('case sensitivity', () => {
-        it('should match field names case-sensitively', () => {
-            // Capital P should not match
-            const result = validateFieldUI('ProjectName', 'valid-project');
-            expect(result.isValid).toBe(true); // Falls through to default
-            expect(result.message).toBe('');
-        });
-
-        it('should not match camelCase variants', () => {
-            const result = validateFieldUI('project_name', 'valid-project');
-            expect(result.isValid).toBe(true); // Falls through to default
-            expect(result.message).toBe('');
-        });
-    });
-
-    describe('edge cases', () => {
-        it('should handle null field name gracefully', () => {
-            // Type assertion for testing edge case - validateFieldUI expects string
-            const result = validateFieldUI(null as unknown as string, 'value');
-            expect(result.isValid).toBe(true); // Falls through to default
-            expect(result.message).toBe('');
-        });
-
-        it('should handle undefined field name gracefully', () => {
-            // Type assertion for testing edge case - validateFieldUI expects string
-            const result = validateFieldUI(undefined as unknown as string, 'value');
-            expect(result.isValid).toBe(true); // Falls through to default
-            expect(result.message).toBe('');
-        });
-
-        it('should handle empty field name', () => {
-            const result = validateFieldUI('', 'value');
-            expect(result.isValid).toBe(true); // Falls through to default
-            expect(result.message).toBe('');
-        });
-    });
-
-    describe('comprehensive validation', () => {
-        it('should validate multiple fields independently', () => {
-            const projectResult = validateFieldUI('projectName', 'my-project');
-            const urlResult = validateFieldUI('commerceUrl', 'https://example.com');
-
-            expect(projectResult.isValid).toBe(true);
-            expect(urlResult.isValid).toBe(true);
-        });
-
-        it('should handle mixed valid/invalid fields', () => {
-            const validProject = validateFieldUI('projectName', 'valid-project');
-            const invalidProject = validateFieldUI('projectName', 'invalid project');
-            const validUrl = validateFieldUI('commerceUrl', 'https://example.com');
-            const invalidUrl = validateFieldUI('commerceUrl', 'not-url');
-
-            expect(validProject.isValid).toBe(true);
-            expect(invalidProject.isValid).toBe(false);
-            expect(validUrl.isValid).toBe(true);
-            expect(invalidUrl.isValid).toBe(false);
+            expect(result).toEqual({ isValid: true, message: '' });
         });
     });
 });

@@ -25,20 +25,18 @@
  */
 
 const mockWarn = jest.fn();
-jest.mock('@/core/logging', () => ({
-    getLogger: () => ({ error: jest.fn(), debug: jest.fn(), info: jest.fn(), warn: mockWarn }),
-}));
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({ error: jest.fn(), debug: jest.fn(), info: jest.fn(), warn: mockWarn }),
-}));
+
+jest.mock('@/core/logging/debugLogger', () => {
+    const { createMockLogger } = require('../../helpers/loggerFake');
+    // The captured mock is read on the FIRST getLogger() call, not when this
+    // factory runs — jest hoists the factory above `const mockX = jest.fn()`, so
+    // reading it eagerly here throws "cannot access before initialization".
+    // Memoised, so every caller still shares one logger.
+    let logger;
+    return { getLogger: () => (logger ??= createMockLogger({ warn: mockWarn })) };
+});
 
 jest.mock('execa');
-jest.mock('@/core/shell/commandSequencer');
-jest.mock('@/core/shell/environmentSetup');
-jest.mock('@/core/shell/fileWatcher');
-jest.mock('@/core/shell/pollingService');
-jest.mock('@/core/shell/resourceLocker');
-jest.mock('@/core/shell/retryStrategyManager');
 
 import execa from 'execa';
 import { CommandExecutor } from '@/core/shell/commandExecutor';
@@ -57,13 +55,13 @@ describe('CommandExecutor — untargeted org-scoped command warning', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-        setupMockDependencies();
-        commandExecutor = new CommandExecutor();
+        const mockDependencies = setupMockDependencies();
+        commandExecutor = new CommandExecutor(mockDependencies.deps);
     });
 
     const run = async (command: string, wrap: boolean) => {
         const mockSubprocess = createMockExecaSubprocess();
-        mockExeca.mockReturnValue(mockSubprocess as never);
+        mockExeca.mockReturnValue(mockSubprocess);
         const exec = () => {
             const p = commandExecutor.execute(command, { configureTelemetry: false });
             process.nextTick(() => simulateSubprocessComplete(mockSubprocess, 'ok\n', '', 0));
@@ -91,7 +89,7 @@ describe('CommandExecutor — untargeted org-scoped command warning', () => {
     it('stays silent when the same command runs inside withOrgContext', async () => {
         await run('aio api-mesh:describe', true);
 
-        expect(untargetedWarnings()).toEqual([]);
+        expect(untargetedWarnings()).toStrictEqual([]);
     });
 
     it.each([
@@ -118,6 +116,6 @@ describe('CommandExecutor — untargeted org-scoped command warning', () => {
     ])('stays silent for %s', async (command) => {
         await run(command, false);
 
-        expect(untargetedWarnings()).toEqual([]);
+        expect(untargetedWarnings()).toStrictEqual([]);
     });
 });

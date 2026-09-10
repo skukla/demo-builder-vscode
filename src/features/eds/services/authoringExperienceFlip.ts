@@ -23,12 +23,13 @@ import {
     createDaLiveServiceTokenProvider,
 } from './daLive/daLiveContentOperations';
 import { GitHubFileOperations } from './github/githubFileOperations';
-import { GitHubTokenService } from './github/githubTokenService';
+import type { GitHubTokenService } from './github/githubTokenService';
+import type { HelixCodePreview } from './helix/helixCapabilities';
 import { HelixService } from './helix/helixService';
 import { installQuickEdit } from './quickEditPublisher';
 import { republishStorefrontConfig } from './storefront/storefrontRepublishService';
 import { COMPONENT_IDS } from '@/core/constants';
-import type { AuthoringExperience, Project } from '@/types';
+import type { AuthoringExperience, Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 
 /**
@@ -57,6 +58,26 @@ export interface AuthoringExperienceFlipDeps {
      * why the save cannot be left to the caller's discretion.
      */
     saveProject: (project: Project) => Promise<void>;
+    /**
+     * Helix seam. Defaults to a service built from this call's logger and the
+     * credentials resolved beside it; production never passes it.
+     *
+     * HelixService is stateless, so ADR-015 leaves the construction where it is — the
+     * cost was test design. This suite could only reach `previewCode` by mocking the
+     * module (ADR-016's wall), which also meant it could not say WHICH service the
+     * publish went through.
+     */
+    helixService?: HelixCodePreview;
+    /**
+     * The GitHub token service, handed in rather than built here.
+     *
+     * It is STATEFUL — a five-minute per-instance validation cache — and that is the
+     * whole reason this is a parameter. A fresh instance starts with an empty cache,
+     * so every construction buys a round trip to GitHub that the shared instance from
+     * `getGitHubServices` would have answered locally. The stateless `HelixService`
+     * beside it stays constructed in place for exactly the opposite reason.
+     */
+    githubTokenService: GitHubTokenService;
 }
 
 /**
@@ -130,7 +151,7 @@ async function reapplyEditorPath(
  */
 async function ensureQuickEditVendored(
     project: Project,
-    { context, logger }: AuthoringExperienceFlipDeps,
+    { context, logger, helixService: injectedHelix, githubTokenService }: AuthoringExperienceFlipDeps,
 ): Promise<'ok' | 'warn'> {
     try {
         const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
@@ -145,14 +166,14 @@ async function ensureQuickEditVendored(
             return 'ok';
         }
 
-        const githubTokenService = new GitHubTokenService(context.secrets, logger);
-        const githubFileOps = new GitHubFileOperations(githubTokenService, logger);
+            const githubFileOps = new GitHubFileOperations(githubTokenService, logger);
         await installQuickEdit(githubFileOps, repoOwner, repoName, logger);
 
         // Push the committed Quick Edit code live so the Experience Workspace
         // Layout (WYSIWYG) view works immediately, without a full reset.
         const daLiveTokenProvider = createDaLiveServiceTokenProvider(getDaLiveAuthService(context));
-        const helixService = new HelixService(logger, githubTokenService, daLiveTokenProvider);
+        const helixService =
+            injectedHelix ?? new HelixService(logger, githubTokenService, daLiveTokenProvider);
         await helixService.previewCode(repoOwner, repoName, '/*');
         return 'ok';
     } catch (error) {

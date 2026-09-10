@@ -11,7 +11,7 @@ import {
     createMockWizardSteps,
     setupTest,
     cleanupTest,
-    renderWithTheme,
+    renderWizard,
 } from './WizardContainer.testUtils';
 
 describe('WizardContainer - Initialization', () => {
@@ -26,7 +26,7 @@ describe('WizardContainer - Initialization', () => {
 
     describe('Happy Path - Component Mounting', () => {
         it('should load component data on mount', async () => {
-            renderWithTheme(
+            await renderWizard(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}
                     wizardSteps={createMockWizardSteps()}
@@ -39,8 +39,8 @@ describe('WizardContainer - Initialization', () => {
             });
         });
 
-        it('should render the initial welcome step (Demo Setup) as the first step', () => {
-            renderWithTheme(
+        it('should render the initial welcome step (Demo Setup) as the first step', async () => {
+            await renderWizard(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}
                     wizardSteps={createMockWizardSteps()}
@@ -51,8 +51,8 @@ describe('WizardContainer - Initialization', () => {
             expect(screen.getByTestId('welcome-step')).toBeInTheDocument();
         });
 
-        it('should render wizard with navigation buttons (Back hidden on first step)', () => {
-            renderWithTheme(
+        it('should render wizard with navigation buttons (Back hidden on first step)', async () => {
+            await renderWizard(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}
                     wizardSteps={createMockWizardSteps()}
@@ -68,8 +68,8 @@ describe('WizardContainer - Initialization', () => {
             expect(screen.getByTestId('welcome-step')).toBeInTheDocument();
         });
 
-        it('should display footer buttons (Cancel, Continue) on first step', () => {
-            renderWithTheme(
+        it('should display footer buttons (Cancel, Continue) on first step', async () => {
+            await renderWizard(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}
                     wizardSteps={createMockWizardSteps()}
@@ -84,8 +84,8 @@ describe('WizardContainer - Initialization', () => {
     });
 
     describe('Edge Cases - Configuration Validation', () => {
-        it('should handle missing wizardSteps configuration', () => {
-            renderWithTheme(
+        it('should handle missing wizardSteps configuration', async () => {
+            await renderWizard(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}
                     wizardSteps={undefined}
@@ -93,11 +93,13 @@ describe('WizardContainer - Initialization', () => {
             );
 
             expect(screen.getByText('Configuration Error')).toBeInTheDocument();
-            expect(screen.getByText('Wizard configuration not loaded. Please restart the extension.')).toBeInTheDocument();
+            expect(
+                screen.getByText('Wizard configuration not loaded. Please restart the extension.')
+            ).toBeInTheDocument();
         });
 
-        it('should handle empty wizardSteps array', () => {
-            renderWithTheme(
+        it('should handle empty wizardSteps array', async () => {
+            await renderWizard(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}
                     wizardSteps={[]}
@@ -107,14 +109,14 @@ describe('WizardContainer - Initialization', () => {
             expect(screen.getByText('Configuration Error')).toBeInTheDocument();
         });
 
-        it('should filter out disabled steps', () => {
+        it('should filter out disabled steps', async () => {
             const stepsWithDisabled = [
                 { id: 'welcome', name: 'Adobe Auth', enabled: true },
                 { id: 'prerequisites', name: 'Prerequisites', enabled: false }, // Disabled
                 { id: 'review', name: 'Review', enabled: true },
             ];
 
-            renderWithTheme(
+            await renderWizard(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}
                     wizardSteps={stepsWithDisabled}
@@ -126,9 +128,9 @@ describe('WizardContainer - Initialization', () => {
 
             // Verify step configuration by checking the filtered steps array
             // (disabled steps are filtered out internally)
-            const enabledSteps = stepsWithDisabled.filter(s => s.enabled);
+            const enabledSteps = stepsWithDisabled.filter((s) => s.enabled);
             expect(enabledSteps).toHaveLength(2);
-            expect(enabledSteps.map(s => s.id)).toEqual(['welcome', 'review']);
+            expect(enabledSteps.map((s) => s.id)).toEqual(['welcome', 'review']);
         });
     });
 });

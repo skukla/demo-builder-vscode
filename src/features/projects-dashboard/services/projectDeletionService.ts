@@ -11,8 +11,9 @@
 
 import * as fs from 'fs/promises';
 import * as vscode from 'vscode';
-import { TIMEOUTS, showOneTimeTip } from '@/core/utils';
+import { showOneTimeTip } from '@/core/utils/oneTimeTip';
 import { sleep } from '@/core/utils/sleep';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { ensureDaLiveAuth as ensureDaLiveAuthShared, getDaLiveAuthService } from '@/features/eds/handlers/edsHelpers';
 import { DaLiveAuthService } from '@/features/eds/services/daLive/daLiveAuthService';
 import { createDaLiveServiceTokenProvider, DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
@@ -26,6 +27,7 @@ import {
 } from '@/features/eds/services/resourceCleanupHelpers';
 import type { Project } from '@/types/base';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
+import type { Logger } from '@/types/logger';
 import { toError } from '@/types/typeGuards';
 
 /**
@@ -48,6 +50,54 @@ interface CleanupOptions {
 }
 
 /**
+ * The three Helix calls the CDN-unpublish step makes, out of a class with dozens.
+ */
+export interface DeletionHelix {
+    listAllPages(org: string, site: string, path?: string): Promise<string[]>;
+    unpublishPages(
+        org: string,
+        site: string,
+        branch: string,
+        webPaths: string[],
+    ): Promise<{
+        success: boolean;
+        count: number;
+        total: number;
+        liveFailed: number;
+        previewFailed: number;
+    }>;
+    deleteAdminApiKey(org: string, site: string): Promise<{ success: boolean; error?: string }>;
+}
+
+/**
+ * Service seam. Defaults to the real Helix, built from the DA.live credential this
+ * deletion holds; production never passes it.
+ *
+ * `HelixService` is STATELESS — credentials arrive at construction and are never
+ * mutated — so ADR-015 leaves the construction here. What it cost was test design,
+ * and in this file it cost more than that. The suite's module mock supplied
+ * `unpublishAllContent`, a method the source stopped calling, and supplied no
+ * `initKeyStore` STATIC — so the key-store init threw a TypeError on the first line
+ * of the try block, the catch swallowed it as a warning, and every Helix call in
+ * this path was unreachable while 23 tests passed. Measured 2026-08-31 by planting a
+ * throw inside the try: the suite stayed green.
+ *
+ * `initKeyStore` rides here for the same reason: it is a side effect this path
+ * performs, and a test needs to say whether it happened rather than have it fail
+ * invisibly.
+ */
+export interface DeletionServices {
+    initKeyStore?: (
+        secrets: vscode.SecretStorage,
+        globalState: vscode.Memento,
+    ) => Promise<void>;
+    makeHelix?: (
+        logger: Logger,
+        daLiveTokenProvider: { getAccessToken: () => Promise<string | null> },
+    ) => DeletionHelix;
+}
+
+/**
  * Delete a project with confirmation and cleanup
  *
  * Shows confirmation dialog, stops demo if running, deletes files,
@@ -58,6 +108,7 @@ interface CleanupOptions {
 export async function deleteProject(
     context: HandlerContext,
     project: Project,
+    services?: DeletionServices,
 ): Promise<HandlerResponse> {
     // Check if this is an EDS project with external resources
     const isEds = isEdsProject(project);
@@ -116,6 +167,7 @@ export async function deleteProject(
                     cleanupOptions,
                     cleanupResults,
                     progress,
+                    services,
                 );
             }
 
@@ -243,7 +295,6 @@ async function showCleanupConfirmation(
     // Build QuickPick items matching plan: "Delete Repository", "Delete DA.live Site"
     interface CleanupQuickPickItem extends vscode.QuickPickItem {
         id: 'github' | 'daLive';
-        enabled: boolean;
     }
 
     const items: CleanupQuickPickItem[] = [];
@@ -256,7 +307,6 @@ async function showCleanupConfirmation(
             description: edsMetadata.githubRepo,
             detail: '$(key) Sign-in required',
             picked: false,
-            enabled: true,
         });
     }
 
@@ -268,7 +318,6 @@ async function showCleanupConfirmation(
             description: `${edsMetadata.daLiveOrg}/${edsMetadata.daLiveSite}`,
             detail: '$(key) Sign-in required',
             picked: false,
-            enabled: true,
         });
     }
 
@@ -377,6 +426,7 @@ async function unpublishCdnContent(
     daLiveTokenProvider: { getAccessToken: () => Promise<string | null> },
     results: CleanupResultItem[],
     progress: vscode.Progress<{ message?: string }>,
+    services?: DeletionServices,
 ): Promise<void> {
     if (!edsMetadata?.githubRepo) return;
 
@@ -385,8 +435,16 @@ async function unpublishCdnContent(
 
     try {
         progress.report({ message: 'Unpublishing CDN content…' });
-        await HelixService.initKeyStore(context.context.secrets, context.context.globalState);
-        const helixService = new HelixService(context.logger, undefined, daLiveTokenProvider);
+        const initKeyStore =
+            services?.initKeyStore ??
+            ((secrets: vscode.SecretStorage, globalState: vscode.Memento) =>
+                HelixService.initKeyStore(secrets, globalState));
+        await initKeyStore(context.context.secrets, context.context.globalState);
+        const makeHelix =
+            services?.makeHelix ??
+            ((l: Logger, tp: { getAccessToken: () => Promise<string | null> }) =>
+                new HelixService(l, undefined, tp));
+        const helixService = makeHelix(context.logger, daLiveTokenProvider);
         const daOrg = edsMetadata.daLiveOrg ?? '';
         const daSite = edsMetadata.daLiveSite ?? '';
         const pages = await helixService.listAllPages(daOrg, daSite);
@@ -423,6 +481,7 @@ async function performDaLiveCleanup(
     options: CleanupOptions,
     results: CleanupResultItem[],
     progress: vscode.Progress<{ message?: string }>,
+    services?: DeletionServices,
 ): Promise<void> {
     if (!options.deleteDaLiveSite || !edsMetadata?.daLiveOrg || !edsMetadata?.daLiveSite) return;
 
@@ -439,7 +498,14 @@ async function performDaLiveCleanup(
 
         // Unpublish CDN content before deleting the site
         // Uses DA.live Bearer token auth which bypasses the "source exists" restriction
-        await unpublishCdnContent(context, edsMetadata, daLiveTokenProvider, results, progress);
+        await unpublishCdnContent(
+            context,
+            edsMetadata,
+            daLiveTokenProvider,
+            results,
+            progress,
+            services,
+        );
 
         progress.report({ message: 'Deleting DA.live site content…' });
         const cleanupResult = await deleteDaLiveSite(
@@ -497,7 +563,7 @@ async function performGitHubCleanup(
 
     try {
         const { getGitHubServices } = await import('@/features/eds/handlers/edsHelpers');
-        const { tokenService, repoOperations } = getGitHubServices(context);
+        const { tokenService, repoOperations } = getGitHubServices(context.context.secrets);
 
         const existingToken = await tokenService.getToken();
         if (!existingToken) {
@@ -559,9 +625,10 @@ async function performEdsCleanup(
     options: CleanupOptions,
     results: CleanupResultItem[],
     progress: vscode.Progress<{ message?: string }>,
+    services?: DeletionServices,
 ): Promise<void> {
     // 1. Delete DA.live site
-    await performDaLiveCleanup(context, edsMetadata, options, results, progress);
+    await performDaLiveCleanup(context, edsMetadata, options, results, progress, services);
 
     // 2. Delete GitHub repository
     if (options.deleteGitHubRepo && edsMetadata?.githubRepo) {

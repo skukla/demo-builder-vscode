@@ -23,12 +23,12 @@ export interface SpinnerProps {
  * <Spinner size="M" aria-label="Loading data" />
  * ```
  */
-export const Spinner: React.FC<SpinnerProps> = ({
+export function Spinner({
     size = 'M',
     isIndeterminate = true,
     'aria-label': ariaLabel = 'Loading',
     className,
-}) => {
+}: SpinnerProps) {
     return (
         <ProgressCircle
             size={size}
@@ -37,4 +37,4 @@ export const Spinner: React.FC<SpinnerProps> = ({
             UNSAFE_className={className}
         />
     );
-};
+}

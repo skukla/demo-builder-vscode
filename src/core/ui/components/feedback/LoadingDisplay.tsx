@@ -30,14 +30,14 @@ export interface LoadingDisplayProps {
  *   or what it is waiting on. Never a phase description; that is row 1's job,
  *   and a description here reads as a second, slower status.
  */
-export const LoadingDisplay: React.FC<LoadingDisplayProps> = ({
+export function LoadingDisplay({
     size = 'L',
     message,
     subMessage,
     helperText,
     progress,
     className,
-}) => {
+}: LoadingDisplayProps) {
     // Center display for large size, left-align for smaller sizes
     const shouldCenter = size === 'L';
     const hasDeterminateProgress = progress !== undefined && progress >= 0;
@@ -49,23 +49,21 @@ export const LoadingDisplay: React.FC<LoadingDisplayProps> = ({
     const helperTextClass = 'text-xs text-gray-500 italic';
 
     // Container props based on centering
-    const containerProps = shouldCenter ? {
-        alignItems: 'center' as const,
-        justifyContent: 'center' as const,
-        height: '100%',
-    } : {
-        alignItems: 'center' as const,
-    };
+    const containerProps = shouldCenter
+        ? {
+              alignItems: 'center' as const,
+              justifyContent: 'center' as const,
+              height: '100%',
+          }
+        : {
+              alignItems: 'center' as const,
+          };
 
     // For small size with no sub-message, use horizontal layout
     if (size === 'S' && !subMessage) {
         return (
             <Flex gap="size-200" alignItems="center" UNSAFE_className={className}>
-                <ProgressCircle
-                    size={size}
-                    isIndeterminate={true}
-                    aria-label={message}
-                />
+                <ProgressCircle size={size} isIndeterminate={true} aria-label={message} />
                 <Text UNSAFE_className={mainTextClass}>{message}</Text>
             </Flex>
         );
@@ -74,33 +72,35 @@ export const LoadingDisplay: React.FC<LoadingDisplayProps> = ({
     // For larger sizes or when sub-message exists, use vertical layout
     return (
         <div role="status" aria-live="polite" aria-atomic="true">
-        <Flex
-            direction="column"
-            gap="size-200"
-            {...containerProps}
-            UNSAFE_className={className}
-        >
-            <ProgressCircle
-                size={size}
-                value={hasDeterminateProgress ? progress : undefined}
-                isIndeterminate={!hasDeterminateProgress}
-                aria-label={message}
-            />
-            <Flex direction="column" gap="size-50" alignItems={shouldCenter ? 'center' : 'start'}>
-                <Text UNSAFE_className={mainTextClass}>
-                    {message}
-                </Text>
-                {/* Always render sub-message row to prevent layout shift */}
-                <Text UNSAFE_className={subTextClass} minHeight="size-200">
-                    {subMessage || '\u00A0'}
-                </Text>
-                {helperText && (
-                    <Text UNSAFE_className={helperTextClass} marginTop="size-100">
-                        {helperText}
+            <Flex
+                direction="column"
+                gap="size-200"
+                {...containerProps}
+                UNSAFE_className={className}
+            >
+                <ProgressCircle
+                    size={size}
+                    value={hasDeterminateProgress ? progress : undefined}
+                    isIndeterminate={!hasDeterminateProgress}
+                    aria-label={message}
+                />
+                <Flex
+                    direction="column"
+                    gap="size-50"
+                    alignItems={shouldCenter ? 'center' : 'start'}
+                >
+                    <Text UNSAFE_className={mainTextClass}>{message}</Text>
+                    {/* Always render sub-message row to prevent layout shift */}
+                    <Text UNSAFE_className={subTextClass} minHeight="size-200">
+                        {subMessage || '\u00A0'}
                     </Text>
-                )}
+                    {helperText && (
+                        <Text UNSAFE_className={helperTextClass} marginTop="size-100">
+                            {helperText}
+                        </Text>
+                    )}
+                </Flex>
             </Flex>
-        </Flex>
         </div>
     );
-};
+}

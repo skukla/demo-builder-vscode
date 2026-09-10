@@ -5,17 +5,10 @@
  * Reference: .rptc/plans/resource-lifecycle-management/TESTING-MOCKING-PATTERNS.md
  */
 
-import * as vscode from 'vscode';
+import { createMockLogger } from '../../helpers/loggerFake';
+import { createMockStateManager } from '../../helpers/stateManagerFake';
 
 // Mock logger FIRST (before any imports that might use it)
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    }),
-}));
 
 // Mock file system watchers
 export const mockWatchers: any[] = [];
@@ -33,43 +26,9 @@ jest.mock('vscode', () => {
             workspaceFolders: [
                 { uri: { fsPath: '/project1', toString: () => 'file:///project1' }, name: 'project1', index: 0 },
             ],
-            createFileSystemWatcher: jest.fn((pattern: string) => {
-                const watcher = {
-                    pattern,
-                    _disposed: false,
-                    _listeners: {
-                        onCreate: [] as ((...args: unknown[]) => unknown)[],
-                        onChange: [] as ((...args: unknown[]) => unknown)[],
-                        onDelete: [] as ((...args: unknown[]) => unknown)[]
-                    },
-                    onDidCreate: jest.fn((listener) => {
-                        watcher._listeners.onCreate.push(listener);
-                        return { dispose: () => {} };
-                    }),
-                    onDidChange: jest.fn((listener) => {
-                        watcher._listeners.onChange.push(listener);
-                        return { dispose: () => {} };
-                    }),
-                    onDidDelete: jest.fn((listener) => {
-                        watcher._listeners.onDelete.push(listener);
-                        return { dispose: () => {} };
-                    }),
-                    dispose: jest.fn(() => {
-                        watcher._disposed = true;
-                        const { mockWatchers } = require('./envFileWatcherService.testUtils');
-                        const idx = mockWatchers.indexOf(watcher);
-                        if (idx !== -1) mockWatchers.splice(idx, 1);
-                    }),
-                    // Helper to simulate file change
-                    _simulateChange: (uri: vscode.Uri) => {
-                        watcher._listeners.onChange.forEach((l: (...args: unknown[]) => unknown) => l(uri));
-                    }
-                };
-
-                const { mockWatchers } = require('./envFileWatcherService.testUtils');
-                mockWatchers.push(watcher);
-                return watcher;
-            })
+            createFileSystemWatcher: (
+                require('./recordingFileWatcher') as typeof import('./recordingFileWatcher')
+            ).createRecordingWatcherFactory(() => mockWatchers)
         },
         window: {
             showInformationMessage: jest.fn(() => Promise.resolve(undefined)),
@@ -125,18 +84,12 @@ jest.mock('@/core/vscode/workspaceWatcherManager', () => {
 });
 
 // Mock StateManager
-export const mockStateManager = {
+export const mockStateManager = createMockStateManager({
     getCurrentProject: jest.fn(),
-};
+});
 
 // Mock logger
-export const mockLogger = {
-    info: jest.fn(),
-    debug: jest.fn(),
-    error: jest.fn(),
-    warn: jest.fn(),
-    trace: jest.fn(),
-};
+export const mockLogger = createMockLogger();
 
 /**
  * Reset all mocks and state
@@ -146,4 +99,32 @@ export function resetMocks(): void {
     mockWatchers.length = 0;
     mockFileContents.clear();
     Object.keys(commandCallbacks).forEach(key => delete commandCallbacks[key]);
+}
+
+// ── The SUT and its collaborators, re-exported ──────────────────────────────
+// Specs MUST import these from here, never from '@/core/vscode/...'. jest.mock
+// hoists above the imports of the module it appears in, NOT across modules, so a
+// spec importing the service directly could load it before the mocks above were
+// registered — which is exactly why all three .mocked specs used to re-declare
+// every mock in this file. Re-exporting removes the ordering question.
+export { EnvFileWatcherService } from '@/core/vscode/envFileWatcherService';
+export { WorkspaceWatcherManager } from '@/core/vscode/workspaceWatcherManager';
+export * as vscode from 'vscode';
+
+/**
+ * Let `handleFileChange`'s promise chain finish before asserting.
+ *
+ * The handler awaits twice — the file read, then the project state — and a single
+ * `process.nextTick` turn resumes the test BETWEEN them. An assertion made there
+ * sees no notification whatever the code did, so a test written that way passes for
+ * the wrong reason. Measured 2026-09-05: a hand-applied mutant reached "Content
+ * actually changed" and every such assertion still passed.
+ *
+ * Microtask turns only, no `nextTick`: the security suite runs on fake timers, which
+ * fake `nextTick` too, and the handler's awaits are all microtasks anyway.
+ */
+export async function settleFileChange(): Promise<void> {
+    for (let i = 0; i < 20; i += 1) {
+        await Promise.resolve();
+    }
 }

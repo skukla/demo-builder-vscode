@@ -215,6 +215,15 @@ describe('blockLibraryLoader', () => {
 
             expect(natives).toHaveLength(0);
         });
+
+        it('withholds a package NATIVE library from a stack it does not support', () => {
+            // isle5 IS native to the isle5 package, so this is the case where the
+            // stack check is the only thing standing between a headless project and
+            // an EDS-only block library.
+            const headlessStack = makeStack({ id: 'headless-paas', frontend: 'headless' });
+
+            expect(getNativeBlockLibraries(headlessStack, 'isle5')).toStrictEqual([]);
+        });
     });
 
     describe('getDefaultBlockLibraryIds', () => {
@@ -227,7 +236,7 @@ describe('blockLibraryLoader', () => {
             const edsStack = makeStack();
             const defaults = getDefaultBlockLibraryIds(edsStack, 'custom');
 
-            expect(defaults).toEqual([]);
+            expect(defaults).toStrictEqual([]);
         });
 
         it('returns empty array for Isle5 package without userDefaults (isle5 is native, not in available)', () => {
@@ -235,7 +244,7 @@ describe('blockLibraryLoader', () => {
             const defaults = getDefaultBlockLibraryIds(edsStack, 'isle5');
 
             expect(defaults).not.toContain('isle5');
-            expect(defaults).toEqual([]);
+            expect(defaults).toStrictEqual([]);
         });
 
         it('does not include storefront-specific libraries as defaults', () => {
@@ -288,6 +297,15 @@ describe('blockLibraryLoader', () => {
             expect(defaults).toContain('demo-team-blocks');
         });
 
+        it('returns NOTHING when the user default names nothing available', () => {
+            // The intersection is the whole job: a setting naming only unavailable
+            // libraries pre-checks none of them, rather than falling back to
+            // pre-checking everything the package can see.
+            const edsStack = makeStack();
+
+            expect(getDefaultBlockLibraryIds(edsStack, 'custom', ['isle5'])).toStrictEqual([]);
+        });
+
         it('ignores a stale isle5 userDefault for non-isle5 packages (pinned via onlyForPackages)', () => {
             // A leftover `demoBuilder.blockLibraries.defaults` = ['isle5'] setting
             // (the enum no longer offers it) must not pre-check isle5 on other
@@ -316,12 +334,12 @@ describe('blockLibraryLoader', () => {
 
         it('returns [] for packages the library does not default to', () => {
             const edsStack = makeStack();
-            expect(getPackageDefaultBlockLibraryIds(edsStack, 'isle5')).toEqual([]);
+            expect(getPackageDefaultBlockLibraryIds(edsStack, 'isle5')).toStrictEqual([]);
         });
 
         it('returns [] for non-EDS stacks', () => {
             const headlessStack = makeStack({ id: 'headless-paas', frontend: 'headless' });
-            expect(getPackageDefaultBlockLibraryIds(headlessStack, 'citisignal')).toEqual([]);
+            expect(getPackageDefaultBlockLibraryIds(headlessStack, 'citisignal')).toStrictEqual([]);
         });
     });
 
@@ -499,7 +517,63 @@ describe('blockLibraryLoader', () => {
                 blockLibSection?.properties?.['demoBuilder.blockLibraries.custom'];
             expect(customSetting).toBeDefined();
             expect(customSetting.type).toBe('array');
-            expect(customSetting.default).toEqual([]);
+            expect(customSetting.default).toStrictEqual([]);
+        });
+    });
+
+    // Two rules of this module are unreachable through the SHIPPED registry: every
+    // library it ships declares `defaultForPackages`, and none sets the legacy
+    // `default` flag. Both are rules about a registry we could WRITE — an externally
+    // supplied one, or the next library added here — so they are driven against a
+    // synthetic registry instead. The config is read ONCE at module load, so the
+    // module is re-imported inside `jest.isolateModules`.
+    describe('against a synthetic registry', () => {
+        /** Load the loader over `libraries` instead of the shipped registry. */
+        function loadWith(libraries: unknown[]) {
+            let loaded!: typeof import('@/features/components/services/blockLibraryLoader');
+            jest.isolateModules(() => {
+                jest.doMock('@/features/components/config/block-libraries.json', () => ({
+                    version: '1.0.0',
+                    libraries,
+                }));
+                loaded = require('@/features/components/services/blockLibraryLoader');
+            });
+            return loaded;
+        }
+
+        const EDS_SOURCE = { owner: 'acme', repo: 'blocks', branch: 'main' };
+        const BASE = {
+            name: 'A Library',
+            description: 'A library',
+            type: 'standalone' as const,
+            source: EDS_SOURCE,
+            stackTypes: ['eds-storefront'],
+        };
+
+        afterEach(() => {
+            jest.dontMock('@/features/components/config/block-libraries.json');
+        });
+
+        it('a library declaring no defaultForPackages is not seeded for any package', () => {
+            const loader = loadWith([
+                { ...BASE, id: 'silent' },
+                { ...BASE, id: 'seeded', defaultForPackages: ['citisignal'] },
+            ]);
+
+            expect(loader.getPackageDefaultBlockLibraryIds(makeStack(), 'citisignal')).toEqual([
+                'seeded',
+            ]);
+        });
+
+        it('falls back to the legacy `default` flag when no userDefaults are supplied', () => {
+            // Forward-compat with an externally supplied registry: no bundled
+            // library sets this field, so it is the only way to reach the branch.
+            const loader = loadWith([
+                { ...BASE, id: 'preferred', default: true },
+                { ...BASE, id: 'not-preferred' },
+            ]);
+
+            expect(loader.getDefaultBlockLibraryIds(makeStack(), 'custom')).toEqual(['preferred']);
         });
     });
 });

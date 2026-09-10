@@ -73,6 +73,15 @@ describe('dataInstallerErrors', () => {
             expect(classifyTransportError(new TypeError('fetch failed'))).toBe('unreachable');
         });
 
+        it('does NOT call any TypeError unreachable — the message is the other half', () => {
+            // A TypeError from our own code (a bad property read inside the
+            // response handling) is a defect, not a network outage. Reporting it
+            // as "unreachable" would put a Retry in front of a bug.
+            expect(classifyTransportError(new TypeError('r.json is not a function'))).toBe(
+                'unknown',
+            );
+        });
+
         it('classifies anything else as unknown', () => {
             expect(classifyTransportError(new Error('something else'))).toBe('unknown');
             expect(classifyTransportError('a string')).toBe('unknown');
@@ -119,11 +128,40 @@ describe('dataInstallerErrors', () => {
             expect(msg).toContain('truncated');
         });
 
+        it('keeps a body of exactly the limit whole — the cut is above 500, not at it', () => {
+            // The boundary decides whether an at-limit body is quoted in full or
+            // silently loses its last character to a "(truncated, 500 chars)"
+            // that claims nothing was lost.
+            const body = 'y'.repeat(500);
+            const msg = describeApiFailure('logs', 500, 'Internal Server Error', body);
+
+            expect(msg).toBe(`logs: 500 Internal Server Error — ${body}`);
+            expect(msg).not.toContain('truncated');
+        });
+
         it('collapses newlines so the message stays one log line', () => {
             const msg = describeApiFailure('logs', 400, 'Bad Request', 'line one\nline two\r\nline three');
             expect(msg).not.toMatch(/[\r\n]/);
             expect(msg).toContain('line one');
             expect(msg).toContain('line three');
+        });
+
+        it('collapses a RUN of newlines to one space, not one space each', () => {
+            // A CRLF is two characters. Replacing them one at a time doubles the
+            // gap, and a body of pretty-printed JSON becomes a line of ragged
+            // whitespace — the exact thing folding onto one line is meant to fix.
+            expect(describeApiFailure('logs', 400, 'Bad Request', 'a\r\n\nb')).toBe(
+                'logs: 400 Bad Request — a b',
+            );
+        });
+
+        it('treats a whitespace-only body as empty rather than quoting the whitespace', () => {
+            // Trimming is what turns "  \n " into "(empty body)". Without it the
+            // message ends in a dash and some spaces, which reads as a truncated
+            // log line rather than as a service that said nothing.
+            expect(describeApiFailure('logs', 502, 'Bad Gateway', '  \n  ')).toBe(
+                'logs: 502 Bad Gateway — (empty body)',
+            );
         });
     });
 });

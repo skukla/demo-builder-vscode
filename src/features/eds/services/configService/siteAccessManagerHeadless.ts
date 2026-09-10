@@ -78,12 +78,15 @@ export interface SiteAccessMutation extends SiteAccessListing {
  *
  * An ALLOW-list, not `!== 'not_authorized'`. That first form said "yes you can
  * manage" for `no_credential` (not signed in) and `no_site`, reintroducing the
- * same contradiction one status over. Only these two mean the identity is
- * genuinely able to manage: the call went through, or it never left because the
- * input was malformed.
+ * same contradiction one status over. `invalid` is the only non-ok status that
+ * means the identity is genuinely able to manage: the call never left because
+ * the INPUT was malformed, which says nothing about permissions.
+ *
+ * Both call sites guard on `result.status !== 'ok'` before calling, so an `ok`
+ * clause here was unreachable and has been removed rather than left to read as
+ * though it did something.
  */
-const canManageFrom = (status: SiteAccessStatus): boolean =>
-    status === 'ok' || status === 'invalid';
+const canManageFrom = (status: SiteAccessStatus): boolean => status === 'invalid';
 
 /** Cheap sanity check — a typo'd address writes a role nobody can use. */
 export function looksLikeEmail(value: string): boolean {
@@ -94,7 +97,13 @@ export function looksLikeEmail(value: string): boolean {
 function resolveSite(
     project: Project,
     context: vscode.ExtensionContext,
-): { owner: string; repo: string; tokenProvider: ReturnType<typeof createDaLiveServiceTokenProvider> } | undefined {
+):
+    | {
+          owner: string;
+          repo: string;
+          tokenProvider: ReturnType<typeof createDaLiveServiceTokenProvider>;
+      }
+    | undefined {
     const parts = getEdsRepoParts(project);
     if (!parts) return undefined;
     return {
@@ -209,8 +218,8 @@ export async function addSiteAdmin(
         return {
             status: 'invalid',
             // Always true: an 'invalid' status means the INPUT was rejected, which says
-        // nothing about whether this identity may manage access.
-        canManage: true,
+            // nothing about whether this identity may manage access.
+            canManage: true,
             verified: false,
             error: 'not an email address',
         };

@@ -65,10 +65,7 @@ describe('Storefront zone — the Republish tile', () => {
     it('wears an amber dot when the storefront has drifted', () => {
         render(<ActionGrid {...edsProps} demoStatus={stale} />);
 
-        expect(screen.getByTestId('republish-tile-dot')).toHaveAttribute(
-            'data-variant',
-            'warning'
-        );
+        expect(screen.getByTestId('republish-tile-dot')).toHaveAttribute('data-variant', 'warning');
     });
 
     it('wears NO dot when the storefront is current', () => {
@@ -89,8 +86,9 @@ describe('Storefront zone — the Republish tile', () => {
         // other tiles carry tooltips too.
         const { container } = render(<ActionGrid {...edsProps} demoStatus={stale} />);
 
-        expect(within(getZone(container, 'storefront')).getByRole('tooltip'))
-            .toHaveTextContent(/Republish needed/);
+        expect(within(getZone(container, 'storefront')).getByRole('tooltip')).toHaveTextContent(
+            /Republish needed/
+        );
     });
 
     it('explains the tile rather than echoing its label when idle', () => {
@@ -104,9 +102,7 @@ describe('Storefront zone — the Republish tile', () => {
     it('drops the dangling status row the tile replaced', () => {
         const { container } = render(<ActionGrid {...edsProps} demoStatus={stale} />);
 
-        expect(
-            container.querySelector('.dashboard-zone-status')
-        ).not.toBeInTheDocument();
+        expect(container.querySelector('.dashboard-zone-status')).not.toBeInTheDocument();
     });
 });
 
@@ -120,9 +116,13 @@ describe('Primary zone — the Restart tile', () => {
     });
 
     it('is absent while the demo is stopped — nothing to restart', () => {
-        const { container } = render(<ActionGrid {...defaultProps} demoStatus={{ color: 'gray', text: 'Stopped' }} />);
+        const { container } = render(
+            <ActionGrid {...defaultProps} demoStatus={{ color: 'gray', text: 'Stopped' }} />
+        );
 
-        expect(within(getZone(container, 'primary')).queryByText('Restart')).not.toBeInTheDocument();
+        expect(
+            within(getZone(container, 'primary')).queryByText('Restart')
+        ).not.toBeInTheDocument();
     });
 
     it('restarts when pressed', () => {
@@ -183,7 +183,9 @@ describe('Primary zone — the Restart tile', () => {
     it('gives an EDS project no Restart tile — it has no running state', () => {
         const { container } = render(<ActionGrid {...edsProps} demoStatus={published} />);
 
-        expect(within(getZone(container, 'primary')).queryByText('Restart')).not.toBeInTheDocument();
+        expect(
+            within(getZone(container, 'primary')).queryByText('Restart')
+        ).not.toBeInTheDocument();
     });
 });
 
@@ -228,19 +230,25 @@ describe('Primary zone — the lifecycle dot', () => {
             <ActionGrid {...defaultProps} demoStatus={status('blue', 'Starting...')} />
         );
 
-        expect(within(getZone(container, 'primary')).getAllByRole('tooltip')[0])
-            .toHaveTextContent('Starting...');
+        expect(within(getZone(container, 'primary')).getAllByRole('tooltip')[0]).toHaveTextContent(
+            'Starting...'
+        );
     });
 
     it('still reports the port there, even though it left the surface', () => {
         // The text moved into the tooltip rather than vanishing; the projects
         // grid card remains the place it is visible at a glance.
         const { container } = render(
-            <ActionGrid {...defaultProps} isRunning demoStatus={status('green', 'Running on port 3000')} />
+            <ActionGrid
+                {...defaultProps}
+                isRunning
+                demoStatus={status('green', 'Running on port 3000')}
+            />
         );
 
-        expect(within(getZone(container, 'primary')).getAllByRole('tooltip')[0])
-            .toHaveTextContent('Running on port 3000');
+        expect(within(getZone(container, 'primary')).getAllByRole('tooltip')[0]).toHaveTextContent(
+            'Running on port 3000'
+        );
     });
 
     it('gives an EDS project no lifecycle tile at all', () => {
@@ -267,10 +275,7 @@ describe('ActionGrid — every dot has words', () => {
         ['stopped', { ...defaultProps, demoStatus: { color: 'gray', text: 'Stopped' } }],
         ['starting', { ...defaultProps, demoStatus: { color: 'blue', text: 'Starting...' } }],
         ['errored', { ...defaultProps, demoStatus: { color: 'red', text: 'Error' } }],
-        [
-            'needing a restart',
-            { ...defaultProps, isRunning: true, demoStatus: needsRestart },
-        ],
+        ['needing a restart', { ...defaultProps, isRunning: true, demoStatus: needsRestart }],
         ['EDS, published', { ...edsProps, demoStatus: published }],
         ['EDS, drifted', { ...edsProps, demoStatus: stale }],
         [
@@ -287,7 +292,9 @@ describe('ActionGrid — every dot has words', () => {
     ];
 
     it.each(cases)('leaves no undocumented dot on a project %s', (_name, props) => {
-        const { container } = render(<ActionGrid {...(props as unknown as React.ComponentProps<typeof ActionGrid>)} />);
+        const { container } = render(
+            <ActionGrid {...(props as unknown as React.ComponentProps<typeof ActionGrid>)} />
+        );
 
         const dots = Array.from(container.querySelectorAll('.tile-status-dot'));
         // Positive control: at least one case must actually produce a dot, or
@@ -341,9 +348,7 @@ describe('Edit tile / Sync Storefront demotion', () => {
         expect(edit).toBeInTheDocument();
         expect(republish).toBeInTheDocument();
         // Node.compareDocumentPosition: 4 === edit precedes republish.
-        expect(edit!.compareDocumentPosition(republish!)).toBe(
-            Node.DOCUMENT_POSITION_FOLLOWING
-        );
+        expect(edit!.compareDocumentPosition(republish!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     });
 
     it('takes Edit out of the More menu — one door, not two', () => {

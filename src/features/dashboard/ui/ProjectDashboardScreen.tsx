@@ -10,7 +10,7 @@
  */
 
 import { DialogContainer } from '@adobe/react-spectrum';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { ActionGrid } from './components/ActionGrid';
 import { AiCapabilitiesModal } from './components/AiCapabilitiesModal';
 import { DashboardStatusHeader } from './components/DashboardStatusHeader';
@@ -21,10 +21,11 @@ import { useDashboardStatus, isMeshBusy } from './hooks/useDashboardStatus';
 import { useInlineRename } from './hooks/useInlineRename';
 import { useLiveDaLiveUrl } from './hooks/useLiveDaLiveUrl';
 import { useOrgSwitchFlow } from './hooks/useOrgSwitchFlow';
-import { InlineRenameField } from '@/core/ui/components/forms';
-import { PageLayout, PageHeader, ControlPanelLayout } from '@/core/ui/components/layout';
-import { useFocusTrap, useSingleTimer } from '@/core/ui/hooks';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { InlineRenameField } from '@/core/ui/components/forms/InlineRenameField';
+import { ControlPanelLayout } from '@/core/ui/components/layout/ControlPanelLayout';
+import { PageHeader } from '@/core/ui/components/layout/PageHeader';
+import { PageLayout } from '@/core/ui/components/layout/PageLayout';
+import { useFocusTrap } from '@/core/ui/hooks/useFocusTrap';
 import type { DashboardInitialData } from '@/types/webviewPayloads';
 
 /**
@@ -91,7 +92,6 @@ export function ProjectDashboardScreen({
 
     // Status management via extracted hook
     const {
-        projectStatus,
         isRunning,
         isTransitioning,
         setIsTransitioning,
@@ -152,23 +152,6 @@ export function ProjectDashboardScreen({
         containFocus: true, // Prevent focus escape (WCAG 2.1 AA)
     });
 
-    // Timer for initial focus (with automatic cleanup on unmount)
-    const focusTimer = useSingleTimer();
-
-    // Initial focus - uses timer hook for proper cleanup
-    useEffect(() => {
-        if (projectStatus) {
-            focusTimer.set(() => {
-                const firstButton = document.querySelector(
-                    '.dashboard-action-button',
-                ) as HTMLElement;
-                if (firstButton) {
-                    firstButton.focus();
-                }
-            }, TIMEOUTS.UI_UPDATE_DELAY);
-        }
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps -- mount-once effect for initial focus; focusTimer is stable, projectStatus read only on mount
-
     // Forced account/org switch flow (attempt flag for the no-loop hint,
     // in-flight "Switching…" state, re-entry-guarded trigger) — extracted hook.
     const { switchAttempted, isSwitchingOrg, onSwitchOrg } = useOrgSwitchFlow(
@@ -184,7 +167,11 @@ export function ProjectDashboardScreen({
 
     // Button disabled states
     const isStartDisabled = isStartActionDisabled(isTransitioning, meshStatus, status || 'ready');
-    const isStopDisabled = isTransitioning || status === 'stopping';
+    // Only consulted while `isRunning` — the Stop tile is the Start tile
+    // otherwise — and `isRunning` is set from the SAME payload as `status`
+    // (statusUpdate), so `status === 'stopping'` was never true where this
+    // value is read. Removed rather than left as a defensive no-op.
+    const isStopDisabled = isTransitioning;
     const isMeshActionDisabled = isTransitioning || isMeshBusy(meshStatus);
 
     return (

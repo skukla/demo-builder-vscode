@@ -15,12 +15,15 @@
 import { handleCheckApiMesh } from '@/features/mesh/handlers/checkHandler';
 import { handleDeleteApiMesh } from '@/features/mesh/handlers/deleteHandler';
 import { HandlerContext } from '@/types/handlers';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import * as _vscode from 'vscode';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 // Mock dependencies
-jest.mock('@/core/di');
-jest.mock('vscode');
+jest.mock('@/core/di/serviceLocator');
 // Uses the real @/core/utils/timeoutConfig (pure constants) — a partial config-leaf
 // mock here would omit keys (e.g. UI.MIN_LOADING) that the @/core/shell import graph
 // reads at module load, and violates the no-config-leaf-mocks SOP.
@@ -47,13 +50,7 @@ describe('Mesh Handlers - DI Pattern (Step 9)', () => {
         jest.clearAllMocks();
 
         // Create mock logger to verify context-based injection
-        mockLogger = {
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            debug: jest.fn(),
-            trace: jest.fn(),
-        };
+        mockLogger = createMockLogger();
 
         // Mock authentication service
         mockAuthService = {
@@ -76,27 +73,23 @@ describe('Mesh Handlers - DI Pattern (Step 9)', () => {
         (ServiceLocator.getCommandExecutor as jest.Mock).mockReturnValue(mockCommandExecutor);
 
         // Mock handler context with injected logger
-        mockContext = {
-            context: {
-                globalStorageUri: {
-                    fsPath: '/tmp/test-storage',
-                },
+        mockContext = createMockHandlerContext({
+            context: createMockExtensionContext({
+                globalStorageUri: _vscode.Uri.file('/tmp/test-storage'),
                 extensionPath: '/tmp/test-extension',
-            } as any,
+            }),
             logger: mockLogger,
-            debugLogger: {
-                trace: jest.fn(),
-                debug: jest.fn(),
-            } as any,
-            stateManager: {
+            debugLogger: createMockLogger(),
+            stateManager: createMockStateManager({
                 getCurrentProject: jest.fn().mockResolvedValue({
                     adobe: {
                         projectId: 'test-project-id',
                         workspaceId: 'test-workspace-id',
                     },
                 }),
-            } as any,
+            }),
             sharedState: {
+                isAuthenticating: false,
                 apiServicesConfig: {
                     services: {
                         apiMesh: {
@@ -108,8 +101,8 @@ describe('Mesh Handlers - DI Pattern (Step 9)', () => {
                         },
                     },
                 },
-            } as any,
-        } as any;
+            },
+        });
     });
 
     describe('Handler Context-Based Injection', () => {

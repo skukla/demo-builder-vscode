@@ -1,0 +1,84 @@
+/**
+ * .integrations-* styles — the integrations SURFACE: its shell, grid and header.
+ *
+ * FEATURE-SCOPED (ADR-017 §6 and §7). Imported by `dashboard` and `integrations`,
+ * the two entries whose graphs reach IntegrationsGrid.
+ *
+ * NOT integration-cards.css, which holds `.integration-*` — the CARD, a core/ui
+ * component reused on three surfaces. Singular is the shared component, plural is
+ * this feature's screen around it.
+ *
+ * Moved here from shared-ui.css on 2026-09-09. It had been batched in with the
+ * shared UI vocabulary, and it was the one family of those nineteen that no
+ * core/ui component uses — feature code only. §7 now states that as a rule and
+ * an enforcer checks it.
+ */
+
+@layer theme {
+/* --------------------------------------------------------------------------
+ * Integrations grid + drawer (dashboard)
+ * Card grid + right detail drawer replacing the stacked integration rows.
+ * Grid, cards, scrim, and drawer are PLAIN DIVS (Spectrum Flex caps at
+ * 450px); tokens flip light/dark. Card family: .project-card-spectrum
+ * (gray-50 base, gray-75 hover, lift, radius 8).
+ * ------------------------------------------------------------------------ */
+/* The grid's root. Kept flexible so it fills whatever host it sits in — on the
+ * dedicated surface that is the full page width. */
+.integrations-surface {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* Heading · count pill · Add button on one baseline; the Add button trails. */
+.integrations-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 8px;
+}
+
+.integrations-header > *:last-child {
+    margin-left: auto;
+}
+
+/* Card tracks are CAPPED, not 1fr: with two cards in a wide band, `1fr` inflated
+   them to ~420px and the content read as mostly empty. `justify-content: start`
+   packs them left instead of spreading. Gap matches the extension's card-grid
+   rhythm (.projects-grid, 24px / size-300). */
+/* Mirrors .projects-grid — the same card-grid problem, already solved there.
+   `minmax(268px, 300px)` needed 3*268 + 2*24 = 852px for three columns and the
+   left-anchored content band is ~815px, so it fell to two and wrapped the third
+   tile onto a row of its own. 240px min clears three columns with room to spare;
+   `1fr` fills the row, which is why `justify-content: start` is gone (it only
+   mattered while tracks were capped at 300px).
+
+   `grid-auto-rows: 1fr` equalises rows. Grid equalises heights WITHIN a row, so
+   an add tile alone on the last row kept its own floor while the cards' row was
+   sized by card content — they matched only when they happened to share a row. */
+.integrations-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    grid-auto-rows: 1fr;
+    gap: 24px;
+    padding: 8px;
+}
+
+/* ---- Dashboard integrations summary tile (build zone) ----
+ * Shaped exactly like its neighbours (Configure / More) — the dot and count are
+ * absolutely positioned overlays, NOT extra inline content, so the tile keeps a
+ * neighbour's footprint and the action row stays on one line. Widening the tile
+ * is what pushed it to wrap onto its own row. */
+.integrations-tile {
+    position: relative;
+}
+
+/* Status dot rides the tile's top-right corner. */
+/* POSITION only. Colour, size and the in-progress pulse come from StatusDot;
+   this tile used to restate all three from Spectrum globals, which is how it
+   ended up with a blue dot that never pulsed. */
+.integrations-tile-dot {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+}
+}

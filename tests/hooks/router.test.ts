@@ -457,8 +457,11 @@ describe('secret-files rule — public repo defense-in-depth', () => {
     });
 
     it('allows the fake-test-password convention', () => {
+        // An EDIT, not a Write. `32-test-authoring` claims a Write to a test file
+        // that does not exist yet, so a Write here would exit 2 for a reason that
+        // has nothing to do with secrets — and this case is about rule 20 alone.
         const r = run(
-            write(path.join(REPO, 'tests/x.test.ts'), "const pw = 'fake-test-pw-not-a-secret';"),
+            edit(path.join(REPO, 'tests/x.test.ts'), "const pw = 'fake-test-pw-not-a-secret';"),
             fresh(),
             inRepo
         );
@@ -474,5 +477,126 @@ describe('secret-files rule — public repo defense-in-depth', () => {
     it('fails open when CLAUDE_PROJECT_DIR is unset', () => {
         const r = run(write('/somewhere/.env'), fresh(), { CLAUDE_PROJECT_DIR: '' });
         expect(r.code).toBe(0);
+    });
+});
+
+/**
+ * EVERY rule is reachable — the pre-filter admits at least one payload it blocks.
+ *
+ * WHY THIS EXISTS, from the same mistake made twice. The router opens with a
+ * cheap substring gate: if the payload contains none of a listed set of tokens it
+ * exits before any rule is sourced. That gate is hand-maintained, and a rule whose
+ * token is missing NEVER RUNS — while looking exactly like a rule that simply
+ * never matched. Nothing distinguishes the two from the outside.
+ *
+ * It happened to `12-unquoted-glob` (gating on `--exclude=` silently dropped every
+ * `--exclude-dir=` call) and again on 2026-08-30 to `13-piped-exit-code`, which was
+ * written, reviewed, and proved dead by its own harness before anyone noticed the
+ * gate. The first was caught by a test written for that one rule; this generalises
+ * it so the third time fails immediately.
+ *
+ * The table is checked against the directory in BOTH directions, so a new rule
+ * cannot skip it and a deleted one cannot leave a row behind.
+ */
+describe('every rule is reachable through the pre-filter', () => {
+    const RULES_DIR = path.join(__dirname, '../../.claude/hooks/rules');
+    const REPO2 = path.resolve(__dirname, '../..');
+    const LIVE_JEST = '    1 node /repo/node_modules/.bin/jest --no-coverage';
+    const PIPE_TAIL = '| tail -5';
+    const BAD_ORDER = '2>&1 > out.txt';
+
+    /** One payload per rule that the rule MUST block. */
+    const PROBES: Record<string, () => Result> = {
+        'jest-pipe': () => run(bash(`npx jest --no-coverage ${PIPE_TAIL}`), fresh()),
+        'jest-redirect': () => run(bash(`npx jest --no-coverage ${BAD_ORDER}`), fresh()),
+        'unquoted-glob': () => run(bash('grep -rn x --include=*.css src/'), fresh()),
+        'piped-exit-code': () => run(bash('ls src | wc -l || echo none'), fresh()),
+        'commit-backtick': () => run(bash('git commit -m "fix `thing` today"'), fresh()),
+        'jest-concurrent': () =>
+            run(bash('npx jest --no-coverage > out.txt 2>&1'), fresh(), {
+                DBV_JEST_PS: psSnapshot([LIVE_JEST]),
+            }),
+        'secret-files': () =>
+            run(write(path.join(REPO2, '.env'), 'X=1'), fresh(), { CLAUDE_PROJECT_DIR: REPO2 }),
+        'reuse-first': () => run(write(path.join(REPO2, 'src/features/x/ui/BrandNew.tsx')), fresh()),
+        // A .ts path, deliberately: the pre-filter's `*.tsx*` token does not admit
+        // `.ts`, so this probe is the thing standing between the rule and a fourth
+        // instance of a guard that is unreachable at the gate.
+        'registry-dir': () =>
+            run(write(path.join(REPO2, 'tests/sop/brand-new-enforcer.test.ts')), fresh()),
+        'webview-test-skill': () =>
+            run(edit(path.join(REPO2, 'tests/features/x/ui/Thing.test.tsx')), fresh()),
+        // The list-valued variable passed bare. This rule's own proof failed 3 of
+        // its 4 blocking cases on the day it was written, because its pre-filter
+        // token was missing — the exact gate failure the docblock above describes,
+        // for the third time. The fourth case "passed" only because its payload
+        // happened to contain another rule's token.
+        'unsplit-var': () => run(bash('F=$(cat list.txt)\nnpx eslint --fix $F'), fresh()),
+        'adobe-docs': () => run(mcp('mcp__adobe-exl__search_experience_league'), fresh()),
+        // The six added 2026-09-10. Each needed a NEW pre-filter token, and until
+        // those landed every one of these payloads exited at the gate — which is
+        // precisely why a `.test.ts` write reached no rule while the splitting
+        // playbook went unread.
+        'test-authoring': () =>
+            run(write(path.join(REPO2, 'tests/features/x/brand-new-suite.test.ts')), fresh()),
+        'new-instrument': () =>
+            run(write(path.join(REPO2, 'scripts/brandNewInstrument.mjs')), fresh()),
+        'css-baseline': () =>
+            run(edit(path.join(REPO2, 'src/core/ui/styles/index.css')), fresh()),
+        'wizard-step': () =>
+            run(edit(path.join(REPO2, 'src/features/project-creation/config/wizard-steps.json')), fresh()),
+        'ai-bundle': () =>
+            run(edit(path.join(REPO2, 'src/features/project-creation/services/aiBundle/aiToolingGate.ts')), fresh()),
+        'mcp-tool': () =>
+            run(edit(path.join(REPO2, 'src/features/ai/server/toolDescriptors.ts')), fresh()),
+        // The seven added later on 2026-09-10. Two of them — `handlers.ts` and
+        // `core/shell/orgContextEnv.ts` — were gated out by the pre-filter on the
+        // first run and found by their own proofs, which is the fourth and fifth
+        // time that gate has been the actual bug.
+        'push-no-verify': () => run(bash(`git push --no-verify origin develop`), fresh()),
+        'webview-handler': () => run(edit(path.join(REPO2, 'src/types/messages.ts')), fresh()),
+        'appbuilder-component': () =>
+            run(edit(path.join(REPO2, 'src/features/components/config/app-builder-components.json')), fresh()),
+        'eds-publish': () =>
+            run(edit(path.join(REPO2, 'src/features/eds/services/helix/helixApiClient.ts')), fresh()),
+        'eds-dropin': () =>
+            run(edit(path.join(REPO2, 'src/features/eds/services/placeholderStubs.ts')), fresh()),
+        'org-context': () =>
+            run(edit(path.join(REPO2, 'src/features/authentication/services/ensureOrgContext.ts')), fresh()),
+        'god-file': () =>
+            run(edit(path.join(REPO2, 'src/features/app-builder/services/appBuilderComponentRunner.ts')), fresh()),
+    };
+
+    /** `rule_id=` as declared inside each rule file — the name the table keys on. */
+    function idsOnDisk(): string[] {
+        return fs
+            .readdirSync(RULES_DIR)
+            .filter((f) => f.endsWith('.rule'))
+            .map((f) => {
+                const m = fs.readFileSync(path.join(RULES_DIR, f), 'utf-8').match(/^rule_id=(\S+)/m);
+                if (!m) throw new Error(`${f} declares no rule_id`);
+                return m[1];
+            })
+            .sort();
+    }
+
+    it('CONTROL: rules are found on disk and each declares an id', () => {
+        // A zero here would make every assertion below pass over an empty list —
+        // which is the same failure shape this whole describe exists to catch.
+        expect(idsOnDisk().length).toBeGreaterThan(5);
+    });
+
+    it('the probe table and the rules directory agree, in both directions', () => {
+        expect({
+            rulesWithNoProbe: idsOnDisk().filter((id) => !(id in PROBES)),
+            probesForNoRule: Object.keys(PROBES).filter((id) => !idsOnDisk().includes(id)),
+        }).toEqual({ rulesWithNoProbe: [], probesForNoRule: [] });
+    });
+
+    it.each(Object.keys(PROBES))('%s reaches its rule and blocks', (id) => {
+        const r = PROBES[id]();
+        // code 0 here means the pre-filter swallowed it — the rule never ran.
+        expect({ id, code: r.code }).toEqual({ id, code: 2 });
+        expect(r.stderr.trim().length).toBeGreaterThan(0);
     });
 });

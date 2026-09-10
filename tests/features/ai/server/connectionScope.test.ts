@@ -71,6 +71,116 @@ describe('readCwdPreamble', () => {
 
         expect(await promise).toBeUndefined();
     });
+
+    it('a single byte that cannot start the prefix settles without waiting for more', async () => {
+        // Shorter than the prefix, so only the prefix-match check can settle it.
+        // Without that check nothing resolves and this test times out.
+        const s = new PassThrough();
+        const promise = readCwdPreamble(s);
+        s.write('X');
+
+        expect(await promise).toBeUndefined();
+        expect(await drain(s)).toBe('X');
+    });
+
+    it('trims trailing whitespace and CR off the declared path', async () => {
+        const s = new PassThrough();
+        const promise = readCwdPreamble(s);
+        s.write('#cwd:/a/b  \r\n{"x":1}\n');
+
+        expect(await promise).toBe('/a/b');
+    });
+
+    it('gives up on a preamble longer than the cap and returns every byte', async () => {
+        const s = new PassThrough();
+        const promise = readCwdPreamble(s);
+        const oversized = `#cwd:/${'a'.repeat(4100)}`;
+        s.write(oversized);
+
+        expect(await promise).toBeUndefined();
+        expect(await drain(s)).toBe(oversized);
+    });
+
+    it('a preamble of exactly the cap is still waiting for its newline', async () => {
+        // 5 (prefix) + 1 ('/') + 4090 === MAX_PREAMBLE_BYTES. The cap is a
+        // strict `>`, so this byte count must NOT settle the connection.
+        const s = new PassThrough();
+        const promise = readCwdPreamble(s);
+        s.write(`#cwd:/${'a'.repeat(4090)}`);
+        await new Promise((r) => setImmediate(r));
+        s.write('/end\n{"x":1}\n');
+
+        expect(await promise).toBe(`/${'a'.repeat(4090)}/end`);
+    });
+});
+
+describe('readCwdPreamble — what reaches the socket', () => {
+    it('hands the MCP bytes back in ONE unshift', async () => {
+        const s = new PassThrough();
+        const unshift = jest.spyOn(s, 'unshift');
+        const promise = readCwdPreamble(s);
+        s.write('#cwd:/a/b\n{"jsonrpc":"2.0"}\n');
+
+        expect(await promise).toBe('/a/b');
+        expect(unshift).toHaveBeenCalledTimes(1);
+        expect((unshift.mock.calls[0][0] as Buffer).toString('utf8')).toBe('{"jsonrpc":"2.0"}\n');
+    });
+
+    it('unshifts nothing when the preamble was all there was', async () => {
+        const s = new PassThrough();
+        const unshift = jest.spyOn(s, 'unshift');
+        const promise = readCwdPreamble(s);
+        s.write('#cwd:/a/b\n');
+
+        expect(await promise).toBe('/a/b');
+        expect(unshift).not.toHaveBeenCalled();
+    });
+
+    it('unshifts nothing into a connection that died mid-preamble', async () => {
+        // An unshift after 'end' emits an error event on the socket, and the
+        // partial preamble held no MCP bytes worth returning anyway.
+        const s = new PassThrough();
+        const unshift = jest.spyOn(s, 'unshift');
+        const promise = readCwdPreamble(s);
+        s.write('#cwd:/never-finished');
+        s.end();
+
+        expect(await promise).toBeUndefined();
+        expect(unshift).not.toHaveBeenCalled();
+    });
+});
+
+describe('readCwdPreamble — the reference contract', () => {
+    /**
+     * What the sniff means, stated independently of how it is written: the
+     * preamble is consumed exactly when the stream OPENS with the prefix and a
+     * newline arrives; every other stream is handed back whole. Two rejection
+     * branches were deleted from the module as unreachable, and this is what
+     * keeps that claim honest — it drives the real sniff over byte strings
+     * built from the characters that decide it.
+     */
+    it('agrees with the reference over 512 byte strings of prefix characters', async () => {
+        const alphabet = '#cwd:\nA/';
+        for (let i = 0; i < 512; i += 1) {
+            let sample = '';
+            const len = 1 + (i % 9);
+            for (let j = 0; j < len; j += 1) {
+                sample += alphabet[(i * 7 + j * 5) % alphabet.length];
+            }
+
+            const s = new PassThrough();
+            const promise = readCwdPreamble(s);
+            s.write(sample);
+            s.end();
+
+            const newline = sample.indexOf('\n');
+            const expected =
+                sample.startsWith('#cwd:') && newline !== -1
+                    ? sample.slice('#cwd:'.length, newline).trim() || undefined
+                    : undefined;
+            expect({ sample, cwd: await promise }).toEqual({ sample, cwd: expected });
+        }
+    });
 });
 
 describe('resolveScopedProjectDir', () => {

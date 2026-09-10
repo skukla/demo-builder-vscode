@@ -1,13 +1,6 @@
 import * as vscode from 'vscode';
 import { showWebviewQuickPick, showWebviewQuickPickMany } from '@/core/utils/quickPickUtils';
 
-// Mock vscode
-jest.mock('vscode', () => ({
-    window: {
-        createQuickPick: jest.fn(),
-    },
-}));
-
 describe('quickPickUtils', () => {
     let mockQuickPick: {
         items: vscode.QuickPickItem[];
@@ -107,6 +100,19 @@ describe('quickPickUtils', () => {
                 expect(mockQuickPick.ignoreFocusOut).toBe(true);
             });
 
+            // Each of these is a real false, not an absent value: VS Code reads
+            // `undefined` as "leave it alone", so a QuickPick that never sets them
+            // inherits whatever the previous one used.
+            it('should default multi-select and both match flags to false', async () => {
+                const promise = showWebviewQuickPick(mockItems);
+                onDidHideCallback();
+                await promise;
+
+                expect(mockQuickPick.canSelectMany).toBe(false);
+                expect(mockQuickPick.matchOnDescription).toBe(false);
+                expect(mockQuickPick.matchOnDetail).toBe(false);
+            });
+
             it('should return selected item on accept', async () => {
                 mockQuickPick.selectedItems = [mockItems[1]];
 
@@ -134,7 +140,7 @@ describe('quickPickUtils', () => {
                 onDidHideCallback();
                 await promise;
 
-                expect(mockQuickPick.items).toEqual([]);
+                expect(mockQuickPick.items).toStrictEqual([]);
             });
 
             it('should handle custom ignoreFocusOut value', async () => {
@@ -147,7 +153,6 @@ describe('quickPickUtils', () => {
                 expect(mockQuickPick.ignoreFocusOut).toBe(false);
             });
         });
-
     });
 
     describe('showWebviewQuickPickMany', () => {
@@ -158,6 +163,19 @@ describe('quickPickUtils', () => {
                 await promise;
 
                 expect(mockQuickPick.canSelectMany).toBe(true);
+            });
+
+            // The multi-select variant carries its OWN copy of the option defaults;
+            // nothing shares them with the single-select one, so they are asserted
+            // here too rather than assumed to follow.
+            it('should keep the QuickPick open by default and both match flags off', async () => {
+                const promise = showWebviewQuickPickMany(mockItems);
+                onDidHideCallback();
+                await promise;
+
+                expect(mockQuickPick.ignoreFocusOut).toBe(true);
+                expect(mockQuickPick.matchOnDescription).toBe(false);
+                expect(mockQuickPick.matchOnDetail).toBe(false);
             });
 
             it('should return array of selected items on accept', async () => {

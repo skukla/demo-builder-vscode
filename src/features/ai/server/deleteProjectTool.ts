@@ -11,6 +11,7 @@
 
 import { z } from 'zod';
 import { asText } from './mcpToolResult';
+import type { McpToolServer } from './mcpToolServer';
 import { deleteProjectFiles } from '@/features/projects-dashboard/services/projectDeletionService';
 import type { HandlerContext } from '@/types/handlers';
 
@@ -21,13 +22,13 @@ import type { HandlerContext } from '@/types/handlers';
  * @param ctxFactory Builds a headless HandlerContext for each invocation.
  */
 export function registerDeleteProjectTool(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    server: any,
+    server: McpToolServer,
     ctxFactory: () => HandlerContext,
 ): void {
     server.registerTool(
         'delete_project',
         {
+            needsAuth: false,
             annotations: { readOnlyHint: false, destructiveHint: true },
             description:
                 'Permanently delete a project locally (files + recent list). Irreversible; does NOT delete cloud resources. Requires confirm:true and confirmName="<project name>".',

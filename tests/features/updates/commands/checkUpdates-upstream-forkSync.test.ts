@@ -9,159 +9,39 @@
  * - Execution order: fork sync -> template -> components -> add-ons
  */
 
+import {
+    AddonUpdateChecker,
+    CheckUpdatesCommand,
+    ForkSyncService,
+    TemplateSyncService,
+    TemplateUpdateChecker,
+    UpdateManager,
+    projectWithAddons,
+    setupDefaultMocks,
+} from './checkUpdates.testUtils';
 import * as vscode from 'vscode';
-import { CheckUpdatesCommand } from '@/features/updates/commands/checkUpdates';
-import { UpdateManager } from '@/features/updates/services/updateManager';
-import { ForkSyncService } from '@/features/updates/services/forkSyncService';
-import { AddonUpdateChecker } from '@/features/updates/services/addonUpdateChecker';
-import { TemplateSyncService } from '@/features/updates/services/templateSyncService';
-import { TemplateUpdateChecker } from '@/features/updates/services/templateUpdateChecker';
-import { COMPONENT_IDS } from '@/core/constants';
-import type { Logger } from '@/types/logger';
-import type { StateManager } from '@/core/state';
-import type { Project } from '@/types';
+import { ServiceLocator } from '@/core/di/serviceLocator';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
-// Mock VS Code API
-jest.mock('vscode', () => ({
-    window: {
-        withProgress: jest.fn(),
-        showInformationMessage: jest.fn(),
-        showWarningMessage: jest.fn(),
-        showErrorMessage: jest.fn().mockResolvedValue(undefined),
-        showQuickPick: jest.fn(),
-    },
-    ProgressLocation: {
-        Notification: 15,
-    },
-    QuickPickItemKind: {
-        Separator: 1,
-    },
-    commands: {
-        executeCommand: jest.fn(),
-    },
-}));
-
-// Mock services
-jest.mock('@/features/updates/services/updateManager');
-jest.mock('@/features/updates/services/componentUpdater');
-jest.mock('@/features/updates/services/extensionUpdater');
-jest.mock('@/features/updates/services/forkSyncService');
-jest.mock('@/features/updates/services/addonUpdateChecker');
-jest.mock('@/features/updates/services/templateSyncService');
-jest.mock('@/features/updates/services/templateUpdateChecker');
-
-// Mock block collection and inspector helpers (for addon application)
-jest.mock('@/features/eds/services/blockCollectionHelpers');
-jest.mock('@/features/eds/services/inspectorHelpers');
 
 // ---------------------------------------------------------------------------
 // Test helpers
 // ---------------------------------------------------------------------------
 
-function makeProject(overrides: Partial<Project> = {}): Project {
-    return {
-        name: 'test-project',
-        path: '/projects/test-project',
-        status: 'stopped',
-        componentInstances: {
-            [COMPONENT_IDS.EDS_STOREFRONT]: {
-                id: COMPONENT_IDS.EDS_STOREFRONT,
-                type: 'frontend',
-                version: '1.0.0',
-                metadata: {
-                    templateOwner: 'adobe',
-                    templateRepo: 'aem-boilerplate-commerce',
-                    edsRepoOwner: 'testuser',
-                    edsRepoName: 'my-storefront',
-                    edsBranch: 'main',
-                },
-            },
-        },
-        installedBlockLibraries: [
-            {
-                name: 'Demo Team Blocks',
-                source: { owner: 'adobe', repo: 'aem-boilerplate-commerce', branch: 'main' },
-                commitSha: 'abc123',
-                blockIds: ['hero', 'cards'],
-                installedAt: '2025-01-01T00:00:00Z',
-            },
-        ],
-        installedInspectorSdk: {
-            commitSha: 'sdk-abc123',
-            installedAt: '2025-01-01T00:00:00Z',
-        },
-        ...overrides,
-    } as unknown as Project;
-}
-
-function setupDefaultMocks(): {
-    mockProgress: { report: jest.Mock };
-    mockContext: any;
-    mockStateManager: jest.Mocked<StateManager>;
-    mockLogger: jest.Mocked<Logger>;
-} {
-    const mockProgress = { report: jest.fn() };
-
-    const mockContext = {
-        subscriptions: [],
-        extensionPath: '/ext',
-        globalState: { get: jest.fn(), update: jest.fn() },
-        secrets: { get: jest.fn(), store: jest.fn() },
-    };
-
-    const mockStateManager = {
-        getCurrentProject: jest.fn().mockResolvedValue(null),
-        saveProject: jest.fn().mockResolvedValue(undefined),
-        getAllProjects: jest.fn().mockResolvedValue([]),
-        loadProjectFromPath: jest.fn().mockResolvedValue(null),
-    } as any;
-
-    const mockLogger = {
-        info: jest.fn(),
-        debug: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    } as any;
-
-    (vscode.window.withProgress as jest.Mock).mockImplementation((_opts, cb) => cb(mockProgress));
-
-    const MockUpdateManager = UpdateManager as jest.MockedClass<typeof UpdateManager>;
-    MockUpdateManager.prototype.checkExtensionUpdate = jest.fn().mockResolvedValue({
-        hasUpdate: false,
-        current: '1.0.0',
-        latest: '1.0.0',
-    });
-    MockUpdateManager.prototype.checkAllProjectsForUpdates = jest.fn().mockResolvedValue([]);
-
-    const MockTemplateChecker = TemplateUpdateChecker as jest.MockedClass<
-        typeof TemplateUpdateChecker
-    >;
-    MockTemplateChecker.prototype.checkForUpdates = jest.fn().mockResolvedValue(null);
-
-    const MockForkSync = ForkSyncService as jest.MockedClass<typeof ForkSyncService>;
-    MockForkSync.prototype.checkForkStatus = jest.fn().mockResolvedValue(null);
-    MockForkSync.prototype.syncFork = jest
-        .fn()
-        .mockResolvedValue({ success: true, message: 'Synced' });
-
-    const MockAddonChecker = AddonUpdateChecker as jest.MockedClass<typeof AddonUpdateChecker>;
-    MockAddonChecker.prototype.checkBlockLibraries = jest.fn().mockResolvedValue([]);
-    MockAddonChecker.prototype.checkInspectorSdk = jest.fn().mockResolvedValue(null);
-
-    const MockTemplateSync = TemplateSyncService as jest.MockedClass<typeof TemplateSyncService>;
-    MockTemplateSync.prototype.syncWithTemplate = jest.fn().mockResolvedValue({
-        success: true,
-        syncedCommit: 'new-commit-sha',
-        strategy: 'merge',
-    });
-    MockTemplateSync.prototype.updateLastSyncedCommit = jest.fn().mockResolvedValue(undefined);
-
-    return { mockProgress, mockContext, mockStateManager, mockLogger };
-}
-
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
+
+/**
+ * ADR-015 (2026-08-28): this boundary fetches the shell executor from the
+ * registry, which the shared node setup resets after EVERY test — so the fake
+ * is seeded per-test rather than once at module scope.
+ */
+beforeEach(() => {
+    ServiceLocator.setCommandExecutor(createMockCommandExecutor({
+        execute: jest.fn(async () => ({ code: 0, stdout: '', stderr: '' })),
+    }));
+});
 
 describe('CheckUpdatesCommand — Fork Sync', () => {
     beforeEach(() => {
@@ -175,7 +55,7 @@ describe('CheckUpdatesCommand — Fork Sync', () => {
 
     it('should show fork sync items in QuickPick when forks are behind', async () => {
         const { mockContext, mockStateManager, mockLogger } = setupDefaultMocks();
-        const project = makeProject();
+        const project = projectWithAddons();
 
         mockStateManager.getAllProjects.mockResolvedValue([
             { name: project.name, path: project.path, lastModified: new Date() },
@@ -200,7 +80,7 @@ describe('CheckUpdatesCommand — Fork Sync', () => {
         expect(vscode.window.showQuickPick).toHaveBeenCalled();
         const items = (vscode.window.showQuickPick as jest.Mock).mock.calls[0][0];
         const forkItems = items.filter((i: any) => i.isForkSync === true);
-        expect(forkItems.length).toBe(1);
+        expect(forkItems).toHaveLength(1);
         expect(forkItems[0].behindBy).toBe(5);
         expect(forkItems[0].owner).toBe('adobe');
         expect(forkItems[0].repo).toBe('aem-boilerplate-commerce');
@@ -208,7 +88,7 @@ describe('CheckUpdatesCommand — Fork Sync', () => {
 
     it('should not show fork items when no forks are detected', async () => {
         const { mockContext, mockStateManager, mockLogger } = setupDefaultMocks();
-        const project = makeProject();
+        const project = projectWithAddons();
 
         mockStateManager.getAllProjects.mockResolvedValue([
             { name: project.name, path: project.path, lastModified: new Date() },
@@ -231,7 +111,7 @@ describe('CheckUpdatesCommand — Fork Sync', () => {
 
     it('should not show fork items when fork is already up-to-date', async () => {
         const { mockContext, mockStateManager, mockLogger } = setupDefaultMocks();
-        const project = makeProject();
+        const project = projectWithAddons();
 
         mockStateManager.getAllProjects.mockResolvedValue([
             { name: project.name, path: project.path, lastModified: new Date() },
@@ -256,7 +136,7 @@ describe('CheckUpdatesCommand — Fork Sync', () => {
 
     it('should show warning and continue when fork sync returns 409 conflict', async () => {
         const { mockContext, mockStateManager, mockLogger } = setupDefaultMocks();
-        const project = makeProject();
+        const project = projectWithAddons();
 
         mockStateManager.getAllProjects.mockResolvedValue([
             { name: project.name, path: project.path, lastModified: new Date() },
@@ -294,7 +174,7 @@ describe('CheckUpdatesCommand — Fork Sync', () => {
 
     it('should execute fork sync BEFORE template sync', async () => {
         const { mockContext, mockStateManager, mockLogger } = setupDefaultMocks();
-        const project = makeProject();
+        const project = projectWithAddons();
 
         mockStateManager.getAllProjects.mockResolvedValue([
             { name: project.name, path: project.path, lastModified: new Date() },
@@ -361,7 +241,7 @@ describe('CheckUpdatesCommand — Integration: Full Flow Order', () => {
 
     it('should execute in order: fork sync -> template -> components -> add-ons', async () => {
         const { mockContext, mockStateManager, mockLogger } = setupDefaultMocks();
-        const project = makeProject();
+        const project = projectWithAddons();
 
         mockStateManager.getAllProjects.mockResolvedValue([
             { name: project.name, path: project.path, lastModified: new Date() },
@@ -447,10 +327,12 @@ describe('CheckUpdatesCommand — Integration: Full Flow Order', () => {
 
         expect(executionOrder[0]).toBe('fork-sync');
         expect(executionOrder[1]).toBe('template-sync');
-        if (executionOrder.includes('component-update')) {
-            expect(executionOrder.indexOf('component-update')).toBeGreaterThan(
-                executionOrder.indexOf('template-sync')
-            );
-        }
+        // component-update is optional; when it runs it must come AFTER template-sync.
+        // Expressed as a value so the assertion runs either way — the old guard meant
+        // a run that skipped the step entirely checked nothing.
+        const componentAt = executionOrder.indexOf('component-update');
+        const afterTemplateSync =
+            componentAt === -1 || componentAt > executionOrder.indexOf('template-sync');
+        expect(afterTemplateSync).toBe(true);
     });
 });

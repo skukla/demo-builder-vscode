@@ -13,42 +13,32 @@
 import * as vscode from 'vscode';
 import { BaseCommand } from '@/core/base/baseCommand';
 import { DisposableStore } from '@/core/utils/disposableStore';
+import { createMockLogger } from '../../helpers/loggerFake';
+import { createMockExtensionContext } from '../../helpers/extensionContextFake';
 
 // Mock logger
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    }),
-}));
 
 // Mock VS Code API
-jest.mock('vscode', () => ({
-    window: {
-        createTerminal: jest.fn(() => ({
-            name: 'test',
-            processId: Promise.resolve(1234),
-            dispose: jest.fn(),
-            sendText: jest.fn(),
-            show: jest.fn(),
-        })),
-        setStatusBarMessage: jest.fn(),
-        withProgress: jest.fn((options, task) => task({ report: jest.fn() })),
-        showInformationMessage: jest.fn(),
-        showErrorMessage: jest.fn(),
-        showWarningMessage: jest.fn(),
-    },
-    ProgressLocation: {
-        Notification: 15,
-    },
-    Uri: {
-        file: (path: string) => ({ fsPath: path }),
-    },
-}));
 
 // Concrete test command (BaseCommand is abstract)
+/**
+ * The protected members a test subclass reaches on itself.
+ *
+ * These suites subclass `BaseCommand` and poke at `disposables` and
+ * `createTerminal` from inside — legitimate, since the point is to prove the base
+ * class disposes what it was given. `self(this).x` disabled checking of each
+ * whole statement to reach one member; this names them.
+ */
+interface BaseCommandInternals {
+    // The REAL types. A hand-written `{ add; dispose }` was my own invented shape —
+    // `DisposableStore` also has `disposables`, `isDisposed`, `disposed`, `count`
+    // and `reset`, and the compiler said so the moment the cast came off.
+    disposables: DisposableStore;
+    createTerminal(name: string): vscode.Terminal;
+}
+
+const self = (cmd: object): BaseCommandInternals => cmd as unknown as BaseCommandInternals;
+
 class TestCommand extends BaseCommand {
     public async execute(): Promise<void> {
         // Test implementation
@@ -56,12 +46,12 @@ class TestCommand extends BaseCommand {
 
     // Expose protected disposables for testing
     public getDisposables(): DisposableStore {
-        return (this as any).disposables;
+        return self(this).disposables;
     }
 
     // Expose protected createTerminal for testing
     public testCreateTerminal(name: string): vscode.Terminal {
-        return (this as any).createTerminal(name);
+        return self(this).createTerminal(name);
     }
 }
 
@@ -75,25 +65,14 @@ describe('BaseCommand Disposal Support', () => {
         jest.clearAllMocks();
 
         // Create mock dependencies
-        mockContext = {
-            subscriptions: [],
-            globalState: {
-                get: jest.fn(),
-                update: jest.fn(),
-            },
-        } as any;
+        mockContext = createMockExtensionContext();
 
         mockStateManager = {
             getCurrentProject: jest.fn(),
             setState: jest.fn(),
         };
 
-        mockLogger = {
-            info: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-            debug: jest.fn(),
-        };
+        mockLogger = createMockLogger();
     });
 
     describe('DisposableStore Initialization', () => {
@@ -209,7 +188,7 @@ describe('BaseCommand Disposal Support', () => {
             command.testCreateTerminal('Test Terminal');
 
             // Should NOT add to context.subscriptions (legacy pattern removed)
-            expect(mockContext.subscriptions.length).toBe(initialLength);
+            expect(mockContext.subscriptions).toHaveLength(initialLength);
         });
 
         it('should dispose terminal when command disposed', () => {
@@ -232,7 +211,7 @@ describe('BaseCommand Disposal Support', () => {
             class SubCommand extends BaseCommand {
                 public async execute(): Promise<void> {
                     // Add mock resource
-                    (this as any).disposables.add({
+                    self(this).disposables.add({
                         dispose: jest.fn(),
                     });
                 }
@@ -254,11 +233,11 @@ describe('BaseCommand Disposal Support', () => {
 
             class SubCommand extends BaseCommand {
                 public async execute(): Promise<void> {
-                    (this as any).disposables.add(mockDisposable);
+                    self(this).disposables.add(mockDisposable);
                 }
 
                 public getDisposables() {
-                    return (this as any).disposables;
+                    return self(this).disposables;
                 }
             }
 
@@ -280,7 +259,7 @@ describe('BaseCommand Disposal Support', () => {
 
             class SubCommand extends BaseCommand {
                 public async execute(): Promise<void> {
-                    (this as any).disposables.add(mockDisposable);
+                    self(this).disposables.add(mockDisposable);
                 }
 
                 public override dispose(): void {

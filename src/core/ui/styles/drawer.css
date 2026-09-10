@@ -1,0 +1,116 @@
+/**
+ * .db-* styles — the detail drawer: scrim, panel, head, body and action bar.
+ *
+ * FEATURE-SCOPED (ADR-017 §6 and §7). A shared component in core/ui, rendered by
+ * FIVE entries — dashboard, dataInstaller, integrations, projectsList and wizard —
+ * and imported by those five. `configure` and `sidebar` do not render it.
+ *
+ * Its `prefers-reduced-motion` rule sits in the MIDDLE of the family, at index 4,
+ * exactly where it was in the god file. The by-hand procedure that appended such a
+ * block at the END would have moved four rules across it.
+ *
+ * Moved out of utilities.css by the CSS migration
+ * (.rptc/plans/css-architecture-migration), in source order, with the comment
+ * above each rule. Verbatim otherwise.
+ */
+
+@layer theme {
+/* Footer pinned to the card bottom; hosts the at-most-one face affordance. */
+/* Only pushed to the bottom when the card HAS a face affordance — an empty foot
+   was reserving a row on every deployed card. */
+/* The deploying pulse lives in StatusDot now (`status-dot--pulse`, index.css) —
+   it is a property of the `info` status, not of this card. */
+/* ---- Detail FLYOUT (over the grid) ----
+ * Restored from the pre-master/detail build: this surface IS the integrations
+ * grid, so an overlay covers only its own page. The scrim + slide live on the
+ * Drawer primitive's classes; everything below styles the CONTENT, which is
+ * host-independent and survived the host swap unchanged. */
+/* Scrim + panel stay mounted; `.open` drives the slide. */
+.db-drawer-scrim {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.42);
+    z-index: 100;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--spectrum-global-animation-duration-400) cubic-bezier(0.4, 0, 0.2, 1),
+        visibility var(--spectrum-global-animation-duration-400);
+}
+
+.db-drawer-scrim.open {
+    opacity: 1;
+    visibility: visible;
+}
+
+.db-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 392px;
+    max-width: 92vw;
+    /* Surface matches the panel treatment this flyout inherited its content from
+       (gray-75 over gray-200 dividers) — the restored shell used gray-50/gray-300,
+       which disagreed with the `.integration-panel-row` dividers INSIDE it. */
+    background: var(--spectrum-global-color-gray-75);
+    border-left: 1px solid var(--spectrum-global-color-gray-200);
+    box-shadow: -8px 0 24px rgba(0, 0, 0, 0.18);
+    z-index: 101;
+    transform: translateX(100%);
+    visibility: hidden;
+    transition: transform var(--spectrum-global-animation-duration-400) cubic-bezier(0.4, 0, 0.2, 1),
+        visibility var(--spectrum-global-animation-duration-400);
+    display: flex;
+    flex-direction: column;
+    outline: none;
+}
+
+.db-drawer.open {
+    transform: translateX(0);
+    visibility: visible;
+}
+
+/* The flyout's sections: fixed head, scrolling body, fixed action bar. */
+.db-drawer-head {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--spectrum-global-color-gray-200);
+}
+
+.db-drawer-body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.db-drawer-actions {
+    display: flex;
+    /* Right, not centred and not the flex-start this defaulted to before: it is
+       what .modal-footer-actions above already does, and what Spectrum specifies
+       for a dialog footer. A drawer footer that centred its action would be the
+       only surface here doing so. */
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 7px;
+    padding: 13px 18px 16px;
+    border-top: 1px solid var(--spectrum-global-color-gray-200);
+}
+
+.db-drawer-head > *:last-child {
+    margin-left: auto;
+}
+}
+
+@layer overrides {
+@media (prefers-reduced-motion: reduce) {
+.db-drawer,
+.db-drawer-scrim {
+    transition: none;
+}
+}
+}

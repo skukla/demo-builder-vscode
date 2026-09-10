@@ -1,7 +1,19 @@
 /* ============================================
    CSS RESET
    Neutralizes VS Code defaults without breaking Spectrum
-   Part of @layer reset (lowest cascade priority)
+   Part of @layer reset — genuinely the LOWEST layer since 2026-09-09.
+
+   It was not, before. The declared order was `vendor, reset, theme, overrides`,
+   which put this file ABOVE the component library, and the line below claiming
+   "lowest cascade priority" was simply false. It did no harm only because
+   Spectrum's CSS was unlayered, and unlayered beats every layer.
+
+   The moment Spectrum went into `@layer vendor`, `font: inherit` on form
+   controls started beating every Spectrum font declaration on every input,
+   button, textarea and select — that one shorthand sets line-height AND
+   font-weight, and it moved 45 of 77 elements on the projects list: inputs lost
+   11px of line-height, buttons lost their bold. Reordering to `reset, vendor`
+   took it to zero. See ADR-018 §1.
    ============================================ */
 
 @layer reset {
@@ -62,14 +74,41 @@
     font: inherit;
   }
 
-  /* Reduce motion for accessibility */
+  /* Reduce-motion lives BELOW, in `@layer overrides` — not here.
+
+     It used to sit in this layer with `!important`, and this comment used to say
+     that `!important` was load-bearing and must never be swept. Both halves of
+     that were true of the old placement and are false of the current one; the
+     comment outlived the code it described by a few hours, which is the exact
+     failure it now documents.
+
+     Why it moved. `@layer reset` is the LOWEST layer, so a plain declaration
+     here loses to every animation rule in `theme`. Measured 2026-09-10 with a
+     live cascade probe (control: the theme rule alone gives `2s infinite`):
+
+       in `reset`, WITHOUT !important -> 2s infinite   — the reset loses
+       in `reset`, WITH    !important -> 0.01ms, 1     — the reset wins
+
+     Read as "the `!important` is required", that is a correct reading of a
+     question nobody had to ask: the LAYER was a choice. Moving the block to
+     `@layer overrides` — above `theme` — makes a plain declaration win, and the
+     last 1,294 `!important`s went to zero with it.
+
+     The accessibility stake is unchanged and is why this is pinned rather than
+     trusted: without a winning rule, someone who asked their OS to reduce motion
+     still gets every animation, nothing fails, and nobody notices. Pinned by
+     `tests/sop/css-declarations.test.ts`. */
+
+}
+
+@layer overrides {
   @media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-      animation-duration: 0.01ms !important;
-      animation-iteration-count: 1 !important;
-      transition-duration: 0.01ms !important;
-    }
+*,
+*::before,
+*::after {
+  animation-duration: 0.01ms;
+  animation-iteration-count: 1;
+  transition-duration: 0.01ms;
+}
   }
 }

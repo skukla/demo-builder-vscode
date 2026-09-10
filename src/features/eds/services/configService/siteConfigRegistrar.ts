@@ -29,10 +29,28 @@
 
 import { registerPublishKey, type PublishKeyTokenProvider } from '../pdp/publishKeyRegistrar';
 import { DaLiveAuthError } from '../types';
-import type { buildSiteConfigParams, ConfigurationService } from './configurationService';
+import type {
+    buildSiteConfigParams,
+    ConfigServiceResult,
+    SiteRegistrationParams,
+} from './configurationService';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
+
+/**
+ * The two Config Service calls this registrar makes, out of a class with many.
+ *
+ * Declared structurally rather than as `ConfigurationService` so callers can hand
+ * in exactly what gets used. The real service satisfies it, so every production
+ * caller is unchanged — and a suite that wants to drive the registrar no longer
+ * has to `jest.mock` the service module to stop a construction it never asserts
+ * on (ADR-016's mock wall, listed for three suites that reach this function).
+ */
+export interface RegistrarConfigService {
+    registerSite(params: SiteRegistrationParams): Promise<ConfigServiceResult>;
+    updateSiteConfig(params: SiteRegistrationParams): Promise<ConfigServiceResult>;
+}
 
 /**
  * Backoff between registration retries on a 403.
@@ -63,7 +81,7 @@ export interface SiteRegistrationOutcome {
 }
 
 export interface RegisterSiteConfigParams {
-    configurationService: ConfigurationService;
+    configurationService: RegistrarConfigService;
     siteParams: SiteParams;
     /**
      * DA.live token source, used to re-mint the site's publish key after the write.
@@ -174,7 +192,7 @@ async function writeSiteConfig(params: RegisterSiteConfigParams): Promise<SiteRe
  */
 async function applyRegistrationResult(
     result: { success: boolean; statusCode?: number; error?: string },
-    configurationService: ConfigurationService,
+    configurationService: RegistrarConfigService,
     siteParams: SiteParams,
     logger: Logger,
 ): Promise<SiteRegistrationOutcome | null> {
@@ -222,7 +240,7 @@ async function applyRegistrationResult(
  * which is what makes waiting worth doing.
  */
 async function retryWhilePropagating(
-    configurationService: ConfigurationService,
+    configurationService: RegistrarConfigService,
     siteParams: SiteParams,
     logger: Logger,
     onProgress?: (message: string) => void | Promise<void>,

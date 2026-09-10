@@ -20,7 +20,7 @@
 import {
     happyClient,
     importHandlers,
-    makeContext,
+    makeImportHarness,
     PAAS_PROJECT,
     PAYLOAD,
     resetImportHandlerMocks,
@@ -46,7 +46,7 @@ beforeEach(() => {
 describe('the scope an omitted payload falls back to', () => {
     it('uses the project scope when the caller sends none', async () => {
         const { startImport } = happyClient();
-        const { context } = makeContext(SCOPED_PAAS_PROJECT);
+        const { context } = makeImportHarness(SCOPED_PAAS_PROJECT);
 
         await importHandlers['start-datapack-import'](context, PAYLOAD);
 
@@ -59,7 +59,7 @@ describe('the scope an omitted payload falls back to', () => {
 
     it('lets an explicit scope win over the recorded one', async () => {
         const { startImport } = happyClient();
-        const { context } = makeContext(SCOPED_PAAS_PROJECT);
+        const { context } = makeImportHarness(SCOPED_PAAS_PROJECT);
 
         await importHandlers['start-datapack-import'](context, {
             ...PAYLOAD,
@@ -74,7 +74,7 @@ describe('the scope an omitted payload falls back to', () => {
 
     it('sends no target when neither the caller nor the project has one', async () => {
         const { startImport } = happyClient();
-        const { context } = makeContext(PAAS_PROJECT);
+        const { context } = makeImportHarness(PAAS_PROJECT);
 
         await importHandlers['start-datapack-import'](context, PAYLOAD);
 
@@ -85,7 +85,7 @@ describe('the scope an omitted payload falls back to', () => {
 
     it('applies the same fallback to a reset', async () => {
         const { startDelete } = happyClient();
-        const { context } = makeContext(SCOPED_PAAS_PROJECT);
+        const { context } = makeImportHarness(SCOPED_PAAS_PROJECT);
 
         await importHandlers['reset-datapack'](context, { ...PAYLOAD, confirm: true });
 
@@ -100,7 +100,7 @@ describe('the scope an omitted payload falls back to', () => {
 
     it('still refuses half a pair rather than completing it', async () => {
         const { startImport } = happyClient();
-        const { context } = makeContext(SCOPED_PAAS_PROJECT);
+        const { context } = makeImportHarness(SCOPED_PAAS_PROJECT);
 
         const result = await importHandlers['start-datapack-import'](context, {
             ...PAYLOAD,

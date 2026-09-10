@@ -247,13 +247,16 @@ function ApiRow({
     checked: boolean;
     onToggle: (code: string) => void;
 }): React.ReactElement {
-    // Locked (required) → checked + disabled. Profile-bound or review-gated →
-    // unchecked + disabled (the self-serve flow can't subscribe them). All guard onToggle.
+    // Locked (required) → checked + disabled; the guard on onToggle is the same
+    // condition, so a locked row cannot toggle even if the checkbox were enabled.
+    //
+    // There is no unavailable/dimmed state here: profile-bound and review-gated
+    // APIs are dropped from the list before it reaches these rows, so the
+    // `data-unavailable` attribute this row used to carry could never be set.
     const pickable = isPickable(api);
-    const unavailable = api.requiresProfile || api.requiresReview;
     const reason = lockedReason(api);
     return (
-        <div className="intflow-api-row" data-unavailable={unavailable ? '' : undefined}>
+        <div className="intflow-api-row">
             <Checkbox
                 isSelected={api.locked || (checked && pickable)}
                 isDisabled={!pickable}

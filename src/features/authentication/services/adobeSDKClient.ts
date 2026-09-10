@@ -1,7 +1,7 @@
 // @ts-expect-error - Adobe SDK lacks TypeScript declarations
 import * as sdk from '@adobe/aio-lib-console';
-import { getLogger } from '@/core/logging';
-import { validateAccessToken } from '@/core/validation';
+import { getLogger } from '@/core/logging/debugLogger';
+import { validateAccessToken } from '@/core/validation/validators/AccessTokenValidator';
 import type { Logger } from '@/types/logger';
 
 /**
@@ -40,22 +40,12 @@ export class AdobeSDKClient {
      * Waits for SDK initialization if in progress
      * Returns true if SDK is available, false if fallback to CLI needed
      *
-     * PERFORMANCE FIX: Reuses in-flight initialization promise to prevent concurrent calls
-     * If multiple callers request SDK init simultaneously, they all wait for the same promise
+     * `initialize()` already returns at once when the client exists and joins an
+     * in-flight initialization when one is running, so there is nothing to guard
+     * here. Two guards that duplicated it were removed on 2026-09-03: a mutation
+     * run showed neither could change the outcome.
      */
     async ensureInitialized(): Promise<boolean> {
-        // Already initialized
-        if (this.sdkClient) {
-            return true;
-        }
-
-        // PERFORMANCE FIX: If initialization is in flight, wait for it
-        if (this.sdkInitPromise) {
-            await this.sdkInitPromise;
-            return this.sdkClient !== undefined;
-        }
-
-        // Not initialized and not in flight, start now (blocking)
         await this.initialize();
 
         return this.sdkClient !== undefined;
@@ -97,9 +87,11 @@ export class AdobeSDKClient {
      */
     private async doInitialize(): Promise<void> {
         try {
-            // CRITICAL FIX: Pre-check token validity before calling getToken('cli')
-            // This prevents Adobe IMS library from opening browser if token not ready
-            // getToken('cli') can trigger browser auth if token is missing/invalid/expired
+            // The token is INSPECTED, never fetched. `aio-lib-ims`'s getToken
+            // opens a browser when it cannot resolve a token silently, so an SDK
+            // init — which runs in the background — must never reach it. Nothing
+            // in this repo calls it any more (2026-09-02): it is not even in the
+            // library's local typings, so a reintroduction fails to compile.
             // Dynamic imports: deferred to avoid module loading chain in tests
             // (TokenManager → loadingHTML → vscode not available during test setup)
             const { TokenManager } = await import('./tokenManager');
@@ -112,10 +104,9 @@ export class AdobeSDKClient {
                 return;
             }
 
-            // CRITICAL FIX: Use token from disk (inspectToken) instead of Adobe IMS Context cache
-            // getToken('cli') reads from Adobe IMS Context memory cache which can be stale after login
-            // inspectToken() reads directly from Adobe CLI config file, always current
-            // Token is guaranteed to exist if valid=true
+            // From disk, not from the IMS Context memory cache: the cache can be
+            // stale right after a login, while inspectToken re-reads the CLI's
+            // config file. Guaranteed present when valid=true.
             const accessToken = tokenInspection.token;
             if (!accessToken) {
                 this.debugLogger.debug('[Auth SDK] Token valid but missing from inspection result');
@@ -128,7 +119,6 @@ export class AdobeSDKClient {
                 validateAccessToken(accessToken);
             } catch (validationError) {
                 this.debugLogger.error('[Auth SDK] Invalid access token format', validationError as Error);
-                this.sdkClient = undefined;
                 return;
             }
 
@@ -138,9 +128,10 @@ export class AdobeSDKClient {
             this.debugLogger.debug('[Auth SDK] SDK initialized successfully - enabling 30x faster operations');
 
         } catch (error) {
-            // SDK initialization failure is not critical - we'll fall back to CLI
+            // SDK initialization failure is not critical - we'll fall back to CLI.
+            // Nothing to reset: this runs only behind initialize()'s guard, so the
+            // client is undefined on entry and only the awaited init could set it.
             this.debugLogger.debug('[Auth SDK] Failed to initialize SDK, will use CLI fallback:', error);
-            this.sdkClient = undefined;
         }
     }
 

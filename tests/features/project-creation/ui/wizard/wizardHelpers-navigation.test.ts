@@ -61,7 +61,7 @@ describe('wizardHelpers - navigation', () => {
                 0,
                 wizardSteps
             );
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
         });
 
         it('should remove target step and all steps after it', () => {
@@ -93,7 +93,7 @@ describe('wizardHelpers - navigation', () => {
 
         it('should handle empty completed steps', () => {
             const result = filterCompletedStepsForBackwardNav([], 'adobe-project', 1, wizardSteps);
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
         });
     });
 
@@ -220,7 +220,7 @@ describe('wizardHelpers - navigation', () => {
         });
 
         it('should return empty array for no completed steps', () => {
-            expect(getCompletedStepIndices([], wizardSteps)).toEqual([]);
+            expect(getCompletedStepIndices([], wizardSteps)).toStrictEqual([]);
         });
 
         it('should return -1 for steps not in wizard steps', () => {
@@ -245,11 +245,11 @@ describe('wizardHelpers - navigation', () => {
         });
 
         it('should return empty array for undefined input', () => {
-            expect(getEnabledWizardSteps(undefined)).toEqual([]);
+            expect(getEnabledWizardSteps(undefined)).toStrictEqual([]);
         });
 
         it('should return empty array for empty input', () => {
-            expect(getEnabledWizardSteps([])).toEqual([]);
+            expect(getEnabledWizardSteps([])).toStrictEqual([]);
         });
 
         it('should preserve order of enabled steps', () => {

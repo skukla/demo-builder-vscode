@@ -4,10 +4,24 @@ description: Load-bearing Adobe Spectrum + webview-UI gotchas — dimension-toke
 ---
 # Spectrum + Webview UI Gotchas
 
-The handbook is `docs/development/styling-guide.md` (CSS architecture, `cn()`, token
-utilities, class conventions) and `docs/development/ui-patterns.md` (layout constraints,
-menu/dropdown patterns, width debugging). This skill is only the incident-derived facts
-that keep biting — read the docs for the how, read this for the traps.
+The reference is `docs/development/styling-guide.md` — CSS architecture, `cn()`, token
+utilities, class conventions. This skill is the incident-derived facts that keep biting:
+read the guide for the how, read this for the traps.
+
+It absorbed `docs/development/ui-patterns.md` on 2026-08-30. That document held the same
+territory in 585 lines, plus a description of an "Adobe Setup two-column layout" that no
+longer exists — `TwoColumnLayout` has zero uses in authentication.
+
+## Hook inputs must be stable — the footgun no tool catches
+
+An inline `[]`, `{}` or arrow literal passed as a prop is a NEW reference every render.
+An effect depending on it runs every render; one that sets state loops forever. Hoist it:
+`const EMPTY: never[] = [];` at module level.
+
+`exhaustive-deps` will not save you — it reads the dependency array INSIDE the hook and
+cannot see across the prop boundary to the caller. Nor will the compiler: the types are
+identical. This has already happened here, which is why it is written in three places
+(handbook §7, the root CLAUDE.md, and `src/core/ui/CLAUDE.md`) rather than one.
 
 ## When NOT to use
 - Adding a wizard step / Build-Your-Project area or its layout — use `wizard-step-authoring`.
@@ -27,7 +41,7 @@ that keep biting — read the docs for the how, read this for the traps.
   *child* of the (position:relative) target and center with `left:50%; transform:translateX(-50%)`.
   That is the true center by construction — immune to the scale mismatch and any wrapper offset.
   Reference: the timeline connector in `TimelineNav.tsx` + `.timeline-connector` in
-  `custom-spectrum.css` (a child of the `size-300` dot; the stretch case uses a tall line clipped
+  `utilities.css` (a child of the `size-300` dot; the stretch case uses a tall line clipped
   by `.timeline-step-wrap-clip`'s `overflow:hidden`).
 - **`DialogContainer type="fullscreen"` outranks the Dialog's `size` and every CSS override.**
   It renders `spectrum-Modal--fullscreen` / `spectrum-Dialog--fullscreen`, which size to the
@@ -93,14 +107,30 @@ Fix either way: put every option in one array and map it once, so the key and th
 cannot drift apart. A test catches this **only if it asserts the payload**
 `onSelectionChange` received; asserting that a request merely fired passes with a mangled key.
 
+### `Picker` dropdown width
+
+- **A `Picker` menu does not inherit its trigger's width, and CSS will not make it.**
+  Use the `menuWidth` prop; every CSS approach tried against this failed, because
+  Spectrum positions the overlay outside the trigger's layout.
+
+### Layout components take Spectrum tokens
+
+- **`GridLayout`, `TwoColumnLayout`, `ControlPanelLayout` and friends accept
+  `DimensionValue`** (`@/core/ui/utils/spectrumTokens`) for dimension props, so
+  `gap="size-300"` is type-checked against the token scale rather than passed as a
+  string. Prefer that over a px literal — see the scale mismatch above for why a
+  hardcoded px cannot track the active scale.
+
 ### Layout width & box model
 - **Spectrum `Flex` caps width at ~450px** — use a plain `<div>` with flex styles for any
-  full-width wizard/webview layout (root `CLAUDE.md` gotcha; see ui-patterns.md "Width Debugging").
+  full-width wizard/webview layout (root `CLAUDE.md` gotcha). To trace where a width is lost, log `getBoundingClientRect()`
+  up the parent chain from the constrained element — the ancestor whose width stops
+  matching its parent is the one applying the constraint.
 - **`box-sizing: border-box` lives in `reset.css`** (lowest cascade priority; unlayered author
   rules win). An input that sets `width:100%` + `padding` + `border` MUST also set
   `box-sizing: border-box` explicitly (or add `.box-border`) or it overflows its container.
 - **Align content to `--content-width`** (960px, the canonical LEFT-aligned band in
-  `custom-spectrum.css`) and wrap in `.page-container-padded`. Don't hardcode widths.
+  `utilities.css`) and wrap in `.page-container-padded`. Don't hardcode widths.
 
 ### Dashboard / webview notice conventions
 The dashboard is minimal/dark — conform, don't invent.
@@ -112,6 +142,11 @@ The dashboard is minimal/dark — conform, don't invent.
 - **`StatusDisplay` (feedback/) is a full-height centered block** for empty/error screens — NOT
   for inline notices.
 ### A CSS class working in one webview proves NOTHING about another
+> **This one is ARCHITECTURE, and its home is now `docs/architecture/adr/017-webview-architecture.md` §6.**
+> It is kept here because this is where you are when it bites. The ADR is where
+> the rule is decided; the line it sits on is: a rule is architecture if breaking
+> it breaks a boundary, style if breaking it produces a wrong-looking result.
+> Everything else in this skill is the second kind.
 Each webview is its own esbuild entry (`WEBVIEW_ENTRIES`), and a feature stylesheet reaches a
 bundle only via a side-effect `import` somewhere in *that* entry's graph. So a class can be
 styled in one surface and simply absent in the next — the element renders raw, with no error
@@ -123,10 +158,10 @@ anywhere.
 - **Earlier shape of the same trap:** warning-text utilities like `text-orange-500/600` are
   feature-scoped (`eds-steps.css`), NOT global — don't depend on them from the dashboard.
 - **Before reusing a component across surfaces**, confirm every class it needs lives in a sheet
-  the TARGET bundle loads. `custom-spectrum.css` / `index.css` / `vscode-theme.css` are imported
+  the TARGET bundle loads. `utilities.css` / `index.css` / `vscode-theme.css` are imported
   by every entry; anything under `src/features/*/ui/styles/` is not.
 - Small inline text-button actions have a global home: **`.inline-action-link`**
-  (`custom-spectrum.css`) — use it instead of EDS's `.service-action-link`.
+  (`utilities.css`) — use it instead of EDS's `.service-action-link`.
 
 ### Styling mechanics
 - Prefer a CSS class via `cn()` (see styling-guide.md) over inline styles. `GridLayout` /
@@ -151,7 +186,7 @@ renderer, so:
   had the same declarations, and rendered at a different height.
 - **Make parity structural instead.** One shared custom property that both surfaces consume
   (`--card-min-height` / `--card-min-width` / `--card-padding` / `--card-gap`, in
-  `custom-spectrum.css`). A number that exists once cannot drift; a number copied twice already
+  `utilities.css`). A number that exists once cannot drift; a number copied twice already
   has.
   - **Caveat — some of those numbers are READ AS TEXT by a guard, so leave them literal.**
     `tests/features/dashboard/ui/components/integrations/integrationsGridLayout.test.ts`

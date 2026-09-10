@@ -1,55 +1,19 @@
+import {
+    shared,
+    setupContinueHandler,
+} from './continueHandler.testUtils';
 import { handleContinuePrerequisites } from '@/features/prerequisites/handlers/continueHandler';
 import { PrerequisiteStatus } from '@/features/prerequisites/services/types';
-import * as shared from '@/features/prerequisites/handlers/shared';
-import { ServiceLocator } from '@/core/di';
 import {
-    createMockContext,
     mockAdobeCliPrereq,
 } from './continueHandler.testUtils';
 
-// Mock dependencies - but keep handlePrerequisiteCheckError real
-jest.mock('@/features/prerequisites/handlers/shared', () => {
-    const actual = jest.requireActual('@/features/prerequisites/handlers/shared');
-    return {
-        ...actual,
-        getNodeVersionMapping: jest.fn(),
-        areDependenciesInstalled: jest.fn(),
-        hasNodeVersions: jest.fn(),
-        getNodeVersionKeys: jest.fn(),
-        // Keep handlePrerequisiteCheckError as the real implementation
-    };
-});
-jest.mock('@/core/di');
-
 describe('Prerequisites Continue Handler - Error Handling', () => {
     let mockContext: any;
-    let mockCommandExecutor: any;
 
     beforeEach(() => {
         jest.clearAllMocks();
-
-        // Mock CommandExecutor
-        mockCommandExecutor = {
-            execute: jest.fn().mockResolvedValue({ stdout: '@adobe/aio-cli/10.0.0' }),
-        };
-        (ServiceLocator.getCommandExecutor as jest.Mock).mockReturnValue(mockCommandExecutor);
-
-        // Mock shared utilities
-        (shared.getNodeVersionMapping as jest.Mock).mockResolvedValue({
-            '18': 'React App',
-            '20': 'Node Backend',
-        });
-        (shared.areDependenciesInstalled as jest.Mock).mockReturnValue(true);
-        // Object utility helpers (used for Object.keys patterns)
-        (shared.hasNodeVersions as jest.Mock).mockImplementation((mapping: Record<string, string>) => {
-            return mapping && Object.keys(mapping).length > 0;
-        });
-        (shared.getNodeVersionKeys as jest.Mock).mockImplementation((mapping: Record<string, string>) => {
-            return Object.keys(mapping || {}).sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
-        });
-
-        // Create mock context
-        mockContext = createMockContext();
+        ({ mockContext } = setupContinueHandler());
     });
 
     describe('missing state validation', () => {

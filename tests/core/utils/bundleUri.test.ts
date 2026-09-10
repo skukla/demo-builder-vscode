@@ -13,15 +13,6 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { getBundleUri, type BundleUriOptions } from '@/core/utils/bundleUri';
 
-// Mock VS Code API
-jest.mock('vscode', () => ({
-    Uri: {
-        file: jest.fn((p: string) => ({
-            fsPath: p,
-            toString: () => `file://${p}`,
-        })),
-    },
-}));
 
 describe('getBundleUri', () => {
     // Mock webview that simulates VS Code panel.webview

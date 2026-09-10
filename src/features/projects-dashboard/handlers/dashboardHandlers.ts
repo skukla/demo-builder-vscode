@@ -10,27 +10,29 @@
  */
 
 import * as vscode from 'vscode';
-import {
-    extractSettingsFromProject,
-    importSettingsFromFile,
-    copySettingsFromProject,
-    exportProjectSettings,
-    deleteProject,
-    renameProjectCore,
-} from '../services';
-import { BaseWebviewCommand } from '@/core/base';
-import { executeCommandForProject } from '@/core/handlers';
-import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell';
+import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
+import { ServiceLocator } from '@/core/di/serviceLocator';
+import { executeCommandForProject } from '@/core/handlers/projectCommandHelper';
+import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell/orgContextEnv';
 import { hasMeshDeploymentRecord } from '@/core/state/appBuilderComponentState';
 import { sessionUIState } from '@/core/state/sessionUIState';
-import { openInIncognito } from '@/core/utils';
-import { validateProjectPath, validateURL } from '@/core/validation';
+import { openInIncognito } from '@/core/utils/browserUtils';
+import { validateProjectPath } from '@/core/validation/PathSafetyValidator';
+import { validateURL } from '@/core/validation/URLValidator';
 import {
     getEwCanvasBranch,
     resolveProjectAuthoringExperience,
 } from '@/features/eds/handlers/edsHelpers';
 import { determineMeshStatus } from '@/features/mesh/services/meshStatusResolver';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
+import { deleteProject } from '@/features/projects-dashboard/services/projectDeletionService';
+import { renameProjectCore } from '@/features/projects-dashboard/services/projectRenameService';
+import { extractSettingsFromProject } from '@/features/projects-dashboard/services/settingsSerializer';
+import {
+    copySettingsFromProject,
+    exportProjectSettings,
+    importSettingsFromFile,
+} from '@/features/projects-dashboard/services/settingsTransferService';
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import type { MessageHandler, HandlerContext, HandlerResponse } from '@/types/handlers';
@@ -85,7 +87,10 @@ export const handleGetProjects: MessageHandler = async (
                         const status = await withOrgContext(
                             buildOrgTargetFromProjectAdobe(project.adobe),
                             async () => {
-                                const meshChanges = await detectMeshChanges(project, configs);
+                                const meshChanges = await detectMeshChanges(project, configs, {
+                                    commandManager: ServiceLocator.getCommandExecutor(),
+                                    authManager: ServiceLocator.getAuthenticationService(),
+                                });
                                 return determineMeshStatus(meshChanges, meshComponent, project);
                             },
                         );
@@ -455,7 +460,7 @@ export const handleDeleteProject: MessageHandler<{ projectPath: string }> = asyn
         // Cast data to expected shape - deleteProject returns { success: boolean }
         const resultData = result.data as { success?: boolean } | undefined;
         if (result.success && resultData?.success) {
-            context.sendMessage?.('projectDeleted', {});
+            context.sendMessage('projectDeleted', {});
         }
 
         return result;
@@ -822,6 +827,10 @@ export const handleResetProject: MessageHandler<{ projectPath: string }> = async
     if (isEdsProject(project)) {
         const { resetEdsProjectWithUI } = await import('@/features/eds/services/reset/edsResetUI');
         return resetEdsProjectWithUI({
+            meshDeps: {
+                commandManager: ServiceLocator.getCommandExecutor(),
+                authManager: ServiceLocator.getAuthenticationService(),
+            },
             project,
             context,
             logPrefix: '[ProjectsList]',
@@ -835,6 +844,8 @@ export const handleResetProject: MessageHandler<{ projectPath: string }> = async
         '@/features/lifecycle/services/projectResetService'
     );
     return resetProjectWithUI({
+        commandManager: ServiceLocator.getCommandExecutor(),
+        authManager: ServiceLocator.getAuthenticationService(),
         project,
         context,
         logPrefix: '[ProjectsList]',

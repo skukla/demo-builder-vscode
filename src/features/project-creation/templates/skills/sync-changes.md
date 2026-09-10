@@ -54,4 +54,6 @@ take effect after restarting the dev server or redeploying.
 - `sync_storefront` runs `git add -A && git commit && git push` in the storefront directory,
   then Helix preview+publish when both Helix tokens and the GitHub repo are known. The commit
   step is skipped cleanly when there is nothing staged, so calling it again is safe.
-- `deploy_mesh` spawns `aio api:mesh:update` — requires Adobe I/O CLI to be authenticated.
+- `deploy_mesh` spawns `aio api-mesh:update` (falling back to `api-mesh:create` when no mesh
+  exists yet) — requires Adobe I/O CLI to be authenticated. Note the hyphen: the topic is
+  `api-mesh`, not `api:mesh`.

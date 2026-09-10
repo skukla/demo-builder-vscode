@@ -9,89 +9,42 @@
  * PREVIOUS project's namespace, with the modal showing the new one.
  *
  * This handler is the missing writer.
+ *
+ * The mock wall and fixtures live in `destinationHandlers.testUtils`, shared with
+ * `destinationHandlers-payload.test.ts`.
  */
 
-const mockWithProgress = jest.fn(async (_o: unknown, task: (p: unknown) => unknown) =>
-    task({ report: mockProgressReport })
-);
-const mockProgressReport = jest.fn();
-jest.mock(
-    'vscode',
-    () => ({
-        window: {
-            withProgress: (...a: unknown[]) =>
-                (mockWithProgress as never as (...x: unknown[]) => unknown)(...a),
-        },
-        ProgressLocation: { Notification: 15 },
-    }),
-    { virtual: true }
-);
-
-const mockMove = jest.fn();
-jest.mock('@/features/app-builder/services/appBuilderComponentMigration', () => ({
-    moveAppBuilderComponentsToDestination: (...a: unknown[]) => mockMove(...a),
-}));
-
-const mockRunGuards = jest.fn();
-const mockBuildDefaultRunnerDeps = jest.fn(() => ({ catalog: [] }));
-const mockBuildRunnerDepsContext = jest.fn(async () => ({}));
-const mockPostRowStatus = jest.fn(async () => undefined);
-const mockPostComponentsSnapshot = jest.fn(async () => undefined);
-const mockPostDestination = jest.fn(async () => undefined);
-const mockPostMeshStatus = jest.fn(async () => undefined);
-jest.mock('@/features/dashboard/handlers/appBuilderComponentHandlers', () => ({
-    runGuards: (...a: unknown[]) => mockRunGuards(...a),
-    postRowStatus: (...a: unknown[]) => mockPostRowStatus(...(a as [])),
-    postComponentsSnapshot: (...a: unknown[]) => mockPostComponentsSnapshot(...(a as [])),
-    postDestination: (...a: unknown[]) => mockPostDestination(...(a as [])),
-    postMeshStatus: (...a: unknown[]) => mockPostMeshStatus(...(a as [])),
-}));
-jest.mock('@/features/project-creation/services/appBuilderComponentRunnerDeps', () => ({
-    buildDefaultRunnerDeps: (...a: unknown[]) => mockBuildDefaultRunnerDeps(...(a as [])),
-    buildRunnerDepsContext: (...a: unknown[]) => mockBuildRunnerDepsContext(...(a as [])),
-}));
-
-import { handleSetProjectDestination } from '@/features/dashboard/handlers/destinationHandlers';
-import type { HandlerContext } from '@/types/handlers';
-
-const EXISTING_ADOBE = {
-    organization: '285361',
-    organizationName: 'Adobe Demo System',
-    projectId: 'old-project-id',
-    projectName: 'OldProject',
-    projectTitle: 'Old Project',
-    workspace: 'old-workspace-id',
-    workspaceName: 'Stage',
-    workspaceTitle: 'Stage',
-};
-
-const NEW_DESTINATION = {
-    project: { id: 'new-project-id', name: 'NewProject', title: 'New Project' },
-    workspace: { id: 'new-workspace-id', name: 'Production', title: 'Production' },
-};
-
-function makeContext(adobe: Record<string, unknown> | undefined = EXISTING_ADOBE) {
-    const project = { name: 'demo', path: '/p/demo', adobe: adobe ? { ...adobe } : undefined };
-    const saveProject = jest.fn().mockResolvedValue(undefined);
-    const context = {
-        logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() },
-        stateManager: {
-            getCurrentProject: jest.fn().mockResolvedValue(project),
-            saveProject,
-        },
-    } as unknown as HandlerContext;
-    return { context, project, saveProject };
-}
+// The shared mock wall FIRST: importing it is what registers the module mocks,
+// and an import of the handler above this line would load it unmocked.
+import {
+    NEW_DESTINATION,
+    makeDestinationContext,
+    makeContextWithComponents,
+    mockMove,
+    mockPostComponentsSnapshot,
+    mockPostDestination,
+    mockPostMeshStatus,
+    mockPostRowStatus,
+    mockProgressReport,
+    mockRunGuards,
+    mockWithProgress,
+    resetDestinationMocks,
+} from './destinationHandlers.testUtils';
+import {
+    handleSetProjectDestination,
+    type SetProjectDestinationPayload,
+} from '@/features/dashboard/handlers/destinationHandlers';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 beforeEach(() => {
-    jest.clearAllMocks();
-    mockRunGuards.mockResolvedValue(undefined);
-    mockMove.mockResolvedValue({ success: true, moved: [], failed: [] });
+    resetDestinationMocks();
 });
 
 describe('handleSetProjectDestination', () => {
     it('persists the new project and workspace onto project.adobe', async () => {
-        const { context, saveProject } = makeContext();
+        const { context, saveProject } = makeDestinationContext();
 
         const result = await handleSetProjectDestination(context, NEW_DESTINATION);
 
@@ -110,7 +63,7 @@ describe('handleSetProjectDestination', () => {
     it('keeps the org — sign-in owns org selection, this control never changes it', async () => {
         // `adobe-org-context`: IMS tokens are org-bound and there is no in-app org
         // picker. A destination change moves project/workspace WITHIN the org.
-        const { context, saveProject } = makeContext();
+        const { context, saveProject } = makeDestinationContext();
 
         await handleSetProjectDestination(context, NEW_DESTINATION);
 
@@ -123,7 +76,7 @@ describe('handleSetProjectDestination', () => {
         // An aborted move points the project back at the old destination. Once
         // `project.adobe` holds the new ref the old one is unrecoverable, so the
         // write has to hand it back. (It is NOT undeployed — a move only deploys.)
-        const { context } = makeContext();
+        const { context } = makeDestinationContext();
 
         const result = await handleSetProjectDestination(context, NEW_DESTINATION);
 
@@ -134,10 +87,12 @@ describe('handleSetProjectDestination', () => {
     });
 
     it('fails when there is no current project', async () => {
-        const context = {
-            logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() },
-            stateManager: { getCurrentProject: jest.fn().mockResolvedValue(undefined) },
-        } as unknown as HandlerContext;
+        const context = createMockHandlerContext({
+            logger: createMockLogger(),
+            stateManager: createMockStateManager({
+                getCurrentProject: jest.fn().mockResolvedValue(undefined),
+            }),
+        });
 
         const result = await handleSetProjectDestination(context, NEW_DESTINATION);
 
@@ -145,11 +100,11 @@ describe('handleSetProjectDestination', () => {
     });
 
     it('rejects an incomplete destination without writing', async () => {
-        const { context, saveProject } = makeContext();
+        const { context, saveProject } = makeDestinationContext();
 
         const result = await handleSetProjectDestination(context, {
             project: { id: 'new-project-id', name: 'NewProject', title: 'New Project' },
-        } as never);
+        } as unknown as SetProjectDestinationPayload);
 
         expect(result.success).toBe(false);
         expect(saveProject).not.toHaveBeenCalled();
@@ -162,23 +117,10 @@ describe('handleSetProjectDestination', () => {
  * (user decision 2026-08-07).
  */
 describe('handleSetProjectDestination — moving existing integrations', () => {
-    function withComponents() {
-        const project = {
-            name: 'demo',
-            path: '/p/demo',
-            adobe: { ...EXISTING_ADOBE },
-            appBuilderComponents: { 'erp-sync': { kind: 'integration', status: 'deployed' } },
-        };
-        const saveProject = jest.fn().mockResolvedValue(undefined);
-        const context = {
-            logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() },
-            stateManager: {
-                getCurrentProject: jest.fn().mockResolvedValue(project),
-                saveProject,
-            },
-        } as unknown as HandlerContext;
-        return { context, saveProject };
-    }
+    const withComponents = () =>
+        makeContextWithComponents({
+            'erp-sync': { kind: 'integration', status: 'deployed' },
+        });
 
     it('moves the integrations, handing the migration the PREVIOUS destination', async () => {
         const { context } = withComponents();
@@ -223,19 +165,9 @@ describe('handleSetProjectDestination — moving existing integrations', () => {
         // and the card sat at DEPLOYED while its deploy ran (reported live
         // 2026-08-07). Which channel a surface uses is the CALLER's job — the same
         // split `progressRegister` documents.
-        const project = {
-            name: 'demo',
-            path: '/p/demo',
-            adobe: { ...EXISTING_ADOBE },
-            appBuilderComponents: { 'eds-accs-mesh': { kind: 'mesh', status: 'deployed' } },
-        };
-        const context = {
-            logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() },
-            stateManager: {
-                getCurrentProject: jest.fn().mockResolvedValue(project),
-                saveProject: jest.fn().mockResolvedValue(undefined),
-            },
-        } as unknown as HandlerContext;
+        const { context } = makeContextWithComponents({
+            'eds-accs-mesh': { kind: 'mesh', status: 'deployed' },
+        });
 
         await handleSetProjectDestination(context, NEW_DESTINATION);
         const onRowStatus = mockMove.mock.calls[0][3] as (
@@ -286,7 +218,7 @@ describe('handleSetProjectDestination — moving existing integrations', () => {
     });
 
     it('does not move when there is nothing deployed', async () => {
-        const { context } = makeContext();
+        const { context } = makeDestinationContext();
 
         await handleSetProjectDestination(context, NEW_DESTINATION);
 
@@ -335,7 +267,7 @@ describe('handleSetProjectDestination — moving existing integrations', () => {
  */
 describe('handleSetProjectDestination — telegraph and guards', () => {
     it('narrates through the standard progress notification', async () => {
-        const { context } = makeContext();
+        const { context } = makeDestinationContext();
 
         await handleSetProjectDestination(context, NEW_DESTINATION);
 
@@ -346,7 +278,7 @@ describe('handleSetProjectDestination — telegraph and guards', () => {
     });
 
     it('reports the destination it is saving, as a step', async () => {
-        const { context } = makeContext();
+        const { context } = makeDestinationContext();
 
         await handleSetProjectDestination(context, NEW_DESTINATION);
 
@@ -357,7 +289,7 @@ describe('handleSetProjectDestination — telegraph and guards', () => {
 
     it('runs the guards, and a guard failure writes NOTHING', async () => {
         mockRunGuards.mockResolvedValue({ error: 'Not signed in', code: 'AUTH' });
-        const { context, saveProject } = makeContext();
+        const { context, saveProject } = makeDestinationContext();
 
         const result = await handleSetProjectDestination(context, NEW_DESTINATION);
 
@@ -369,7 +301,7 @@ describe('handleSetProjectDestination — telegraph and guards', () => {
 
 describe('handleSetProjectDestination — selecting the destination already in use', () => {
     it('does not persist or move — there is nothing to change', async () => {
-        const { context, saveProject } = makeContext();
+        const { context, saveProject } = makeDestinationContext();
 
         const result = await handleSetProjectDestination(context, {
             project: { id: 'old-project-id', name: 'OldProject', title: 'Old Project' },

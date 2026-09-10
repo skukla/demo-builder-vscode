@@ -56,10 +56,14 @@ grep -rn "<the job, e.g. EmptyState>" src/core/ui/components/
 grep -rln "StatusDisplay\|LoadingDisplay" src/features/  # how peers already use it
 ```
 
-If a peer feature already solves your exact job, **reuse or extract — do not copy**. The
-extraction rule is Rule of Three (extract at the third instance), with one override that
-matters here: if the same behaviour has already been FIXED separately on two surfaces, that
-is demonstrated drift and it gets extracted at two.
+If a peer feature already solves your exact job, **reuse or extract — do not copy**.
+
+The threshold is [the handbook's](../../../../docs/development/handbook.md) and is not
+restated here. What belongs here is the **override**: if the same behaviour has already
+been FIXED separately on two surfaces, that is demonstrated drift and it gets extracted
+at two. A bug fixed twice is evidence the copies must agree — which is the thing a count
+of three is only a proxy for, so this is the rule's own logic arriving early rather than
+an exception to it.
 
 ## When something genuinely does not fit
 
@@ -71,6 +75,6 @@ sentence is what stops the next person re-litigating it.
 ## Related
 
 - `../hooks/CLAUDE.md` — the shared hook vocabulary (the same rule applies)
-- `docs/development/ui-patterns.md` — layout mechanics, the Spectrum `Flex` 450px trap
+- `spectrum-webview-ui` skill — layout mechanics and the load-bearing Spectrum
+  gotchas, including the `Flex` 450px trap this table's layout row points at
 - `docs/development/styling-guide.md` — CSS architecture, `cn()`, token utilities
-- `.claude/skills/spectrum-webview-ui` — the load-bearing Spectrum/webview gotchas

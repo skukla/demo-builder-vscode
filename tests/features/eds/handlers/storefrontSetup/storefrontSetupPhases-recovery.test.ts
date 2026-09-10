@@ -14,14 +14,19 @@
  * Step 5b: Wrap content pipeline with DaLiveAuthError catch for mid-pipeline recovery.
  */
 
+import './storefrontSetupPhases.sharedMocks';
 import type { HandlerContext } from '@/types/handlers';
-import type { Logger } from '@/types/logger';
 
 jest.setTimeout(5000);
 
 // =============================================================================
 // Mocks - defined before imports
 // =============================================================================
+
+// `createSetupServices` now takes its GitHub clients from `getGitHubServices`
+// (ADR-015 / D-2 — the cache holds the token-validation result). That builder
+// calls `getLogger()`, which throws unless the logger is initialised. Same mock
+// the other suites of getGitHubServices consumers use.
 
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     ensureDaLiveAuth: jest.fn(),
@@ -32,39 +37,6 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     }),
 }));
 
-jest.mock('@/features/eds/services/edsPipeline', () => ({
-    executeEdsPipeline: jest.fn(),
-}));
-
-jest.mock('vscode', () => ({
-    window: {
-        showWarningMessage: jest.fn(),
-        showErrorMessage: jest.fn(),
-    },
-}), { virtual: true });
-
-jest.mock('@/features/eds/services/daLive/daLiveAuthService', () => ({
-    DaLiveAuthService: jest.fn().mockImplementation(() => ({
-        isAuthenticated: jest.fn().mockResolvedValue(true),
-        getAccessToken: jest.fn().mockResolvedValue('mock-token'),
-        getUserEmail: jest.fn().mockResolvedValue('user@test.com'),
-    })),
-}));
-
-jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
-    DaLiveContentOperations: jest.fn().mockImplementation(() => ({})),
-    createDaLiveTokenProvider: jest.fn().mockReturnValue({
-        getAccessToken: jest.fn().mockResolvedValue('mock-token'),
-    }),
-    createDaLiveServiceTokenProvider: jest.fn().mockReturnValue({
-        getAccessToken: jest.fn().mockResolvedValue('mock-token'),
-    }),
-}));
-
-jest.mock('@/features/eds/services/github/githubTokenService', () => ({
-    GitHubTokenService: jest.fn().mockImplementation(() => ({})),
-}));
-
 jest.mock('@/features/eds/services/github/githubRepoOperations', () => ({
     GitHubRepoOperations: jest.fn().mockImplementation(() => ({
         createFromTemplate: jest.fn(),
@@ -72,49 +44,9 @@ jest.mock('@/features/eds/services/github/githubRepoOperations', () => ({
     })),
 }));
 
-jest.mock('@/features/eds/services/github/githubFileOperations', () => ({
-    GitHubFileOperations: jest.fn().mockImplementation(() => ({
-        getFileContent: jest.fn().mockResolvedValue(null),
-        createOrUpdateFile: jest.fn().mockResolvedValue(undefined),
-    })),
-}));
-
-jest.mock('@/features/eds/services/github/githubAppService', () => ({
-    GitHubAppService: jest.fn().mockImplementation(() => ({
-        isAppInstalled: jest.fn().mockResolvedValue({ isInstalled: true }),
-    })),
-}));
-
-jest.mock('@/features/eds/services/helix/helixService', () => ({
-    HelixService: jest.fn().mockImplementation(() => ({
-        previewCode: jest.fn().mockResolvedValue(undefined),
-    })),
-}));
-
-jest.mock('@/features/eds/services/configService/configurationService', () => ({
-    ConfigurationService: jest.fn().mockImplementation(() => ({
-        registerSite: jest.fn().mockResolvedValue({ success: true }),
-        updateSiteConfig: jest.fn().mockResolvedValue({ success: true }),
-        deleteSiteConfig: jest.fn().mockResolvedValue({ success: true }),
-    })),
-    buildSiteConfigParams: (owner: string, repo: string, org: string, site: string) => ({
-        org: owner, site: repo, codeOwner: owner, codeRepo: repo,
-        contentSourceUrl: `https://content.da.live/${org}/${site}/`,
-    }),
-}));
-
-jest.mock('@/features/eds/services/fstabGenerator', () => ({
-    generateFstabContent: jest.fn().mockReturnValue('mountpoints:\n  /: https://content.da.live/org/site'),
-}));
-
-jest.mock('@/features/components/services/blockLibraryLoader', () => ({
-    getBlockLibrarySource: jest.fn(),
-    getBlockLibraryName: jest.fn(),
-}));
-
-jest.mock('@/features/eds/services/blockCollectionHelpers', () => ({
-    installBlockCollections: jest.fn().mockResolvedValue({ success: true, blocksCount: 0, blockIds: [] }),
-}));
+// NOT mocked, and it does not need to be: the collaborator is constructed on this
+// path and never touched, so the mock silenced nothing. Measured 2026-08-31 by
+// stripping it and re-running this suite.
 
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: { QUICK: 5000 },
@@ -128,9 +60,16 @@ global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200 });
 // =============================================================================
 
 import { DaLiveAuthError } from '@/features/eds/services/types';
-import { executeStorefrontSetupPhases } from '@/features/eds/handlers/storefrontSetup/storefrontSetupPhases';
+import {
+    createSetupContext,
+    executeStorefrontSetupPhases,
+    createEdsConfig,
+} from './storefrontSetupPhases.testUtils';
+import type { SetupServices } from '@/features/eds/handlers/storefrontSetup/storefrontSetupTypes';
 import { ensureDaLiveAuth, configureDaLivePermissions } from '@/features/eds/handlers/edsHelpers';
 import { executeEdsPipeline } from '@/features/eds/services/edsPipeline';
+import { ServiceLocator } from '@/core/di/serviceLocator';
+import { createMockCommandExecutor } from '../../../../helpers/commandExecutorFake';
 
 // Get mock references
 const mockEnsureDaLiveAuth = ensureDaLiveAuth as jest.MockedFunction<typeof ensureDaLiveAuth>;
@@ -141,71 +80,39 @@ const mockConfigurePerms = configureDaLivePermissions as jest.MockedFunction<typ
 // Helpers
 // =============================================================================
 
-function createMockContext(): HandlerContext {
-    return {
-        panel: {
-            webview: { postMessage: jest.fn() },
-        } as unknown as HandlerContext['panel'],
-        stateManager: {
-            getCurrentProject: jest.fn(),
-            saveProject: jest.fn().mockResolvedValue(undefined),
-        } as unknown as HandlerContext['stateManager'],
-        logger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-            trace: jest.fn(),
-        } as unknown as Logger,
-        debugLogger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-        } as unknown as HandlerContext['debugLogger'],
-        sendMessage: jest.fn(),
-        context: {
-            secrets: {},
-            globalState: { get: jest.fn(), update: jest.fn() },
-        } as unknown as HandlerContext['context'],
-        sharedState: {},
-        authManager: {
-            isAuthenticated: jest.fn().mockResolvedValue(true),
-            getTokenManager: jest.fn().mockReturnValue({
-                getAccessToken: jest.fn().mockResolvedValue('mock-token'),
-            }),
-        },
-    } as unknown as HandlerContext;
-}
-
-function createEdsConfig() {
-    return {
-        repoName: 'test-repo',
-        repoMode: 'new' as const,
-        daLiveOrg: 'test-org',
-        daLiveSite: 'test-site',
-        githubOwner: 'test-owner',
-        templateOwner: 'tmpl-owner',
-        templateRepo: 'tmpl-repo',
-        createdRepo: {
-            owner: 'test-owner',
-            name: 'test-repo',
-            url: 'https://github.com/test-owner/test-repo',
-            fullName: 'test-owner/test-repo',
-        },
-    };
-}
-
 // =============================================================================
 // Tests
 // =============================================================================
+
+/**
+ * ADR-015 (2026-08-28): this boundary resolves the shell executor from the
+ * registry, which the shared node setup empties after EVERY test — so the fake
+ * is seeded per-test rather than mocked at the module level.
+ */
+beforeEach(() => {
+    ServiceLocator.setCommandExecutor(createMockCommandExecutor());
+});
+
+/**
+ * The GitHub App service, handed in through the phases' `servicesOverride`.
+ *
+ * There used to be a `jest.mock` of the CLASS here. It was load-bearing: the real
+ * `isAppInstalled` reaches the network, and `resolveAppInstallation` runs it on this
+ * path. Typed to `SetupGitHubAppService`, the two-call view the phases actually use.
+ */
+const SERVICES: Partial<SetupServices> = {
+    githubAppService: {
+        getInstallUrl: () => 'https://github.com/apps/aem-code-sync/installations/select_target',
+        isAppInstalled: jest.fn().mockResolvedValue({ isInstalled: true }),
+    },
+};
 
 describe('executeStorefrontSetupPhases - Mid-pipeline Recovery', () => {
     let mockContext: HandlerContext;
 
     beforeEach(() => {
         jest.clearAllMocks();
-        mockContext = createMockContext();
+        mockContext = createSetupContext();
     });
 
     // =========================================================================
@@ -226,6 +133,8 @@ describe('executeStorefrontSetupPhases - Mid-pipeline Recovery', () => {
             mockContext,
             createEdsConfig(),
             new AbortController().signal,
+            undefined,
+            SERVICES,
         );
 
         // Then: ensureDaLiveAuth should have been called
@@ -250,6 +159,8 @@ describe('executeStorefrontSetupPhases - Mid-pipeline Recovery', () => {
             mockContext,
             createEdsConfig(),
             new AbortController().signal,
+            undefined,
+            SERVICES,
         );
 
         // Then: Pipeline should have been called twice
@@ -271,6 +182,8 @@ describe('executeStorefrontSetupPhases - Mid-pipeline Recovery', () => {
             mockContext,
             createEdsConfig(),
             new AbortController().signal,
+            undefined,
+            SERVICES,
         );
 
         // Then: Should return error (caught by outer try-catch)
@@ -295,6 +208,8 @@ describe('executeStorefrontSetupPhases - Mid-pipeline Recovery', () => {
             mockContext,
             createEdsConfig(),
             new AbortController().signal,
+            undefined,
+            SERVICES,
         );
 
         // Then: Should return error
@@ -317,6 +232,8 @@ describe('executeStorefrontSetupPhases - Mid-pipeline Recovery', () => {
             mockContext,
             createEdsConfig(),
             new AbortController().signal,
+            undefined,
+            SERVICES,
         );
 
         // Then: Should have attempted pipeline 3 times (initial + 2 retries)
@@ -340,6 +257,8 @@ describe('executeStorefrontSetupPhases - Mid-pipeline Recovery', () => {
             mockContext,
             createEdsConfig(),
             new AbortController().signal,
+            undefined,
+            SERVICES,
         );
 
         // Then: Should NOT call ensureDaLiveAuth
@@ -366,6 +285,8 @@ describe('executeStorefrontSetupPhases - Mid-pipeline Recovery', () => {
             mockContext,
             createEdsConfig(),
             new AbortController().signal,
+            undefined,
+            SERVICES,
         );
 
         // Then: Should send auth-recovery progress
@@ -421,7 +342,7 @@ describe('executeStorefrontSetupPhases - Phase 2-3 Configuration Recovery', () =
 
     beforeEach(() => {
         jest.clearAllMocks();
-        mockContext = createMockContext();
+        mockContext = createSetupContext();
         // Default: pipeline succeeds
         mockExecuteEdsPipeline.mockResolvedValue({ success: true, contentFilesCopied: 0, libraryPaths: [] });
     });
@@ -440,6 +361,8 @@ describe('executeStorefrontSetupPhases - Phase 2-3 Configuration Recovery', () =
             mockContext,
             createEdsConfig(),
             new AbortController().signal,
+            undefined,
+            SERVICES,
         );
 
         // Then: Should succeed after recovery
@@ -461,6 +384,8 @@ describe('executeStorefrontSetupPhases - Phase 2-3 Configuration Recovery', () =
             mockContext,
             createEdsConfig(),
             new AbortController().signal,
+            undefined,
+            SERVICES,
         );
 
         // Then: Should send auth-recovery progress for phase 2-3
@@ -491,6 +416,8 @@ describe('executeStorefrontSetupPhases - Phase 2-3 Configuration Recovery', () =
             mockContext,
             createEdsConfig(),
             new AbortController().signal,
+            undefined,
+            SERVICES,
         );
 
         // Then: Should return error
@@ -509,6 +436,8 @@ describe('executeStorefrontSetupPhases - Phase 2-3 Configuration Recovery', () =
             mockContext,
             createEdsConfig(),
             new AbortController().signal,
+            undefined,
+            SERVICES,
         );
 
         // Then: configureDaLivePermissions called 3 times (initial + 2 retries)

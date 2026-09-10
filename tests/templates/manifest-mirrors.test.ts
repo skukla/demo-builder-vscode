@@ -133,7 +133,7 @@ describe('settings keys mirror package.json', () => {
         const orphans = [...referenced].filter((k) => !declaredOrPrefix(k));
         // The class this catches: a setting renamed/retired in package.json
         // while code still watches the old key (ai.surface, aemAuthorUrl).
-        expect(orphans.sort()).toEqual([]);
+        expect(orphans.sort()).toStrictEqual([]);
     });
 
     it('every declared setting is referenced somewhere in code', () => {
@@ -153,7 +153,7 @@ describe('settings keys mirror package.json', () => {
         const dead = [...declared].filter((k) => !isReferenced(k));
         // A declared-but-unread setting is UI the user can set that does
         // nothing — the inverse orphan.
-        expect(dead.sort()).toEqual([]);
+        expect(dead.sort()).toStrictEqual([]);
     });
 });
 
@@ -176,7 +176,7 @@ describe('contributes.commands mirror registrations', () => {
         }
         expect(registered.size).toBeGreaterThan(10); // vacuous-pass guard
         const unregistered = [...declaredCmds].filter((c) => !registered.has(c));
-        expect(unregistered.sort()).toEqual([]);
+        expect(unregistered.sort()).toStrictEqual([]);
     });
 });
 
@@ -205,7 +205,7 @@ describe('webview bundle names mirror esbuild WEBVIEW_ENTRIES', () => {
         }
         expect(used.size).toBeGreaterThanOrEqual(8);
         const phantom = [...used].filter((u) => !entries.has(u));
-        expect(phantom.sort()).toEqual([]);
+        expect(phantom.sort()).toStrictEqual([]);
     });
 });
 
@@ -241,7 +241,7 @@ describe('cross-config id references resolve', () => {
             }
         }
         expect(refs.length).toBeGreaterThan(0); // vacuous-pass guard
-        expect(refs.filter((r) => !packageIds.has(r)).sort()).toEqual([]);
+        expect(refs.filter((r) => !packageIds.has(r)).sort()).toStrictEqual([]);
     });
 
     it('demo-package addon references name real components.json addons', () => {
@@ -250,6 +250,6 @@ describe('cross-config id references resolve', () => {
             Object.keys(p.addons ?? {})
         );
         expect(refs.length).toBeGreaterThan(0); // vacuous-pass guard
-        expect(refs.filter((r: string) => !addonIds.has(r)).sort()).toEqual([]);
+        expect(refs.filter((r: string) => !addonIds.has(r)).sort()).toStrictEqual([]);
     });
 });

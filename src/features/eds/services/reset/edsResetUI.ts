@@ -16,6 +16,8 @@
  * @module features/eds/services/reset/edsResetUI
  */
 
+import type { GitHubAppService } from '../github/githubAppService';
+import type { MeshRedeployDeps } from './edsResetMeshHelper';
 import {
     executeEdsReset,
     extractResetParams,
@@ -25,6 +27,7 @@ import {
 import { COMPONENT_IDS } from '@/core/constants';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import type { Project, ProjectStatus } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 
@@ -33,15 +36,24 @@ import type { HandlerContext } from '@/types/handlers';
 // ==========================================================
 
 /**
- * Options for the full reset UI flow
+ * Options for the full EDS reset UI flow.
+ *
+ * RENAMED 2026-08-28: this was `ResetWithUIOptions`, the same name the generic
+ * reset in `lifecycle/services/projectResetService.ts` uses for a DIFFERENT
+ * shape. They are variants, not duplicates — this one carries five EDS-only
+ * toggles the generic reset must not have — but two exported types sharing a
+ * name across modules is a trap: importing the wrong one typechecks wherever
+ * the fields happen to overlap.
  */
-export interface ResetWithUIOptions {
+export interface EdsResetWithUIOptions {
     /** Project to reset */
     project: Project;
     /** Handler context */
     context: HandlerContext;
     /** Log prefix for messages (e.g., '[Dashboard]' or '[ProjectsList]') */
     logPrefix?: string;
+    /** ADR-015: collaborators the mesh-redeploy step needs, from the handler. */
+    meshDeps: MeshRedeployDeps;
     /** Include block library configuration (default: false) */
     includeBlockLibrary?: boolean;
     /** Verify CDN resources after publish (default: false) */
@@ -55,6 +67,15 @@ export interface ResetWithUIOptions {
      * defaults to the bundled demo-packages.json inside extractResetParams.
      */
     packages?: Parameters<typeof extractResetParams>[1];
+    /**
+     * GitHub App service. Injectable for tests; defaults to one built from the
+     * context's GitHub and DA.live credentials inside the App check.
+     *
+     * The check reaches it through `await import(...)`, which is precisely why the
+     * six suites in this family could only supply one by mocking the module —
+     * ADR-016's wall. A dynamic import has no seam unless the caller offers one.
+     */
+    githubAppService?: GitHubAppService;
 }
 
 // ==========================================================
@@ -100,10 +121,9 @@ async function checkAdobeAuth(
     context: HandlerContext,
     originalStatus: ProjectStatus,
     logPrefix: string,
+    authService: AuthenticationService,
 ): Promise<EdsResetResult | null> {
     const { ensureAdobeIOAuth } = await import('@/core/auth/adobeAuthGuard');
-    const { ServiceLocator } = await import('@/core/di');
-    const authService = ServiceLocator.getAuthenticationService();
 
     const result = await ensureAdobeIOAuth({
         authManager: authService,
@@ -146,13 +166,11 @@ async function checkOrgContext(
     context: HandlerContext,
     originalStatus: ProjectStatus,
     logPrefix: string,
+    authService: AuthenticationService,
 ): Promise<EdsResetResult | null> {
     const { ensureProjectOrgContext } = await import(
         '@/features/authentication/services/ensureProjectOrgContext'
     );
-    const { ServiceLocator } = await import('@/core/di');
-    const authService = ServiceLocator.getAuthenticationService();
-
     const result = await ensureProjectOrgContext({
         authManager: authService,
         project,
@@ -186,19 +204,22 @@ async function checkGitHubAppInstallation(
     project: Project,
     originalStatus: ProjectStatus,
     logPrefix: string,
+    injectedAppService?: GitHubAppService,
 ): Promise<EdsResetResult | null> {
     const { getGitHubServices } = await import('../../handlers/edsHelpers');
-    const { tokenService: preCheckTokenService } = getGitHubServices(context);
+    const { tokenService: preCheckTokenService } = getGitHubServices(context.context.secrets);
     const { GitHubAppService } = await import('../github/githubAppService');
     // The DA.live session rides along: a site carrying any `access.admin` role
     // refuses the GitHub token outright, and storefront setup now pins one on
     // every project it registers.
     const { tryCreateDaLiveTokenProvider } = await import('../../handlers/edsHelpers');
-    const appService = new GitHubAppService(
-        preCheckTokenService,
-        context.logger,
-        tryCreateDaLiveTokenProvider(context.context),
-    );
+    const appService =
+        injectedAppService ??
+        new GitHubAppService(
+            preCheckTokenService,
+            context.logger,
+            tryCreateDaLiveTokenProvider(context.context),
+        );
     const { resolveAppInstallation } = await import('../appInstallationResolver');
     const outcome = await resolveAppInstallation(
         appService,
@@ -301,7 +322,7 @@ async function showResetResultNotifications(
         }
     } else if (result.error) {
         if (showLogsOnError) {
-            const { getLogger } = await import('@/core/logging');
+            const { getLogger } = await import('@/core/logging/debugLogger');
             vscode.window
                 .showErrorMessage(`Failed to reset EDS project: ${result.error}`, 'Show Logs')
                 .then((sel) => {
@@ -338,7 +359,7 @@ async function showResetResultNotifications(
  * @param options - Reset options
  * @returns Reset result
  */
-export async function resetEdsProjectWithUI(options: ResetWithUIOptions): Promise<EdsResetResult> {
+export async function resetEdsProjectWithUI(options: EdsResetWithUIOptions): Promise<EdsResetResult> {
     const {
         project,
         context,
@@ -445,6 +466,7 @@ export async function resetEdsProjectWithUI(options: ResetWithUIOptions): Promis
                         context,
                         originalStatus,
                         logPrefix,
+                        options.meshDeps.authManager,
                     );
                     if (adobeResult) return adobeResult;
 
@@ -454,6 +476,7 @@ export async function resetEdsProjectWithUI(options: ResetWithUIOptions): Promis
                         context,
                         originalStatus,
                         logPrefix,
+                        options.meshDeps.authManager,
                     );
                     if (orgResult) return orgResult;
                 }
@@ -467,6 +490,7 @@ export async function resetEdsProjectWithUI(options: ResetWithUIOptions): Promis
                     project,
                     originalStatus,
                     logPrefix,
+                    options.githubAppService,
                 );
                 if (appResult) return appResult;
 
@@ -503,7 +527,7 @@ export async function resetEdsProjectWithUI(options: ResetWithUIOptions): Promis
                     await removeProjectSampleData(project, context, progress);
                 }
 
-                const result = await executeEdsReset(resetParams, context, tokenProvider, (p) => {
+                const result = await executeEdsReset(resetParams, context, tokenProvider, options.meshDeps, (p) => {
                     progress.report({ message: `Step ${p.step}/${p.totalSteps}: ${p.message}` });
                 });
 
@@ -580,11 +604,11 @@ async function confirmSampleDataRemoval(
     vscode: typeof import('vscode'),
     canRemove: Promise<boolean> | undefined,
 ): Promise<boolean> {
+    // One condition, not a guard and then an await: `canRemove` is undefined
+    // exactly when `datapack` is (the check above gates on the same field), so a
+    // separate `!canRemove` test could never be the deciding one.
     const { datapack } = project;
-    if (!datapack || !canRemove) {
-        return false;
-    }
-    if (!(await canRemove)) {
+    if (!datapack || !(await canRemove)) {
         return false;
     }
 

@@ -6,7 +6,7 @@
  */
 
 import { getFrontendEnvVars, updateFrontendState } from '@/core/state/projectStateSync';
-import { Project } from '@/types';
+import { Project } from '@/types/base';
 
 describe('projectStateSync', () => {
     describe('getFrontendEnvVars', () => {

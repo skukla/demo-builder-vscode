@@ -35,15 +35,36 @@ module.exports = {
       cacheDirectory: '<rootDir>/.jest-cache/node',
       testMatch: [
         '**/tests/**/*.test.ts',
-        '!**/tests/webview-ui/**/*.test.ts',
-        '!**/tests/webview-ui/**/*.test.tsx'
+        // The whole `tests/core/ui` subtree is React: components, hooks and the
+        // utilities they call. It runs under the react project below, which owns
+        // jsdom and the fake-timer contract. Until 2026-09-02 the shared half of
+        // it lived in `tests/webview-ui/` and was excluded here by that name; the
+        // suites moved to their subjects' mirror, so the exclusion follows the
+        // subject instead of the old tree.
+        '!**/tests/core/ui/**/*.test.ts',
+        '!**/tests/core/ui/**/*.test.tsx',
+        // A feature's React HOOK suites are `.test.ts`, not `.test.tsx`, so the
+        // extension rule above would hand them to node. Until 2026-09-03 each carried
+        // a `@jest-environment jsdom` docblock instead — eighteen of them — which
+        // works for jest and silently defeats Stryker: a per-file environment
+        // bypasses the coverage hook, and every mutation run on those modules failed.
+        // The environment is decided HERE, once, and a docblock is now an enforcer
+        // failure (`tests/sop/no-jest-environment-docblocks.test.ts`).
+        '!**/tests/features/**/ui/**/use*.test.ts'
       ],
       // `roots` (top-level) does not propagate into `projects`, so Jest would
       // otherwise crawl the whole repo — including agent worktrees under
       // `.claude/worktrees/`, which carry stale duplicate copies of every test.
       // Ignore them so runs are deterministic regardless of in-flight worktrees.
-      testPathIgnorePatterns: ['/node_modules/', '<rootDir>/.claude/worktrees/'],
-      modulePathIgnorePatterns: ['<rootDir>/.claude/worktrees/'],
+      testPathIgnorePatterns: [
+          '/node_modules/',
+          '<rootDir>/.claude/worktrees/',
+          '<rootDir>/.stryker-tmp',
+      ],
+      modulePathIgnorePatterns: [
+          '<rootDir>/.claude/worktrees/',
+          '<rootDir>/.stryker-tmp',
+      ],
       transform: {
         '^.+\\.ts$': ['@swc/jest', {
           jsc: {
@@ -90,16 +111,24 @@ module.exports = {
       cache: true,
       cacheDirectory: '<rootDir>/.jest-cache/react',
       testMatch: [
-        '**/tests/webview-ui/**/*.test.ts',
-        '**/tests/webview-ui/**/*.test.tsx',
         '**/tests/features/**/*.test.tsx',
+        '**/tests/core/ui/**/*.test.ts',
         '**/tests/core/ui/**/*.test.tsx',
+        // See the node project's matching exclusion for why hook suites are named here.
+        '**/tests/features/**/ui/**/use*.test.ts',
         '**/src/features/**/*.test.tsx'
       ],
       // See node project: ignore agent worktrees so their stale duplicate test
       // copies don't run against the live source via the `@/` aliases.
-      testPathIgnorePatterns: ['/node_modules/', '<rootDir>/.claude/worktrees/'],
-      modulePathIgnorePatterns: ['<rootDir>/.claude/worktrees/'],
+      testPathIgnorePatterns: [
+          '/node_modules/',
+          '<rootDir>/.claude/worktrees/',
+          '<rootDir>/.stryker-tmp',
+      ],
+      modulePathIgnorePatterns: [
+          '<rootDir>/.claude/worktrees/',
+          '<rootDir>/.stryker-tmp',
+      ],
       transform: {
         '^.+\\.(ts|tsx)$': ['@swc/jest', {
           jsc: {

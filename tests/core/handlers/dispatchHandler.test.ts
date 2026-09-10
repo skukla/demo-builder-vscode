@@ -9,15 +9,18 @@
 
 import { dispatchHandler, hasHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 import type { HandlerMap, HandlerContext } from '@/types/handlers';
+import { createMockLogger } from '../../helpers/loggerFake';
 
+import { createMockExtensionContext } from '../../helpers/extensionContextFake';
+import { createMockStateManager } from '../../helpers/stateManagerFake';
 // Mock handler context factory
 function createMockContext(): HandlerContext {
     return {
-        logger: { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() } as any,
-        debugLogger: { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() } as any,
-        context: {} as any,
+        logger: createMockLogger(),
+        debugLogger: createMockLogger(),
+        context: createMockExtensionContext(),
         panel: undefined,
-        stateManager: {} as any,
+        stateManager: createMockStateManager(),
         communicationManager: undefined,
         sendMessage: jest.fn(),
         sharedState: { isAuthenticating: false },

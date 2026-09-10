@@ -17,90 +17,66 @@ import {
 
 // ─── sanitizeTemplateValue ────────────────────────────────────────────────────
 
+/**
+ * The cases are DATA, and the label on each row is the SECURITY RATIONALE — which
+ * Markdown construct that character would have opened. Those reasons were the
+ * only thing the one-test-per-character form carried that a table does not, so
+ * they are kept verbatim as row labels.
+ *
+ * Every row asserts the EXACT output. Five of these previously asserted
+ * `not.toContain('](')` or similar: true of any mangling, not just the right one,
+ * so a mutant that stripped the wrong characters passed. `sanitizeTemplateValue`
+ * removes [\n\r#*`|>[\]()] and `sanitizeGithubSlug` keeps only
+ * [a-zA-Z0-9._/-], so the exact result is knowable in every case.
+ */
+const TEMPLATE_VALUE: ReadonlyArray<readonly [string, string, string]> = [
+    ['a newline, which would open a heading', 'my-project\n## Injected heading', 'my-project Injected heading'],
+    ['a carriage return', 'value\rextra', 'valueextra'],
+    ['a hash, an inline heading marker', 'value#extra', 'valueextra'],
+    ['asterisks, bold', '**bold**', 'bold'],
+    ['asterisks, italic', '*italic*', 'italic'],
+    ['backticks, a code span', '`code`', 'code'],
+    ['a pipe, a table cell', 'cell | injected', 'cell  injected'],
+    ['an angle bracket, a blockquote', '> blockquote', ' blockquote'],
+    ['a bracket-paren pair, an inline link', 'My Project](https://evil.com', 'My Projecthttps://evil.com'],
+    ['an opening bracket, a reference link', 'project[ref', 'projectref'],
+];
+
+const TEMPLATE_VALUE_PRESERVED: ReadonlyArray<readonly [string, string]> = [
+    ['an underscore, common in identifiers and safe in CommonMark word context', 'my_block_name'],
+    ['an empty string', ''],
+    ['ordinary words', 'hello world'],
+    ['a slug with hyphens and an underscore', 'my-demo-project_v2'],
+];
+
 describe('sanitizeTemplateValue', () => {
-    it('strips newlines (\n) to prevent Markdown heading injection', () => {
-        const result = sanitizeTemplateValue('my-project\n## Injected heading');
-
-        expect(result).not.toContain('## Injected heading');
-        expect(result).toContain('my-project');
+    it.each(TEMPLATE_VALUE)('strips %s', (_why, input, expected) => {
+        expect(sanitizeTemplateValue(input)).toBe(expected);
     });
 
-    it('strips carriage returns (\r) from strings', () => {
-        expect(sanitizeTemplateValue('value\rextra')).toBe('valueextra');
-    });
-
-    it('strips # to prevent inline heading marker injection', () => {
-        expect(sanitizeTemplateValue('value#extra')).toBe('valueextra');
-    });
-
-    it('strips * to prevent Markdown bold/italic injection', () => {
-        expect(sanitizeTemplateValue('**bold**')).toBe('bold');
-        expect(sanitizeTemplateValue('*italic*')).toBe('italic');
-    });
-
-    it('strips backtick to prevent Markdown code span injection', () => {
-        expect(sanitizeTemplateValue('`code`')).toBe('code');
-    });
-
-    it('strips | to prevent Markdown table cell injection', () => {
-        expect(sanitizeTemplateValue('cell | injected')).toBe('cell  injected');
-    });
-
-    it('strips > to prevent Markdown blockquote injection', () => {
-        expect(sanitizeTemplateValue('> blockquote')).toBe(' blockquote');
-    });
-
-    it('strips ] ( ) to prevent Markdown link injection via crafted project names', () => {
-        // A project name like 'My Project](https://evil.com' would inject a link in CLAUDE.md
-        const result = sanitizeTemplateValue('My Project](https://evil.com');
-        expect(result).not.toContain('](');
-        expect(result).toContain('My Project');
-    });
-
-    it('strips [ to prevent Markdown reference-style link injection', () => {
-        expect(sanitizeTemplateValue('project[ref')).not.toContain('[');
-    });
-
-    it('preserves _ because it is common in identifiers and safe in CommonMark word context', () => {
-        expect(sanitizeTemplateValue('my_block_name')).toBe('my_block_name');
-    });
-
-    it('returns empty string unchanged', () => {
-        expect(sanitizeTemplateValue('')).toBe('');
-    });
-
-    it('preserves safe characters unchanged', () => {
-        expect(sanitizeTemplateValue('hello world')).toBe('hello world');
-        expect(sanitizeTemplateValue('my-demo-project_v2')).toBe('my-demo-project_v2');
+    it.each(TEMPLATE_VALUE_PRESERVED)('preserves %s', (_why, input) => {
+        expect(sanitizeTemplateValue(input)).toBe(input);
     });
 });
 
 // ─── sanitizeGithubSlug ───────────────────────────────────────────────────────
 
+const GITHUB_SLUG: ReadonlyArray<readonly [string, string, string]> = [
+    ['a bracket-paren pair that would break link syntax', 'org](https://evil.com', 'orghttps//evil.com'],
+    ['a space', 'org space', 'orgspace'],
+    ['a newline and the heading it would open', 'org\n## Injected', 'orgInjected'],
+];
+
 describe('sanitizeGithubSlug', () => {
-    it('allows alphanumeric characters, dots, hyphens, underscores, and slashes', () => {
+    it('keeps the characters GitHub actually allows', () => {
         expect(sanitizeGithubSlug('my-org/my-repo.v1_2')).toBe('my-org/my-repo.v1_2');
     });
 
-    it('strips ] ( ) that could break Markdown link syntax', () => {
-        const result = sanitizeGithubSlug('org](https://evil.com');
-
-        expect(result).not.toContain('](');
-        expect(result).not.toContain(')');
+    it.each(GITHUB_SLUG)('strips %s', (_why, input, expected) => {
+        expect(sanitizeGithubSlug(input)).toBe(expected);
     });
 
-    it('strips spaces and other non-allowlist characters', () => {
-        expect(sanitizeGithubSlug('org space')).toBe('orgspace');
-    });
-
-    it('strips newlines that could enable heading injection', () => {
-        const result = sanitizeGithubSlug('org\n## Injected');
-
-        expect(result).not.toContain('\n');
-        expect(result).not.toContain('## Injected');
-    });
-
-    it('returns empty string for empty input', () => {
+    it('returns an empty string unchanged', () => {
         expect(sanitizeGithubSlug('')).toBe('');
     });
 });
@@ -127,25 +103,15 @@ describe('sanitizeUrl', () => {
         expect(sanitizeUrl('https://da.live/#/org/site')).toBe('https://da.live/#/org/site');
     });
 
-    it('strips newlines to prevent Markdown heading injection', () => {
-        const result = sanitizeUrl('https://example.com\n## Injected Heading');
-
-        expect(result).not.toContain('\n## Injected Heading');
-        expect(result).toContain('https://example.com');
-    });
-
-    it('strips ] ( ) to prevent Markdown link injection', () => {
-        const result = sanitizeUrl('https://example.com](https://attacker.com');
-
-        expect(result).not.toContain('](https://attacker.com');
-        expect(result).toContain('https://example.com');
-    });
-
-    it('strips [ to prevent Markdown reference-style link injection', () => {
-        const result = sanitizeUrl('https://example.com[text');
-
-        expect(result).not.toContain('[');
-        expect(result).toContain('https://example.com');
+    // Exact outputs, not `not.toContain`: sanitizeUrl strips [\n\r[\]()] and keeps
+    // everything else, so what survives is knowable. An assertion that the bad
+    // substring is absent is true of any mangling, including a wrong one.
+    it.each([
+        ['a newline and the heading it would open', 'https://example.com\n## Injected Heading', 'https://example.com## Injected Heading'],
+        ['a bracket-paren pair, an inline link', 'https://example.com](https://attacker.com', 'https://example.comhttps://attacker.com'],
+        ['an opening bracket, a reference link', 'https://example.com[text', 'https://example.comtext'],
+    ])('strips %s', (_why, input, expected) => {
+        expect(sanitizeUrl(input)).toBe(expected);
     });
 });
 
@@ -166,14 +132,13 @@ describe('sanitizeBlockId', () => {
         expect(sanitizeBlockId('block name')).toBe('blockname');
     });
 
-    it('strips ] ( ) that could break Markdown link syntax', () => {
-        const result = sanitizeBlockId('btn](https://evil.com');
-        expect(result).not.toContain('](');
-        expect(result).not.toContain(')');
-    });
-
-    it('strips [ to prevent Markdown reference-style link injection', () => {
-        expect(sanitizeBlockId('block[ref')).not.toContain('[');
+    it.each([
+        ['a bracket-paren pair that would break link syntax', 'btn](https://evil.com', 'btnhttpsevilcom'],
+        ['an opening bracket, a reference link', 'block[ref', 'blockref'],
+    ])('strips %s', (_why, input, expected) => {
+        // sanitizeBlockId keeps only [a-zA-Z0-9_-], so the colon and slashes go
+        // too — which `not.toContain('](')` never said.
+        expect(sanitizeBlockId(input)).toBe(expected);
     });
 
     it('strips # to prevent Markdown heading injection', () => {

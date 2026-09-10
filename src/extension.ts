@@ -3,19 +3,21 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { CommandManager } from '@/commands/commandManager';
-import { BaseWebviewCommand } from '@/core/base';
+import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { describeBuildInfo, readBuildInfo } from '@/core/build/buildInfo';
 import { registerBuildStamp } from '@/core/build/buildStampUi';
-import { ServiceLocator } from '@/core/di';
-import { initializeLogger, getLogger } from '@/core/logging';
-import { CommandExecutor } from '@/core/shell';
-import { StateManager } from '@/core/state';
+import { ServiceLocator } from '@/core/di/serviceLocator';
+import { getLogger, initializeLogger } from '@/core/logging/debugLogger';
+import { CommandExecutor } from '@/core/shell/commandExecutor';
+import { createCommandExecutorDeps } from '@/core/shell/commandExecutorDeps';
 import { sweepManifestFormat } from '@/core/state/manifestFormatSweep';
+import { StateManager } from '@/core/state/stateManager';
 import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
 import { resolveProjectsRoot } from '@/core/utils/projectsRoot';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { WorkspaceWatcherManager, EnvFileWatcherService } from '@/core/vscode';
+import { EnvFileWatcherService } from '@/core/vscode/envFileWatcherService';
+import { WorkspaceWatcherManager } from '@/core/vscode/workspaceWatcherManager';
 import { ACTION_DESCRIPTORS } from '@/features/ai/server/actionDescriptors';
 import { registerAdobeResourceTools } from '@/features/ai/server/adobeResourceTools';
 import { registerAdobeTools } from '@/features/ai/server/adobeTools';
@@ -23,6 +25,8 @@ import {
     createAgentConsentGate,
     createAgentOperationNotifier,
 } from '@/features/ai/server/agentOperationNotifier';
+import { createAgentTraceFileSink } from '@/features/ai/server/agentTraceSink';
+import { registerAgentTraceTool } from '@/features/ai/server/agentTraceTool';
 import { registerApplyUpdatesTool } from '@/features/ai/server/applyUpdatesTool';
 import { registerAuthTools } from '@/features/ai/server/authTools';
 import { registerCloudResourceTools } from '@/features/ai/server/cloudResourceTools';
@@ -32,10 +36,6 @@ import { registerComponentRequirementsTool } from '@/features/ai/server/componen
 import { registerConfigureProjectTool } from '@/features/ai/server/configureProjectTool';
 import { registerContentAuthoringTools } from '@/features/ai/server/contentAuthoringTools';
 import { registerCreateProjectTool } from '@/features/ai/server/createProjectTool';
-import { createAgentTraceFileSink } from '@/features/ai/server/agentTraceSink';
-import { registerAgentTraceTool } from '@/features/ai/server/agentTraceTool';
-import { narrationFor } from '@/features/ai/server/toolNarration';
-import { createScopedStateManager } from '@/features/ai/server/scopedStateManager';
 import { registerCurrentProjectTool } from '@/features/ai/server/currentProjectTool';
 import { DATA_INSTALLER_DESCRIPTORS } from '@/features/ai/server/dataInstallerDescriptors';
 import { registerDeleteProjectTool } from '@/features/ai/server/deleteProjectTool';
@@ -50,15 +50,17 @@ import {
 import { registerLifecycleTools } from '@/features/ai/server/lifecycleTools';
 import { registerProjectStatusTool } from '@/features/ai/server/projectStatusTool';
 import { READ_DESCRIPTORS } from '@/features/ai/server/readDescriptors';
+import { createScopedStateManager } from '@/features/ai/server/scopedStateManager';
 import { registerSettingsTools } from '@/features/ai/server/settingsTools';
 import { registerSiteTools } from '@/features/ai/server/siteTools';
 import { STATUS_DESCRIPTORS } from '@/features/ai/server/statusDescriptors';
 import { registerStorefrontTools } from '@/features/ai/server/storefrontTools';
 import { registerDescriptorTools } from '@/features/ai/server/toolDescriptors';
+import { narrationFor } from '@/features/ai/server/toolNarration';
 import { ToolTraceRecorder } from '@/features/ai/server/toolTraceRecorder';
 import { registerValidateSelectionTool } from '@/features/ai/server/validateSelectionTool';
 import { registerViewTools } from '@/features/ai/server/viewTools';
-import { AuthenticationService } from '@/features/authentication';
+import { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { sweepCommerceSecrets } from '@/features/components/services/commerceSecretSweep';
 import { shouldAutoReopenProjectsList } from '@/features/dashboard/commands/showDashboard';
 import { seedDefaultAiPrompts } from '@/features/dashboard/services/defaultPromptsSeeder';
@@ -78,7 +80,7 @@ import {
     refreshHomeAgentsMd,
 } from '@/features/project-creation/services/aiBundle/homeAiContextWriter';
 import { registerThirdPartyToolingSettingListener } from '@/features/project-creation/services/aiBundle/thirdPartyToolingSettingListener';
-import { SidebarProvider } from '@/features/sidebar';
+import { SidebarProvider } from '@/features/sidebar/providers/sidebarProvider';
 import type { McpCredentialProvider } from '@/mcp-server';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
@@ -114,7 +116,7 @@ let inExtensionMcpServer: InExtensionMcpServer | undefined;
  * per-connection recorder would cut that trace in half at the seam.
  *
  * NOTHING READS IT TODAY. Its only consumer was the prompt-evaluation surface,
- * which moved to `feature/prompt-workbench` — see AI-3b. The recorder stays
+ * which moved to `feature/evaluation-mode-dry-run` — see AI-3b. The recorder stays
  * wired because the write is one array push against a capped buffer and it is
  * the foundation AI-2 ("can you see what the agent is doing") needs; pulling
  * the `trace` hook out would mean surgery inside the core MCP server. If AI-2
@@ -293,7 +295,7 @@ export async function activate(context: vscode.ExtensionContext) {
         });
 
         // Initialize external command manager
-        externalCommandManager = new CommandExecutor();
+        externalCommandManager = new CommandExecutor(createCommandExecutorDeps());
 
         // Register CommandExecutor with ServiceLocator (breaks circular dependencies)
         ServiceLocator.setCommandExecutor(externalCommandManager);
@@ -426,9 +428,20 @@ export async function activate(context: vscode.ExtensionContext) {
         // Republish affected EDS projects when an EW-URL-affecting daLive setting
         // (ewCanvasBranch / authoringExperience) changes — confirm-gated, debounced.
         context.subscriptions.push(
-            registerEwSettingChangeListener({ context, stateManager, logger }),
+            registerEwSettingChangeListener({
+            context,
+            stateManager,
+            logger,
+            // The SHARED token service: its validation cache is per-instance, so
+            // building a fresh one downstream would cost a GitHub round trip.
+            githubTokenService: getGitHubServices(context.secrets).tokenService,
+        }),
             // Step 7 of the third-party-tooling item: re-enabling must install.
-            registerThirdPartyToolingSettingListener(context.extensionPath, logger),
+            registerThirdPartyToolingSettingListener(
+                ServiceLocator.getCommandExecutor(),
+                context.extensionPath,
+                logger,
+            ),
         );
 
         // Initialize auto-updater (but don't check yet - wait for sidebar activation)
@@ -573,7 +586,12 @@ async function cleanupStaleFlagFiles(): Promise<void> {
 }
 
 export function deactivate() {
-    logger.info('Adobe Demo Builder extension is deactivating...');
+    // `logger?` for the same reason every disposal below is optional-chained:
+    // this runs on shutdown whatever happened at startup, and `logger` is only
+    // assigned once activation has got past its first few statements. Unguarded,
+    // this line threw before any of the guarded ones could run — so the whole
+    // defensive shape below it was unreachable in exactly the case it exists for.
+    logger?.info('Adobe Demo Builder extension is deactivating...');
 
     // Clean up resources
     autoUpdater?.dispose();
@@ -586,7 +604,7 @@ export function deactivate() {
     // Reset service locator
     ServiceLocator.reset();
 
-    logger.info('Adobe Demo Builder extension deactivated.');
+    logger?.info('Adobe Demo Builder extension deactivated.');
 }
 
 /**
@@ -617,7 +635,8 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
         const credentials: McpCredentialProvider = {
             getDaLiveToken: () => getDaLiveAuthService(context).getAccessToken(),
             getGitHubToken: async () =>
-                (await getGitHubServices(ctxFactory()).tokenService.getToken())?.token ?? null,
+                (await getGitHubServices(ctxFactory().context.secrets).tokenService.getToken())
+                    ?.token ?? null,
         };
         // One socket: the projects-root path, derivable without an open
         // workspace (the window model is "homed at the projects root, project
@@ -647,6 +666,12 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
             // consent/visibility design; see agentOperationNotifier.
             longRunningNotifier: createAgentOperationNotifier(logger),
             consentGate: createAgentConsentGate(logger),
+            // Standing consent, read live — must beat the chat ask (see the
+            // option's doc: headless clients auto-decline elicitation).
+            consentNotRequired: () =>
+                vscode.workspace
+                    .getConfiguration('demoBuilder')
+                    .get<boolean>('ai.requireAgentConsent', true) === false,
             trace: agentTrace,
             registerExtraTools: (mcpServer, scopedProjectDir) => {
                 // Per-connection scope (owner decision 2026-08-28): a session
@@ -691,6 +716,8 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
                 registerValidateSelectionTool(mcpServer, connCtxFactory);
                 registerComponentRequirementsTool(mcpServer);
                 registerAdobeResourceTools(mcpServer, connCtxFactory);
+                // I/O Events lifecycle (AB-6) — scoped to the current
+                // project's Console workspace; deletes are consent-gated.
                 registerConfigureProjectTool(mcpServer, connState);
                 registerCloudResourceTools(mcpServer, connCtxFactory);
                 registerStorefrontTools(mcpServer, connCtxFactory);

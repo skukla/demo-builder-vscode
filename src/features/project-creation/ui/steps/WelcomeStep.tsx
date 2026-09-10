@@ -133,8 +133,10 @@ export function WelcomeStep({
     );
 
     useEffect(() => {
-        const isProjectNameValid =
-            state.projectName.length >= 3 && validateProjectName(state.projectName) === undefined;
+        // `getProjectNameError` already refuses anything shorter than three
+        // characters, so a second length test here decided nothing — no input
+        // reaches one answer through it and the other answer around it.
+        const isProjectNameValid = validateProjectName(state.projectName) === undefined;
 
         // Package selection only — the architecture (stack) is chosen on the
         // Project Builder step that follows. Legacy mode (no packages) is
@@ -236,8 +238,8 @@ export function WelcomeStep({
     if (hasPackages && hasStacks) {
         return (
             <BrandGallery
-                packages={packages ?? []}
-                stacks={stacks ?? []}
+                packages={packages}
+                stacks={stacks}
                 selectedPackage={state.selectedPackage}
                 selectedStack={state.selectedStack}
                 onPackageSelect={handlePackageSelect}

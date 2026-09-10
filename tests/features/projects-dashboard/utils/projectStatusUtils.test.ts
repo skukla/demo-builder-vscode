@@ -18,7 +18,7 @@ import {
     getDeploymentSummary,
     hasIntegrations,
 } from '@/features/projects-dashboard/utils/projectStatusUtils';
-import { createMockProject, createRunningProject } from '../testUtils';
+import { createProjectsDashboardProject, createRunningProject } from '../testUtils';
 
 describe('projectStatusUtils', () => {
     describe('getStatusText', () => {
@@ -194,7 +194,7 @@ describe('projectStatusUtils', () => {
     describe('getFrontendPort', () => {
         it('should return undefined when project status is not running', () => {
             // Given: Stopped project
-            const project = createMockProject({ status: 'stopped' });
+            const project = createProjectsDashboardProject({ status: 'stopped' });
 
             // When: Getting frontend port
             const result = getFrontendPort(project);
@@ -205,7 +205,7 @@ describe('projectStatusUtils', () => {
 
         it('should return undefined when project has no componentInstances', () => {
             // Given: Running project with no component instances
-            const project = createMockProject({
+            const project = createProjectsDashboardProject({
                 status: 'running',
                 componentInstances: undefined,
             });
@@ -231,7 +231,7 @@ describe('projectStatusUtils', () => {
 
         it('should return undefined when no component instances have ports', () => {
             // Given: Running project with components but none have ports
-            const project = createMockProject({
+            const project = createProjectsDashboardProject({
                 status: 'running',
                 componentInstances: {
                     'api-mesh': {
@@ -301,7 +301,7 @@ describe('projectStatusUtils', () => {
         });
 
         it('contributes nothing when there is neither a component nor a summary', () => {
-            const project = createMockProject({
+            const project = createProjectsDashboardProject({
                 meshStatusSummary: undefined,
                 appBuilderComponents: {},
             });
@@ -313,14 +313,14 @@ describe('projectStatusUtils', () => {
         // creation says the project may have a mesh, not that it does — driving
         // the line off that is what put a placeholder on cards with no mesh.
         it('is still nothing for a stack that merely selected a mesh dependency', () => {
-            const project = createMockProject({
+            const project = createProjectsDashboardProject({
                 componentSelections: {
                     frontend: 'eds-storefront',
                     backend: 'adobe-commerce-accs',
                     dependencies: ['eds-accs-mesh'],
                     integrations: [],
                     appBuilder: [],
-                } as never,
+                },
                 meshStatusSummary: undefined,
                 appBuilderComponents: {},
             });
@@ -329,7 +329,7 @@ describe('projectStatusUtils', () => {
         });
 
         it('reads the keyed entry when no summary survived the reload', () => {
-            const project = createMockProject({
+            const project = createProjectsDashboardProject({
                 meshStatusSummary: undefined,
                 appBuilderComponents: { 'eds-accs-mesh': meshEntry('deployed') },
             });
@@ -344,7 +344,7 @@ describe('projectStatusUtils', () => {
             ['error', 'error'],
             ['stale', 'warning'],
         ] as const)('a keyed %s mesh needs attention, with the %s dot', (status, variant) => {
-            const project = createMockProject({
+            const project = createProjectsDashboardProject({
                 meshStatusSummary: undefined,
                 appBuilderComponents: { 'eds-accs-mesh': meshEntry(status) },
             });
@@ -356,7 +356,7 @@ describe('projectStatusUtils', () => {
         });
 
         it('a keyed not-deployed mesh is not a problem, just not shipped', () => {
-            const project = createMockProject({
+            const project = createProjectsDashboardProject({
                 meshStatusSummary: undefined,
                 appBuilderComponents: { 'eds-accs-mesh': meshEntry('not-deployed') },
             });
@@ -367,7 +367,7 @@ describe('projectStatusUtils', () => {
         it('PREFERS the live summary — it knows states the keyed entry cannot express', () => {
             // 'update-declined' has no keyed equivalent; reading the entry alone
             // would report a healthy mesh the user has already been warned about.
-            const project = createMockProject({
+            const project = createProjectsDashboardProject({
                 meshStatusSummary: 'update-declined',
                 appBuilderComponents: { 'eds-accs-mesh': meshEntry('deployed') },
             });
@@ -378,7 +378,7 @@ describe('projectStatusUtils', () => {
 
     describe('hasIntegrations', () => {
         it('is true for any keyed App Builder component', () => {
-            const project = createMockProject({
+            const project = createProjectsDashboardProject({
                 appBuilderComponents: {
                     'erp-sync': {
                         kind: 'integration',
@@ -396,7 +396,7 @@ describe('projectStatusUtils', () => {
         it.each(['not-deployed', 'error', 'stale'] as const)(
             'is true for a %s integration too',
             (status) => {
-                const project = createMockProject({
+                const project = createProjectsDashboardProject({
                     appBuilderComponents: {
                         'erp-sync': {
                             kind: 'integration',
@@ -411,7 +411,7 @@ describe('projectStatusUtils', () => {
         );
 
         it('counts the mesh — it is a card on that page too', () => {
-            const project = createMockProject({
+            const project = createProjectsDashboardProject({
                 appBuilderComponents: {
                     mesh: {
                         kind: 'mesh',
@@ -425,8 +425,8 @@ describe('projectStatusUtils', () => {
         });
 
         it('is false when the keyed map is absent or empty', () => {
-            expect(hasIntegrations(createMockProject({}))).toBe(false);
-            expect(hasIntegrations(createMockProject({ appBuilderComponents: {} }))).toBe(false);
+            expect(hasIntegrations(createProjectsDashboardProject({}))).toBe(false);
+            expect(hasIntegrations(createProjectsDashboardProject({ appBuilderComponents: {} }))).toBe(false);
         });
     });
 });
@@ -441,14 +441,16 @@ describe('projectStatusUtils', () => {
 // ACTS on the mesh, and this is a read.
 describe('mesh status resolution matches the canonical resolver', () => {
     it('prefers the canonical `mesh` key over another mesh entry', () => {
-        const project = {
+        const source = { owner: 'adobe', repo: 'commerce-mesh' };
+        const project = createProjectsDashboardProject({
+            meshStatusSummary: undefined,
             appBuilderComponents: {
                 // Insertion order deliberately puts the non-canonical one FIRST,
                 // which is what a bare find() would return.
-                'eds-accs-mesh': { kind: 'mesh', status: 'error' },
-                mesh: { kind: 'mesh', status: 'deployed' },
+                'eds-accs-mesh': { kind: 'mesh', status: 'error', source },
+                mesh: { kind: 'mesh', status: 'deployed', source },
             },
-        } as never;
+        });
 
         // The two entries disagree, so the verdict names which one was read: the
         // canonical 'deployed' gives "Deployed", the stray 'error' would not.
@@ -456,9 +458,16 @@ describe('mesh status resolution matches the canonical resolver', () => {
     });
 
     it('still falls back to the only mesh when there is no canonical key', () => {
-        const project = {
-            appBuilderComponents: { 'eds-accs-mesh': { kind: 'mesh', status: 'deployed' } },
-        } as never;
+        const project = createProjectsDashboardProject({
+            meshStatusSummary: undefined,
+            appBuilderComponents: {
+                'eds-accs-mesh': {
+                    kind: 'mesh',
+                    status: 'deployed',
+                    source: { owner: 'adobe', repo: 'commerce-mesh' },
+                },
+            },
+        });
 
         // The two entries disagree, so the verdict names which one was read: the
         // canonical 'deployed' gives "Deployed", the stray 'error' would not.

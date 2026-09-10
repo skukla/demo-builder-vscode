@@ -5,6 +5,7 @@
  */
 
 /* ========== Service Cards Grid ========== */
+@layer theme {
 .services-cards-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -12,32 +13,42 @@
     margin-top: 8px;
     align-items: start; /* Each card takes its natural height */
 }
+}
 
-@media (max-width: 600px) { /* bp: linear / single-col — service cards 2→1 (registry: custom-spectrum.css) */
+@media (max-width: 600px) { /* bp: linear / single-col — service cards 2→1 (registry: utilities.css) */
+@layer theme {
     .services-cards-grid {
         grid-template-columns: 1fr;
     }
 }
+}
 
+@layer theme {
 .service-card {
     background: var(--spectrum-global-color-gray-50);
     border: 1px solid var(--spectrum-global-color-gray-300);
     border-radius: 12px;
     padding: 20px;
-    transition: all 0.2s ease;
+    transition: all var(--spectrum-global-animation-duration-300) ease;
+}
 }
 
+@layer theme {
 .service-card:hover {
     background: var(--spectrum-global-color-gray-75);
 }
+}
 
+@layer theme {
 .service-card-header {
     display: flex;
     align-items: center;
     gap: 10px;
     margin-bottom: 8px;
 }
+}
 
+@layer theme {
 .service-icon {
     width: 24px;
     height: 24px;
@@ -46,58 +57,80 @@
     justify-content: center;
     border-radius: 6px;
 }
+}
 
+@layer theme {
 .github-icon {
     background: var(--spectrum-global-color-gray-800);
     color: var(--spectrum-global-color-gray-50);
 }
+}
 
+@layer theme {
 .github-icon svg {
     width: 16px;
     height: 16px;
 }
+}
 
+@layer theme {
 .dalive-icon {
     background: var(--spectrum-global-color-gray-700);
     color: var(--spectrum-global-color-gray-50);
     font-size: 10px;
     font-weight: 700;
 }
+}
 
+@layer theme {
 .service-card-title {
     font-size: 15px;
     font-weight: 600;
     color: var(--spectrum-global-color-gray-900);
 }
+}
 
+@layer theme {
 .service-card-description {
     font-size: 13px;
     color: var(--spectrum-global-color-gray-600);
     margin-bottom: 16px;
 }
+}
 
+@layer theme {
 .service-card-status {
     min-height: 32px;
 }
+}
 
+@layer theme {
 .status-text {
     font-size: 13px;
     color: var(--spectrum-global-color-gray-700);
 }
+}
 
+@layer theme {
 .status-text-error {
     font-size: 12px;
     color: var(--spectrum-semantic-negative-color-text-small);
 }
+}
 
+@layer theme {
 .status-icon-success {
     color: var(--spectrum-semantic-positive-color-icon);
 }
+}
 
+@layer theme {
 .status-icon-error {
     color: var(--spectrum-semantic-negative-color-icon);
 }
+}
 
+@layer theme {
 .service-action-button {
     background: var(--spectrum-global-color-blue-400);
     color: white;
@@ -107,18 +140,24 @@
     font-size: 13px;
     font-weight: 500;
     cursor: pointer;
-    transition: background 0.15s ease;
+    transition: background var(--spectrum-global-animation-duration-200) ease;
+}
 }
 
+@layer theme {
 .service-action-button:hover {
     background: var(--spectrum-global-color-blue-500);
 }
+}
 
+@layer theme {
 .service-action-button:disabled {
     background: var(--spectrum-global-color-gray-400);
     cursor: not-allowed;
 }
+}
 
+@layer theme {
 .service-action-link {
     background: none;
     border: none;
@@ -127,11 +166,15 @@
     cursor: pointer;
     padding: 4px 8px;
 }
+}
 
+@layer theme {
 .service-action-link:hover {
     text-decoration: underline;
 }
+}
 
+@layer theme {
 .service-input {
     /* border-box so width:100% includes the padding + border and the field stays
        within the card's content box (otherwise it overflows the right edge). */
@@ -145,27 +188,36 @@
     color: var(--spectrum-global-color-gray-900);
     margin-bottom: 8px;
 }
+}
 
+@layer theme {
 .service-input:focus {
     outline: none;
     border-color: var(--spectrum-global-color-blue-400);
     box-shadow: 0 0 0 1px var(--spectrum-global-color-blue-400);
 }
+}
 
+@layer theme {
 .dalive-input-form {
     display: flex;
     flex-direction: column;
+}
 }
 
 /* The namespace Picker renders at Spectrum's default (large) field text, which
    towers over the small label and the 13px Token field below it. Bring the label
    and the selected value down to the card's compact field sizing so the label +
    value read as one group. Spectrum's own rules are specific, so !important. */
+@layer theme {
 .dalive-namespace-picker label {
-    font-size: 12px !important;
+    font-size: 12px;
 }
+}
+@layer theme {
 .dalive-namespace-picker button,
 .dalive-namespace-picker button span {
-    font-size: 13px !important;
-    font-weight: 400 !important;
+    font-size: 13px;
+    font-weight: 400;
+}
 }

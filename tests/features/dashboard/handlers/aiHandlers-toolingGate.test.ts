@@ -12,14 +12,16 @@ import {
     handleRegenerateAiFiles,
     generateAIContextFiles,
     installAiDefaultsMcpTools,
-    createMockContext,
+    createAiHandlerContext,
+    seedCommandExecutor,
 } from './aiHandlers.testUtils';
-import type { HandlerContext } from './aiHandlers.testUtils';
 import { COMPONENT_IDS } from '@/core/constants';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 describe('handleRegenerateAiFiles — tooling gate', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        seedCommandExecutor();
     });
 
     it('runs the tooling install for a mesh project without a storefront', async () => {
@@ -35,11 +37,11 @@ describe('handleRegenerateAiFiles — tooling gate', () => {
                 },
             },
         };
-        const context = createMockContext({
-            stateManager: {
+        const context = createAiHandlerContext({
+            stateManager: createMockStateManager({
                 getCurrentProject: jest.fn().mockResolvedValue(meshProject),
                 saveProjectConfigOnly: jest.fn(),
-            } as unknown as HandlerContext['stateManager'],
+            }),
         });
 
         await handleRegenerateAiFiles(context);
@@ -47,7 +49,11 @@ describe('handleRegenerateAiFiles — tooling gate', () => {
         expect(installAiDefaultsMcpTools).toHaveBeenCalledWith(
             meshProject.path,
             meshProject,
-            expect.any(Function)
+            expect.anything(),
+            expect.any(Function),
+            // The installer needs a logger or an npm EBADENGINE warning reaches
+            // no channel at all — npm exits 0 on it.
+            { debug: expect.any(Function), warn: expect.any(Function) }
         );
     });
 });

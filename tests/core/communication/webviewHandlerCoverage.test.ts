@@ -70,7 +70,11 @@ const PANELS: ReadonlyArray<{ name: string; entry: string; command: string; noRe
         // Recorded rather than omitted, so the coverage check still runs over it.
         name: 'sidebar',
         entry: 'features/sidebar/ui/index.tsx',
-        command: 'features/sidebar/handlers/sidebarHandlers.ts',
+        // The provider IS the handler here: SidebarProvider answers its webview's
+        // messages from private methods. A parallel, never-wired sidebarHandlers.ts
+        // was deleted on 2026-08-31 — nothing imported it, and its handleGetContext
+        // did not know about the projectsList state the live one handles.
+        command: 'features/sidebar/providers/sidebarProvider.ts',
         noRequests: true,
     },
 ];
@@ -256,8 +260,8 @@ describe('webview handler coverage — every panel answers what its UI sends', (
             // Without this, a broken import walk would return nothing and every
             // coverage assertion below would pass while proving nothing.
             const count = sentTypes(entry).size;
-            if (noRequests) expect(count).toBe(0);
-            else expect(count).toBeGreaterThan(0);
+            // The fixture picks the EXPECTED shape; the assertion always runs.
+            expect(count === 0).toBe(Boolean(noRequests));
         }
     );
 
@@ -267,6 +271,6 @@ describe('webview handler coverage — every panel answers what its UI sends', (
             .filter(([type]) => !registered.has(type) && !PLATFORM_HANDLED.has(type))
             .map(([type, from]) => `${type}  (sent from ${from})`);
 
-        expect(missing).toEqual([]);
+        expect(missing).toStrictEqual([]);
     });
 });

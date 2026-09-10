@@ -8,13 +8,16 @@
  * Configure authoring-experience test's mocking style.
  */
 
+import type { HelixService } from '@/features/eds/services/helix/helixService';
 import { applyAuthoringExperienceFlip } from '@/features/eds/services/authoringExperienceFlip';
 import * as vscode from 'vscode';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { Logger } from '@/types/logger';
-import type { AuthoringExperience, Project } from '@/types';
-
-jest.mock('vscode');
+import type { AuthoringExperience, Project } from '@/types/base';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import type { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockProject } from '../../../helpers/projectFake';
 
 const mockApplyDaLiveOrgConfigSettings = jest.fn().mockResolvedValue(undefined);
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
@@ -33,9 +36,13 @@ jest.mock('@/features/eds/services/quickEditPublisher', () => ({
 }));
 
 const mockPreviewCode = jest.fn().mockResolvedValue(undefined);
-jest.mock('@/features/eds/services/helix/helixService', () => ({
-    HelixService: jest.fn().mockImplementation(() => ({ previewCode: mockPreviewCode })),
-}));
+
+/**
+ * Helix arrives through `AuthoringExperienceFlipDeps` rather than by mocking the
+ * module (ADR-016 wall). `previewCode` is the only method this flow calls, so the
+ * partial fake is cast into the real type once, here — ADR-016 rule 2.
+ */
+const fakeHelix = { previewCode: mockPreviewCode } as unknown as HelixService;
 
 const mockGitHubFileOperations = jest.fn().mockImplementation(() => ({}));
 jest.mock('@/features/eds/services/github/githubFileOperations', () => ({
@@ -63,42 +70,47 @@ function makeEdsProject(
 ): Project {
     const repo = githubRepo === NO_REPO ? undefined : githubRepo;
     const hasCoords = coords !== NO_COORDS;
-    return {
+    return createMockProject({
         name: 'Test Project',
         path: '/test/project',
         componentInstances: {
             [COMPONENT_IDS.EDS_STOREFRONT]: {
+                id: COMPONENT_IDS.EDS_STOREFRONT,
+                name: 'EDS Storefront',
+                status: 'ready',
                 metadata: {
                     ...(hasCoords ? { daLiveOrg: 'my-org', daLiveSite: 'my-site' } : {}),
                     ...(repo ? { githubRepo: repo } : {}),
                 },
             },
         },
-    } as unknown as Project;
+    });
 }
 
 describe('applyAuthoringExperienceFlip', () => {
     let mockContext: vscode.ExtensionContext;
     let mockLogger: Logger;
+    let fakeTokenService: GitHubTokenService;
 
     beforeEach(() => {
         jest.clearAllMocks();
-        mockContext = {
-            secrets: { get: jest.fn(), store: jest.fn() },
-        } as unknown as vscode.ExtensionContext;
-        mockLogger = {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as unknown as Logger;
+        mockContext = createMockExtensionContext();
+        mockLogger = createMockLogger() as unknown as Logger;
+        fakeTokenService = {
+            getToken: jest.fn().mockResolvedValue('gh-token'),
+        } as unknown as GitHubTokenService;
     });
 
     function flip(project: Project, experience: AuthoringExperience) {
         return applyAuthoringExperienceFlip(project, experience, {
+            helixService: fakeHelix,
             context: mockContext,
             logger: mockLogger,
             saveProject: jest.fn().mockResolvedValue(undefined),
+            // Handed in now rather than constructed inside the service. The suite
+            // never drives it directly — GitHubFileOperations and HelixService are
+            // what receive it — so a bare object is the honest fake.
+            githubTokenService: fakeTokenService,
         });
     }
 
@@ -124,6 +136,55 @@ describe('applyAuthoringExperienceFlip', () => {
 
         expect(mockApplyDaLiveOrgConfigSettings).not.toHaveBeenCalled();
         expect(result.editorPath).toBe('ok');
+    });
+
+    it('skips editor.path when the DA org is known but the site is not', async () => {
+        // BOTH coordinates are required to address a site config. Half of them is
+        // not a partial write, it is a write to the wrong place.
+        const halfCoords = createMockProject({
+            name: 'Half Coords',
+            path: '/test/project',
+            componentInstances: {
+                [COMPONENT_IDS.EDS_STOREFRONT]: {
+                    id: COMPONENT_IDS.EDS_STOREFRONT,
+                    name: 'EDS Storefront',
+                    status: 'ready',
+                    metadata: { daLiveOrg: 'my-org' },
+                },
+            },
+        });
+
+        const result = await flip(halfCoords, 'da-live-classic');
+
+        expect(mockApplyDaLiveOrgConfigSettings).not.toHaveBeenCalled();
+        expect(result.editorPath).toBe('ok');
+    });
+
+    it('a project with NO componentInstances no-ops every step rather than throwing', async () => {
+        // The metadata write has already landed by the time this runs, so a project
+        // that carries no instances at all must still return — reading through the
+        // missing record is the one place a throw would escape the per-step catches.
+        const bare = createMockProject({
+            name: 'Bare',
+            path: '/test/bare',
+            componentInstances: undefined,
+        });
+
+        const result = await flip(bare, 'experience-workspace');
+
+        expect(mockApplyDaLiveOrgConfigSettings).not.toHaveBeenCalled();
+        expect(mockInstallQuickEdit).not.toHaveBeenCalled();
+        expect(result).toEqual({ editorPath: 'ok', quickEdit: 'ok', configRegen: 'ok' });
+    });
+
+    it('skips Quick Edit vendoring when githubRepo is not owner/repo', async () => {
+        // A malformed value splits into an owner and NO repo. Vendoring against a
+        // half-resolved repo would push a commit at a repository nobody named.
+        const result = await flip(makeEdsProject('acme-storefront'), 'experience-workspace');
+
+        expect(mockInstallQuickEdit).not.toHaveBeenCalled();
+        expect(mockPreviewCode).not.toHaveBeenCalled();
+        expect(result.quickEdit).toBe('ok');
     });
 
     it('da-live-classic SKIPS Quick Edit + config.json regen', async () => {

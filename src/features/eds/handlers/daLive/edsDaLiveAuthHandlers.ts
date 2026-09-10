@@ -187,10 +187,12 @@ export async function handleStoreDaLiveTokenWithOrg(
         // Code Sync and prompts install. Any genuine write failure now surfaces
         // at the actual write site with contextual error messaging, not as a
         // generic "organization not found".
-        const tokenExpiry = validation.expiresAt || (Date.now() + 24 * 60 * 60 * 1000);
+        // No expiry fallback: `validateDaLiveTokenStrict` refuses a token that states no
+        // expiry, so an accepted one always carries a real one. This fallback was already
+        // unreachable; the narrowed result type now makes that a compile-time fact.
         const authService = getDaLiveAuthService(context.context);
         await authService.storeToken(token, {
-            expiresAt: tokenExpiry,
+            expiresAt: validation.expiresAt,
             email: validation.email,
             orgName,
         });

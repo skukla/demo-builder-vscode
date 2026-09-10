@@ -1,3 +1,8 @@
+import {
+    DaLiveAuthService,
+    ExtensionContext,
+} from './daLiveAuthService.testUtils';
+import { createMockExtensionContext, createStatefulGlobalState } from '../../../../helpers/extensionContextFake';
 /**
  * DA.live Auth Service Security Tests
  *
@@ -10,36 +15,12 @@
  * no longer used. Tokens are now obtained via bookmarklet/QuickPick flow.
  */
 
-// Mock vscode before imports
-jest.mock('vscode', () => ({
-    env: {
-        openExternal: jest.fn().mockResolvedValue(true),
-    },
-    Uri: {
-        parse: jest.fn((s: string) => s),
-    },
-    EventEmitter: require('../../../../helpers/vscodeEventEmitter').VscodeEventEmitter,
-}));
-
-// Mock logger
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
-}));
-
 // Keep these unit tests off the real ~/.aem/da-token.json (the service now
 // reads it as a fallback and mirrors stored tokens to it).
 jest.mock('@/features/eds/services/daAuthHelperToken', () => ({
     readDaAuthHelperToken: jest.fn(() => null),
     writeDaAuthHelperToken: jest.fn(() => false),
 }));
-
-import { DaLiveAuthService } from '@/features/eds/services/daLive/daLiveAuthService';
-import type { ExtensionContext } from 'vscode';
 
 describe('DaLiveAuthService Security Tests', () => {
     let service: DaLiveAuthService;
@@ -49,23 +30,9 @@ describe('DaLiveAuthService Security Tests', () => {
     beforeEach(() => {
         jest.clearAllMocks();
 
-        // Create mock global state store
-        globalStateStore = new Map();
-
-        // Create mock extension context
-        mockContext = {
-            globalState: {
-                get: jest.fn((key: string) => globalStateStore.get(key)),
-                update: jest.fn((key: string, value: unknown) => {
-                    if (value === undefined) {
-                        globalStateStore.delete(key);
-                    } else {
-                        globalStateStore.set(key, value);
-                    }
-                    return Promise.resolve();
-                }),
-            },
-        } as unknown as ExtensionContext;
+        const stateful = createStatefulGlobalState();
+        globalStateStore = stateful.store;
+        mockContext = createMockExtensionContext({ globalState: stateful.globalState });
 
         service = new DaLiveAuthService(mockContext);
     });

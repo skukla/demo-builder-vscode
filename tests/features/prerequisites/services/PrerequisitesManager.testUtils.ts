@@ -3,34 +3,29 @@
  */
 
 // Mock debugLogger FIRST to prevent "Logger not initialized" errors
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    }),
-}));
 
 // Mock the ConfigurationLoader
 jest.mock('@/core/config/ConfigurationLoader');
-jest.mock('@/core/di');
 
 // Mock fs module for components.json reading
 jest.mock('fs', () => ({
-    readFileSync: jest.fn().mockReturnValue(JSON.stringify({
-        infrastructure: {
-            'adobe-cli': {
-                name: 'Adobe I/O CLI & SDK',
-                description: 'Command-line interface and SDK for Adobe I/O services'
-            }
-        }
-    }))
+    readFileSync: jest.fn().mockReturnValue(
+        JSON.stringify({
+            infrastructure: {
+                'adobe-cli': {
+                    name: 'Adobe I/O CLI & SDK',
+                    description: 'Command-line interface and SDK for Adobe I/O services',
+                },
+            },
+        })
+    ),
 }));
 
 import type { Logger } from '@/types/logger';
-import type { CommandExecutor } from '@/core/shell';
-import { ServiceLocator } from '@/core/di';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
+import type { PrerequisiteDefinition, PrerequisitesConfig } from '@/features/prerequisites/services/types';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 export interface TestMocks {
     logger: jest.Mocked<Logger>;
@@ -87,20 +82,12 @@ export const mockConfig = {
 export function setupMocks(): TestMocks {
     jest.clearAllMocks();
 
-    const mockLogger = {
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        debug: jest.fn(),
-    } as any;
+    const mockLogger = createMockLogger();
 
-    const mockExecutor = {
-        execute: jest.fn(),
-    } as any;
+    const mockExecutor = createMockCommandExecutor();
 
-    // Mock ServiceLocator
-    (ServiceLocator.getCommandExecutor as jest.Mock).mockReturnValue(mockExecutor);
-
+    // CONVERTED 2026-08-28 (ADR-015): the executor is a constructor argument
+    // now — suites pass `mocks.executor` in. No registry mock at all.
     return {
         logger: mockLogger,
         executor: mockExecutor,
@@ -110,7 +97,7 @@ export function setupMocks(): TestMocks {
 /**
  * Sets up ConfigurationLoader mock
  */
-export function setupConfigLoader(config = mockConfig) {
+export function setupConfigLoader(config: PrerequisitesConfig | typeof mockConfig = mockConfig) {
     const { ConfigurationLoader } = require('@/core/config/ConfigurationLoader');
     ConfigurationLoader.mockImplementation(() => ({
         load: jest.fn().mockResolvedValue(config),
@@ -120,7 +107,9 @@ export function setupConfigLoader(config = mockConfig) {
 /**
  * Creates a prerequisite with perNodeVersion flag
  */
-export function createPerNodePrerequisite(overrides?: any) {
+export function createPerNodePrerequisite(
+    overrides?: Partial<PrerequisiteDefinition>
+): PrerequisiteDefinition {
     return {
         id: 'aio-cli',
         name: 'Adobe I/O CLI',
@@ -137,7 +126,9 @@ export function createPerNodePrerequisite(overrides?: any) {
 /**
  * Creates a standard prerequisite
  */
-export function createStandardPrerequisite(overrides?: any) {
+export function createStandardPrerequisite(
+    overrides?: Partial<PrerequisiteDefinition>
+): PrerequisiteDefinition {
     return {
         id: 'git',
         name: 'Git',
@@ -153,14 +144,19 @@ export function createStandardPrerequisite(overrides?: any) {
 /**
  * Creates a prerequisite with dynamic installation
  */
-export function createDynamicInstallPrerequisite(overrides?: any) {
+export function createDynamicInstallPrerequisite(
+    overrides?: Partial<PrerequisiteDefinition>
+): PrerequisiteDefinition {
     return {
         id: 'node',
         name: 'Node.js',
         description: 'JavaScript runtime',
         check: {
-            command: 'node',
-            args: ['--version'],
+            // `args: ['--version']` sat here until 2026-08-28. `PrerequisiteCheck`
+            // has no such field, production never reads `check.args`, and it
+            // appears zero times in prerequisites.json — an invented field that
+            // nothing could see while this builder was untyped.
+            command: 'node --version',
         },
         install: {
             dynamic: true,

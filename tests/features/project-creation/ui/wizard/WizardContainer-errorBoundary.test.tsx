@@ -98,16 +98,17 @@ const defaultWizardSteps = [
 ];
 
 describe('WizardContainer ErrorBoundary', () => {
-    // Suppress console.error for expected errors in these tests
-    beforeAll(() => {
-        jest.spyOn(console, 'error').mockImplementation(() => {});
-    });
-
     afterAll(() => {
         jest.restoreAllMocks();
     });
 
     beforeEach(() => {
+        // ABSORB the expected errors — an error boundary catching a throw is
+        // the component working. In beforeEach, NOT beforeAll: the console gate
+        // wraps console in a beforeEach registered by the setup file, so a
+        // beforeAll spy is wrapped BY the gate and still counted, while this one
+        // replaces the gate's wrapper.
+        jest.spyOn(console, 'error').mockImplementation(() => {});
         setupTest();
         // Reset AdobeAuthStep to normal behavior
         authStepImpl = ({ setCanProceed }) => {

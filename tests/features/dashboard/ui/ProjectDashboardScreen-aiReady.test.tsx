@@ -219,7 +219,7 @@ describe('ProjectDashboardScreen - AI Ready Badge', () => {
             // belongs to the surface. Regenerate living inside the StatusCard is
             // exactly why the link could not be pinned while it sat alongside.
             renderDashboard();
-            deliverVerify({ checks: [{ name: 'skills', status: 'error' }] } as never);
+            deliverVerify({ checks: [{ name: 'skills', status: 'error' }] });
 
             const row = screen.getByTestId('ai-status-row');
             expect(within(row).getByTestId('ai-regenerate-trigger')).toBeInTheDocument();

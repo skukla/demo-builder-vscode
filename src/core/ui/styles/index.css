@@ -3,12 +3,24 @@
    Layer order controls cascade priority
    ============================================ */
 
-/* Layer order declaration - MUST be first */
-@layer reset, theme, overrides;
+/* THE CASCADE ORDER, and the only place it is decided.
+   Lowest priority first: vendor < reset < theme < overrides, for NORMAL
+   declarations. `vendor` carries Spectrum's own CSS for the entries listed in
+   LAYERED_VENDOR_ENTRIES (esbuild.config.js); the rest still get it unlayered,
+   where it outranks every layer. reset sits BELOW vendor because a reset
+   neutralises the browser, not the component library — see ADR-018 §1.
+   Enforced by `layerOrder` in tests/sop/stylesheet-bundles.test.ts, which also
+   checks that EVERY bundle carries this line — the sidebar carried none until
+   2026-09-09 and took whatever order its graph happened to produce. */
+@layer reset, vendor, theme, overrides;
 
-/* Import design system files */
-@import './reset.css';
-@import './tokens.css';
+/* reset.css and tokens.css are imported by each BUNDLE ENTRY, not from here.
+   They used to be pulled in with `@import` — resolved at build time by webpack's
+   css-loader, and NOT by the esbuild plugin that replaced it, which passes the
+   line through as text for a browser to resolve against a vscode-webview:// URL.
+   It never resolved, so neither sheet reached any bundle between 2026-04-13 and
+   2026-09-09. An import in the entry is visible to the bundler AND to the
+   ADR-017 §6 reach check; an @import inside a stylesheet is visible to neither. */
 
 /* Base styles wrapped in theme layer */
 @layer theme {
@@ -31,12 +43,7 @@
     }
 
     /* Spectrum overrides for quiet mode */
-    .spectrum--quiet {
-        --spectrum-textfield-border-width: 0;
-        --spectrum-textfield-border-width-focused: 1px;
-        --spectrum-picker-border-width: 0;
-        --spectrum-picker-border-width-hover: 1px;
-    }
+    
 
     /* Custom scrollbar styles */
     ::-webkit-scrollbar {
@@ -59,6 +66,7 @@
 }
 
 /* Terminal output styles */
+@layer theme {
 .terminal-output {
     font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
     font-size: 12px;
@@ -72,68 +80,95 @@
     word-break: break-all;
     line-height: 1.4;
 }
+}
 
 /* Terminal colors for different output types */
+@layer theme {
 .terminal-output .command {
     color: var(--db-terminal-command);
 }
+}
 
+@layer theme {
 .terminal-output .success {
     color: var(--db-terminal-success);
 }
+}
 
+@layer theme {
 .terminal-output .error {
     color: var(--db-terminal-error);
 }
+}
 
+@layer theme {
 .terminal-output .warning {
     color: var(--db-terminal-warning);
 }
+}
 
 /* Step animation */
+@layer theme {
 .wizard-step-enter {
     opacity: 0;
     transform: translateX(20px);
 }
+}
 
+@layer theme {
 .wizard-step-enter-active {
     opacity: 1;
     transform: translateX(0);
-    transition: opacity 300ms ease, transform 300ms ease;
+    transition: opacity var(--spectrum-global-animation-duration-600) ease, transform var(--spectrum-global-animation-duration-600) ease;
+}
 }
 
+@layer theme {
 .wizard-step-exit {
     opacity: 1;
     transform: translateX(0);
 }
+}
 
+@layer theme {
 .wizard-step-exit-active {
     opacity: 0;
     transform: translateX(-20px);
-    transition: opacity 300ms ease, transform 300ms ease;
+    transition: opacity var(--spectrum-global-animation-duration-600) ease, transform var(--spectrum-global-animation-duration-600) ease;
+}
 }
 
 /* Status indicators */
+@layer theme {
 .status-indicator {
     display: inline-flex;
     align-items: center;
     gap: 8px;
 }
+}
 
+@layer theme {
 .status-indicator.success {
     color: var(--spectrum-global-color-green-600);
 }
+}
 
+@layer theme {
 .status-indicator.error {
     color: var(--spectrum-global-color-red-600);
 }
+}
 
+@layer theme {
 .status-indicator.warning {
     color: var(--spectrum-global-color-orange-600);
 }
+}
 
+@layer theme {
 .status-indicator.checking {
     color: var(--spectrum-global-color-blue-600);
+}
 }
 
 /* ===========================================
@@ -145,8 +180,10 @@
    itself whenever its variant is `info`, so no surface has to remember. Kept
    distinct from the generic `.pulse` below, which is a layout-level effect with
    its own timing and callers. */
+@layer theme {
 .status-dot--pulse {
     animation: status-dot-pulse 1.2s ease-in-out infinite;
+}
 }
 @keyframes status-dot-pulse {
     0%,
@@ -155,14 +192,6 @@
     }
     50% {
         opacity: 0.35;
-    }
-}
-/* Ships WITH the animation, not in the surface that happens to use it — the
-   previous per-card pulse carried its own reduced-motion rule, which a second
-   implementation would simply have missed. */
-@media (prefers-reduced-motion: reduce) {
-    .status-dot--pulse {
-        animation: none;
     }
 }
 
@@ -179,11 +208,14 @@
     to { opacity: 1; }
 }
 
+@layer theme {
 .pulse {
     animation: pulse 1.5s ease-in-out infinite;
 }
+}
 
 /* Code block styles */
+@layer theme {
 .code-block {
     font-family: 'Courier New', Courier, monospace;
     font-size: 12px;
@@ -192,8 +224,207 @@
     border-radius: var(--spectrum-global-dimension-size-50);
     overflow-x: auto;
 }
+}
 
+@layer theme {
 .code-block.dark {
     background: var(--spectrum-global-color-gray-800);
     color: var(--spectrum-global-color-gray-100);
+}
+}
+@layer theme {
+/* Page container — caps content at the canonical width, LEFT-ALIGNED.
+   These used to centre (margin: auto), contradicting the --content-width
+   docblock below and the wizard's .content-column, which never centred. Screens
+   coped one at a time: the project dashboard added an opt-out, the integrations
+   surface inherited the centred default when its grid moved out of that
+   dashboard, and the projects list and Prompt Library never opted out at all.
+   Fixing the DEFAULT is the only version that cannot rot — a new screen gets
+   canonical behaviour by doing nothing. */
+.page-container {
+    max-width: var(--content-width);
+}
+
+/* Page container with horizontal padding */
+/* size-400 (32px), NOT 16: PageHeader pads its own content by size-400, so a
+   narrower body inset left every screen's content 16px adrift of its title. The
+   old per-screen opt-out had been silently correcting that too. */
+.page-container-padded {
+    max-width: var(--content-width);
+    padding-left: var(--spectrum-global-dimension-size-400);
+    padding-right: var(--spectrum-global-dimension-size-400);
+}
+
+/* Page header section spacing */
+.page-header-section {
+    padding-top: 24px;
+    padding-bottom: 16px;
+}
+
+/* Page body section spacing */
+.page-body-section {
+    padding-top: 24px;
+    padding-bottom: 16px;
+}
+
+/* Page body section with larger bottom spacing */
+.page-body-section-lg {
+    padding-bottom: 24px;
+}
+
+/* Integrations band, context row: "Deploys to <project> · <workspace>  Change".
+   Rides the END of SearchHeader's count row, which is space-between and has an
+   empty right half once a search field shows. Costs the band no extra line for
+   what is the least-used fact on the screen. The label is what distinguishes
+   the REMOTE Adobe destination from the LOCAL project name in the page header;
+   they used to sit in one dot-separated run in the subtitle, where nothing told
+   them apart. */
+.page-destination-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* One size for the whole row — it sits beside SearchHeader's 12px count, and
+   11px uppercase (borrowed from the dashboard's badge rows, where it stands
+   alone) read as a mismatch rather than a hierarchy. Sentence case, so the row
+   reads as a phrase: "Deploys to Kukla Mesh · Stage". The three roles separate by
+   COLOUR now that size does not: dim label, darker value, blue action. */
+.page-destination-label {
+    font-size: 12px;
+    color: var(--spectrum-global-color-gray-500);
+}
+
+/* Canonical page header — one tight single row (title · subtitle crumb … action),
+ * the same reclaimed density on every screen. The page context (a rail, a grid) owns
+ * the wayfinding, so the title stays modest and the header spends little vertical budget. */
+.page-header-title {
+    font-size: var(--spectrum-global-dimension-font-size-300);
+    line-height: 1.2;
+    /* Zero the Spectrum Heading's default block margins so the single-row header
+     * content sits vertically centered in its (now tight) padded band. */
+    margin: 0;
+}
+
+.page-header-subtitle {
+    font-size: var(--spectrum-global-dimension-font-size-100);
+}
+
+.page-header-secondary {
+    margin-top: var(--spectrum-global-dimension-size-75);
+}
+}
+
+@layer overrides {
+/* Ships WITH the animation, not in the surface that happens to use it — the
+   previous per-card pulse carried its own reduced-motion rule, which a second
+   implementation would simply have missed. */
+@media (prefers-reduced-motion: reduce) {
+@layer theme {
+.status-dot--pulse {
+    animation: none;
+}
+}
+}
+}
+
+/* ==========================================================================
+   PageLayout — the page shell, moved out of PageLayout.tsx 2026-09-10.
+
+   It was a `PAGE_LAYOUT_STYLES` constant spread inline. Hoisting a style object
+   out of the JSX makes it a constant; it does not make it styleable — the
+   declarations were still welded to the element, so no stylesheet could adjust
+   the page shell. `backgroundColor` remains a parameter and arrives as a custom
+   property, which keeps `background-color` itself in the cascade.
+   ========================================================================== */
+@layer theme {
+.page-layout {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--page-layout-background, transparent);
+}
+}
+
+@layer theme {
+/* ==========================================================================
+   SingleColumnLayout — the box, moved out of SingleColumnLayout.tsx 2026-09-10.
+
+   It escaped the earlier inline-style sweep because it wrote `style={style}`
+   from a VARIABLE, and the scan only ever matched `style={{`. Three parameters
+   still cross from JS, as custom properties; the rest is fixed and lives here.
+
+   The padding rule excludes itself with `:not([data-padding='none'])` rather
+   than setting a zero. `padding={null}` means "a stylesheet owns this" — and a
+   declaration of `0` is still a declaration a stylesheet has to outrank, which
+   is how `.brand-gallery-column` ended up needing `!important`.
+   ========================================================================== */
+.single-column-layout {
+    max-width: var(--single-column-max-width, 960px);
+    width: 100%;
+    /* Keep padding inside the 100% width. Without this the default content-box
+       adds it outside, so the column overflows its parent by 2x padding and
+       clips content at narrow/zoomed viewports. */
+    box-sizing: border-box;
+    margin: var(--single-column-margin, 0);
+}
+}
+
+@layer theme {
+.single-column-layout:not([data-padding='none']) {
+    padding: var(--single-column-padding, 24px);
+}
+}
+
+@layer theme {
+.page-layout-content {
+    flex: 1;
+    overflow-y: auto;
+}
+}
+
+/* ==========================================================================
+   StatusDot — the box and the colour, moved out of StatusDot.tsx 2026-09-10.
+
+   `data-variant` was already on the element, so the colour needs no parameter
+   passed through JS at all; only the SIZE varies, and that arrives as
+   `--status-dot-size`.
+
+   The old inline style was justified as making the dot "self-sufficient
+   regardless of which stylesheets loaded". It was not: the colour was already a
+   `var(--spectrum-*)`, so a missing stylesheet produced a correctly-sized
+   INVISIBLE dot. And the case it feared — a utility class not reaching a bundle —
+   is what ADR-017 §6 enforces, verified across all eight bundles.
+   ========================================================================== */
+@layer theme {
+.status-dot {
+    display: inline-block;
+    width: var(--status-dot-size, 8px);
+    height: var(--status-dot-size, 8px);
+    background-color: var(--spectrum-global-color-gray-500);
+}
+}
+
+@layer theme {
+.status-dot[data-variant='success'] {
+    background-color: var(--spectrum-semantic-positive-color-status);
+}
+}
+
+@layer theme {
+.status-dot[data-variant='error'] {
+    background-color: var(--spectrum-semantic-negative-color-status);
+}
+}
+
+@layer theme {
+.status-dot[data-variant='warning'] {
+    background-color: var(--spectrum-semantic-notice-color-status);
+}
+}
+
+@layer theme {
+.status-dot[data-variant='info'] {
+    background-color: var(--spectrum-semantic-informative-color-status);
+}
 }

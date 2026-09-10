@@ -29,7 +29,7 @@
 
 import { RUNTIME_SURFACES, type RuntimeSurfaceInventory } from './runtimeSurfaceInventory';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import type { Logger } from '@/types';
+import type { Logger } from '@/types/logger';
 
 /** Minimal locator for the patches repo ledger (satisfied by Code/ContentPatchSource). */
 export interface RuntimeSurfaceSource {

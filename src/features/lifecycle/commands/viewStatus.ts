@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { BaseCommand } from '@/core/base';
+import { BaseCommand } from '@/core/base/baseCommand';
 import type { Project } from '@/types/base';
 import { getComponentInstancesByType, getMeshComponentInstance, getMeshEndpointUrl } from '@/types/typeGuards';
 

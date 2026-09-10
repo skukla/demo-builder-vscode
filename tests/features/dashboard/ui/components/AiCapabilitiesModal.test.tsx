@@ -61,9 +61,11 @@ function renderModal(props: Partial<React.ComponentProps<typeof AiCapabilitiesMo
                 onRegenerate={onRegenerate}
                 hasSkillsError={props.hasSkillsError}
                 hasMcpsError={props.hasMcpsError}
+                isLoading={props.isLoading}
                 isBusy={props.isBusy}
                 progress={props.progress}
                 editedFiles={props.editedFiles}
+                gatedSkills={props.gatedSkills}
                 errorMessage={props.errorMessage}
             />
         </Provider>
@@ -108,6 +110,23 @@ describe('AiCapabilitiesModal', () => {
         // not, which is what the previous wording had quietly become.
         expect(within(storefront).queryAllByTestId('ai-skill-row')).toHaveLength(0);
         expect(within(storefront).queryByTestId('ai-skills-list')).not.toBeInTheDocument();
+        // Nor the "no skills installed" line: that copy answers a question about
+        // the PROJECT, and printing it inside one pair would say the project has
+        // no skills while another section lists them.
+        expect(within(storefront).queryByTestId('ai-skills-empty')).not.toBeInTheDocument();
+    });
+
+    // The mirror of the case above — a skill set whose server is not wired. It
+    // reads as the same kind of gap, and the section must not answer for the
+    // missing half by rendering an empty MCP list or the "none wired" line,
+    // which speaks for the whole project.
+    it('shows a pair that is missing its server as a section with only the skills', () => {
+        renderModal({ skills: SKILLS, mcps: [MCPS[1]] });
+
+        const demoBuilder = screen.getByTestId('ai-integration-demo-builder');
+        expect(within(demoBuilder).getByTestId('ai-skills-list')).toBeInTheDocument();
+        expect(within(demoBuilder).queryByTestId('ai-mcps-list')).not.toBeInTheDocument();
+        expect(within(demoBuilder).queryByTestId('ai-mcps-empty')).not.toBeInTheDocument();
     });
 
     it('surfaces every skill name at rest (flat list — no accordions to jump the modal)', () => {
@@ -147,6 +166,11 @@ describe('AiCapabilitiesModal', () => {
     it('shows a plain-language empty state for skills when none are installed', () => {
         renderModal({ skills: [], mcps: MCPS });
         expect(screen.getByTestId('ai-skills-empty')).toBeInTheDocument();
+        // …in the FLAT body, which is the only place that copy can be reached
+        // from. A sectioned view renders its skills list only inside a section
+        // that HAS skills, so with none it would show no empty state at all —
+        // the "MCP servers · N" heading is what says which body is on screen.
+        expect(screen.getByTestId('ai-mcps-heading')).toBeInTheDocument();
     });
 
     it('shows an error row when the skill inspector errored', () => {
@@ -351,5 +375,97 @@ describe('AiCapabilitiesModal', () => {
         const loading = screen.getByTestId('ai-capabilities-loading');
         expect(loading).toHaveTextContent(/checking ai setup/i);
         expect(loading).not.toHaveTextContent(/reinstalling|up to a minute/i);
+    });
+
+    // ─── Which body renders ──────────────────────────────────────────────────
+    // Pairs are for the populated, healthy case. Whenever a half is missing or
+    // errored the flat two-list body takes over, because it owns the "checking",
+    // "none wired" and inspector-error copy — a section renders its MCP list only
+    // when it HAS an MCP, so an empty or failed inspector produces no row to
+    // carry any of those messages. Every one of these was decided on a populated,
+    // healthy fixture until now, so nothing said what the other cases do.
+
+    describe('sections vs the flat body', () => {
+        it('falls back to the flat body while the verify has not answered yet', () => {
+            // Populated lists AND still loading is the ordinary shape: the modal
+            // renders the last inventory it saw while the check re-runs. Grouping
+            // it into pairs would hide the "checking" rows, which is the only
+            // thing on screen saying the numbers may be stale.
+            renderModal({ skills: SKILLS, mcps: MCPS, isLoading: true });
+
+            expect(screen.queryByTestId('ai-integration-demo-builder')).not.toBeInTheDocument();
+            expect(screen.getByTestId('ai-mcps-loading')).toBeInTheDocument();
+            expect(screen.getByTestId('ai-skills-loading')).toBeInTheDocument();
+        });
+
+        it('falls back to the flat body when the MCP inspector errored, however many servers it had listed', () => {
+            renderModal({ skills: SKILLS, mcps: MCPS, hasMcpsError: true });
+
+            expect(screen.queryByTestId('ai-integration-demo-builder')).not.toBeInTheDocument();
+            expect(screen.getByTestId('ai-mcps-error')).toBeInTheDocument();
+        });
+
+        it('falls back to the flat body when the skill inspector errored', () => {
+            renderModal({ skills: SKILLS, mcps: MCPS, hasSkillsError: true });
+
+            expect(screen.queryByTestId('ai-integration-demo-builder')).not.toBeInTheDocument();
+            expect(screen.getByTestId('ai-skills-error')).toBeInTheDocument();
+        });
+
+        // The gated list is rendered once beneath everything, and ONLY under the
+        // sectioned body: in the flat body the skills list already carries the
+        // gated rows itself, so a second one would print the project's empty
+        // state underneath a list that is not empty.
+        it('renders the gated skills once, under the sections', () => {
+            renderModal({
+                skills: SKILLS,
+                mcps: MCPS,
+                gatedSkills: [
+                    { file: 'eds-publish.md', toolId: 'publish_eds', reason: 'tool-missing' },
+                ],
+            });
+
+            expect(screen.getAllByTestId('ai-skill-gated-row')).toHaveLength(1);
+            expect(screen.getByTestId('ai-skills-group-gated')).toBeInTheDocument();
+        });
+
+        it('adds no second skills list to the flat body', () => {
+            // Skills are populated here, so nothing on screen may claim the
+            // project has none.
+            renderModal({ skills: SKILLS, mcps: [] });
+
+            expect(screen.getByTestId('ai-mcps-empty')).toBeInTheDocument();
+            expect(screen.queryAllByTestId('ai-skills-empty')).toHaveLength(0);
+            expect(screen.getAllByTestId('ai-skills-list')).toHaveLength(1);
+        });
+    });
+});
+
+// ─── The pairing is recomputed when the inventory changes ────────────────────
+// The sections are memoised on the two lists. A regenerate replaces both while
+// the modal stays mounted — it is the same open dialog that triggered the write
+// — so a memo that never re-ran would leave the user looking at the inventory
+// from before the regenerate they had just watched finish.
+describe('AiCapabilitiesModal — a refreshed inventory', () => {
+    it('re-pairs when new skills and servers arrive in place', () => {
+        const props = {
+            onClose: jest.fn(),
+            onRegenerate: jest.fn(),
+        };
+        const { rerender } = render(
+            <Provider theme={defaultTheme}>
+                <AiCapabilitiesModal skills={SKILLS} mcps={[MCPS[0]]} {...props} />
+            </Provider>
+        );
+
+        expect(screen.queryByTestId('ai-integration-browser')).not.toBeInTheDocument();
+
+        rerender(
+            <Provider theme={defaultTheme}>
+                <AiCapabilitiesModal skills={SKILLS} mcps={MCPS} {...props} />
+            </Provider>
+        );
+
+        expect(screen.getByTestId('ai-integration-browser')).toBeInTheDocument();
     });
 });

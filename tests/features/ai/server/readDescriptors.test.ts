@@ -4,13 +4,15 @@
  * the catalog wiring so a row can't silently point at the wrong handler.
  */
 
+import { descriptorFor } from './readDescriptors.testUtils';
+
 import { READ_DESCRIPTORS } from '@/features/ai/server/readDescriptors';
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
 import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
-import { meshHandlers } from '@/features/mesh/handlers';
+import { meshHandlers } from '@/features/mesh/handlers/meshHandlers';
 
 function row(tool: string) {
-    return READ_DESCRIPTORS.find((d) => d.tool === tool);
+    return descriptorFor(tool);
 }
 
 describe('READ_DESCRIPTORS', () => {
@@ -199,7 +201,7 @@ describe('list_console_apis emits the group legend once, not per row', () => {
     it('preserves the other row fields and the envelope', () => {
         const out = JSON.parse(row('list_console_apis')!.shape!(RESPONSE, {}));
         expect(out.apis[0]).toMatchObject({ code: 'A', name: 'Alpha' });
-        expect(out.added).toEqual([]);
+        expect(out.added).toStrictEqual([]);
     });
 });
 

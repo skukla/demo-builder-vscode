@@ -8,91 +8,22 @@
  * and the Helix call is mocked via helixApiClient.
  */
 
-import * as childProcess from 'child_process';
-import { previewAndPublishPage } from '@/features/eds/services/helix/helixApiClient';
 import {
     GitOperationError,
     PushRejectedError,
+    STOREFRONT,
+    TOKENIZED_REMOTE,
+    defaultExecImpl,
+    execFileMock,
+    execImpl,
+    execImplWithCommitFailure,
+    execImplWithPushRejected,
+    execImplWithPushStderr,
+    gitFailure,
+    previewMock,
     rebaseOntoRemote,
     syncAndPublish,
-} from '@/features/eds/services/storefront/storefrontSyncService';
-
-jest.mock('child_process', () => ({
-    execFile: jest.fn(),
-}));
-
-jest.mock('@/features/eds/services/helix/helixApiClient', () => ({
-    previewAndPublishPage: jest.fn(),
-}));
-
-// `util.promisify(execFile)` returns a Promise-returning wrapper. The mock
-// above is the callback form; we drive it from tests by configuring
-// `execFile.mock.implementation`.
-
-const execFileMock = childProcess.execFile as unknown as jest.Mock;
-const previewMock = previewAndPublishPage as jest.Mock;
-
-const STOREFRONT = '/projects/demo/components/eds-storefront';
-
-function defaultExecImpl(): void {
-    execFileMock.mockImplementation((cmd: string, args: string[], cb: (err: Error | null, result: { stdout: string; stderr: string }) => void) => {
-        // remote get-url returns a sample URL when asked
-        if (args.includes('remote') && args.includes('get-url')) {
-            cb(null, { stdout: 'https://github.com/owner/repo.git\n', stderr: '' });
-            return;
-        }
-        cb(null, { stdout: '', stderr: '' });
-    });
-}
-
-function execImplWithCommitFailure(message: string): void {
-    execFileMock.mockImplementation((cmd: string, args: string[], cb: (err: Error | null, result?: { stdout: string; stderr: string }) => void) => {
-        if (args.includes('remote') && args.includes('get-url')) {
-            cb(null, { stdout: 'https://github.com/owner/repo.git\n', stderr: '' });
-            return;
-        }
-        if (args.includes('commit')) {
-            const err = new Error('Command failed') as NodeJS.ErrnoException & { stderr?: string };
-            err.stderr = message;
-            cb(err);
-            return;
-        }
-        cb(null, { stdout: '', stderr: '' });
-    });
-}
-
-function execImplWithPushRejected(): void {
-    execFileMock.mockImplementation((cmd: string, args: string[], cb: (err: Error | null, result?: { stdout: string; stderr: string }) => void) => {
-        if (args.includes('remote') && args.includes('get-url')) {
-            cb(null, { stdout: 'https://github.com/owner/repo.git\n', stderr: '' });
-            return;
-        }
-        if (args.includes('push')) {
-            const err = new Error('Command failed') as NodeJS.ErrnoException & { stderr?: string };
-            err.stderr = '! [rejected] main -> main (non-fast-forward)\nerror: failed to push some refs';
-            cb(err);
-            return;
-        }
-        cb(null, { stdout: '', stderr: '' });
-    });
-}
-
-/** Fail `git push` with an arbitrary stderr, for rejection-classification tests. */
-function execImplWithPushStderr(stderr: string): void {
-    execFileMock.mockImplementation((cmd: string, args: string[], cb: (err: Error | null, result?: { stdout: string; stderr: string }) => void) => {
-        if (args.includes('remote') && args.includes('get-url')) {
-            cb(null, { stdout: 'https://github.com/owner/repo.git\n', stderr: '' });
-            return;
-        }
-        if (args.includes('push')) {
-            const err = new Error('Command failed') as NodeJS.ErrnoException & { stderr?: string };
-            err.stderr = stderr;
-            cb(err);
-            return;
-        }
-        cb(null, { stdout: '', stderr: '' });
-    });
-}
+} from './storefrontSyncService.testUtils';
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -105,7 +36,7 @@ describe('storefrontSyncService.syncAndPublish', () => {
         it('runs git add -A in the storefront directory', async () => {
             await syncAndPublish({ storefrontPath: STOREFRONT, commitMessage: 'msg' });
 
-            const addCall = execFileMock.mock.calls.find(c => c[1].includes('add'));
+            const addCall = execFileMock.mock.calls.find((c) => c[1].includes('add'));
             expect(addCall?.[1]).toEqual(['-C', STOREFRONT, 'add', '-A']);
         });
 
@@ -115,27 +46,36 @@ describe('storefrontSyncService.syncAndPublish', () => {
                 commitMessage: 'first\nsecond\rthird',
             });
 
-            const commitCall = execFileMock.mock.calls.find(c => c[1].includes('commit'));
-            expect(commitCall?.[1]).toEqual(['-C', STOREFRONT, 'commit', '-m', 'first second third']);
+            const commitCall = execFileMock.mock.calls.find((c) => c[1].includes('commit'));
+            expect(commitCall?.[1]).toEqual([
+                '-C',
+                STOREFRONT,
+                'commit',
+                '-m',
+                'first second third',
+            ]);
         });
 
         it('reports committed=false and skips push when there is nothing to commit', async () => {
             execImplWithCommitFailure('nothing to commit, working tree clean');
 
-            const result = await syncAndPublish({ storefrontPath: STOREFRONT, commitMessage: 'msg' });
+            const result = await syncAndPublish({
+                storefrontPath: STOREFRONT,
+                commitMessage: 'msg',
+            });
 
             expect(result.committed).toBe(false);
             // Legacy semantics: don't push when nothing changed. Users with
             // unpushed local commits use `git push` directly.
             expect(result.pushed).toBe(false);
-            expect(execFileMock.mock.calls.some(c => c[1].includes('push'))).toBe(false);
+            expect(execFileMock.mock.calls.some((c) => c[1].includes('push'))).toBe(false);
         });
 
         it('throws GitOperationError on commit failure unrelated to "nothing to commit"', async () => {
             execImplWithCommitFailure('some other git error');
 
             await expect(
-                syncAndPublish({ storefrontPath: STOREFRONT, commitMessage: 'msg' }),
+                syncAndPublish({ storefrontPath: STOREFRONT, commitMessage: 'msg' })
             ).rejects.toBeInstanceOf(GitOperationError);
         });
 
@@ -143,7 +83,7 @@ describe('storefrontSyncService.syncAndPublish', () => {
             execImplWithPushRejected();
 
             await expect(
-                syncAndPublish({ storefrontPath: STOREFRONT, commitMessage: 'msg' }),
+                syncAndPublish({ storefrontPath: STOREFRONT, commitMessage: 'msg' })
             ).rejects.toBeInstanceOf(PushRejectedError);
         });
     });
@@ -166,7 +106,7 @@ describe('storefrontSyncService.syncAndPublish', () => {
             execImplWithPushStderr(RULESET_STDERR);
 
             await expect(
-                syncAndPublish({ storefrontPath: STOREFRONT, commitMessage: 'msg' }),
+                syncAndPublish({ storefrontPath: STOREFRONT, commitMessage: 'msg' })
             ).rejects.not.toThrow(/pull and rebase/i);
         });
 
@@ -174,18 +114,18 @@ describe('storefrontSyncService.syncAndPublish', () => {
             execImplWithPushStderr(RULESET_STDERR);
 
             await expect(
-                syncAndPublish({ storefrontPath: STOREFRONT, commitMessage: 'msg' }),
+                syncAndPublish({ storefrontPath: STOREFRONT, commitMessage: 'msg' })
             ).rejects.toThrow(/rule/i);
         });
 
         it('still treats a real non-fast-forward as one', async () => {
             // The existing behaviour must survive: this remedy IS pull-and-rebase.
             execImplWithPushStderr(
-                '! [rejected] main -> main (non-fast-forward)\nerror: failed to push some refs',
+                '! [rejected] main -> main (non-fast-forward)\nerror: failed to push some refs'
             );
 
             await expect(
-                syncAndPublish({ storefrontPath: STOREFRONT, commitMessage: 'msg' }),
+                syncAndPublish({ storefrontPath: STOREFRONT, commitMessage: 'msg' })
             ).rejects.toThrow(/pull and rebase/i);
         });
     });
@@ -204,45 +144,51 @@ describe('storefrontSyncService.syncAndPublish', () => {
             });
 
             const calls = execFileMock.mock.calls;
-            const ffIdx = calls.findIndex(c => c[1].includes('pull') && c[1].includes('--ff-only'));
-            const addIdx = calls.findIndex(c => c[1].includes('add'));
+            const ffIdx = calls.findIndex(
+                (c) => c[1].includes('pull') && c[1].includes('--ff-only')
+            );
+            const addIdx = calls.findIndex((c) => c[1].includes('add'));
             expect(ffIdx).toBeGreaterThanOrEqual(0);
             expect(addIdx).toBeGreaterThanOrEqual(0);
             // Fast-forward must run BEFORE staging, or staged changes block the merge.
             expect(ffIdx).toBeLessThan(addIdx);
-            // Pulls from a token-injected URL (same pattern as push).
-            expect(calls[ffIdx][1].some((a: string) => a.includes('gh-token-abc'))).toBe(true);
+            // Pulls from a token-injected URL (same pattern as push). Asserted as the
+            // WHOLE argv, not a substring: a token that reached the command line in the
+            // wrong position, or an extra ref, is exactly the kind of malformed call a
+            // `.includes` check reports as correct.
+            expect(calls[ffIdx][1]).toEqual([
+                '-C',
+                STOREFRONT,
+                'pull',
+                '--ff-only',
+                TOKENIZED_REMOTE,
+                'HEAD',
+            ]);
         });
 
         it('uses a plain git pull --ff-only when no token is provided', async () => {
             await syncAndPublish({ storefrontPath: STOREFRONT, commitMessage: 'msg' });
 
             const ffCall = execFileMock.mock.calls.find(
-                c => c[1].includes('pull') && c[1].includes('--ff-only'),
+                (c) => c[1].includes('pull') && c[1].includes('--ff-only')
             );
             expect(ffCall?.[1]).toEqual(['-C', STOREFRONT, 'pull', '--ff-only']);
         });
 
         it('still commits and pushes when the fast-forward fails (best-effort)', async () => {
             // Diverged history / dirty file: ff-only pull fails. Sync must continue.
-            execFileMock.mockImplementation((cmd: string, args: string[], cb: (err: Error | null, result?: { stdout: string; stderr: string }) => void) => {
-                if (args.includes('remote') && args.includes('get-url')) {
-                    cb(null, { stdout: 'https://github.com/owner/repo.git\n', stderr: '' });
-                    return;
-                }
-                if (args.includes('pull') && args.includes('--ff-only')) {
-                    const err = new Error('Command failed') as NodeJS.ErrnoException & { stderr?: string };
-                    err.stderr = 'fatal: Not possible to fast-forward, aborting.';
-                    cb(err);
-                    return;
-                }
-                cb(null, { stdout: '', stderr: '' });
+            execImpl({
+                when: (args) => args.includes('pull') && args.includes('--ff-only'),
+                error: gitFailure({ stderr: 'fatal: Not possible to fast-forward, aborting.' }),
             });
 
-            const result = await syncAndPublish({ storefrontPath: STOREFRONT, commitMessage: 'msg' });
+            const result = await syncAndPublish({
+                storefrontPath: STOREFRONT,
+                commitMessage: 'msg',
+            });
 
             expect(result.pushed).toBe(true);
-            expect(execFileMock.mock.calls.some(c => c[1].includes('push'))).toBe(true);
+            expect(execFileMock.mock.calls.some((c) => c[1].includes('push'))).toBe(true);
         });
 
         it('skips the fast-forward on the rebase-recovery path (skipCommit=true)', async () => {
@@ -254,7 +200,7 @@ describe('storefrontSyncService.syncAndPublish', () => {
             });
 
             const ranFastForward = execFileMock.mock.calls.some(
-                c => c[1].includes('pull') && c[1].includes('--ff-only'),
+                (c) => c[1].includes('pull') && c[1].includes('--ff-only')
             );
             expect(ranFastForward).toBe(false);
         });
@@ -268,15 +214,14 @@ describe('storefrontSyncService.syncAndPublish', () => {
                 githubToken: 'gh-token-abc',
             });
 
-            const pushCall = execFileMock.mock.calls.find(c => c[1].includes('push'));
-            expect(pushCall?.[1].some((a: string) => a.includes('gh-token-abc'))).toBe(true);
-            expect(pushCall?.[1]).toContain('HEAD');
+            const pushCall = execFileMock.mock.calls.find((c) => c[1].includes('push'));
+            expect(pushCall?.[1]).toEqual(['-C', STOREFRONT, 'push', TOKENIZED_REMOTE, 'HEAD']);
         });
 
         it('falls back to ambient git auth when githubToken is omitted', async () => {
             await syncAndPublish({ storefrontPath: STOREFRONT, commitMessage: 'msg' });
 
-            const pushCall = execFileMock.mock.calls.find(c => c[1].includes('push'));
+            const pushCall = execFileMock.mock.calls.find((c) => c[1].includes('push'));
             expect(pushCall?.[1]).toEqual(['-C', STOREFRONT, 'push']);
         });
     });
@@ -291,10 +236,10 @@ describe('storefrontSyncService.syncAndPublish', () => {
                 daLiveToken: 'dalive-ims',
             });
 
-            expect(previewMock).toHaveBeenCalledWith(
-                'owner', 'repo', '/', 'main',
-                { githubToken: 'gh-token', daLiveToken: 'dalive-ims' },
-            );
+            expect(previewMock).toHaveBeenCalledWith('owner', 'repo', '/', 'main', {
+                githubToken: 'gh-token',
+                daLiveToken: 'dalive-ims',
+            });
         });
 
         it('reports helixPublished=true on success', async () => {
@@ -362,29 +307,38 @@ describe('storefrontSyncService.syncAndPublish', () => {
         // go on, and the site is exactly what lags.
 
         it('reports the short sha of the commit it pushed', async () => {
-            execFileMock.mockImplementation((cmd: string, args: string[], cb: (err: Error | null, result: { stdout: string; stderr: string }) => void) => {
-                if (args.includes('rev-parse')) {
-                    cb(null, { stdout: 'a1b2c3d\n', stderr: '' });
-                    return;
+            execFileMock.mockImplementation(
+                (
+                    cmd: string,
+                    args: string[],
+                    cb: (err: Error | null, result: { stdout: string; stderr: string }) => void
+                ) => {
+                    if (args.includes('rev-parse')) {
+                        cb(null, { stdout: 'a1b2c3d\n', stderr: '' });
+                        return;
+                    }
+                    cb(null, { stdout: '', stderr: '' });
                 }
-                cb(null, { stdout: '', stderr: '' });
-            });
+            );
 
-            const result = await syncAndPublish({ storefrontPath: STOREFRONT, commitMessage: 'msg' });
+            const result = await syncAndPublish({
+                storefrontPath: STOREFRONT,
+                commitMessage: 'msg',
+            });
 
             expect(result.commitSha).toBe('a1b2c3d');
         });
 
         it('leaves commitSha undefined rather than failing a sync that already pushed', async () => {
-            execFileMock.mockImplementation((cmd: string, args: string[], cb: (err: Error | null, result?: { stdout: string; stderr: string }) => void) => {
-                if (args.includes('rev-parse')) {
-                    cb(new Error('fatal: ambiguous argument'));
-                    return;
-                }
-                cb(null, { stdout: '', stderr: '' });
+            execImpl({
+                when: (args) => args.includes('rev-parse'),
+                error: new Error('fatal: ambiguous argument'),
             });
 
-            const result = await syncAndPublish({ storefrontPath: STOREFRONT, commitMessage: 'msg' });
+            const result = await syncAndPublish({
+                storefrontPath: STOREFRONT,
+                commitMessage: 'msg',
+            });
 
             expect(result.pushed).toBe(true);
             expect(result.commitSha).toBeUndefined();
@@ -393,7 +347,10 @@ describe('storefrontSyncService.syncAndPublish', () => {
         it('does not report a sha when nothing was committed', async () => {
             execImplWithCommitFailure('nothing to commit, working tree clean');
 
-            const result = await syncAndPublish({ storefrontPath: STOREFRONT, commitMessage: 'msg' });
+            const result = await syncAndPublish({
+                storefrontPath: STOREFRONT,
+                commitMessage: 'msg',
+            });
 
             expect(result.commitSha).toBeUndefined();
         });
@@ -407,18 +364,18 @@ describe('storefrontSyncService.syncAndPublish', () => {
             execImplWithPushRejected();
 
             await expect(
-                syncAndPublish({ storefrontPath: STOREFRONT, commitMessage: 'msg' }),
+                syncAndPublish({ storefrontPath: STOREFRONT, commitMessage: 'msg' })
             ).rejects.toMatchObject({ reason: 'non-fast-forward' });
         });
 
         it('tags a ruleset rejection', async () => {
             execImplWithPushStderr(
                 'remote: error: GH013: Repository rule violations found for refs/heads/main.\n' +
-                    '! [remote rejected] main -> main (push declined due to repository rule violations)',
+                    '! [remote rejected] main -> main (push declined due to repository rule violations)'
             );
 
             await expect(
-                syncAndPublish({ storefrontPath: STOREFRONT, commitMessage: 'msg' }),
+                syncAndPublish({ storefrontPath: STOREFRONT, commitMessage: 'msg' })
             ).rejects.toMatchObject({ reason: 'ruleset' });
         });
     });
@@ -433,7 +390,7 @@ describe('storefrontSyncService.syncAndPublish', () => {
 
             expect(outcome).toBe('clean');
             const pullCall = execFileMock.mock.calls.find(
-                c => c[1].includes('pull') && c[1].includes('--rebase'),
+                (c) => c[1].includes('pull') && c[1].includes('--rebase')
             );
             expect(pullCall?.[1]).toEqual(['-C', STOREFRONT, 'pull', '--rebase']);
         });
@@ -442,45 +399,68 @@ describe('storefrontSyncService.syncAndPublish', () => {
             await rebaseOntoRemote(STOREFRONT, 'gh-token-abc');
 
             const pullCall = execFileMock.mock.calls.find(
-                c => c[1].includes('pull') && c[1].includes('--rebase'),
+                (c) => c[1].includes('pull') && c[1].includes('--rebase')
             );
-            expect(pullCall?.[1].some((a: string) => a.includes('gh-token-abc'))).toBe(true);
+            expect(pullCall?.[1]).toEqual([
+                '-C',
+                STOREFRONT,
+                'pull',
+                '--rebase',
+                TOKENIZED_REMOTE,
+                'HEAD',
+            ]);
         });
 
         it('runs git rebase --abort and reports aborted when the rebase conflicts', async () => {
-            execFileMock.mockImplementation((cmd: string, args: string[], cb: (err: Error | null, result?: { stdout: string; stderr: string }) => void) => {
-                if (args.includes('pull') && args.includes('--rebase')) {
-                    const err = new Error('Command failed') as NodeJS.ErrnoException & { stderr?: string };
-                    err.stderr = 'CONFLICT (content): Merge conflict in blocks/hero/hero.js';
-                    cb(err);
-                    return;
+            execFileMock.mockImplementation(
+                (
+                    cmd: string,
+                    args: string[],
+                    cb: (err: Error | null, result?: { stdout: string; stderr: string }) => void
+                ) => {
+                    if (args.includes('pull') && args.includes('--rebase')) {
+                        cb(
+                            gitFailure({
+                                stderr: 'CONFLICT (content): Merge conflict in blocks/hero/hero.js',
+                            })
+                        );
+                        return;
+                    }
+                    cb(null, { stdout: '', stderr: '' });
                 }
-                cb(null, { stdout: '', stderr: '' });
-            });
+            );
 
             const outcome = await rebaseOntoRemote(STOREFRONT);
 
             expect(outcome).toBe('aborted');
-            const abortCall = execFileMock.mock.calls.find(c => c[1].includes('--abort'));
+            const abortCall = execFileMock.mock.calls.find((c) => c[1].includes('--abort'));
             expect(abortCall?.[1]).toEqual(['-C', STOREFRONT, 'rebase', '--abort']);
         });
 
         it('still reports aborted when git rebase --abort itself fails', async () => {
             // No rebase in progress: the pull refused before starting one. There
             // is nothing to undo, and the caller must not be told otherwise.
-            execFileMock.mockImplementation((cmd: string, args: string[], cb: (err: Error | null, result?: { stdout: string; stderr: string }) => void) => {
-                if (args.includes('pull') && args.includes('--rebase')) {
-                    const err = new Error('Command failed') as NodeJS.ErrnoException & { stderr?: string };
-                    err.stderr = 'error: cannot pull with rebase: You have unstaged changes.';
-                    cb(err);
-                    return;
+            execFileMock.mockImplementation(
+                (
+                    cmd: string,
+                    args: string[],
+                    cb: (err: Error | null, result?: { stdout: string; stderr: string }) => void
+                ) => {
+                    if (args.includes('pull') && args.includes('--rebase')) {
+                        cb(
+                            gitFailure({
+                                stderr: 'error: cannot pull with rebase: You have unstaged changes.',
+                            })
+                        );
+                        return;
+                    }
+                    if (args.includes('--abort')) {
+                        cb(new Error('fatal: No rebase in progress?'));
+                        return;
+                    }
+                    cb(null, { stdout: '', stderr: '' });
                 }
-                if (args.includes('--abort')) {
-                    cb(new Error('fatal: No rebase in progress?'));
-                    return;
-                }
-                cb(null, { stdout: '', stderr: '' });
-            });
+            );
 
             await expect(rebaseOntoRemote(STOREFRONT)).resolves.toBe('aborted');
         });
@@ -488,13 +468,15 @@ describe('storefrontSyncService.syncAndPublish', () => {
 
     describe('does not import vscode', () => {
         it('module file has no `import * as vscode` or `from "vscode"`', () => {
-
             const fs = require('fs') as typeof import('fs');
 
             const path = require('path') as typeof import('path');
             const source = fs.readFileSync(
-                path.join(__dirname, '../../../../../src/features/eds/services/storefront/storefrontSyncService.ts'),
-                'utf-8',
+                path.join(
+                    __dirname,
+                    '../../../../../src/features/eds/services/storefront/storefrontSyncService.ts'
+                ),
+                'utf-8'
             );
             expect(source).not.toMatch(/from\s+['"]vscode['"]/);
             expect(source).not.toMatch(/require\(['"]vscode['"]\)/);

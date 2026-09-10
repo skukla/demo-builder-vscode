@@ -1,0 +1,33 @@
+{
+    // F5 CRASHES THE EXTENSION HOST WITHOUT THIS. Not our code — the debugger.
+    //
+    // With the Network view on, VS Code's JS debug adapter sends a CDP
+    // `Network.enable` to the extension host as it attaches. Node's inspector
+    // hits a failed assertion handling it and calls abort(), so the host dies
+    // with SIGABRT ("Abort trap: 6", which VS Code reports as `exited with
+    // code: 6 ... reason 'crashed'`). The faulting stack is the same every
+    // time:
+    //
+    //     abort
+    //     node::Assert(node::AssertionInfo const&)
+    //     node::inspector::Agent::ToggleNetworkTracking(...)
+    //     node::inspector::Agent::EnableNetworkTracking()
+    //     node::inspector::NetworkInspector::Enable()
+    //     node::inspector::NetworkAgent::enable(...)
+    //
+    // Measured 2026-09-10: EVERY ONE of the eight extension-host crash reports
+    // that day (~/Library/Logs/DiagnosticReports/"Code Helper (Plugin)"-*.ips)
+    // had that stack and SIGABRT. Zero had anything else. The extension itself
+    // loads and activates cleanly against a stubbed host.
+    //
+    // It presents as intermittent -- the host dies once or twice and then comes
+    // up fine -- which is why it reads as "the extension is flaky" and sends you
+    // looking through activation code. It is a race in the debugger's attach,
+    // not in anything this repo builds.
+    //
+    // Turning the Network view off costs the network-request panel while
+    // debugging, which this extension does not need. Remove this line to check
+    // whether an upstream Electron/Node bump has fixed it; if F5 stops dying,
+    // the setting can go.
+    "debug.javascript.enableNetworkView": false
+}

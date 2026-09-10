@@ -15,33 +15,17 @@
  * Strict TDD: written BEFORE the component exists.
  */
 
-import React from 'react';
-import { render, screen, act, fireEvent } from '@testing-library/react';
-import { Provider, defaultTheme } from '@adobe/react-spectrum';
-import { ManageApisModal } from '@/features/dashboard/ui/components/ManageApisModal';
-import '@testing-library/jest-dom';
+import { screen, fireEvent } from '@testing-library/react';
 
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        postMessage: jest.fn(),
-        onMessage: jest.fn(() => jest.fn()),
-        request: jest.fn(),
-    },
-}));
-
-function getClient() {
-    const { webviewClient } = jest.requireMock('@/core/ui/utils/WebviewClient') as {
-        webviewClient: { request: jest.Mock; postMessage: jest.Mock };
-    };
-    return webviewClient;
-}
-
-/** The org list as `listConsoleApis` reports it: `managed` = covered by the reconcile union. */
-const ORG_APIS = [
-    { code: 'GraphQLServiceSDK', name: 'API Mesh', managed: true },
-    { code: 'AssetsSDK', name: 'AEM Assets', managed: false },
-    { code: 'FireflySDK', name: 'Firefly Services', managed: false },
-];
+import {
+    ORG_APIS,
+    applyButton,
+    checkboxFor,
+    flush,
+    getClient,
+    modal,
+    renderModal,
+} from './ManageApisModal.testUtils';
 
 type RequestImpl = (type: string, payload?: unknown) => Promise<unknown>;
 
@@ -56,36 +40,6 @@ function mockRequest(impl?: RequestImpl) {
                 return Promise.resolve({ success: true });
             })
     );
-}
-
-/** Flush the microtask queue inside act so request promises settle into state. */
-async function flush() {
-    await act(async () => {
-        await Promise.resolve();
-        await Promise.resolve();
-    });
-}
-
-function renderModal(props: Partial<React.ComponentProps<typeof ManageApisModal>> = {}) {
-    const onClose = jest.fn();
-    const result = render(
-        <Provider theme={defaultTheme}>
-            <ManageApisModal isOpen componentName="erp-sync" onClose={onClose} {...props} />
-        </Provider>
-    );
-    return { onClose, ...result };
-}
-
-/** The checkbox input rendered for a given API display name (shared-mock shape). */
-function checkboxFor(name: string): HTMLInputElement {
-    const label = screen.getByText(name).closest('label');
-    if (!label) throw new Error(`No checkbox label found for "${name}"`);
-    return label.querySelector('input[type="checkbox"]') as HTMLInputElement;
-}
-
-/** The modal's footer Apply action (Modal renders div[role=button] actions). */
-function applyButton(): HTMLElement {
-    return screen.getByRole('button', { name: /^apply/i });
 }
 
 beforeEach(() => {
@@ -114,11 +68,7 @@ describe('ManageApisModal', () => {
             expect(getClient().request).toHaveBeenCalledTimes(1);
 
             // A re-render while open must NOT refetch.
-            rerender(
-                <Provider theme={defaultTheme}>
-                    <ManageApisModal isOpen componentName="erp-sync" onClose={onClose} />
-                </Provider>
-            );
+            rerender(modal({ onClose }));
             await flush();
             expect(getClient().request).toHaveBeenCalledTimes(1);
         });
@@ -349,7 +299,11 @@ describe('ManageApisModal', () => {
     // Signed-out is NOT a retryable error — Retry re-runs the same unauthenticated
     // call. The house treatment (AdobeAuthStep) offers a sign-in action instead.
     describe('signed out offers sign-in, not Retry', () => {
-        const signedOut = { success: false, error: 'Adobe sign-in required.', code: 'AUTH_REQUIRED' };
+        const signedOut = {
+            success: false,
+            error: 'Adobe sign-in required.',
+            code: 'AUTH_REQUIRED',
+        };
 
         it('shows Sign In with Adobe and NO Retry', async () => {
             getClient().request.mockResolvedValue(signedOut);
@@ -372,8 +326,9 @@ describe('ManageApisModal', () => {
 
             // reAuthenticate itself, plus the reload it triggers.
             expect(getClient().request.mock.calls.length).toBeGreaterThan(before + 1);
-            expect(getClient().request.mock.calls.some((c: unknown[]) => c[0] === 'reAuthenticate'))
-                .toBe(true);
+            expect(
+                getClient().request.mock.calls.some((c: unknown[]) => c[0] === 'reAuthenticate')
+            ).toBe(true);
         });
 
         it('still offers Retry for a NON-auth failure', async () => {
@@ -398,7 +353,7 @@ describe('ManageApisModal', () => {
      * view is this same modal without one.
      */
     describe('per-integration scope (step 05)', () => {
-        it('asks for THIS integration\'s rows', async () => {
+        it("asks for THIS integration's rows", async () => {
             mockRequest();
             renderModal({ componentId: 'erp-sync' });
             await flush();
@@ -432,7 +387,5 @@ describe('ManageApisModal', () => {
 
             expect(getClient().request).toHaveBeenCalledWith('listConsoleApis', undefined);
         });
-
     });
-
 });

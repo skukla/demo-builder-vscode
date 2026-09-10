@@ -2,8 +2,8 @@
  * Promise utilities for timeout and cancellation handling
  */
 
+import { TimeoutError, toAppError, isTimeout } from '@/core/errors';
 import { ErrorCode } from '@/types/errorCodes';
-import { TimeoutError, toAppError, isTimeout } from '@/types/errors';
 
 export interface TimeoutOptions {
     timeoutMs: number;
@@ -66,13 +66,24 @@ export async function withTimeout<T>(
     });
 
     // Create cancellation promise if signal provided - use Error with code for typed detection
+    const cancelled = () => {
+        const cancelError = new Error('Operation cancelled by user');
+        (cancelError as Error & { code?: string }).code = ErrorCode.CANCELLED;
+        return cancelError;
+    };
     const cancellationPromise = signal
         ? new Promise<never>((_, reject) => {
-            signal.addEventListener('abort', () => {
-                const cancelError = new Error('Operation cancelled by user');
-                (cancelError as Error & { code?: string }).code = ErrorCode.CANCELLED;
-                reject(cancelError);
-            });
+            // An AbortSignal that is ALREADY aborted never fires the event again,
+            // so listening alone silently ignores it and the caller waits out the
+            // whole timeout. Project creation passes a controller created moments
+            // before this call and aborted from the wizard's close handler — if
+            // that close lands in between, a 30-minute build used to run on and
+            // report a TIMEOUT rather than a cancellation. Check the flag first.
+            if (signal.aborted) {
+                reject(cancelled());
+                return;
+            }
+            signal.addEventListener('abort', () => reject(cancelled()));
         })
         : null;
 
@@ -131,10 +142,17 @@ export async function tryWithTimeout<T>(
     } catch (error) {
         const appError = toAppError(error);
 
-        // Use typed error detection instead of string matching
+        // Use typed error detection instead of string matching.
+        //
+        // Cancellation is read off the RAW error, not off `appError`. The
+        // `appError.code === CANCELLED` half this line used to lead with could
+        // never decide the answer on its own: `toAppError` only ever returns a
+        // CANCELLED-coded error by handing back an AppError it was given, and
+        // such an error is itself an Error carrying the same code — so the
+        // second half was already true whenever the first was.
         const timedOut = isTimeout(appError);
-        const cancelled = appError.code === ErrorCode.CANCELLED ||
-            (error instanceof Error && (error as Error & { code?: string }).code === ErrorCode.CANCELLED);
+        const cancelled = error instanceof Error &&
+            (error as Error & { code?: string }).code === ErrorCode.CANCELLED;
 
         return {
             timedOut,

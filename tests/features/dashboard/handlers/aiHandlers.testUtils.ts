@@ -27,38 +27,46 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
 }));
 
 // Mock BaseWebviewCommand to avoid pulling the whole webview infrastructure
-jest.mock('@/core/base', () => ({
+jest.mock('@/core/base/baseCommand', () => ({
     BaseCommand: class {},
+}));
+
+jest.mock('@/core/base/baseWebviewCommand', () => ({
     BaseWebviewCommand: {
         startWebviewTransition: jest.fn().mockResolvedValue(undefined),
     },
 }));
 
 // Mock validateURL (transitive dependency)
-jest.mock('@/core/validation', () => ({
-    validateURL: jest.fn(),
+jest.mock('@/core/validation/SensitiveDataRedactor', () => ({
     // Real redactor — logAiVerification sanitizes the MCP stderr tail through it.
-    sanitizeErrorForLogging: jest.requireActual('@/core/validation').sanitizeErrorForLogging,
+    sanitizeErrorForLogging: jest.requireActual('@/core/validation/SensitiveDataRedactor').sanitizeErrorForLogging,
+}));
+
+jest.mock('@/core/validation/URLValidator', () => ({
+    validateURL: jest.fn(),
 }));
 
 // Mock AI feature barrel
-jest.mock('@/features/ai', () => ({
+// Two mocks where there was one: the barrel these names came through was retired
+// under ADR-022, and they live in two different modules.
+jest.mock('@/features/ai/aiSetupVerifier', () => ({
     verifyAiSetup: jest.fn(),
+}));
+jest.mock('@/features/ai/mcpInspector', () => ({
     inspectAllServers: jest.fn().mockResolvedValue([]),
     clearMcpCache: jest.fn(),
 }));
 
 // Mock AI context file generator
-jest.mock('@/features/project-creation/services', () => ({
+jest.mock('@/features/project-creation/services/aiBundle/aiBundleService', () => ({
     generateAIContextFiles: jest.fn(),
+}));
+
+jest.mock('@/features/project-creation/services/aiBundle/aiDefaultsInstaller', () => ({
     // Default: success — tests can override per-case via mockResolvedValueOnce.
     installAiDefaultsMcpTools: jest.fn().mockResolvedValue({ success: true }),
     readInstalledMcpPackages: jest.fn().mockResolvedValue([]),
-    // Real predicate: pure function over the project record, so the
-    // storefront/headless fixtures keep their production meaning.
-    projectNeedsAppBuilderTooling: jest.requireActual(
-        '@/features/project-creation/services/aiBundle/aiToolingGate'
-    ).projectNeedsAppBuilderTooling,
     // Real resolver: pure function over the bundled ai-defaults.json, so the
     // "Downloading AI tool packages" prompt names the ACTUAL packages the
     // fixtures qualify for (e.g. @playwright/mcp for the storefront fixture).
@@ -66,6 +74,13 @@ jest.mock('@/features/project-creation/services', () => ({
         '@/features/project-creation/services/aiBundle/aiDefaultsInstaller'
     ).applicableMcpPackages,
 }));
+
+// aiToolingGate is NOT mocked. It was only ever in the barrel factory because
+// mocking the barrel replaced every symbol at once, and these tests wanted the
+// REAL predicate — a pure function over the project record, so the fixtures keep
+// their production meaning. Mocking per-module makes the stand-in unnecessary,
+// and a partial factory here would have silently deleted the module's other
+// exports (aiDefaultsEntryApplies, gatedSkillReasons).
 
 // Mock vscode
 jest.mock('vscode', () => ({
@@ -108,105 +123,61 @@ export {
 // `aiHandlers`, which re-exported eight names — and this file was the only
 // consumer of six of them, so production code carried a re-export block kept
 // alive solely by its own test helper.
+// Only the four the handler-map identity test needs: the aiPromptHandlers suites
+// now import their subjects from the defining module directly, which is also what
+// pairs them to it in the mutation configs.
 export {
     handleSaveAiPrompt,
     handleDeleteAiPrompt,
     handleListAiPrompts,
     handleCopyAiPrompt,
-    GLOBAL_AI_PROMPTS_KEY,
-    mergePromptsForRead,
-    deleteAiPromptById,
-    readMergedAiPrompts,
 } from '@/features/dashboard/handlers/aiPromptHandlers';
 export { hasHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
-export { clearMcpCache, inspectAllServers, verifyAiSetup } from '@/features/ai';
-export {
-    generateAIContextFiles,
-    installAiDefaultsMcpTools,
-} from '@/features/project-creation/services';
+export { verifyAiSetup } from '@/features/ai/aiSetupVerifier';
+export { clearMcpCache, inspectAllServers } from '@/features/ai/mcpInspector';
+export { generateAIContextFiles } from '@/features/project-creation/services/aiBundle/aiBundleService';
+export { installAiDefaultsMcpTools } from '@/features/project-creation/services/aiBundle/aiDefaultsInstaller';
 export type { HandlerContext } from '@/types/handlers';
 
 import type { HandlerContext } from '@/types/handlers';
+import { ServiceLocator } from '@/core/di/serviceLocator';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockProject } from '../../../helpers/projectFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import {
+    createMockExtensionContext,
+    createStatefulGlobalState,
+} from '../../../helpers/extensionContextFake';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import { createMockWebviewPanel } from '../../../helpers/webviewPanelFake';
+import type { AiPrompt, Project } from '@/types/base';
 
 // ==========================================================
 // Test Helpers
 // ==========================================================
 
-export function createMockContext(overrides?: Partial<HandlerContext>): HandlerContext {
-    // Honor the (key, defaultValue) overload — matches the real VS Code Memento.
-    // Bare jest.fn() returns undefined for ALL args, which breaks code that
-    // relies on the default; this mock falls back to the supplied default when
-    // the second arg is present.
-    const memento = {
-        get: jest.fn((_key: string, defaultValue?: unknown) => defaultValue),
-        update: jest.fn(),
-        keys: jest.fn().mockReturnValue([]),
-    };
-    return {
-        context: {
-            extensionPath: '/mock/extension/path',
-            secrets: {
-                get: jest.fn(),
-                store: jest.fn(),
-                delete: jest.fn(),
-                onDidChange: jest.fn(),
-            },
-            globalState: memento,
-            subscriptions: [],
-        },
-        logger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        },
-        debugLogger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        },
-        stateManager: {
+export function createAiHandlerContext(overrides?: Partial<HandlerContext>): HandlerContext {
+    // The stateful globalState honours the (key, defaultValue) overload the real
+    // VS Code Memento has, so a handler that relies on the default gets it.
+    const { globalState } = createStatefulGlobalState();
+    return createMockHandlerContext({
+        context: createMockExtensionContext(
+            { globalState, secrets: createMockSecretStorage().secrets },
+            '/mock/extension/path'
+        ),
+        debugLogger: createMockLogger(),
+        stateManager: createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue({
                 name: 'Test Project',
                 path: '/projects/test',
                 stack: 'paas',
             }),
-            saveProjectConfigOnly: jest.fn().mockResolvedValue(undefined),
-        },
-        sendMessage: jest.fn().mockResolvedValue(undefined),
-        panel: {
-            dispose: jest.fn(),
-        },
-        sharedState: {},
-        ...overrides,
-    } as unknown as HandlerContext;
-}
-
-/**
- * Stateful Memento mock used by the global-pin-store tests. Behaves like the
- * real VS Code Memento: `update(key, val)` persists, subsequent `get(key)`
- * returns the persisted value. The bare `createMockContext` memento only
- * echoes the default — fine for handlers that don't touch globalState, but
- * useless for handlers that read what they just wrote.
- */
-function makeStatefulMemento(initial: Record<string, unknown> = {}) {
-    const store = new Map<string, unknown>(Object.entries(initial));
-    return {
-        get: jest.fn((key: string, defaultValue?: unknown) =>
-            store.has(key) ? store.get(key) : defaultValue
-        ),
-        update: jest.fn((key: string, value: unknown) => {
-            if (value === undefined) {
-                store.delete(key);
-            } else {
-                store.set(key, value);
-            }
-            return Promise.resolve();
         }),
-        keys: jest.fn(() => Array.from(store.keys())),
-        _store: store,
-    };
+        panel: createMockWebviewPanel(),
+        ...overrides,
+    });
 }
 
 /**
@@ -217,37 +188,56 @@ function makeStatefulMemento(initial: Record<string, unknown> = {}) {
  */
 export function makeScopedContext(
     opts: {
-        projectPrompts?: unknown[];
-        globalPrompts?: unknown[];
+        projectPrompts?: AiPrompt[];
+        globalPrompts?: AiPrompt[];
     } = {}
 ) {
-    const project = {
+    /**
+     * A real `Project`, not a three-field literal.
+     *
+     * Until 2026-09-01 this was `{ name, path, aiPrompts: unknown[] }` cast to
+     * `HandlerContext['stateManager']` through the state-manager fake. The cast
+     * was doing real work: `Project.aiPrompts` is `AiPrompt[]`, and the whole
+     * fixture was `unknown[]`, so every prompt this suite fed a handler was a
+     * shape the compiler had been told not to look at. Dropping the cast is what
+     * surfaced it.
+     */
+    const project = createMockProject({
         name: 'p',
         path: '/projects/p',
-        aiPrompts: [...(opts.projectPrompts ?? [])] as unknown[],
-    };
-    const saveProject = jest.fn(async (next: { aiPrompts?: unknown[] }) => {
+        aiPrompts: [...(opts.projectPrompts ?? [])],
+    });
+    const saveProject = jest.fn(async (next: Project) => {
         project.aiPrompts = next.aiPrompts ?? [];
     });
-    const memento = makeStatefulMemento({
+    // The global-pin-store tests read what the handler wrote, so the memento
+    // REMEMBERS; `_store` is the map behind it, exposed for those assertions.
+    const { globalState, store } = createStatefulGlobalState({
         'demoBuilder.ai.globalPrompts': [...(opts.globalPrompts ?? [])],
     });
-    const context = createMockContext({
-        context: {
-            extensionPath: '/mock/extension/path',
-            secrets: {
-                get: jest.fn(),
-                store: jest.fn(),
-                delete: jest.fn(),
-                onDidChange: jest.fn(),
-            },
-            globalState: memento,
-            subscriptions: [],
-        } as unknown as HandlerContext['context'],
-        stateManager: {
+    const memento = Object.assign(globalState, { _store: store });
+    const context = createAiHandlerContext({
+        context: createMockExtensionContext(
+            { globalState: memento, secrets: createMockSecretStorage().secrets },
+            '/mock/extension/path'
+        ),
+        stateManager: createMockStateManager({
             getCurrentProject: jest.fn(async () => project),
             saveProject,
-        } as unknown as HandlerContext['stateManager'],
+        }),
     });
     return { context, project, saveProject, memento };
+}
+
+/**
+ * ADR-015 (2026-08-28): `handleRegenerateAiFiles` fetches the shell executor at
+ * the handler boundary, which is where fetching is allowed. Rather than mock the
+ * registry module away, seed the REAL ServiceLocator with a fake — the suites
+ * then drive the actual lookup path the handler uses. The shared node setup
+ * resets the registry after EVERY test, so this must run per-test.
+ */
+export function seedCommandExecutor(): void {
+    ServiceLocator.setCommandExecutor(createMockCommandExecutor({
+        execute: jest.fn(async () => ({ code: 0, stdout: '', stderr: '' })),
+    }));
 }

@@ -38,6 +38,7 @@
 import { z } from 'zod';
 import { runWithAdobeTarget } from './adobeTargetStore';
 import { asText } from './mcpToolResult';
+import type { McpToolServer } from './mcpToolServer';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { buildSourceUrl, resolveDaPath } from '@/features/eds/services/daLive/daLiveContentHelpers';
@@ -47,7 +48,7 @@ import {
 } from '@/features/eds/services/daLive/daLiveContentOperations';
 import { HelixService } from '@/features/eds/services/helix/helixService';
 import { aemLiveBaseUrl } from '@/features/eds/services/storefront/storefrontProbe';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 import { getEdsDaLiveTarget, getEdsRepoParts, isEdsProject } from '@/types/typeGuards';
 
@@ -244,7 +245,7 @@ async function resolveTarget(
     if (opts.needsGitHub) {
         let githubOk = false;
         try {
-            githubOk = (await getGitHubServices(ctx).tokenService.validateToken()).valid;
+            githubOk = (await getGitHubServices(ctx.context.secrets).tokenService.validateToken()).valid;
         } catch {
             githubOk = false;
         }
@@ -294,7 +295,7 @@ function daLiveOps(ctx: HandlerContext): DaLiveContentOperations {
 function helixFor(ctx: HandlerContext): HelixService {
     return new HelixService(
         ctx.logger,
-        getGitHubServices(ctx).tokenService,
+        getGitHubServices(ctx.context.secrets).tokenService,
         createDaLiveServiceTokenProvider(getDaLiveAuthService(ctx.context)),
     );
 }
@@ -321,14 +322,24 @@ const pathField = z
  * @param ctxFactory Builds a headless HandlerContext for each invocation.
  */
 export function registerContentAuthoringTools(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    server: any,
+    server: McpToolServer,
     ctxFactory: () => HandlerContext,
+    /**
+     * Helix factory seam. Defaults to `helixFor`, which builds a service carrying
+     * both credentials a preview/publish request needs. Production never passes it.
+     *
+     * A FACTORY rather than an instance, because each tool call builds its Helix from
+     * that call's context — a single instance would outlive the context it was made
+     * from. This is the seam that lets the suites stop mocking the module: they were
+     * intercepting the constructor purely to reach the instance.
+     */
+    helixFactory: (ctx: HandlerContext) => HelixService = helixFor,
 ): void {
     // ─── read_page ───────────────────────────────────────────────────────────
     server.registerTool(
         'read_page',
         {
+            needsAuth: ['dalive'],
             annotations: { readOnlyHint: true, destructiveHint: false },
             description: "Read a page's DA.live source HTML from the current project's storefront",
             inputSchema: { path: pathField },
@@ -376,6 +387,7 @@ export function registerContentAuthoringTools(
     server.registerTool(
         'write_page',
         {
+            needsAuth: ['dalive'],
             annotations: { readOnlyHint: false, destructiveHint: false },
             description:
                 "Write a page's HTML to the current project's DA.live storefront; set publish:true to preview+publish it in the same call",
@@ -426,7 +438,7 @@ export function registerContentAuthoringTools(
             // in DA.live and a later publish_page will pick it up.
             try {
                 await runWithAdobeTarget(() =>
-                    helixFor(r.ctx).previewAndPublishPage(daLiveOrg, daLiveSite, webPath),
+                    helixFactory(r.ctx).previewAndPublishPage(daLiveOrg, daLiveSite, webPath),
                 );
                 return asText({ written: true, published: true, path: webPath, sourcePath });
             } catch (err) {
@@ -445,6 +457,7 @@ export function registerContentAuthoringTools(
     server.registerTool(
         'publish_page',
         {
+            needsAuth: ['dalive'],
             annotations: { readOnlyHint: false, destructiveHint: false },
             description: 'Preview and publish an existing DA.live page to the live CDN',
             inputSchema: { path: pathField },
@@ -457,7 +470,7 @@ export function registerContentAuthoringTools(
 
             try {
                 await runWithAdobeTarget(() =>
-                    helixFor(r.ctx).previewAndPublishPage(
+                    helixFactory(r.ctx).previewAndPublishPage(
                         r.target.daLiveOrg,
                         r.target.daLiveSite,
                         webPath,
@@ -474,6 +487,7 @@ export function registerContentAuthoringTools(
     server.registerTool(
         'list_content',
         {
+            needsAuth: ['dalive'],
             annotations: { readOnlyHint: true, destructiveHint: false },
             description:
                 "List pages and folders in the current project's DA.live storefront (defaults to " +
@@ -539,6 +553,7 @@ export function registerContentAuthoringTools(
     server.registerTool(
         'delete_page',
         {
+            needsAuth: ['dalive'],
             annotations: { readOnlyHint: false, destructiveHint: true },
             description:
                 'Unpublish and delete a page from the current project\'s DA.live storefront (irreversible). Requires confirm:true.',
@@ -581,7 +596,7 @@ export function registerContentAuthoringTools(
             let unpublishError: string | undefined;
             try {
                 unpublished = await runWithAdobeTarget(() =>
-                    helixFor(r.ctx).unpublishPage(daLiveOrg, daLiveSite, webPath),
+                    helixFactory(r.ctx).unpublishPage(daLiveOrg, daLiveSite, webPath),
                 );
             } catch (err) {
                 unpublishError = message(err);
@@ -597,6 +612,10 @@ export function registerContentAuthoringTools(
                 });
             }
 
+            // `unpublishError` is deliberately NOT carried past this point: it is
+            // only ever set in the catch above, which leaves `unpublished` false
+            // and returns at the guard. Everything below runs with the unpublish
+            // having succeeded, so there is no error to report alongside.
             try {
                 const result = await runWithAdobeTarget(() =>
                     daLiveOps(r.ctx).deleteSource(daLiveOrg, daLiveSite, sourcePath),
@@ -606,7 +625,6 @@ export function registerContentAuthoringTools(
                     unpublished,
                     path: webPath,
                     ...(result.error ? { error: result.error } : {}),
-                    ...(unpublishError ? { unpublishError } : {}),
                 });
             } catch (err) {
                 return asText({
@@ -614,7 +632,6 @@ export function registerContentAuthoringTools(
                     unpublished,
                     path: webPath,
                     error: message(err),
-                    ...(unpublishError ? { unpublishError } : {}),
                 });
             }
         },
@@ -626,6 +643,7 @@ export function registerContentAuthoringTools(
     server.registerTool(
         'read_published_page',
         {
+            needsAuth: ['dalive'],
             annotations: { readOnlyHint: true, destructiveHint: false },
             description:
                 "Fetch a page as published on the live CDN (.plain.html) — the way to verify a publish actually landed",

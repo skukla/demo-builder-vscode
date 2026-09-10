@@ -31,7 +31,7 @@ describe('typeGuards - JSON Parsing', () => {
                 expect(parseJSON('"string"')).toBe('string');
                 expect(parseJSON('true')).toBe(true);
                 expect(parseJSON('false')).toBe(false);
-                expect(parseJSON('null')).toBe(null);
+                expect(parseJSON('null')).toBeNull();
             });
 
             it('should parse nested objects', () => {
@@ -52,20 +52,20 @@ describe('typeGuards - JSON Parsing', () => {
 
         describe('invalid JSON', () => {
             it('should return null for invalid JSON', () => {
-                expect(parseJSON('not json')).toBe(null);
-                expect(parseJSON('{')).toBe(null);
-                expect(parseJSON('}')).toBe(null);
-                expect(parseJSON('["incomplete')).toBe(null);
+                expect(parseJSON('not json')).toBeNull();
+                expect(parseJSON('{')).toBeNull();
+                expect(parseJSON('}')).toBeNull();
+                expect(parseJSON('["incomplete')).toBeNull();
             });
 
             it('should return null for malformed JSON', () => {
-                expect(parseJSON('{key: "value"}')).toBe(null); // Missing quotes
-                expect(parseJSON("{'key': 'value'}")).toBe(null); // Single quotes
-                expect(parseJSON('{,}')).toBe(null);
+                expect(parseJSON('{key: "value"}')).toBeNull(); // Missing quotes
+                expect(parseJSON("{'key': 'value'}")).toBeNull(); // Single quotes
+                expect(parseJSON('{,}')).toBeNull();
             });
 
             it('should return null for empty string', () => {
-                expect(parseJSON('')).toBe(null);
+                expect(parseJSON('')).toBeNull();
             });
         });
 

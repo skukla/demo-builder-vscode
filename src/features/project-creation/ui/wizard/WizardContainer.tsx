@@ -8,12 +8,6 @@ import {
 } from '../helpers/stackHelpers';
 import { buildAreaWalk } from './buildAreaWalk';
 import {
-    useWizardState,
-    useWizardNavigation,
-    useMessageListeners,
-    useWizardEffects,
-} from './hooks';
-import {
     getCompletedStepIndices,
     getNextButtonText,
     getNavigationDirection,
@@ -23,14 +17,19 @@ import {
 } from './wizardHelpers';
 import { renderWizardStep } from './wizardStepRouter';
 import { ErrorBoundary } from '@/core/ui/components/ErrorBoundary';
-import { LoadingOverlay } from '@/core/ui/components/feedback';
-import { PageHeader, PageFooter } from '@/core/ui/components/layout';
+import { LoadingOverlay } from '@/core/ui/components/feedback/LoadingOverlay';
+import { PageFooter } from '@/core/ui/components/layout/PageFooter';
+import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 import { TimelineNav, TimelineStep } from '@/core/ui/components/TimelineNav';
-import { useFocusTrap } from '@/core/ui/hooks';
+import { useFocusTrap } from '@/core/ui/hooks/useFocusTrap';
 import { cn } from '@/core/ui/utils/classNames';
 import { vscode } from '@/core/ui/utils/vscode-api';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { useMessageListeners } from '@/features/project-creation/ui/wizard/hooks/useMessageListeners';
+import { useWizardEffects } from '@/features/project-creation/ui/wizard/hooks/useWizardEffects';
+import { useWizardNavigation } from '@/features/project-creation/ui/wizard/hooks/useWizardNavigation';
+import { useWizardState } from '@/features/project-creation/ui/wizard/hooks/useWizardState';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
@@ -304,8 +303,6 @@ export function WizardContainer({
     // Timeline state — derived from local wizard state, no sidebar messaging.
     const timelineSteps: TimelineStep[] = WIZARD_STEPS.map((s) => ({ id: s.id, name: s.name }));
     const completedStepIndices = getCompletedStepIndices(completedSteps, WIZARD_STEPS);
-    const confirmedStepIndices = getCompletedStepIndices(confirmedSteps, WIZARD_STEPS);
-    const isEditMode = (state.wizardMode ?? 'create') !== 'create';
 
     // Build-Your-Project linear driver (Continue/Back over sub-steps -> areas ->
     // wizard steps) + rail children. Extracted to buildAreaWalk (pure derivation).
@@ -347,12 +344,10 @@ export function WizardContainer({
                         steps={timelineSteps}
                         currentStepIndex={currentStepIndex}
                         completedStepIndices={completedStepIndices}
-                        confirmedStepIndices={confirmedStepIndices}
                         onStepClick={handleTimelineStepClick}
                         compact={true}
                         showHeader={true}
                         headerText="Setup Progress"
-                        isEditMode={isEditMode}
                         // Build-step areas as children under the (current) Build step.
                         childSteps={buildChildSteps}
                         childStatusById={buildChildStatusById}
@@ -459,26 +454,6 @@ export function WizardContainer({
                     )}
                 </div>
             </div>
-
-            <style>{`
-                .step-content {
-                    opacity: 1;
-                    transform: translateX(0);
-                }
-                
-                .step-content.transitioning {
-                    opacity: 0;
-                }
-                
-                .step-content.transitioning.forward {
-                    transform: translateX(-20px);
-                }
-                
-                .step-content.transitioning.backward {
-                    transform: translateX(20px);
-                }
-
-            `}</style>
         </View>
     );
 }

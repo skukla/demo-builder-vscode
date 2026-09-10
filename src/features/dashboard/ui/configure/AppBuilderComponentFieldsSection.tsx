@@ -6,7 +6,7 @@ import {
     type AppBuilderComponentFieldGroup,
 } from './appBuilderComponentFieldModel';
 import { SecretFieldRow } from './SecretFieldRow';
-import { ConfigSection } from '@/core/ui/components/forms';
+import { ConfigSection } from '@/core/ui/components/forms/ConfigSection';
 import type { AppBuilderComponentCatalogEntry, AppBuilderComponentEnvVar } from '@/types/appBuilderComponents';
 import type { ComponentConfigs } from '@/types/webview';
 

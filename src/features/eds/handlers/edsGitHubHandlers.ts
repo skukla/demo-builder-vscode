@@ -41,7 +41,7 @@ export async function handleCheckGitHubAuth(
 ): Promise<HandlerResponse> {
     try {
         context.logger.debug('[EDS] Checking GitHub auth status');
-        const { tokenService } = getGitHubServices(context);
+        const { tokenService } = getGitHubServices(context.context.secrets);
 
         // First, check if we have a stored token
         const storedToken = await tokenService.getToken();
@@ -127,7 +127,7 @@ export async function handleGitHubOAuth(
 ): Promise<HandlerResponse> {
     try {
         context.logger.debug('[EDS] Starting GitHub OAuth via VS Code authentication');
-        const { tokenService } = getGitHubServices(context);
+        const { tokenService } = getGitHubServices(context.context.secrets);
 
         // First attempt: let VS Code return its cached session if one exists,
         // or prompt fresh auth via createIfNone. This is the fast path for
@@ -259,7 +259,7 @@ export async function handleGitHubChangeAccount(
 ): Promise<HandlerResponse> {
     try {
         context.logger.debug('[EDS] Changing GitHub account');
-        const { tokenService } = getGitHubServices(context);
+        const { tokenService } = getGitHubServices(context.context.secrets);
 
         // Clear stored token before fresh auth — the new session must not
         // inherit any state from the old one.
@@ -318,7 +318,7 @@ export async function handleGetGitHubRepos(
 ): Promise<HandlerResponse> {
     try {
         context.logger.debug('[EDS] Fetching GitHub repositories');
-        const { repoOperations } = getGitHubServices(context);
+        const { repoOperations } = getGitHubServices(context.context.secrets);
 
         const repos = await repoOperations.listUserRepositories();
 
@@ -387,7 +387,7 @@ export async function handleCreateGitHubRepo(
 
     try {
         context.logger.info(`[EDS] Creating GitHub repository: ${repoName} from ${templateOwner}/${templateRepo}`);
-        const { repoOperations } = getGitHubServices(context);
+        const { repoOperations } = getGitHubServices(context.context.secrets);
 
         // Create repository from template
         const repo = await repoOperations.createFromTemplate(

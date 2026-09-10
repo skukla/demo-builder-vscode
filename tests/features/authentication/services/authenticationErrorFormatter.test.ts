@@ -8,6 +8,7 @@
  * - Uses consistent user-friendly messages from getErrorTitle()
  */
 
+import { AppError } from '@/core/errors';
 import { AuthenticationErrorFormatter } from '@/features/authentication/services/authenticationErrorFormatter';
 import { ErrorCode } from '@/types/errorCodes';
 
@@ -220,6 +221,24 @@ describe('AuthenticationErrorFormatter', () => {
             const result = AuthenticationErrorFormatter.formatError(error, context);
 
             expect(result.technical).toContain('Code: TIMEOUT');
+        });
+
+        it('passes a non-auth, non-general AppError through with its own user message', () => {
+            // A mesh-category error reaches the formatter's fallback branch: the
+            // title comes from the code and the message is the error's own userMessage,
+            // not the auth or network copy.
+            const error = new AppError('mesh deploy exited 1', ErrorCode.MESH_DEPLOY_FAILED, {
+                userMessage: 'The mesh could not be deployed. Check the deploy log.',
+            });
+
+            const result = AuthenticationErrorFormatter.formatError(error, { operation: 'DeployMesh' });
+
+            expect(result).toEqual({
+                title: 'Mesh deployment failed',
+                message: 'The mesh could not be deployed. Check the deploy log.',
+                technical: expect.stringContaining('Code: MESH_DEPLOY_FAILED'),
+                code: ErrorCode.MESH_DEPLOY_FAILED,
+            });
         });
     });
 });

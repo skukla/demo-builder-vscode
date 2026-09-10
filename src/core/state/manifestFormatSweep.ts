@@ -25,7 +25,7 @@
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import { MANIFEST_FORMAT_VERSION } from './projectConfigWriter';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 
 export interface ManifestFormatSweepDeps {
     /** Project directories to inspect (each containing .demo-builder.json). */

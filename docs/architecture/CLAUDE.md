@@ -1,4 +1,3 @@
-<!-- Last verified: 2026-07-03 -->
 # Architecture Documentation Index
 
 **New to the codebase?** Start with [`overview.md`](overview.md), then
@@ -29,26 +28,18 @@
   bug.
 - [`error-handling.md`](error-handling.md) — Error handling architecture
   (backend phases complete; frontend migration pending at time of writing).
-- [`graph-based-dependencies.md`](graph-based-dependencies.md) — Planned
-  evolution from the two-level prerequisite/plugin hierarchy to a
-  graph-based dependency system (topological install order, cycle
-  detection).
 - [`working-directory-and-node-version.md`](working-directory-and-node-version.md)
   — Why commands must run from the correct component directory, and how
   per-component Node versions (fnm) are managed.
+- [`where-code-goes.md`](where-code-goes.md) — the when-you-want-X table: which
+  layer a new service, handler, hook or component belongs in. ADR-015 defers to it
+  for placement, and the root `CLAUDE.md` sends you here for it.
 
 ### Components and Updates
 
 - [`component-version-management.md`](component-version-management.md) —
   Floating stable-tag pattern that decouples component updates from
   extension releases.
-- [`component-update-env-migration.md`](component-update-env-migration.md) —
-  Handling environment-variable renames across component updates so `.env`
-  files don't rot.
-- [`update-system-refactoring.md`](update-system-refactoring.md) — Dynamic
-  repository resolution from `components.json` instead of hardcoded
-  mappings. Implementation:
-  `src/features/updates/services/updateManager.ts`.
 
 ### Edge Delivery Services (EDS)
 
@@ -57,11 +48,6 @@
   configuration.
 - [`eds-backend-configuration.md`](eds-backend-configuration.md) — How EDS
   projects are configured based on the selected backend component.
-- [`eds-unified-config-generation.md`](eds-unified-config-generation.md) —
-  Registry-based generation of both `.env` and `site.json` in one phase.
-- [`eds-standard-pattern-refactoring.md`](eds-standard-pattern-refactoring.md)
-  — Aligning EDS configuration with the standard component pattern
-  (removing custom `.env` generation logic).
 - [`eds-byom-pdp-routing.md`](eds-byom-pdp-routing.md) — How
   `/products/{urlKey}/{sku}` URLs work for every storefront: shared
   `render-pdp` overlay, browser-side smart 404, reversible SKU encoding.
@@ -70,22 +56,17 @@
 
 ## Architecture Decision Records (`adr/`)
 
-| ADR | Title | Status |
-|-----|-------|--------|
-| [001](adr/001-component-naming-standardization.md) | Component naming standardization (`externalSystems` → `integrations`) | Accepted and implemented |
-| [002](adr/002-helix-bulk-api-fallback.md) | Helix bulk API fallback strategy | Accepted and implemented |
-| [003](adr/003-multisite-architecture-seam.md) | Multisite architecture seam | Accepted (implementation deferred) |
-| [004](adr/004-claude-code-harness.md) | Claude Code (CLI) as the AI harness | Accepted |
-| [005](adr/005-byom-pdp-routing.md) | BYOM PDP routing — canonical pattern with multi-tenancy and smart-404 gap-fill | Accepted |
-| [006](adr/006-thin-layer-storefront-customization.md) | Thin-layer storefront customization — retire CitiSignal forks, canonical + code patches | Accepted (implementation in progress) |
-| [007](adr/007-pdp-sku-url-encoding.md) | PDP SKU URL encoding — reversible, lowercase-stable, Helix-safe | Accepted |
-| [008](adr/008-derive-runtime-surface-inventory.md) | Derive the runtime-surface inventory from the boilerplate, not by hand | Accepted (producer built; consumer wiring pending) |
-| [009](adr/009-storefront-config-flag-injection.md) | Storefront `config.json` flag injection — the generator owns config, so template flags must be re-injected | Accepted |
-| [010](adr/010-content-copy-completeness.md) | Content-copy completeness — follow document references so unindexed fragments aren't dropped | Accepted |
-| [011](adr/011-app-builder-deployables.md) | App Builder deployables — a keyed set of deployable components in one App Builder project (shipped as `appBuilderComponents`) | Accepted; D1–D2 implemented, D3 pending |
-| [012](adr/012-diagnostic-surfaces.md) | Diagnostic surfaces — every capability human-reachable first, MCP tools wrap the same core; no remote probe manifest | Accepted; prerequisite landed, surfaces planned (beta.123) |
-| [013](adr/013-generated-file-edit-survival.md) | Generated AI files — hash-and-skip edit survival (refresh overwrites only unmodified files) | Implemented (feature/tiered-ai-refresh, 2026-08-14) |
-| [014](adr/014-data-installer-shared-credential.md) | The ACCS datapack credential is served from the shared discovery service (one pair, never persisted; a declared pair still wins) | Implemented (feature/data-installer-credential-broker, 2026-08-16) |
+**The index is generated: [`adr/README.md`](adr/README.md).** It is rebuilt by
+`npm run docs:adr-index` and every column in it is measured from the files rather
+than asserted, so it cannot drift from what is on disk.
+
+This section used to carry a second, hand-written copy of that table. It stopped at
+ADR-018 while four more had landed — the same failure the backlog index had, and the
+reason the generator exists. Do not reintroduce a copy here; link to it.
+
+For the decision-vs-convention split — why a rule lives in the handbook and its
+reasoning lives in an ADR — see
+[`../development/handbook.md`](../development/handbook.md).
 
 ## Quick Reference
 

@@ -24,11 +24,13 @@
  */
 
 import * as vscode from 'vscode';
-import { ServiceLocator } from '@/core/di';
-import { getLogger, getStepLogger } from '@/core/logging';
+import { ServiceLocator } from '@/core/di/serviceLocator';
+import { getLogger } from '@/core/logging/debugLogger';
 import { ErrorLogger } from '@/core/logging/errorLogger';
-import { ProgressUnifier } from '@/core/utils/progressUnifier';
-import { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
+import { getStepLogger } from '@/core/logging/stepLogger';
+import { ProgressUnifier } from '@/core/utils/progressUnifier/ProgressUnifier';
+import { getComponentRegistryManager } from '@/features/components/services/componentRegistryInstance';
+import { getPrerequisitesManager } from '@/features/prerequisites/services/prerequisitesManagerInstance';
 import type { HandlerContext, SharedState } from '@/types/handlers';
 
 /** The panel-specific half — everything the factory cannot know. */
@@ -52,7 +54,12 @@ export function createPanelHandlerContext(parts: PanelContextParts): HandlerCont
     const logger = getLogger();
 
     return {
-        prereqManager: new PrerequisitesManager(parts.context.extensionPath, logger),
+        prereqManager: getPrerequisitesManager(
+            parts.context.extensionPath,
+            logger,
+            ServiceLocator.getCommandExecutor(),
+        ),
+        componentRegistry: getComponentRegistryManager(parts.context.extensionPath),
         authManager: ServiceLocator.getAuthenticationService(),
         errorLogger: new ErrorLogger(parts.context),
         progressUnifier: new ProgressUnifier(logger),

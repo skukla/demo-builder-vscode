@@ -52,6 +52,7 @@
 import { z } from 'zod';
 import { needsUser } from './handoff';
 import { asText } from './mcpToolResult';
+import type { McpToolServer } from './mcpToolServer';
 import { AGENT_PAGE_SIZE } from './projectors';
 import { phaseReporter } from '@/core/utils/agentPhaseChannel';
 import { repairSiteConfigForProject } from '@/features/eds/services/configService/repairSiteConfigForProject';
@@ -64,7 +65,7 @@ import {
     findStorefrontNameMismatch,
     migrateStorefrontNameForProject,
 } from '@/features/eds/services/storefront/storefrontNameMigrationForProject';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 import { isEdsProject } from '@/types/typeGuards';
 
@@ -95,14 +96,11 @@ function refuseIfNotEds(project: Project, tool: string): { error: string } | und
         : { error: `${tool} applies only to EDS storefront projects` };
 }
 
-export function registerSiteTools(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    server: any,
-    ctxFactory: () => HandlerContext,
-): void {
+export function registerSiteTools(server: McpToolServer, ctxFactory: () => HandlerContext): void {
     server.registerTool(
         'get_site_access',
         {
+            needsAuth: ['dalive'],
             annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'Get Site Access',
             description:
@@ -126,6 +124,7 @@ export function registerSiteTools(
     server.registerTool(
         'set_site_admin',
         {
+            needsAuth: ['dalive'],
             annotations: { readOnlyHint: false, destructiveHint: true },
             title: 'Set Site Admin',
             description:
@@ -174,6 +173,7 @@ export function registerSiteTools(
     server.registerTool(
         'repair_site_configuration',
         {
+            needsAuth: ['dalive'],
             annotations: { readOnlyHint: false, destructiveHint: false },
             title: 'Repair Site Configuration',
             description:
@@ -232,6 +232,7 @@ export function registerSiteTools(
     server.registerTool(
         'find_storefront_name_mismatches',
         {
+            needsAuth: ['dalive'],
             annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'Find Storefront Name Mismatches',
             description:
@@ -290,6 +291,7 @@ export function registerSiteTools(
     server.registerTool(
         'migrate_storefront_name',
         {
+            needsAuth: ['dalive'],
             annotations: { readOnlyHint: false, destructiveHint: true },
             title: 'Migrate Storefront Name',
             description:
@@ -339,7 +341,9 @@ export function registerSiteTools(
             // The echo is the project NAME rather than the site name: it is what
             // find_storefront_name_mismatches reports first and what the user
             // recognises. The site names are in `from`/`to` on that same row.
-            if (args?.confirm !== true || args?.confirmName !== candidate.projectName) {
+            // Not `args?.` — the projectPath guard above has already returned for a
+            // call with no arguments at all, so `args` is an object by here.
+            if (args.confirm !== true || args.confirmName !== candidate.projectName) {
                 return asText({
                     error:
                         `migrate_storefront_name deletes the old DA.live site root ` +
@@ -380,6 +384,7 @@ export function registerSiteTools(
     server.registerTool(
         'connect_dalive',
         {
+            needsAuth: ['dalive'],
             annotations: { readOnlyHint: false, destructiveHint: false },
             title: 'Connect DA.live',
             description:

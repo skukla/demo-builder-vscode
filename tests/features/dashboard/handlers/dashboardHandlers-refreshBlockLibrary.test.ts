@@ -1,0 +1,115 @@
+/**
+ * handleRefreshBlockLibrary handler tests
+ *
+ * Covers the dashboard "Refresh Block Library" kebab action (EDS-only):
+ *   1. No current project → PROJECT_NOT_FOUND error
+ *   2. Non-EDS (headless) project → INVALID_OPERATION error, no command dispatched
+ *   3. EDS project → executes 'demoBuilder.refreshBlockLibrary' and returns success
+ */
+
+
+jest.mock('@/core/di/serviceLocator', () => ({
+    ServiceLocator: {
+        getAuthenticationService: jest.fn(),
+    },
+}));
+
+jest.mock('@/features/mesh/services/stalenessDetector');
+
+import './dashboardValidatorMocks';
+import * as vscode from 'vscode';
+import { handleRefreshBlockLibrary } from '@/features/dashboard/handlers/dashboardHandlers';
+import { ErrorCode } from '@/types/errorCodes';
+import { HandlerContext } from '@/types/handlers';
+import { Project } from '@/types/base';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockProject } from '../../../helpers/projectFake';
+
+function makeContext(project: Project | undefined): HandlerContext {
+    return createMockHandlerContext({
+        panel: {
+            webview: { postMessage: jest.fn() },
+        } as unknown as HandlerContext['panel'],
+        stateManager: createMockStateManager({
+            getCurrentProject: jest.fn().mockResolvedValue(project),
+            saveProject: jest.fn().mockResolvedValue(undefined),
+        }),
+        logger: createMockLogger() as unknown as HandlerContext['logger'],
+        sendMessage: jest.fn(),
+    });
+}
+
+function makeEdsProject(): Project {
+    return createMockProject({
+        name: 'test-eds',
+        path: '/path/to/eds',
+        status: 'running',
+        selectedStack: 'eds-paas',
+        componentInstances: {
+            'eds-storefront': {
+                id: 'eds-storefront',
+                name: 'EDS Storefront',
+                type: 'frontend',
+                status: 'ready',
+            },
+        },
+    });
+}
+
+function makeHeadlessProject(): Project {
+    return createMockProject({
+        name: 'test-headless',
+        path: '/path/to/headless',
+        status: 'running',
+        selectedStack: 'headless-paas',
+        componentInstances: {
+            headless: {
+                id: 'headless',
+                name: 'Headless',
+                type: 'frontend',
+                status: 'ready',
+            },
+        },
+    });
+}
+
+describe('handleRefreshBlockLibrary', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        (vscode.commands.executeCommand as jest.Mock).mockResolvedValue(undefined);
+    });
+
+    it('returns PROJECT_NOT_FOUND when no current project is loaded', async () => {
+        const context = makeContext(undefined);
+
+        const result = await handleRefreshBlockLibrary(context);
+
+        expect(result.success).toBe(false);
+        expect(result.code).toBe(ErrorCode.PROJECT_NOT_FOUND);
+        expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
+    });
+
+    it('returns INVALID_OPERATION for non-EDS (headless) projects', async () => {
+        const context = makeContext(makeHeadlessProject());
+
+        const result = await handleRefreshBlockLibrary(context);
+
+        expect(result.success).toBe(false);
+        expect(result.code).toBe(ErrorCode.INVALID_OPERATION);
+        expect(result.error).toMatch(/EDS/i);
+        expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
+    });
+
+    it("invokes 'demoBuilder.refreshBlockLibrary' and returns success for EDS projects", async () => {
+        const context = makeContext(makeEdsProject());
+
+        const result = await handleRefreshBlockLibrary(context);
+
+        expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+            'demoBuilder.refreshBlockLibrary'
+        );
+        expect(result.success).toBe(true);
+    });
+});

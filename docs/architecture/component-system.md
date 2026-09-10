@@ -1,324 +1,53 @@
-# Component System Documentation
-
-## Overview
-
-The Demo Builder VSCode Extension uses a flexible component-based architecture that allows users to mix and match different frontend frameworks, backend systems, and optional dependencies to create customized demo environments.
-
-## Architecture
-
-### Component Types
-
-1. **Frontend Components**: User-facing applications (e.g., NextJS storefronts)
-2. **Backend Components**: Commerce platforms and data sources
-3. **Dependencies**: Supporting tools and services (required or optional)
-4. **External Systems**: Third-party integrations (e.g., Target, Experience Platform)
-
-### Component Registry
-
-All components are defined in `src/features/components/config/components.json`, which serves as the single source of truth for available components and their relationships.
-
-## Component Definition Structure
-
-### Frontend Component Example
-
-```json
-{
-  "id": "citisignal-nextjs",
-  "name": "CitiSignal NextJS Headless Storefront",
-  "description": "Modern, performant NextJS-based storefront",
-  "source": {
-    "type": "git",
-    "url": "https://github.com/adobe/citisignal-nextjs.git",
-    "branch": "main"
-  },
-  "compatibleBackends": ["adobe-commerce-paas", "adobe-commerce-saas"],
-  "configuration": {
-    "envVars": ["ADOBE_COMMERCE_URL"],
-    "port": 3000,
-    "nodeVersion": "20"
-  }
-}
-```
-
-### Backend Component Example
-
-```json
-{
-  "id": "adobe-commerce-paas",
-  "name": "Adobe Commerce (Platform-as-a-Service)",
-  "configuration": {
-    "required": {
-      "commerceUrl": {
-        "type": "url",
-        "label": "Commerce Instance URL"
-      },
-      "environmentId": {
-        "type": "string",
-        "label": "Environment ID"
-      }
-    },
-    "services": [
-      {
-        "id": "catalog-service",
-        "name": "Catalog Service",
-        "required": false,
-        "requiresApiKey": true
-      }
-    ]
-  }
-}
-```
-
-## Dependency Resolution
-
-### Required vs Optional Dependencies
-
-- **Required Dependencies**: Automatically included when a component is selected
-- **Optional Dependencies**: User can choose to include based on needs
-
-### Dependency Chain Validation
-
-The system validates:
-- Circular dependencies
-- Version conflicts
-- Compatibility issues
-
-## User Workflow
-
-### 1. Component Selection
-
-Users can choose between:
-- **Presets**: Pre-configured component combinations
-- **Custom Selection**: Choose individual components
-
-### 2. Dependency Management
-
-The wizard:
-1. Automatically includes required dependencies
-2. Presents optional dependencies with impact indicators
-3. Validates the complete dependency chain
-
-### 3. Configuration Generation
-
-Based on selections, the system generates:
-- Environment variables
-- Service configurations
-- Deployment settings
-
-## External Systems Integration
-
-External systems provide optional integrations with Adobe Experience Cloud services:
-
-### Experience Platform
-```json
-{
-  "id": "experience-platform",
-  "name": "Experience Platform",
-  "description": "Adobe Experience Platform integration via Commerce Data Sharing",
-  "requiresApiKey": true,
-  "endpoint": "https://platform.adobe.io",
-  "configuration": {
-    "datastream": {
-      "type": "string",
-      "required": true
-    }
-  }
-}
-```
-
-## Adding New Components
-
-### Step 1: Define Component in Registry
-
-Add the component definition to `src/features/components/config/components.json`:
-
-```json
-{
-  "id": "my-new-frontend",
-  "name": "My Custom Frontend",
-  "type": "frontend",
-  "source": {
-    "type": "git",
-    "url": "https://github.com/myorg/my-frontend.git"
-  },
-  "dependencies": {
-    "required": ["commerce-mesh"],
-    "optional": []
-  },
-  "compatibleBackends": ["adobe-commerce-paas"]
-}
-```
-
-### Step 2: Update Compatibility Matrix
-
-Add compatibility information:
-
-```json
-"compatibilityMatrix": {
-  "my-new-frontend": {
-    "adobe-commerce-paas": {
-      "compatible": true,
-      "recommended": true,
-      "notes": "Full support for all features"
-    }
-  }
-}
-```
-
-### Step 3: Test Integration
-
-1. Validate JSON against schema
-2. Test component selection in wizard
-3. Verify dependency resolution
-4. Test installation process
-
-## API Reference
-
-### ComponentRegistryManager
-
-```typescript
-class ComponentRegistryManager {
-  loadRegistry(): Promise<ComponentRegistry>
-  getFrontends(): Promise<ComponentDefinition[]>
-  getBackends(): Promise<ComponentDefinition[]>
-  getDependencies(): Promise<ComponentDefinition[]>
-  getExternalSystems(): Promise<ComponentDefinition[]>
-  getComponentById(id: string): Promise<ComponentDefinition>
-  checkCompatibility(frontend: string, backend: string): Promise<boolean>
-}
-```
-
-### DependencyResolver
-
-```typescript
-class DependencyResolver {
-  resolveDependencies(
-    frontend: string,
-    backend: string,
-    selectedOptional: string[]
-  ): Promise<ResolvedDependencies>
-  
-  validateDependencyChain(
-    dependencies: ComponentDefinition[]
-  ): Promise<ValidationResult>
-  
-  generateConfiguration(
-    frontend: ComponentDefinition,
-    backend: ComponentDefinition,
-    dependencies: ComponentDefinition[]
-  ): Promise<Configuration>
-}
-```
-
-## Configuration Output
-
-The component system generates a configuration object that includes:
-
-```typescript
-{
-  envVars: {
-    MESH_ENDPOINT: "${MESH_ENDPOINT}"
-  },
-  frontend: {
-    id: "citisignal-nextjs",
-    port: 3000,
-    nodeVersion: "20"
-  },
-  backend: {
-    id: "adobe-commerce-paas",
-    configuration: { /* backend-specific config */ }
-  },
-  dependencies: [
-    {
-      id: "commerce-mesh",
-      type: "mesh",
-      configuration: { /* dependency config */ }
-    }
-  ]
-}
-```
-
-## Benefits
-
-1. **Flexibility**: Mix and match components
-2. **Maintainability**: Centralized component definitions
-3. **Scalability**: Easy to add new components
-4. **Clear Dependencies**: Explicit required/optional relationships
-5. **Type Safety**: Full TypeScript support
-
-## Component Version Tracking
-
-The extension tracks component versions to support the auto-update system.
-
-### Version Storage
-
-Stored in project manifest (`.demo-builder.json`):
-
-```json
-{
-  "componentVersions": {
-    "citisignal-nextjs": {
-      "version": "1.0.0",
-      "lastUpdated": "2025-01-15T10:30:00Z"
-    },
-    "commerce-mesh": {
-      "version": "main",
-      "lastUpdated": "2025-01-15T10:35:00Z"
-    }
-  }
-}
-```
-
-### Version Lifecycle
-
-1. **Initial Creation**: Set to `"unknown"` when project is created
-2. **First Update**: Set to actual version after first component update
-3. **Subsequent Updates**: Updated after each successful component update
-
-### Update Detection
-
-```typescript
-// UpdateManager checks for newer versions
-const current = project.componentVersions[componentId]?.version || 'unknown';
-const latest = await fetchLatestRelease(repo, channel);
-
-if (isNewerVersion(latest, current)) {
-  // Show update notification
-}
-```
-
-### Integration Points
-
-- **UpdateManager**: Checks versions against GitHub Releases
-- **ComponentUpdater**: Updates version after successful component update
-- **Project Creation**: Initializes version tracking structure
-
-## Auto-Update System Integration
-
-Components integrate with the auto-update system introduced in v1.6.0.
-
-### Update Flow
-
-1. **Check for Updates**: UpdateManager queries GitHub Releases
-2. **User Confirmation**: Show notification with available updates
-3. **Component Update**: ComponentUpdater performs safe update with snapshot/rollback
-4. **Version Tracking**: Update componentVersions in project manifest
-5. **Restart Notification**: Prompt user to restart demo if running
-
-### Safety Features
-
-- **Snapshot Before Update**: Full component directory backed up
-- **Automatic Rollback**: Restore snapshot on ANY failure
-- **Smart .env Merging**: Preserve user config, add new variables
-- **Verification**: Check package.json validity after extraction
-- **Concurrent Lock**: Prevent multiple updates to same component
-
-See `src/features/updates/services/componentUpdater.ts` for implementation details.
-
-## Future Enhancements
-
-- Dynamic component discovery from custom registries
-- Version compatibility matrix
-- Component marketplace integration
-- Custom component templates
-- ~~Automated dependency updates~~ ✅ **Implemented in v1.6.0**
+# Component system
+
+A demo project is assembled from components: a frontend, a backend, and the
+dependencies and integrations they need.
+
+## Components are rows, not classes
+
+`src/features/components/config/components.json` defines every installable
+component — where it clones from, what it needs, what it provides. Adding support for
+something is normally an edit there. The registries and what reads them are in
+[`src/features/components/README.md`](../../src/features/components/README.md).
+
+## Three kinds, and one of them is not a component
+
+| `type` | |
+|---|---|
+| `frontend` | the storefront — EDS, or headless |
+| `backend` | Commerce — ACCS or PaaS |
+| `dependency` | something a frontend or backend needs, like the mesh |
+
+A **stack** (`stacks.json`) is a frontend + backend combination that is known to
+work, plus the addons available to it. A **demo package** (`demo-packages.json`) is
+what the user actually picks on the Welcome screen — a brand, with a stack and
+content behind it.
+
+So a user chooses a package, which implies a stack, which implies components. Working
+backwards from a component to explain what the user did is the wrong direction.
+
+## Dependencies are declared, and the order matters
+
+A component declares what it `depends` on. Installation follows those declarations,
+because a mesh deployed before its backend exists has nothing to point at.
+
+There is no general graph — the relationships are one level deep by design, and the
+proposal to generalise them is backlog PL-23 rather than architecture.
+
+## Required versus optional
+
+An optional component that fails to install does not fail the project. A required one
+does. That distinction is what lets a demo come up without an integration the user
+did not ask for, and it is why `optional` is a field rather than an inference.
+
+## Conventions that bind this
+
+The rules are in [the handbook](../development/handbook.md). Registries load through
+`ConfigurationLoader`, each has a schema beside it validated by
+`tests/templates/config-contracts.test.ts`, and a config leaf is never mocked in a
+test — inject the data instead.
+
+## Related
+
+- [component-version-management.md](component-version-management.md) — how a component updates
+- [service-resolution-pattern.md](service-resolution-pattern.md) — what `providesServices` still drives

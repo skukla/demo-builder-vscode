@@ -10,13 +10,10 @@
  * Strict TDD: written BEFORE the hook exists.
  */
 
+import '../../../../helpers/webviewClientMock';
 import React from 'react';
 import { render, screen, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
-
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: { onMessage: jest.fn() },
-}));
 
 // Below the mock on purpose — see webview-test-authoring §3.
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
@@ -85,6 +82,23 @@ describe('useImportProgress', () => {
         const seen = screen.getByTestId('seen');
         expect(seen).toHaveTextContent('success');
         expect(seen).not.toHaveTextContent('processing');
+    });
+
+    /**
+     * The channel hands the listener whatever arrived; a push with no payload is
+     * `undefined`, and reading `.activationId` off it throws inside the message
+     * dispatcher — which would take down every other listener on the same push.
+     */
+    it('survives a push with no payload rather than throwing at the dispatcher', () => {
+        render(<Probe activationId="act-1" />);
+
+        expect(() => {
+            act(() => {
+                handlerFor()(undefined);
+            });
+        }).not.toThrow();
+
+        expect(screen.getByTestId('seen')).toHaveTextContent('null');
     });
 
     it('subscribes to nothing until there is a job to watch', () => {

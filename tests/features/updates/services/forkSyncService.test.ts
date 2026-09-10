@@ -12,55 +12,18 @@
  * Total tests: 8
  */
 
-// Mock vscode
-jest.mock('vscode', () => ({}), { virtual: true });
 
-// Mock Logger
-jest.mock('@/core/logging', () => ({
-    Logger: jest.fn().mockImplementation(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
-}));
-
-// Mock timeoutConfig (used by githubApiClient)
-jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: {
-        QUICK: 5000,
-    },
-}));
-
-// Mock global fetch
-global.fetch = jest.fn() as jest.Mock;
-
-import { ForkSyncService } from '@/features/updates/services/forkSyncService';
+import { ForkSyncService } from './forkSyncService.testUtils';
+import { createForkSyncHarness, fetchMock as mockFetch } from './forkSyncService.testUtils';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 describe('ForkSyncService', () => {
     let service: ForkSyncService;
-    let mockSecrets: any;
-    let mockLogger: any;
-    const mockFetch = global.fetch as jest.Mock;
+    let mockLogger: ReturnType<typeof createMockLogger>;
 
     beforeEach(() => {
         jest.clearAllMocks();
-
-        mockSecrets = {
-            get: jest.fn().mockResolvedValue('test-github-token'),
-            store: jest.fn(),
-            delete: jest.fn(),
-            onDidChange: jest.fn(),
-        };
-
-        mockLogger = {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        };
-
-        service = new ForkSyncService(mockSecrets, mockLogger);
+        ({ service, logger: mockLogger } = createForkSyncHarness());
     });
 
     describe('checkForkStatus', () => {
@@ -160,9 +123,7 @@ describe('ForkSyncService', () => {
             const result = await service.checkForkStatus('my-org', 'my-repo');
 
             expect(result).toBeNull();
-            expect(mockLogger.warn).toHaveBeenCalledWith(
-                expect.stringContaining('Timeout'),
-            );
+            expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining('Timeout'));
         });
     });
 
@@ -186,7 +147,7 @@ describe('ForkSyncService', () => {
                 expect.objectContaining({
                     method: 'POST',
                     body: JSON.stringify({ branch: 'main' }),
-                }),
+                })
             );
         });
 
@@ -215,9 +176,9 @@ describe('ForkSyncService', () => {
                 }),
             });
 
-            await expect(
-                service.syncFork('my-org', 'accs-citisignal', 'main'),
-            ).rejects.toThrow(/rate limit/i);
+            await expect(service.syncFork('my-org', 'accs-citisignal', 'main')).rejects.toThrow(
+                /rate limit/i
+            );
         });
 
         it('should throw permission error on 403 without rate limit message', async () => {
@@ -229,9 +190,9 @@ describe('ForkSyncService', () => {
                 }),
             });
 
-            await expect(
-                service.syncFork('my-org', 'accs-citisignal', 'main'),
-            ).rejects.toThrow(/permission denied/i);
+            await expect(service.syncFork('my-org', 'accs-citisignal', 'main')).rejects.toThrow(
+                /permission denied/i
+            );
         });
     });
 });

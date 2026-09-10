@@ -13,9 +13,9 @@
  */
 
 import * as vscode from 'vscode';
-import { ServiceLocator } from '@/core/di';
-import type { CachedOrgRef, CommandExecutor } from '@/core/shell';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { ensureFnmNodeVersion } from '@/core/shell/ensureNodeVersion';
+import type { CachedOrgRef } from '@/core/shell/orgContextEnv';
 import { resolveDesiredApis } from '@/core/state/componentApiPicks';
 import { deriveAllowedDomain } from '@/features/app-builder/services/allowedDomain';
 import {
@@ -30,6 +30,7 @@ import { uninstallAppManagementApp } from '@/features/app-builder/services/appMa
 import { deployAppComponentIsolated } from '@/features/app-builder/services/deployAppIsolated';
 import { subscriberTarget } from '@/features/app-builder/services/ensureMeshApiSubscribed';
 import { buildS2SDeployEnv } from '@/features/app-builder/services/s2sDeployEnv';
+import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { ComponentManager } from '@/features/components/services/componentManager';
 import { republishStorefrontConfig } from '@/features/eds/services/storefront/storefrontRepublishService';
@@ -38,9 +39,9 @@ import {
     calculateMeshSourceHash,
     readMeshEnvVarsFromFile,
 } from '@/features/mesh/services/stalenessDetector';
-import { regenerateComponentEnvFile } from '@/features/project-creation/helpers';
-import type { Project } from '@/types';
+import { regenerateComponentEnvFile } from '@/features/project-creation/helpers/envFileGenerator';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
+import type { Project } from '@/types/base';
 import type { ComponentRegistry } from '@/types/components';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
@@ -49,6 +50,8 @@ import type { Logger } from '@/types/logger';
 export interface RunnerDepsContext {
     componentManager: ComponentManager;
     commandManager: CommandExecutor;
+    /** ADR-015: the auth service, so the factory never reaches for it. */
+    authManager: AuthenticationService;
     logger: Logger;
     saveProject: (project: Project) => Promise<void>;
     getCachedOrganization: () => CachedOrgRef | undefined;
@@ -93,8 +96,8 @@ async function promptForToolchainRefresh(): Promise<boolean> {
  */
 export async function resolveAppManagementAuth(
     project: Project,
+    authManager: AuthenticationService,
 ): Promise<AppManagementAuth | undefined> {
-    const authManager = ServiceLocator.getAuthenticationService();
     const inspection = await authManager.getTokenManager().inspectToken();
     if (!inspection.valid || !inspection.token) {
         return undefined;
@@ -149,6 +152,7 @@ export function buildDefaultRunnerDeps(
                 ctx.logger,
                 componentId,
                 componentPath,
+                ctx.secrets,
             );
         },
         // The ONE isolating deploy seam (ADR-011 D3 Step 03) — every deploy routes
@@ -163,7 +167,7 @@ export function buildDefaultRunnerDeps(
         // outcome; a failure never fails the deploy.
         installAppManagement: (project, deployedUrls, installProgress) =>
             installAppManagementApp(project, deployedUrls, {
-                getAuth: () => resolveAppManagementAuth(project),
+                getAuth: () => resolveAppManagementAuth(project, ctx.authManager),
                 logger: ctx.logger,
                 onProgress: installProgress,
             }),
@@ -173,7 +177,7 @@ export function buildDefaultRunnerDeps(
         // anyway.
         uninstallAppManagement: (project, deployedUrls, uninstallProgress) =>
             uninstallAppManagementApp(project, deployedUrls, {
-                getAuth: () => resolveAppManagementAuth(project),
+                getAuth: () => resolveAppManagementAuth(project, ctx.authManager),
                 logger: ctx.logger,
                 onProgress: uninstallProgress,
             }),
@@ -188,8 +192,7 @@ export function buildDefaultRunnerDeps(
                     'The project has no Adobe org/project/workspace context to resolve credentials from.',
                 );
             }
-            const credentials =
-                await ServiceLocator.getAuthenticationService().getS2SDeployCredentials(
+            const credentials = await ctx.authManager.getS2SDeployCredentials(
                     adobe.organization,
                     adobe.projectId,
                     adobe.workspace,
@@ -239,12 +242,19 @@ function resolveCatalog(project: Project): AppBuilderComponentCatalogEntry[] {
 export async function buildRunnerDepsContext(
     context: HandlerContext,
     project: Project,
+    /**
+     * ADR-015: a `create...Deps` builder may CONSTRUCT its feature's parts, but
+     * fetching is a boundary privilege — so the shared singletons arrive from
+     * the handler that calls this.
+     */
+    services: { authManager: AuthenticationService; commandManager: CommandExecutor },
 ): Promise<RunnerDepsContext> {
     const { ComponentManager } = await import('@/features/components/services/componentManager');
-    const authManager = ServiceLocator.getAuthenticationService();
+    const { authManager, commandManager } = services;
     return {
-        componentManager: new ComponentManager(context.logger),
-        commandManager: ServiceLocator.getCommandExecutor(),
+        componentManager: new ComponentManager(context.logger, commandManager),
+        commandManager,
+        authManager,
         logger: context.logger,
         saveProject: (p: Project) => context.stateManager.saveProject(p),
         // Tiers 1+2 and the stamp. Package INSTALLS (tier 3) are not needed

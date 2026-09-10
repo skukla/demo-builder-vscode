@@ -29,9 +29,6 @@ import type { DemoPackage } from '@/types/demoPackages';
 import type { WizardState } from '@/types/webview';
 import '@testing-library/jest-dom';
 
-jest.mock('@/core/ui/hooks/useSelectableDefault', () => ({
-    useSelectableDefault: () => ({}),
-}));
 
 /** The catalog's CURRENT truth for citisignal/eds-paas — including two code patches. */
 const PACKAGES = [

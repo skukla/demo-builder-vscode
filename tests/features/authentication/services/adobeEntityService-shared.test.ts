@@ -8,22 +8,16 @@
 import { setupMocks, mockOrgs, mockProjects, type TestMocks } from './adobeEntityService.testUtils';
 
 // Mock external dependencies only
-jest.mock('@/core/logging');
 
-import { getLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 describe('AdobeEntityService - Shared Operations', () => {
     let testMocks: TestMocks;
 
     beforeEach(() => {
         // Setup mocked module functions
-        (getLogger as jest.Mock).mockReturnValue({
-            trace: jest.fn(),
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        });
+        (getLogger as jest.Mock).mockReturnValue(createMockLogger());
 
         testMocks = setupMocks();
     });
@@ -41,11 +35,15 @@ describe('AdobeEntityService - Shared Operations', () => {
 
             expect(result.org).toEqual(mockOrgs[0]);
             expect(result.project).toEqual(mockProjects[0]);
+            // `workspace` may be a string or an object. The fixture supplies an
+            // object, so read the id through a shape that admits both rather than
+            // guarding — the old `if` meant a regression to a bare string passed.
             expect(result.workspace).toBeDefined();
-            // workspace can be string or object, check if it's an object with id
-            if (typeof result.workspace === 'object' && result.workspace !== null) {
-                expect(result.workspace.id).toBe('ws1');
-            }
+            const workspaceId =
+                typeof result.workspace === 'object' && result.workspace !== null
+                    ? result.workspace.id
+                    : result.workspace;
+            expect(workspaceId).toBe('ws1');
         });
 
         it('should return partial context if some entities missing', async () => {

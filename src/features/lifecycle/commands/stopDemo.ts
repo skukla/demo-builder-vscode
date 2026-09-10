@@ -14,12 +14,14 @@
  */
 
 import * as vscode from 'vscode';
-import { BaseCommand, BaseWebviewCommand } from '@/core/base';
-import { ServiceLocator } from '@/core/di';
+import { BaseCommand } from '@/core/base/baseCommand';
+import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
+import { ServiceLocator } from '@/core/di/serviceLocator';
+import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { ProcessCleanup } from '@/core/shell/processCleanup';
-import { ExecutionLock, TIMEOUTS } from '@/core/utils';
+import { ExecutionLock } from '@/core/utils/executionLock';
 import { sleep } from '@/core/utils/sleep';
-import { DEFAULT_SHELL } from '@/types/shell';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getComponentInstancesByType } from '@/types/typeGuards';
 import type { DemoStateChangedPayload } from '@/types/webviewPayloads';
 
@@ -68,12 +70,15 @@ export class StopDemoCommand extends BaseCommand {
                 shell: DEFAULT_SHELL,
             });
 
-            if (result.code === 0 && result.stdout.trim()) {
-                // May return multiple PIDs (parent + children), use first (parent)
+            if (result.code === 0) {
+                // May return multiple PIDs (parent + children), use first (parent).
+                // Empty output parses to NaN and fails the `> 0` test below, so no
+                // separate emptiness or NaN check — a mutation run showed both were
+                // unobservable.
                 const firstPid = result.stdout.trim().split('\n')[0];
                 const pid = parseInt(firstPid, 10);
 
-                if (!isNaN(pid) && pid > 0) {
+                if (pid > 0) {
                     return pid;
                 }
             }

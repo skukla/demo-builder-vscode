@@ -10,7 +10,7 @@ import { COMPONENT_IDS } from '@/core/constants';
 import type { AdobeMcpUpdateResult } from '@/features/updates/services/adobeMcpUpdateChecker';
 import type { TemplateUpdateResult } from '@/features/updates/services/templateUpdateChecker';
 import type { MultiProjectUpdateResult } from '@/features/updates/services/updateManager';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import type { InstalledBlockLibrary } from '@/types/blockLibraries';
 
 // ---------------------------------------------------------------------------

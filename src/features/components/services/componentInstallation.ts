@@ -12,21 +12,26 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { ServiceLocator } from '@/core/di';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
+import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type {
     ComponentInstallOptions,
     ComponentInstallResult,
 } from '@/features/components/services/types';
-import { ComponentInstance, TransformedComponentDefinition } from '@/types';
+import { ComponentInstance } from '@/types/base';
+import { TransformedComponentDefinition } from '@/types/components';
 import type { Logger } from '@/types/logger';
-import { DEFAULT_SHELL } from '@/types/shell';
 
 /**
  * Handles Git-based component installation
  */
 export class ComponentInstallation {
-    constructor(private logger: Logger) {}
+    /** ADR-015: the executor arrives with the logger, rather than being fetched. */
+    constructor(
+        private logger: Logger,
+        private commandManager: CommandExecutor,
+    ) {}
 
     /**
      * Install a Git-based component by cloning the repository
@@ -70,7 +75,7 @@ export class ComponentInstallation {
         );
 
         // Clone repository
-        const commandManager = ServiceLocator.getCommandExecutor();
+        const commandManager = this.commandManager;
 
         // Build git clone command with options
         const cloneFlags: string[] = [];
@@ -194,7 +199,7 @@ export class ComponentInstallation {
         _componentDef: TransformedComponentDefinition,
         componentPath: string,
     ): Promise<string | null> {
-        const commandManager = ServiceLocator.getCommandExecutor();
+        const commandManager = this.commandManager;
         let detectedVersion: string | null = null;
 
         // Strategy 1: Try git describe for tagged commits

@@ -11,6 +11,7 @@
 
 import { getAppBuilderInstance } from '@/types/typeGuards';
 import { Project, ComponentInstance } from '@/types/base';
+import { createMockProject } from '../helpers/projectFake';
 
 describe('typeGuards - App Builder Accessor', () => {
     const createApp = (id: string, overrides: Partial<ComponentInstance> = {}): ComponentInstance => ({
@@ -22,7 +23,7 @@ describe('typeGuards - App Builder Accessor', () => {
         ...overrides,
     } as ComponentInstance);
 
-    const createProjectWithAppAndMesh = (): Project => ({
+    const createProjectWithAppAndMesh = (): Project => (createMockProject({
         name: 'test-project',
         componentInstances: {
             'my-app': createApp('my-app'),
@@ -35,7 +36,7 @@ describe('typeGuards - App Builder Accessor', () => {
             },
             'citisignal': { id: 'citisignal', name: 'CitiSignal', type: 'frontend', status: 'ready' },
         },
-    } as unknown as Project);
+    }));
 
     describe('getAppBuilderInstance', () => {
         it('returns the app instance, isolated from the coexisting mesh', () => {
@@ -46,11 +47,11 @@ describe('typeGuards - App Builder Accessor', () => {
         });
 
         it('returns undefined when the project has a mesh but no app', () => {
-            const project = {
+            const project = createMockProject({
                 componentInstances: {
-                    'commerce-mesh': { id: 'commerce-mesh', subType: 'mesh', status: 'deployed' },
+                    'commerce-mesh': { id: 'commerce-mesh', name: 'Commerce API Mesh', subType: 'mesh', status: 'deployed' },
                 },
-            } as unknown as Project;
+            });
             expect(getAppBuilderInstance(project)).toBeUndefined();
         });
 
@@ -63,7 +64,7 @@ describe('typeGuards - App Builder Accessor', () => {
         });
 
         it('returns undefined when componentInstances is empty', () => {
-            const project = { componentInstances: {} } as unknown as Project;
+            const project = createMockProject({ componentInstances: {} });
             expect(getAppBuilderInstance(project)).toBeUndefined();
         });
     });

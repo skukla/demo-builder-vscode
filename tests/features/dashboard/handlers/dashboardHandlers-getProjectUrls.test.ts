@@ -21,14 +21,19 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => {
     };
 });
 
-import { setupMocks, createMockProject } from './dashboardHandlers.testUtils';
-import type { Project } from '@/types';
+import { setupMocks, createDashboardProject } from './dashboardHandlers.testUtils';
+import type { Project } from '@/types/base';
+import type { HandlerContext } from '@/types/handlers';
 
-async function run(context: unknown) {
+/**
+ * `context: unknown` erased the argument at every call — the fifth instance of that
+ * exact shape on this programme. Typed to the real context, the cast is unnecessary.
+ */
+async function run(context: HandlerContext) {
     const { handleGetProjectUrls } = await import(
         '@/features/dashboard/handlers/dashboardHandlers'
     );
-    return handleGetProjectUrls(context as never);
+    return handleGetProjectUrls(context);
 }
 
 function urlsOf(result: { data?: unknown }): Record<string, string> {
@@ -63,7 +68,7 @@ describe('handleGetProjectUrls', () => {
             validateOrgId,
             validateProjectId,
             validateWorkspaceId,
-        } = require('@/core/validation');
+        } = require('@/core/validation/validators/AdobeResourceValidator');
         validateOrgId.mockImplementation(() => undefined);
         validateProjectId.mockImplementation(() => undefined);
         validateWorkspaceId.mockImplementation(() => undefined);
@@ -85,11 +90,15 @@ describe('handleGetProjectUrls', () => {
 
         expect(result.success).toBe(true);
         expect(vscode.env.openExternal).not.toHaveBeenCalled();
-        expect(vscode.window.showInformationMessage ?? (() => {})).not.toBeUndefined();
-        // No admin-panel prompt path — showInformationMessage is not even called.
-        if (vscode.window.showInformationMessage) {
-            expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
-        }
+
+        // "Never prompts" was asserted inside `if (vscode.window.showInformationMessage)`,
+        // and the shared vscode mock does not define that function at all — so the
+        // guard was always false and the assertion NEVER RAN. Install a spy first,
+        // which is what makes the claim checkable rather than merely written down.
+        const prompt = jest.fn();
+        vscode.window.showInformationMessage = prompt;
+        await run(mockContext);
+        expect(prompt).not.toHaveBeenCalled();
     });
 
     it('returns the local storefront URL only when a frontend port is assigned', async () => {
@@ -99,8 +108,15 @@ describe('handleGetProjectUrls', () => {
         expect(urlsOf(withPort).storefront).toBe('http://localhost:3000');
 
         // Stopped / no port → storefront omitted.
-        const stopped = createMockProject({
-            componentInstances: { headless: { id: 'headless', type: 'frontend' } } as never,
+        const stopped = createDashboardProject({
+            componentInstances: {
+                headless: {
+                    id: 'headless',
+                    name: 'CitiSignal Next.js',
+                    type: 'frontend',
+                    status: 'stopped',
+                },
+            },
         });
         mockContext.stateManager.getCurrentProject = jest.fn().mockResolvedValue(stopped);
         const noPort = await run(mockContext);
@@ -113,10 +129,10 @@ describe('handleGetProjectUrls', () => {
         const result = await run(mockContext);
         expect(urlsOf(result).commerceAdmin).toBeUndefined();
 
-        const withAdmin = createMockProject({
+        const withAdmin = createDashboardProject({
             componentConfigs: {
                 'commerce-paas': { ADOBE_COMMERCE_ADMIN_URL: 'https://admin.example.com' },
-            } as never,
+            },
         });
         mockContext.stateManager.getCurrentProject = jest.fn().mockResolvedValue(withAdmin);
         const result2 = await run(mockContext);
@@ -132,7 +148,7 @@ describe('handleGetProjectUrls', () => {
     });
 
     it('falls back to the generic Console URL when Adobe IDs are absent', async () => {
-        const noAdobe = createMockProject({ adobe: undefined } as never);
+        const noAdobe = createDashboardProject({ adobe: undefined });
         const { mockContext } = setupMocks();
         mockContext.stateManager.getCurrentProject = jest.fn().mockResolvedValue(noAdobe);
 
@@ -144,7 +160,7 @@ describe('handleGetProjectUrls', () => {
         const { mockContext } = setupMocks();
         mockContext.stateManager.getCurrentProject = jest
             .fn()
-            .mockResolvedValue(createMockProject(edsProject() as never));
+            .mockResolvedValue(createDashboardProject(edsProject()));
 
         const urls = urlsOf(await run(mockContext));
         expect(urls.liveSite).toBe('https://main--site--owner.aem.live');

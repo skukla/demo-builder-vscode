@@ -20,9 +20,12 @@
 
 import { Text } from '@adobe/react-spectrum';
 import React from 'react';
-import { SelectionStepContent } from '@/core/ui/components/selection';
-import { useSelectionStep } from '@/core/ui/hooks';
+import { SelectionStepContent } from '@/core/ui/components/selection/SelectionStepContent';
+import { useSelectionStep } from '@/core/ui/hooks/useSelectionStep';
 import type { WizardSessionState, Workspace, WizardState } from '@/types/webview';
+
+/** Constant per call site — see PROJECT_SEARCH_FIELDS in AdobeProjectPicker. */
+const WORKSPACE_SEARCH_FIELDS: ReadonlyArray<keyof Workspace> = ['title', 'name'];
 
 export interface AdobeWorkspacePickerProps {
     /** Current wizard state (provides project + cached workspaces + selection). */
@@ -90,7 +93,7 @@ export function AdobeWorkspacePicker({
         updateState,
         selectedItem: state.adobeWorkspace,
         autoSelectSingle: !suppressAutoSelect,
-        searchFields: ['title', 'name'],
+        searchFields: WORKSPACE_SEARCH_FIELDS,
         // Auto-select "Stage" workspace if available and nothing selected — unless the
         // user reopened this picker to change it, in which case leave it to them.
         autoSelectCustom: suppressAutoSelect
@@ -98,7 +101,7 @@ export function AdobeWorkspacePicker({
             : (items) =>
                   items.find(
                       (ws) =>
-                          ws.name?.toLowerCase().includes('stage') ||
+                          ws.name.toLowerCase().includes('stage') ||
                           ws.title?.toLowerCase().includes('stage'),
                   ),
         onSelect: (workspace) => {

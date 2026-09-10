@@ -1,5 +1,6 @@
 import { PrerequisitesCacheManager } from '@/features/prerequisites/services/prerequisitesCacheManager';
 import { createMockStatus, setupMockTime } from './prerequisitesCacheManager.testUtils';
+import type { CachedPrerequisiteResult } from '@/features/prerequisites/services/types';
 
 /**
  * PrerequisitesCacheManager Statistics & Versions Test Suite
@@ -16,15 +17,6 @@ import { createMockStatus, setupMockTime } from './prerequisitesCacheManager.tes
  */
 
 // Mock dependencies
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: jest.fn(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
-}));
-
 jest.mock('@/core/utils/timeoutConfig', () => ({
     CACHE_TTL: {
         MEDIUM: 300000, // 5 minutes - semantic category (replaces PREREQUISITE_CHECK)
@@ -171,7 +163,7 @@ describe('PrerequisitesCacheManager - Statistics & Versions', () => {
         it('should return empty array when no results cached', () => {
             const results = cacheManager.getPerVersionResults('nonexistent');
 
-            expect(results).toEqual([]);
+            expect(results).toStrictEqual([]);
         });
 
         it('should return results with major field', () => {
@@ -200,9 +192,11 @@ describe('PrerequisitesCacheManager - Statistics & Versions', () => {
             expect(results[0].major).toBe('20');
 
             // Access private cache to verify nodeVersion is stored
-            const cache = (cacheManager as any).cache;
+            const cache = (
+                cacheManager as unknown as { cache: Map<string, CachedPrerequisiteResult> }
+            ).cache;
             const cachedEntry = cache.get('aio-cli##20');
-            expect(cachedEntry.nodeVersion).toBe('20');
+            expect(cachedEntry?.nodeVersion).toBe('20');
         });
     });
 });

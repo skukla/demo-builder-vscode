@@ -14,7 +14,7 @@
 import * as vscode from 'vscode';
 import { getLinkedEdsProjects } from '../services/resourceCleanupHelpers';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import { getLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
@@ -32,7 +32,7 @@ export async function manageGitHubReposCommand(context: vscode.ExtensionContext)
 
         // getGitHubServices' parameter is narrowed to the one field it reads,
         // so a command without a full HandlerContext calls it without a cast.
-        const { tokenService, repoOperations } = getGitHubServices({ context });
+        const { tokenService, repoOperations } = getGitHubServices(context.secrets);
 
         // Check if we have a valid token
         let token = await tokenService.getToken();

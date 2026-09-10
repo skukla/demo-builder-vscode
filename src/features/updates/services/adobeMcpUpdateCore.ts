@@ -23,13 +23,17 @@
  * an import cycle between the two callers.
  */
 
-import { ServiceLocator } from '@/core/di';
-import type { StateManager } from '@/core/state';
-import { TIMEOUTS } from '@/core/utils';
-import { generateAIContextFiles, resolveMcpToolsDir } from '@/features/project-creation/services';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
+import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import {
+    generateAIContextFiles,
+    type AiBundleRefreshResult,
+} from '@/features/project-creation/services/aiBundle/aiBundleService';
+import { resolveMcpToolsDir } from '@/features/project-creation/services/aiBundle/aiDefaultsInstaller';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
-import { DEFAULT_SHELL } from '@/types/shell';
+import type { StateManager } from '@/types/state';
 
 /** The slice of the callers' UpdateContext the core actually needs. */
 export interface AdobeMcpUpdateCoreContext {
@@ -37,6 +41,8 @@ export interface AdobeMcpUpdateCoreContext {
     /** The one method this core calls; UpdateContext's pick satisfies it. */
     stateManager: Pick<StateManager, 'saveProjectConfigOnly'>;
     logger: Logger;
+    /** ADR-015: handed in at the boundary rather than fetched here. */
+    commandManager: CommandExecutor;
 }
 
 /**
@@ -50,7 +56,7 @@ export async function applyAdobeMcpUpdate(
     latestVersion: string,
     ctx: AdobeMcpUpdateCoreContext,
 ): Promise<void> {
-    const commandManager = ServiceLocator.getCommandExecutor();
+    const { commandManager } = ctx;
     const toolsDir = resolveMcpToolsDir(project.path);
 
     const result = await commandManager.execute(`npm update ${packageName} --no-fund`, {
@@ -63,7 +69,7 @@ export async function applyAdobeMcpUpdate(
         throw new Error(`npm update failed: ${result.stderr || result.stdout}`);
     }
 
-    let generated;
+    let generated: AiBundleRefreshResult;
     try {
         generated = await generateAIContextFiles(project.path, project, ctx.extensionPath);
     } catch (err) {
@@ -81,7 +87,7 @@ export async function applyAdobeMcpUpdate(
     // user-edited files alone — name them so the skip is an event.
     ctx.logger.info(
         `[Updates] Regenerated AI bundle after ${packageName} npm update; ` +
-            `skipped (user-edited): [${(generated?.report?.skipped ?? []).join(', ')}]`,
+            `skipped (user-edited): [${generated.report.skipped.join(', ')}]`,
     );
 
     // Persist the freshness stamp + hashes generateAIContextFiles set on

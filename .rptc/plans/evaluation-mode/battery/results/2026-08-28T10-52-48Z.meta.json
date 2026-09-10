@@ -1,0 +1,17 @@
+{
+  "startedAt": "2026-08-28T10-52-48Z",
+  "serving": "loop/2026-08-28-journeys-battery@f6c0fba49 built 2026-08-28T05:22:58.004Z from /Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode",
+  "currentProject": "Bodea",
+  "adobeAuthBefore": {
+    "authenticated": true,
+    "expiresInMinutes": 448
+  },
+  "promptCount": 6,
+  "allowlist": 95,
+  "cache": "unspecified",
+  "adobeAuthAfter": {
+    "authenticated": true,
+    "expiresInMinutes": 448
+  },
+  "authChangedMidRun": false
+}

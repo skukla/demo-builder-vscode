@@ -16,18 +16,29 @@
 
 import * as vscode from 'vscode';
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
-import { BaseWebviewCommand } from '@/core/base';
-import type { HandlerContext } from '@/types/handlers';
+import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import {
+    createStatefulGlobalState,
+    createMockExtensionContext,
+} from '../../../helpers/extensionContextFake';
+import { createMockWebviewPanel } from '../../../helpers/webviewPanelFake';
 
 function makeContext() {
-    return {
-        logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
-        debugLogger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
+    return createMockHandlerContext({
+        logger: createMockLogger(),
+        debugLogger: createMockLogger(),
         sendMessage: jest.fn(),
-        panel: {},
-        stateManager: { getCurrentProject: jest.fn() },
-        context: { globalState: { get: jest.fn(), update: jest.fn() }, secrets: {} },
-    } as unknown as HandlerContext;
+        panel: createMockWebviewPanel(),
+        stateManager: createMockStateManager({ getCurrentProject: jest.fn() }),
+        context: createMockExtensionContext({
+            globalState: createStatefulGlobalState().globalState,
+            secrets: createMockSecretStorage().secrets,
+        }),
+    });
 }
 
 beforeEach(() => jest.clearAllMocks());
@@ -37,20 +48,21 @@ describe('openDataInstaller', () => {
         expect(dashboardHandlers.openDataInstaller).toBeInstanceOf(Function);
     });
 
-    it('dispatches the Data Installer command', async () => {
-        await dashboardHandlers.openDataInstaller(makeContext(), undefined);
+    it('dispatches the Data Installer command and reports success', async () => {
+        const result = await dashboardHandlers.openDataInstaller(makeContext(), undefined);
 
         expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
-            'demoBuilder.showDataInstaller',
+            'demoBuilder.showDataInstaller'
         );
+        expect(result).toEqual({ success: true });
     });
 
     /** The rule this handler exists to keep. */
     it('leaves the dashboard open — the catalog is global, not project-scoped', async () => {
         const dispose = jest.fn();
-        jest.spyOn(BaseWebviewCommand, 'getActivePanel').mockReturnValue({
-            dispose,
-        } as never);
+        jest.spyOn(BaseWebviewCommand, 'getActivePanel').mockReturnValue(
+            createMockWebviewPanel({ dispose })
+        );
 
         await dashboardHandlers.openDataInstaller(makeContext(), undefined);
 
@@ -68,12 +80,15 @@ describe('openDataInstaller', () => {
     /** A failed dispatch must not take the dashboard down with it. */
     it('reports rather than throws when the command fails', async () => {
         (vscode.commands.executeCommand as jest.Mock).mockRejectedValueOnce(
-            new Error('command missing'),
+            new Error('command missing')
         );
         const context = makeContext();
 
-        await expect(
-            dashboardHandlers.openDataInstaller(context, undefined),
-        ).resolves.not.toThrow();
+        // The REASON has to survive: the dashboard shows what it was told, and a
+        // bare `undefined` from an emptied catch reads as a silent success.
+        await expect(dashboardHandlers.openDataInstaller(context, undefined)).resolves.toEqual({
+            success: false,
+            error: 'command missing',
+        });
     });
 });

@@ -1,0 +1,46 @@
+# Delivers the test-splitting playbook before a NEW non-webview test file is written.
+#
+# Rule 40 covers `.test.tsx` under a `ui/` directory. Everything else — most of this
+# suite — reached no rule at all, and on 2026-09-10 that is exactly what happened: a
+# session invented a test-file splitter, cut 11 files at their arithmetic midpoint,
+# named the halves `-part2` and broke 167 tests. Every one of those mistakes is named
+# in `docs/testing/test-file-splitting-playbook.md`, which was never opened.
+#
+# WRITE ONLY, and only for a path that does not exist. Editing a test is the normal
+# inner loop and must not be interrupted; creating one — especially a `-something`
+# sibling of an existing suite — is the moment the playbook is about.
+rule_id=test-authoring
+rule_once=1
+
+rule_match() {
+    [ "$1" = "Write" ] || return 1
+    [ -n "$3" ] || return 1
+    case "$3" in
+        # Rule 40 owns the webview half; do not fire twice for one file.
+        *.test.tsx|*.testUtils.tsx) return 1 ;;
+        */tests/*.test.ts|*/tests/*.testUtils.ts) ;;
+        *) return 1 ;;
+    esac
+    [ -e "$3" ] && return 1
+    return 0
+}
+
+rule_message() {
+    cat <<'MSG'
+You are creating a NEW test file. Read
+`docs/testing/test-file-splitting-playbook.md` first — it is short, and it answers
+the questions this action raises before you have to guess at them:
+
+  - Line count is a TRIGGER, not a reason. A long suite covering one thing
+    coherently is better left alone than split into files that share their mocks.
+  - Extract shared setup into `<name>.testUtils.ts` FIRST, and commit that
+    separately — it is the step that is easy to roll back.
+  - One file per responsibility, named `<subject>-<responsibility>.test.ts`.
+    NEVER `-part2`; a name that carries no subject tells the next reader nothing.
+  - Keep the test count identical across a split. That is the only check that the
+    move lost nothing — a dropped `describe` is invisible in a green run.
+
+`npm run validate:test-file-sizes` is the instrument for the size question; do not
+re-count it by hand. This hook fires only once per session.
+MSG
+}

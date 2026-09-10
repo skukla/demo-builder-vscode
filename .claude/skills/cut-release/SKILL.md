@@ -35,7 +35,13 @@ whole thing rather than the thing you just changed" is cheap. Both passes PROPOS
 and never apply, so neither blocks the cut; run them, show the user, and let them
 decide what (if anything) to fix before tagging.
 
-- **`codebase-sweep`** — duplication, extraction, cycles, orphans, doc drift (~30s).
+- **`npm run sweep`** — every scripted periodic check in one command (~25s), driven by
+  `tests/sop/toolingRegistry.ts` so it cannot silently omit one. Read the labels: a
+  `reported` row ALWAYS exits 0 and its output is the result; a failing `gate` row is a
+  real failure; `COULD NOT RUN` is a broken instrument, not a finding. It closes by
+  naming the guided reviews it did NOT run, so a skipped one is a stated decision.
+- **`codebase-sweep`** — the judgement half of the above: triage the sweep's hits against
+  measured baselines and decide what to fix. The sweep gathers; this decides.
 - **`dream`** — memory / skills / CLAUDE.md staleness across recent sessions.
 - **`bash .rptc/plans/evaluation-mode/battery/sweep.sh`** — the full-coverage
   battery (AI-1q): every unattended-safe prompt (tier 1 + skills read-only, then
@@ -43,7 +49,21 @@ decide what (if anything) to fix before tagging.
   host on the socket (mcp-live-probe has the relaunch recipe) and REAL agent
   sessions — minutes, not seconds. Tier 3 never runs here by design; the named
   floor in `unprompted-baseline.json` documents each exclusion.
-- **`bash .claude/skills/rptc-hygiene-scan/scan.sh`** — rot in the RPTC record itself
+- **`test-strategy-scan`** — the strategy read of the test suite (~1 min, offline): runs
+  the craft / queue / ledger censuses together and interprets them. Invoke the SKILL, not
+  the three scripts — its value is the verdict table saying which columns track defects.
+  Two that did not (`logicInTests`, `throw-style`) were RETIRED 2026-08-30 rather than
+  footnoted, so every flag the census still emits is worth acting on; the surviving
+  caveat is jscpd's overlapping-range self-clones, which are not duplication at all.
+  Working a worklist off a number that measures shape is the failure it exists to
+  prevent. Capture `check-ledger.mjs`'s exit code in a variable; it exits 1 on an
+  unreconciled ledger and a pipe will report the pipe's 0.
+- **`node .claude/skills/test-divergence-scan/scan.mjs tests`** — how many
+  DIFFERENT ways the suite builds the same fake (~2s, offline). Not duplication —
+  divergence: 26 distinct StateManager fakes across 48 uses is nobody knowing what
+  the fake should look like. Baseline table lives in the skill; compare against it.
+  Exit 2 means a probe matched nothing — BROKEN, not clean.
+- **`bash .claude/skills/rptc-hygiene-scan/scan.sh`** — (also inside `npm run sweep`) rot in the RPTC record itself
   (~2s, offline): backlog links that do not resolve, items with no index entry, plans that
   shipped and never moved, citations naming a deleted file. Read the CONTROL line in each
   section — a "(none)" from a check that did not run looks identical to a clean one. Findings

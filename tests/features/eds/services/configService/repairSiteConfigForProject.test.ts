@@ -42,19 +42,15 @@ jest.mock('@/features/eds/services/reset/edsResetParams', () => ({
 import { ConfigurationService } from '@/features/eds/services/configService/configurationService';
 import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
 import { repairSiteConfigForProject } from '@/features/eds/services/configService/repairSiteConfigForProject';
-import type * as vscode from 'vscode';
-import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../../helpers/loggerFake';
+import { createMockProject } from '../../../../helpers/projectFake';
+import { createMockExtensionContext } from '../../../../helpers/extensionContextFake';
 
-const logger = {
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-} as unknown as Logger;
+const logger = createMockLogger() as unknown as Logger;
 
-const project = { name: 'demo', selectedPackage: 'citisignal' } as unknown as Project;
-const context = { secrets: {}, globalState: {} } as unknown as vscode.ExtensionContext;
+const project = createMockProject({ name: 'demo', selectedPackage: 'citisignal' });
+const context = createMockExtensionContext();
 
 /** The single argument object `repairSiteConfig` was called with. */
 const callParams = () => mockRepairSiteConfig.mock.calls[0][0];

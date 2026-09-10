@@ -7,12 +7,6 @@
  */
 
 jest.mock('axios');
-jest.mock('vscode', () => ({
-    workspace: { getConfiguration: jest.fn() },
-    window: { showInformationMessage: jest.fn() },
-    commands: { executeCommand: jest.fn() },
-    Uri: { file: jest.fn((p: string) => ({ fsPath: p })) },
-}), { virtual: true });
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: {
         QUICK: 5000,
@@ -24,6 +18,7 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
 import axios from 'axios';
 import * as vscode from 'vscode';
 import { AutoUpdater } from '@/utils/autoUpdater';
+import { createMockLogger } from '../helpers/loggerFake';
 
 const mockedAxios = axios as jest.Mocked<typeof axios>;
 
@@ -52,7 +47,7 @@ function makeContext(version: string): any {
 }
 
 function makeLogger(): any {
-    return { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() };
+    return createMockLogger();
 }
 
 function setChannel(channel: string): void {
@@ -77,7 +72,7 @@ describe('AutoUpdater - channel safety', () => {
 
     it('beta excludes alpha in the background path', async () => {
         setChannel('beta');
-        mockedAxios.get.mockResolvedValue({ data: MIXED } as any);
+        mockedAxios.get.mockResolvedValue({ data: MIXED });
         updater = new AutoUpdater(makeContext('1.0.0'), makeLogger());
 
         const result = await updater.checkForUpdates();
@@ -87,7 +82,7 @@ describe('AutoUpdater - channel safety', () => {
 
     it('early-access collapses to beta (never serves alpha silently)', async () => {
         setChannel('early-access');
-        mockedAxios.get.mockResolvedValue({ data: MIXED } as any);
+        mockedAxios.get.mockResolvedValue({ data: MIXED });
         updater = new AutoUpdater(makeContext('1.0.0'), makeLogger());
 
         const result = await updater.checkForUpdates();
@@ -97,7 +92,7 @@ describe('AutoUpdater - channel safety', () => {
 
     it('stable uses /releases/latest', async () => {
         setChannel('stable');
-        mockedAxios.get.mockResolvedValue({ data: arrayRelease('v1.1.0') } as any);
+        mockedAxios.get.mockResolvedValue({ data: arrayRelease('v1.1.0') });
         updater = new AutoUpdater(makeContext('1.0.0'), makeLogger());
 
         const result = await updater.checkForUpdates();
@@ -105,13 +100,13 @@ describe('AutoUpdater - channel safety', () => {
         expect(result?.version).toBe('1.1.0');
         expect(mockedAxios.get).toHaveBeenCalledWith(
             expect.stringContaining('/releases/latest'),
-            expect.any(Object),
+            expect.any(Object)
         );
     });
 
     it('returns undefined when no eligible release exists', async () => {
         setChannel('beta');
-        mockedAxios.get.mockResolvedValue({ data: [] } as any);
+        mockedAxios.get.mockResolvedValue({ data: [] });
         updater = new AutoUpdater(makeContext('1.0.0'), makeLogger());
 
         const result = await updater.checkForUpdates();

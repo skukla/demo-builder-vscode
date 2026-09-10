@@ -60,7 +60,7 @@ function renderCard(group: DatapackGroup, selectedVersion = group.versions[0].id
             selectedVersion={selectedVersion}
             onVersionChange={onVersionChange}
             onOpen={onOpen}
-        />,
+        />
     );
     return { ...view, onVersionChange, onOpen, card: screen.getByTestId('datapack-card') };
 }
@@ -84,6 +84,17 @@ describe('DatapackCard', () => {
         expect(screen.getByText('1 data type')).toBeInTheDocument();
     });
 
+    // The catalog service groups by pack name, so an empty version list should not
+    // happen — but every read of the selected version goes through `version?.`,
+    // and those chains are the only thing standing between an empty group and a
+    // crashed grid.
+    it('survives a group carrying no versions at all', () => {
+        renderCard(makeGroup({ versions: [] }), 'main');
+
+        expect(screen.getByText('0 data types')).toBeInTheDocument();
+        expect(screen.getByTestId('datapack-card-tile')).toBeInTheDocument();
+    });
+
     describe('art chain', () => {
         it('renders the cover when the selected version has one', () => {
             const { card } = renderCard(makeGroup());
@@ -93,7 +104,7 @@ describe('DatapackCard', () => {
 
         it('falls back to the thumbnail when there is no cover', () => {
             const { card } = renderCard(
-                makeGroup({ versions: [makeVersion({ art: { cover: '', thumbnail: THUMB } })] }),
+                makeGroup({ versions: [makeVersion({ art: { cover: '', thumbnail: THUMB } })] })
             );
 
             expect(within(card).getByTestId('datapack-card-art')).toHaveAttribute('src', THUMB);
@@ -112,6 +123,61 @@ describe('DatapackCard', () => {
 
             expect(within(card).queryByTestId('datapack-card-art')).not.toBeInTheDocument();
             expect(within(card).getByTestId('datapack-card-tile')).toHaveTextContent('B');
+        });
+
+        // The community (`aco_*`) entries carry no `art` key at all, not an empty
+        // one — a different shape from the case above, and the one the reads
+        // through `art?.` are for.
+        it('renders the letter tile when the version has no art key', () => {
+            const { card } = renderCard(
+                makeGroup({ versions: [makeVersion({ art: undefined })] })
+            );
+
+            expect(within(card).queryByTestId('datapack-card-art')).not.toBeInTheDocument();
+            expect(within(card).getByTestId('datapack-card-tile')).toBeInTheDocument();
+        });
+
+        it('trims a padded art URL rather than dropping it as unloadable', () => {
+            const { card } = renderCard(
+                makeGroup({
+                    versions: [
+                        makeVersion({ art: { cover: `  ${COVER}  `, thumbnail: THUMB } }),
+                    ],
+                })
+            );
+
+            expect(within(card).getByTestId('datapack-card-art')).toHaveAttribute('src', COVER);
+        });
+
+        // The CSP test asserts an http: URL is dropped. This one asserts WHY the
+        // pattern is anchored: a blocked URL that merely mentions https: further
+        // along is still blocked.
+        it('drops a blocked URL that only contains https: later in the string', () => {
+            const { card } = renderCard(
+                makeGroup({
+                    versions: [
+                        makeVersion({
+                            art: {
+                                cover: 'http://example.invalid/go?to=https://cdn/x.png',
+                                thumbnail: THUMB,
+                            },
+                        }),
+                    ],
+                })
+            );
+
+            expect(within(card).getByTestId('datapack-card-art')).toHaveAttribute('src', THUMB);
+        });
+
+        it('shows only the first letter of the display name, upper-cased', () => {
+            const { card } = renderCard(
+                makeGroup({
+                    displayName: '  acme wholesale  ',
+                    versions: [makeVersion({ art: {} })],
+                })
+            );
+
+            expect(within(card).getByTestId('datapack-card-tile').textContent).toBe('A');
         });
 
         it('renders the letter tile once every candidate has failed', () => {
@@ -136,7 +202,7 @@ describe('DatapackCard', () => {
                             art: { cover: 'http://example.invalid/x.png', thumbnail: THUMB },
                         }),
                     ],
-                }),
+                })
             );
 
             expect(within(card).getByTestId('datapack-card-art')).toHaveAttribute('src', THUMB);
@@ -203,10 +269,15 @@ describe('DatapackCard', () => {
                     selectedVersion="tierpricingfix"
                     onVersionChange={jest.fn()}
                     onOpen={jest.fn()}
-                />,
+                />
             );
             rerender(
-                <DatapackCard group={multi} selectedVersion="main" onVersionChange={jest.fn()} onOpen={jest.fn()} />,
+                <DatapackCard
+                    group={multi}
+                    selectedVersion="main"
+                    onVersionChange={jest.fn()}
+                    onOpen={jest.fn()}
+                />
             );
 
             expect(screen.getByTestId('datapack-card-art')).toHaveAttribute('src', COVER);
@@ -236,6 +307,26 @@ describe('DatapackCard', () => {
             activate(card);
 
             expect(onOpen).toHaveBeenCalledWith({ name: 'bodea', version: 'main' });
+        });
+
+        // The press handler closes over the selected version, so a stale dependency
+        // list opens the version the card MOUNTED with. Same onOpen instance
+        // across both renders, so only the closure can explain the difference.
+        it('opens the version selected now, not the one it mounted with', () => {
+            const group = makeGroup({
+                versions: [
+                    makeVersion(),
+                    makeVersion({ id: { name: 'bodea', version: 'tierpricingfix' } }),
+                ],
+            });
+            const onOpen = jest.fn();
+            const props = { group, onVersionChange: jest.fn(), onOpen };
+            const { rerender } = render(<DatapackCard {...props} selectedVersion="main" />);
+            rerender(<DatapackCard {...props} selectedVersion="tierpricingfix" />);
+
+            fireEvent.click(screen.getByTestId('datapack-card'));
+
+            expect(onOpen).toHaveBeenCalledWith({ name: 'bodea', version: 'tierpricingfix' });
         });
 
         it('opens the VERSION the user picked, not the default', () => {
@@ -302,6 +393,44 @@ describe('DatapackCard', () => {
  * it becomes a radio. A boolean `selected={false}` still means "selectable, not
  * selected" — which is why the check is `!== undefined` and not truthiness.
  */
+/**
+ * The accent border. Two independent reasons earn it — the card is the chosen one
+ * in a set, or the pack is believed to be on the project's Commerce instance — and
+ * a wizard card can carry both at once without wanting two borders.
+ */
+describe('DatapackCard — the is-selected border', () => {
+    function renderWith(props: Partial<React.ComponentProps<typeof DatapackCard>>) {
+        render(
+            <DatapackCard
+                group={makeGroup()}
+                selectedVersion="main"
+                onVersionChange={jest.fn()}
+                onOpen={jest.fn()}
+                {...props}
+            />
+        );
+        return screen.getByTestId('datapack-card');
+    }
+
+    it('is absent on a card that is neither chosen nor installed', () => {
+        expect(renderWith({ selected: false, isInstalled: false })).not.toHaveClass(
+            'is-selected'
+        );
+    });
+
+    it('is absent when neither prop is given at all', () => {
+        expect(renderWith({})).not.toHaveClass('is-selected');
+    });
+
+    it('is present when the card is the chosen one', () => {
+        expect(renderWith({ selected: true, isInstalled: false })).toHaveClass('is-selected');
+    });
+
+    it('is present when the pack is installed, with no choosing going on', () => {
+        expect(renderWith({ isInstalled: true })).toHaveClass('is-selected');
+    });
+});
+
 describe('DatapackCard — as a choice', () => {
     function renderChoice(selected: boolean | undefined) {
         const onOpen = jest.fn();
@@ -312,7 +441,7 @@ describe('DatapackCard — as a choice', () => {
                 onVersionChange={jest.fn()}
                 onOpen={onOpen}
                 {...(selected === undefined ? {} : { selected })}
-            />,
+            />
         );
         return { onOpen, card: screen.getByTestId('datapack-card') };
     }

@@ -6,20 +6,24 @@
 
 import { handleCheckApiMesh } from '@/features/mesh/handlers/checkHandler';
 import { HandlerContext } from '@/types/handlers';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import * as _vscode from 'vscode';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 // withOrgContext records the target then runs the callback (no global mutation).
 // buildOrgTargetFromProjectAdobe is pure — use the real implementation.
 const mockWithOrgContext = jest.fn((_target: unknown, fn: () => Promise<unknown>) => fn());
-jest.mock('@/core/shell', () => ({
-    ...jest.requireActual('@/core/shell'),
+jest.mock('@/core/shell/orgContextEnv', () => ({
+    ...jest.requireActual('@/core/shell/orgContextEnv'),
     withOrgContext: (target: unknown, fn: () => Promise<unknown>) => mockWithOrgContext(target, fn),
 }));
 
 // Mock dependencies
-jest.mock('@/core/di');
-jest.mock('vscode');
+jest.mock('@/core/di/serviceLocator');
 jest.mock('fs', () => ({
     promises: {
         mkdir: jest.fn().mockResolvedValue(undefined),
@@ -61,23 +65,13 @@ describe('checkHandler - Security Tests (Step 2)', () => {
         (ServiceLocator.getCommandExecutor as jest.Mock).mockReturnValue(mockCommandExecutor);
 
         // Mock handler context
-        mockContext = {
-            context: {
-                globalStorageUri: {
-                    fsPath: '/tmp/test-storage',
-                },
-            } as any,
-            logger: {
-                info: jest.fn(),
-                warn: jest.fn(),
-                error: jest.fn(),
-                debug: jest.fn(),
-            } as any,
-            debugLogger: {
-                trace: jest.fn(),
-                debug: jest.fn(),
-            } as any,
-            stateManager: {
+        mockContext = createMockHandlerContext({
+            context: createMockExtensionContext({
+                globalStorageUri: _vscode.Uri.file('/tmp/test-storage'),
+            }),
+            logger: createMockLogger(),
+            debugLogger: createMockLogger(),
+            stateManager: createMockStateManager({
                 getCurrentProject: jest.fn().mockResolvedValue({
                     adobe: {
                         organization: 'test-org-id',
@@ -85,9 +79,10 @@ describe('checkHandler - Security Tests (Step 2)', () => {
                         workspaceId: 'test-workspace-id',
                     },
                 }),
-            } as any,
-            authManager: {} as any,
+            }),
+            authManager: createMockAuthenticationService(),
             sharedState: {
+                isAuthenticating: false,
                 apiServicesConfig: {
                     services: {
                         apiMesh: {
@@ -99,8 +94,8 @@ describe('checkHandler - Security Tests (Step 2)', () => {
                         },
                     },
                 },
-            } as any,
-        } as any;
+            },
+        });
     });
 
     describe('WorkspaceId Validation (SECURITY)', () => {
@@ -272,7 +267,17 @@ describe('checkHandler - Security Tests (Step 2)', () => {
     });
 
     describe('Error Handling', () => {
-        it('should handle authentication failure gracefully', async () => {
+        it('hands the agent a sign-in it can act on, and does not prompt', async () => {
+            /**
+             * `mockContext` has no panel, so this is the AGENT surface. Until
+             * 2026-09-01 the guard awaited a `showWarningMessage` here — a
+             * notification on the user's window that blocked the tool until
+             * somebody clicked, which an agent cannot do.
+             *
+             * The old assertion only checked the prose said "authentication
+             * required". What matters to a caller is the MARKER: which sign-in to
+             * offer, in a field rather than a sentence.
+             */
             mockAuthService.isAuthenticated.mockResolvedValue(false);
 
             const result = await handleCheckApiMesh(mockContext, {
@@ -280,7 +285,9 @@ describe('checkHandler - Security Tests (Step 2)', () => {
             });
 
             expect(result.success).toBe(false);
-            expect(result.error).toMatch(/authentication required/i);
+            expect((result as { needsAuth?: string }).needsAuth).toBe('adobe');
+            expect(result.error).toMatch(/sign.?in/i);
+            expect(result.error).toContain('sign_in');
         });
 
         it('should not execute commands if workspaceId validation fails', async () => {
@@ -299,7 +306,7 @@ describe('checkHandler - Security Tests (Step 2)', () => {
         // The config carries setupInstructions in production; the handler must NOT
         // surface them anymore — absent-API is auto-remediated by the deploy path.
         beforeEach(() => {
-            (mockContext.sharedState as any).apiServicesConfig = {
+            mockContext.sharedState.apiServicesConfig = {
                 services: {
                     apiMesh: {
                         detection: {
@@ -418,8 +425,7 @@ describe('checkHandler - Security Tests (Step 2)', () => {
             });
 
             const downloadCall = mockCommandExecutor.execute.mock.calls.find(
-                (c: unknown[]) =>
-                    typeof c[0] === 'string' && (c[0] as string).includes('workspace download')
+                (c: unknown[]) => typeof c[0] === 'string' && c[0].includes('workspace download')
             );
             expect(downloadCall).toBeDefined();
             expect(downloadCall[0]).toContain('--workspaceId workspace-123');

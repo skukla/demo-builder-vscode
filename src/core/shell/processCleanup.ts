@@ -30,7 +30,7 @@
  * ```
  */
 
-import { getLogger, DebugLogger } from '@/core/logging';
+import { DebugLogger, getLogger } from '@/core/logging/debugLogger';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 // Lazy-initialized logger to avoid calling getLogger() before initializeLogger()

@@ -12,49 +12,13 @@
  * - Error handling
  */
 
+import {
+    createDefaultState,
+    messageHandlers,
+    mockPostMessage,
+} from './edsAuthHooks.testUtils';
 import { renderHook, act, waitFor } from '@testing-library/react';
-import type { WizardState, EDSConfig } from '@/types/webview';
-
-// Mock webviewClient
-const mockPostMessage = jest.fn();
-const messageHandlers: Map<string, (data: unknown) => void> = new Map();
-
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        postMessage: mockPostMessage,
-        onMessage: jest.fn((type: string, handler: (data: unknown) => void) => {
-            messageHandlers.set(type, handler);
-            return () => messageHandlers.delete(type);
-        }),
-        ready: jest.fn().mockResolvedValue(undefined),
-    },
-}));
-
-// Mock webviewLogger
-jest.mock('@/core/ui/utils/webviewLogger', () => ({
-    webviewLogger: jest.fn(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
-}));
-
-// Default wizard state for hook tests
-const createDefaultState = (overrides?: Partial<EDSConfig>): WizardState => ({
-    currentStep: 'storefront-setup',
-    projectName: 'test-project',
-    adobeAuth: { isAuthenticated: true, isChecking: false },
-    edsConfig: {
-        accsHost: 'https://accs.example.com',
-        storeViewCode: 'default',
-        customerGroup: 'general',
-        repoName: '',
-        daLiveOrg: '',
-        daLiveSite: '',
-        ...overrides,
-    },
-});
+import type { WizardState } from '@/types/webview';
 
 // State with DA.live already authenticated
 const createAuthenticatedState = (): WizardState => createDefaultState({

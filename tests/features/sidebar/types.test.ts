@@ -223,14 +223,15 @@ describe('Sidebar Types - Supporting Types', () => {
  */
 describe('Type Narrowing', () => {
     it('should narrow projects context correctly', () => {
-        const context: SidebarContext = { type: 'projects' };
+        // `satisfies` keeps the literal type while checking it against the union, so
+        // the narrowing this test is named for is proved BY COMPILING. The old
+        // `if (context.type === 'projects')` wrapper tested a condition that is true
+        // by construction one line above, and made the assertions skippable.
+        const context = { type: 'projects' } satisfies SidebarContext;
 
-        if (context.type === 'projects') {
-            // In this branch, context should be narrowed to { type: 'projects' }
-            expect(context.type).toBe('projects');
-            // Should NOT have project property
-            expect((context as any).project).toBeUndefined();
-        }
+        expect(context.type).toBe('projects');
+        // Should NOT have project property
+        expect((context as unknown as { project?: Project }).project).toBeUndefined();
     });
 
     it('should narrow project context correctly', () => {
@@ -242,13 +243,12 @@ describe('Type Narrowing', () => {
             status: 'stopped',
         };
 
-        const context: SidebarContext = { type: 'project', project: mockProject };
+        const context = { type: 'project', project: mockProject } satisfies SidebarContext;
 
-        if (context.type === 'project') {
-            // In this branch, context should have project property
-            expect(context.project).toBeDefined();
-            expect(context.project.name).toBe('Test');
-        }
+        // `context.project` below does not typecheck unless the type really carries
+        // it — which is the whole claim. No conditional needed to reach it.
+        expect(context.project).toBeDefined();
+        expect(context.project.name).toBe('Test');
     });
 
     it('should handle exhaustive type checking', () => {

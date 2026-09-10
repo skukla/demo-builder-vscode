@@ -1,44 +1,14 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { AdobeAuthStep } from '@/features/authentication/ui/steps/AdobeAuthStep';
 import { WizardState } from '@/types/webview';
 import '@testing-library/jest-dom';
 import {
+    AdobeAuthStep,
     mockRequestAuth,
     baseState,
     resetMocks,
     cleanupTests,
 } from './AdobeAuthStep.testUtils';
-
-// Mock WebviewClient
-jest.mock('@/core/ui/utils/WebviewClient', () => {
-    const {
-        mockPostMessage,
-        mockRequestAuth,
-        mockOnMessage,
-    } = require('./AdobeAuthStep.testUtils');
-
-    return {
-        webviewClient: {
-            postMessage: (...args: any[]) => mockPostMessage(...args),
-            requestAuth: (...args: any[]) => mockRequestAuth(...args),
-            onMessage: (...args: any[]) => mockOnMessage(...args),
-        },
-    };
-});
-
-// Mock LoadingDisplay component
-jest.mock('@/core/ui/components/feedback/LoadingDisplay', () => {
-    const React = require('react');
-    return {
-        LoadingDisplay: ({ message, subMessage }: { message: string; subMessage?: string }) => (
-            <div data-testid="loading-display">
-                <div>{message}</div>
-                {subMessage && <div>{subMessage}</div>}
-            </div>
-        ),
-    };
-});
 
 describe('AdobeAuthStep - Messaging and Edge Cases', () => {
     const mockUpdateState = jest.fn();

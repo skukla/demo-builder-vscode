@@ -48,7 +48,7 @@ a silent-failure bug of this exact shape.
 Make the generator inject the required flags, **data-driven per demo package**.
 
 - A demo package declares a `configFlags` object in
-  `src/features/project-creation/config/demo-packages.json`. The unbranded `custom`
+  `src/features/components/config/demo-packages.json`. The unbranded `custom`
   hybrid (displayed "Custom (B2B + B2C)") and the branded `citisignal` hybrid both
   declare `commerce-b2b-enabled: true` and `commerce-companies-enabled: true`.
 - `configGenerator` merges those into `config.public.default` via a single
@@ -127,3 +127,9 @@ Add a `configFlags` block to that package in `demo-packages.json`. No code chang
 `configFlags` keys are unvalidated strings (shared with the addon mechanism); a typo
 (`commerce-b2b-enabld`) silently injects a dead key. Acceptable for now; a schema
 tying keys to known storefront config keys is a possible future hardening.
+
+## Reference notes
+
+- `scripts/initializers/auth.js` — belongs to the generated EDS storefront, not to this
+  repository. It is the file whose flags the generator clobbers, which is the whole
+  subject of this decision.

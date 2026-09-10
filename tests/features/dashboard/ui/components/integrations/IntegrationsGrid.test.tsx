@@ -17,12 +17,7 @@
  */
 
 import { screen } from '@testing-library/react';
-import {
-    card,
-    renderGrid,
-    resetGridMocks,
-    twoDeployed,
-} from './IntegrationsGrid.testUtils';
+import { card, renderGrid, resetGridMocks, twoDeployed } from './IntegrationsGrid.testUtils';
 
 beforeEach(() => {
     resetGridMocks();
@@ -59,7 +54,7 @@ describe('IntegrationsGrid', () => {
             const mesh = card('API Mesh', 'Deployed');
             const integration = card('custom-app', 'Deployed');
             expect(
-                mesh.compareDocumentPosition(integration) & Node.DOCUMENT_POSITION_FOLLOWING,
+                mesh.compareDocumentPosition(integration) & Node.DOCUMENT_POSITION_FOLLOWING
             ).toBeTruthy();
         });
 
@@ -74,7 +69,7 @@ describe('IntegrationsGrid', () => {
 
             // Card families should read alike; the mesh earns no accent border.
             expect(card('API Mesh', 'Deployed').className).toBe(
-                card('custom-app', 'Deployed').className,
+                card('custom-app', 'Deployed').className
             );
         });
 

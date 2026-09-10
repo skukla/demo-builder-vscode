@@ -8,6 +8,7 @@
  */
 
 import * as fs from 'fs';
+import { waitForCondition } from '../../../testUtils/async';
 import * as net from 'net';
 import * as os from 'os';
 import * as path from 'path';
@@ -17,7 +18,7 @@ import {
     isReadOnlyToolName,
 } from '@/features/ai/server/inExtensionMcpServer';
 import { registerDescriptorTools } from '@/features/ai/server/toolDescriptors';
-import type { HandlerContext, HandlerMap } from '@/types/handlers';
+import type { HandlerMap } from '@/types/handlers';
 import {
     callToolOverSocket,
     connectAndInit,
@@ -25,6 +26,43 @@ import {
     makeLogger,
     serverInfoOverSocket,
 } from './inExtensionMcpServer.testUtils';
+import type { McpToolServer } from '@/features/ai/server/mcpToolServer';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+
+// Real unix sockets under worker contention, like the sibling
+// inExtensionMcpServer.socketOwnership.test.ts: same 30s ceiling, same reason
+// (headroom, not slowness). A build-label test overran the 10s default on
+// 2026-09-03 in a full run and passed alone.
+jest.setTimeout(30_000);
+
+/**
+ * Resolves once nothing answers on `socketPath` — the previous listener is gone.
+ *
+ * Two tests waited a flat 50ms for this instead. That is a guess: the successor's
+ * bind loses to a listener the OS has not torn down yet, and the test fails on a
+ * busy moment rather than on a defect. Measured 2026-09-02 — twice in full-suite
+ * runs, 8/8 green in isolation, which is the signature of a fixed delay.
+ *
+ * Note the socket FILE outlives dispose; only the listener goes. So the signal is
+ * a refused connection, not an absent file.
+ */
+async function waitForListenerGone(path: string): Promise<void> {
+    await waitForCondition(
+        () =>
+            new Promise<boolean>((resolve) => {
+                const probe = net.connect(path);
+                probe.once('connect', () => {
+                    probe.destroy();
+                    resolve(false);
+                });
+                probe.once('error', () => {
+                    probe.destroy();
+                    resolve(true);
+                });
+            }),
+        { timeout: 5_000, interval: 10, message: `something still answers on ${path}` }
+    );
+}
 
 describe('InExtensionMcpServer', () => {
     let socketPath: string;
@@ -127,11 +165,20 @@ describe('InExtensionMcpServer', () => {
         const extraMap: HandlerMap = {
             ping: async () => ({ success: true, data: { pong: true } }),
         };
-        const registerExtra = (mcpServer: unknown) =>
+        const registerExtra = (mcpServer: McpToolServer) =>
             registerDescriptorTools(
                 mcpServer,
-                [{ tool: 'ping_tool', description: 'test', map: extraMap, type: 'ping', readOnly: true }],
-                () => ({}) as HandlerContext
+                [
+                    {
+                        tool: 'ping_tool',
+                        needsAuth: false,
+                        description: 'test',
+                        map: extraMap,
+                        type: 'ping',
+                        readOnly: true,
+                    },
+                ],
+                () => createMockHandlerContext()
             );
         server = new InExtensionMcpServer(socketPath, projectsDir, makeLogger(), {
             registerExtraTools: registerExtra,
@@ -201,7 +248,11 @@ describe('InExtensionMcpServer', () => {
 
         const debug = logger.debug as jest.Mock;
         const ids = debug.mock.calls
-            .map(([msg]) => /\[MCP\] client connected \(conn=(\d+), [a-z-]+-scoped(?: to [^)]+)?\)/.exec(String(msg)))
+            .map(([msg]) =>
+                /\[MCP\] client connected \(conn=(\d+), [a-z-]+-scoped(?: to [^)]+)?\)/.exec(
+                    String(msg)
+                )
+            )
             .filter((m): m is RegExpExecArray => m !== null)
             .map((m) => Number(m[1]));
         expect(ids).toHaveLength(2);
@@ -216,7 +267,7 @@ describe('InExtensionMcpServer', () => {
         server = new InExtensionMcpServer(socketPath, projectsDir, makeLogger());
         await server.start();
         server.dispose();
-        await new Promise((r) => setTimeout(r, 50));
+        await waitForListenerGone(socketPath);
 
         await expect(
             new Promise((resolve, reject) => {
@@ -276,7 +327,14 @@ describe('InExtensionMcpServer', () => {
         const outgoing = new InExtensionMcpServer(socketPath, projectsDir, makeLogger());
         await outgoing.start();
         outgoing.dispose();
-        await new Promise((r) => setTimeout(r, 50));
+
+        // WAIT FOR THE SOCKET TO GO, do not guess at how long that takes. This was
+        // `setTimeout(50)`, and 50ms is a number somebody hoped was enough: the
+        // successor's bind loses to a socket the OS has not released yet, and the
+        // test fails on an unrelated machine-busy moment. It failed twice on
+        // 2026-09-02 in full-suite runs and passed 8/8 in isolation, which is the
+        // signature of a fixed delay rather than of a defect.
+        await waitForListenerGone(socketPath);
 
         server = new InExtensionMcpServer(socketPath, projectsDir, makeLogger());
         await server.start();
@@ -294,7 +352,7 @@ describe('InExtensionMcpServer', () => {
         const leftovers = fs
             .readdirSync(path.dirname(socketPath))
             .filter((n) => n.startsWith(path.basename(socketPath) + '.'));
-        expect(leftovers).toEqual([]);
+        expect(leftovers).toStrictEqual([]);
     });
 });
 
@@ -339,7 +397,7 @@ describe('agent-operation visibility (the notifier seam)', () => {
         const names = await listToolsOverSocket(socketPath);
         expect(names).toContain('list_projects');
         await callToolOverSocket(socketPath, 'list_projects', {});
-        expect(seen).toEqual([]);
+        expect(seen).toStrictEqual([]);
 
         // sync_storefront is mutating: must go through the notifier (the call
         // itself fails on the empty projects dir — irrelevant; the notifier
@@ -356,6 +414,12 @@ describe('agent-operation visibility (the notifier seam)', () => {
             expect(isReadOnlyToolName(name)).toBe(true);
         }
         for (const name of ['sync_storefront', 'republish', 'delete_page', 'brand_new_tool']) {
+            expect(isReadOnlyToolName(name)).toBe(false);
+        }
+        // The prefix has to be the START of the name. A write tool that merely
+        // CONTAINS a read word is a write — this is the direction that matters,
+        // because getting it wrong makes a mutation invisible.
+        for (const name of ['deploy_get_thing', 'reset_list_cache', 'undo_check_run']) {
             expect(isReadOnlyToolName(name)).toBe(false);
         }
     });
@@ -385,12 +449,18 @@ describe('agent-operation visibility (the notifier seam)', () => {
         expect(callRequestsConsent('delete_project', { confirm: 'true' })).toBe(false);
         expect(callRequestsConsent('delete_project', {})).toBe(false);
         expect(callRequestsConsent('delete_project', undefined)).toBe(false);
+
+        // `null` is the one JSON value that is `typeof 'object'` and still has
+        // no properties to read. The guard exists to make `.confirm` safe, so
+        // it has to hold here rather than throw inside the tool wrapper.
+        expect(callRequestsConsent('delete_project', null)).toBe(false);
+        expect(callRequestsConsent('delete_project', [])).toBe(false);
     });
 
     it('every tool that interrupts has authored copy — no dialog without words', () => {
         // Membership IS the copy table, so a dialog with no written text is not
         // expressible. This pins that the two cannot drift apart.
-         
+
         const { AGENT_ALERT_COPY } = require('@/features/ai/server/agentAlertCopy');
         for (const [tool, copy] of Object.entries(AGENT_ALERT_COPY)) {
             expect(callRequestsConsent(tool, { confirm: true })).toBe(true);
@@ -434,7 +504,34 @@ describe('agent-operation visibility (the notifier seam)', () => {
             expect.objectContaining({ confirm: true }),
             expect.any(String)
         );
-        expect(notified).toEqual([]);
+        expect(notified).toStrictEqual([]);
+    });
+
+    it('standing consent (consentNotRequired) beats BOTH the chat ask and the gate', async () => {
+        // The 2026-08-28 regression: headless `claude -p` declares elicitation
+        // and auto-declines it, so with the chat ask first the owner's
+        // requireAgentConsent:false could never take effect — both ERP
+        // journeys built green and were refused their own teardown. The
+        // standing grant must short-circuit BEFORE any ask happens.
+        const consentGate = jest.fn(async () => ({
+            allowed: false as const,
+            refusal: { content: [{ type: 'text' as const, text: 'should never be consulted' }] },
+        }));
+        server = new InExtensionMcpServer(socketPath, projectsDir, makeLogger(), {
+            consentGate,
+            consentNotRequired: () => true,
+        });
+        await server.start();
+
+        // The refusal NOT arriving proves neither ask ran; the handler's own
+        // failure on the empty projects dir is the expected outcome instead.
+        const result = await callToolOverSocket(socketPath, 'remove_block_from_library', {
+            projectName: 'nope',
+            blockId: 'hero',
+            confirm: true,
+        }).catch((e: Error) => e.message);
+        expect(result).not.toBe('should never be consulted');
+        expect(consentGate).not.toHaveBeenCalled();
     });
 
     it('an allowed gate proceeds into the notifier; confirm-less calls never consult the gate', async () => {

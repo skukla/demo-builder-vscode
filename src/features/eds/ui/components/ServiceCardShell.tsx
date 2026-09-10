@@ -26,8 +26,8 @@ import { Flex, Text } from '@adobe/react-spectrum';
 import Alert from '@spectrum-icons/workflow/Alert';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React from 'react';
-import { Spinner } from '@/core/ui/components/ui';
-
+import { Spinner } from '@/core/ui/components/ui/Spinner';
+import { cn } from '@/core/ui/utils/classNames';
 /** Props for the card frame. */
 export interface ServiceCardShellProps {
     /** Icon content for the `service-icon` well. */
@@ -54,7 +54,7 @@ export function ServiceCardShell({
     return (
         <div className="service-card" data-connected={isConnected ? 'true' : 'false'}>
             <div className="service-card-header">
-                <div className={`service-icon ${iconClassName}`}>{icon}</div>
+                <div className={cn('service-icon', iconClassName)}>{icon}</div>
                 <div className="service-card-title">{title}</div>
             </div>
             <div className="service-card-description">{description}</div>

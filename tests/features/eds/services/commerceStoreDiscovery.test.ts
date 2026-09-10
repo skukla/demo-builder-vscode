@@ -5,18 +5,12 @@
  * Covers PaaS (admin token auth) and ACCS (IMS OAuth auth) paths.
  */
 
-// Mock timeoutConfig before imports
-jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: {
-        NORMAL: 30000,
-    },
-}));
-
 import {
     getAdminToken,
     fetchStoreStructurePaas,
     discoverStoreStructure,
-} from '@/features/eds/services/commerceStoreDiscovery';
+} from './commerceStoreDiscovery.testUtils';
+import { assertNotOk, assertOk } from '../../../helpers/resultAssertions';
 
 // ==========================================================
 // Test Fixtures
@@ -222,9 +216,9 @@ describe('commerceStoreDiscovery', () => {
 
             const result = await fetchStoreStructurePaas('https://magento.test', MOCK_ADMIN_TOKEN);
 
-            expect(result.websites).toEqual([]);
-            expect(result.storeGroups).toEqual([]);
-            expect(result.storeViews).toEqual([]);
+            expect(result.websites).toStrictEqual([]);
+            expect(result.storeGroups).toStrictEqual([]);
+            expect(result.storeViews).toStrictEqual([]);
         });
     });
 
@@ -251,12 +245,10 @@ describe('commerceStoreDiscovery', () => {
                 password: 'admin123',
             });
 
-            expect(result.success).toBe(true);
-            if (result.success) {
-                expect(result.data.websites).toHaveLength(2);
-                expect(result.data.storeGroups).toHaveLength(2);
-                expect(result.data.storeViews).toHaveLength(3);
-            }
+            assertOk(result);
+            expect(result.data.websites).toHaveLength(2);
+            expect(result.data.storeGroups).toHaveLength(2);
+            expect(result.data.storeViews).toHaveLength(3);
         });
 
         it('should return error for PaaS without credentials', async () => {
@@ -265,10 +257,8 @@ describe('commerceStoreDiscovery', () => {
                 baseUrl: 'https://magento.test',
             });
 
-            expect(result.success).toBe(false);
-            if (!result.success) {
-                expect(result.error).toContain('Admin Username and Admin Password');
-            }
+            assertNotOk(result);
+            expect(result.error).toContain('Admin Username and Admin Password');
         });
 
         it('should return error for ACCS without required params', async () => {
@@ -277,12 +267,10 @@ describe('commerceStoreDiscovery', () => {
                 baseUrl: 'https://accs.test',
             });
 
-            expect(result.success).toBe(false);
-            if (!result.success) {
-                expect(result.error).toContain(
-                    'Discovery service not configured or IMS token missing'
-                );
-            }
+            assertNotOk(result);
+            expect(result.error).toContain(
+                'Discovery service not configured or IMS token missing'
+            );
         });
 
         it('should return success for ACCS path via discovery service', async () => {
@@ -308,10 +296,8 @@ describe('commerceStoreDiscovery', () => {
                 accsGraphqlEndpoint: 'https://na1-sandbox.api.commerce.adobe.com/Abcd1234/graphql',
             });
 
-            expect(result.success).toBe(true);
-            if (result.success) {
-                expect(result.data.websites).toHaveLength(2);
-            }
+            assertOk(result);
+            expect(result.data.websites).toHaveLength(2);
         });
 
         /**
@@ -365,12 +351,10 @@ describe('commerceStoreDiscovery', () => {
                 accsGraphqlEndpoint: 'https://na1-sandbox.api.commerce.adobe.com/Abcd1234/graphql',
             });
 
-            expect(result.success).toBe(true);
-            if (result.success) {
-                expect(result.data.websites.map((w) => w.code)).toEqual(['base', 'citisignal']);
-                expect(result.data.storeGroups.map((g) => g.id)).toEqual([1, 2]);
-                expect(result.data.storeViews.every((v) => v.id !== 0)).toBe(true);
-            }
+            assertOk(result);
+            expect(result.data.websites.map((w) => w.code)).toEqual(['base', 'citisignal']);
+            expect(result.data.storeGroups.map((g) => g.id)).toEqual([1, 2]);
+            expect(result.data.storeViews.every((v) => v.id !== 0)).toBe(true);
         });
 
         it('should surface HTTP status + body when the discovery service rejects (for field diagnostics)', async () => {
@@ -395,12 +379,10 @@ describe('commerceStoreDiscovery', () => {
                 discoveryServiceUrl: 'https://actions.adobeioruntime.net/api/v1/web/discovery',
             });
 
-            expect(result.success).toBe(false);
-            if (!result.success) {
-                expect(result.error).toContain('401');
-                expect(result.error).toContain('Unauthorized');
-                expect(result.error).toContain('Token is invalid or expired');
-            }
+            assertNotOk(result);
+            expect(result.error).toContain('401');
+            expect(result.error).toContain('Unauthorized');
+            expect(result.error).toContain('Token is invalid or expired');
         });
 
         it('should surface raw body when discovery service returns non-JSON error', async () => {
@@ -424,12 +406,10 @@ describe('commerceStoreDiscovery', () => {
                 discoveryServiceUrl: 'https://actions.adobeioruntime.net/api/v1/web/discovery',
             });
 
-            expect(result.success).toBe(false);
-            if (!result.success) {
-                expect(result.error).toContain('502');
-                expect(result.error).toContain('Bad Gateway');
-                expect(result.error).toContain('upstream unavailable');
-            }
+            assertNotOk(result);
+            expect(result.error).toContain('502');
+            expect(result.error).toContain('Bad Gateway');
+            expect(result.error).toContain('upstream unavailable');
         });
 
         it('should return friendly error when the request actually aborts (AbortSignal.timeout fires)', async () => {
@@ -447,10 +427,8 @@ describe('commerceStoreDiscovery', () => {
                 password: 'pass',
             });
 
-            expect(result.success).toBe(false);
-            if (!result.success) {
-                expect(result.error).toContain('timed out');
-            }
+            assertNotOk(result);
+            expect(result.error).toContain('timed out');
         });
 
         it('should return friendly error on actual network failure (TypeError("fetch failed") from Node fetch)', async () => {
@@ -466,10 +444,8 @@ describe('commerceStoreDiscovery', () => {
                 password: 'pass',
             });
 
-            expect(result.success).toBe(false);
-            if (!result.success) {
-                expect(result.error).toContain('Cannot reach');
-            }
+            assertNotOk(result);
+            expect(result.error).toContain('Cannot reach');
         });
 
         it('should NOT swallow status code when service response body happens to contain "timeout" or "abort"', async () => {
@@ -496,16 +472,14 @@ describe('commerceStoreDiscovery', () => {
                 discoveryServiceUrl: 'https://actions.adobeioruntime.net/api/v1/web/discovery',
             });
 
-            expect(result.success).toBe(false);
-            if (!result.success) {
-                // Status code survives — this is the regression check.
-                expect(result.error).toContain('504');
-                expect(result.error).toContain('Gateway Timeout');
-                // And the rewrite-to-friendly-timeout did NOT fire.
-                expect(result.error).not.toBe(
-                    'Connection timed out. Check the Commerce URL and try again.'
-                );
-            }
+            assertNotOk(result);
+            // Status code survives — this is the regression check.
+            expect(result.error).toContain('504');
+            expect(result.error).toContain('Gateway Timeout');
+            // And the rewrite-to-friendly-timeout did NOT fire.
+            expect(result.error).not.toBe(
+                'Connection timed out. Check the Commerce URL and try again.'
+            );
         });
 
         it('should return error for invalid backendType', async () => {
@@ -514,10 +488,8 @@ describe('commerceStoreDiscovery', () => {
                 baseUrl: 'https://magento.test',
             });
 
-            expect(result.success).toBe(false);
-            if (!result.success) {
-                expect(result.error).toContain('Unsupported backend type');
-            }
+            assertNotOk(result);
+            expect(result.error).toContain('Unsupported backend type');
         });
 
         it('should validate base URL format', async () => {
@@ -528,10 +500,8 @@ describe('commerceStoreDiscovery', () => {
                 password: 'pass',
             });
 
-            expect(result.success).toBe(false);
-            if (!result.success) {
-                expect(result.error).toContain('protocol');
-            }
+            assertNotOk(result);
+            expect(result.error).toContain('protocol');
         });
 
         it('should return auth error for 401', async () => {
@@ -548,10 +518,8 @@ describe('commerceStoreDiscovery', () => {
                 password: 'wrong',
             });
 
-            expect(result.success).toBe(false);
-            if (!result.success) {
-                expect(result.error).toContain('Invalid admin credentials');
-            }
+            assertNotOk(result);
+            expect(result.error).toContain('Invalid admin credentials');
         });
     });
 });

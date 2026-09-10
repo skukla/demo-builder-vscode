@@ -1,0 +1,182 @@
+/**
+ * .prerequisite-* and .progress-* styles.
+ *
+ * FEATURE-SCOPED (ADR-017 §6). Imported by the `wizard` entry ALONE — the only one
+ * whose graph reaches PrerequisitesStep.
+ *
+ * TWO FAMILIES, one sheet. `.progress-*` was appended here rather than given a
+ * sheet of its own; four rules do not earn a file, and that is what keeps this
+ * migration from ending in forty single-family stylesheets.
+ *
+ * Moved out of utilities.css by the CSS migration
+ * (.rptc/plans/css-architecture-migration), each rule with the comment above it.
+ * Verbatim otherwise: a move is only correct when the visual diff is empty.
+ */
+
+@layer theme {
+
+.prerequisite-list {
+    padding-bottom: 60px;
+}
+
+.prerequisite-item:not(:last-child) {
+    margin-bottom: 8px;
+}
+
+.prerequisite-content {
+    margin-right: 12px;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.prerequisite-title {
+    font-size: 14px;
+    font-weight: 600;
+    display: block;
+    margin-bottom: 2px;
+}
+
+.prerequisite-description {
+    font-size: 12px;
+    color: var(--spectrum-global-color-gray-600);
+    display: block;
+}
+
+.prerequisite-message-error {
+    color: var(--spectrum-global-color-red-600);
+}
+
+.prerequisite-message-warning {
+    color: var(--spectrum-global-color-orange-600);
+}
+
+.prerequisite-message-default {
+    color: var(--spectrum-global-color-gray-600);
+}
+
+.prerequisite-plugin-item {
+    font-size: 12px;
+    margin-left: 20px;
+}
+
+/* Prerequisite item spacing */
+.prerequisite-item-spacing {
+    margin-bottom: 8px;
+}
+
+/* ===========================================
+   Smooth Transitions for Prerequisites
+   =========================================== */
+/* Smooth transitions for all prerequisite elements */
+.prerequisite-item * {
+    transition: opacity var(--spectrum-global-animation-duration-600) ease, transform var(--spectrum-global-animation-duration-600) ease;
+}
+
+.prerequisite-content > * {
+    transition: opacity var(--spectrum-global-animation-duration-600) ease;
+}
+
+/* Message text transitions */
+.prerequisite-message,
+.prerequisite-description,
+.prerequisite-title {
+    transition: opacity var(--spectrum-global-animation-duration-300) ease, color var(--spectrum-global-animation-duration-600) ease;
+}
+
+/* Status icon transitions */
+.prerequisite-item svg {
+    transition: opacity var(--spectrum-global-animation-duration-600) ease, transform var(--spectrum-global-animation-duration-300) ease, color var(--spectrum-global-animation-duration-600) ease;
+}
+
+/* Smooth transitions for conditional content */
+.prerequisite-content > div {
+    transition: all var(--spectrum-global-animation-duration-600) ease;
+}
+
+/* Ensure smooth transitions for dynamically added content */
+.prerequisite-item [role="progressbar"],
+.prerequisite-item .progress-bar-small-label {
+    animation: fadeInUp var(--spectrum-global-animation-duration-600) ease;
+}
+
+/* Merged 2 declarations of this selector that the sheet carried separately.
+   Kept at the LAST one's position; for a property declared twice the winner
+   survives (!important over plain, then later over earlier). */
+/* Smooth text content updates */
+.prerequisite-message {
+    font-size: 12px;
+    font-weight: 400;
+    display: block;
+    margin-top: 4px;
+    min-height: 17px;
+    line-height: 17px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow: hidden;
+    transition: opacity var(--spectrum-global-animation-duration-300) ease;
+}
+
+.prerequisite-message:not(:empty) {
+    animation: fadeIn var(--spectrum-global-animation-duration-300) ease;
+}
+
+/* Smooth install button transitions */
+.prerequisite-item button {
+    transition: opacity var(--spectrum-global-animation-duration-600) ease, transform var(--spectrum-global-animation-duration-300) ease;
+}
+
+/* Merged 2 declarations of this selector that the sheet carried separately.
+   Kept at the LAST one's position; for a property declared twice the winner
+   survives (!important over plain, then later over earlier). */
+/* ===========================================
+   Prerequisite-specific Classes
+   =========================================== */
+/* Prevent layout shift during transitions */
+.prerequisite-container {
+    overflow-y: auto;
+    overflow-x: hidden;
+    margin-bottom: 16px;
+    border: 1px solid var(--spectrum-global-color-gray-300);
+    border-radius: 4px;
+    background-color: var(--spectrum-global-color-gray-50);
+    padding: 12px;
+    max-width: 100%;
+    width: 100%;
+    will-change: scroll-position;
+}
+
+/* Merged 3 declarations of this selector that the sheet carried separately.
+   Kept at the LAST one's position; for a property declared twice the winner
+   survives (!important over plain, then later over earlier). */
+/* Prevent jarring height changes */
+.prerequisite-item {
+    padding: 12px;
+    background-color: var(--spectrum-global-color-gray-75);
+    border-radius: 4px;
+    width: 100%;
+    overflow: hidden;
+    transition: min-height var(--spectrum-global-animation-duration-600) ease, padding var(--spectrum-global-animation-duration-600) ease;
+    will-change: transform;
+}
+
+/* Progress bar customizations */
+.progress-bar-small-label [class*="spectrum-ProgressBar-label"] {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--spectrum-global-color-gray-700);
+}
+
+.progress-bar-full-width {
+    width: 100%;
+    max-width: none;
+}
+
+.progress-bar-full-width [class*="spectrum-ProgressBar"] {
+    width: 100%;
+}
+
+/* Progress bar spacing */
+.progress-bar-spacing {
+    margin-bottom: 8px;
+}
+}

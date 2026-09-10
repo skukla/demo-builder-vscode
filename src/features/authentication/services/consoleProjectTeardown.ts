@@ -29,7 +29,7 @@
 import { errorMessage, teardownEventEntities } from './consoleProjectTeardownEvents';
 import type { EventsAuth, IoEventsClient } from './ioEventsClient';
 import type { WorkspaceS2SCredentialIds } from './types';
-import { getLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
 
 /** Progress steps reported to `onProgress`. */
 const TOTAL_STEPS = 4;
@@ -311,10 +311,8 @@ export async function teardownConsoleProject(
     );
     if (firstCredential) {
         report(3, 'Removing event registrations and providers…');
-        if (!(await teardownEventEntities(ctx, prep.workspaces, firstCredential))) {
-            debugLogger.debug('[Teardown] event-entity sweep failed — aborting before delete');
-            return buildResult(items, false);
-        }
+        // A failed sweep records a failed item, which the gate below aborts on.
+        await teardownEventEntities(ctx, prep.workspaces, firstCredential);
     } else {
         // Keep the reported steps monotonic and complete even on the fast path.
         report(3, 'No event entities to remove');

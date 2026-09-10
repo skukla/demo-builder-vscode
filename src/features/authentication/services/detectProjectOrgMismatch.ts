@@ -22,7 +22,7 @@
 
 import { ensureOrgContext } from './ensureOrgContext';
 import type { AdobeOrg } from './types';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 
 /**
@@ -76,7 +76,7 @@ export async function detectProjectOrgMismatch(
     }
 
     try {
-        const orgs = (await authManager.getOrganizations()) ?? [];
+        const orgs = await authManager.getOrganizations();
         const result = await ensureOrgContext(expectedOrg, {
             listSelectableOrgs: async () =>
                 orgs.map((org) => ({ id: org.id, code: org.code, name: org.name })),

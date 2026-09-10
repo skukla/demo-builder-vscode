@@ -12,9 +12,8 @@ import { migrateLegacyToAppBuilderComponents } from './appBuilderComponentMigrat
 import { migrateApiPicks } from './componentApiPicks';
 import { reconcileComponentSelections } from './componentSelectionReconcile';
 import { validateManifestShape } from './manifestValidation';
-import { stripDuplicateBackendOwnedScope } from '@/features/components/config/backendOwnedScope';
-import type { Project, ComponentInstance } from '@/types';
-import type { AiPrompt } from '@/types/base';
+import { stripDuplicateBackendOwnedScope } from '@/core/config/backendOwnedScope';
+import type { ComponentInstance, Project , AiPrompt } from '@/types/base';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { Logger } from '@/types/logger';
 import { getComponentInstancesByType, parseJSON } from '@/types/typeGuards';
@@ -347,8 +346,10 @@ export class ProjectFileLoader {
         // Prefer componentInstance.version (from recent installation) over manifest data
         const mergedComponentVersions = { ...(manifestVersions || {}) };
         for (const componentId of Object.keys(discoveredComponents)) {
-            // Check if the merged componentInstance has version data (from recent installation)
-            const instanceVersion = mergedComponentInstances[componentId]?.version;
+            // Every discovered id was spread into the merged map above, so the
+            // lookup is always defined; the instance version comes from a recent
+            // installation when present.
+            const instanceVersion = mergedComponentInstances[componentId].version;
 
             if (!mergedComponentVersions[componentId]) {
                 // Component exists on disk but has no version tracking in project file

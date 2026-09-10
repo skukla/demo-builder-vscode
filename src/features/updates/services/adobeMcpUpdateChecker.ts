@@ -17,8 +17,8 @@ import semver from 'semver';
 import * as vscode from 'vscode';
 import { getLatestRelease } from './githubApiClient';
 import { COMPONENT_IDS } from '@/core/constants';
-import { resolveMcpToolsDir } from '@/features/project-creation/services';
-import type { Project } from '@/types';
+import { resolveMcpToolsDir } from '@/features/project-creation/services/aiBundle/aiDefaultsInstaller';
+import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 
 const ADOBE_MCP_PACKAGE = '@adobe-commerce/commerce-extensibility-tools';

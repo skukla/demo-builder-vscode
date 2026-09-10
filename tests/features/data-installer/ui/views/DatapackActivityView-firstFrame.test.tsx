@@ -58,9 +58,7 @@ jest.mock('@/core/ui/hooks/useVSCodeRequest', () => ({
     }),
 }));
 
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: { request: jest.fn(), postMessage: jest.fn() },
-}));
+import './DatapackActivityView.testUtils';
 
 // Below the mocks on purpose — see webview-test-authoring §3.
 import { DatapackActivityView } from '@/features/data-installer/ui/views/DatapackActivityView';
@@ -76,5 +74,14 @@ describe('DatapackActivityView — the frame before the fetch', () => {
         render(<DatapackActivityView />);
 
         expect(screen.getByText(/loading activity/i)).toBeInTheDocument();
+    });
+
+    it('waits INLINE, keeping the filter the user can already see', () => {
+        // The target has answered, so the chrome is allowed. Taking the whole
+        // viewport here removes the filter mid-wait — the reason the gate reads
+        // `hasLoaded` rather than "is anything in flight".
+        render(<DatapackActivityView />);
+
+        expect(screen.getByTestId('spectrum-picker-select')).toBeInTheDocument();
     });
 });

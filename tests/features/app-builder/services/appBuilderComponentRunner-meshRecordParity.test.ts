@@ -28,14 +28,9 @@ jest.setTimeout(5000);
 // Mocks — defined before imports (same preamble as appBuilderComponentRunner.test.ts)
 // =============================================================================
 
-const mockWithOrgContext = jest.fn((_target: unknown, fn: () => Promise<unknown>) => fn());
-jest.mock('@/core/shell', () => ({
-    ...jest.requireActual('@/core/shell'),
-    withOrgContext: (target: unknown, fn: () => Promise<unknown>) => mockWithOrgContext(target, fn),
-}));
-
 const mockDetectAppLayout = jest.fn().mockResolvedValue('standalone');
 jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
+    listDeclaredPackageNames: jest.fn().mockResolvedValue([]),
     ...jest.requireActual('@/features/app-builder/services/appConfigPackages'),
     detectAppLayout: (...args: unknown[]) => mockDetectAppLayout(...args),
 }));
@@ -44,6 +39,7 @@ jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
 // Imports (after mocks)
 // =============================================================================
 
+import { mockWithOrgContext } from './appBuilderComponentRunner.orgContextMock';
 import { addAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentRunner';
 import {
     MESH_ENTRY,
@@ -73,7 +69,7 @@ describe('a dashboard mesh add lands the full deployment record', () => {
             captureMeshBaseline: jest.fn().mockResolvedValue(BASELINE),
         });
 
-        await addAppBuilderComponent(project, MESH_ENTRY, deps as never);
+        await addAppBuilderComponent(project, MESH_ENTRY, deps);
 
         expect(deps.captureMeshBaseline).toHaveBeenCalledWith('/proj/components/commerce-mesh');
 
@@ -95,7 +91,7 @@ describe('a dashboard mesh add lands the full deployment record', () => {
         const project = createProject();
         const deps = createDeps();
 
-        await addAppBuilderComponent(project, MESH_ENTRY, deps as never);
+        await addAppBuilderComponent(project, MESH_ENTRY, deps);
 
         // meshVerifier reads componentInstances[id].metadata.meshId. A null
         // metadata is what sent it to `api-mesh:describe` on every status request.
@@ -106,7 +102,7 @@ describe('a dashboard mesh add lands the full deployment record', () => {
         const project = createProject();
         const deps = createDeps();
 
-        await addAppBuilderComponent(project, INTEGRATION_ENTRY, deps as never);
+        await addAppBuilderComponent(project, INTEGRATION_ENTRY, deps);
 
         const entry = project.appBuilderComponents?.[INTEGRATION_ENTRY.id];
         expect(entry?.status).toBe('deployed');

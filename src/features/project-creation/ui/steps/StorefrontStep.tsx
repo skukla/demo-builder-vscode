@@ -40,7 +40,8 @@ import {
     getAvailableBlockLibraries,
     getNativeBlockLibraries,
 } from '@/features/components/services/blockLibraryLoader';
-import { GitHubServiceCard, DaLiveServiceCard } from '@/features/eds/ui/components';
+import { DaLiveServiceCard } from '@/features/eds/ui/components/DaLiveServiceCard';
+import { GitHubServiceCard } from '@/features/eds/ui/components/GitHubServiceCard';
 import { getBookmarkletSetupPageUrl } from '@/features/eds/ui/helpers/bookmarkletSetupPage';
 import { useDaLiveAuth } from '@/features/eds/ui/hooks/useDaLiveAuth';
 import { useGitHubAuth } from '@/features/eds/ui/hooks/useGitHubAuth';

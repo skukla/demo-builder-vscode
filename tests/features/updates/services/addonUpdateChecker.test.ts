@@ -8,15 +8,9 @@ import {
     BlockLibraryUpdateResult,
     InspectorSdkUpdateResult,
 } from '@/features/updates/services/addonUpdateChecker';
-import type { Project } from '@/types';
-import type { InstalledBlockLibrary } from '@/types/blockLibraries';
 import type { Logger } from '@/types/logger';
-
-// Mock modules
-jest.mock('vscode', () => ({}), { virtual: true });
-jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: { QUICK: 5000 },
-}));
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { makeCheckerSecrets, makeLibrary, makeProject } from './addonUpdateChecker.testUtils';
 jest.mock('@/features/eds/services/inspectorHelpers', () => ({
     SDK_SOURCE: {
         owner: 'skukla',
@@ -28,62 +22,28 @@ jest.mock('@/features/eds/services/inspectorHelpers', () => ({
 }));
 
 // Mock fetch globally
-global.fetch = jest.fn() as jest.Mock;
+global.fetch = jest.fn();
 
 describe('AddonUpdateChecker', () => {
     let checker: AddonUpdateChecker;
     let mockLogger: Logger;
-    let mockSecrets: { get: jest.Mock };
+    let mockSecrets: ReturnType<typeof makeCheckerSecrets>;
 
     beforeEach(() => {
         jest.clearAllMocks();
 
-        mockLogger = {
-            trace: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            debug: jest.fn(),
-        } as unknown as Logger;
+        mockLogger = createMockLogger() as unknown as Logger;
 
-        mockSecrets = {
-            get: jest.fn().mockResolvedValue('fake-github-token'),
-        };
+        mockSecrets = makeCheckerSecrets();
 
-        checker = new AddonUpdateChecker(mockSecrets as any, mockLogger);
+        checker = new AddonUpdateChecker(mockSecrets, mockLogger);
     });
-
-    // -------------------------------------------------------------------------
-    // Helper factories
-    // -------------------------------------------------------------------------
-
-    function makeLibrary(overrides: Partial<InstalledBlockLibrary> = {}): InstalledBlockLibrary {
-        return {
-            name: 'Test Library',
-            source: { owner: 'acme', repo: 'blocks', branch: 'main' },
-            commitSha: 'aaa111',
-            blockIds: ['hero', 'footer'],
-            installedAt: '2025-01-01T00:00:00Z',
-            ...overrides,
-        };
-    }
-
-    function makeProject(overrides: Partial<Project> = {}): Project {
-        return {
-            name: 'test-project',
-            created: new Date(),
-            lastModified: new Date(),
-            path: '/tmp/test',
-            status: 'ready',
-            ...overrides,
-        };
-    }
 
     /** Mock fetch to respond to branches and compare endpoints */
     function mockGitHubApi(
         branchSha: string | null,
         behindBy: number = 0,
-        branchStatus: number = 200,
+        branchStatus: number = 200
     ): void {
         (global.fetch as jest.Mock).mockImplementation(async (url: string) => {
             if (url.includes('/branches/')) {
@@ -134,7 +94,7 @@ describe('AddonUpdateChecker', () => {
 
             const results = await checker.checkBlockLibraries(project);
 
-            expect(results).toEqual([]);
+            expect(results).toStrictEqual([]);
         });
 
         it('should return empty array when project has no installed libraries', async () => {
@@ -142,19 +102,17 @@ describe('AddonUpdateChecker', () => {
 
             const results = await checker.checkBlockLibraries(project);
 
-            expect(results).toEqual([]);
+            expect(results).toStrictEqual([]);
         });
 
         it('should skip library with missing source and log warning', async () => {
-            const lib = makeLibrary({ source: undefined as any });
+            const lib = makeLibrary({ source: undefined });
             const project = makeProject({ installedBlockLibraries: [lib] });
 
             const results = await checker.checkBlockLibraries(project);
 
-            expect(results).toEqual([]);
-            expect(mockLogger.warn).toHaveBeenCalledWith(
-                expect.stringContaining('[Updates]'),
-            );
+            expect(results).toStrictEqual([]);
+            expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining('[Updates]'));
         });
 
         it('should handle GitHub API failure gracefully and return empty', async () => {
@@ -164,7 +122,7 @@ describe('AddonUpdateChecker', () => {
 
             const results = await checker.checkBlockLibraries(project);
 
-            expect(results).toEqual([]);
+            expect(results).toStrictEqual([]);
             expect(mockLogger.warn).toHaveBeenCalled();
         });
     });

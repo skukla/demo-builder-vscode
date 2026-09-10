@@ -17,11 +17,11 @@ import { shapeDrift, checkEndpoint, modeFindings, readBaseUrl } from '../../scri
 
 describe('shapeDrift', () => {
     it('reports nothing for identical shapes', () => {
-        expect(shapeDrift({ a: 1, b: 'x' }, { a: 2, b: 'y' })).toEqual([]);
+        expect(shapeDrift({ a: 1, b: 'x' }, { a: 2, b: 'y' })).toStrictEqual([]);
     });
 
     it('ignores VALUE differences — only shape matters', () => {
-        expect(shapeDrift({ total: 35 }, { total: 9999 })).toEqual([]);
+        expect(shapeDrift({ total: 35 }, { total: 9999 })).toStrictEqual([]);
     });
 
     it('reports a renamed key, naming it', () => {
@@ -53,7 +53,7 @@ describe('shapeDrift', () => {
     // break. Reporting it as drift would make the tool cry wolf, and a tool that
     // cries wolf gets ignored and then deleted.
     it('does NOT report an ADDED key', () => {
-        expect(shapeDrift({ a: 1 }, { a: 1, b: 2 })).toEqual([]);
+        expect(shapeDrift({ a: 1 }, { a: 1, b: 2 })).toStrictEqual([]);
     });
 
     it('descends into nested objects', () => {
@@ -69,7 +69,7 @@ describe('shapeDrift', () => {
     });
 
     it('does not trip on an empty array in the live response', () => {
-        expect(shapeDrift({ rows: [{ id: 1 }] }, { rows: [] })).toEqual([]);
+        expect(shapeDrift({ rows: [{ id: 1 }] }, { rows: [] })).toStrictEqual([]);
     });
 
     // Found by the first live run: the logs fixture's row 0 has nulls for
@@ -78,11 +78,11 @@ describe('shapeDrift', () => {
     // was the cry-wolf failure that gets a checker deleted.
     describe('nullable fields', () => {
         it('does not report null -> value', () => {
-            expect(shapeDrift({ scenario: null }, { scenario: 'DATAPACK_ALL_ITEMS' })).toEqual([]);
+            expect(shapeDrift({ scenario: null }, { scenario: 'DATAPACK_ALL_ITEMS' })).toStrictEqual([]);
         });
 
         it('does not report value -> null', () => {
-            expect(shapeDrift({ scenario: 'x' }, { scenario: null })).toEqual([]);
+            expect(shapeDrift({ scenario: 'x' }, { scenario: null })).toStrictEqual([]);
         });
 
         it('still reports a REAL type change either side of null', () => {
@@ -98,7 +98,7 @@ describe('shapeDrift', () => {
             const fixture = { rows: [{ a: 1 }, { a: 1, b: 2 }] };
             const live = { rows: [{ a: 9, b: 8 }, { a: 9 }] };
 
-            expect(shapeDrift(fixture, live)).toEqual([]);
+            expect(shapeDrift(fixture, live)).toStrictEqual([]);
         });
 
         it('reports a key absent from EVERY live element', () => {
@@ -168,7 +168,7 @@ describe('checkEndpoint', () => {
 
         expect(result.ok).toBe(false);
         expect(result.unreachable).toBe(true);
-        expect(result.drift).toEqual([]);
+        expect(result.drift).toStrictEqual([]);
         expect(result.error).toMatch(/404/);
     });
 
@@ -269,7 +269,7 @@ describe('modeFindings', () => {
     };
 
     it('reports nothing when the surface matches what is decided', () => {
-        expect(modeFindings(HEALTHY)).toEqual([]);
+        expect(modeFindings(HEALTHY)).toStrictEqual([]);
     });
 
     // If a made-up mode answers with processors, the endpoint is not validating

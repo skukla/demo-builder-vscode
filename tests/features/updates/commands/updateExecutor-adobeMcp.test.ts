@@ -11,6 +11,7 @@
  * the contract.
  */
 
+import { captureProgress } from './updateExecutor.testUtils';
 import * as vscode from 'vscode';
 import {
     performAdobeMcpUpdates,
@@ -18,71 +19,114 @@ import {
 } from '@/features/updates/commands/updateExecutor';
 import type { AdobeMcpUpdateItem } from '@/features/updates/commands/updateTypes';
 import { applyAdobeMcpUpdate } from '@/features/updates/services/adobeMcpUpdateCore';
+import type { Project } from '@/types/base';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockProject } from '../../../helpers/projectFake';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
-jest.mock(
-    'vscode',
-    () => ({
-        window: {
-            withProgress: jest.fn((_opts: unknown, cb: (p: { report: jest.Mock }) => unknown) =>
-                cb({ report: jest.fn() })
-            ),
-            showWarningMessage: jest.fn(),
-            showErrorMessage: jest.fn(),
-            showInformationMessage: jest.fn(),
-        },
-        workspace: { getConfiguration: jest.fn() },
-        ProgressLocation: { Notification: 15 },
-    }),
-    { virtual: true }
-);
 jest.mock('@/features/updates/services/adobeMcpUpdateCore', () => ({
     applyAdobeMcpUpdate: jest.fn(),
-}));
-jest.mock('@/features/eds/services/blockCollectionHelpers', () => ({
-    installBlockCollections: jest.fn(),
-}));
-jest.mock('@/features/eds/services/github/githubTokenService', () => ({ GitHubTokenService: jest.fn() }));
-jest.mock('@/features/eds/services/github/githubFileOperations', () => ({
-    GitHubFileOperations: jest.fn(),
 }));
 
 const coreMock = applyAdobeMcpUpdate as jest.Mock;
 const showErrorMock = vscode.window.showErrorMessage as jest.Mock;
 const showWarningMock = vscode.window.showWarningMessage as jest.Mock;
+const withProgressMock = vscode.window.withProgress as jest.Mock;
 
 const PKG = '@adobe-commerce/commerce-extensibility-tools';
 
 function makeCtx(): UpdateContext {
     return {
-        secrets: {} as vscode.SecretStorage,
+        secrets: createMockSecretStorage().secrets,
         extensionPath: '/ext',
-        stateManager: { saveProjectConfigOnly: jest.fn(async () => undefined) },
-        logger: {
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            debug: jest.fn(),
-            trace: jest.fn(),
-        },
-    } as never;
+        // The fake's default saveProjectConfigOnly already resolves undefined.
+        stateManager: createMockStateManager(),
+        logger: createMockLogger(),
+        commandManager: createMockCommandExecutor(),
+    };
 }
 
-function makeItem(projectOverrides: Record<string, unknown> = {}): AdobeMcpUpdateItem {
+function makeItem(projectOverrides: Partial<Project> = {}): AdobeMcpUpdateItem {
     return {
-        project: { name: 'demo', path: '/p/demo', status: 'ready', ...projectOverrides },
+        project: createMockProject({ name: 'demo', path: '/p/demo', status: 'ready', ...projectOverrides }),
         packageName: PKG,
         currentVersion: '1.0.0',
         latestVersion: '2.0.0',
         isAdobeMcpUpdate: true,
         label: 'Adobe MCP',
-    } as never;
+    };
 }
 
 describe('performAdobeMcpUpdates', () => {
+    let report: jest.Mock;
+
     beforeEach(() => {
         jest.clearAllMocks();
         coreMock.mockReset();
         coreMock.mockResolvedValue(undefined);
+        report = captureProgress();
+    });
+
+    it('shows a non-cancellable notification titled Updating Adobe MCP', async () => {
+        await performAdobeMcpUpdates([makeItem()], makeCtx());
+
+        expect(withProgressMock).toHaveBeenCalledWith(
+            {
+                location: vscode.ProgressLocation.Notification,
+                title: 'Updating Adobe MCP',
+                cancellable: false,
+            },
+            expect.any(Function),
+        );
+    });
+
+    it('reports package, version and project with an even share of the bar per project', async () => {
+        await performAdobeMcpUpdates(
+            [makeItem({ name: 'a', path: '/p/a' }), makeItem({ name: 'b', path: '/p/b' })],
+            makeCtx(),
+        );
+
+        expect(report).toHaveBeenNthCalledWith(1, { message: `${PKG} → 2.0.0 in a…`, increment: 50 });
+        expect(report).toHaveBeenNthCalledWith(2, { message: `${PKG} → 2.0.0 in b…`, increment: 50 });
+    });
+
+    it('a running project whose demo the user keeps is dropped, and alone it means no progress bar', async () => {
+        showWarningMock.mockResolvedValue('Skip');
+
+        await performAdobeMcpUpdates([makeItem({ status: 'running' })], makeCtx());
+
+        expect(showWarningMock).toHaveBeenCalledWith(
+            expect.stringContaining('is currently running'),
+            'Stop & Update',
+            'Skip',
+        );
+        expect(coreMock).not.toHaveBeenCalled();
+        expect(withProgressMock).not.toHaveBeenCalled();
+    });
+
+    it('a skipped project does not take the others with it', async () => {
+        const ctx = makeCtx();
+        const idle = makeItem({ name: 'b', path: '/p/b' });
+        showWarningMock.mockResolvedValue('Skip');
+
+        await performAdobeMcpUpdates([makeItem({ name: 'a', path: '/p/a', status: 'running' }), idle], ctx);
+
+        expect(coreMock).toHaveBeenCalledTimes(1);
+        expect(coreMock).toHaveBeenCalledWith(idle.project, PKG, '2.0.0', ctx);
+        expect(report).toHaveBeenCalledWith({ message: `${PKG} → 2.0.0 in b…`, increment: 100 });
+    });
+
+    it('counts successes and failures separately in the summary', async () => {
+        coreMock.mockRejectedValueOnce(new Error('boom')).mockResolvedValueOnce(undefined);
+
+        await performAdobeMcpUpdates(
+            [makeItem({ name: 'a', path: '/p/a' }), makeItem({ name: 'b', path: '/p/b' })],
+            makeCtx(),
+        );
+
+        expect(showWarningMock).toHaveBeenCalledWith('Updated 1 Adobe MCP package(s), 1 failed.', 'OK');
     });
 
     it('delegates each selected update to the shared core', async () => {

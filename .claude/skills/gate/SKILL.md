@@ -104,13 +104,46 @@ base**, so errors inherited from the base branch or sibling worktree work surfac
 pushing, match CI exactly:
 
 ```bash
-npm run lint                                  # whole repo — the one that's easy to miss
-npx tsc --noEmit
-npm run typecheck:tests                       # test tree — CI gates on this too
-npm run validate:tsc-blindspots               # files tsc silently skips (basename shadowing) — CI gates on this
-npx jest --no-coverage > "$SCRATCH/gate-jest.txt" 2>&1   # full suite; never pipe through tail
-bash .claude/skills/dead-code-scan/scan.sh src     # ~5s — cruft the compiler cannot see
+npm run gate     # all six, in order, stopping at the first failure
 ```
+
+**Step 5 was missing until 2026-09-02, and CI was red for two days because of it.**
+`Test File Size Check` is its own workflow, so a green `gate` said nothing about it — a
+suite grew to 880 lines against a 750 limit and the local run reported clean the whole
+time. If a check runs in CI it belongs in this list; that is the only rule that keeps the
+two in step, and `tests/sop/tooling-registry.test.ts` now fails when the table and the
+script disagree.
+
+**A pre-push hook runs all of this before a push is allowed** (`.githooks/pre-push`,
+switched on with `npm run hooks:git`). It is PRE-PUSH rather than pre-commit on purpose:
+several enforcers enumerate files with `git ls-files`, which lists tracked files only, so
+a brand-new file is invisible to them until it is committed. A pre-commit gate has that
+blind spot; a pre-push gate runs against committed state, which is exactly what CI sees.
+Both of 2026-09-02's breaks would have been caught. `git push --no-verify` skips it, for a
+genuine emergency.
+
+**One command, deliberately.** This used to be the six commands below, listed for
+you to run by hand — and a list of six is a memory test you eventually fail. The
+2026-07-30 dream run found a whole feature shipped after someone hand-ran a scoped
+lint and skipped the whole-repo one; on 2026-08-30 a session ran three of the six
+all day and only noticed while auditing this skill. Both times the missing steps
+would have passed. That is what makes it hard to catch: the failure is silent until
+the day it is not.
+
+What `npm run gate` runs, so you can read a failure without opening package.json:
+
+| | | |
+|---|---|---|
+| 1 | `npm run lint` | whole repo — the one that is easy to miss |
+| 2 | `npx tsc --noEmit` | `src/` (tsconfig.json excludes tests) |
+| 3 | `npm run typecheck:tests` | the test tree; CI gates on this too |
+| 4 | `npm run validate:tsc-blindspots` | files tsc silently skips (basename shadowing) |
+| 5 | `npm run validate:test-file-sizes` | the 750-line CI limit — its own workflow, and it was missing here |
+| 6 | `npx jest --no-coverage` | full suite |
+| 7 | `dead-code-scan/scan.sh src` | ~5s — cruft the compiler cannot see |
+
+It stops at the first failure, so fix and re-run rather than reading ahead. Run
+jest on its own if you need the output in a file — never pipe it through `tail`.
 
 The scan is advisory, not a gate: ts-prune reports entry points and DI/config-registered
 symbols as unused. Read it, do not obey it. What IS reliable is its doc-drift section —
@@ -132,6 +165,21 @@ whose sha never reached the item, writes the line, and flips a `backlog` item to
 `active`. It refuses an unknown id or a finished item rather than guessing.
 
 Skipping it is how eight commits landed unlogged on 2026-08-26.
+
+## 7. Reading a CI failure (the two commands)
+
+```bash
+gh run list --limit 40 --json conclusion,displayTitle,name,headBranch,databaseId,createdAt \
+  | python3 -c "import json,sys; [print(r['conclusion'],'|',r['name'],'|',r['headBranch'],'|',r['displayTitle'][:55],'| id',r['databaseId']) for r in json.load(sys.stdin) if r['conclusion']=='failure']"
+gh run view <databaseId> --log-failed | grep -E "##\[error\]"   # the actual error lines
+```
+
+Then reproduce the failing check LOCALLY against current HEAD before concluding
+anything — a red run tests the tree AS OF ITS COMMIT, and a fix may already have
+landed. The 2026-08-28 case: three red runs were docs pushes inside the
+minutes-wide window between a bad `responseCeilings.ts` shape and its fix; the
+error was real, the alarm was stale. `conclusion` empty means still running,
+not failed.
 
 ## Notes
 - This is the inner loop. For agent-driven review use `/rptc:verify`; to ship use `/rptc:commit`.

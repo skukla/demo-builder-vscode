@@ -29,7 +29,7 @@ describe('orphanedKeys', () => {
     it('says nothing about a key that is still contributed', () => {
         expect(
             orphanedKeys(['demoBuilder.daLive.aemAuthorUrl'], ['demoBuilder.daLive.aemAuthorUrl']),
-        ).toEqual([]);
+        ).toStrictEqual([]);
     });
 
     it('sorts, so two runs of the report diff cleanly', () => {
@@ -40,7 +40,7 @@ describe('orphanedKeys', () => {
     });
 
     it('reports nothing when the user has set nothing', () => {
-        expect(orphanedKeys(['demoBuilder.daLive.aemAuthorUrl'], [])).toEqual([]);
+        expect(orphanedKeys(['demoBuilder.daLive.aemAuthorUrl'], [])).toStrictEqual([]);
     });
 });
 
@@ -72,9 +72,26 @@ describe('contributedKeysFrom', () => {
 
     /** A diagnostic must never become the failure it was called to explain. */
     it('returns nothing rather than throwing on a shape it does not recognise', () => {
-        expect(contributedKeysFrom(undefined)).toEqual([]);
-        expect(contributedKeysFrom({ contributes: {} })).toEqual([]);
-        expect(contributedKeysFrom('nonsense')).toEqual([]);
+        expect(contributedKeysFrom(undefined)).toStrictEqual([]);
+        expect(contributedKeysFrom({ contributes: {} })).toStrictEqual([]);
+        expect(contributedKeysFrom('nonsense')).toStrictEqual([]);
+    });
+
+    it('skips a section that declares no properties', () => {
+        // A configuration section may exist purely for its title and order.
+        expect(contributedKeysFrom({ contributes: { configuration: [{ title: 'Demo' }] } })).toStrictEqual([]);
+    });
+
+    it('skips a section that is not an object at all', () => {
+        expect(contributedKeysFrom({ contributes: { configuration: [null, undefined] } })).toStrictEqual([]);
+    });
+
+    it('skips a section whose properties is not an object', () => {
+        // A string has keys ('0', '1', …). Treated as properties, the report would
+        // name settings that are single characters of somebody's typo.
+        expect(
+            contributedKeysFrom({ contributes: { configuration: [{ properties: 'oops' }] } })
+        ).toStrictEqual([]);
     });
 });
 
@@ -113,7 +130,7 @@ describe('collectUserSetKeys', () => {
             inspector({}, ['demoBuilder.daLive.aemAuthorUrl']),
         );
 
-        expect(keys).toEqual([]);
+        expect(keys).toStrictEqual([]);
     });
 
     it('does not descend INTO an object-valued setting the user set', () => {
@@ -139,6 +156,85 @@ describe('collectUserSetKeys', () => {
     });
 
     it('survives a null or non-object tree', () => {
-        expect(collectUserSetKeys(null as never, 'demoBuilder', () => undefined)).toEqual([]);
+        expect(collectUserSetKeys(null as unknown as Record<string, unknown>, 'demoBuilder', () => undefined)).toStrictEqual([]);
+    });
+
+    it.each([['workspaceValue'], ['workspaceFolderValue']])(
+        'counts a value the user set at %s, not just globally',
+        (scope) => {
+            const tree = { daLive: { aemAuthorUrl: 'author.example' } };
+
+            const keys = collectUserSetKeys(tree, 'demoBuilder', (key) =>
+                key === 'demoBuilder.daLive.aemAuthorUrl'
+                    ? { defaultValue: 'x', [scope]: 'author.example' }
+                    : undefined
+            );
+
+            // A key set only in the workspace is exactly as orphaned by a rename as
+            // one set globally, and it is the scope a shared demo repo carries.
+            expect(keys).toEqual(['demoBuilder.daLive.aemAuthorUrl']);
+        }
+    );
+
+    /**
+     * What the walk ASKS about is the behaviour, not only what it returns. Descending
+     * into a value that is not a container invents keys no schema ever declared, and
+     * the invented ones resolve to nothing — so the returned list looks fine while the
+     * walk has wandered through the characters of a string.
+     */
+    it('never asks about a key below a value that is not a container', () => {
+        const asked: string[] = [];
+        const tree = {
+            blockLibraries: { defaults: { foo: true } },
+            someList: ['a', 'b'],
+            someText: 'hello',
+        };
+
+        collectUserSetKeys(tree, 'demoBuilder', (key) => {
+            asked.push(key);
+            return key === 'demoBuilder.blockLibraries.defaults'
+                ? { globalValue: { foo: true } }
+                : undefined;
+        });
+
+        expect(asked).toEqual([
+            'demoBuilder.blockLibraries',
+            'demoBuilder.blockLibraries.defaults',
+            'demoBuilder.someList',
+            'demoBuilder.someText',
+        ]);
+    });
+
+    /**
+     * The depth backstop. `MAX_DEPTH` is 6, so a key seven segments below the section
+     * is the deepest the walk reaches and one more is refused — a settings tree is not
+     * deep, and an unbounded walk over a cyclic or pathological object is how a
+     * diagnostic hangs the command that called it.
+     */
+    function nest(depth: number): { tree: Record<string, unknown>; key: string } {
+        const leafKey = ['demoBuilder', ...Array.from({ length: depth }, (_, i) => `l${i}`)].join(
+            '.'
+        );
+        let node: Record<string, unknown> = { leaf: 'value' };
+        for (let i = depth - 1; i >= 0; i--) {
+            node = { [`l${i}`]: i === depth - 1 ? 'value' : node };
+        }
+        return { tree: node, key: leafKey };
+    }
+
+    it('reaches a setting seven segments below the section', () => {
+        const { tree, key } = nest(7);
+
+        expect(collectUserSetKeys(tree, 'demoBuilder', (k) =>
+            k === key ? { globalValue: 'value' } : undefined
+        )).toEqual([key]);
+    });
+
+    it('refuses to walk deeper than that', () => {
+        const { tree, key } = nest(8);
+
+        expect(collectUserSetKeys(tree, 'demoBuilder', (k) =>
+            k === key ? { globalValue: 'value' } : undefined
+        )).toStrictEqual([]);
     });
 });

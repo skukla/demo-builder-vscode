@@ -7,6 +7,7 @@
  * - handleOpenBrowser: opens demo in browser
  */
 
+import './dashboardValidatorMocks';
 import * as vscode from 'vscode';
 import {
     handleConfigure,
@@ -16,8 +17,11 @@ import {
     handleOpenBrowser,
 } from '@/features/dashboard/handlers/dashboardHandlers';
 import { ErrorCode } from '@/types/errorCodes';
-import { setupMocks, createMockProject } from './dashboardHandlers.testUtils';
+import { setupMocks, createDashboardProject } from './dashboardHandlers.testUtils';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 
+import { mockWindow } from '../../../helpers/vscodeMockViews';
 // Mock vscode
 jest.mock(
     'vscode',
@@ -44,21 +48,12 @@ jest.mock(
 jest.mock('@/features/mesh/services/stalenessDetector');
 
 // Mock authentication
-jest.mock('@/features/authentication');
 
 // Mock ServiceLocator
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(),
     },
-}));
-
-// Mock validation
-jest.mock('@/core/validation', () => ({
-    validateOrgId: jest.fn(),
-    validateProjectId: jest.fn(),
-    validateWorkspaceId: jest.fn(),
-    validateURL: jest.fn(),
 }));
 
 // Mock projectDeletionService to avoid deep dependency chain
@@ -68,9 +63,15 @@ jest.mock('@/features/projects-dashboard/services/projectDeletionService', () =>
 
 // Mock the projects-dashboard services barrel (dynamic-imported by the edit/
 // rename/export handlers) to avoid its deep dependency chain
-jest.mock('@/features/projects-dashboard/services', () => ({
-    extractSettingsFromProject: jest.fn(() => ({ selectedPackage: 'citisignal' })),
+jest.mock('@/features/projects-dashboard/services/projectRenameService', () => ({
     renameProjectCore: jest.fn().mockResolvedValue({ success: true }),
+}));
+
+jest.mock('@/features/projects-dashboard/services/settingsSerializer', () => ({
+    extractSettingsFromProject: jest.fn(() => ({ selectedPackage: 'citisignal' })),
+}));
+
+jest.mock('@/features/projects-dashboard/services/settingsTransferService', () => ({
     exportProjectSettings: jest.fn().mockResolvedValue({ success: true }),
 }));
 
@@ -85,7 +86,7 @@ describe('Dashboard Action Handlers', () => {
 
     describe('handleConfigure', () => {
         it('should execute configureProject command', async () => {
-            const result = await handleConfigure({} as any);
+            const result = await handleConfigure(createMockHandlerContext());
 
             expect(result).toEqual({ success: true });
             expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.configureProject');
@@ -130,7 +131,7 @@ describe('Dashboard Action Handlers', () => {
         });
 
         it('should not open browser when no frontend port', async () => {
-            const projectWithoutPort = createMockProject({
+            const projectWithoutPort = createDashboardProject({
                 componentInstances: {
                     'commerce-mesh': {
                         id: 'commerce-mesh',
@@ -141,14 +142,11 @@ describe('Dashboard Action Handlers', () => {
                     },
                 },
             });
-            const mockContext = {
-                stateManager: {
+            const mockContext = createMockHandlerContext({
+                stateManager: createMockStateManager({
                     getCurrentProject: jest.fn().mockResolvedValue(projectWithoutPort),
-                },
-                logger: {
-                    debug: jest.fn(),
-                },
-            } as any;
+                }),
+            });
 
             const result = await handleOpenBrowser(mockContext);
 
@@ -157,14 +155,11 @@ describe('Dashboard Action Handlers', () => {
         });
 
         it('should not open browser when no project', async () => {
-            const mockContext = {
-                stateManager: {
+            const mockContext = createMockHandlerContext({
+                stateManager: createMockStateManager({
                     getCurrentProject: jest.fn().mockResolvedValue(null),
-                },
-                logger: {
-                    debug: jest.fn(),
-                },
-            } as any;
+                }),
+            });
 
             const result = await handleOpenBrowser(mockContext);
 
@@ -173,7 +168,7 @@ describe('Dashboard Action Handlers', () => {
         });
 
         it('should use correct port from frontend component', async () => {
-            const projectWithCustomPort = createMockProject({
+            const projectWithCustomPort = createDashboardProject({
                 componentInstances: {
                     headless: {
                         id: 'headless',
@@ -185,14 +180,11 @@ describe('Dashboard Action Handlers', () => {
                     },
                 },
             });
-            const mockContext = {
-                stateManager: {
+            const mockContext = createMockHandlerContext({
+                stateManager: createMockStateManager({
                     getCurrentProject: jest.fn().mockResolvedValue(projectWithCustomPort),
-                },
-                logger: {
-                    debug: jest.fn(),
-                },
-            } as any;
+                }),
+            });
 
             const result = await handleOpenBrowser(mockContext);
 
@@ -206,7 +198,7 @@ describe('Dashboard Action Handlers', () => {
             const { mockContext, mockProject } = setupMocks();
             const {
                 extractSettingsFromProject,
-            } = require('@/features/projects-dashboard/services');
+            } = require('@/features/projects-dashboard/services/settingsSerializer');
 
             const result = await handleEditProject(mockContext);
 
@@ -233,9 +225,9 @@ describe('Dashboard Action Handlers', () => {
     });
 
     describe('handleOpenAdminPanel', () => {
-        const mockShowInformationMessage = (vscode.window as any)
+        const mockShowInformationMessage = mockWindow
             .showInformationMessage as jest.Mock;
-        const { validateURL } = require('@/core/validation');
+        const { validateURL } = require('@/core/validation/URLValidator');
 
         /** Flush the fire-and-forget notification .then chain. */
         const flushPromises = () => new Promise((resolve) => setImmediate(resolve));
@@ -249,7 +241,7 @@ describe('Dashboard Action Handlers', () => {
                         ADOBE_COMMERCE_ADMIN_URL: adminUrl,
                     },
                 },
-            } as any);
+            });
 
         it('should open the configured admin URL in the browser', async () => {
             const { mockContext } = setupWithAdminUrl();
@@ -279,7 +271,7 @@ describe('Dashboard Action Handlers', () => {
         });
 
         it('should show a notification when no admin URL is configured', async () => {
-            const { mockContext } = setupMocks({ componentConfigs: {} } as any);
+            const { mockContext } = setupMocks({ componentConfigs: {} });
 
             const result = await handleOpenAdminPanel(mockContext);
 
@@ -292,7 +284,7 @@ describe('Dashboard Action Handlers', () => {
         });
 
         it('should open Configure when "Open Configure" is selected from the notification', async () => {
-            const { mockContext } = setupMocks({ componentConfigs: {} } as any);
+            const { mockContext } = setupMocks({ componentConfigs: {} });
             mockShowInformationMessage.mockResolvedValueOnce('Open Configure');
 
             const result = await handleOpenAdminPanel(mockContext);
@@ -303,7 +295,7 @@ describe('Dashboard Action Handlers', () => {
         });
 
         it('should not open Configure when the notification is dismissed', async () => {
-            const { mockContext } = setupMocks({ componentConfigs: {} } as any);
+            const { mockContext } = setupMocks({ componentConfigs: {} });
             mockShowInformationMessage.mockResolvedValueOnce(undefined);
 
             await handleOpenAdminPanel(mockContext);

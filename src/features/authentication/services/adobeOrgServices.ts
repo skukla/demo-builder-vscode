@@ -13,9 +13,12 @@
 
 import type { AdobeSDKClient } from './adobeSDKClient';
 import type { OrgServiceInfo, SDKResponse, ServiceSubscriptionInfo } from './types';
-import { getLogger } from '@/core/logging';
-import { CACHE_TTL, formatDuration, SingleFlight, TIMEOUTS } from '@/core/utils';
+import { getLogger } from '@/core/logging/debugLogger';
 import { tryWithTimeout } from '@/core/utils/promiseUtils';
+import { SingleFlight } from '@/core/utils/singleFlight';
+import { sleep } from '@/core/utils/sleep';
+import { formatDuration } from '@/core/utils/timeFormatting';
+import { CACHE_TTL, TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 /**
  * The subscribe response, only as deep as the refusal check reads.
@@ -135,10 +138,28 @@ export class AdobeOrgServices {
         // Bounded like every other SDK read (trySDKFetch's contract, which this
         // method predates): an unbounded call left the API picker spinning with no
         // log line and no ceiling when the endpoint stalled.
-        const outcome = await tryWithTimeout(client.getServicesForOrg(orgId), {
+        let outcome = await tryWithTimeout(client.getServicesForOrg(orgId), {
             timeoutMs: TIMEOUTS.ORG_SERVICES_FETCH,
             timeoutMessage: 'SDK org services fetch',
         });
+
+        // ONE retry, and only for a FAST failure (owner-approved hardening,
+        // 2026-08-28). The endpoint intermittently answers sub-second 500s whose
+        // own template says retry-on-internal-error, and a retry was measured to
+        // succeed — three add attempts died on single 500s that day. A TIMEOUT is
+        // never retried: it already spent the full 60s budget, and doubling that
+        // wait is worse than the picker's fast-fail + Retry affordance.
+        const failedFast = !outcome.timedOut && (outcome.error || !outcome.result);
+        if (failedFast) {
+            this.debugLogger.warn(
+                '[Entity Fetcher] Org services fetch failed fast — retrying once',
+            );
+            await sleep(TIMEOUTS.ORG_SERVICES_RETRY_DELAY);
+            outcome = await tryWithTimeout(client.getServicesForOrg(orgId), {
+                timeoutMs: TIMEOUTS.ORG_SERVICES_FETCH,
+                timeoutMessage: 'SDK org services fetch (retry)',
+            });
+        }
 
         if (outcome.timedOut || outcome.error || !outcome.result) {
             const elapsed = formatDuration(Date.now() - startTime);

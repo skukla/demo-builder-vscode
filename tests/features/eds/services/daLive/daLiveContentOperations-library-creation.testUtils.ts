@@ -7,6 +7,7 @@
 
 import { DaLiveContentOperations, type TokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
 export interface LibraryCreationMocks {
     service: DaLiveContentOperations;
@@ -21,12 +22,7 @@ export function createLibraryCreationMocks(): LibraryCreationMocks {
         getAccessToken: jest.fn().mockResolvedValue('mock-ims-token'),
     };
 
-    const mockLogger = {
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    } as unknown as Logger;
+    const mockLogger = createMockLogger() as unknown as Logger;
 
     const service = new DaLiveContentOperations(mockTokenProvider, mockLogger);
     const mockGetFileContent = jest.fn();
@@ -34,23 +30,5 @@ export function createLibraryCreationMocks(): LibraryCreationMocks {
     return { service, mockTokenProvider, mockLogger, mockGetFileContent };
 }
 
-/**
- * Build a component-definition.json content string.
- * Note: GitHubFileOperations.getFileContent returns decoded content (not base64).
- */
-export function createComponentDef(
-    blocks: Array<{ title: string; id: string; unsafeHTML?: string }>,
-): string {
-    const content = {
-        groups: [{
-            id: 'blocks',
-            title: 'Blocks',
-            components: blocks.map(b => ({
-                title: b.title,
-                id: b.id,
-                plugins: b.unsafeHTML ? { da: { unsafeHTML: b.unsafeHTML } } : undefined,
-            })),
-        }],
-    };
-    return JSON.stringify(content);
-}
+/** Byte-identical to the blockCollectionHelpers one; re-exported (ADR-016). */
+export { createComponentDef } from '../blockCollectionHelpers.testUtils';

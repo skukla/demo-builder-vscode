@@ -1,5 +1,4 @@
 import type { HandlerContext } from '@/types/handlers';
-import type { Logger } from '@/types/logger';
 
 /**
  * Test Helpers for Prerequisites Handlers Tests
@@ -7,43 +6,38 @@ import type { Logger } from '@/types/logger';
  * Shared mock factories and utilities for testing prerequisite handlers.
  */
 
-/**
- * Creates a mock logger with all standard methods.
- */
-export function createMockLogger(): jest.Mocked<Logger> {
-    return {
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        trace: jest.fn(),
-    };
-}
+/** Canonical logger fake (ADR-016). Re-exported so existing imports keep working. */
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+export { createMockLogger };
 
 /**
  * Creates a mock HandlerContext with sensible defaults and optional overrides.
  * All properties are properly typed without using 'as any'.
  */
-export function createMockContext(overrides?: Partial<HandlerContext>): jest.Mocked<HandlerContext> {
+export function createPrereqHandlerContext(overrides?: Partial<HandlerContext>): jest.Mocked<HandlerContext> {
     const baseContext: HandlerContext = {
         prereqManager: {} as HandlerContext['prereqManager'],
+        /**
+         * `shared.ts` reads the registry off the context now instead of building
+         * one behind a dynamic import (ADR-015). The suites here already
+         * module-mock ComponentRegistryManager; this hands that same fake in.
+         */
+        componentRegistry: new (
+            jest.requireMock('@/features/components/services/ComponentRegistryManager')
+                .ComponentRegistryManager
+        )(),
         authManager: {} as HandlerContext['authManager'],
         errorLogger: {} as HandlerContext['errorLogger'],
         progressUnifier: {} as HandlerContext['progressUnifier'],
         stepLogger: {} as HandlerContext['stepLogger'],
         logger: createMockLogger(),
-        debugLogger: {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            trace: jest.fn(),
-        } as HandlerContext['debugLogger'],
+        debugLogger: createMockLogger() as HandlerContext['debugLogger'],
         context: {
             extensionPath: '/test/extension/path',
         } as HandlerContext['context'],
         panel: undefined,
-        stateManager: {} as HandlerContext['stateManager'],
+        stateManager: createMockStateManager(),
         communicationManager: undefined,
         sendMessage: jest.fn(),
         sharedState: {
@@ -57,19 +51,5 @@ export function createMockContext(overrides?: Partial<HandlerContext>): jest.Moc
     return baseContext as jest.Mocked<HandlerContext>;
 }
 
-/**
- * Creates a component selection configuration for testing.
- */
-export function createComponentSelection(overrides?: {
-    frontend?: string;
-    backend?: string;
-    dependencies?: string[];
-    integrations?: string[];
-}) {
-    return {
-        frontend: overrides?.frontend ?? 'react-app',
-        backend: overrides?.backend ?? 'commerce-paas',
-        dependencies: overrides?.dependencies ?? [],
-        integrations: overrides?.integrations ?? [],
-    };
-}
+/** Canonical component-selection fixture (ADR-016). */
+export { createComponentSelection } from '../../../helpers/componentSelectionFake';

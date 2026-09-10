@@ -7,18 +7,17 @@ import * as fs from 'fs/promises';
 import * as vscode from 'vscode';
 import { ExtensionUpdater } from '@/features/updates/services/extensionUpdater';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
+import { mockCommands, mockWindow } from '../../../helpers/vscodeMockViews';
 // Mock modules
 jest.mock('fs/promises');
-jest.mock('vscode', () => ({
-    window: {},
-    commands: {},
-    Uri: {},
-    ProgressLocation: {
-        Notification: 15,
-    },
-}));
-jest.mock('@/core/validation');
+jest.mock('@/core/validation/PathSafetyValidator');
+jest.mock('@/core/validation/SensitiveDataRedactor');
+jest.mock('@/core/validation/URLValidator');
+jest.mock('@/core/validation/Validator');
+jest.mock('@/core/validation/fieldValidation');
+jest.mock('@/core/validation/normalizers');
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: {
         AUTH: {
@@ -39,12 +38,7 @@ describe('ExtensionUpdater', () => {
     beforeEach(() => {
         jest.clearAllMocks();
 
-        mockLogger = {
-            info: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-            debug: jest.fn(),
-        } as any;
+        mockLogger = createMockLogger();
 
         updater = new ExtensionUpdater(mockLogger);
 
@@ -56,10 +50,10 @@ describe('ExtensionUpdater', () => {
         mockWithProgress = jest.fn().mockImplementation(
             async (config, callback) => callback(mockProgress),
         );
-        (vscode.window as any).withProgress = mockWithProgress;
-        (vscode.window as any).showInformationMessage = jest.fn();
-        (vscode.commands as any).executeCommand = jest.fn();
-        (vscode.Uri as any).file = jest.fn((path) => ({ path }));
+        mockWindow.withProgress = mockWithProgress;
+        mockWindow.showInformationMessage = jest.fn();
+        mockCommands.executeCommand = jest.fn();
+        (vscode.Uri as unknown as { file: (path: string) => unknown }).file = jest.fn((path: string) => ({ path }));
     });
 
     describe('updateExtension', () => {
@@ -68,7 +62,7 @@ describe('ExtensionUpdater', () => {
 
         beforeEach(() => {
             // Mock security validation
-            const { validateGitHubDownloadURL } = require('@/core/validation');
+            const { validateGitHubDownloadURL } = require('@/core/validation/URLValidator');
             validateGitHubDownloadURL.mockImplementation(() => {});
 
             // Mock fetch
@@ -116,7 +110,7 @@ describe('ExtensionUpdater', () => {
         });
 
         it('should validate GitHub URL before downloading', async () => {
-            const { validateGitHubDownloadURL } = require('@/core/validation');
+            const { validateGitHubDownloadURL } = require('@/core/validation/URLValidator');
 
             await updater.updateExtension(downloadUrl, newVersion);
 
@@ -124,7 +118,7 @@ describe('ExtensionUpdater', () => {
         });
 
         it('should throw error if URL validation fails', async () => {
-            const { validateGitHubDownloadURL } = require('@/core/validation');
+            const { validateGitHubDownloadURL } = require('@/core/validation/URLValidator');
             validateGitHubDownloadURL.mockImplementation(() => {
                 throw new Error('Invalid URL');
             });
@@ -228,6 +222,59 @@ describe('ExtensionUpdater', () => {
             );
 
             await expect(updater.updateExtension(downloadUrl, newVersion)).rejects.toThrow();
+        });
+
+        describe('download timeout timer', () => {
+            const DOWNLOAD_TIMEOUT_MS = 60000; // the mocked TIMEOUTS.AUTH.BROWSER above
+
+            beforeEach(() => {
+                jest.useFakeTimers();
+            });
+
+            afterEach(() => {
+                jest.useRealTimers();
+            });
+
+            /** The signal fetch was handed — the only thing the timer can act on. */
+            function signalHandedToFetch(): AbortSignal {
+                const [, init] = (global.fetch as jest.Mock).mock.calls[0] as [string, RequestInit];
+                return init.signal as AbortSignal;
+            }
+
+            it('aborts the download when the timeout elapses before fetch answers', async () => {
+                // A fetch that only settles when its signal fires — so a timer whose
+                // callback does NOT abort would leave this hanging forever.
+                (global.fetch as jest.Mock).mockImplementation(
+                    (_url: string, init: RequestInit) =>
+                        new Promise((_resolve, reject) => {
+                            init.signal?.addEventListener('abort', () =>
+                                reject(new Error('The operation was aborted')),
+                            );
+                        }),
+                );
+
+                const pending = updater.updateExtension(downloadUrl, newVersion);
+                // Mark the rejection handled BEFORE the clock moves: it fires inside
+                // the timer tick, and an unhandled one fails the test. Asserted below.
+                void pending.catch(() => undefined);
+                // Let the async validation import settle so fetch has been called.
+                await jest.advanceTimersByTimeAsync(0);
+                expect(signalHandedToFetch().aborted).toBe(false);
+
+                await jest.advanceTimersByTimeAsync(DOWNLOAD_TIMEOUT_MS);
+
+                expect(signalHandedToFetch().aborted).toBe(true);
+                await expect(pending).rejects.toThrow('The operation was aborted');
+            });
+
+            it('clears the timer once the download completes, so it never aborts late', async () => {
+                await updater.updateExtension(downloadUrl, newVersion);
+                const signal = signalHandedToFetch();
+
+                expect(jest.getTimerCount()).toBe(0);
+                jest.advanceTimersByTime(DOWNLOAD_TIMEOUT_MS);
+                expect(signal.aborted).toBe(false);
+            });
         });
 
         it('should handle installation command failure', async () => {

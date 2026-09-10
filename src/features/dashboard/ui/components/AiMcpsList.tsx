@@ -8,10 +8,10 @@
  * informational, so the user can see what tools the AI can actually call.
  */
 
-import { SERVER_LABELS } from './aiSurfaceNames';
 import { Flex, Text } from '@adobe/react-spectrum';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import React, { useMemo } from 'react';
+import { SERVER_LABELS } from './aiSurfaceNames';
 import { Spinner } from '@/core/ui/components/ui/Spinner';
 import type { McpInventoryEntry } from '@/types/ai';
 

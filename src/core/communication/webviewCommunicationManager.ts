@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import * as vscode from 'vscode';
-import { getLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { Message, PendingRequest } from '@/types/messages';
@@ -102,16 +102,26 @@ const REQUEST_TIMEOUTS: Record<string, number> = {
  * This approach eliminates race conditions where the extension sends messages
  * before the webview JavaScript bundle has finished loading.
  */
+/**
+ * What this manager needs from the thing it talks to.
+ *
+ * It only ever touches `.webview` — to listen and to post. A `WebviewPanel`
+ * (the seven editor surfaces) and a `WebviewView` (the sidebar) both satisfy
+ * that, and they are otherwise unrelated VS Code types. Naming the shape rather
+ * than one of the two is what lets ADR-017 §4's "one channel per bundle" cover
+ * all EIGHT bundles instead of seven.
+ */
+export type WebviewHost = Pick<vscode.WebviewPanel, 'webview'>;
+
 export class WebviewCommunicationManager {
-    private panel: vscode.WebviewPanel;
+    private host: WebviewHost;
     private messageQueue: Message[] = [];
     private pendingRequests = new Map<string, PendingRequest>();
     private messageHandlers = new Map<string, MessageHandlerFunction>();
-    // Tracking state for handshake protocol - values assigned but read indirectly
-
-    private isWebviewReady = false;
-
-    private isExtensionReady = false;
+    // `handshakeComplete` is the only handshake flag anything reads. Two more —
+    // `isWebviewReady` and `isExtensionReady` — were written here and at the two
+    // points below and read by nothing in src or tests, under a comment saying
+    // they were "read indirectly". They were not. Removed 2026-09-05.
     private handshakeComplete = false;
     private stateVersion = 0;
     private disposables: vscode.Disposable[] = [];
@@ -119,8 +129,8 @@ export class WebviewCommunicationManager {
     private config: Required<CommunicationConfig>;
     private isDisposed = false;
 
-    constructor(panel: vscode.WebviewPanel, config: CommunicationConfig = {}) {
-        this.panel = panel;
+    constructor(host: WebviewHost, config: CommunicationConfig = {}) {
+        this.host = host;
         this.config = {
             handshakeTimeout: config.handshakeTimeout || TIMEOUTS.QUICK,
             messageTimeout: config.messageTimeout || TIMEOUTS.NORMAL,
@@ -135,14 +145,11 @@ export class WebviewCommunicationManager {
      */
     async initialize(): Promise<void> {
         // Set up message listener
-        this.panel.webview.onDidReceiveMessage(
+        this.host.webview.onDidReceiveMessage(
             (message) => this.handleWebviewMessage(message),
             undefined,
             this.disposables,
         );
-
-        // Mark extension as ready
-        this.isExtensionReady = true;
 
         // Wait for handshake to complete
         return new Promise((resolve, reject) => {
@@ -153,8 +160,6 @@ export class WebviewCommunicationManager {
             // Set up handshake completion handler
             // Extension waits passively for webview ready signal (VS Code Issue #125546)
             this.once('__webview_ready__', () => {
-                this.isWebviewReady = true;
-
                 // Send handshake confirmation
                 this.sendRawMessage({
                     id: uuidv4(),
@@ -476,7 +481,7 @@ export class WebviewCommunicationManager {
         }
 
         try {
-            await this.panel.webview.postMessage(message);
+            await this.host.webview.postMessage(message);
         } catch (error) {
             if (this.config.enableLogging) {
                 this.logger.error(`[WebviewComm] Failed to send message: ${error}`);
@@ -510,10 +515,18 @@ export class WebviewCommunicationManager {
  * calls would create duplicate listeners, causing handlers to fire multiple times.
  */
 export async function createWebviewCommunication(
-    panel: vscode.WebviewPanel,
+    host: WebviewHost,
     config?: CommunicationConfig,
+    register?: (manager: WebviewCommunicationManager) => void,
 ): Promise<WebviewCommunicationManager> {
-    const manager = new WebviewCommunicationManager(panel, config);
+    const manager = new WebviewCommunicationManager(host, config);
+    // Handlers are registered BEFORE the handshake, never after awaiting it.
+    // The webview's client queues its first messages until it sees
+    // `__handshake_complete__` and then releases them at once, so a caller that
+    // waits for this promise and registers afterwards can lose the first one —
+    // for the sidebar that is `getContext`, and losing it leaves the panel on
+    // its spinner with nothing in any log.
+    register?.(manager);
     const logger = getLogger();
     try {
         await manager.initialize();

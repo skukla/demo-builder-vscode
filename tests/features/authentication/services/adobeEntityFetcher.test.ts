@@ -5,88 +5,36 @@
  * These tests verify the fetcher works correctly in isolation.
  */
 
-import { AdobeEntityFetcher } from '@/features/authentication/services/adobeEntityFetcher';
+import {
+    AdobeEntityFetcher,
+    setupEntityFetcher,
+} from './adobeEntityFetcher.testUtils';
+
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import type { CommandExecutor } from '@/core/shell';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
-import type { StepLogger } from '@/core/logging';
-import type { Logger } from '@/types/logger';
+import type { StepLogger } from '@/core/logging/stepLogger';
 
 // Mock external dependencies
-jest.mock('@/core/logging');
-jest.mock('@/types/typeGuards');
-
-import { getLogger } from '@/core/logging';
-import { parseJSON } from '@/types/typeGuards';
 
 describe('AdobeEntityFetcher', () => {
     let fetcher: AdobeEntityFetcher;
     let mockCommandExecutor: jest.Mocked<CommandExecutor>;
     let mockSDKClient: jest.Mocked<AdobeSDKClient>;
     let mockCacheManager: jest.Mocked<AuthCacheManager>;
-    let mockLogger: jest.Mocked<Logger>;
     let mockStepLogger: jest.Mocked<StepLogger>;
     let onNoOrgsAccessible: jest.Mock;
 
     beforeEach(() => {
-        // Setup logger mock
-        (getLogger as jest.Mock).mockReturnValue({
-            trace: jest.fn(),
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        });
-
-        // Mock parseJSON
-        (parseJSON as jest.Mock).mockImplementation((str) => {
-            try {
-                return JSON.parse(str);
-            } catch {
-                return null;
-            }
-        });
-
-        // Create mocks
-        mockCommandExecutor = {
-            execute: jest.fn(),
-        } as unknown as jest.Mocked<CommandExecutor>;
-
-        mockSDKClient = {
-            isInitialized: jest.fn().mockReturnValue(false),
-            getClient: jest.fn(),
-            ensureInitialized: jest.fn().mockResolvedValue(true),
-        } as unknown as jest.Mocked<AdobeSDKClient>;
-
-        mockCacheManager = {
-            getCachedOrgList: jest.fn().mockReturnValue(undefined),
-            setCachedOrgList: jest.fn(),
-            getCachedOrganization: jest.fn().mockReturnValue(undefined),
-            getCachedProject: jest.fn().mockReturnValue(undefined),
-        } as unknown as jest.Mocked<AuthCacheManager>;
-
-        mockLogger = {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as unknown as jest.Mocked<Logger>;
-
-        mockStepLogger = {
-            logTemplate: jest.fn(),
-        } as unknown as jest.Mocked<StepLogger>;
-
-        onNoOrgsAccessible = jest.fn();
-
-        fetcher = new AdobeEntityFetcher(
+        ({
+            fetcher,
             mockCommandExecutor,
             mockSDKClient,
             mockCacheManager,
-            mockLogger,
             mockStepLogger,
-            { onNoOrgsAccessible }
-        );
+            onNoOrgsAccessible,
+        } = setupEntityFetcher());
     });
 
     describe('getOrganizations()', () => {
@@ -305,7 +253,7 @@ describe('AdobeEntityFetcher', () => {
 
             const result = await fetcher.getOrganizationsSdkOnly();
 
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
             expect(mockCommandExecutor.execute).not.toHaveBeenCalled();
             expect(mockCacheManager.setCachedOrgList).not.toHaveBeenCalled();
         });
@@ -363,7 +311,7 @@ describe('AdobeEntityFetcher', () => {
 
             const result = await fetcher.getProjectsSdkOnly();
 
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
             expect(mockCommandExecutor.execute).not.toHaveBeenCalled();
         });
 
@@ -380,7 +328,7 @@ describe('AdobeEntityFetcher', () => {
 
             const result = await fetcher.getWorkspacesSdkOnly({ projectId: 'proj1' });
 
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
             expect(mockCommandExecutor.execute).not.toHaveBeenCalled();
         });
 
@@ -400,7 +348,8 @@ describe('AdobeEntityFetcher', () => {
                 stdout: '[]',
                 stderr: '',
                 code: 0,
-            } as never);
+                duration: 0,
+            });
 
             await fetcher.getProjects();
 

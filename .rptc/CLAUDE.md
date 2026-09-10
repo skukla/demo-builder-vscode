@@ -1,4 +1,3 @@
-<!-- Last verified: 2026-07-03 -->
 # RPTC Workflow — Project Configuration
 
 Project-specific RPTC configuration for the Adobe Demo Builder VS Code
@@ -12,7 +11,7 @@ project.
 - **Platform**: VS Code Extension API
 - **UI**: React + Adobe Spectrum
 - **Build**: esbuild (`esbuild.config.js`) — NOT webpack
-- **Testing**: Jest with ts-jest, @testing-library/react (~1,130 suites)
+- **Testing**: Jest with ts-jest, @testing-library/react
 - **Database**: none
 
 ## Essential Commands
@@ -32,16 +31,15 @@ Test-Command Gotchas below.
 
 ## Where RPTC Artifacts Live
 
-`.rptc/` is **fully tracked in git** (only `.rptc/prompt.md` is gitignored).
-Write working artifacts to these locations, never ad-hoc paths:
+**The table lives in the root [`CLAUDE.md`](../CLAUDE.md).** It is there rather than
+here because you need to know where an artifact goes *before* you start writing one,
+and that file is loaded into every session while this one is not — by the time you
+are reading this, you are already in `.rptc/`.
 
-| Stage | Location | What goes there |
-|---|---|---|
-| Working research | `.rptc/research/<topic-slug>/research.md` | Exploratory, in-flight research generated during `/rptc:research` or equivalent |
-| Working plans | `.rptc/plans/<feature-slug>/overview.md` + `step-NN.md` | Active implementation plans being executed via TDD |
-| Completed work | `.rptc/complete/<feature-slug>/` | Plans whose implementation has shipped (move from `.rptc/plans/` when done) |
-| Curated research | `docs/research/<date>-<topic>.md` | **Promoted only.** Landmark research cited by ADRs / CHANGELOG. Don't write here directly; promote from `.rptc/research/` once durable. |
-| Backlog items | `.rptc/backlog/<slug>.md` or `.rptc/backlog/<feature>/` | Designed/proposed work that isn't active (index: `.rptc/backlog/README.md`) |
+It was duplicated in both for a while. Two copies of a five-row table with nothing
+keeping them in step is a slower version of having none.
+
+`.rptc/` is **fully tracked in git**; only `.rptc/prompt.md` is gitignored.
 
 ### Live-probe writeups: redact before committing
 
@@ -73,20 +71,29 @@ name, a stage Runtime endpoint and two live activation ids.
 - Still per-checkout and ignored: `settings.local.json` (personal permission
   allowlist). Copy it from the main checkout or expect permission prompts.
 
-## Project SOPs (`.rptc/sop/`)
+## Project SOPs — moved to [`docs/development/sop/`](../docs/development/sop/)
 
-Project-specific SOPs override the plugin defaults (resolution order:
-`.rptc/sop/` → `~/.claude/global/sop/` → plugin).
+They left `.rptc/` on 2026-08-30. `.rptc/` holds RPTC WORK — research, plans,
+backlog, completed records — all of which is transient. The SOPs are standing
+guidance cited by five permanent enforcer suites, two skills and ADR-016, so
+filing them here miscategorised them. It had a cost: the documentation reference
+check excludes `.rptc/` precisely because it is work tracking, so 5,257 lines of
+live guidance went unchecked and 31% of their file citations had rotted.
+
+This section used to claim a resolution order — project SOPs "override the plugin
+defaults", `.rptc/sop/` → global → plugin. **No such mechanism exists.** No RPTC
+skill or command reads the project SOP directory at all; the order was prose
+describing something nothing implements. Checked 2026-08-30.
+
+What is true: the SOPs are procedure. The RULE each one asserts lives in
+[the architecture handbook](../docs/development/handbook.md) with its enforcer
+named; the SOP holds the worked examples and the refactoring steps.
 
 | SOP | Covers |
 |---|---|
 | `code-patterns.md` | Mandatory code-clarity patterns: `TIMEOUTS.*` constants, no nested ternaries, helper extraction, etc. |
-| `complexity-reduction.md` | Identifying and reducing code complexity (nesting, long functions, dense expressions) |
-| `component-extraction.md` | When and how to extract React components (size, props, sub-components) |
 | `consistency-patterns.md` | Detecting the same operation implemented differently across the codebase |
-| `dead-code-removal.md` | Removing dead code, unused exports, and duplicate logic |
 | `god-file-decomposition.md` | Detection criteria and decomposition workflows for oversized multi-responsibility files |
-| `hooks-extraction.md` | Extracting React hooks and business logic out of components |
 | `testing-guide.md` | Optimized Jest execution for 5-10s TDD feedback loops (`test:watch`, `test:file`, `test:changed`) |
 
 ## Test-Command Gotchas
@@ -104,8 +111,8 @@ Project-specific SOPs override the plugin defaults (resolution order:
 - **Write to the session scratchpad, not `/tmp`.** The scratchpad is per-session
   and cleaned up; `/tmp` is neither. This file used to say `/tmp`, which is why
   every measured session used it.
-- The full suite takes **~20 seconds** (1,130 suites / ~14,850 tests as of 2026-08-23; measured over 10
-  consecutive runs on 16 cores, 2026-08-13). It was 3-5 minutes before the worker and
+- The full suite takes **~20 seconds** (measured over 10 consecutive runs on 16
+  cores, 2026-08-13; the suite count is not stated here because it moves weekly). It was 3-5 minutes before the worker and
   transform tuning landed; that figure survived in the docs long after it stopped
   being true, and it teaches you to walk away from a run that is already finished.
   `npm test` is the slow one — its `pretest` runs compile + lint first.
@@ -114,12 +121,18 @@ Project-specific SOPs override the plugin defaults (resolution order:
   different suites each time. A concurrent result is noise in both directions. A
   PreToolUse rule (`.claude/hooks/rules/15-jest-concurrent.rule`) blocks the second run;
   if it fires, wait rather than scoping the run down — a scoped run takes the same cores.
-- **CI lints the whole repo** (`npm run lint` covers all of `src/` +
-  `tests/`). A scoped/changed-files lint can pass locally while CI fails on a
-  pre-existing error elsewhere. Before pushing: full `npm run lint` +
-  `tsc --noEmit` + full jest.
+- **Before pushing, run `npm run gate`** — one command, all six checks, stopping at
+  the first failure. It exists because this line used to name three of them
+  (`lint` + `tsc --noEmit` + jest), and a list of commands in a doc is a list
+  somebody transcribes incompletely. That is not hypothetical: a session on
+  2026-08-30 ran exactly those three all day and never touched
+  `typecheck:tests`, `validate:tsc-blindspots` or the dead-code scan, having
+  copied the short list from here.
+- **CI lints the whole repo** (`npm run lint` covers all of `src/` + `tests/`), so a
+  scoped or changed-files lint can pass locally while CI fails on a pre-existing
+  error in a file you never opened. `gate` uses the whole-repo form.
 - Fast iteration during TDD: `npm run test:watch -- <path>` or
-  `npm run test:file -- <path>` (see `.rptc/sop/testing-guide.md` and
+  `npm run test:file -- <path>` (see `docs/development/sop/testing-guide.md` and
   `tests/README.md`).
 
 ## RPTC Configuration

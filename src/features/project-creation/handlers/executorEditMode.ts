@@ -21,7 +21,7 @@ import type { HandlerContext } from '@/types/handlers';
 async function loadExistingProjectForEdit(
     projectPath: string,
     context: HandlerContext,
-): Promise<import('@/types').Project | undefined> {
+): Promise<import('@/types/base').Project | undefined> {
     context.logger.info(`[Project Edit] Editing existing project at: ${projectPath}`);
     try {
         const existingProject =
@@ -76,7 +76,7 @@ async function prepareEditModeTempDir(
  */
 async function performAtomicComponentSwap(
     context: HandlerContext,
-    project: import('@/types').Project,
+    project: import('@/types/base').Project,
     projectPath: string,
     progressTracker: ProgressTracker,
 ): Promise<void> {

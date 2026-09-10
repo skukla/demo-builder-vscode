@@ -15,7 +15,7 @@
 
 import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
 import { mockRawRegistry, getMockLoader } from './ComponentRegistryManager.testUtils';
-import type { RawComponentRegistry } from '@/types';
+import type { RawComponentRegistry } from '@/types/components';
 
 // Mock ConfigurationLoader (Jest hoisting requirement)
 jest.mock('@/core/config/ConfigurationLoader', () => {
@@ -60,7 +60,7 @@ describe('ComponentRegistryManager - App Builder Category', () => {
             const registry = await manager.loadRegistry();
 
             expect(registry.components.appBuilder).toBeDefined();
-            expect(registry.components.appBuilder).toEqual([]);
+            expect(registry.components.appBuilder).toStrictEqual([]);
         });
 
         it('should load app-builder components from the "appBuilder" section', async () => {
@@ -98,7 +98,7 @@ describe('ComponentRegistryManager - App Builder Category', () => {
 
             const appBuilders = await manager.getAppBuilder();
 
-            expect(appBuilders).toEqual([]);
+            expect(appBuilders).toStrictEqual([]);
         });
     });
 

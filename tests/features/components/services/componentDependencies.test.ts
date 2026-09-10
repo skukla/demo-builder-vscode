@@ -7,32 +7,32 @@
  * trailing log. This suite was written BEFORE extracting that core — the file
  * had no tests at all, so the refactor needed something to prove itself against.
  *
- * The command executor and fs are mocked; nothing spawns.
+ * The command executor is a plain handed-in fake and fs is mocked; nothing spawns.
  */
 
 import * as fs from 'fs/promises';
 import { ComponentDependencies } from '@/features/components/services/componentDependencies';
+import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import type { TransformedComponentDefinition } from '@/types';
+import type { TransformedComponentDefinition } from '@/types/components';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 jest.mock('fs/promises');
 
 const mockExecute = jest.fn();
-jest.mock('@/core/di', () => ({
-    ServiceLocator: { getCommandExecutor: () => ({ execute: mockExecute }) },
-}));
+/**
+ * CONVERTED 2026-08-28 (ADR-015): the executor is handed IN now, so this suite
+ * mocks the service registry NOT AT ALL — the fake is a plain object and the
+ * assertions are unchanged.
+ */
+const executor = createMockCommandExecutor({ execute: mockExecute });
 
 const mockedFs = fs as jest.Mocked<typeof fs>;
 
 function logger(): Logger {
-    return {
-        trace: jest.fn(),
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    } as unknown as Logger;
+    return createMockLogger() as unknown as Logger;
 }
 
 function componentDef(
@@ -69,7 +69,7 @@ describe('ComponentDependencies', () => {
             ['installDependenciesForComponent', true],
         ])('%s runs npm install with the component Node version', async (method, needsSkipArg) => {
             packageJsonExists(true);
-            const deps = new ComponentDependencies(logger());
+            const deps = new ComponentDependencies(logger(), executor);
 
             if (needsSkipArg) {
                 await deps.installDependenciesForComponent('/p', componentDef(), false);
@@ -90,11 +90,11 @@ describe('ComponentDependencies', () => {
 
         it('honours a configured install timeout over the default', async () => {
             packageJsonExists(true);
-            const deps = new ComponentDependencies(logger());
+            const deps = new ComponentDependencies(logger(), executor);
 
             await deps.installNpmDependencies(
                 '/p',
-                componentDef({ source: { timeouts: { install: 1234 } } } as never)
+                componentDef({ source: { type: 'git', timeouts: { install: 1234 } } })
             );
 
             expect(mockExecute).toHaveBeenCalledWith(
@@ -105,7 +105,7 @@ describe('ComponentDependencies', () => {
 
         it('runs the build script when configured, at the LONG timeout', async () => {
             packageJsonExists(true);
-            const deps = new ComponentDependencies(logger());
+            const deps = new ComponentDependencies(logger(), executor);
 
             await deps.installNpmDependencies(
                 '/p',
@@ -122,7 +122,7 @@ describe('ComponentDependencies', () => {
 
         it('skips the build step when no build script is configured', async () => {
             packageJsonExists(true);
-            const deps = new ComponentDependencies(logger());
+            const deps = new ComponentDependencies(logger(), executor);
 
             await deps.installNpmDependencies('/p', componentDef());
 
@@ -135,7 +135,7 @@ describe('ComponentDependencies', () => {
             const log = logger();
             mockExecute.mockResolvedValue({ code: 1, stdout: '', stderr: 'boom' });
 
-            const result = await new ComponentDependencies(log).installNpmDependencies(
+            const result = await new ComponentDependencies(log, executor).installNpmDependencies(
                 '/p',
                 componentDef()
             );
@@ -153,7 +153,7 @@ describe('ComponentDependencies', () => {
                 .mockResolvedValueOnce({ code: 0, stdout: '', stderr: '' })
                 .mockResolvedValueOnce({ code: 1, stdout: '', stderr: 'build boom' });
 
-            await new ComponentDependencies(log).installNpmDependencies(
+            await new ComponentDependencies(log, executor).installNpmDependencies(
                 '/p',
                 componentDef({ configuration: { nodeVersion: '20', buildScript: 'build' } })
             );
@@ -167,7 +167,7 @@ describe('ComponentDependencies', () => {
         it('returns success and installs nothing when there is no package.json', async () => {
             packageJsonExists(false);
 
-            const result = await new ComponentDependencies(logger()).installNpmDependencies(
+            const result = await new ComponentDependencies(logger(), executor).installNpmDependencies(
                 '/p',
                 componentDef()
             );
@@ -181,12 +181,12 @@ describe('ComponentDependencies', () => {
         it('installs nothing when there is no package.json', async () => {
             packageJsonExists(false);
 
-            await new ComponentDependencies(logger()).installDependenciesForComponent(
-                '/p',
-                componentDef(),
-                false
-            );
+            const result = await new ComponentDependencies(
+                logger(),
+                executor
+            ).installDependenciesForComponent('/p', componentDef(), false);
 
+            expect(result).toEqual({ success: true });
             expect(mockExecute).not.toHaveBeenCalled();
         });
 
@@ -194,13 +194,24 @@ describe('ComponentDependencies', () => {
         it('installs nothing when skipDependencies is set', async () => {
             packageJsonExists(true);
 
-            await new ComponentDependencies(logger()).installDependenciesForComponent(
-                '/p',
-                componentDef(),
-                true
-            );
+            const result = await new ComponentDependencies(
+                logger(),
+                executor
+            ).installDependenciesForComponent('/p', componentDef(), true);
 
+            expect(result).toEqual({ success: true });
             expect(mockExecute).not.toHaveBeenCalled();
+        });
+
+        it('reports success when the install and build both go through', async () => {
+            packageJsonExists(true);
+
+            const result = await new ComponentDependencies(
+                logger(),
+                executor
+            ).installDependenciesForComponent('/p', componentDef(), false);
+
+            expect(result).toEqual({ success: true });
         });
     });
 });
@@ -220,9 +231,9 @@ describe('strictInstall', () => {
             stderr: 'npm error engine Unsupported engine\nnpm error notsup Required: {"node":"^24.0.0"}',
         });
 
-        const result = await new ComponentDependencies(logger()).installNpmDependencies(
+        const result = await new ComponentDependencies(logger(), executor).installNpmDependencies(
             '/p',
-            componentDef({ configuration: { strictInstall: true } } as never)
+            componentDef({ configuration: { strictInstall: true } })
         );
 
         expect(result.success).toBe(false);
@@ -234,9 +245,9 @@ describe('strictInstall', () => {
         packageJsonExists(true);
         mockExecute.mockResolvedValue({ code: 1, stderr: 'npm error nope' });
 
-        const result = await new ComponentDependencies(logger()).installDependenciesForComponent(
+        const result = await new ComponentDependencies(logger(), executor).installDependenciesForComponent(
             '/p',
-            componentDef({ configuration: { strictInstall: true } } as never),
+            componentDef({ configuration: { strictInstall: true } }),
             false
         );
 
@@ -247,9 +258,138 @@ describe('strictInstall', () => {
         packageJsonExists(true);
         mockExecute.mockResolvedValue({ code: 1, stderr: 'warnings' });
 
-        const result = await new ComponentDependencies(logger()).installNpmDependencies(
+        const result = await new ComponentDependencies(logger(), executor).installNpmDependencies(
             '/p',
             componentDef()
+        );
+
+        expect(result).toEqual({ success: true });
+    });
+});
+
+// ─── the optional shapes, and what the build call carries ────────────────────
+// Every `?.` in this module guards a component definition that omits a whole
+// block — `configuration` and `source` are both optional on the catalog type,
+// and a storefront entry that declares neither is ordinary, not exotic. Removing
+// any one of them throws a TypeError mid-install; measured 2026-09-06, no test
+// entered any of those shapes.
+describe('component definitions that omit a block', () => {
+    it('installs with the default Node when the definition has no configuration', async () => {
+        packageJsonExists(true);
+
+        await new ComponentDependencies(logger(), executor).installNpmDependencies(
+            '/p',
+            componentDef({ configuration: undefined })
+        );
+
+        expect(mockExecute).toHaveBeenCalledWith(
+            'npm install',
+            expect.objectContaining({ useNodeVersion: null })
+        );
+    });
+
+    it('still warns-and-continues on a failed install with no configuration', async () => {
+        packageJsonExists(true);
+        mockExecute.mockResolvedValue({ code: 1, stdout: '', stderr: 'boom' });
+
+        const result = await new ComponentDependencies(logger(), executor).installNpmDependencies(
+            '/p',
+            componentDef({ configuration: undefined })
+        );
+
+        expect(result).toEqual({ success: true });
+    });
+
+    it('falls back to the default install timeout when the source declares none', async () => {
+        packageJsonExists(true);
+
+        await new ComponentDependencies(logger(), executor).installNpmDependencies(
+            '/p',
+            componentDef({ source: { type: 'git' } })
+        );
+
+        expect(mockExecute).toHaveBeenCalledWith(
+            'npm install',
+            expect.objectContaining({ timeout: TIMEOUTS.VERY_LONG })
+        );
+    });
+});
+
+describe('the build step', () => {
+    const withBuild = () =>
+        componentDef({ configuration: { nodeVersion: '20', buildScript: 'build' } });
+
+    it('runs under the component Node version, on an enhanced PATH, in the default shell', async () => {
+        packageJsonExists(true);
+
+        await new ComponentDependencies(logger(), executor).installNpmDependencies(
+            '/p',
+            withBuild()
+        );
+
+        expect(mockExecute).toHaveBeenNthCalledWith(
+            2,
+            'npm run build',
+            expect.objectContaining({
+                enhancePath: true,
+                useNodeVersion: '20',
+                shell: DEFAULT_SHELL,
+            })
+        );
+    });
+
+    it('says nothing when the build succeeds', async () => {
+        packageJsonExists(true);
+        const log = logger();
+
+        await new ComponentDependencies(log, executor).installNpmDependencies('/p', withBuild());
+
+        expect(log.warn).not.toHaveBeenCalled();
+    });
+});
+
+// The detail a strictInstall failure carries is the ONLY npm output the user
+// sees — the deploy that follows would otherwise bury it under an npx failure.
+describe('the strictInstall failure detail', () => {
+    const strict = () => componentDef({ configuration: { strictInstall: true } });
+
+    it('is the last six lines of npm stderr, joined into one line', async () => {
+        packageJsonExists(true);
+        mockExecute.mockResolvedValue({
+            code: 1,
+            stderr: ['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight'].join('\n'),
+        });
+
+        const result = await new ComponentDependencies(logger(), executor).installNpmDependencies(
+            '/p',
+            strict()
+        );
+
+        expect(result.error).toBe(
+            'npm install failed for Demo Component: three four five six seven eight'
+        );
+    });
+
+    it('falls back to the exit code when npm printed nothing at all', async () => {
+        packageJsonExists(true);
+        mockExecute.mockResolvedValue({ code: 137 });
+
+        const result = await new ComponentDependencies(logger(), executor).installNpmDependencies(
+            '/p',
+            strict()
+        );
+
+        expect(result.error).toBe(
+            'npm install failed for Demo Component: npm install exited with code 137'
+        );
+    });
+
+    it('a strictInstall component whose install SUCCEEDS is not a failure', async () => {
+        packageJsonExists(true);
+
+        const result = await new ComponentDependencies(logger(), executor).installNpmDependencies(
+            '/p',
+            strict()
         );
 
         expect(result).toEqual({ success: true });

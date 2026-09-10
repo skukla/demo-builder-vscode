@@ -3,6 +3,7 @@
 
 import { fireEvent, screen } from '@testing-library/react';
 
+import { createMockProject } from '../../../../helpers/projectFake';
 /**
  * The rail tab whose VISIBLE label matches, or throw.
  *
@@ -38,7 +39,14 @@ export function railTabLabels(): string[] {
 }
 
 // Mock project data
-export const mockProject = {
+/**
+ * The canonical `Project` builder, carrying this suite's four fields as overrides.
+ *
+ * It was a bare four-field literal handed to `ConfigureScreen` through `as any` at
+ * every one of ~45 call sites — so the component received an object missing every
+ * other field of `Project`, and nothing could say so.
+ */
+export const mockProject = createMockProject({
     name: 'Test Project',
     path: '/test/path',
     componentSelections: {
@@ -53,7 +61,7 @@ export const mockProject = {
             ADOBE_COMMERCE_URL: 'https://example.com',
         },
     },
-};
+});
 
 // Mock components data
 export const mockComponentsData = {

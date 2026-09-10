@@ -25,21 +25,13 @@ import { PollingService } from '@/core/shell/pollingService';
 import * as vscode from 'vscode';
 import { EventEmitter } from 'events';
 
-// Mock vscode
-jest.mock('vscode');
 
 // Mock polling service
-jest.mock('@/core/shell/pollingService');
+// CONVERTED 2026-08-28 (ADR-015): FileWatcher takes its poller, so the fake is
+// handed in. The module mock stays only because this suite builds its fake via
+// `new PollingService()` and relies on the automock for the method surface.
 
-// Mock logging - must match the import path in fileWatcher.ts: '@/core/logging'
-jest.mock('@/core/logging', () => ({
-    getLogger: () => ({
-        error: jest.fn(),
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn()
-    })
-}));
+// Mock logging - must match the import path in fileWatcher.ts: '@/core/logging/debugLogger'
 
 /**
  * Helper to create a mock VS Code FileSystemWatcher
@@ -81,8 +73,7 @@ describe('FileWatcher Branch Coverage', () => {
         mockPollingService.pollUntilCondition = jest.fn().mockResolvedValue(undefined);
 
         // Create FileWatcher and inject mock polling service
-        fileWatcher = new FileWatcher();
-        (fileWatcher as any).pollingService = mockPollingService;
+        fileWatcher = new FileWatcher(mockPollingService);
 
         // Setup mock watcher factory
         (vscode.workspace.createFileSystemWatcher as jest.Mock).mockImplementation(() => {
@@ -186,6 +177,31 @@ describe('FileWatcher Branch Coverage', () => {
 
             // And: Promise should reject with timeout error
             await expect(waitPromise).rejects.toThrow('File system wait timeout');
+        });
+
+        /**
+         * The condition branch keeps its OWN timeout beside the poller's. The
+         * poller is given the same deadline and normally reports first, so this
+         * one only ever fires when the poller does not come back at all — and a
+         * caller waiting on a file that will never appear must be told, not left
+         * holding a promise nothing will settle.
+         */
+        it('rejects on its own deadline when the poller never settles', async () => {
+            mockPollingService.pollUntilCondition.mockReturnValue(new Promise<void>(() => {}));
+
+            // Held as a value BEFORE the clock moves: asserting on a rejection
+            // that is created and settled inside the same statement leaves the
+            // failure unattached for a tick, which reads as a crash, not a fail.
+            const outcome = fileWatcher
+                .waitForFileSystem('/path/to/file.txt', jest.fn().mockResolvedValue(false), 1000)
+                .then(
+                    () => 'resolved',
+                    (error: Error) => error.message,
+                );
+
+            jest.advanceTimersByTime(1000);
+
+            await expect(outcome).resolves.toBe('File system wait timeout: /path/to/file.txt');
         });
 
         it('should clear timeout when polling rejection occurs', async () => {

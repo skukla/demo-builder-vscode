@@ -30,19 +30,12 @@ jest.mock('os', () => ({
 }));
 
 // Mock logger - StateManager uses getLogger() internally
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn(() => ({
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        debug: jest.fn(),
-        trace: jest.fn(),
-    })),
-}));
 
 // Import mocked fs/promises after jest.mock
 import * as fs from 'fs/promises';
+import { createMockProject } from '../../helpers/projectFake';
 
+import { codedError } from '../../helpers/codedErrorFake';
 describe('StateManager - Error Handling', () => {
     let stateManager: StateManager;
     let mockContext: any;
@@ -73,37 +66,41 @@ describe('StateManager - Error Handling', () => {
         (fs.readdir as jest.Mock).mockResolvedValue([]);
         (fs.access as jest.Mock).mockResolvedValue(undefined);
         (fs.stat as jest.Mock).mockResolvedValue({ mtime: new Date() });
-        ((fs as any).rename as jest.Mock).mockResolvedValue(undefined); // For atomic writes
+        (fs.rename as jest.Mock).mockResolvedValue(undefined); // For atomic writes
 
         // Create StateManager instance
         stateManager = new StateManager(mockContext);
 
         // Create mock project
-        mockProject = {
+        mockProject = createMockProject({
             name: 'test-project',
             path: '/mock/home/.demo-builder/projects/test-project',
             created: new Date(),
             lastModified: new Date(),
             status: 'ready',
-        } as Project;
+        });
     });
 
     describe('saveProject() - Error Propagation', () => {
         describe('saveState() errors', () => {
             it('should throw error when state file write fails with permission denied', async () => {
-                const permissionError = new Error('EACCES: permission denied');
-                (permissionError as any).code = 'EACCES';
+                const permissionError = codedError('EACCES: permission denied', { code: 'EACCES' });
                 (fs.writeFile as jest.Mock).mockRejectedValue(permissionError);
 
-                await expect(stateManager.saveProject(mockProject)).rejects.toThrow('permission denied');
+                await expect(stateManager.saveProject(mockProject)).rejects.toThrow(
+                    'permission denied'
+                );
             });
 
             it('should throw error when state file write fails with disk full', async () => {
-                const diskFullError = new Error('ENOSPC: no space left on device');
-                (diskFullError as any).code = 'ENOSPC';
+                const diskFullError = codedError('ENOSPC: no space left on device', {
+                    code: 'ENOSPC',
+                });
                 (fs.writeFile as jest.Mock).mockRejectedValue(diskFullError);
 
-                await expect(stateManager.saveProject(mockProject)).rejects.toThrow('no space left on device');
+                await expect(stateManager.saveProject(mockProject)).rejects.toThrow(
+                    'no space left on device'
+                );
             });
         });
 
@@ -112,21 +109,27 @@ describe('StateManager - Error Handling', () => {
                 // State save succeeds, but mkdir fails
                 (fs.writeFile as jest.Mock).mockResolvedValueOnce(undefined); // saveState succeeds
 
-                const mkdirError = new Error('EACCES: permission denied, mkdir');
-                (mkdirError as any).code = 'EACCES';
+                const mkdirError = codedError('EACCES: permission denied, mkdir', {
+                    code: 'EACCES',
+                });
                 (fs.mkdir as jest.Mock).mockRejectedValue(mkdirError);
 
-                await expect(stateManager.saveProject(mockProject)).rejects.toThrow('permission denied');
+                await expect(stateManager.saveProject(mockProject)).rejects.toThrow(
+                    'permission denied'
+                );
             });
 
             it('should throw error when path is too long (Windows 260-char limit)', async () => {
                 (fs.writeFile as jest.Mock).mockResolvedValueOnce(undefined); // saveState succeeds
 
-                const pathTooLongError = new Error('ENAMETOOLONG: name too long');
-                (pathTooLongError as any).code = 'ENAMETOOLONG';
+                const pathTooLongError = codedError('ENAMETOOLONG: name too long', {
+                    code: 'ENAMETOOLONG',
+                });
                 (fs.mkdir as jest.Mock).mockRejectedValue(pathTooLongError);
 
-                await expect(stateManager.saveProject(mockProject)).rejects.toThrow('name too long');
+                await expect(stateManager.saveProject(mockProject)).rejects.toThrow(
+                    'name too long'
+                );
             });
         });
 
@@ -138,7 +141,9 @@ describe('StateManager - Error Handling', () => {
 
                 (fs.mkdir as jest.Mock).mockResolvedValue(undefined); // mkdir succeeds
 
-                await expect(stateManager.saveProject(mockProject)).rejects.toThrow('no space left on device');
+                await expect(stateManager.saveProject(mockProject)).rejects.toThrow(
+                    'no space left on device'
+                );
             });
 
             it('should throw error when manifest path is invalid', async () => {
@@ -148,7 +153,9 @@ describe('StateManager - Error Handling', () => {
 
                 (fs.mkdir as jest.Mock).mockResolvedValue(undefined);
 
-                await expect(stateManager.saveProject(mockProject)).rejects.toThrow('no such file or directory');
+                await expect(stateManager.saveProject(mockProject)).rejects.toThrow(
+                    'no such file or directory'
+                );
             });
         });
 
@@ -161,7 +168,9 @@ describe('StateManager - Error Handling', () => {
 
                 (fs.mkdir as jest.Mock).mockResolvedValue(undefined);
 
-                await expect(stateManager.saveProject(mockProject)).rejects.toThrow('permission denied');
+                await expect(stateManager.saveProject(mockProject)).rejects.toThrow(
+                    'permission denied'
+                );
             });
 
             it('should throw error when .env path is read-only', async () => {
@@ -172,31 +181,31 @@ describe('StateManager - Error Handling', () => {
 
                 (fs.mkdir as jest.Mock).mockResolvedValue(undefined);
 
-                await expect(stateManager.saveProject(mockProject)).rejects.toThrow('read-only file system');
+                await expect(stateManager.saveProject(mockProject)).rejects.toThrow(
+                    'read-only file system'
+                );
             });
         });
     });
 
     describe('getAllProjects() - Error Handling', () => {
         it('should return empty array when projects directory does not exist (ENOENT)', async () => {
-            const enoentError = new Error('ENOENT: no such file or directory');
-            (enoentError as any).code = 'ENOENT';
+            const enoentError = codedError('ENOENT: no such file or directory', { code: 'ENOENT' });
             (fs.readdir as jest.Mock).mockRejectedValue(enoentError);
 
             const result = await stateManager.getAllProjects();
 
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
             // Should log debug message (not error) for ENOENT
         });
 
         it('should return empty array when projects directory is not readable (EACCES)', async () => {
-            const permissionError = new Error('EACCES: permission denied');
-            (permissionError as any).code = 'EACCES';
+            const permissionError = codedError('EACCES: permission denied', { code: 'EACCES' });
             (fs.readdir as jest.Mock).mockRejectedValue(permissionError);
 
             const result = await stateManager.getAllProjects();
 
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
             // Should log error for permission issues
         });
 
@@ -231,24 +240,28 @@ describe('StateManager - Error Handling', () => {
 
             (fs.mkdir as jest.Mock).mockResolvedValue(undefined);
 
-            await expect(stateManager.saveProject(mockProject)).rejects.toThrow('no space left on device');
+            await expect(stateManager.saveProject(mockProject)).rejects.toThrow(
+                'no space left on device'
+            );
         });
 
         it('should fail when home directory has restrictive permissions', async () => {
             // Simulates: ~/.demo-builder exists but user can't write to projects/
-            const permissionError = new Error('EACCES: permission denied, mkdir');
-            (permissionError as any).code = 'EACCES';
+            const permissionError = codedError('EACCES: permission denied, mkdir', {
+                code: 'EACCES',
+            });
 
             (fs.writeFile as jest.Mock).mockResolvedValueOnce(undefined); // state.json succeeds
             (fs.mkdir as jest.Mock).mockRejectedValue(permissionError); // mkdir fails
 
-            await expect(stateManager.saveProject(mockProject)).rejects.toThrow('permission denied');
+            await expect(stateManager.saveProject(mockProject)).rejects.toThrow(
+                'permission denied'
+            );
         });
 
         it('should fail when network home directory becomes unavailable', async () => {
             // Simulates: Network mounted home directory disconnects mid-operation
-            const networkError = new Error('EIO: i/o error');
-            (networkError as any).code = 'EIO';
+            const networkError = codedError('EIO: i/o error', { code: 'EIO' });
 
             (fs.writeFile as jest.Mock)
                 .mockResolvedValueOnce(undefined) // state.json succeeds

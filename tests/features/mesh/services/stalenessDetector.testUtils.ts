@@ -2,32 +2,29 @@
  * Shared test utilities for StalenessDetector tests
  */
 
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import * as fs from 'fs/promises';
 import * as crypto from 'crypto';
+import { createMockProject as createMockProjectBase } from '../../../helpers/projectFake';
 
+import type { MeshStalenessDeps } from '@/features/mesh/services/stalenessDetector';
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 // Mock dependencies
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getCommandExecutor: jest.fn(() => ({
             execute: jest.fn(),
         })),
         getAuthenticationService: jest.fn(() => ({
-            getTokenStatus: jest.fn().mockResolvedValue({ isAuthenticated: true, expiresInMinutes: 30 }),
+            getTokenStatus: jest
+                .fn()
+                .mockResolvedValue({ isAuthenticated: true, expiresInMinutes: 30 }),
         })),
     },
 }));
 
-jest.mock('@/core/logging', () => ({
-    Logger: jest.fn().mockImplementation(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
-}));
-
-jest.mock('@/core/state', () => ({
+jest.mock('@/core/state/projectStateSync', () => ({
     getFrontendEnvVars: jest.fn((config) => ({
         MESH_ENDPOINT: config.MESH_ENDPOINT || '',
         OTHER_VAR: config.OTHER_VAR || '',
@@ -78,19 +75,19 @@ export const MOCK_DEPLOYED_CONFIG = {
 };
 
 // Factory functions
-export function createMockProject(overrides?: Partial<Project>): Project {
-    return {
+export function createStalenessProject(overrides?: Partial<Project>): Project {
+    return createMockProjectBase({
         name: 'Test Project',
         path: '/test',
         created: new Date('2024-01-01T00:00:00Z'),
         lastModified: new Date('2024-01-01T00:00:00Z'),
         status: 'running',
         ...overrides,
-    };
+    });
 }
 
 export function createMockProjectWithMesh(overrides?: Partial<Project>): Project {
-    return createMockProject({
+    return createStalenessProject({
         componentInstances: {
             'commerce-mesh': {
                 id: 'commerce-mesh',
@@ -105,21 +102,21 @@ export function createMockProjectWithMesh(overrides?: Partial<Project>): Project
                 kind: 'mesh',
                 status: 'deployed',
                 source: { owner: '', repo: '' },
-                    envVars: {
-                        ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://example.com/graphql',
-                    },
-                    sourceHash: 'abc123',
-                    lastDeployed: '2024-01-01T00:00:00Z',
-                    },
+                envVars: {
+                    ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://example.com/graphql',
+                },
+                sourceHash: 'abc123',
+                lastDeployed: '2024-01-01T00:00:00Z',
+            },
         },
         ...overrides,
     });
 }
 
 export function createMockProjectWithFrontend(overrides?: Partial<Project>): Project {
-    return createMockProject({
+    return createStalenessProject({
         componentInstances: {
-            'headless': {
+            headless: {
                 id: 'headless',
                 name: 'Frontend',
                 type: 'frontend',
@@ -128,7 +125,7 @@ export function createMockProjectWithFrontend(overrides?: Partial<Project>): Pro
             },
         },
         componentConfigs: {
-            'headless': {
+            headless: {
                 MESH_ENDPOINT: 'https://example.com',
                 OTHER_VAR: 'value',
             },
@@ -145,36 +142,64 @@ export function createMockProjectWithFrontend(overrides?: Partial<Project>): Pro
 }
 
 // Mock setup functions
+/**
+ * CONVERTED 2026-08-28 (ADR-015): staleness detection receives its
+ * collaborators. This ONE object is what every suite hands in; the setup
+ * function below swaps the fakes inside it, so the suites' existing setup calls
+ * keep working unchanged and no registry mock is involved.
+ */
+/**
+ * The real `MeshStalenessDeps`, built from the canonical fakes.
+ *
+ * It was a two-member literal cast to `never` — and then cast BACK, through
+ * `as unknown as {…}`, because the setup helper below has to swap its members. Two
+ * casts to end up where the type already was: `commandManager` is a
+ * `CommandExecutor` and `authManager` an `AuthenticationService`, and both have
+ * builders. Erasing it cost 29 checks across four suites.
+ *
+ * No `mutableDeps` view is needed now — the members are typed, so they can be
+ * assigned directly.
+ */
+export const meshDeps: MeshStalenessDeps = {
+    commandManager: createMockCommandExecutor(),
+    authManager: createMockAuthenticationService(),
+};
+
 export function setupMockCommandExecutor(
     authResponse: { code: number; stdout: string; stderr?: string },
     meshResponse?: { code: number; stdout: string; stderr?: string } | Error
 ) {
-    const { ServiceLocator } = require('@/core/di');
-    const mockCommandManager = {
-        execute: jest.fn(),
-    };
+    const mockCommandManager = createMockCommandExecutor();
 
     // Determine if auth should succeed based on the authResponse code
     // code: 0 = authenticated, code: 1 = not authenticated
     const isAuthenticated = authResponse.code === 0;
-    const mockAuthService = {
+    meshDeps.authManager = createMockAuthenticationService({
         getTokenStatus: jest.fn().mockResolvedValue({
             isAuthenticated,
             expiresInMinutes: isAuthenticated ? 30 : -5,
         }),
-    };
-    ServiceLocator.getAuthenticationService.mockReturnValue(mockAuthService);
+    });
 
     // Only set up command executor mock for mesh response (auth is now handled by authService)
     if (meshResponse) {
         if (meshResponse instanceof Error) {
             mockCommandManager.execute.mockRejectedValueOnce(meshResponse);
         } else {
-            mockCommandManager.execute.mockResolvedValueOnce(meshResponse);
+            // A full `CommandResult`. The suites' friendly `{ code, stdout }` is not
+            // one — `stderr` and `duration` are required — and the erased deps meant
+            // nothing said so. Production reads only `stdout`, so this changes no
+            // behaviour; it stops the fake answering in a shape execute never returns.
+            mockCommandManager.execute.mockResolvedValueOnce({
+                stdout: meshResponse.stdout,
+                stderr: meshResponse.stderr ?? '',
+                code: meshResponse.code,
+                duration: 0,
+            });
         }
     }
 
-    ServiceLocator.getCommandExecutor.mockReturnValue(mockCommandManager);
+    meshDeps.commandManager = mockCommandManager;
     return mockCommandManager;
 }
 
@@ -211,10 +236,7 @@ export function setupMockFileSystem(
     return { mockFs, mockCrypto, mockHash };
 }
 
-export function setupMockFileSystemWithHash(
-    hash: string | null,
-    fileContent: string = 'content'
-) {
+export function setupMockFileSystemWithHash(hash: string | null, fileContent: string = 'content') {
     const mockFs = fs as jest.Mocked<typeof fs>;
     const mockCrypto = crypto as jest.Mocked<typeof crypto>;
 

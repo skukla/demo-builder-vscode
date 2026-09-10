@@ -1,14 +1,16 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { BaseCommand, BaseWebviewCommand } from '@/core/base';
-import { ServiceLocator } from '@/core/di';
+import { BaseCommand } from '@/core/base/baseCommand';
+import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
+import { ServiceLocator } from '@/core/di/serviceLocator';
+import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { ProcessCleanup } from '@/core/shell/processCleanup';
-import { updateFrontendState } from '@/core/state';
-import { ExecutionLock, TIMEOUTS } from '@/core/utils';
+import { updateFrontendState } from '@/core/state/projectStateSync';
+import { ExecutionLock } from '@/core/utils/executionLock';
 import { sleep } from '@/core/utils/sleep';
-import { validateNodeVersion } from '@/core/validation';
-import { DEFAULT_SHELL } from '@/types/shell';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { validateNodeVersion } from '@/core/validation/validators/NodeVersionValidator';
 import { getComponentIds, getComponentInstancesByType, getComponentInstanceValues } from '@/types/typeGuards';
 import type { DemoStateChangedPayload } from '@/types/webviewPayloads';
 
@@ -104,9 +106,12 @@ export class StartDemoCommand extends BaseCommand {
             return false;
         }
 
-        // Parse all PIDs (there may be multiple processes on the same port)
-        const pids = result.stdout.trim().split('\n')
-            .map(line => parseInt(line.trim(), 10))
+        // Parse all PIDs (there may be multiple processes on the same port).
+        // No trimming: parseInt ignores surrounding whitespace and the filter
+        // drops the NaN a blank line parses to — a mutation run showed both
+        // trims here were unobservable.
+        const pids = result.stdout.split('\n')
+            .map(line => parseInt(line, 10))
             .filter(pid => !isNaN(pid) && pid > 0);
 
         if (pids.length === 0) {

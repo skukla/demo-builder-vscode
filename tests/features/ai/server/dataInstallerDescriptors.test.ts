@@ -148,11 +148,113 @@ describe('list_datapack_export_items paging', () => {
         expect(out).toEqual({ success: false, error: 'nope' });
     });
 
+    // The service answering with no data at all is not an error, and inventing
+    // a page for it — or reaching into one that is not there — is worse.
+    it('answers with an empty page when the response carries no data', () => {
+        expect(JSON.parse(shape()({ success: true }, {}))).toStrictEqual({
+            items: [],
+            returned: 0,
+        });
+    });
+
     it('omits counts the service did not send rather than inventing them', () => {
         const out = JSON.parse(shape()({ success: true, data: { items: [] } }, {}));
 
         expect(out.totalCount).toBeUndefined();
         expect(out.excludedCount).toBeUndefined();
         expect(out.returned).toBe(0);
+    });
+});
+
+// A descriptor row is a set of DECLARATIONS the MCP registration acts on before
+// any handler runs — which sign-in is required, whether the tool is exposed as a
+// read, and what a caller may send. Nothing else checks them.
+describe('what each row declares', () => {
+    it('requires an Adobe sign-in on every row', () => {
+        for (const d of DATA_INSTALLER_DESCRIPTORS) {
+            expect(d.needsAuth).toStrictEqual(['adobe']);
+        }
+    });
+
+    // readOnly is what the write-gating machinery reads. The dry run is a read;
+    // the three that touch a live instance or the shared catalog are not.
+    it('exposes five reads and three writes', () => {
+        const byFlag = (readOnly: boolean) =>
+            DATA_INSTALLER_DESCRIPTORS.filter((d) => d.readOnly === readOnly)
+                .map((d) => d.tool)
+                .sort();
+
+        expect(byFlag(true)).toEqual([
+            'get_datapack_import_status',
+            'get_datapack_import_target',
+            'list_datapack_export_items',
+            'list_datapack_import_scopes',
+            'validate_datapack_import',
+        ]);
+        expect(byFlag(false)).toEqual([
+            'reset_datapack',
+            'start_datapack_export',
+            'start_datapack_import',
+        ]);
+    });
+});
+
+describe('what each row accepts', () => {
+    const keys = (tool: string) => Object.keys(row(tool)!.inputSchema ?? {}).sort();
+
+    // The dry run's whole point is taking the SAME request body as the real
+    // import, so the three share one schema.
+    it('gives the import trio the datapack id plus the full import target', () => {
+        const expected = [
+            'commerceInstance',
+            'dataTypes',
+            'datapackName',
+            'storeCode',
+            'version',
+            'websiteCode',
+        ].sort();
+
+        for (const tool of ['validate_datapack_import', 'start_datapack_import', 'reset_datapack']) {
+            expect(keys(tool)).toEqual(expected);
+        }
+    });
+
+    it('gives the export item list a single data type to enumerate, and a limit', () => {
+        expect(keys('list_datapack_export_items')).toEqual(
+            ['commerceInstance', 'dataType', 'dataTypes', 'datapackName', 'limit', 'version'].sort(),
+        );
+    });
+
+    it('gives the export the name echo that guards the shared catalog', () => {
+        expect(keys('start_datapack_export')).toEqual(
+            ['commerceInstance', 'confirmName', 'dataTypes', 'datapackName', 'version'].sort(),
+        );
+    });
+
+    it('asks the three project-derived reads for nothing at all', () => {
+        for (const tool of [
+            'get_datapack_import_target',
+            'list_datapack_import_scopes',
+            'get_datapack_import_status',
+        ]) {
+            expect(row(tool)!.inputSchema).toBeUndefined();
+        }
+    });
+
+    // An empty dataTypes is a request that would do nothing, and an agent that
+    // sends one has misunderstood the call rather than made a small mistake.
+    it('requires at least one data type wherever dataTypes appears', () => {
+        for (const tool of [
+            'validate_datapack_import',
+            'start_datapack_import',
+            'reset_datapack',
+            'list_datapack_export_items',
+            'start_datapack_export',
+        ]) {
+            const dataTypes = row(tool)!.inputSchema!.dataTypes;
+
+            expect(() => dataTypes.parse([])).toThrow();
+            expect(() => dataTypes.parse(['products', 'categories'])).not.toThrow();
+        }
     });
 });

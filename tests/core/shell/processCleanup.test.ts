@@ -7,17 +7,8 @@
 
 import { ProcessCleanup } from '@/core/shell/processCleanup';
 import { spawn } from 'child_process';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 // Mock logger
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    }),
-}));
 
 /**
  * These suites drive REAL child processes, and `killProcessTree` observes exits
@@ -30,6 +21,8 @@ jest.mock('@/core/logging/debugLogger', () => ({
  * healthy run (these finish in ~100-200ms in band).
  */
 jest.setTimeout(30_000);
+/** Inner deadline for a spawned parent to report its children — under the suite ceiling. */
+const CHILDREN_UP_BUDGET_MS = 25_000;
 
 describe('ProcessCleanup - Basic Operations', () => {
     let processCleanup: ProcessCleanup;
@@ -78,22 +71,28 @@ describe('ProcessCleanup - Basic Operations', () => {
             const childProcess = spawn('sleep', ['10']);
             const pid = childProcess.pid!;
 
-            // When: killProcessTree called
-            const startTime = Date.now();
-            await processCleanup.killProcessTree(pid, 'SIGTERM');
-            const duration = Date.now() - startTime;
+            // Observe the signals, as the test below does. This one measured the
+            // clock against the grace period, and under full-suite load the 100ms
+            // poll chain stretched past 5s on a child that HAD exited on SIGTERM —
+            // the bound failed on correct behaviour, twice on 2026-09-03.
+            const killSpy = jest.spyOn(process, 'kill');
 
-            // Then: it exited on SIGTERM rather than being force-killed. The
-            // boundary for that claim is the grace period — escalation to SIGKILL
-            // cannot have happened below it. A tighter wall-clock bound would be
-            // stricter than the property under test, and is what made this flake.
-            expect(duration).toBeLessThan(TIMEOUTS.PROCESS_GRACEFUL_SHUTDOWN);
+            // When: killProcessTree called
+            await processCleanup.killProcessTree(pid, 'SIGTERM');
+
+            // Then: it exited on SIGTERM rather than being force-killed.
+            const signals = killSpy.mock.calls.map((call) => call[1]);
+            expect(signals).not.toContain('SIGKILL');
+            killSpy.mockRestore();
             expect(() => process.kill(pid, 0)).toThrow();
         });
 
         it('should not send SIGKILL if process exits on SIGTERM', async () => {
             // Given: Process that responds to SIGTERM
-            const childProcess = spawn('node', ['-e', 'process.on("SIGTERM", () => process.exit(0)); setTimeout(() => {}, 60000);']);
+            const childProcess = spawn('node', [
+                '-e',
+                'process.on("SIGTERM", () => process.exit(0)); setTimeout(() => {}, 60000);',
+            ]);
             const pid = childProcess.pid!;
 
             // OBSERVE the signals instead of inferring them from elapsed time. The
@@ -121,15 +120,18 @@ describe('ProcessCleanup - Basic Operations', () => {
             // Given: PID that doesn't exist (process already exited)
             const nonExistentPid = 999999;
 
-            // When: killProcessTree called
-            const startTime = Date.now();
-            await processCleanup.killProcessTree(nonExistentPid);
-            const duration = Date.now() - startTime;
+            // Observe the SIGNALS, not the clock: the last timing bound in this file.
+            // A short-circuit sends exactly one probe (signal 0) and nothing else; a
+            // run that entered the poll loop would send SIGTERM and poll further.
+            const killSpy = jest.spyOn(process, 'kill');
 
-            // Then: it short-circuited instead of entering the poll loop. Ten
-            // poll ticks is the margin; anything that actually polled to the
-            // grace period lands an order of magnitude above this.
-            expect(duration).toBeLessThan(TIMEOUTS.POLL.PROCESS_CHECK * 10);
+            // When: killProcessTree called
+            await processCleanup.killProcessTree(nonExistentPid);
+
+            // Then: one liveness probe, no termination signal, no polling.
+            const calls = killSpy.mock.calls.filter(([pid]) => pid === nonExistentPid);
+            killSpy.mockRestore();
+            expect(calls.map(([, signal]) => signal)).toEqual([0]);
         });
 
         it('should not throw error for non-existent PID', async () => {
@@ -153,20 +155,40 @@ describe('ProcessCleanup - Basic Operations', () => {
         it('should kill parent and all child processes', async () => {
             // Given: Parent process with 2 child processes
             // Create a parent that spawns children
+            // The parent ANNOUNCES readiness rather than the test guessing at it.
+            // This waited a flat 500ms for node to start and spawn two children;
+            // on a busy machine that is not enough, and the kill then ran against
+            // a tree that did not exist yet. Same defect class as the two MCP
+            // socket suites (2026-09-02).
             const parentProcess = spawn('node', [
                 '-e',
                 `
                 const { spawn } = require('child_process');
                 const child1 = spawn('sleep', ['10']);
                 const child2 = spawn('sleep', ['10']);
+                process.stdout.write('children-up\\n');
                 setTimeout(() => {}, 60000);
-                `
+                `,
             ]);
 
             const parentPid = parentProcess.pid!;
 
-            // Wait for children to spawn
-            await new Promise(resolve => setTimeout(resolve, 500));
+            // The suite ceiling above is 30s, but this inner deadline was still 10s —
+            // so it fired first, five times in one evening (2026-09-03), each time on a
+            // spawn that completed in ~15s under full-suite load and in ~200ms alone.
+            // Same headroom as the suite: it does not slow a healthy run.
+            await new Promise<void>((resolve, reject) => {
+                const timer = setTimeout(
+                    () => reject(new Error('parent never reported its children up')),
+                    CHILDREN_UP_BUDGET_MS
+                );
+                parentProcess.stdout?.on('data', (chunk: Buffer) => {
+                    if (chunk.toString().includes('children-up')) {
+                        clearTimeout(timer);
+                        resolve();
+                    }
+                });
+            });
 
             // When: killProcessTree(parentPid) called
             await processCleanup.killProcessTree(parentPid);

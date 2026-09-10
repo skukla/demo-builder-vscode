@@ -6,40 +6,20 @@
  * jest.mock + constructor wiring is re-declared here (jest.mock is hoisted).
  */
 
+import { ComponentRegistryManager, setupComponentHandlerSuite } from './componentHandlers.testUtils';
 import { handleGetComponentsData } from '@/features/components/handlers/componentHandlers';
 import { HandlerContext } from '@/types/handlers';
-import {
-    ComponentRegistryManager,
-    DependencyResolver,
-} from '@/features/components/services/ComponentRegistryManager';
-import {
-    createMockHandlerContext,
-    createMockRegistryManager,
-    createMockDependencyResolver,
-} from './componentHandlers.testUtils';
-
-// Mock ComponentRegistryManager (DependencyResolver is re-exported from the same module)
-jest.mock('@/features/components/services/ComponentRegistryManager');
+import type { ComponentsDataPayload } from '@/types/webviewRequests';
 
 describe('componentHandlers - Pattern B (request-response)', () => {
     let mockContext: HandlerContext;
     let mockRegistryManager: jest.Mocked<ComponentRegistryManager>;
-    let mockDependencyResolver: jest.Mocked<DependencyResolver>;
 
     beforeEach(() => {
-        mockContext = createMockHandlerContext();
-        mockRegistryManager = createMockRegistryManager();
-        mockDependencyResolver = createMockDependencyResolver();
-
-        // Mock the ComponentRegistryManager constructor
-        (
-            ComponentRegistryManager as jest.MockedClass<typeof ComponentRegistryManager>
-        ).mockImplementation(() => mockRegistryManager);
-
-        // Mock the DependencyResolver constructor
-        (DependencyResolver as jest.MockedClass<typeof DependencyResolver>).mockImplementation(
-            () => mockDependencyResolver
-        );
+        ({
+            context: mockContext,
+            registryManager: mockRegistryManager,
+        } = setupComponentHandlerSuite());
     });
 
     afterEach(() => {
@@ -207,7 +187,7 @@ describe('componentHandlers - Pattern B (request-response)', () => {
 
             const result = await handleGetComponentsData(mockContext);
 
-            const envVars = (result as any).data.envVars;
+            const envVars = (result.data as ComponentsDataPayload).envVars;
             expect(envVars.ACCS_WEBSITE_CODE.key).toBe('ACCS_WEBSITE_CODE');
             expect(envVars.ACCS_STORE_CODE.key).toBe('ACCS_STORE_CODE');
             // The rest of the record survives the injection untouched.
@@ -351,7 +331,7 @@ describe('componentHandlers - Pattern B (request-response)', () => {
             expect(result).toHaveProperty('type', 'components-data');
             expect(result).toHaveProperty('data');
 
-            const data = (result as any).data;
+            const data = result.data as ComponentsDataPayload;
             expect(data).toHaveProperty('frontends');
             expect(data).toHaveProperty('backends');
             expect(data).toHaveProperty('integrations');

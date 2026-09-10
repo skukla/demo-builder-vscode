@@ -19,7 +19,7 @@
  */
 
 import * as vscode from 'vscode';
-import { sanitizeErrorForLogging } from '@/core/validation';
+import { sanitizeErrorForLogging } from '@/core/validation/SensitiveDataRedactor';
 import { getTemplateSource, shouldSkipBlockLibrary } from '@/features/updates/commands/updateTypes';
 import { AddonUpdateChecker } from '@/features/updates/services/addonUpdateChecker';
 import { AdobeMcpUpdateChecker } from '@/features/updates/services/adobeMcpUpdateChecker';
@@ -131,7 +131,7 @@ async function applyTemplate(
     const result = emptyResult();
     const succeededPaths = new Set<string>();
     if (items.length === 0) return { result, succeededPaths };
-    const svc = new TemplateSyncService(ctx.secrets, ctx.logger);
+    const svc = new TemplateSyncService(ctx.secrets, ctx.logger, ctx.commandManager);
     for (const { project } of items) {
         onProgress?.(`Syncing template for ${project.name}...`);
         try {
@@ -171,7 +171,7 @@ async function applyComponents(
         byProject.set(item.project.path, entry);
     }
 
-    const updater = new ComponentUpdater(ctx.logger, ctx.extensionPath);
+    const updater = new ComponentUpdater(ctx.logger, ctx.extensionPath, ctx.commandManager);
     for (const { project, items: updates } of byProject.values()) {
         for (const update of updates) {
             if (!update.downloadUrl) continue;
@@ -207,7 +207,8 @@ async function applyAdobeMcp(
     onProgress?: OnProgress,
 ): Promise<CategoryResult> {
     const result = emptyResult();
-    if (items.length === 0) return result;
+    // No empty-list return here: unlike its siblings this core constructs no
+    // service, so the loop below already does nothing for nothing.
     // The npm-update → regenerate → persist sequence lives in the ONE shared
     // core (adobeMcpUpdateCore.ts), which the interactive sibling
     // `performAdobeMcpUpdates` also calls. This loop only shapes results.
@@ -257,7 +258,9 @@ async function applyAddons(
         onProgress?.(`Updating block library ${item.library.name}...`);
         try {
             await applyBlockLibraryUpdateResolved(item, effectiveBehavior, ctx);
-            if (effectiveBehavior === 'disabled' && setting === 'ask') {
+            // 'ask' always resolves to 'disabled' above, so the setting alone says
+            // whether this was a deferral rather than the user's own choice.
+            if (setting === 'ask') {
                 (result.deferred ??= []).push(item.library.name);
             } else {
                 result.successCount++;

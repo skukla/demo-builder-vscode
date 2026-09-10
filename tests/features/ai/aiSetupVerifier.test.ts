@@ -9,43 +9,31 @@
  * - Overall aggregation: error > warning > ok
  */
 
+// The mock scaffold and the subject import both live in the family's testUtils —
+// listed first so its jest.mock calls register before anything else resolves.
+import {
+    verifyAiSetup,
+    gatherInventory,
+    inspectSkills,
+    inspectAllServers,
+    detectSessionMcps,
+    PROJECT_PATH,
+    EXT_DIST_PATH,
+} from './aiSetupVerifier.testUtils';
+import type { AiCheckResult } from './aiSetupVerifier.testUtils';
+
 import { createHash } from 'crypto';
 import * as fsPromises from 'fs/promises';
-
-jest.mock('fs/promises', () => ({
-    realpath: jest.fn(async (p: string) => p),
-    readFile: jest.fn(),
-    access: jest.fn(),
-    readdir: jest.fn(),
-}));
-
-// Inventory inspectors — mocked so the file-presence checks remain the focus
-// of this suite. Per-inspector behavior has dedicated test files.
-jest.mock('@/features/ai/skillInspector', () => ({
-    inspectSkills: jest.fn().mockResolvedValue([]),
-}));
-jest.mock('@/features/ai/mcpInspector', () => ({
-    inspectAllServers: jest.fn().mockResolvedValue([]),
-}));
-jest.mock('@/features/ai/sessionMcpDetector', () => ({
-    detectSessionMcps: jest.fn().mockResolvedValue([]),
-}));
-
-import { verifyAiSetup, gatherInventory } from '@/features/ai/aiSetupVerifier';
-import type { AiCheckResult } from '@/features/ai/aiSetupVerifier';
-import { inspectSkills } from '@/features/ai/skillInspector';
-import { inspectAllServers } from '@/features/ai/mcpInspector';
-import { detectSessionMcps } from '@/features/ai/sessionMcpDetector';
+import * as path from 'path';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-const PROJECT_PATH = '/projects/test-project';
-const EXT_DIST_PATH = '/ext/dist';
-
 function setupAllOk(): void {
     (fsPromises.readFile as jest.Mock).mockImplementation((filePath: string) => {
-        if ((filePath as string).endsWith('AGENTS.md')) return Promise.resolve('# Demo Builder Project\n\nContent');
-        if ((filePath as string).endsWith('mcp.json')) return Promise.resolve(JSON.stringify({ mcpServers: { 'demo-builder': {} } }));
+        if (filePath.endsWith('AGENTS.md'))
+            return Promise.resolve('# Demo Builder Project\n\nContent');
+        if (filePath.endsWith('mcp.json'))
+            return Promise.resolve(JSON.stringify({ mcpServers: { 'demo-builder': {} } }));
         return Promise.reject(new Error('unexpected readFile call'));
     });
     (fsPromises.access as jest.Mock).mockResolvedValue(undefined); // mcp-server.js exists
@@ -55,7 +43,7 @@ function setupAllOk(): void {
 }
 
 function findCheck(checks: AiCheckResult[], name: string): AiCheckResult | undefined {
-    return checks.find(c => c.name === name);
+    return checks.find((c) => c.name === name);
 }
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
@@ -77,8 +65,9 @@ describe('verifyAiSetup', () => {
         it('returns warning when AGENTS.md does not exist', async () => {
             setupAllOk();
             (fsPromises.readFile as jest.Mock).mockImplementation((filePath: string) => {
-                if ((filePath as string).endsWith('AGENTS.md')) return Promise.reject(new Error('ENOENT'));
-                if ((filePath as string).endsWith('mcp.json')) return Promise.resolve(JSON.stringify({ mcpServers: {} }));
+                if (filePath.endsWith('AGENTS.md')) return Promise.reject(new Error('ENOENT'));
+                if (filePath.endsWith('mcp.json'))
+                    return Promise.resolve(JSON.stringify({ mcpServers: {} }));
                 return Promise.reject(new Error('unexpected'));
             });
 
@@ -92,8 +81,28 @@ describe('verifyAiSetup', () => {
         it('returns warning when AGENTS.md is empty', async () => {
             setupAllOk();
             (fsPromises.readFile as jest.Mock).mockImplementation((filePath: string) => {
-                if ((filePath as string).endsWith('AGENTS.md')) return Promise.resolve('');
-                if ((filePath as string).endsWith('mcp.json')) return Promise.resolve(JSON.stringify({ mcpServers: {} }));
+                if (filePath.endsWith('AGENTS.md')) return Promise.resolve('');
+                if (filePath.endsWith('mcp.json'))
+                    return Promise.resolve(JSON.stringify({ mcpServers: {} }));
+                return Promise.reject(new Error('unexpected'));
+            });
+
+            const result = await verifyAiSetup(PROJECT_PATH, EXT_DIST_PATH);
+
+            const check = findCheck(result.checks, 'AGENTS.md');
+            expect(check?.status).toBe('warning');
+        });
+    });
+
+    describe('AGENTS.md content', () => {
+        it('returns warning when AGENTS.md holds only whitespace', async () => {
+            // Not the same case as an empty file: without the trim, a file of
+            // blank lines is truthy and reports 'ok' on a bundle with no content.
+            setupAllOk();
+            (fsPromises.readFile as jest.Mock).mockImplementation((filePath: string) => {
+                if (filePath.endsWith('AGENTS.md')) return Promise.resolve('   \n\t\n  ');
+                if (filePath.endsWith('mcp.json'))
+                    return Promise.resolve(JSON.stringify({ mcpServers: {} }));
                 return Promise.reject(new Error('unexpected'));
             });
 
@@ -116,8 +125,9 @@ describe('verifyAiSetup', () => {
         it('returns warning when mcp.json does not exist', async () => {
             setupAllOk();
             (fsPromises.readFile as jest.Mock).mockImplementation((filePath: string) => {
-                if ((filePath as string).endsWith('mcp.json')) return Promise.reject(new Error('ENOENT'));
-                if ((filePath as string).endsWith('AGENTS.md')) return Promise.resolve('# Demo Builder Project');
+                if (filePath.endsWith('mcp.json')) return Promise.reject(new Error('ENOENT'));
+                if (filePath.endsWith('AGENTS.md'))
+                    return Promise.resolve('# Demo Builder Project');
                 return Promise.reject(new Error('unexpected'));
             });
 
@@ -130,8 +140,9 @@ describe('verifyAiSetup', () => {
         it('returns error when mcp.json contains invalid JSON', async () => {
             setupAllOk();
             (fsPromises.readFile as jest.Mock).mockImplementation((filePath: string) => {
-                if ((filePath as string).endsWith('mcp.json')) return Promise.resolve('{ invalid json }');
-                if ((filePath as string).endsWith('AGENTS.md')) return Promise.resolve('# Demo Builder Project');
+                if (filePath.endsWith('mcp.json')) return Promise.resolve('{ invalid json }');
+                if (filePath.endsWith('AGENTS.md'))
+                    return Promise.resolve('# Demo Builder Project');
                 return Promise.reject(new Error('unexpected'));
             });
 
@@ -145,8 +156,10 @@ describe('verifyAiSetup', () => {
         it('returns warning when mcp.json is valid JSON but missing mcpServers key', async () => {
             setupAllOk();
             (fsPromises.readFile as jest.Mock).mockImplementation((filePath: string) => {
-                if ((filePath as string).endsWith('mcp.json')) return Promise.resolve(JSON.stringify({ other: {} }));
-                if ((filePath as string).endsWith('AGENTS.md')) return Promise.resolve('# Demo Builder Project');
+                if (filePath.endsWith('mcp.json'))
+                    return Promise.resolve(JSON.stringify({ other: {} }));
+                if (filePath.endsWith('AGENTS.md'))
+                    return Promise.resolve('# Demo Builder Project');
                 return Promise.reject(new Error('unexpected'));
             });
 
@@ -244,6 +257,34 @@ describe('verifyAiSetup', () => {
         });
     });
 
+    describe('skill-files listing contract', () => {
+        it('asks readdir for Dirents, since the check reads isFile/isDirectory', async () => {
+            setupAllOk();
+
+            await verifyAiSetup(PROJECT_PATH, EXT_DIST_PATH);
+
+            expect(fsPromises.readdir).toHaveBeenCalledWith(
+                path.join(PROJECT_PATH, '.claude', 'skills'),
+                { withFileTypes: true },
+            );
+        });
+
+        it('counts neither a non-.md file nor a file probed as a directory', async () => {
+            // Two decisions in one listing: a flat entry only counts when it is a
+            // file AND ends in .md, and only DIRECTORY entries are probed for a
+            // SKILL.md. `access` resolves for everything here, so an entry that
+            // reached the directory probe by mistake would report 'ok'.
+            setupAllOk();
+            (fsPromises.readdir as jest.Mock).mockResolvedValue([
+                { name: 'notes.txt', isFile: () => true, isDirectory: () => false },
+            ]);
+
+            const result = await verifyAiSetup(PROJECT_PATH, EXT_DIST_PATH);
+
+            expect(findCheck(result.checks, 'skill-files')?.status).toBe('warning');
+        });
+    });
+
     describe('overall status aggregation', () => {
         it('returns ok when all checks pass', async () => {
             setupAllOk();
@@ -264,8 +305,8 @@ describe('verifyAiSetup', () => {
         it('returns error when any check is error', async () => {
             setupAllOk();
             (fsPromises.readFile as jest.Mock).mockImplementation((filePath: string) => {
-                if ((filePath as string).endsWith('mcp.json')) return Promise.resolve('{ bad json');
-                if ((filePath as string).endsWith('AGENTS.md')) return Promise.resolve('# content');
+                if (filePath.endsWith('mcp.json')) return Promise.resolve('{ bad json');
+                if (filePath.endsWith('AGENTS.md')) return Promise.resolve('# content');
                 return Promise.reject(new Error('unexpected'));
             });
 
@@ -278,8 +319,8 @@ describe('verifyAiSetup', () => {
             setupAllOk();
             // Both an error (bad JSON) and a warning (no mcp-binary)
             (fsPromises.readFile as jest.Mock).mockImplementation((filePath: string) => {
-                if ((filePath as string).endsWith('mcp.json')) return Promise.resolve('{ bad json');
-                if ((filePath as string).endsWith('AGENTS.md')) return Promise.resolve('# content');
+                if (filePath.endsWith('mcp.json')) return Promise.resolve('{ bad json');
+                if (filePath.endsWith('AGENTS.md')) return Promise.resolve('# content');
                 return Promise.reject(new Error('unexpected'));
             });
             (fsPromises.access as jest.Mock).mockRejectedValue(new Error('ENOENT'));
@@ -293,7 +334,7 @@ describe('verifyAiSetup', () => {
             setupAllOk();
             const result = await verifyAiSetup(PROJECT_PATH, EXT_DIST_PATH);
 
-            const names = result.checks.map(c => c.name);
+            const names = result.checks.map((c) => c.name);
             expect(names).toContain('AGENTS.md');
             expect(names).toContain('.claude/mcp.json');
             expect(names).toContain('mcp-binary');
@@ -308,18 +349,27 @@ describe('verifyAiSetup', () => {
             const result = await verifyAiSetup(PROJECT_PATH, EXT_DIST_PATH);
 
             expect(result.inventory).toBeDefined();
-            expect(result.inventory.skills).toEqual([]);
-            expect(result.inventory.mcps).toEqual([]);
-            expect(result.inventory.sessionMcps).toEqual([]);
+            expect(result.inventory.skills).toStrictEqual([]);
+            expect(result.inventory.mcps).toStrictEqual([]);
+            expect(result.inventory.sessionMcps).toStrictEqual([]);
         });
 
         it('populates inventory with each inspector output', async () => {
             setupAllOk();
             (inspectSkills as jest.Mock).mockResolvedValueOnce([
-                { name: 'add-component', description: 'Add a component', path: '/p/.claude/skills/add-component.md', source: 'demo-builder' },
+                {
+                    name: 'add-component',
+                    description: 'Add a component',
+                    path: '/p/.claude/skills/add-component.md',
+                    source: 'demo-builder',
+                },
             ]);
             (inspectAllServers as jest.Mock).mockResolvedValueOnce([
-                { id: 'demo-builder', status: 'ok', tools: [{ name: 'list_projects', description: 'List' }] },
+                {
+                    id: 'demo-builder',
+                    status: 'ok',
+                    tools: [{ name: 'list_projects', description: 'List' }],
+                },
             ]);
             (detectSessionMcps as jest.Mock).mockResolvedValueOnce([
                 { displayName: 'claude.ai AEM Content - Prod', needsAuth: false },
@@ -329,14 +379,18 @@ describe('verifyAiSetup', () => {
 
             expect(result.inventory.skills).toHaveLength(1);
             expect(result.inventory.mcps[0].id).toBe('demo-builder');
-            expect(result.inventory.sessionMcps[0].displayName).toBe('claude.ai AEM Content - Prod');
+            expect(result.inventory.sessionMcps[0].displayName).toBe(
+                'claude.ai AEM Content - Prod'
+            );
         });
 
         it('runs checks and inventory in parallel (one slow inspector does not block checks)', async () => {
             setupAllOk();
             let resolveMcps: (v: unknown[]) => void = () => undefined;
             (inspectAllServers as jest.Mock).mockReturnValueOnce(
-                new Promise(resolve => { resolveMcps = resolve; }),
+                new Promise((resolve) => {
+                    resolveMcps = resolve;
+                })
             );
 
             const promise = verifyAiSetup(PROJECT_PATH, EXT_DIST_PATH);
@@ -349,7 +403,7 @@ describe('verifyAiSetup', () => {
             // 5); the mocked fs makes the package look installed, so the row
             // appears with 'ok'.
             expect(result.checks).toHaveLength(5);
-            expect(result.inventory.mcps).toEqual([]);
+            expect(result.inventory.mcps).toStrictEqual([]);
         });
 
         it('does not surface inspector exceptions through verifyAiSetup', async () => {
@@ -360,14 +414,19 @@ describe('verifyAiSetup', () => {
 
             // The check status is unaffected; the failed inspector degrades to []
             expect(result.status).toBe('ok');
-            expect(result.inventory.skills).toEqual([]);
+            expect(result.inventory.skills).toStrictEqual([]);
         });
     });
 
     describe('gatherInventory', () => {
         it('returns the union of all three inspector outputs', async () => {
             (inspectSkills as jest.Mock).mockResolvedValueOnce([
-                { name: 's', description: null, path: '/p/.claude/skills/s.md', source: 'demo-builder' },
+                {
+                    name: 's',
+                    description: null,
+                    path: '/p/.claude/skills/s.md',
+                    source: 'demo-builder',
+                },
             ]);
             (inspectAllServers as jest.Mock).mockResolvedValueOnce([
                 { id: 'srv', status: 'ok', tools: [] },
@@ -392,9 +451,9 @@ describe('verifyAiSetup', () => {
 
             const inventory = await gatherInventory(PROJECT_PATH);
 
-            expect(inventory.skills).toEqual([]);
+            expect(inventory.skills).toStrictEqual([]);
             expect(inventory.mcps).toHaveLength(1);
-            expect(inventory.sessionMcps).toEqual([]);
+            expect(inventory.sessionMcps).toStrictEqual([]);
         });
 
         it('surfaces a *Error field for each rejected inspector', async () => {
@@ -407,6 +466,18 @@ describe('verifyAiSetup', () => {
             expect(inventory.skillsError).toBe('skills broke');
             expect(inventory.mcpsError).toBeUndefined();
             expect(inventory.sessionMcpsError).toBe('session broke');
+        });
+
+        it('surfaces mcpsError AND an empty list when the MCP inspector rejects', async () => {
+            // The other two inspectors had this pinned and this one did not, so
+            // a rejected MCP inspection could have handed the screen `undefined`
+            // where it renders a list.
+            (inspectAllServers as jest.Mock).mockRejectedValueOnce(new Error('mcps broke'));
+
+            const inventory = await gatherInventory(PROJECT_PATH);
+
+            expect(inventory.mcps).toStrictEqual([]);
+            expect(inventory.mcpsError).toBe('mcps broke');
         });
 
         it('omits *Error fields when every inspector succeeds', async () => {
@@ -426,8 +497,7 @@ describe('verifyAiSetup', () => {
         // Contents match the setupAllOk() readFile mock verbatim.
         const AGENTS_CONTENT = '# Demo Builder Project\n\nContent';
         const MCP_CONTENT = JSON.stringify({ mcpServers: { 'demo-builder': {} } });
-        const sha = (s: string): string =>
-            createHash('sha256').update(s, 'utf-8').digest('hex');
+        const sha = (s: string): string => createHash('sha256').update(s, 'utf-8').digest('hex');
 
         beforeEach(() => {
             setupAllOk();
@@ -436,7 +506,7 @@ describe('verifyAiSetup', () => {
         it('is empty when no hashes are recorded (pre-ADR project: zero false "edited" flags)', async () => {
             const result = await verifyAiSetup(PROJECT_PATH, EXT_DIST_PATH);
 
-            expect(result.inventory.editedFiles).toEqual([]);
+            expect(result.inventory.editedFiles).toStrictEqual([]);
         });
 
         it('does not flag a file whose disk content still matches its recorded hash', async () => {
@@ -444,7 +514,7 @@ describe('verifyAiSetup', () => {
                 'AGENTS.md': sha(AGENTS_CONTENT),
             });
 
-            expect(result.inventory.editedFiles).toEqual([]);
+            expect(result.inventory.editedFiles).toStrictEqual([]);
         });
 
         it('flags a file whose disk content differs from its recorded hash', async () => {
@@ -462,7 +532,7 @@ describe('verifyAiSetup', () => {
                 '.claude/skills/gone.md': sha('never mind'),
             });
 
-            expect(result.inventory.editedFiles).toEqual([]);
+            expect(result.inventory.editedFiles).toStrictEqual([]);
         });
 
         it('never flags .claude/settings.json — the merge path incorporates user edits by design', async () => {
@@ -482,7 +552,7 @@ describe('verifyAiSetup', () => {
                 '.claude/settings.json': sha('what the last merge recorded'),
             });
 
-            expect(result.inventory.editedFiles).toEqual([]);
+            expect(result.inventory.editedFiles).toStrictEqual([]);
         });
 
         it('lists every edited file (sorted), mixing edited, absent, and untouched entries', async () => {
@@ -515,9 +585,23 @@ describe('editedFiles — manifest-key containment', () => {
             '../../outside/secrets.txt': sha('guess'),
         });
 
-        expect(result.inventory.editedFiles).toEqual([]);
+        expect(result.inventory.editedFiles).toStrictEqual([]);
         const readPaths = (fsPromises.readFile as jest.Mock).mock.calls.map((c) => String(c[0]));
         expect(readPaths.some((p) => p.includes('outside'))).toBe(false);
+    });
+
+    it('ignores a traversal key even when it resolves back INSIDE the project', async () => {
+        // The realpath check alone passes this one: `.claude/../AGENTS.md`
+        // resolves to a real file in the project. Only the lexical '..'
+        // rejection stops it, and stopping it is the point — the modal must not
+        // echo a crafted manifest key back as an edited file.
+        const result = await verifyAiSetup(PROJECT_PATH, EXT_DIST_PATH, {
+            '.claude/../AGENTS.md': sha('edited since generation'),
+        });
+
+        expect(result.inventory.editedFiles).toStrictEqual([]);
+        const readPaths = (fsPromises.readFile as jest.Mock).mock.calls.map((c) => String(c[0]));
+        expect(readPaths.some((p) => p.includes('..'))).toBe(false);
     });
 
     it('ignores absolute-path keys without reading them', async () => {
@@ -525,7 +609,7 @@ describe('editedFiles — manifest-key containment', () => {
             '/etc/passwd': sha('guess'),
         });
 
-        expect(result.inventory.editedFiles).toEqual([]);
+        expect(result.inventory.editedFiles).toStrictEqual([]);
         const readPaths = (fsPromises.readFile as jest.Mock).mock.calls.map((c) => String(c[0]));
         expect(readPaths.some((p) => p.startsWith('/etc'))).toBe(false);
     });
@@ -544,6 +628,6 @@ describe('editedFiles — manifest-key containment', () => {
             'linked.md': sha('other content'),
         });
 
-        expect(result.inventory.editedFiles).toEqual([]);
+        expect(result.inventory.editedFiles).toStrictEqual([]);
     });
 });

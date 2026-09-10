@@ -8,8 +8,8 @@ import {
 } from '@adobe/react-spectrum';
 import React from 'react';
 import { UniqueField } from '../hooks/useComponentConfig';
-import { FieldHelpButton } from '@/core/ui/components/forms';
 import { renderTextWithCopyable } from '@/core/ui/components/forms/descriptionRenderer';
+import { FieldHelpButton } from '@/core/ui/components/forms/FieldHelpButton';
 import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
 
 interface ConfigFieldRendererProps {
@@ -54,8 +54,10 @@ export function ConfigFieldRenderer({ field, value, error, isTouched, onUpdate, 
     // Determine if field should be marked as required
     const isFieldRequired = field.required;
 
-    // Determine if field has a default value (not empty and equals the default from config)
-    const hasDefault = value && field.default && value === field.default;
+    // Determine if field has a default value (not empty and equals the default
+    // from config). The emptiness check is what the equality alone cannot say:
+    // an empty value is never "the default", not even when the default is empty.
+    const hasDefault = Boolean(value) && value === field.default;
 
     // Render description with backtick-wrapped URLs as clickable links.
     const renderedDescription = field.description

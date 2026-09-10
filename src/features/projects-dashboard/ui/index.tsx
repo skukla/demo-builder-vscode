@@ -13,11 +13,36 @@ import { WebviewApp } from '@/core/ui/components/WebviewApp';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { sleep } from '@/core/utils/sleep';
 import type { Project } from '@/types/base';
-import type { ConfigChangedPayload, DemoStateChangedPayload, ProjectsUpdatedPayload } from '@/types/webviewPayloads';
+import type {
+    ConfigChangedPayload,
+    DemoStateChangedPayload,
+    ProjectsUpdatedPayload,
+} from '@/types/webviewPayloads';
 
 // Import global styles
+// The base layers. They arrive as REAL imports, in this entry's graph, because
+// that is the only delivery this build resolves. index.css used to pull them in
+// with `@import './reset.css'` — which webpack's css-loader inlined at build
+// time, and which the esbuild plugin that replaced it (580495214, 2026-04-13)
+// passes through as literal text. The browser then tried to fetch them relative
+// to a vscode-webview:// URL and got nothing, so the reset and every design
+// token were absent from all eight bundles for five months. ADR-017 §6 asks for
+// exactly this: a stylesheet belongs to its bundle's GRAPH.
+import '@/core/ui/styles/reset.css';
+import '@/core/ui/styles/tokens.css';
 import '@/core/ui/styles/index.css';
-import '@/core/ui/styles/custom-spectrum.css';
+import '@/core/ui/styles/utilities.css';
+// .project-card-* and .project-row-* rules, moved out of utilities.css by
+// the CSS migration. This is the ONLY entry whose graph reaches a component using
+// them — the family looked cross-cutting on a bare `project-` prefix match, which
+// was catching file paths and prose rather than class names.
+import './styles/project-cards.css';
+// The shared UI vocabulary — 19 small families. Seven of the eight entries.
+import '@/core/ui/styles/shared-ui.css';
+// .db-* — the shared detail drawer.
+import '@/core/ui/styles/drawer.css';
+// .inline-notice-*, .inline-rename-* — two small shared components.
+import '@/core/ui/styles/inline-controls.css';
 
 // Local constant - webview cannot import TIMEOUTS from extension host
 // Equivalent to TIMEOUTS.PROJECT_STATE_PERSIST_DELAY in src/core/utils/timeoutConfig.ts
@@ -26,7 +51,7 @@ const PROJECT_STATE_PERSIST_DELAY = 500;
 /**
  * ProjectsDashboardApp - Wrapper component that handles data fetching
  */
-const ProjectsDashboardApp: React.FC = () => {
+function ProjectsDashboardApp() {
     const [projects, setProjects] = useState<Project[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -453,7 +478,7 @@ const ProjectsDashboardApp: React.FC = () => {
             onViewModeOverride={handleViewModeOverride}
         />
     );
-};
+}
 
 // Mount the app
 const container = document.getElementById('root');

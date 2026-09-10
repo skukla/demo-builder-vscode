@@ -11,14 +11,6 @@
 
 // The orchestrator writes step-level debug lines (AI-5); no logger singleton
 // exists under jest, so the module-level getLogger is stubbed.
-jest.mock('@/core/logging', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    }),
-}));
 
 import {
     teardownConsoleProject,
@@ -49,6 +41,18 @@ describe('teardownConsoleProject', () => {
             );
             expect(skipped.map((item) => item.id)).toEqual(['ws1', 'ws2']);
             expect(harness.deps.deleteConsoleProject).toHaveBeenCalledWith('org1', 'proj1');
+        });
+
+        it('should list workspaces for exactly the target org and project', async () => {
+            const harness = makeHarness({ credentials: {} });
+
+            await teardownConsoleProject(harness.deps, TARGET);
+
+            expect(harness.deps.getWorkspaces).toHaveBeenCalledTimes(1);
+            expect(harness.deps.getWorkspaces).toHaveBeenCalledWith({
+                orgId: 'org1',
+                projectId: 'proj1',
+            });
         });
 
         it('should treat an empty clientId as no usable credential', async () => {

@@ -18,10 +18,20 @@
             "group": "build"
         },
         {
+            // What F5 runs. `compile:dev` is `compile` WITHOUT `rm -rf
+            // dist/webview`, because that clean is the one destructive step in the
+            // build and F5 is the one place it buys nothing: it exists to drop
+            // bundles for entries that no longer exist, which matters when
+            // packaging and never between two debug launches. Meanwhile it leaves
+            // every webview bundle missing for the length of a full production
+            // build, and anything that reads dist in that window — a debug host,
+            // the visual-baseline harness — sees a broken tree.
+            //
+            // Use `npm: compile` (the full, cleaning build) before packaging.
             "type": "npm",
-            "script": "test-compile",
+            "script": "compile:dev",
             "problemMatcher": "$tsc",
-            "group": "test"
+            "group": "build"
         }
     ]
 }

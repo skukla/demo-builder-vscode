@@ -1,0 +1,5 @@
+{
+  "_what": "PL-15 burn-down ledger (ADR-016). Suites that emit console.error/warn during a PASSING run, measured 2026-08-28. This list may only SHRINK: fix the cause, delete the line. A suite NOT listed here fails the moment it emits.",
+  "_seededFrom": "CONSOLE_GATE=collect full-suite run at commit a1bc7c5 (1,179 suites, 68 offenders)",
+  "suites": []
+}

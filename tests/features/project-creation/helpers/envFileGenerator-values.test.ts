@@ -11,6 +11,7 @@ import {
     sharedEnvVars,
     TEST_COMPONENT_PATH,
 } from './envFileGenerator.testUtils';
+import { createMockProject } from '../../../helpers/projectFake';
 
 // Mock fs promises
 jest.mock('fs', () => ({
@@ -21,9 +22,11 @@ jest.mock('fs', () => ({
 
 // Mock formatters
 jest.mock('@/features/project-creation/helpers/formatters', () => ({
-    formatGroupName: (group: string) => group.split('-').map(word =>
-        word.charAt(0).toUpperCase() + word.slice(1)
-    ).join(' '),
+    formatGroupName: (group: string) =>
+        group
+            .split('-')
+            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' '),
 }));
 
 describe('envFileGenerator - Value Resolution', () => {
@@ -43,24 +46,22 @@ describe('envFileGenerator - Value Resolution', () => {
                 },
             } as TransformedComponentDefinition;
 
-            const projectWithMeshState = {
+            const projectWithMeshState = createMockProject({
                 name: 'test-project',
                 path: '/test/path',
                 status: 'ready',
-                created: new Date().toISOString(),
                 appBuilderComponents: {
                     mesh: {
                         kind: 'mesh',
                         status: 'deployed',
                         source: { owner: '', repo: '' },
-                            endpoint: 'https://runtime-endpoint.adobe.io/graphql',
-                            workspace: 'test-workspace',
-                                    },
+                        endpoint: 'https://runtime-endpoint.adobe.io/graphql',
+                    },
                 },
-            } as any;
+            });
 
             const setupContext = createMockSetupContext({
-                registry: { envVars: sharedEnvVars } as any,
+                registry: { envVars: sharedEnvVars },
                 project: projectWithMeshState,
                 config: { projectName: 'test-project' },
             });
@@ -69,7 +70,7 @@ describe('envFileGenerator - Value Resolution', () => {
                 TEST_COMPONENT_PATH,
                 'test-component',
                 componentDef,
-                setupContext,
+                setupContext
             );
 
             const [[, content]] = (fsPromises.writeFile as jest.Mock).mock.calls;
@@ -99,7 +100,7 @@ describe('envFileGenerator - Value Resolution', () => {
             };
 
             const setupContext = createMockSetupContext({
-                registry: { envVars: sharedEnvVars } as any,
+                registry: { envVars: sharedEnvVars },
                 config,
             });
 
@@ -107,7 +108,7 @@ describe('envFileGenerator - Value Resolution', () => {
                 TEST_COMPONENT_PATH,
                 'test-component',
                 componentDef,
-                setupContext,
+                setupContext
             );
 
             const [[, content]] = (fsPromises.writeFile as jest.Mock).mock.calls;
@@ -135,7 +136,7 @@ describe('envFileGenerator - Value Resolution', () => {
             };
 
             const setupContext = createMockSetupContext({
-                registry: { envVars: sharedEnvVars } as any,
+                registry: { envVars: sharedEnvVars },
                 config,
             });
 
@@ -143,7 +144,7 @@ describe('envFileGenerator - Value Resolution', () => {
                 TEST_COMPONENT_PATH,
                 'test-component',
                 componentDef,
-                setupContext,
+                setupContext
             );
 
             const [[, content]] = (fsPromises.writeFile as jest.Mock).mock.calls;
@@ -164,7 +165,7 @@ describe('envFileGenerator - Value Resolution', () => {
             } as TransformedComponentDefinition;
 
             const setupContext = createMockSetupContext({
-                registry: { envVars: sharedEnvVars } as any,
+                registry: { envVars: sharedEnvVars },
                 config: { projectName: 'test-project' },
             });
 
@@ -172,7 +173,7 @@ describe('envFileGenerator - Value Resolution', () => {
                 TEST_COMPONENT_PATH,
                 'test-component',
                 componentDef,
-                setupContext,
+                setupContext
             );
 
             const [[, content]] = (fsPromises.writeFile as jest.Mock).mock.calls;
@@ -191,7 +192,7 @@ describe('envFileGenerator - Value Resolution', () => {
             } as TransformedComponentDefinition;
 
             const setupContext = createMockSetupContext({
-                registry: { envVars: sharedEnvVars } as any,
+                registry: { envVars: sharedEnvVars },
                 config: { projectName: 'test-project' },
             });
 
@@ -199,7 +200,7 @@ describe('envFileGenerator - Value Resolution', () => {
                 TEST_COMPONENT_PATH,
                 'test-component',
                 componentDef,
-                setupContext,
+                setupContext
             );
 
             const [[, content]] = (fsPromises.writeFile as jest.Mock).mock.calls;

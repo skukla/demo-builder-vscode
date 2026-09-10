@@ -18,7 +18,7 @@
 import React, { useState } from 'react';
 import { ChoiceCard } from '../../ChoiceCard';
 import { OptionalNameField } from '../OptionalNameField';
-import { SearchHeader } from '@/core/ui/components/navigation';
+import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 
 /** Show the catalog filter only once the gallery is big enough to warrant it. */

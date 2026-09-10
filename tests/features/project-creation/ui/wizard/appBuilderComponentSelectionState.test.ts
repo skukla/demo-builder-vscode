@@ -36,7 +36,7 @@ describe('withSelectedAppBuilderComponent', () => {
 
     it('returns an empty array (not undefined) when removing the last id', () => {
         const after = withSelectedAppBuilderComponent(['a'], 'a', false);
-        expect(after).toEqual([]);
+        expect(after).toStrictEqual([]);
     });
 });
 

@@ -10,9 +10,12 @@
 import * as fs from 'fs';
 import * as vscode from 'vscode';
 import { CreateProjectWebviewCommand } from '@/features/project-creation/commands/createProject';
-import { StateManager } from '@/core/state';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 
+import { internals } from '../../../helpers/commandInternals';
 // Factory mock keeping the real module: transitive deps (fetch-blob via the
 // auth service import chain) destructure fs.promises at load time, so a bare
 // auto-mock crashes the suite before any test runs.
@@ -22,7 +25,7 @@ jest.mock('fs', () => ({
     readFileSync: jest.fn(),
 }));
 jest.mock('@/core/logging/debugLogger');
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(() => ({
             isAuthenticated: jest.fn(),
@@ -33,47 +36,6 @@ jest.mock('@/core/di', () => ({
     },
 }));
 jest.mock('@/features/prerequisites/services/PrerequisitesManager');
-
-function createMockExtensionContext(): vscode.ExtensionContext {
-    return {
-        subscriptions: [],
-        extensionPath: '/mock/extension/path',
-        globalState: {
-            get: jest.fn(),
-            update: jest.fn(),
-            keys: jest.fn(() => []),
-            setKeysForSync: jest.fn(),
-        } as any,
-        workspaceState: {
-            get: jest.fn(),
-            update: jest.fn(),
-            keys: jest.fn(() => []),
-        } as any,
-        extensionUri: vscode.Uri.file('/mock/extension/path'),
-        extensionMode: vscode.ExtensionMode.Test,
-        asAbsolutePath: (relativePath: string) => `/mock/extension/path/${relativePath}`,
-        secrets: {} as any,
-    } as unknown as vscode.ExtensionContext;
-}
-
-function createMockStateManager(): StateManager {
-    return {
-        getState: jest.fn(),
-        setState: jest.fn(),
-        clearState: jest.fn(),
-        getCurrentProject: jest.fn(),
-        getAllProjects: jest.fn().mockResolvedValue([]),
-    } as any;
-}
-
-function createMockLogger(): Logger {
-    return {
-        info: jest.fn(),
-        debug: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    } as any;
-}
 
 /** Serve `json` as the wizard-steps.json content; no other file exists. */
 function setupStepsFile(json: string): void {
@@ -97,7 +59,7 @@ describe('CreateProjectWebviewCommand - getInitialData wizard-steps validation',
 
         mockLogger = createMockLogger();
         command = new CreateProjectWebviewCommand(
-            createMockExtensionContext(),
+            createMockExtensionContext({}, '/mock/extension/path'),
             createMockStateManager(),
             mockLogger
         );
@@ -113,7 +75,7 @@ describe('CreateProjectWebviewCommand - getInitialData wizard-steps validation',
             })
         );
 
-        const data = await (command as any).getInitialData();
+        const data = await internals(command).getInitialData();
 
         expect(data.wizardSteps).toBeNull();
         expect(mockLogger.error).toHaveBeenCalledWith(expect.stringContaining('wizard-steps.json'));
@@ -131,7 +93,7 @@ describe('CreateProjectWebviewCommand - getInitialData wizard-steps validation',
         ];
         setupStepsFile(JSON.stringify({ steps }));
 
-        const data = await (command as any).getInitialData();
+        const data = await internals(command).getInitialData();
 
         expect(data.wizardSteps).toEqual(steps);
         expect(mockLogger.error).not.toHaveBeenCalled();
@@ -144,7 +106,7 @@ describe('CreateProjectWebviewCommand - getInitialData wizard-steps validation',
             })
         );
 
-        const data = await (command as any).getInitialData();
+        const data = await internals(command).getInitialData();
 
         expect(data.wizardSteps).toBeNull();
     });

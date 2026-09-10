@@ -1,10 +1,11 @@
 import { AuthenticationService } from '@/features/authentication/services/authenticationService';
-import type { CommandExecutor } from '@/core/shell';
-import type { StepLogger } from '@/core/logging';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
+import type { StepLogger } from '@/core/logging/stepLogger';
 import type { Logger } from '@/types/logger';
 import {
     createMockCommandExecutor,
     createMockLogger,
+    createMockSDKClient,
     createMockStepLogger,
     mockOrg,
     mockProject,
@@ -25,11 +26,10 @@ import {
  */
 
 // Only mock external dependencies
-jest.mock('@/core/logging');
 jest.mock('@/features/authentication/services/adobeSDKClient');
 jest.mock('@/features/authentication/services/adobeEntityService');
 
-import { getLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
 import { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import { createEntityServices } from '@/features/authentication/services/adobeEntityService';
 
@@ -54,15 +54,11 @@ describe('AuthenticationService - Entity Retrieval and Selection', () => {
         (getLogger as jest.Mock).mockReturnValue(mockLogger);
 
         // Mock StepLogger.create
-        const StepLoggerMock = require('@/core/logging').StepLogger;
+        const StepLoggerMock = require('@/core/logging/stepLogger').StepLogger;
         StepLoggerMock.create = jest.fn().mockResolvedValue(mockStepLogger);
 
         // Setup mock SDK client
-        mockSDKClient = {
-            initialize: jest.fn().mockResolvedValue(undefined),
-            ensureInitialized: jest.fn().mockResolvedValue(true),
-            clear: jest.fn(),
-        } as any;
+        mockSDKClient = createMockSDKClient();
 
         // Create mock entity sub-services
         mockFetcher = {
@@ -129,7 +125,7 @@ describe('AuthenticationService - Entity Retrieval and Selection', () => {
             expect(mockFetcher.createProject).toHaveBeenCalledWith(
                 'My Demo',
                 'A demo project',
-                undefined,
+                undefined
             );
         });
 
@@ -140,7 +136,7 @@ describe('AuthenticationService - Entity Retrieval and Selection', () => {
             expect(mockFetcher.createWorkspace).toHaveBeenCalledWith(
                 'Stage',
                 'A workspace',
-                undefined,
+                undefined
             );
         });
 
@@ -202,7 +198,7 @@ describe('AuthenticationService - Entity Retrieval and Selection', () => {
                 stdout: 'x'.repeat(150),
                 stderr: '',
                 duration: 0,
-            } as any);
+            });
         });
 
         it('should succeed after login when restoring project context', async () => {
@@ -222,7 +218,7 @@ describe('AuthenticationService - Entity Retrieval and Selection', () => {
                 stdout: '',
                 stderr: 'login failed',
                 duration: 0,
-            } as any);
+            });
 
             const result = await authService.loginAndRestoreProjectContext({
                 organization: 'org123',

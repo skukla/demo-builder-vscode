@@ -5,7 +5,17 @@
  * type-safe access to component identifiers matching templates/components.json.
  */
 
-import { AI_CONTEXT_VERSION, COMPONENT_IDS, ComponentId } from '@/core/constants';
+import {
+    AI_CONTEXT_VERSION,
+    BASELINE_API,
+    COMPONENT_IDS,
+    ComponentId,
+    LAST_UPDATE_CHECK,
+    LAST_UPDATE_CHECK_VERSION,
+    MESH_COMPONENT_IDS,
+    hasMeshInDependencies,
+    isMeshComponentId,
+} from '@/core/constants';
 
 describe('AI_CONTEXT_VERSION', () => {
     // Pin the current bundle version. Bump this pin ONLY together with a real
@@ -103,8 +113,19 @@ describe('AI_CONTEXT_VERSION', () => {
     // in a project directory act on THAT project; the pointer never moves).
     // v29: skills route config values to configure_project (stale guidance
     // named the raw tool and agents obeyed it — measured 2/2 by the battery).
-    it('is 29 (skills route config values to configure_project)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(29);
+    // v30: token-first theming generalized beyond type — the design skills
+    // teach the whole styles.css token system (color/spacing/shape/grid) with
+    // read-the-file-first, plus the reset lifecycle stated plainly.
+    // v31: extend-app-builder-app routes kit knowledge to the
+    // commerce-extensibility server first (measured at zero uses across both
+    // ERP journeys while agents re-derived its rules from source).
+    // v32: sync-changes named the mesh deploy command `aio api:mesh:update`. No
+    // such command exists — the topic is `api-mesh`, and that misspelling lived in
+    // exactly one file in the repo: the shipped template. Every project generated
+    // since carried it, so an agent following the skill got "command not found".
+    // The bump is what delivers the correction to projects that already have it.
+    it('is 32 (the mesh deploy command in sync-changes is api-mesh, not api:mesh)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(32);
     });
 });
 
@@ -143,7 +164,7 @@ describe('COMPONENT_IDS', () => {
         });
 
         it('should have exactly 4 component IDs', () => {
-            expect(Object.keys(COMPONENT_IDS).length).toBe(4);
+            expect(Object.keys(COMPONENT_IDS)).toHaveLength(4);
         });
     });
 
@@ -175,5 +196,75 @@ describe('COMPONENT_IDS', () => {
             expect(edsAccsMesh).toBe('eds-accs-mesh');
             expect(headlessCommerceMesh).toBe('headless-commerce-mesh');
         });
+    });
+});
+
+/**
+ * These two are globalState KEYS, not display strings. A rename does not fail
+ * anything: the new key reads back undefined, the old value is orphaned, and the
+ * only symptom is a check that starts running every activation again. The same
+ * shape orphaned a settings override here for six months.
+ */
+describe('global state keys', () => {
+    it('stores the last-checked version under lastUpdateCheckVersion', () => {
+        expect(LAST_UPDATE_CHECK_VERSION).toBe('lastUpdateCheckVersion');
+    });
+
+    it('stores the auto-check throttle timestamp under lastUpdateCheck', () => {
+        expect(LAST_UPDATE_CHECK).toBe('lastUpdateCheck');
+    });
+});
+
+describe('BASELINE_API', () => {
+    // The SDK code goes into a subscription PUT and an Adobe project teardown.
+    // A wrong or empty one is accepted by the API and leaves the workspace
+    // unable to run `aio app` operations.
+    it('is the management SDK every App Builder workspace subscribes to', () => {
+        expect(BASELINE_API).toBe('AdobeIOManagementAPISDK');
+    });
+});
+
+describe('isMeshComponentId', () => {
+    it('accepts every id in MESH_COMPONENT_IDS', () => {
+        for (const id of MESH_COMPONENT_IDS) {
+            expect(isMeshComponentId(id)).toBe(true);
+        }
+    });
+
+    it('rejects a component that is not a mesh', () => {
+        expect(isMeshComponentId(COMPONENT_IDS.EDS_STOREFRONT)).toBe(false);
+    });
+
+    it('rejects an id no catalog entry uses', () => {
+        expect(isMeshComponentId('some-other-component')).toBe(false);
+    });
+});
+
+describe('hasMeshInDependencies', () => {
+    it('finds a mesh among dependencies that are mostly not one', () => {
+        expect(
+            hasMeshInDependencies([COMPONENT_IDS.EDS_STOREFRONT, COMPONENT_IDS.EDS_ACCS_MESH])
+        ).toBe(true);
+    });
+
+    // SOME, not every: a component depending on a mesh depends on other things
+    // too, and requiring all of them to be meshes would answer false for every
+    // real dependency list.
+    it('does not require every dependency to be a mesh', () => {
+        expect(hasMeshInDependencies([COMPONENT_IDS.EDS_ACCS_MESH, 'anything-else'])).toBe(true);
+    });
+
+    it('answers false when nothing in the list is a mesh', () => {
+        expect(hasMeshInDependencies([COMPONENT_IDS.EDS_STOREFRONT])).toBe(false);
+    });
+
+    it('answers false for an empty dependency list', () => {
+        expect(hasMeshInDependencies([])).toBe(false);
+    });
+
+    // Dependencies are optional on a catalog entry, so undefined is the common
+    // case rather than an edge one — it must answer, not throw.
+    it('answers false when a component declares no dependencies at all', () => {
+        expect(hasMeshInDependencies(undefined)).toBe(false);
     });
 });

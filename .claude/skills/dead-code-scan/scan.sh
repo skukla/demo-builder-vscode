@@ -132,7 +132,17 @@ docs = [d for d in glob.glob(f'{root}/**/*.md', recursive=True) + glob.glob('doc
 HIST = re.compile(r'\b(former|formerly|renamed|was |used to|previously|supersedes?|superseded|'
                   r'replaces?|replaced|re-homed|retired|extracted from|split from|moved|'
                   r'relocated|lifted|recovered from|inlined from|existed|old |no longer|'
+                  # `lived` is PAST TENSE by construction ("lived here from X to Y"),
+                  # so it cannot describe current code the way `lives` would. Added
+                  # 2026-09-08 after reviewPredicates.ts:41 was adjudicated a false
+                  # positive for the THIRD time (sweeps 2026-08-24 and 2026-08-25 both
+                  # say "leave it — the comment is doing useful work"). A scan that
+                  # re-reports a hit already ruled on twice costs a reader every
+                  # release cut, and the third reader nearly deleted the comment.
+                  r'lived|'
                   r'deleted|removed|until |\bv1\b|verbatim)\b'
+                  # A closed date span is a historical claim on its face.
+                  r'|\bfrom \d{4}-\d{2}\S* to \d{4}-\d{2}'
                   # Before/After EXAMPLE headings only — the bare prepositions are far
                   # too common and would suppress real drift wholesale.
                   r'|(^|[*#(\s])(before|after)[\s)*:]', re.I)

@@ -10,26 +10,13 @@
  * Step 5 of Projects Navigation Architecture plan.
  */
 
-import { DeleteProjectCommand } from '@/features/lifecycle/commands/deleteProject';
-import { StateManager } from '@/core/state';
-import type { Logger } from '@/types/logger';
-
-// Mock VS Code API with proper types
-jest.mock('vscode', () => ({
-    window: {
-        showInformationMessage: jest.fn(),
-        showWarningMessage: jest.fn(),
-        showErrorMessage: jest.fn(),
-        withProgress: jest.fn(),
-        setStatusBarMessage: jest.fn(),
-    },
-    commands: {
-        executeCommand: jest.fn(),
-    },
-    ProgressLocation: {
-        Notification: 15,
-    },
-}));
+import {
+    DeleteProjectCommand,
+    vscode,
+    setupDeleteProject,
+} from './deleteProject.testUtils';
+import type { StateManager } from '@/types/state';
+import { createMockProject } from '../../../helpers/projectFake';
 
 // Mock fs/promises with explicit exports
 jest.mock('fs/promises', () => ({
@@ -40,88 +27,20 @@ import * as fs from 'fs/promises';
 const mockRm = fs.rm as jest.Mock;
 const mockAccess = fs.access as jest.Mock;
 
-// Mock logging
-jest.mock('@/core/logging', () => ({
-    Logger: jest.fn().mockImplementation(() => ({
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        debug: jest.fn(),
-    })),
-    getLogger: jest.fn(() => ({
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        debug: jest.fn(),
-    })),
-}));
-
 // Import vscode after mock
-import * as vscode from 'vscode';
 
 describe('DeleteProjectCommand - Navigation', () => {
     let command: DeleteProjectCommand;
-    let mockContext: jest.Mocked<vscode.ExtensionContext>;
     let mockStateManager: jest.Mocked<StateManager>;
-    let mockLogger: jest.Mocked<Logger>;
     const testProjectPath = '/tmp/test-project-navigation';
 
     beforeEach(() => {
         jest.clearAllMocks();
-
-        // Reset fs mocks
         mockRm.mockClear();
         mockAccess.mockClear();
         mockRm.mockResolvedValue(undefined);
         mockAccess.mockRejectedValue({ code: 'ENOENT' });
-
-        // Mock extension context
-        mockContext = {
-            subscriptions: [],
-            extensionPath: '/mock/extension/path',
-            globalState: {
-                get: jest.fn(),
-                update: jest.fn().mockResolvedValue(undefined),
-            },
-        } as any;
-
-        // Mock state manager
-        mockStateManager = {
-            getCurrentProject: jest.fn().mockResolvedValue({
-                name: 'test-project',
-                path: testProjectPath,
-                status: 'stopped',
-            }),
-            clearProject: jest.fn().mockResolvedValue(undefined),
-            removeFromRecentProjects: jest.fn().mockResolvedValue(undefined),
-        } as any;
-
-        // Mock logger
-        mockLogger = {
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            debug: jest.fn(),
-        } as any;
-
-        // Mock vscode.window.showInformationMessage for confirmation (returns 'Yes')
-        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Yes');
-
-        // Mock vscode.window.withProgress to execute task immediately
-        (vscode.window.withProgress as jest.Mock).mockImplementation(
-            async (_options: any, task: any) => {
-                return await task({ report: jest.fn() });
-            }
-        );
-
-        // Mock vscode.commands.executeCommand
-        (vscode.commands.executeCommand as jest.Mock).mockResolvedValue(undefined);
-
-        command = new DeleteProjectCommand(
-            mockContext,
-            mockStateManager,
-            mockLogger
-        );
+        ({ command, mockStateManager } = setupDeleteProject(testProjectPath));
     });
 
     afterEach(() => {
@@ -133,11 +52,9 @@ describe('DeleteProjectCommand - Navigation', () => {
         describe('When the current project is deleted', () => {
             it('should execute showProjectsList command (not showWelcome)', async () => {
                 // Given: Project exists and user confirms deletion
-                mockStateManager.getCurrentProject.mockResolvedValue({
-                    name: 'test-project',
-                    path: testProjectPath,
-                    status: 'stopped',
-                } as any);
+                mockStateManager.getCurrentProject.mockResolvedValue(
+                    createMockProject({ name: 'test-project', path: testProjectPath, status: 'stopped' })
+                );
 
                 // When: User deletes the project
                 await command.execute();
@@ -179,11 +96,9 @@ describe('DeleteProjectCommand - Navigation', () => {
         describe('When that project is deleted', () => {
             it('should still show Projects List (empty state handled by UI)', async () => {
                 // Given: User has only one project (simulated - same test setup)
-                mockStateManager.getCurrentProject.mockResolvedValue({
-                    name: 'only-project',
-                    path: testProjectPath,
-                    status: 'stopped',
-                } as any);
+                mockStateManager.getCurrentProject.mockResolvedValue(
+                    createMockProject({ name: 'only-project', path: testProjectPath, status: 'stopped' })
+                );
 
                 // When: The last project is deleted
                 await command.execute();

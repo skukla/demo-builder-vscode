@@ -88,6 +88,15 @@ describe('AiMcpsList', () => {
         expect(screen.getByTestId('ai-mcp-empty-server')).toHaveTextContent(/0 tools\b/i);
     });
 
+    it('renders a healthy MCP whose tools field is ABSENT as "0 tools"', () => {
+        // `tools` is optional on McpInventoryEntry: an inspector that answered
+        // but advertised nothing leaves it undefined rather than empty. Reading
+        // `.length` off it directly throws and takes the whole panel down, so
+        // the count has to survive a missing field, not just an empty array.
+        renderList({ mcps: [{ id: 'toolless', status: 'ok' }] });
+        expect(screen.getByTestId('ai-mcp-toolless')).toHaveTextContent(/0 tools\b/i);
+    });
+
     it('flags MCPs that timed out during inspection', () => {
         renderList({ mcps: [{ id: 'slow', status: 'timeout' }] });
         expect(screen.getByTestId('ai-mcp-slow')).toHaveTextContent(/timed out|timeout/i);
@@ -96,6 +105,14 @@ describe('AiMcpsList', () => {
     it('flags MCPs that errored during inspection', () => {
         renderList({ mcps: [{ id: 'broken', status: 'error', error: 'spawn failed' }] });
         expect(screen.getByTestId('ai-mcp-broken')).toHaveTextContent(/error|failed/i);
+    });
+
+    it('still names the failure when an errored MCP carries no message', () => {
+        // `error` is optional: an inspector can fail without producing a
+        // diagnostic. The row must still read as a failure rather than
+        // trailing off after the label.
+        renderList({ mcps: [{ id: 'mute', status: 'error' }] });
+        expect(screen.getByTestId('ai-mcp-mute')).toHaveTextContent(/error/i);
     });
 
     it('shows a plain-language empty state when there are no MCPs', () => {
@@ -120,6 +137,27 @@ describe('AiMcpsList', () => {
         const rows = screen.getAllByTestId(/^ai-mcp-/);
         const ids = rows.map((r) => r.getAttribute('data-testid'));
         expect(ids).toEqual(['ai-mcp-alpha', 'ai-mcp-beta', 'ai-mcp-zeta']);
+    });
+
+    it('re-sorts when the mcps prop changes — the memo tracks its input', () => {
+        // The sort is memoised on `mcps`. Drop that dependency and the list
+        // freezes on whatever the first render was handed: the verify finishes,
+        // hands down a real inventory, and the panel keeps showing the old one.
+        const { rerender } = render(
+            <Provider theme={defaultTheme}>
+                <AiMcpsList mcps={[{ id: 'zeta', status: 'ok', tools: [] }]} />
+            </Provider>
+        );
+        expect(screen.getByTestId('ai-mcp-zeta')).toBeInTheDocument();
+
+        rerender(
+            <Provider theme={defaultTheme}>
+                <AiMcpsList mcps={[{ id: 'alpha', status: 'ok', tools: [] }]} />
+            </Provider>
+        );
+
+        expect(screen.getByTestId('ai-mcp-alpha')).toBeInTheDocument();
+        expect(screen.queryByTestId('ai-mcp-zeta')).not.toBeInTheDocument();
     });
 
     it('sorts by the DISPLAYED label, not the id', () => {

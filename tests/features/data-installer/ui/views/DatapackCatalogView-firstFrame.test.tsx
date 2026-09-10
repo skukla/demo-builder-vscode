@@ -22,6 +22,7 @@
  * first.
  */
 
+import '../../../../helpers/webviewClientMock';
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
@@ -49,10 +50,6 @@ jest.mock('@/core/ui/hooks/useVSCodeRequest', () => ({
     }),
 }));
 
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: { request: jest.fn(), postMessage: jest.fn() },
-}));
-
 // Below the mocks on purpose — see webview-test-authoring §3.
 import { DatapackCatalogView } from '@/features/data-installer/ui/views/DatapackCatalogView';
 
@@ -66,8 +63,6 @@ describe('DatapackCatalogView — the frame before the fetch', () => {
     it('shows no search bar, which belongs to a list that has not arrived', () => {
         render(<DatapackCatalogView />);
 
-        expect(
-            screen.queryByRole('searchbox', { name: /filter|search/i }),
-        ).not.toBeInTheDocument();
+        expect(screen.queryByRole('searchbox', { name: /filter|search/i })).not.toBeInTheDocument();
     });
 });

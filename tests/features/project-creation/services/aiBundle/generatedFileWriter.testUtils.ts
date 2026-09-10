@@ -6,17 +6,10 @@
  */
 
 import { createGeneratedFileWriter } from '@/features/project-creation/services/aiBundle/generatedFileWriter';
-import type { Logger } from '@/types/logger';
 
-export function makeMockLogger(): Logger {
-    return {
-        trace: jest.fn(),
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    };
-}
+/** Canonical logger fake (ADR-016); local name kept so consumers are unchanged. */
+import { createMockLogger as makeMockLogger } from '../../../../helpers/loggerFake';
+export { makeMockLogger };
 
 /**
  * Real ADR-013 writer over the suite's mocked fs. With no recorded hashes it

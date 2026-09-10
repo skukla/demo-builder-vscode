@@ -29,7 +29,7 @@ import { HelixService } from '../helix/helixService';
 import type { PhaseProgressCallback } from '../types';
 import { updateStorefrontState } from './storefrontStalenessDetector';
 import { COMPONENT_IDS } from '@/core/constants';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 
 // ==========================================================
@@ -217,6 +217,16 @@ export async function republishStorefrontConfig(params: RepublishParams): Promis
         }
 
         // Step 3: Write config.json to component path
+        //
+        // A PLAIN OVERWRITE, DELIBERATELY. config.json is generated output — it is
+        // derived entirely from the project's own configuration by `generateConfigJson`
+        // above, and regenerating it is the whole job of a republish. It is not meant to
+        // be hand-edited (owner, 2026-09-02), so there is nothing here for the ADR-013
+        // hash-and-skip seam to protect and no user edit to preserve.
+        //
+        // That seam is scoped to the generated AI BUNDLE (`aiBundle/`), which lands in a
+        // project people then edit. Reaching for it here would be applying the right rule
+        // to the wrong file.
         onProgress?.('Writing config.json...');
         const configJsonPath = path.join(componentPath, 'config.json');
 
@@ -323,6 +333,17 @@ export interface RepublishContentParams {
     githubTokenService: GitHubTokenService;
     /** Optional per-step progress callback. */
     onProgress?: (message: string) => void;
+    /**
+     * Helix seam. Defaults to a service built from this call's logger and
+     * credentials; production never passes it.
+     *
+     * HelixService is stateless, so ADR-015 leaves the construction here — the cost
+     * was test design. `storefrontRepublishContent.test.ts` had to `jest.mock` the
+     * module to reach `previewCode`/`purgeCacheAll`/`publishAllSiteContent`, and its
+     * prewarm assertion could only say `expect.anything()` about the instance it
+     * could not name. With the seam it asserts the identity it handed in.
+     */
+    helixService?: HelixService;
 }
 
 /** Result of the full content republish. */
@@ -362,7 +383,9 @@ export async function republishStorefrontContent(
 
     try {
         const daLiveTokenProvider = createDaLiveServiceTokenProvider(daLiveAuthService);
-        const helixService = new HelixService(logger, githubTokenService, daLiveTokenProvider);
+        const helixService =
+            params.helixService ??
+            new HelixService(logger, githubTokenService, daLiveTokenProvider);
         const daLiveContentOps = new DaLiveContentOperations(daLiveTokenProvider, logger);
 
         // Step 1: Apply EDS site config (AEM Assets, authoring experience).

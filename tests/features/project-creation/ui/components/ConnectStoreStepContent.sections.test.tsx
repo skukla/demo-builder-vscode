@@ -15,12 +15,18 @@
  * See ConnectStoreStepContent.test.tsx (Part 1) and *.advanced.test.tsx (Part 2).
  */
 
+import {
+    mockUseComponentConfig,
+    mockUseStoreDiscovery,
+} from './ConnectStoreStepContent.sharedMocks';
+import {
+    mockLookupComponentConfigValue,
+} from './ConnectStoreStepContent.testUtils';
 import React from 'react';
 import { render, screen, within } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import '@testing-library/jest-dom';
 import {
-    type MockServiceGroup,
     ACCS_ENDPOINT_KEY,
     PAAS_URL,
     PAAS_ADMIN_USERNAME,
@@ -34,38 +40,6 @@ import {
 // ---------------------------------------------------------------------------
 // Mock setup (mirrors ConnectStoreStepContent.test.tsx)
 // ---------------------------------------------------------------------------
-
-const mockUseComponentConfig = {
-    isLoading: false,
-    loadError: null as string | null,
-    serviceGroups: [] as MockServiceGroup[],
-    validationErrors: {} as Record<string, string>,
-    touchedFields: new Set<string>(),
-    componentConfigs: {} as Record<string, Record<string, string | boolean>>,
-    updateField: jest.fn(),
-    getFieldValue: jest.fn().mockReturnValue(''),
-    normalizeUrlField: jest.fn(),
-};
-
-const mockUseStoreDiscovery = {
-    isFetching: false,
-    fetchError: null as string | null,
-    hasStoreData: false,
-    fetchStores: jest.fn(),
-    getWebsiteItems: jest.fn().mockReturnValue([]),
-    getStoreGroupItems: jest.fn().mockReturnValue([]),
-    getStoreViewItems: jest.fn().mockReturnValue([]),
-    isStoreGroup: jest.fn((groupId: string) => groupId === 'accs' || groupId === 'adobe-commerce'),
-};
-
-jest.mock('@/features/components/ui/hooks/useComponentConfig', () => ({
-    useComponentConfig: () => mockUseComponentConfig,
-    __esModule: true,
-}));
-
-jest.mock('@/features/components/ui/hooks/useStoreDiscovery', () => ({
-    useStoreDiscovery: () => mockUseStoreDiscovery,
-}));
 
 jest.mock('@/features/components/ui/components/ConfigFieldRenderer', () => ({
     ConfigFieldRenderer: ({ field, value, error, isTouched, onUpdate, onNormalizeUrl }: any) => (
@@ -83,33 +57,8 @@ jest.mock('@/features/components/ui/components/ConfigFieldRenderer', () => ({
     ),
 }));
 
-jest.mock('@/features/components/ui/components/StoreSelectionRow', () => ({
-    StoreSelectionRow: ({ group }: any) => (
-        <div data-testid={`store-selection-row-${group.id}`}>Store Selection for {group.label}</div>
-    ),
-}));
-
-const mockLookupComponentConfigValue = jest.fn();
-jest.mock('@/features/components/services/envVarHelpers', () => ({
-    lookupComponentConfigValue: (...args: any[]) => mockLookupComponentConfigValue(...args),
-    // Derived from the mocked lookup rather than stubbed separately, so this cannot
-    // disagree with it. `useAutoStoreDetect` reads the admin pair through this now;
-    // a mock that omitted it failed with "readPaasAdminPair is not a function".
-    readPaasAdminPair: (configs: any) => {
-        const username = mockLookupComponentConfigValue(configs, 'ADOBE_COMMERCE_ADMIN_USERNAME');
-        const password = mockLookupComponentConfigValue(configs, 'ADOBE_COMMERCE_ADMIN_PASSWORD');
-        return username && password ? { username, password } : undefined;
-    },
-}));
-
 jest.mock('@/core/ui/components/feedback/LoadingDisplay', () => ({
     LoadingDisplay: ({ message }: any) => <div data-testid="loading-display">{message}</div>,
-}));
-
-jest.mock('@/core/ui/components/layout/CenteredFeedbackContainer', () => ({
-    CenteredFeedbackContainer: ({ children }: any) => (
-        <div data-testid="centered-feedback">{children}</div>
-    ),
 }));
 
 // ---------------------------------------------------------------------------
@@ -193,7 +142,7 @@ describe('ConnectStoreStepContent - section filtering', () => {
 
     describe('section="connection"', () => {
         it('should render endpoint/credential fields', () => {
-            mockUseComponentConfig.serviceGroups = [paasServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [paasServiceGroup];
 
             renderWithProvider(<ConnectStoreStepContent {...defaultProps} section="connection" />);
 
@@ -203,7 +152,7 @@ describe('ConnectStoreStepContent - section filtering', () => {
         });
 
         it('should not render the store-view cascade', () => {
-            mockUseComponentConfig.serviceGroups = [paasServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [paasServiceGroup];
             // Even with connection filled (cascade would otherwise be reachable)
             configurePaasConnectionFilled();
 
@@ -220,8 +169,8 @@ describe('ConnectStoreStepContent - section filtering', () => {
 
         it('should not render the catalog/assets groups', () => {
             mockUseComponentConfig.serviceGroups = [
-                paasServiceGroup as any,
-                catalogServiceGroup as any,
+                paasServiceGroup,
+                catalogServiceGroup,
             ];
             // Even when store selection is complete (catalog would otherwise show)
             configureStoreViewFilled();
@@ -241,7 +190,7 @@ describe('ConnectStoreStepContent - section filtering', () => {
 
     describe('section="business-structure"', () => {
         it('should render the store-view cascade', () => {
-            mockUseComponentConfig.serviceGroups = [paasServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [paasServiceGroup];
             configurePaasConnectionFilled();
             // The cascade renders once discovery has populated the structure.
             mockUseStoreDiscovery.hasStoreData = true;
@@ -254,7 +203,7 @@ describe('ConnectStoreStepContent - section filtering', () => {
         });
 
         it('should not render the raw connection endpoint fields', () => {
-            mockUseComponentConfig.serviceGroups = [paasServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [paasServiceGroup];
             configurePaasConnectionFilled();
             // Store data present → the cascade renders (not the detection loader).
             mockUseStoreDiscovery.hasStoreData = true;
@@ -274,8 +223,8 @@ describe('ConnectStoreStepContent - section filtering', () => {
 
         it('should not render the catalog groups', () => {
             mockUseComponentConfig.serviceGroups = [
-                paasServiceGroup as any,
-                catalogServiceGroup as any,
+                paasServiceGroup,
+                catalogServiceGroup,
             ];
             configureStoreViewFilled();
             mockUseStoreDiscovery.hasStoreData = true;
@@ -288,7 +237,7 @@ describe('ConnectStoreStepContent - section filtering', () => {
         });
 
         it('shows the step-level "Detecting store structure..." loader (centered, like auth) while detecting', () => {
-            mockUseComponentConfig.serviceGroups = [paasServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [paasServiceGroup];
             configurePaasConnectionFilled();
             // Detection in flight: no store data yet.
             mockUseStoreDiscovery.hasStoreData = false;
@@ -317,8 +266,8 @@ describe('ConnectStoreStepContent - section filtering', () => {
     describe('section="catalog"', () => {
         it('should render the catalog/assets groups when store-view is chosen', () => {
             mockUseComponentConfig.serviceGroups = [
-                paasServiceGroup as any,
-                catalogServiceGroup as any,
+                paasServiceGroup,
+                catalogServiceGroup,
             ];
             configureStoreViewFilled();
 
@@ -330,8 +279,8 @@ describe('ConnectStoreStepContent - section filtering', () => {
 
         it('should show a gate hint when store-view is not chosen', () => {
             mockUseComponentConfig.serviceGroups = [
-                paasServiceGroup as any,
-                catalogServiceGroup as any,
+                paasServiceGroup,
+                catalogServiceGroup,
             ];
             // store view NOT filled → gated
             mockLookupComponentConfigValue.mockReturnValue(undefined);
@@ -344,8 +293,8 @@ describe('ConnectStoreStepContent - section filtering', () => {
 
         it('should not render the connection fields', () => {
             mockUseComponentConfig.serviceGroups = [
-                paasServiceGroup as any,
-                catalogServiceGroup as any,
+                paasServiceGroup,
+                catalogServiceGroup,
             ];
             configureStoreViewFilled();
 
@@ -364,7 +313,7 @@ describe('ConnectStoreStepContent - section filtering', () => {
 
     describe('no section prop (unchanged behavior)', () => {
         it('should render all connection fields when section is absent', () => {
-            mockUseComponentConfig.serviceGroups = [paasServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [paasServiceGroup];
 
             renderWithProvider(<ConnectStoreStepContent {...defaultProps} />);
 
@@ -374,8 +323,8 @@ describe('ConnectStoreStepContent - section filtering', () => {
 
         it('should render connection + cascade + catalog together when section is absent', () => {
             mockUseComponentConfig.serviceGroups = [
-                paasServiceGroup as any,
-                catalogServiceGroup as any,
+                paasServiceGroup,
+                catalogServiceGroup,
             ];
             configureStoreViewFilled();
             // The cascade renders once discovery has populated the structure.

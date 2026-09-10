@@ -25,20 +25,6 @@ export {};
 const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
-jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: { NORMAL: 30000, POLL: { INTERVAL: 5000 } },
-}));
-
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn(() => ({
-        trace: jest.fn(),
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
-}));
-
 describe('GitHubAppService — an inner code.status Helix will not stand behind', () => {
     let GitHubAppService: any;
     let mockTokenService: any;

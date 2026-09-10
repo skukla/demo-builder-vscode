@@ -20,7 +20,7 @@
  */
 
 import * as vscode from 'vscode';
-import type { CacheEntry } from '@/core/cache';
+import type { CacheEntry } from '@/core/cache/cacheUtils';
 
 /** Persisted API key data for cross-restart reuse */
 export interface PersistedHelixKey {

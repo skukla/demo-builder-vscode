@@ -5,18 +5,10 @@
  * This is CRITICAL infrastructure - handles theme sync, handshake, and Provider setup.
  */
 
+import '../../../helpers/webviewClientMock';
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-
-// Create mocks that can be accessed before Jest hoisting
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        postMessage: jest.fn(),
-        onMessage: jest.fn(),
-        ready: jest.fn(),
-    },
-}));
 
 // Import after mock is set up
 import { WebviewApp } from '@/core/ui/components/WebviewApp';
@@ -48,11 +40,15 @@ describe('WebviewApp', () => {
         document.body.className = '';
     });
 
-    // Helper to trigger a message
+    // Helper to trigger a message.
+    //
+    // act()-wrapped: this pushes a message straight into the component's
+    // subscriber, so the state update has no React event behind it and warns
+    // when bare. A synchronous act is correct — the handlers set state directly.
     const triggerMessage = (type: string, data: unknown) => {
         const handler = messageHandlers.get(type);
         if (handler) {
-            handler(data);
+            act(() => handler(data));
         }
     };
 
@@ -142,6 +138,62 @@ describe('WebviewApp', () => {
         });
     });
 
+    // The effect re-subscribes and re-checks on every dependency change, and the
+    // ready guard is a REF, so it has to survive those re-runs. Both directions
+    // were unconstrained: nothing noticed a second `ready`, and nothing noticed a
+    // handler left closed over the first render's props.
+    describe('effect re-runs', () => {
+        it('sends ready ONCE even when the effect runs again (StrictMode remount)', async () => {
+            const view = render(
+                <WebviewApp notifyReady onInit={jest.fn()}>
+                    <div>Content</div>
+                </WebviewApp>
+            );
+
+            await waitFor(() => {
+                expect(mockPostMessage).toHaveBeenCalledWith('ready');
+            });
+
+            // A NEW onInit identity re-runs the effect, and `ready()` resolves again.
+            await act(async () => {
+                view.rerender(
+                    <WebviewApp notifyReady onInit={jest.fn()}>
+                        <div>Content</div>
+                    </WebviewApp>
+                );
+            });
+
+            expect(mockReady.mock.calls.length).toBeGreaterThan(1);
+            expect(mockPostMessage.mock.calls.filter(([type]) => type === 'ready'))
+                .toHaveLength(1);
+        });
+
+        it('calls the CURRENT onInit after a rerender, not the one from mount', async () => {
+            const first = jest.fn();
+            const second = jest.fn();
+
+            const view = render(
+                <WebviewApp onInit={first}>
+                    <div>Content</div>
+                </WebviewApp>
+            );
+            view.rerender(
+                <WebviewApp onInit={second}>
+                    <div>Content</div>
+                </WebviewApp>
+            );
+
+            triggerMessage('init', { project: 'test-project' });
+
+            await waitFor(() => {
+                expect(second).toHaveBeenCalledWith(
+                    expect.objectContaining({ project: 'test-project' })
+                );
+            });
+            expect(first).not.toHaveBeenCalled();
+        });
+    });
+
     describe('theme handling (unified theme system)', () => {
         // Unified theme system: Always uses dark mode, ignores VS Code theme preferences
 
@@ -196,7 +248,14 @@ describe('WebviewApp', () => {
     describe('render props pattern', () => {
         it('supports function children (render props)', async () => {
             render(
-                <WebviewApp>{(data) => <div>Data: {String((data as { customProp?: string } | null)?.customProp ?? 'none')}</div>}</WebviewApp>
+                <WebviewApp>
+                    {(data) => (
+                        <div>
+                            Data:{' '}
+                            {String((data as { customProp?: string } | null)?.customProp ?? 'none')}
+                        </div>
+                    )}
+                </WebviewApp>
             );
 
             triggerMessage('init', { customProp: 'test-value' });
@@ -209,7 +268,7 @@ describe('WebviewApp', () => {
         it('passes init data to render function', async () => {
             render(
                 <WebviewApp>
-                    {(data) => <div>Custom: {(data as any)?.customProp || 'missing'}</div>}
+                    {(data) => <div>Custom: {String(data?.customProp || 'missing')}</div>}
                 </WebviewApp>
             );
 

@@ -494,8 +494,8 @@ describe('toolHandlers.promoteBlockToLibrary', () => {
         // load-bearing text directly from the source via the un-mocked fs
         // module (jest.requireActual — `fs/promises` is mocked globally by
         // mcpServer.testUtils.ts).
-        const realFs = jest.requireActual('fs') as typeof import('fs');
-        const realPath = jest.requireActual('path') as typeof import('path');
+        const realFs = jest.requireActual('fs');
+        const realPath = jest.requireActual('path');
         const srcPath = realPath.resolve(__dirname, '../../../src/mcp-server.ts');
         const src = realFs.readFileSync(srcPath, 'utf-8');
         expect(src).toContain('promote_block_to_library');
@@ -550,20 +550,37 @@ describe('promote_block_to_library — credential source', () => {
         );
     });
 
-    it('throws when no DA.live token is supplied (user not signed in)', async () => {
+    it('answers with a sign-in marker when DA.live is not signed in, and writes nothing', async () => {
+        /**
+         * Two behaviours, one cause, both changed on 2026-09-01.
+         *
+         * It used to THROW — an MCP error the caller cannot branch on, for the
+         * most ordinary state an agent is in. And the check ran AFTER
+         * applyComponentDefinitionEntry, so a signed-out caller got the error
+         * with component-definition.json already rewritten on disk: a half-done
+         * promotion nobody asked for and nothing would finish.
+         *
+         * The writeFile assertion is the load-bearing one. The old test could
+         * not have caught the stray write — a rejected promise says nothing
+         * about what happened before it.
+         */
         mockHappyPathFilesystem({ componentDef: [] });
 
-        await expect(
-            toolHandlers.promoteBlockToLibrary(
-                PROJECTS_DIR,
-                PROJECT_NAME,
-                BLOCK_ID,
-                BLOCK_TITLE,
-                BLOCK_HTML,
-                undefined,
-                { daLiveToken: null, githubToken: null }
-            )
-        ).rejects.toThrow(/DA\.live token unavailable/i);
+        const raw = await toolHandlers.promoteBlockToLibrary(
+            PROJECTS_DIR,
+            PROJECT_NAME,
+            BLOCK_ID,
+            BLOCK_TITLE,
+            BLOCK_HTML,
+            undefined,
+            { daLiveToken: null, githubToken: null }
+        );
+
+        expect(JSON.parse(raw)).toEqual({
+            error: expect.stringContaining('sign_in(provider:"dalive"'),
+            needsAuth: 'dalive',
+        });
+        expect(fsProm.writeFile as jest.Mock).not.toHaveBeenCalled();
     });
 
     /** Register the real tools against a stub server and hand back the promote tool. */

@@ -20,6 +20,8 @@ import {
     toDependencyData,
     withEnvVarKeys,
 } from '../services/componentTransforms';
+import { toAppError } from '@/core/errors';
+import { componentRegistryFrom } from '@/features/components/services/componentRegistryAccess';
 import {
     ComponentRegistryManager,
     DependencyResolver,
@@ -28,7 +30,6 @@ import {
     ComponentSelection,
     type ComponentConfigs as ComponentConfigsData,
 } from '@/types/components';
-import { toAppError } from '@/types/errors';
 import { HandlerContext, MessageHandler } from '@/types/handlers';
 import { getEntryCount } from '@/types/typeGuards';
 import type { ComponentsDataPayload, GetComponentsDataResponse } from '@/types/webviewRequests';
@@ -37,7 +38,7 @@ import type { ComponentsDataPayload, GetComponentsDataResponse } from '@/types/w
  * Create a ComponentRegistryManager for the current extension context
  */
 function createRegistryManager(context: HandlerContext): ComponentRegistryManager {
-    return new ComponentRegistryManager(context.context.extensionPath);
+    return componentRegistryFrom(context);
 }
 
 /**

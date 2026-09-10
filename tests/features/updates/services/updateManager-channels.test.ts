@@ -11,43 +11,12 @@
  * Total tests: 3
  */
 
-// Mock vscode
-jest.mock('vscode', () => ({
-    workspace: {
-        getConfiguration: jest.fn(),
-    },
-}), { virtual: true });
-
-// Mock Logger
-jest.mock('@/core/logging', () => ({
-    Logger: jest.fn().mockImplementation(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
-}));
-
-// Mock timeoutConfig - uses semantic categories
-jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: {
-        QUICK: 5000, // Fast operations (replaces UPDATE_CHECK)
-    },
-}));
-
-// Mock security validation
-jest.mock('@/core/validation', () => ({
-    validateGitHubDownloadURL: jest.fn().mockReturnValue(true),
-    sanitizeErrorForLogging: jest.fn((msg: string) => msg),
-}));
-
 // Mock global fetch
-global.fetch = jest.fn() as jest.Mock;
+global.fetch = jest.fn();
 
-import { UpdateManager } from '@/features/updates/services/updateManager';
-import * as vscode from 'vscode';
+import { UpdateManager, vscode } from './updateManager.testUtils';
 import {
-    createMockContext,
+    createUpdateManagerContext,
     createMockLogger,
     createMockWorkspaceConfig,
     createMockRelease,
@@ -62,7 +31,7 @@ describe('UpdateManager - Update Channels', () => {
     beforeEach(() => {
         jest.clearAllMocks();
 
-        mockContext = createMockContext('1.0.0');
+        mockContext = createUpdateManagerContext('1.0.0');
         mockLogger = createMockLogger();
     });
 
@@ -107,7 +76,8 @@ describe('UpdateManager - Update Channels', () => {
                     assets: [
                         {
                             name: 'extension.vsix',
-                            browser_download_url: 'https://github.com/test/repo/releases/download/v1.2.0-beta.1/extension.vsix',
+                            browser_download_url:
+                                'https://github.com/test/repo/releases/download/v1.2.0-beta.1/extension.vsix',
                         },
                     ],
                 },
@@ -120,7 +90,8 @@ describe('UpdateManager - Update Channels', () => {
                     assets: [
                         {
                             name: 'extension.vsix',
-                            browser_download_url: 'https://github.com/test/repo/releases/download/v1.1.0/extension.vsix',
+                            browser_download_url:
+                                'https://github.com/test/repo/releases/download/v1.1.0/extension.vsix',
                         },
                     ],
                 },
@@ -161,7 +132,8 @@ describe('UpdateManager - Update Channels', () => {
                     assets: [
                         {
                             name: 'extension.vsix',
-                            browser_download_url: 'https://github.com/test/repo/releases/download/v1.2.0-beta.1/extension.vsix',
+                            browser_download_url:
+                                'https://github.com/test/repo/releases/download/v1.2.0-beta.1/extension.vsix',
                         },
                     ],
                 },

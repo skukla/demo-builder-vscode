@@ -1,6 +1,6 @@
 # ADR-013: Generated AI Files — Hash-and-Skip Edit Survival
 
-**Status**: Implemented 2026-08-14 (`feature/tiered-ai-refresh`) — `generatedFileWriter.ts` is the seam; hashes live in the manifest's `aiFileHashes`; the activation sweep (`aiBundleActivationRefresh.ts`) is the silent driver
+**Status**: Accepted — implemented 2026-08-14 (`feature/tiered-ai-refresh`) — `generatedFileWriter.ts` is the seam; hashes live in the manifest's `aiFileHashes`; the activation sweep (`aiBundleActivationRefresh.ts`) is the silent driver
 **Date**: 2026-08-14
 **Decision Maker**: Project Owner
 **Implementer**: Implemented on `feature/tiered-ai-refresh` (steps 1-8, TDD)
@@ -84,3 +84,9 @@ the extension owns.
   generator forever, and protects nothing on the paths that already regenerate
   without asking (`updateExecutor` after an Adobe MCP package update) — the
   protection it offers is already inconsistent today.
+
+## Reference notes
+
+- `.claude/mcp.json` — a file this extension GENERATES into a user's project. It does not
+  exist in this repository, and the decision is precisely about how such generated files
+  survive user edits.

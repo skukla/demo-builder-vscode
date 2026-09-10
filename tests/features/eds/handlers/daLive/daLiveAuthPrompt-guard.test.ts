@@ -79,15 +79,6 @@ jest.mock(
 );
 
 // Mock core logging (prevents "Logger not initialized" error)
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn().mockReturnValue({
-        info: jest.fn(),
-        debug: jest.fn(),
-        error: jest.fn(),
-        warn: jest.fn(),
-    }),
-    initializeLogger: jest.fn(),
-}));
 
 // Mock DaLiveAuthService - used by both ensureDaLiveAuth (isAuthenticated)
 // and showDaLiveAuthQuickPick (getOrgName, storeToken)
@@ -113,15 +104,9 @@ jest.mock('@/features/eds/services/daLive/daLiveAuthService', () => {
 });
 
 // Mock remaining service imports required by daLiveAuthPrompt to load
-jest.mock('@/features/eds/services/github/githubTokenService');
-jest.mock('@/features/eds/services/github/githubRepoOperations');
-jest.mock('@/features/eds/services/github/githubFileOperations');
-jest.mock('@/features/eds/services/github/githubOAuthService');
-jest.mock('@/features/eds/services/daLive/daLiveOrgOperations');
-jest.mock('@/features/eds/services/daLive/daLiveContentOperations');
-jest.mock('@/features/eds/services/helix/helixService', () => ({
-    HelixService: { initKeyStore: jest.fn() },
-}));
+// HelixService is NOT mocked. Its only use on this path is the STATIC `initKeyStore`,
+// which returns early unless the fake Memento hands back legacy keys — so the real one
+// runs harmlessly and the mock was silencing nothing. Measured 2026-08-31.
 jest.mock('@/core/utils/oneTimeTip', () => ({
     showOneTimeTip: jest.fn(),
 }));
@@ -131,48 +116,17 @@ jest.mock('@/core/utils/oneTimeTip', () => ({
 // =============================================================================
 
 import * as vscode from 'vscode';
-import { ensureDaLiveAuth, type DaLiveGuardResult } from '@/features/eds/handlers/daLive/daLiveAuthPrompt';
-import { clearServiceCache } from '@/features/eds/handlers/edsServiceCache';
+import {
+    clearServiceCache,
+    createAuthPromptContext,
+    ensureDaLiveAuth,
+    type DaLiveGuardResult,
+} from './daLiveAuthPrompt.testUtils';
 
 // =============================================================================
 // Test Utilities
 // =============================================================================
 
-function createMockContext(): HandlerContext {
-    return {
-        panel: {
-            webview: { postMessage: jest.fn() },
-        } as unknown as HandlerContext['panel'],
-        stateManager: {
-            loadProjectFromPath: jest.fn(),
-            getCurrentProject: jest.fn(),
-        } as unknown as HandlerContext['stateManager'],
-        logger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-            trace: jest.fn(),
-        } as unknown as HandlerContext['logger'],
-        debugLogger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-            trace: jest.fn(),
-        } as unknown as HandlerContext['debugLogger'],
-        sendMessage: jest.fn(),
-        context: {
-            globalState: {
-                get: jest.fn(),
-                update: jest.fn().mockResolvedValue(undefined),
-            },
-        } as unknown as HandlerContext['context'],
-        sharedState: {
-            isAuthenticating: false,
-        },
-    } as unknown as HandlerContext;
-}
 
 function resetMockState(): void {
     showInputBoxResponses = [];
@@ -194,7 +148,7 @@ describe('ensureDaLiveAuth', () => {
         jest.clearAllMocks();
         clearServiceCache();
         resetMockState();
-        mockContext = createMockContext();
+        mockContext = createAuthPromptContext();
     });
 
     // =========================================================================
@@ -258,9 +212,25 @@ describe('ensureDaLiveAuth', () => {
         // When: ensureDaLiveAuth is called
         const result = await ensureDaLiveAuth(mockContext);
 
-        // Then: Should return not authenticated with error
+        // Then: Should return not authenticated, carrying the REASON rather than a
+        // generic one. `toBeDefined()` passed whether the real reason survived or was
+        // replaced by the fallback, which is why the fallback went untested.
         expect(result.authenticated).toBe(false);
-        expect(result.error).toBeDefined();
+        expect(result.error).toMatch(/token format/i);
+    });
+
+    it('falls back to a generic reason when the flow gives none', async () => {
+        // Cancelling produces no error text of its own, and the guard's caller still
+        // needs something to show. Without the fallback the caller reports a failure
+        // with an empty reason.
+        mockIsAuthenticated.mockResolvedValue(false);
+        showWarningMessageResponse = 'Sign In';
+        showInfoMessageResponse = undefined; // dismissed
+
+        const result = await ensureDaLiveAuth(mockContext);
+
+        expect(result.authenticated).toBe(false);
+        expect(result.error).toBe('DA.live authentication required');
     });
 
     it('should return cancelled when QuickPick is cancelled', async () => {
@@ -400,7 +370,7 @@ describe('ensureDaLiveAuth — server probe', () => {
         jest.clearAllMocks();
         clearServiceCache();
         resetMockState();
-        mockContext = createMockContext();
+        mockContext = createAuthPromptContext();
         mockIsAuthenticated.mockResolvedValue(true);
     });
 
@@ -414,6 +384,22 @@ describe('ensureDaLiveAuth — server probe', () => {
         expect(result).toMatchObject({ authenticated: false, cancelled: true });
         expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
             expect.stringContaining('refused'),
+            'Sign In'
+        );
+    });
+
+    it('says EXPIRED, not refused, when the local check is what failed', async () => {
+        // The two causes send the SC to different places: an expiry means fetch
+        // a fresh token, a refusal means the namespace does not accept this
+        // identity. Defaulting to the refusal copy tells everyone whose token
+        // simply ran out to go check the wrong thing.
+        mockIsAuthenticated.mockResolvedValue(false);
+        showWarningMessageResponse = undefined;
+
+        await ensureDaLiveAuth(mockContext, '[Test]', 'acme');
+
+        expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
+            'Your DA.live session has expired. Please sign in to continue.',
             'Sign In'
         );
     });

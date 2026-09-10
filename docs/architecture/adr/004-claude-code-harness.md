@@ -1,6 +1,27 @@
 # ADR-004: Claude Code (CLI) as the AI Harness
 
-**Status**: Accepted
+**Status**: Accepted — original decision (Claude Code CLI is the harness) STILL STANDS.
+Its delivery mechanics are **superseded by [ADR-019](019-claude-code-delivery-terminal-only.md)**.
+
+> **Read ADR-019 for what is true today. EVERYTHING below this line is the May 2026
+> record** — the Decision and Consequences sections included, not only the amendments.
+>
+> The six amendments were applied to this document in place, each partially superseding
+> the last: amendment 5 retires the extension surface that amendments 2 and 3
+> established. Resolving them in order is not something a reader should have to do, and
+> the identifiers they name are mostly surfaces since removed.
+>
+> **The quarantine was widened on 2026-08-30**, because it had covered only "the
+> amendments below" while the stale part a reader meets FIRST is the Decision section.
+> It documents a `demoBuilder.ai.harness` setting with three modes; that setting does
+> not exist and has not for months, and its `'extension'` mode names a surface ADR-019
+> retired. Consequences is stale the same way — it describes the MCP server as a
+> standalone `dist/mcp-server.js` process, which the sixth amendment replaced with the
+> in-extension server. In-place amendment puts the oldest text where it reads as
+> current; that is the failure mode, and it is why ADR-019 exists as a separate record.
+>
+> Kept whole, as the history it is. One live claim survives all of it, and it is the one
+> in the title: Claude Code (CLI) is the harness.
 **Date**: 2026-05-21
 **Decision Maker**: Project Team
 **Implementer**: AI Layer Pivot — Cycles A (2026-05-19), B (2026-05-20), C (2026-05-20), D (2026-05-21)
@@ -500,3 +521,22 @@ and the tools do the same work as the UI (single source of truth).
 
 Full architecture, tool catalog, and conventions:
 [`docs/systems/mcp-server.md`](../../systems/mcp-server.md).
+
+## Reference notes
+
+Almost every identifier in the amendments below names a surface that was built and later
+removed as the AI harness changed shape. `src/commands/aiMenu.ts`, `AiSetupTab`,
+`AiConfigurationTab`, `launchViaUri`, `getSurface`, `scheduleSpawnInject`,
+`getSpawnInjectDelayMs`, `browseClaudeSessions`, `handleBrowseClaudeSessions`,
+`markSessionsBrowserAutoShown`, `handleMarkSessionsBrowserAutoShown`,
+`revealSessionsBrowser`, `maybeOpenSessionsBrowserOnce`, `maybeShowFirstLaunchDialog`,
+`maybeShowMismatchWarning`, `maybeOfferExtensionSurface`, `maybeOfferDockToRight`,
+`handleMissingExtensionDialog`, `openProjectAsWorkspace`, `replayPendingClaudeLaunch`,
+`migrateHarnessSetting`, `ensureGlobalMcpRegistration`, `extensionInstalled` and
+`helixToken` resolve nowhere today.
+
+That is a symptom, not a filing error: a 500-line document with eight stacked amendments
+accumulates names faster than anyone reconciles them. The audit
+(`.rptc/research/adr-audit/research.md`) recommends splitting this into a supersession
+chain, at which point most of these names belong to superseded records where they are
+correct.

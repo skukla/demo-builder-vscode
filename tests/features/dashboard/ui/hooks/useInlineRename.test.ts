@@ -6,7 +6,6 @@
  * init so the title refreshes) and maps the response to the InlineRenameField
  * contract — null on success, an error message string otherwise.
  *
- * @jest-environment jsdom
  */
 
 import { renderHook } from '@testing-library/react';
@@ -57,5 +56,21 @@ describe('useInlineRename', () => {
         const { result } = renderHook(() => useInlineRename());
 
         await expect(result.current('x')).resolves.toBe('socket closed');
+    });
+
+    it('falls back when the request resolves with no response at all', async () => {
+        // A dropped/queued request resolves undefined; reading `success` or
+        // `error` off it directly would throw into the catch instead.
+        mockRequest.mockResolvedValue(undefined);
+        const { result } = renderHook(() => useInlineRename());
+
+        await expect(result.current('x')).resolves.toBe('Rename failed');
+    });
+
+    it('falls back when the rejection is not an Error', async () => {
+        mockRequest.mockRejectedValue('socket closed');
+        const { result } = renderHook(() => useInlineRename());
+
+        await expect(result.current('x')).resolves.toBe('Rename failed');
     });
 });

@@ -26,10 +26,14 @@
 jest.mock('@/core/utils/sleep', () => ({ sleep: jest.fn().mockResolvedValue(undefined) }));
 
 import { checkGitHubAppForExistingRepo } from '@/features/eds/handlers/storefrontSetup/storefrontSetupPhaseHelpers';
-import type { RepoInfo, SetupServices } from '@/features/eds/handlers/storefrontSetup/storefrontSetupTypes';
+import type {
+    RepoInfo,
+    SetupServices,
+} from '@/features/eds/handlers/storefrontSetup/storefrontSetupTypes';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
-
+import { createMockLogger } from '../../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../../helpers/handlerContextTestHelpers';
 
 const REPO_INFO: RepoInfo = {
     repoOwner: 'acme-demos',
@@ -40,16 +44,10 @@ const REPO_INFO: RepoInfo = {
 const INSTALL_URL = 'https://github.com/apps/aem-code-sync/installations/select_target';
 
 function makeContext(): HandlerContext {
-    return {
-        logger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-            trace: jest.fn(),
-        } as unknown as Logger,
+    return createMockHandlerContext({
+        logger: createMockLogger() as unknown as Logger,
         sendMessage: jest.fn().mockResolvedValue(undefined),
-    } as unknown as HandlerContext;
+    });
 }
 
 /** Build services whose `isAppInstalled` returns the given results in order. */
@@ -90,6 +88,24 @@ describe('checkGitHubAppForExistingRepo', () => {
 
             expect(result).toBeNull();
             expect(sentMessageTypes(context)).not.toContain('storefront-setup-github-app-required');
+        });
+    });
+
+    /**
+     * The opening progress push. `phase` and `progress` are what the wizard reads
+     * to place the step and move the bar — an empty payload leaves the bar where
+     * the previous phase left it and the surface says nothing happened, which is
+     * exactly the silence this gate must not produce while it waits on Helix.
+     */
+    it('opens by announcing the check on the storefront-code phase', async () => {
+        const context = makeContext();
+        const services = makeServices({ isInstalled: true, codeStatus: 200 });
+
+        await checkGitHubAppForExistingRepo(context, services, REPO_INFO);
+
+        expect(sentPayload(context, 'storefront-setup-progress')).toMatchObject({
+            phase: 'storefront-code',
+            progress: 28,
         });
     });
 
@@ -160,9 +176,7 @@ describe('checkGitHubAppForExistingRepo', () => {
 
             await checkGitHubAppForExistingRepo(context, outer404(), REPO_INFO);
 
-            expect(sentMessageTypes(context)).not.toContain(
-                'storefront-setup-github-app-required',
-            );
+            expect(sentMessageTypes(context)).not.toContain('storefront-setup-github-app-required');
         });
 
         it('says so in the progress feed rather than passing in silence', async () => {
@@ -189,6 +203,93 @@ describe('checkGitHubAppForExistingRepo', () => {
                 .join('\n');
             expect(logged).toMatch(/no site for/i);
             expect(logged).not.toMatch(/AEM Code Sync is not installed/i);
+        });
+
+        /**
+         * Whether to WAIT for Helix to register the site is the caller's call,
+         * and it is the one thing `afterReset` decides.
+         *
+         * After a reset the repo was just rewritten from the template, the AEM
+         * Code Sync webhook has fired, and the site appears on its own within
+         * seconds — so an outer 404 there is "not yet", worth waiting on. On any
+         * other path it is a settled answer (measured 2026-08-20: a repo that is
+         * not a storefront 404s permanently, 28 minutes after a successful
+         * code-sync trigger), and waiting only delays the verdict.
+         *
+         * These count the ATTEMPTS rather than the elapsed time — `sleep` is
+         * mocked at the top of this file — and they assert whether it waits at
+         * all, not how long, because the attempt budget is explicitly a starting
+         * guess rather than a measurement.
+         */
+        it('waits for registration when the repo was just reset', async () => {
+            const context = makeContext();
+            const services = outer404();
+
+            const result = await checkGitHubAppForExistingRepo(context, services, REPO_INFO, {
+                afterReset: true,
+            });
+
+            const attempts = (services.githubAppService.isAppInstalled as jest.Mock).mock.calls
+                .length;
+            expect(attempts).toBeGreaterThan(1);
+            expect(result).toBeNull();
+        });
+
+        it('does not wait when no reset just happened', async () => {
+            const context = makeContext();
+            const services = outer404();
+
+            await checkGitHubAppForExistingRepo(context, services, REPO_INFO);
+
+            expect(services.githubAppService.isAppInstalled).toHaveBeenCalledTimes(1);
+        });
+
+        it('treats an explicit afterReset:false the same as omitting it', async () => {
+            const context = makeContext();
+            const services = outer404();
+
+            await checkGitHubAppForExistingRepo(context, services, REPO_INFO, {
+                afterReset: false,
+            });
+
+            expect(services.githubAppService.isAppInstalled).toHaveBeenCalledTimes(1);
+        });
+
+        /**
+         * Both halves of "this is the OUTER 404" have to hold, and each on its
+         * own says something different.
+         *
+         * An HTTP 404 with a `code.status` beside it is the INNER 404 — Helix
+         * knows the site and reports no code sync for it — which is the one
+         * answer that earns the install prompt. And a not-installed verdict with
+         * no status at all is not a 404 of either kind, so it cannot be the
+         * "Adobe has not registered the repo yet" case either.
+         */
+        it('still prompts on an HTTP 404 that carries a code.status', async () => {
+            const context = makeContext();
+            const services = makeServices({
+                isInstalled: false,
+                httpStatus: 404,
+                codeStatus: 404,
+            });
+
+            const result = await checkGitHubAppForExistingRepo(context, services, REPO_INFO);
+
+            expect(sentMessageTypes(context)).toContain('storefront-setup-github-app-required');
+            expect(sentPayload(context, 'storefront-setup-github-app-required')).toMatchObject({
+                siteUnregistered: false,
+            });
+            expect(result?.awaitingGitHubApp).toBe(true);
+        });
+
+        it('still prompts when the verdict carries no status at all', async () => {
+            const context = makeContext();
+            const services = makeServices({ isInstalled: false });
+
+            const result = await checkGitHubAppForExistingRepo(context, services, REPO_INFO);
+
+            expect(sentMessageTypes(context)).toContain('storefront-setup-github-app-required');
+            expect(result?.awaitingGitHubApp).toBe(true);
         });
 
         it('does NOT retry a definitive answer', async () => {

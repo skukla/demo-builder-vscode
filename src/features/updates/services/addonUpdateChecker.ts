@@ -16,7 +16,7 @@ import {
     getLatestBranchCommit,
 } from './githubApiClient';
 import { SDK_SOURCE } from '@/features/eds/services/inspectorHelpers';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import type { InstalledBlockLibrary } from '@/types/blockLibraries';
 import type { Logger } from '@/types/logger';
 
@@ -56,7 +56,7 @@ export class AddonUpdateChecker {
      */
     async checkBlockLibraries(project: Project): Promise<BlockLibraryUpdateResult[]> {
         const libraries = project.installedBlockLibraries;
-        if (!libraries || libraries.length === 0) {
+        if (!libraries) {
             return [];
         }
 

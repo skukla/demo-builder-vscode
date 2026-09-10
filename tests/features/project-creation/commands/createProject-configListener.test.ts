@@ -8,14 +8,16 @@
  * not reflected in block library selection modal.
  */
 
+import {
+    CreateProjectWebviewCommand,
+} from './createProject.testUtils';
 import * as vscode from 'vscode';
-import { CreateProjectWebviewCommand } from '@/features/project-creation/commands/createProject';
-import { StateManager } from '@/core/state';
+import { StateManager } from '@/core/state/stateManager';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 
-// Mock dependencies
-jest.mock('@/core/logging/debugLogger');
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(() => ({
             isAuthenticated: jest.fn(),
@@ -30,8 +32,6 @@ jest.mock('@/core/di', () => ({
         })),
     },
 }));
-
-jest.mock('@/features/prerequisites/services/PrerequisitesManager');
 
 // Mock WebviewPanelManager to prevent singleton panel reuse between tests
 jest.mock('@/core/base/webviewPanelManager', () => ({
@@ -57,7 +57,7 @@ let configChangeCallback: ((e: vscode.ConfigurationChangeEvent) => void) | undef
 const mockConfigListenerDispose = jest.fn();
 
 // Mock communication manager — define mocks inside factory to avoid @swc/jest hoisting TDZ
-jest.mock('@/core/communication', () => {
+jest.mock('@/core/communication/webviewCommunicationManager', () => {
     const mockComm = {
         on: jest.fn(),
         onStreaming: jest.fn(),
@@ -72,7 +72,9 @@ jest.mock('@/core/communication', () => {
         _mockComm: mockComm,
     };
 });
-const { _mockComm } = require('@/core/communication') as { _mockComm: { sendMessage: jest.Mock } };
+const { _mockComm } = require('@/core/communication/webviewCommunicationManager') as {
+    _mockComm: { sendMessage: jest.Mock };
+};
 const mockSendMessage = _mockComm.sendMessage;
 
 // Mock loading HTML utility
@@ -204,25 +206,7 @@ describe('CreateProjectWebviewCommand - Config Change Listener', () => {
         jest.clearAllMocks();
         configChangeCallback = undefined;
 
-        mockContext = {
-            subscriptions: [],
-            extensionPath: '/mock/extension/path',
-            globalState: {
-                get: jest.fn(),
-                update: jest.fn(),
-                keys: jest.fn(() => []),
-                setKeysForSync: jest.fn(),
-            },
-            workspaceState: {
-                get: jest.fn(),
-                update: jest.fn(),
-                keys: jest.fn(() => []),
-            },
-            extensionUri: vscode.Uri.file('/mock/extension/path'),
-            extensionMode: vscode.ExtensionMode.Test,
-            asAbsolutePath: (relativePath: string) => `/mock/extension/path/${relativePath}`,
-            secrets: {},
-        } as unknown as vscode.ExtensionContext;
+        mockContext = createMockExtensionContext();
 
         mockStateManager = {
             getAllProjects: jest.fn().mockResolvedValue([]),
@@ -231,12 +215,7 @@ describe('CreateProjectWebviewCommand - Config Change Listener', () => {
             getState: jest.fn(),
         } as unknown as jest.Mocked<StateManager>;
 
-        mockLogger = {
-            info: jest.fn(),
-            debug: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-        } as unknown as jest.Mocked<Logger>;
+        mockLogger = createMockLogger() as unknown as jest.Mocked<Logger>;
 
         command = new CreateProjectWebviewCommand(
             mockContext,

@@ -33,25 +33,33 @@ export const BACKEND_DESCRIPTIONS: Record<string, string> = {
 const NOOP = (): void => {};
 
 /** A single roomy Backend "choice card" (a prominent binary pick, not a dense tile). */
-export const BackendCard: React.FC<{
+export function BackendCard({
+    backend,
+    pkgName,
+    available,
+    selected,
+    onSelect,
+}: {
     backend: string;
     pkgName: string;
     available: boolean;
     selected: boolean;
     onSelect: (backend: string) => void;
-}> = ({ backend, pkgName, available, selected, onSelect }) => (
-    <ChoiceCard
-        name={BACKEND_LABELS[backend] ?? backend}
-        description={BACKEND_DESCRIPTIONS[backend] ?? ''}
-        selected={selected}
-        disabled={!available}
-        note={available ? undefined : `Not available for ${pkgName}`}
-        noteTestId={`backend-note-${backend}`}
-        onSelect={() => onSelect(backend)}
-        testId={`backend-card-${backend}`}
-        checkTestId="backend-card-check"
-    />
-);
+}) {
+    return (
+        <ChoiceCard
+            name={BACKEND_LABELS[backend] ?? backend}
+            description={BACKEND_DESCRIPTIONS[backend] ?? ''}
+            selected={selected}
+            disabled={!available}
+            note={available ? undefined : `Not available for ${pkgName}`}
+            noteTestId={`backend-note-${backend}`}
+            onSelect={() => onSelect(backend)}
+            testId={`backend-card-${backend}`}
+            checkTestId="backend-card-check"
+        />
+    );
+}
 
 /** Context passed to the per-section body builder. */
 export interface SectionBodyContext {
@@ -70,7 +78,7 @@ export function sectionBody(id: CommerceSectionId, ctx: SectionBodyContext): Rea
     if (id === 'backend') {
         return (
             <div className="choice-grid" role="listbox" data-testid="backend-cards">
-                {Object.keys(BACKEND_LABELS).map(backend => (
+                {Object.keys(BACKEND_LABELS).map((backend) => (
                     <BackendCard
                         key={backend}
                         backend={backend}

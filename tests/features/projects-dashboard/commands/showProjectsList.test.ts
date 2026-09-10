@@ -9,80 +9,33 @@
  * - HTML generation follows 4-bundle pattern
  */
 
+import {
+    ShowProjectsListCommand,
+} from './showProjectsList.testUtils';
 import * as vscode from 'vscode';
-import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
-import { projectsListHandlers } from '@/features/projects-dashboard/handlers';
+import { projectsListHandlers } from '@/features/projects-dashboard/handlers/projectsListHandlers';
 import { hasHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
-import { StateManager } from '@/core/state';
-import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
-// Mock dependencies
-jest.mock('@/core/logging/debugLogger');
-
-/**
- * Create mock ExtensionContext
- */
-function createMockExtensionContext(): vscode.ExtensionContext {
-    return {
-        subscriptions: [],
-        extensionPath: '/mock/extension/path',
-        globalState: {
-            get: jest.fn(),
-            update: jest.fn(),
-            keys: jest.fn(() => []),
-            setKeysForSync: jest.fn(),
-        } as any,
-        workspaceState: {
-            get: jest.fn(),
-            update: jest.fn(),
-            keys: jest.fn(() => []),
-        } as any,
-        extensionUri: vscode.Uri.file('/mock/extension/path'),
-        extensionMode: vscode.ExtensionMode.Test,
-        environmentVariableCollection: {} as any,
-        asAbsolutePath: (relativePath: string) => `/mock/extension/path/${relativePath}`,
-        storageUri: undefined,
-        globalStorageUri: vscode.Uri.file('/mock/storage'),
-        logUri: vscode.Uri.file('/mock/logs'),
-        storagePath: '/mock/storage',
-        globalStoragePath: '/mock/global/storage',
-        logPath: '/mock/logs',
-        secrets: {} as any,
-        extension: {} as any,
-        languageModelAccessInformation: {} as any,
-    } as vscode.ExtensionContext;
-}
-
-/**
- * Create mock StateManager
- */
-function createMockStateManager(): StateManager {
-    return {
-        getState: jest.fn(),
-        setState: jest.fn(),
-        clearState: jest.fn(),
-        getCurrentProject: jest.fn().mockResolvedValue(null),
-        getAllProjects: jest.fn().mockResolvedValue([]),
-    } as any;
-}
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import { internals } from '../../../helpers/commandInternals';
 
 /**
  * Create mock Logger
  */
-function createMockLogger(): Logger {
-    return {
-        info: jest.fn(),
-        debug: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    } as any;
-}
 
 /**
  * Helper to create ShowProjectsListCommand instance
  */
 function createCommand(): ShowProjectsListCommand {
-    const mockContext = createMockExtensionContext();
+    const mockContext = createMockExtensionContext(
+        // The one thing this suite needs beyond the canonical defaults: a real
+        // SecretStorage fake, because the command reads credentials through it.
+        { secrets: createMockSecretStorage().secrets },
+        '/mock/extension/path'
+    );
     const mockStateManager = createMockStateManager();
     const mockLogger = createMockLogger();
 
@@ -104,7 +57,7 @@ describe('ShowProjectsListCommand', () => {
             const command = createCommand();
 
             // When: Accessing the webview ID
-            const webviewId = (command as any).getWebviewId();
+            const webviewId = internals(command).getWebviewId();
 
             // Then: Should return correct ID
             expect(webviewId).toBe('demoBuilder.projectsList');
@@ -115,7 +68,7 @@ describe('ShowProjectsListCommand', () => {
             const command = createCommand();
 
             // When: Accessing the title
-            const title = (command as any).getWebviewTitle();
+            const title = internals(command).getWebviewTitle();
 
             // Then: Should return "Projects"
             expect(title).toBe('Projects');
@@ -126,7 +79,7 @@ describe('ShowProjectsListCommand', () => {
             const command = createCommand();
 
             // When: Accessing loading message
-            const message = (command as any).getLoadingMessage();
+            const message = internals(command).getLoadingMessage();
 
             // Then: Should return appropriate loading message
             expect(message).toBe('Loading Projects...');
@@ -143,12 +96,12 @@ describe('ShowProjectsListCommand', () => {
                 cspSource: 'vscode-webview://test',
                 asWebviewUri: jest.fn((uri: vscode.Uri) => uri),
             };
-            (command as any).panel = {
+            internals(command).panel = {
                 webview: mockWebview,
             };
 
             // When: Webview HTML is generated
-            const html = await (command as any).getWebviewContent();
+            const html = await internals(command).getWebviewContent();
 
             // Then: Single feature bundle — no runtime/vendors/common split
             expect(html).toContain('projectsList-bundle.js');
@@ -166,12 +119,12 @@ describe('ShowProjectsListCommand', () => {
                 cspSource: 'vscode-webview://test',
                 asWebviewUri: jest.fn((uri: vscode.Uri) => uri),
             };
-            (command as any).panel = {
+            internals(command).panel = {
                 webview: mockWebview,
             };
 
             // When: HTML content is parsed
-            const html = await (command as any).getWebviewContent();
+            const html = await internals(command).getWebviewContent();
 
             // Then: Single script tag with nonce
             const scriptMatches = html.match(/<script nonce="([^"]+)"/g);
@@ -199,7 +152,7 @@ describe('ShowProjectsListCommand', () => {
 
             try {
                 // When: Getting initial data
-                const initialData = await (command as any).getInitialData();
+                const initialData = await internals(command).getInitialData();
 
                 // Then: Should contain theme information
                 expect(initialData).toHaveProperty('theme');

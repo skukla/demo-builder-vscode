@@ -1,3 +1,8 @@
+import {
+    DaLiveAuthService,
+    ExtensionContext,
+} from './daLiveAuthService.testUtils';
+import { createMockExtensionContext, createStatefulGlobalState } from '../../../../helpers/extensionContextFake';
 /**
  * DA.live Auth Service Tests
  *
@@ -5,27 +10,6 @@
  * After cleanup, this service is a simple token storage wrapper
  * (PKCE OAuth flow has been removed as it was never functional).
  */
-
-// Mock vscode before imports
-jest.mock('vscode', () => ({
-    env: {
-        openExternal: jest.fn().mockResolvedValue(true),
-    },
-    Uri: {
-        parse: jest.fn((s: string) => s),
-    },
-    EventEmitter: require('../../../../helpers/vscodeEventEmitter').VscodeEventEmitter,
-}));
-
-// Mock logger
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
-}));
 
 // Keep these unit tests off the real ~/.aem/da-token.json (the service now
 // reads it as a fallback and mirrors stored tokens to it). The bridge itself
@@ -35,9 +19,6 @@ jest.mock('@/features/eds/services/daAuthHelperToken', () => ({
     writeDaAuthHelperToken: jest.fn(() => false),
 }));
 
-import { DaLiveAuthService } from '@/features/eds/services/daLive/daLiveAuthService';
-import type { ExtensionContext } from 'vscode';
-
 describe('DaLiveAuthService', () => {
     let service: DaLiveAuthService;
     let mockContext: ExtensionContext;
@@ -46,23 +27,9 @@ describe('DaLiveAuthService', () => {
     beforeEach(() => {
         jest.clearAllMocks();
 
-        // Create mock global state store
-        globalStateStore = new Map();
-
-        // Create mock extension context
-        mockContext = {
-            globalState: {
-                get: jest.fn((key: string) => globalStateStore.get(key)),
-                update: jest.fn((key: string, value: unknown) => {
-                    if (value === undefined) {
-                        globalStateStore.delete(key);
-                    } else {
-                        globalStateStore.set(key, value);
-                    }
-                    return Promise.resolve();
-                }),
-            },
-        } as unknown as ExtensionContext;
+        const stateful = createStatefulGlobalState();
+        globalStateStore = stateful.store;
+        mockContext = createMockExtensionContext({ globalState: stateful.globalState });
 
         service = new DaLiveAuthService(mockContext);
     });
@@ -240,6 +207,27 @@ describe('DaLiveAuthService', () => {
             expect(result?.accessToken).toBe('valid-token');
             expect(result?.expiresAt).toBe(validExpiration);
             expect(result?.email).toBe(email);
+        });
+
+        // The buffer is a `<` against `now + 5 minutes`, so a token expiring at
+        // EXACTLY that instant is still usable. One character the other way and
+        // every sign-in loses its last five minutes of life — invisible in any
+        // test that picks a round hour.
+        it('keeps a token whose expiry sits exactly on the 5-minute buffer', async () => {
+            const now = 1_700_000_000_000;
+            const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(now);
+            try {
+                const boundary = now + 5 * 60 * 1000;
+                globalStateStore.set('daLive.accessToken', 'boundary-token');
+                globalStateStore.set('daLive.tokenExpiration', boundary);
+
+                const result = await service.getStoredToken();
+
+                expect(result?.accessToken).toBe('boundary-token');
+                expect(result?.expiresAt).toBe(boundary);
+            } finally {
+                nowSpy.mockRestore();
+            }
         });
 
         it('should return token info without email if not stored', async () => {

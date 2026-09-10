@@ -1,9 +1,10 @@
 import { RateLimiter } from './rateLimiter';
 import type { RetryStrategy, CommandResult } from './types';
-import { getLogger } from '@/core/logging';
-import { TIMEOUTS, formatDuration } from '@/core/utils';
+import { toAppError, isTimeout, isNetwork } from '@/core/errors';
+import { getLogger } from '@/core/logging/debugLogger';
 import { sleep } from '@/core/utils/sleep';
-import { toAppError, isTimeout, isNetwork } from '@/types/errors';
+import { formatDuration } from '@/core/utils/timeFormatting';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 /**
  * Manages retry strategies for failed commands

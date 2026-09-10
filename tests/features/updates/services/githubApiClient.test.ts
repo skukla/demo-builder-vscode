@@ -2,13 +2,8 @@
  * Unit tests for githubApiClient shared utilities
  */
 
-jest.mock('vscode', () => ({}), { virtual: true });
-jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: { QUICK: 5000 },
-}));
-
 // Mock global fetch
-global.fetch = jest.fn() as jest.Mock;
+global.fetch = jest.fn();
 
 import {
     buildGitHubHeaders,
@@ -18,6 +13,8 @@ import {
     getLatestRelease,
 } from '@/features/updates/services/githubApiClient';
 
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
 describe('githubApiClient', () => {
     const mockFetch = global.fetch as jest.Mock;
 
@@ -27,11 +24,13 @@ describe('githubApiClient', () => {
 
     describe('buildGitHubHeaders', () => {
         it('should include auth token when available', async () => {
-            const mockSecrets = {
-                get: jest.fn().mockResolvedValue('my-token'),
-            };
+            // Keyed, not blanket. The old fake resolved its token for ANY key, so
+            // a rename of `githubToken` in production would not have failed here —
+            // a fake more generous than the real thing, which is the shape this
+            // repo has been bitten by.
+            const mockSecrets = createMockSecretStorage({ githubToken: 'my-token' }).secrets;
 
-            const headers = await buildGitHubHeaders(mockSecrets as any);
+            const headers = await buildGitHubHeaders(mockSecrets);
 
             expect(headers['Authorization']).toBe('token my-token');
             expect(headers['Accept']).toBe('application/vnd.github.v3+json');
@@ -39,11 +38,10 @@ describe('githubApiClient', () => {
         });
 
         it('should omit auth header when no token stored', async () => {
-            const mockSecrets = {
-                get: jest.fn().mockResolvedValue(undefined),
-            };
+            // Empty store: `get` resolves undefined for every key.
+            const mockSecrets = createMockSecretStorage().secrets;
 
-            const headers = await buildGitHubHeaders(mockSecrets as any);
+            const headers = await buildGitHubHeaders(mockSecrets);
 
             expect(headers['Authorization']).toBeUndefined();
             expect(headers['Accept']).toBe('application/vnd.github.v3+json');
@@ -65,7 +63,7 @@ describe('githubApiClient', () => {
                 expect.objectContaining({
                     headers: { 'X-Custom': 'value' },
                     signal: expect.any(AbortSignal),
-                }),
+                })
             );
         });
 
@@ -74,14 +72,42 @@ describe('githubApiClient', () => {
             abortError.name = 'AbortError';
             mockFetch.mockRejectedValueOnce(abortError);
 
-            await expect(
-                fetchWithTimeout('https://api.github.com/test'),
-            ).rejects.toThrow('The operation was aborted');
+            await expect(fetchWithTimeout('https://api.github.com/test')).rejects.toThrow(
+                'The operation was aborted'
+            );
+        });
+
+        describe('the abort timer', () => {
+            beforeEach(() => jest.useFakeTimers());
+            afterEach(() => jest.useRealTimers());
+
+            /** The signal handed to fetch on the most recent call. */
+            function signalGivenToFetch(): AbortSignal {
+                return mockFetch.mock.calls[mockFetch.mock.calls.length - 1][1].signal;
+            }
+
+            it('aborts the request at exactly TIMEOUTS.QUICK and not before', async () => {
+                mockFetch.mockReturnValueOnce(new Promise(() => undefined)); // never settles
+                void fetchWithTimeout('https://api.github.com/slow');
+
+                jest.advanceTimersByTime(TIMEOUTS.QUICK - 1);
+                expect(signalGivenToFetch().aborted).toBe(false);
+                jest.advanceTimersByTime(1);
+                expect(signalGivenToFetch().aborted).toBe(true);
+            });
+
+            it('cancels the timer once fetch has settled, so a late tick aborts nothing', async () => {
+                mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
+                await fetchWithTimeout('https://api.github.com/fast');
+
+                jest.advanceTimersByTime(TIMEOUTS.QUICK);
+                expect(signalGivenToFetch().aborted).toBe(false);
+            });
         });
     });
 
     describe('getLatestBranchCommit', () => {
-        const mockSecrets = { get: jest.fn().mockResolvedValue('tok') } as any;
+        const mockSecrets = createMockSecretStorage({ githubToken: 'tok' }).secrets;
 
         it('should return commit SHA on success', async () => {
             mockFetch.mockResolvedValueOnce({
@@ -94,7 +120,7 @@ describe('githubApiClient', () => {
             expect(sha).toBe('abc123');
             expect(mockFetch).toHaveBeenCalledWith(
                 'https://api.github.com/repos/owner/repo/branches/main',
-                expect.objectContaining({ headers: expect.any(Object) }),
+                expect.objectContaining({ headers: expect.any(Object) })
             );
         });
 
@@ -104,6 +130,16 @@ describe('githubApiClient', () => {
             const sha = await getLatestBranchCommit(mockSecrets, 'owner', 'repo', 'main');
 
             expect(sha).toBeNull();
+        });
+
+        it('does not read the body of a non-ok response', async () => {
+            const json = jest.fn(async () => ({ commit: { sha: 'stale' } }));
+            mockFetch.mockResolvedValueOnce({ ok: false, status: 403, json });
+
+            const sha = await getLatestBranchCommit(mockSecrets, 'owner', 'repo', 'main');
+
+            expect(sha).toBeNull();
+            expect(json).not.toHaveBeenCalled();
         });
 
         it('should return null on network error', async () => {
@@ -116,7 +152,7 @@ describe('githubApiClient', () => {
     });
 
     describe('getLatestRelease', () => {
-        const mockSecrets = { get: jest.fn().mockResolvedValue('tok') } as any;
+        const mockSecrets = createMockSecretStorage({ githubToken: 'tok' }).secrets;
 
         it('should return tag + version on success and strip a v-prefix', async () => {
             mockFetch.mockResolvedValueOnce({
@@ -124,12 +160,16 @@ describe('githubApiClient', () => {
                 json: async () => ({ tag_name: 'v3.5.0', name: 'Release 3.5.0' }),
             });
 
-            const result = await getLatestRelease(mockSecrets, 'adobe-commerce', 'commerce-extensibility-tools');
+            const result = await getLatestRelease(
+                mockSecrets,
+                'adobe-commerce',
+                'commerce-extensibility-tools'
+            );
 
             expect(result).toEqual({ tag: 'v3.5.0', version: '3.5.0' });
             expect(mockFetch).toHaveBeenCalledWith(
                 'https://api.github.com/repos/adobe-commerce/commerce-extensibility-tools/releases/latest',
-                expect.objectContaining({ headers: expect.any(Object) }),
+                expect.objectContaining({ headers: expect.any(Object) })
             );
         });
 
@@ -159,6 +199,32 @@ describe('githubApiClient', () => {
             expect(await getLatestRelease(mockSecrets, 'owner', 'repo')).toBeNull();
         });
 
+        it('does not read the body of a non-ok response', async () => {
+            const json = jest.fn(async () => ({ tag_name: 'v9.9.9' }));
+            mockFetch.mockResolvedValueOnce({ ok: false, status: 403, json });
+
+            expect(await getLatestRelease(mockSecrets, 'owner', 'repo')).toBeNull();
+            expect(json).not.toHaveBeenCalled();
+        });
+
+        it('should return null when tag_name is not a string, even one semver could coerce', async () => {
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ tag_name: 3 }),
+            });
+
+            expect(await getLatestRelease(mockSecrets, 'owner', 'repo')).toBeNull();
+        });
+
+        it('should return null when tag_name is empty', async () => {
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ tag_name: '' }),
+            });
+
+            expect(await getLatestRelease(mockSecrets, 'owner', 'repo')).toBeNull();
+        });
+
         it('should return null on network error', async () => {
             mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
@@ -176,7 +242,7 @@ describe('githubApiClient', () => {
     });
 
     describe('compareCommits', () => {
-        const mockSecrets = { get: jest.fn().mockResolvedValue('tok') } as any;
+        const mockSecrets = createMockSecretStorage({ githubToken: 'tok' }).secrets;
 
         it('should return comparison data on success', async () => {
             mockFetch.mockResolvedValueOnce({
@@ -193,7 +259,7 @@ describe('githubApiClient', () => {
             });
             expect(mockFetch).toHaveBeenCalledWith(
                 'https://api.github.com/repos/owner/repo/compare/aaa...bbb',
-                expect.objectContaining({ headers: expect.any(Object) }),
+                expect.objectContaining({ headers: expect.any(Object) })
             );
         });
 
@@ -205,6 +271,16 @@ describe('githubApiClient', () => {
             expect(result).toBeNull();
         });
 
+        it('does not read the body of a non-ok response', async () => {
+            const json = jest.fn(async () => ({ ahead_by: 5 }));
+            mockFetch.mockResolvedValueOnce({ ok: false, status: 403, json });
+
+            const result = await compareCommits(mockSecrets, 'owner', 'repo', 'aaa', 'bbb');
+
+            expect(result).toBeNull();
+            expect(json).not.toHaveBeenCalled();
+        });
+
         it('should return null on network error', async () => {
             mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
@@ -213,5 +289,4 @@ describe('githubApiClient', () => {
             expect(result).toBeNull();
         });
     });
-
 });

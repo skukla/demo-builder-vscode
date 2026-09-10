@@ -8,41 +8,19 @@
  * commit stays non-fatal — it costs console cosmetics, never the setup.
  */
 
+import '../../../../helpers/edsPlaceholderStubMocks';
+
 import type { HandlerContext } from '@/types/handlers';
-
-jest.mock('@/features/eds/services/fstabGenerator', () => ({
-    generateFstabContent: jest.fn().mockReturnValue('mock-fstab'),
-}));
-
-jest.mock('@/features/eds/services/blockCollectionHelpers', () => ({
-    installBlockCollections: jest
-        .fn()
-        .mockResolvedValue({ success: true, blocksCount: 0, blockIds: [] }),
-}));
-
-jest.mock('@/features/eds/services/inspectorHelpers', () => ({
-    generateInspectorTreeEntries: jest.fn().mockResolvedValue([]),
-    installInspectorTagging: jest.fn().mockResolvedValue({ success: true }),
-}));
-
-jest.mock('@/features/eds/services/pdp/pdp404HandlerPublisher', () => ({
-    installSmart404Handler: jest.fn().mockResolvedValue({ installed: false, reason: 'no-overlay' }),
-}));
-
-jest.mock('@/features/eds/services/quickEditPublisher', () => ({
-    installQuickEdit: jest.fn().mockResolvedValue({ installed: true }),
-}));
+import type { StorefrontSetupStartPayload } from '@/types/webviewRequests';
+import type { GitHubFileOperations } from '@/features/eds/services/github/githubFileOperations';
+import type {
+    RepoInfo,
+    SetupServices,
+} from '@/features/eds/handlers/storefrontSetup/storefrontSetupTypes';
 
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     addPdpCaveat: jest.fn(),
     describeSmart404Skip: jest.fn().mockReturnValue('skip'),
-}));
-
-jest.mock('@/features/components/services/blockLibraryLoader', () => ({
-    getBlockLibrarySource: jest.fn(),
-    getBlockLibraryName: jest.fn(),
-    getBlockLibraryContentSource: jest.fn(),
-    isBlockLibraryAvailableForPackage: jest.fn().mockReturnValue(true),
 }));
 
 import { executePhaseHelixConfig } from '@/features/eds/handlers/storefrontSetup/storefrontSetupPhase2';
@@ -50,30 +28,41 @@ import {
     PLACEHOLDER_STUB_PATHS,
     buildPlaceholderStubJson,
 } from '@/features/eds/services/placeholderStubs';
+import { createMockLogger } from '../../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../../helpers/handlerContextTestHelpers';
 
-const EDS_CONFIG = {
+const EDS_CONFIG: StorefrontSetupStartPayload['edsConfig'] = {
+    repoName: 'shop',
     daLiveOrg: 'acme',
     daLiveSite: 'shop',
-     
-} as any;
+};
 
-const REPO_INFO = { repoOwner: 'me', repoName: 'shop' };
+const REPO_INFO: RepoInfo = { repoOwner: 'me', repoName: 'shop' };
 
-function makeContext(): HandlerContext {
-    return {
-        logger: { info: jest.fn(), warn: jest.fn(), debug: jest.fn(), error: jest.fn() },
-        sendMessage: jest.fn().mockResolvedValue(undefined),
-    } as unknown as HandlerContext;
+/** The three file-ops calls this phase makes; the class itself holds private Octokit state. */
+type FileOpsStub = jest.Mocked<
+    Pick<GitHubFileOperations, 'getFileContent' | 'createOrUpdateFile' | 'commitTreeToBranch'>
+>;
+
+/** Only `githubFileOps` is read here; the other services are forwarded to mocked modules. */
+function servicesWith(githubFileOps: FileOpsStub): SetupServices {
+    return { githubFileOps } as unknown as SetupServices;
 }
 
-function makeGithubFileOps(overrides: Record<string, unknown> = {}) {
+function makeContext(): HandlerContext {
+    return createMockHandlerContext({
+        logger: createMockLogger(),
+        sendMessage: jest.fn().mockResolvedValue(undefined),
+    });
+}
+
+function makeGithubFileOps(overrides: Partial<FileOpsStub> = {}): FileOpsStub {
     return {
         getFileContent: jest.fn().mockResolvedValue(null),
         createOrUpdateFile: jest.fn().mockResolvedValue(undefined),
         commitTreeToBranch: jest.fn().mockResolvedValue('sha123'),
         ...overrides,
-         
-    } as any;
+    };
 }
 
 describe('executePhaseHelixConfig — placeholder stubs (creation)', () => {
@@ -83,10 +72,8 @@ describe('executePhaseHelixConfig — placeholder stubs (creation)', () => {
         await executePhaseHelixConfig(
             makeContext(),
             EDS_CONFIG,
-             
-            { githubFileOps } as any,
-             
-            REPO_INFO as any,
+            servicesWith(githubFileOps),
+            REPO_INFO,
             new AbortController().signal
         );
 
@@ -120,10 +107,8 @@ describe('executePhaseHelixConfig — placeholder stubs (creation)', () => {
             executePhaseHelixConfig(
                 context,
                 EDS_CONFIG,
-                 
-                { githubFileOps } as any,
-                 
-                REPO_INFO as any,
+                servicesWith(githubFileOps),
+                REPO_INFO,
                 new AbortController().signal
             )
         ).resolves.toBeDefined();

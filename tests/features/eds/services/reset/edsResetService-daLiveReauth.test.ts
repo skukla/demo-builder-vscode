@@ -7,31 +7,16 @@
  * storefrontSetupPhases.ts.
  */
 
+import { mockEnsureDaLiveAuth } from './edsResetService.sharedMocks';
+
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
-import type { Logger } from '@/types/logger';
 
 jest.setTimeout(5000);
 
 // =============================================================================
 // Mocks — defined before imports
 // =============================================================================
-
-const mockEnsureDaLiveAuth = jest.fn();
-
-jest.mock('vscode', () => ({
-    window: { showWarningMessage: jest.fn(), showInformationMessage: jest.fn() },
-    ProgressLocation: { Notification: 15 },
-    Uri: { parse: jest.fn((url: string) => ({ toString: () => url })) },
-}), { virtual: true });
-
-jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: { QUICK: 5000, NORMAL: 30000, PREREQUISITE_CHECK: 10000, UI: { MIN_LOADING: 200 } },
-}));
-
-jest.mock('@/core/constants', () => ({
-    COMPONENT_IDS: { EDS_STOREFRONT: 'eds-storefront' },
-}));
 
 jest.mock('@/features/components/services/blockLibraryLoader', () => ({
     getBlockLibrarySource: jest.fn(),
@@ -40,84 +25,21 @@ jest.mock('@/features/components/services/blockLibraryLoader', () => ({
     isBlockLibraryAvailableForPackage: jest.fn().mockReturnValue(true),
 }));
 
-jest.mock('@/features/eds/handlers/edsHelpers', () => ({
-    getGitHubServices: jest.fn().mockReturnValue({
-        tokenService: {},
-        fileOperations: {
-            resetRepoToTemplate: jest.fn().mockResolvedValue({ fileCount: 10, commitSha: 'abc1234567' }),
-            getFileContent: jest.fn().mockResolvedValue(null),
-            createOrUpdateFile: jest.fn().mockResolvedValue(undefined),
-        },
-    }),
-    configureDaLivePermissions: jest.fn().mockResolvedValue({ success: true }),
-    getDaLiveAuthService: jest.fn().mockReturnValue({
-        getAccessToken: jest.fn().mockResolvedValue('token'),
-        getUserEmail: jest.fn().mockResolvedValue('test@example.com'),
-    }),
-    ensureDaLiveAuth: (...args: unknown[]) => mockEnsureDaLiveAuth(...args),
-}));
-
-jest.mock('@/features/eds/services/inspectorHelpers', () => ({
-    generateInspectorTreeEntries: jest.fn().mockResolvedValue([]),
-    installInspectorTagging: jest.fn().mockResolvedValue({ success: true }),
-}));
-
-jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
-    DaLiveContentOperations: jest.fn().mockImplementation(() => ({})),
-}));
-
-jest.mock('@/features/eds/services/helix/helixService', () => ({
-    HelixService: jest.fn().mockImplementation(() => ({
-        previewCode: jest.fn().mockResolvedValue(undefined),
-    })),
-}));
-
-jest.mock('@/features/eds/services/daLive/daLiveAuthService', () => ({
-    DaLiveAuthService: jest.fn().mockImplementation(() => ({
-        getAccessToken: jest.fn().mockResolvedValue('token'),
-        getUserEmail: jest.fn().mockResolvedValue('test@example.com'),
-    })),
-}));
+// NOT mocked, and it does not need to be: the collaborator is constructed on this
+// path and never touched, so the mock silenced nothing. Measured 2026-08-31 by
+// stripping it and re-running this suite.
 
 const mockExecuteEdsPipeline = jest.fn();
 jest.mock('@/features/eds/services/edsPipeline', () => ({
     executeEdsPipeline: (...args: unknown[]) => mockExecuteEdsPipeline(...args),
 }));
 
-jest.mock('@/features/eds/services/storefront/storefrontStalenessDetector', () => ({
-    updateStorefrontState: jest.fn(),
-}));
-
-jest.mock('@/features/mesh/services/stalenessDetector', () => ({
-    updateMeshState: jest.fn(),
-}));
-
-jest.mock('@/features/eds/services/configService/configurationService', () => ({
-    ConfigurationService: jest.fn().mockImplementation(() => ({
-        updateSiteConfig: jest.fn().mockResolvedValue({ success: true }),
-    })),
-    buildSiteConfigParams: (owner: string, repo: string, org: string, site: string) => ({
-        org, site, codeOwner: owner, codeRepo: repo,
-        contentSourceUrl: `https://content.da.live/${org}/${site}/`,
-    }),
-}));
-
-jest.mock('@/features/eds/services/blockCollectionHelpers', () => ({
-    installBlockCollections: jest.fn(),
-}));
-
-jest.mock('@/features/eds/services/configGenerator', () => ({
-    generateConfigJson: jest.fn().mockReturnValue({ success: true, content: '{}' }),
-    extractConfigParams: jest.fn().mockReturnValue({}),
-    buildConfigGeneratorParams: jest.fn().mockReturnValue({}),
-}));
-
-jest.mock('@/features/eds/services/fstabGenerator', () => ({
-    generateFstabContent: jest.fn().mockReturnValue('mock-fstab'),
-}));
+// NOT mocked, and it does not need to be: the collaborator is constructed on this
+// path and never touched, so the mock silenced nothing. Measured 2026-08-31 by
+// stripping it and re-running this suite.
 
 // Mock fetch for code sync verification
-global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200 }) as jest.Mock;
+global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200 });
 
 // =============================================================================
 // Imports (after mocks)
@@ -125,50 +47,15 @@ global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200 }) as jest.Mo
 
 import { DaLiveAuthError } from '@/features/eds/services/types';
 import { executeEdsReset } from '@/features/eds/services/reset/edsResetService';
+import { createResetContext, meshDeps } from './edsResetService.testUtils';
+import { createMockProject } from '../../../../helpers/projectFake';
 
 // =============================================================================
 // Helpers
 // =============================================================================
 
-function createMockContext(): HandlerContext {
-    return {
-        panel: {
-            webview: { postMessage: jest.fn() },
-        } as unknown as HandlerContext['panel'],
-        stateManager: {
-            getCurrentProject: jest.fn(),
-            saveProject: jest.fn().mockResolvedValue(undefined),
-        } as unknown as HandlerContext['stateManager'],
-        logger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-            trace: jest.fn(),
-        } as unknown as Logger,
-        debugLogger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-        } as unknown as HandlerContext['debugLogger'],
-        sendMessage: jest.fn(),
-        context: {
-            secrets: {},
-            globalState: { get: jest.fn(), update: jest.fn() },
-        } as unknown as HandlerContext['context'],
-        sharedState: {},
-        authManager: {
-            isAuthenticated: jest.fn().mockResolvedValue(true),
-            getTokenManager: jest.fn().mockReturnValue({
-                getAccessToken: jest.fn().mockResolvedValue('mock-token'),
-            }),
-        },
-    } as unknown as HandlerContext;
-}
-
 function createProject(): Project {
-    return {
+    return createMockProject({
         name: 'test-project',
         path: '/test/project',
         status: 'ready',
@@ -190,7 +77,7 @@ function createProject(): Project {
                 },
             },
         },
-    } as unknown as Project;
+    });
 }
 
 function createResetParams() {
@@ -219,9 +106,11 @@ describe('executeEdsReset - DA.live Mid-Pipeline Re-Auth', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-        mockContext = createMockContext();
+        mockContext = createResetContext();
         mockExecuteEdsPipeline.mockResolvedValue({
-            success: true, contentFilesCopied: 5, libraryPaths: [],
+            success: true,
+            contentFilesCopied: 5,
+            libraryPaths: [],
         });
     });
 
@@ -235,7 +124,10 @@ describe('executeEdsReset - DA.live Mid-Pipeline Re-Auth', () => {
 
         // When
         const result = await executeEdsReset(
-            createResetParams(), mockContext, mockTokenProvider,
+            createResetParams(),
+            mockContext,
+            mockTokenProvider,
+            meshDeps
         );
 
         // Then: ensureDaLiveAuth should have been called
@@ -253,7 +145,10 @@ describe('executeEdsReset - DA.live Mid-Pipeline Re-Auth', () => {
 
         // When
         const result = await executeEdsReset(
-            createResetParams(), mockContext, mockTokenProvider,
+            createResetParams(),
+            mockContext,
+            mockTokenProvider,
+            meshDeps
         );
 
         // Then: Pipeline should have been called twice
@@ -268,7 +163,10 @@ describe('executeEdsReset - DA.live Mid-Pipeline Re-Auth', () => {
 
         // When
         const result = await executeEdsReset(
-            createResetParams(), mockContext, mockTokenProvider,
+            createResetParams(),
+            mockContext,
+            mockTokenProvider,
+            meshDeps
         );
 
         // Then: Should return failure (not crash)
@@ -283,7 +181,10 @@ describe('executeEdsReset - DA.live Mid-Pipeline Re-Auth', () => {
 
         // When
         const result = await executeEdsReset(
-            createResetParams(), mockContext, mockTokenProvider,
+            createResetParams(),
+            mockContext,
+            mockTokenProvider,
+            meshDeps
         );
 
         // Then
@@ -298,7 +199,10 @@ describe('executeEdsReset - DA.live Mid-Pipeline Re-Auth', () => {
 
         // When
         const result = await executeEdsReset(
-            createResetParams(), mockContext, mockTokenProvider,
+            createResetParams(),
+            mockContext,
+            mockTokenProvider,
+            meshDeps
         );
 
         // Then: Should have attempted re-auth twice, then failed
@@ -312,7 +216,10 @@ describe('executeEdsReset - DA.live Mid-Pipeline Re-Auth', () => {
 
         // When
         const result = await executeEdsReset(
-            createResetParams(), mockContext, mockTokenProvider,
+            createResetParams(),
+            mockContext,
+            mockTokenProvider,
+            meshDeps
         );
 
         // Then: Should not call ensureDaLiveAuth

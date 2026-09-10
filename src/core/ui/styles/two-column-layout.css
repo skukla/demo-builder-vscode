@@ -1,0 +1,155 @@
+/**
+ * .two-* styles — the two-column layout's STACKING BREAKPOINT, and nothing else.
+ *
+ * FEATURE-SCOPED (ADR-017 §6 and §7). A shared component in core/ui, rendered by
+ * `dashboard` and `wizard`, imported by those two.
+ *
+ * ALL THREE RULES ARE CONDITIONAL. The layout's resting styles are set by the
+ * component itself; the only CSS it has ever had here is the 1180px rule that
+ * turns the row into a column. A sheet that is one `@media` block is unusual
+ * enough to say so rather than leave the next reader wondering what is missing.
+ *
+ * Moved out of utilities.css by the CSS migration
+ * (.rptc/plans/css-architecture-migration), in source order, with the comment
+ * above each rule. Verbatim otherwise.
+ */
+
+@layer theme {
+@media (max-width: 1180px) { /* bp: two-column stack — TwoColumnLayout row→column */
+    /* TwoColumnLayout stack mode: row → column. Each column becomes
+       full-width; the left max-width and right min-width are released so
+       neither one squeezes the other, and the divider moves from between
+       them to above the summary card. */
+    .two-column-layout {
+        flex-direction: column;
+        align-items: stretch;
+        /* Stacked columns are flex 0-0-auto (content height), which unbounds
+           any inner flex-1 scroll region (e.g. Configure's .container-form) —
+           the container itself must scroll or tall content paints past the
+           page footer with no way to reach it. Inert where the container is
+           height:auto in normal flow (no bounded height → no scrollbar). */
+        overflow-y: auto;
+    }
+    .two-column-layout-left {
+        max-width: none;
+        flex: 0 0 auto;
+        width: 100%;
+    }
+    .two-column-layout-right {
+        flex: 0 0 auto;
+        min-width: 0;
+        border-left: none;
+        border-top: 1px solid var(--spectrum-global-color-gray-200);
+    }
+}
+}
+
+/* ==========================================================================
+   GridLayout — the declarations the component used to write INLINE.
+
+   The component now passes `columns`, `gap`, `maxWidth` and `padding` as custom
+   properties and this rule turns them into CSS. That keeps the properties in the
+   cascade: an inline `grid-template-columns` could never be overridden by any
+   layer, so a later rule could only win with `!important` — which is how two of
+   the conflicts in the 1,294 -> 0 sweep were created in the first place.
+
+   The DEFAULTS live here, in the `var()` fallbacks, because an omitted prop
+   writes no variable at all.
+   ========================================================================== */
+@layer theme {
+.grid-layout {
+    grid-template-columns: repeat(var(--grid-columns, 2), 1fr);
+    gap: var(--grid-gap, 24px);
+    max-width: var(--grid-max-width, none);
+    padding: var(--grid-padding, 0);
+}
+}
+
+/* ==========================================================================
+   ContentWithSidebar / ControlPanelLayout — the inner-column widths.
+
+   Both classes existed with NO rule anywhere: the components set `max-width`
+   inline and that was the entire styling. The width is a parameter, so it now
+   arrives as a custom property and these rules own the declaration — which means
+   a stylesheet can still adjust these columns, and an inline `max-width` never
+   could have been adjusted by one.
+
+   Defaults live in the `var()` fallbacks and match the components' prop
+   defaults (280px and 400px).
+   ========================================================================== */
+@layer theme {
+.content-sidebar-inner {
+    max-width: var(--sidebar-content-width, 280px);
+}
+}
+
+@layer theme {
+.control-panel-secondary-inner {
+    max-width: var(--control-panel-secondary-width, 400px);
+    width: 100%;
+}
+}
+
+/* ==========================================================================
+   TwoColumnLayout — moved out of TwoColumnLayout.tsx 2026-09-10.
+
+   Three style objects, two of them branching on `fixedRight`. The branch is now
+   a DATA ATTRIBUTE and the varying values arrive as custom properties, so the
+   declarations live here where a consumer can still reach them. A style object
+   cannot be reached by any stylesheet at any specificity — which is how two of
+   the three conflicts in the 1,294 -> 0 !important sweep were created.
+
+   `box-sizing: border-box` on the columns keeps padding INSIDE the column width,
+   so a padded 100%/fixed-width column never overflows its parent and clips
+   content at narrow or zoomed viewports.
+   ========================================================================== */
+@layer theme {
+.two-column-layout {
+    gap: var(--two-col-gap, 24px);
+    max-width: var(--two-col-max-width, none);
+    margin: 0 auto;
+}
+}
+
+@layer theme {
+/* Default: capped primary column, for readable line length. */
+.two-column-layout-left {
+    box-sizing: border-box;
+    padding: var(--two-col-left-padding, 0);
+    max-width: var(--two-col-left-max-width, none);
+}
+}
+
+@layer theme {
+/* Fixed-right mode: the left column becomes the flexible majority and drops its
+   cap, so it fills whatever the pinned sidebar leaves. */
+.two-column-layout[data-fixed-right='true'] .two-column-layout-left {
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: none;
+}
+}
+
+@layer theme {
+.two-column-layout-right {
+    box-sizing: border-box;
+    padding: var(--two-col-right-padding, 0);
+    background-color: var(--two-col-right-background, transparent);
+    min-width: var(--two-col-right-min-width, auto);
+}
+}
+
+@layer theme {
+/* Fixed-right mode: a pinned sidebar — no grow, no shrink. */
+.two-column-layout[data-fixed-right='true'] .two-column-layout-right {
+    flex: 0 0 var(--two-col-right-width);
+    width: var(--two-col-right-width);
+    min-width: auto;
+}
+}
+
+@layer theme {
+.two-column-layout-right[data-show-border='true'] {
+    border-left: 1px solid var(--spectrum-global-color-gray-200);
+}
+}

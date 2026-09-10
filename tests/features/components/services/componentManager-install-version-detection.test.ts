@@ -10,19 +10,12 @@
  */
 
 import { ComponentManager } from '@/features/components/services/componentManager';
-import { Project } from '@/types';
+import { Project } from '@/types/base';
 import { TransformedComponentDefinition } from '@/types/components';
 import { Logger } from '@/types/logger';
-import { ServiceLocator } from '@/core/di/serviceLocator';
-import { CommandExecutor } from '@/core/shell';
-import {
-    createMockCommandExecutor,
-    createMockLogger,
-    createMockProject,
-} from './testHelpers';
+import { CommandExecutor } from '@/core/shell/commandExecutor';
+import { setupComponentManager } from './componentManager.testUtils';
 
-// Mock ServiceLocator
-jest.mock('@/core/di/serviceLocator');
 
 // Mock fs/promises
 jest.mock('fs/promises');
@@ -44,18 +37,8 @@ describe('ComponentManager - Version Detection', () => {
     };
 
     beforeEach(() => {
-        jest.clearAllMocks();
-
-        // Create mocks
-        mockLogger = createMockLogger();
-        mockProject = createMockProject();
-        mockCommandExecutor = createMockCommandExecutor();
-
-        // Mock ServiceLocator
-        (ServiceLocator.getCommandExecutor as jest.Mock).mockReturnValue(mockCommandExecutor);
-
-        // Create ComponentManager instance
-        componentManager = new ComponentManager(mockLogger);
+        ({ componentManager, mockLogger, mockProject, mockCommandExecutor } =
+            setupComponentManager());
 
         // Mock fs/promises
         const fs = require('fs/promises');

@@ -11,6 +11,7 @@
 // under test. Assertions pin the SEQUENCE of attempts, never elapsed duration.
 jest.mock('@/core/utils/sleep', () => ({ sleep: jest.fn().mockResolvedValue(undefined) }));
 
+import type { HelixService } from '@/features/eds/services/helix/helixService';
 import * as vscode from 'vscode';
 
 // --- Mocks (must precede imports) -------------------------------------------
@@ -65,9 +66,6 @@ jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     createDaLiveServiceTokenProvider: jest.fn(() => ({ getToken: jest.fn() })),
 }));
 
-jest.mock('@/features/eds/services/helix/helixService', () => ({
-    HelixService: jest.fn().mockImplementation(() => ({})),
-}));
 
 jest.mock('@/features/eds/services/github/githubTokenService', () => ({
     GitHubTokenService: jest.fn().mockImplementation(() => ({})),
@@ -79,42 +77,33 @@ import { RefreshBlockLibraryCommand } from '@/commands/refreshBlockLibrary';
 import { executeEdsPipeline } from '@/features/eds/services/edsPipeline';
 import { ensureDaLiveAuth } from '@/features/eds/handlers/edsHelpers';
 import { DaLiveAuthError } from '@/features/eds/services/types';
-import type { StateManager } from '@/core/state';
+import type { StateManager } from '@/core/state/stateManager';
 import type { Logger } from '@/types/logger';
 import type { Project } from '@/types/base';
+import { createMockLogger } from '../helpers/loggerFake';
+import { createMockStateManager } from '../helpers/stateManagerFake';
+import { createMockExtensionContext } from '../helpers/extensionContextFake';
+import { createMockProject } from '../helpers/projectFake';
 
 const executePipelineMock = executeEdsPipeline as jest.Mock;
 const ensureAuthMock = ensureDaLiveAuth as jest.Mock;
 
 function makeLogger(): Logger {
-    return {
-        info: jest.fn(),
-        debug: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        trace: jest.fn(),
-    } as unknown as Logger;
+    return createMockLogger() as unknown as Logger;
 }
 
 function makeStateManager(project: Project | null): StateManager {
-    return {
+    return createMockStateManager({
         getCurrentProject: jest.fn().mockResolvedValue(project),
         saveProject: jest.fn().mockResolvedValue(undefined),
-    } as unknown as StateManager;
+    }) as unknown as StateManager;
 }
 
 function makeContext(): vscode.ExtensionContext {
-    return {
-        subscriptions: [],
-        secrets: {
-            get: jest.fn(),
-            store: jest.fn(),
-            delete: jest.fn(),
-        },
-    } as unknown as vscode.ExtensionContext;
+    return createMockExtensionContext();
 }
 
-const EDS_PROJECT = {
+const EDS_PROJECT = createMockProject({
     name: 'Demo EDS',
     path: '/projects/demo',
     selectedStack: 'eds-paas',
@@ -131,7 +120,14 @@ const EDS_PROJECT = {
             },
         },
     },
-} as unknown as Project;
+});
+
+/**
+ * Helix reaches the headless core through the command's own seam, not a module mock.
+ * Nothing here asserts on the service — the pipeline is what this suite checks — so an
+ * empty object cast at the boundary states exactly that (ADR-016 rule 2).
+ */
+const fakeHelix = {} as unknown as HelixService;
 
 describe('RefreshBlockLibraryCommand', () => {
     beforeEach(() => {
@@ -157,6 +153,7 @@ describe('RefreshBlockLibraryCommand', () => {
             makeStateManager(EDS_PROJECT),
             makeLogger(),
         );
+        cmd.helixService = fakeHelix;
 
         await cmd.execute();
 
@@ -169,7 +166,7 @@ describe('RefreshBlockLibraryCommand', () => {
         // Load-bearing: an empty (truthy) blockCollectionIds array signals the
         // pipeline to read component-definition.json from the USER's repo so
         // MCP-promoted blocks survive the destructive rebuild.
-        expect(params.blockCollectionIds).toEqual([]);
+        expect(params.blockCollectionIds).toStrictEqual([]);
     });
 
     it('surfaces progress messages during pipeline execution', async () => {
@@ -178,6 +175,7 @@ describe('RefreshBlockLibraryCommand', () => {
             makeStateManager(EDS_PROJECT),
             makeLogger(),
         );
+        cmd.helixService = fakeHelix;
 
         await cmd.execute();
 
@@ -192,6 +190,101 @@ describe('RefreshBlockLibraryCommand', () => {
         // Invoking the pipeline progress callback must not throw — it must
         // bridge through to a reporter (we just verify it's wired and callable).
         expect(() => onProgress({ operation: 'block-library', message: 'configuring...' })).not.toThrow();
+    });
+
+    /**
+     * The command owns the UX and nothing else — which toast fires, and whether one
+     * fires at all. Every branch below is invisible to the pipeline assertions above:
+     * the rebuild behaves identically and only the user's report differs.
+     */
+    describe('what the user is told', () => {
+        function command(project: Project | null = EDS_PROJECT): RefreshBlockLibraryCommand {
+            const cmd = new RefreshBlockLibraryCommand(
+                makeContext(),
+                makeStateManager(project),
+                makeLogger(),
+            );
+            cmd.helixService = fakeHelix;
+            return cmd;
+        }
+
+        it('confirms a rebuild that landed, and shows no error', async () => {
+            await command().execute();
+
+            expect(vscode.window.setStatusBarMessage).toHaveBeenCalledWith(
+                expect.stringContaining('Block library refreshed'),
+                expect.anything(),
+            );
+            expect(vscode.window.showErrorMessage).not.toHaveBeenCalled();
+        });
+
+        it('reports the failure the rebuild gave, not a generic one', async () => {
+            executePipelineMock.mockResolvedValue({
+                success: false,
+                error: 'component-definition.json is not valid JSON',
+            });
+
+            await command().execute();
+
+            // The reason IS the fix here — a hand-edited comp-def is why this
+            // command exists, and "it failed" sends the user nowhere.
+            expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
+                expect.stringContaining('component-definition.json is not valid JSON'),
+                'OK',
+            );
+            expect(vscode.window.setStatusBarMessage).not.toHaveBeenCalled();
+        });
+
+        it('says nothing when the user cancelled the mid-rebuild DA.live re-auth', async () => {
+            executePipelineMock.mockRejectedValue(new DaLiveAuthError('DA.live token expired'));
+            ensureAuthMock.mockResolvedValue({ authenticated: false, cancelled: true });
+
+            await command().execute();
+
+            // The user just dismissed a sign-in. An error toast on top of that
+            // reports their own choice back to them as a fault.
+            expect(vscode.window.showErrorMessage).not.toHaveBeenCalled();
+            expect(vscode.window.setStatusBarMessage).not.toHaveBeenCalled();
+        });
+
+        it('still errors when the re-auth failed rather than being cancelled', async () => {
+            executePipelineMock.mockRejectedValue(new DaLiveAuthError('DA.live token expired'));
+            ensureAuthMock.mockResolvedValue({ authenticated: false, error: 'token rejected' });
+
+            await command().execute();
+
+            expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
+                expect.stringContaining('token rejected'),
+                'OK',
+            );
+        });
+
+        it('warns and runs nothing when no project is loaded', async () => {
+            await command(null).execute();
+
+            expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
+                'No project loaded.',
+                'OK',
+            );
+            expect(executePipelineMock).not.toHaveBeenCalled();
+            expect(vscode.window.withProgress).not.toHaveBeenCalled();
+        });
+
+        it('reports a failure rather than a success when the progress task never ran', async () => {
+            // The result is captured from inside the task, so the initial value is
+            // what survives if the task does not run. It has to read as a failure:
+            // a success toast for a rebuild that never happened is the one outcome
+            // this command must not produce.
+            (vscode.window.withProgress as jest.Mock).mockResolvedValue(undefined);
+
+            await command().execute();
+
+            expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
+                expect.stringContaining('Unknown error'),
+                'OK',
+            );
+            expect(vscode.window.setStatusBarMessage).not.toHaveBeenCalled();
+        });
     });
 
     it('retries the pipeline once after DaLiveAuthError (auth recovery)', async () => {
@@ -212,6 +305,7 @@ describe('RefreshBlockLibraryCommand', () => {
             makeStateManager(EDS_PROJECT),
             makeLogger(),
         );
+        cmd.helixService = fakeHelix;
 
         await cmd.execute();
 

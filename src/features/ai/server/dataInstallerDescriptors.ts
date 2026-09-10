@@ -138,6 +138,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
     // ── reads ───────────────────────────────────────────────────────────────
     {
         tool: 'get_datapack_import_target',
+        needsAuth: ['adobe'],
         readOnly: true,
         description:
             'Which Commerce instance an import would land on, derived from the current project, ' +
@@ -148,6 +149,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'list_datapack_import_scopes',
+        needsAuth: ['adobe'],
         readOnly: true,
         description:
             "The websites and store views an import can be scoped to on this project's instance. " +
@@ -157,6 +159,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'get_datapack_import_status',
+        needsAuth: ['adobe'],
         readOnly: true,
         description:
             'Progress of the running or most recent datapack import/reset. Poll this after ' +
@@ -166,6 +169,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'list_datapack_export_items',
+        needsAuth: ['adobe'],
         readOnly: true,
         description:
             'What this Commerce instance holds for one data type, to choose from before exporting. ' +
@@ -193,6 +197,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
     // ── the dry run ─────────────────────────────────────────────────────────
     {
         tool: 'validate_datapack_import',
+        needsAuth: ['adobe'],
         // The safe half of the import pair — "same request body as the real
         // thing, without writing".
         readOnly: true,
@@ -211,6 +216,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
     // ── writes ──────────────────────────────────────────────────────────────
     {
         tool: 'start_datapack_import',
+        needsAuth: ['adobe'],
         readOnly: false,
         description:
             'Import a datapack into a live Commerce instance. Returns an activationId as soon as ' +
@@ -222,6 +228,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'reset_datapack',
+        needsAuth: ['adobe'],
         readOnly: false,
         description:
             "Remove a datapack's data from the Commerce instance so the project can be reused. " +
@@ -237,6 +244,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'start_datapack_export',
+        needsAuth: ['adobe'],
         readOnly: false,
         description:
             'Capture data from a Commerce instance into a datapack. **Writes into the SHARED ' +

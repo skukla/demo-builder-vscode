@@ -1,0 +1,56 @@
+Work `.rptc/plans/unmeasured-fifth/overview.md` STEP 3 — DESIGN ONLY, change no tooling.
+
+Every attribution failure found on 2026-09-07 came from one rule: a module is measured against
+the suites that share its FILENAME (`focusModule.suitesFor`). Three shapes came out of it —
+a suite scored against a module it never runs, a suite carrying a module's name that tests
+something else, and a module tested only through a consumer's suite and so never measured.
+
+WRITE A PROPOSAL at `.rptc/plans/unmeasured-fifth/attribution-design.md`. Do NOT change
+focusModule.mjs, mutationScope.mjs, any config, or the baseline. This rule is what every
+measurement in the repo rests on, and a wrong change still produces plausible numbers — the
+owner decides this one awake.
+
+The proposal must answer:
+  - what attribution should key on instead. Stryker already computes which tests cover which
+    mutants; the filename rule only decides which suites to RUN. Say whether that can be
+    inverted and what it costs.
+  - what a run costs under the new rule, measured or estimated with the arithmetic shown.
+    Running every suite per module is correct and possibly unaffordable; say which.
+  - how to PROVE the new set is right, including the control that would catch it being wrong.
+  - what happens to the 628 baseline rows that exist — do they survive, need re-measuring,
+    or change meaning?
+  - what it does NOT fix. A module replaced everywhere by a jest.mock or an injected double
+    is not an attribution problem and no rule change makes it measurable.
+
+CLASSIFY EVERY OPTION, because a later session gates on it. For each, state exactly one of:
+
+  SAFE-TO-LAND — the change is mechanically verifiable by a control that can be RUN. Name the
+    control. It must be able to catch the failure that matters: a wider suite set inflates
+    scores silently, so the control has to re-measure a sample under BOTH rules and show no
+    score rose without a coverage reason. Measured today: diagnosticsReport reads 43.12%
+    beside its sibling and 41.53% alone.
+
+  NEEDS-THE-OWNER — landing it changes what a measurement COSTS from now on (for example
+    running every suite per module, turning a 12-minute run into hours), or changes the
+    MEANING of the 628 baseline rows PL-22 closed against. Say which of the two, and the
+    number if you can measure it.
+
+Put the verdict for the RECOMMENDED option on its own line, exactly:
+    RECOMMENDATION-VERDICT: SAFE-TO-LAND
+or  RECOMMENDATION-VERDICT: NEEDS-THE-OWNER
+Nothing else on that line. A later session reads it and does nothing if it says the second.
+
+Two or three options with a recommendation, not a survey. Cite file:line for every claim
+about how the current tooling behaves.
+
+RAILS (the standing unattended contract). Stay on the work branch; never checkout or merge
+develop. NO CLOUD WRITES and no live calls — tests and local measurement only. Commit only on
+a GREEN check, exit codes captured in variables and never read through a pipe. Explicit
+pathspec (`git commit -- <paths>`), never bare `git commit` or `-a`. `Backlog: PL-50` trailer.
+No attribution trailers. If blocked, record what you learned and stop — do not force it.
+
+CHECK before each commit: the suites you touched, `npx tsc --noEmit`, `npm run
+typecheck:tests`, eslint on changed files, `npm run validate:test-file-sizes`.
+
+FINISH with three or four plain sentences a tired reader understands: what you did, what you
+found, what you did NOT do.

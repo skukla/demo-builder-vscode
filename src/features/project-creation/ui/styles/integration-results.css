@@ -1,0 +1,110 @@
+/**
+ * .int-* styles — the integration RESULTS list on the wizard's Integrations step.
+ *
+ * FEATURE-SCOPED (ADR-017 §6). Imported by the `wizard` entry ALONE — the only one
+ * whose graph reaches IntegrationsStep.
+ *
+ * NOT the Add Integration modal. That journey is `.intflow-*` and lives in
+ * add-integration-flow.css, which the wizard and integrations entries both import.
+ * This file was called integration-flow.css until 2026-09-09 — a name wider than
+ * its contents, sitting next to the sheet that actually holds the flow.
+ *
+ * Moved out of utilities.css by the CSS migration
+ * (.rptc/plans/css-architecture-migration), each rule with the comment above it.
+ * Verbatim otherwise: a move is only correct when the visual diff is empty.
+ */
+
+@layer theme {
+/* ---- Center column: the result-row list + Add launchpad ---- */
+.int-results {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-width: 720px;
+}
+
+/* Empty state escapes the row-width cap so it centers in the full view. */
+.int-results--empty {
+    max-width: none;
+}
+
+/* Empty state: one centered unit (title, copy, Add button) filling the view —
+   a left-anchored fragment in the dark expanse reads as unfinished. */
+.int-results-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    min-height: min(420px, 50vh);
+    width: 100%;
+}
+
+.int-results-empty-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--spectrum-global-color-gray-800);
+}
+
+.int-results-empty-copy {
+    margin-top: 6px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--spectrum-global-color-gray-600);
+    max-width: 52ch;
+}
+
+.int-results-empty-action {
+    margin-top: 20px;
+}
+
+.int-results-add {
+    margin-top: 4px;
+}
+
+/* ---- The surface's ONE destination line, above the cards ---- */
+/* Was repeated on every row while always printing the same project/workspace.
+   `DestinationContext` supplies the value + Change; this rule only lays the
+   label beside it. */
+.int-destination {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 2px 4px;
+    font-size: var(--spectrum-global-dimension-font-size-75);
+    color: var(--spectrum-global-color-gray-600);
+}
+
+.int-destination-label {
+    color: var(--spectrum-global-color-gray-600);
+}
+
+.int-destination-unset {
+    color: var(--spectrum-global-color-gray-500);
+    font-style: italic;
+}
+
+/* ---- The wizard's integration cards ----
+   The card itself is `.integration-card`, shared with the dashboard's
+   integrations page (core/ui/components/integrations) — do NOT restyle it here,
+   or the two surfaces drift apart again. This column only stacks them: the
+   dashboard lays the same cards out on a grid, which does not fit inside
+   `.int-results`' 720px cap. */
+.int-results > .integration-card {
+    width: 100%;
+    /* Drop the grid's reserved height. `--card-min-height` (128px) exists so
+       cells in `.integrations-grid` share a baseline with their NEIGHBOURS —
+       a card with a short status line stays as tall as one carrying a message.
+       A single column has no neighbour to match, so the reservation is just
+       ~90px of empty card under two lines of text. Height comes from content
+       plus `--card-padding`. */
+    min-height: 0;
+}
+
+/* The subline is prose here, not a status pair, so it keeps the muted
+   statusline metrics without the dot's leading gap. */
+.int-results > .integration-card .integration-card-statusline {
+    font-size: var(--spectrum-global-dimension-font-size-75);
+    color: var(--spectrum-global-color-gray-600);
+}
+}

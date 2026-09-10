@@ -34,17 +34,17 @@ import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { useActivateOnKey } from '@/core/ui/hooks/useActivateOnKey';
 import { matchesSearchFields } from '@/core/ui/hooks/useSearchFilter';
+import { cn } from '@/core/ui/utils/classNames';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import {
-    DatapackCard,
     groupDatapacks,
     pickDefaultVersion,
-    renderDataInstallerFailure,
-    useDataInstallerRequest,
     type DatapackGroup,
-    type DatapackSummary,
-    type Page,
-} from '@/features/data-installer';
+} from '@/features/data-installer/services/datapackCatalog';
+import type { DatapackSummary, Page } from '@/features/data-installer/types';
+import { DatapackCard } from '@/features/data-installer/ui/components/DatapackCard';
+import { renderDataInstallerFailure } from '@/features/data-installer/ui/dataInstallerFailure';
+import { useDataInstallerRequest } from '@/features/data-installer/ui/hooks/useDataInstallerRequest';
 import type { BaseStepProps } from '@/types/wizard';
 
 /**
@@ -236,7 +236,7 @@ function NoSampleData({
             aria-checked={isSelected}
             aria-label="None"
             tabIndex={0}
-            className={`sample-data-none${isSelected ? ' is-selected' : ''}`}
+            className={cn('sample-data-none', isSelected && 'is-selected')}
             onClick={onSelect}
             onKeyDown={handleKeyDown}
         >

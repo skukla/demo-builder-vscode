@@ -18,7 +18,7 @@
 
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { renderFields } from './BrokeredCredentialFields.testUtils';
+import { ID_FIELD, renderFields } from './BrokeredCredentialFields.testUtils';
 
 const SERVED = { served: true, verdict: 'configured, 200', httpStatus: 200 };
 const REFUSED = { served: false, verdict: 'configured, 403 — ask an administrator', httpStatus: 403 };
@@ -95,6 +95,29 @@ describe('when the service serves a credential', () => {
 
         expect(screen.getByLabelText('OAuth client ID')).toHaveValue('mine');
     });
+
+    it('opens already overriding when only the SECRET is present', () => {
+        // The pair is one credential. Half of it typed is still the user having
+        // chosen the override, and reading only the id would hide the half they kept.
+        const values: Record<string, string> = { ACCS_OAUTH_CLIENT_SECRET: 'kept' };
+        renderFields({
+            status: SERVED,
+            getFieldValue: (field: any) => values[field.key],
+        });
+
+        expect(screen.getByLabelText('OAuth client secret')).toHaveValue('kept');
+    });
+
+    it('TAKING the override clears nothing — only leaving it does', async () => {
+        // The clear belongs to the way OUT. Firing it on the way in writes two empty
+        // values over a config the user never touched, which the wizard then persists.
+        const user = setupUser();
+        const { updateField } = renderFields({ status: SERVED });
+
+        await user.click(screen.getByTestId('toggle-credential-override'));
+
+        expect(updateField).not.toHaveBeenCalled();
+    });
 });
 
 describe('when the service will NOT serve this user', () => {
@@ -137,5 +160,23 @@ describe('degenerate catalog', () => {
 
         expect(screen.getByLabelText('OAuth client ID')).toBeInTheDocument();
         expect(screen.queryByLabelText('OAuth client secret')).not.toBeInTheDocument();
+    });
+
+    it('leaving the override clears the id ALONE when there is no secret field', async () => {
+        // Clearing a field that was never rendered means calling updateField with
+        // undefined — a malformed call the store cannot key, and one no assertion on
+        // the id alone would notice.
+        const user = setupUser();
+        const values: Record<string, string> = { ACCS_OAUTH_CLIENT_ID: 'mine' };
+        const { updateField } = renderFields({
+            status: SERVED,
+            secretField: undefined,
+            getFieldValue: (field: any) => values[field.key],
+        });
+
+        await user.click(screen.getByTestId('toggle-credential-override'));
+
+        expect(updateField).toHaveBeenCalledTimes(1);
+        expect(updateField).toHaveBeenCalledWith(ID_FIELD, '');
     });
 });

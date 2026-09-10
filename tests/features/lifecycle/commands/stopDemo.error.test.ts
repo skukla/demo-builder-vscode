@@ -10,141 +10,29 @@
  * ALL TESTS ARE FULLY MOCKED - No real process spawning or port binding.
  */
 
-import { StopDemoCommand } from '@/features/lifecycle/commands/stopDemo';
-import { ProcessCleanup } from '@/core/shell/processCleanup';
-import { ServiceLocator as _ServiceLocator } from '@/core/di';
-import { StateManager } from '@/core/state';
+import {
+    ProcessCleanup,
+    StopDemoCommand,
+    setupStopDemo,
+} from './stopDemo.testUtils';
+import type { StateManager } from '@/types/state';
 import type { Logger } from '@/types/logger';
 import * as vscode from 'vscode';
 
-// Mock ProcessCleanup
-jest.mock('@/core/shell/processCleanup');
-const MockProcessCleanup = ProcessCleanup as jest.MockedClass<typeof ProcessCleanup>;
-
-// Mock ServiceLocator for CommandExecutor (lsof commands)
-const mockCommandExecutor = {
-    execute: jest.fn(),
-};
-jest.mock('@/core/di', () => ({
-    ServiceLocator: {
-        getCommandExecutor: jest.fn(() => mockCommandExecutor),
-        reset: jest.fn(),
-    },
-}));
-
-// Mock logging
-jest.mock('@/core/logging', () => ({
-    Logger: jest.fn().mockImplementation(() => ({
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        debug: jest.fn(),
-    })),
-    getLogger: jest.fn(() => ({
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        debug: jest.fn(),
-    })),
-}));
+import {
+    createMockTerminal,
+} from '../../../helpers/vscodeMockViews';
 
 describe('StopDemoCommand - Error Handling', () => {
     let command: StopDemoCommand;
-    let mockContext: jest.Mocked<vscode.ExtensionContext>;
     let mockStateManager: jest.Mocked<StateManager>;
     let mockLogger: jest.Mocked<Logger>;
     let mockProcessCleanup: jest.Mocked<ProcessCleanup>;
-    let mockTerminal: { name: string; dispose: jest.Mock };
+    let mockTerminal: ReturnType<typeof createMockTerminal>;
 
     beforeEach(() => {
         jest.clearAllMocks();
-
-        // Setup mock terminal
-        mockTerminal = {
-            name: 'test-project - Frontend',
-            dispose: jest.fn(),
-        };
-        (vscode.window as any).terminals = [mockTerminal];
-
-        // Setup mock ProcessCleanup instance
-        mockProcessCleanup = {
-            killProcessTree: jest.fn().mockResolvedValue(undefined),
-        } as any;
-        MockProcessCleanup.mockImplementation(() => mockProcessCleanup);
-
-        // Setup mock CommandExecutor for lsof
-        mockCommandExecutor.execute.mockResolvedValue({
-            code: 0,
-            stdout: '12345',
-            stderr: '',
-        });
-
-        // Mock extension context
-        mockContext = {
-            subscriptions: [],
-            extensionPath: '/mock/extension/path',
-            globalState: {
-                get: jest.fn(),
-                update: jest.fn().mockResolvedValue(undefined),
-            },
-        } as any;
-
-        // Mock state manager
-        mockStateManager = {
-            getCurrentProject: jest.fn().mockResolvedValue({
-                name: 'test-project',
-                path: '/test/path',
-                status: 'running',
-                created: new Date(),
-                lastModified: new Date(),
-                componentInstances: {
-                    eds: {
-                        id: 'eds',
-                        name: 'Edge Delivery Services',
-                        type: 'frontend',
-                        status: 'running',
-                        port: 3000,
-                    },
-                },
-            }),
-            saveProject: jest.fn().mockResolvedValue(undefined),
-        } as any;
-
-        // Mock logger
-        mockLogger = {
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            debug: jest.fn(),
-        } as any;
-
-        // Mock vscode.window.withProgress to execute task immediately
-        (vscode.window as any).withProgress = jest.fn().mockImplementation(
-            async (_options: any, task: any) => {
-                return await task({ report: jest.fn() });
-            }
-        );
-
-        // Mock vscode.window.setStatusBarMessage
-        (vscode.window as any).setStatusBarMessage = jest.fn();
-
-        // Mock vscode.window.showErrorMessage
-        (vscode.window as any).showErrorMessage = jest.fn().mockResolvedValue('OK');
-
-        // Mock vscode.commands.executeCommand
-        (vscode.commands as any).executeCommand = jest.fn().mockResolvedValue(undefined);
-
-        // Mock vscode.workspace.getConfiguration
-        (vscode.workspace as any).getConfiguration = jest.fn().mockReturnValue({
-            get: jest.fn().mockReturnValue(3000),
-        });
-
-        // Create command instance
-        command = new StopDemoCommand(
-            mockContext,
-            mockStateManager,
-            mockLogger
-        );
+        ({ command, mockStateManager, mockLogger, mockProcessCleanup, mockTerminal } = setupStopDemo());
     });
 
     afterEach(() => {
@@ -193,7 +81,7 @@ describe('StopDemoCommand - Error Handling', () => {
             const finalSaves = mockStateManager.saveProject.mock.calls.filter(
                 call => call[0].status === 'ready'
             );
-            expect(finalSaves.length).toBe(0);
+            expect(finalSaves).toHaveLength(0);
         });
     });
 
@@ -213,7 +101,7 @@ describe('StopDemoCommand - Error Handling', () => {
             const finalSaves = mockStateManager.saveProject.mock.calls.filter(
                 call => call[0].status === 'ready'
             );
-            expect(finalSaves.length).toBe(0);
+            expect(finalSaves).toHaveLength(0);
         });
 
         it('should allow retry after error', async () => {

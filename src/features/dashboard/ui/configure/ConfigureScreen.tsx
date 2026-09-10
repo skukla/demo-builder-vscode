@@ -28,18 +28,19 @@ import { useConfigureFieldValues } from './hooks/useConfigureFieldValues';
 import { useSelectedComponents } from './hooks/useSelectedComponents';
 import { useServiceGroups } from './hooks/useServiceGroups';
 import { withStoredSecretsPreserved } from './storedSecretPayload';
-import { PageHeader, PageFooter } from '@/core/ui/components/layout';
+import { ACCS_OAUTH_CLIENT_ID } from '@/core/config/envVarKeys';
+import { PageFooter } from '@/core/ui/components/layout/PageFooter';
+import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 // Direct paths, not the barrels: several Configure suites mock `components/layout`
 // wholesale to stub PageHeader/PageFooter, and a barrel import would hand this screen an
 // undefined shell/rail. Both are plain presentational markup, so tests render the REAL
 // ones and drive the rail the way a user does.
 import { StepAreaShell } from '@/core/ui/components/layout/StepAreaShell';
 import { StepRail } from '@/core/ui/components/navigation/StepRail';
-import { useFocusTrap } from '@/core/ui/hooks';
+import { useFocusTrap } from '@/core/ui/hooks/useFocusTrap';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { normalizeProjectName, getProjectNameError } from '@/core/validation/normalizers';
-import { ACCS_OAUTH_CLIENT_ID } from '@/features/components/config/envVarKeys';
 import { StoreConfigFieldRow } from '@/features/components/ui/components/StoreConfigFieldRow';
 import { useAutoStoreDetect } from '@/features/components/ui/hooks/useAutoStoreDetect';
 import { useCredentialService } from '@/features/components/ui/hooks/useCredentialService';

@@ -5,10 +5,8 @@
  * Verifies all required handlers are registered and accessible.
  */
 
-import {
-    projectCreationHandlers,
-} from '@/features/project-creation/handlers';
-import { hasHandler, getRegisteredTypes } from '@/core/handlers';
+import { projectCreationHandlers } from '@/features/project-creation/handlers/ProjectCreationHandlerRegistry';
+import { getRegisteredTypes, hasHandler } from '@/core/handlers/dispatchHandler';
 
 describe('projectCreationHandlers', () => {
     describe('Handler Map Structure', () => {
@@ -65,14 +63,6 @@ describe('projectCreationHandlers', () => {
             expect(hasHandler(projectCreationHandlers, 'list-org-console-apis')).toBe(true);
         });
 
-        it('should export the console API handler from the barrel', async () => {
-            const barrel = await import('@/features/project-creation/handlers');
-            const exported = (barrel as Record<string, unknown>).handleListOrgConsoleApis;
-            expect(typeof exported).toBe('function');
-            expect(
-                (projectCreationHandlers as Record<string, unknown>)['list-org-console-apis']
-            ).toBe(exported);
-        });
     });
 
 });

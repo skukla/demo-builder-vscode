@@ -10,7 +10,6 @@
  * - When not provided, getLogger() fallback is used internally
  *
  * Services tested:
- * - AuthCacheManager
  * - PrerequisitesCacheManager
  * - TokenManager
  * - DaLiveOrgOperations (extracted from DaLiveService)
@@ -22,21 +21,9 @@
  */
 
 import type { Logger } from '@/types/logger';
-
-/**
- * Create a mock Logger for testing
- */
-function createMockLogger(): Logger {
-    return {
-        trace: jest.fn(),
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        setContext: jest.fn(),
-        with: jest.fn(),
-    } as unknown as Logger;
-}
+import { ToolManager } from '@/features/eds/services/toolManager';
+import { createMockCommandExecutor } from '../../helpers/commandExecutorFake';
+import { createMockLogger } from '../../helpers/loggerFake';
 
 // Track calls to getLogger to verify DI is working
 const mockModuleLogger = {
@@ -50,9 +37,12 @@ const mockModuleLogger = {
 };
 
 // Mock all getLogger calls to verify they're not being used when logger is injected
-jest.mock('@/core/logging', () => ({
+// `Logger` was ALSO listed here as a mocked export. `@/core/logging` never
+// exported a `Logger` — only DebugLogger/ErrorLogger/StepLogger and the two
+// accessors — so that line faked a symbol that does not exist. Dropped 2026-08-31
+// (PL-31) when the barrel went and every key had to name its declaring module.
+jest.mock('@/core/logging/debugLogger', () => ({
     getLogger: jest.fn(() => mockModuleLogger),
-    Logger: class {},
     StepLogger: class {},
 }));
 
@@ -108,28 +98,16 @@ describe('Service Logger Injection', () => {
         // Clear module-level mock logs
         Object.values(mockModuleLogger).forEach((fn) => {
             if (typeof fn === 'function' && 'mockClear' in fn) {
-                (fn as jest.Mock).mockClear();
+                fn.mockClear();
             }
-        });
-    });
-
-    describe('AuthCacheManager', () => {
-        it('should accept optional logger in constructor', () => {
-            const { AuthCacheManager } = require('@/features/authentication/services/authCacheManager');
-
-            // Should work without logger (backward compatible)
-            const cacheManager1 = new AuthCacheManager();
-            expect(cacheManager1).toBeDefined();
-
-            // Should work with logger (DI pattern)
-            const cacheManager2 = new AuthCacheManager(mockLogger);
-            expect(cacheManager2).toBeDefined();
         });
     });
 
     describe('PrerequisitesCacheManager', () => {
         it('should accept optional logger in constructor and use injected logger', () => {
-            const { PrerequisitesCacheManager } = require('@/features/prerequisites/services/prerequisitesCacheManager');
+            const {
+                PrerequisitesCacheManager,
+            } = require('@/features/prerequisites/services/prerequisitesCacheManager');
 
             // Should work without logger (backward compatible)
             const cacheManager1 = new PrerequisitesCacheManager();
@@ -141,7 +119,7 @@ describe('Service Logger Injection', () => {
 
             // Set up a cache entry, then invalidate it (which will log)
             const mockStatus = { installed: true, version: '1.0.0' };
-            cacheManager2.setCachedResult('test-prereq', mockStatus as any);
+            cacheManager2.setCachedResult('test-prereq', mockStatus);
             cacheManager2.invalidate('test-prereq');
 
             // Verify the injected logger was called
@@ -156,6 +134,13 @@ describe('Service Logger Injection', () => {
             // constructor no longer takes a CommandExecutor at all, because the
             // read is in-process.
             const readNoToken = () => undefined;
+            // The 4th constructor parameter defaults to the REAL
+            // `refreshStoredToken`, which calls @adobe/aio-lib-ims. On a
+            // signed-in machine that performs a live network refresh and can
+            // escalate to the INTERACTIVE browser login — a unit test must
+            // never do either. Found 2026-08-28 by the console gate: the full
+            // suite printed an Adobe "Login URI" with a live callback port.
+            const noRefresh = async () => undefined;
 
             const { TokenManager } = require('@/features/authentication/services/tokenManager');
 
@@ -164,7 +149,7 @@ describe('Service Logger Injection', () => {
             expect(tokenManager1).toBeDefined();
 
             // Should work with logger (DI pattern)
-            const tokenManager2 = new TokenManager(undefined, mockLogger, readNoToken);
+            const tokenManager2 = new TokenManager(undefined, mockLogger, readNoToken, noRefresh);
             expect(tokenManager2).toBeDefined();
 
             // Trigger operation that logs
@@ -184,7 +169,9 @@ describe('Service Logger Injection', () => {
                 getToken: jest.fn().mockResolvedValue('test-token'),
             };
 
-            const { DaLiveOrgOperations } = require('@/features/eds/services/daLive/daLiveOrgOperations');
+            const {
+                DaLiveOrgOperations,
+            } = require('@/features/eds/services/daLive/daLiveOrgOperations');
 
             // Should work without logger (backward compatible)
             const service1 = new DaLiveOrgOperations(mockTokenProvider);
@@ -205,7 +192,9 @@ describe('Service Logger Injection', () => {
                 delete: jest.fn(),
             };
 
-            const { GitHubTokenService } = require('@/features/eds/services/github/githubTokenService');
+            const {
+                GitHubTokenService,
+            } = require('@/features/eds/services/github/githubTokenService');
 
             // Should work without logger (backward compatible)
             const service1 = new GitHubTokenService(mockSecretStorage);
@@ -218,16 +207,23 @@ describe('Service Logger Injection', () => {
     });
 
     describe('ToolManager', () => {
-        it('should accept optional logger in constructor', () => {
-            const { ToolManager } = require('@/features/eds/services/toolManager');
+        /**
+         * REWRITTEN 2026-08-28. This used to load the class through `require`,
+         * which types as `any` — so the compiler checked NOTHING here, and the
+         * test asserted a no-argument constructor still worked. ADR-015 made
+         * the executor required, and the old test would have kept passing
+         * regardless, because JavaScript does not enforce argument counts.
+         *
+         * A statically imported class is what makes the contract checkable.
+         */
+        it('requires the executor and still takes an optional logger', () => {
+            const executor = createMockCommandExecutor({ execute: jest.fn() });
 
-            // Should work without logger (backward compatible)
-            const manager1 = new ToolManager();
-            expect(manager1).toBeDefined();
+            const withoutLogger = new ToolManager(executor);
+            expect(withoutLogger).toBeDefined();
 
-            // Should work with logger (DI pattern)
-            const manager2 = new ToolManager(mockLogger);
-            expect(manager2).toBeDefined();
+            const withLogger = new ToolManager(executor, mockLogger);
+            expect(withLogger).toBeDefined();
         });
     });
 
@@ -246,7 +242,9 @@ describe('Service Logger Injection', () => {
             expect(service2).toBeDefined();
 
             // Should work with logger and GitHub token service (Helix Admin API auth)
-            const mockGithubTokenService = { getToken: jest.fn().mockResolvedValue({ token: 'gh-token' }) };
+            const mockGithubTokenService = {
+                getToken: jest.fn().mockResolvedValue({ token: 'gh-token' }),
+            };
             const service3 = new HelixService(mockLogger, mockGithubTokenService);
             expect(service3).toBeDefined();
         });
@@ -265,7 +263,7 @@ describe('Service Logger Injection', () => {
             const service1 = new CleanupService(
                 mockGithubService,
                 mockDaLiveService,
-                mockToolManager,
+                mockToolManager
             );
             expect(service1).toBeDefined();
 
@@ -274,7 +272,7 @@ describe('Service Logger Injection', () => {
                 mockGithubService,
                 mockDaLiveService,
                 mockToolManager,
-                mockLogger,
+                mockLogger
             );
             expect(service2).toBeDefined();
         });

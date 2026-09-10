@@ -6,23 +6,17 @@
  * its own behavior is covered by collaboratorGate.test.ts.
  */
 
-jest.mock('vscode', () => ({
-    workspace: { getConfiguration: jest.fn() },
-}), { virtual: true });
-
-jest.mock('@/core/logging', () => ({
-    Logger: jest.fn().mockImplementation(() => ({
-        debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(),
-    })),
-}));
 
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: { QUICK: 5000 },
 }));
 
-jest.mock('@/core/validation', () => ({
-    validateGitHubDownloadURL: jest.fn().mockReturnValue(true),
+jest.mock('@/core/validation/SensitiveDataRedactor', () => ({
     sanitizeErrorForLogging: jest.fn((msg: string) => msg),
+}));
+
+jest.mock('@/core/validation/URLValidator', () => ({
+    validateGitHubDownloadURL: jest.fn().mockReturnValue(true),
 }));
 
 // Mock the gate so we control collaborator verification
@@ -31,13 +25,13 @@ jest.mock('@/features/updates/services/collaboratorGate', () => ({
     clearCollaboratorCache: jest.fn(),
 }));
 
-global.fetch = jest.fn() as jest.Mock;
+global.fetch = jest.fn();
 
 import { UpdateManager } from '@/features/updates/services/updateManager';
 import { isRepoCollaborator } from '@/features/updates/services/collaboratorGate';
 import * as vscode from 'vscode';
 import {
-    createMockContext,
+    createUpdateManagerContext,
     createMockLogger,
     createMockWorkspaceConfig,
     createMockReleasesArray,
@@ -59,7 +53,7 @@ describe('UpdateManager - Early-Access Gate', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-        mockContext = createMockContext('1.0.0');
+        mockContext = createUpdateManagerContext('1.0.0');
         mockLogger = createMockLogger();
         mockSecurityValidationPass();
     });
@@ -112,7 +106,8 @@ describe('UpdateManager - Early-Access Gate', () => {
                     assets: [
                         {
                             name: 'extension.vsix',
-                            browser_download_url: 'https://github.com/test/repo/releases/download/v1.1.0/extension.vsix',
+                            browser_download_url:
+                                'https://github.com/test/repo/releases/download/v1.1.0/extension.vsix',
                         },
                     ],
                 }),

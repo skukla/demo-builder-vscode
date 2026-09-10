@@ -31,7 +31,7 @@
  */
 
 import * as vscode from 'vscode';
-import { getLogger, DebugLogger } from '@/core/logging';
+import { DebugLogger, getLogger } from '@/core/logging/debugLogger';
 import { DisposableStore } from '@/core/utils/disposableStore';
 
 // Lazy-initialized logger to avoid calling getLogger() before initializeLogger()

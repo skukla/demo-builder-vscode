@@ -3,8 +3,9 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { BaseCommand } from './baseCommand';
 import { WebviewPanelManager } from './webviewPanelManager';
-import { WebviewCommunicationManager, createWebviewCommunication } from '@/core/communication';
-import { setLoadingState, TIMEOUTS, type LoadingHeader } from '@/core/utils';
+import { WebviewCommunicationManager, createWebviewCommunication } from '@/core/communication/webviewCommunicationManager';
+import { setLoadingState, type LoadingHeader } from '@/core/utils/loadingHTML';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 /**
  * Base class for commands that use webviews with robust communication

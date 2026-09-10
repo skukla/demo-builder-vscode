@@ -164,9 +164,110 @@ same tool was called again: near means the answer did not stick, far means the
 agent legitimately re-oriented, and only reading tells you which. Same for
 `→BASH` — early in an arc it is a discovery gap, late it is a capability gap.
 
+Journey mode opens with the **four AI-1d metrics**, computed over the whole arc
+(same leads-not-verdicts rule): **first action** (the first non-read call of
+ours — everything before it is orientation), **re-orientations** (repeat calls
+to read-like tools), **bash moments** bucketed early/mid/late by event index,
+and **interventions** (the user spoke immediately after one of our calls — the
+clearest marker of the agent being off the path). Reference reading, 2026-08-28:
+the 264-turn ERP journey scored first-action-at-#6, 4 re-orientations, 94 Bash
+calls spread 33/36/25 — a journey that ran on Bash THROUGHOUT is a sustained
+capability gap, not a discovery problem.
+
 `PROSE-ERROR` is the trap the battery met first: a tool answering "Adobe sign-in
 required" as ordinary text with `is_error` unset, which every count scores as a
 success.
+
+## The journey measurement (owner-requested, 2026-08-28)
+
+**Every journey or battery analysis answers three questions, not one:** what
+happened, what SHOULD have happened, and **where the should-have-fired tool
+comes from** — so the intended journey is understood, not just the failed one.
+"Bad things found" is half an audit.
+
+A real project's agent surface has FOUR MCP servers plus two skill families
+(verified against bodea's bundle, 2026-08-28) — the provenance answer names
+one of these per should-have-fired tool:
+
+| Source | What it owns |
+|---|---|
+| **demo-builder** (our in-extension server) | Project/org/mesh/Console/commerce-query — ALL the tools that replaced the ERP journey's aio commands and curls live here |
+| **dropins** (`@dropins/mcp`) | Structured dropin knowledge: slots, events, containers, **`list_graphql_queries`** — the storefront GraphQL operations, extracted from source |
+| **commerce-extensibility** (`@adobe-commerce/commerce-extensibility-tools`) | App Builder + Integration Starter Kit rules and patterns — the ERP journey's BUILD phase guidance |
+| **playwright** | Browser verification |
+| **Demo Builder skills** (generated, 15) | Our workflows: add-component, commerce-block-mapper, diagnose-demo… |
+| **Adobe skill bundles** (aem-\* ×7, appbuilder-\* ×7) | Storefront and App Builder craft; `aem-researcher` is what ROUTES to the dropins MCP's query tools |
+
+The journey metrics' **calls-by-server** line makes the provenance question
+mechanical: a sibling server at 0 calls while its job was done by hand is a
+ROUTING gap — the knowledge existed and nothing led the agent to it — which is
+a different fix (skill/AGENTS.md routing) from a missing tool.
+
+When auditing for COST, work these five steps in order. The 264-turn ERP
+journey is the reference audit; its numbers are cited so future audits have a
+comparison point.
+
+**1. Classify every Bash call** into exactly four buckets:
+   - *File-work* — reading/writing code, navigating. Bash is CORRECT here;
+     never count it as a gap. (ERP journey: ~50 of 94.)
+   - *Covered today* — a current tool does this job; name the tool per call.
+   - *Covered since* — the tool postdates the journey (the ERP journey's 20
+     Commerce curls predate `run_commerce_query`; its 17 aio commands predate
+     the Console tool family). These are REPLAY candidates, not gaps.
+   - *Uncovered* — no tool does it. Only this bucket proposes work, and only
+     after asking whether the job is rare enough that Bash is fine (the ERP
+     journey's one uncovered job — reading ANOTHER project's mesh config as a
+     reference — is rare-enough).
+
+**2. Look for the efficiency smells**, each mechanical to spot in the call list:
+   - *Header/auth re-derivation creep* — the `-H` count rising across curls as
+     calls fail (ERP journey: 2 → 14 headers by call 13; the
+     `Missing-Magento-Store-View-Code` failure at turn 14 is the trap
+     `run_commerce_query`'s description now names).
+   - *Trial-and-error schema probing* — more than two variant queries before a
+     working one, or introspection fired mid-journey (ERP: 8 discovery curls,
+     introspection at call 8). Signals a missing knowledge answer, not a
+     missing transport.
+   - *The select dance* — global `aio console org/project/workspace select` +
+     `where` confirmation pairs (ERP: 5 selects + 5 wheres). Our model
+     eliminates this BY DESIGN (per-invocation org targeting); any occurrence
+     on today's surface is a routing failure worth a finding.
+   - *Repeated identical calls* — same command, same args, minutes apart.
+
+**3. Account the cost per phase from the transcript itself** — sum
+   `message.usage` over assistant turns (input + cache_creation as the input
+   side; output separately; count tool_use blocks), split at the journey's
+   pivot turns. Reference: ERP phase 1 (GraphQL exploration, 14 user turns)
+   = ~211k in / 87k out / 25 calls; phase 2 (org-connect onward) = ~3.0M in /
+   758k out / 146 calls.
+
+**4. Replay the covered-since phases as battery prompts.** Take the journey's
+   VERBATIM asks (or minimally generalized — a category name that doesn't
+   exist in the current store gets "pick a real category"), add them to
+   `prompts.json` with the journey id + turn range in `why` (`journey-*` id
+   prefix), run `--only <ids> --repeat 3`, and compare calls/billable against
+   the original phase. That closes the loop the classification opened: it
+   proves the covered-since bucket is actually covered.
+
+**5. Verdicts stay leads.** A smell names what happened; only reading the
+   calls says whether it was waste. Grade outcomes, not paths (Anthropic's
+   rule, pinned on the round-trip item): the question is never "did the agent
+   take our route" but "what did the route it took cost".
+
+**6. Journeys round-trip to zero, and the report says so in plain English**
+   (owner, 2026-08-28 — from the extension's overarching goal: an SC works as
+   idempotently as possible; whatever can be done should be undoable so
+   activities reproduce at will). Two obligations on every journey:
+   - **The ask contains its own undo.** A journey that creates, deploys, or
+     configures something also asks for its removal in the same journey, so
+     the run ends at zero. This is deliberately stronger than harness cleanup
+     (the tier-2 scratch choreography): the UNDO PATH is part of the measured
+     surface, and a journey that cannot get back to zero has found a
+     reversibility gap — a product finding under the idempotency goal, not a
+     test inconvenience.
+   - **The result is reported in plain English**: what the journey actually
+     did, and what it left behind (the right answer is "nothing"). Scores and
+     routes are the appendix, never the report.
 
 ### The corpus excludes battery runs, and you must not bypass that
 

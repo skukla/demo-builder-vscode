@@ -139,7 +139,7 @@ export class ForkSyncService {
         }
 
         if (response.status === 403) {
-            const body = await response.json().catch(() => ({}));
+            const body = await response.json().catch(() => undefined);
             const message = (body as Record<string, unknown>)?.message ?? '';
             if (typeof message === 'string' && message.toLowerCase().includes('rate limit')) {
                 throw new Error('GitHub API rate limit exceeded. Please try again later.');

@@ -9,7 +9,11 @@
 
 import { renderHook } from '@testing-library/react';
 import { useServiceGroups } from '@/features/dashboard/ui/configure/hooks/useServiceGroups';
-import type { ComponentsData } from '@/features/dashboard/ui/configure/configureTypes';
+import type {
+    ComponentsData,
+    ServiceGroup,
+    UniqueField,
+} from '@/features/dashboard/ui/configure/configureTypes';
 import type { SelectedComponent } from '@/features/dashboard/ui/configure/hooks/useSelectedComponents';
 
 // Minimal componentsData with envVars relevant to the mesh-filtering tests.
@@ -64,8 +68,40 @@ const componentsData: ComponentsData = {
             required: true,
             group: 'accs',
         },
+        ACCS_WEBSITE_CODE: {
+            key: 'ACCS_WEBSITE_CODE',
+            label: 'ACCS Website Code',
+            type: 'text',
+            required: true,
+            group: 'accs',
+        },
+        UNGROUPED_SETTING: {
+            key: 'UNGROUPED_SETTING',
+            label: 'Ungrouped Setting',
+            type: 'text',
+            required: true,
+        },
     } as ComponentsData['envVars'],
 };
+
+/** A component declaring exactly `envVars` as required, and nothing else. */
+function componentRequiring(id: string, envVars: string[]): SelectedComponent {
+    return {
+        id,
+        type: 'Backend',
+        data: { id, name: id, configuration: { requiredEnvVars: envVars, optionalEnvVars: [] } },
+    } as SelectedComponent;
+}
+
+/** Every field key the hook surfaces, across all groups. */
+function keysFrom(groups: ServiceGroup[]): string[] {
+    return groups.flatMap((g) => g.fields.map((f) => f.key));
+}
+
+/** The one field with `key`, wherever it landed. */
+function fieldNamed(groups: ServiceGroup[], key: string): UniqueField | undefined {
+    return groups.flatMap((g) => g.fields).find((f) => f.key === key);
+}
 
 const edsStorefrontNoMesh: SelectedComponent = {
     id: 'eds-storefront',
@@ -221,5 +257,144 @@ describe('useServiceGroups', () => {
         // Control: the other frontend-declared optional var still comes through,
         // so this is MESH_ENDPOINT being filtered and not the fixture collapsing.
         expect(everyKey).toContain('AEM_ASSETS_ENABLED');
+    });
+
+    // A field declared by several components is stored ONCE and accumulates their
+    // ids. That list is what makes an edit fan out to every component needing the
+    // value, so a second declaration must extend it rather than replace the field.
+    describe('deduplicating a field across components', () => {
+        it('records every component that declares the same field', () => {
+            const { result } = renderHook(() =>
+                useServiceGroups({
+                    selectedComponents: [
+                        componentRequiring('comp-a', ['ACCS_GRAPHQL_ENDPOINT']),
+                        componentRequiring('comp-b', ['ACCS_GRAPHQL_ENDPOINT']),
+                    ],
+                    componentsData,
+                })
+            );
+
+            expect(keysFrom(result.current)).toStrictEqual(['ACCS_GRAPHQL_ENDPOINT']);
+            expect(fieldNamed(result.current, 'ACCS_GRAPHQL_ENDPOINT')?.componentIds).toStrictEqual(
+                ['comp-a', 'comp-b']
+            );
+        });
+
+        it('records a component once when it declares the field twice', () => {
+            const twice: SelectedComponent = {
+                id: 'comp-dup',
+                type: 'Backend',
+                data: {
+                    id: 'comp-dup',
+                    name: 'Declares it both ways',
+                    configuration: {
+                        requiredEnvVars: ['ACCS_GRAPHQL_ENDPOINT'],
+                        optionalEnvVars: ['ACCS_GRAPHQL_ENDPOINT'],
+                    },
+                },
+            } as SelectedComponent;
+
+            const { result } = renderHook(() =>
+                useServiceGroups({ selectedComponents: [twice], componentsData })
+            );
+
+            expect(fieldNamed(result.current, 'ACCS_GRAPHQL_ENDPOINT')?.componentIds).toStrictEqual(
+                ['comp-dup']
+            );
+        });
+    });
+
+    describe('what does not become a field', () => {
+        // A component may name an env var the registry does not define — an older
+        // catalog entry, a var that has since been removed. There is nothing to
+        // render for it: no label, no type, no group.
+        it('skips an env var the registry does not define', () => {
+            const { result } = renderHook(() =>
+                useServiceGroups({
+                    selectedComponents: [
+                        componentRequiring('comp-stale', ['NOT_IN_THE_REGISTRY']),
+                        accsBackend,
+                    ],
+                    componentsData,
+                })
+            );
+
+            expect(keysFrom(result.current)).toStrictEqual(['ACCS_GRAPHQL_ENDPOINT']);
+        });
+
+        it('tolerates a selected component that declares no configuration at all', () => {
+            const bare = {
+                id: 'comp-bare',
+                type: 'Frontend',
+                data: { id: 'comp-bare', name: 'No configuration block' },
+            } as SelectedComponent;
+
+            const { result } = renderHook(() =>
+                useServiceGroups({
+                    selectedComponents: [bare, accsBackend],
+                    componentsData,
+                })
+            );
+
+            expect(keysFrom(result.current)).toStrictEqual(['ACCS_GRAPHQL_ENDPOINT']);
+        });
+    });
+
+    describe('placing fields into groups', () => {
+        it('keeps every field of a group, not just the last one', () => {
+            const { result } = renderHook(() =>
+                useServiceGroups({
+                    selectedComponents: [
+                        componentRequiring('comp-accs', [
+                            'ACCS_GRAPHQL_ENDPOINT',
+                            'ACCS_WEBSITE_CODE',
+                        ]),
+                    ],
+                    componentsData,
+                })
+            );
+
+            const accs = result.current.find((g) => g.id === 'accs');
+            expect(accs?.fields.map((f) => f.key)).toStrictEqual([
+                'ACCS_GRAPHQL_ENDPOINT',
+                'ACCS_WEBSITE_CODE',
+            ]);
+        });
+
+        it('files a field that declares no group under Additional Settings', () => {
+            const { result } = renderHook(() =>
+                useServiceGroups({
+                    selectedComponents: [componentRequiring('comp-misc', ['UNGROUPED_SETTING'])],
+                    componentsData,
+                })
+            );
+
+            expect(result.current.map((g) => g.id)).toStrictEqual(['other']);
+            expect(keysFrom(result.current)).toStrictEqual(['UNGROUPED_SETTING']);
+        });
+    });
+
+    // Configure re-renders on every keystroke in a field. The memo is what keeps
+    // that cheap — but a memo that never re-runs shows the OLD component's fields
+    // after the user changes their selection.
+    it('recomputes when the selected components change', () => {
+        const { result, rerender } = renderHook(
+            (props: Parameters<typeof useServiceGroups>[0]) => useServiceGroups(props),
+            {
+                initialProps: {
+                    selectedComponents: [accsBackend],
+                    componentsData,
+                },
+            }
+        );
+
+        expect(keysFrom(result.current)).toStrictEqual(['ACCS_GRAPHQL_ENDPOINT']);
+
+        rerender({
+            selectedComponents: [componentRequiring('comp-misc', ['UNGROUPED_SETTING'])],
+            componentsData,
+        });
+
+        expect(keysFrom(result.current)).toStrictEqual(['UNGROUPED_SETTING']);
     });
 });

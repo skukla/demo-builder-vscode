@@ -43,7 +43,7 @@ describe('StartDemoCommand - Concurrent Execution Prevention Pattern', () => {
 
             expect(executionCount).toBe(1);
             expect(executionOrder).toContain('blocked');
-            expect(executionOrder.filter(e => e === 'start').length).toBe(1);
+            expect(executionOrder.filter(e => e === 'start')).toHaveLength(1);
         });
 
         it('should allow sequential execution after lock released', async () => {

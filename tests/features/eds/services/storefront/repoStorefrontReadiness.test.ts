@@ -23,18 +23,27 @@
  */
 
 import { classifyRepoForStorefront } from '@/features/eds/services/storefront/repoStorefrontReadiness';
+import type { RepoReadiness } from '@/features/eds/services/storefront/repoStorefrontReadiness';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
-const logger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() };
+import type { GithubFake } from '../../../../helpers/githubFake';
+import { assertKind } from '../../../../helpers/resultAssertions';
+const logger = createMockLogger();
 
 /** Stub GitHubFileOperations: `present` lists the paths that exist. */
-function fileOps(present: string[], opts: { emptyRepo?: boolean; throwOn?: string } = {}) {
+function fileOps(
+    present: string[],
+    opts: { emptyRepo?: boolean; throwOn?: string; emptyRepoOn?: string } = {}
+): GithubFake {
     return {
         getFileContent: jest.fn().mockImplementation(async (_o: string, _r: string, p: string) => {
             if (opts.throwOn && p === opts.throwOn) throw new Error('network down');
-            if (opts.emptyRepo) throw new Error('This repository is empty.');
+            if (opts.emptyRepo || p === opts.emptyRepoOn) {
+                throw new Error('This repository is empty.');
+            }
             return present.includes(p) ? { content: 'x', sha: 's' } : null;
         }),
-    };
+    } as GithubFake;
 }
 
 const CANONICAL = ['scripts/scripts.js', 'scripts/delayed.js', 'head.html'];
@@ -44,10 +53,10 @@ describe('classifyRepoForStorefront', () => {
 
     it('calls a repo with every canonical file a storefront', async () => {
         const result = await classifyRepoForStorefront(
-            fileOps(CANONICAL) as never,
+            fileOps(CANONICAL),
             'skukla',
             'b2b-tester',
-            logger as never
+            logger
         );
 
         expect(result.kind).toBe('storefront');
@@ -55,10 +64,10 @@ describe('classifyRepoForStorefront', () => {
 
     it('calls an empty repo empty', async () => {
         const result = await classifyRepoForStorefront(
-            fileOps([], { emptyRepo: true }) as never,
+            fileOps([], { emptyRepo: true }),
             'skukla',
             'fresh',
-            logger as never
+            logger
         );
 
         expect(result.kind).toBe('empty');
@@ -67,29 +76,27 @@ describe('classifyRepoForStorefront', () => {
     it('names which canonical files are missing', async () => {
         // The user has to know WHAT is wrong to judge whether reset is safe.
         const result = await classifyRepoForStorefront(
-            fileOps(['head.html']) as never,
+            fileOps(['head.html']),
             'skukla',
             'demo-builder-test',
-            logger as never
+            logger
         );
 
-        expect(result.kind).toBe('not-a-storefront');
-        if (result.kind === 'not-a-storefront') {
-            expect(result.missing).toEqual(
-                expect.arrayContaining(['scripts/scripts.js', 'scripts/delayed.js'])
-            );
-            expect(result.missing).not.toContain('head.html');
-        }
+        assertKind(result, 'not-a-storefront');
+        expect(result.missing).toEqual(
+            expect.arrayContaining(['scripts/scripts.js', 'scripts/delayed.js'])
+        );
+        expect(result.missing).not.toContain('head.html');
     });
 
     it('does not call a populated non-storefront empty', async () => {
         // The repo that prompted this had 53 blocks and no scripts/scripts.js.
         // Treating it as empty would auto-reset someone's populated repo.
         const result = await classifyRepoForStorefront(
-            fileOps(['blocks/header/header.js']) as never,
+            fileOps(['blocks/header/header.js']),
             'skukla',
             'x',
-            logger as never
+            logger
         );
 
         expect(result.kind).toBe('not-a-storefront');
@@ -99,10 +106,10 @@ describe('classifyRepoForStorefront', () => {
         // An unreachable GitHub must never read as "empty" — that answer would
         // authorize a destructive reset on a repo we could not see.
         const result = await classifyRepoForStorefront(
-            fileOps(CANONICAL, { throwOn: 'scripts/delayed.js' }) as never,
+            fileOps(CANONICAL, { throwOn: 'scripts/delayed.js' }),
             'skukla',
             'b2b-tester',
-            logger as never
+            logger
         );
 
         expect(result.kind).toBe('undetermined');
@@ -110,21 +117,49 @@ describe('classifyRepoForStorefront', () => {
 
     it('never reports undetermined as a missing-file problem', async () => {
         const result = await classifyRepoForStorefront(
-            fileOps(CANONICAL, { throwOn: 'head.html' }) as never,
+            fileOps(CANONICAL, { throwOn: 'head.html' }),
             'skukla',
             'b2b-tester',
-            logger as never
+            logger
         );
 
         expect(result.kind).not.toBe('not-a-storefront');
         expect(result.kind).not.toBe('empty');
     });
 
+    it('carries the failing check\'s own error as the undetermined reason', async () => {
+        // `undetermined` without a reason is indistinguishable from a bug in the
+        // classifier. The caller shows this string to explain why setup stopped.
+        const result = await classifyRepoForStorefront(
+            fileOps(CANONICAL, { throwOn: 'head.html' }),
+            'skukla',
+            'b2b-tester',
+            logger
+        );
+
+        expect(result).toEqual({ kind: 'undetermined', reason: 'network down' });
+    });
+
+    it('does not call a repo empty when only some probes see it empty', async () => {
+        // The three probes run concurrently, so a push landing mid-flight gives a
+        // mixed answer: one path still 409s "repository is empty" while the others
+        // already return content. Requiring every probe to agree is what stops that
+        // from reading as `empty` and authorizing a reset over the new content.
+        const result = await classifyRepoForStorefront(
+            fileOps(['scripts/scripts.js', 'head.html'], { emptyRepoOn: 'scripts/delayed.js' }),
+            'skukla',
+            'racing',
+            logger
+        );
+
+        expect(result.kind).toBe('not-a-storefront');
+    });
+
     it('checks every canonical file, not just the first miss', async () => {
         // Reporting one missing file at a time turns a single fix into three
         // round trips.
         const ops = fileOps([]);
-        await classifyRepoForStorefront(ops as never, 'skukla', 'x', logger as never);
+        await classifyRepoForStorefront(ops, 'skukla', 'x', logger);
 
         const checked = ops.getFileContent.mock.calls.map((c) => c[2]);
         for (const f of CANONICAL) expect(checked).toContain(f);
@@ -132,7 +167,7 @@ describe('classifyRepoForStorefront', () => {
 });
 
 describe('consent policy', () => {
-    it.each([
+    it.each<[RepoReadiness['kind'], boolean]>([
         ['empty', false],
         ['storefront', true],
         ['not-a-storefront', false],
@@ -140,7 +175,7 @@ describe('consent policy', () => {
         const { shouldAskBeforeReset } = await import(
             '@/features/eds/services/storefront/repoStorefrontReadiness'
         );
-        expect(shouldAskBeforeReset(kind as never)).toBe(expected);
+        expect(shouldAskBeforeReset(kind)).toBe(expected);
     });
 
     it('does not ask when the state is undetermined', async () => {

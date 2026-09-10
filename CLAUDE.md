@@ -1,4 +1,3 @@
-<!-- Last verified: 2026-07-03 -->
 ## IMPORTANT: RPTC Workflow
 
 This project uses the RPTC (Research → Plan → TDD → Commit) workflow.
@@ -25,12 +24,83 @@ This project uses the RPTC (Research → Plan → TDD → Commit) workflow.
 
 The Adobe Demo Builder is a VS Code extension that streamlines the creation of Adobe Commerce demo projects. It provides a wizard-based interface for setting up complex e-commerce demonstrations with various Adobe technologies integrated (Adobe Commerce / ACO, Edge Delivery Services storefronts, API Mesh, App Builder).
 
+## What this extension never compromises on
+
+Five properties a change must not break. They are not style preferences and they
+are not ranked — a change that trades one away has to be stopped and discussed,
+not balanced. Each names where it is already enforced, so it can be checked
+rather than believed.
+
+**1. Whatever can be done can be undone.** Reversibility is a design principle
+here, not a per-feature nicety: demos get rebuilt, reset and re-run constantly, so
+an SC must be able to return to zero and start again. New capabilities ship with
+their reversal — create↔delete, deploy↔undeploy, install↔uninstall — or they state
+plainly why reversal is impossible. **A thing that cannot be undone is a finding.**
+(Owner, 2026-08-28.)
+
+**2. A user's own edits are never overwritten.** The extension writes files into
+projects people then edit by hand. Every generated-bundle write goes through the
+ADR-013 hash-and-skip seam (`generatedFileWriter.ts`): a file whose content no
+longer matches its recorded hash is skipped and reported, never clobbered, and
+removal requires positive proof of authorship. A writer that calls `writeFile`
+directly has quietly opted out of that.
+
+**3. Existing projects keep working.** Projects live on disk for months across
+many extension versions. This is why `AI_CONTEXT_VERSION` exists
+and why the activation sweep refreshes stale bundles instead of prompting. A
+change that only works for newly created projects is half a change — the
+regenerate path and the creation path must produce the same result.
+
+**4. This repository is public.** No secrets, internal URLs, or PII in code,
+docs, tests, fixtures, or commit messages. Values that must reach the extension
+travel through user-scoped VS Code settings or SecretStorage. Rotation cost is
+high and history rewriting is destructive, so the bar is "never enters", not
+"removed later". Endpoints that are already public — a deployed App Builder action
+URL — are fine.
+
+**5. Cloud operations are real and consequential.** Deploys, teardowns, publishes
+and repository creation touch live Adobe, GitHub and DA.live resources belonging
+to actual people. They are confirmed before they run, never performed
+speculatively to "check" something, and never run unattended.
+
+One more that governs how the above are kept: **nothing is soft-deprecated.** When
+a setting, field, code path or schema element becomes obsolete, it is deleted in
+the same change that obsoletes it — not left accepted-but-ignored or relabelled
+"(Deprecated)". Write "removed", not "deprecated". (Owner, 2026-05-20.)
+
+## The words this repo uses
+
+Say these back in these words. The glossary is here less so you understand the
+owner — that part usually works — than so you DESCRIBE things in the same terms
+he does, instead of coining a fresh label mid-session and then using it as though
+it were shared.
+
+**SC** — a Solution Consultant: the person this extension is for. They build,
+reset and re-run customer demos, often several a week. Every "user" in this
+codebase is an SC unless it says otherwise. The word appears in 37 files here and
+was, before this entry, spelled out in exactly one of them — a test comment.
+
+| Word | Here it means | Not to be confused with |
+|---|---|---|
+| **catalog entry** | A row in `components.json` — a KIND of thing that can be installed, keyed by id under `frontends`, `backends`, `mesh`, `integrations`, `addons`, `tools`, `services` | a component instance |
+| **component instance** | What one project actually HAS. Lives in `componentInstances`, a `Record` keyed by id — never an array. Carries `status`, `port`, `subType` | the catalog entry it was made from |
+| **stack** | A frontend+backend combination the SC picks (4 of them, a list in `stacks.json`) | a demo package |
+| **demo package** | A brand/scenario bundle — the card on the Welcome step (5 of them, `demo-packages.json`) | a stack, a datapack |
+| **datapack** | The unit of sample DATA, owned by the data-installer service. Exported, versioned and published there, not here | a demo package |
+| **area** | One of the THREE sub-steps inside the single Build Your Project wizard step — Commerce, Storefront, Integrations. Order lives in `BUILD_AREA_DESCRIPTORS`, which is the list that decides | a wizard step; a step INSIDE an area (Commerce has its own strip, including Datapacks) |
+| **surface** | Where a capability is reachable from. The **human surface** is the buttons; the **agent surface** is the MCP tools. Both dispatch into the same handlers, and the gap between them is what the coverage scans measure | a UI screen |
+| **Pattern B** | A handler answers by RETURNING its result; `sendMessage` is for progress pushes only. Named in fifteen files and defined in none until 2026-08-30 — if you meet it in a plan or a code comment, this is it | a push channel; there is no "Pattern A" worth knowing |
+
+**you** is the agent reading this and changing this repo. **we** and **the owner**
+are Steve, who decides product intent. **the user** is the SC using the shipped
+extension — not the person in this conversation.
+
 ## Technology Stack
 
 - **Extension**: TypeScript, VS Code Extension API
 - **UI**: React, Adobe Spectrum
 - **Build**: esbuild (`esbuild.config.js`) — NOT webpack
-- **Testing**: Jest with ts-jest, @testing-library/react (~1,130 suites; see `tests/README.md`)
+- **Testing**: Jest with ts-jest, @testing-library/react (see `tests/README.md`)
 
 ## Development Workflow
 
@@ -83,7 +153,7 @@ Feature config lives per-feature in `src/features/*/config/*.json`.
 → See wizard steps in respective feature directories:
   - `src/features/authentication/ui/steps/` - Adobe auth steps
   - `src/features/prerequisites/ui/steps/` - Prerequisites step
-  - `src/features/project-creation/ui/steps/` - WelcomeStep (demo package selection); `BuildYourProjectStep` (step id `'build-your-project'`) — the nested builder shell that renders a sub-step rail of **area bodies**: `CommerceStep` (area id `'commerce'`: a restyled `StepTabs` step strip (Backend · [Sign in] · Connection · Business Structure · Catalog) over a dedicated full-width view of the active step's body (one `ConnectStoreStepContent` for config steps), plus a persistent `CommerceSummary`; step/lock logic in `commerceSections.ts`), `StorefrontStep` (area id `'storefront'`, EDS-only: GitHub/DA.live + repo + block libraries), `IntegrationsStep` (area id `'integrations'`), `SampleDataStep` (area id `'sample-data'`: records which datapack seeds this project — never imports; always complete, so it cannot gate Continue); ReviewStep, ProjectCreationStep; plus `buildYourProjectAreas.ts` (visible areas + order/status, reusing `filterStepsForStack`) and `useProjectBuilder.ts` (selection hub; `selectedAppBuilderComponents` is the single mesh authority — the dual-flow mirror was removed by D3)
+  - `src/features/project-creation/ui/steps/` - WelcomeStep (demo package selection); `BuildYourProjectStep` (step id `'build-your-project'`) — the nested builder shell that renders a sub-step rail of **area bodies**: `CommerceStep` (area id `'commerce'`: a restyled `StepTabs` step strip (Backend · [Sign in] · Connection · Business Structure · Catalog) over a dedicated full-width view of the active step's body (one `ConnectStoreStepContent` for config steps); step/lock logic in `commerceSections.ts`), `StorefrontStep` (area id `'storefront'`, EDS-only: GitHub/DA.live + repo + block libraries), `IntegrationsStep` (area id `'integrations'`); `SampleDataStep` — **not an area**: it is a step INSIDE the Commerce strip, shown as "Datapacks" (`commerceSections.ts`), and records which datapack seeds this project — never imports; always complete, so it cannot gate Continue; ReviewStep, ProjectCreationStep; plus `BuildYourProjectSummary` — ONE cross-area summary rendered by `BuildYourProjectStep`, fed by `buildSummary.ts`, not the per-area `CommerceSummary` it was generalized from; `buildYourProjectAreas.ts` (visible areas + order/status, reusing `filterStepsForStack`) and `useProjectBuilder.ts` (selection hub; `selectedAppBuilderComponents` is the single mesh authority — the dual-flow mirror was removed by D3)
   - `src/features/eds/ui/steps/RepoSelectionInline.tsx` - single-column repo choose/create body used by `StorefrontStep`
 → Note: WelcomeStep's brand card selects a demo package; backend/stack + connect, integrations, and storefront (GitHub/DA.live + block libraries) are all configured **within the single `'build-your-project'` step** via its nested Commerce/Storefront/Integrations/Sample Data area rail. The canonical step order lives in `wizard-steps.json` (a single `build-your-project` entry); the area order/visibility lives in `buildYourProjectAreas.ts`. Custom block libraries are configured in VS Code settings and selected via checkboxes (see `demo-packages.json`, `block-libraries.json`, and `src/types/blockLibraries.ts`).
 
@@ -97,6 +167,33 @@ Feature config lives per-feature in `src/features/*/config/*.json`.
 → Run "Demo Builder: Diagnostics" command
 → Check "Demo Builder: Debug Logs" output channel
 → `docs/systems/debugging.md`
+
+## The quality instruments — one registry, four cadences
+
+`tests/sop/toolingRegistry.ts` lists every instrument this repo owns and how
+often it runs. `tests/sop/tooling-registry.test.ts` fails the build when the
+registry and the disk disagree **in either direction** — an unregistered skill is
+red, and so is a registry entry for something deleted.
+
+| Cadence | What runs | Who triggers it |
+|---|---|---|
+| per-tool-call | 25 hook rules in `.claude/hooks/rules/` | automatic |
+| per-jest-run | 49 enforcer suites in `tests/sop/` | automatic |
+| per-push | lint, both typecheckers, 2 validators | CI |
+| periodic | 15 scripted checks + 10 guided reviews | **`npm run sweep`** |
+
+Read a sweep by its labels, not its exit code: a `reported` row always exits 0
+and its OUTPUT is the result; a failing `gate` row is a real failure; `COULD NOT
+RUN` is a broken instrument rather than a finding. That distinction exists
+because the first sweep printed "clean" over a scan that had just measured a 34%
+agent-surface gap.
+
+Why it exists: the 2026-08-29 audit found ~50 instruments and no index. Two scans
+were in no list at all, `validate:test-guidelines` had been failing unseen on a
+bug in its OWN export detector, and `docs:check` called a Python file that no
+longer existed —
+three failures, one cause. An instrument nothing lists and nothing runs decays
+without producing a signal.
 
 ## Project Skills (`.claude/skills/` — tracked; bodies load on invocation)
 
@@ -118,7 +215,24 @@ Feature config lives per-feature in `src/features/*/config/*.json`.
 - `debug-log-triage` — parse a pasted Debug Logs dump: the structured stdout/stderr block above a blank error carries the truth; benign-noise catalog; channel→feature map
 - `adobe-docs-lookup` — route an Adobe docs question to the source that has it (App Builder concepts live on developer.adobe.com, which NO doc MCP indexes) + recover from `-32002` / 401 MCP session failures
 - `component-extraction-scan` — find UI markup duplicated across ≥3 sites that should be one component (inverse of the SOP God-file scan)
+- `webview-visual-baseline` — prove a CSS/webview change moved exactly what it meant to: a computed-style fingerprint of every element on all eight surfaces, before and after, compared by exact string equality (not screenshots). The safety net PL-21 is gated on, and the instrument that measured ADR-018
+- `ask-the-tool` — do a mechanical refactor over many files by letting the COMPILER decide which
+  sites are real: change all of them, run `typecheck:tests` once, and the files that now error are
+  the ones where the thing you removed was load-bearing. Then the suite catches what tsc cannot see
+  (type-correct is not behaviour-preserving), and you read only the residue. Measured 2026-09-01:
+  a prior about which casts were redundant was wrong 29 times out of 36, and a hand-rolled
+  "is this import still used?" scan was wrong twice in one session where eslint's own output was right
+- `reuse-first` — the same question asked BEFORE the duplicate exists: find the house component/hook/pattern that already does the job. Enforced by a PreToolUse rule (`30-reuse-first.rule`), so it fires when you create a file under a `ui/` directory rather than at a release cut
+- `ai-coverage-scan` — which extension features an AGENT can actually reach: the gap between the human surface (handler types behind every webview button) and the agent surface (MCP tools), which dispatch into the same handler maps
+- `agent-gap-scan` — the same gap read from the other end: what agents ACTUALLY did in real session transcripts — tools nobody calls, jobs done with Bash because no tool existed, tools that failed. No instrumentation; it reads Claude Code's own transcripts
+- `test-divergence-scan` — how many DIFFERENT ways the suite builds the same fake. The sibling of the duplication scans aimed at TESTS: not copy-paste, but divergence nobody agreed to (26 StateManager fakes across 48 uses; 32 Project shapes across 38). HandlerContext is its control — 165 suites share a builder and 4 hand-roll, which is what happens when the builder exists
 - `code-duplication-scan` — find copy-paste LOGIC duplication (jscpd) that should be one shared function (logic counterpart to component-extraction-scan)
+- `dead-mock-scan` — jest.mock calls that do NOTHING. Two halves: a static, exact one (a bare
+  automock of a module `moduleNameMapper` already redirects — the line is a no-op) and a scoped
+  probe that deletes a mock and re-runs. Exists because the question was asked twice and answered
+  the same way: of 28 module-mock walls, 22 needed the mock deleted rather than injected; of the
+  shared setup in 11 split-suite families, **79 mocks were dead**. Probe the SET — twice, a mock
+  and the line using it were both dead while each kept the other alive
 - `dead-code-scan` — find unused exports (ts-prune) + abandonment markers; serves "no soft deprecation"
 - `backlog-item` — READ and WRITE the backlog through one CLI (`backlog.mjs`): `list`/`next`/`show` (all take `--json`, the agent-facing form), `new`/`set`/`log` for mutations that validate BEFORE touching disk, `check`, and `sync` to regenerate the README's spans. Carries the frontmatter contract (kind/area/layer/parent/needs/value/status), the five kinds and why a `question` is not an epic. Everything hand-maintained here has rotted: the index (three items invisible for months, a reverted correction, an epic with no file) and then the second, prose copy of the list that survived it and drifted to 25 items against 32. Test any change with `dogfood.sh`, which runs the real content through the real CLI inside a temp copy
 - `tool-verdicts` — per-tool verdict on the agent surface (keep/fix/investigate/find-out), from real transcript usage AND battery outcomes together. Exists because "85 tools are unused so nobody needs them" was measured and found unsupportable: 78 of 107 had been judged by nothing at all. Refuses to conclude anything about a tool no prompt has ever asked for
@@ -129,6 +243,48 @@ Feature config lives per-feature in `src/features/*/config/*.json`.
 - `ai-bundle-coherence` — do real projects' AI bundles match their shape: delivered skill sets vs composition, bundle sources that exist, .mcp.json/package agreement (live half; the static half runs every commit in `tests/templates/ai-bundle-coherence.test.ts`)
 - `call-path-audit` — prove a user action has ONE definitive path: trace every door down + every occurrence of the action's ground-truth primitive up, pin the verdict in `tests/templates/spine-chokepoints.test.ts` (runs at release cuts over its own sweep worklist; the mechanical, per-action half of `architecture-duplication-scan`)
 - `decompose-god-file` — split an oversized multi-responsibility file into single-responsibility units without breaking its public API (the fix to the scan skills' find)
+- `mutation-test-pilot` — the only instrument that measures whether a test would CATCH a defect rather than merely execute the line: Stryker changes the source and re-runs the suite, and a surviving mutant is a defect the suite would ship. Carries both measured numbers and the gap between them — 93% on the four-module pilot, 59% on a representative sample — because the score falls almost monotonically as `await` count rises, so async, heavily-mocked code is the hard case, not the careless one
+- `test-strategy-scan` — the census half of the same question: how the suite is BUILT (tier mix, mock density, hollow suites) read across every file at once, where `mutation-test-pilot` measures a few modules empirically. Use the census to pick what to mutate
+
+## The conventions live in one place
+
+**[docs/development/handbook.md](docs/development/handbook.md)** states every convention
+this codebase holds itself to — 110 of them, 110 with an enforcer that fails the build — and
+explains each one for a human reader. Read it once, start to finish.
+
+Some rules appear both there and here, deliberately: this file is loaded into every agent
+session and the handbook is not, so a rule that must steer the work has to be in both. The
+pairs are pinned by `tests/sop/claude-md-handbook-agreement.test.ts`, which fails when one
+copy is edited away — the duplication is allowed, the silent divergence is not.
+
+## Architecture law — TWO documents, one per runtime
+
+This repo is two programs. **ADR-015 governs the extension host; ADR-017 governs
+the webviews.** They split 2026-08-29: ADR-015 had been applied to all 896 files
+including 291 browser-bundle ones, in a document that mentions React zero times.
+Each has its own enforcer (`tests/sop/architecture-rules.test.ts` and
+`tests/sop/webview-architecture-rules.test.ts`) and its own ledger.
+
+**Webview side (ADR-017)**: the composition root is the bundle entry (8 of them);
+dependencies arrive as props, not context; the message channel is a RATIFIED
+singleton (`acquireVsCodeApi()` is once-per-webview, so there is nothing to
+vary); hooks are the service layer; and a feature stylesheet reaches only the
+bundles whose entry imports it — a class can be styled on one surface and absent
+on the next with no error anywhere.
+
+### ADR-015 (extension host, owner-ratified 2026-08-28)
+
+**Services are fetched only at the boundary** (`extension.ts`, `commands/`,
+`handlers/`, MCP tool registrars); everywhere else dependencies arrive as
+parameters, constructed only in `extension.ts` or a feature's `create...Deps`
+file. Placement rules: `docs/architecture/where-code-goes.md` (the
+when-you-want-X table). Enforced by `tests/sop/architecture-rules.test.ts` —
+new violations fail the build; exemptions live in its ledger and every one
+carries a reason.
+Its companion **ADR-016** rules the TEST strategy: three tiers (unit =
+handed-in deps + argument assertions; contract = fixtures captured from live
+responses; live = journeys/verify-after-write), Jest retained, run-noise to
+zero, effectiveness measured by mutation testing.
 
 ## Verified duplication gets FIXED, not reported
 
@@ -167,6 +323,55 @@ the same turn; if it needs a decision, END THE TURN WITH THE QUESTION ("found X,
 verified — fix now or defer?") rather than a sentence that files it away. A
 "systemic note" in a report is the reporting-instead-of-fixing failure wearing
 its third hat.
+
+## Hit every surface
+
+**The most common defect in this repo is a change that is correct on the path you
+tested and missing everywhere else.** Not a logic bug — a completeness bug, and
+the reason it keeps shipping is that every check passes: the path you changed
+works, and nothing anywhere fails for the paths you did not.
+
+Before calling a change done, walk this list and decide which entries apply. An
+entry that does not apply is a one-line statement, not a silence.
+
+**1. Eight webview bundles.** `WEBVIEW_ENTRIES` in `esbuild.config.js`: wizard,
+dashboard, configure, sidebar, projectsList, aiOverview, integrations,
+dataInstaller. A feature stylesheet reaches only the bundles whose entry imports
+it, so a class can be styled on one surface and absent on the next **with no error
+anywhere** (ADR-017). Shared UI touched → ask which of the eight render it.
+
+**2. Creation and regeneration must agree.** Anything project creation writes,
+"Regenerate AI Files" has to reproduce for a project that gains the qualifying
+component later. The two paths are separate call chains; only one of them is
+exercised by the flow you are probably testing.
+
+**3. The AI-bundle gate has four seams — change all or none.**
+`buildMcpConfig`, `installAiDefaultsMcpTools`, `componentInstallationOrchestrator`
+and `handleRegenerateAiFiles` each apply the same predicate. Miss one and creation
+and regenerate silently produce different bundles.
+
+**4. Human surface and agent surface.** A capability reached by a button and a
+capability reached by an MCP tool dispatch into the same handlers, but adding the
+button does not add the tool. If a change gives a person a new action, say whether
+an agent gets it too — `ai-coverage-scan` measures that gap and it is real.
+
+**5. A config field lives in three places.** The JSON registry, its schema, and
+its TypeScript type. Changing one and not the others typechecks fine and fails at
+runtime, or worse, validates against a schema that no longer describes the data.
+
+**6. Changing a contract means auditing its MOCKS, not just its callers.** `tsc`
+and the callers keep each other honest; a hand-written mock is invisible to both
+and keeps answering in the old shape. The suite stays green while asserting
+behaviour that no longer exists.
+
+**7. Docs that state the thing you changed.** Counts, tool lists, and step orders
+are pinned by tests in several places precisely because they drift — if a pin
+fails, the pin is usually right.
+
+One trap that belongs here because it defeats the whole list: an entry point named
+`index.tsx` beside an `index.ts` barrel **is never typechecked**, because tsc keeps
+one file per basename. That is why the dashboard entry is `main.tsx`. A surface
+that is not typechecked will not tell you it was missed.
 
 ## Verifying
 
@@ -226,9 +431,17 @@ mirrored. A field that looks like an answer is the easiest kind of evidence to o
 
 **Never publish an identifier you have not read from the source.** Same day, a setting
 name written from memory into release notes — `demoBuilder.eds.defaultDaLiveOrg` — was
-wrong; the real key is `demoBuilder.daLive.defaultOrg`. Caught only by diffing
-`package.json` against the previous tag. Setting keys, env vars, command ids, file paths
-and function names are cheap to grep and expensive to get wrong in something users read.
+wrong; the key it should have named was `demoBuilder.daLive.defaultOrg`. Caught only by
+diffing `package.json` against the previous tag. Setting keys, env vars, command ids, file
+paths and function names are cheap to grep and expensive to get wrong in something users
+read.
+
+**And this paragraph then broke its own rule.** It said "the real key IS
+`demoBuilder.daLive.defaultOrg`" in the present tense long after that setting was DROPPED
+(`6e14114b9`, when the DA.live org became a GitHub-namespace picker with no setting at
+all). A correction that names a second dead identifier is the same defect wearing the
+fix's clothes. Found 2026-08-31 by `tests/sop/cited-identifiers.test.ts`, which is the
+enforced version of this rule.
 
 **A comment describing what ANOTHER module does is a claim, not documentation.** Nothing
 keeps it true — not the compiler, not the tests, not a scan — and it reads to the next
@@ -257,6 +470,32 @@ across all four. When the thing under test is HOW a collaborator is invoked — 
 field, a scoped id, which client is passed — assert the ARGUMENT, or drive the real
 collaborator with `jest.requireActual`. Asserting the outcome tests the mock.
 
+**A shape written where the compiler cannot read it WILL be invented.** This is
+not a discipline problem and cannot be fixed by another rule: "never write a
+shape you have not read" is already in `mcp-tool-authoring`,
+`webview-test-authoring` AND ADR-016 rule 3 — three documents — and on
+2026-08-29 five shapes were invented anyway, in one file, in one afternoon. Each
+was caught only when a surface visibly crashed: a keyed-object registry passed
+where an array was expected, an invented `statusUpdate` payload that emptied two
+whole screens, the wrong message envelope (`data` where the client hands over
+`payload`), a manifest missing the `path` its loader adds, and a response shaped
+`{type:'response', requestId}` when the client matches `isResponse` +
+`responseToId` — so no request was answered for hours while everything looked
+fine.
+
+Every one of those had an exported type in `src/types/` that would have failed to
+compile. The fix is mechanical, not motivational: **put the literal in a
+typechecked file and type it to the real interface.** `tsconfig.test.json`
+includes `tests/**`, so a shape living in `tests/helpers/` is read by
+`npm run typecheck:tests` in CI. `tests/helpers/webviewFixtures.ts` is the
+worked example, and both failures above were replayed against it as controls —
+tsc rejects each one by name.
+
+The corollary is the checkable part: **an object literal in a `.mjs`, a `.json`,
+or a template string has opted out of the only check that works.** If a shape
+crosses a boundary — a message, a payload, a fixture, a config — and it is not
+in a typed file, that is the smell, whatever the comment above it claims.
+
 **Read before you Edit.** `grep`/`awk`/`sed`/`git show` do not satisfy Edit's precondition —
 Read the file, or the range, before editing anything you located with a shell command. The
 format-on-edit hook can also invalidate your own read, so when an edit fails on a string you
@@ -272,8 +511,24 @@ are sure is present, re-Read rather than re-deriving it from memory.
 
 ## Gotchas (verified, load-bearing)
 
+- **A value passed into a hook must be stable across renders.** An inline `[]`, `{}` or
+  arrow literal as a prop is a NEW reference every render, so an effect depending on it
+  runs every render and one that sets state loops forever. Hoist it to a module-level
+  constant (`const EMPTY: never[] = [];`), memoise it, or hold it in a ref inside the
+  hook. **`exhaustive-deps` cannot catch this** — it reads the dependency array inside
+  the hook and cannot see across the prop boundary, and the types are identical so the
+  compiler sees nothing either.
+
+  This entry said "**no tool** catches this" until 2026-09-01, and that was too strong
+  by exactly the distance that mattered: a LINT RULE cannot cross the boundary, but the
+  TYPE CHECKER can — it resolves the call to the hook's declaration, where the dependency
+  arrays are plain text. `tests/sop/stable-hook-arguments.test.ts` now bans it, and
+  emptying the corpus found twelve real ones, including two defaults written INSIDE a
+  shared hook's destructure (`messagePayload = {}`, `searchFields = []`) that rebuilt
+  themselves every render for every caller that omitted them. The sentence claiming it
+  was uncatchable is what stopped anyone looking.
 - **Adobe Spectrum Flex constrains width** (450px): use a standard HTML div with flex styles for critical wizard layouts.
-- **Layout components accept Spectrum design tokens**: `GridLayout`/`TwoColumnLayout` take `DimensionValue` props (`gap="size-300"`). See `docs/development/ui-patterns.md` and `docs/development/styling-guide.md`.
+- **Layout components accept Spectrum design tokens**: `GridLayout`/`TwoColumnLayout` take `DimensionValue` props (`gap="size-300"`). See `.claude/skills/spectrum-webview-ui/` and `docs/development/styling-guide.md`.
 - **Never pipe jest through `tail`/`head`/`grep`** — output buffering makes it look hung. Redirect to a file instead (enforced by a PreToolUse hook; details in `tests/README.md`).
 - **Webview communication** uses a handshake protocol with message queuing (`src/core/communication/`); async handlers must be awaited or the UI receives Promise objects.
 

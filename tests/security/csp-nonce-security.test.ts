@@ -10,14 +10,15 @@
 
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import * as vscode from 'vscode';
-import { StateManager } from '@/core/state';
+import type { StateManager } from '@/types/state';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../helpers/loggerFake';
+import { createMockStateManager } from '../helpers/stateManagerFake';
+import { createMockExtensionContext } from '../helpers/extensionContextFake';
 
 // Mock dependencies
-jest.mock('vscode');
 jest.mock('@/core/communication/webviewCommunicationManager');
 jest.mock('@/core/utils/loadingHTML');
-jest.mock('@/core/logging/debugLogger');
 
 // Concrete test implementation of BaseWebviewCommand
 class TestWebviewCommand extends BaseWebviewCommand {
@@ -57,18 +58,10 @@ describe('Security: CSP Nonce Generation', () => {
     let mockLogger: Logger;
 
     beforeEach(() => {
-        mockContext = {
-            extensionPath: '/mock/path',
-            subscriptions: [],
-        } as unknown as vscode.ExtensionContext;
+        mockContext = createMockExtensionContext();
 
-        mockStateManager = {} as StateManager;
-        mockLogger = {
-            info: jest.fn(),
-            debug: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as unknown as Logger;
+        mockStateManager = createMockStateManager();
+        mockLogger = createMockLogger() as unknown as Logger;
 
         command = new TestWebviewCommand(
             mockContext,
@@ -166,18 +159,18 @@ describe('Security: CSP Nonce Generation', () => {
     });
 
     describe('Performance', () => {
-        it('should generate nonces efficiently', () => {
+        it('generates a distinct nonce every time, a thousand times over', () => {
             const iterations = 1000;
-            const startTime = Date.now();
 
+            const nonces = new Set<string>();
             for (let i = 0; i < iterations; i++) {
-                command.testGetNonce();
+                nonces.add(command.testGetNonce());
             }
 
-            const duration = Date.now() - startTime;
-
-            // Should complete 1000 nonces in under 100ms
-            expect(duration).toBeLessThan(100);
+            // A repeat is the security failure. The old assertion timed the loop
+            // instead, which measured the machine rather than the nonce (PL-41)
+            // and would have passed just as happily on a constant.
+            expect(nonces.size).toBe(iterations);
         });
     });
 });

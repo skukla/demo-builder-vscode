@@ -5,46 +5,21 @@
  * componentManager test files.
  */
 
-import { Project } from '@/types';
-import { Logger } from '@/types/logger';
-import { CommandExecutor } from '@/core/shell';
+import { Project } from '@/types/base';
+import { CommandExecutor } from '@/core/shell/commandExecutor';
+import { createMockProject as createMockProjectBase } from '../../../helpers/projectFake';
 
-/**
- * Creates a mock CommandExecutor with all methods stubbed
- */
-export function createMockCommandExecutor(): CommandExecutor {
-    return {
-        execute: jest.fn(),
-        executeExclusive: jest.fn(),
-        pollUntilCondition: jest.fn(),
-        waitForFileSystem: jest.fn(),
-        executeSequence: jest.fn(),
-        executeParallel: jest.fn(),
-        queueCommand: jest.fn(),
-        commandExists: jest.fn(),
-        isPortAvailable: jest.fn(),
-        dispose: jest.fn()
-    } as unknown as CommandExecutor;
-}
+/** Canonical command-executor fake (ADR-016). */
+export { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
-/**
- * Creates a mock Logger with all methods stubbed
- */
-export function createMockLogger(): Logger {
-    return {
-        trace: jest.fn(),
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn()
-    };
-}
+/** Canonical logger fake (ADR-016). Re-exported so existing imports keep working. */
+export { createMockLogger } from '../../../helpers/loggerFake';
 
 /**
  * Creates a test Project with default values
  */
-export function createMockProject(overrides?: Partial<Project>): Project {
-    return {
+export function createComponentServiceProject(overrides?: Partial<Project>): Project {
+    return createMockProjectBase({
         name: 'test-project',
         path: '/test/project',
         status: 'ready',
@@ -52,7 +27,7 @@ export function createMockProject(overrides?: Partial<Project>): Project {
         lastModified: new Date(),
         componentInstances: {},
         ...overrides
-    };
+    })
 }
 
 /**

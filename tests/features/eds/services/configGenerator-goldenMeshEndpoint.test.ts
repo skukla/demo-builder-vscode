@@ -30,20 +30,17 @@ import {
     PAAS_WEBSITE_CODE,
     PAAS_CUSTOMER_GROUP,
     CATALOG_API_KEY,
-} from '@/features/components/config/envVarKeys';
+} from '@/core/config/envVarKeys';
 import type { Project, AppBuilderComponentState } from '@/types/base';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockProject } from '../../../helpers/projectFake';
 
 const MESH_URL = 'https://edge-sandbox-graph.adobe.io/api/abc-123-def/graphql';
 const LAST_DEPLOYED = '2026-07-10T12:00:00.000Z';
 
 function makeLogger(): Logger {
-    return {
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    } as unknown as Logger;
+    return createMockLogger() as unknown as Logger;
 }
 
 /** The same mesh expressed as a keyed appBuilderComponents entry. */
@@ -64,7 +61,7 @@ function keyedMeshEntry(): AppBuilderComponentState {
  * generator consumes. Mesh state shape is supplied per-case.
  */
 function makeProject(overrides: Partial<Project>): Project {
-    return {
+    return createMockProject({
         name: 'golden-demo',
         path: '/projects/golden-demo',
         status: 'ready',
@@ -104,7 +101,7 @@ function makeProject(overrides: Partial<Project>): Project {
             },
         },
         ...overrides,
-    } as unknown as Project;
+    });
 }
 
 /** Run the REAL generator end-to-end and return the exact config.json string. */

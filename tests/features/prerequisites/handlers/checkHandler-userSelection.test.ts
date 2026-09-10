@@ -39,7 +39,7 @@ jest.mock('@/types/typeGuards', () => ({
 
 import { handleCheckPrerequisites } from '@/features/prerequisites/handlers/checkHandler';
 import {
-    createMockContext,
+    createCheckHandlerContext,
     setupStandardMocks,
     cleanupTests,
 } from './checkHandler.testUtils';
@@ -58,7 +58,7 @@ describe('handleCheckPrerequisites — user optional-dependency picks', () => {
         // Repro of Leah's field case: CitiSignal + EDS+ACCS, no mesh selected.
         // The eds-accs stack has eds-accs-mesh in optionalDependencies, but
         // the user left it unchecked, so selectedOptionalDependencies is [].
-        const context = createMockContext();
+        const context = createCheckHandlerContext();
 
         await handleCheckPrerequisites(context, {
             selectedStack: 'eds-accs',
@@ -72,7 +72,7 @@ describe('handleCheckPrerequisites — user optional-dependency picks', () => {
     it('includes mesh in currentComponentSelection.dependencies when the user opted in', async () => {
         // Same stack (eds-accs), but the user explicitly toggled mesh on in the
         // Architecture Modal — so it appears in selectedOptionalDependencies.
-        const context = createMockContext();
+        const context = createCheckHandlerContext();
 
         await handleCheckPrerequisites(context, {
             selectedStack: 'eds-accs',
@@ -86,7 +86,7 @@ describe('handleCheckPrerequisites — user optional-dependency picks', () => {
         // Some callers (older code paths, edit mode, etc.) may not send the new
         // field. Treat absence as "no opt-in" rather than "all opt-ins" — that
         // matches the safer interpretation and avoids the original bug.
-        const context = createMockContext();
+        const context = createCheckHandlerContext();
 
         await handleCheckPrerequisites(context, {
             selectedStack: 'eds-accs',

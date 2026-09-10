@@ -67,27 +67,23 @@ export function readCwdPreamble(socket: Readable): Promise<string | undefined> {
         const onData = (chunk: Buffer): void => {
             buffered = Buffer.concat([buffered, chunk]);
             // Not our preamble the moment the prefix stops matching — hand
-            // every byte back untouched.
+            // every byte back untouched. `head` is ALREADY cut to PREFIX.length,
+            // so this one check settles every rejection there is: a `head` that
+            // survives it and fills PREFIX.length IS the prefix, and a newline
+            // among those bytes would have failed it (PREFIX contains none). The
+            // two further rejections that used to sit here could not run; the
+            // reference contract in this module's suite is what keeps that true.
             const head = buffered.subarray(0, PREFIX.length).toString('utf8');
-            if (!PREFIX.startsWith(head.slice(0, Math.min(head.length, PREFIX.length)))) {
-                finish(undefined, buffered);
-                return;
-            }
-            if (buffered.length >= PREFIX.length && head !== PREFIX) {
+            if (!PREFIX.startsWith(head)) {
                 finish(undefined, buffered);
                 return;
             }
             const newline = buffered.indexOf(0x0a);
             if (newline !== -1) {
-                const line = buffered.subarray(0, newline).toString('utf8');
-                if (line.startsWith(PREFIX)) {
-                    finish(
-                        line.slice(PREFIX.length).trim() || undefined,
-                        buffered.subarray(newline + 1),
-                    );
-                } else {
-                    finish(undefined, buffered);
-                }
+                finish(
+                    buffered.subarray(PREFIX.length, newline).toString('utf8').trim() || undefined,
+                    buffered.subarray(newline + 1),
+                );
                 return;
             }
             if (buffered.length > MAX_PREAMBLE_BYTES) {
@@ -119,10 +115,13 @@ export function resolveScopedProjectDir(
     if (!cwd || !path.isAbsolute(cwd)) return undefined;
     const root = path.resolve(projectsDir);
     const rel = path.relative(root, path.resolve(cwd));
-    if (rel === '' || rel.startsWith('..') || path.isAbsolute(rel)) return undefined;
     const first = rel.split(path.sep)[0];
-    // Dot-directories under the root (.claude, .demo-builder-mcp) are bundle
-    // machinery, not projects.
-    if (!first || first.startsWith('.')) return undefined;
+    // ONE guard, three rejections — they were two guards, and the first said
+    // nothing the second did not: the projects root itself (`rel` is empty, so
+    // `first` is too), anything outside it (the first segment is `..`), and
+    // dot-directories under the root (.claude, .demo-builder-mcp), which are
+    // bundle machinery rather than projects. `path.isAbsolute(rel)` is the
+    // win32 cross-drive case, where no relative path can express the answer.
+    if (!first || first.startsWith('.') || path.isAbsolute(rel)) return undefined;
     return path.join(root, first);
 }

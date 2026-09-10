@@ -1,12 +1,9 @@
-/**
- * @jest-environment jsdom
- */
-
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { ProjectCard } from '@/features/projects-dashboard/ui/components/ProjectCard';
-import { createMockProject, createRunningProject } from '../../testUtils';
+import { createProjectsDashboardProject, createRunningProject } from '../../testUtils';
+import { ruleFor, declares } from '../../../../helpers/cssRules';
 
 // Wrap component with Spectrum Provider
 const renderWithProvider = (ui: React.ReactElement) => {
@@ -20,7 +17,7 @@ const renderWithProvider = (ui: React.ReactElement) => {
 describe('ProjectCard', () => {
     describe('rendering', () => {
         it('should render project name', () => {
-            const project = createMockProject({ name: 'My Demo Project' });
+            const project = createProjectsDashboardProject({ name: 'My Demo Project' });
             renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
 
             expect(screen.getByText('My Demo Project')).toBeInTheDocument();
@@ -28,19 +25,26 @@ describe('ProjectCard', () => {
 
         it('should show running status with green indicator', () => {
             const project = createRunningProject({ name: 'Running Demo' });
-            renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
+            const { container } = renderWithProvider(
+                <ProjectCard project={project} onSelect={jest.fn()} />
+            );
 
-            // Find the status text specifically (not the project name)
-            const statusElements = screen.getAllByText(/running/i);
-            // Should have at least the status text
-            expect(statusElements.length).toBeGreaterThanOrEqual(1);
-            // Status dots should be present. Plural now: a mesh-supporting stack
-            // always renders its mesh slot beside the project status.
-            expect(screen.getAllByRole('presentation').length).toBeGreaterThanOrEqual(1);
+            // EXACT, both halves. This asserted `length >= 1` on a loose regex
+            // match and again on the dot count -- true of any number of status
+            // rows wearing any colour, including none of the ones the test name
+            // claims. The fixture is a running non-EDS project with a frontend on
+            // port 3000 and nothing deployable, so `getRuntimeSummary` answers one
+            // line and `getDeploymentSummary` answers null: one row, one dot.
+            const statuses = container.querySelectorAll('.project-card-spectrum-status');
+            expect(Array.from(statuses, (n) => n.textContent)).toEqual(['Running on port 3000']);
+            const dots = screen.getAllByRole('presentation');
+            expect(dots).toHaveLength(1);
+            // "green" is the subject of the test name and was never asserted.
+            expect(dots[0]).toHaveAttribute('data-variant', 'success');
         });
 
         it('should show stopped status with gray indicator', () => {
-            const project = createMockProject({
+            const project = createProjectsDashboardProject({
                 name: 'My Demo', // Avoid status word in name
                 status: 'stopped',
             });
@@ -58,7 +62,7 @@ describe('ProjectCard', () => {
         });
 
         it('should not show port when stopped', () => {
-            const project = createMockProject({
+            const project = createProjectsDashboardProject({
                 name: 'Stopped Demo',
                 status: 'stopped',
             });
@@ -69,22 +73,35 @@ describe('ProjectCard', () => {
         });
 
         it('should display simplified card with name and status only (no component list)', () => {
-            // The simplified card design shows only name and status (Standard info density)
-            // Component names are intentionally NOT displayed to keep the card clean
-            const project = createMockProject();
-            renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
+            // The card's only descriptive slot is the brand/stack summary, fed by
+            // `selectedPackage` -- never by `componentInstances`.
+            //
+            // The two absence assertions below USED TO BE UNFALSIFIABLE. The
+            // fixture selected no package, so the summary slot did not render at
+            // all, and the card has no code path that reads an instance's name:
+            // no mutation of this component could have made "CitiSignal" or
+            // "API Mesh" appear. Selecting a package whose brand DIFFERS from the
+            // instance names is what gives them something to catch -- a card
+            // rendering `getComponentSummary` instead would fail both.
+            const project = createProjectsDashboardProject({
+                selectedPackage: 'buildright',
+                selectedStack: 'headless-paas',
+            });
+            const { container } = renderWithProvider(
+                <ProjectCard project={project} onSelect={jest.fn()} />
+            );
 
-            // Should show project name
             expect(screen.getByText('Test Project')).toBeInTheDocument();
-            // Should show status
             expect(screen.getByText('Stopped')).toBeInTheDocument();
-            // Should NOT show component names (simplified design)
+            expect(container.querySelector('.project-card-spectrum-components')).toHaveTextContent(
+                'BuildRight \u00b7 Headless + PaaS'
+            );
             expect(screen.queryByText('CitiSignal')).not.toBeInTheDocument();
             expect(screen.queryByText('API Mesh')).not.toBeInTheDocument();
         });
 
         it('should handle project with no components gracefully', () => {
-            const project = createMockProject({
+            const project = createProjectsDashboardProject({
                 name: 'Empty Project',
                 componentInstances: undefined,
             });
@@ -109,7 +126,7 @@ describe('ProjectCard', () => {
      */
     describe('deployment status', () => {
         it('shows one consolidated line, not a per-component one', () => {
-            const project = createMockProject({ meshStatusSummary: 'stale' });
+            const project = createProjectsDashboardProject({ meshStatusSummary: 'stale' });
             renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
 
             expect(screen.getByText('Attention needed')).toBeInTheDocument();
@@ -117,21 +134,21 @@ describe('ProjectCard', () => {
         });
 
         it('says Deployed when everything is current', () => {
-            const project = createMockProject({ meshStatusSummary: 'deployed' });
+            const project = createProjectsDashboardProject({ meshStatusSummary: 'deployed' });
             renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
 
             expect(screen.getByText('Deployed')).toBeInTheDocument();
         });
 
         it('reports a drifted STOREFRONT, which the card could not do before', () => {
-            const project = createMockProject({ edsStorefrontStatusSummary: 'stale' });
+            const project = createProjectsDashboardProject({ edsStorefrontStatusSummary: 'stale' });
             renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
 
             expect(screen.getByText('Attention needed')).toBeInTheDocument();
         });
 
         it('folds integrations into the same line rather than counting them', () => {
-            const project = createMockProject({
+            const project = createProjectsDashboardProject({
                 appBuilderComponents: {
                     'acme-widget': {
                         kind: 'integration',
@@ -147,7 +164,7 @@ describe('ProjectCard', () => {
         });
 
         it('renders NO deployment line when the project has nothing deployable', () => {
-            const project = createMockProject({
+            const project = createProjectsDashboardProject({
                 meshStatusSummary: undefined,
                 appBuilderComponents: {},
             });
@@ -163,7 +180,7 @@ describe('ProjectCard', () => {
             // STOREFRONT status. With the storefront now inside the deployment
             // summary, keeping it would render "Republish needed" directly above
             // "Attention needed" — two warning dots for one problem.
-            const project = createMockProject({
+            const project = createProjectsDashboardProject({
                 selectedStack: 'eds-dalive',
                 edsStorefrontStatusSummary: 'stale',
             });
@@ -178,7 +195,7 @@ describe('ProjectCard', () => {
 
         it('still shows an EDS republish WHILE it is in flight', () => {
             // Transient and local — the summary has no way to express it.
-            const project = createMockProject({
+            const project = createProjectsDashboardProject({
                 selectedStack: 'eds-dalive',
                 status: 'republishing',
                 edsStorefrontStatusSummary: 'published',
@@ -228,21 +245,19 @@ describe('ProjectCard', () => {
         // the summary was doing the same job one element earlier. Unlike the
         // margin, THIS one is a stylesheet rule, so it is observable here.
         it('does not let the stack summary absorb the card height', () => {
-            const css = require('fs').readFileSync(
-                'src/core/ui/styles/custom-spectrum.css',
-                'utf8'
-            ) as string;
-            const start = css.indexOf('.project-card-spectrum-components {');
-            // Comments stripped first: the rule's own comment explains why there is
-            // no flex-grow, and matching that text would make this pass on prose.
-            const rule = css.slice(start, css.indexOf('}', start)).replace(/\/\*[\s\S]*?\*\//g, '');
+            // Read through the shared helper, which searches EVERY sheet and THROWS
+            // when a selector is absent. It used to open utilities.css by
+            // path, and `.project-*` moved to project-cards.css on 2026-09-09 —
+            // `indexOf` returned -1, the slice produced an empty string, and both
+            // assertions below passed on "". Vacuously green, found 2026-09-09.
+            const rule = ruleFor('.project-card-spectrum-components');
 
+            expect(declares(rule, 'flex-grow')).toBe(false);
             expect(rule).not.toMatch(/flex:\s*1/);
-            expect(rule).not.toMatch(/flex-grow/);
         });
 
         it('lists runtime first, then deployment', () => {
-            const project = createMockProject({
+            const project = createProjectsDashboardProject({
                 edsStorefrontStatusSummary: 'published',
                 meshStatusSummary: 'deployed',
                 appBuilderComponents: {
@@ -252,7 +267,7 @@ describe('ProjectCard', () => {
                         source: { owner: 'acme', repo: 'widget' },
                     },
                 },
-            } as never);
+            });
             const { container } = renderWithProvider(
                 <ProjectCard project={project} onSelect={jest.fn()} />
             );
@@ -267,9 +282,101 @@ describe('ProjectCard', () => {
         });
     });
 
+    /**
+     * The pin is a leading marker, not a status line: it appears only for a
+     * pinned project, and its inline flex rule is what keeps it from being
+     * squeezed out by a long project name (the name beside it truncates).
+     */
+    describe('pin indicator', () => {
+        it('marks a pinned project', () => {
+            const project = createProjectsDashboardProject({ name: 'Pinned Demo', pinned: true });
+            renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
+
+            const pin = screen.getByTestId('project-card-pin-indicator');
+            expect(pin).toHaveAttribute('aria-label', 'Pinned');
+        });
+
+        it('renders no pin for an unpinned project', () => {
+            const project = createProjectsDashboardProject({ name: 'Plain Demo' });
+            renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
+
+            expect(screen.queryByTestId('project-card-pin-indicator')).not.toBeInTheDocument();
+        });
+
+        it('holds the pin at its own size beside the name', () => {
+            // `flex: 0 0 auto` is the decision: the name is the flexible half of
+            // the header row, so without it the pin is the element that gives way.
+            const project = createProjectsDashboardProject({ name: 'Pinned Demo', pinned: true });
+            renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
+
+            // All four declarations are `.pin-indicator` (shared-ui.css) since
+            // 2026-09-10 — one rule for the three components that each carried
+            // their own copy. jsdom loads no stylesheets, so the contract here is
+            // the class; the declarations themselves are pinned by the visual
+            // fingerprint, which is the only thing that can actually see them.
+            expect(screen.getByTestId('project-card-pin-indicator')).toHaveClass('pin-indicator');
+        });
+    });
+
+    /**
+     * The brand/stack line — package name and stack name, in that order. It has
+     * its own slot on the card, and a project that has selected no package has
+     * no slot at all rather than an empty one.
+     */
+    describe('brand and stack summary', () => {
+        function summarySlot(container: HTMLElement): Element | null {
+            return container.querySelector('.project-card-spectrum-components');
+        }
+
+        it('renders the package and stack names in the summary slot', () => {
+            const project = createProjectsDashboardProject({
+                selectedPackage: 'citisignal',
+                selectedStack: 'eds-paas',
+            });
+            const { container } = renderWithProvider(
+                <ProjectCard project={project} onSelect={jest.fn()} />
+            );
+
+            expect(summarySlot(container)).toHaveTextContent(
+                'CitiSignal \u00b7 Edge Delivery + PaaS'
+            );
+        });
+
+        it('renders no summary slot when the project has selected no package', () => {
+            const project = createProjectsDashboardProject({ selectedPackage: undefined });
+            const { container } = renderWithProvider(
+                <ProjectCard project={project} onSelect={jest.fn()} />
+            );
+
+            expect(summarySlot(container)).toBeNull();
+        });
+
+        it('follows the project it is given rather than the first one', () => {
+            const first = createProjectsDashboardProject({
+                selectedPackage: 'citisignal',
+                selectedStack: 'eds-paas',
+            });
+            const second = createProjectsDashboardProject({
+                selectedPackage: 'buildright',
+                selectedStack: 'headless-paas',
+            });
+            const { container, rerender } = renderWithProvider(
+                <ProjectCard project={first} onSelect={jest.fn()} />
+            );
+
+            rerender(
+                <Provider theme={defaultTheme} colorScheme="light">
+                    <ProjectCard project={second} onSelect={jest.fn()} />
+                </Provider>
+            );
+
+            expect(summarySlot(container)).toHaveTextContent('BuildRight \u00b7 Headless + PaaS');
+        });
+    });
+
     describe('interactions', () => {
         it('should call onSelect when clicked', () => {
-            const project = createMockProject({ name: 'Clickable Demo' });
+            const project = createProjectsDashboardProject({ name: 'Clickable Demo' });
             const onSelect = jest.fn();
             renderWithProvider(<ProjectCard project={project} onSelect={onSelect} />);
 
@@ -280,7 +387,7 @@ describe('ProjectCard', () => {
         });
 
         it('should call onSelect when Enter key is pressed', () => {
-            const project = createMockProject({ name: 'Keyboard Demo' });
+            const project = createProjectsDashboardProject({ name: 'Keyboard Demo' });
             const onSelect = jest.fn();
             renderWithProvider(<ProjectCard project={project} onSelect={onSelect} />);
 
@@ -291,7 +398,7 @@ describe('ProjectCard', () => {
         });
 
         it('should call onSelect when Space key is pressed', () => {
-            const project = createMockProject({ name: 'Keyboard Demo' });
+            const project = createProjectsDashboardProject({ name: 'Keyboard Demo' });
             const onSelect = jest.fn();
             renderWithProvider(<ProjectCard project={project} onSelect={onSelect} />);
 
@@ -302,7 +409,7 @@ describe('ProjectCard', () => {
         });
 
         it('passes forceNewWindow=true when shift-clicked', () => {
-            const project = createMockProject({ name: 'Shift Click' });
+            const project = createProjectsDashboardProject({ name: 'Shift Click' });
             const onSelect = jest.fn();
             renderWithProvider(<ProjectCard project={project} onSelect={onSelect} />);
 
@@ -312,7 +419,7 @@ describe('ProjectCard', () => {
         });
 
         it('passes forceNewWindow=true when cmd-clicked (metaKey)', () => {
-            const project = createMockProject({ name: 'Cmd Click' });
+            const project = createProjectsDashboardProject({ name: 'Cmd Click' });
             const onSelect = jest.fn();
             renderWithProvider(<ProjectCard project={project} onSelect={onSelect} />);
 
@@ -322,7 +429,7 @@ describe('ProjectCard', () => {
         });
 
         it('does NOT pass forceNewWindow on plain click', () => {
-            const project = createMockProject({ name: 'Plain Click' });
+            const project = createProjectsDashboardProject({ name: 'Plain Click' });
             const onSelect = jest.fn();
             renderWithProvider(<ProjectCard project={project} onSelect={onSelect} />);
 
@@ -333,7 +440,7 @@ describe('ProjectCard', () => {
         });
 
         it('passes forceNewWindow=true when Shift+Enter is pressed', () => {
-            const project = createMockProject({ name: 'Shift Enter' });
+            const project = createProjectsDashboardProject({ name: 'Shift Enter' });
             const onSelect = jest.fn();
             renderWithProvider(<ProjectCard project={project} onSelect={onSelect} />);
 
@@ -349,12 +456,39 @@ describe('ProjectCard', () => {
             const project = createRunningProject({ name: 'Accessible Demo' });
             renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
 
-            const card = screen.getByRole('button');
-            expect(card).toHaveAttribute('aria-label', expect.stringContaining('Accessible Demo'));
+            // EXACT. `stringContaining('Accessible Demo')` passed on the name
+            // alone, so it could not tell the joined label from an unjoined one --
+            // and the join is one of the few decisions this component makes for
+            // itself. A running non-EDS project with nothing deployable and no
+            // package selected contributes exactly two of the four slots.
+            expect(screen.getByRole('button')).toHaveAttribute(
+                'aria-label',
+                'Accessible Demo, Running on port 3000'
+            );
+        });
+
+        it('names only the lines the card actually renders', () => {
+            // An EDS project at rest has no runtime line and, with nothing
+            // deployed, no deployment line either. Without the filter the label
+            // would carry their empty slots as ", , ".
+            const project = createProjectsDashboardProject({
+                name: 'Quiet Demo',
+                selectedStack: 'eds-paas',
+                selectedPackage: 'citisignal',
+                meshStatusSummary: undefined,
+                edsStorefrontStatusSummary: undefined,
+                appBuilderComponents: {},
+            });
+            renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
+
+            expect(screen.getByRole('button')).toHaveAttribute(
+                'aria-label',
+                'Quiet Demo, CitiSignal \u00b7 Edge Delivery + PaaS'
+            );
         });
 
         it('should be focusable', () => {
-            const project = createMockProject({ name: 'Focusable Demo' });
+            const project = createProjectsDashboardProject({ name: 'Focusable Demo' });
             renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
 
             const card = screen.getByRole('button');
@@ -364,7 +498,7 @@ describe('ProjectCard', () => {
 
     describe('Open AI wiring', () => {
         it('should expose Open AI menu item when actions.onOpenAi is provided', () => {
-            const project = createMockProject({ name: 'AI Wired Project' });
+            const project = createProjectsDashboardProject({ name: 'AI Wired Project' });
             const onOpenAi = jest.fn();
             renderWithProvider(
                 <ProjectCard project={project} onSelect={jest.fn()} actions={{ onOpenAi }} />
@@ -378,7 +512,7 @@ describe('ProjectCard', () => {
         });
 
         it('should invoke onOpenAi with the row project when item is selected', () => {
-            const project = createMockProject({ name: 'AI Dispatch Project' });
+            const project = createProjectsDashboardProject({ name: 'AI Dispatch Project' });
             const onOpenAi = jest.fn();
             renderWithProvider(
                 <ProjectCard project={project} onSelect={jest.fn()} actions={{ onOpenAi }} />
@@ -395,7 +529,7 @@ describe('ProjectCard', () => {
         });
 
         it('should NOT render Open AI when actions.onOpenAi is omitted', () => {
-            const project = createMockProject({ name: 'No AI Wire Project' });
+            const project = createProjectsDashboardProject({ name: 'No AI Wire Project' });
             renderWithProvider(
                 <ProjectCard
                     project={project}
@@ -404,17 +538,18 @@ describe('ProjectCard', () => {
                 />
             );
 
-            const menuButton = screen.queryByLabelText('More actions');
-            if (menuButton) {
-                fireEvent.click(menuButton);
-            }
+            // Unconditional. This used to be `if (menuButton) { click }`, so a
+            // card that stopped rendering the kebab entirely would have passed
+            // without ever opening a menu to look in.
+            fireEvent.click(screen.getByLabelText('More actions'));
+
             expect(screen.queryByText('Open AI')).not.toBeInTheDocument();
         });
     });
 
     describe('inline rename', () => {
         it('renders the rename pencil beside the name when onRenameSubmit is wired', () => {
-            const project = createMockProject({ name: 'Renamable' });
+            const project = createProjectsDashboardProject({ name: 'Renamable' });
             renderWithProvider(
                 <ProjectCard
                     project={project}
@@ -442,8 +577,21 @@ describe('ProjectCard', () => {
             ).not.toBeInTheDocument();
         });
 
+        it('hides the pencil when no rename callback is wired', () => {
+            // The other half of `disabled={isRunning || !actions.onRenameSubmit}`.
+            // The component's own comment names both reasons; only the running one
+            // was covered, so nothing here distinguished the card's default
+            // `actions = {}` from a card that offers a rename leading nowhere.
+            const project = createProjectsDashboardProject({ name: 'Unwired' });
+            renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
+
+            expect(
+                screen.queryByRole('button', { name: 'Rename Unwired' })
+            ).not.toBeInTheDocument();
+        });
+
         it('commits a rename through actions.onRenameSubmit with the project + new name', async () => {
-            const project = createMockProject({ name: 'Old Name' });
+            const project = createProjectsDashboardProject({ name: 'Old Name' });
             const onRenameSubmit = jest.fn().mockResolvedValue(null);
             renderWithProvider(
                 <ProjectCard project={project} onSelect={jest.fn()} actions={{ onRenameSubmit }} />
@@ -464,7 +612,7 @@ describe('ProjectCard', () => {
         });
 
         it('never opens the project while interacting with the rename editor', () => {
-            const project = createMockProject({ name: 'Contained' });
+            const project = createProjectsDashboardProject({ name: 'Contained' });
             const onSelect = jest.fn();
             renderWithProvider(
                 <ProjectCard

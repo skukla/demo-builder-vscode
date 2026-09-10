@@ -6,21 +6,6 @@ import { setupMockDependencies } from './commandExecutor.testUtils';
 // Mock execa (no actual subprocess calls needed for delegation tests)
 jest.mock('execa');
 
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({
-        error: jest.fn(),
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn()
-    })
-}));
-
-jest.mock('@/core/shell/commandSequencer');
-jest.mock('@/core/shell/environmentSetup');
-jest.mock('@/core/shell/fileWatcher');
-jest.mock('@/core/shell/pollingService');
-jest.mock('@/core/shell/resourceLocker');
-jest.mock('@/core/shell/retryStrategyManager');
 
 describe('CommandExecutor - Service Delegation', () => {
     let commandExecutor: CommandExecutor;
@@ -33,7 +18,7 @@ describe('CommandExecutor - Service Delegation', () => {
         mockDependencies = setupMockDependencies();
 
         // Now create CommandExecutor - it will use our mocks
-        commandExecutor = new CommandExecutor();
+        commandExecutor = new CommandExecutor(mockDependencies.deps);
     });
 
     describe('executeExclusive', () => {
@@ -58,10 +43,11 @@ describe('CommandExecutor - Service Delegation', () => {
             const options = { maxAttempts: 10, timeout: 5000 };
 
             // Create new executor to get fresh mocks
-            const executor = new CommandExecutor();
+            const executor = new CommandExecutor(mockDependencies.deps);
 
             // Mock the polling service method
-            (executor as any).pollingService.pollUntilCondition = mockPollingService.pollUntilCondition;
+            (executor as unknown as { pollingService: PollingService }).pollingService.pollUntilCondition =
+                mockPollingService.pollUntilCondition;
 
             await executor.pollUntilCondition(checkFn, options);
 
@@ -77,7 +63,7 @@ describe('CommandExecutor - Service Delegation', () => {
                 { stdout: 'result2', stderr: '', code: 0, duration: 150 }
             ]);
 
-            (commandExecutor as any).commandSequencer = mockSequencer;
+            (commandExecutor as unknown as { commandSequencer: CommandSequencer }).commandSequencer = mockSequencer;
 
             const commands = [
                 { command: 'echo 1' },
@@ -103,7 +89,7 @@ describe('CommandExecutor - Service Delegation', () => {
                 { stdout: 'result2', stderr: '', code: 0, duration: 150 }
             ]);
 
-            (commandExecutor as any).commandSequencer = mockSequencer;
+            (commandExecutor as unknown as { commandSequencer: CommandSequencer }).commandSequencer = mockSequencer;
 
             const commands = [
                 { command: 'echo 1' },

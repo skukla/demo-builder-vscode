@@ -1,250 +1,102 @@
 /**
- * Design Token System Tests
+ * What `tokens.css` IS, now that it is not pretending to be a design system.
  *
- * Validates that tokens.css contains all required CSS custom properties
- * for the unified theme system.
+ * IT USED TO ASSERT A PALETTE. Roughly sixty `expect(tokensCSS).toContain(
+ * '--db-color-gray-100:')` lines, one per token, specifying a ramp of greys,
+ * status colours, badges and surfaces. Every one passed for five months while the
+ * file reached NO BUNDLE AT ALL — `index.css` pulled it in with an `@import` that
+ * the esbuild plugin never resolved, so the whole palette was absent from the
+ * product and the suite was green throughout. A test that a file contains a
+ * string proves nothing about what ships.
+ *
+ * It was also specifying the wrong thing. Of 101 tokens, 21 were referenced and
+ * 80 were not; the status colours were Tailwind hexes repainting Spectrum's own
+ * semantic colours; and the terminal colours pinned VS Code's Dark+ palette into
+ * a webview whose user may run any theme. The design system here is ADOBE'S —
+ * 519 uses of `--spectrum-*` against 30 of `--db-*`.
+ *
+ * So this file's job is now narrow and worth stating: map the user's VS Code
+ * theme onto a few semantic names, and hold the handful of constants that are
+ * genuinely ours. These tests check THAT, and they check invariants rather than
+ * strings — the strongest of them is that nothing here is dead, which is the
+ * property the old suite could never have caught.
  */
+import { execSync } from 'child_process';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
-describe('Design Token System', () => {
-  let tokensCSS: string;
+const ROOT = resolve(__dirname, '../../../../');
+const read = (p: string) => readFileSync(resolve(ROOT, p), 'utf-8');
+const strip = (css: string) => css.replace(/\/\*[\s\S]*?\*\//g, '');
 
-  beforeAll(() => {
-    tokensCSS = readFileSync(
-      resolve(__dirname, '../../../../src/core/ui/styles/tokens.css'),
-      'utf-8'
-    );
-  });
+const tokensCSS = read('src/core/ui/styles/tokens.css');
+const defined = (css: string) => [...strip(css).matchAll(/(--[\w-]+)\s*:/g)].map((m) => m[1]);
 
-  describe('Layer Declaration', () => {
-    it('wraps tokens in @layer theme', () => {
-      expect(tokensCSS).toContain('@layer theme');
-    });
-  });
+/** Every file that could reference a token: our stylesheets and our components. */
+const consumers = execSync(
+    'git ls-files "*.css" "src/**/*.ts" "src/**/*.tsx"',
+    { cwd: ROOT, encoding: 'utf8' }
+)
+    .split('\n')
+    .filter((f) => f && !f.includes('node_modules') && !f.endsWith('styles/tokens.css'));
 
-  describe('Primitive Tokens', () => {
-    describe('Gray Scale', () => {
-      it('defines gray-50 (lightest)', () => {
-        expect(tokensCSS).toContain('--db-color-gray-50:');
-      });
-
-      it('defines gray-900 (darkest)', () => {
-        expect(tokensCSS).toContain('--db-color-gray-900:');
-      });
-
-      it('defines intermediate gray values', () => {
-        expect(tokensCSS).toContain('--db-color-gray-100:');
-        expect(tokensCSS).toContain('--db-color-gray-500:');
-        expect(tokensCSS).toContain('--db-color-gray-700:');
-        expect(tokensCSS).toContain('--db-color-gray-800:');
-      });
+describe('tokens.css', () => {
+    it('is wrapped in @layer theme', () => {
+        expect(tokensCSS).toContain('@layer theme');
     });
 
-    describe('Status Colors', () => {
-      it('defines green status primitives', () => {
-        expect(tokensCSS).toContain('--db-color-green-100:');
-        expect(tokensCSS).toContain('--db-color-green-500:');
-      });
+    it('every token it defines is reachable — nothing here is dead', () => {
+        const defs = new Set(defined(tokensCSS));
+        // Control: the file must actually define tokens, or this passes on nothing.
+        expect(defs.size).toBeGreaterThan(20);
 
-      it('defines red status primitives', () => {
-        expect(tokensCSS).toContain('--db-color-red-100:');
-        expect(tokensCSS).toContain('--db-color-red-500:');
-      });
+        const referenced = new Set<string>();
+        for (const f of consumers) {
+            for (const m of strip(read(f)).matchAll(/var\(\s*(--[\w-]+)/g)) {
+                if (defs.has(m[1])) referenced.add(m[1]);
+            }
+        }
+        // Control: the consumer scan must find something, or "reachable" is vacuous.
+        expect(referenced.size).toBeGreaterThan(5);
 
-      it('defines amber status primitives', () => {
-        expect(tokensCSS).toContain('--db-color-amber-100:');
-        expect(tokensCSS).toContain('--db-color-amber-500:');
-      });
+        // A token is reachable if something outside this file names it, or if a
+        // reachable token resolves through it.
+        const chains = new Map(
+            [...strip(tokensCSS).matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)].map((m) => [m[1], m[2]])
+        );
+        const reachable = new Set(referenced);
+        let frontier = [...referenced];
+        while (frontier.length) {
+            const next: string[] = [];
+            for (const t of frontier) {
+                for (const m of (chains.get(t) ?? '').matchAll(/var\(\s*(--[\w-]+)/g)) {
+                    if (defs.has(m[1]) && !reachable.has(m[1])) {
+                        reachable.add(m[1]);
+                        next.push(m[1]);
+                    }
+                }
+            }
+            frontier = next;
+        }
 
-      it('defines blue status primitives', () => {
-        expect(tokensCSS).toContain('--db-color-blue-100:');
-        expect(tokensCSS).toContain('--db-color-blue-500:');
-      });
+        expect([...defs].filter((t) => !reachable.has(t)).sort()).toStrictEqual([]);
     });
 
-    describe('Brand Colors (Tangerine)', () => {
-      it('defines tangerine-500 with correct hex value', () => {
-        expect(tokensCSS).toContain('--db-color-tangerine-500:');
-        expect(tokensCSS).toContain('#f97316');
-      });
-
-      it('defines tangerine hover state (600)', () => {
-        expect(tokensCSS).toContain('--db-color-tangerine-600:');
-        expect(tokensCSS).toContain('#ea580c');
-      });
-
-      it('defines tangerine active state (700)', () => {
-        expect(tokensCSS).toContain('--db-color-tangerine-700:');
-        expect(tokensCSS).toContain('#c2410c');
-      });
+    it('terminal colours defer to the user VS Code theme, with a fallback', () => {
+        // Hard-coding Dark+ into a webview means an SC on a light theme reads
+        // terminal output in colours their editor never uses. The fallback keeps
+        // today's rendering for a theme that supplies nothing.
+        const terminal = [...strip(tokensCSS).matchAll(/(--db-terminal-[\w-]+)\s*:\s*([^;]+);/g)];
+        expect(terminal.length).toBeGreaterThan(3);
+        for (const [, name, value] of terminal) {
+            expect(`${name} -> ${value.trim()}`).toMatch(/var\(--vscode-terminal-[\w-]+,\s*var\(/);
+        }
     });
 
-    describe('Terminal Colors', () => {
-      it('defines terminal background and foreground', () => {
-        expect(tokensCSS).toContain('--db-color-terminal-bg:');
-        expect(tokensCSS).toContain('--db-color-terminal-fg:');
-      });
-
-      it('defines terminal syntax colors', () => {
-        expect(tokensCSS).toContain('--db-color-terminal-command:');
-        expect(tokensCSS).toContain('--db-color-terminal-success:');
-        expect(tokensCSS).toContain('--db-color-terminal-error:');
-        expect(tokensCSS).toContain('--db-color-terminal-warning:');
-      });
+    it('defines no status colour — those are Spectrum\'s', () => {
+        // `--db-status-*` was #10b981/#ef4444/#f59e0b/#3b82f6: Tailwind, used to
+        // repaint elements Spectrum had already coloured through its own
+        // `color="positive"` prop. Replaced by --spectrum-semantic-*-color-status.
+        expect(defined(tokensCSS).filter((t) => t.startsWith('--db-status'))).toStrictEqual([]);
     });
-  });
-
-  describe('Semantic Tokens', () => {
-    describe('Status Semantic Tokens', () => {
-      it('defines success status token', () => {
-        expect(tokensCSS).toContain('--db-status-success:');
-        expect(tokensCSS).toContain('--db-status-success-bg:');
-      });
-
-      it('defines error status token', () => {
-        expect(tokensCSS).toContain('--db-status-error:');
-        expect(tokensCSS).toContain('--db-status-error-bg:');
-      });
-
-      it('defines warning status token', () => {
-        expect(tokensCSS).toContain('--db-status-warning:');
-        expect(tokensCSS).toContain('--db-status-warning-bg:');
-      });
-
-      it('defines info status token', () => {
-        expect(tokensCSS).toContain('--db-status-info:');
-        expect(tokensCSS).toContain('--db-status-info-bg:');
-      });
-
-      it('defines neutral status token', () => {
-        expect(tokensCSS).toContain('--db-status-neutral:');
-        expect(tokensCSS).toContain('--db-status-neutral-bg:');
-      });
-    });
-
-    describe('Brand Semantic Tokens', () => {
-      it('defines brand primary token', () => {
-        expect(tokensCSS).toContain('--db-brand-primary:');
-      });
-
-      it('defines brand hover state', () => {
-        expect(tokensCSS).toContain('--db-brand-primary-hover:');
-      });
-
-      it('defines brand active state', () => {
-        expect(tokensCSS).toContain('--db-brand-primary-active:');
-      });
-    });
-
-    describe('Surface Tokens', () => {
-      it('defines surface background and foreground', () => {
-        expect(tokensCSS).toContain('--db-surface-background:');
-        expect(tokensCSS).toContain('--db-surface-foreground:');
-      });
-    });
-
-    describe('Terminal Semantic Tokens', () => {
-      it('defines terminal background token', () => {
-        expect(tokensCSS).toContain('--db-terminal-background:');
-      });
-
-      it('defines terminal foreground token', () => {
-        expect(tokensCSS).toContain('--db-terminal-foreground:');
-      });
-    });
-  });
-
-  describe('Component Tokens', () => {
-    describe('StatusDot Component', () => {
-      it('defines status dot tokens for all states', () => {
-        expect(tokensCSS).toContain('--db-status-dot-success:');
-        expect(tokensCSS).toContain('--db-status-dot-error:');
-        expect(tokensCSS).toContain('--db-status-dot-warning:');
-        expect(tokensCSS).toContain('--db-status-dot-info:');
-        expect(tokensCSS).toContain('--db-status-dot-neutral:');
-      });
-    });
-
-    describe('Badge Component', () => {
-      it('defines badge background tokens', () => {
-        expect(tokensCSS).toContain('--db-badge-success-bg:');
-        expect(tokensCSS).toContain('--db-badge-error-bg:');
-        expect(tokensCSS).toContain('--db-badge-warning-bg:');
-        expect(tokensCSS).toContain('--db-badge-info-bg:');
-        expect(tokensCSS).toContain('--db-badge-neutral-bg:');
-      });
-
-      it('defines badge text tokens', () => {
-        expect(tokensCSS).toContain('--db-badge-success-text:');
-        expect(tokensCSS).toContain('--db-badge-error-text:');
-        expect(tokensCSS).toContain('--db-badge-warning-text:');
-        expect(tokensCSS).toContain('--db-badge-info-text:');
-        expect(tokensCSS).toContain('--db-badge-neutral-text:');
-      });
-    });
-
-    describe('CTA Button Component', () => {
-      it('defines CTA background tokens', () => {
-        expect(tokensCSS).toContain('--db-cta-background:');
-        expect(tokensCSS).toContain('--db-cta-background-hover:');
-        expect(tokensCSS).toContain('--db-cta-background-active:');
-      });
-
-      it('defines CTA text token', () => {
-        expect(tokensCSS).toContain('--db-cta-text:');
-      });
-    });
-
-    describe('Code/NumberedInstructions Component', () => {
-      it('defines code background and border tokens', () => {
-        expect(tokensCSS).toContain('--db-code-background:');
-        expect(tokensCSS).toContain('--db-code-border:');
-      });
-    });
-
-    describe('LoadingOverlay Component', () => {
-      it('defines loading overlay tokens', () => {
-        expect(tokensCSS).toContain('--db-loading-overlay-bg:');
-        expect(tokensCSS).toContain('--db-loading-text:');
-      });
-    });
-
-    describe('Tip Component', () => {
-      it('defines tip info tokens', () => {
-        expect(tokensCSS).toContain('--db-tip-info-bg:');
-        expect(tokensCSS).toContain('--db-tip-info-border:');
-      });
-
-      it('defines tip success tokens', () => {
-        expect(tokensCSS).toContain('--db-tip-success-bg:');
-        expect(tokensCSS).toContain('--db-tip-success-border:');
-      });
-    });
-  });
-
-  describe('Token Architecture', () => {
-    it('uses --db- namespace prefix for all custom tokens', () => {
-      // Ensure no non-namespaced custom properties
-      const customProperties = tokensCSS.match(/--[a-z][a-z0-9-]*:/g) || [];
-      const nonNamespaced = customProperties.filter(
-        (prop) => !prop.startsWith('--db-')
-      );
-      expect(nonNamespaced).toEqual([]);
-    });
-
-    it('semantic tokens reference primitives using var()', () => {
-      // Check that semantic tokens use var() to reference primitives
-      expect(tokensCSS).toMatch(/--db-status-success:\s*var\(--db-color-/);
-      expect(tokensCSS).toMatch(/--db-brand-primary:\s*var\(--db-color-/);
-      expect(tokensCSS).toMatch(/--db-surface-background:\s*var\(--db-color-/);
-    });
-
-    it('component tokens reference semantic tokens using var()', () => {
-      // Check that component tokens use var() to reference semantic tokens
-      expect(tokensCSS).toMatch(/--db-status-dot-success:\s*var\(--db-status-/);
-      expect(tokensCSS).toMatch(/--db-badge-success-bg:\s*var\(--db-status-/);
-      expect(tokensCSS).toMatch(/--db-cta-background:\s*var\(--db-brand-/);
-    });
-  });
 });

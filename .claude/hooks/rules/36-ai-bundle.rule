@@ -1,0 +1,43 @@
+# Routes AI-bundle changes to the skill that knows all four gate seams.
+#
+# CLAUDE.md states the failure directly: "The AI-bundle gate has four seams — change
+# all or none. buildMcpConfig, installAiDefaultsMcpTools, componentInstallationOrchestrator
+# and handleRegenerateAiFiles each apply the same predicate. Miss one and creation and
+# regenerate silently produce different bundles."
+#
+# Silent, and split across a creation path and a regeneration path that are separate
+# call chains — only one of which the flow you are testing exercises.
+rule_id=ai-bundle
+rule_once=1
+
+rule_match() {
+    case "$1" in
+        Edit|Write) ;;
+        *) return 1 ;;
+    esac
+    [ -n "$3" ] || return 1
+    case "$3" in
+        */services/aiBundle/*) return 0 ;;
+        */handlers/*RegenerateAiFiles*) return 0 ;;
+    esac
+    return 1
+}
+
+rule_message() {
+    cat <<'MSG'
+You are changing what Demo Builder writes into a project's AI bundle. Invoke the
+`ai-context-authoring` skill (Skill tool, skill: "ai-context-authoring") first.
+
+The gate has FOUR seams and they must change together — `buildMcpConfig`,
+`installAiDefaultsMcpTools`, `componentInstallationOrchestrator` and
+`handleRegenerateAiFiles` each apply the same predicate. Miss one and project
+CREATION and "Regenerate AI Files" produce different bundles, silently, because
+they are separate call chains and your test almost certainly drives only one.
+
+Existing projects are the other half: a bundle change that only works for NEW
+projects is half a change. That is what AI_CONTEXT_VERSION and the activation
+sweep are for, and the skill carries the bump discipline.
+
+This hook fires only once per session.
+MSG
+}

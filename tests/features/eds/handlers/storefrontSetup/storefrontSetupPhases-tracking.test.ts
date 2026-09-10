@@ -7,188 +7,66 @@
  * TDD RED Phase: Tests written BEFORE implementation.
  */
 
+// FIRST, before the family harness: that file re-exports the subject, so requiring
+// it loads the subject and binds its collaborators. These mocks must be registered
+// before that happens (measured 2026-09-02 — five tests fail the other way round).
+import {
+    mockGetBlockLibraryName,
+    mockGetBlockLibrarySource,
+    mockInstallBlockCollections,
+} from './storefrontSetupPhases.blockLibraries.testUtils';
+
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 
 // =============================================================================
 // Mocks - jest.mock calls are hoisted, so we use jest.fn() inline
 // =============================================================================
 
-jest.mock('vscode', () => ({
-    window: { showWarningMessage: jest.fn(), showInformationMessage: jest.fn() },
-    ProgressLocation: { Notification: 15 },
-    Uri: { parse: jest.fn((url: string) => ({ toString: () => url })) },
-}), { virtual: true });
-
-jest.mock('@/features/eds/services/blockCollectionHelpers', () => ({
-    installBlockCollections: jest.fn(),
-}));
-
-jest.mock('@/features/components/services/blockLibraryLoader', () => ({
-    getBlockLibrarySource: jest.fn(),
-    getBlockLibraryName: jest.fn(),
-    isBlockLibraryAvailableForPackage: jest.fn().mockReturnValue(true),
-}));
-
-jest.mock('@/features/eds/services/fstabGenerator', () => ({
-    generateFstabContent: jest.fn().mockReturnValue('mock-fstab-content'),
-}));
+// `createSetupServices` now takes its GitHub clients from `getGitHubServices`
+// (ADR-015 / D-2 — the cache holds the token-validation result). That builder
+// calls `getLogger()`, which throws unless the logger is initialised. Same mock
+// the other suites of getGitHubServices consumers use.
 
 jest.mock('@/features/eds/services/inspectorHelpers', () => ({
     generateInspectorTreeEntries: jest.fn().mockResolvedValue([]),
     installInspectorTagging: jest.fn().mockResolvedValue({ success: true }),
 }));
 
-jest.mock('@/features/eds/services/github/githubTokenService', () => ({
-    GitHubTokenService: jest.fn().mockImplementation(() => ({})),
-}));
-
-jest.mock('@/features/eds/services/github/githubFileOperations', () => ({
-    GitHubFileOperations: jest.fn().mockImplementation(() => ({
-        getFileContent: jest.fn().mockResolvedValue(null),
-        createOrUpdateFile: jest.fn().mockResolvedValue(undefined),
-    })),
-}));
-
-jest.mock('@/features/eds/services/github/githubRepoOperations', () => ({
-    GitHubRepoOperations: jest.fn().mockImplementation(() => ({
-        createFromTemplate: jest.fn().mockResolvedValue({ fullName: 'owner/repo', htmlUrl: 'https://github.com/owner/repo' }),
-        waitForContent: jest.fn().mockResolvedValue(undefined),
-    })),
-}));
-
-jest.mock('@/features/eds/services/github/githubAppService', () => ({
-    GitHubAppService: jest.fn().mockImplementation(() => ({
-        isAppInstalled: jest.fn().mockResolvedValue({ isInstalled: true, codeStatus: 200 }),
-        getInstallUrl: jest.fn().mockReturnValue('https://github.com/apps/aem-code-sync'),
-    })),
-}));
-
-jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
-    DaLiveContentOperations: jest.fn().mockImplementation(() => ({})),
-    createDaLiveTokenProvider: jest.fn().mockReturnValue({ getAccessToken: jest.fn().mockResolvedValue('token') }),
-    createDaLiveServiceTokenProvider: jest.fn().mockReturnValue({ getAccessToken: jest.fn().mockResolvedValue('token') }),
-}));
-
-jest.mock('@/features/eds/services/helix/helixService', () => ({
-    HelixService: jest.fn().mockImplementation(() => ({
-        previewCode: jest.fn().mockResolvedValue(undefined),
-    })),
-}));
-
-jest.mock('@/features/eds/services/daLive/daLiveAuthService', () => ({
-    DaLiveAuthService: jest.fn().mockImplementation(() => ({
-        getAccessToken: jest.fn().mockResolvedValue('token'),
-        getUserEmail: jest.fn().mockResolvedValue('test@example.com'),
-    })),
-}));
-
-jest.mock('@/features/eds/services/configService/configurationService', () => ({
-    ConfigurationService: jest.fn().mockImplementation(() => ({
-        registerSite: jest.fn().mockResolvedValue({ success: true }),
-        updateSiteConfig: jest.fn().mockResolvedValue({ success: true }),
-        deleteSiteConfig: jest.fn().mockResolvedValue({ success: true }),
-    })),
-    buildSiteConfigParams: (owner: string, repo: string, org: string, site: string) => ({
-        org, site, codeOwner: owner, codeRepo: repo,
-        contentSourceUrl: `https://content.da.live/${org}/${site}/`,
-    }),
-}));
-
-jest.mock('@/features/eds/handlers/edsHelpers', () => ({
-    configureDaLivePermissions: jest.fn().mockResolvedValue({ success: true }),
-    ensureDaLiveAuth: jest.fn().mockResolvedValue({ authenticated: true }),
-    getDaLiveAuthService: jest.fn().mockReturnValue({
-        getAccessToken: jest.fn().mockResolvedValue('mock-token'),
-        getUserEmail: jest.fn().mockResolvedValue('test@example.com'),
-    }),
-}));
-
-jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: { QUICK: 5000, NORMAL: 30000, UI: { MIN_LOADING: 200 } },
-}));
-
-jest.mock('@/features/eds/services/edsPipeline', () => ({
-    executeEdsPipeline: jest.fn().mockResolvedValue({
-        success: true,
-        contentFilesCopied: 0,
-        libraryPaths: [],
-    }),
-}));
-
+// NOT mocked, and it does not need to be: the collaborator is constructed on this
+// path and never touched, so the mock silenced nothing. Measured 2026-08-31 by
+// stripping it and re-running this suite.
 
 // Mock fetch for code sync verification
-global.fetch = jest.fn().mockResolvedValue({ ok: true }) as jest.Mock;
+global.fetch = jest.fn().mockResolvedValue({ ok: true });
 
 // =============================================================================
 // Imports (after mocks)
 // =============================================================================
 
-import { executeStorefrontSetupPhases } from '@/features/eds/handlers/storefrontSetup/storefrontSetupPhases';
-import { installBlockCollections } from '@/features/eds/services/blockCollectionHelpers';
-import { getBlockLibrarySource, getBlockLibraryName } from '@/features/components/services/blockLibraryLoader';
-import type { StorefrontSetupStartPayload } from '@/features/eds/handlers/storefrontSetup/storefrontSetupHandlers';
-import type { HandlerContext } from '@/types/handlers';
-
-// Cast imported mocks for type-safe access
-const mockInstallBlockCollections = installBlockCollections as jest.MockedFunction<typeof installBlockCollections>;
-const mockGetBlockLibrarySource = getBlockLibrarySource as jest.MockedFunction<typeof getBlockLibrarySource>;
-const mockGetBlockLibraryName = getBlockLibraryName as jest.MockedFunction<typeof getBlockLibraryName>;
+import {
+    createSetupContext,
+    executeStorefrontSetupPhases,
+    createEdsConfig,
+} from './storefrontSetupPhases.testUtils';
+import { ServiceLocator } from '@/core/di/serviceLocator';
+import { createMockCommandExecutor } from '../../../../helpers/commandExecutorFake';
 
 // =============================================================================
 // Helpers
 // =============================================================================
 
-function createMockContext(overrides?: {
-    currentProject?: Record<string, unknown> | null;
-}): HandlerContext {
-    const mockProject = overrides?.currentProject !== undefined
-        ? overrides.currentProject
-        : {
-            name: 'test-project',
-            path: '/path/to/test-project',
-            status: 'configuring',
-            created: new Date(),
-            lastModified: new Date(),
-        };
-
-    return {
-        panel: { webview: { postMessage: jest.fn() } } as unknown as HandlerContext['panel'],
-        stateManager: {
-            getCurrentProject: jest.fn().mockResolvedValue(mockProject),
-            saveProject: jest.fn().mockResolvedValue(undefined),
-        } as unknown as HandlerContext['stateManager'],
-        logger: {
-            info: jest.fn(), debug: jest.fn(), error: jest.fn(), warn: jest.fn(),
-        } as unknown as HandlerContext['logger'],
-        debugLogger: {
-            info: jest.fn(), debug: jest.fn(), error: jest.fn(), warn: jest.fn(),
-        } as unknown as HandlerContext['debugLogger'],
-        sendMessage: jest.fn(),
-        context: { secrets: {} },
-        sharedState: {},
-        authManager: {
-            getAccessToken: jest.fn().mockResolvedValue('mock-token'),
-        },
-    } as unknown as HandlerContext;
-}
-
-function createEdsConfig(overrides?: Partial<StorefrontSetupStartPayload['edsConfig']>): StorefrontSetupStartPayload['edsConfig'] {
-    return {
-        repoName: 'test-repo',
-        repoMode: 'new',
-        daLiveOrg: 'test-org',
-        daLiveSite: 'test-site',
-        githubOwner: 'test-owner',
-        templateOwner: 'template-owner',
-        templateRepo: 'template-repo',
-        createdRepo: { owner: 'test-owner', name: 'test-repo', url: 'https://github.com/test-owner/test-repo', fullName: 'test-owner/test-repo' },
-        ...overrides,
-    };
-}
-
 // =============================================================================
 // Tests
 // =============================================================================
+
+/**
+ * ADR-015 (2026-08-28): this boundary resolves the shell executor from the
+ * registry, which the shared node setup empties after EVERY test — so the fake
+ * is seeded per-test rather than mocked at the module level.
+ */
+beforeEach(() => {
+    ServiceLocator.setCommandExecutor(createMockCommandExecutor());
+});
 
 describe('Storefront Setup Phases - Block Library Install Tracking', () => {
     const LIBRARY_VERSIONS = [
@@ -224,17 +102,23 @@ describe('Storefront Setup Phases - Block Library Install Tracking', () => {
             libraryVersions: LIBRARY_VERSIONS,
         });
 
-        const context = createMockContext();
+        const context = createSetupContext({
+            name: 'test-project',
+            path: '/path/to/test-project',
+            status: 'configuring',
+            created: new Date(),
+            lastModified: new Date(),
+        });
         const edsConfig = createEdsConfig();
         const customLibs: CustomBlockLibrary[] = [
             { name: 'Partner Blocks', source: { owner: 'partner', repo: 'blocks', branch: 'v2' } },
         ];
 
         // When: Executing storefront setup with block libraries
-        await executeStorefrontSetupPhases(
-            context, edsConfig, AbortSignal.timeout(30000),
-            { selectedBlockLibraries: ['isle5'], customBlockLibraries: customLibs },
-        );
+        await executeStorefrontSetupPhases(context, edsConfig, AbortSignal.timeout(30000), {
+            selectedBlockLibraries: ['isle5'],
+            customBlockLibraries: customLibs,
+        });
 
         // Then: stateManager.saveProject should have been called with installedBlockLibraries
         const saveProjectMock = context.stateManager.saveProject as jest.Mock;
@@ -242,7 +126,8 @@ describe('Storefront Setup Phases - Block Library Install Tracking', () => {
 
         // Find the call that saved installedBlockLibraries
         const savedProject = saveProjectMock.mock.calls.find(
-            (call: unknown[]) => (call[0] as Record<string, unknown>).installedBlockLibraries !== undefined,
+            (call: unknown[]) =>
+                (call[0] as Record<string, unknown>).installedBlockLibraries !== undefined
         );
         expect(savedProject).toBeDefined();
 
@@ -260,26 +145,36 @@ describe('Storefront Setup Phases - Block Library Install Tracking', () => {
             libraryVersions: LIBRARY_VERSIONS,
         });
 
-        const context = createMockContext();
+        const context = createSetupContext({
+            name: 'test-project',
+            path: '/path/to/test-project',
+            status: 'configuring',
+            created: new Date(),
+            lastModified: new Date(),
+        });
         const edsConfig = createEdsConfig();
 
         // When: Executing storefront setup
-        await executeStorefrontSetupPhases(
-            context, edsConfig, AbortSignal.timeout(30000),
-            {
-                selectedBlockLibraries: ['isle5'],
-                customBlockLibraries: [{ name: 'Partner Blocks', source: { owner: 'partner', repo: 'blocks', branch: 'v2' } }],
-            },
-        );
+        await executeStorefrontSetupPhases(context, edsConfig, AbortSignal.timeout(30000), {
+            selectedBlockLibraries: ['isle5'],
+            customBlockLibraries: [
+                {
+                    name: 'Partner Blocks',
+                    source: { owner: 'partner', repo: 'blocks', branch: 'v2' },
+                },
+            ],
+        });
 
         // Then: Saved data should match expected structure
         const saveProjectMock = context.stateManager.saveProject as jest.Mock;
         const savedProject = saveProjectMock.mock.calls.find(
-            (call: unknown[]) => (call[0] as Record<string, unknown>).installedBlockLibraries !== undefined,
+            (call: unknown[]) =>
+                (call[0] as Record<string, unknown>).installedBlockLibraries !== undefined
         );
         expect(savedProject).toBeDefined();
 
-        const installedLibs = (savedProject![0] as Record<string, unknown>).installedBlockLibraries as Array<{
+        const installedLibs = (savedProject![0] as Record<string, unknown>)
+            .installedBlockLibraries as Array<{
             name: string;
             source: { owner: string; repo: string; branch: string };
             commitSha: string;
@@ -294,7 +189,9 @@ describe('Storefront Setup Phases - Block Library Install Tracking', () => {
         expect(installedLibs[0].blockIds).toEqual(['hero-cta', 'newsletter', 'search-bar']);
         expect(installedLibs[0].installedAt).toBeDefined();
         // installedAt should be a valid ISO date string
-        expect(new Date(installedLibs[0].installedAt).toISOString()).toBe(installedLibs[0].installedAt);
+        expect(new Date(installedLibs[0].installedAt).toISOString()).toBe(
+            installedLibs[0].installedAt
+        );
 
         // Verify second library
         expect(installedLibs[1].name).toBe('Partner Blocks');
@@ -311,19 +208,25 @@ describe('Storefront Setup Phases - Block Library Install Tracking', () => {
             error: 'Network error',
         });
 
-        const context = createMockContext();
+        const context = createSetupContext({
+            name: 'test-project',
+            path: '/path/to/test-project',
+            status: 'configuring',
+            created: new Date(),
+            lastModified: new Date(),
+        });
         const edsConfig = createEdsConfig();
 
         // When: Executing storefront setup with block libraries that fail to install
-        await executeStorefrontSetupPhases(
-            context, edsConfig, AbortSignal.timeout(30000),
-            { selectedBlockLibraries: ['isle5'] },
-        );
+        await executeStorefrontSetupPhases(context, edsConfig, AbortSignal.timeout(30000), {
+            selectedBlockLibraries: ['isle5'],
+        });
 
         // Then: saveProject should NOT have been called with installedBlockLibraries
         const saveProjectMock = context.stateManager.saveProject as jest.Mock;
         const savedWithTracking = saveProjectMock.mock.calls.find(
-            (call: unknown[]) => (call[0] as Record<string, unknown>).installedBlockLibraries !== undefined,
+            (call: unknown[]) =>
+                (call[0] as Record<string, unknown>).installedBlockLibraries !== undefined
         );
         expect(savedWithTracking).toBeUndefined();
     });

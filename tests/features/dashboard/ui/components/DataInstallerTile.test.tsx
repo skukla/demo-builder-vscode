@@ -14,31 +14,33 @@
  * Strict TDD: written BEFORE the tile exists.
  */
 
+import '../../../../helpers/webviewClientMock';
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: { postMessage: jest.fn(), onMessage: jest.fn(() => jest.fn()) },
-}));
-
-jest.mock('@adobe/react-spectrum', () => ({
-    ActionButton: ({
-        children,
-        onPress,
-        ...props
-    }: {
-        children?: React.ReactNode;
-        onPress?: () => void;
-    } & Record<string, unknown>) => (
-        <button onClick={onPress} {...props}>
-            {children}
-        </button>
-    ),
-    Text: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
-    TooltipTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-    Tooltip: ({ children }: { children: React.ReactNode }) => <span role="tooltip">{children}</span>,
-}));
+jest.mock('@adobe/react-spectrum', () => {
+    const { domProps } = jest.requireActual('../../../../helpers/spectrumStubProps');
+    return {
+        ActionButton: ({
+            children,
+            onPress,
+            ...props
+        }: {
+            children?: React.ReactNode;
+            onPress?: () => void;
+        } & Record<string, unknown>) => (
+            <button onClick={onPress} {...domProps(props)}>
+                {children}
+            </button>
+        ),
+        Text: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
+        TooltipTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+        Tooltip: ({ children }: { children: React.ReactNode }) => (
+            <span role="tooltip">{children}</span>
+        ),
+    };
+});
 
 // Below the mocks on purpose — see webview-test-authoring §3.
 import { webviewClient } from '@/core/ui/utils/WebviewClient';

@@ -33,7 +33,7 @@
 import { View, Flex, Button, Link } from '@adobe/react-spectrum';
 import React from 'react';
 import type { StatusDisplay, AiReadyState, OrgCheckState } from '../hooks/useDashboardStatus';
-import { StatusCard } from '@/core/ui/components/feedback';
+import { StatusCard } from '@/core/ui/components/feedback/StatusCard';
 
 export interface DashboardStatusHeaderProps {
     /** AI Ready badge state. */

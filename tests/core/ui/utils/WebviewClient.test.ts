@@ -26,18 +26,26 @@ describe('WebviewClient - Handshake Reversal', () => {
         mockVscodeApi = {
             postMessage: jest.fn(),
             getState: jest.fn(),
-            setState: jest.fn()
+            setState: jest.fn(),
         };
 
-        // Mock window.acquireVsCodeApi and addEventListener
-        (global as any).window = {
-            acquireVsCodeApi: jest.fn(() => mockVscodeApi),
-            addEventListener: jest.fn((event: string, handler: (event: MessageEvent) => void) => {
-                if (event === 'message') {
-                    messageHandlers.push(handler);
-                }
-            })
-        };
+        // Stub ONTO the real window, never over it. This suite used to assign
+        // `global.window = {...}`, which worked only because it ran under the node
+        // project where no window exists. jsdom's window is a real global that the
+        // assignment cannot replace, so the stub was silently ignored: the client
+        // acquired no API, registered no listener, and the handshake tests hung on
+        // a promise nothing could resolve. Moved here with its subject 2026-09-02.
+        (window as unknown as { acquireVsCodeApi: unknown }).acquireVsCodeApi = jest.fn(
+            () => mockVscodeApi,
+        );
+        jest.spyOn(window, 'addEventListener').mockImplementation(((
+            event: string,
+            handler: (event: MessageEvent) => void,
+        ) => {
+            if (event === 'message') {
+                messageHandlers.push(handler);
+            }
+        }) as typeof window.addEventListener);
 
         // Load WebviewClient module (singleton created on import)
         const module = require('@/core/ui/utils/WebviewClient');
@@ -45,8 +53,9 @@ describe('WebviewClient - Handshake Reversal', () => {
     });
 
     afterEach(() => {
-        // Clean up global mocks
-        delete (global as any).window;
+        // Clean up: drop the stub property, restore the real addEventListener.
+        delete (window as unknown as { acquireVsCodeApi?: unknown }).acquireVsCodeApi;
+        jest.restoreAllMocks();
         jest.clearAllMocks();
     });
 
@@ -60,7 +69,7 @@ describe('WebviewClient - Handshake Reversal', () => {
                 expect.objectContaining({
                     type: '__webview_ready__',
                     id: expect.any(String),
-                    timestamp: expect.any(Number)
+                    timestamp: expect.any(Number),
                 })
             );
         });
@@ -75,17 +84,18 @@ describe('WebviewClient - Handshake Reversal', () => {
                 data: {
                     id: 'ext-1',
                     type: '__extension_ready__',
-                    timestamp: Date.now()
-                }
+                    timestamp: Date.now(),
+                },
             } as MessageEvent;
 
-            messageHandlers.forEach(handler => handler(extensionReadyMessage));
+            messageHandlers.forEach((handler) => handler(extensionReadyMessage));
 
             // Then: No response sent (no handler for __extension_ready__)
-            const webviewReadyCalls = (mockVscodeApi.postMessage as jest.Mock).mock.calls
-                .filter(call => call[0]?.type === '__webview_ready__');
+            const webviewReadyCalls = mockVscodeApi.postMessage.mock.calls.filter(
+                (call) => call[0]?.type === '__webview_ready__'
+            );
 
-            expect(webviewReadyCalls.length).toBe(0);
+            expect(webviewReadyCalls).toHaveLength(0);
         });
 
         it('should complete handshake when receiving __handshake_complete__', async () => {
@@ -97,11 +107,11 @@ describe('WebviewClient - Handshake Reversal', () => {
                     id: 'hc-1',
                     type: '__handshake_complete__',
                     timestamp: Date.now(),
-                    payload: { stateVersion: 1 }
-                }
+                    payload: { stateVersion: 1 },
+                },
             } as MessageEvent;
 
-            messageHandlers.forEach(handler => handler(handshakeCompleteMessage));
+            messageHandlers.forEach((handler) => handler(handshakeCompleteMessage));
 
             // Then: Ready promise resolves
             await expect(webviewClient.ready()).resolves.toBeUndefined();
@@ -123,17 +133,17 @@ describe('WebviewClient - Handshake Reversal', () => {
                 data: {
                     id: 'hc-1',
                     type: '__handshake_complete__',
-                    timestamp: Date.now()
-                }
+                    timestamp: Date.now(),
+                },
             } as MessageEvent;
 
-            messageHandlers.forEach(handler => handler(handshakeCompleteMessage));
+            messageHandlers.forEach((handler) => handler(handshakeCompleteMessage));
 
             // Then: Queued message flushed
             expect(mockVscodeApi.postMessage).toHaveBeenCalledWith(
                 expect.objectContaining({
                     type: 'test-action',
-                    payload: { data: 'test' }
+                    payload: { data: 'test' },
                 })
             );
         });
@@ -147,14 +157,15 @@ describe('WebviewClient - Handshake Reversal', () => {
             // Step 1 already happened: Webview sent ready during init
 
             // Verify __webview_ready__ was sent (check existing calls)
-            const readyCall = (mockVscodeApi.postMessage as jest.Mock).mock.calls
-                .find(call => call[0]?.type === '__webview_ready__');
+            const readyCall = mockVscodeApi.postMessage.mock.calls.find(
+                (call) => call[0]?.type === '__webview_ready__'
+            );
 
             expect(readyCall).toBeDefined();
             expect(readyCall![0]).toMatchObject({
                 type: '__webview_ready__',
                 id: expect.any(String),
-                timestamp: expect.any(Number)
+                timestamp: expect.any(Number),
             });
 
             // Step 2: Extension receives ready, sends handshake complete
@@ -162,11 +173,11 @@ describe('WebviewClient - Handshake Reversal', () => {
                 data: {
                     id: 'hc-1',
                     type: '__handshake_complete__',
-                    timestamp: Date.now()
-                }
+                    timestamp: Date.now(),
+                },
             } as MessageEvent;
 
-            messageHandlers.forEach(handler => handler(handshakeCompleteMessage));
+            messageHandlers.forEach((handler) => handler(handshakeCompleteMessage));
 
             // Step 3: Ready promise resolves
             await expect(webviewClient.ready()).resolves.toBeUndefined();

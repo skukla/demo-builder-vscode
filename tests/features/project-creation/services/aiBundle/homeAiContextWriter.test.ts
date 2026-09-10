@@ -22,6 +22,7 @@ import {
     ensureHomeAiContext,
     refreshHomeAgentsMd,
 } from '@/features/project-creation/services/aiBundle/homeAiContextWriter';
+import { DEMO_BUILDER_SKILLS } from '@/features/project-creation/services/aiBundle/skillsWriter';
 import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
 
 jest.mock('fs/promises', () => ({
@@ -44,7 +45,7 @@ const TEST_NODE_PATH = '/usr/local/bin/node';
  */
 function captureWrite(suffix: string): string {
     const writeFileMock = fsPromises.writeFile as jest.Mock;
-    const call = writeFileMock.mock.calls.find(([p]: [string]) => (p as string).endsWith(suffix));
+    const call = writeFileMock.mock.calls.find(([p]: [string]) => p.endsWith(suffix));
     if (!call) {
         throw new Error(`No writeFile call found for path ending with: ${suffix}`);
     }
@@ -53,7 +54,7 @@ function captureWrite(suffix: string): string {
 
 function wasWritten(suffix: string): boolean {
     const writeFileMock = fsPromises.writeFile as jest.Mock;
-    return writeFileMock.mock.calls.some(([p]: [string]) => (p as string).endsWith(suffix));
+    return writeFileMock.mock.calls.some(([p]: [string]) => p.endsWith(suffix));
 }
 
 // ─── MCP config ──────────────────────────────────────────────────────────────
@@ -295,6 +296,18 @@ describe('refreshHomeAgentsMd — stating the active project', () => {
 
         await expect(refreshHomeAgentsMd(PROJECTS_ROOT, 'citisignal-b2b')).resolves.toBeUndefined();
     });
+
+    it('never throws when the rejection carries no value at all', async () => {
+        // The catch reads `.code` off the rejection to decide whether a missing
+        // root is worth reporting. A rejection with nothing in it must still
+        // leave the launch unblocked — that read is guarded for exactly this
+        // case, and an unguarded one turns a best-effort refresh into a throw.
+        const stderr = jest.spyOn(process.stderr, 'write').mockReturnValue(true);
+        (fsPromises.writeFile as jest.Mock).mockRejectedValueOnce(undefined);
+
+        await expect(refreshHomeAgentsMd(PROJECTS_ROOT, 'citisignal-b2b')).resolves.toBeUndefined();
+        stderr.mockRestore();
+    });
 });
 
 // ─── skills ──────────────────────────────────────────────────────────────────
@@ -329,13 +342,18 @@ describe('ensureHomeAiContext — skills', () => {
 
         const writeFileMock = fsPromises.writeFile as jest.Mock;
         const claudeDir = path.join(PROJECTS_ROOT, '.claude');
-        for (const [p] of writeFileMock.mock.calls as Array<[string]>) {
-            // Every write is either directly under the root or under <root>/.claude.
-            const dir = path.dirname(p);
-            const underRoot = dir === PROJECTS_ROOT;
-            const underClaude = dir === claudeDir || dir.startsWith(claudeDir + path.sep);
-            expect(underRoot || underClaude).toBe(true);
-        }
+
+        // Every write belongs directly under the root or under <root>/.claude.
+        // The disjunction is the real property, but asserting it per-write said
+        // only "expected true, got false" — collecting the strays names the path
+        // that broke the rule, which is the whole point of the test.
+        const strays = (writeFileMock.mock.calls as Array<[string]>)
+            .map(([p]) => path.dirname(p))
+            .filter((dir) => dir !== PROJECTS_ROOT
+                && dir !== claudeDir
+                && !dir.startsWith(claudeDir + path.sep));
+
+        expect(strays).toStrictEqual([]);
     });
 });
 
@@ -364,5 +382,50 @@ describe('ensureHomeAiContext — best-effort', () => {
         await expect(
             ensureHomeAiContext(PROJECTS_ROOT, EXTENSION_DIST, TEST_NODE_PATH)
         ).resolves.toBeUndefined();
+    });
+});
+
+// ─── directories and legacy skill cleanup ────────────────────────────────────
+
+/**
+ * The `recursive`/`force` options are the whole content of these calls: the fs
+ * mock resolves whatever it is handed, so it cannot see a call that would fail
+ * against a real disk. Only the arguments say whether a fresh root works.
+ */
+describe('ensureHomeAiContext — directories and legacy skill cleanup', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    it('creates the skills directory recursively, so a root with no .claude works', async () => {
+        await ensureHomeAiContext(PROJECTS_ROOT, EXTENSION_DIST, TEST_NODE_PATH);
+
+        expect(fsPromises.mkdir).toHaveBeenCalledWith(
+            path.join(PROJECTS_ROOT, '.claude', 'skills'),
+            { recursive: true }
+        );
+    });
+
+    it('creates every skill directory recursively', async () => {
+        await ensureHomeAiContext(PROJECTS_ROOT, EXTENSION_DIST, TEST_NODE_PATH);
+
+        const skillsDir = path.join(PROJECTS_ROOT, '.claude', 'skills');
+        expect(DEMO_BUILDER_SKILLS.length).toBeGreaterThan(0);
+        for (const { name } of DEMO_BUILDER_SKILLS) {
+            expect(fsPromises.mkdir).toHaveBeenCalledWith(path.join(skillsDir, name), {
+                recursive: true,
+            });
+        }
+    });
+
+    it('unlinks the legacy flat <name>.md with force, so an absent file is not an error', async () => {
+        await ensureHomeAiContext(PROJECTS_ROOT, EXTENSION_DIST, TEST_NODE_PATH);
+
+        const skillsDir = path.join(PROJECTS_ROOT, '.claude', 'skills');
+        for (const { name } of DEMO_BUILDER_SKILLS) {
+            expect(fsPromises.rm).toHaveBeenCalledWith(path.join(skillsDir, `${name}.md`), {
+                force: true,
+            });
+        }
     });
 });

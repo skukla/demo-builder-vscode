@@ -4,18 +4,14 @@
  * Split from useProjectBuilder.test.ts to keep both files under the eslint
  * max-lines limit. Covers the plain field-update handlers (addons, block
  * libraries, custom libs) and the onStackSelect addon / block-library seeding
- * parity. Shares the same setup header as the sibling file (unchanged).
+ * parity. Takes its fixtures and `setup` from useProjectBuilder.testUtils,
+ * which the two sibling suites already use — this file had carried its own
+ * byte-identical copy since the split.
  *
- * @jest-environment jsdom
  */
 
-import { renderHook, act } from '@testing-library/react';
-import { useProjectBuilder } from '@/features/project-creation/ui/steps/useProjectBuilder';
-import { COMPONENT_IDS } from '@/core/constants';
+import { act } from '@testing-library/react';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
-import type { DemoPackage, GitSource } from '@/types/demoPackages';
-import type { Stack } from '@/types/stacks';
-import type { WizardState } from '@/types/webview';
 
 // The mesh seeding depends on getResolvedMeshRequirement for the reset path.
 // Default each test to 'optional' (no auto-include) unless overridden.
@@ -37,6 +33,7 @@ jest.mock('@/core/ui/utils/vscode-api', () => ({
     vscode: { postMessage: jest.fn() },
 }));
 
+import { setup } from './useProjectBuilder.testUtils';
 import { getResolvedMeshRequirement } from '@/features/components/services/demoPackageLoader';
 import { vscode } from '@/core/ui/utils/vscode-api';
 import {
@@ -48,90 +45,11 @@ const mockGetResolvedMeshRequirement = getResolvedMeshRequirement as jest.Mock;
 const mockGetNativeBlockLibraries = getNativeBlockLibraries as jest.Mock;
 const mockGetDefaultBlockLibraryIds = getDefaultBlockLibraryIds as jest.Mock;
 
-const mockGitSource: GitSource = {
-    type: 'git',
-    url: 'https://github.com/test/repo',
-    branch: 'main',
-    gitOptions: { shallow: true },
-};
-
-const edsStack: Stack = {
-    id: 'eds-paas',
-    name: 'EDS + PaaS',
-    description: 'Edge Delivery with PaaS backend',
-    frontend: 'eds-storefront',
-    backend: 'adobe-commerce-paas',
-    dependencies: [],
-    optionalDependencies: [COMPONENT_IDS.EDS_COMMERCE_MESH],
-    optionalAddons: [
-        { id: 'live-search', default: true },
-        { id: 'catalog-service', default: false },
-    ],
-};
-
-const headlessStack: Stack = {
-    id: 'headless-paas',
-    name: 'Headless + PaaS',
-    description: 'Headless storefront with PaaS backend',
-    frontend: 'headless',
-    backend: 'adobe-commerce-paas',
-    dependencies: [],
-    optionalDependencies: [COMPONENT_IDS.HEADLESS_COMMERCE_MESH],
-};
-
-const edsRequiresStack: Stack = {
-    id: 'eds-accs',
-    name: 'EDS + ACCS',
-    description: 'Edge Delivery with ACCS backend',
-    frontend: 'eds-storefront',
-    backend: 'adobe-commerce-accs',
-    dependencies: [],
-    requiresGitHub: true,
-    requiresDaLive: true,
-};
-
-const citisignal: DemoPackage = {
-    id: 'citisignal',
-    name: 'CitiSignal',
-    description: 'A test package',
-    configDefaults: {},
-    storefronts: {
-        'eds-paas': { name: 'CS EDS', description: '', source: mockGitSource },
-        'eds-accs': {
-            name: 'CS EDS ACCS',
-            description: '',
-            source: mockGitSource,
-            templateOwner: 'skukla',
-            templateRepo: 'citisignal-eds',
-        },
-    },
-};
-
-const custom: DemoPackage = {
-    id: 'custom',
-    name: 'Custom',
-    description: 'Custom package',
-    configDefaults: {},
-    storefronts: { 'headless-paas': { name: 'Custom HL', description: '', source: mockGitSource } },
-};
-
 /**
  * Package with a REQUIRED addon (`live-search`) and an OPTIONAL one (`foo`).
  * Drives the addon-seeding parity tests: onStackSelect must union the package's
  * required addons with the stack's default optionalAddons.
  */
-const withAddons: DemoPackage = {
-    id: 'withAddons',
-    name: 'With Addons',
-    description: 'A package with required + optional addons',
-    configDefaults: {},
-    addons: { 'live-search': 'required', foo: 'optional' },
-    storefronts: {
-        'eds-paas': { name: 'WA EDS', description: '', source: mockGitSource },
-        'headless-paas': { name: 'WA HL', description: '', source: mockGitSource },
-    },
-} as DemoPackage;
-
 const customLib: CustomBlockLibrary = {
     name: 'My Custom Lib',
     source: { owner: 'myorg', repo: 'my-blocks', branch: 'main' },
@@ -142,42 +60,6 @@ const customLib: CustomBlockLibrary = {
  * to a mutable ref so successive handler calls in one test observe prior writes
  * (mirrors the real reducer's functional update).
  */
-interface SetupExtras {
-    onArchitectureChange?: (oldStackId: string, newStackId: string) => void;
-    blockLibraryDefaults?: string[];
-    customBlockLibraryDefaults?: CustomBlockLibrary[];
-}
-
-function setup(initial: Partial<WizardState> = {}, extras: SetupExtras = {}) {
-    const { onArchitectureChange, blockLibraryDefaults, customBlockLibraryDefaults } = extras;
-    const stateRef: { current: WizardState } = {
-        current: {
-            currentStep: 'welcome',
-            projectName: '',
-            selectedPackage: 'citisignal',
-            adobeAuth: { isAuthenticated: false, isChecking: false },
-            ...initial,
-        } as WizardState,
-    };
-    const updateState = jest.fn((partial: Partial<WizardState>) => {
-        stateRef.current = { ...stateRef.current, ...partial };
-    });
-
-    const { result, rerender } = renderHook(
-        ({ state }: { state: WizardState }) =>
-            useProjectBuilder(state, updateState, {
-                packages: [citisignal, custom, withAddons],
-                stacks: [edsStack, headlessStack, edsRequiresStack],
-                onArchitectureChange,
-                blockLibraryDefaults,
-                customBlockLibraryDefaults,
-            }),
-        { initialProps: { state: stateRef.current } },
-    );
-
-    return { result, rerender, updateState, stateRef };
-}
-
 beforeEach(() => {
     mockGetResolvedMeshRequirement.mockReset();
     mockGetResolvedMeshRequirement.mockReturnValue('optional');
@@ -194,7 +76,7 @@ describe('useProjectBuilder — addon handler', () => {
             result.current.onAddonsChange(['live-search', 'catalog-service']);
         });
         expect(updateState).toHaveBeenCalledWith(
-            expect.objectContaining({ selectedAddons: ['live-search', 'catalog-service'] }),
+            expect.objectContaining({ selectedAddons: ['live-search', 'catalog-service'] })
         );
     });
 });
@@ -206,7 +88,7 @@ describe('useProjectBuilder — block library handlers', () => {
             result.current.onBlockLibrariesChange(['isle5']);
         });
         expect(updateState).toHaveBeenCalledWith(
-            expect.objectContaining({ selectedBlockLibraries: ['isle5'] }),
+            expect.objectContaining({ selectedBlockLibraries: ['isle5'] })
         );
     });
 
@@ -216,7 +98,7 @@ describe('useProjectBuilder — block library handlers', () => {
             result.current.onCustomBlockLibrariesChange([customLib]);
         });
         expect(updateState).toHaveBeenCalledWith(
-            expect.objectContaining({ customBlockLibraries: [customLib] }),
+            expect.objectContaining({ customBlockLibraries: [customLib] })
         );
     });
 });
@@ -228,7 +110,7 @@ describe('useProjectBuilder — onStackSelect addon seeding (parity)', () => {
         act(() => {
             result.current.onStackSelect('eds-paas');
         });
-        const call = updateState.mock.calls[0][0] as Partial<WizardState>;
+        const call = updateState.mock.calls[0][0];
         expect(call.selectedAddons).toEqual(['live-search']);
     });
 
@@ -237,7 +119,7 @@ describe('useProjectBuilder — onStackSelect addon seeding (parity)', () => {
         act(() => {
             result.current.onStackSelect('eds-paas');
         });
-        const call = updateState.mock.calls[0][0] as Partial<WizardState>;
+        const call = updateState.mock.calls[0][0];
         // edsStack defaults live-search (default:true); catalog-service is default:false.
         expect(call.selectedAddons).toEqual(['live-search']);
     });
@@ -247,8 +129,8 @@ describe('useProjectBuilder — onStackSelect addon seeding (parity)', () => {
         act(() => {
             result.current.onStackSelect('headless-paas');
         });
-        const call = updateState.mock.calls[0][0] as Partial<WizardState>;
-        expect(call.selectedAddons).toEqual([]);
+        const call = updateState.mock.calls[0][0];
+        expect(call.selectedAddons).toStrictEqual([]);
     });
 });
 
@@ -258,21 +140,21 @@ describe('useProjectBuilder — onStackSelect block library seeding (parity)', (
         mockGetDefaultBlockLibraryIds.mockReturnValue(['isle5']);
         const { result, updateState } = setup(
             { selectedPackage: 'citisignal' },
-            { blockLibraryDefaults: ['isle5'] },
+            { blockLibraryDefaults: ['isle5'] }
         );
         act(() => {
             result.current.onStackSelect('eds-paas');
         });
-        const call = updateState.mock.calls[0][0] as Partial<WizardState>;
+        const call = updateState.mock.calls[0][0];
         expect(new Set(call.selectedBlockLibraries)).toEqual(
-            new Set(['demo-team-blocks', 'isle5']),
+            new Set(['demo-team-blocks', 'isle5'])
         );
     });
 
     it('passes blockLibraryDefaults through to getDefaultBlockLibraryIds', () => {
         const { result } = setup(
             { selectedPackage: 'citisignal' },
-            { blockLibraryDefaults: ['isle5'] },
+            { blockLibraryDefaults: ['isle5'] }
         );
         act(() => {
             result.current.onStackSelect('eds-paas');
@@ -280,7 +162,7 @@ describe('useProjectBuilder — onStackSelect block library seeding (parity)', (
         expect(mockGetDefaultBlockLibraryIds).toHaveBeenCalledWith(
             expect.objectContaining({ id: 'eds-paas' }),
             'citisignal',
-            ['isle5'],
+            ['isle5']
         );
     });
 
@@ -291,19 +173,19 @@ describe('useProjectBuilder — onStackSelect block library seeding (parity)', (
         act(() => {
             result.current.onStackSelect('eds-paas');
         });
-        const call = updateState.mock.calls[0][0] as Partial<WizardState>;
+        const call = updateState.mock.calls[0][0];
         expect(call.selectedBlockLibraries).toEqual(['isle5']);
     });
 
     it('seeds customBlockLibraries from customBlockLibraryDefaults when state has none', () => {
         const { result, updateState } = setup(
             { selectedPackage: 'citisignal' },
-            { customBlockLibraryDefaults: [customLib] },
+            { customBlockLibraryDefaults: [customLib] }
         );
         act(() => {
             result.current.onStackSelect('eds-paas');
         });
-        const call = updateState.mock.calls[0][0] as Partial<WizardState>;
+        const call = updateState.mock.calls[0][0];
         expect(call.customBlockLibraries).toEqual([customLib]);
     });
 
@@ -314,12 +196,12 @@ describe('useProjectBuilder — onStackSelect block library seeding (parity)', (
         };
         const { result, updateState } = setup(
             { selectedPackage: 'citisignal', customBlockLibraries: [existing] },
-            { customBlockLibraryDefaults: [customLib] },
+            { customBlockLibraryDefaults: [customLib] }
         );
         act(() => {
             result.current.onStackSelect('eds-paas');
         });
-        const call = updateState.mock.calls[0][0] as Partial<WizardState>;
+        const call = updateState.mock.calls[0][0];
         expect(call.customBlockLibraries).toEqual([existing]);
     });
 
@@ -330,14 +212,14 @@ describe('useProjectBuilder — onStackSelect block library seeding (parity)', (
                 selectedBlockLibraries: ['stale-lib'],
                 customBlockLibraries: [customLib],
             },
-            { customBlockLibraryDefaults: [customLib] },
+            { customBlockLibraryDefaults: [customLib] }
         );
         act(() => {
             result.current.onStackSelect('headless-paas');
         });
-        const call = updateState.mock.calls[0][0] as Partial<WizardState>;
-        expect(call.selectedBlockLibraries).toEqual([]);
-        expect(call.customBlockLibraries).toEqual([]);
+        const call = updateState.mock.calls[0][0];
+        expect(call.selectedBlockLibraries).toStrictEqual([]);
+        expect(call.customBlockLibraries).toStrictEqual([]);
     });
 
     it('does not call the block library loaders for a non-EDS stack', () => {
@@ -361,12 +243,11 @@ describe('useProjectBuilder — onBlockLibrariesChange offers save-defaults tip'
             result.current.onBlockLibrariesChange(['blocks-a', 'blocks-b']);
         });
         expect(updateState).toHaveBeenCalledWith(
-            expect.objectContaining({ selectedBlockLibraries: ['blocks-a', 'blocks-b'] }),
+            expect.objectContaining({ selectedBlockLibraries: ['blocks-a', 'blocks-b'] })
         );
-        expect(vscode.postMessage).toHaveBeenCalledWith(
-            'offer-save-block-library-defaults',
-            { selectedLibraries: ['blocks-a', 'blocks-b'] },
-        );
+        expect(vscode.postMessage).toHaveBeenCalledWith('offer-save-block-library-defaults', {
+            selectedLibraries: ['blocks-a', 'blocks-b'],
+        });
     });
 
     it('does NOT offer the tip when the selection is cleared to empty', () => {
@@ -375,7 +256,7 @@ describe('useProjectBuilder — onBlockLibrariesChange offers save-defaults tip'
             result.current.onBlockLibrariesChange([]);
         });
         expect(updateState).toHaveBeenCalledWith(
-            expect.objectContaining({ selectedBlockLibraries: [] }),
+            expect.objectContaining({ selectedBlockLibraries: [] })
         );
         expect(vscode.postMessage).not.toHaveBeenCalled();
     });

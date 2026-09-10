@@ -80,7 +80,15 @@ for ov in "$RPTC"/plans/*/overview.md "$RPTC"/plans/*/HANDOFF.md; do
     [ -f "$ov" ] || continue
     if grep -qiE '^\s*(\*\*)?(status|state)(\*\*)?:?.{0,40}(shipped|complete)|^\*\*shipped' "$ov"; then
         echo "  CLAIMS SHIPPED  $(dirname "$ov")"
-        grep -m1 -iE 'shipped|complete' "$ov" | cut -c1-96 | sed 's/^/      /'
+        # Print the line that ACTUALLY triggered it, not a looser re-grep. The
+        # evidence used to be `grep -m1 -iE 'shipped|complete'`, which finds the
+        # first loose match anywhere in the file — so a plan flagged on a
+        # `**SHIPPED**` heading at line 251 was reported with prose from line 18
+        # that merely contained the word "completely". The finding was right and
+        # the evidence pointed somewhere else, which costs more time than no
+        # evidence would.
+        grep -n -m1 -iE '^\s*(\*\*)?(status|state)(\*\*)?:?.{0,40}(shipped|complete)|^\*\*shipped' \
+            "$ov" | cut -c1-96 | sed 's/^/      /'
         found=$((found + 1))
     fi
 done
@@ -116,7 +124,12 @@ python3 - "$RPTC" <<'PY'
 import os, re, sys
 roots = [os.path.join(sys.argv[1], 'backlog'), os.path.join(sys.argv[1], 'plans'),
          'docs', '.claude/skills']
-pat = re.compile(r'\b((?:src|tests|scripts)/[\w./-]+\.(?:ts|tsx|js|mjs|css)):(\d+)\b')
+# The lookbehind, not \b: `/` IS a word boundary, so `\bsrc/` matched the TAIL of
+# `node_modules/@stryker-mutator/jest-runner/dist/src/jest-test-runner.js:67` and
+# reported a vendor file as a missing repo file. Expanding the citation to its full
+# path made it worse — one false hit became three. A citation must START at a
+# non-path character to be a citation into this repo.
+pat = re.compile(r'(?<![\w./-])((?:src|tests|scripts)/[\w./-]+\.(?:ts|tsx|js|mjs|css)):(\d+)\b')
 # Skill docs illustrate with placeholder paths (src/a/foo.ts, src/features/x/old.ts).
 # Reporting a scan's own examples trains people to ignore it.
 PLACEHOLDER = re.compile(r'/(foo|bar|baz|qux|old|new|thing|example)\.[a-z]+$|/[a-z]/')

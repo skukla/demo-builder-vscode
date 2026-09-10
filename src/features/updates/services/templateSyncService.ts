@@ -14,13 +14,13 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { COMPONENT_IDS } from '@/core/constants';
-import { ServiceLocator } from '@/core/di';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
+import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import { injectTokenIntoUrl } from '@/features/eds/services/github/githubHelpers';
-import { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
-import { DEFAULT_SHELL } from '@/types/shell';
 
 /**
  * Options for template sync operation
@@ -68,7 +68,12 @@ export class TemplateSyncService {
     private logger: Logger;
     private secrets: vscode.SecretStorage;
 
-    constructor(secrets: vscode.SecretStorage, logger: Logger) {
+    /** ADR-015: the executor joins the secrets + logger as an injected dependency. */
+    constructor(
+        secrets: vscode.SecretStorage,
+        logger: Logger,
+        private commandManager: CommandExecutor,
+    ) {
         this.secrets = secrets;
         this.logger = logger;
     }
@@ -158,7 +163,10 @@ export class TemplateSyncService {
         templateRepo: string,
         preserveFiles: string[],
     ): Promise<TemplateSyncResult> {
-        const githubTokenService = new GitHubTokenService(this.secrets, this.logger);
+        // The SHARED instance. NOTE: these two sites only call getToken() and never
+        // validate, so a fresh instance cost nothing here — this is consistency with
+        // the other 34 call sites, not a fix for a redundant round trip.
+        const { tokenService: githubTokenService } = getGitHubServices(this.secrets);
         const token = await githubTokenService.getToken();
         if (!token) {
             return {
@@ -169,7 +177,6 @@ export class TemplateSyncService {
             };
         }
 
-        const commandManager = ServiceLocator.getCommandExecutor();
         const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'template-sync-'));
         this.logger.info(`[TemplateSync] Starting merge from ${templateOwner}/${templateRepo} to ${repoOwner}/${repoName}`);
 
@@ -177,7 +184,7 @@ export class TemplateSyncService {
             // Step 1: Clone user's repo
             this.logger.debug(`[TemplateSync] Cloning user repo...`);
             const userRepoUrl = injectTokenIntoUrl(`https://github.com/${repoOwner}/${repoName}.git`, token.token);
-            const cloneResult = await commandManager.execute(
+            const cloneResult = await this.commandManager.execute(
                 `git clone --depth 50 --branch main "${userRepoUrl}" repo`,
                 { cwd: tempDir, timeout: TIMEOUTS.LONG, shell: DEFAULT_SHELL },
             );
@@ -193,11 +200,11 @@ export class TemplateSyncService {
             // Step 3: Add template as remote and fetch
             this.logger.debug(`[TemplateSync] Fetching template repo...`);
             const templateUrl = `https://github.com/${templateOwner}/${templateRepo}.git`;
-            await commandManager.execute(`git remote add template "${templateUrl}"`, {
+            await this.commandManager.execute(`git remote add template "${templateUrl}"`, {
                 cwd: repoDir, timeout: TIMEOUTS.QUICK, shell: DEFAULT_SHELL,
             });
 
-            const fetchResult = await commandManager.execute(`git fetch template main`, {
+            const fetchResult = await this.commandManager.execute(`git fetch template main`, {
                 cwd: repoDir, timeout: TIMEOUTS.LONG, shell: DEFAULT_SHELL,
             });
             if (fetchResult.code !== 0) {
@@ -206,13 +213,13 @@ export class TemplateSyncService {
 
             // Step 4: Try merge (without commit)
             this.logger.debug(`[TemplateSync] Attempting merge...`);
-            await commandManager.execute(
+            await this.commandManager.execute(
                 `git merge template/main --no-commit --no-ff`,
                 { cwd: repoDir, timeout: TIMEOUTS.NORMAL, shell: DEFAULT_SHELL },
             );
 
             // Step 5: Check for conflicts
-            const conflictResult = await commandManager.execute(
+            const conflictResult = await this.commandManager.execute(
                 `git diff --name-only --diff-filter=U`,
                 { cwd: repoDir, timeout: TIMEOUTS.QUICK, shell: DEFAULT_SHELL },
             );
@@ -221,7 +228,7 @@ export class TemplateSyncService {
             if (conflicts.length > 0) {
                 // Conflicts detected - abort merge and fall back to reset
                 this.logger.warn(`[TemplateSync] Merge conflicts detected in ${conflicts.length} files, falling back to reset`);
-                await commandManager.execute(`git merge --abort`, {
+                await this.commandManager.execute(`git merge --abort`, {
                     cwd: repoDir, timeout: TIMEOUTS.QUICK, shell: DEFAULT_SHELL,
                 });
 
@@ -235,7 +242,6 @@ export class TemplateSyncService {
                     templateRepo,
                     preserveFiles,
                     backups,
-                    commandManager,
                 );
 
                 return {
@@ -249,17 +255,17 @@ export class TemplateSyncService {
             await this.restorePreservedFiles(repoDir, backups);
 
             // Stage all changes
-            await commandManager.execute(`git add -A`, {
+            await this.commandManager.execute(`git add -A`, {
                 cwd: repoDir, timeout: TIMEOUTS.QUICK, shell: DEFAULT_SHELL,
             });
 
             // Check if there are changes to commit
-            const statusResult = await commandManager.execute(`git status --porcelain`, {
+            const statusResult = await this.commandManager.execute(`git status --porcelain`, {
                 cwd: repoDir, timeout: TIMEOUTS.QUICK, shell: DEFAULT_SHELL,
             });
 
             if (statusResult.stdout.trim()) {
-                const commitResult = await commandManager.execute(
+                const commitResult = await this.commandManager.execute(
                     `git commit -m "chore: sync with template"`,
                     { cwd: repoDir, timeout: TIMEOUTS.QUICK, shell: DEFAULT_SHELL },
                 );
@@ -269,14 +275,14 @@ export class TemplateSyncService {
             }
 
             // Get commit SHA
-            const shaResult = await commandManager.execute(`git rev-parse HEAD`, {
+            const shaResult = await this.commandManager.execute(`git rev-parse HEAD`, {
                 cwd: repoDir, timeout: TIMEOUTS.QUICK, shell: DEFAULT_SHELL,
             });
             const syncedCommit = shaResult.stdout.trim();
 
             // Step 7: Push to origin
             this.logger.debug(`[TemplateSync] Pushing to origin...`);
-            const pushResult = await commandManager.execute(`git push origin main`, {
+            const pushResult = await this.commandManager.execute(`git push origin main`, {
                 cwd: repoDir, timeout: TIMEOUTS.LONG, shell: DEFAULT_SHELL,
             });
             if (pushResult.code !== 0) {
@@ -317,7 +323,10 @@ export class TemplateSyncService {
         templateRepo: string,
         preserveFiles: string[],
     ): Promise<TemplateSyncResult> {
-        const githubTokenService = new GitHubTokenService(this.secrets, this.logger);
+        // The SHARED instance. NOTE: these two sites only call getToken() and never
+        // validate, so a fresh instance cost nothing here — this is consistency with
+        // the other 34 call sites, not a fix for a redundant round trip.
+        const { tokenService: githubTokenService } = getGitHubServices(this.secrets);
         const token = await githubTokenService.getToken();
         if (!token) {
             return {
@@ -328,7 +337,6 @@ export class TemplateSyncService {
             };
         }
 
-        const commandManager = ServiceLocator.getCommandExecutor();
         const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'template-sync-'));
         this.logger.info(`[TemplateSync] Starting reset from ${templateOwner}/${templateRepo} to ${repoOwner}/${repoName}`);
 
@@ -336,7 +344,7 @@ export class TemplateSyncService {
             // Step 1: Clone user's repo
             this.logger.debug(`[TemplateSync] Cloning user repo...`);
             const userRepoUrl = injectTokenIntoUrl(`https://github.com/${repoOwner}/${repoName}.git`, token.token);
-            const cloneResult = await commandManager.execute(
+            const cloneResult = await this.commandManager.execute(
                 `git clone --depth 1 --branch main "${userRepoUrl}" repo`,
                 { cwd: tempDir, timeout: TIMEOUTS.LONG, shell: DEFAULT_SHELL },
             );
@@ -352,11 +360,11 @@ export class TemplateSyncService {
             // Step 3: Add template as remote and fetch
             this.logger.debug(`[TemplateSync] Fetching template repo...`);
             const templateUrl = `https://github.com/${templateOwner}/${templateRepo}.git`;
-            await commandManager.execute(`git remote add template "${templateUrl}"`, {
+            await this.commandManager.execute(`git remote add template "${templateUrl}"`, {
                 cwd: repoDir, timeout: TIMEOUTS.QUICK, shell: DEFAULT_SHELL,
             });
 
-            const fetchResult = await commandManager.execute(`git fetch template main`, {
+            const fetchResult = await this.commandManager.execute(`git fetch template main`, {
                 cwd: repoDir, timeout: TIMEOUTS.LONG, shell: DEFAULT_SHELL,
             });
             if (fetchResult.code !== 0) {
@@ -370,7 +378,6 @@ export class TemplateSyncService {
                 templateRepo,
                 preserveFiles,
                 backups,
-                commandManager,
             );
 
             return resetResult;
@@ -401,11 +408,10 @@ export class TemplateSyncService {
         templateRepo: string,
         preserveFiles: string[],
         backups: Map<string, string>,
-        commandManager: ReturnType<typeof ServiceLocator.getCommandExecutor>,
     ): Promise<TemplateSyncResult> {
         // Reset to template's content
         this.logger.debug(`[TemplateSync] Resetting to template content...`);
-        const readTreeResult = await commandManager.execute(
+        const readTreeResult = await this.commandManager.execute(
             `git read-tree --reset -u template/main`,
             { cwd: repoDir, timeout: TIMEOUTS.NORMAL, shell: DEFAULT_SHELL },
         );
@@ -417,16 +423,16 @@ export class TemplateSyncService {
         await this.restorePreservedFiles(repoDir, backups);
 
         // Stage and commit
-        await commandManager.execute(`git add -A`, {
+        await this.commandManager.execute(`git add -A`, {
             cwd: repoDir, timeout: TIMEOUTS.QUICK, shell: DEFAULT_SHELL,
         });
 
-        const statusResult = await commandManager.execute(`git status --porcelain`, {
+        const statusResult = await this.commandManager.execute(`git status --porcelain`, {
             cwd: repoDir, timeout: TIMEOUTS.QUICK, shell: DEFAULT_SHELL,
         });
 
         if (statusResult.stdout.trim()) {
-            const commitResult = await commandManager.execute(
+            const commitResult = await this.commandManager.execute(
                 `git commit -m "chore: sync with template (reset)"`,
                 { cwd: repoDir, timeout: TIMEOUTS.QUICK, shell: DEFAULT_SHELL },
             );
@@ -436,14 +442,14 @@ export class TemplateSyncService {
         }
 
         // Get commit SHA
-        const shaResult = await commandManager.execute(`git rev-parse HEAD`, {
+        const shaResult = await this.commandManager.execute(`git rev-parse HEAD`, {
             cwd: repoDir, timeout: TIMEOUTS.QUICK, shell: DEFAULT_SHELL,
         });
         const syncedCommit = shaResult.stdout.trim();
 
         // Push with force (reset may rewrite history)
         this.logger.debug(`[TemplateSync] Pushing to origin...`);
-        const pushResult = await commandManager.execute(`git push origin main --force`, {
+        const pushResult = await this.commandManager.execute(`git push origin main --force`, {
             cwd: repoDir, timeout: TIMEOUTS.LONG, shell: DEFAULT_SHELL,
         });
         if (pushResult.code !== 0) {

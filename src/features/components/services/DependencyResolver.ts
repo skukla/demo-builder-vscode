@@ -11,7 +11,7 @@
 
 import type { ComponentRegistryManager } from './ComponentRegistryManager';
 import { isMeshComponentId } from '@/core/constants';
-import type { TransformedComponentDefinition } from '@/types';
+import type { TransformedComponentDefinition } from '@/types/components';
 import { ProjectConfig } from '@/types/handlers';
 
 /**

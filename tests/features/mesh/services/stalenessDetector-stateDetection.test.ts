@@ -1,24 +1,16 @@
 // IMPORTANT: Mock must be declared before imports
-jest.mock('@/core/logging', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        trace: jest.fn(),
-    }),
-}));
 
 import {
     getCurrentMeshState,
     detectMeshChanges,
 } from '@/features/mesh/services/stalenessDetector';
 import {
-    createMockProject,
+    createStalenessProject,
     setupMockCommandExecutor,
     setupMockFileSystemWithHash,
+    meshDeps,
 } from './stalenessDetector.testUtils';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 
 /**
  * StalenessDetector - State Detection Tests
@@ -33,6 +25,13 @@ import type { Project } from '@/types';
  * Total tests: 7
  */
 
+
+/**
+ * ADR-015 (2026-08-28): `detectMeshChanges` receives its collaborators now. The
+ * suite passes the fake explicitly at each call site, so a reader sees the
+ * real signature.
+ */
+
 describe('StalenessDetector - State Detection', () => {
     beforeEach(() => {
         jest.clearAllMocks();
@@ -40,7 +39,7 @@ describe('StalenessDetector - State Detection', () => {
 
     describe('getCurrentMeshState', () => {
         it('should return mesh state from project', () => {
-            const project = createMockProject({
+            const project = createStalenessProject({
                 appBuilderComponents: {
                     mesh: {
                         kind: 'mesh',
@@ -51,7 +50,7 @@ describe('StalenessDetector - State Detection', () => {
                         lastDeployed: '2024-01-01T00:00:00Z',
                     },
                 },
-            } as unknown as Partial<Project>);
+            });
 
             const result = getCurrentMeshState(project);
 
@@ -63,7 +62,7 @@ describe('StalenessDetector - State Detection', () => {
         });
 
         it('should return null when no mesh state', () => {
-            const project = createMockProject();
+            const project = createStalenessProject();
 
             const result = getCurrentMeshState(project);
 
@@ -71,7 +70,7 @@ describe('StalenessDetector - State Detection', () => {
         });
 
         it('should handle partial mesh state', () => {
-            const project = createMockProject({
+            const project = createStalenessProject({
                 appBuilderComponents: {
                     mesh: {
                         kind: 'mesh',
@@ -82,7 +81,7 @@ describe('StalenessDetector - State Detection', () => {
                         lastDeployed: '',
                     },
                 },
-            } as unknown as Partial<Project>);
+            });
 
             const result = getCurrentMeshState(project);
 
@@ -97,7 +96,7 @@ describe('StalenessDetector - State Detection', () => {
         // entry — the only carrier since PL-1 phase 2.
         describe('keyed-first read (ADR-011 D3 Step 06)', () => {
             it('should read envVars/sourceHash/lastDeployed from the keyed mesh entry (keyed-only)', () => {
-                const project = createMockProject({
+                const project = createStalenessProject({
                     appBuilderComponents: {
                         'commerce-mesh': {
                             kind: 'mesh',
@@ -109,7 +108,7 @@ describe('StalenessDetector - State Detection', () => {
                             lastDeployed: '2026-07-01T00:00:00Z',
                         },
                     },
-                } as unknown as Partial<Project>);
+                });
 
                 const result = getCurrentMeshState(project);
 
@@ -121,7 +120,7 @@ describe('StalenessDetector - State Detection', () => {
             });
 
             it('should return null for an undeployed keyed entry with no runtime fields (fresh-deploy semantics)', () => {
-                const project = createMockProject({
+                const project = createStalenessProject({
                     appBuilderComponents: {
                         mesh: {
                             kind: 'mesh',
@@ -129,7 +128,7 @@ describe('StalenessDetector - State Detection', () => {
                             source: { owner: '', repo: '' },
                         },
                     },
-                } as unknown as Partial<Project>);
+                });
 
                 expect(getCurrentMeshState(project)).toBeNull();
             });
@@ -138,7 +137,7 @@ describe('StalenessDetector - State Detection', () => {
 
     describe('detectMeshChanges - unknownDeployedState handling', () => {
         it('should return unknownDeployedState=true and hasChanges=false when fetch fails (timeout)', async () => {
-            const project = createMockProject({
+            const project = createStalenessProject({
                 componentInstances: {
                     'commerce-mesh': {
                         id: 'commerce-mesh',
@@ -158,14 +157,14 @@ describe('StalenessDetector - State Detection', () => {
                         lastDeployed: '',
                     },
                 },
-            } as unknown as Partial<Project>);
+            });
 
             setupMockCommandExecutor(
                 { code: 0, stdout: '{"org":"test"}' },
                 new Error('Timeout')
             );
 
-            const result = await detectMeshChanges(project, {});
+            const result = await detectMeshChanges(project, {}, meshDeps);
 
             expect(result.unknownDeployedState).toBe(true);
             expect(result.hasChanges).toBe(false);
@@ -173,7 +172,7 @@ describe('StalenessDetector - State Detection', () => {
         });
 
         it('should populate the keyed entry envVars and set shouldSaveProject when fetch succeeds (keyed-only)', async () => {
-            const project: Project = createMockProject({
+            const project: Project = createStalenessProject({
                 componentInstances: {
                     'commerce-mesh': {
                         id: 'commerce-mesh',
@@ -195,7 +194,7 @@ describe('StalenessDetector - State Detection', () => {
                         sourceHash: null,
                     },
                 },
-            } as unknown as Partial<Project>);
+            });
 
             const deployedConfig = {
                 ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://example.com/graphql',
@@ -230,7 +229,7 @@ describe('StalenessDetector - State Detection', () => {
                 },
             };
 
-            const result = await detectMeshChanges(project, newConfig);
+            const result = await detectMeshChanges(project, newConfig, meshDeps);
 
             expect(result.shouldSaveProject).toBe(true);
             expect(result.hasChanges).toBe(false);
@@ -239,7 +238,7 @@ describe('StalenessDetector - State Detection', () => {
         });
 
         it('should handle an empty keyed baseline with fetch returning null (no mesh deployed)', async () => {
-            const project = createMockProject({
+            const project = createStalenessProject({
                 componentInstances: {
                     'commerce-mesh': {
                         id: 'commerce-mesh',
@@ -259,7 +258,7 @@ describe('StalenessDetector - State Detection', () => {
                         lastDeployed: '',
                     },
                 },
-            } as unknown as Partial<Project>);
+            });
 
             setupMockCommandExecutor({
                 code: 1,
@@ -267,16 +266,16 @@ describe('StalenessDetector - State Detection', () => {
                 stderr: 'Not authenticated',
             });
 
-            const result = await detectMeshChanges(project, {});
+            const result = await detectMeshChanges(project, {}, meshDeps);
 
             expect(result.unknownDeployedState).toBe(true);
             expect(result.hasChanges).toBe(false);
         });
 
         it('should handle missing mesh component gracefully', async () => {
-            const project = createMockProject();
+            const project = createStalenessProject();
 
-            const result = await detectMeshChanges(project, {});
+            const result = await detectMeshChanges(project, {}, meshDeps);
 
             expect(result.hasChanges).toBe(false);
             expect(result.envVarsChanged).toBe(false);

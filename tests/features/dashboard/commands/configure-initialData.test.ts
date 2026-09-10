@@ -9,32 +9,18 @@
  * payload read undefined.
  */
 
-import { ConfigureProjectWebviewCommand } from '@/features/dashboard/commands/configure';
+import { ConfigureProjectWebviewCommand } from './configure.testUtils';
 import * as vscode from 'vscode';
-import { StateManager } from '@/core/state';
+import { StateManager } from '@/core/state/stateManager';
 import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
 import type { Logger } from '@/types/logger';
-import type { Project } from '@/types';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 
-jest.mock('vscode');
-jest.mock('@/core/state');
-jest.mock('@/features/components/services/ComponentRegistryManager');
 
-jest.mock('@/core/logging', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    }),
-    Logger: jest.fn().mockImplementation(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
-}));
 
+import { internals } from '../../../helpers/commandInternals';
+import { createMockProject } from '../../../helpers/projectFake';
 jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => ({
     getAvailableAppBuilderComponents: jest.fn(() => []),
 }));
@@ -51,9 +37,17 @@ jest.mock('@/features/components/services/commerceSecretMigration', () => ({
     migrateDeclaredSecrets: jest.fn(),
     reKeyProjectSecrets: jest.fn(),
 }));
-jest.mock('@/features/eds', () => ({
-    detectStorefrontChanges: jest.fn(),
+// The '@/features/eds' barrel was retired under ADR-022, so these names are mocked
+// at the modules that declare them. isEdsProject is a type guard and lives in
+// @/types/typeGuards, whose other guards stay real.
+jest.mock('@/types/typeGuards', () => ({
+    ...jest.requireActual('@/types/typeGuards'),
     isEdsProject: jest.fn(() => false),
+}));
+jest.mock('@/features/eds/services/storefront/storefrontStalenessDetector', () => ({
+    detectStorefrontChanges: jest.fn(),
+}));
+jest.mock('@/features/eds/services/storefront/storefrontRepublishService', () => ({
     republishStorefrontConfig: jest.fn(),
 }));
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
@@ -68,31 +62,20 @@ describe('ConfigureProjectWebviewCommand - getInitialData envVars', () => {
     beforeEach(() => {
         jest.clearAllMocks();
 
-        const mockContext = {
-            subscriptions: [],
-            extensionPath: '/test/extension/path',
-            extensionUri: vscode.Uri.file('/test/extension/path'),
-            globalState: { get: jest.fn(), update: jest.fn() },
-            secrets: { get: jest.fn(), store: jest.fn() },
-        } as unknown as vscode.ExtensionContext;
+        const mockContext = createMockExtensionContext();
 
         mockStateManager = {
-            getCurrentProject: jest.fn().mockResolvedValue({
+            getCurrentProject: jest.fn().mockResolvedValue(createMockProject({
                 name: 'test-project',
                 path: '/nonexistent/test/project',
                 componentInstances: {},
                 componentConfigs: {},
                 componentSelections: {},
-            } as unknown as Project),
+            })),
             getAllProjects: jest.fn().mockResolvedValue([]),
         } as unknown as jest.Mocked<StateManager>;
 
-        const mockLogger = {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as unknown as Logger;
+        const mockLogger = createMockLogger() as unknown as Logger;
 
         (
             ComponentRegistryManager as jest.MockedClass<typeof ComponentRegistryManager>
@@ -116,13 +99,18 @@ describe('ConfigureProjectWebviewCommand - getInitialData envVars', () => {
                 }) as unknown as ComponentRegistryManager
         );
 
-        (vscode.window.activeColorTheme as any) = { kind: vscode.ColorThemeKind.Dark };
+        vscode.window.activeColorTheme = { kind: vscode.ColorThemeKind.Dark };
 
         command = new ConfigureProjectWebviewCommand(mockContext, mockStateManager, mockLogger);
     });
 
     it('injects each record key into the envVars records it sends', async () => {
-        const data = await (command as any).getInitialData();
+        // Names what this test reads, so the nested access is CHECKED rather than
+        // waved through — the generic parameter is what the shared helper offers in
+        // place of the `as any` that used to sit here.
+        const data = await internals(command).getInitialData<{
+            componentsData: { envVars: Record<string, { key: string; label: string; type: string }> };
+        }>();
 
         const envVars = data.componentsData.envVars;
         expect(envVars.ACCS_WEBSITE_CODE.key).toBe('ACCS_WEBSITE_CODE');

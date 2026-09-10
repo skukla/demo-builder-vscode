@@ -69,7 +69,7 @@ function modalConsumers(): { file: string; name: string; source: string }[] {
 }
 
 describe('SOP: Modal hosting', () => {
-    it('finds the modal consumers at all — the check is pointed somewhere real', () => {
+    it('CONTROL: finds the modal consumers at all — the check is pointed somewhere real', () => {
         // A positive control. Without it, a broken path or a changed import
         // spelling makes every assertion below pass over an EMPTY list, which is
         // the exact "clean result from a check that never ran" this repo keeps
@@ -83,7 +83,7 @@ describe('SOP: Modal hosting', () => {
             .filter(({ name }) => !HOSTED_BY_PARENT[name])
             .map(({ file }) => path.relative(SRC, file));
 
-        expect(unhosted).toEqual([]);
+        expect(unhosted).toStrictEqual([]);
     });
 
     describe('the allowlist stays true', () => {
@@ -107,7 +107,7 @@ describe('SOP: Modal hosting', () => {
                 }
             }
 
-            expect(broken).toEqual([]);
+            expect(broken).toStrictEqual([]);
         });
 
         it('lists nothing that now hosts itself', () => {
@@ -118,7 +118,7 @@ describe('SOP: Modal hosting', () => {
                 .filter(({ source }) => HOSTS.test(source))
                 .map(({ name }) => name);
 
-            expect(stale).toEqual([]);
+            expect(stale).toStrictEqual([]);
         });
     });
 });

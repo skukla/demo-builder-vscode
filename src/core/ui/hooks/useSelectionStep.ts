@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useDebouncedLoading } from '@/core/ui/hooks/useDebouncedLoading';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { ErrorCode } from '@/types/errorCodes';
@@ -6,7 +6,14 @@ import { WizardSessionState, WizardState } from '@/types/webview';
 
 /**
  * Check if a selected item needs syncing with fresh data
- * Handles hydration (ID-only imports) and refresh (external rename)
+ *
+ * Covers BOTH jobs this hook documents: hydration (an ID-only import, whose
+ * selection carries no display fields yet) and refresh (an external rename).
+ * Hydration needs no term of its own — a selection with no title, against an
+ * incoming item that HAS one, is already a title change, because a falsy stored
+ * title can never equal a truthy incoming one. A third `needsHydration` clause
+ * saying so separately sat here until 2026-09-07 and could not change the answer
+ * in any of the 256 field combinations this helper can be handed.
  */
 function needsSelectedItemSync<T extends { id: string }>(
   selectedItem: Pick<T, 'id'> & Partial<T>,
@@ -19,9 +26,8 @@ function needsSelectedItemSync<T extends { id: string }>(
 
   const titleChanged = matchingTitle && selectedTitle !== matchingTitle;
   const nameChanged = matchingName && selectedName !== matchingName;
-  const needsHydration = !selectedTitle && matchingTitle;
 
-  return !!(titleChanged || nameChanged || needsHydration);
+  return !!(titleChanged || nameChanged);
 }
 
 /**
@@ -113,7 +119,13 @@ export interface UseSelectionStepOptions<T extends { id: string }> {
   messagePayload?: Record<string, unknown>;
 
   /** Optional: Filter items by search fields */
-  searchFields?: Array<keyof T>;
+  /**
+   * READONLY because callers hoist this to a module constant — an inline array is
+   * a new reference every render and this is named by the filter memo's deps. The
+   * hook only reads it (`.length`, `.some`), so a mutable type bought nothing and
+   * would have forced every caller to share a mutable array.
+   */
+  searchFields?: ReadonlyArray<keyof T>;
 
   /** Optional: Custom validation before loading */
   validateBeforeLoad?: () => { valid: boolean; error?: string };
@@ -209,6 +221,23 @@ export interface UseSelectionStepResult<T extends { id: string }> {
  * });
  * ```
  */
+/**
+ * The defaults for `messagePayload` and `searchFields` live at MODULE level, not
+ * inline in the destructure below.
+ *
+ * `= {}` and `= []` inside a destructure are evaluated on EVERY RENDER, so each
+ * render hands the dependency arrays at lines below a value that is `===`-different
+ * from the last one. `messagePayload` is depended on by the `load` callback and
+ * `searchFields` by the filter memo, so both were re-created every render for every
+ * caller that OMITS them — callers doing nothing wrong.
+ *
+ * These are frozen so the shared instance cannot be mutated by one caller into
+ * another's view of it, which is the hazard a shared default introduces and the
+ * only reason a per-render literal looked safer.
+ */
+const NO_PAYLOAD: Readonly<Record<string, never>> = Object.freeze({});
+const NO_SEARCH_FIELDS: readonly never[] = Object.freeze([]);
+
 export function useSelectionStep<T extends { id: string }>(
   options: UseSelectionStepOptions<T>,
 ): UseSelectionStepResult<T> {
@@ -224,10 +253,35 @@ export function useSelectionStep<T extends { id: string }>(
     autoSelectCustom,
     onSelect,
     autoLoad = true,
-    messagePayload = {},
-    searchFields = [],
+    messagePayload = NO_PAYLOAD,
+    searchFields = NO_SEARCH_FIELDS,
     validateBeforeLoad,
   } = options;
+
+  /**
+   * THE CALLER'S CALLBACKS AND PAYLOAD, HELD BY REFERENCE.
+   *
+   * `onSelect`, `validateBeforeLoad` and `messagePayload` are written inline at
+   * every call site — an arrow or an object literal in the options — so each is a
+   * NEW value on every render of the calling component. Naming them in a
+   * dependency array therefore re-created `load` and re-subscribed the message
+   * effect on every render: the callers were doing the ordinary thing and paying
+   * for it, and no lint rule could see it, because `exhaustive-deps` reads the
+   * array from inside this hook and cannot see across the boundary to the caller
+   * that built the value.
+   *
+   * A ref is the fix rather than asking three call sites to memoise, because what
+   * this hook actually wants is "whatever the caller means RIGHT NOW, at the
+   * moment I call it" — which is what a ref expresses and a dependency cannot.
+   * Behaviour is unchanged: every read below happens inside a callback or an
+   * effect body, never during render, so it always sees the current value.
+   *
+   * Assigned during render on purpose. The effects below may run before any
+   * post-paint effect could refresh it, and a stale callback there would be the
+   * bug this is fixing.
+   */
+  const latest = useRef({ onSelect, validateBeforeLoad, messagePayload });
+  latest.current = { onSelect, validateBeforeLoad, messagePayload };
 
   // Get cached items from wizard state (memoized to prevent useMemo deps changing on every render)
   const items = useMemo(() => (state[cacheKey] as T[]) || [], [state, cacheKey]);
@@ -256,8 +310,9 @@ export function useSelectionStep<T extends { id: string }>(
     setErrorCode(null);
 
     // Run validation if provided
-    if (validateBeforeLoad) {
-      const validation = validateBeforeLoad();
+    const validate = latest.current.validateBeforeLoad;
+    if (validate) {
+      const validation = validate();
       if (!validation.valid) {
         setError(validation.error || 'Validation failed');
         setIsLoading(false);
@@ -266,8 +321,8 @@ export function useSelectionStep<T extends { id: string }>(
     }
 
     // Send request to extension (extension will respond via message)
-    webviewClient.postMessage(messageType, messagePayload);
-  }, [messageType, messagePayload, validateBeforeLoad]);
+    webviewClient.postMessage(messageType, latest.current.messagePayload);
+  }, [messageType]);
 
   // Refresh items (keeps cache visible during load)
   const refresh = useCallback(() => {
@@ -303,8 +358,9 @@ export function useSelectionStep<T extends { id: string }>(
         setErrorCode(null);
 
         const typedData = data as T[];
-        handleAutoSelect(typedData, selectedItem, autoSelectSingle, autoSelectCustom, onSelect);
-        syncSelectedItem(typedData, selectedItem, onSelect);
+        const select = latest.current.onSelect;
+        handleAutoSelect(typedData, selectedItem, autoSelectSingle, autoSelectCustom, select);
+        syncSelectedItem(typedData, selectedItem, select);
       } else if (data && typeof data === 'object' && 'error' in data) {
         // Backend sends structured error (including timeout)
         const errorData = data as { error: string; code?: ErrorCode };
@@ -335,15 +391,12 @@ export function useSelectionStep<T extends { id: string }>(
     selectedItem,
     autoSelectSingle,
     autoSelectCustom,
-    onSelect,
   ]);
 
   // Select an item
   const selectItem = useCallback((item: T) => {
-    if (onSelect) {
-      onSelect(item);
-    }
-  }, [onSelect]);
+    latest.current.onSelect?.(item);
+  }, []);
 
   // Filter items based on search query
   const filteredItems = useMemo(() => {

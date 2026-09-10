@@ -1,25 +1,10 @@
+import { ServiceLocator, shared } from './continueHandler.testUtils';
 import { handleContinuePrerequisites } from '@/features/prerequisites/handlers/continueHandler';
-import { PrerequisiteDefinition, PrerequisiteStatus } from '@/features/prerequisites/services/types';
-import * as shared from '@/features/prerequisites/handlers/shared';
-import { ServiceLocator } from '@/core/di';
 import {
-    createMockContext,
-    mockAdobeCliPrereq,
-} from './continueHandler.testUtils';
-
-// Mock dependencies - but keep handlePrerequisiteCheckError real
-jest.mock('@/features/prerequisites/handlers/shared', () => {
-    const actual = jest.requireActual('@/features/prerequisites/handlers/shared');
-    return {
-        ...actual,
-        getNodeVersionMapping: jest.fn(),
-        areDependenciesInstalled: jest.fn(),
-        hasNodeVersions: jest.fn(),
-        getNodeVersionKeys: jest.fn(),
-        // Keep handlePrerequisiteCheckError as the real implementation
-    };
-});
-jest.mock('@/core/di');
+    PrerequisiteDefinition,
+    PrerequisiteStatus,
+} from '@/features/prerequisites/services/types';
+import { createContinueHandlerContext, mockAdobeCliPrereq } from './continueHandler.testUtils';
 
 describe('Prerequisites Continue Handler - Edge Cases', () => {
     let mockContext: any;
@@ -41,15 +26,19 @@ describe('Prerequisites Continue Handler - Edge Cases', () => {
         });
         (shared.areDependenciesInstalled as jest.Mock).mockReturnValue(true);
         // Object utility helpers (used for Object.keys patterns)
-        (shared.hasNodeVersions as jest.Mock).mockImplementation((mapping: Record<string, string>) => {
-            return mapping && Object.keys(mapping).length > 0;
-        });
-        (shared.getNodeVersionKeys as jest.Mock).mockImplementation((mapping: Record<string, string>) => {
-            return Object.keys(mapping || {}).sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
-        });
+        (shared.hasNodeVersions as jest.Mock).mockImplementation(
+            (mapping: Record<string, string>) => {
+                return mapping && Object.keys(mapping).length > 0;
+            }
+        );
+        (shared.getNodeVersionKeys as jest.Mock).mockImplementation(
+            (mapping: Record<string, string>) => {
+                return Object.keys(mapping || {}).sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
+            }
+        );
 
         // Create mock context
-        mockContext = createMockContext();
+        mockContext = createContinueHandlerContext();
     });
 
     describe('empty and unusual states', () => {
@@ -73,7 +62,7 @@ describe('Prerequisites Continue Handler - Edge Cases', () => {
                 description: 'Container platform',
                 optional: true,
                 check: { command: 'docker --version' },
-            } as any;
+            };
             const optionalResult: PrerequisiteStatus = {
                 id: 'docker',
                 name: 'Docker',
@@ -89,7 +78,9 @@ describe('Prerequisites Continue Handler - Edge Cases', () => {
                 currentPrerequisites: [optionalPrereq],
                 currentPrerequisiteStates: states,
             };
-            (mockContext.prereqManager!.checkPrerequisite as jest.Mock).mockResolvedValue(optionalResult);
+            (mockContext.prereqManager!.checkPrerequisite as jest.Mock).mockResolvedValue(
+                optionalResult
+            );
 
             const result = await handleContinuePrerequisites(mockContext);
 
@@ -125,7 +116,9 @@ describe('Prerequisites Continue Handler - Edge Cases', () => {
                 currentPrerequisites: [mockAdobeCliPrereq],
                 currentPrerequisiteStates: states,
             };
-            (mockContext.prereqManager!.checkPrerequisite as jest.Mock).mockResolvedValue(adobeResult);
+            (mockContext.prereqManager!.checkPrerequisite as jest.Mock).mockResolvedValue(
+                adobeResult
+            );
             // Note: Per-node version checking happens inside checkPrerequisite which is mocked,
             // so specific Node version scenarios are tested in integration tests.
 
@@ -159,14 +152,26 @@ describe('Prerequisites Continue Handler - Edge Cases', () => {
                 currentPrerequisites: [mockAdobeCliPrereq],
                 currentPrerequisiteStates: states,
             };
-            (mockContext.prereqManager!.checkPrerequisite as jest.Mock).mockResolvedValue(adobeResult);
+            (mockContext.prereqManager!.checkPrerequisite as jest.Mock).mockResolvedValue(
+                adobeResult
+            );
             // Mock the command execution sequence:
             // 1. fnm list (get installed Node versions)
             // 2. aio --version with Node 18 (succeeds)
             // 3. aio --version with Node 20 (fails)
             (mockCommandExecutor.execute as jest.Mock)
-                .mockResolvedValueOnce({ stdout: 'v18.20.8\nv20.19.5\n', stderr: '', code: 0, duration: 100 }) // fnm list
-                .mockResolvedValueOnce({ stdout: '@adobe/aio-cli/10.0.0', stderr: '', code: 0, duration: 100 }) // Node 18 check
+                .mockResolvedValueOnce({
+                    stdout: 'v18.20.8\nv20.19.5\n',
+                    stderr: '',
+                    code: 0,
+                    duration: 100,
+                }) // fnm list
+                .mockResolvedValueOnce({
+                    stdout: '@adobe/aio-cli/10.0.0',
+                    stderr: '',
+                    code: 0,
+                    duration: 100,
+                }) // Node 18 check
                 .mockRejectedValueOnce(new Error('Command not found')); // Node 20 check
 
             const result = await handleContinuePrerequisites(mockContext);

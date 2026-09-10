@@ -52,6 +52,56 @@ describe('detectB2bReadiness', () => {
         await expect(detectB2bReadiness(endpoint, fetchImpl as unknown as typeof fetch)).resolves.toBe('unknown');
     });
 
+    /**
+     * A non-OK response is not a verdict, whatever its body says.
+     *
+     * Commerce and the mesh both answer 4xx/5xx with a JSON body, and an
+     * error-page body that happens to parse would otherwise be read as an
+     * answer. Without this the `!response.ok` guard could be deleted and every
+     * other test still passed, because the failing responses they use carry
+     * empty bodies that fall through to 'unknown' anyway.
+     */
+    it('ignores the body of a non-OK response even when it looks like an answer', async () => {
+        const fetchImpl = jest.fn().mockResolvedValue(
+            gql({ data: { storeConfig: { is_requisition_list_active: true } } }, false, 503)
+        );
+        await expect(
+            detectB2bReadiness(endpoint, fetchImpl as unknown as typeof fetch)
+        ).resolves.toBe('unknown');
+    });
+
+    /**
+     * The true-negative contract, at its hardest point: a PARTIAL GraphQL
+     * response. Commerce returns `data` and `errors` together when one field of
+     * a query resolves and another does not, so the flag can be present and
+     * wrong at the same time. `disabled` drives a user-facing warning that the
+     * backend has no B2B — it must never come off a response the server itself
+     * said went wrong.
+     */
+    it('stays silent when errors arrive ALONGSIDE a flag', async () => {
+        const fetchImpl = jest.fn().mockResolvedValue(
+            gql({
+                data: { storeConfig: { is_requisition_list_active: false } },
+                errors: [{ message: 'Internal server error' }],
+            })
+        );
+        await expect(
+            detectB2bReadiness(endpoint, fetchImpl as unknown as typeof fetch)
+        ).resolves.toBe('unknown');
+    });
+
+    // An `errors` key holding nothing is not an error. Treating the key's mere
+    // presence as failure would throw away every definitive answer that ships
+    // beside an empty array.
+    it('reads the flag when errors is present but empty', async () => {
+        const fetchImpl = jest.fn().mockResolvedValue(
+            gql({ data: { storeConfig: { is_requisition_list_active: true } }, errors: [] })
+        );
+        await expect(
+            detectB2bReadiness(endpoint, fetchImpl as unknown as typeof fetch)
+        ).resolves.toBe('enabled');
+    });
+
     it('queries storeConfig.is_requisition_list_active via POST (no auth required)', async () => {
         const fetchImpl = jest.fn().mockResolvedValue(gql({ data: { storeConfig: { is_requisition_list_active: true } } }));
         await detectB2bReadiness(endpoint, fetchImpl as unknown as typeof fetch);
@@ -62,5 +112,9 @@ describe('detectB2bReadiness', () => {
         // No Authorization header — storefront-scoped, anonymous query.
         const headers = (init as RequestInit).headers as Record<string, string>;
         expect(Object.keys(headers).map((k) => k.toLowerCase())).not.toContain('authorization');
+        // Commerce rejects a GraphQL POST without it, and the rejection is a
+        // non-OK response — which this module reports as 'unknown', so dropping
+        // the header would turn every probe silent rather than loud.
+        expect(headers['Content-Type']).toBe('application/json');
     });
 });

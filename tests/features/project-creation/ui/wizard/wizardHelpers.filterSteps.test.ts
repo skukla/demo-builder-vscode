@@ -39,7 +39,7 @@ describe('filterStepsByComponents', () => {
         it('should handle empty steps array', () => {
             const result = filterStepsByComponents([], undefined);
 
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
         });
     });
 

@@ -9,13 +9,13 @@
 
 import { handleAuthenticate } from '@/features/authentication/handlers/authenticationHandlers';
 import type { HandlerContext } from '@/types/handlers';
-import { createMockHandlerContext, mockOrg, mockProject } from './testUtils';
+import { createAuthHandlerContext, mockOrg, mockProject } from './testUtils';
 
 describe('authenticationHandlers - handleAuthenticate - New Authentication', () => {
 	let mockContext: jest.Mocked<HandlerContext>;
 
 	beforeEach(() => {
-		mockContext = createMockHandlerContext();
+		mockContext = createAuthHandlerContext();
 		jest.clearAllMocks();
 	});
 
@@ -201,7 +201,14 @@ describe('authenticationHandlers - handleAuthenticate - New Authentication', () 
 
 			await handleAuthenticate(mockContext);
 
-			// Validation is NOT done during login
+			// Login RESOLVES an org (getOrganizations -> setCachedOrganization) but does
+			// not VALIDATE access to it. That distinction is the whole point of the
+			// title and was asserted by nothing — the first attempt at this assertion
+			// claimed getOrganizations was never called, which is simply false. An
+			// unasserted negative agrees with whatever the code does.
+			expect(mockContext.authManager!.login).toHaveBeenCalled();
+			expect(mockContext.authManager!.getOrganizations).toHaveBeenCalled();
+			expect(mockContext.authManager!.getValidationCache).not.toHaveBeenCalled();
 		});
 
 		it('should NOT check developer permissions during login', async () => {

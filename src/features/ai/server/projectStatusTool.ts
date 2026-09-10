@@ -26,8 +26,8 @@
  */
 
 import { asRawText, asText } from './mcpToolResult';
-import { ServiceLocator } from '@/core/di';
-import type { StateManager } from '@/core/state';
+import type { McpToolServer } from './mcpToolServer';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getMeshEndpoint } from '@/core/state/appBuilderComponentState';
 import {
     buildStatusPayload,
@@ -35,6 +35,7 @@ import {
 } from '@/features/dashboard/services/dashboardStatusService';
 import { detectFrontendChanges } from '@/features/mesh/services/stalenessDetector';
 import type { Project } from '@/types/base';
+import type { StateManager } from '@/types/state';
 
 /**
  * The status facts for a project: name, path, running state, port, org, whether
@@ -75,7 +76,9 @@ export async function resolveProjectStatus(project: Project): Promise<unknown> {
     try {
         authenticated = await ServiceLocator.getAuthenticationService().isAuthenticated();
     } catch {
-        authenticated = false;
+        // Deliberately empty: `authenticated` is already false, and the catch
+        // used to re-assign it — two statements holding one fact, so neither
+        // could be shown to matter. The initialiser is the one that decides.
     }
 
     const mesh = deriveMeshStatus(project, authenticated);
@@ -87,14 +90,11 @@ export async function resolveProjectStatus(project: Project): Promise<unknown> {
 }
 
 /** Registers `get_project_status` on the MCP server. */
-export function registerProjectStatusTool(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    server: any,
-    stateManager: StateManager,
-): void {
+export function registerProjectStatusTool(server: McpToolServer, stateManager: StateManager): void {
     server.registerTool(
         'get_project_status',
         {
+            needsAuth: false,
             annotations: { readOnlyHint: true, destructiveHint: false },
             description:
                 'Is the current demo running, on what port, is its frontend config stale, is the EDS storefront published, and what is the mesh status. Use after start_demo/stop_demo to confirm they took effect.',

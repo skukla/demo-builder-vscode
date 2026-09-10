@@ -17,14 +17,18 @@ import * as vscode from 'vscode';
 import { importHandlers } from '@/features/data-installer/handlers/importHandlers';
 import { DataInstallerWriteClient } from '@/features/data-installer/services/dataInstallerWriteClient';
 import type { Project } from '@/types/base';
-import type { HandlerContext } from '@/types/handlers';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import {
+    createStatefulGlobalState,
+    createMockExtensionContext,
+} from '../../../helpers/extensionContextFake';
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 
 jest.mock('@/core/auth/adobeAuthGuard', () => ({
     ensureAdobeIOAuth: jest.fn().mockResolvedValue({ authenticated: true }),
-}));
-jest.mock('@/core/logging/debugLogger', () => ({
-    ...jest.requireActual('@/core/logging/debugLogger'),
-    getLogger: () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }),
 }));
 jest.mock('@/features/data-installer/services/dataInstallerWriteClient');
 jest.mock('@/features/data-installer/services/importJobRunner', () => ({
@@ -50,33 +54,27 @@ const PAAS_PROJECT = (): Partial<Project> => ({
     },
 });
 
-function makeContext(project: Partial<Project>, saveProject = jest.fn()) {
-    const mem = new Map<string, unknown>();
-    const context = {
-        logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
-        debugLogger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
-        authManager: {
+function makeImportHarness(project: Partial<Project>, saveProject = jest.fn()) {
+    const context = createMockHandlerContext({
+        logger: createMockLogger(),
+        debugLogger: createMockLogger(),
+        authManager: createMockAuthenticationService({
             isAuthenticated: jest.fn().mockResolvedValue(true),
             getTokenManager: jest
                 .fn()
                 .mockReturnValue({ inspectToken: jest.fn().mockResolvedValue({ token: 'tok' }) }),
-        },
+        }),
         panel: {} as vscode.WebviewPanel,
-        context: {
-            globalState: {
-                get: jest.fn((k: string, d?: unknown) => (mem.has(k) ? mem.get(k) : d)),
-                update: jest.fn(async (k: string, v: unknown) => void mem.set(k, v)),
-                keys: jest.fn(() => [...mem.keys()]),
-                setKeysForSync: jest.fn(),
-            },
-            secrets: { get: jest.fn(async () => undefined), store: jest.fn(), delete: jest.fn() },
-        } as unknown as vscode.ExtensionContext,
-        stateManager: {
+        context: createMockExtensionContext({
+            globalState: createStatefulGlobalState().globalState,
+            secrets: createMockSecretStorage().secrets,
+        }),
+        stateManager: createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(project),
             saveProject,
-        },
+        }),
         sendMessage: jest.fn().mockResolvedValue(undefined),
-    } as unknown as HandlerContext;
+    });
     return { context, saveProject };
 }
 
@@ -87,29 +85,28 @@ const PAYLOAD = {
     dataTypes: ['categories'],
 };
 
+/** The class carries private state no literal can supply; the methods stand in. */
+function stubWriteClient(methods: Partial<DataInstallerWriteClient>): void {
+    MockedWriteClient.mockImplementation(() => methods as DataInstallerWriteClient);
+}
+
 function happyClient() {
-    MockedWriteClient.mockImplementation(
-        () =>
-            ({
-                validateImport: jest.fn().mockResolvedValue({ valid: true }),
-                startImport: jest.fn().mockResolvedValue({ activationId: 'act-1' }),
-                startDelete: jest.fn().mockResolvedValue({ activationId: 'act-9' }),
-                checkCredentials: jest.fn().mockResolvedValue({ usable: true }),
-            }) as never,
-    );
+    stubWriteClient({
+        validateImport: jest.fn().mockResolvedValue({ valid: true }),
+        startImport: jest.fn().mockResolvedValue({ activationId: 'act-1' }),
+        startDelete: jest.fn().mockResolvedValue({ activationId: 'act-9' }),
+        checkCredentials: jest.fn().mockResolvedValue({ usable: true }),
+    });
 }
 
 /** A client whose validate REFUSES, so the job is never accepted. */
 function refusingClient() {
-    MockedWriteClient.mockImplementation(
-        () =>
-            ({
-                validateImport: jest.fn().mockResolvedValue({ valid: false, reason: 'nope' }),
-                startImport: jest.fn(),
-                startDelete: jest.fn(),
-                checkCredentials: jest.fn().mockResolvedValue({ usable: true }),
-            }) as never,
-    );
+    stubWriteClient({
+        validateImport: jest.fn().mockResolvedValue({ valid: false, reason: 'nope' }),
+        startImport: jest.fn(),
+        startDelete: jest.fn(),
+        checkCredentials: jest.fn().mockResolvedValue({ usable: true }),
+    });
 }
 
 beforeEach(() => {
@@ -123,7 +120,7 @@ describe('an accepted import records the datapack on the project', () => {
     it('writes name and version, and saves', async () => {
         happyClient();
         const project = PAAS_PROJECT();
-        const { context, saveProject } = makeContext(project);
+        const { context, saveProject } = makeImportHarness(project);
 
         await importHandlers['start-datapack-import'](context, PAYLOAD);
 
@@ -140,7 +137,7 @@ describe('an accepted import records the datapack on the project', () => {
     it('CONTROL — records nothing when validate refuses the request', async () => {
         refusingClient();
         const project = PAAS_PROJECT();
-        const { context, saveProject } = makeContext(project);
+        const { context, saveProject } = makeImportHarness(project);
 
         await importHandlers['start-datapack-import'](context, PAYLOAD);
 
@@ -155,7 +152,7 @@ describe('an accepted import records the datapack on the project', () => {
     it('still reports success when the project write fails', async () => {
         happyClient();
         const saveProject = jest.fn().mockRejectedValue(new Error('disk full'));
-        const { context } = makeContext(PAAS_PROJECT(), saveProject);
+        const { context } = makeImportHarness(PAAS_PROJECT(), saveProject);
 
         const result = await importHandlers['start-datapack-import'](context, PAYLOAD);
 
@@ -167,7 +164,7 @@ describe('an accepted reset clears it', () => {
     it('removes the datapack so reset stops offering a removal already done', async () => {
         happyClient();
         const project = { ...PAAS_PROJECT(), datapack: { name: 'bodea', version: 'main' } };
-        const { context, saveProject } = makeContext(project);
+        const { context, saveProject } = makeImportHarness(project);
 
         await importHandlers['reset-datapack'](context, { ...PAYLOAD, confirm: true });
 
@@ -180,7 +177,7 @@ describe('an accepted reset clears it', () => {
     it('CONTROL — an unconfirmed reset changes nothing', async () => {
         happyClient();
         const project = { ...PAAS_PROJECT(), datapack: { name: 'bodea', version: 'main' } };
-        const { context, saveProject } = makeContext(project);
+        const { context, saveProject } = makeImportHarness(project);
 
         await importHandlers['reset-datapack'](context, PAYLOAD);
 

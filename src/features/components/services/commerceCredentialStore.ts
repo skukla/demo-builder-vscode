@@ -40,13 +40,13 @@
  * @module features/components/services/commerceCredentialStore
  */
 
+import { lookupComponentConfigValue, type ConfigMap } from './envVarHelpers';
 import {
     ACCS_OAUTH_CLIENT_ID,
     ACCS_OAUTH_CLIENT_SECRET,
     PAAS_ADMIN_PASSWORD,
     PAAS_ADMIN_USERNAME,
-} from '../config/envVarKeys';
-import { lookupComponentConfigValue, type ConfigMap } from './envVarHelpers';
+} from '@/core/config/envVarKeys';
 
 /**
  * Namespace for credentials declared as component config fields.

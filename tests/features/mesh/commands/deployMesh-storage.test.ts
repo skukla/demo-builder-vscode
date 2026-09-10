@@ -14,23 +14,22 @@
 
 import * as vscode from 'vscode';
 import * as fs from 'fs/promises';
-import { DeployMeshCommand } from '@/features/mesh/commands/deployMesh';
-import { StateManager } from '@/core/state';
-import { ServiceLocator } from '@/core/di';
+import { DeployMeshCommand } from './deployMesh.testUtils';
+import { StateManager } from '@/core/state/stateManager';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import type { Logger } from '@/types/logger';
 import type { Project, ComponentInstance } from '@/types/base';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+
+// MUST stay in this file: this spec imports fs/promises directly, and a
+// jest.mock only hoists above the imports of the module it appears in. Moved to
+// the shared harness it applied too late and every test failed on
+// `access.mockResolvedValue is not a function`.
+jest.mock('fs/promises');
 
 // Mock all external dependencies
-jest.mock('vscode');
-jest.mock('fs/promises');
-jest.mock('@/core/di/serviceLocator');
-jest.mock('@/features/mesh/utils/errorFormatter', () => ({
-    formatAdobeCliError: jest.fn((s: string) => s),
-    extractMeshErrorSummary: jest.fn((s: string) => s),
-}));
-jest.mock('@/core/utils/meshConfig', () => ({
-    getMeshNodeVersion: jest.fn(() => '18'),
-}));
 
 // The DeployMeshCommand gates App Builder operations on
 // projectRequiresAppBuilder + testDeveloperPermissions. These tests focus on
@@ -83,13 +82,6 @@ jest.mock('@/features/mesh/services/stalenessDetector', () => ({
         project.meshState = undefined;
     }),
 }));
-jest.mock('@/features/mesh/services/meshDeploymentVerifier', () => ({
-    waitForMeshDeployment: jest.fn().mockResolvedValue({
-        deployed: true,
-        meshId: 'mesh-test-123',
-        endpoint: 'https://test-mesh.adobe.io/graphql',
-    }),
-}));
 // The command delegates build+deploy+verify to deployMeshComponent; mock it so the
 // command's persistence (the subject of these tests) runs on a successful result.
 jest.mock('@/features/mesh/services/meshDeployment', () => ({
@@ -111,6 +103,7 @@ describe('DeployMeshCommand - Storage Behavior', () => {
         isAuthenticated: jest.Mock;
         getOrganizations: jest.Mock;
         getCurrentOrganization: jest.Mock;
+        getCachedOrganization: jest.Mock;
     };
     let mockCommandExecutor: { execute: jest.Mock };
 
@@ -158,16 +151,13 @@ describe('DeployMeshCommand - Storage Behavior', () => {
         capturedProject = null;
 
         // Setup mock context
-        mockContext = {
-            subscriptions: [],
-            extensionPath: '/test/extension',
-        } as unknown as vscode.ExtensionContext;
+        mockContext = createMockExtensionContext();
 
         // Setup mock StateManager
-        mockStateManager = {
+        mockStateManager = createMockStateManager({
             getCurrentProject: jest.fn(),
             saveProject: jest.fn(),
-        } as unknown as jest.Mocked<StateManager>;
+        }) as unknown as jest.Mocked<StateManager>;
 
         // Capture project state on saveProject call
         mockStateManager.saveProject.mockImplementation(async (project: Project) => {
@@ -175,13 +165,7 @@ describe('DeployMeshCommand - Storage Behavior', () => {
         });
 
         // Setup mock Logger
-        mockLogger = {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            trace: jest.fn(),
-        };
+        mockLogger = createMockLogger();
 
         // Setup mock AuthManager — org-123 is reachable, matching the project's
         // org, so the canonical detectProjectOrgMismatch check passes.
@@ -191,6 +175,9 @@ describe('DeployMeshCommand - Storage Behavior', () => {
                 .fn()
                 .mockResolvedValue([{ id: 'org-123', code: 'ORG123@AdobeOrg', name: 'Org 123' }]),
             getCurrentOrganization: jest.fn().mockResolvedValue({ id: 'org-123', name: 'Org 123' }),
+            // Read by the deploy core to enrich the org target. Omitted, it throws
+            // inside the core's try and every assertion below sees a failed deploy.
+            getCachedOrganization: jest.fn().mockReturnValue({ id: 'org-123', name: 'Org 123' }),
         };
 
         // Setup mock CommandExecutor
@@ -242,13 +229,12 @@ describe('DeployMeshCommand - Storage Behavior', () => {
 
             // Check that no component in componentConfigs has MESH_ENDPOINT
             const componentConfigs = capturedProject!.componentConfigs || {};
-            for (const [componentId, config] of Object.entries(componentConfigs)) {
-                expect(config).not.toHaveProperty('MESH_ENDPOINT');
-                // Extra assertion: Check the frontend specifically
-                if (componentId === 'frontend-headless') {
-                    expect((config as Record<string, unknown>)['MESH_ENDPOINT']).toBeUndefined();
-                }
-            }
+            // The per-component `if` was a second, weaker spelling of the same check
+            // the loop already makes. One list, one assertion, every offender named.
+            const carryingEndpoint = Object.entries(componentConfigs)
+                .filter(([, config]) => 'MESH_ENDPOINT' in (config as Record<string, unknown>))
+                .map(([componentId]) => componentId);
+            expect(carryingEndpoint).toStrictEqual([]);
         });
 
         it('should store the mesh endpoint on the KEYED entry (single source of truth)', async () => {
@@ -323,7 +309,7 @@ describe('DeployMeshCommand - Storage Behavior', () => {
             );
             // And: componentConfigs should not have any MESH_ENDPOINT entries
             const componentConfigs = capturedProject!.componentConfigs || {};
-            expect(Object.keys(componentConfigs).length).toBe(0);
+            expect(Object.keys(componentConfigs)).toHaveLength(0);
         });
     });
 

@@ -458,13 +458,13 @@ function ModalBody({ view, ctx }: { view: ModalView; ctx: BodyContext }): React.
                                 text node beside the term leaves the value with no
                                 element of its own, so nothing can query or style
                                 it independently. */}
-                            <p className="datapack-danger-detail">
+                            <p>
                                 <span className="datapack-danger-term">Instance</span>
                                 <span className="datapack-danger-value">
                                     {ctx.commerceInstance}
                                 </span>
                             </p>
-                            <p className="datapack-danger-detail">
+                            <p>
                                 <span className="datapack-danger-term">
                                     {ctx.selected.length} data{' '}
                                     {ctx.selected.length === 1 ? 'type' : 'types'}

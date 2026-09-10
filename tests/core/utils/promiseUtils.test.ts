@@ -1,5 +1,22 @@
 import { withTimeout, tryWithTimeout, runInBatches } from '@/core/utils/promiseUtils';
 
+/**
+ * A rejected promise whose rejection is ALREADY observed.
+ *
+ * A bare `Promise.reject(...)` handed to code under test is only "handled"
+ * because that code awaits it. Under mutation testing that is exactly what
+ * stops being true: a mutant that drops the promise from the race leaves the
+ * rejection unobserved, node tears the worker down with exit code 1, and the
+ * whole run dies instead of scoring one mutant (measured 2026-09-06). The
+ * no-op handler attached here marks the rejection handled whatever the code
+ * under test does with it, and does not change what the test observes.
+ */
+function rejectedWith(reason: unknown): Promise<never> {
+    const rejected = Promise.reject(reason);
+    rejected.catch(() => undefined);
+    return rejected as Promise<never>;
+}
+
 describe('promiseUtils', () => {
     beforeEach(() => {
         jest.useFakeTimers();
@@ -48,7 +65,7 @@ describe('promiseUtils', () => {
         });
 
         it('should handle promise rejection', async () => {
-            const promise = Promise.reject(new Error('Operation failed'));
+            const promise = rejectedWith(new Error('Operation failed'));
 
             await expect(
                 withTimeout(promise, { timeoutMs: 1000 })
@@ -124,6 +141,19 @@ describe('promiseUtils', () => {
             expect(result).toBe('async result');
         });
 
+        it.each([
+            ['resolves', () => Promise.resolve('fast')],
+            ['rejects', () => rejectedWith(new Error('fast failure'))],
+        ])('clears the pending timeout once the race %s', async (_label, make) => {
+            // A fast promise used to leave the timeout armed for the full
+            // timeoutMs, keeping the event loop alive (and tripping Jest's
+            // "failed to exit gracefully" teardown). The timer is cleared in a
+            // `finally`, so it happens on every exit from the race.
+            await withTimeout(make(), { timeoutMs: 30000 }).catch(() => undefined);
+
+            expect(jest.getTimerCount()).toBe(0);
+        });
+
         it('should handle different result types', async () => {
             const numberPromise = Promise.resolve(42);
             const objectPromise = Promise.resolve({ key: 'value' });
@@ -196,7 +226,7 @@ describe('promiseUtils', () => {
         });
 
         it('should return error result when operation fails', async () => {
-            const promise = Promise.reject(new Error('Operation error'));
+            const promise = rejectedWith(new Error('Operation error'));
 
             const result = await tryWithTimeout(promise, { timeoutMs: 1000 });
 
@@ -208,7 +238,7 @@ describe('promiseUtils', () => {
         });
 
         it('should handle string errors', async () => {
-            const promise = Promise.reject('String error');
+            const promise = rejectedWith('String error');
 
             const result = await tryWithTimeout(promise, { timeoutMs: 1000 });
 
@@ -249,100 +279,6 @@ describe('promiseUtils', () => {
         });
     });
 
-    describe('Real-world scenarios', () => {
-        it('should handle network requests with timeout', async () => {
-            const networkRequest = async () => {
-                await new Promise(resolve => setTimeout(resolve, 100));
-                return { status: 200, data: 'response' };
-            };
-
-            const resultPromise = tryWithTimeout(networkRequest(), { timeoutMs: 500 });
-
-            jest.advanceTimersByTime(100);
-
-            const result = await resultPromise;
-
-            expect(result.result).toEqual({ status: 200, data: 'response' });
-            expect(result.timedOut).toBe(false);
-        });
-
-        it('should handle slow network requests', async () => {
-            const slowRequest = async () => {
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                return { status: 200, data: 'slow response' };
-            };
-
-            const resultPromise = tryWithTimeout(slowRequest(), { timeoutMs: 100 });
-
-            // Advance past timeout
-            jest.advanceTimersByTime(100);
-
-            const result = await resultPromise;
-
-            expect(result.timedOut).toBe(true);
-            expect(result.result).toBeUndefined();
-        });
-
-        it('should handle user cancellation of long operation', async () => {
-            const controller = new AbortController();
-            const longOperation = async () => {
-                await new Promise(resolve => setTimeout(resolve, 5000));
-                return 'completed';
-            };
-
-            // Simulate user clicking cancel after 100ms
-            setTimeout(() => controller.abort(), 100);
-
-            const resultPromise = tryWithTimeout(longOperation(), {
-                timeoutMs: 10000,
-                signal: controller.signal
-            });
-
-            // Advance to trigger abort
-            jest.advanceTimersByTime(100);
-
-            const result = await resultPromise;
-
-            expect(result.cancelled).toBe(true);
-            expect(result.result).toBeUndefined();
-        });
-
-        it('should handle Adobe CLI command with timeout', async () => {
-            const aioCommand = async () => {
-                await new Promise(resolve => setTimeout(resolve, 200));
-                return { stdout: 'command output', stderr: '', code: 0 };
-            };
-
-            const resultPromise = tryWithTimeout(aioCommand(), {
-                timeoutMs: 5000,
-                timeoutMessage: 'Adobe CLI command timed out'
-            });
-
-            jest.advanceTimersByTime(200);
-
-            const result = await resultPromise;
-
-            expect(result.result).toBeDefined();
-            expect(result.result?.stdout).toBe('command output');
-        });
-
-        it('should handle file system operations', async () => {
-            const fileOp = async () => {
-                await new Promise(resolve => setTimeout(resolve, 50));
-                return { path: '/tmp/file.txt', size: 1024 };
-            };
-
-            const resultPromise = withTimeout(fileOp(), { timeoutMs: 1000 });
-
-            jest.advanceTimersByTime(50);
-
-            const result = await resultPromise;
-
-            expect(result.path).toBe('/tmp/file.txt');
-            expect(result.size).toBe(1024);
-        });
-    });
-
     describe('runInBatches', () => {
         it('should process items in sequential batches', async () => {
             const order: number[] = [];
@@ -356,7 +292,7 @@ describe('promiseUtils', () => {
 
         it('should return empty array for empty input', async () => {
             const results = await runInBatches([], 5, async (x: number) => x);
-            expect(results).toEqual([]);
+            expect(results).toStrictEqual([]);
         });
 
         it('should handle batch size larger than items', async () => {
@@ -389,29 +325,28 @@ describe('promiseUtils', () => {
         });
 
         it('should handle immediate rejection', async () => {
-            const immediate = Promise.reject(new Error('instant error'));
+            const immediate = rejectedWith(new Error('instant error'));
 
             await expect(
                 withTimeout(immediate, { timeoutMs: 1000 })
             ).rejects.toThrow('instant error');
         });
 
-        it('should handle zero timeout', async () => {
-            // Use a slow promise that won't resolve before timeout
-            const promise = new Promise<string>(resolve => {
+        it('times out at zero, and says which of the two happened', async () => {
+            const promise = new Promise<string>((resolve) => {
                 setTimeout(() => resolve('value'), 1000);
             });
 
-            // Zero timeout should timeout immediately
             const resultPromise = tryWithTimeout(promise, { timeoutMs: 0 });
-
-            // Advance slightly to trigger timeout
             jest.advanceTimersByTime(1);
-
             const result = await resultPromise;
 
-            // Due to event loop timing, this may not timeout, so accept either result
-            expect(result.timedOut || result.result === undefined).toBe(true);
+            // The old assertion was `timedOut || result === undefined`, true for
+            // BOTH outcomes and therefore unable to fail.
+            expect({ timedOut: result.timedOut, result: result.result }).toStrictEqual({
+                timedOut: true,
+                result: undefined,
+            });
         });
 
         it('should handle very large timeout', async () => {
@@ -441,29 +376,56 @@ describe('promiseUtils', () => {
             expect(result.error).toBeUndefined();
         });
 
-        it('should handle already aborted signal', async () => {
-            const controller = new AbortController();
-            controller.abort();
+        it('does NOT cancel on a signal that was never aborted', async () => {
+            const controller = new AbortController(); // fresh — never aborted
 
-            // Use a slow promise so signal can be checked
-            const promise = new Promise<string>(resolve => {
+            const slow = new Promise<string>((resolve) => {
+                setTimeout(() => resolve('value'), 10_000);
+            });
+
+            const resultPromise = tryWithTimeout(slow, {
+                timeoutMs: 200,
+                signal: controller.signal,
+            });
+            jest.advanceTimersByTime(200);
+            const result = await resultPromise;
+
+            // The converse of the already-aborted case, and the reason it needs its
+            // own test: the pre-check must read the FLAG, not assume it. Treating
+            // every signal as aborted cancels operations nobody cancelled, and the
+            // promise here is slow on purpose — an already-resolved one wins the
+            // race either way and so cannot tell the two apart.
+            expect({ cancelled: result.cancelled, timedOut: result.timedOut }).toStrictEqual({
+                cancelled: false,
+                timedOut: true,
+            });
+        });
+
+        it('cancels at once on a signal that is ALREADY aborted', async () => {
+            const controller = new AbortController();
+            controller.abort(); // aborted BEFORE the call
+
+            const slow = new Promise<string>((resolve) => {
                 setTimeout(() => resolve('value'), 1000);
             });
 
-            const resultPromise = tryWithTimeout(promise, {
+            // No timer advance: the point is that it settles without waiting.
+            const result = await tryWithTimeout(slow, {
                 timeoutMs: 5000,
-                signal: controller.signal
+                signal: controller.signal,
             });
 
-            // Advance past timeout to ensure resolution
-            jest.advanceTimersByTime(5000);
-
-            const result = await resultPromise;
-
-            // The implementation only listens for future abort events
-            // since the signal is already aborted before addEventListener
-            // the operation may continue unless timeout fires
-            expect(result.timedOut || result.cancelled || result.result).toBeTruthy();
+            // An already-aborted signal never fires `abort` again, so listening
+            // alone ignored it and the caller waited out the whole timeout —
+            // measured as {cancelled: false, timedOut: true} before the fix.
+            // Project creation passes exactly such a controller to a 30-minute
+            // timeout, so the old behaviour reported a TIMEOUT for a build the
+            // user had cancelled.
+            expect({ cancelled: result.cancelled, timedOut: result.timedOut }).toStrictEqual({
+                cancelled: true,
+                timedOut: false,
+            });
+            expect(result.error?.message).toBe('Operation cancelled by user');
         });
     });
 });

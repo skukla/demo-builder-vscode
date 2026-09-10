@@ -19,25 +19,14 @@
  * technique as integrationsGridLayout.test.ts.
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
-
-const CSS = fs
-    .readFileSync(
-        path.join(__dirname, '../../../../../src/core/ui/styles/custom-spectrum.css'),
-        'utf8'
-    )
-    .replace(/\/\*[\s\S]*?\*\//g, '');
-
-function ruleFor(selectorList: string): string {
-    const norm = (t: string) => t.replace(/\s+/g, ' ').trim();
-    for (const block of CSS.split('}')) {
-        const open = block.indexOf('{');
-        if (open === -1) continue;
-        if (norm(block.slice(0, open)) === norm(selectorList)) return block.slice(open);
-    }
-    throw new Error(`no rule for: ${selectorList}`);
-}
+/**
+ * Rules are read through the shared helper, which reads EVERY stylesheet under
+ * src/. This suite named its sheets by hand until 2026-09-09, and twelve of its
+ * tests failed when `.ai-*` moved to the dashboard feature's own sheet — a move
+ * whose visual diff was empty across 2,700 elements. Naming sheets made it assert
+ * where a rule LIVED rather than what it SAYS.
+ */
+import { ruleFor } from '../../../../helpers/cssRules';
 
 /** px value of a single-valued declaration. */
 function px(rule: string, prop: string): number {

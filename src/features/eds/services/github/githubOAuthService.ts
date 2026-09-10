@@ -12,7 +12,7 @@
 import * as crypto from 'crypto';
 import * as vscode from 'vscode';
 import { GITHUB_SCOPES, type OAuthCallbackParams } from '../types';
-import { getLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 
@@ -100,9 +100,11 @@ export class GitHubOAuthService {
             // timer that fires after the callback already won rejects an
             // orphaned promise, surfacing as an unhandled rejection that
             // crashes/poisons other tests sharing the worker process.
-            if (timeoutHandle) {
-                clearTimeout(timeoutHandle);
-            }
+            //
+            // Unguarded on purpose: the `timeoutPromise` executor runs
+            // synchronously, so `timeoutHandle` is always assigned by the time
+            // this runs, and `clearTimeout` accepts undefined regardless.
+            clearTimeout(timeoutHandle);
         }
     }
 

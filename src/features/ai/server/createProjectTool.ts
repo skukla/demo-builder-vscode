@@ -31,13 +31,14 @@ import { z } from 'zod';
 import { getAdobeTarget, runWithAdobeTarget } from './adobeTargetStore';
 import { isOrgMismatchError, orgMismatchResult } from './adobeTools';
 import { asText } from './mcpToolResult';
+import type { McpToolServer } from './mcpToolServer';
 import {
     lastCompleteData,
     toPhaseTimeline,
     withCapturedProgress,
     type CapturedEvent,
 } from './progressCapture';
-import { dispatchHandler } from '@/core/handlers';
+import { dispatchHandler } from '@/core/handlers/dispatchHandler';
 import { resolveProjectsRoot } from '@/core/utils/projectsRoot';
 import {
     getAutoSelectedOptionalDependencies,
@@ -136,9 +137,11 @@ async function requireAdobeWorkspace(ctx: HandlerContext): Promise<
 
 /** Pre-flight GitHub + DA.live auth; return a needsAuth handoff or null. */
 async function edsAuthHandoff(ctx: HandlerContext): Promise<Record<string, unknown> | null> {
-    let githubOk = false;
+    // Declared without an initializer on purpose: both arms below assign, so a
+    // starting value would be a store nothing can read.
+    let githubOk: boolean;
     try {
-        githubOk = (await getGitHubServices(ctx).tokenService.validateToken()).valid;
+        githubOk = (await getGitHubServices(ctx.context.secrets).tokenService.validateToken()).valid;
     } catch {
         githubOk = false;
     }
@@ -149,7 +152,7 @@ async function edsAuthHandoff(ctx: HandlerContext): Promise<Record<string, unkno
                 'GitHub sign-in required to create the storefront repo. Check get_auth_status, then sign_in(provider:"github", confirm:true).',
         };
     }
-    let daLiveOk = false;
+    let daLiveOk: boolean;
     try {
         daLiveOk = await getDaLiveAuthService(ctx.context).isAuthenticated();
     } catch {
@@ -365,11 +368,11 @@ async function createEds(
  * @param server     McpServer (typed `any`; see registerProjectTools docstring).
  * @param ctxFactory Builds a headless HandlerContext per call.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function registerCreateProjectTool(server: any, ctxFactory: () => HandlerContext): void {
+export function registerCreateProjectTool(server: McpToolServer, ctxFactory: () => HandlerContext): void {
     server.registerTool(
         'create_project',
         {
+            needsAuth: ['github', 'dalive'],
             annotations: { readOnlyHint: false, destructiveHint: false },
             title: 'Create Project',
             description:

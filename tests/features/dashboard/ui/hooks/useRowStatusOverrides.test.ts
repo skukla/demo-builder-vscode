@@ -10,26 +10,14 @@
  * `deploying` override, so the grid kept a GHOST card stuck on "Deploying…"
  * (reported 2026-07-31, with a screenshot of exactly that).
  *
- * @jest-environment jsdom
  */
 
+import { webviewClientHandlers } from '../../../../helpers/webviewClientMock';
 import { renderHook, act } from '@testing-library/react';
 import { useRowStatusOverrides } from '@/features/dashboard/ui/hooks/useRowStatusOverrides';
 
-/** Captured channel handlers, so tests can push like the extension does. */
-const handlers: Record<string, (data: unknown) => void> = {};
-
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        onMessage: jest.fn((type: string, handler: (data: unknown) => void) => {
-            handlers[type] = handler;
-            return () => delete handlers[type];
-        }),
-    },
-}));
-
 function pushStatus(payload: Record<string, unknown>): void {
-    act(() => handlers.appBuilderComponentStatusUpdate?.(payload));
+    act(() => webviewClientHandlers.get('appBuilderComponentStatusUpdate')?.(payload));
 }
 /**
  * Push a snapshot in the shape the EXTENSION actually sends.
@@ -43,17 +31,17 @@ function pushStatus(payload: Record<string, unknown>): void {
  * deploy's error status vanished and the card fell back to "Deployed").
  */
 function pushSnapshot(map: Record<string, unknown>): void {
-    act(() => handlers.appBuilderComponentsSnapshot?.({ components: map }));
+    act(() => webviewClientHandlers.get('appBuilderComponentsSnapshot')?.({ components: map }));
 }
 
 beforeEach(() => {
-    for (const key of Object.keys(handlers)) delete handlers[key];
+    webviewClientHandlers.clear();
 });
 
 describe('useRowStatusOverrides', () => {
     it('starts empty and merges a status push', () => {
         const { result } = renderHook(() => useRowStatusOverrides());
-        expect(result.current).toEqual({});
+        expect(result.current).toStrictEqual({});
 
         pushStatus({ id: 'erp', status: 'deploying', message: 'Adding…' });
 
@@ -66,7 +54,20 @@ describe('useRowStatusOverrides', () => {
         pushStatus({ status: 'deploying' });
         pushStatus({ id: 'erp' });
 
-        expect(result.current).toEqual({});
+        expect(result.current).toStrictEqual({});
+    });
+
+    it('survives a status push with no payload at all', () => {
+        // `webviewClient` hands the handler whatever arrived, and a push with no
+        // payload reaches it as undefined. Reading `.id` off that throws inside
+        // the message handler, which takes the whole grid down rather than
+        // dropping one malformed message — the same contract the snapshot half
+        // states one effect above.
+        const { result } = renderHook(() => useRowStatusOverrides());
+
+        pushStatus(undefined as unknown as Record<string, unknown>);
+
+        expect(result.current).toStrictEqual({});
     });
 
     // Deploy pushes omit `name`; a wholesale replace would wipe a prior rename.
@@ -92,7 +93,7 @@ describe('useRowStatusOverrides', () => {
 
             pushSnapshot({});
 
-            expect(result.current).toEqual({});
+            expect(result.current).toStrictEqual({});
         });
 
         it('keeps overrides for ids the snapshot still holds', () => {

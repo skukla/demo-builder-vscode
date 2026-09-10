@@ -25,8 +25,9 @@ import { DATA_INSTALLER_DESCRIPTORS } from '@/features/ai/server/dataInstallerDe
 import { READ_DESCRIPTORS } from '@/features/ai/server/readDescriptors';
 import { STATUS_DESCRIPTORS } from '@/features/ai/server/statusDescriptors';
 import { registerDescriptorTools, type ToolDescriptor } from '@/features/ai/server/toolDescriptors';
-import type { HandlerContext, HandlerMap, HandlerResponse } from '@/types/handlers';
+import type { HandlerMap, HandlerResponse } from '@/types/handlers';
 import { RESPONSE_CEILINGS } from './responseCeilings';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 
 /** Registers the rows and invokes them exactly as the MCP server does. */
 function harness(descriptors: ToolDescriptor[], response: HandlerResponse) {
@@ -54,7 +55,7 @@ function harness(descriptors: ToolDescriptor[], response: HandlerResponse) {
     registerDescriptorTools(
         server,
         descriptors.map((d) => ({ ...d, map: stub })),
-        () => ({}) as HandlerContext
+        () => createMockHandlerContext()
     );
     return {
         names: () => [...tools.keys()],
@@ -168,7 +169,7 @@ describe('descriptor tools — response size', () => {
     it('every shaped row has a representative payload in this file', () => {
         // Otherwise a new projector silently gets measured against GENERIC, which
         // does not exercise it — the failure this suite is meant to prevent.
-        expect(SHAPED.filter((t) => !PAYLOADS[t])).toEqual([]);
+        expect(SHAPED.filter((t) => !PAYLOADS[t])).toStrictEqual([]);
     });
 
     /**
@@ -206,7 +207,7 @@ describe('descriptor tools — response size', () => {
     });
 
     it('declares a ceiling for every shaped row', () => {
-        expect(SHAPED.filter((t) => CEILING[t] === undefined)).toEqual([]);
+        expect(SHAPED.filter((t) => CEILING[t] === undefined)).toStrictEqual([]);
     });
 
     /**
@@ -486,11 +487,11 @@ describe('the ceiling table tracks the tool surface', () => {
         const missing = descriptorTools.filter(
             (t) => !RESPONSE_CEILINGS[t] && !EXEMPT.has(t) && !PENDING_LIVE_MEASUREMENT.has(t)
         );
-        expect(missing).toEqual([]);
+        expect(missing).toStrictEqual([]);
 
         // An IOU that is already paid is rot in the other direction.
         const paid = [...PENDING_LIVE_MEASUREMENT].filter((t) => RESPONSE_CEILINGS[t]);
-        expect(paid).toEqual([]);
+        expect(paid).toStrictEqual([]);
     });
 
     /**
@@ -552,18 +553,18 @@ describe('the ceiling table tracks the tool surface', () => {
         const unwatched = directOnly.filter(
             (t) => !RESPONSE_CEILINGS[t] && !EXEMPT.has(t) && !DIRECT_PENDING.has(t)
         );
-        expect(unwatched).toEqual([]);
+        expect(unwatched).toStrictEqual([]);
 
         // Same both-directions rule as above: a paid IOU left listed is rot.
         const paidDirect = [...DIRECT_PENDING].filter((t) => RESPONSE_CEILINGS[t] || EXEMPT.has(t));
-        expect(paidDirect).toEqual([]);
+        expect(paidDirect).toStrictEqual([]);
 
         // The exemption list needs the same two-way check as the ceilings, or it
         // rots in the direction nothing notices: an entry that names no descriptor
         // row can never match, so it sits there reading as a decision. Found this
         // way — `apply_updates` is a bespoke tool and was never in scope here.
         const stale = [...EXEMPT].filter((t) => !descriptorTools.includes(t));
-        expect(stale).toEqual([]);
+        expect(stale).toStrictEqual([]);
     });
 
     it('has no ceiling for a tool that no longer exists', async () => {
@@ -580,6 +581,6 @@ describe('the ceiling table tracks the tool surface', () => {
         const blob = sources + mcpServer;
 
         const orphans = Object.keys(RESPONSE_CEILINGS).filter((t) => !blob.includes(`'${t}'`));
-        expect(orphans).toEqual([]);
+        expect(orphans).toStrictEqual([]);
     });
 });

@@ -1,17 +1,8 @@
 // IMPORTANT: Mock must be declared before imports
-jest.mock('@/core/logging', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        trace: jest.fn(),
-    }),
-}));
 
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
-import { createMockProject, setupMockFileSystemWithHash } from './stalenessDetector.testUtils';
-import type { Project } from '@/types';
+import { createStalenessProject, setupMockFileSystemWithHash, meshDeps } from './stalenessDetector.testUtils';
+import type { Project } from '@/types/base';
 
 /**
  * The mesh staleness detector is the THIRD resolver over `componentConfigs`, and
@@ -37,7 +28,7 @@ const ENDPOINT = 'https://backend.example/graphql';
 
 /** ACCS project with a deployed mesh whose snapshot is supplied per test. */
 function projectWithDeployedScope(websiteCode: string): Project {
-    return createMockProject({
+    return createStalenessProject({
         componentSelections: { backend: BACKEND_ID },
         componentInstances: {
             [MESH_ID]: {
@@ -90,6 +81,13 @@ function configsMeshFirst(backendCode: string, meshCode: string) {
     };
 }
 
+
+/**
+ * ADR-015 (2026-08-28): `detectMeshChanges` receives its collaborators now. The
+ * suite passes the fake explicitly at each call site, so a reader sees the
+ * real signature.
+ */
+
 beforeEach(() => {
     jest.clearAllMocks();
 });
@@ -102,7 +100,7 @@ describe('mesh staleness resolves the store scope from the backend', () => {
         const project = projectWithDeployedScope('base');
         setupMockFileSystemWithHash(SOURCE_HASH);
 
-        const result = await detectMeshChanges(project, configsBackendFirst('citisignal', 'base'));
+        const result = await detectMeshChanges(project, configsBackendFirst('citisignal', 'base'), meshDeps);
 
         expect(result.changedEnvVars).toContain('ACCS_WEBSITE_CODE');
         expect(result.envVarsChanged).toBe(true);
@@ -114,12 +112,16 @@ describe('mesh staleness resolves the store scope from the backend', () => {
         const backendFirst = await detectMeshChanges(
             projectWithDeployedScope('base'),
             configsBackendFirst('citisignal', 'base')
+        ,
+            meshDeps,
         );
 
         setupMockFileSystemWithHash(SOURCE_HASH);
         const meshFirst = await detectMeshChanges(
             projectWithDeployedScope('base'),
             configsMeshFirst('citisignal', 'base')
+        ,
+            meshDeps,
         );
 
         expect(meshFirst.changedEnvVars).toEqual(backendFirst.changedEnvVars);
@@ -134,9 +136,11 @@ describe('mesh staleness resolves the store scope from the backend', () => {
         const result = await detectMeshChanges(
             project,
             configsBackendFirst('citisignal', 'citisignal')
+        ,
+            meshDeps,
         );
 
-        expect(result.changedEnvVars).toEqual([]);
+        expect(result.changedEnvVars).toStrictEqual([]);
         expect(result.hasChanges).toBe(false);
     });
 
@@ -147,6 +151,8 @@ describe('mesh staleness resolves the store scope from the backend', () => {
         const result = await detectMeshChanges(
             project,
             configsBackendFirst('citisignal', 'citisignal')
+        ,
+            meshDeps,
         );
 
         expect(result.changedEnvVars).toContain('ACCS_WEBSITE_CODE');
@@ -164,6 +170,8 @@ describe('mesh staleness resolves the store scope from the backend', () => {
         const result = await detectMeshChanges(
             project,
             configsBackendFirst('citisignal', 'citisignal')
+        ,
+            meshDeps,
         );
 
         expect(result.changedEnvVars).not.toContain('ACCS_CUSTOMER_GROUP');
@@ -181,7 +189,9 @@ describe('mesh staleness resolves the store scope from the backend', () => {
                 ACCS_WEBSITE_CODE: 'citisignal',
             },
             [MESH_ID]: {},
-        });
+        },
+            meshDeps,
+        );
 
         expect(result.changedEnvVars).toContain('ACCS_GRAPHQL_ENDPOINT');
     });
@@ -210,7 +220,7 @@ describe('mesh staleness agrees with the .env generator on non-scope keys', () =
     const NEW = 'https://new.example/graphql';
 
     function projectDeployedWith(endpoint: string): Project {
-        return createMockProject({
+        return createStalenessProject({
             componentSelections: { backend: BACKEND_ID },
             componentInstances: {
                 [MESH_ID]: {
@@ -244,7 +254,9 @@ describe('mesh staleness agrees with the .env generator on non-scope keys', () =
         const result = await detectMeshChanges(project, {
             [BACKEND_ID]: { ACCS_GRAPHQL_ENDPOINT: NEW, ACCS_WEBSITE_CODE: 'citisignal' },
             [MESH_ID]: { ACCS_GRAPHQL_ENDPOINT: OLD },
-        });
+        },
+            meshDeps,
+        );
 
         expect(result.changedEnvVars).toContain('ACCS_GRAPHQL_ENDPOINT');
         expect(result.hasChanges).toBe(true);
@@ -257,9 +269,11 @@ describe('mesh staleness agrees with the .env generator on non-scope keys', () =
         const result = await detectMeshChanges(project, {
             [BACKEND_ID]: { ACCS_GRAPHQL_ENDPOINT: NEW, ACCS_WEBSITE_CODE: 'citisignal' },
             [MESH_ID]: { ACCS_GRAPHQL_ENDPOINT: OLD },
-        });
+        },
+            meshDeps,
+        );
 
-        expect(result.changedEnvVars).toEqual([]);
+        expect(result.changedEnvVars).toStrictEqual([]);
         expect(result.hasChanges).toBe(false);
     });
 
@@ -273,9 +287,11 @@ describe('mesh staleness agrees with the .env generator on non-scope keys', () =
         const result = await detectMeshChanges(project, {
             [MESH_ID]: { ACCS_GRAPHQL_ENDPOINT: OLD },
             [BACKEND_ID]: { ACCS_GRAPHQL_ENDPOINT: NEW, ACCS_WEBSITE_CODE: 'citisignal' },
-        });
+        },
+            meshDeps,
+        );
 
-        expect(result.changedEnvVars).toEqual([]);
+        expect(result.changedEnvVars).toStrictEqual([]);
     });
 
     it('still resolves the store SCOPE from the backend, whatever the order', async () => {
@@ -283,7 +299,7 @@ describe('mesh staleness agrees with the .env generator on non-scope keys', () =
         // them, or the mesh-first ordering above would reinstate the original bug.
         // Deployed against `base`; the mesh config still says `base` and comes
         // first; the backend says `citisignal`. Only the scope may differ.
-        const project = createMockProject({
+        const project = createStalenessProject({
             componentSelections: { backend: BACKEND_ID },
             componentInstances: {
                 [MESH_ID]: {
@@ -310,7 +326,9 @@ describe('mesh staleness agrees with the .env generator on non-scope keys', () =
         const result = await detectMeshChanges(project, {
             [MESH_ID]: { ACCS_GRAPHQL_ENDPOINT: OLD, ACCS_WEBSITE_CODE: 'base' },
             [BACKEND_ID]: { ACCS_GRAPHQL_ENDPOINT: NEW, ACCS_WEBSITE_CODE: 'citisignal' },
-        });
+        },
+            meshDeps,
+        );
 
         // The endpoint is NOT flagged (the generator would still write OLD, which
         // is deployed); the scope IS (the backend moved to citisignal).

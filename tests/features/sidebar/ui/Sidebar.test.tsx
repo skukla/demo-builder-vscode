@@ -1,7 +1,3 @@
-/**
- * @jest-environment jsdom
- */
-
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
@@ -43,6 +39,41 @@ describe('Sidebar', () => {
 
             expect(screen.getByRole('button', { name: /^chat$/i })).toBeInTheDocument();
             expect(screen.getByRole('button', { name: /^prompts$/i })).toBeInTheDocument();
+        });
+    });
+
+    describe('The AiZone gate — BOTH callbacks or nothing', () => {
+        it('renders no AiZone when only one of the two AI callbacks is given', () => {
+            // A half-wired host would otherwise get a Chat tile whose Prompts
+            // sibling does nothing. Every existing test passes both callbacks or
+            // neither, so loosening the gate to `||` moved no assertion.
+            renderWithProvider(
+                <Sidebar
+                    context={createProjectsContext()}
+                    onNavigate={jest.fn()}
+                    onCreateProject={jest.fn()}
+                    onOpenAiChat={jest.fn()}
+                />
+            );
+
+            expect(screen.queryByRole('button', { name: /^chat$/i })).toBeNull();
+            expect(screen.queryByRole('button', { name: /^prompts$/i })).toBeNull();
+        });
+
+        it('renders no AiZone when neither AI callback is given', () => {
+            renderWithProvider(
+                <Sidebar
+                    context={createProjectsContext()}
+                    onNavigate={jest.fn()}
+                    onCreateProject={jest.fn()}
+                    onOpenTools={jest.fn()}
+                />
+            );
+
+            expect(screen.queryByRole('button', { name: /^chat$/i })).toBeNull();
+            expect(screen.queryByRole('button', { name: /^prompts$/i })).toBeNull();
+            // The utility bar is unconditional — this is the zone, not the panel.
+            expect(screen.getByRole('button', { name: /tools/i })).toBeInTheDocument();
         });
     });
 
@@ -139,7 +170,7 @@ describe('Sidebar', () => {
                 .filter((b) =>
                     /^(chat|prompts|workbench)$/i.test(b.getAttribute('aria-label') ?? '')
                 );
-            // Two tiles since the Workbench moved to feature/prompt-workbench
+            // Two tiles since the Workbench moved to feature/evaluation-mode-dry-run
             // on 2026-08-26 (AI-3b): Chat and Prompts.
             expect(aiTiles).toHaveLength(2);
         });

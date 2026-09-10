@@ -11,104 +11,29 @@
  * Reset-on-open is the conditional mount itself: closing unmounts the journey,
  * reopening mounts a fresh hook (pinned by the reopen test).
  *
- * @jest-environment jsdom
+ * Mocks, fixtures, harness and helpers live in AddIntegrationFlowModal.testUtils
+ * (shared with the later-and-variants suite) — import the SUT from there only.
+ *
  */
 
-import React, { useCallback, useState } from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { Provider, defaultTheme } from '@adobe/react-spectrum';
-import '@testing-library/jest-dom';
+import { screen, waitFor } from '@testing-library/react';
 
-// --- module-external mocks --------------------------------------------------
-const mockRequest = jest.fn();
-jest.mock('@/core/ui/utils/vscode-api', () => ({
-    webviewClient: {
-        request: (...args: unknown[]) => mockRequest(...args),
-        postMessage: jest.fn(),
-        // The mesh enable subscribes to per-API progress ticks; return an unsubscribe.
-        onMessage: jest.fn(() => () => {}),
-    },
-}));
-
-const phasesMock = jest.fn();
-jest.mock('@/features/project-creation/ui/hooks/useProjectCreationPhases', () => ({
-    useProjectCreationPhases: (...args: unknown[]) => phasesMock(...args),
-}));
-
-jest.mock('@/features/authentication/ui/steps/AdobeAuthStep', () => ({
-    AdobeAuthStep: () => <div data-testid="adobe-auth-step">Adobe Auth Step</div>,
-}));
-jest.mock('@/features/authentication/ui/components/AdobeEntityFields', () => ({
-    AdobeProjectField: ({
-        selectedProjectId,
-        onProjectSelect,
-    }: {
-        selectedProjectId?: string;
-        onProjectSelect?: (p: { id: string; name: string; title?: string }) => void;
-    }) => (
-        <div data-testid="project-field" data-selected={selectedProjectId ?? ''}>
-            <button
-                type="button"
-                onClick={() =>
-                    onProjectSelect?.({ id: 'p-picked', name: 'picked', title: 'Picked Project' })
-                }
-            >
-                pick-project
-            </button>
-        </div>
-    ),
-    AdobeWorkspaceField: ({
-        selectedWorkspaceId,
-        onWorkspaceSelect,
-    }: {
-        selectedWorkspaceId?: string;
-        onWorkspaceSelect?: (ws: { id: string; name: string; title?: string }) => void;
-    }) => (
-        <div data-testid="workspace-field" data-selected={selectedWorkspaceId ?? ''}>
-            <button
-                type="button"
-                onClick={() =>
-                    onWorkspaceSelect?.({ id: 'w-picked', name: 'Stage', title: 'Stage' })
-                }
-            >
-                pick-ws
-            </button>
-        </div>
-    ),
-}));
-
-import { AddIntegrationFlowModal } from '@/features/project-creation/ui/components/integration-flow/AddIntegrationFlowModal';
-import type { FlowMode } from '@/features/project-creation/ui/components/integration-flow/flowStages';
-import type { SelectableAppBuilderComponent } from '@/features/project-creation/services/appBuilderComponentSelection';
+import { change } from '../../../../../helpers/reactSettle';
+import {
+    mockRequest,
+    setPhases,
+    ERP,
+    COMMITTED_DEST,
+    APIS,
+    renderFlowModal,
+    button,
+    click,
+    expectDisabled,
+    expectEnabled,
+    walkMeshToProject,
+    type RenderOptions,
+} from './AddIntegrationFlowModal.testUtils';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
-import type { AdobeProject, WizardState, Workspace } from '@/types/webview';
-
-// --- fixtures ----------------------------------------------------------------
-const MESH = {
-    id: 'commerce-mesh',
-    name: 'API Mesh',
-    description: 'Mesh for the stack',
-    kind: 'mesh',
-    requiredApis: ['GraphQLServiceSDK'],
-    source: { owner: 'adobe', repo: 'commerce-mesh', branch: 'main' },
-    requirement: 'optional',
-} as unknown as SelectableAppBuilderComponent;
-
-const ERP: AppBuilderComponentCatalogEntry = {
-    id: 'erp-sync',
-    name: 'ERP Sync',
-    description: 'Sync orders with your ERP',
-    kind: 'integration',
-    source: { owner: 'adobe', repo: 'erp-sync', branch: 'main' },
-};
-const CRM: AppBuilderComponentCatalogEntry = {
-    id: 'crm-connect',
-    name: 'CRM Connect',
-    description: 'Connect your CRM',
-    kind: 'integration',
-    source: { owner: 'adobe', repo: 'crm-connect', branch: 'main' },
-};
-const CATALOG = [ERP, CRM];
 
 /** The blank starter app the "Build custom" kind instances from. */
 const BLANK: AppBuilderComponentCatalogEntry = {
@@ -118,6 +43,16 @@ const BLANK: AppBuilderComponentCatalogEntry = {
     kind: 'integration',
     blank: true,
     source: { owner: 'skukla', repo: 'app-builder-shell', branch: 'main' },
+};
+
+/** A SEED: scaffolding offered beside "Blank" on the Build-custom stage. */
+const SEED: AppBuilderComponentCatalogEntry = {
+    id: 'commerce-starter-kit',
+    name: 'Commerce Starter Kit',
+    description: 'Scaffolding for a Commerce-integrated custom app',
+    kind: 'integration',
+    seed: true,
+    source: { owner: 'adobe', repo: 'commerce-starter-kit', branch: 'main' },
 };
 
 /** The composed collision domain IntegrationsStep threads in (catalog + selections). */
@@ -130,168 +65,9 @@ const RESERVED_IDS = new Set([
     'eds-storefront',
 ]);
 
-const PROJECT: AdobeProject = { id: 'proj-1', name: 'proj-one', title: 'Demo Project' };
-const WORKSPACE: Workspace = { id: 'ws-1', name: 'Stage', title: 'Stage' };
-
-const SIGNED_IN: Partial<WizardState> = {
-    adobeAuth: { isAuthenticated: true, isChecking: false },
-    adobeOrg: { id: 'org-1', code: 'ORG@AdobeOrg', name: 'Test Org' },
-};
-const COMMITTED_DEST: Partial<WizardState> = {
-    adobeProject: PROJECT,
-    adobeWorkspace: WORKSPACE,
-    // A committed shared destination co-occurs with at least one existing integration
-    // (the "later add" case). Without a referencing integration the flow treats the
-    // destination as a clean slate and re-walks the picker instead of collapsing to
-    // the summary, so a later-add fixture must include one.
-    selectedAppBuilderComponents: ['existing-integration'],
-};
-
-const APIS = [
-    { code: 'GraphQLServiceSDK', name: 'Mesh Gateway', locked: true },
-    { code: 'AnalyticsSDK', name: 'Adobe Analytics', locked: false },
-    { code: 'CampaignSDK', name: 'Adobe Campaign', locked: false },
-];
-
-// --- phase-hook helper (DestinationStage's create/workspace flow) -------------
-function setPhases(overrides: { phase?: string; phaseMessage?: string } = {}): void {
-    phasesMock.mockReturnValue({
-        phase: 'idle',
-        phaseMessage: undefined,
-        phaseSubMessage: undefined,
-        error: undefined,
-        failedPhase: undefined,
-        enableResult: undefined,
-        projectName: '',
-        start: jest.fn(),
-        retry: jest.fn(),
-        reset: jest.fn(),
-        ...overrides,
-    });
-}
-
-// --- harness ------------------------------------------------------------------
-function makeState(initial: Partial<WizardState> = {}): WizardState {
-    return {
-        currentStep: 'build-your-project',
-        projectName: '',
-        selectedPackage: 'citisignal',
-        selectedStack: 'headless-paas',
-        ...SIGNED_IN,
-        ...initial,
-    } as WizardState;
-}
-
-interface HarnessProps {
-    isOpen: boolean;
-    mode: FlowMode;
-    initial?: Partial<WizardState>;
-    meshComponent?: SelectableAppBuilderComponent;
-    catalog: AppBuilderComponentCatalogEntry[];
-    onClose: jest.Mock;
-    builder: {
-        onAppBuilderComponentToggle: jest.Mock;
-        onAddCustomAppBuilderComponent: jest.Mock;
-    };
-    updateSpy: jest.Mock;
-}
-
-/** Hosts the modal over a REAL useState wizard state (commits re-render the tree). */
-function Harness({
-    isOpen,
-    mode,
-    initial,
-    meshComponent,
-    catalog,
-    onClose,
-    builder,
-    updateSpy,
-}: HarnessProps): React.ReactElement {
-    const [state, setState] = useState<WizardState>(() => makeState(initial));
-    const updateState = useCallback(
-        (partial: Partial<WizardState>): void => {
-            updateSpy(partial);
-            setState((current) => ({ ...current, ...partial }));
-        },
-        [updateSpy]
-    );
-    return (
-        <AddIntegrationFlowModal
-            isOpen={isOpen}
-            onClose={onClose}
-            mode={mode}
-            state={state}
-            updateState={updateState}
-            meshComponent={meshComponent}
-            catalog={catalog}
-            blankComponent={BLANK}
-            reservedIds={RESERVED_IDS}
-            builder={builder}
-        />
-    );
-}
-
-interface RenderOptions {
-    isOpen?: boolean;
-    mode?: FlowMode;
-    initial?: Partial<WizardState>;
-    meshComponent?: SelectableAppBuilderComponent;
-    catalog?: AppBuilderComponentCatalogEntry[];
-}
-
-function renderModal(options: RenderOptions = {}) {
-    const onClose = jest.fn();
-    const builder = {
-        onAppBuilderComponentToggle: jest.fn(),
-        onAddCustomAppBuilderComponent: jest.fn(),
-    };
-    const updateSpy = jest.fn();
-    const meshComponent = 'meshComponent' in options ? options.meshComponent : MESH;
-    const makeElement = (isOpen: boolean): React.ReactElement => (
-        <Provider theme={defaultTheme} colorScheme="light">
-            <Harness
-                isOpen={isOpen}
-                mode={options.mode ?? 'add'}
-                initial={options.initial}
-                meshComponent={meshComponent}
-                catalog={options.catalog ?? CATALOG}
-                onClose={onClose}
-                builder={builder}
-                updateSpy={updateSpy}
-            />
-        </Provider>
-    );
-    const view = render(makeElement(options.isOpen ?? true));
-    return {
-        onClose,
-        builder,
-        updateSpy,
-        /** Rerender the tree (setOpen(true) doubles as a plain force-rerender). */
-        setOpen: (open: boolean) => view.rerender(makeElement(open)),
-    };
-}
-
-// --- interaction helpers -------------------------------------------------------
-function button(name: string | RegExp): HTMLElement {
-    return screen.getByRole('button', { name });
-}
-
-function click(name: string | RegExp): void {
-    fireEvent.click(button(name));
-}
-
-function expectDisabled(name: string | RegExp): void {
-    expect(button(name)).toHaveAttribute('aria-disabled', 'true');
-}
-
-function expectEnabled(name: string | RegExp): void {
-    expect(button(name)).toHaveAttribute('aria-disabled', 'false');
-}
-
-/** kind → dest-project for a mesh add (signed in, nothing committed). */
-function walkMeshToProject(): void {
-    click(/API Mesh/);
-    click('Continue');
+/** This suite mounts the modal WITH the blank starter and its full id domain. */
+function renderModal(options: Omit<RenderOptions, 'reservedIds' | 'blankComponent'> = {}) {
+    return renderFlowModal({ blankComponent: BLANK, reservedIds: RESERVED_IDS, ...options });
 }
 
 beforeEach(() => {
@@ -350,11 +126,11 @@ describe('AddIntegrationFlowModal — kind stage', () => {
         expect(screen.queryByRole('button', { name: /API Mesh/ })).not.toBeInTheDocument();
     });
 
-    it('disables Back and Continue at the unpicked kind stage; a pick enables Continue', () => {
+    it('disables Back and Continue at the unpicked kind stage; a pick enables Continue', async () => {
         renderModal();
         expectDisabled('Back');
         expectDisabled('Continue');
-        click(/Import a repo/);
+        await click(/Import a repo/);
         expectEnabled('Continue');
         expectDisabled('Back');
     });
@@ -363,10 +139,10 @@ describe('AddIntegrationFlowModal — kind stage', () => {
 describe('AddIntegrationFlowModal — full mesh walk (first add)', () => {
     it('walks kind → project → workspace (terminal), then commits on Add — no api-access step', async () => {
         const { builder, updateSpy, onClose } = renderModal();
-        walkMeshToProject();
+        await walkMeshToProject();
         expect(screen.getByTestId('project-field')).toBeInTheDocument();
-        click('pick-project');
-        click('Continue');
+        await click('pick-project');
+        await click('Continue');
         expect(updateSpy).toHaveBeenCalledWith({
             adobeProject: { id: 'p-picked', name: 'picked', title: 'Picked Project' },
             adobeWorkspace: undefined,
@@ -376,10 +152,10 @@ describe('AddIntegrationFlowModal — full mesh walk (first add)', () => {
         // api-access step): its footer button reads "Add Integration" and commits +
         // closes in a single press, which also commits the pending workspace.
         expect(screen.getByTestId('workspace-field')).toBeInTheDocument();
-        click('pick-ws');
+        await click('pick-ws');
         expect(screen.queryByTestId('api-access-included')).not.toBeInTheDocument();
         expectEnabled('Add Integration');
-        click('Add Integration');
+        await click('Add Integration');
         expect(updateSpy).toHaveBeenCalledWith({
             adobeWorkspace: { id: 'w-picked', name: 'Stage', title: 'Stage' },
         });
@@ -393,9 +169,9 @@ describe('AddIntegrationFlowModal — full mesh walk (first add)', () => {
         expect(onClose).toHaveBeenCalledTimes(1);
     });
 
-    it('mesh later-add finishes on the KIND stage: no dest step, no api-access, no fetch', () => {
+    it('mesh later-add finishes on the KIND stage: no dest step, no api-access, no fetch', async () => {
         renderModal({ initial: COMMITTED_DEST });
-        click(/API Mesh/);
+        await click(/API Mesh/);
         // A committed destination is a context LINE, not a step, and the deterministic
         // mesh has no api-access — so picking the kind is the whole flow.
         expect(screen.queryByTestId('api-access-included')).not.toBeInTheDocument();
@@ -408,11 +184,11 @@ describe('AddIntegrationFlowModal — full mesh walk (first add)', () => {
         expectEnabled('Add Integration');
     });
 
-    it('a mesh finish writes no selectedConsoleApis and never subscribes', () => {
+    it('a mesh finish writes no selectedConsoleApis and never subscribes', async () => {
         const { builder, updateSpy } = renderModal({ initial: COMMITTED_DEST });
-        click(/API Mesh/); // kind is terminal — dest is a line, mesh has no api-access
+        await click(/API Mesh/); // kind is terminal — dest is a line, mesh has no api-access
         expectEnabled('Add Integration');
-        click('Add Integration');
+        await click('Add Integration');
         expect(builder.onAppBuilderComponentToggle).toHaveBeenCalledWith('commerce-mesh', true);
         expect(mockRequest).not.toHaveBeenCalledWith(
             'ensure-mesh-api-subscribed',
@@ -423,10 +199,10 @@ describe('AddIntegrationFlowModal — full mesh walk (first add)', () => {
         );
     });
 
-    it('Back from dest-project returns to the kind stage', () => {
+    it('Back from dest-project returns to the kind stage', async () => {
         renderModal();
-        walkMeshToProject();
-        click('Back');
+        await walkMeshToProject();
+        await click('Back');
         expect(button(/API Mesh/)).toBeInTheDocument();
         expect(screen.queryByTestId('project-field')).not.toBeInTheDocument();
     });
@@ -434,18 +210,18 @@ describe('AddIntegrationFlowModal — full mesh walk (first add)', () => {
 
 describe('AddIntegrationFlowModal — build custom (optional-name model)', () => {
     /** kind → source-blank (the starting-point + optional-name stage). */
-    function walkToBlankStage(): HTMLElement {
-        click(/Build custom/);
-        click('Continue');
+    async function walkToBlankStage(): Promise<HTMLElement> {
+        await click(/Build custom/);
+        await click('Continue');
         return screen.getByLabelText(/Name \(optional\)/);
     }
 
-    it('Continue is enabled immediately — the name never gates', () => {
+    it('Continue is enabled immediately — the name never gates', async () => {
         renderModal({ initial: COMMITTED_DEST });
-        const input = walkToBlankStage();
+        const input = await walkToBlankStage();
         expectEnabled('Continue');
         // Typing does not introduce a gate either — no validation exists here.
-        fireEvent.change(input, { target: { value: 'App Builder Shell' } });
+        await change(input, 'App Builder Shell');
         expect(
             screen.queryByText('That name is already used by another part of this project.')
         ).not.toBeInTheDocument();
@@ -454,10 +230,10 @@ describe('AddIntegrationFlowModal — build custom (optional-name model)', () =>
 
     it('an empty name commits the minted DEFAULT instance ("Custom Integration")', async () => {
         const { builder, onClose } = renderModal({ initial: COMMITTED_DEST });
-        walkToBlankStage();
-        click('Continue');
+        await walkToBlankStage();
+        await click('Continue');
         await waitFor(() => expect(screen.getByTestId('api-picker-stage')).toBeInTheDocument());
-        click('Add Integration');
+        await click('Add Integration');
         await waitFor(() =>
             expect(builder.onAddCustomAppBuilderComponent).toHaveBeenCalledWith(
                 { owner: 'skukla', repo: 'app-builder-shell', branch: 'main' },
@@ -469,14 +245,14 @@ describe('AddIntegrationFlowModal — build custom (optional-name model)', () =>
 
     it('walks kind → source-blank → api-access and commits the typed name', async () => {
         const { builder, updateSpy, onClose } = renderModal({ initial: COMMITTED_DEST });
-        const input = walkToBlankStage();
-        fireEvent.change(input, { target: { value: 'Firefly Image Gen' } });
+        const input = await walkToBlankStage();
+        await change(input, 'Firefly Image Gen');
         // Straight to api-access: the committed destination rides along as the
         // context line instead of costing a step.
-        click('Continue');
+        await click('Continue');
         expect(screen.getByText('Demo Project · Stage')).toBeInTheDocument();
         await waitFor(() => expect(screen.getByTestId('api-picker-stage')).toBeInTheDocument());
-        click('Add Integration');
+        await click('Add Integration');
         // The commit routes through the custom add with the MINTED identity —
         // never the fixed-id toggle (which capped a project at one shell).
         await waitFor(() =>
@@ -494,6 +270,29 @@ describe('AddIntegrationFlowModal — build custom (optional-name model)', () =>
             })
         );
         expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('offers SEEDS as starting points and keeps pre-built entries out of the row', async () => {
+        // The two rows are drawn from the same catalog by opposite predicates. A
+        // seed belongs here and nowhere else; a finished pre-built integration
+        // belongs in the gallery and must not be offered as a starting point.
+        renderModal({ initial: COMMITTED_DEST, catalog: [ERP, SEED] });
+        await walkToBlankStage();
+
+        expect(screen.getByText(SEED.name)).toBeInTheDocument();
+        expect(screen.queryByText(ERP.name)).not.toBeInTheDocument();
+    });
+
+    it('picks up a seed from a catalog that arrives after the stage is on screen', async () => {
+        // The catalog loads asynchronously, so it can land while the modal is
+        // already open. The derived rows have to follow it.
+        const { setCatalog } = renderModal({ initial: COMMITTED_DEST, catalog: [ERP] });
+        await walkToBlankStage();
+        expect(screen.queryByText(SEED.name)).not.toBeInTheDocument();
+
+        setCatalog([ERP, SEED]);
+
+        expect(screen.getByText(SEED.name)).toBeInTheDocument();
     });
 });
 
@@ -535,11 +334,20 @@ describe('AddIntegrationFlowModal — only genuine pre-built entries reach the g
         expect(screen.getByRole('button', { name: /Pre-built/ })).not.toBeDisabled();
     });
 
+    it('enables the Pre-built tile when a real integration arrives in a later catalog', () => {
+        const { setCatalog } = renderModal({ catalog: MIXED });
+        expect(screen.getByRole('button', { name: /Pre-built/ })).toBeDisabled();
+
+        setCatalog([MESH_ENTRY, BLANK, ERP]);
+
+        expect(screen.getByRole('button', { name: /Pre-built/ })).not.toBeDisabled();
+    });
+
     it('keeps the mesh and the shell OUT of the gallery', async () => {
         // Reachable only when something real exists, so ERP opens the door.
         renderModal({ catalog: [MESH_ENTRY, BLANK, ERP] });
-        click(/Pre-built/);
-        click('Continue');
+        await click(/Pre-built/);
+        await click('Continue');
 
         expect(await screen.findByText(ERP.name)).toBeInTheDocument();
         expect(screen.queryByText(BLANK.name)).not.toBeInTheDocument();

@@ -143,7 +143,15 @@ export class PrerequisitesCacheManager {
      *
      * @param prereqId - Prerequisite ID
      * @param result - Prerequisite check result
-     * @param ttlMs - Time-to-live in milliseconds (default: CACHE_TTL.PREREQUISITE_CHECK)
+     * @param ttlMs - Time-to-live in milliseconds. Default `CACHE_TTL.MEDIUM`
+     *   (5 minutes, jittered). The docstring said `CACHE_TTL.PREREQUISITE_CHECK`
+     *   until 2026-08-29; that constant was removed from this family by the
+     *   2025-12-31 cache refactor (`88f0c6eb8`) and only `TIMEOUTS.PREREQUISITE_CHECK`
+     *   — a check TIMEOUT, not a cache lifetime — still carries the name.
+     *
+     *   Five minutes is the window in which a prerequisite installed or removed
+     *   OUTSIDE the extension goes unnoticed. Inside it, install and Recheck both
+     *   invalidate explicitly; see the note on those paths below.
      * @param nodeVersion - Node version (for perNodeVersion prerequisites)
      */
     setCachedResult(

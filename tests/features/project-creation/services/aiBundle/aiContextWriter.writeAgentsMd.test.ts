@@ -7,33 +7,21 @@
  * Covers EDS projects, headless projects, block libraries, and conditional sections.
  */
 
+import { fsPromises } from './aiBundleFsMock';
 import { createHash } from 'crypto';
-import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import { enoentError, makeTestWriter } from './generatedFileWriter.testUtils';
 import {
     generateAgentsMd,
     writeAgentsMd,
 } from '@/features/project-creation/services/aiBundle/aiContextWriter';
-import type { Project, ComponentInstance } from '@/types/base';
-import type { Stack } from '@/types/stacks';
 
-jest.mock('fs/promises', () => {
-    const writeFile = jest.fn().mockResolvedValue(undefined);
-    return {
-        lstat: jest.fn().mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
-        realpath: jest.fn(async (p: string) => p),
-        mkdir: jest.fn().mockResolvedValue(undefined),
-        writeFile,
-        readFile: jest.fn(),
-        // O_NOFOLLOW writes go through open(); the returned handle delegates to
-        // the writeFile mock WITH the path, so path-based assertions keep working.
-        open: jest.fn(async (p: unknown) => ({
-            writeFile: jest.fn(async (d: unknown, e: unknown) => writeFile(p as string, d, e)),
-            close: jest.fn(async () => undefined),
-        })),
-    };
-});
+import {
+    STACKS,
+    makeEdsProject,
+    makeEdsStorefrontInstance,
+    makeHeadlessProject,
+} from './aiBundleFixtures';
 
 function sha256(content: string): string {
     return createHash('sha256').update(content, 'utf-8').digest('hex');
@@ -48,85 +36,6 @@ function primeDisk(files: Record<string, string>): void {
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
-
-function makeStack(overrides: Partial<Stack> = {}): Stack {
-    return {
-        id: 'eds-paas',
-        name: 'Edge Delivery + PaaS',
-        description: 'EDS storefront with Commerce Drop-ins and PaaS',
-        frontend: 'eds-storefront',
-        backend: 'adobe-commerce-paas',
-        dependencies: [],
-        ...overrides,
-    };
-}
-
-function makeEdsStorefrontInstance(metaOverrides: Record<string, unknown> = {}): ComponentInstance {
-    return {
-        id: 'eds-storefront',
-        name: 'EDS Storefront',
-        status: 'ready',
-        path: '/projects/test-project/components/eds-storefront',
-        metadata: {
-            githubRepo: 'owner/my-repo',
-            liveUrl: 'https://main--my-repo--owner.aem.live',
-            previewUrl: 'https://main--my-repo--owner.aem.page',
-            daLiveOrg: 'my-org',
-            daLiveSite: 'my-site',
-            ...metaOverrides,
-        },
-    };
-}
-
-function makeEdsProject(overrides: Partial<Project> = {}): Project {
-    return {
-        name: 'test-project',
-        created: new Date('2026-01-01'),
-        lastModified: new Date('2026-01-01'),
-        path: '/projects/test-project',
-        status: 'ready',
-        selectedStack: 'eds-paas',
-        selectedPackage: 'isle5',
-        componentInstances: {
-            'eds-storefront': makeEdsStorefrontInstance(),
-        },
-        ...overrides,
-    };
-}
-
-function makeHeadlessProject(overrides: Partial<Project> = {}): Project {
-    return {
-        name: 'headless-project',
-        created: new Date('2026-01-01'),
-        lastModified: new Date('2026-01-01'),
-        path: '/projects/headless-project',
-        status: 'ready',
-        selectedStack: 'headless-paas',
-        selectedPackage: 'citisignal',
-        commerce: {
-            type: 'platform-as-a-service',
-            instance: {
-                url: 'https://commerce.example.com',
-                environmentId: 'env-123',
-                storeView: 'default',
-                websiteCode: 'base',
-                storeCode: 'main_website_store',
-            },
-        },
-        componentInstances: {},
-        ...overrides,
-    };
-}
-
-const STACKS: Stack[] = [
-    makeStack({ id: 'eds-paas', name: 'Edge Delivery + PaaS' }),
-    makeStack({
-        id: 'headless-paas',
-        name: 'Headless + PaaS',
-        frontend: 'headless',
-        backend: 'adobe-commerce-paas',
-    }),
-];
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
 
@@ -385,10 +294,11 @@ describe('aiContextWriter', () => {
                 });
                 const result = generateAgentsMd(project, STACKS);
 
-                // The ]( sequence that would break Markdown link syntax is stripped
-                expect(result).not.toContain('](https://attacker.com');
-                // The https:// base is preserved
-                expect(result).toContain('https://example.com');
+                // sanitizeUrl strips `[`, `]`, `(`, `)` and keeps everything else, so
+                // the two URLs concatenate into one inert string.
+                expect(result).toContain(
+                    '- **Commerce URL:** https://example.comhttps://attacker.com',
+                );
             });
 
             it('strips Markdown link-breaking chars from GitHub owner/repo in block libraries', () => {
@@ -408,8 +318,11 @@ describe('aiContextWriter', () => {
                 const project = makeEdsProject({ installedBlockLibraries: installedLibraries });
                 const result = generateAgentsMd(project, STACKS);
 
-                // The ]( sequence enabling Markdown link injection is stripped; domain text may remain as plain text
-                expect(result).not.toContain('](https://');
+                // sanitizeTemplateValue strips `](`, then sanitizeGithubSlug strips the
+                // `:` — the domain survives as inert path text, which is the exact output.
+                expect(result).toContain(
+                    '  - Source: https://github.com/orghttps//evil.example.com/repo',
+                );
             });
         });
 
@@ -540,9 +453,23 @@ describe('aiContextWriter', () => {
             await writeAgentsMd(PROJECT_PATH, project, STACKS, makeWriter());
 
             const mkdirMock = fsPromises.mkdir as jest.Mock;
+            const writeFileMock = fsPromises.writeFile as jest.Mock;
             const claudeDir = path.join(PROJECT_PATH, '.claude');
-            const mkdirCall = mkdirMock.mock.calls.find(([dir]: [string]) => dir === claudeDir);
-            expect(mkdirCall).toBeDefined();
+            const pointerPath = path.join(claudeDir, 'CLAUDE.md');
+
+            const mkdirIndex = mkdirMock.mock.calls.findIndex(
+                ([dir]: [string]) => dir === claudeDir,
+            );
+            const writeIndex = writeFileMock.mock.calls.findIndex(
+                ([p]: [string]) => p === pointerPath,
+            );
+
+            expect(mkdirMock.mock.calls[mkdirIndex]).toEqual([claudeDir, { recursive: true }]);
+            // BEFORE, which is what the name claims: compare the two mocks' global
+            // invocation order, not their per-mock indexes.
+            expect(mkdirMock.mock.invocationCallOrder[mkdirIndex]).toBeLessThan(
+                writeFileMock.mock.invocationCallOrder[writeIndex],
+            );
         });
 
         it('writes AGENTS.md content identical to generateAgentsMd output', async () => {
@@ -610,7 +537,7 @@ describe('aiContextWriter', () => {
                 await writeAgentsMd(PROJECT_PATH, makeEdsProject(), STACKS, writer);
 
                 expect(writer.report().written).toContain('AGENTS.md');
-                expect(writer.report().skipped).toEqual([]);
+                expect(writer.report().skipped).toStrictEqual([]);
             });
         });
     });

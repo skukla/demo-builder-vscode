@@ -7,26 +7,13 @@
  * - Non-retryable errors fail immediately
  */
 
-import { DeleteProjectCommand } from '@/features/lifecycle/commands/deleteProject';
-import { StateManager } from '@/core/state';
+import {
+    DeleteProjectCommand,
+    vscode,
+    setupDeleteProject,
+} from './deleteProject.testUtils';
+import type { StateManager } from '@/types/state';
 import type { Logger } from '@/types/logger';
-
-// Mock VS Code API with proper types
-jest.mock('vscode', () => ({
-    window: {
-        showInformationMessage: jest.fn(),
-        showWarningMessage: jest.fn(),
-        showErrorMessage: jest.fn(),
-        withProgress: jest.fn(),
-        setStatusBarMessage: jest.fn(),
-    },
-    commands: {
-        executeCommand: jest.fn(),
-    },
-    ProgressLocation: {
-        Notification: 15,
-    },
-}));
 
 // Mock fs/promises with explicit exports
 jest.mock('fs/promises', () => ({
@@ -35,28 +22,10 @@ jest.mock('fs/promises', () => ({
 import * as fs from 'fs/promises';
 const mockRm = fs.rm as jest.Mock;
 
-// Mock logging
-jest.mock('@/core/logging', () => ({
-    Logger: jest.fn().mockImplementation(() => ({
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        debug: jest.fn(),
-    })),
-    getLogger: jest.fn(() => ({
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        debug: jest.fn(),
-    })),
-}));
-
 // Import vscode after mock
-import * as vscode from 'vscode';
 
 describe('DeleteProjectCommand - Error Handling', () => {
     let command: DeleteProjectCommand;
-    let mockContext: jest.Mocked<vscode.ExtensionContext>;
     let mockStateManager: jest.Mocked<StateManager>;
     let mockLogger: jest.Mocked<Logger>;
     const testProjectPath = '/tmp/test-project-error';
@@ -64,63 +33,16 @@ describe('DeleteProjectCommand - Error Handling', () => {
     // Store original setTimeout
     const originalSetTimeout = global.setTimeout;
 
+    /** Collapse the retry back-off so the five attempts run without waiting. */
+    function runTimeoutsImmediately(): void {
+        jest.spyOn(global, 'setTimeout').mockImplementation((fn) => originalSetTimeout(fn, 0));
+    }
+
     beforeEach(() => {
         jest.clearAllMocks();
-
-        // Reset fs mocks
         mockRm.mockClear();
         mockRm.mockResolvedValue(undefined);
-
-        // Mock extension context
-        mockContext = {
-            subscriptions: [],
-            extensionPath: '/mock/extension/path',
-            globalState: {
-                get: jest.fn(),
-                update: jest.fn().mockResolvedValue(undefined),
-            },
-        } as any;
-
-        // Mock state manager
-        mockStateManager = {
-            getCurrentProject: jest.fn().mockResolvedValue({
-                name: 'test-project',
-                path: testProjectPath,
-                status: 'stopped',
-            }),
-            clearProject: jest.fn().mockResolvedValue(undefined),
-            removeFromRecentProjects: jest.fn().mockResolvedValue(undefined),
-        } as any;
-
-        // Mock logger
-        mockLogger = {
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            debug: jest.fn(),
-        } as any;
-
-        // Mock vscode.window.showInformationMessage for confirmation (returns 'Yes')
-        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Yes');
-
-        // Mock vscode.window.showErrorMessage
-        (vscode.window.showErrorMessage as jest.Mock).mockResolvedValue('OK');
-
-        // Mock vscode.window.withProgress to execute task immediately
-        (vscode.window.withProgress as jest.Mock).mockImplementation(
-            async (_options: any, task: any) => {
-                return await task({ report: jest.fn() });
-            }
-        );
-
-        // Mock vscode.commands.executeCommand
-        (vscode.commands.executeCommand as jest.Mock).mockResolvedValue(undefined);
-
-        command = new DeleteProjectCommand(
-            mockContext,
-            mockStateManager,
-            mockLogger
-        );
+        ({ command, mockStateManager, mockLogger } = setupDeleteProject(testProjectPath));
     });
 
     afterEach(() => {
@@ -137,9 +59,7 @@ describe('DeleteProjectCommand - Error Handling', () => {
             mockRm.mockRejectedValue(error);
 
             // Mock setTimeout to execute immediately
-            global.setTimeout = jest.fn((fn: () => void) => {
-                return originalSetTimeout(fn, 0);
-            }) as any;
+            runTimeoutsImmediately();
 
             // When: Deletion attempted with 5 retries
             await command.execute();
@@ -160,9 +80,7 @@ describe('DeleteProjectCommand - Error Handling', () => {
             error.code = 'ENOTEMPTY';
             mockRm.mockRejectedValue(error);
 
-            global.setTimeout = jest.fn((fn: () => void) => {
-                return originalSetTimeout(fn, 0);
-            }) as any;
+            runTimeoutsImmediately();
 
             // When: Deletion attempted
             await command.execute();
@@ -178,9 +96,7 @@ describe('DeleteProjectCommand - Error Handling', () => {
             error.code = 'ENOTEMPTY';
             mockRm.mockRejectedValue(error);
 
-            global.setTimeout = jest.fn((fn: () => void) => {
-                return originalSetTimeout(fn, 0);
-            }) as any;
+            runTimeoutsImmediately();
 
             // When: Deletion attempted
             await command.execute();
@@ -191,7 +107,7 @@ describe('DeleteProjectCommand - Error Handling', () => {
             const retryCalls = debugCalls.filter((call: any[]) =>
                 call[0] && call[0].includes('Waiting')
             );
-            expect(retryCalls.length).toBe(4);
+            expect(retryCalls).toHaveLength(4);
         });
 
         it('should show clear error message with attempt count', async () => {
@@ -200,9 +116,7 @@ describe('DeleteProjectCommand - Error Handling', () => {
             error.code = 'ENOTEMPTY';
             mockRm.mockRejectedValue(error);
 
-            global.setTimeout = jest.fn((fn: () => void) => {
-                return originalSetTimeout(fn, 0);
-            }) as any;
+            runTimeoutsImmediately();
 
             // When: Deletion attempted
             await command.execute();
@@ -230,9 +144,7 @@ describe('DeleteProjectCommand - Error Handling', () => {
             mockRm.mockRejectedValue(error);
 
             // Mock setTimeout to execute immediately (for any retry logic)
-            global.setTimeout = jest.fn((fn: () => void) => {
-                return originalSetTimeout(fn, 0);
-            }) as any;
+            runTimeoutsImmediately();
 
             // When: Deletion attempted
             await command.execute();
@@ -251,9 +163,7 @@ describe('DeleteProjectCommand - Error Handling', () => {
             mockRm.mockRejectedValue(error);
 
             // Mock setTimeout to execute immediately (for any retry logic)
-            global.setTimeout = jest.fn((fn: () => void) => {
-                return originalSetTimeout(fn, 0);
-            }) as any;
+            runTimeoutsImmediately();
 
             // When: Deletion attempted
             await command.execute();
@@ -273,9 +183,7 @@ describe('DeleteProjectCommand - Error Handling', () => {
             error.code = 'ENOTEMPTY';
             mockRm.mockRejectedValue(error);
 
-            global.setTimeout = jest.fn((fn: () => void) => {
-                return originalSetTimeout(fn, 0);
-            }) as any;
+            runTimeoutsImmediately();
 
             // When: Deletion attempted
             await command.execute();
@@ -291,9 +199,7 @@ describe('DeleteProjectCommand - Error Handling', () => {
             error.code = 'ENOTEMPTY';
             mockRm.mockRejectedValue(error);
 
-            global.setTimeout = jest.fn((fn: () => void) => {
-                return originalSetTimeout(fn, 0);
-            }) as any;
+            runTimeoutsImmediately();
 
             // When: Deletion attempted
             await command.execute();

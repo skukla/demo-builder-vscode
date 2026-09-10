@@ -20,8 +20,19 @@
  */
 
 import type { HandlerContext } from '@/types/handlers';
-import type { PrerequisiteDefinition, PrerequisiteStatus } from '@/features/prerequisites/services/PrerequisitesManager';
+import type {
+    PrerequisiteDefinition,
+    PrerequisiteStatus,
+    PrerequisitesManager,
+} from '@/features/prerequisites/services/PrerequisitesManager';
+import type { ErrorLogger } from '@/core/logging/errorLogger';
+import type { ProgressUnifier } from '@/core/utils/progressUnifier/ProgressUnifier';
+import type { StepLogger } from '@/core/logging/stepLogger';
+import { createMockHandlerContext as createMockHandlerContextBase } from '../../../helpers/handlerContextTestHelpers';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 // Test data
 export const mockConfig = {
     version: '1.0',
@@ -72,8 +83,13 @@ export const mockAdobeCliPrereq: PrerequisiteDefinition = {
 /**
  * Helper to create mock HandlerContext
  */
-export function createMockContext(overrides?: Partial<HandlerContext>): jest.Mocked<HandlerContext> {
-    return {
+export function createCheckHandlerContext(
+    overrides?: Partial<HandlerContext>
+): jest.Mocked<HandlerContext> {
+    // The manager, error logger, progress unifier and step logger are CLASSES
+    // with private members, so no literal can satisfy them; each fake carries
+    // only the methods the check handlers call.
+    return createMockHandlerContextBase({
         prereqManager: {
             loadConfig: jest.fn(),
             resolveDependencies: jest.fn(),
@@ -83,26 +99,17 @@ export function createMockContext(overrides?: Partial<HandlerContext>): jest.Moc
                 getPerVersionResults: jest.fn().mockReturnValue(undefined),
                 clearAll: jest.fn(),
             }),
-        } as any,
-        authManager: {} as any,
-        componentHandler: {} as any,
-        errorLogger: {} as any,
-        progressUnifier: {} as any,
+        } as unknown as PrerequisitesManager,
+        authManager: createMockAuthenticationService(),
+        errorLogger: {} as unknown as ErrorLogger,
+        progressUnifier: {} as unknown as ProgressUnifier,
         stepLogger: {
             log: jest.fn(),
-        } as any,
-        logger: {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as any,
-        debugLogger: {
-            debug: jest.fn(),
-        } as any,
-        context: {} as any,
+        } as unknown as StepLogger,
+        logger: createMockLogger(),
+        debugLogger: createMockLogger(),
+        context: createMockExtensionContext(),
         panel: undefined,
-        stateManager: {} as any,
         communicationManager: undefined,
         sendMessage: jest.fn().mockResolvedValue(undefined),
         sharedState: {
@@ -112,21 +119,11 @@ export function createMockContext(overrides?: Partial<HandlerContext>): jest.Moc
             currentComponentSelection: undefined,
         },
         ...overrides,
-    } as jest.Mocked<HandlerContext>;
+    });
 }
 
-/**
- * Helper to create component selection for multi-version tests
- */
-export function createComponentSelection(backend: string, appBuilder: string[] = []) {
-    return {
-        frontend: 'react-app',
-        backend,
-        dependencies: [],
-        integrations: [],
-        appBuilder,
-    };
-}
+/** Canonical component-selection fixture (ADR-016). */
+export { createComponentSelection } from '../../../helpers/componentSelectionFake';
 
 /**
  * Setup standard mock implementations for shared utilities
@@ -139,9 +136,11 @@ export function setupStandardMocks() {
     (shared.hasNodeVersions as jest.Mock).mockImplementation((mapping: Record<string, string>) => {
         return mapping && Object.keys(mapping).length > 0;
     });
-    (shared.getNodeVersionKeys as jest.Mock).mockImplementation((mapping: Record<string, string>) => {
-        return Object.keys(mapping || {}).sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
-    });
+    (shared.getNodeVersionKeys as jest.Mock).mockImplementation(
+        (mapping: Record<string, string>) => {
+            return Object.keys(mapping || {}).sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
+        }
+    );
 }
 
 /**

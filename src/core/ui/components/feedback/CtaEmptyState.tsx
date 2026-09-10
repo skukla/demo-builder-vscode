@@ -36,12 +36,12 @@ export interface CtaEmptyStateProps {
     autoFocus?: boolean;
 }
 
-export const CtaEmptyState: React.FC<CtaEmptyStateProps> = ({
+export function CtaEmptyState({
     title,
     description,
     actions,
     autoFocus = false,
-}) => {
+}: CtaEmptyStateProps) {
     const focusRef = useCallback(
         (node: FocusableRefValue<HTMLElement, HTMLElement> | null) => {
             if (autoFocus && node) {
@@ -80,4 +80,4 @@ export const CtaEmptyState: React.FC<CtaEmptyStateProps> = ({
             </Flex>
         </Flex>
     );
-};
+}

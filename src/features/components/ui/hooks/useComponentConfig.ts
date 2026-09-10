@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
+import { PAAS_URL, PAAS_GRAPHQL_ENDPOINT } from '@/core/config/envVarKeys';
 import { vscode } from '@/core/ui/utils/vscode-api';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import { url, pattern, normalizeUrl } from '@/core/validation/Validator';
-import { PAAS_URL, PAAS_GRAPHQL_ENDPOINT } from '@/features/components/config/envVarKeys';
 import {
     findFieldValue,
     resolveWriteTargets,
@@ -18,7 +18,7 @@ import {
 import { collectStackComponents } from '@/features/components/services/stackComponentCollector';
 import type { EnvVarDefinition } from '@/types/components';
 import { ComponentConfigs } from '@/types/webview';
-import type { ComponentDataDTO, ComponentsDataPayload, GetComponentsDataResponse } from '@/types/webviewRequests';
+import type { ComponentDataDTO, ComponentsDataPayload, GetComponentsDataResult } from '@/types/webviewRequests';
 
 const log = webviewLogger('useComponentConfig');
 
@@ -135,9 +135,18 @@ function applyFieldDefaults(
             // wanted. Every write path fans one field's value to all its components,
             // so two copies disagreeing is a defect, never a feature (see
             // resolveWriteTargets).
-            const targets = resolveWriteTargets(field, backendId).filter(
-                (componentId) => !newConfigs[componentId]?.[field.key],
-            );
+            //
+            // "Blank" is undefined or '', NOT falsy. A bare truthiness check sat
+            // here and re-applied the default over a stored `false` or `0` on every
+            // mount — an unticked checkbox re-ticking itself, a numeric field
+            // refusing to hold zero. This is the same defect the validation effect
+            // below already carries a note about, twenty lines apart, and the same
+            // rule `findFieldValue` uses: undefined and '' are absent, everything
+            // else is present.
+            const targets = resolveWriteTargets(field, backendId).filter((componentId) => {
+                const stored = newConfigs[componentId]?.[field.key];
+                return stored === undefined || stored === '';
+            });
             if (targets.length === 0) return;
 
             newConfigs = writeToComponents(newConfigs, targets, { [field.key]: defaultValue });
@@ -210,8 +219,20 @@ export function useComponentConfig({
         const loadData = async () => {
             try {
                 registryInFlight ??= vscode
-                    .request<GetComponentsDataResponse>('get-components-data')
-                    .then((response) => response.data);
+                    .request<GetComponentsDataResult>('get-components-data')
+                    .then((response) => {
+                        // A FAILED response carries no `data`. Storing that
+                        // undefined is what crashed the Connection view on
+                        // 2026-09-02 — every later read of `componentsData.envVars`
+                        // threw, and the hook's own error state never rendered.
+                        // Throwing here routes it to that state instead.
+                        if (!response.success) {
+                            throw new Error(
+                                response.error ?? 'components-data returned no data',
+                            );
+                        }
+                        return response.data;
+                    });
                 const data = await registryInFlight;
                 registryCache = data;
                 if (cancelled) return;

@@ -101,7 +101,11 @@ export function loadItems() {
         if (!parts) { problems.push(`${rel}: no frontmatter`); continue; }
         const fm = parseFrontmatter(parts[0]);
         const title = (text.split('\n').find((l) => l.startsWith('# ')) || '# (untitled)').slice(2);
-        items.push({ ...fm, rel, path, title });
+        // `body` carries the prose after the frontmatter, so validation can reach the
+        // `[[PL-12]]` links items use to point at each other. Without it the wiki-link
+        // check below is inert — which it was when first written, and which the plant
+        // caught rather than the reading.
+        items.push({ ...fm, rel, path, title, body: parts[1] });
     }
     return { items, problems };
 }
@@ -144,6 +148,19 @@ export function validate(items, problems = []) {
             p.push(`${i.rel}: superseded-by "${i['superseded-by']}" does not exist`);
         }
         if (i.needs.includes(i.id)) p.push(`${i.rel}: needs itself`);
+        // Body `[[PL-12]]` links, which items use to point at each other in prose.
+        // These went UNCHECKED while `check` printed "all references resolve" — a
+        // message true of two frontmatter fields and of nothing a reader writes.
+        // Found 2026-08-30 by planting `[[PL-999]]` and watching it pass. The corpus
+        // was clean at the time (27 links, 0 dead), which is the moment to add a
+        // check rather than the moment to skip it.
+        //
+        // Only id-SHAPED targets are validated. `[[some-note]]` is a free link, and
+        // the memory corpus deliberately allows one that does not exist yet — it
+        // marks something worth writing, not an error.
+        for (const m of (i.body ?? '').matchAll(/\[\[([A-Z]+-\d+[a-z]?)\]\]/g)) {
+            if (!ids.has(m[1])) p.push(`${i.rel}: [[${m[1]}]] does not exist`);
+        }
     }
     // RULE: an epic is not done while a child is unfinished. This is the AB-1
     // failure made impossible — its spine shipped, the file moved to complete/, and
@@ -249,7 +266,9 @@ function writeFrontmatter(item, changes) {
     if (!parts) throw new Error(`${item.rel}: no frontmatter to change`);
     let fm = parts[0];
     for (const [k, v] of Object.entries(changes)) {
-        const line = `${k}: ${v}`;
+        // Lists round-trip as `[a, b]`, which is what the reader expects and what every
+        // hand-written item already uses.
+        const line = `${k}: ${Array.isArray(v) ? `[${v.join(', ')}]` : v}`;
         fm = new RegExp(`^${k}:.*$`, 'm').test(fm)
             ? fm.replace(new RegExp(`^${k}:.*$`, 'm'), line)
             : `${fm.replace(/\n+$/, '')}\n${line}`;
@@ -412,7 +431,15 @@ function main() {
             for (const kv of pos.slice(1)) {
                 const m = kv.match(/^([a-z-]+)=(.*)$/);
                 if (!m) die(`bad assignment "${kv}" — expected key=value`);
-                changes[m[1]] = m[2];
+                // A LIST field has to become an ARRAY here, the same way reading a file
+                // parses it. It used to be stored as the raw string, and then `validate`
+                // iterated that string CHARACTER BY CHARACTER: `needs=PL-11` reported
+                // `needs "1" does not exist`, because it was checking the letter. The
+                // refusal was correct and its reason was nonsense, which is worse than
+                // failing outright — it reads as a syntax you have to guess at.
+                changes[m[1]] = LIST_FIELDS.includes(m[1])
+                    ? m[2].replace(/[[\]]/g, '').split(/[\s,]+/).filter(Boolean)
+                    : m[2];
             }
             if (!Object.keys(changes).length) die('nothing to set');
             // Validate the RESULT BEFORE writing it. The first version wrote first
@@ -489,7 +516,11 @@ function main() {
                     .filter((x) => x && x.toLowerCase() !== 'none');
                 return { sha, date, subject: body.trim().split('\n')[0], ids };
             });
-            const tagged = commits.filter((c) => c.ids.length);
+            // A commit whose whole job is writing a log line carries the trailer too
+            // (the hook requires one), so the next run logged the log commit, whose log
+            // commit was logged next — nine such lines had to be hand-pruned from one
+            // item on 2026-09-03. The record is for work, not for the record.
+            const tagged = commits.filter((c) => c.ids.length && !/^docs\(backlog\): log /.test(c.subject));
             const byId = new Map(items.map((i) => [i.id, i]));
             const missing = [];
             for (const c of tagged) {

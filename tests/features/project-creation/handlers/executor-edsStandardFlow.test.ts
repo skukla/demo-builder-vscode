@@ -8,8 +8,19 @@
  * 4. Have metadata populated after cloning
  */
 
-import { HandlerContext } from '@/types/handlers';
+// Everything here is mocked and the suite finishes in about a second alone. Under the
+// full suite's worker contention it still exceeded jest's 10s default twice on
+// 2026-09-02 and repeatedly on 2026-09-03, blocking pushes on commits that could not
+// have caused it. This is CPU starvation, not slow code: the same headroom the two
+// real-process suites carry. It buys scheduler room and does not slow a healthy run.
+jest.setTimeout(30_000);
 
+import { HandlerContext } from '@/types/handlers';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockLogger } from '../../../helpers/loggerFake';
+
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockWebviewPanel } from '../../../helpers/webviewPanelFake';
 // Track component definitions passed to cloneAllComponents
 let componentDefinitionIds: string[] = [];
 const clonedComponents: Map<string, any> = new Map();
@@ -22,7 +33,7 @@ jest.mock('@/features/mesh/services/stalenessDetector', () => ({
     fetchDeployedMeshConfig: jest.fn().mockResolvedValue({}),
 }));
 
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getCommandExecutor: jest.fn().mockReturnValue({
             execute: jest.fn().mockResolvedValue({ code: 0, stdout: '', stderr: '' }),
@@ -84,13 +95,15 @@ jest.mock('@/features/components/services/ComponentRegistryManager', () => ({
                 source: { type: 'git', url: 'https://github.com/test/headless' },
             },
         ]),
-        getDependencies: jest.fn().mockResolvedValue([{
-            id: 'eds-commerce-mesh',
-            name: 'EDS Commerce Mesh',
-            type: 'dependency',
-            subType: 'mesh',
-            source: { type: 'git', url: 'https://github.com/test/eds-mesh' },
-        }]),
+        getDependencies: jest.fn().mockResolvedValue([
+            {
+                id: 'eds-commerce-mesh',
+                name: 'EDS Commerce Mesh',
+                type: 'dependency',
+                subType: 'mesh',
+                source: { type: 'git', url: 'https://github.com/test/eds-mesh' },
+            },
+        ]),
         getComponentById: jest.fn().mockResolvedValue(undefined),
     })),
 }));
@@ -100,18 +113,7 @@ jest.mock('@/features/project-creation/helpers/envFileGenerator', () => ({
     generateComponentConfigFiles: jest.fn().mockResolvedValue(undefined),
 }));
 
-jest.mock('vscode', () => ({
-    workspace: {
-        getConfiguration: jest.fn().mockReturnValue({
-            get: jest.fn().mockReturnValue(3000),
-        }),
-    },
-    window: { setStatusBarMessage: jest.fn() },
-    commands: { executeCommand: jest.fn() },
-}), { virtual: true });
-
-// Mock services to track what component definitions are used
-jest.mock('@/features/project-creation/services', () => ({
+jest.mock('@/features/project-creation/services/componentInstallationOrchestrator', () => ({
     cloneAllComponents: jest.fn().mockImplementation(({ componentDefinitions, project }) => {
         componentDefinitionIds = Array.from(componentDefinitions.keys());
         // Simulate component creation
@@ -130,13 +132,18 @@ jest.mock('@/features/project-creation/services', () => ({
         return Promise.resolve();
     }),
     installAllComponents: jest.fn().mockResolvedValue(undefined),
+}));
+
+jest.mock('@/features/project-creation/services/meshSetupService', () => ({
     deployNewMesh: jest.fn().mockResolvedValue(undefined),
     linkExistingMesh: jest.fn().mockResolvedValue(undefined),
     shouldConfigureExistingMesh: jest.fn().mockReturnValue(false),
+}));
+
+jest.mock('@/features/project-creation/services/projectFinalizationService', () => ({
     generateEnvironmentFiles: jest.fn().mockResolvedValue(undefined),
     finalizeProject: jest.fn().mockResolvedValue(undefined),
     sendCompletionAndCleanup: jest.fn().mockResolvedValue(undefined),
-    generateAIContextFiles: jest.fn().mockResolvedValue(undefined),
 }));
 
 describe('Executor - EDS Standard Flow', () => {
@@ -144,28 +151,63 @@ describe('Executor - EDS Standard Flow', () => {
 
     const createMockContext = (): Partial<HandlerContext> => {
         return {
-            context: { extensionPath: '/test/extension' } as any,
-            logger: {
-                info: jest.fn(),
-                debug: jest.fn(),
-                warn: jest.fn(),
-                error: jest.fn(),
-            } as any,
-            stateManager: {
+            context: createMockExtensionContext({}, '/test/extension'),
+            logger: createMockLogger(),
+            stateManager: createMockStateManager({
                 getCurrentProject: jest.fn().mockResolvedValue(null),
                 saveProject: jest.fn().mockResolvedValue(undefined),
-            } as any,
+            }),
             sharedState: { isAuthenticating: false },
             sendMessage: jest.fn(),
-            panel: { visible: false, dispose: jest.fn() } as any,
+            panel: createMockWebviewPanel({ visible: false }),
         };
     };
+
+    /**
+     * Replace the cloner with one that RECORDS the component definitions it was
+     * handed, and registers an installed instance for each.
+     *
+     * PL-9 lane A: written out twice, identically. `capture.definitions` is the
+     * Map the executor built — the thing both tests are actually about.
+     */
+    async function captureComponentDefinitions(): Promise<{
+        definitions: Map<string, any> | null;
+    }> {
+        const capture: { definitions: Map<string, any> | null } = { definitions: null };
+        const { cloneAllComponents } = await import(
+            '@/features/project-creation/services/componentInstallationOrchestrator'
+        );
+        // `project` is the cloner's OWN argument, not an outer binding — taking it
+        // as a parameter is what broke the first version of this extraction.
+        (cloneAllComponents as jest.Mock).mockImplementation(
+            ({ componentDefinitions, project }: any) => {
+                capture.definitions = componentDefinitions;
+                componentDefinitionIds = Array.from(componentDefinitions.keys());
+                for (const [id, entry] of componentDefinitions.entries()) {
+                    project.componentInstances = project.componentInstances || {};
+                    project.componentInstances[id] = {
+                        id,
+                        name: entry.definition.name,
+                        type: entry.definition.type,
+                        status: 'installed',
+                        path: `${project.path}/components/${id}`,
+                        lastUpdated: new Date(),
+                    };
+                }
+                return Promise.resolve();
+            }
+        );
+        return capture;
+    }
 
     beforeEach(() => {
         jest.clearAllMocks();
         componentDefinitionIds = [];
         clonedComponents.clear();
         mockContext = createMockContext();
+        mockContext.componentRegistry = new (jest.requireMock(
+            '@/features/components/services/ComponentRegistryManager'
+        ).ComponentRegistryManager)();
     });
 
     describe('EDS Frontend Inclusion in componentDefinitions', () => {
@@ -218,26 +260,12 @@ describe('Executor - EDS Standard Flow', () => {
             };
 
             // Override mock to capture component definitions
-            const { cloneAllComponents } = await import('@/features/project-creation/services');
-            let capturedDefinitions: Map<string, any> | null = null;
-            (cloneAllComponents as jest.Mock).mockImplementation(({ componentDefinitions, project }) => {
-                capturedDefinitions = componentDefinitions;
-                componentDefinitionIds = Array.from(componentDefinitions.keys());
-                for (const [id, entry] of componentDefinitions.entries()) {
-                    project.componentInstances = project.componentInstances || {};
-                    project.componentInstances[id] = {
-                        id,
-                        name: entry.definition.name,
-                        type: entry.definition.type,
-                        status: 'installed',
-                        path: `${project.path}/components/${id}`,
-                        lastUpdated: new Date(),
-                    };
-                }
-                return Promise.resolve();
-            });
+            const capture = await captureComponentDefinitions();
 
             mockContext = createMockContext();
+            mockContext.componentRegistry = new (jest.requireMock(
+                '@/features/components/services/ComponentRegistryManager'
+            ).ComponentRegistryManager)();
             const { executeProjectCreation } = await import(
                 '@/features/project-creation/handlers/executor'
             );
@@ -245,8 +273,8 @@ describe('Executor - EDS Standard Flow', () => {
             await executeProjectCreation(mockContext as HandlerContext, edsConfig);
 
             // Verify the source URL was set from edsConfig
-            expect(capturedDefinitions).not.toBeNull();
-            const edsEntry = capturedDefinitions!.get('eds-storefront');
+            expect(capture.definitions).not.toBeNull();
+            const edsEntry = capture.definitions!.get('eds-storefront');
             expect(edsEntry).toBeDefined();
             expect(edsEntry.definition.source.url).toBe('https://github.com/myuser/my-custom-repo');
             expect(edsEntry.definition.source.type).toBe('git');
@@ -272,6 +300,9 @@ describe('Executor - EDS Standard Flow', () => {
             };
 
             mockContext = createMockContext();
+            mockContext.componentRegistry = new (jest.requireMock(
+                '@/features/components/services/ComponentRegistryManager'
+            ).ComponentRegistryManager)();
             const { executeProjectCreation } = await import(
                 '@/features/project-creation/handlers/executor'
             );
@@ -315,14 +346,17 @@ describe('Executor - EDS Standard Flow', () => {
             };
 
             mockContext = createMockContext();
+            mockContext.componentRegistry = new (jest.requireMock(
+                '@/features/components/services/ComponentRegistryManager'
+            ).ComponentRegistryManager)();
             // Capture saved projects to verify metadata
-            mockContext.stateManager = {
+            mockContext.stateManager = createMockStateManager({
                 getCurrentProject: jest.fn().mockResolvedValue(null),
                 saveProject: jest.fn().mockImplementation((project) => {
                     savedProjects.push(JSON.parse(JSON.stringify(project)));
                     return Promise.resolve();
                 }),
-            } as any;
+            });
 
             const { executeProjectCreation } = await import(
                 '@/features/project-creation/handlers/executor'
@@ -331,8 +365,8 @@ describe('Executor - EDS Standard Flow', () => {
             await executeProjectCreation(mockContext as HandlerContext, edsConfig);
 
             // Find the project save that has metadata populated (githubRepo is the source for URL derivation)
-            const projectWithMetadata = savedProjects.find(p =>
-                p.componentInstances?.['eds-storefront']?.metadata?.githubRepo
+            const projectWithMetadata = savedProjects.find(
+                (p) => p.componentInstances?.['eds-storefront']?.metadata?.githubRepo
             );
 
             expect(projectWithMetadata).toBeDefined();
@@ -367,26 +401,12 @@ describe('Executor - EDS Standard Flow', () => {
             };
 
             // Override mock to capture component definitions
-            const { cloneAllComponents } = await import('@/features/project-creation/services');
-            let capturedDefinitions: Map<string, any> | null = null;
-            (cloneAllComponents as jest.Mock).mockImplementation(({ componentDefinitions, project }) => {
-                capturedDefinitions = componentDefinitions;
-                componentDefinitionIds = Array.from(componentDefinitions.keys());
-                for (const [id, entry] of componentDefinitions.entries()) {
-                    project.componentInstances = project.componentInstances || {};
-                    project.componentInstances[id] = {
-                        id,
-                        name: entry.definition.name,
-                        type: entry.definition.type,
-                        status: 'installed',
-                        path: `${project.path}/components/${id}`,
-                        lastUpdated: new Date(),
-                    };
-                }
-                return Promise.resolve();
-            });
+            const capture = await captureComponentDefinitions();
 
             mockContext = createMockContext();
+            mockContext.componentRegistry = new (jest.requireMock(
+                '@/features/components/services/ComponentRegistryManager'
+            ).ComponentRegistryManager)();
             const { executeProjectCreation } = await import(
                 '@/features/project-creation/handlers/executor'
             );
@@ -394,10 +414,12 @@ describe('Executor - EDS Standard Flow', () => {
             await executeProjectCreation(mockContext as HandlerContext, headlessConfig);
 
             // Verify the source URL was set from frontendSource
-            expect(capturedDefinitions).not.toBeNull();
-            const headlessEntry = capturedDefinitions!.get('headless');
+            expect(capture.definitions).not.toBeNull();
+            const headlessEntry = capture.definitions!.get('headless');
             expect(headlessEntry).toBeDefined();
-            expect(headlessEntry.definition.source.url).toBe('https://github.com/adobe/citisignal-nextjs');
+            expect(headlessEntry.definition.source.url).toBe(
+                'https://github.com/adobe/citisignal-nextjs'
+            );
         });
     });
 });

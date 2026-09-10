@@ -69,22 +69,61 @@ const aliasPlugin = {
 // ---------------------------------------------------------------------------
 // Plugin: convert CSS imports to style-tag injection (replaces style-loader)
 // ---------------------------------------------------------------------------
-const cssInjectionPlugin = {
-    name: 'css-injection',
-    setup(build) {
-        build.onLoad({ filter: /\.css$/ }, async (args) => {
-            const css = await fs.promises.readFile(args.path, 'utf8');
-            return {
-                contents: `
+/**
+ * The cascade order every layered sheet is written against (ADR-018 §1).
+ *
+ * Kept here as ONE string so the build cannot disagree with the sheets. It is
+ * asserted byte-for-byte against the declarations in `src/` by
+ * `tests/sop/stylesheet-bundles.test.ts`.
+ */
+const LAYER_ORDER = '@layer reset, vendor, theme, overrides;';
+
+/**
+ * Convert CSS imports to style-tag injection (replaces style-loader).
+ *
+ * `layerVendor` is ADR-018 STEP 3, and it is enabled for ONE entry at a time.
+ *
+ * Our rules sit in `@layer theme`. Spectrum's arrive unlayered, and an UNLAYERED
+ * normal declaration beats a LAYERED one however specific the layered rule is —
+ * which is why this codebase carries ~1,300 `!important`. Wrapping Spectrum in
+ * `@layer vendor` puts it below `theme`, so our rules win on their own merits and
+ * the `!important` can eventually go.
+ *
+ * It is per-entry because the whole-repo version was measured on 2026-09-08 and
+ * moved 762 of 2,700 elements (28%) — a redesign, not a refactor, and far too much
+ * to review at once. The sidebar is the smallest surface (46 elements, 21 injected
+ * sheets), so it is where the theory gets tested cheaply. If it is wrong, it is
+ * wrong somewhere a person can look at the whole thing in one screen.
+ */
+function makeCssInjectionPlugin({ layerVendor = false } = {}) {
+    return {
+        name: 'css-injection',
+        setup(build) {
+            build.onLoad({ filter: /\.css$/ }, async (args) => {
+                const raw = await fs.promises.readFile(args.path, 'utf8');
+                // `@import` must stay first in a sheet, and a layer block around one
+                // would be invalid. None of our sheets or Spectrum's use it; assert
+                // rather than assume, because the failure is silent.
+                const vendor = layerVendor && args.path.includes('node_modules');
+                if (vendor && /^\s*@import/m.test(raw)) {
+                    throw new Error(`cannot wrap ${args.path} in @layer vendor: it uses @import`);
+                }
+                const body = vendor ? `@layer vendor {\n${raw}\n}` : raw;
+                const css = layerVendor ? `${LAYER_ORDER}\n${body}` : body;
+                return {
+                    contents: `
 const __s = document.createElement('style');
 __s.textContent = ${JSON.stringify(css)};
 document.head.appendChild(__s);
 `,
-                loader: 'js',
-            };
-        });
-    },
-};
+                    loader: 'js',
+                };
+            });
+        },
+    };
+}
+
+const cssInjectionPlugin = makeCssInjectionPlugin();
 
 // ---------------------------------------------------------------------------
 // Build stamp — write dist/build-info.json naming the checkout, branch, commit
@@ -129,12 +168,60 @@ function writeBuildInfo() {
     }
 }
 
+/**
+ * Write every output through a temp file and a rename, so a build is never
+ * observable half-done.
+ *
+ * WHY. esbuild writes an output file in place, non-atomically. `dist/extension.js`
+ * is ~5MB, so the window where it exists and is TRUNCATED is real, and the
+ * Extension Development Host reads that file the instant it launches. Load it
+ * mid-write and the host dies on sight — which reads as a random, intermittent
+ * crash, because whether it happens depends on the millisecond you pressed F5.
+ *
+ * Reported 2026-09-10: F5 killed the host twice and worked the third time. The
+ * build that produced it had finished 108 seconds earlier, mid-way through the
+ * first two attempts. Nothing was wrong with the extension; it was read while it
+ * was being written.
+ *
+ * A rename within the same directory is atomic on every filesystem this runs on,
+ * so a reader sees the OLD complete file or the NEW complete file and nothing in
+ * between. It applies to the webview bundles too — a half-written bundle blanks a
+ * surface the same way.
+ *
+ * This is a plugin rather than a step in `startContext` because watch-mode
+ * rebuilds happen inside esbuild and never come back through that function.
+ * `onEnd` fires for every rebuild; `startContext` fires once.
+ */
+const atomicWritePlugin = {
+    name: 'atomic-write',
+    setup(build) {
+        // Take writing away from esbuild — `outputFiles` is only populated when
+        // this is false, and we do the writing below.
+        build.initialOptions.write = false;
+        build.onEnd((result) => {
+            if (result.errors.length > 0) return; // a failed build writes nothing
+            for (const file of result.outputFiles ?? []) {
+                const dir = path.dirname(file.path);
+                fs.mkdirSync(dir, { recursive: true });
+                // Same directory, so the rename cannot cross filesystems. Dotted
+                // and pid-suffixed so two concurrent builds cannot collide on it.
+                const tmp = path.join(dir, `.${path.basename(file.path)}.${process.pid}.tmp`);
+                fs.writeFileSync(tmp, file.contents);
+                fs.renameSync(tmp, file.path);
+            }
+        });
+    },
+};
+
 // ---------------------------------------------------------------------------
 // Create a context, run the initial build, and return it for watch mode.
 // In non-watch mode the context is built once and disposed.
 // ---------------------------------------------------------------------------
 async function startContext(name, options) {
-    const ctx = await esbuild.context(options);
+    const ctx = await esbuild.context({
+        ...options,
+        plugins: [...(options.plugins ?? []), atomicWritePlugin],
+    });
     const result = await ctx.rebuild();
     logOutputSizes(result.metafile);
     if (!watch) {
@@ -195,8 +282,12 @@ function runMcpProxyBuild() {
 // ---------------------------------------------------------------------------
 const WEBVIEW_ENTRIES = {
     wizard:       'src/features/project-creation/ui/wizard/index.tsx',
-    // main.tsx, not index.tsx: an index.ts barrel sits beside it, and tsc keeps
-    // only one file per basename — an index.tsx entry here is never typechecked.
+    // main.tsx, not index.tsx. The reason was that an index.ts barrel sat beside
+    // it and tsc keeps only one file per basename, so an index.tsx entry here
+    // would never have been typechecked. THAT BARREL IS GONE (PL-31, 2026-08-31)
+    // and the constraint with it — renaming this to index.tsx would now be safe,
+    // and is deliberately not done here because it is an entry-point rename with
+    // its own blast radius, not part of retiring a barrel.
     dashboard:    'src/features/dashboard/ui/main.tsx',
     configure:    'src/features/dashboard/ui/configure/index.tsx',
     sidebar:      'src/features/sidebar/ui/index.tsx',
@@ -209,9 +300,44 @@ const WEBVIEW_ENTRIES = {
     dataInstaller: 'src/features/data-installer/ui/index.tsx',
 };
 
+/**
+ * Entries built with Spectrum wrapped in `@layer vendor` (ADR-018 step 3).
+ *
+ * ONE at a time, smallest first. Adding an entry here is a visual change that has
+ * to be measured with `.claude/skills/webview-visual-baseline` and looked at by a
+ * person before it lands — see the plugin's comment for why the all-at-once
+ * version was rejected.
+ */
+const LAYERED_VENDOR_ENTRIES = [
+    'sidebar', 'projectsList', 'aiOverview', 'configure',
+    'dashboard', 'dataInstaller', 'integrations', 'wizard',
+];
+
+function pick(entries, names) {
+    return Object.fromEntries(Object.entries(entries).filter(([k]) => names.includes(k)));
+}
+
+/**
+ * Two contexts, because the vendor wrapper is a per-BUILD plugin option and one
+ * build cannot vary it per entry. Both write to the same outdir with the same
+ * entryNames, so the eight bundles land exactly where they always did.
+ */
 function runWebviewBuild() {
-    return startContext('webview', {
-        entryPoints: WEBVIEW_ENTRIES,
+    const layered = LAYERED_VENDOR_ENTRIES;
+    const plain = Object.keys(WEBVIEW_ENTRIES).filter((k) => !layered.includes(k));
+    return Promise.all([
+        runWebviewBuildFor('webview', pick(WEBVIEW_ENTRIES, plain), cssInjectionPlugin),
+        runWebviewBuildFor(
+            'webview-layered',
+            pick(WEBVIEW_ENTRIES, layered),
+            makeCssInjectionPlugin({ layerVendor: true }),
+        ),
+    ]);
+}
+
+function runWebviewBuildFor(label, entryPoints, cssPlugin) {
+    return startContext(label, {
+        entryPoints,
         bundle: true,
         format: 'iife',
         platform: 'browser',
@@ -231,7 +357,7 @@ function runWebviewBuild() {
             // Required for React's dead-code elimination of development warnings
             'process.env.NODE_ENV': production ? '"production"' : '"development"',
         },
-        plugins: [aliasPlugin, cssInjectionPlugin],
+        plugins: [aliasPlugin, cssPlugin],
         logLevel: 'info',
         metafile: true,
     });
@@ -343,7 +469,19 @@ async function main() {
     }
 }
 
-main().catch(e => {
-    console.error(e);
-    process.exit(1);
-});
+// Only build when RUN, not when required.
+//
+// `tests/sop/stylesheet-bundles.test.ts` requires this file to reuse the
+// real WEBVIEW_ENTRIES and the real alias resolution. Without this guard that
+// require would kick off a full build. The exports below exist so the check
+// cannot drift from the build it is checking — a second copy of the alias
+// resolver would eventually disagree with this one, and the check would be
+// confidently wrong about which files are in a bundle.
+if (require.main === module) {
+    main().catch(e => {
+        console.error(e);
+        process.exit(1);
+    });
+}
+
+module.exports = { WEBVIEW_ENTRIES, aliasPlugin, LAYER_ORDER, LAYERED_VENDOR_ENTRIES };

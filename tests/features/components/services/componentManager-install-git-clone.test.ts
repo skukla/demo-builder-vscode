@@ -13,28 +13,20 @@
  */
 
 import { ComponentManager } from '@/features/components/services/componentManager';
-import { Project } from '@/types';
+import { Project } from '@/types/base';
 import { TransformedComponentDefinition } from '@/types/components';
-import { Logger } from '@/types/logger';
-import { ServiceLocator } from '@/core/di/serviceLocator';
-import { CommandExecutor } from '@/core/shell';
+import { CommandExecutor } from '@/core/shell/commandExecutor';
 import {
-    createMockCommandExecutor,
-    createMockLogger,
-    createMockProject,
-    mockSuccessfulExecution,
     mockFileExists,
 } from './testHelpers';
+import { setupComponentManager } from './componentManager.testUtils';
 
-// Mock ServiceLocator
-jest.mock('@/core/di/serviceLocator');
 
 // Mock fs/promises
 jest.mock('fs/promises');
 
 describe('ComponentManager - Installation (Git Clone)', () => {
     let componentManager: ComponentManager;
-    let mockLogger: Logger;
     let mockProject: Project;
     let mockCommandExecutor: CommandExecutor;
 
@@ -46,24 +38,10 @@ describe('ComponentManager - Installation (Git Clone)', () => {
         // (its 404 fell back to the configured tag, so tests passed while the
         // in-flight TLS handle outlived the worker — the "failed to exit
         // gracefully" warning). A mocked 404 exercises the same fallback.
-        jest.spyOn(globalThis, 'fetch').mockResolvedValue({
-            ok: false,
-            status: 404,
-        } as never);
+        jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 404 }));
 
-        // Create mocks
-        mockLogger = createMockLogger();
-        mockProject = createMockProject();
-        mockCommandExecutor = createMockCommandExecutor();
+        ({ componentManager, mockProject, mockCommandExecutor } = setupComponentManager());
 
-        // Mock ServiceLocator
-        (ServiceLocator.getCommandExecutor as jest.Mock).mockReturnValue(mockCommandExecutor);
-
-        // Create ComponentManager instance
-        componentManager = new ComponentManager(mockLogger);
-
-        // Mock successful command execution by default
-        mockSuccessfulExecution(mockCommandExecutor);
     });
 
     describe('Git clone operations', () => {

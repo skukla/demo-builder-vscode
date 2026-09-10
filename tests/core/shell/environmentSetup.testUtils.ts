@@ -5,16 +5,20 @@ import { EnvironmentSetup } from '@/core/shell/environmentSetup';
 import * as fsSync from 'fs';
 import * as os from 'os';
 import * as vscode from 'vscode';
+import { createMockLogger } from '../../helpers/loggerFake';
 
 /**
  * Mock logger instance
  */
-export const mockLogger = {
-    error: jest.fn(),
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-};
+/** The private statics `EnvironmentSetup` memoises, for per-test reset. */
+function envSetupStatics(): { telemetryConfigured: boolean; checkingTelemetry: boolean } {
+    return EnvironmentSetup as unknown as {
+        telemetryConfigured: boolean;
+        checkingTelemetry: boolean;
+    };
+}
+
+export const mockLogger = createMockLogger();
 
 /**
  * Setup all Jest mocks for EnvironmentSetup tests
@@ -25,7 +29,6 @@ export function setupMocks() {
         homedir: jest.fn(() => '/mock/home'),
         platform: jest.fn(() => process.platform),
     }));
-    jest.mock('vscode');
     jest.mock('child_process', () => ({
         execSync: jest.fn(),
     }));
@@ -39,7 +42,7 @@ export function setupMocks() {
  */
 export function createEnvironmentSetup(mockHomeDir: string = '/mock/home'): EnvironmentSetup {
     // Mock vscode.extensions API
-    (vscode as any).extensions = {
+    (vscode as { extensions: Pick<typeof vscode.extensions, 'getExtension'> }).extensions = {
         getExtension: jest.fn(),
     };
 
@@ -47,16 +50,21 @@ export function createEnvironmentSetup(mockHomeDir: string = '/mock/home'): Envi
     (os.homedir as jest.Mock).mockReturnValue(mockHomeDir);
 
     // Reset static flags in EnvironmentSetup
-    (EnvironmentSetup as any).telemetryConfigured = false;
-    (EnvironmentSetup as any).checkingTelemetry = false;
-    (EnvironmentSetup as any).nodeVersionConfigured = false;
-    (EnvironmentSetup as any).checkingNodeVersion = false;
+    // The two private statics this module memoises. Named rather than erased: a
+    // typo in either would otherwise create a NEW static and leave the real one
+    // set, so the next test would inherit the previous one's telemetry state.
+    envSetupStatics().telemetryConfigured = false;
+    envSetupStatics().checkingTelemetry = false;
 
     const instance = new EnvironmentSetup();
 
     // Reset instance caches
-    (instance as any).cachedFnmPath = undefined;
-    (instance as any).cachedAdobeCLINodeVersion = undefined;
+    const caches = instance as unknown as {
+        cachedFnmPath: string | null | undefined;
+        cachedAdobeCLINodeVersion: string | null | undefined;
+    };
+    caches.cachedFnmPath = undefined;
+    caches.cachedAdobeCLINodeVersion = undefined;
 
     return instance;
 }

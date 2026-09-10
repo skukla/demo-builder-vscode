@@ -15,15 +15,16 @@
 
 import { stripRedundantDaLiveSite } from '@/core/state/projectFileLoader';
 import type { Project } from '@/types/base';
+import { createMockProject } from '../../helpers/projectFake';
 
 function projectWith(metadata: Record<string, unknown> | undefined): Project {
-    return {
+    return createMockProject({
         name: 'demo',
         path: '/p',
         componentInstances: metadata
-            ? { 'eds-storefront': { id: 'eds-storefront', metadata } }
+            ? { 'eds-storefront': { id: 'eds-storefront', name: 'EDS Storefront', status: 'ready', metadata } }
             : {},
-    } as unknown as Project;
+    });
 }
 
 describe('stripRedundantDaLiveSite', () => {
@@ -63,5 +64,13 @@ describe('stripRedundantDaLiveSite', () => {
     it('is a no-op when there is no EDS storefront instance', () => {
         const project = projectWith(undefined);
         expect(() => stripRedundantDaLiveSite(project)).not.toThrow();
+    });
+
+    it('is a no-op when the project has no component instances at all', () => {
+        const project = createMockProject({ name: 'demo', path: '/p' });
+        delete project.componentInstances;
+
+        expect(() => stripRedundantDaLiveSite(project)).not.toThrow();
+        expect(project.componentInstances).toBeUndefined();
     });
 });

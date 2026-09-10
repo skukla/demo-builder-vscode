@@ -5,7 +5,7 @@
  * Used for import/export functionality to share settings between projects.
  */
 
-import { stripSecretValues } from '@/features/components/config/envVarKeys';
+import { stripSecretValues } from '@/core/config/envVarKeys';
 import { getAppBuilderComponentEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { Project } from '@/types/base';
 import {

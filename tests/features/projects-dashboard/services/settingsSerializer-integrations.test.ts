@@ -12,8 +12,9 @@ import {
     parseSettingsFile,
     extractSettingsFromProject,
 } from '@/features/projects-dashboard/services/settingsSerializer';
-import type { Project } from '@/types/base';
+import type { AppBuilderComponentState, Project } from '@/types/base';
 import { SETTINGS_FILE_VERSION } from '@/types/settingsFile';
+import { assertOk } from '../../../helpers/resultAssertions';
 
 describe('settingsSerializer', () => {
     describe('extractSettingsFromProject - App Builder integration round-trip', () => {
@@ -132,7 +133,7 @@ describe('settingsSerializer', () => {
                     'broken-entry': {
                         kind: 'integration',
                         status: 'error',
-                    } as never,
+                    } as unknown as AppBuilderComponentState,
                     'acme-widget': CUSTOM_IMPORT_STATE,
                 },
             });
@@ -211,7 +212,7 @@ describe('settingsSerializer', () => {
             expect(result.selections).toEqual({
                 appBuilder: ['firefly-image-gen', 'acme-widget'],
             });
-            expect(result.configs).toEqual({});
+            expect(result.configs).toStrictEqual({});
             expect(result.version).toBe(SETTINGS_FILE_VERSION);
             expect(result.source.project).toBe('integrations-project');
         });
@@ -239,28 +240,26 @@ describe('settingsSerializer', () => {
             const exported = extractSettingsFromProject(project, false);
             const parseResult = parseSettingsFile(JSON.stringify(exported));
 
-            expect(parseResult.success).toBe(true);
-            if (parseResult.success) {
-                expect(parseResult.settings.appBuilderComponentSources).toEqual({
-                    'firefly-image-gen': {
-                        owner: 'skukla',
-                        repo: 'app-builder-shell',
-                        branch: 'main',
-                        name: 'Firefly Image Gen',
-                    },
-                    'order-sync': {
-                        owner: 'skukla',
-                        repo: 'app-builder-shell',
-                        branch: 'main',
-                        name: 'Order Sync',
-                    },
-                    'acme-widget': { owner: 'acme', repo: 'widget', branch: 'dev' },
-                });
-                expect(parseResult.settings.additionalConsoleApis).toBeUndefined();
-                expect(parseResult.settings.componentApiPicks).toEqual({
-                    __existing__: ['AssetComputeSDK', 'CCAPI'],
-                });
-            }
+            assertOk(parseResult);
+            expect(parseResult.settings.appBuilderComponentSources).toEqual({
+                'firefly-image-gen': {
+                    owner: 'skukla',
+                    repo: 'app-builder-shell',
+                    branch: 'main',
+                    name: 'Firefly Image Gen',
+                },
+                'order-sync': {
+                    owner: 'skukla',
+                    repo: 'app-builder-shell',
+                    branch: 'main',
+                    name: 'Order Sync',
+                },
+                'acme-widget': { owner: 'acme', repo: 'widget', branch: 'dev' },
+            });
+            expect(parseResult.settings.additionalConsoleApis).toBeUndefined();
+            expect(parseResult.settings.componentApiPicks).toEqual({
+                __existing__: ['AssetComputeSDK', 'CCAPI'],
+            });
         });
     });
 });

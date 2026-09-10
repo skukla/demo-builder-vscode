@@ -314,15 +314,76 @@ function journey(sessionId) {
         };
     });
 
+    // ── The four journey metrics (AI-1d). LEADS, not verdicts — each names what
+    // happened in the arc; only reading the rows says whether it was waste. ──
+    const readLike = (t) => /^(get|list|check|find|verify|read|describe|show|inspect)_/.test(t);
+    // 1. Turns to first ACTION — how far in before the journey did anything
+    //    (first call to a non-read tool of ours). Null: the journey was all reads.
+    const firstAction = rows.find((r) => !readLike(r.tool)) || null;
+    // 2. Re-orientation — repeat calls to read-like tools. The repeat is the
+    //    signal ("re-asked what it already knew"); distance tells near from far.
+    const seenReads = new Set();
+    let reorientations = 0;
+    for (const r of rows.filter((x) => readLike(x.tool))) {
+        if (seenReads.has(r.tool)) reorientations++;
+        else seenReads.add(r.tool);
+    }
+    // 3. Bash moments, by arc third — early is a discovery gap, late a capability
+    //    gap (the item's framing). Buckets over ALL events so the arc is real time.
+    const bashIdx = events
+        .map((e, i) => ({ e, i }))
+        .filter(({ e }) => e.kind === 'call' && /__Bash$|^Bash$/.test(e.name))
+        .map(({ i }) => i);
+    const third = (i) => (i < events.length / 3 ? 'early' : i < (2 * events.length) / 3 ? 'mid' : 'late');
+    const bashArc = { early: 0, mid: 0, late: 0 };
+    for (const i of bashIdx) bashArc[third(i)]++;
+    // 4. Interventions — the user spoke right after one of our calls answered.
+    //    The clearest available marker of the agent being off the path.
+    const interventions = rows.filter((r) => r.flags.includes('USER-SPOKE-NEXT')).length;
+    // 5. Calls by SERVER — the tool-name prefix (mcp__<server>__) carries
+    //    provenance, so the journey says which installed surfaces it actually
+    //    used. A journey that never touches a sibling server (dropins,
+    //    commerce-extensibility, playwright) while doing that server's job by
+    //    hand is a ROUTING gap, distinct from a missing tool.
+    const byServer = {};
+    for (const e of events) {
+        if (e.kind !== 'call') continue;
+        const m = /^mcp__([^_]+(?:-[^_]+)*)__/.exec(e.name);
+        const server = m ? m[1] : (/^Bash$|__Bash$/.test(e.name) ? 'bash' : 'built-in');
+        byServer[server] = (byServer[server] || 0) + 1;
+    }
+    const metrics = {
+        turnsToFirstAction: firstAction
+            ? { callNumber: firstAction.n, tool: firstAction.tool }
+            : null,
+        reorientations,
+        bash: { total: bashIdx.length, ...bashArc },
+        interventions,
+        byServer,
+    };
+
     if (opt.json) {
         console.log(JSON.stringify({ session: basename(file), userTurns,
-            totalCalls: calls.length, ourCalls: rows.length, rows }, null, 2));
+            totalCalls: calls.length, ourCalls: rows.length, metrics, rows }, null, 2));
         return;
     }
     const L = [];
     L.push(`# Journey — ${basename(file)}\n`);
     L.push(`**${userTurns}** turns you actually typed · **${calls.length}** tool calls, ` +
            `**${rows.length}** of them ours.\n`);
+    L.push('## Journey metrics (leads, not verdicts)\n');
+    L.push(`- **First action**: ${firstAction
+        ? `call #${firstAction.n} (\`${firstAction.tool}\`)` +
+          (firstAction.n > 1 ? ` — the ${firstAction.n - 1} call${firstAction.n > 2 ? 's' : ''} before it were reads` : ' — the journey acted immediately')
+        : 'never — every one of our calls was a read'}`);
+    L.push(`- **Re-orientations**: ${reorientations} repeat read${reorientations === 1 ? '' : 's'} ` +
+           '(a read-like tool asked again; near repeats mean the answer did not stick)');
+    L.push(`- **Bash moments**: ${bashIdx.length} total — ${bashArc.early} early / ${bashArc.mid} mid / ` +
+           `${bashArc.late} late (early = discovery gap, late = capability gap)`);
+    L.push(`- **Interventions**: ${interventions} — the user spoke immediately after one of our calls`);
+    const servers = Object.entries(byServer).sort((a, b) => b[1] - a[1])
+        .map(([s2, n]) => `${s2} ${n}`).join(' · ');
+    L.push(`- **Calls by server**: ${servers || '(none)'} — a sibling server at 0 while its job was done by hand is a ROUTING gap\n`);
     if (!rows.length) {
         L.push('_This session never called a Demo Builder tool._\n');
         console.log(L.join('\n'));

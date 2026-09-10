@@ -4,15 +4,16 @@
  * Shared mocks, factories, and utilities for mesh deployer test suite.
  */
 
-import { Project } from '@/types';
-import { CommandExecutor } from '@/core/shell';
+import { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
+import { createMockProject as createMockProjectBase } from '../../../helpers/projectFake';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 /**
  * Creates a test project with Commerce configuration
  */
-export function createMockProject(overrides: Partial<Project> = {}): Project {
-    return {
+export function createMeshProject(overrides: Partial<Project> = {}): Project {
+    return createMockProjectBase({
         name: 'test-project',
         path: '/test/project',
         status: 'ready',
@@ -29,34 +30,17 @@ export function createMockProject(overrides: Partial<Project> = {}): Project {
             },
         },
         ...overrides,
-    };
+    })
 }
 
-/**
- * Creates a mock CommandExecutor with typed methods
- */
-export function createMockCommandExecutor(): jest.Mocked<CommandExecutor> {
-    return {
-        execute: jest.fn().mockResolvedValue({
-            stdout: 'https://mesh-endpoint.adobe.io/graphql',
-            stderr: '',
-            code: 0,
-            duration: 1000,
-        }),
-    } as unknown as jest.Mocked<CommandExecutor>;
-}
+/** Canonical command-executor fake (ADR-016). */
+export { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 /**
  * Creates a real Logger instance for testing (no mocking needed)
  */
 export function createTestLogger(): Logger {
-    return {
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        trace: jest.fn(),
-    };
+    return createMockLogger();
 }
 
 /**
@@ -73,20 +57,6 @@ export function createProjectWithoutCommerce(): Project {
 }
 
 /**
- * Creates a project with null Commerce configuration
- */
-export function createProjectWithNullCommerce(): Project {
-    return {
-        name: 'test-project',
-        path: '/test/project',
-        status: 'ready',
-        created: new Date(),
-        lastModified: new Date(),
-        commerce: null as any,
-    };
-}
-
-/**
  * Command execution result types for testing
  */
 export interface MockCommandResult {
@@ -96,28 +66,8 @@ export interface MockCommandResult {
     duration: number;
 }
 
-/**
- * Creates a successful command result
- */
-export function createSuccessResult(
-    stdout: string = 'https://mesh-endpoint.adobe.io/graphql'
-): MockCommandResult {
-    return {
-        stdout,
-        stderr: '',
-        code: 0,
-        duration: 1000,
-    };
-}
+/** Canonical command result (ADR-016). */
+export { createSuccessResult } from '../../../helpers/commandResultFake';
 
-/**
- * Creates a failed command result
- */
-export function createFailureResult(stderr: string = 'Command failed'): MockCommandResult {
-    return {
-        stdout: '',
-        stderr,
-        code: 1,
-        duration: 100,
-    };
-}
+/** Canonical command result (ADR-016). */
+export { createFailureResult } from '../../../helpers/commandResultFake';

@@ -104,6 +104,9 @@ export interface SetupExtras {
     onArchitectureChange?: (oldStackId: string, newStackId: string) => void;
     blockLibraryDefaults?: string[];
     customBlockLibraryDefaults?: CustomBlockLibrary[];
+    /** Override the catalog the hook resolves stacks and packages against. */
+    packages?: DemoPackage[];
+    stacks?: Stack[];
 }
 
 /**
@@ -112,7 +115,13 @@ export interface SetupExtras {
  * (mirrors the real reducer's functional update).
  */
 export function setup(initial: Partial<WizardState> = {}, extras: SetupExtras = {}) {
-    const { onArchitectureChange, blockLibraryDefaults, customBlockLibraryDefaults } = extras;
+    const {
+        onArchitectureChange,
+        blockLibraryDefaults,
+        customBlockLibraryDefaults,
+        packages = [citisignal, custom, withAddons],
+        stacks = [edsStack, headlessStack, edsRequiresStack],
+    } = extras;
     const stateRef: { current: WizardState } = {
         current: {
             currentStep: 'welcome',
@@ -126,17 +135,34 @@ export function setup(initial: Partial<WizardState> = {}, extras: SetupExtras = 
         stateRef.current = { ...stateRef.current, ...partial };
     });
 
-    const { result, rerender } = renderHook(
-        ({ state }: { state: WizardState }) =>
-            useProjectBuilder(state, updateState, {
-                packages: [citisignal, custom, withAddons],
-                stacks: [edsStack, headlessStack, edsRequiresStack],
+    const { result, rerender: rerenderHook } = renderHook(
+        ({ state, updater }: { state: WizardState; updater: typeof updateState }) =>
+            useProjectBuilder(state, updater, {
+                packages,
+                stacks,
                 onArchitectureChange,
                 blockLibraryDefaults,
                 customBlockLibraryDefaults,
             }),
-        { initialProps: { state: stateRef.current } }
+        { initialProps: { state: stateRef.current, updater: updateState } }
     );
 
-    return { result, rerender, updateState, stateRef };
+    /** Re-render with a new state, keeping the original updater. */
+    const rerender = ({ state }: { state: WizardState }): void =>
+        rerenderHook({ state, updater: updateState });
+
+    /**
+     * Re-render with a SECOND updater and hand it back.
+     *
+     * The wizard passes a fresh `updateState` down whenever its own state moves,
+     * so a handler memoised without it keeps writing through the updater from the
+     * render it was made in — a write that lands nowhere the wizard is reading.
+     */
+    const swapUpdater = (state: WizardState = stateRef.current): jest.Mock => {
+        const next = jest.fn();
+        rerenderHook({ state, updater: next as unknown as typeof updateState });
+        return next;
+    };
+
+    return { result, rerender, swapUpdater, updateState, stateRef };
 }

@@ -13,8 +13,8 @@ import { handleListOrgConsoleApis } from '@/features/project-creation/handlers/c
 import { createApiSubscriberClient } from '@/features/app-builder/services/apiSubscriberClientAdapter';
 import { getAppBuilderComponentEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { HandlerContext } from '@/types/handlers';
-
-jest.mock('vscode');
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 
 const mockGetServicesForOrg = jest.fn();
 jest.mock('@/features/app-builder/services/apiSubscriberClientAdapter', () => ({
@@ -73,10 +73,10 @@ const ORG_SERVICES = [
 ];
 
 function makeContext(): HandlerContext {
-    return {
-        logger: { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() },
+    return createMockHandlerContext({
+        logger: createMockLogger(),
         sendMessage: jest.fn(),
-    } as unknown as HandlerContext;
+    });
 }
 
 type ApiRow = {
@@ -178,6 +178,17 @@ describe('handleListOrgConsoleApis', () => {
             expect(apis.find((a) => a.code === 'AdobeIOManagementAPISDK')?.locked).toBe(true);
             expect(apis.find((a) => a.code === 'FireflyAPISDK')?.locked).toBe(false);
             expect(apis.find((a) => a.code === 'GraphQLServiceSDK')?.locked).toBe(false);
+        });
+
+        it('never consults the catalog when the payload carries no component ids', async () => {
+            const result = await handleListOrgConsoleApis(makeContext(), {});
+
+            expect(result.success).toBe(true);
+            expect(getAppBuilderComponentEntry).not.toHaveBeenCalled();
+            // Baseline only — nothing was selected, so nothing else is locked.
+            const apis = apisOf(result);
+            expect(apis.find((a) => a.code === 'AdobeIOManagementAPISDK')?.locked).toBe(true);
+            expect(apis.filter((a) => a.locked)).toHaveLength(1);
         });
 
         it('treats custom owner-repo ids as inert (baseline-only locks)', async () => {
@@ -348,6 +359,20 @@ describe('handleListOrgConsoleApis', () => {
             expect(mockGetServicesForOrg).not.toHaveBeenCalled();
         });
 
+        it('fails gracefully when the token org read yields nothing at all', async () => {
+            // getOrganizationsSdkOnly returns AdobeOrg[] | undefined — an absent list
+            // is a different answer from an empty one, and indexing it directly would
+            // throw out of the handler before the try/catch below could dress it up.
+            mockGetCachedOrganization.mockReturnValue(undefined);
+            mockGetOrganizationsSdkOnly.mockResolvedValue(undefined);
+
+            const result = await handleListOrgConsoleApis(makeContext(), { componentIds: [] });
+
+            expect(result.success).toBe(false);
+            expect(result.error).toMatch(/organization/i);
+            expect(mockGetServicesForOrg).not.toHaveBeenCalled();
+        });
+
         it('resolves the org from the token when the in-memory cache is cold', async () => {
             // Editing a loaded project (Edit → Integrations → Change APIs) reaches this
             // handler without a fresh sign-in warming the auth service's in-memory org
@@ -423,7 +448,7 @@ describe('attribution (step 04)', () => {
         const row = apisOf(result).find((a) => a.code === 'AdobeIOManagementAPISDK');
         expect(row?.ownership).toBe('baseline');
         // Naming an owner here would be a lie — nothing chose it, it is always on.
-        expect(row?.requiredBy).toEqual([]);
+        expect(row?.requiredBy).toStrictEqual([]);
     });
 
     it("treats the asking integration's own requirement as mine, not another's", async () => {
@@ -461,6 +486,6 @@ describe('attribution (step 04)', () => {
         const row = apisOf(result).find((a) => a.code === 'GraphQLServiceSDK');
         expect(row?.locked).toBe(false);
         expect(row?.ownership).toBeUndefined();
-        expect(row?.requiredBy).toEqual([]);
+        expect(row?.requiredBy).toStrictEqual([]);
     });
 });

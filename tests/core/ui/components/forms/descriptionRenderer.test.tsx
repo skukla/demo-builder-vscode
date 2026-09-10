@@ -25,6 +25,9 @@ jest.mock('@/core/ui/utils/vscode-api', () => ({
     },
 }));
 
+/** getByText normalizes whitespace by default; these assertions need it verbatim. */
+const exact = (text: string) => text;
+
 describe('descriptionRenderer', () => {
     beforeEach(() => {
         mockPostMessage.mockClear();
@@ -79,6 +82,17 @@ describe('descriptionRenderer', () => {
                 { orgCode: 'demosystem' },
             );
             expect(result).toBe('https://example.com/static/path');
+        });
+
+        it('rejects a substituted value that smuggles in another placeholder', () => {
+            // The leftover-placeholder check runs AFTER substitution, so this is
+            // the only way to reach it: every token the template itself declares
+            // has already been resolved or refused above.
+            const result = resolveExternalUrl(
+                'https://example.com/{orgCode}/instances',
+                { orgCode: '{nested}' },
+            );
+            expect(result).toBeNull();
         });
     });
 
@@ -135,6 +149,76 @@ describe('descriptionRenderer', () => {
             );
             // No clickable link should appear when the placeholder cannot be resolved.
             expect(screen.queryByRole('link')).not.toBeInTheDocument();
+        });
+
+        it('returns the raw string, not a fragment, when there is nothing to interpolate', () => {
+            // Callers hand this straight to Spectrum's `description` prop, which
+            // treats a string and an element differently.
+            expect(renderTextWithCopyable('Plain description text.')).toBe(
+                'Plain description text.',
+            );
+        });
+
+        it('a backtick-wrapped non-URL renders as copyable text, not a link', () => {
+            const { container } = renderWithProviders(
+                <>{renderTextWithCopyable('Set `MESH_ENDPOINT` before you start.')}</>,
+            );
+
+            const copyable = container.querySelector('code.copyable-text');
+            expect(copyable).toBeInTheDocument();
+            expect(copyable!.textContent).toContain('MESH_ENDPOINT');
+            expect(screen.queryByRole('link')).not.toBeInTheDocument();
+        });
+
+        it('an http:// URL is a link too, not only https://', () => {
+            renderWithProviders(<>{renderTextWithCopyable('Try `http://localhost:3000`.')}</>);
+            expect(screen.getByRole('link', { name: 'http://localhost:3000' }))
+                .toBeInTheDocument();
+        });
+
+        it('the plain segments around a backticked one render as themselves', () => {
+            renderWithProviders(
+                <>{renderTextWithCopyable('Set `MESH_ENDPOINT` before you start.')}</>,
+            );
+            // `exact` keeps the leading/trailing spaces, which is the point:
+            // a mangled segment loses a character off each end.
+            expect(screen.getByText('Set ', { normalizer: exact })).toBeInTheDocument();
+            expect(screen.getByText(' before you start.', { normalizer: exact }))
+                .toBeInTheDocument();
+        });
+
+        it('a stray trailing backtick stays literal text', () => {
+            // The segment ENDS with a backtick and does not open with one. It is
+            // not a wrapped segment and must not be sliced as though it were.
+            renderWithProviders(<>{renderTextWithCopyable('Use `code` and a stray `')}</>);
+            expect(screen.getByText(' and a stray `', { normalizer: exact }))
+                .toBeInTheDocument();
+        });
+
+        it('a segment that opens with a backtick and never closes stays literal text', () => {
+            // Degenerate but reachable: a run of backticks splits into a trailing
+            // segment that opens one and closes nothing.
+            renderWithProviders(<>{renderTextWithCopyable('```a``a')}</>);
+            expect(screen.getByText('`a')).toBeInTheDocument();
+        });
+    });
+
+    describe('ClickableUrl — keyboard', () => {
+        function renderLink() {
+            renderWithProviders(<>{renderTextWithCopyable('Go to `https://example.com/page`.')}</>);
+            return screen.getByRole('link', { name: 'https://example.com/page' });
+        }
+
+        it.each([['Enter'], [' ']])('%s opens the URL externally', (key) => {
+            fireEvent.keyDown(renderLink(), { key });
+            expect(mockPostMessage).toHaveBeenCalledWith('openExternal', {
+                url: 'https://example.com/page',
+            });
+        });
+
+        it('any other key does nothing', () => {
+            fireEvent.keyDown(renderLink(), { key: 'a' });
+            expect(mockPostMessage).not.toHaveBeenCalled();
         });
     });
 });

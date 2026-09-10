@@ -20,9 +20,51 @@ Parse a Demo Builder debug-log dump to the actual failure fast. The logs mix thr
 the real signal, verbose-but-healthy progress, and **alarming-looking lines that are benign
 by design**. Knowing which is which is the whole skill.
 
+## The host DIED — don't ask for a paste, go read the logs yourself
+
+**"The extension host started, then died" is not an extension-log question.** A JS
+error in `activate()` is caught and logged; it does not kill the process. A host
+that exits was killed at the PROCESS level, and none of our channels will contain a
+word about it. Four places have the answer, and all four are files on disk you can
+read without the user doing anything:
+
+```bash
+L=~/"Library/Application Support/Code/logs"
+S=$(ls -dt "$L"/*/ | head -1)          # newest session
+grep -E "Extension host with pid|crashed with" "$S/main.log" | tail -20
+ls -t ~/"Library/Logs/DiagnosticReports/Code Helper (Plugin)"-*.ips | head -3
+```
+
+| Where | What it tells you |
+|---|---|
+| `logs/<session>/main.log` | `Extension host with pid N exited with code: C` — and whether it was `crashed` |
+| `logs/<session>/window<N>/exthost/exthost.log` | the host's own startup; a window dir with NO `exthost/` died before it could write one |
+| `~/Library/Logs/DiagnosticReports/Code Helper (Plugin)-*.ips` | **the actual stack.** JSON: line 1 is a header, the rest is the body |
+| `logs/<session>/window<N>/exthost/skukla.adobe-demo-builder/` | our own channels — only useful once the host SURVIVED |
+
+Read the `.ips` body with `json.loads(raw.partition('\n')[2])`, then
+`d['threads'][d['faultingThread']]['frames']` for the symbols. **Check every recent
+report, not just the newest** — "all eight have the same stack" is a conclusion;
+one report is an anecdote.
+
+**Exit code 6 = SIGABRT = `abort()`**, which is native, never a JS throw. Measured
+2026-09-10, all eight of that day's crashes: `node::inspector::Agent::
+ToggleNetworkTracking` → `abort`. VS Code's JS debug adapter sends a CDP
+`Network.enable` on attach, Node's inspector fails an assertion handling it, and the
+host dies before our code runs. Fixed by `debug.javascript.enableNetworkView: false`
+in `.vscode/settings.json`, where the full note lives. It presents as INTERMITTENT —
+dies once or twice, then comes up fine — which is exactly what sends you hunting
+through activation code for a bug that is not there.
+
+The trap: an intermittent host death invites a build-race explanation, and a build
+race is a real and separate thing (`dist/extension.js` is 5MB and was written
+non-atomically until 2026-09-10). Both were true that day; only one was killing the
+host. The crash report is what tells them apart, and it costs one command.
+
 ## When NOT to use
 - The user reports a UI symptom with no logs → ask for the Debug Logs channel dump first
   ("Demo Builder: Debug Logs" output channel; there's also a quieter "User Logs" channel).
+- **The host exits or crashes → the section above, not the procedure below.**
 - Jest/test output → that's not extension logging; read the test failure directly.
 - You need to ADD logging → `src/core/logging/` (StepLogger templates in
   `src/core/logging/config/logging.json`), not this skill.

@@ -1,39 +1,24 @@
+import './ConfigureScreen.mocks';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { ConfigureScreen } from '@/features/dashboard/ui/configure/ConfigureScreen';
 import '@testing-library/jest-dom';
-import { mockProject, mockComponentsData, selectSection, railTab } from './ConfigureScreen.testUtils';
-
-// Mock hooks
-jest.mock('@/core/ui/hooks', () => ({
-    useSelectableDefault: jest.fn(() => ({})),
-    useFocusTrap: jest.fn(() => ({ current: null })),
-}));
+import {
+    mockProject,
+    mockComponentsData,
+    selectSection,
+    railTab,
+} from './ConfigureScreen.testUtils';
 
 jest.mock('@/core/ui/hooks/useSelectableDefault', () => ({
     useSelectableDefault: jest.fn(() => ({})),
 }));
 
-// Mock WebviewClient
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        postMessage: jest.fn(),
-        request: jest.fn(),
-        onMessage: jest.fn(() => jest.fn()),
-    },
-}));
-
 // Mock layout components. The shell + rail are NOT mocked (direct-path imports) — the
 // rail is what these tests use to reach a section, and what carries the error marker.
-jest.mock('@/core/ui/components/layout', () => ({
-    PageHeader: ({ title, subtitle }: any) => (
-        <div data-testid="page-header" className="border-b bg-gray-75">
-            <h1>{title}</h1>
-            {subtitle && <h3>{subtitle}</h3>}
-        </div>
-    ),
+jest.mock('@/core/ui/components/layout/PageFooter', () => ({
     PageFooter: ({ leftContent, rightContent }: any) => (
         <div data-testid="page-footer" className="border-t bg-gray-75 max-w-800">
             <div data-testid="footer-left">{leftContent}</div>
@@ -42,13 +27,18 @@ jest.mock('@/core/ui/components/layout', () => ({
     ),
 }));
 
+jest.mock('@/core/ui/components/layout/PageHeader', () => ({
+    PageHeader: ({ title, subtitle }: any) => (
+        <div data-testid="page-header" className="border-b bg-gray-75">
+            <h1>{title}</h1>
+            {subtitle && <h3>{subtitle}</h3>}
+        </div>
+    ),
+}));
+
 // Helper to wrap component in Provider
 const renderWithProvider = (component: React.ReactElement) => {
-    return render(
-        <Provider theme={defaultTheme}>
-            {component}
-        </Provider>
-    );
+    return render(<Provider theme={defaultTheme}>{component}</Provider>);
 };
 
 describe('ConfigureScreen - Validation', () => {
@@ -59,7 +49,7 @@ describe('ConfigureScreen - Validation', () => {
         it('should validate required fields on load', () => {
             renderWithProvider(
                 <ConfigureScreen
-                    project={mockProject as any}
+                    project={mockProject}
                     componentsData={mockComponentsData}
                     existingEnvValues={{}}
                 />
@@ -73,10 +63,7 @@ describe('ConfigureScreen - Validation', () => {
         it('should validate URL fields', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             renderWithProvider(
-                <ConfigureScreen
-                    project={mockProject as any}
-                    componentsData={mockComponentsData}
-                />
+                <ConfigureScreen project={mockProject} componentsData={mockComponentsData} />
             );
 
             selectSection('Adobe Commerce');
@@ -113,7 +100,7 @@ describe('ConfigureScreen - Validation', () => {
 
             renderWithProvider(
                 <ConfigureScreen
-                    project={mockProject as any}
+                    project={mockProject}
                     componentsData={mockComponentsData}
                     existingEnvValues={validConfig}
                 />
@@ -152,7 +139,7 @@ describe('ConfigureScreen - Validation', () => {
 
             renderWithProvider(
                 <ConfigureScreen
-                    project={mockProject as any}
+                    project={mockProject}
                     componentsData={mockComponentsData}
                     existingEnvValues={validConfig}
                 />
@@ -185,7 +172,7 @@ describe('ConfigureScreen - Validation', () => {
 
             renderWithProvider(
                 <ConfigureScreen
-                    project={mockProject as any}
+                    project={mockProject}
                     componentsData={mockComponentsData}
                     existingEnvValues={validConfig}
                 />

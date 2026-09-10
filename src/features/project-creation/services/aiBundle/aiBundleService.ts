@@ -33,7 +33,7 @@ import {
 import { writeMcpConfigs } from './mcpConfigWriter';
 import { writeSkillFiles } from './skillsWriter';
 import { AI_CONTEXT_VERSION } from '@/core/constants';
-import { getLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
 import stacksConfig from '@/features/components/config/stacks.json';
 import type { Project } from '@/types/base';
 import type { Stack } from '@/types/stacks';

@@ -12,7 +12,7 @@
 
 import { useCallback } from 'react';
 import { useActivateOnKey } from '@/core/ui/hooks/useActivateOnKey';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 
 /** How a surface opens a project; `forceNewWindow` requests a new VS Code window. */
 export type ProjectSelectHandler = (

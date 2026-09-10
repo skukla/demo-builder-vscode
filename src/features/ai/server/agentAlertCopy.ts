@@ -162,6 +162,20 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         // The deployment could be redeployed, but the local files are deleted.
         sessionGrant: false,
     },
+    delete_event_registration: {
+        action: 'Delete an event registration',
+        consequence:
+            'Stops Adobe I/O event delivery for this registration. Anything consuming its journal or webhook goes quiet.',
+        target: ['registrationId'],
+        sessionGrant: false,
+    },
+    delete_event_provider: {
+        action: 'Delete an event provider',
+        consequence:
+            'Deletes the provider (and the named registrations first) from the project workspace. Events of these types can no longer be published.',
+        target: ['providerId'],
+        sessionGrant: false,
+    },
     migrate_storefront_name: {
         action: 'Rename this storefront',
         consequence:
@@ -193,7 +207,8 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     },
     republish: {
         action: 'Republish the storefront',
-        consequence: 'Pushes the current configuration live. Visitors see the change within minutes.',
+        consequence:
+            'Pushes the current configuration live. Visitors see the change within minutes.',
         target: [],
         // Repeatable and recoverable, and it fires several times in one flow -
         // the case a grant exists for.
@@ -217,7 +232,7 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     start_datapack_export: {
         action: 'Export sample data',
         consequence:
-            'Captures this instance\'s data into the shared catalogue, where other people will see it.',
+            "Captures this instance's data into the shared catalogue, where other people will see it.",
         // The pack and the store it is captured FROM. `confirmName` is the
         // proof-of-intent echo, not the target.
         target: ['datapackName', 'version', 'commerceInstance'],

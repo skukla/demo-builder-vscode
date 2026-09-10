@@ -17,6 +17,12 @@ import {
     updateCommitShaWithRollback,
 } from '@/features/updates/services/updateCore';
 import { shouldSkipBlockLibrary } from '@/features/updates/commands/updateTypes';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
+import { createMockProject } from '../../../helpers/projectFake';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import type { InstalledBlockLibrary } from '@/types/blockLibraries';
 
 const syncForkMock = jest.fn();
 const syncWithTemplateMock = jest.fn();
@@ -24,13 +30,6 @@ const updateLastSyncedCommitMock = jest.fn();
 const updateComponentMock = jest.fn();
 const executeMock = jest.fn();
 
-jest.mock(
-    'vscode',
-    () => ({
-        workspace: { getConfiguration: jest.fn() },
-    }),
-    { virtual: true }
-);
 
 jest.mock('@/features/updates/services/forkSyncService', () => ({
     ForkSyncService: jest.fn(() => ({ syncFork: syncForkMock })),
@@ -44,16 +43,21 @@ jest.mock('@/features/updates/services/templateSyncService', () => ({
 jest.mock('@/features/updates/services/componentUpdater', () => ({
     ComponentUpdater: jest.fn(() => ({ updateComponent: updateComponentMock })),
 }));
-jest.mock('@/features/project-creation/services', () => ({
+jest.mock('@/features/project-creation/services/aiBundle/aiBundleService', () => ({
     generateAIContextFiles: jest.fn(),
+}));
+
+jest.mock('@/features/project-creation/services/aiBundle/aiDefaultsInstaller', () => ({
     // The MCP packages live in a per-project ISOLATED tools dir, never the
     // storefront's node_modules — `aiDefaultsInstaller` calls this resolver
     // "the single source of truth" for that location.
     resolveMcpToolsDir: (projectPath: string) => `${projectPath}/.demo-builder-mcp`,
 }));
-jest.mock('@/core/di', () => ({
-    ServiceLocator: { getCommandExecutor: () => ({ execute: executeMock }) },
-}));
+/**
+ * CONVERTED 2026-08-28 (ADR-015): the executor arrives in the context, so this
+ * suite no longer mocks the service registry.
+ */
+const executor = createMockCommandExecutor({ execute: executeMock });
 jest.mock('@/features/updates/services/updateCore', () => ({
     applyBlockLibraryUpdateResolved: jest.fn(),
     updateCommitShaWithRollback: jest.fn(),
@@ -83,24 +87,41 @@ function setSyncBehavior(value: 'ask' | 'enabled' | 'disabled'): void {
     getConfigMock.mockReturnValue({ get: jest.fn((_k: string, def: unknown) => value ?? def) });
 }
 
+/**
+ * `secrets: {}` was a standing claim that an empty object is a `SecretStorage`, and
+ * the one-method `stateManager` beside it the same claim about a class with twenty.
+ * Both held only because the whole object was cast at every call site, which also
+ * meant nothing checked the OTHER members against `UpdateContext`.
+ */
 const ctx = {
-    secrets: {},
+    secrets: createMockSecretStorage().secrets,
     extensionPath: '/ext',
-    stateManager: { saveProject: jest.fn(async () => undefined) },
-    logger: {
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        debug: jest.fn(),
-        trace: jest.fn(),
-    },
-} as never;
+    stateManager: createMockStateManager(),
+    commandManager: executor,
+    logger: createMockLogger(),
+};
 
-const project = {
+/** A real `Project` — `created`, `lastModified` and `status` are required. */
+const project = createMockProject({
     name: 'demo',
     path: '/p/demo',
-    installedInspectorSdk: { commitSha: 'old' },
-} as never;
+    installedInspectorSdk: { commitSha: 'old', installedAt: '2026-01-01T00:00:00.000Z' },
+});
+
+/**
+ * A faithful `InstalledBlockLibrary`. The fixtures below named only `name`; nothing
+ * broke because these tests hand the library to a MOCKED applier and assert on the
+ * call, but a fixture the real type rejects is not evidence about the real type.
+ */
+function installedLibrary(name: string): InstalledBlockLibrary {
+    return {
+        name,
+        installedAt: '2026-01-01T00:00:00.000Z',
+        source: { owner: 'acme', repo: 'blocks', branch: 'main' },
+        commitSha: 'aaa',
+        blockIds: ['hero'],
+    };
+}
 
 function emptySelections(): UpdateSelections {
     return {
@@ -171,14 +192,14 @@ describe('applyUpdatesHeadless', () => {
             '2.0.0'
         );
         expect(
-            (ctx as never as { stateManager: { saveProject: jest.Mock } }).stateManager.saveProject
+            ctx.stateManager.saveProject
         ).toHaveBeenCalledTimes(1);
     });
 
     it('applies a block library with the resolved behavior when syncBehavior is enabled', async () => {
         setSyncBehavior('enabled');
         const sel = emptySelections();
-        sel.blockLibrary = [{ project, library: { name: 'Lib A' } as never, latestCommit: 'bbb' }];
+        sel.blockLibrary = [{ project, library: installedLibrary('Lib A'), latestCommit: 'bbb' }];
         const res = await applyUpdatesHeadless(sel, ctx);
         expect(applyBlockResolvedMock).toHaveBeenCalledWith(
             expect.objectContaining({ latestCommit: 'bbb' }),
@@ -192,7 +213,7 @@ describe('applyUpdatesHeadless', () => {
     it('defers a block library to disabled (safe) when syncBehavior is ask', async () => {
         setSyncBehavior('ask');
         const sel = emptySelections();
-        sel.blockLibrary = [{ project, library: { name: 'Lib A' } as never, latestCommit: 'bbb' }];
+        sel.blockLibrary = [{ project, library: installedLibrary('Lib A'), latestCommit: 'bbb' }];
         const res = await applyUpdatesHeadless(sel, ctx);
         expect(applyBlockResolvedMock).toHaveBeenCalledWith(expect.anything(), 'disabled', ctx);
         expect(res.addon.successCount).toBe(0);
@@ -203,7 +224,7 @@ describe('applyUpdatesHeadless', () => {
         shouldSkipMock.mockReturnValue(true);
         const sel = emptySelections();
         sel.template = [{ project }];
-        sel.blockLibrary = [{ project, library: { name: 'Lib A' } as never, latestCommit: 'bbb' }];
+        sel.blockLibrary = [{ project, library: installedLibrary('Lib A'), latestCommit: 'bbb' }];
         const res = await applyUpdatesHeadless(sel, ctx);
         // template succeeded → its path is threaded into the dedup check
         expect(shouldSkipMock).toHaveBeenCalledWith(expect.anything(), project, expect.any(Set));
@@ -216,7 +237,11 @@ describe('applyUpdatesHeadless', () => {
         sel.inspector = [{ project, latestCommit: 'newsha' }];
         const res = await applyUpdatesHeadless(sel, ctx);
         expect(updateShaRollbackMock).toHaveBeenCalledWith(
-            { commitSha: 'old' },
+            // The WHOLE recorded SDK entry is threaded through, and `installedAt` is
+            // required on it — so the old expectation, `{ commitSha: 'old' }` alone,
+            // pinned a shape production cannot produce. It passed only because the
+            // fixture was cast and was equally incomplete.
+            { commitSha: 'old', installedAt: '2026-01-01T00:00:00.000Z' },
             'newsha',
             expect.any(Function)
         );
@@ -253,17 +278,26 @@ describe('applyUpdatesHeadless — Adobe MCP update location', () => {
         const sel = emptySelections();
         sel.adobeMcp = [
             {
-                project: {
+                project: createMockProject({
                     name: 'demo',
                     path: '/p/demo',
                     componentInstances: {
-                        'eds-storefront': { path: '/p/demo/components/eds-storefront' },
+                        // A real instance carries id/name/status; this one named only
+                        // `path`. The service reads the path, so nothing broke — but
+                        // the shape now matches what the loader actually produces.
+                        'eds-storefront': {
+                            id: 'eds-storefront',
+                            name: 'EDS Storefront',
+                            type: 'frontend',
+                            status: 'ready',
+                            path: '/p/demo/components/eds-storefront',
+                        },
                     },
-                } as never,
+                }),
                 packageName: '@adobe-commerce/commerce-extensibility-tools',
                 latestVersion: '2.0.0',
             },
-        ] as never;
+        ];
         return sel;
     }
 

@@ -26,8 +26,10 @@
 
 import { executePhaseGitHubRepo } from '@/features/eds/handlers/storefrontSetup/storefrontSetupPhase1';
 import type { StorefrontSetupStartPayload } from '@/features/eds/handlers/storefrontSetup/storefrontSetupHandlers';
-import type { RepoInfo, SetupServices } from '@/features/eds/handlers/storefrontSetup/storefrontSetupTypes';
-import type { HandlerContext } from '@/types/handlers';
+import type {
+    RepoInfo,
+    SetupServices,
+} from '@/features/eds/handlers/storefrontSetup/storefrontSetupTypes';
 
 jest.mock('@/features/eds/services/patches/lkgPinHelper', () => ({
     pinRepoToLkg: jest.fn().mockResolvedValue(true),
@@ -41,20 +43,13 @@ jest.mock('@/features/eds/services/appInstallationResolver', () => ({
     resolveAppInstallation: jest.fn(),
 }));
 import { resolveAppInstallation } from '@/features/eds/services/appInstallationResolver';
+import { makeContext, TEMPLATE } from './storefrontSetupPhase1.testUtils';
 
 const mockPin = pinRepoToLkg as jest.Mock;
 const mockResolve = resolveAppInstallation as jest.Mock;
 
 /** Records the order of the operations whose sequence is the thing under test. */
 let callOrder: string[];
-
-function makeContext(): HandlerContext {
-    return {
-        logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() },
-        sendMessage: jest.fn().mockResolvedValue(undefined),
-        context: { secrets: {}, globalState: { get: jest.fn(), update: jest.fn() } },
-    } as unknown as HandlerContext;
-}
 
 function makeServices(): SetupServices {
     return {
@@ -75,8 +70,6 @@ const EXISTING_REPO_CONFIG = {
     existingRepo: 'acme-corp/storefront-demo',
     resetToTemplate: true,
 } as unknown as StorefrontSetupStartPayload['edsConfig'];
-
-const TEMPLATE = { owner: 'adobe-commerce', repo: 'boilerplate-b2b-template' };
 
 function freshRepoInfo(): RepoInfo {
     return { repoOwner: '', repoName: '', repoUrl: '' };
@@ -132,7 +125,7 @@ describe('a repo being RESET cannot answer until it has been reset', () => {
             expect.anything(),
             expect.anything(),
             expect.anything(),
-            { awaitRegistration: true },
+            { awaitRegistration: true }
         );
     });
 
@@ -170,7 +163,7 @@ describe('a repo the user chose to PRESERVE is gated before any write', () => {
             expect.anything(),
             expect.anything(),
             expect.anything(),
-            { awaitRegistration: false },
+            { awaitRegistration: false }
         );
     });
 

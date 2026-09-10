@@ -57,7 +57,8 @@
 import { readdirSync, readFileSync } from 'fs';
 import { asRawText, asText, type McpTextResult } from '@/features/ai/server/mcpToolResult';
 import { registerDescriptorTools } from '@/features/ai/server/toolDescriptors';
-import type { HandlerContext, HandlerMap } from '@/types/handlers';
+import type { HandlerMap } from '@/types/handlers';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 
 const SERVER_DIR = 'src/features/ai/server';
 
@@ -109,7 +110,11 @@ describe('every descriptor row answers in the envelope', () => {
     function capture(handlerResult: unknown) {
         const tools = new Map<string, (args: unknown) => Promise<unknown>>();
         const server = {
-            registerTool(name: string, _def: unknown, handler: (args: unknown) => Promise<unknown>) {
+            registerTool(
+                name: string,
+                _def: unknown,
+                handler: (args: unknown) => Promise<unknown>
+            ) {
                 tools.set(name, handler);
             },
         };
@@ -117,8 +122,17 @@ describe('every descriptor row answers in the envelope', () => {
 
         registerDescriptorTools(
             server,
-            [{ tool: 'probe_tool', description: 'probe', map, type: 'probe', readOnly: true }],
-            () => ({}) as HandlerContext,
+            [
+                {
+                    needsAuth: false,
+                    tool: 'probe_tool',
+                    description: 'probe',
+                    map,
+                    type: 'probe',
+                    readOnly: true,
+                },
+            ],
+            () => createMockHandlerContext()
         );
         return tools.get('probe_tool')!;
     }
@@ -144,7 +158,11 @@ describe('every descriptor row answers in the envelope', () => {
     it('wraps a CONFIRM REFUSAL, which never reaches the handler', async () => {
         const tools = new Map<string, (args: unknown) => Promise<unknown>>();
         const server = {
-            registerTool(name: string, _def: unknown, handler: (args: unknown) => Promise<unknown>) {
+            registerTool(
+                name: string,
+                _def: unknown,
+                handler: (args: unknown) => Promise<unknown>
+            ) {
                 tools.set(name, handler);
             },
         };
@@ -152,8 +170,18 @@ describe('every descriptor row answers in the envelope', () => {
 
         registerDescriptorTools(
             server,
-            [{ tool: 'gated', description: 'g', map, type: 'probe', confirm: true, readOnly: false }],
-            () => ({}) as HandlerContext,
+            [
+                {
+                    needsAuth: false,
+                    tool: 'gated',
+                    description: 'g',
+                    map,
+                    type: 'probe',
+                    confirm: true,
+                    readOnly: false,
+                },
+            ],
+            () => createMockHandlerContext()
         );
 
         // The gate returns early, on its own path. An early return is exactly
@@ -164,7 +192,11 @@ describe('every descriptor row answers in the envelope', () => {
     it('wraps a PREFLIGHT answer, which also never reaches the handler', async () => {
         const tools = new Map<string, (args: unknown) => Promise<unknown>>();
         const server = {
-            registerTool(name: string, _def: unknown, handler: (args: unknown) => Promise<unknown>) {
+            registerTool(
+                name: string,
+                _def: unknown,
+                handler: (args: unknown) => Promise<unknown>
+            ) {
                 tools.set(name, handler);
             },
         };
@@ -175,6 +207,7 @@ describe('every descriptor row answers in the envelope', () => {
             [
                 {
                     tool: 'preflighted',
+                    needsAuth: false,
                     description: 'p',
                     readOnly: false,
                     map,
@@ -182,7 +215,7 @@ describe('every descriptor row answers in the envelope', () => {
                     preflight: () => ({ needsUser: { reason: 'browser-oauth' } }),
                 },
             ],
-            () => ({}) as HandlerContext,
+            () => createMockHandlerContext()
         );
 
         expectEnvelope(await tools.get('preflighted')!({}));
@@ -225,13 +258,13 @@ describe('every bespoke tool module builds its answer with the shared helper', (
             .filter(({ source }) => !/mcpToolResult'/.test(source))
             .map(({ file }) => file);
 
-        expect(offenders).toEqual([]);
+        expect(offenders).toStrictEqual([]);
     });
 
     it('the exemptions are real files that still register tools', () => {
         // A stale exemption is a hole that reads as a decision.
         const names = new Set(registrars.map((r) => r.file));
-        expect([...EXEMPT].filter((f) => !names.has(f))).toEqual([]);
+        expect([...EXEMPT].filter((f) => !names.has(f))).toStrictEqual([]);
     });
 
     it('no registrar hand-rolls the envelope inline', () => {
@@ -244,6 +277,6 @@ describe('every bespoke tool module builds its answer with the shared helper', (
             .filter(({ source }) => /content:\s*\[\s*\{\s*type:\s*'text'/.test(source))
             .map(({ file }) => file);
 
-        expect(inlined).toEqual([]);
+        expect(inlined).toStrictEqual([]);
     });
 });

@@ -31,19 +31,13 @@
  * previewed AND published the whole time.)
  */
 
+import {
+    mockFetch,
+} from './daLiveContentOperations.testUtils';
 import { DaLiveContentOperations, type TokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
-// Mock the timeout config
-jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: {
-        NORMAL: 30000,
-        QUICK: 5000,
-    },
-}));
-
-// Mock global fetch
-const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
 describe('createBlockLibraryFromTemplate', () => {
@@ -59,12 +53,7 @@ describe('createBlockLibraryFromTemplate', () => {
             getAccessToken: jest.fn().mockResolvedValue('mock-ims-token'),
         };
 
-        mockLogger = {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as unknown as Logger;
+        mockLogger = createMockLogger() as unknown as Logger;
 
         service = new DaLiveContentOperations(mockTokenProvider, mockLogger);
         mockGetFileContent = jest.fn();
@@ -409,7 +398,7 @@ describe('createBlockLibraryFromTemplate', () => {
 
             expect(result.success).toBe(true);
             expect(result.blocksCount).toBe(0);
-            expect(result.paths).toEqual([]);
+            expect(result.paths).toStrictEqual([]);
 
             const infoCalls = (mockLogger.info as jest.Mock).mock.calls;
             const noBlocksLog = infoCalls.find((call: string[]) =>

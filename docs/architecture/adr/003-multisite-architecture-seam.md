@@ -1,6 +1,15 @@
 # ADR-003: Multisite Architecture Seam
 
-**Status**: Accepted (decision recorded, implementation deferred)
+**Status**: Accepted — implementation deferred
+
+> Verified 2026-08-30. Its Decision opens "No implementation today", and that is
+> still true of the seam itself; the two disciplines it asks for ARE live, with 11
+> sites defaulting a new state field to `'main'`.
+>
+> Briefly relabelled `Deferred` in the same audit, which is reverted: `Deferred` is
+> not part of the ADR vocabulary (Proposed / Accepted / Deprecated / Superseded), and
+> the decision genuinely IS accepted. What is deferred is the work, which the status
+> line now says in words rather than by inventing a term.
 **Date**: 2026-05-18
 **Decision Maker**: Project Team
 **Implementer**: TBD (no implementation today; this ADR documents the seam for future work)
@@ -145,6 +154,13 @@ before — a whole tab for three pickers reproduces the single-control-tab probl
 
 ---
 
+> **The two disciplines below live HERE, not in the handbook.** An earlier version of
+> this line claimed they were stated as handbook rules; the handbook has never
+> mentioned multisite, and the anchor it pointed at did not exist. Corrected
+> 2026-08-30 — the claim is registered in `.rptc/backlog/unratified-rules-register.md`
+> rather than quietly dropped, because a forward-compatibility discipline nothing
+> checks is exactly the kind that decays silently.
+
 ## Decision
 
 **No implementation today. Document the seam in this ADR and apply two ongoing disciplines:**
@@ -274,3 +290,9 @@ This ADR has no implementation, so no test verification. Acceptance criteria for
 | **Site (in Config Service sense)** | A registered entry in `admin.hlx.page/config/{org}/sites/{site}.json`. One Demo Builder project today registers one site; multisite registers multiple |
 | **Single-env assumption** | Any code path that reads/writes scalar `daLiveOrg` / `daLiveSite` / workspace instead of a list keyed by env |
 | **Seam** | The boundary in current code where a future multisite refactor will need to insert per-env logic |
+
+## Reference notes
+
+- `selectedEnvironment`, `someEnvSpecificThing` — illustrative placeholders, not real
+  symbols. This ADR documents a seam with no implementation, so its examples are
+  deliberately hypothetical.

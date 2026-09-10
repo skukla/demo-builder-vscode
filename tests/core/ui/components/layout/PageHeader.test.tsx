@@ -41,43 +41,74 @@ describe('PageHeader', () => {
 
     describe('subtitle rendering', () => {
         it('should render the subtitle as an inline crumb (text, not a heading)', () => {
-            renderWithProvider(
+            const { container } = renderWithProvider(
                 <PageHeader title="Main Title" subtitle="Build Your Project" />
             );
 
             // Subtitle text is present…
             expect(screen.getByText('Build Your Project')).toBeInTheDocument();
+            // …inside the crumb element that carries its styling…
+            expect(container.querySelector('.page-header-subtitle')).toHaveTextContent(
+                'Build Your Project'
+            );
             // …but it is a crumb, NOT an H3 heading (single-row treatment).
             expect(screen.queryByRole('heading', { level: 3 })).not.toBeInTheDocument();
         });
 
         it('should not render subtitle text when not provided', () => {
-            renderWithProvider(<PageHeader title="Title Only" subtitle={undefined} />);
+            const { container } = renderWithProvider(
+                <PageHeader title="Title Only" subtitle={undefined} />
+            );
 
             expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
             expect(screen.queryByRole('heading', { level: 3 })).not.toBeInTheDocument();
+            // No subtitle means NO crumb element, not an empty one: an empty crumb still
+            // takes the row's gap, so the title stops sitting flush against the edge.
+            expect(container.querySelector('.page-header-subtitle')).toBeNull();
         });
     });
 
     describe('description / status (optional secondary line)', () => {
-        it('should render the description when provided', () => {
-            renderWithProvider(
+        it('should render the description on a secondary line when provided', () => {
+            const { container } = renderWithProvider(
                 <PageHeader title="Title" description="Configure everything here" />
             );
 
             expect(screen.getByText('Configure everything here')).toBeInTheDocument();
+            const lines = container.querySelectorAll('.page-header-secondary');
+            expect(lines).toHaveLength(1);
+            expect(lines[0]).toHaveTextContent('Configure everything here');
         });
 
-        it('should not render a description when not provided', () => {
-            renderWithProvider(<PageHeader title="Title" />);
+        it('should render NO secondary line when neither description nor status is given', () => {
+            const { container } = renderWithProvider(<PageHeader title="Title" />);
 
             expect(screen.queryByText('Configure everything here')).not.toBeInTheDocument();
+            // The secondary line is optional in the DOM, not merely empty: an empty one
+            // still adds its own vertical space and the header stops being one tight row.
+            expect(container.querySelectorAll('.page-header-secondary')).toHaveLength(0);
         });
 
-        it('should render statusText when provided', () => {
-            renderWithProvider(<PageHeader title="Title" statusText="Deploying…" />);
+        it('should render statusText on a secondary line when provided', () => {
+            const { container } = renderWithProvider(
+                <PageHeader title="Title" statusText="Deploying…" />
+            );
 
             expect(screen.getByText('Deploying…')).toBeInTheDocument();
+            const lines = container.querySelectorAll('.page-header-secondary');
+            expect(lines).toHaveLength(1);
+            expect(lines[0]).toHaveTextContent('Deploying…');
+        });
+
+        it('should render both secondary lines when description and status are given', () => {
+            const { container } = renderWithProvider(
+                <PageHeader title="Title" description="Set it up" statusText="Deploying…" />
+            );
+
+            const lines = container.querySelectorAll('.page-header-secondary');
+            expect(lines).toHaveLength(2);
+            expect(lines[0]).toHaveTextContent('Set it up');
+            expect(lines[1]).toHaveTextContent('Deploying…');
         });
     });
 
@@ -185,7 +216,7 @@ describe('PageHeader', () => {
                 />
             );
 
-            screen.getAllByRole('button').forEach(button => {
+            screen.getAllByRole('button').forEach((button) => {
                 expect(button).not.toHaveAttribute('aria-hidden', 'true');
             });
         });

@@ -16,7 +16,10 @@ import {
 } from '@/features/projects-dashboard/services/settingsSerializer';
 import type { Project } from '@/types/base';
 import { SETTINGS_FILE_VERSION } from '@/types/settingsFile';
+import type { SettingsFile } from '@/types/settingsFile';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
+import { createMockProject, edsStorefrontInstance } from '../../../helpers/projectFake';
+import { assertNotOk, assertOk } from '../../../helpers/resultAssertions';
 
 describe('settingsSerializer', () => {
     describe('parseSettingsFile', () => {
@@ -32,19 +35,15 @@ describe('settingsSerializer', () => {
 
             const result = parseSettingsFile(json);
 
-            expect(result.success).toBe(true);
-            if (result.success) {
-                expect(result.settings.version).toBe(1);
-            }
+            assertOk(result);
+            expect(result.settings.version).toBe(1);
         });
 
         it('should return error for invalid JSON', () => {
             const result = parseSettingsFile('{ invalid json }');
 
-            expect(result.success).toBe(false);
-            if (!result.success) {
-                expect(result.error).toContain('corrupted');
-            }
+            assertNotOk(result);
+            expect(result.error).toContain('corrupted');
         });
 
         it('should return error for non-settings object', () => {
@@ -52,10 +51,8 @@ describe('settingsSerializer', () => {
 
             const result = parseSettingsFile(json);
 
-            expect(result.success).toBe(false);
-            if (!result.success) {
-                expect(result.error).toContain('Demo Builder settings');
-            }
+            assertNotOk(result);
+            expect(result.error).toContain('Demo Builder settings');
         });
     });
 
@@ -83,18 +80,30 @@ describe('settingsSerializer', () => {
     });
 
     describe('isNewerVersion', () => {
+        /** A minimal but COMPLETE SettingsFile at the given schema version. */
+        function settingsAtVersion(version: number): SettingsFile {
+            return {
+                version,
+                exportedAt: '2024-01-01T00:00:00Z',
+                source: { project: 'test' },
+                includesSecrets: false,
+                selections: {},
+                configs: {},
+            };
+        }
+
         it('should return true when version is newer', () => {
-            const settings = { version: SETTINGS_FILE_VERSION + 1 } as any;
+            const settings = settingsAtVersion(SETTINGS_FILE_VERSION + 1);
             expect(isNewerVersion(settings)).toBe(true);
         });
 
         it('should return false when version is current', () => {
-            const settings = { version: SETTINGS_FILE_VERSION } as any;
+            const settings = settingsAtVersion(SETTINGS_FILE_VERSION);
             expect(isNewerVersion(settings)).toBe(false);
         });
 
         it('should return false when version is older', () => {
-            const settings = { version: SETTINGS_FILE_VERSION - 1 } as any;
+            const settings = settingsAtVersion(SETTINGS_FILE_VERSION - 1);
             expect(isNewerVersion(settings)).toBe(false);
         });
     });
@@ -234,8 +243,8 @@ describe('settingsSerializer', () => {
 
             const result = extractSettingsFromProject(project, false);
 
-            expect(result.selections).toEqual({});
-            expect(result.configs).toEqual({});
+            expect(result.selections).toStrictEqual({});
+            expect(result.configs).toStrictEqual({});
         });
     });
 
@@ -314,10 +323,8 @@ describe('settingsSerializer', () => {
 
             // Import (parse)
             const parseResult = parseSettingsFile(json);
-            expect(parseResult.success).toBe(true);
-            if (parseResult.success) {
-                expect(parseResult.settings.customBlockLibraries).toEqual(customLibs);
-            }
+            assertOk(parseResult);
+            expect(parseResult.settings.customBlockLibraries).toEqual(customLibs);
         });
     });
 
@@ -398,7 +405,7 @@ describe('settingsSerializer', () => {
      * label and the content agreeing.
      */
     describe('includeSecrets actually removes secret values', () => {
-        const withSecrets: Project = {
+        const withSecrets: Project = createMockProject({
             name: 'secret-test',
             created: new Date(),
             lastModified: new Date(),
@@ -417,7 +424,7 @@ describe('settingsSerializer', () => {
                     EXPERIENCE_PLATFORM_API_KEY: 'ep-key-value',
                 },
             },
-        } as unknown as Project;
+        });
 
         it('strips every secret-valued key when includeSecrets is false', () => {
             const result = extractSettingsFromProject(withSecrets, false);
@@ -520,6 +527,83 @@ describe('settingsSerializer', () => {
             const result = extractSettingsFromProject(project, false);
 
             expect(result.selectedPackage).toBeUndefined();
+        });
+    });
+
+    describe('extractSettingsFromProject - edsConfig extraction', () => {
+        const edsMetadata = {
+            daLiveOrg: 'acme',
+            daLiveSite: 'demo-storefront',
+            githubRepo: 'acme-org/demo-storefront',
+            repoUrl: 'https://github.com/acme-org/demo-storefront',
+            // Derived from brand+stack on import, so deliberately NOT exported.
+            templateOwner: 'demo-system-stores',
+            templateRepo: 'accs-citisignal',
+        };
+
+        function projectWithEdsMetadata(metadata: Record<string, unknown>): Project {
+            return createMockProject({
+                componentInstances: {
+                    'eds-storefront': { ...edsStorefrontInstance(), metadata },
+                },
+            });
+        }
+
+        it('maps the eds-storefront metadata into edsConfig', () => {
+            // The whole object, not a field: this is the shape an import reads
+            // back, and the derived template fields must not ride along.
+            const result = extractSettingsFromProject(
+                projectWithEdsMetadata(edsMetadata),
+                false
+            );
+
+            expect(result.edsConfig).toEqual({
+                daLiveOrg: 'acme',
+                daLiveSite: 'demo-storefront',
+                githubOwner: 'acme-org',
+                repoName: 'demo-storefront',
+                repoUrl: 'https://github.com/acme-org/demo-storefront',
+            });
+        });
+
+        it('splits githubRepo on the slash — owner first, repo second', () => {
+            const result = extractSettingsFromProject(
+                projectWithEdsMetadata({ githubRepo: 'owner-side/repo-side' }),
+                false
+            );
+
+            expect(result.edsConfig?.githubOwner).toBe('owner-side');
+            expect(result.edsConfig?.repoName).toBe('repo-side');
+        });
+
+        it('leaves owner and repo undefined when there is no githubRepo', () => {
+            const result = extractSettingsFromProject(
+                projectWithEdsMetadata({ daLiveOrg: 'acme' }),
+                false
+            );
+
+            expect(result.edsConfig?.githubOwner).toBeUndefined();
+            expect(result.edsConfig?.repoName).toBeUndefined();
+        });
+
+        it('omits edsConfig when the instance carries no metadata', () => {
+            const noMetadata = createMockProject({
+                componentInstances: { 'eds-storefront': edsStorefrontInstance() },
+            });
+
+            expect(extractSettingsFromProject(noMetadata, false).edsConfig).toBeUndefined();
+        });
+
+        it('reads the eds-storefront instance BY ID and no other', () => {
+            // The control. A same-shaped instance under a different id must not
+            // be mistaken for the storefront.
+            const otherComponent = createMockProject({
+                componentInstances: {
+                    'adobe-commerce-accs': { ...edsStorefrontInstance(), metadata: edsMetadata },
+                },
+            });
+
+            expect(extractSettingsFromProject(otherComponent, false).edsConfig).toBeUndefined();
         });
     });
 

@@ -19,7 +19,7 @@ export interface LoadingOverlayProps {
  *
  * For inline loading states, use LoadingDisplay instead.
  *
- * SOP §11: Uses CSS classes from custom-spectrum.css instead of inline styles
+ * SOP §11: Uses CSS classes from utilities.css instead of inline styles
  *
  * @example
  * <div style={{ position: 'relative' }}>

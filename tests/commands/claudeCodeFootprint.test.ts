@@ -26,6 +26,11 @@ function writeSized(relPath: string, bytes: number, mtime?: Date): void {
     if (mtime) fs.utimesSync(abs, mtime, mtime);
 }
 
+/** A symlink beside `target`; the walker must not size what it points at. */
+function linkTo(relTarget: string, relLink: string): void {
+    fs.symlinkSync(path.join(root, relTarget), path.join(root, relLink));
+}
+
 beforeEach(() => {
     root = fs.mkdtempSync(path.join(os.tmpdir(), 'claude-footprint-'));
 });
@@ -82,6 +87,42 @@ describe('collectClaudeCodeFootprint', () => {
 
         expect(footprint.transcripts).toEqual({ count: 0, bytes: 0 });
     });
+
+    it('sizes only real files — a symlink is neither walked nor stat-followed', async () => {
+        writeSized('plugins/real.bin', 1000);
+        writeSized('sub/inner.bin', 500);
+        linkTo('plugins/real.bin', 'top-link.bin');
+        linkTo('sub/inner.bin', 'sub/inner-link.bin');
+
+        const footprint = await collectClaudeCodeFootprint(root);
+
+        // 1500, not 3000: following either link would double-count its target.
+        expect(footprint.totalBytes).toBe(1500);
+        expect(footprint.subdirs).toEqual([
+            { name: 'plugins', bytes: 1000 },
+            { name: 'sub', bytes: 500 },
+        ]);
+    });
+
+    it('skips a subdirectory it cannot read and still totals the rest', async () => {
+        writeSized('plugins/readable.bin', 700);
+        writeSized('locked/secret.bin', 900);
+        fs.chmodSync(path.join(root, 'locked'), 0o000);
+
+        try {
+            const footprint = await collectClaudeCodeFootprint(root);
+
+            // The unreadable tree counts as zero — a partial size, never an error.
+            expect(footprint.error).toBeUndefined();
+            expect(footprint.totalBytes).toBe(700);
+            expect(footprint.subdirs).toEqual([
+                { name: 'plugins', bytes: 700 },
+                { name: 'locked', bytes: 0 },
+            ]);
+        } finally {
+            fs.chmodSync(path.join(root, 'locked'), 0o755);
+        }
+    });
 });
 
 describe('formatBytes', () => {
@@ -89,6 +130,9 @@ describe('formatBytes', () => {
         expect(formatBytes(2.2 * 1024 * 1024 * 1024)).toBe('2.2 GB');
         expect(formatBytes(331 * 1024 * 1024)).toBe('331.0 MB');
         expect(formatBytes(500 * 1024)).toBe('500 KB');
+        // Exactly at each boundary the LARGER unit wins (>=, not >).
+        expect(formatBytes(1024 * 1024 * 1024)).toBe('1.0 GB');
+        expect(formatBytes(1024 * 1024)).toBe('1.0 MB');
         // Never renders "0 KB" for a non-empty file.
         expect(formatBytes(12)).toBe('1 KB');
     });
@@ -132,6 +176,41 @@ describe('claudeFootprintLines (report-only contract)', () => {
         });
 
         expect(lines.join('\n')).not.toMatch(/clean ?up|delete .*\?|press|click|\[.*\]/i);
+    });
+
+    it('omits the Largest line when the walk reported no subdirectories', () => {
+        const lines = claudeFootprintLines({
+            root: '/home/user/.claude',
+            exists: true,
+            totalBytes: 4096,
+            transcripts: { count: 0, bytes: 0 },
+        });
+
+        expect(lines.join('\n')).not.toContain('Largest');
+    });
+
+    it('omits the transcripts line when there are none', () => {
+        const lines = claudeFootprintLines({
+            root: '/home/user/.claude',
+            exists: true,
+            totalBytes: 4096,
+            subdirs: [{ name: 'plugins', bytes: 4096 }],
+            transcripts: { count: 0, bytes: 0 },
+        });
+
+        expect(lines.join('\n')).not.toContain('Session transcripts');
+    });
+
+    it('says "1 file" and not "1 files" for a single transcript', () => {
+        const lines = claudeFootprintLines({
+            root: '/home/user/.claude',
+            exists: true,
+            totalBytes: 4096,
+            subdirs: [],
+            transcripts: { count: 1, bytes: 4096, oldest: '2026-09-01' },
+        });
+
+        expect(lines.join('\n')).toContain('Session transcripts: 1 file,');
     });
 
     it('says so plainly when Claude Code has never run', () => {

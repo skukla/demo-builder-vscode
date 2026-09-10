@@ -21,7 +21,7 @@
  */
 
 import type { CheckResult, OnOpenCheck, OnOpenCheckContext } from './types';
-import type { AiCheckResult, AiVerificationResult } from '@/features/ai';
+import type { AiCheckResult, AiVerificationResult } from '@/features/ai/aiSetupVerifier';
 import type { AiInventory } from '@/types/ai';
 import { CHECK_IDS } from '@/types/messages';
 

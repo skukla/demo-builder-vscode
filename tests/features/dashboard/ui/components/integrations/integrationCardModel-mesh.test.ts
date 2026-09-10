@@ -60,14 +60,14 @@ describe('deriveMeshCard — status matrix', () => {
 
         expect(model.status).toBe('checking');
         expect(model.dotVariant).toBe('neutral');
-        expect(model.menuActions).toEqual([]);
+        expect(model.menuActions).toStrictEqual([]);
     });
 
     it('undefined status behaves as checking (unresolved)', () => {
         const model = deriveMeshCard(display({ color: 'gray', text: 'Checking…' }), undefined, undefined, false);
 
         expect(model.status).toBe('checking');
-        expect(model.menuActions).toEqual([]);
+        expect(model.menuActions).toStrictEqual([]);
     });
 
     it('needs-auth: warning dot, Sign in LEADS the menu', () => {
@@ -106,7 +106,7 @@ describe('deriveMeshCard — status matrix', () => {
 
         expect(model.status).toBe('deploying');
         expect(model.dotVariant).toBe('info');
-        expect(model.menuActions).toEqual([]);
+        expect(model.menuActions).toStrictEqual([]);
     });
 
     it('deployed: success dot, NO Open (a GraphQL endpoint is not browsable), Redeploy in the MENU', () => {
@@ -143,7 +143,7 @@ describe('deriveMeshCard — status matrix', () => {
 
         // An action you cannot take is not offered. The bar used to render it
         // disabled; a menu item has no disabled state, so it is simply absent.
-        expect(model.menuActions).toEqual([]);
+        expect(model.menuActions).toStrictEqual([]);
     });
 
     it.each(['config-changed', 'update-declined'] as const)(
@@ -224,18 +224,24 @@ describe('deriveMeshCard — identity + propagation', () => {
     // mesh does not have: 'open' (its endpoint answers POSTs, so it is copy-not-
     // browse) and 'manage-apis' (it has no API picks of its own).
     it('carries the status verb, and Redeploy only where there is a deployment to redo', () => {
+        // The branch decides what counts as WRONG; the assertion is outside it and
+        // always runs. It also names every offending status in one failure instead
+        // of stopping at the first.
+        const problems: string[] = [];
         for (const status of MESH_STATUSES) {
             const model = deriveMeshCard(display(), status, meshEntry(), false);
+            const got = model.menuActions;
             if (model.status === 'deploying' || model.status === 'checking') {
-                expect(model.menuActions).toEqual([]);
+                if (got.length !== 0) problems.push(`${status}: expected no verbs, got [${got}]`);
             } else if (model.status === 'deployed') {
-                expect(model.menuActions).toEqual(['redeploy']);
+                if (got.join() !== 'redeploy') problems.push(`${status}: expected [redeploy], got [${got}]`);
             } else {
                 // deploy / update / retry / sign-in — one verb, never two.
-                expect(model.menuActions).toHaveLength(1);
-                expect(model.menuActions).not.toContain('redeploy');
+                if (got.length !== 1) problems.push(`${status}: expected exactly one verb, got [${got}]`);
+                if (got.includes('redeploy')) problems.push(`${status}: must not offer redeploy`);
             }
         }
+        expect(problems).toStrictEqual([]);
     });
 
     // The live text used to win for EVERY status, which is how the mesh card came
@@ -291,7 +297,7 @@ describe('deriveMeshCard — identity + propagation', () => {
             const model = deriveMeshCard(display(), status, meshEntry(), true);
             // A menu item has no disabled state, so an unavailable action is
             // withheld rather than shown greyed.
-            expect(model.menuActions).toEqual([]);
+            expect(model.menuActions).toStrictEqual([]);
         }
     });
 
@@ -365,7 +371,7 @@ describe('buildIntegrationCards', () => {
             'eds-accs-mesh',
         );
 
-        expect(cards).toEqual([]);
+        expect(cards).toStrictEqual([]);
     });
 
     // The add case, which is why the synthesis cannot simply be dropped for
@@ -423,7 +429,7 @@ describe('buildIntegrationCards', () => {
             gone: { status: 'deployed' },
             failed: { status: 'error' },
         });
-        expect(cards).toEqual([]);
+        expect(cards).toStrictEqual([]);
     });
 
     it('a known-id deploying override merges into its card instead of synthesizing a duplicate', () => {

@@ -1,21 +1,20 @@
 import { handleCreateProject } from '@/features/project-creation/handlers/createHandler';
-import * as _validation from '@/core/validation';
+
 import * as executor from '@/features/project-creation/handlers/executor';
 import * as promiseUtils from '@/core/utils/promiseUtils';
 import * as _vscode from 'vscode';
 import * as _fs from 'fs';
 import {
-    createMockContext,
+    createProjectCreationContext,
     setupDefaultMocks,
     mockValidationError,
 } from './createHandler.testUtils';
 
 // Mock all dependencies
-jest.mock('@/core/validation');
+jest.mock('@/core/validation/validators/ProjectNameValidator');
 jest.mock('@/features/project-creation/handlers/executor');
 jest.mock('@/core/utils/promiseUtils');
-jest.mock('@/core/di');
-jest.mock('vscode');
+jest.mock('@/core/di/serviceLocator');
 jest.mock('fs', () => ({
     existsSync: jest.fn(),
     promises: {
@@ -24,12 +23,12 @@ jest.mock('fs', () => ({
 }));
 
 describe('Project Creation - Create Handler - Validation', () => {
-    let mockContext: ReturnType<typeof createMockContext>;
+    let mockContext: ReturnType<typeof createProjectCreationContext>;
     let _mockCommandExecutor: ReturnType<typeof setupDefaultMocks>;
 
     beforeEach(() => {
         _mockCommandExecutor = setupDefaultMocks();
-        mockContext = createMockContext();
+        mockContext = createProjectCreationContext();
     });
 
     describe('security validation', () => {
@@ -70,7 +69,7 @@ describe('Project Creation - Create Handler - Validation', () => {
         it('should reject non-string project name', async () => {
             await expect(
                 handleCreateProject(mockContext, {
-                    projectName: 123 as any,
+                    projectName: 123,
                 })
             ).rejects.toThrow('projectName must be a string');
 
@@ -221,15 +220,15 @@ describe('Project Creation - Create Handler - Validation', () => {
 
     describe('edge cases', () => {
         it('should handle missing projectName', async () => {
-            await expect(
-                handleCreateProject(mockContext, {})
-            ).rejects.toThrow('projectName must be a string');
+            await expect(handleCreateProject(mockContext, {})).rejects.toThrow(
+                'projectName must be a string'
+            );
         });
 
         it('should handle null projectName', async () => {
-            await expect(
-                handleCreateProject(mockContext, { projectName: null })
-            ).rejects.toThrow('projectName must be a string');
+            await expect(handleCreateProject(mockContext, { projectName: null })).rejects.toThrow(
+                'projectName must be a string'
+            );
         });
 
         it('should handle empty projectName', async () => {
@@ -252,12 +251,8 @@ describe('Project Creation - Create Handler - Validation', () => {
             (executor.executeProjectCreation as jest.Mock).mockImplementation(
                 () => new Promise((resolve) => setTimeout(resolve, 65000))
             );
-            (promiseUtils.withTimeout as jest.Mock).mockImplementation(
-                async (promise) => promise
-            );
-            (executor.executeProjectCreation as jest.Mock).mockRejectedValue(
-                new Error('Failed')
-            );
+            (promiseUtils.withTimeout as jest.Mock).mockImplementation(async (promise) => promise);
+            (executor.executeProjectCreation as jest.Mock).mockRejectedValue(new Error('Failed'));
 
             await handleCreateProject(mockContext, {
                 projectName: 'test-project',

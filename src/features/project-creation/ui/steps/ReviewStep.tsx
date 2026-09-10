@@ -8,7 +8,7 @@ import {
 } from './reviewStepHelpers';
 import { COMPONENT_IDS, isMeshComponentId } from '@/core/constants';
 import { ContentColumn } from '@/core/ui/components/layout/ContentColumn';
-import { useCanProceed } from '@/core/ui/hooks';
+import { useCanProceed } from '@/core/ui/hooks/useCanProceed';
 import { cn } from '@/core/ui/utils/classNames';
 import { getStackById } from '@/features/components/services/demoPackageLoader';
 import type { DemoPackage } from '@/types/demoPackages';
@@ -62,10 +62,6 @@ function LabelValue({
         <Flex gap="size-200" alignItems="start">
             <Text
                 UNSAFE_className="review-label"
-                UNSAFE_style={{
-                    width: '120px',
-                    flexShrink: 0,
-                }}
             >
                 {label}
             </Text>
@@ -95,9 +91,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
         <View
             padding="size-200"
             borderRadius="medium"
-            UNSAFE_style={{
-                backgroundColor: 'var(--spectrum-gray-75)',
-            }}
+            UNSAFE_className="review-panel"
         >
             <Text
                 UNSAFE_className={cn(
@@ -366,20 +360,15 @@ export function ReviewStep({
             <Divider size="M" marginBottom="size-400" />
 
             <div
-                style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 1fr',
-                    gap: 'var(--spectrum-global-dimension-size-200)',
-                }}
+                className="review-grid"
             >
-                {/* Span both columns when no Adobe I/O section */}
-                <div
-                    style={
-                        !adobeOrgName && !adobeProjectName && !adobeWorkspaceName
-                            ? { gridColumn: '1 / -1' }
-                            : undefined
-                    }
-                >
+                {/* Span both columns when there is no Adobe I/O section. A data
+                    attribute, not a conditional style object — and note this one
+                    was invisible to the inline-style scan, which matches
+                    `style={{` and never saw `style={ cond ? {...} : ... }`. */}
+                <div data-span-columns={
+                    !adobeOrgName && !adobeProjectName && !adobeWorkspaceName ? 'true' : undefined
+                }>
                     <ProjectConfigSection packageName={packageName} stackName={stackName} />
                 </div>
                 {(adobeOrgName || adobeProjectName || adobeWorkspaceName) && (

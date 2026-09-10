@@ -116,6 +116,42 @@ describe('registerGlobalMcp', () => {
         await expect(registerGlobalMcp(DIST, NODE)).rejects.toThrow(/malformed/);
         await expect(fsPromises.readFile(configPath, 'utf-8')).resolves.toBe('{ not json');
     });
+
+    // `~/.claude.json` is hand-edited by people and written by other tools, so
+    // `mcpServers` can be there and still be unusable. Each of these would throw
+    // on the upsert without the guard that replaces it.
+    it('adds an mcpServers map to a config that has none', async () => {
+        await fsPromises.writeFile(configPath, JSON.stringify({ numStartups: 3 }), 'utf-8');
+
+        await registerGlobalMcp(DIST, NODE);
+
+        const config = await readConfig();
+        expect(config.numStartups).toBe(3);
+        expect(config.mcpServers).toEqual({
+            'demo-builder': { command: NODE, args: [path.join(DIST, 'mcp-proxy.js')] },
+        });
+    });
+
+    it('replaces a null mcpServers with a real map', async () => {
+        // `typeof null === 'object'`, so a null check alone lets this through.
+        await fsPromises.writeFile(configPath, JSON.stringify({ mcpServers: null }), 'utf-8');
+
+        await registerGlobalMcp(DIST, NODE);
+
+        expect((await readConfig()).mcpServers).toEqual({
+            'demo-builder': { command: NODE, args: [path.join(DIST, 'mcp-proxy.js')] },
+        });
+    });
+
+    it('replaces a non-object mcpServers with a real map', async () => {
+        await fsPromises.writeFile(configPath, JSON.stringify({ mcpServers: 'nope' }), 'utf-8');
+
+        await registerGlobalMcp(DIST, NODE);
+
+        expect((await readConfig()).mcpServers).toEqual({
+            'demo-builder': { command: NODE, args: [path.join(DIST, 'mcp-proxy.js')] },
+        });
+    });
 });
 
 /**
@@ -269,5 +305,69 @@ describe('refreshGlobalMcpIfPresent', () => {
         const c = JSON.parse(await fsPromises.readFile(configPath, 'utf-8'));
         expect(c.numStartups).toBe(42);
         expect(c.mcpServers.serena).toEqual({ command: 'uvx', args: ['serena'] });
+    });
+
+    // A repair pass must answer "no entry to repair" for every shape of missing,
+    // not only for the tidy one — and must never opt the user in on the way past.
+    it('reports nothing to repair when the config has no mcpServers at all', async () => {
+        await writeConfig({ numStartups: 7 });
+
+        expect(await refreshGlobalMcpIfPresent(DIST, NODE)).toBe(false);
+        const c = JSON.parse(await fsPromises.readFile(configPath, 'utf-8'));
+        expect(c).not.toHaveProperty('mcpServers');
+    });
+
+    it('reports nothing to repair when mcpServers is null', async () => {
+        await writeConfig({ mcpServers: null });
+
+        expect(await refreshGlobalMcpIfPresent(DIST, NODE)).toBe(false);
+        const c = JSON.parse(await fsPromises.readFile(configPath, 'utf-8'));
+        expect(c.mcpServers).toBeNull();
+    });
+
+    // Staleness is judged on args[0] AND on there being exactly one arg. Each of
+    // these entries is broken in a way that the other two checks would pass.
+    it('repairs an entry with no args at all', async () => {
+        await writeConfig({ mcpServers: { 'demo-builder': { command: NODE } } });
+
+        expect(await refreshGlobalMcpIfPresent(DIST, NODE)).toBe(true);
+        expect(await entryArgs()).toEqual([path.join(DIST, 'mcp-proxy.js')]);
+    });
+
+    it('repairs an entry with an empty args array', async () => {
+        await writeConfig({ mcpServers: { 'demo-builder': { command: NODE, args: [] } } });
+
+        expect(await refreshGlobalMcpIfPresent(DIST, NODE)).toBe(true);
+        expect(await entryArgs()).toEqual([path.join(DIST, 'mcp-proxy.js')]);
+    });
+
+    it('repairs an entry that names this build FIRST but carries extra args', async () => {
+        // args[0] is right, so a first-element check alone reads it as current —
+        // and the proxy is then launched with an argument it does not understand.
+        await writeConfig({
+            mcpServers: {
+                'demo-builder': {
+                    command: process.execPath,
+                    args: [path.join(DIST, 'mcp-proxy.js'), '--socket=/tmp/pinned.sock'],
+                },
+            },
+        });
+
+        expect(await refreshGlobalMcpIfPresent(DIST, NODE)).toBe(true);
+        expect(await entryArgs()).toEqual([path.join(DIST, 'mcp-proxy.js')]);
+    });
+
+    it('repairs a single-arg entry naming a DIFFERENT install of the proxy', async () => {
+        await writeConfig({
+            mcpServers: {
+                'demo-builder': {
+                    command: process.execPath,
+                    args: [path.join(OLD, 'mcp-proxy.js')],
+                },
+            },
+        });
+
+        expect(await refreshGlobalMcpIfPresent(DIST, NODE)).toBe(true);
+        expect(await entryArgs()).toEqual([path.join(DIST, 'mcp-proxy.js')]);
     });
 });

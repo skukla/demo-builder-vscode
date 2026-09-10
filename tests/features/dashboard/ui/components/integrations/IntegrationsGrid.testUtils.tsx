@@ -12,6 +12,8 @@
  * registered before the component module loads.
  */
 
+import '../../../../../helpers/webviewClientMock';
+import { createMockProject } from '../../../../../helpers/projectFake';
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -19,14 +21,6 @@ import type { MeshStatus, StatusDisplay } from '@/features/dashboard/ui/hooks/us
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState } from '@/types/base';
 import '@testing-library/jest-dom';
-
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        postMessage: jest.fn(),
-        onMessage: jest.fn(() => jest.fn()),
-        request: jest.fn(() => Promise.resolve({ success: true })),
-    },
-}));
 
 jest.mock('@adobe/react-spectrum', () => ({
     // Menu renders items EAGERLY (no popup): each Item becomes a button firing
@@ -37,7 +31,9 @@ jest.mock('@adobe/react-spectrum', () => ({
             {require('react').Children.map(children, (child: any) =>
                 child ? (
                     <li>
-                        <button onClick={() => onAction?.(child.key)}>{child.props.children}</button>
+                        <button onClick={() => onAction?.(child.key)}>
+                            {child.props.children}
+                        </button>
                     </li>
                 ) : null
             )}
@@ -96,7 +92,12 @@ jest.mock('@/core/ui/components/ui/Modal', () => ({
             {children}
             <button onClick={onClose}>{closeLabel ?? 'Close'}</button>
             {actionButtons.map((b: any, i: number) => (
-                <button key={i} onClick={b.onPress} data-variant={b.variant} disabled={b.isDisabled}>
+                <button
+                    key={i}
+                    onClick={b.onPress}
+                    data-variant={b.variant}
+                    disabled={b.isDisabled}
+                >
                     {b.label}
                 </button>
             ))}
@@ -123,6 +124,7 @@ import { IntegrationsGrid } from '@/features/dashboard/ui/components/integration
 import {
     buildIntegrationCards,
     deriveMeshCard,
+    type IntegrationCardModel,
 } from '@/features/dashboard/ui/components/integrations/integrationCardModel';
 import {
     getIdentifiedMeshAppBuilderComponent,
@@ -216,22 +218,16 @@ export interface RenderOptions {
  * which keeps every existing grid test expressed in its original inputs
  * (appBuilderComponents + mesh props) rather than hand-built card models.
  */
-export function renderGrid({
+export function cardsFor({
     appBuilderComponents = {},
     withMesh = false,
     meshStatus = 'deployed',
     meshStatusText = MESH_DISPLAY.text,
     isMeshActionDisabled = false,
-    onDeployMesh = jest.fn(),
-    onReAuthenticate = jest.fn(),
-}: RenderOptions = {}) {
-    const project = { appBuilderComponents } as never;
-    const integrationCards = buildIntegrationCards(
-        listAppBuilderComponents(project),
-        {},
-        CATALOG,
-    );
-    const cards = withMesh
+}: RenderOptions = {}): IntegrationCardModel[] {
+    const project = createMockProject({ appBuilderComponents });
+    const integrationCards = buildIntegrationCards(listAppBuilderComponents(project), {}, CATALOG);
+    return withMesh
         ? [
               deriveMeshCard(
                   { ...MESH_DISPLAY, text: meshStatusText },
@@ -241,19 +237,39 @@ export function renderGrid({
                   // Same SINGLE resolver the screen uses — id and state from one
                   // lookup, so the harness cannot pass a mismatched pair the real
                   // screen could never produce.
-                  getIdentifiedMeshAppBuilderComponent(project)?.id,
+                  getIdentifiedMeshAppBuilderComponent(project)?.id
               ),
               ...integrationCards,
           ]
         : integrationCards;
+}
 
-    const result = render(
-        <IntegrationsGrid
-            cards={cards}
-            onDeployMesh={onDeployMesh}
-            onReAuthenticate={onReAuthenticate}
-        />,
-    );
+/**
+ * Render the grid from card models directly — the prop contract the SCREEN
+ * feeds it. `setCards` re-renders with a new set (and optionally new mesh
+ * callbacks), which is how the live-push behaviour the grid owns is exercised:
+ * a card leaving the map, or a parent handing over fresh callbacks.
+ */
+export function renderCards(
+    cards: IntegrationCardModel[],
+    props: Partial<React.ComponentProps<typeof IntegrationsGrid>> = {}
+) {
+    const result = render(<IntegrationsGrid cards={cards} {...props} />);
+    return {
+        ...result,
+        setCards: (
+            next: IntegrationCardModel[],
+            nextProps: Partial<React.ComponentProps<typeof IntegrationsGrid>> = props
+        ) => result.rerender(<IntegrationsGrid cards={next} {...nextProps} />),
+    };
+}
+
+export function renderGrid({
+    onDeployMesh = jest.fn(),
+    onReAuthenticate = jest.fn(),
+    ...options
+}: RenderOptions = {}) {
+    const result = renderCards(cardsFor(options), { onDeployMesh, onReAuthenticate });
     return { ...result, onDeployMesh, onReAuthenticate };
 }
 
@@ -272,7 +288,7 @@ export function card(name: string, statusLabel: string): HTMLElement {
 export async function openPanel(
     user: ReturnType<typeof userEvent.setup>,
     name: string,
-    statusLabel: string,
+    statusLabel: string
 ): Promise<HTMLElement> {
     await user.click(card(name, statusLabel));
     return screen.getByLabelText(`${name} details`);

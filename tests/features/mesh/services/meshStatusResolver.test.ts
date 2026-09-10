@@ -10,8 +10,8 @@ import {
     checkMeshConfigCompleteness,
     determineMeshStatus,
 } from '@/features/mesh/services/meshStatusResolver';
-import { parseEnvFile } from '@/core/utils/envParser';
-import type { ComponentInstance, Project } from '@/types';
+import type { ComponentInstance, Project } from '@/types/base';
+import { createMockProject } from '../../../helpers/projectFake';
 
 // Mock fs/promises
 jest.mock('fs/promises');
@@ -40,6 +40,19 @@ describe('meshStatusResolver', () => {
 
             expect(result.isComplete).toBe(false);
             expect(result.missingFields).toContain('ADOBE_COMMERCE_GRAPHQL_ENDPOINT');
+        });
+
+        it('reports MESH_ENDPOINT missing too when the .env cannot be read, endpoint or not', async () => {
+            // The unreadable-.env arm returns a fixed "everything is missing"
+            // list rather than falling through to the per-field loop. Only a
+            // caller that DOES supply an endpoint can tell the two apart: the
+            // loop would then leave MESH_ENDPOINT out.
+            mockFs.readFile.mockRejectedValue(new Error('EACCES: permission denied'));
+
+            const result = await checkMeshConfigCompleteness(mockMeshPath, mockMeshEndpoint);
+
+            expect(result.missingFields).toContain('MESH_ENDPOINT');
+            expect(result.missingFields).toHaveLength(9);
         });
 
         it('returns incomplete when .env file is empty', async () => {
@@ -364,7 +377,7 @@ ADOBE_COMMERCE_STORE_CODE=main_store
 ADOBE_CATALOG_API_KEY=api-key-123
 `);
 
-            const project = {
+            const project = createMockProject({
                 ...mockProjectWithMeshEndpoint,
                 appBuilderComponents: {
                     'commerce-mesh': {
@@ -376,7 +389,7 @@ ADOBE_CATALOG_API_KEY=api-key-123
                         declinedAt: '2026-07-01T00:00:00Z',
                     },
                 },
-            } as unknown as Project;
+            });
 
             const result = await determineMeshStatus(
                 { hasChanges: true },
@@ -399,9 +412,9 @@ ADOBE_COMMERCE_STORE_CODE=main_store
 ADOBE_CATALOG_API_KEY=api-key-123
 `);
 
-            const project = {
+            const project = createMockProject({
                 ...mockProjectWithMeshEndpoint,
-                meshState: undefined, // post-Step-07 world: keyed entry only
+                // post-Step-07 world: keyed entry only, no meshState
                 appBuilderComponents: {
                     'commerce-mesh': {
                         kind: 'mesh',
@@ -410,7 +423,7 @@ ADOBE_CATALOG_API_KEY=api-key-123
                         endpoint: mockMeshEndpoint,
                     },
                 },
-            } as unknown as Project;
+            });
 
             const result = await determineMeshStatus(
                 { hasChanges: false },
@@ -501,48 +514,6 @@ ADOBE_CATALOG_API_KEY=api-key-123
         });
     });
 
-    describe('parseEnvFile (shared utility)', () => {
-        it('parses simple key=value pairs', () => {
-            const content = 'KEY=value\nANOTHER=test';
-            const result = parseEnvFile(content);
-
-            expect(result).toEqual({ KEY: 'value', ANOTHER: 'test' });
-        });
-
-        it('skips comments and empty lines', () => {
-            const content = '# Comment\nKEY=value\n\n# Another comment\nKEY2=value2';
-            const result = parseEnvFile(content);
-
-            expect(result).toEqual({ KEY: 'value', KEY2: 'value2' });
-        });
-
-        it('removes double quotes from values', () => {
-            const content = 'KEY="quoted value"';
-            const result = parseEnvFile(content);
-
-            expect(result).toEqual({ KEY: 'quoted value' });
-        });
-
-        it('removes single quotes from values', () => {
-            const content = "KEY='quoted value'";
-            const result = parseEnvFile(content);
-
-            expect(result).toEqual({ KEY: 'quoted value' });
-        });
-
-        it('handles values with equals signs', () => {
-            const content = 'URL=https://example.com?foo=bar';
-            const result = parseEnvFile(content);
-
-            expect(result).toEqual({ URL: 'https://example.com?foo=bar' });
-        });
-
-        it('returns empty object for empty content', () => {
-            const result = parseEnvFile('');
-
-            expect(result).toEqual({});
-        });
-    });
 
     // ADR-011 D3 Steps 07+09: the quick status update reads the endpoint from the
     // keyed mesh entry — a keyed-only project (post-Step-07, no meshState) must

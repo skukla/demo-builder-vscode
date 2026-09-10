@@ -30,11 +30,38 @@
  * @module features/eds/services/storefront/storefrontNameMigration
  */
 
-import { buildSiteConfigParams, ConfigurationService } from '../configService/configurationService';
-import { DaLiveContentOperations } from '../daLive/daLiveContentOperations';
+import {
+    buildSiteConfigParams,
+    type ConfigServiceResult,
+    type SiteRegistrationParams,
+} from '../configService/configurationService';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
+
+/**
+ * The DA.live content calls this migration makes — two of them, out of a class
+ * with far more.
+ *
+ * Declared structurally rather than as `DaLiveContentOperations` so a caller can
+ * hand in exactly what gets used. `DaLiveContentOperations` still satisfies it,
+ * so both production callers are unchanged; what it buys is that a test can pass
+ * two functions instead of `jest.mock`-ing the module (ADR-016's mock wall).
+ */
+export interface MigrationContentOps {
+    copyDaLiveSite(
+        srcOrg: string,
+        srcSite: string,
+        destOrg: string,
+        destSite: string
+    ): Promise<{ success: true } | { success: false; error: string; status?: number }>;
+    deleteSiteRoot(org: string, site: string): Promise<void>;
+}
+
+/** The single Config Service call this migration makes. See {@link MigrationContentOps}. */
+export interface MigrationConfigService {
+    updateSiteConfig(params: SiteRegistrationParams): Promise<ConfigServiceResult>;
+}
 
 /** Result of the migration step. */
 export interface StorefrontMigrationResult {
@@ -87,8 +114,8 @@ export interface StorefrontMigrationContext {
 export async function migrateStorefrontNamingIfNeeded(
     ctx: StorefrontMigrationContext,
     project: Project,
-    daLiveContentOps: DaLiveContentOperations,
-    configService: ConfigurationService,
+    daLiveContentOps: MigrationContentOps,
+    configService: MigrationConfigService,
     logger: Logger,
 ): Promise<StorefrontMigrationResult> {
     const { repoOwner, repoName, daLiveOrg, daLiveSite, byomOverlayUrl } = ctx;
@@ -103,7 +130,10 @@ export async function migrateStorefrontNamingIfNeeded(
 
     // Step 1: copy DA content so the destination exists before we re-point Helix.
     const copyResult = await daLiveContentOps.copyDaLiveSite(
-        daLiveOrg, daLiveSite, daLiveOrg, repoName,
+        daLiveOrg,
+        daLiveSite,
+        daLiveOrg,
+        repoName,
     );
     if (!copyResult.success) {
         logger.error(`[StorefrontMigration] DA content copy failed: ${copyResult.error}`);
@@ -123,8 +153,7 @@ export async function migrateStorefrontNamingIfNeeded(
     // Computed BEFORE the failure return: a re-registration that failed AND lost
     // the grants used to report only the error string, dropping the half nothing
     // in the app can undo.
-    const lostGrants =
-        updateResult.grantsRestored === false ? updateResult.lostGrants : undefined;
+    const lostGrants = updateResult.grantsRestored === false ? updateResult.lostGrants : undefined;
     if (!updateResult.success) {
         logger.error(
             `[StorefrontMigration] Helix re-registration failed: ${updateResult.error ?? 'unknown'}`,
@@ -160,7 +189,7 @@ export async function migrateStorefrontNamingIfNeeded(
 
     logger.info(
         `[StorefrontMigration] Storefront migrated to ${daLiveOrg}/${repoName}; ` +
-        `daLiveSite now matches repoName and bus has a fresh contentBusId.`,
+            `daLiveSite now matches repoName and bus has a fresh contentBusId.`,
     );
     return {
         skipped: false,

@@ -4,23 +4,18 @@
 
 import { EnvVarDefinition, ComponentRegistry } from '@/types/components';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
-import type { Logger } from '@/types/logger';
 import type { HandlerContext } from '@/types/handlers';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import { ProjectSetupContext } from '@/features/project-creation/services/ProjectSetupContext';
 
-/**
- * Creates a mock logger for testing
- */
-export function createMockLogger(): Logger {
-    return {
-        trace: jest.fn(),
-        info: jest.fn(),
-        error: jest.fn(),
-        warn: jest.fn(),
-        debug: jest.fn(),
-    };
-}
+/** Canonical logger fake (ADR-016). Re-exported so existing imports keep working. */
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockHandlerContext as createMockHandlerContextBase } from '../../../helpers/handlerContextTestHelpers';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+export { createMockLogger };
 
 /**
  * Creates a mock HandlerContext for testing
@@ -28,30 +23,32 @@ export function createMockLogger(): Logger {
  * Provides all essential HandlerContext properties with sensible defaults.
  * Can be overridden via the overrides parameter for specific test needs.
  */
-export function createMockHandlerContext(
+export function createEnvFileGeneratorContext(
     overrides?: Partial<HandlerContext>
 ): jest.Mocked<HandlerContext> {
-    return {
-        logger: createMockLogger() as any,
-        debugLogger: createMockLogger() as any,
-        context: {
+    return createMockHandlerContextBase({
+        logger: createMockLogger(),
+        debugLogger: createMockLogger(),
+        context: createMockExtensionContext({
             extensionPath: '/test/extension/path',
-            secrets: {} as any,
+            secrets: createMockSecretStorage().secrets,
             globalState: {
                 get: jest.fn(),
                 update: jest.fn().mockResolvedValue(undefined),
+                keys: jest.fn().mockReturnValue([]),
+                setKeysForSync: jest.fn(),
             },
-        } as any,
+        }),
         panel: undefined,
-        stateManager: {} as any,
+        stateManager: createMockStateManager(),
         communicationManager: undefined,
         sendMessage: jest.fn().mockResolvedValue(undefined),
         sharedState: {
             isAuthenticating: false,
         },
-        authManager: {} as any,
+        authManager: createMockAuthenticationService(),
         ...overrides,
-    } as jest.Mocked<HandlerContext>;
+    });
 }
 
 /**
@@ -63,13 +60,14 @@ export function createMockHandlerContext(
 export function createMockSetupContext(
     overrides?: Partial<{
         handlerContext: HandlerContext;
-        registry: ComponentRegistry;
+        /** Merged over the default registry, so a suite can hand in just `envVars`. */
+        registry: Partial<ComponentRegistry>;
         project: Project;
         config: ProjectCreationConfig;
     }>
 ): ProjectSetupContext {
-    const mockHandlerContext = overrides?.handlerContext || createMockHandlerContext();
-    const mockRegistry: ComponentRegistry = overrides?.registry || {
+    const mockHandlerContext = overrides?.handlerContext || createEnvFileGeneratorContext();
+    const mockRegistry: ComponentRegistry = {
         version: '1.0.0',
         envVars: sharedEnvVars,
         components: {
@@ -80,6 +78,7 @@ export function createMockSetupContext(
             integrations: [],
         },
         services: {},
+        ...overrides?.registry,
     };
     const mockProject: Project = overrides?.project || {
         name: 'test-project',

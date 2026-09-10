@@ -1,0 +1,183 @@
+---
+id: PL-11
+kind: epic
+area: platform
+needs: []
+value: med
+status: active
+parent: PL-30
+---
+
+# Test health and optimization
+
+Filed 2026-08-28 at the owner's direction: the test-health work kept arriving
+as orphan items and same-day incidents with no shared home or done-condition.
+
+
+## The UI arc — added 2026-09-06
+
+Everything under this epic so far has been about the code's DECISIONS: dedup, run-noise,
+shared fixtures, casts, and the mutation burn-down. Two new children cover what a person
+actually sees, and they are one plan in two halves.
+
+| | Item | Question it answers | Cost |
+|---|---|---|---|
+| 1 | [[PL-47]] | Is it accessible, and does it hold up across themes and widths? | cheap — extends an instrument that exists |
+| 2 | [[PL-46]] | Does it work end to end when a person clicks it? | a decision first, then real work |
+
+**Do PL-47 first.** It reuses `webview-visual-baseline`, which already loads the real
+bundles for all eight surfaces; accessibility, theme variants and widths are further
+readings of that same page rather than new systems. It also closes a standard the root
+CLAUDE.md states and nothing enforces — WCAG 2.1 AA, against a repo with zero accessibility
+tooling.
+
+**PL-46 is a question before it is work**, because clicking the wizard through to a finished
+project creates real Adobe, GitHub and DA.live resources.
+
+They are complements. PL-47 cannot prove a surface opens or that the extension sent the
+right payload; PL-46 cannot cheaply reach the many states a fixture expresses. And PL-47's
+fixtures are the seam that will rot silently — a functional test is the only thing that
+could check they still match what the extension really sends.
+
+
+## What the burn-down left behind — added 2026-09-07
+
+[[PL-22]] reached zero open gaps across all 610 modules on 2026-09-06, and the sweep that
+ran straight after it measured the suite from the other side: not "does a test exist" but
+"does it catch anything". Two findings came out, and they are separate items because they
+are separate KINDS of finding.
+
+| | Finding | Why it is its own item |
+|---|---|---|
+| [[PL-48]] | 12,564 of 21,429 tests (59%) catch things, but nothing that another test does not already catch | A property of a GROUP. Names no individual test, so it can only be used to rank — the work is consolidating the worst files, never deleting on the number |
+| [[PL-49]] | 792 tests catch no deliberate change at all | Names tests EXACTLY once rebuilt from the raw reports. The work is classifying why, because a shared cause means one fix rather than 792 decisions |
+
+Do PL-49 first. It is the sharper signal, its list is recoverable offline with no
+re-measurement, and two of its clusters look like one habit this repo already warns about —
+asserting that a mock was called tests the mock. If that is what it turns out to be, the
+result is a rule for test authors, which outlives any cleanup.
+
+The sweep measured 609 modules and 58,550 possible changes to the source; its per-module
+counts are in `reports/mutation/redundancy/summary.jsonl`.
+
+Both are newly safe to attempt. Zero open gaps means a test removal is now falsifiable:
+re-measure, and the gap count must still read zero. That safety net did not exist before
+this week, which is why neither item was worth filing until now.
+
+## What this epic collects
+
+- `PL-9` — tests-tree dedup census (execution lane; two mechanical clusters
+  fixed 2026-08-28, three variant families triaged).
+- `PL-10` — the testing-approach audit (the question lane: which duplication
+  is convention, is the split-suite pattern healthy, mock-contract drift,
+  what a tests-tree scan skill would add).
+
+## The standing failure modes this epic exists to retire
+
+Each measured, not hypothesized — most more than once:
+
+1. **Stale mocks survive contract changes** (webview-test-authoring §8's
+   four-in-one-day, and again 2026-08-28: adding one export to
+   appConfigPackages broke NINE suites whose module mocks lacked it — found
+   only by running them).
+2. **Mocks cannot see malformed calls** — four production no-ops shipped
+   green in August because collaborators were mocked; the argument-assertion
+   rule exists but nothing detects suites that need it and lack it.
+3. **Invented fixtures** — shapes written from memory that typecheck and
+   agree with the code and disagree with reality (the manifest-record trap,
+   the DA.live path trap).
+4. **Dead-or-broken shared helpers beside N clones of their job** (the
+   PrerequisitesStep testUtils lesson).
+
+## Open: six enforcers cannot see an uncommitted file
+
+**Recorded 2026-09-02, not worked.** Fifteen enforcer call sites enumerate files with
+`git ls-files`, which lists TRACKED files only. `mutation-config-pairing` was fixed the
+day this was found, because it broke CI: a new suite was invisible to the local gate while
+it was untracked, the gate went green, and CI failed the moment the file was committed —
+the gate had been reporting on the previous commit.
+
+Six call sites still have it: `doc-module-refs`, `test-family-setup`,
+`duplicate-test-files`, `inline-styles`, `stylesheet-bundles`, `tool.testUtils`.
+
+**This is NOT a sweep of one change applied six times, which is why it was not done then.**
+
+The pre-push hook added the same day already closes the hole that matters: at push time
+everything being pushed is committed, so tracked-only is the CORRECT query there, and all
+fifteen sites are right at that moment. What the change buys is earlier warning during a
+mid-work `npm run gate`.
+
+And it costs something. An enforcer that can see untracked-but-not-ignored files can
+refuse a push over a file that is not being pushed — a half-written scratch suite in
+`tests/` would do it. That is defensible for the pairing check, where an untracked test
+for a mutated module is a real thing you would hit at commit anyway; it is less obviously
+right for `duplicate-test-files`, whose own comment shows someone already weighed this and
+chose tracked-only deliberately.
+
+So each of the six is a small judgement — is early warning worth a possible false block —
+and the answer may differ per enforcer. The correct incantation, where the answer is yes,
+is `git ls-files --cached --others --exclude-standard`, which `architectureScan.ts`
+already uses.
+
+**A separate, smaller gap, recorded so it is not rediscovered as news:** the pre-push gate
+is not perfectly equal to CI either. Enforcers read file CONTENT from disk, so a dirty
+working tree means the gate checks uncommitted content while CI checks committed. Closing
+that would mean running the gate against a temporary checkout — real cost for a rare case,
+and not obviously worth it.
+
+## Done when
+
+A new suite's defects surface at WRITE time, not at review or in production:
+the conventions have either a mechanical check or a documented
+accepted-variety verdict, and the census numbers (clone %, testUtils
+coverage of split families) hold or improve across two release cuts.
+
+## Shipped so far
+
+- 2026-08-28  Witness census SHIPPED (harness/test-census.mjs + .json, reconciled 54/54): before any ADR-015 convergence, each queue file's suites were classified by whether they can OBJECT to a bad refactor. Result: 47 WITNESS (argument-asserting suites already in place — the convergence can start there safely), 1 BLIND (prerequisitesCacheManager: SEVEN suites, none inspect collaborator calls), 4 UNTESTED (catalogPrewarmPhase, edsResetConfigStep, MultiVersionDetector, VersionSatisfactionChecker), 2 INDIRECT (meshRedeploy, componentInstallation — exercised through parent suites; re-read before trusting). Ordering rule ratified by the owner: strengthen-then-convert for the seven weak files; convert-then-simplify for the 47. Caveat recorded: WITNESS = the suite asserts SOME collaborator's calls, not necessarily the locator seam — per-file confirmation happens at conversion time.
+- 2026-08-28  TRUE-SHAPE reconciliation: epic now holds PL-9 (dedup census/ratchet — serviced by the batch loop), PL-14 (enforcement tooling, HIGH — first), PL-15 (noise burn-down, needs PL-14). The batch loop is SHARED with PL-13 (architecture convergence) — one stream, not two. Also queued on this epic: the 7 weak witnesses (strengthen-first, gates the batches), coverage follow-ups (proxy 0%, deletion 16%, template sync 18%), the hollow suite fix, and the mutation-informed pruning decision after the first Stryker pass.
+- 2026-08-28  IMPACT METER SHIPPED (harness/program-metrics.mjs) + BASELINE FROZEN (metrics-baseline-2026-08-28.json, commit 87b693d). The program's scoreboard, all re-runnable: src 899 files/176,234 lines; tests 1,276 files/297,726 lines (1.69 test lines per src line — the ratio the mock-wall melt should visibly shrink); arch exemptions 75 rows; sendMessage ceiling 147; double styles: 100 wall-suites to melt, 547 already deps-object; clones 160/2.44% (note: jscpd jitters +-1 run to run); craft flags theater 2 / nondeterminism 26 / realWaits 16; coverage 84.17/73.18/85.94; noise 355 act + 72 prop + 613 console.error + 95 console.warn. Ritual: re-run with --label at each release cut; the impact report IS the diff of two snapshots. Expected direction: testLines DOWN (walls melt), exemptions -> adjudicated floor, noise -> 0, walls -> ~0, coverage branches UP, clones -> adjudicated floor.
+- 2026-08-28  CONSOLIDATED PLAN written: .rptc/plans/architecture-test-convergence/overview.md — 7 phases in dependency order (gates first, then witnesses, then conversion batches, noise, release-cut instruments, craft/coverage, impact snapshot), the per-file batch recipe with its gate, the loop-decides vs owner-rules split (3 adjudication slates + the post-Stryker pruning verdict), stop conditions, and the report contract. PL-13 and this epic execute as ONE stream through the shared batch.
+- 2026-08-29  projectDeletionService coverage gap closed (16% -> 84%): three confirmation configurations pinned, retry bounds pinned, EDS resource-selection decisions tested. 12 planted defects all caught. Clause 3 of the pre-stated criterion failed on first pass and was fixed by testing, not narrating. Commit 6acdb3adb.
+- 2026-08-29  refactor(mcp-proxy): fix two flaws in yesterday's extraction — one I introduced (`9e85cbc2f`)
+- 2026-08-29  test(mcp-proxy): extract the session state machine — 0% becomes 100%, and the reason mattered (`bfbb03f7a`)
+- 2026-08-28  test(prerequisites): close phase 2 — the last blind witness now guards its seams (`5a57dc044`)
+- 2026-08-28  docs(plan): validate every phase against reality — 3 of 8 done, not "essentially complete" (`5e30f8c3c`)
+- 2026-08-30  docs(plan): throw-style is setup, not assertions — phase 6's third syntax-count item (`966626b26`)
+- 2026-08-30  refactor(updates): the env merge gets a seam, and the hollow suite gets assertions (`d4cd2085f`)
+- 2026-08-30  docs(plan): logicInTests counts loops, not defects — phase 6's criterion is wrong for it (`a4585f04c`)
+- 2026-08-29  test(updates): templateSyncService — the safety net that nothing asserted (`45874c83a`)
+- 2026-08-29  wip(updates): templateSyncService safety suite, before mutation testing (`b5c478ac0`)
+- 2026-08-29  chore(record): refresh the audit ledger and correct phase 6's status (`f4b0788d8`)
+- 2026-08-30  docs(handoff): 2026-08-30 loop report — programme done bar one lane (`fdfcdb0a3`)
+- 2026-08-30  refactor(census): retire logicInTests and throw-style — owner-approved (`5a12b9f16`)
+- 2026-08-30  Merge loop/2026-08-29-convergence-phases into develop (`02e730c8d`)
+- 2026-08-30  docs(handoff): bring the loop report current — it had gone stale mid-run (`d2226926a`)
+- 2026-08-30  docs(handoff): correct the report header — the branch is merged, not 15 ahead (`293500f93`)
+- 2026-08-30  chore(metrics): closing snapshot for the convergence programme (`414da452e`)
+- 2026-08-30  fix(census): a deliberate throw IS a verification — suites-asserting-nothing to 0 (`d9135af81`)
+- 2026-08-30  docs(adr-015): state the two conventions the code had been inventing per-file (`50f3a8405`)
+- 2026-08-30  refactor(architecture): two of three registry constructions use the session accessor (`4204789fd`)
+- 2026-08-30  docs(adr): audit all 18 decisions, and generate the index that answers "where is the rule for X" (`fc46598ff`)
+- 2026-08-30  docs(research): what ADRs are actually for — and two corrections to this morning's audit (`d2b00172e`)
+- 2026-08-30  docs(handbook): one home for the conventions, and the ADR/handbook split stated (`72993f9f0`)
+- 2026-08-30  docs(adr): part 2 of the audit — is each ADR truly valuable? (`863f1f9b7`)
+- 2026-08-30  fix(adr): every reference now resolves or is declared — 63 unexplained to 0 (`68191d7e6`)
+- 2026-08-30  docs(adr): ADR-019 supersedes ADR-004's amendment chain; rules move to the handbook (`178eb70be`)
+- 2026-08-30  docs(adr): split ADR-015 — one decision per record, two rules to the handbook (`319031bc5`)
+- 2026-08-30  docs(handbook): rewrite as an orientation document a person can read (`2aa80ef68`)
+- 2026-08-30  docs(handbook): capture every convention this programme exposed, one rule each (`4bab5b4a1`)
+- 2026-08-30  docs(handbook): state each section's POSITION above its conventions (`b879ae9f1`)
+- 2026-08-30  docs(research): how the field structures conventions — and the name for what we built (`e470da602`)
+- 2026-08-30  docs(research): close both gaps — the fitness-function taxonomy, and how big a real one is (`3af4904d3`)
+- 2026-08-30  docs(handbook): separate what you must understand from what the tools will tell you (`b3fd39aba`)
+- 2026-08-30  docs(handbook): capture the frontend and CSS conventions that were missing (`2dcf85a47`)
+- 2026-09-02  Pre-push gate + validate:test-file-sizes added to the gate; the git ls-files blind spot fixed in mutation-config-pairing and RECORDED for the other six (8b3961d14, b7ef3f920)
+- 2026-09-02  docs(backlog): record the six enforcers that cannot see an uncommitted file (`187c7467f`)
+- 2026-09-02  test: split the two suites over the 750-line limit — CI has been red since 2026-08-31 (`e1db680d7`)
+- 2026-09-03  Five of seven children shipped as of 2026-09-03 — PL-9, PL-10, PL-15, PL-16, PL-32. Remaining: PL-14 (built; enforcement tooling needs use, not more code) and PL-22 (a question — does the 93% mutation score hold outside the modules already trusted). PL-22 is the last item track 3 of PL-30 names as outstanding.
+- 2026-09-03  docs(backlog): close out the test-health work — five of seven children shipped (`34e7ab6af`)
+- 2026-09-08  refactor(eds): delete an unreachable empty-blocks guard in createBlockLibrary (`b45271543`)
+- 2026-09-08  fix(mutation): the baseline command silently destroyed 617 of its own 629 rows (`a80ab0171`)
+- 2026-09-08  FINDING (not acted on, out of PL-19's scope): tests/features/sidebar/providers/sidebarProvider.test.ts (546 lines) hand-rolls its own MockWebviewView type, factory AND full jest.mock preamble for vscode/lifecycleService, while its sibling sidebarProvider-messages.test.ts uses the shared sidebarProvider.testUtils that already provides all of it. They are one test family. Not converted because the suite registers its OWN jest.mock('vscode'), so importing the testUtils would collide on hoisting — it needs a whole-suite conversion, not a partial one. test-family-setup.test.ts passes because it checks a .testUtils EXISTS, not that every family member imports it; that is the gap.
+- 2026-09-08  fix(scan): stop re-reporting a comment already ruled accurate history, twice (`b07391838`)

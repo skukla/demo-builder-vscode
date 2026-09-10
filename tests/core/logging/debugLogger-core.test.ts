@@ -9,47 +9,18 @@
 import {
     mockLogsChannel,
     mockDebugChannel,
-    createMockContext,
+    createDebugLoggerContext,
     resetMocks,
 } from './debugLogger.testUtils';
 
-// Mock vscode - must be in test file for proper hoisting
-jest.mock('vscode', () => {
-    const originalModule = jest.requireActual('../../__mocks__/vscode');
-    return {
-        ...originalModule,
-        window: {
-            ...originalModule.window,
-            createOutputChannel: jest.fn((name: string, options?: { log: boolean }) => {
-                const { mockLogsChannel, mockDebugChannel } = require('./debugLogger.testUtils');
-                // Both channels use LogOutputChannel with { log: true }
-                if (options?.log) {
-                    if (name === 'Demo Builder: User Logs') {
-                        return mockLogsChannel;
-                    }
-                    if (name === 'Demo Builder: Debug Logs') {
-                        return mockDebugChannel;
-                    }
-                }
-                return {
-                    append: jest.fn(),
-                    appendLine: jest.fn(),
-                    clear: jest.fn(),
-                    show: jest.fn(),
-                    hide: jest.fn(),
-                    dispose: jest.fn(),
-                    name,
-                };
-            }),
-        },
-        workspace: {
-            ...originalModule.workspace,
-            getConfiguration: jest.fn().mockReturnValue({
-                get: jest.fn().mockReturnValue(true),
-            }),
-        },
-    };
-});
+/**
+ * This suite tests the real singleton — that `getLogger` throws before
+ * initialisation and returns the initialised instance after. The shared node
+ * setup mocks BOTH `@/core/logging` and `@/core/logging/debugLogger` so no other
+ * suite has to, which would otherwise hand this one a fake and make both
+ * assertions meaningless. It is the one suite that wants the real accessor.
+ */
+jest.unmock('@/core/logging/debugLogger');
 
 import * as vscode from 'vscode';
 import {
@@ -66,7 +37,7 @@ describe('DebugLogger - Core', () => {
     beforeEach(() => {
         resetMocks();
         _resetLoggerForTesting();
-        mockContext = createMockContext();
+        mockContext = createDebugLoggerContext();
     });
 
     describe('Initialization', () => {
@@ -87,7 +58,7 @@ describe('DebugLogger - Core', () => {
         it('should add both channels to subscriptions for cleanup', () => {
             logger = new DebugLogger(mockContext);
 
-            expect(mockContext.subscriptions.length).toBe(2);
+            expect(mockContext.subscriptions).toHaveLength(2);
         });
 
         it('should always output debug messages via info() with [debug] prefix', () => {

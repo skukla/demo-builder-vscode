@@ -134,19 +134,14 @@ describe('ActionGrid', () => {
             render(<ActionGrid {...defaultProps} />);
 
             const openButton = screen.getByText('Open in Browser').closest('button');
-            // Mock renders UNSAFE_className as a lowercase attribute
-            expect(openButton?.getAttribute('unsafe_classname')).toContain(
-                'dashboard-action-button--hero'
-            );
+            expect(openButton?.className).toContain('dashboard-action-button--hero');
         });
 
         it('should mark the Author button with the hero accent modifier class', () => {
             render(<ActionGrid {...edsProps} />);
 
             const authorButton = screen.getByText('Author Content').closest('button');
-            expect(authorButton?.getAttribute('unsafe_classname')).toContain(
-                'dashboard-action-button--hero'
-            );
+            expect(authorButton?.className).toContain('dashboard-action-button--hero');
         });
 
         it('should not render Start/Stop in the primary cluster for EDS projects', () => {
@@ -177,9 +172,7 @@ describe('ActionGrid', () => {
             render(<ActionGrid {...defaultProps} />);
 
             const adminButton = screen.getByText('Manage Commerce').closest('button');
-            expect(adminButton?.getAttribute('unsafe_classname')).toContain(
-                'dashboard-action-button--hero'
-            );
+            expect(adminButton?.className).toContain('dashboard-action-button--hero');
         });
 
         it('should not disable Manage Commerce while isOpeningBrowser (resolves backend-side)', () => {

@@ -8,11 +8,12 @@
  * - check-project-apis: Verify API Mesh access
  */
 
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
+import { toAppError, isTimeout } from '@/core/errors';
 import { getMeshNodeVersion } from '@/core/utils/meshConfig';
 import { withTimeout } from '@/core/utils/promiseUtils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { validateProjectId } from '@/core/validation';
+import { validateProjectId } from '@/core/validation/validators/AdobeResourceValidator';
 import {
     ensureOrgContext,
     type EnsureOrgContextResult,
@@ -20,7 +21,6 @@ import {
 import { stampProjectsDeletable } from '@/features/authentication/services/projectOwnership';
 import { isConsoleOpFailure, type AdobeProject } from '@/features/authentication/services/types';
 import { ErrorCode } from '@/types/errorCodes';
-import { toAppError, isTimeout } from '@/types/errors';
 import { HandlerContext, HandlerResponse } from '@/types/handlers';
 import { DataResult, SimpleResult } from '@/types/results';
 import { parseJSON, toError } from '@/types/typeGuards';
@@ -152,7 +152,7 @@ export async function handleGetProjects(
             await context.sendMessage('project-loading-status', {
                 isLoading: true,
                 message: 'Loading your Adobe projects...',
-                subMessage: `Fetching from organization: ${currentOrg?.name || 'your organization'}`,
+                subMessage: `Fetching from organization: ${currentOrg.name || 'your organization'}`,
             });
         }
 
@@ -371,11 +371,7 @@ export async function handleCheckProjectApis(
                     context.logger.warn('[Adobe Setup] API Mesh not enabled for selected project');
                     return { success: true, data: { hasMesh: false } };
                 }
-                // If the error indicates unknown command, try next variant
-                const unknown = /is not a aio command|Unknown argument|Did you mean/i.test(
-                    combined,
-                );
-                if (unknown) continue;
+                // Any other failure — an unknown command included — tries the next variant.
             }
         }
 

@@ -5,21 +5,6 @@ import { createMockExecaSubprocess, setupMockDependencies, simulateSubprocessCom
 jest.mock('execa');
 import execa from 'execa';
 
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({
-        error: jest.fn(),
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn()
-    })
-}));
-
-jest.mock('@/core/shell/commandSequencer');
-jest.mock('@/core/shell/environmentSetup');
-jest.mock('@/core/shell/fileWatcher');
-jest.mock('@/core/shell/pollingService');
-jest.mock('@/core/shell/resourceLocker');
-jest.mock('@/core/shell/retryStrategyManager');
 
 describe('CommandExecutor - Adobe CLI Integration', () => {
     let commandExecutor: CommandExecutor;
@@ -33,13 +18,13 @@ describe('CommandExecutor - Adobe CLI Integration', () => {
         mockDependencies = setupMockDependencies();
 
         // Now create CommandExecutor - it will use our mocks
-        commandExecutor = new CommandExecutor();
+        commandExecutor = new CommandExecutor(mockDependencies.deps);
     });
 
     describe('Adobe CLI telemetry handling', () => {
         it('should auto-answer telemetry prompt', async () => {
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             const promise = commandExecutor.execute('aio --version', {
                 configureTelemetry: false
@@ -57,7 +42,7 @@ describe('CommandExecutor - Adobe CLI Integration', () => {
 
         it('should configure telemetry for Adobe CLI commands', async () => {
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             // Use non-version command to test telemetry configuration
             const promise = commandExecutor.execute('aio console:org:list', {
@@ -76,7 +61,7 @@ describe('CommandExecutor - Adobe CLI Integration', () => {
 
         it('should skip telemetry configuration for --version commands', async () => {
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             const promise = commandExecutor.execute('aio --version');
 
@@ -92,7 +77,7 @@ describe('CommandExecutor - Adobe CLI Integration', () => {
 
         it('should skip telemetry configuration for -v commands', async () => {
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             const promise = commandExecutor.execute('aio -v');
 
@@ -107,7 +92,7 @@ describe('CommandExecutor - Adobe CLI Integration', () => {
 
         it('should skip telemetry for node --version commands', async () => {
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             const promise = commandExecutor.execute('node --version');
 
@@ -123,7 +108,7 @@ describe('CommandExecutor - Adobe CLI Integration', () => {
 
         it('should skip telemetry when configureTelemetry is explicitly false', async () => {
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             const promise = commandExecutor.execute('aio console:org:list', {
                 configureTelemetry: false
@@ -142,7 +127,7 @@ describe('CommandExecutor - Adobe CLI Integration', () => {
     describe('Adobe CLI caching', () => {
         it('should cache aio --version results', async () => {
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             // First call
             const promise1 = commandExecutor.execute('aio --version');
@@ -164,7 +149,7 @@ describe('CommandExecutor - Adobe CLI Integration', () => {
 
         it('should cache aio plugins results', async () => {
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             // First call
             const promise1 = commandExecutor.execute('aio plugins');
@@ -191,7 +176,7 @@ describe('CommandExecutor - Adobe CLI Integration', () => {
             const mockSubprocess2 = createMockExecaSubprocess();
 
             // First call with Node 20
-            mockExeca.mockReturnValueOnce(mockSubprocess1 as any);
+            mockExeca.mockReturnValueOnce(mockSubprocess1);
             const promise1 = commandExecutor.execute('aio --version', { useNodeVersion: '20' });
 
             process.nextTick(() => {
@@ -201,7 +186,7 @@ describe('CommandExecutor - Adobe CLI Integration', () => {
             const result1 = await promise1;
 
             // Second call with Node 24 - should NOT use cache from Node 20
-            mockExeca.mockReturnValueOnce(mockSubprocess2 as any);
+            mockExeca.mockReturnValueOnce(mockSubprocess2);
             const promise2 = commandExecutor.execute('aio --version', { useNodeVersion: '24' });
 
             process.nextTick(() => {
@@ -221,7 +206,7 @@ describe('CommandExecutor - Adobe CLI Integration', () => {
             mockDependencies.mockEnvironmentSetup().findFnmPath.mockReturnValue('/usr/local/bin/fnm');
 
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             // First call with Node 20
             const promise1 = commandExecutor.execute('aio --version', { useNodeVersion: '20' });
@@ -248,7 +233,7 @@ describe('CommandExecutor - Adobe CLI Integration', () => {
             const mockSubprocess2 = createMockExecaSubprocess();
 
             // First call without Node version (default)
-            mockExeca.mockReturnValueOnce(mockSubprocess1 as any);
+            mockExeca.mockReturnValueOnce(mockSubprocess1);
             const promise1 = commandExecutor.execute('aio --version');
 
             process.nextTick(() => {
@@ -258,7 +243,7 @@ describe('CommandExecutor - Adobe CLI Integration', () => {
             await promise1;
 
             // Second call with explicit Node version - should NOT use cache
-            mockExeca.mockReturnValueOnce(mockSubprocess2 as any);
+            mockExeca.mockReturnValueOnce(mockSubprocess2);
             const promise2 = commandExecutor.execute('aio --version', { useNodeVersion: '20' });
 
             process.nextTick(() => {
@@ -279,7 +264,7 @@ describe('CommandExecutor - Adobe CLI Integration', () => {
             const mockSubprocess2 = createMockExecaSubprocess();
 
             // First call with Node 20
-            mockExeca.mockReturnValueOnce(mockSubprocess1 as any);
+            mockExeca.mockReturnValueOnce(mockSubprocess1);
             const promise1 = commandExecutor.execute('aio plugins', { useNodeVersion: '20' });
 
             process.nextTick(() => {
@@ -289,7 +274,7 @@ describe('CommandExecutor - Adobe CLI Integration', () => {
             await promise1;
 
             // Second call with Node 24 - should NOT use cache
-            mockExeca.mockReturnValueOnce(mockSubprocess2 as any);
+            mockExeca.mockReturnValueOnce(mockSubprocess2);
             const promise2 = commandExecutor.execute('aio plugins', { useNodeVersion: '24' });
 
             process.nextTick(() => {
@@ -306,7 +291,7 @@ describe('CommandExecutor - Adobe CLI Integration', () => {
     describe('Adobe CLI Node version management', () => {
         it('should ensure Adobe CLI Node version is set', async () => {
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             const promise = commandExecutor.execute('aio console:org:list');
 

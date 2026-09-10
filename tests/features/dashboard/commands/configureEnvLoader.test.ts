@@ -29,6 +29,22 @@ describe('mergeEnvValuesFromSources', () => {
         expect(result['eds-storefront']).toEqual({ FOO: 'disk-value' });
     });
 
+    it('still merges the manifest when the disk-loaded entry is EMPTY', () => {
+        // An empty entry means the component's .env was read and had nothing in it.
+        // That is not "already populated": the skip must be keyed on the entry
+        // having keys, not on it existing, or the Configure screen renders blank
+        // fields for a component whose values live in .demo-builder.json.
+        const envValues = { 'adobe-commerce-accs': {} };
+        const rootEnv = {};
+        const componentConfigs = {
+            'adobe-commerce-accs': { ACCS_STORE_CODE: 'citisignal_store' },
+        };
+
+        const result = mergeEnvValuesFromSources(envValues, rootEnv, componentConfigs);
+
+        expect(result['adobe-commerce-accs']).toStrictEqual({ ACCS_STORE_CODE: 'citisignal_store' });
+    });
+
     it('pulls values from the root .env when present', () => {
         const envValues = {};
         const rootEnv = { ACCS_GRAPHQL_ENDPOINT: 'https://root-env.example.com/graphql' };

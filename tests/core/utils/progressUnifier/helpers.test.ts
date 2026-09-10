@@ -8,7 +8,7 @@
  * See ProgressUnifier.test.ts for elapsed time tracking tests.
  */
 
-import { formatElapsedTime } from '@/core/utils/progressUnifier';
+import { formatElapsedTime } from '@/core/utils/progressUnifier/ProgressUnifier';
 
 describe('ProgressUnifier Helper Functions', () => {
     describe('formatElapsedTime', () => {

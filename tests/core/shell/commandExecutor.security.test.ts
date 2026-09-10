@@ -14,34 +14,15 @@
  */
 
 import { CommandExecutor } from '@/core/shell/commandExecutor';
-import { CommandSequencer } from '@/core/shell/commandSequencer';
 import { EnvironmentSetup } from '@/core/shell/environmentSetup';
-import { FileWatcher } from '@/core/shell/fileWatcher';
-import { PollingService } from '@/core/shell/pollingService';
-import { ResourceLocker } from '@/core/shell/resourceLocker';
-import { RetryStrategyManager } from '@/core/shell/retryStrategyManager';
 import type { ExecuteOptions } from '@/core/shell/types';
 import { createMockExecaSubprocess, simulateSubprocessComplete } from './commandExecutor.testUtils';
 
 // Mock execa
 jest.mock('execa');
 import execa from 'execa';
+import { createFakeCommandExecutorDeps } from '../../helpers/commandExecutorDepsFake';
 
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({
-        error: jest.fn(),
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn()
-    })
-}));
-
-jest.mock('@/core/shell/commandSequencer');
-jest.mock('@/core/shell/environmentSetup');
-jest.mock('@/core/shell/fileWatcher');
-jest.mock('@/core/shell/pollingService');
-jest.mock('@/core/shell/resourceLocker');
-jest.mock('@/core/shell/retryStrategyManager');
 
 describe('CommandExecutor - Security: Node Version Validation Integration', () => {
     let commandExecutor: CommandExecutor;
@@ -51,57 +32,17 @@ describe('CommandExecutor - Security: Node Version Validation Integration', () =
     beforeEach(() => {
         jest.clearAllMocks();
 
-        // Setup mock implementations BEFORE creating CommandExecutor
-        (ResourceLocker as jest.MockedClass<typeof ResourceLocker>).mockImplementation(() => ({
-            executeExclusive: jest.fn(<T>(resource: string, operation: () => Promise<T>) => operation()) as any,
-            clearAllLocks: jest.fn()
-        } as any));
-
-        (RetryStrategyManager as jest.MockedClass<typeof RetryStrategyManager>).mockImplementation(() => ({
-            executeWithRetry: jest.fn((executeFn: () => Promise<any>) => executeFn()) as any,
-            getDefaultStrategy: jest.fn(() => ({
-                maxAttempts: 1,
-                initialDelay: 1000,
-                maxDelay: 5000,
-                backoffFactor: 2
-            })),
-            getStrategy: jest.fn(() => ({
-                maxAttempts: 1,
-                initialDelay: 1000,
-                maxDelay: 5000,
-                backoffFactor: 1.5
-            }))
-        } as any));
-
-        (EnvironmentSetup as jest.MockedClass<typeof EnvironmentSetup>).mockImplementation(() => {
-            const mock = {
-                findAdobeCLINodeVersion: jest.fn().mockResolvedValue('18'),
-                findFnmPath: jest.fn().mockReturnValue('/usr/local/bin/fnm'),
-                findNpmGlobalPaths: jest.fn().mockReturnValue([]),
-                ensureAdobeCLIConfigured: jest.fn().mockResolvedValue(undefined),
-                ensureAdobeCLINodeVersion: jest.fn().mockResolvedValue(undefined),
-                resetSession: jest.fn()
-            } as any;
-            mockEnvironmentSetup = mock;
-            return mock;
-        });
-
-        (FileWatcher as jest.MockedClass<typeof FileWatcher>).mockImplementation(() => ({
-            disposeAll: jest.fn(),
-            waitForFileSystem: jest.fn()
-        } as any));
-
-        (CommandSequencer as jest.MockedClass<typeof CommandSequencer>).mockImplementation(() => ({
-            executeSequence: jest.fn(),
-            executeParallel: jest.fn()
-        } as any));
-
-        (PollingService as jest.MockedClass<typeof PollingService>).mockImplementation(() => ({
-            pollUntilCondition: jest.fn()
-        } as any));
+        // CONVERTED 2026-08-28 (ADR-015). Sixty lines of class-constructor
+        // mocking stood here, duplicating what commandExecutor.testUtils
+        // already did, because CommandExecutor built its own collaborators.
+        // One shared fake replaces all of it; `npmGlobalPaths` is empty in this
+        // suite, which is the one way it differed.
+        const deps = createFakeCommandExecutorDeps();
+        mockEnvironmentSetup = deps.environmentSetup as unknown as jest.Mocked<EnvironmentSetup>;
+        mockEnvironmentSetup.findNpmGlobalPaths.mockReturnValue([]);
 
         // Create CommandExecutor instance
-        commandExecutor = new CommandExecutor();
+        commandExecutor = new CommandExecutor(deps);
     });
 
     // =================================================================
@@ -196,7 +137,7 @@ describe('CommandExecutor - Security: Node Version Validation Integration', () =
         it('should accept valid numeric version and call execa()', async () => {
             // Given: Valid numeric version
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             const options: ExecuteOptions = { useNodeVersion: '20' };
 
@@ -223,7 +164,7 @@ describe('CommandExecutor - Security: Node Version Validation Integration', () =
                 jest.clearAllMocks();
 
                 const mockSubprocess = createMockExecaSubprocess();
-                mockExeca.mockReturnValue(mockSubprocess as any);
+                mockExeca.mockReturnValue(mockSubprocess);
 
                 const options: ExecuteOptions = { useNodeVersion: version };
                 const promise = commandExecutor.execute('npm install', options);
@@ -241,7 +182,7 @@ describe('CommandExecutor - Security: Node Version Validation Integration', () =
         it('should accept valid semantic version and call execa()', async () => {
             // Given: Valid semantic version
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             const options: ExecuteOptions = { useNodeVersion: '20.11.0' };
 
@@ -263,7 +204,7 @@ describe('CommandExecutor - Security: Node Version Validation Integration', () =
             mockEnvironmentSetup.findAdobeCLINodeVersion.mockResolvedValue('18');
 
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             const options: ExecuteOptions = { useNodeVersion: 'auto' };
 
@@ -284,7 +225,7 @@ describe('CommandExecutor - Security: Node Version Validation Integration', () =
         it('should accept "current" keyword and call execa()', async () => {
             // Given: "current" keyword
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             const options: ExecuteOptions = { useNodeVersion: 'current' };
 
@@ -304,7 +245,7 @@ describe('CommandExecutor - Security: Node Version Validation Integration', () =
         it('should skip validation for null and call execa()', async () => {
             // Given: null (no nodeVersion specified)
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             const options: ExecuteOptions = { useNodeVersion: null };
 
@@ -324,7 +265,7 @@ describe('CommandExecutor - Security: Node Version Validation Integration', () =
         it('should skip validation for undefined (no useNodeVersion option)', async () => {
             // Given: undefined (useNodeVersion not in options)
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             const options: ExecuteOptions = {}; // useNodeVersion is undefined
 
@@ -352,7 +293,7 @@ describe('CommandExecutor - Security: Node Version Validation Integration', () =
             mockEnvironmentSetup.findAdobeCLINodeVersion.mockResolvedValue('20');
 
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             const options: ExecuteOptions = { useNodeVersion: 'auto' };
 
@@ -386,7 +327,7 @@ describe('CommandExecutor - Security: Node Version Validation Integration', () =
         it('should skip validation for "current" keyword (not interpolated)', async () => {
             // Given: "current" keyword (uses fnm env, not interpolated into --using=)
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             const options: ExecuteOptions = { useNodeVersion: 'current' };
 
@@ -434,7 +375,7 @@ describe('CommandExecutor - Security: Node Version Validation Integration', () =
         it('should call execa() with validated version in command', async () => {
             // Given: Valid version
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             const options: ExecuteOptions = { useNodeVersion: '20' };
 

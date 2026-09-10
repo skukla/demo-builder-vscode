@@ -83,42 +83,14 @@ jest.mock('vscode', () => {
 import * as vscode from 'vscode';
 import { ErrorLogger } from '@/core/logging/errorLogger';
 import { getLogger } from '@/core/logging/debugLogger';
+import { createMockExtensionContext } from '../../helpers/extensionContextFake';
 
 describe('ErrorLogger', () => {
     let errorLogger: ErrorLogger;
     let mockContext: vscode.ExtensionContext;
 
     function createMockContext(): vscode.ExtensionContext {
-        return {
-            subscriptions: [],
-            extensionPath: '/test/path',
-            extensionUri: vscode.Uri.file('/test/path'),
-            globalStorageUri: vscode.Uri.file('/test/global-storage'),
-            storageUri: vscode.Uri.file('/test/storage'),
-            logUri: vscode.Uri.file('/test/logs'),
-            extensionMode: vscode.ExtensionMode.Development,
-            asAbsolutePath: jest.fn((p: string) => `/test/path/${p}`),
-            workspaceState: {
-                get: jest.fn(),
-                update: jest.fn(),
-                keys: jest.fn().mockReturnValue([]),
-            },
-            globalState: {
-                get: jest.fn(),
-                update: jest.fn(),
-                keys: jest.fn().mockReturnValue([]),
-                setKeysForSync: jest.fn(),
-            },
-            secrets: {
-                get: jest.fn(),
-                store: jest.fn(),
-                delete: jest.fn(),
-                onDidChange: jest.fn(),
-            },
-            environmentVariableCollection: {} as vscode.GlobalEnvironmentVariableCollection,
-            extension: {} as vscode.Extension<unknown>,
-            languageModelAccessInformation: {} as vscode.LanguageModelAccessInformation,
-        } as unknown as vscode.ExtensionContext;
+        return createMockExtensionContext();
     }
 
     beforeEach(() => {
@@ -173,9 +145,17 @@ describe('ErrorLogger', () => {
             (getLogger as jest.Mock).mockImplementationOnce(() => {
                 throw new Error('Logger not initialized');
             });
+            // ASSERT-AND-ABSORB (ADR-016): this path logs to console by design —
+            // it is the one place ErrorLogger cannot report through the logger,
+            // because the logger is what is missing. Assert it says so, rather
+            // than letting the line leak into the run as untracked noise.
+            const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
 
             // Should not throw
             expect(() => new ErrorLogger(mockContext)).not.toThrow();
+            expect(consoleError).toHaveBeenCalledWith('ErrorLogger: DebugLogger not initialized');
+
+            consoleError.mockRestore();
         });
     });
 
@@ -201,7 +181,12 @@ describe('ErrorLogger', () => {
             (getLogger as jest.Mock).mockImplementationOnce(() => {
                 throw new Error('Logger not initialized');
             });
+            // Constructing without a logger prints the same console line the
+            // test above pins; absorb it here, where the subject is what happens
+            // AFTERWARDS.
+            const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
             const loggerWithoutDebug = new ErrorLogger(mockContext);
+            consoleError.mockRestore();
             jest.clearAllMocks();
 
             loggerWithoutDebug.logInfo('Test message');
@@ -317,6 +302,31 @@ describe('ErrorLogger', () => {
 
             expect(mockDebugLogger.show).toHaveBeenCalledWith(false);
         });
+
+        it('should not show a notification when critical is left unstated', () => {
+            // The default is what almost every caller uses; passing `false`
+            // explicitly is the rarer case, and it was the only one covered.
+            errorLogger.logError('Ordinary error');
+
+            expect(vscode.window.showErrorMessage).not.toHaveBeenCalled();
+        });
+
+        it('should not log a details line when no details are given', () => {
+            errorLogger.logError('Error message');
+
+            expect(mockDebugLogger.debug).not.toHaveBeenCalled();
+        });
+
+        it('should not show logs when the user dismisses the notification', async () => {
+            // showErrorMessage resolves undefined when the notification is
+            // dismissed rather than actioned.
+            (vscode.window.showErrorMessage as jest.Mock).mockResolvedValueOnce(undefined);
+
+            errorLogger.logError('Critical error', undefined, true);
+            await new Promise(resolve => setTimeout(resolve, 0));
+
+            expect(mockDebugLogger.show).not.toHaveBeenCalled();
+        });
     });
 
     describe('updateStatusBar()', () => {
@@ -350,6 +360,20 @@ describe('ErrorLogger', () => {
 
             expect(mockStatusBarItem.text).toContain('$(error) 1');
             expect(mockStatusBarItem.text).toContain('$(warning) 1');
+        });
+
+        it('should show the warning half alone when there are no errors', () => {
+            errorLogger.logWarning('Warning');
+
+            // Exact, not `toContain`: the empty error half must leave no
+            // "$(error) 0" behind, and no leading space where it used to be.
+            expect(mockStatusBarItem.text).toBe('$(warning) 1');
+        });
+
+        it('should show the error half alone when there are no warnings', () => {
+            errorLogger.logError('Error');
+
+            expect(mockStatusBarItem.text).toBe('$(error) 1');
         });
 
         it('should set tooltip', () => {
@@ -485,6 +509,17 @@ describe('ErrorLogger', () => {
             errorLogger.addDiagnostic(uri, 'Test diagnostic');
 
             expect(mockDiagnosticCollection.set).toHaveBeenCalled();
+        });
+
+        it('should set exactly the new diagnostic when the file had none', () => {
+            const uri = vscode.Uri.file('/test/file.ts');
+            mockDiagnosticCollection.get.mockReturnValue(undefined);
+
+            errorLogger.addDiagnostic(uri, 'Only diagnostic');
+
+            expect(mockDiagnosticCollection.set).toHaveBeenCalledWith(uri, [
+                expect.objectContaining({ message: 'Only diagnostic' }),
+            ]);
         });
     });
 

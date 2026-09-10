@@ -24,32 +24,26 @@ jest.mock('@/features/data-installer/services/importJobRunner', () => ({
     watchImportJob: jest.fn(),
     IMPORT_POLL: { maxAttempts: 120, timeout: 600_000 },
 }));
-// Its constructor calls getLogger(), which throws unless the extension has
-// activated. The poller itself is mocked above, so the instance is never used.
-jest.mock('@/core/shell/pollingService', () => ({
-    PollingService: jest.fn().mockImplementation(() => ({})),
-}));
 
 import { buildSampleDataDeps } from '@/features/data-installer/services/sampleDataInstallDeps';
 import { resolveCommerceCredentials } from '@/features/data-installer/services/commerceCredentials';
 import type { HandlerContext } from '@/types/handlers';
+import type { DataTypeStatus } from '@/features/data-installer/types';
+import { importHarness, ACCS_PROJECT } from './sampleDataInstallDeps.testUtils';
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 
 const mockedResolve = resolveCommerceCredentials as jest.MockedFunction<
     typeof resolveCommerceCredentials
 >;
 
-const PROJECT = {
-    name: 'demo',
-    adobe: { organization: '285361' },
-    componentSelections: { backend: 'adobe-commerce-accs' },
-    componentConfigs: {},
-};
+const PROJECT = ACCS_PROJECT;
 
-function makeContext(): HandlerContext {
-    return {
-        debugLogger: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() },
-        authManager: { getTokenManager: () => ({ inspectToken: jest.fn() }) },
-    } as unknown as HandlerContext;
+function makeImportHarness(): HandlerContext {
+    return importHarness({
+        authManager: createMockAuthenticationService({
+            getTokenManager: jest.fn().mockReturnValue({ inspectToken: jest.fn() }),
+        }),
+    });
 }
 
 beforeEach(() => {
@@ -92,9 +86,9 @@ describe('buildSampleDataDeps — the credential dispatch, unmocked', () => {
 
     it('resolves an ACCS project that declares its own pair', async () => {
         mockedResolve.mockImplementation(actual.resolveCommerceCredentials);
-        const deps = buildSampleDataDeps(makeContext(), ACCS_WITH_PAIR, jest.fn());
+        const deps = buildSampleDataDeps(makeImportHarness(), ACCS_WITH_PAIR, jest.fn());
 
-        const result = await deps.credentials(ACCS_WITH_PAIR as never);
+        const result = await deps.credentials(ACCS_WITH_PAIR);
 
         expect(result.ok).toBe(true);
     });
@@ -108,9 +102,9 @@ describe('buildSampleDataDeps — the credential dispatch, unmocked', () => {
     it('CONTROL — the same configs with no backend cannot resolve', async () => {
         mockedResolve.mockImplementation(actual.resolveCommerceCredentials);
         const noBackend = { ...ACCS_WITH_PAIR, componentSelections: undefined };
-        const deps = buildSampleDataDeps(makeContext(), noBackend, jest.fn());
+        const deps = buildSampleDataDeps(makeImportHarness(), noBackend, jest.fn());
 
-        const result = await deps.credentials(noBackend as never);
+        const result = await deps.credentials(noBackend);
 
         expect(result.ok).toBe(false);
     });
@@ -130,12 +124,12 @@ describe('buildSampleDataDeps — the credential dispatch, unmocked', () => {
  * handed over rather than on any outcome.
  */
 describe('buildSampleDataDeps — watch', () => {
-    const { watchImportJob } = jest.requireMock('@/features/data-installer/services/importJobRunner') as {
-        watchImportJob: jest.Mock;
-    };
+    const { watchImportJob } = jest.requireMock(
+        '@/features/data-installer/services/importJobRunner'
+    );
     const { resolveDataInstallerAccess } = jest.requireMock(
-        '@/features/data-installer/handlers/dataInstallerHandlers',
-    ) as { resolveDataInstallerAccess: jest.Mock };
+        '@/features/data-installer/handlers/dataInstallerHandlers'
+    );
 
     /** A read client: the two methods the poller calls, and nothing else. */
     const readClient = {
@@ -162,7 +156,7 @@ describe('buildSampleDataDeps — watch', () => {
     });
 
     it('passes a client that can report job status', async () => {
-        const deps = buildSampleDataDeps(makeContext(), PROJECT, jest.fn());
+        const deps = buildSampleDataDeps(makeImportHarness(), PROJECT, jest.fn());
 
         await deps.watch({ activationId: 'act-1', requestedTypes: ['categories'] });
 
@@ -177,7 +171,7 @@ describe('buildSampleDataDeps — watch', () => {
      * identity pins it to the one `resolveDataInstallerAccess` supplies.
      */
     it('CONTROL — it is the access client, not some other one', async () => {
-        const deps = buildSampleDataDeps(makeContext(), PROJECT, jest.fn());
+        const deps = buildSampleDataDeps(makeImportHarness(), PROJECT, jest.fn());
 
         await deps.watch({ activationId: 'act-1', requestedTypes: ['categories'] });
 
@@ -187,7 +181,7 @@ describe('buildSampleDataDeps — watch', () => {
     // The poller names the job from this; a removal labelled `import` is what the
     // 2026-08-17 log said while deleting.
     it('labels the job with the operation it was given', async () => {
-        const deps = buildSampleDataDeps(makeContext(), PROJECT, jest.fn());
+        const deps = buildSampleDataDeps(makeImportHarness(), PROJECT, jest.fn());
 
         await deps.watch({ activationId: 'act-1', requestedTypes: [], operation: 'reset' });
 
@@ -195,7 +189,7 @@ describe('buildSampleDataDeps — watch', () => {
     });
 
     it('defaults the label to import when none is given', async () => {
-        const deps = buildSampleDataDeps(makeContext(), PROJECT, jest.fn());
+        const deps = buildSampleDataDeps(makeImportHarness(), PROJECT, jest.fn());
 
         await deps.watch({ activationId: 'act-1', requestedTypes: [] });
 
@@ -203,7 +197,7 @@ describe('buildSampleDataDeps — watch', () => {
     });
 
     it("defaults to 'reset' when the deps were built for a removal", async () => {
-        const deps = buildSampleDataDeps(makeContext(), PROJECT, jest.fn(), 'remove');
+        const deps = buildSampleDataDeps(makeImportHarness(), PROJECT, jest.fn(), 'remove');
 
         await deps.watch({ activationId: 'act-1', requestedTypes: [] });
 
@@ -225,48 +219,51 @@ describe('buildSampleDataDeps — progress wording', () => {
     // Since 2026-08-22 the report is STRUCTURED (verb/done/total/processing)
     // and each surface composes its own line — the invariants below are the
     // same ones the old string assertions guarded.
-    const perType = { categories: 'success', products: 'pending' } as never;
+    const perType: Record<string, DataTypeStatus> = { categories: 'success', products: 'pending' };
 
     it('says Removing when built for a removal', () => {
         const report = jest.fn();
-        buildSampleDataDeps(makeContext(), PROJECT, report, 'remove').onProgress?.(perType);
+        buildSampleDataDeps(makeImportHarness(), PROJECT, report, 'remove').onProgress?.(perType);
 
         expect(report).toHaveBeenCalledWith(expect.objectContaining({ verb: 'Removing' }));
     });
 
     it('CONTROL — still says Installing for an install', () => {
         const report = jest.fn();
-        buildSampleDataDeps(makeContext(), PROJECT, report, 'install').onProgress?.(perType);
+        buildSampleDataDeps(makeImportHarness(), PROJECT, report, 'install').onProgress?.(perType);
 
         expect(report).toHaveBeenCalledWith(expect.objectContaining({ verb: 'Installing' }));
     });
 
     it('counts finished types, not pending ones', () => {
         const report = jest.fn();
-        buildSampleDataDeps(makeContext(), PROJECT, report, 'remove').onProgress?.(perType);
+        buildSampleDataDeps(makeImportHarness(), PROJECT, report, 'remove').onProgress?.(perType);
 
         expect(report).toHaveBeenCalledWith(expect.objectContaining({ done: 1, total: 2 }));
     });
 
     it('names the types processing right now, with friendly labels', () => {
         const report = jest.fn();
-        const live = { categories: 'success', customer_groups: 'processing' } as never;
-        buildSampleDataDeps(makeContext(), PROJECT, report, 'install').onProgress?.(live);
+        const live: Record<string, DataTypeStatus> = {
+            categories: 'success',
+            customer_groups: 'processing',
+        };
+        buildSampleDataDeps(makeImportHarness(), PROJECT, report, 'install').onProgress?.(live);
 
         expect(report).toHaveBeenCalledWith(
-            expect.objectContaining({ processing: ['Customer groups'] }),
+            expect.objectContaining({ processing: ['Customer groups'] })
         );
     });
 });
 
 describe('buildSampleDataDeps — credentials', () => {
     it('supplies a broker, so a project with no workspace can still install', async () => {
-        const deps = buildSampleDataDeps(makeContext(), PROJECT, jest.fn());
+        const deps = buildSampleDataDeps(makeImportHarness(), PROJECT, jest.fn());
 
-        await deps.credentials(PROJECT as never);
+        await deps.credentials(PROJECT);
 
         expect(mockedResolve).toHaveBeenCalledWith(
-            expect.objectContaining({ broker: expect.any(Function) }),
+            expect.objectContaining({ broker: expect.any(Function) })
         );
     });
 
@@ -275,9 +272,9 @@ describe('buildSampleDataDeps — credentials', () => {
             ok: true,
             credentials: { kind: 'accs', clientId: 'shared', clientSecret: 'fake-not-a-secret' },
         });
-        const deps = buildSampleDataDeps(makeContext(), PROJECT, jest.fn());
+        const deps = buildSampleDataDeps(makeImportHarness(), PROJECT, jest.fn());
 
-        await expect(deps.credentials(PROJECT as never)).resolves.toEqual({
+        await expect(deps.credentials(PROJECT)).resolves.toEqual({
             ok: true,
             credentials: { kind: 'accs', clientId: 'shared', clientSecret: 'fake-not-a-secret' },
         });
@@ -286,9 +283,9 @@ describe('buildSampleDataDeps — credentials', () => {
     // The refusal wording stays a plain reason — the install reports it, and it
     // must not carry anything about credentials beyond "there are none".
     it('reports a refusal without leaking what was tried', async () => {
-        const deps = buildSampleDataDeps(makeContext(), PROJECT, jest.fn());
+        const deps = buildSampleDataDeps(makeImportHarness(), PROJECT, jest.fn());
 
-        const result = await deps.credentials(PROJECT as never);
+        const result = await deps.credentials(PROJECT);
 
         expect(result.ok).toBe(false);
         expect(JSON.stringify(result)).not.toContain('client');

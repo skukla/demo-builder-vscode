@@ -20,8 +20,8 @@ import * as vscode from 'vscode';
 import {
     execFileMock,
     readFileMock,
-    makeContext,
-    makeEdsProject,
+    makeSyncStorefrontContext,
+    makeSyncTargetProject,
     makeLogger,
     makeStateManager,
     mockGetAccessToken,
@@ -31,6 +31,7 @@ import {
     syncAndPublishMock,
     SyncStorefrontCommand,
 } from './syncStorefront.testUtils';
+import type { StateManager } from '@/core/state/stateManager';
 
 beforeEach(() => {
     resetSyncStorefrontMocks();
@@ -39,9 +40,9 @@ beforeEach(() => {
 describe('SyncStorefrontCommand', () => {
     it('skips with a warning when no current project is loaded', async () => {
         const command = new SyncStorefrontCommand(
-            makeContext(),
-            makeStateManager(null) as never,
-            makeLogger() as never
+            makeSyncStorefrontContext(),
+            makeStateManager(null) as unknown as StateManager,
+            makeLogger()
         );
 
         await command.execute();
@@ -51,11 +52,11 @@ describe('SyncStorefrontCommand', () => {
     });
 
     it('errors when the project has no EDS storefront component', async () => {
-        const project = { ...makeEdsProject(), componentInstances: {} };
+        const project = { ...makeSyncTargetProject(), componentInstances: {} };
         const command = new SyncStorefrontCommand(
-            makeContext(),
-            makeStateManager(project) as never,
-            makeLogger() as never
+            makeSyncStorefrontContext(),
+            makeStateManager(project) as unknown as StateManager,
+            makeLogger()
         );
 
         await command.execute();
@@ -70,9 +71,9 @@ describe('SyncStorefrontCommand', () => {
     it('errors when the storefront has no .git directory', async () => {
         statMock.mockRejectedValueOnce(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }));
         const command = new SyncStorefrontCommand(
-            makeContext(),
-            makeStateManager(makeEdsProject()) as never,
-            makeLogger() as never
+            makeSyncStorefrontContext(),
+            makeStateManager(makeSyncTargetProject()) as unknown as StateManager,
+            makeLogger()
         );
 
         await command.execute();
@@ -87,9 +88,9 @@ describe('SyncStorefrontCommand', () => {
     it('does nothing when the user cancels the commit message prompt', async () => {
         (vscode.window.showInputBox as jest.Mock).mockResolvedValueOnce(undefined);
         const command = new SyncStorefrontCommand(
-            makeContext(),
-            makeStateManager(makeEdsProject()) as never,
-            makeLogger() as never
+            makeSyncStorefrontContext(),
+            makeStateManager(makeSyncTargetProject()) as unknown as StateManager,
+            makeLogger()
         );
 
         await command.execute();
@@ -107,9 +108,9 @@ describe('SyncStorefrontCommand', () => {
         mockGetAccessToken.mockResolvedValue('dalive-ims-from-auth-service');
 
         const command = new SyncStorefrontCommand(
-            makeContext(),
-            makeStateManager(makeEdsProject()) as never,
-            makeLogger() as never
+            makeSyncStorefrontContext(),
+            makeStateManager(makeSyncTargetProject()) as unknown as StateManager,
+            makeLogger()
         );
 
         await command.execute();
@@ -139,11 +140,11 @@ describe('SyncStorefrontCommand', () => {
         });
         mockGetAccessToken.mockResolvedValue('dalive-ims-from-auth-service');
 
-        const context = makeContext();
+        const context = makeSyncStorefrontContext();
         const command = new SyncStorefrontCommand(
             context,
-            makeStateManager(makeEdsProject()) as never,
-            makeLogger() as never
+            makeStateManager(makeSyncTargetProject()) as unknown as StateManager,
+            makeLogger()
         );
 
         await command.execute();
@@ -166,9 +167,9 @@ describe('SyncStorefrontCommand', () => {
         mockGetAccessToken.mockResolvedValue(null);
 
         const command = new SyncStorefrontCommand(
-            makeContext(),
-            makeStateManager(makeEdsProject()) as never,
-            makeLogger() as never
+            makeSyncStorefrontContext(),
+            makeStateManager(makeSyncTargetProject()) as unknown as StateManager,
+            makeLogger()
         );
 
         await command.execute();
@@ -188,9 +189,9 @@ describe('SyncStorefrontCommand', () => {
         mockGetAccessToken.mockRejectedValue(new Error('token store unavailable'));
 
         const command = new SyncStorefrontCommand(
-            makeContext(),
-            makeStateManager(makeEdsProject()) as never,
-            makeLogger() as never
+            makeSyncStorefrontContext(),
+            makeStateManager(makeSyncTargetProject()) as unknown as StateManager,
+            makeLogger()
         );
 
         await command.execute();
@@ -216,9 +217,9 @@ describe('SyncStorefrontCommand', () => {
 
         const runCommand = (): Promise<void> =>
             new SyncStorefrontCommand(
-                makeContext(),
-                makeStateManager(makeEdsProject()) as never,
-                makeLogger() as never
+                makeSyncStorefrontContext(),
+                makeStateManager(makeSyncTargetProject()) as unknown as StateManager,
+                makeLogger()
             ).execute();
 
         it('shows the rule-violation reason to the user, not just to the log', async () => {
@@ -308,9 +309,9 @@ describe('SyncStorefrontCommand', () => {
         (vscode.window.showWarningMessage as jest.Mock).mockResolvedValueOnce('Cancel and Reset');
 
         const command = new SyncStorefrontCommand(
-            makeContext(),
-            makeStateManager(makeEdsProject()) as never,
-            makeLogger() as never
+            makeSyncStorefrontContext(),
+            makeStateManager(makeSyncTargetProject()) as unknown as StateManager,
+            makeLogger()
         );
 
         await command.execute();
@@ -339,9 +340,9 @@ describe('SyncStorefrontCommand', () => {
         });
 
         const command = new SyncStorefrontCommand(
-            makeContext(),
-            makeStateManager(makeEdsProject()) as never,
-            makeLogger() as never
+            makeSyncStorefrontContext(),
+            makeStateManager(makeSyncTargetProject()) as unknown as StateManager,
+            makeLogger()
         );
 
         await command.execute();
@@ -389,9 +390,9 @@ describe('SyncStorefrontCommand', () => {
         (vscode.window.showWarningMessage as jest.Mock).mockResolvedValueOnce('Continue');
 
         const command = new SyncStorefrontCommand(
-            makeContext(),
-            makeStateManager(makeEdsProject()) as never,
-            makeLogger() as never
+            makeSyncStorefrontContext(),
+            makeStateManager(makeSyncTargetProject()) as unknown as StateManager,
+            makeLogger()
         );
 
         await command.execute();
@@ -485,9 +486,9 @@ describe('SyncStorefrontCommand', () => {
             mockConflictFlow({ conflicted: ['config.json'] });
 
             const command = new SyncStorefrontCommand(
-                makeContext(),
-                makeStateManager(makeEdsProject()) as never,
-                makeLogger() as never
+                makeSyncStorefrontContext(),
+                makeStateManager(makeSyncTargetProject()) as unknown as StateManager,
+                makeLogger()
             );
 
             await command.execute();
@@ -517,9 +518,9 @@ describe('SyncStorefrontCommand', () => {
             mockConflictFlow({ conflicted: ['config.json'] });
 
             const command = new SyncStorefrontCommand(
-                makeContext(),
-                makeStateManager(makeEdsProject()) as never,
-                makeLogger() as never
+                makeSyncStorefrontContext(),
+                makeStateManager(makeSyncTargetProject()) as unknown as StateManager,
+                makeLogger()
             );
 
             await command.execute();
@@ -544,9 +545,9 @@ describe('SyncStorefrontCommand', () => {
             (vscode.window.showWarningMessage as jest.Mock).mockResolvedValueOnce('Continue');
 
             const command = new SyncStorefrontCommand(
-                makeContext(),
-                makeStateManager(makeEdsProject()) as never,
-                makeLogger() as never
+                makeSyncStorefrontContext(),
+                makeStateManager(makeSyncTargetProject()) as unknown as StateManager,
+                makeLogger()
             );
 
             await command.execute();
@@ -569,9 +570,9 @@ describe('SyncStorefrontCommand', () => {
             (vscode.window.showWarningMessage as jest.Mock).mockResolvedValueOnce('Continue');
 
             const command = new SyncStorefrontCommand(
-                makeContext(),
-                makeStateManager(makeEdsProject()) as never,
-                makeLogger() as never
+                makeSyncStorefrontContext(),
+                makeStateManager(makeSyncTargetProject()) as unknown as StateManager,
+                makeLogger()
             );
 
             await command.execute();
@@ -595,9 +596,9 @@ describe('SyncStorefrontCommand', () => {
             });
 
             const command = new SyncStorefrontCommand(
-                makeContext(),
-                makeStateManager(makeEdsProject()) as never,
-                makeLogger() as never
+                makeSyncStorefrontContext(),
+                makeStateManager(makeSyncTargetProject()) as unknown as StateManager,
+                makeLogger()
             );
 
             await command.execute();
@@ -611,9 +612,9 @@ describe('SyncStorefrontCommand', () => {
             mockConflictFlow({ conflicted: ['config.json'], checkoutError: true });
 
             const command = new SyncStorefrontCommand(
-                makeContext(),
-                makeStateManager(makeEdsProject()) as never,
-                makeLogger() as never
+                makeSyncStorefrontContext(),
+                makeStateManager(makeSyncTargetProject()) as unknown as StateManager,
+                makeLogger()
             );
 
             await command.execute();

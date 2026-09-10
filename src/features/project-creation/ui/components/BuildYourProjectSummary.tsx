@@ -50,7 +50,7 @@ export interface BuildYourProjectSummaryProps {
 const ARCHITECTURE_PENDING = 'Architecture pending';
 
 /** A single summary row. */
-const Row: React.FC<{ row: SummaryRow }> = ({ row }) => {
+function Row({ row }: { row: SummaryRow }) {
     const isDone = Boolean(row.done && row.value);
     return (
         <div className={cn('sum-row', isDone && 'done')}>
@@ -71,7 +71,7 @@ const Row: React.FC<{ row: SummaryRow }> = ({ row }) => {
             )}
         </div>
     );
-};
+}
 
 /**
  * The persistent cross-area "Your project" summary column.
@@ -79,22 +79,24 @@ const Row: React.FC<{ row: SummaryRow }> = ({ row }) => {
  * @param props - the derived architecture label and the visible area groups
  * @returns the summary column element
  */
-export const BuildYourProjectSummary: React.FC<BuildYourProjectSummaryProps> = ({
+export function BuildYourProjectSummary({
     architectureLabel,
     groups,
-}) => (
-    <>
-        <div className="sum-title">Your project</div>
-        <div className="sum-arch">
-            {architectureLabel ?? <span className="empty">{ARCHITECTURE_PENDING}</span>}
-        </div>
-        {groups.map(group => (
-            <React.Fragment key={group.heading}>
-                <div className="sum-group-h">{group.heading}</div>
-                {group.rows.map(row => (
-                    <Row key={row.label} row={row} />
-                ))}
-            </React.Fragment>
-        ))}
-    </>
-);
+}: BuildYourProjectSummaryProps) {
+    return (
+        <>
+            <div className="sum-title">Your project</div>
+            <div className="sum-arch">
+                {architectureLabel ?? <span className="empty">{ARCHITECTURE_PENDING}</span>}
+            </div>
+            {groups.map((group) => (
+                <React.Fragment key={group.heading}>
+                    <div className="sum-group-h">{group.heading}</div>
+                    {group.rows.map((row) => (
+                        <Row key={row.label} row={row} />
+                    ))}
+                </React.Fragment>
+            ))}
+        </>
+    );
+}

@@ -38,6 +38,44 @@ NOT overlap `/sop-scan` (God files, complexity, mixed patterns) — cross-refere
 3. **Confirm not a false positive** — jscpd flags these, none of which are targets:
    - Generated / vendored code, config maps, large literal tables.
    - Parallel test fixtures or data-driven cases (already `--ignore`d, but watch helpers).
+   - **A pair whose two ranges OVERLAP inside one file.** See below — this one is
+     not a judgment call, it is arithmetic, and it costs hours if you miss it.
+
+### The overlapping-range false positive (measured 2026-08-30)
+
+A clone pair reported **within a single file** whose ranges overlap, and whose two
+spans differ in length, is NOT duplication. There is nothing to extract, and reading
+the file will not tell you that — the code looks repetitive because it *is* uniform.
+
+Check it mechanically before opening anything:
+
+```python
+a, b = c['firstFile'], c['secondFile']
+overlap = a['name'] == b['name'] and not (a['end'] < b['start'] or b['end'] < a['start'])
+mismatched = (a['end'] - a['start']) != (b['end'] - b['start'])
+# overlap and mismatched  ->  false positive, skip it
+```
+
+The confirming test, which needs no interpretation: strip all whitespace from the file
+and from the reported `fragment`, then count occurrences. **Real duplication yields ≥2.
+This class yields exactly 1.**
+
+**Why it happens** — established by experiment, not inferred: a file of N tests that
+share one skeleton and differ only in their literals has a *periodic* token stream, so
+a long window matches the same stream shifted by roughly one test block. A synthetic
+file of 30 structurally identical, textually distinct tests (every name, id and string
+different — zero copy-paste available to remove) reproduces the signature exactly: one
+self-clone, overlapping ranges, mismatched spans. So this fires on uniform test files
+by design; it is not a jscpd bug and there is no threshold that fixes it.
+
+This cost a real detour. A duplication sweep across `tests/` reported 15 self-clones;
+12 were genuine and were extracted, and the last 3 — the three LARGEST, at 251, 178 and
+344 reported lines — were all this. They were queued as "large, likely whole-test-body
+duplication needing care". They were nothing at all.
+
+**The general lesson, and the fourth instance of it in this codebase:** a count of
+what code LOOKS like is not a count of what is WRONG with it. Before working a scan's
+worklist, confirm the metric measures the defect you intend to fix.
 
 4. **Extract** the shared logic into ONE function/module with a minimal signature — params
    model only what VARIES; import it at each former site and delete the copies.

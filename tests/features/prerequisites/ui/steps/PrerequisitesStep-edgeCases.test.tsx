@@ -4,10 +4,10 @@ import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { PrerequisitesStep } from '@/features/prerequisites/ui/steps/PrerequisitesStep';
 import '@testing-library/jest-dom';
 import {
-    mockOnMessage,
     baseState,
-    setupScrollMock,
     resetAllMocks,
+    setupMessageCallbacks,
+    setupScrollMock,
 } from './PrerequisitesStep.testUtils';
 import { WizardState } from '@/types/webview';
 
@@ -45,17 +45,7 @@ describe('PrerequisitesStep - Edge Cases', () => {
     });
 
     it('should not allow continue when required prerequisites fail', async () => {
-        let loadedCallback: (data: any) => void = () => {};
-        let statusCallback: (data: any) => void = () => {};
-
-        mockOnMessage.mockImplementation((type: string, callback: (data: any) => void) => {
-            if (type === 'prerequisites-loaded') {
-                loadedCallback = callback;
-            } else if (type === 'prerequisite-status') {
-                statusCallback = callback;
-            }
-            return jest.fn();
-        });
+        const fire = setupMessageCallbacks();
 
         render(
             <Provider theme={defaultTheme}>
@@ -70,17 +60,17 @@ describe('PrerequisitesStep - Edge Cases', () => {
             </Provider>
         );
 
-        loadedCallback({
+        fire.fireLoaded({
             prerequisites: [
-                { id: 'node', name: 'Node.js', description: 'Runtime', optional: false }
-            ]
+                { id: 'node', name: 'Node.js', description: 'Runtime', optional: false },
+            ],
         });
 
         await waitFor(() => {
             expect(screen.getByText('Node.js')).toBeInTheDocument();
         });
 
-        statusCallback({ index: 0, status: 'error', message: 'Not installed', canInstall: true });
+        fire.fireStatus({ index: 0, status: 'error', message: 'Not installed', canInstall: true });
 
         await waitFor(() => {
             expect(mockSetCanProceed).toHaveBeenCalledWith(false);
@@ -88,17 +78,7 @@ describe('PrerequisitesStep - Edge Cases', () => {
     });
 
     it('should enable continue when all prerequisites pass', async () => {
-        let loadedCallback: (data: any) => void = () => {};
-        let statusCallback: (data: any) => void = () => {};
-
-        mockOnMessage.mockImplementation((type: string, callback: (data: any) => void) => {
-            if (type === 'prerequisites-loaded') {
-                loadedCallback = callback;
-            } else if (type === 'prerequisite-status') {
-                statusCallback = callback;
-            }
-            return jest.fn();
-        });
+        const fire = setupMessageCallbacks();
 
         render(
             <Provider theme={defaultTheme}>
@@ -113,17 +93,17 @@ describe('PrerequisitesStep - Edge Cases', () => {
             </Provider>
         );
 
-        loadedCallback({
+        fire.fireLoaded({
             prerequisites: [
-                { id: 'node', name: 'Node.js', description: 'Runtime', optional: false }
-            ]
+                { id: 'node', name: 'Node.js', description: 'Runtime', optional: false },
+            ],
         });
 
         await waitFor(() => {
             expect(screen.getByText('Node.js')).toBeInTheDocument();
         });
 
-        statusCallback({ index: 0, status: 'success', message: 'Installed' });
+        fire.fireStatus({ index: 0, status: 'success', message: 'Installed' });
 
         // When all prerequisites pass, navigation should be enabled
         await waitFor(() => {

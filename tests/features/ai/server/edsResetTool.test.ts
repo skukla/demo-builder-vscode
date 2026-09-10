@@ -25,11 +25,12 @@ jest.mock('@/types/typeGuards', () => ({
 }));
 
 const mockInspectToken = jest.fn();
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(() => ({
             getTokenManager: () => ({ inspectToken: mockInspectToken }),
         })),
+        getCommandExecutor: jest.fn(() => ({ execute: jest.fn() })),
     },
 }));
 jest.mock('@/features/ai/server/adobeTargetStore', () => ({
@@ -42,7 +43,10 @@ import { runWithAdobeTarget } from '@/features/ai/server/adobeTargetStore';
 import { executeEdsReset, extractResetParams } from '@/features/eds/services/reset/edsResetService';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { isEdsProject, getMeshComponentInstance } from '@/types/typeGuards';
-import type { HandlerContext } from '@/types/handlers';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 const executeEdsResetMock = executeEdsReset as jest.Mock;
 const extractResetParamsMock = extractResetParams as jest.Mock;
@@ -51,15 +55,26 @@ const getDaLiveAuthServiceMock = getDaLiveAuthService as jest.Mock;
 const isEdsProjectMock = isEdsProject as unknown as jest.Mock;
 const getMeshComponentInstanceMock = getMeshComponentInstance as unknown as jest.Mock;
 
+interface CapturedDef {
+    needsAuth?: unknown;
+    annotations?: Record<string, boolean>;
+    inputSchema?: Record<string, unknown>;
+}
+
 function fakeServer() {
     const tools = new Map<string, (args: any) => Promise<{ content: Array<{ text: string }> }>>();
+    const defs = new Map<string, CapturedDef>();
     return {
         registerTool(
             name: string,
-            _def: unknown,
+            def: unknown,
             handler: (args: any) => Promise<{ content: Array<{ text: string }> }>
         ) {
             tools.set(name, handler);
+            defs.set(name, def as CapturedDef);
+        },
+        def(): CapturedDef {
+            return defs.get('reset_eds_project')!;
         },
         async call(args?: unknown): Promise<any> {
             return JSON.parse((await tools.get('reset_eds_project')!(args)).content[0].text);
@@ -69,17 +84,11 @@ function fakeServer() {
 
 const getCurrentProject = jest.fn();
 const ctxFactory = () =>
-    ({
-        stateManager: { getCurrentProject },
-        context: {},
-        logger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            trace: jest.fn(),
-        },
-    }) as unknown as HandlerContext;
+    createMockHandlerContext({
+        stateManager: createMockStateManager({ getCurrentProject }),
+        context: createMockExtensionContext(),
+        logger: createMockLogger(),
+    });
 
 const PROJECT = { name: 'eds-proj', path: '/p/eds-proj' };
 const PARAMS = {
@@ -108,6 +117,9 @@ describe('reset_eds_project', () => {
                 _p: unknown,
                 _c: unknown,
                 _tp: unknown,
+                // ADR-015: the mesh-redeploy deps now sit between the token
+                // provider and the progress callback.
+                _deps: unknown,
                 onProgress?: (x: { step: number; totalSteps: number; message: string }) => void
             ) => {
                 onProgress?.({ step: 1, totalSteps: 2, message: 'Resetting repo' });
@@ -208,6 +220,93 @@ describe('reset_eds_project', () => {
         expect(executeEdsResetMock).not.toHaveBeenCalled();
     });
 
+    it('declares itself DA.live-authenticated and destructive', async () => {
+        // The descriptor is what the consent layer and the auth pre-flight read.
+        // A tool that rewrites a repo and its content must not be annotated as a
+        // read, and must not be reachable without DA.live.
+        const s = fakeServer();
+        registerEdsResetTool(s, ctxFactory);
+
+        const def = s.def();
+        expect(def.needsAuth).toEqual(['dalive']);
+        expect(def.annotations).toEqual({ readOnlyHint: false, destructiveHint: true });
+        expect(Object.keys(def.inputSchema!)).toEqual([
+            'includeBlockLibrary',
+            'verifyCdn',
+            'confirm',
+        ]);
+    });
+
+    it('refuses a call with no arguments at all rather than throwing', async () => {
+        const s = fakeServer();
+        registerEdsResetTool(s, ctxFactory);
+        const res = await s.call();
+        expect(res).toMatchObject({ destructive: true, project: 'eds-proj' });
+        expect(executeEdsResetMock).not.toHaveBeenCalled();
+    });
+
+    it('proceeds and redeploys when the project has a mesh and Adobe IS signed in', async () => {
+        // The mesh handoff must be a REFUSAL, not the normal path: a valid token
+        // has to let the reset through, and turn the redeploy on.
+        getMeshComponentInstanceMock.mockReturnValue({ path: '/p/mesh' });
+        mockInspectToken.mockResolvedValue({ valid: true });
+        const s = fakeServer();
+        registerEdsResetTool(s, ctxFactory);
+
+        const res = await s.call({ confirm: true });
+
+        expect(res).toMatchObject({ reset: true });
+        expect(executeEdsResetMock).toHaveBeenCalledWith(
+            expect.objectContaining({ redeployMesh: true }),
+            expect.anything(),
+            expect.anything(),
+            expect.anything(),
+            expect.any(Function)
+        );
+    });
+
+    it('treats an Adobe token inspection that throws as not signed in', async () => {
+        // The pre-flight is best-effort; a thrown inspection must hand off rather
+        // than fall through into a reset whose mesh redeploy will fail late.
+        getMeshComponentInstanceMock.mockReturnValue({ path: '/p/mesh' });
+        mockInspectToken.mockRejectedValue(new Error('IMS unreachable'));
+        const s = fakeServer();
+        registerEdsResetTool(s, ctxFactory);
+
+        expect(await s.call({ confirm: true })).toMatchObject({ needsAuth: 'adobe' });
+        expect(executeEdsResetMock).not.toHaveBeenCalled();
+    });
+
+    it('defaults both optional flags OFF when the caller omits them', async () => {
+        const s = fakeServer();
+        registerEdsResetTool(s, ctxFactory);
+
+        await s.call({ confirm: true });
+
+        expect(executeEdsResetMock).toHaveBeenCalledWith(
+            expect.objectContaining({ includeBlockLibrary: false, verifyCdn: false }),
+            expect.anything(),
+            expect.anything(),
+            expect.anything(),
+            expect.any(Function)
+        );
+    });
+
+    it('hands the reset the command executor and auth manager it redeploys with', async () => {
+        // ADR-015: these arrive as a parameter. Passing an empty object instead
+        // typechecks nowhere and fails only once a mesh redeploy is attempted.
+        const s = fakeServer();
+        registerEdsResetTool(s, ctxFactory);
+
+        await s.call({ confirm: true });
+
+        const deps = executeEdsResetMock.mock.calls[0][3];
+        expect(deps).toEqual({
+            commandManager: expect.anything(),
+            authManager: expect.anything(),
+        });
+    });
+
     it('resets and returns the captured timeline + result fields on success', async () => {
         const s = fakeServer();
         registerEdsResetTool(s, ctxFactory);
@@ -232,6 +331,8 @@ describe('reset_eds_project', () => {
             }),
             expect.anything(),
             expect.anything(),
+            // ADR-015: the mesh-redeploy deps.
+            expect.anything(),
             expect.any(Function)
         );
     });
@@ -249,6 +350,9 @@ describe('reset_eds_project', () => {
                 _p: unknown,
                 _c: unknown,
                 _tp: unknown,
+                // ADR-015: the mesh-redeploy deps now sit between the token
+                // provider and the progress callback.
+                _deps: unknown,
                 onProgress?: (x: { step: number; totalSteps: number; message: string }) => void
             ) => {
                 onProgress?.({ step: 1, totalSteps: 2, message: 'Resetting repo' });
@@ -264,7 +368,7 @@ describe('reset_eds_project', () => {
             error: 'rate limited',
             rerunSafe: true,
         });
-        expect(res.phases.length).toBe(1);
+        expect(res.phases).toHaveLength(1);
     });
 
     it('catches a thrown error as a re-runnable failure', async () => {

@@ -6,10 +6,11 @@
  * - No abstract classes for single implementations
  * - No HOCs or generic wrappers
  *
- * @see .rptc/sop/code-patterns.md - Component Extraction Criteria
+ * @see docs/architecture/where-code-goes.md rows 7-8 — where a component or hook belongs
  */
 
 import * as fs from 'fs';
+import { sourceFilesUnder } from './architectureScan';
 import * as path from 'path';
 
 describe('SOP: Component Extraction', () => {
@@ -52,32 +53,6 @@ describe('SOP: Component Extraction', () => {
         'BaseHandlerRegistry', // Multiple feature registries
     ];
 
-    function getTypeScriptFiles(dir: string, extensions: string[] = ['.ts', '.tsx']): string[] {
-        const files: string[] = [];
-
-        function walkDir(currentDir: string) {
-            if (!fs.existsSync(currentDir)) return;
-
-            const entries = fs.readdirSync(currentDir, { withFileTypes: true });
-            for (const entry of entries) {
-                const fullPath = path.join(currentDir, entry.name);
-                if (entry.isDirectory() && entry.name !== 'node_modules') {
-                    walkDir(fullPath);
-                } else if (
-                    entry.isFile() &&
-                    extensions.some(ext => entry.name.endsWith(ext)) &&
-                    !entry.name.includes('.test.') &&
-                    !entry.name.includes('.spec.')
-                ) {
-                    files.push(fullPath);
-                }
-            }
-        }
-
-        walkDir(dir);
-        return files;
-    }
-
     function countImplementations(className: string, files: string[]): number {
         let count = 0;
         const extendsPattern = new RegExp(`extends\\s+${className}\\b`);
@@ -92,9 +67,16 @@ describe('SOP: Component Extraction', () => {
         return count;
     }
 
+    it('CONTROL: the scan sees a corpus worth scanning', () => {
+        // A walk that returned nothing would make every "should not have X"
+        // below pass while examining no files at all.
+        expect(sourceFilesUnder(srcDir).length).toBeGreaterThan(300);
+        expect(sourceFilesUnder(srcDir, ['.tsx']).length).toBeGreaterThan(100);
+    });
+
     describe('Abstract classes', () => {
         it('should not have abstract classes with fewer than 2 implementations', () => {
-            const files = getTypeScriptFiles(srcDir);
+            const files = sourceFilesUnder(srcDir);
             const violations: { file: string; className: string; implementations: number }[] = [];
 
             for (const file of files) {
@@ -121,13 +103,13 @@ describe('SOP: Component Extraction', () => {
                 }
             }
 
-            expect(violations).toEqual([]);
+            expect(violations).toStrictEqual([]);
         });
     });
 
     describe('Higher-Order Components (HOCs)', () => {
         it('should not have HOC patterns (withX, createXComponent)', () => {
-            const files = getTypeScriptFiles(srcDir, ['.tsx']);
+            const files = sourceFilesUnder(srcDir, ['.tsx']);
             const violations: { file: string; hocName: string; line: number }[] = [];
 
             /**
@@ -163,13 +145,13 @@ describe('SOP: Component Extraction', () => {
                 });
             }
 
-            expect(violations).toEqual([]);
+            expect(violations).toStrictEqual([]);
         });
     });
 
     describe('Generic wrapper components', () => {
         it('should not have overly generic wrapper components', () => {
-            const files = getTypeScriptFiles(srcDir, ['.tsx']);
+            const files = sourceFilesUnder(srcDir, ['.tsx']);
             const violations: { file: string; line: number; content: string }[] = [];
 
             /**
@@ -221,7 +203,7 @@ describe('SOP: Component Extraction', () => {
                 });
             }
 
-            expect(violations).toEqual([]);
+            expect(violations).toStrictEqual([]);
         });
     });
 
@@ -258,7 +240,7 @@ describe('SOP: Component Extraction', () => {
         it.each(SHARED_COMPONENTS_VERIFIED)(
             '$name should have at least $minUsages usages',
             ({ name, minUsages }) => {
-                const files = getTypeScriptFiles(srcDir, ['.tsx']);
+                const files = sourceFilesUnder(srcDir, ['.tsx']);
                 let usageCount = 0;
                 const importPattern = new RegExp(`import\\s*{[^}]*\\b${name}\\b[^}]*}\\s*from`);
 
@@ -290,7 +272,7 @@ describe('SOP: Component Extraction', () => {
             ];
 
             // This test documents the decision, not enforces a rule
-            expect(ACCEPTABLE_SINGLE_USAGE.length).toBe(2);
+            expect(ACCEPTABLE_SINGLE_USAGE).toHaveLength(2);
         });
     });
 });

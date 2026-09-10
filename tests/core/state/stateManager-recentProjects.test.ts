@@ -6,11 +6,10 @@
  */
 
 import * as fs from 'fs/promises';
-import { setupMocks, mockRecentProjectsFile, createMockProject, type TestMocks } from './stateManager.testUtils';
-import type { Project } from '@/types';
+import { setupMocks, mockRecentProjectsFile, createStateManagerProject, type TestMocks } from './stateManager.testUtils';
+import type { Project } from '@/types/base';
 
 // Re-declare mocks to ensure proper typing and hoisting
-jest.mock('vscode');
 jest.mock('fs/promises');
 jest.mock('os');
 
@@ -28,7 +27,7 @@ describe('StateManager - Recent Projects', () => {
 
             const result = await stateManager.getRecentProjects();
 
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
         });
 
         it('should load and return recent projects', async () => {
@@ -113,7 +112,7 @@ describe('StateManager - Recent Projects', () => {
             await stateManager.initialize();
             const result = await stateManager.getRecentProjects();
 
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
         });
     });
 
@@ -122,7 +121,7 @@ describe('StateManager - Recent Projects', () => {
             const { stateManager } = testMocks;
             await stateManager.initialize();
 
-            const project = createMockProject();
+            const project = createStateManagerProject();
             project.organization = 'Test Org';
 
             await stateManager.addToRecentProjects(project as Project);
@@ -150,7 +149,7 @@ describe('StateManager - Recent Projects', () => {
 
             await stateManager.initialize();
 
-            const project = createMockProject();
+            const project = createStateManagerProject();
             project.path = '/test/project1';
             project.name = 'Project 1';
 
@@ -185,7 +184,7 @@ describe('StateManager - Recent Projects', () => {
 
             await stateManager.initialize();
 
-            const newProject = createMockProject();
+            const newProject = createStateManagerProject();
             newProject.path = '/test/new-project';
             newProject.name = 'New Project';
 
@@ -200,7 +199,7 @@ describe('StateManager - Recent Projects', () => {
             const { stateManager } = testMocks;
             await stateManager.initialize();
 
-            const project = createMockProject();
+            const project = createStateManagerProject();
             project.organization = 'My Organization';
             project.adobe = {
                 projectId: 'proj123',

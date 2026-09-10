@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-beta.146] - 2026-09-10
+
+The styling layer is the headline: the CSS reset and every design token had not been
+shipping since April, and a large share of the stylesheets were rules nothing
+referenced. Both are fixed, and the whole cascade is now declared and enforced.
+
+### Fixed
+- **Design tokens and the CSS reset ship again.** They silently stopped reaching the webview bundles in April; every surface now gets the reset and the full token set it was written against.
+- **The cascade order was backwards** — the reset sat above vendor styles instead of below them, so Spectrum's own rules lost arguments they should have won.
+- **Dashboard tile labels no longer break mid-word.** "Republish", "Integrations" and "Datapacks" were splitting across lines: Spectrum's button-label padding was eating 19px of a 96px tile.
+- **The API Mesh drawer uses one label scale.** The Commerce scope sub-labels (Website / Store / Store view) were a size smaller than every other label beside them.
+- **Reset does the same thing from both doors** — resetting an EDS project from the dashboard did less than from the projects list.
+- **"No skills yet" no longer prints above a full list of skills.**
+- **The wizard's Connection view no longer crashes** when handed a hand-built context.
+- **A background token check can no longer open a browser window** on its own.
+- **A component update that rolled back cleanly no longer reports "rollback failed".**
+- **A stored `false` or `0` is no longer read as blank** and overwritten by its default.
+- **`deactivate()` runs its cleanup** — it was throwing past every guard it was meant to reach.
+- **A DA.live token that states no expiry is refused on every path.**
+- **An unknown content-patch ID is reported** instead of passing silently when it matches no page.
+- **The integrations tile ranks every mesh state** it can be handed.
+- **The sidebar handshake gets the same time budget the other seven panels get.**
+- **Prerequisite and component lookups are cached per session**, not rebuilt on every message.
+
+### Added
+- **Eventing.** I/O Events provider lifecycle — create, list and delete, scoped to the project — with a new Eventing section on the dashboard.
+- **App Builder removal verifies the Runtime namespace** afterwards, so a removal that left code deployed is reported rather than claimed as success.
+- **Adobe org-services fetch retries once** on a fast failure.
+- **Token-first theming guidance** in the AI skills: a theme is a bounded set of token choices, not a free-form edit.
+
+### Changed
+- **The VSIX is dramatically smaller** — it was shipping 144MB of mutation-testing reports (775 files, now 67); a separate packaging fix stopped another 329MB of developer tooling going out with it.
+- **Agent-facing MCP tools answer instead of erroring** when a credential is missing, and `check_mesh` / `delete_mesh` no longer block on a notification an agent cannot click. Unattended teardown works, with standing consent honoured ahead of the chat prompt.
+- **`get_auth_status` reporting GitHub `false` no longer reads as signed out** — VS Code owns GitHub auth and the extension adopts it on demand.
+
+### Internal
+Of 1,620 commits, 774 are tests, 367 documentation and 172 refactors. The CSS work sits on a new architecture (ADR-017 §7, ADR-018): every rule lives in a declared cascade layer, a stylesheet lives with the feature that owns it, and both are held by shrink-only ratchets. Several hundred dead rules and selectors were deleted.
+
 ## [1.0.0-beta.145] - 2026-08-28
 
 ### Added
@@ -181,7 +219,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **Two stale layout claims in the sidebar.** `custom-spectrum.css` and
+- **Two stale layout claims in the sidebar.** `utilities.css` and
   `sidebar/CLAUDE.md` both still derived the tile-wrap threshold from a
   `padding-top: 80px` that was replaced by centring long ago, quoting 572px where
   the current layout measures 524px. Found while checking whether a seventh tile
@@ -1730,7 +1768,7 @@ skip a published version.
   - Added `postinstall` script for automatic compilation after `npm install`
   - New `npm run setup` command combining install and compile steps
   - Ensures consistent builds across different development environments
-- **Centralized CSS System**: Created `custom-spectrum.css` with 850+ lines of reusable CSS classes for React Spectrum components
+- **Centralized CSS System**: Created `utilities.css` with 850+ lines of reusable CSS classes for React Spectrum components
 - **Class Name Utilities**: Added `classNames.ts` utility module with `cn()` function for composing CSS classes
 - **Per-Node-Version Prerequisites**: Support for installing prerequisites in specific Node.js versions
 - **Prerequisite Continuation**: Ability to continue prerequisite checking from a specific index after installation

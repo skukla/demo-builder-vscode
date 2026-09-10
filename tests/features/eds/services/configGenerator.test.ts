@@ -13,141 +13,130 @@ import {
     extractConfigParams,
     buildConfigGeneratorParams,
     type ConfigGeneratorParams,
+    type EnvironmentType,
 } from '@/features/eds/services/configGenerator';
 import type { Logger } from '@/types/logger';
 import type { Project } from '@/types/base';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockProject } from '../../../helpers/projectFake';
+
+/**
+ * The generator's own headers shape, taken from the function rather than
+ * re-declared: an expected object written here is checked by tsc against what
+ * `generateHeaders` actually returns.
+ */
+type ConfigHeaders = ReturnType<typeof generateHeaders>;
 
 describe('configGenerator', () => {
     let mockLogger: Logger;
 
     beforeEach(() => {
-        mockLogger = {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as unknown as Logger;
+        mockLogger = createMockLogger() as unknown as Logger;
     });
 
     describe('mapBackendToEnvironmentType', () => {
-        it('should map adobe-commerce-paas to paas', () => {
-            expect(mapBackendToEnvironmentType('adobe-commerce-paas')).toBe('paas');
-        });
-
-        it('should map adobe-commerce-accs to accs', () => {
-            expect(mapBackendToEnvironmentType('adobe-commerce-accs')).toBe('accs');
-        });
-
-        it('should map adobe-commerce-aco to aco', () => {
-            expect(mapBackendToEnvironmentType('adobe-commerce-aco')).toBe('aco');
-        });
-
-        it('should default to paas for unknown backend', () => {
-            expect(mapBackendToEnvironmentType('unknown-backend')).toBe('paas');
-        });
-
-        it('should default to paas for undefined', () => {
-            expect(mapBackendToEnvironmentType(undefined)).toBe('paas');
+        it.each<[string, string | undefined, EnvironmentType]>([
+            ['the PaaS backend id', 'adobe-commerce-paas', 'paas'],
+            ['the ACCS backend id', 'adobe-commerce-accs', 'accs'],
+            ['the ACO backend id', 'adobe-commerce-aco', 'aco'],
+            // The default arm has to be a real environment, not "neither": a
+            // project whose backend was never recorded still generates a config.
+            ['an id the switch does not name', 'unknown-backend', 'paas'],
+            ['no backend id at all', undefined, 'paas'],
+        ])('%s maps to %s', (_label, backendComponentId, expected) => {
+            expect(mapBackendToEnvironmentType(backendComponentId)).toBe(expected);
         });
     });
 
     describe('generateHeaders', () => {
-        const baseParams: ConfigGeneratorParams = {
+        const coordinates = {
             githubOwner: 'test-owner',
             repoName: 'test-repo',
             daLiveOrg: 'test-org',
             daLiveSite: 'test-site',
+        };
+        const storeScope = {
             storeViewCode: 'en_us',
             storeCode: 'us_store',
             websiteCode: 'us_website',
             customerGroup: 'b2c',
         };
+        const credentials = {
+            commerceApiKey: 'api-key-123',
+            commerceEnvironmentId: 'env-id-456',
+        };
 
-        it('should generate PaaS headers with API key and environment ID', () => {
-            const params: ConfigGeneratorParams = {
-                ...baseParams,
-                environmentType: 'paas',
-                commerceApiKey: 'api-key-123',
-                commerceEnvironmentId: 'env-id-456',
-            };
-
-            const headers = generateHeaders(params);
-
-            expect(headers.all).toEqual({ Store: 'en_us' });
-            expect(headers.cs).toEqual({
+        /**
+         * The PaaS answer, named because two rows must produce the SAME object:
+         * an explicit `environmentType: 'paas'` and an absent one.
+         */
+        const PAAS_HEADERS: ConfigHeaders = {
+            all: { Store: 'en_us' },
+            cs: {
                 'Magento-Customer-Group': 'b2c',
                 'Magento-Store-Code': 'us_store',
                 'Magento-Store-View-Code': 'en_us',
                 'Magento-Website-Code': 'us_website',
                 'x-api-key': 'api-key-123',
                 'Magento-Environment-Id': 'env-id-456',
-            });
-        });
+            },
+        };
 
-        it('should generate ACCS headers without API key', () => {
-            const params: ConfigGeneratorParams = {
-                ...baseParams,
-                environmentType: 'accs',
-            };
-
-            const headers = generateHeaders(params);
-
-            expect(headers.all).toEqual({ Store: 'en_us' });
-            expect(headers.cs).toEqual({
-                'Magento-Customer-Group': 'b2c',
-                'Magento-Store-Code': 'us_store',
-                'Magento-Store-View-Code': 'en_us',
-                'Magento-Website-Code': 'us_website',
-            });
-            // Should NOT have x-api-key or Magento-Environment-Id
-            expect(headers.cs).not.toHaveProperty('x-api-key');
-            expect(headers.cs).not.toHaveProperty('Magento-Environment-Id');
-        });
-
-        it('should generate ACO headers with placeholders', () => {
-            const params: ConfigGeneratorParams = {
-                ...baseParams,
-                environmentType: 'aco',
-            };
-
-            const headers = generateHeaders(params);
-
-            expect(headers.all).toEqual({ Store: 'en_us' });
-            expect(headers.cs).toEqual({
-                'AC-View-ID': '{{AC_VIEW_ID}}',
-                'AC-Price-Book-ID': '{{AC_PRICE_BOOK_ID}}',
-            });
-        });
-
-        it('should use default values when store codes not provided', () => {
-            const params: ConfigGeneratorParams = {
-                githubOwner: 'test-owner',
-                repoName: 'test-repo',
-                daLiveOrg: 'test-org',
-                daLiveSite: 'test-site',
-                environmentType: 'paas',
-            };
-
-            const headers = generateHeaders(params);
-
-            expect(headers.all).toEqual({ Store: 'default' });
-            expect(headers.cs?.['Magento-Store-Code']).toBe('default');
-            expect(headers.cs?.['Magento-Store-View-Code']).toBe('default');
-            expect(headers.cs?.['Magento-Website-Code']).toBe('base');
-        });
-
-        it('should default to paas when environmentType not specified', () => {
-            const params: ConfigGeneratorParams = {
-                ...baseParams,
-                commerceApiKey: 'api-key-123',
-                commerceEnvironmentId: 'env-id-456',
-            };
-
-            const headers = generateHeaders(params);
-
-            // Should include PaaS-specific headers
-            expect(headers.cs?.['x-api-key']).toBe('api-key-123');
-            expect(headers.cs?.['Magento-Environment-Id']).toBe('env-id-456');
+        // The whole headers object per row, not a few keys: an environment's
+        // header set is defined as much by what it does NOT carry (ACCS has no
+        // x-api-key, ACO has no store scope at all) as by what it does.
+        it.each<[string, ConfigGeneratorParams, ConfigHeaders]>([
+            [
+                'PaaS carries the store scope plus the API key and environment id',
+                { ...coordinates, ...storeScope, ...credentials, environmentType: 'paas' },
+                PAAS_HEADERS,
+            ],
+            [
+                'ACCS carries the store scope and no credentials',
+                { ...coordinates, ...storeScope, ...credentials, environmentType: 'accs' },
+                {
+                    all: { Store: 'en_us' },
+                    cs: {
+                        'Magento-Customer-Group': 'b2c',
+                        'Magento-Store-Code': 'us_store',
+                        'Magento-Store-View-Code': 'en_us',
+                        'Magento-Website-Code': 'us_website',
+                    },
+                },
+            ],
+            [
+                'ACO carries the Optimizer placeholders instead of the store scope',
+                { ...coordinates, ...storeScope, ...credentials, environmentType: 'aco' },
+                {
+                    all: { Store: 'en_us' },
+                    cs: {
+                        'AC-View-ID': '{{AC_VIEW_ID}}',
+                        'AC-Price-Book-ID': '{{AC_PRICE_BOOK_ID}}',
+                    },
+                },
+            ],
+            [
+                'an absent store scope falls back to default/default/base and blank credentials',
+                { ...coordinates, environmentType: 'paas' },
+                {
+                    all: { Store: 'default' },
+                    cs: {
+                        'Magento-Customer-Group': '',
+                        'Magento-Store-Code': 'default',
+                        'Magento-Store-View-Code': 'default',
+                        'Magento-Website-Code': 'base',
+                        'x-api-key': '',
+                        'Magento-Environment-Id': '',
+                    },
+                },
+            ],
+            [
+                'an absent environment type answers exactly as PaaS does',
+                { ...coordinates, ...storeScope, ...credentials },
+                PAAS_HEADERS,
+            ],
+        ])('%s', (_label, params, expected) => {
+            expect(generateHeaders(params)).toStrictEqual(expected);
         });
     });
 
@@ -163,128 +152,90 @@ describe('configGenerator', () => {
             websiteCode: 'us_website',
         };
 
-        it('should generate PaaS config with API key and environment ID headers', () => {
-            const params: ConfigGeneratorParams = {
-                ...baseParams,
-                environmentType: 'paas',
-                commerceApiKey: 'api-key-123',
-                commerceEnvironmentId: 'env-id-456',
-            };
-
+        // generateHeaders' own answers are pinned above; what these rows add is
+        // that the answer REACHES config.public.default.headers, whole and
+        // unaltered by the placeholder pass. The template ships `headers: {}`,
+        // so an injection that never happened is indistinguishable from one
+        // that happened wrongly unless the assertion is the entire object.
+        //
+        // `commerce-core-endpoint` and `commerce-assets-enabled` are NOT here:
+        // configGenerator-environmentAndFailure.test.ts owns both, with the two
+        // extra cases (absent environment type, PaaS with no catalog endpoint)
+        // this block never had.
+        it.each<[EnvironmentType, ConfigGeneratorParams, ConfigHeaders]>([
+            [
+                'paas',
+                {
+                    ...baseParams,
+                    environmentType: 'paas',
+                    commerceApiKey: 'api-key-123',
+                    commerceEnvironmentId: 'env-id-456',
+                },
+                {
+                    all: { Store: 'en_us' },
+                    cs: {
+                        'Magento-Customer-Group': '',
+                        'Magento-Store-Code': 'us_store',
+                        'Magento-Store-View-Code': 'en_us',
+                        'Magento-Website-Code': 'us_website',
+                        'x-api-key': 'api-key-123',
+                        'Magento-Environment-Id': 'env-id-456',
+                    },
+                },
+            ],
+            [
+                'accs',
+                { ...baseParams, environmentType: 'accs' },
+                {
+                    all: { Store: 'en_us' },
+                    cs: {
+                        'Magento-Customer-Group': '',
+                        'Magento-Store-Code': 'us_store',
+                        'Magento-Store-View-Code': 'en_us',
+                        'Magento-Website-Code': 'us_website',
+                    },
+                },
+            ],
+            [
+                'aco',
+                { ...baseParams, environmentType: 'aco' },
+                {
+                    all: { Store: 'en_us' },
+                    cs: {
+                        'AC-View-ID': '{{AC_VIEW_ID}}',
+                        'AC-Price-Book-ID': '{{AC_PRICE_BOOK_ID}}',
+                    },
+                },
+            ],
+        ])('injects the whole %s header block into config.public.default', (
+            _env,
+            params,
+            expected,
+        ) => {
             const result = generateConfigJson(params, mockLogger);
 
             expect(result.success).toBe(true);
-            expect(result.content).toBeDefined();
-
-            const config = JSON.parse(result.content!);
-            expect(config.public.default.headers.cs['x-api-key']).toBe('api-key-123');
-            expect(config.public.default.headers.cs['Magento-Environment-Id']).toBe('env-id-456');
+            expect(JSON.parse(result.content!).public.default.headers).toStrictEqual(expected);
         });
 
-        it('should generate ACCS config without API key headers', () => {
-            const params: ConfigGeneratorParams = {
-                ...baseParams,
-                environmentType: 'accs',
-            };
+        it('publishes an EMPTY commerce endpoint when the project has none yet', () => {
+            // A storefront generated before any mesh deploy and with no direct
+            // backend URL. The `|| ''` matters because the placeholder is
+            // substituted into a JSON string either way: without it the config
+            // ships the literal text "undefined" as an endpoint, which parses,
+            // publishes, and fails only in the browser.
+            const { commerceEndpoint: _dropped, ...withoutEndpoint } = baseParams;
 
-            const result = generateConfigJson(params, mockLogger);
+            const result = generateConfigJson(
+                { ...withoutEndpoint, environmentType: 'paas' },
+                mockLogger,
+            );
 
             expect(result.success).toBe(true);
             const config = JSON.parse(result.content!);
-
-            // Should have store codes
-            expect(config.public.default.headers.cs['Magento-Store-Code']).toBe('us_store');
-
-            // Should NOT have API key headers
-            expect(config.public.default.headers.cs['x-api-key']).toBeUndefined();
-            expect(config.public.default.headers.cs['Magento-Environment-Id']).toBeUndefined();
+            expect(config.public.default['commerce-endpoint']).toBe('');
+            expect(config.public.default['commerce-core-endpoint']).toBe('');
         });
-
-        it('should generate ACO config with AC-View-ID placeholders', () => {
-            const params: ConfigGeneratorParams = {
-                ...baseParams,
-                environmentType: 'aco',
-            };
-
-            const result = generateConfigJson(params, mockLogger);
-
-            expect(result.success).toBe(true);
-            const config = JSON.parse(result.content!);
-
-            expect(config.public.default.headers.cs['AC-View-ID']).toBe('{{AC_VIEW_ID}}');
-            expect(config.public.default.headers.cs['AC-Price-Book-ID']).toBe('{{AC_PRICE_BOOK_ID}}');
-        });
-
-        it('should set separate commerce-core-endpoint for PaaS catalog service', () => {
-            // PaaS has a separate catalog service endpoint
-            const paasParams: ConfigGeneratorParams = {
-                ...baseParams,
-                environmentType: 'paas',
-                catalogServiceEndpoint: 'https://catalog.example.com/graphql',
-            };
-
-            const paasResult = generateConfigJson(paasParams, mockLogger);
-            const paasConfig = JSON.parse(paasResult.content!);
-            expect(paasConfig.public.default['commerce-core-endpoint']).toBe('https://catalog.example.com/graphql');
-            expect(paasConfig.public.default['commerce-endpoint']).toBe('https://commerce.example.com/graphql');
-        });
-
-        it('should preserve commerce-core-endpoint for ACCS even when equal to commerce-endpoint', () => {
-            // The storefront uses the *existence* of commerce-core-endpoint to determine
-            // which requests get cs headers (Magento-Website-Code, etc.). ACCS backends
-            // require these headers — removing the property breaks catalog queries.
-            const accsParams: ConfigGeneratorParams = {
-                ...baseParams,
-                environmentType: 'accs',
-            };
-
-            const accsResult = generateConfigJson(accsParams, mockLogger);
-            const accsConfig = JSON.parse(accsResult.content!);
-            expect(accsConfig.public.default['commerce-endpoint']).toBe('https://commerce.example.com/graphql');
-            expect(accsConfig.public.default['commerce-core-endpoint']).toBe('https://commerce.example.com/graphql');
-        });
-
-        it('should preserve commerce-core-endpoint for ACO even when equal to commerce-endpoint', () => {
-            // ACO also uses cs headers (AC-View-ID, AC-Price-Book-ID) — same reasoning
-            const acoParams: ConfigGeneratorParams = {
-                ...baseParams,
-                environmentType: 'aco',
-            };
-
-            const acoResult = generateConfigJson(acoParams, mockLogger);
-            const acoConfig = JSON.parse(acoResult.content!);
-            expect(acoConfig.public.default['commerce-endpoint']).toBe('https://commerce.example.com/graphql');
-            expect(acoConfig.public.default['commerce-core-endpoint']).toBe('https://commerce.example.com/graphql');
-        });
-
-        it('should handle AEM Assets enabled flag', () => {
-            const params: ConfigGeneratorParams = {
-                ...baseParams,
-                environmentType: 'paas',
-                aemAssetsEnabled: true,
-            };
-
-            const result = generateConfigJson(params, mockLogger);
-
-            expect(result.success).toBe(true);
-            const config = JSON.parse(result.content!);
-            expect(config.public.default['commerce-assets-enabled']).toBe(true);
-        });
-
-        it('should set commerce-assets-enabled to false when disabled', () => {
-            const params: ConfigGeneratorParams = {
-                ...baseParams,
-                environmentType: 'paas',
-                aemAssetsEnabled: false,
-            };
-
-            const result = generateConfigJson(params, mockLogger);
-
-            expect(result.success).toBe(true);
-            const config = JSON.parse(result.content!);
-            expect(config.public.default['commerce-assets-enabled']).toBe(false);
-        });
-
     });
 
     describe('extractConfigParamsFromConfigs', () => {
@@ -359,54 +310,67 @@ describe('configGenerator', () => {
             expect(result.aemAssetsEnabled).toBe(true);
         });
 
-        it('should extract ACCS store codes from eds-accs-mesh config', () => {
-            // Regression: When the wizard populates componentConfigs, ACCS store codes
-            // live under 'eds-accs-mesh' (not 'eds-storefront'). The extraction function
-            // must fall back to the mesh config for these values.
-            const componentConfigs = {
-                'eds-storefront': {
-                    AEM_ASSETS_ENABLED: 'true',
+        // Regression, both environments: when the wizard populates
+        // componentConfigs the store scope lands under the MESH component, not
+        // 'eds-storefront'. Each row asserts the entire returned params object —
+        // the environment fork decides which keys are read AND which are dropped,
+        // so a per-key assertion cannot see half of what the fork does.
+        it.each<[string, Record<string, Record<string, string>>, string, Partial<ConfigGeneratorParams>]>([
+            [
+                'ACCS reads the scope off eds-accs-mesh and drops the PaaS-only fields',
+                {
+                    'eds-storefront': { AEM_ASSETS_ENABLED: 'true' },
+                    'eds-accs-mesh': {
+                        ACCS_STORE_VIEW_CODE: 'citisignal_us',
+                        ACCS_STORE_CODE: 'citisignal_store',
+                        ACCS_WEBSITE_CODE: 'citisignal',
+                        ACCS_CUSTOMER_GROUP: 'b6589fc6ab0dc82cf12099d1c2d40ab994e8410c',
+                        ACCS_GRAPHQL_ENDPOINT: 'https://accs.example.com/graphql',
+                    },
                 },
-                'eds-accs-mesh': {
-                    ACCS_STORE_VIEW_CODE: 'citisignal_us',
-                    ACCS_STORE_CODE: 'citisignal_store',
-                    ACCS_WEBSITE_CODE: 'citisignal',
-                    ACCS_CUSTOMER_GROUP: 'b6589fc6ab0dc82cf12099d1c2d40ab994e8410c',
-                    ACCS_GRAPHQL_ENDPOINT: 'https://accs.example.com/graphql',
+                'adobe-commerce-accs',
+                {
+                    environmentType: 'accs',
+                    commerceEndpoint: 'https://accs.example.com/graphql',
+                    catalogServiceEndpoint: undefined,
+                    commerceApiKey: undefined,
+                    commerceEnvironmentId: undefined,
+                    storeViewCode: 'citisignal_us',
+                    storeCode: 'citisignal_store',
+                    websiteCode: 'citisignal',
+                    customerGroup: 'b6589fc6ab0dc82cf12099d1c2d40ab994e8410c',
+                    aemAssetsEnabled: true,
                 },
-            };
-
-            const result = extractConfigParamsFromConfigs(componentConfigs, undefined, 'adobe-commerce-accs');
-
-            expect(result.environmentType).toBe('accs');
-            expect(result.storeViewCode).toBe('citisignal_us');
-            expect(result.storeCode).toBe('citisignal_store');
-            expect(result.websiteCode).toBe('citisignal');
-            expect(result.customerGroup).toBe('b6589fc6ab0dc82cf12099d1c2d40ab994e8410c');
-            expect(result.commerceEndpoint).toBe('https://accs.example.com/graphql');
-        });
-
-        it('should extract PaaS store codes from eds-commerce-mesh config', () => {
-            // Same fallback pattern for PaaS: store codes in mesh config, not storefront
-            const componentConfigs = {
-                'eds-storefront': {
-                    AEM_ASSETS_ENABLED: 'false',
+            ],
+            [
+                'PaaS reads the scope off eds-commerce-mesh',
+                {
+                    'eds-storefront': { AEM_ASSETS_ENABLED: 'false' },
+                    'eds-commerce-mesh': {
+                        ADOBE_COMMERCE_STORE_VIEW_CODE: 'default',
+                        ADOBE_COMMERCE_STORE_CODE: 'main_website_store',
+                        ADOBE_COMMERCE_WEBSITE_CODE: 'base',
+                        ADOBE_COMMERCE_CUSTOMER_GROUP: 'hash123',
+                    },
                 },
-                'eds-commerce-mesh': {
-                    ADOBE_COMMERCE_STORE_VIEW_CODE: 'default',
-                    ADOBE_COMMERCE_STORE_CODE: 'main_website_store',
-                    ADOBE_COMMERCE_WEBSITE_CODE: 'base',
-                    ADOBE_COMMERCE_CUSTOMER_GROUP: 'hash123',
+                'adobe-commerce-paas',
+                {
+                    environmentType: 'paas',
+                    commerceEndpoint: undefined,
+                    catalogServiceEndpoint: undefined,
+                    commerceApiKey: undefined,
+                    commerceEnvironmentId: undefined,
+                    storeViewCode: 'default',
+                    storeCode: 'main_website_store',
+                    websiteCode: 'base',
+                    customerGroup: 'hash123',
+                    aemAssetsEnabled: false,
                 },
-            };
-
-            const result = extractConfigParamsFromConfigs(componentConfigs, undefined, 'adobe-commerce-paas');
-
-            expect(result.environmentType).toBe('paas');
-            expect(result.storeViewCode).toBe('default');
-            expect(result.storeCode).toBe('main_website_store');
-            expect(result.websiteCode).toBe('base');
-            expect(result.customerGroup).toBe('hash123');
+            ],
+        ])('%s', (_label, componentConfigs, backendComponentId, expected) => {
+            expect(
+                extractConfigParamsFromConfigs(componentConfigs, undefined, backendComponentId),
+            ).toStrictEqual(expected);
         });
 
         it('should generate correct ACCS headers in config.json when store codes come from mesh config', () => {
@@ -459,15 +423,17 @@ describe('configGenerator', () => {
             expect(result.success).toBe(true);
             const config = JSON.parse(result.content!);
             const plugins = config.sidekick.plugins as Array<Record<string, unknown>>;
-            const quickEdit = plugins.find((p) => p.id === 'quick-edit');
 
-            expect(quickEdit).toBeDefined();
-            expect(quickEdit!.title).toBe('Quick Edit');
-            expect(quickEdit!.environments).toEqual(['dev', 'preview']);
-            expect(quickEdit!.event).toBe('quick-edit');
-            // Event plugin, not a palette — no url/isPalette.
-            expect(quickEdit!.url).toBeUndefined();
-            expect(quickEdit!.isPalette).toBeUndefined();
+            // The whole plugin, so "event plugin, not a palette" is asserted by
+            // the shape rather than by two absent-key checks: a `url` or
+            // `isPalette` appearing would fail this, and a missing one cannot
+            // pass unnoticed.
+            expect(plugins.find((p) => p.id === 'quick-edit')).toStrictEqual({
+                id: 'quick-edit',
+                title: 'Quick Edit',
+                environments: ['dev', 'preview'],
+                event: 'quick-edit',
+            });
         });
 
         it('preserves the existing cif and personalisation plugins (additive regression guard)', () => {
@@ -475,11 +441,10 @@ describe('configGenerator', () => {
 
             const config = JSON.parse(result.content!);
             const plugins = config.sidekick.plugins as Array<Record<string, unknown>>;
-            const ids = plugins.map((p) => p.id);
 
-            expect(ids).toContain('cif');
-            expect(ids).toContain('personalisation');
-            expect(ids).toContain('quick-edit');
+            // The exact list in the template's order. `toContain` three times
+            // would pass a template that had also grown a fourth plugin.
+            expect(plugins.map((p) => p.id)).toStrictEqual(['cif', 'personalisation', 'quick-edit']);
         });
     });
 
@@ -501,8 +466,7 @@ describe('configGenerator', () => {
          * exactly what the load-time migration produces from an old manifest.
          */
         function migratedMeshProject(): Project {
-            return {
-                id: 'proj-1',
+            return createMockProject({
                 name: 'Legacy Mesh Project',
                 path: '/tmp/proj-1',
                 componentSelections: { backend: 'adobe-commerce-paas' },
@@ -514,12 +478,14 @@ describe('configGenerator', () => {
                         ADOBE_COMMERCE_CUSTOMER_GROUP: 'b2c_group',
                         ADOBE_CATALOG_API_KEY: 'api-key-123',
                         ADOBE_COMMERCE_ENVIRONMENT_ID: 'env-id-456',
-                        ADOBE_COMMERCE_CATALOG_SERVICE_ENDPOINT: 'https://catalog.example.com/graphql',
                         AEM_ASSETS_ENABLED: 'true',
                     },
                 },
                 componentInstances: {
                     'eds-storefront': {
+                        id: 'eds-storefront',
+                        name: 'eds-storefront',
+                        status: 'ready',
                         metadata: {
                             githubRepo: 'test-owner/test-repo',
                             daLiveOrg: 'test-org',
@@ -536,13 +502,13 @@ describe('configGenerator', () => {
                         lastDeployed: '2026-06-20T00:00:00.000Z',
                     },
                 },
-            } as unknown as Project;
+            });
         }
 
         /** Forward-state: the provider declares the endpoint via providesEnvVars. */
         function appBuilderComponentsOnlyProject(): Project {
             const base = migratedMeshProject();
-            return {
+            return createMockProject({
                 ...base,
                 appBuilderComponents: {
                     mesh: {
@@ -553,14 +519,12 @@ describe('configGenerator', () => {
                         providesEnvVars: { MESH_ENDPOINT },
                     },
                 },
-            } as unknown as Project;
+            });
         }
 
         let mockLogger: Logger;
         beforeEach(() => {
-            mockLogger = {
-                debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(),
-            } as unknown as Logger;
+            mockLogger = createMockLogger() as unknown as Logger;
         });
 
         it('GOLDEN: migrated mesh project produces byte-identical config.json (snapshot guard)', () => {
@@ -601,7 +565,7 @@ describe('configGenerator', () => {
         });
 
         it('falls back to the direct backend endpoint when NO provider exists (no mesh)', () => {
-            const noMesh = {
+            const noMesh = createMockProject({
                 ...migratedMeshProject(),
                 appBuilderComponents: undefined,
                 componentConfigs: {
@@ -609,7 +573,7 @@ describe('configGenerator', () => {
                         ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://direct.example.com/graphql',
                     },
                 },
-            } as unknown as Project;
+            });
 
             const params = extractConfigParams(noMesh);
             expect(params.commerceEndpoint).toBe('https://direct.example.com/graphql');

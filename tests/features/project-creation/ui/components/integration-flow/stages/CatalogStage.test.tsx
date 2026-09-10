@@ -6,7 +6,6 @@
  * header appears past the same threshold as the old catalog modal and filters across
  * name + description.
  *
- * @jest-environment jsdom
  */
 
 import React from 'react';
@@ -149,6 +148,28 @@ describe('CatalogStage', () => {
         expect(screen.queryByRole('button', { name: /Widget A/ })).not.toBeInTheDocument();
     });
 
+    // A query of only spaces is not a query. Untrimmed it is truthy, so every
+    // tile fails the match and the gallery blanks to "No integrations match" —
+    // one stray keystroke and the catalog appears empty.
+    it('treats a whitespace-only query as no query at all', () => {
+        renderStage({ catalog: sixEntries() });
+        fireEvent.change(screen.getByTestId('spectrum-searchfield'), {
+            target: { value: '   ' },
+        });
+        expect(screen.getByRole('button', { name: /Widget A/ })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Gizmo F/ })).toBeInTheDocument();
+        expect(screen.queryByText(/No integrations match/)).not.toBeInTheDocument();
+    });
+
+    it('ignores padding around a real query', () => {
+        renderStage({ catalog: sixEntries() });
+        fireEvent.change(screen.getByTestId('spectrum-searchfield'), {
+            target: { value: '  widget  ' },
+        });
+        expect(screen.getByRole('button', { name: /Widget A/ })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /Gadget C/ })).not.toBeInTheDocument();
+    });
+
     it('shows an empty-state message when no entries match the query', () => {
         renderStage({ catalog: sixEntries() });
         fireEvent.change(screen.getByTestId('spectrum-searchfield'), {
@@ -192,8 +213,8 @@ describe('node-version disclosure', () => {
                     description: 'Sync scaffolding.',
                     kind: 'integration',
                     nodeVersion: '24',
-                    source: { owner: 'adobe', repo: 'kit' },
-                } as never,
+                    source: { owner: 'adobe', repo: 'kit', branch: 'main' },
+                },
             ],
         });
 

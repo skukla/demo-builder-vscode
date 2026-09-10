@@ -29,10 +29,8 @@
 // Logging only. `parseJSON` is deliberately REAL here — the whole question is what
 // the parser does with the CLI's actual bytes, and a mocked parser would answer it
 // for us.
-jest.mock('@/core/logging', () => ({
-    getLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() }),
-}));
 
+import type { CommandResult } from '@/core/shell/types';
 import { setupMocks, type TestMocks } from './adobeEntityService.testUtils';
 
 let mocks: TestMocks;
@@ -41,22 +39,23 @@ beforeEach(() => {
     mocks = setupMocks();
     // Force the CLI fallback: the SDK path must yield nothing.
     mocks.mockSDKClient.isInitialized.mockReturnValue(false);
-    mocks.mockSDKClient.getClient.mockReturnValue(undefined as never);
+    mocks.mockSDKClient.getClient.mockReturnValue(undefined);
 });
 
 /** Exactly what the live CLI returns for a stale org: code 2, no stdout, real error on stderr. */
-const STALE_ORG_RESULT = {
+const STALE_ORG_RESULT: CommandResult = {
     code: 2,
     stdout: '',
     stderr:
         '- Getting Projects...\n' +
         ' ›   Error: [CoreConsoleAPISDK:ERROR_GET_PROJECTS_BY_ORG_ID] 500 - Internal Server Error\n' +
         ' ›   ({"messages":[{"template":"ERR_MSG_TRANSIENT"}]})\n',
+    duration: 0,
 };
 
 describe('a CLI that failed', () => {
     it('reports the CLI error, not a parse error', async () => {
-        mocks.mockCommandExecutor.execute.mockResolvedValue(STALE_ORG_RESULT as never);
+        mocks.mockCommandExecutor.execute.mockResolvedValue(STALE_ORG_RESULT);
 
         await expect(mocks.service.getProjects()).rejects.toThrow(
             /Internal Server Error|ERR_MSG_TRANSIENT/,
@@ -66,7 +65,7 @@ describe('a CLI that failed', () => {
     it('does NOT claim the response format was invalid', async () => {
         // The specific lie. It sent two engineers into a decompiled bundle looking
         // for a parser bug that does not exist.
-        mocks.mockCommandExecutor.execute.mockResolvedValue(STALE_ORG_RESULT as never);
+        mocks.mockCommandExecutor.execute.mockResolvedValue(STALE_ORG_RESULT);
 
         await expect(mocks.service.getProjects()).rejects.not.toThrow(
             /Invalid projects response format/,
@@ -80,7 +79,8 @@ describe('a CLI that failed', () => {
             code: 2,
             stdout: '',
             stderr: ' ›   Error: 403 - Forbidden',
-        } as never);
+            duration: 0,
+        });
 
         await expect(mocks.service.getProjects()).rejects.toThrow(/organization/i);
     });
@@ -90,7 +90,8 @@ describe('a CLI that failed', () => {
             code: 2,
             stdout: '',
             stderr: ' ›   Error: 401 - Unauthorized',
-        } as never);
+            duration: 0,
+        });
 
         await expect(mocks.service.getProjects()).rejects.toThrow(/AUTH_EXPIRED/);
     });
@@ -109,7 +110,8 @@ describe('stderr that is only NOISE is not an error', () => {
             stderr:
                 ' ›   Warning: @adobe/aio-cli update available from 10.3.4 to 11.1.2.\n' +
                 ' ›   Run npm install -g @adobe/aio-cli to update.\n',
-        } as never);
+            duration: 0,
+        });
 
         await expect(mocks.service.getProjects()).rejects.not.toThrow(/update available/);
     });
@@ -121,7 +123,8 @@ describe('what must keep working', () => {
             code: 0,
             stdout: JSON.stringify([{ id: 'p1', name: 'demo', title: 'Demo' }]),
             stderr: '',
-        } as never);
+            duration: 0,
+        });
 
         const projects = await mocks.service.getProjects();
 
@@ -135,7 +138,8 @@ describe('what must keep working', () => {
             code: 2,
             stdout: '',
             stderr: JSON.stringify([{ id: 'p1', name: 'demo', title: 'Demo' }]),
-        } as never);
+            duration: 0,
+        });
 
         const projects = await mocks.service.getProjects();
 
@@ -147,8 +151,9 @@ describe('what must keep working', () => {
             code: 1,
             stdout: '',
             stderr: 'This organization does not have any projects',
-        } as never);
+            duration: 0,
+        });
 
-        await expect(mocks.service.getProjects()).resolves.toEqual([]);
+        await expect(mocks.service.getProjects()).resolves.toStrictEqual([]);
     });
 });
