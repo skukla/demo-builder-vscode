@@ -22,6 +22,11 @@ import '../styles/ai.css';
 // .modal-* — the shared Modal shell.
 import '@/core/ui/styles/modal.css';
 // The shared UI vocabulary — 19 small families. Seven of the eight entries.
+// GridLayout's declarations. The component passes its columns/gap/maxWidth as
+// custom properties and this sheet turns them into CSS, so they stay in the
+// cascade — see the comment in GridLayout.tsx. aiOverview is the only entry
+// whose graph reaches PromptGrid, the component's one consumer.
+import '@/core/ui/styles/two-column-layout.css';
 import '@/core/ui/styles/shared-ui.css';
 import type { AiOverviewInitialData } from '@/types/webviewPayloads';
 

@@ -13,7 +13,7 @@ describe('GridLayout', () => {
         </GridLayout>
       );
       const gridDiv = container.firstChild as HTMLDivElement;
-      expect(gridDiv.style.gap).toBe('24px');
+      expect(gridDiv.style.getPropertyValue('--grid-gap')).toBe('24px');
     });
 
     it('should translate maxWidth token size-6000 to 480px', () => {
@@ -24,7 +24,7 @@ describe('GridLayout', () => {
         </GridLayout>
       );
       const gridDiv = container.firstChild as HTMLDivElement;
-      expect(gridDiv.style.maxWidth).toBe('480px');
+      expect(gridDiv.style.getPropertyValue('--grid-max-width')).toBe('480px');
     });
 
     it('should translate padding token size-200 to 16px', () => {
@@ -35,7 +35,7 @@ describe('GridLayout', () => {
         </GridLayout>
       );
       const gridDiv = container.firstChild as HTMLDivElement;
-      expect(gridDiv.style.padding).toBe('16px');
+      expect(gridDiv.style.getPropertyValue('--grid-padding')).toBe('16px');
     });
 
     it('should translate multiple token props simultaneously', () => {
@@ -52,9 +52,9 @@ describe('GridLayout', () => {
         </GridLayout>
       );
       const gridDiv = container.firstChild as HTMLDivElement;
-      expect(gridDiv.style.gap).toBe('24px');
-      expect(gridDiv.style.maxWidth).toBe('480px');
-      expect(gridDiv.style.padding).toBe('32px');
+      expect(gridDiv.style.getPropertyValue('--grid-gap')).toBe('24px');
+      expect(gridDiv.style.getPropertyValue('--grid-max-width')).toBe('480px');
+      expect(gridDiv.style.getPropertyValue('--grid-padding')).toBe('32px');
     });
 
     it('should handle mixed token and pixel values', () => {
@@ -65,8 +65,8 @@ describe('GridLayout', () => {
         </GridLayout>
       );
       const gridDiv = container.firstChild as HTMLDivElement;
-      expect(gridDiv.style.gap).toBe('24px');
-      expect(gridDiv.style.padding).toBe('16px');
+      expect(gridDiv.style.getPropertyValue('--grid-gap')).toBe('24px');
+      expect(gridDiv.style.getPropertyValue('--grid-padding')).toBe('16px');
     });
   });
 
@@ -79,7 +79,7 @@ describe('GridLayout', () => {
         </GridLayout>
       );
       const gridDiv = container.firstChild as HTMLDivElement;
-      expect(gridDiv.style.gap).toBe('16px');
+      expect(gridDiv.style.getPropertyValue('--grid-gap')).toBe('16px');
     });
 
     it('should pass through pixel string values unchanged', () => {
@@ -89,7 +89,7 @@ describe('GridLayout', () => {
         </GridLayout>
       );
       const gridDiv = container.firstChild as HTMLDivElement;
-      expect(gridDiv.style.gap).toBe('32px');
+      expect(gridDiv.style.getPropertyValue('--grid-gap')).toBe('32px');
     });
 
     it('should use default gap when undefined', () => {
@@ -99,7 +99,7 @@ describe('GridLayout', () => {
         </GridLayout>
       );
       const gridDiv = container.firstChild as HTMLDivElement;
-      expect(gridDiv.style.gap).toBe('24px');
+      expect(gridDiv.style.getPropertyValue('--grid-gap')).toBe('24px');
     });
   });
 
@@ -114,7 +114,7 @@ describe('GridLayout', () => {
       );
       const gridDiv = container.firstChild as HTMLDivElement;
       // Invalid token should pass through unchanged (graceful degradation)
-      expect(gridDiv.style.gap).toBe('size-999');
+      expect(gridDiv.style.getPropertyValue('--grid-gap')).toBe('size-999');
     });
   });
 
@@ -129,7 +129,7 @@ describe('GridLayout', () => {
         </GridLayout>
       );
       const gridDiv = container.firstChild as HTMLDivElement;
-      expect(gridDiv.className).toBe('grid w-full');
+      expect(gridDiv.className).toBe('grid-layout grid w-full');
     });
 
     it('should append a caller className after the utility classes', () => {
@@ -139,7 +139,7 @@ describe('GridLayout', () => {
         </GridLayout>
       );
       const gridDiv = container.firstChild as HTMLDivElement;
-      expect(gridDiv.className).toBe('grid w-full welcome-tiles');
+      expect(gridDiv.className).toBe('grid-layout grid w-full welcome-tiles');
     });
 
     it('should render grid container with correct structure', () => {
@@ -152,7 +152,7 @@ describe('GridLayout', () => {
       const gridDiv = container.firstChild as HTMLDivElement;
       // SOP §11: Static styles now use utility classes instead of inline styles
       expect(gridDiv).toHaveClass('grid');
-      expect(gridDiv.style.gridTemplateColumns).toBe('repeat(3, 1fr)');
+      expect(gridDiv.style.getPropertyValue('--grid-columns')).toBe('3');
     });
   });
 });

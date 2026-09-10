@@ -23,13 +23,23 @@ describe('SOP: Inline Styles', () => {
      * Each entry explains why inline styles are acceptable
      */
     const DOCUMENTED_EXCEPTIONS: Record<string, string> = {
-        // Layout components with dynamic props
-        'GridLayout.tsx': 'Dynamic gap/columns from props via translateSpectrumToken()',
+        // Layout components with dynamic props.
+        // GridLayout, ContentWithSidebar and ControlPanelLayout LEFT this list on
+        // 2026-09-10: they pass their parameters as CUSTOM PROPERTIES and a
+        // stylesheet owns the declarations, so the cascade keeps control. A
+        // custom property is not a CSS property, which is why this scan stops
+        // counting them. `.control-panel-secondary-inner` also left the
+        // `classesDefinedNowhere` ledger in the same change — it had a class and
+        // no rule anywhere, because the inline style WAS the styling.
+        // GridLayout.tsx was here until 2026-09-10. It now passes columns/gap/
+        // maxWidth/padding as CUSTOM PROPERTIES and `.grid-layout` in
+        // two-column-layout.css turns them into CSS — so the declarations stay in
+        // the cascade instead of being welded to the element. This scan agrees:
+        // a custom property is not a CSS property, so it is not styling.
+        // That is the exit from this list, not a wider exception.
         'TwoColumnLayout.tsx': 'Dynamic gap/ratio from props via translateSpectrumToken()',
         'PageLayout.tsx': 'Dynamic backgroundColor from props',
         'SingleColumnLayout.tsx': 'Dynamic gap from props via translateSpectrumToken()',
-        'ContentWithSidebar.tsx': 'Dynamic sidebar inner-content max-width from props',
-        'ControlPanelLayout.tsx': 'Dynamic secondary-panel inner-content max-width from props',
         // The Spectrum Flex 450px workaround — this project's OWN prescribed
         // pattern for a full-width webview layout (root CLAUDE.md: "Adobe
         // Spectrum Flex constrains width (450px): use a standard HTML div with
@@ -104,8 +114,25 @@ describe('SOP: Inline Styles', () => {
         unsafeStyle: number;
         dynamic: number;
     } {
-        const standardMatches = (content.match(/style=\{\{/g) || []).length;
-        const unsafeMatches = (content.match(/UNSAFE_style=\{\{/g) || []).length;
+        // A style object that sets ONLY CUSTOM PROPERTIES is not styling — it is
+        // passing parameters. `--grid-columns: 3` declares nothing; the rule that
+        // reads it lives in a stylesheet, where the cascade can still reach it.
+        // That is the sanctioned way out of this list (GridLayout,
+        // ContentWithSidebar, ControlPanelLayout, 2026-09-10), so the counter has
+        // to recognise it or the way out is "reformat until the regex misses".
+        //
+        // Anything else in the object and it counts in full: one real declaration
+        // welded to the element is the whole problem, however many variables keep
+        // it company.
+        const styleObjects = (content.match(/(?:UNSAFE_)?style=\{\s*\{[\s\S]*?\}/g) || []);
+        const onlyCustomProps = (obj: string): boolean => {
+            const props = [...obj.matchAll(/(?:^|[{,\s])['"]?(--[\w-]+|[a-zA-Z][\w]*)['"]?\s*:/g)]
+                .map((m) => m[1]);
+            return props.length > 0 && props.every((k) => k.startsWith('--'));
+        };
+        const counted = styleObjects.filter((o) => !onlyCustomProps(o));
+        const standardMatches = counted.filter((o) => !o.startsWith('UNSAFE_')).length;
+        const unsafeMatches = counted.filter((o) => o.startsWith('UNSAFE_')).length;
 
         // Detect dynamic patterns (spreading, function calls, ternaries)
         const dynamicPatterns = [

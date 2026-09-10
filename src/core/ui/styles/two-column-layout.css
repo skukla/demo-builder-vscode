@@ -43,3 +43,49 @@
     }
 }
 }
+
+/* ==========================================================================
+   GridLayout — the declarations the component used to write INLINE.
+
+   The component now passes `columns`, `gap`, `maxWidth` and `padding` as custom
+   properties and this rule turns them into CSS. That keeps the properties in the
+   cascade: an inline `grid-template-columns` could never be overridden by any
+   layer, so a later rule could only win with `!important` — which is how two of
+   the conflicts in the 1,294 -> 0 sweep were created in the first place.
+
+   The DEFAULTS live here, in the `var()` fallbacks, because an omitted prop
+   writes no variable at all.
+   ========================================================================== */
+@layer theme {
+.grid-layout {
+    grid-template-columns: repeat(var(--grid-columns, 2), 1fr);
+    gap: var(--grid-gap, 24px);
+    max-width: var(--grid-max-width, none);
+    padding: var(--grid-padding, 0);
+}
+}
+
+/* ==========================================================================
+   ContentWithSidebar / ControlPanelLayout — the inner-column widths.
+
+   Both classes existed with NO rule anywhere: the components set `max-width`
+   inline and that was the entire styling. The width is a parameter, so it now
+   arrives as a custom property and these rules own the declaration — which means
+   a stylesheet can still adjust these columns, and an inline `max-width` never
+   could have been adjusted by one.
+
+   Defaults live in the `var()` fallbacks and match the components' prop
+   defaults (280px and 400px).
+   ========================================================================== */
+@layer theme {
+.content-sidebar-inner {
+    max-width: var(--sidebar-content-width, 280px);
+}
+}
+
+@layer theme {
+.control-panel-secondary-inner {
+    max-width: var(--control-panel-secondary-width, 400px);
+    width: 100%;
+}
+}

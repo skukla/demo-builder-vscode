@@ -54,18 +54,30 @@ export function GridLayout({
     padding,
     className,
 }: GridLayoutProps) {
-    // SOP §11: Static styles use utility classes, dynamic styles stay inline
-    const containerClasses = ['grid', 'w-full', className].filter(Boolean).join(' ');
+    // The props arrive as CUSTOM PROPERTIES; the stylesheet owns the actual
+    // declarations. Setting `grid-template-columns` inline would take it out of
+    // the cascade for good — no layer can outrank an inline style, so any future
+    // rule wanting to touch this grid could only win with `!important`. That is
+    // exactly how two of the survivors in the 1,294 -> 0 sweep came about.
+    // A variable set inline stays a parameter; the property stays styleable.
+    //
+    // An undefined prop writes nothing, so `.grid-layout`'s own fallback applies
+    // — which is why the CSS carries the defaults rather than this file.
+    const containerClasses = ['grid-layout', 'grid', 'w-full', className]
+        .filter(Boolean)
+        .join(' ');
 
     return (
         <div
             className={containerClasses}
-            style={{
-                gridTemplateColumns: `repeat(${columns}, 1fr)`,
-                gap: translateSpectrumToken(gap),
-                maxWidth: translateSpectrumToken(maxWidth),
-                padding: translateSpectrumToken(padding),
-            }}
+            style={
+                {
+                    '--grid-columns': columns,
+                    '--grid-gap': translateSpectrumToken(gap),
+                    '--grid-max-width': translateSpectrumToken(maxWidth),
+                    '--grid-padding': translateSpectrumToken(padding),
+                } as React.CSSProperties
+            }
         >
             {children}
         </div>

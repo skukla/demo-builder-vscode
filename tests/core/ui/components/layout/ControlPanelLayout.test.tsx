@@ -51,8 +51,10 @@ describe('ControlPanelLayout', () => {
 
         const inner = container.querySelector<HTMLElement>('.control-panel-secondary-inner');
 
-        expect(inner?.style.maxWidth).toBe('400px');
-        expect(inner?.style.width).toBe('100%');
+        // Parameter in, declaration in CSS: `.control-panel-secondary-inner`
+        // owns both `max-width` and `width`, and the 400px default is that
+        // rule's var() fallback — so an unset prop writes nothing here.
+        expect(inner?.style.getPropertyValue('--control-panel-secondary-width')).toBe('');
     });
 
     it('honours a caller-supplied secondaryContentWidth', () => {
@@ -65,7 +67,9 @@ describe('ControlPanelLayout', () => {
         );
 
         expect(
-            container.querySelector<HTMLElement>('.control-panel-secondary-inner')?.style.maxWidth,
+            container
+                .querySelector<HTMLElement>('.control-panel-secondary-inner')
+                ?.style.getPropertyValue('--control-panel-secondary-width'),
         ).toBe('640px');
     });
 

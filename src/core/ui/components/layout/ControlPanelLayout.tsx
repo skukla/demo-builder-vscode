@@ -44,7 +44,9 @@ export function ControlPanelLayout({
     masthead,
     primary,
     secondary,
-    secondaryContentWidth = '400px',
+    // NO default here — `.control-panel-secondary-inner` carries it. See
+    // ContentWithSidebar for why the default lives in exactly one place.
+    secondaryContentWidth,
     className,
 }: ControlPanelLayoutProps) {
     return (
@@ -67,7 +69,12 @@ export function ControlPanelLayout({
                     rightContent={
                         <div
                             className="control-panel-secondary-inner"
-                            style={{ maxWidth: secondaryContentWidth, width: '100%' }}
+                            // Parameter in, declaration in CSS — see GridLayout.tsx.
+                            style={
+                                {
+                                    '--control-panel-secondary-width': secondaryContentWidth,
+                                } as React.CSSProperties
+                            }
                         >
                             {secondary}
                         </div>

@@ -32,7 +32,11 @@ export interface ContentWithSidebarProps {
 export function ContentWithSidebar({
     children,
     sidebar,
-    sidebarContentWidth = '280px',
+    // NO default here — `.content-sidebar-inner` carries it in its var()
+    // fallback. Two defaults for one value is two things to keep in step, and
+    // a component default would write the variable ALWAYS, making the CSS
+    // fallback dead code that still looks authoritative.
+    sidebarContentWidth,
     className,
 }: ContentWithSidebarProps) {
     return (
@@ -44,7 +48,13 @@ export function ContentWithSidebar({
             className={cn('content-with-sidebar', className)}
             leftContent={children}
             rightContent={
-                <div className="content-sidebar-inner" style={{ maxWidth: sidebarContentWidth }}>
+                <div
+                    className="content-sidebar-inner"
+                    // The WIDTH is a parameter; the DECLARATION belongs to CSS.
+                    // `max-width` set inline could never be overridden by any
+                    // layer — see GridLayout.tsx for what that costs.
+                    style={{ '--sidebar-content-width': sidebarContentWidth } as React.CSSProperties}
+                >
                     {sidebar}
                 </div>
             }
