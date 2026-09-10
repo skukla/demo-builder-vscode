@@ -33,11 +33,21 @@
 # already refuses to edit a file that was not read.
 #
 # .rule files can only exit 2 (show the message) or 0 (silent) — there is no
-# "print and proceed". So this interrupts once per file creation, which is rare by
-# construction. If it ever becomes frequent, that is the signal to narrow it, not
-# to raise the cap.
+# "print and proceed". So this interrupts, you read the listing, and you retry.
+#
+# IT SHIPPED WITH `rule_once=0` AND THAT MADE IT UNUSABLE. The matcher requires the
+# path NOT to exist, and Write is the only thing that makes it exist — so with no
+# marker, every retry hit the same block and a new file in tests/sop could never be
+# created through the Write tool at all. Measured 2026-09-10 by hitting it three
+# times in a row with one session id, while trying to add this directory's 47th
+# enforcer.
+#
+# The header above already claimed it "interrupts once per file creation", so the
+# intent was always once. `rule_once=1` delivers that: the listing arrives, the
+# retry proceeds. The cost is that a SECOND new file in the same session gets no
+# listing — acceptable, and the same trade every other nudge rule here makes.
 rule_id=registry-dir
-rule_once=0
+rule_once=1
 
 rule_match() {
     [ "$1" = "Write" ] || return 1

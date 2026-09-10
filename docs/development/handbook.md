@@ -657,9 +657,17 @@ check says so and names the file.
 > instrument, and the sweep runs none, so the check has only ever run when a person
 > invoked `/sop-scan`. Measured 2026-09-10: 67 files over, the worst at 1,156 lines
 > against 400.
-> Enforced by `.claude/hooks/rules/49-god-file.rule`, which measures the file you are
-> editing and states the number. Numbered last so a specific route wins over a
-> generic size notice.
+> Enforced two ways: `.claude/hooks/rules/49-god-file.rule` measures the file you are
+> editing and states the number (numbered last so a specific route wins over a generic
+> size notice), and `tests/sop/god-file-ratchet.test.ts` pins the counts so they can
+> only fall — `godFileCandidates` at 68 (the population) and `godFileCoupled` at 31
+> (the ones that also show a coupling signal, which is the actual work list).
+>
+> Two numbers because line count alone is not a finding: `decompose-god-file` says a
+> file over threshold WITHOUT coupling should be left alone, and pinning only the
+> population would reward splitting cohesive files to move a number.
+> `appBuilderComponentRunner.ts` is 1,122 lines with 11 imports and a 7-symbol public
+> surface; it is long and it is not a god file.
 
 > **Convention.** Never push with the pre-push gate disabled.
 > *Why:* the gate runs pre-push rather than pre-commit because several enforcers
@@ -1438,7 +1446,7 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 25 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 47 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 48 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 

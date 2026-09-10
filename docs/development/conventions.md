@@ -109,7 +109,7 @@ it means the rule rests on somebody noticing.
 | Wizard step order, area order and step bodies change together. |  |  | `35-wizard-step.rule` |
 | The AI-bundle gate has four seams; change all or none. |  |  | `36-ai-bundle.rule` |
 | A change to the MCP tool surface is made through its skill. |  |  | `37-mcp-tool.rule` |
-| A source file that is already over its size limit does not grow. |  |  | `49-god-file.rule` |
+| A source file that is already over its size limit does not grow. |  |  | `49-god-file.rule`<br>`god-file-ratchet.test.ts` |
 | Never push with the pre-push gate disabled. |  |  | `21-push-no-verify.rule` |
 | A new webview message is wired through its skill. |  |  | `38-webview-handler.rule` |
 | App Builder catalog edits go through the authoring skill. |  |  | `39-appbuilder-component.rule` |
