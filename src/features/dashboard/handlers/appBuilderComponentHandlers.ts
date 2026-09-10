@@ -37,6 +37,7 @@ import {
     addAppBuilderComponent,
     deployAppBuilderComponent,
     removeAppBuilderComponent,
+    type RuntimeCleanupSummary,
 } from '@/features/app-builder/services/appBuilderComponentRunner';
 import {
     buildCustomIntegrationEntry,
@@ -590,6 +591,14 @@ export type GuardableResult = {
     /** Set when the refusal is actionable (AUTH_REQUIRED → the UI offers sign-in). */
     code?: ErrorCode;
     blocked?: boolean;
+    /**
+     * Set by `removeAppBuilderComponent` — what the Runtime namespace looked like
+     * after undeploy. THIS TYPE OMITTED IT UNTIL 2026-09-10, which is how AB-7's
+     * fix came to be invisible: the runner produced the summary, this type erased
+     * it on the way through `withComponentProgress`, and the handler answered a
+     * bare success. A `failed` entry here means code is STILL DEPLOYED.
+     */
+    runtimeCleanup?: RuntimeCleanupSummary;
 };
 
 /** What the card calls a component: its kind, title-cased for the status line. */
@@ -787,7 +796,32 @@ export const handleRemoveAppBuilderComponent: MessageHandler<{ id?: string }> = 
     // The entry left the persisted map — without a snapshot the card lingers.
     await postComponentsSnapshot(context);
     await refreshProjectStatus(context);
-    return { success: true };
+
+    // AB-7: the runner verifies the Runtime namespace after undeploy, and it can
+    // come back with code STILL DEPLOYED — a leftover whose delete failed, or a
+    // namespace it could not list at all. This handler threw that summary away and
+    // answered a bare `{ success: true }`, which is the exact failure AB-7 was
+    // filed for: "success that lies". The removal itself DID happen — the manifest
+    // is clean — so this stays a success; what changes is that an incomplete
+    // cleanup is now said out loud instead of swallowed.
+    const cleanup = result.runtimeCleanup;
+    const stillRunning = cleanup?.failed ?? [];
+    if (cleanup && (stillRunning.length > 0 || !cleanup.verified)) {
+        const detail =
+            stillRunning.length > 0
+                ? `${stillRunning.length} package(s) are still deployed: ${stillRunning.join(', ')}`
+                : (cleanup.note ?? 'the Runtime namespace could not be listed');
+        const warning =
+            `${displayName} was removed, but its Runtime cleanup did not finish — ${detail}. ` +
+            `Check the namespace with \`aio runtime package list\` before reusing this project.`;
+        // Both surfaces, deliberately: the toast is for the SC, and `data` carries
+        // it to an agent, which cannot see a toast. HandlerResponse already has
+        // `data?: unknown`, so this needs no change to the message contract.
+        vscode.window.showWarningMessage(warning);
+        return { success: true, data: { runtimeCleanup: cleanup, warning } };
+    }
+
+    return { success: true, data: cleanup ? { runtimeCleanup: cleanup } : undefined };
 };
 
 /**

@@ -24,7 +24,6 @@ import {
     handleAddAppBuilderComponent,
     handleDeployAppBuilderComponent,
     handleRedeployAppBuilderComponent,
-    handleRemoveAppBuilderComponent,
     handleRenameAppBuilderComponent,
     mockAddAppBuilderComponent,
     mockBuildDefaultRunnerDeps,
@@ -33,7 +32,6 @@ import {
     mockDetectProjectOrgMismatch,
     mockEnsureAdobeIOAuth,
     mockGetAppBuilderComponentEntry,
-    mockRemoveAppBuilderComponent,
     mockSendAppBuilderComponentStatusUpdate,
     mockTestDeveloperPermissions,
     resetHandlerMocks,
@@ -374,35 +372,6 @@ describe('handleDeployAppBuilderComponent / handleRedeployAppBuilderComponent', 
     });
 });
 
-describe('handleRemoveAppBuilderComponent', () => {
-    it('routes to the runner removeAppBuilderComponent with the id', async () => {
-        const { mockContext, mockProject } = setupMocks();
-        mockTestDeveloperPermissions(true);
-
-        const result = await handleRemoveAppBuilderComponent(mockContext, { id: 'erp-sync' });
-
-        expect(result.success).toBe(true);
-        expect(mockRemoveAppBuilderComponent).toHaveBeenCalledWith(
-            mockProject,
-            'erp-sync',
-            expect.anything()
-        );
-    });
-
-    it('surfaces the runner error', async () => {
-        const { mockContext } = setupMocks();
-        mockTestDeveloperPermissions(true);
-        mockRemoveAppBuilderComponent.mockResolvedValue({
-            success: false,
-            error: 'undeploy failed',
-        });
-
-        const result = await handleRemoveAppBuilderComponent(mockContext, { id: 'erp-sync' });
-
-        expect(result.success).toBe(false);
-        expect(result.error).toBe('undeploy failed');
-    });
-});
 
 describe('handleRenameAppBuilderComponent (display name only — shell instancing Step 10)', () => {
     /** The keyed integration entry under rename (deployed, already named). */

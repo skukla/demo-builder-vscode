@@ -8783,7 +8783,7 @@
             "anchors": [
                 "if (result.success) {"
             ],
-            "line": 674,
+            "line": 683,
             "mutants": 7,
             "category": "branch",
             "reason": "The three-way tail of withComponentProgress writes one USER-log line per outcome and nothing else \u2014 no return value changes, no channel is pushed. Forcing any branch, or emptying any body, changes only which line prints, which is what the ratchet exists to refuse to reward. The outcome itself is asserted through the returned result and the row-status pushes.",
@@ -8808,10 +8808,10 @@
             "anchors": [
                 "success: false,"
             ],
-            "line": 474,
+            "line": 475,
             "mutants": 1,
             "category": "branch",
-            "reason": "The Configure route's inner success flag never reaches a caller: the outer handler matches result.blocked first and returns its own { success: false, error }. Flipping it changes a value that is overwritten one frame later.",
+            "reason": "The Configure route's inner success flag never reaches a caller: the outer handler matches result.blocked first and returns its own { success: false, error }. Flipping it changes a value that is overwritten one frame later. Re-anchored 2026-09-10 (474 -> 475): unchanged code, shifted by the AB-7 cleanup-reporting block added to handleRemoveAppBuilderComponent.",
             "decision": "none \u2014 the inner shape matches GuardableResult, which the outer translates",
             "recorded": "2026-09-05",
             "source": "PL-22 MUT-08"
