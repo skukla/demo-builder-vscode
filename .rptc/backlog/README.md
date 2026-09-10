@@ -274,7 +274,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-36` | fix | [The third Node-version sort in installHandler is untested](2026-09-02-install-handler-target-version-sort.md) | — | med | backlog |
 | `PR-1` | epic | [Reframe prerequisites: extension-wide tools vs project-shape requirements (Path A)](2026-06-11-prereqs-architecture-reframe.md) | — | low | backlog |
 
-### platform  (51)
+### platform  (52)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -320,6 +320,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-33` | chore | └ [Every convention is enforced, or it stops being a convention](2026-08-31-every-convention-enforced.md) | — | high | shipped |
 | `PL-34` | chore | └ [Every open finding from the 2026-09-01 toolchain day, in one list](2026-09-01-cast-and-builder-worklog.md) | — | high | shipped |
 | `PL-54` | fix | └ [The nudge rules cover two file shapes; reinvention happens in more than two](2026-09-10-agent-nudge-coverage.md) | — | high | shipped |
+| `PL-55` | chore | └ [Two architectural domains have no convention at all — one of them is a non-negotiable](2026-09-10-architecture-conventions-never-written.md) | — | high | backlog |
 | `PL-37` | chore | [The webview handshake's `stateVersion` is write-only](2026-09-02-webview-state-version-dead.md) | — | low | backlog |
 | `PL-38` | chore | [Our two most-mocked modules are faked 122 different ways](2026-09-02-webviewclient-mock-divergence.md) | — | med | shipped |
 | `PL-39` | chore | [An item can be marked done while its own body says what is left](2026-09-02-finished-items-carrying-remainders.md) | — | med | backlog |
@@ -476,7 +477,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-3` [Monorepo Support with Independent Release Tracking - Implementation Plan](monorepo-independent-release-tracking/overview.md) — backlog
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 
-*78 item(s) sit outside the A–G chain.*
+*79 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 

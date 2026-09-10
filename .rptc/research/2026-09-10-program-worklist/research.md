@@ -148,3 +148,48 @@ It does not re-litigate anything shipped, and it does not carry the 55 finished 
 forward. It also does not promote a `low` item because it is easy — the ranking is
 "what is blocked until this exists", which is what `value` is supposed to mean here
 and mostly does.
+
+---
+
+## Added 2026-09-10 — the release bar, and a gap the count could not report
+
+### If `built` becomes the release bar
+
+It moves **four** items from "waiting" to "releasable": PL-14, AB-7, PL-21, EDS-12.
+Done goes **57 → 61 of 115**.
+
+But the number is not the point. The bar change does not alter what is on develop —
+**1,628 commits, 46 of them CSS, and the last tag predates the program.** Under a
+`built` bar those are releasable NOW, which makes "cut a release" the immediate
+action rather than a later one. `built` also stops meaning "waiting on a person" and
+starts meaning "in the next cut", which is a cleaner definition: `shipped` then
+records that it actually reached someone, instead of blocking on it.
+
+The one caution: three of the four are `high` and one of them (**AB-7**) is a defect
+where `remove_integration` reports success while leaving deployed code running.
+Releasing on `built` means releasing that fix unverified. Worth verifying that single
+item before the cut rather than adopting a slower bar for everything.
+
+### PL-55 — two architectural domains have no convention at all
+
+Filed today, after the owner said the architecture program had conventions never
+started. Checked, and it is right.
+
+**109 conventions, all enforced** is a completeness-shaped number that measures
+something else: how many of the rules we WROTE DOWN are checked. It cannot report the
+ones never written. Sixty-eight of the 109 are UI and tests — the two tracks that
+actually ran — and two domains got nothing:
+
+- **Reversibility: zero.** It is non-negotiable #1 in `CLAUDE.md` — *"a thing that
+  cannot be undone is a finding"* — with no convention and no enforcer. The one
+  reversibility-adjacent convention gates an irreversible agent tool behind
+  `confirm: true`, which is a different rule. **AB-7 is what an unenforced principle
+  looks like in production.**
+- **Error handling: zero**, in both the handbook and the generated index, against a
+  `src/core/errors/` that exists and a global SOP that names the rule. Verified with
+  two positive controls (cascade layers 17 lines, dependency injection 4), so the
+  search was aimed correctly.
+
+This is the same shape as the god-file finding hours earlier: a stated rule with no
+cadence. **A convention count cannot report its own gaps** — something has to compare
+the rules against an independent list of what the codebase says it cares about.
