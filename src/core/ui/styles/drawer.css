@@ -70,13 +70,6 @@
     visibility: visible;
 }
 
-@media (prefers-reduced-motion: reduce) {
-    .db-drawer,
-    .db-drawer-scrim {
-        transition: none;
-    }
-}
-
 /* The flyout's sections: fixed head, scrolling body, fixed action bar. */
 .db-drawer-head {
     display: flex;
@@ -110,5 +103,14 @@
 
 .db-drawer-head > *:last-child {
     margin-left: auto;
+}
+}
+
+@layer overrides {
+@media (prefers-reduced-motion: reduce) {
+.db-drawer,
+.db-drawer-scrim {
+    transition: none;
+}
 }
 }

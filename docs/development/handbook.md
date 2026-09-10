@@ -621,6 +621,45 @@ check says so and names the file.
 > colours deferring to `--vscode-*`, and no `--db-status-*` at all, with a
 > planted-violation control.
 
+> **Convention.** A `prefers-reduced-motion: reduce` block sits directly in
+> `@layer overrides`, and needs no `!important`.
+> *Why:* it is a kill switch, so it has to beat every animation rule we wrote. These
+> blocks used to sit in `@layer reset` — the LOWEST layer — and in `@layer theme`,
+> fighting upward, and carried `!important` to win. That reads as "reduced motion
+> needs `!important`"; it does not. It needed it because the block was in the wrong
+> layer. A kill switch is not a reset. Probed live, control first: the theme rule
+> alone gives `2s infinite`; `@layer reset` plain still gives `2s infinite`;
+> `@layer reset` with `!important` gives `0.01ms`; **`@layer overrides` plain gives
+> `0.01ms` with nothing added.** Verified end-to-end with `prefers-reduced-motion`
+> emulated against the real bundle: all 170 elements read `1e-05s`, nothing has real
+> motion, and the repo contains ZERO `!important`.
+> This is what took the count from 1,294 to **0** rather than to 6 — those six were
+> not a legitimate residue, they were evidence of a misplaced block, and keeping them
+> would have written the mistake down as a rule.
+> [ADR-018 §2](../architecture/adr/018-css-architecture.md) · Enforced by
+> `tests/sop/css-declarations.test.ts`, with a control that tells a misplaced block
+> from a correct one.
+
+> **Convention.** Motion timings come from Spectrum's scale, not hand-written
+> milliseconds. Loop durations (>= 1s) are exempt.
+> *Why:* 72 animation/transition declarations carried **11 distinct durations** and 6
+> easing curves, and `--db-motion-*` was three constants with four consumers while 68
+> others typed `0.2s ease`. 39 values were already exactly Spectrum's; the largest
+> shift for a UI timing was 30ms, on one declaration. A 1.2s pulse is a designed
+> rhythm rather than a UI transition, and the scale would move it by 500ms.
+> [ADR-018 §7](../architecture/adr/018-css-architecture.md) · Enforced by
+> `tests/sop/css-declarations.test.ts`, with a planted-violation control.
+
+> **Convention.** Every stylesheet parses — no selector list is interrupted by an
+> at-rule.
+> *Why:* a comma-separated list broken by `@layer` never closes, and the browser
+> discards the whole rule. Three sheets shipped that way; Chrome kept ZERO rules from
+> the block, measured against the correct form as a control. Nothing caught it because
+> esbuild injects CSS as a string and never parses it, and the visual baseline had
+> captured the broken state as its own "before".
+> [ADR-018](../architecture/adr/018-css-architecture.md) · Enforced by
+> `tests/sop/css-declarations.test.ts`, with a planted-violation control.
+
 > **Convention.** Utility classes live in the overrides layer, not scattered through
 > component sheets.
 > *Why:* a utility defined beside a component is invisible to everyone who could reuse it,
@@ -1286,11 +1325,11 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 12 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 46 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 47 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 93 conventions. 92 of them are enforced; 1 is not.**
+**This handbook states 96 conventions. 95 of them are enforced; 1 is not.**
 
 The one is not unenforceable — it is **not yet true**. No `@layer vendor` exists in
 `src/`, so a check would fail the build today rather than protect anything. It waits on

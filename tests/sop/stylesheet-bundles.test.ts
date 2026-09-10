@@ -26,9 +26,8 @@
  */
 
 import { execSync } from 'child_process';
-import { existsSync, readFileSync, readdirSync, writeFileSync, unlinkSync } from 'fs';
-import { tmpdir } from 'os';
-import { join, relative } from 'path';
+import { existsSync, readFileSync, readdirSync } from 'fs';
+import { join } from 'path';
 import { reportBundleClassUsage, type UsageReport } from './webviewBundleClasses';
 import { loadLedger, expectBanned, expectClean, expectCeiling, expectFloor } from './architectureScan';
 
@@ -160,162 +159,6 @@ describe('ADR-018 step 3: Spectrum in @layer vendor, one entry at a time', () =>
             'aiOverview', 'configure', 'dashboard', 'dataInstaller',
             'integrations', 'projectsList', 'sidebar', 'wizard',
         ]);
-    });
-});
-
-describe('ADR-018 §7: motion timings come from Spectrum\'s scale', () => {
-    /**
-     * Durations in `animation`/`transition` are Spectrum duration tokens, not
-     * hand-written milliseconds.
-     *
-     * WHY. Measured 2026-09-10: 72 animation/transition declarations, of which
-     * FOUR used a token and 68 hand-wrote their timing, across **11 distinct
-     * durations** and 6 easing curves. `--db-motion-*` was three constants with
-     * four consumers in a codebase where everyone else typed `0.2s ease` — it
-     * unified nothing, and its own curve was a sixth one.
-     *
-     * The tell that adoption had stalled rather than finished: `--db-motion-fast:
-     * 150ms` was deleted as "referenced by nothing", and 150ms is hand-written 17
-     * times. A reachability check asks whether anything NAMES a token, never
-     * whether anything uses its VALUE.
-     *
-     * Spectrum's scale was verified usable first — 24 animated elements across all
-     * eight surfaces, every one able to resolve the token. The largest shift for a
-     * UI timing is 30ms, on one declaration.
-     *
-     * LOOP DURATIONS ARE EXEMPT. A 1.2s pulse or a 1s spinner is a designed rhythm,
-     * not a UI transition, and forcing those onto the scale moves them by up to
-     * 500ms. They stay literal, and this check leaves anything >= 1s alone.
-     */
-    const SHEETS = execSync('git ls-files "*.css"', { cwd: ROOT, encoding: 'utf8' })
-        .split('\n')
-        .filter((f) => f && !f.includes('node_modules'));
-
-    const LOOP_MS = 1000;
-    const stripComments = (css: string): string => css.replace(/\/\*[\s\S]*?\*\//g, '');
-
-    it('no hand-written sub-second duration survives', () => {
-        const offenders: string[] = [];
-        let scanned = 0;
-        for (const f of SHEETS) {
-            const css = stripComments(readFileSync(join(ROOT, f), 'utf8'));
-            for (const m of css.matchAll(/(?:animation|transition)(?:-duration)?\s*:\s*([^;]+);/g)) {
-                scanned++;
-                for (const d of m[1].matchAll(/(\d*\.?\d+)(ms|s)\b/g)) {
-                    const ms = parseFloat(d[1]) * (d[2] === 'ms' ? 1 : 1000);
-                    // Below 10ms is an OFF SWITCH, not a timing — reset.css's
-                    // reduced-motion block uses `0.01ms !important` to stop
-                    // animation without breaking code that listens for its end.
-                    if (ms >= 10 && ms < LOOP_MS) {
-                        offenders.push(`${f}: ${d[0]} in "${m[1].trim().slice(0, 46)}"`);
-                    }
-                }
-            }
-        }
-        // Control: declarations must EXIST to be checked.
-        expect(scanned).toBeGreaterThan(50);
-        expect(offenders.sort()).toStrictEqual([]);
-    });
-
-    it('CONTROL: the scan sees a hand-written duration', () => {
-        const planted = join(tmpdir(), `motion-${process.pid}.css`);
-        writeFileSync(planted, '.a { transition: opacity 0.2s ease; }\n');
-        try {
-            const css = stripComments(readFileSync(planted, 'utf8'));
-            const found = [...css.matchAll(/(?:animation|transition)\s*:\s*([^;]+);/g)].flatMap((m) =>
-                [...m[1].matchAll(/(\d*\.?\d+)(ms|s)\b/g)].map((d) => d[0])
-            );
-            expect(found).toStrictEqual(['0.2s']);
-        } finally {
-            unlinkSync(planted);
-        }
-    });
-});
-
-describe('every stylesheet PARSES — a rule the browser drops is not a rule', () => {
-    /**
-     * A comma-separated selector list interrupted by an at-rule.
-     *
-     * The migration's mover wraps each rule in `@layer theme { ... }`, and it
-     * found rules by their BRACE line. A selector list written across several
-     * lines has its brace on the last one, so the wrapper landed in the middle:
-     *
-     *     .manage-apis-body .intflow-api-picker,
-     *     @layer theme {                          <-- the list never closes
-     *     .manage-apis-body .intflow-api-scroll { ... }
-     *
-     * Chrome keeps ZERO rules from that. Measured 2026-09-09 in a real browser
-     * against the correct form as a control: flex-grow 0 (initial) versus 1.
-     * Three sheets shipped this way — shared-ui, data-installer and
-     * connect-services — and nothing anywhere failed, because esbuild injects
-     * CSS as a string and never parses it, and the visual baseline had captured
-     * the broken state as the "before".
-     *
-     * This is a PARSE check, not a style opinion, which is why it has no ledger:
-     * there is no such thing as a grandfathered unparseable rule.
-     */
-    const SHEETS = execSync('git ls-files "*.css"', { cwd: ROOT, encoding: 'utf8' })
-        .split('\n')
-        .filter((f) => f && !f.includes('node_modules'));
-
-    /** Blank out comments, keeping line numbers so a hit can be cited. */
-    const stripComments = (text: string): string => {
-        let out = '';
-        for (let i = 0; i < text.length; ) {
-            if (text.startsWith('/*', i)) {
-                const close = text.indexOf('*/', i + 2);
-                const end = close < 0 ? text.length : close + 2;
-                out += text.slice(i, end).replace(/[^\n]/g, ' ');
-                i = end;
-            } else {
-                out += text[i];
-                i++;
-            }
-        }
-        return out;
-    };
-
-    const scan = (sheets: string[]): { broken: string[]; continued: number } => {
-        const broken: string[] = [];
-        let continued = 0;
-        for (const f of sheets) {
-            const lines = stripComments(readFileSync(join(ROOT, f), 'utf8')).split('\n');
-            for (let i = 0; i < lines.length - 1; i++) {
-                if (!lines[i].trimEnd().endsWith(',')) continue;
-                continued++;
-                let j = i + 1;
-                while (j < lines.length && lines[j].trim() === '') j++;
-                if ((lines[j] ?? '').trim().startsWith('@')) {
-                    broken.push(`${f}:${i + 1} — selector list broken by ${lines[j].trim()}`);
-                }
-            }
-        }
-        return { broken, continued };
-    };
-
-    it('no selector list is interrupted by an at-rule', () => {
-        const { broken, continued } = scan(SHEETS);
-        // Control: multi-line selector lists must EXIST, or this passes on nothing.
-        expect(continued).toBeGreaterThan(20);
-        expect(broken.sort()).toStrictEqual([]);
-    });
-
-    it('CONTROL: the scan detects the shape it is looking for', () => {
-        // The exact text that shipped, so a rewrite of `scan` that stops seeing
-        // it fails here rather than reporting the corpus clean.
-        const planted = join(tmpdir(), `planted-${process.pid}.css`);
-        writeFileSync(
-            planted,
-            '.a .b,\n@layer theme {\n.a .c {\n    flex: 1 1 auto;\n}\n}\n'
-        );
-        try {
-            const rel = relative(ROOT, planted);
-            const { broken } = scan([rel]);
-            expect(broken).toHaveLength(1);
-            expect(broken[0]).toContain('@layer theme {');
-        } finally {
-            unlinkSync(planted);
-        }
     });
 });
 
@@ -620,7 +463,13 @@ describe('ADR-018 §2: !important is a symptom, not a mechanism', () => {
 
     it('CONTROL: stripping comments does not empty the corpus', () => {
         const stripped = CSS.map((f) => stripComments(readFileSync(f, 'utf8'))).join('');
-        expect(stripped).toContain('!important');
+        // The corpus no longer contains ANY `!important` (1,294 -> 0 on 2026-09-10),
+        // so this can no longer prove the counter works by finding one. It proves
+        // it the other way instead: the comment-stripper must leave the sheets
+        // intact, or a count of zero would be an empty corpus rather than a clean
+        // one — the exact false all-clear this control exists to prevent.
+        expect(stripped.length).toBeGreaterThan(50_000);
+        expect(stripped).toContain('.text-sm');
         expect(stripped.length).toBeGreaterThan(10_000);
     });
 

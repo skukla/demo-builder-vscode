@@ -24,7 +24,7 @@
  * visible as a gap at reduced zoom (panel wider than the 960px cap). So the column runs
  * full width and each content region below carries the cap itself. */
 .build-two-col .two-column-layout-left {
-    min-width: 0 !important;
+    min-width: 0;
 }
 
 /* Non-nav area bodies (Storefront / Integrations) supply their own padding since the
@@ -40,7 +40,7 @@
 
 @media (max-width: 1180px) { /* bp: two-column stack — Build summary hidden */
     .build-two-col .two-column-layout-right {
-        display: none !important;
+        display: none;
     }
 }
 }

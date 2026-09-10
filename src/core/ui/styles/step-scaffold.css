@@ -23,37 +23,37 @@
 @layer theme {
 /* Step container - full width with max constraint */
 .step-content-container {
-    max-width: var(--content-width) !important;
-    width: 100% !important;
-    margin: 0 !important;
-    padding: 20px !important;
+    max-width: var(--content-width);
+    width: 100%;
+    margin: 0;
+    padding: 20px;
 }
 
 /* Step main content area */
 .step-main-content {
-    flex: 1 !important;
-    display: flex !important;
-    width: 100% !important;
+    flex: 1;
+    display: flex;
+    width: 100%;
 }
 
 .step-content-area {
-    width: 100% !important;
-    height: 100% !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-    position: relative !important;
+    width: 100%;
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    position: relative;
 }
 
 .step-inner {
-    height: 100% !important;
-    width: 100% !important;
+    height: 100%;
+    width: 100%;
 }
 
 /* Step Counter - Modal header step indicator */
 .step-counter {
-    font-size: 13px !important;
-    font-weight: normal !important;
-    color: var(--spectrum-global-color-gray-500) !important;
+    font-size: 13px;
+    font-weight: normal;
+    color: var(--spectrum-global-color-gray-500);
 }
 
 /* ---- Sub-step nav (.step-nav) — a horizontal strip across the top of the area
@@ -62,42 +62,42 @@
  * wizard timeline. (Was a vertical left rail — promoted the small-screen strip to
  * the default.) */
 .step-nav {
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    flex: 0 0 auto !important;
-    width: 100% !important;
-    box-sizing: border-box !important;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex: 0 0 auto;
+    width: 100%;
+    box-sizing: border-box;
     /* Thinner rail: trim the vertical padding (keep the horizontal content padding so
        the label + tabs stay aligned with the content band). */
-    padding: var(--spectrum-global-dimension-size-150) var(--wizard-content-pad) !important;
-    gap: var(--spectrum-global-dimension-size-300) !important;
+    padding: var(--spectrum-global-dimension-size-150) var(--wizard-content-pad);
+    gap: var(--spectrum-global-dimension-size-300);
     /* Matched toolbar — gray-75 fill + a bottom divider (was a right border on the
      * left rail) so the strip and summary still read as the same panel family. */
-    background: var(--spectrum-global-color-gray-75) !important;
-    border-bottom: 1px solid var(--spectrum-global-color-gray-200) !important;
+    background: var(--spectrum-global-color-gray-75);
+    border-bottom: 1px solid var(--spectrum-global-color-gray-200);
 }
 
 /* All-caps area label — pinned at the strip's left edge (doesn't scroll with tabs). */
 .step-nav-area {
-    font-size: var(--spectrum-global-dimension-font-size-50) !important;
-    color: var(--spectrum-global-color-gray-700) !important;
-    font-weight: 700 !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.05em !important;
-    margin: 0 !important;
-    flex: 0 0 auto !important;
+    font-size: var(--spectrum-global-dimension-font-size-50);
+    color: var(--spectrum-global-color-gray-700);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 0;
+    flex: 0 0 auto;
 }
 
 /* ---- Dedicated view (.step-view) — the active step's roomy full-width body ----
  * Transparent (no box framing empty space): the content sits in the column over the
  * column background, with generous top padding for breathing room. */
 .step-view {
-    width: 100% !important;
-    box-sizing: border-box !important;
+    width: 100%;
+    box-sizing: border-box;
     /* Content sits size-400 (32px) below the flush sub-step nav rail — the rail is chrome,
        this view is the content. Horizontal + bottom stay at --wizard-content-pad (24px). */
-    padding: var(--spectrum-global-dimension-size-400) var(--wizard-content-pad) var(--wizard-content-pad) !important;
+    padding: var(--spectrum-global-dimension-size-400) var(--wizard-content-pad) var(--wizard-content-pad);
 }
 
 /* Sub-step view crossfade: the active view body fades + slides up when the sub-step
@@ -122,38 +122,38 @@
    Container Patterns
    =========================================== */
 .container-wizard {
-    max-width: var(--content-width) !important;
-    width: 100% !important;
-    margin: 0 !important;
+    max-width: var(--content-width);
+    width: 100%;
+    margin: 0;
     /* Content starts size-400 (32px) below the header (no nav rail on these steps). */
-    padding: var(--spectrum-global-dimension-size-400) 24px 24px !important;
+    padding: var(--spectrum-global-dimension-size-400) 24px 24px;
 }
 
 .container-dashboard {
-    padding: var(--spectrum-global-dimension-size-400) !important;
-    height: 100vh !important;
-    max-width: 500px !important;
-    margin: 0 auto !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
+    padding: var(--spectrum-global-dimension-size-400);
+    height: 100vh;
+    max-width: 500px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .container-form {
-    flex: 1 !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 /* ===========================================
    Configure Screen Container
    =========================================== */
 .container-configure {
-    background-color: var(--spectrum-global-color-gray-50) !important;
-    width: 100% !important;
-    height: 100vh !important;
-    display: flex !important;
-    overflow: hidden !important;
+    background-color: var(--spectrum-global-color-gray-50);
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    overflow: hidden;
     /* Configure renders the SAME StepAreaShell as the wizard's areas, and .step-nav /
      * .step-view-anim reference these two tokens in their padding and max-width. They
      * are declared on .wizard-main-content, which Configure is not inside — so without
@@ -166,45 +166,45 @@
 
 /* Button size variations */
 .btn-compact {
-    height: 28px !important;
-    font-size: 12px !important;
-    padding: 0 12px !important;
-    min-width: 60px !important;
+    height: 28px;
+    font-size: 12px;
+    padding: 0 12px;
+    min-width: 60px;
 }
 
 .btn-standard {
-    height: 32px !important;
-    font-size: 13px !important;
-    padding: 0 16px !important;
+    height: 32px;
+    font-size: 13px;
+    padding: 0 16px;
 }
 
 .btn-large {
-        height: 40px !important;
-        font-size: 14px !important;
-        padding: 0 20px !important;
+        height: 40px;
+        font-size: 14px;
+        padding: 0 20px;
     }
 
 .content-column {
-    width: 100% !important;
-    max-width: var(--content-width) !important;
-    box-sizing: border-box !important;
+    width: 100%;
+    max-width: var(--content-width);
+    box-sizing: border-box;
     /* Content starts size-400 (32px) below the header; sides/bottom stay size-300 (24px). */
-    padding: var(--spectrum-global-dimension-size-400) var(--spectrum-global-dimension-size-300) var(--spectrum-global-dimension-size-300) !important;
+    padding: var(--spectrum-global-dimension-size-400) var(--spectrum-global-dimension-size-300) var(--spectrum-global-dimension-size-300);
 }
 
 /* Cap the LEFT column at the canonical width (overrides TwoColumnLayout's inline
  * leftMaxWidth so it's single-sourced); the right column flex-grows to the screen edge
  * (TwoColumnLayout default), with the sidebar's inner content capped by the component. */
 .content-with-sidebar .two-column-layout-left {
-    max-width: var(--content-width) !important;
+    max-width: var(--content-width);
 }
 
 .content-area {
-    display: flex !important;
-    flex-direction: column !important;
-    flex: 1 !important;
-    height: 100% !important;
-    width: 100% !important;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    height: 100%;
+    width: 100%;
 }
 
 
@@ -213,45 +213,45 @@
    URLs in help text that open in browser
    =========================================== */
 .clickable-url {
-    font-family: var(--spectrum-alias-body-text-font-family, monospace) !important;
-    font-size: 0.9em !important;
-    background-color: var(--db-code-background) !important;
-    padding: 2px 8px !important;
-    border-radius: 4px !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    cursor: pointer !important;
-    text-decoration: underline !important;
-    color: var(--spectrum-global-color-blue-600) !important;
-    transition: background-color var(--spectrum-global-animation-duration-200) ease, color var(--spectrum-global-animation-duration-200) ease !important;
+    font-family: var(--spectrum-alias-body-text-font-family, monospace);
+    font-size: 0.9em;
+    background-color: var(--db-code-background);
+    padding: 2px 8px;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    text-decoration: underline;
+    color: var(--spectrum-global-color-blue-600);
+    transition: background-color var(--spectrum-global-animation-duration-200) ease, color var(--spectrum-global-animation-duration-200) ease;
 }
 
 .clickable-url:hover {
-    background-color: var(--spectrum-global-color-gray-200) !important;
-    color: var(--spectrum-global-color-blue-700) !important;
+    background-color: var(--spectrum-global-color-gray-200);
+    color: var(--spectrum-global-color-blue-700);
 }
 
 .clickable-url:focus {
-    outline: 2px solid var(--spectrum-global-color-blue-400) !important;
-    outline-offset: 2px !important;
+    outline: 2px solid var(--spectrum-global-color-blue-400);
+    outline-offset: 2px;
 }
 
 /* ===========================================
    Instruction Card Styles
    =========================================== */
 .instruction-card {
-    padding: 16px !important;
-    border-radius: 6px !important;
+    padding: 16px;
+    border-radius: 6px;
 }
 
 /* Instruction step title */
 .instruction-title {
-    font-size: 15px !important;
+    font-size: 15px;
 }
 
 /* Instruction details line height */
 .instruction-details {
-    line-height: 2.0 !important;
+    line-height: 2.0;
 }
 
 /* ===========================================
@@ -259,42 +259,42 @@
    Fullscreen overlay for zoomed images
    =========================================== */
 .image-zoom-overlay {
-    position: fixed !important;
-    inset: 0 !important;
-    background: rgba(0, 0, 0, 0.9) !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    z-index: 10000 !important;
-    cursor: zoom-out !important;
-    padding: 20px !important;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    cursor: zoom-out;
+    padding: 20px;
 }
 
 .image-zoom-image {
-    max-width: 100% !important;
-    max-height: 100% !important;
-    object-fit: contain !important;
-    border-radius: 4px !important;
-    cursor: zoom-out !important;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 4px;
+    cursor: zoom-out;
 }
 
 .image-zoom-hint {
-    position: absolute !important;
-    top: 20px !important;
-    right: 20px !important;
-    color: white !important;
-    font-size: 14px !important;
-    opacity: 0.7 !important;
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    color: white;
+    font-size: 14px;
+    opacity: 0.7;
 }
 
 /* Screenshot Thumbnail - FieldHelpButton step images */
 .screenshot-thumbnail {
-    width: 100% !important;
-    max-height: 380px !important;
-    object-fit: contain !important;
-    border-radius: 4px !important;
-    border: 1px solid var(--spectrum-global-color-gray-300) !important;
-    cursor: zoom-in !important;
+    width: 100%;
+    max-height: 380px;
+    object-fit: contain;
+    border-radius: 4px;
+    border: 1px solid var(--spectrum-global-color-gray-300);
+    cursor: zoom-in;
 }
 
     .number-badge {

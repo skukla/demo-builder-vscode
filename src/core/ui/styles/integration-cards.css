@@ -292,7 +292,7 @@
 .integration-panel-row-value .copyable-text {
     display: inline-block;
     max-width: 100%;
-    white-space: normal !important;
+    white-space: normal;
     overflow-wrap: anywhere;
     line-height: 1.45;
 }

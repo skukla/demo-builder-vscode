@@ -83,10 +83,17 @@ export function Sidebar({
             // the last tile off the bottom the way `height: 100%` did.
             // `.sidebar-provider` scrolls whatever overflows.
             minHeight="100%"
-            // Centred rather than top-padded — `.sidebar-view` refines this to
-            // `safe center` so a too-short panel degrades to top-aligned instead
-            // of pushing the first tile out of reach above the scroll origin.
-            justifyContent="center"
+            // Top-aligned, so a panel too short for its content keeps the first
+            // tile reachable instead of pushing it above the scroll origin.
+            //
+            // This said `center` until 2026-09-10, and `.sidebar-view` overrode it
+            // back to `flex-start` with `!important` — a prop and a stylesheet, in
+            // the same repo, disagreeing, and the only way CSS can win against a
+            // component prop is `!important`, because the prop writes an INLINE
+            // style that no cascade layer can reach. The comment here described a
+            // third thing again (`safe center`), which the CSS had stopped saying.
+            // Setting the prop to what we actually want removes all three.
+            justifyContent="start"
             alignItems="center"
             gap="size-300"
             UNSAFE_className="sidebar-view"

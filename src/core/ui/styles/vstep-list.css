@@ -25,67 +25,67 @@
  * upcoming/locked → muted + aria-disabled. Subtle Spectrum tokens (theme-aware), no
  * saturated fills, accessible focus ring. */
 .vsteplist {
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: center !important;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
     /* Takes the strip's remaining width and scrolls horizontally when the tabs
        overflow (the active tab is scrolled into view by StepRail). */
-    flex: 1 1 auto !important;
-    min-width: 0 !important;
-    width: auto !important;
-    overflow-x: auto !important;
-    scroll-behavior: smooth !important;
+    flex: 1 1 auto;
+    min-width: 0;
+    width: auto;
+    overflow-x: auto;
+    scroll-behavior: smooth;
     gap: var(--spectrum-global-dimension-size-150)
-        var(--spectrum-global-dimension-size-300) !important;
-    list-style: none !important;
-    margin: 0 !important;
-    padding: 0 !important;
+        var(--spectrum-global-dimension-size-300);
+    list-style: none;
+    margin: 0;
+    padding: 0;
 }
 
 .vsteplist-item {
-    display: block !important;
-    flex: 0 0 auto !important;
+    display: block;
+    flex: 0 0 auto;
 }
 
 /* A quiet menu row. Matches the summary's small type scale (font-size-75) and gray
  * tokens. NO border / outline anywhere except the :focus-visible ring — the active
  * state is conveyed by the left accent bar + gray-100 fill + bold label only. */
 .vsteplist-step {
-    display: flex !important;
-    align-items: center !important;
-    gap: var(--spectrum-global-dimension-size-100) !important;
+    display: flex;
+    align-items: center;
+    gap: var(--spectrum-global-dimension-size-100);
     /* Inline tab: intrinsic width, never shrinks (overflow scrolls instead), one line. */
-    width: auto !important;
-    flex: 0 0 auto !important;
-    white-space: nowrap !important;
-    box-sizing: border-box !important;
+    width: auto;
+    flex: 0 0 auto;
+    white-space: nowrap;
+    box-sizing: border-box;
     padding: var(--spectrum-global-dimension-size-100)
-        var(--spectrum-global-dimension-size-150) !important;
-    background: transparent !important;
-    border: 0 !important;
-    border-radius: 0 !important;
-    cursor: pointer !important;
-    color: var(--spectrum-global-color-gray-700) !important;
-    font-family: inherit !important;
-    font-size: var(--spectrum-global-dimension-font-size-75) !important;
-    text-align: left !important;
-    transition: background var(--spectrum-global-animation-duration-200) ease, color var(--spectrum-global-animation-duration-200) ease !important;
+        var(--spectrum-global-dimension-size-150);
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    cursor: pointer;
+    color: var(--spectrum-global-color-gray-700);
+    font-family: inherit;
+    font-size: var(--spectrum-global-dimension-font-size-75);
+    text-align: left;
+    transition: background var(--spectrum-global-animation-duration-200) ease, color var(--spectrum-global-animation-duration-200) ease;
 }
 
 .vsteplist-step:hover:not([aria-disabled='true']) {
-    background: var(--spectrum-global-color-gray-100) !important;
+    background: var(--spectrum-global-color-gray-100);
 }
 
 .vsteplist-step:focus-visible {
-    outline: 2px solid var(--spectrum-global-color-blue-500) !important;
-    outline-offset: 2px !important;
+    outline: 2px solid var(--spectrum-global-color-blue-500);
+    outline-offset: 2px;
 }
 
 /* Active tab: a single simple bottom underline (no pill fill, no box) + bold label. */
 .vsteplist-step.active {
-    background: transparent !important;
-    box-shadow: inset 0 -2px 0 var(--spectrum-global-color-blue-500) !important;
-    color: var(--spectrum-global-color-gray-900) !important;
+    background: transparent;
+    box-shadow: inset 0 -2px 0 var(--spectrum-global-color-blue-500);
+    color: var(--spectrum-global-color-gray-900);
 }
 
 /* A newly-revealed tab (e.g. "Sign in" appearing when the ACCS backend is chosen)
@@ -93,7 +93,7 @@
  * mirrors the rail's timeline-enter (animate a max dimension + opacity, clip while
  * growing). Applied for one render by StepRail; zeroed under reduced-motion. */
 .vsteplist-step--enter {
-    overflow: hidden !important;
+    overflow: hidden;
     animation: vsteplist-step-enter var(--spectrum-global-animation-duration-600) var(--spectrum-global-animation-ease-out);
 }
 
@@ -107,29 +107,29 @@
 }
 
 .vsteplist-step[aria-disabled='true'] {
-    cursor: default !important;
-    color: var(--spectrum-global-color-gray-500) !important;
+    cursor: default;
+    color: var(--spectrum-global-color-gray-500);
 }
 
 /* No leading status marker: the summary column owns "done" (✓ + value), and the
  * active highlight + muted upcoming/locked text carry position + reachability. */
 .vsteplist-title {
-    flex: 1 1 auto !important;
-    min-width: 0 !important;
-    font-weight: 500 !important;
+    flex: 1 1 auto;
+    min-width: 0;
+    font-weight: 500;
 }
 
 /* upcoming / locked labels read muted (gray-500/600) — matched to .sum-label. */
 .vsteplist-step.upcoming .vsteplist-title,
 .vsteplist-step.locked .vsteplist-title {
-    color: var(--spectrum-global-color-gray-600) !important;
+    color: var(--spectrum-global-color-gray-600);
 }
 
 /* Active row: a bolder gray-900 label (paired with the left accent + gray-100 fill,
  * NOT a full border) so the active step reads clearly without a boxed outline. */
 .vsteplist-step.active .vsteplist-title {
-    font-weight: 700 !important;
-    color: var(--spectrum-global-color-gray-900) !important;
+    font-weight: 700;
+    color: var(--spectrum-global-color-gray-900);
 }
 
 /* Error marker — the ONE per-item glyph on a tab, and only because the errored step's
@@ -137,39 +137,41 @@
  * else can carry it. A small negative-500 dot after the label, plus a red-600 label so
  * the signal is not colour-on-a-dot alone. */
 .vsteplist-step.has-error .vsteplist-title {
-    color: var(--spectrum-global-color-red-600) !important;
+    color: var(--spectrum-global-color-red-600);
 }
 
 .vsteplist-error {
-    flex: 0 0 auto !important;
-    width: var(--spectrum-global-dimension-size-75) !important;
-    height: var(--spectrum-global-dimension-size-75) !important;
-    border-radius: 50% !important;
-    background: var(--spectrum-global-color-red-600) !important;
+    flex: 0 0 auto;
+    width: var(--spectrum-global-dimension-size-75);
+    height: var(--spectrum-global-dimension-size-75);
+    border-radius: 50%;
+    background: var(--spectrum-global-color-red-600);
 }
 
 /* Visually-hidden lock reason (the mark/title stay visible; SR reads the reason). */
 .vsteplist-sr {
-    position: absolute !important;
-    width: 1px !important;
-    height: 1px !important;
-    padding: 0 !important;
-    margin: -1px !important;
-    overflow: hidden !important;
-    clip: rect(0, 0, 0, 0) !important;
-    white-space: nowrap !important;
-    border: 0 !important;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
 }
 }
-@layer theme {
+
+
+@layer overrides {
 /* The short-panel breakpoint, moved WHOLE — @media wrapper and all, and placed
    AFTER this family's plain rules because that is where it sat in the god file.
    Hoisting a rule out of its condition makes it apply at every height: on the
    first cycle of this migration that flipped the sidebar tiles from a column to
    a row, 48 elements, and it looked like a styling opinion rather than a bug. */
 @media (prefers-reduced-motion: reduce) {
-    .vsteplist-step {
-        transition: none !important;
-    }
+.vsteplist-step {
+    transition: none;
+}
 }
 }

@@ -17,7 +17,7 @@
 @layer theme {
 /* Brand section container */
 .brand-section {
-    margin-bottom: 24px !important;
+    margin-bottom: 24px;
 }
 
 /* Base brand card - expandable variant */
@@ -26,214 +26,218 @@
    starts at the same inset below the header as every other flow step; sides/bottom keep
    the layout's default 24px. */
 .brand-gallery-column {
-    padding-top: var(--spectrum-global-dimension-size-400) !important;
+    /* ALL FOUR SIDES, because the component now passes `padding="0px"`. It used
+       to set only the top and inherit 24px from SingleColumnLayout's inline
+       default — which meant a prop and this stylesheet each owned part of one
+       element's padding, and the top could only win with `!important`. */
+    padding: var(--spectrum-global-dimension-size-400) 24px 24px;
 }
 
 /* Brand card header area */
 .brand-card-header {
-    margin-bottom: 0 !important;
+    margin-bottom: 0;
 }
 
 .brand-card-title-row {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: space-between !important;
-    margin-bottom: 4px !important;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
 }
 
 .brand-card-name {
-    display: block !important;
-    font-size: 15px !important;
-    font-weight: 600 !important;
-    color: var(--spectrum-global-color-gray-900) !important;
+    display: block;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--spectrum-global-color-gray-900);
 }
 
 .brand-card-description {
-    display: block !important;
-    font-size: 12px !important;
-    color: var(--spectrum-global-color-gray-600) !important;
-    line-height: 1.4 !important;
+    display: block;
+    font-size: 12px;
+    color: var(--spectrum-global-color-gray-600);
+    line-height: 1.4;
 }
 
 /* Architecture options section (inside expanded card) slides + fades down on expand.
  * Its own keyframe (was a second `fadeIn` definition that the later plain `fadeIn`
  * silently shadowed — so this slide never actually ran; renamed to restore it). */
 .brand-card-architectures {
-    animation: fadeInDown var(--spectrum-global-animation-duration-300) var(--spectrum-global-animation-ease-out) !important;
+    animation: fadeInDown var(--spectrum-global-animation-duration-300) var(--spectrum-global-animation-ease-out);
 }
 
 .brand-card-section-label {
-    display: block !important;
-    font-size: 12px !important;
-    font-weight: 600 !important;
-    color: var(--spectrum-global-color-gray-700) !important;
-    margin-bottom: 12px !important;
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--spectrum-global-color-gray-700);
+    margin-bottom: 12px;
 }
 
 /* Compact selection summary in expanded brand card */
 /* A quiet secondary line — no divider / uppercase micro-label — so the package card's
    architecture summary reads in the same tone as the backend card's description. */
 .brand-card-selection {
-    margin-top: 6px !important;
-    animation: fadeIn var(--spectrum-global-animation-duration-300) ease-out !important;
+    margin-top: 6px;
+    animation: fadeIn var(--spectrum-global-animation-duration-300) ease-out;
 }
 
 .brand-card-selection-summary {
-    font-size: 12px !important;
-    color: var(--spectrum-global-color-gray-600) !important;
-    line-height: 1.4 !important;
+    font-size: 12px;
+    color: var(--spectrum-global-color-gray-600);
+    line-height: 1.4;
 }
 
 .brand-card-selection-sep {
-    color: var(--spectrum-global-color-gray-400) !important;
+    color: var(--spectrum-global-color-gray-400);
 }
 
 .brand-card-selection-label {
-    display: block !important;
-    font-size: 10px !important;
-    font-weight: 600 !important;
-    color: var(--spectrum-global-color-gray-600) !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.5px !important;
-    margin-bottom: 2px !important;
+    display: block;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--spectrum-global-color-gray-600);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
 }
 
 .brand-card-selection-value {
-    display: block !important;
-    font-size: 13px !important;
-    font-weight: 500 !important;
-    color: var(--spectrum-global-color-gray-900) !important;
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--spectrum-global-color-gray-900);
 }
 
 /* Hover tooltip for block library details */
 .brand-card-detail-trigger {
-    position: relative !important;
+    position: relative;
     /* Inline on the architecture summary line (was a block below it). */
-    white-space: nowrap !important;
+    white-space: nowrap;
 }
 
 .brand-card-detail-link {
-    display: inline-block !important;
-    font-size: 12px !important;
-    color: var(--spectrum-global-color-blue-500) !important;
-    text-decoration: underline !important;
-    text-decoration-style: dotted !important;
-    text-underline-offset: 2px !important;
-    cursor: default !important;
+    display: inline-block;
+    font-size: 12px;
+    color: var(--spectrum-global-color-blue-500);
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-underline-offset: 2px;
+    cursor: default;
 }
 
 .brand-card-detail-tooltip {
-    display: none !important;
-    position: absolute !important;
-    left: 0 !important;
-    bottom: calc(100% + 6px) !important;
-    width: max-content !important;
-    padding: 10px 14px !important;
-    background: var(--spectrum-global-color-gray-50) !important;
-    border: 1px solid var(--spectrum-global-color-gray-300) !important;
-    border-radius: 8px !important;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15) !important;
-    z-index: 20 !important;
-    white-space: nowrap !important;
+    display: none;
+    position: absolute;
+    left: 0;
+    bottom: calc(100% + 6px);
+    width: max-content;
+    padding: 10px 14px;
+    background: var(--spectrum-global-color-gray-50);
+    border: 1px solid var(--spectrum-global-color-gray-300);
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    z-index: 20;
+    white-space: nowrap;
 }
 
 .brand-card-detail-trigger:hover .brand-card-detail-tooltip {
-    display: block !important;
+    display: block;
 }
 
 /* Edit hint for expanded card */
 .brand-card-edit-hint {
-    display: block !important;
-    font-size: 11px !important;
-    color: var(--spectrum-global-color-blue-400) !important;
-    margin-top: 8px !important;
-    opacity: 0.7 !important;
-    transition: opacity var(--spectrum-global-animation-duration-200) ease !important;
+    display: block;
+    font-size: 11px;
+    color: var(--spectrum-global-color-blue-400);
+    margin-top: 8px;
+    opacity: 0.7;
+    transition: opacity var(--spectrum-global-animation-duration-200) ease;
 }
 
 /* Self-reflowing CSS grid (mirrors .projects-grid / .selector-grid above): the
    browser fits as many 220px-min columns as the container allows with zero JS.
    `align-items: start` so an expanded card doesn't stretch its row-mates. */
 .expandable-brand-grid {
-    display: grid !important;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)) !important;
-    gap: 20px !important;
-    align-items: start !important;
-    margin-bottom: 24px !important;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 20px;
+    align-items: start;
+    margin-bottom: 24px;
 }
 
 .expandable-brand-card {
-    position: relative !important;
-    background: var(--spectrum-global-color-gray-50) !important;
-    border-radius: 8px !important;
-    padding: 16px !important;
-    border: 1px solid var(--spectrum-global-color-gray-300) !important;
-    cursor: pointer !important;
-    transition: all var(--spectrum-global-animation-duration-300) ease-out !important;
+    position: relative;
+    background: var(--spectrum-global-color-gray-50);
+    border-radius: 8px;
+    padding: 16px;
+    border: 1px solid var(--spectrum-global-color-gray-300);
+    cursor: pointer;
+    transition: all var(--spectrum-global-animation-duration-300) ease-out;
     /* Grid items default to min-width:auto (=min-content); without this a card
        refuses to shrink into its reflowing-grid track and overflows. */
-    min-width: 0 !important;
-    box-sizing: border-box !important;
+    min-width: 0;
+    box-sizing: border-box;
     /* Shared card-family height floor so package cards and stack (selector) cards
        read at a consistent height across steps. */
-    min-height: 100px !important;
+    min-height: 100px;
 }
 
 .expandable-brand-card:hover {
-    background: var(--spectrum-global-color-gray-75) !important;
-    transform: translateY(-2px) !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12) !important;
+    background: var(--spectrum-global-color-gray-75);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
 .expandable-brand-card:focus-visible {
-    outline: 2px solid var(--spectrum-global-color-blue-400) !important;
-    outline-offset: 2px !important;
+    outline: 2px solid var(--spectrum-global-color-blue-400);
+    outline-offset: 2px;
 }
 
 /* Selected state - brand chosen, shows blue border */
 .expandable-brand-card.selected {
-    border-color: var(--spectrum-global-color-blue-400) !important;
-    outline: 2px solid var(--spectrum-global-color-blue-400) !important;
-    outline-offset: 2px !important;
+    border-color: var(--spectrum-global-color-blue-400);
+    outline: 2px solid var(--spectrum-global-color-blue-400);
+    outline-offset: 2px;
 }
 
 /* Expanded state - shows architecture selection */
 .expandable-brand-card.expanded {
-    background: var(--spectrum-global-color-gray-50) !important;
-    border-color: var(--spectrum-global-color-blue-400) !important;
-    outline: 2px solid var(--spectrum-global-color-blue-400) !important;
-    outline-offset: 2px !important;
-    transform: none !important;
-    cursor: pointer !important;
+    background: var(--spectrum-global-color-gray-50);
+    border-color: var(--spectrum-global-color-blue-400);
+    outline: 2px solid var(--spectrum-global-color-blue-400);
+    outline-offset: 2px;
+    transform: none;
+    cursor: pointer;
 }
 
 /* Dimmed state - other cards when one is expanded */
 .expandable-brand-card.dimmed {
-    opacity: 0.5 !important;
-    transform: none !important;
+    opacity: 0.5;
+    transform: none;
 }
 
 .expandable-brand-card.dimmed:hover {
-    opacity: 0.7 !important;
-    transform: none !important;
-    box-shadow: none !important;
+    opacity: 0.7;
+    transform: none;
+    box-shadow: none;
 }
 
 .expandable-brand-card.coming-soon {
     position: relative;
     opacity: 0.45;
-    cursor: default !important;
+    cursor: default;
     pointer-events: none;
 }
 
 .expandable-brand-card.expanded .brand-card-header {
-    margin-bottom: 0 !important;
-    padding-bottom: 0 !important;
+    margin-bottom: 0;
+    padding-bottom: 0;
     /* No border here - selection section has its own border-top */
 }
 
 .expandable-brand-card.expanded:hover .brand-card-edit-hint {
-    opacity: 1 !important;
+    opacity: 1;
 }
 
 /* Merged 2 declarations of this selector that the sheet carried separately.
@@ -241,9 +245,9 @@
    survives (!important over plain, then later over earlier). */
 /* Expanded card hover - re-open modal */
 .expandable-brand-card.expanded:hover {
-    transform: none !important;
-    box-shadow: none !important;
-    background: var(--spectrum-global-color-gray-75) !important;
+    transform: none;
+    box-shadow: none;
+    background: var(--spectrum-global-color-gray-75);
 }
 }
 

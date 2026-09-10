@@ -30,78 +30,78 @@
     /* ===========================================
        Typography Classes
        =========================================== */
-.text-xs { font-size: 11px !important; }
-.text-sm { font-size: 12px !important; }
-.text-base { font-size: 13px !important; }
-.text-md { font-size: 14px !important; }
-.text-lg { font-size: 16px !important; }
-.text-xl { font-size: 18px !important; }
+.text-xs { font-size: 11px; }
+.text-sm { font-size: 12px; }
+.text-base { font-size: 13px; }
+.text-md { font-size: 14px; }
+.text-lg { font-size: 16px; }
+.text-xl { font-size: 18px; }
 
-.font-normal { font-weight: 400 !important; }
-.font-medium { font-weight: 500 !important; }
-.font-semibold { font-weight: 600 !important; }
-.font-mono { font-family: var(--spectrum-font-family-code, monospace) !important; }
+.font-normal { font-weight: 400; }
+.font-medium { font-weight: 500; }
+.font-semibold { font-weight: 600; }
+.font-mono { font-family: var(--spectrum-font-family-code, monospace); }
 
-.text-center { text-align: center !important; }
-.text-uppercase { text-transform: uppercase !important; }
+.text-center { text-align: center; }
+.text-uppercase { text-transform: uppercase; }
 
 /* ===========================================
    Color Classes (using Spectrum variables)
    =========================================== */
-.text-gray-500 { color: var(--spectrum-global-color-gray-500) !important; }
-.text-gray-600 { color: var(--spectrum-global-color-gray-600) !important; }
-.text-gray-700 { color: var(--spectrum-global-color-gray-700) !important; }
-.text-red-600 { color: var(--spectrum-global-color-red-600) !important; }
-.text-green-600 { color: var(--spectrum-global-color-green-600) !important; }
-.text-yellow-600 { color: var(--spectrum-global-color-yellow-600) !important; }
-.text-blue-600 { color: var(--spectrum-global-color-blue-600) !important; }
+.text-gray-500 { color: var(--spectrum-global-color-gray-500); }
+.text-gray-600 { color: var(--spectrum-global-color-gray-600); }
+.text-gray-700 { color: var(--spectrum-global-color-gray-700); }
+.text-red-600 { color: var(--spectrum-global-color-red-600); }
+.text-green-600 { color: var(--spectrum-global-color-green-600); }
+.text-yellow-600 { color: var(--spectrum-global-color-yellow-600); }
+.text-blue-600 { color: var(--spectrum-global-color-blue-600); }
 
-.bg-gray-75 { background-color: var(--spectrum-global-color-gray-75) !important; }
+.bg-gray-75 { background-color: var(--spectrum-global-color-gray-75); }
 
 /* ===========================================
    Layout Classes
    =========================================== */
-.w-full { width: 100% !important; }
-.h-full { height: 100% !important; }
+.w-full { width: 100%; }
+.h-full { height: 100%; }
 
-.min-w-0 { min-width: 0 !important; }
+.min-w-0 { min-width: 0; }
 
-.flex { display: flex !important; }
+.flex { display: flex; }
 .flex-column { 
-    display: flex !important; 
-    flex-direction: column !important; 
+    display: flex; 
+    flex-direction: column; 
 }
-.flex-1 { flex: 1 !important; }
-.items-stretch { align-items: stretch !important; }
+.flex-1 { flex: 1; }
+.items-stretch { align-items: stretch; }
 
-.block { display: block !important; }
-.hidden { display: none !important; }
+.block { display: block; }
+.hidden { display: none; }
 
-.overflow-hidden { overflow: hidden !important; }
-.overflow-y-auto { overflow-y: auto !important; }
-.overflow-x-hidden { overflow-x: hidden !important; }
+.overflow-hidden { overflow: hidden; }
+.overflow-y-auto { overflow-y: auto; }
+.overflow-x-hidden { overflow-x: hidden; }
 
 /* ===========================================
    Spacing Classes
    =========================================== */
-.p-0 { padding: 0 !important; }
-.p-2 { padding: 8px !important; }
+.p-0 { padding: 0; }
+.p-2 { padding: 8px; }
 
 /* ===========================================
    Border & Radius Classes
    =========================================== */
-.border { border: 1px solid var(--spectrum-global-color-gray-300) !important; }
-.border-radius { border-radius: 4px !important; }
+.border { border: 1px solid var(--spectrum-global-color-gray-300); }
+.border-radius { border-radius: 4px; }
 button[class*="spectrum-Button"]:not(:disabled),
 button[class*="spectrum-Button"]:not([disabled]),
 [class*="spectrum-Button"]:not([aria-disabled="true"]) {
-    cursor: pointer !important;
+    cursor: pointer;
 }
 button[class*="spectrum-Button"]:disabled,
 button[class*="spectrum-Button"][disabled],
 [class*="spectrum-Button"][aria-disabled="true"] {
-    cursor: not-allowed !important;
-    opacity: 0.5 !important;
+    cursor: not-allowed;
+    opacity: 0.5;
 }
 
 } /* End of first @layer theme block */
@@ -112,17 +112,17 @@ button[class*="spectrum-Button"][disabled],
    ============================================ */
 @layer overrides {
     button[class*="spectrum-Button"][class*="cta"] {
-        background-color: var(--db-cta-background) !important;
-        border-color: var(--db-cta-background) !important;
+        background-color: var(--db-cta-background);
+        border-color: var(--db-cta-background);
     }
     button[class*="spectrum-Button"][class*="cta"]:hover,
     button[class*="spectrum-Button"][class*="cta"]:focus {
-        background-color: var(--db-cta-background-hover) !important;
-        border-color: var(--db-cta-background-hover) !important;
+        background-color: var(--db-cta-background-hover);
+        border-color: var(--db-cta-background-hover);
     }
     button[class*="spectrum-Button"][class*="cta"]:active {
-        background-color: var(--db-cta-background-active) !important;
-        border-color: var(--db-cta-background-active) !important;
+        background-color: var(--db-cta-background-active);
+        border-color: var(--db-cta-background-active);
     }
 }
 
@@ -135,53 +135,53 @@ button[class*="spectrum-Button"][disabled],
 /* ===========================================
    Utility Classes
    =========================================== */
-.opacity-50 { opacity: 0.5 !important; }
-.opacity-100 { opacity: 1 !important; }
+.opacity-50 { opacity: 0.5; }
+.opacity-100 { opacity: 1; }
 
-.cursor-pointer { cursor: pointer !important; }
-.cursor-default { cursor: default !important; }
+.cursor-pointer { cursor: pointer; }
+.cursor-default { cursor: default; }
 
-.whitespace-pre-wrap { white-space: pre-wrap !important; }
-.whitespace-nowrap { white-space: nowrap !important; }
+.whitespace-pre-wrap { white-space: pre-wrap; }
+.whitespace-nowrap { white-space: nowrap; }
 
 /* ===========================================
    Position Classes
    =========================================== */
-.relative { position: relative !important; }
-.absolute { position: absolute !important; }
-.fixed { position: fixed !important; }
-.sticky { position: sticky !important; }
+.relative { position: relative; }
+.absolute { position: absolute; }
+.fixed { position: fixed; }
+.sticky { position: sticky; }
 
 /* ===========================================
    Display Variations
    =========================================== */
-.inline { display: inline !important; }
-.inline-block { display: inline-block !important; }
-.inline-flex { display: inline-flex !important; }
-.grid { display: grid !important; }
+.inline { display: inline; }
+.inline-block { display: inline-block; }
+.inline-flex { display: inline-flex; }
+.grid { display: grid; }
 
-.rounded { border-radius: 4px !important; }
-.rounded-full { border-radius: 50% !important; }
+.rounded { border-radius: 4px; }
+.rounded-full { border-radius: 50%; }
 
-.border-t { border-top: 1px solid var(--spectrum-global-color-gray-200) !important; }
-.border-b { border-bottom: 1px solid var(--spectrum-global-color-gray-200) !important; }
+.border-t { border-top: 1px solid var(--spectrum-global-color-gray-200); }
+.border-b { border-bottom: 1px solid var(--spectrum-global-color-gray-200); }
 
-.bg-gray-400 { background-color: var(--spectrum-global-color-gray-400) !important; }
+.bg-gray-400 { background-color: var(--spectrum-global-color-gray-400); }
 
 /* ===========================================
    Text Color Extensions
    =========================================== */
-.text-white { color: var(--spectrum-global-color-gray-900) !important; }
-.text-gray-800 { color: var(--spectrum-global-color-gray-800) !important; }
-.text-blue-700 { color: var(--spectrum-global-color-blue-700) !important; }
+.text-white { color: var(--spectrum-global-color-gray-900); }
+.text-gray-800 { color: var(--spectrum-global-color-gray-800); }
+.text-blue-700 { color: var(--spectrum-global-color-blue-700); }
 
 /* ===========================================
    Text Utilities
    =========================================== */
-.letter-spacing-05 { letter-spacing: 0.5px !important; }
+.letter-spacing-05 { letter-spacing: 0.5px; }
 
-.min-w-100 { min-width: 100px !important; }
-.max-w-800 { max-width: 800px !important; }
+.min-w-100 { min-width: 100px; }
+.max-w-800 { max-width: 800px; }
 
 /* ===========================================
    Semantic Layout Classes
@@ -216,9 +216,9 @@ button[class*="spectrum-Button"][disabled],
 }
 
 /* Footer grid cell alignment */
-.grid-align-start { justify-self: start !important; }
-.grid-align-center { justify-self: center !important; }
-.grid-align-end { justify-self: end !important; }
+.grid-align-start { justify-self: start; }
+.grid-align-center { justify-self: center; }
+.grid-align-end { justify-self: end; }
 
 /* --------------------------------------------------------------------------
    Responsive layout: narrow-viewport adjustments for the wizard chrome and
@@ -260,10 +260,10 @@ button[class*="spectrum-Button"][disabled],
 
 /* Picker dropdown menu: prevent item text wrapping, ensure items fit content */
 [role="listbox"] [role="option"] {
-    white-space: nowrap !important;
-    overflow: visible !important;
-    text-overflow: unset !important;
-    min-width: fit-content !important;
+    white-space: nowrap;
+    overflow: visible;
+    text-overflow: unset;
+    min-width: fit-content;
 }
 
 /* Optional addons section in architecture modal */
@@ -272,15 +272,15 @@ button[class*="spectrum-Button"][disabled],
 
 /* Architecture modal footer with Done button */
 
-.min-h-0 { min-height: 0 !important; }
-.min-h-48 { min-height: 48px !important; }
+.min-h-0 { min-height: 0; }
+.min-h-48 { min-height: 48px; }
 
 /* ===========================================
    Animation Classes
    Note: @keyframes pulse is defined in index.css (canonical location)
    =========================================== */
 
-.shadow { box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important; }
+.shadow { box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }
 
 /* AI badge + its capabilities link on one line. The link was a standalone row
    beneath the badges, which cost the band a whole row to say one thing. */
@@ -306,9 +306,9 @@ button[class*="spectrum-Button"][disabled],
 
 /* Option B: Button grid (matches dashboard action buttons) */
 
-.pb-6 { padding-bottom: 24px !important; }
+.pb-6 { padding-bottom: 24px; }
 
-.grow { flex-grow: 1 !important; }
+.grow { flex-grow: 1; }
 
 /* AI surface — drill-down row typography reuses the wizard's existing
    utility classes (.text-sm, .font-semibold, .text-gray-700) for
@@ -318,7 +318,7 @@ button[class*="spectrum-Button"][disabled],
 /* Progress bar entrance/exit animations */
 [class*="spectrum-ProgressBar"] {
     animation: fadeInUp var(--spectrum-global-animation-duration-600) ease;
-    transition: opacity var(--spectrum-global-animation-duration-600) ease !important;
+    transition: opacity var(--spectrum-global-animation-duration-600) ease;
 }
 
 @keyframes fadeInUp {
@@ -334,7 +334,7 @@ button[class*="spectrum-Button"][disabled],
 
 /* Smooth progress bar value changes */
 [class*="spectrum-ProgressBar-fill"] {
-    transition: width var(--spectrum-global-animation-duration-600) ease !important;
+    transition: width var(--spectrum-global-animation-duration-600) ease;
 }
 
 /* Note: .animate-fade-in and @keyframes fadeIn defined in utility section above */
@@ -342,21 +342,21 @@ button[class*="spectrum-Button"][disabled],
 /* Node version status lines transitions */
 
 /* Text color for errors */
-.text-red-700 { color: var(--spectrum-global-color-red-700) !important; }
+.text-red-700 { color: var(--spectrum-global-color-red-700); }
 
 /* ===========================================
    Optional/Muted Label Styles
    =========================================== */
 .text-muted-label {
-    font-weight: 400 !important;
-    opacity: 0.7 !important;
+    font-weight: 400;
+    opacity: 0.7;
 }
 
 /* Flex End Container - Right-aligned flex child */
 .flex-end-container {
-    flex: 1 !important;
-    display: flex !important;
-    justify-content: flex-end !important;
+    flex: 1;
+    display: flex;
+    justify-content: flex-end;
 }
 
 } /* End of second @layer theme block */

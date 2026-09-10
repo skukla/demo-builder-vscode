@@ -24,15 +24,15 @@
    Transition Classes
    =========================================== */
 .transition-all {
-    transition: all var(--spectrum-global-animation-duration-600) ease !important;
+    transition: all var(--spectrum-global-animation-duration-600) ease;
 }
 
 .transition-colors {
-    transition: color var(--spectrum-global-animation-duration-600) ease, background-color var(--spectrum-global-animation-duration-600) ease !important;
+    transition: color var(--spectrum-global-animation-duration-600) ease, background-color var(--spectrum-global-animation-duration-600) ease;
 }
 
 .transition-opacity {
-    transition: opacity var(--spectrum-global-animation-duration-600) ease !important;
+    transition: opacity var(--spectrum-global-animation-duration-600) ease;
 }
 
 /* Small accent pill button for inline actions */
@@ -56,11 +56,11 @@
     background: var(--spectrum-accent-background-color-down, var(--spectrum-global-color-blue-600));
 }
 
-.animate-pulse { animation: pulse 2s infinite !important; }
+.animate-pulse { animation: pulse 2s infinite; }
 
-.animate-fade-in { animation: fadeIn var(--spectrum-global-animation-duration-600) ease !important; }
+.animate-fade-in { animation: fadeIn var(--spectrum-global-animation-duration-600) ease; }
 
-.animate-slide-down { animation: slide-down var(--spectrum-global-animation-duration-600) ease !important; }
+.animate-slide-down { animation: slide-down var(--spectrum-global-animation-duration-600) ease; }
 
 /* ===========================================
    GitHub Avatar with Badge
@@ -68,79 +68,79 @@
    Sized to match the L checkmark icon (~36px)
    =========================================== */
 .github-avatar-container {
-    position: relative !important;
-    display: inline-block !important;
+    position: relative;
+    display: inline-block;
 }
 
 .github-avatar-container img {
-    width: 64px !important;
-    height: 64px !important;
-    border-radius: 50% !important;
-    object-fit: cover !important;
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    object-fit: cover;
 }
 
 .github-avatar-badge {
-    position: absolute !important;
-    bottom: 0 !important;
-    right: 0 !important;
-    background: var(--spectrum-global-color-gray-50) !important;
-    border-radius: 50% !important;
-    padding: 3px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15) !important;
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    background: var(--spectrum-global-color-gray-50);
+    border-radius: 50%;
+    padding: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
 }
 
 /* Label width for label/value pairs (ReviewStep, etc.) */
-.review-label-width { min-width: 100px !important; }
+.review-label-width { min-width: 100px; }
 
 /* Review label - label/value pair label */
 .review-label {
-    font-size: 14px !important;
-    color: var(--spectrum-global-color-gray-500) !important;
-    min-width: 100px !important;
+    font-size: 14px;
+    color: var(--spectrum-global-color-gray-500);
+    min-width: 100px;
 }
 
-.user-select-none { user-select: none !important; }
+.user-select-none { user-select: none; }
 
-.user-select-text { user-select: text !important; }
+.user-select-text { user-select: text; }
 
 /* Empty state text with padding */
 .empty-state-text {
-    color: var(--spectrum-global-color-gray-500) !important;
-    padding-top: 16px !important;
-    padding-bottom: 16px !important;
+    color: var(--spectrum-global-color-gray-500);
+    padding-top: 16px;
+    padding-bottom: 16px;
 }
 
 /* ===========================================
    Empty State Styles
    =========================================== */
 .empty-state-container {
-    text-align: center !important;
-    background: var(--spectrum-global-color-gray-100) !important;
-    border-radius: 8px !important;
-    border: 1px solid var(--spectrum-global-color-gray-400) !important;
+    text-align: center;
+    background: var(--spectrum-global-color-gray-100);
+    border-radius: 8px;
+    border: 1px solid var(--spectrum-global-color-gray-400);
 }
 
 /* ===========================================
    Box Model Utilities
    =========================================== */
-.box-border { box-sizing: border-box !important; }
+.box-border { box-sizing: border-box; }
 
-.box-content { box-sizing: content-box !important; }
+.box-content { box-sizing: content-box; }
 
-.my-2 { margin-top: 8px !important; margin-bottom: 8px !important; }
+.my-2 { margin-top: 8px; margin-bottom: 8px; }
 
-.my-5 { margin-top: 20px !important; margin-bottom: 20px !important; }
+.my-5 { margin-top: 20px; margin-bottom: 20px; }
 
-.line-height-16 { line-height: 16px !important; }
+.line-height-16 { line-height: 16px; }
 
 /* Navigation item row - larger gap for nav items */
 .nav-item-row {
-    display: flex !important;
-    align-items: center !important;
-    gap: 12px !important;
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 
 .architecture-badge {
@@ -163,8 +163,8 @@
    Placeholder Icon (for pending/unknown states)
    =========================================== */
 .placeholder-icon {
-    width: 20px !important;
-    height: 20px !important;
+    width: 20px;
+    height: 20px;
 }
 }
 

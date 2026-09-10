@@ -45,30 +45,30 @@
 .view-switcher-button {
     /* Square, transparent, and carrying the underline slot on every tab so the
        active one does not shift its neighbours by 2px when it gains one. */
-    border-radius: 0 !important;
-    background-color: transparent !important;
-    border-bottom: 2px solid transparent !important;
+    border-radius: 0;
+    background-color: transparent;
+    border-bottom: 2px solid transparent;
     /* Pull the underline down onto the container's rule. */
-    margin-bottom: -1px !important;
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-    color: var(--spectrum-global-color-gray-700) !important;
+    margin-bottom: -1px;
+    padding-left: 0;
+    padding-right: 0;
+    color: var(--spectrum-global-color-gray-700);
 }
 }
 
 @layer theme {
 .view-switcher-button:hover {
-    background-color: transparent !important;
-    color: var(--spectrum-global-color-gray-900) !important;
+    background-color: transparent;
+    color: var(--spectrum-global-color-gray-900);
 }
 }
 
 @layer theme {
 .view-switcher-button.is-active {
-    background-color: transparent !important;
-    font-weight: 600 !important;
-    color: var(--spectrum-global-color-gray-900) !important;
-    border-bottom-color: var(--spectrum-global-color-blue-500) !important;
+    background-color: transparent;
+    font-weight: 600;
+    color: var(--spectrum-global-color-gray-900);
+    border-bottom-color: var(--spectrum-global-color-blue-500);
 }
 }
 

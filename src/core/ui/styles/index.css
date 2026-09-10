@@ -194,16 +194,6 @@
         opacity: 0.35;
     }
 }
-/* Ships WITH the animation, not in the surface that happens to use it — the
-   previous per-card pulse carried its own reduced-motion rule, which a second
-   implementation would simply have missed. */
-@media (prefers-reduced-motion: reduce) {
-@layer theme {
-    .status-dot--pulse {
-        animation: none;
-    }
-}
-}
 
 /* Pulse animation for checking status */
 @keyframes pulse {
@@ -252,7 +242,7 @@
    Fixing the DEFAULT is the only version that cannot rot — a new screen gets
    canonical behaviour by doing nothing. */
 .page-container {
-    max-width: var(--content-width) !important;
+    max-width: var(--content-width);
 }
 
 /* Page container with horizontal padding */
@@ -260,26 +250,26 @@
    narrower body inset left every screen's content 16px adrift of its title. The
    old per-screen opt-out had been silently correcting that too. */
 .page-container-padded {
-    max-width: var(--content-width) !important;
-    padding-left: var(--spectrum-global-dimension-size-400) !important;
-    padding-right: var(--spectrum-global-dimension-size-400) !important;
+    max-width: var(--content-width);
+    padding-left: var(--spectrum-global-dimension-size-400);
+    padding-right: var(--spectrum-global-dimension-size-400);
 }
 
 /* Page header section spacing */
 .page-header-section {
-    padding-top: 24px !important;
-    padding-bottom: 16px !important;
+    padding-top: 24px;
+    padding-bottom: 16px;
 }
 
 /* Page body section spacing */
 .page-body-section {
-    padding-top: 24px !important;
-    padding-bottom: 16px !important;
+    padding-top: 24px;
+    padding-bottom: 16px;
 }
 
 /* Page body section with larger bottom spacing */
 .page-body-section-lg {
-    padding-bottom: 24px !important;
+    padding-bottom: 24px;
 }
 
 /* Integrations band, context row: "Deploys to <project> · <workspace>  Change".
@@ -309,18 +299,31 @@
  * the same reclaimed density on every screen. The page context (a rail, a grid) owns
  * the wayfinding, so the title stays modest and the header spends little vertical budget. */
 .page-header-title {
-    font-size: var(--spectrum-global-dimension-font-size-300) !important;
-    line-height: 1.2 !important;
+    font-size: var(--spectrum-global-dimension-font-size-300);
+    line-height: 1.2;
     /* Zero the Spectrum Heading's default block margins so the single-row header
      * content sits vertically centered in its (now tight) padded band. */
-    margin: 0 !important;
+    margin: 0;
 }
 
 .page-header-subtitle {
-    font-size: var(--spectrum-global-dimension-font-size-100) !important;
+    font-size: var(--spectrum-global-dimension-font-size-100);
 }
 
 .page-header-secondary {
-    margin-top: var(--spectrum-global-dimension-size-75) !important;
+    margin-top: var(--spectrum-global-dimension-size-75);
+}
+}
+
+@layer overrides {
+/* Ships WITH the animation, not in the surface that happens to use it — the
+   previous per-card pulse carried its own reduced-motion rule, which a second
+   implementation would simply have missed. */
+@media (prefers-reduced-motion: reduce) {
+@layer theme {
+.status-dot--pulse {
+    animation: none;
+}
+}
 }
 }

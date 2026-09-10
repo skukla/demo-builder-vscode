@@ -74,14 +74,33 @@
     font: inherit;
   }
 
-  /* Reduce motion for accessibility */
+  /* Reduce motion for accessibility.
+
+     THE `!important` HERE IS LOAD-BEARING AND MUST NOT BE SWEPT. This file is
+     `@layer reset`, the LOWEST layer, so a plain declaration here loses to every
+     animation rule in `theme`. `!important` reverses layer order, which is the
+     only way a low layer can override a high one.
+
+     Measured 2026-09-10 with a live cascade probe (control: the theme rule alone
+     gives `2s infinite`):
+       reset WITHOUT !important -> 2s infinite   — the reset loses, motion runs
+       reset WITH    !important -> 0.01ms, 1     — the reset wins
+
+     So without it, someone who has asked their OS to reduce motion still gets
+     every animation, nothing fails, and nobody in the room notices. Pinned by
+     `tests/sop/stylesheet-bundles.test.ts`; the ADR-018 §2 sweep script skips
+     `prefers-reduced-motion` blocks for the same reason. */
+
+}
+
+@layer overrides {
   @media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-      animation-duration: 0.01ms !important;
-      animation-iteration-count: 1 !important;
-      transition-duration: 0.01ms !important;
-    }
+*,
+*::before,
+*::after {
+  animation-duration: 0.01ms;
+  animation-iteration-count: 1;
+  transition-duration: 0.01ms;
+}
   }
 }

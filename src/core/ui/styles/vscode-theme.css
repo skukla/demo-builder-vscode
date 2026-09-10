@@ -35,8 +35,8 @@
 
     /* Well component - transparent, no border (used for form grouping) */
     body [class*="spectrum-Well"] {
-        background-color: transparent !important;
-        border: none !important;
+        background-color: transparent;
+        border: none;
     }
 
     /* ListView - Let Spectrum handle styling natively (uses alias tokens above) */
@@ -44,27 +44,27 @@
     /* TextField and SearchField styling - transparent background to blend with page */
     body [class*="spectrum-Textfield"] input,
     body [class*="spectrum-SearchField"] input {
-        background-color: transparent !important;
-        color: var(--spectrum-global-color-gray-900) !important;
-        border-color: var(--spectrum-global-color-gray-400) !important;
+        background-color: transparent;
+        color: var(--spectrum-global-color-gray-900);
+        border-color: var(--spectrum-global-color-gray-400);
     }
 
     body [class*="spectrum-Textfield"] input:focus,
     body [class*="spectrum-SearchField"] input:focus {
-        border-color: var(--spectrum-global-color-blue-500) !important;
+        border-color: var(--spectrum-global-color-blue-500);
     }
 
     /* Button styling - use light text on dark backgrounds */
     /* Use precise class matching to avoid targeting internal elements like spectrum-Button-label */
     /* Exclude accent buttons (data-variant="accent") - let Spectrum handle their native blue */
     body button[class*="spectrum-Button"]:not([class*="quiet"]):not([class*="cta"]):not([data-variant="accent"]):not(.dashboard-action-button) {
-        background-color: var(--spectrum-global-color-gray-200) !important;
-        color: var(--spectrum-global-color-gray-800) !important;
-        border-color: var(--spectrum-global-color-gray-400) !important;
+        background-color: var(--spectrum-global-color-gray-200);
+        color: var(--spectrum-global-color-gray-800);
+        border-color: var(--spectrum-global-color-gray-400);
     }
 
     body button[class*="spectrum-Button"]:not([class*="quiet"]):not([class*="cta"]):not([data-variant="accent"]):not(.dashboard-action-button):hover {
-        background-color: var(--spectrum-global-color-gray-300) !important;
+        background-color: var(--spectrum-global-color-gray-300);
     }
 
     /* Accent buttons - let Spectrum handle natively (uses --spectrum-accent-background-color-*) */
@@ -72,48 +72,48 @@
 
     body button[class*="spectrum-Button"][class*="secondary"]:not(.dashboard-action-button),
     body button[class*="spectrum-Button"][data-variant="secondary"]:not(.dashboard-action-button) {
-        background-color: var(--spectrum-global-color-gray-200) !important;
-        color: var(--spectrum-global-color-gray-800) !important;
+        background-color: var(--spectrum-global-color-gray-200);
+        color: var(--spectrum-global-color-gray-800);
     }
 
     /* Ensure internal button elements don't get background overrides */
     body [class*="spectrum-Button-label"],
     body [class*="spectrum-Button-icon"] {
-        background-color: transparent !important;
+        background-color: transparent;
     }
 
     /* Picker/Dropdown styling */
     body [class*="spectrum-Picker"] {
-        background-color: var(--spectrum-global-color-gray-100) !important;
-        color: var(--spectrum-global-color-gray-900) !important;
-        border-color: var(--spectrum-global-color-gray-400) !important;
+        background-color: var(--spectrum-global-color-gray-100);
+        color: var(--spectrum-global-color-gray-900);
+        border-color: var(--spectrum-global-color-gray-400);
     }
 
     /* ProgressBar and ProgressCircle */
     body [class*="spectrum-ProgressBar-fill"],
     body [class*="spectrum-ProgressCircle-fill"] {
-        background-color: var(--spectrum-global-color-blue-500) !important;
+        background-color: var(--spectrum-global-color-blue-500);
     }
 
     /* Badge styling - use our design tokens */
     body [class*="spectrum-Badge"] {
-        background-color: var(--spectrum-global-color-gray-200) !important;
-        color: var(--spectrum-global-color-gray-900) !important;
+        background-color: var(--spectrum-global-color-gray-200);
+        color: var(--spectrum-global-color-gray-900);
     }
 
     /* Divider */
     body [class*="spectrum-Divider"] {
-        background-color: var(--spectrum-global-color-gray-400) !important;
+        background-color: var(--spectrum-global-color-gray-400);
     }
 
     /* Heading and text colors */
     body [class*="spectrum-Heading"] {
-        color: var(--spectrum-global-color-gray-900) !important;
+        color: var(--spectrum-global-color-gray-900);
     }
 
     body [class*="spectrum-Body"],
     body [class*="spectrum-Detail"] {
-        color: var(--spectrum-global-color-gray-700) !important;
+        color: var(--spectrum-global-color-gray-700);
     }
 
     /* Status colours, from SPECTRUM's semantic ramp.
@@ -124,15 +124,15 @@
        they did was replace one palette with a foreign one. `-text-small` is the
        right member of the ramp here because these select text. */
     body [color="positive"] {
-        color: var(--spectrum-semantic-positive-color-text-small) !important;
+        color: var(--spectrum-semantic-positive-color-text-small);
     }
 
     body [color="negative"] {
-        color: var(--spectrum-semantic-negative-color-text-small) !important;
+        color: var(--spectrum-semantic-negative-color-text-small);
     }
 
     body [color="notice"] {
-        color: var(--spectrum-semantic-notice-color-text-small) !important;
+        color: var(--spectrum-semantic-notice-color-text-small);
     }
 
     /* =========================================

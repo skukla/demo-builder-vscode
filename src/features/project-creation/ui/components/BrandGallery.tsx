@@ -174,8 +174,13 @@ export function BrandGallery({
         );
     }
 
+    // `padding={null}` writes NO inline padding, so `.brand-gallery-column` owns
+    // all four sides. `padding="0px"` would not do this — it is still an inline
+    // style, and inline beats every cascade layer; it would just overrule the
+    // stylesheet with zero. This element wants 32px on top and 24px elsewhere,
+    // which one DimensionValue cannot express, so the property has to be absent.
     return (
-        <SingleColumnLayout className="brand-gallery-column">
+        <SingleColumnLayout padding={null} className="brand-gallery-column">
             {/* Optional header content (e.g., project name field) */}
             {headerContent}
 

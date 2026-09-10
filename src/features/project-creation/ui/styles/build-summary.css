@@ -11,73 +11,73 @@
 
 @layer theme {
 .sum-title {
-    font-size: var(--spectrum-global-dimension-font-size-50) !important;
-    letter-spacing: 0.1em !important;
-    text-transform: uppercase !important;
-    color: var(--spectrum-global-color-gray-600) !important;
-    margin-bottom: var(--spectrum-global-dimension-size-150) !important;
+    font-size: var(--spectrum-global-dimension-font-size-50);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--spectrum-global-color-gray-600);
+    margin-bottom: var(--spectrum-global-dimension-size-150);
 }
 
 .sum-arch {
-    font-size: var(--spectrum-global-dimension-font-size-100) !important;
-    font-weight: 600 !important;
-    color: var(--spectrum-global-color-gray-900) !important;
-    padding-bottom: var(--spectrum-global-dimension-size-125) !important;
-    margin-bottom: var(--spectrum-global-dimension-size-75) !important;
-    border-bottom: 1px solid var(--spectrum-global-color-gray-300) !important;
+    font-size: var(--spectrum-global-dimension-font-size-100);
+    font-weight: 600;
+    color: var(--spectrum-global-color-gray-900);
+    padding-bottom: var(--spectrum-global-dimension-size-125);
+    margin-bottom: var(--spectrum-global-dimension-size-75);
+    border-bottom: 1px solid var(--spectrum-global-color-gray-300);
 }
 
 .sum-arch .empty {
-    color: var(--spectrum-global-color-gray-600) !important;
-    font-weight: 400 !important;
-    font-style: italic !important;
+    color: var(--spectrum-global-color-gray-600);
+    font-weight: 400;
+    font-style: italic;
 }
 
 .sum-group-h {
-    font-size: var(--spectrum-global-dimension-font-size-50) !important;
-    color: var(--spectrum-global-color-gray-700) !important;
-    font-weight: 700 !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.05em !important;
-    margin: var(--spectrum-global-dimension-size-150) 0 var(--spectrum-global-dimension-size-40) !important;
+    font-size: var(--spectrum-global-dimension-font-size-50);
+    color: var(--spectrum-global-color-gray-700);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: var(--spectrum-global-dimension-size-150) 0 var(--spectrum-global-dimension-size-40);
 }
 
 .sum-row {
-    display: flex !important;
-    justify-content: space-between !important;
-    gap: var(--spectrum-global-dimension-size-125) !important;
-    padding: var(--spectrum-global-dimension-size-50) 0 !important;
-    font-size: var(--spectrum-global-dimension-font-size-75) !important;
+    display: flex;
+    justify-content: space-between;
+    gap: var(--spectrum-global-dimension-size-125);
+    padding: var(--spectrum-global-dimension-size-50) 0;
+    font-size: var(--spectrum-global-dimension-font-size-75);
 }
 
 .sum-row + .sum-row {
-    border-top: 1px solid var(--spectrum-global-color-gray-200) !important;
+    border-top: 1px solid var(--spectrum-global-color-gray-200);
 }
 
 /* Left group: the shared small CheckmarkCircle (done only) + the row label. */
 .sum-rowlabel {
-    display: flex !important;
-    align-items: center !important;
-    gap: var(--spectrum-global-dimension-size-65) !important;
-    min-width: 0 !important;
+    display: flex;
+    align-items: center;
+    gap: var(--spectrum-global-dimension-size-65);
+    min-width: 0;
 }
 
 .sum-label {
-    color: var(--spectrum-global-color-gray-600) !important;
-    white-space: nowrap !important;
+    color: var(--spectrum-global-color-gray-600);
+    white-space: nowrap;
 }
 
 .sum-value {
-    color: var(--spectrum-global-color-gray-900) !important;
-    text-align: right !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    white-space: nowrap !important;
+    color: var(--spectrum-global-color-gray-900);
+    text-align: right;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .sum-value.empty {
-    color: var(--spectrum-global-color-gray-600) !important;
-    font-style: italic !important;
+    color: var(--spectrum-global-color-gray-600);
+    font-style: italic;
 }
 
 .sum-check {

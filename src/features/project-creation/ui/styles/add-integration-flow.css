@@ -119,11 +119,11 @@
    its `flex-basis: 0` overrides the `height="100%"` prop, so on an empty filter the
    list yields the line its ~20px instead of pushing it out of view. */
 .intflow-destination .list-refresh-container {
-    flex: 0 0 auto !important;
+    flex: 0 0 auto;
     /* The viewport term reserves the modal chrome (title, search, count, context
        line, footer, dialog margins) so a short window shrinks the list rather than
        overflowing the dialog. */
-    height: min(420px, calc(100vh - 22rem)) !important;
+    height: min(420px, calc(100vh - 22rem));
 }
 
 /* A committed choice (project/workspace) collapsed to one compact boxed line. */
@@ -333,7 +333,7 @@
    lists; inside this modal picker that pushes the actual API list below the fold.
    Tighten them here (inline Spectrum margins need !important to lose). */
 .intflow-api-picker .search-header > div {
-    margin-bottom: 6px !important;
+    margin-bottom: 6px;
 }
 
 /* Kill the HORIZONTAL half of `.search-header`'s `margin: -4px` bleed.
@@ -346,8 +346,8 @@
    Only left/right are neutralised — the vertical bleed costs nothing, and the
    4px padding stays so the focus ring is still unclipped. */
 .intflow-api-picker .search-header {
-    margin-left: 0 !important;
-    margin-right: 0 !important;
+    margin-left: 0;
+    margin-right: 0;
 }
 
 /* Left browse-column header + at-a-glance picks count (Selected has no mirror). */

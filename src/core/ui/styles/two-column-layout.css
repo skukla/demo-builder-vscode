@@ -21,25 +21,25 @@
        neither one squeezes the other, and the divider moves from between
        them to above the summary card. */
     .two-column-layout {
-        flex-direction: column !important;
-        align-items: stretch !important;
+        flex-direction: column;
+        align-items: stretch;
         /* Stacked columns are flex 0-0-auto (content height), which unbounds
            any inner flex-1 scroll region (e.g. Configure's .container-form) —
            the container itself must scroll or tall content paints past the
            page footer with no way to reach it. Inert where the container is
            height:auto in normal flow (no bounded height → no scrollbar). */
-        overflow-y: auto !important;
+        overflow-y: auto;
     }
     .two-column-layout-left {
-        max-width: none !important;
-        flex: 0 0 auto !important;
-        width: 100% !important;
+        max-width: none;
+        flex: 0 0 auto;
+        width: 100%;
     }
     .two-column-layout-right {
-        flex: 0 0 auto !important;
-        min-width: 0 !important;
-        border-left: none !important;
-        border-top: 1px solid var(--spectrum-global-color-gray-200) !important;
+        flex: 0 0 auto;
+        min-width: 0;
+        border-left: none;
+        border-top: 1px solid var(--spectrum-global-color-gray-200);
     }
 }
 }

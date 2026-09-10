@@ -40,29 +40,29 @@
  * overflow handles, and a scrollbar is the correct degradation — out-of-scale
  * controls are not. */
 .sidebar-action-tile {
-    background: var(--spectrum-global-color-gray-50) !important;
-    border-radius: 6px !important;
-    padding: 8px !important;
-    border: 1px solid var(--spectrum-global-color-gray-300) !important;
-    transition: all var(--spectrum-global-animation-duration-300) ease !important;
+    background: var(--spectrum-global-color-gray-50);
+    border-radius: 6px;
+    padding: 8px;
+    border: 1px solid var(--spectrum-global-color-gray-300);
+    transition: all var(--spectrum-global-animation-duration-300) ease;
 
-    width: 64px !important;
-    height: 64px !important;
-    flex-shrink: 0 !important;
-    box-sizing: border-box !important;
+    width: 64px;
+    height: 64px;
+    flex-shrink: 0;
+    box-sizing: border-box;
 
-    display: flex !important;
-    flex-direction: column !important;
-    justify-content: center !important;
-    align-items: center !important;
-    gap: 4px !important;
-    cursor: pointer !important;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
 }
 
 .sidebar-action-tile svg {
-    width: 18px !important;
-    height: 18px !important;
-    flex-shrink: 0 !important;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
 }
 
 /* Menu caret on a tile — a TEXT GLYPH, not a Spectrum icon.
@@ -82,19 +82,19 @@
      * in a mockup and invisible on screen — a 9px glyph at half opacity against
      * a dark tile is nothing. It has to read as an affordance from a glance, so
      * it is sized UP against the 11px label and kept near full strength. */
-    font-size: 1.15em !important;
-    line-height: 1 !important;
-    opacity: 0.9 !important;
-    margin-left: 3px !important;
+    font-size: 1.15em;
+    line-height: 1;
+    opacity: 0.9;
+    margin-left: 3px;
 }
 
 .sidebar-action-tile .icon-label {
-    font-size: 11px !important;
-    line-height: 1.1 !important;
-    white-space: normal !important;
-    overflow: visible !important;
-    text-overflow: clip !important;
-    overflow-wrap: anywhere !important;
+    font-size: 11px;
+    line-height: 1.1;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
     /* Spectrum's ActionButton gives its label `padding: 0 12px 0 7px`, which is
        sized for a normal button and means nothing inside a 64px square tile. The
        label is laid out 46px wide, so those 19px have ALWAYS been wrong — under
@@ -116,34 +116,34 @@
 
 .sidebar-action-tile:hover,
 .sidebar-action-tile:focus {
-    background: var(--spectrum-global-color-gray-75) !important;
-    border-color: var(--spectrum-global-color-gray-400) !important;
-    outline: none !important;
+    background: var(--spectrum-global-color-gray-75);
+    border-color: var(--spectrum-global-color-gray-400);
+    outline: none;
 }
 
 .sidebar-action-tile:focus-visible {
-    outline: 2px solid var(--spectrum-global-color-blue-400) !important;
-    outline-offset: 2px !important;
+    outline: 2px solid var(--spectrum-global-color-blue-400);
+    outline-offset: 2px;
 }
 
 /* Prevent internal Spectrum elements from showing their own hover states */
 .sidebar-action-tile:hover *,
 .sidebar-action-tile:focus * {
-    background: transparent !important;
-    background-color: transparent !important;
+    background: transparent;
+    background-color: transparent;
 }
 
 /* Sidebar loading state */
 .sidebar-loading {
-    padding: 16px !important;
-    color: var(--spectrum-global-color-gray-800) !important;
+    padding: 16px;
+    color: var(--spectrum-global-color-gray-800);
 }
 
 /* Sidebar nav item base styles (static parts) */
 .sidebar-nav-item {
-    padding: 8px 12px !important;
-    border-radius: 4px !important;
-    cursor: pointer !important;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
 }
 
 /* Sidebar provider - use Spectrum gray-75 for consistency */
@@ -158,12 +158,12 @@
  * always exactly the panel, and overflow scrolls rather than clipping the last
  * tile off the bottom. */
 .sidebar-provider {
-    background: var(--spectrum-global-color-gray-75) !important;
-    height: 100% !important;
+    background: var(--spectrum-global-color-gray-75);
+    height: 100%;
     /* Safety net only. With the tiles clamped below, the stack should FIT; this
      * exists so an extreme panel size degrades to a scrollbar rather than
      * silently clipping a tile off the bottom, which is what it used to do. */
-    overflow-y: auto !important;
+    overflow-y: auto;
 }
 
 /* TOP-ALIGNED, so the slack pools at the bottom where a tile can use it.
@@ -187,9 +187,8 @@
  * the scroll origin where it could not be reached; `flex-start` cannot do that,
  * because overflow only ever runs downward into `.sidebar-provider`'s scroll. */
 .sidebar-view {
-    justify-content: flex-start !important;
-    padding-top: 20px !important;
-    padding-bottom: 16px !important;
+    padding-top: 20px;
+    padding-bottom: 16px;
 }
 
 /* One tile per row — the default, and what the sidebar looks like whenever there
@@ -197,87 +196,87 @@
  *
  * A plain div rather than a Spectrum `Flex`, per the repo's width gotcha. */
 .sidebar-tile-grid {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    gap: 8px !important;
-    width: 100% !important;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
 }
 
 @media (max-height: 640px) {
     .sidebar-tile-grid {
-        flex-direction: row !important;
-        flex-wrap: wrap !important;
-        justify-content: center !important;
-        align-items: flex-start !important;
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: flex-start;
     }
 }
 
 /* Sidebar welcome container - vertically centered */
 .sidebar-welcome {
-    padding: 16px !important;
-    min-height: calc(100vh - 40px) !important;
-    justify-content: center !important;
+    padding: 16px;
+    min-height: calc(100vh - 40px);
+    justify-content: center;
 }
 
 /* Sidebar icon buttons - no background */
 .sidebar-icon-btn {
-    background: transparent !important;
+    background: transparent;
 }
 
 .sidebar-icon-btn:hover {
-    background: var(--spectrum-global-color-gray-200) !important;
+    background: var(--spectrum-global-color-gray-200);
 }
 
 /* Sidebar project view - full height with padding */
 .sidebar-project-view {
-    padding: 12px !important;
-    min-height: calc(100vh - 40px) !important;
+    padding: 12px;
+    min-height: calc(100vh - 40px);
 }
 
 /* Sidebar project card - compact status display */
 .sidebar-project-card {
-    padding: 12px !important;
-    background: var(--spectrum-global-color-gray-100) !important;
-    border: 1px solid var(--spectrum-global-color-gray-300) !important;
-    border-radius: 6px !important;
+    padding: 12px;
+    background: var(--spectrum-global-color-gray-100);
+    border: 1px solid var(--spectrum-global-color-gray-300);
+    border-radius: 6px;
 }
 
 /* Project name in sidebar */
 .sidebar-project-name {
-    font-size: 14px !important;
-    font-weight: 600 !important;
-    margin-bottom: 4px !important;
-    display: block !important;
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    display: block;
 }
 
 /* Status indicator dot */
 .sidebar-status-dot {
-    width: 8px !important;
-    height: 8px !important;
-    border-radius: 50% !important;
-    display: inline-block !important;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
 }
 
 /* Status text */
 .sidebar-status-text {
-    font-size: 12px !important;
-    color: var(--spectrum-global-color-gray-700) !important;
+    font-size: 12px;
+    color: var(--spectrum-global-color-gray-700);
 }
 
 /* Section header in sidebar */
 .sidebar-section-header {
-    font-size: 11px !important;
-    text-transform: uppercase !important;
-    color: var(--spectrum-global-color-gray-600) !important;
-    font-weight: 600 !important;
-    letter-spacing: 0.5px !important;
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--spectrum-global-color-gray-600);
+    font-weight: 600;
+    letter-spacing: 0.5px;
 }
 
 /* Sidebar wizard view - use Spectrum gray-75 for consistency */
 .sidebar-wizard-view {
-    min-height: calc(100vh - 40px) !important;
-    background: var(--spectrum-global-color-gray-75) !important;
+    min-height: calc(100vh - 40px);
+    background: var(--spectrum-global-color-gray-75);
     /* No padding here - TimelineNav handles its own padding */
 }
 

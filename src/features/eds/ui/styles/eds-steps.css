@@ -124,7 +124,7 @@
  */
 @layer theme {
 .reset-to-template-top {
-    margin-top: 0 !important;
+    margin-top: 0;
     margin-bottom: var(--spectrum-global-dimension-size-100);
     padding-bottom: var(--spectrum-global-dimension-size-100);
     border-bottom: 1px solid var(--spectrum-global-color-gray-200);

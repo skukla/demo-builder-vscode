@@ -211,13 +211,13 @@
    value read as one group. Spectrum's own rules are specific, so !important. */
 @layer theme {
 .dalive-namespace-picker label {
-    font-size: 12px !important;
+    font-size: 12px;
 }
 }
 @layer theme {
 .dalive-namespace-picker button,
 .dalive-namespace-picker button span {
-    font-size: 13px !important;
-    font-weight: 400 !important;
+    font-size: 13px;
+    font-weight: 400;
 }
 }

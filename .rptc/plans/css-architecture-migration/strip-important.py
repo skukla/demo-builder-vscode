@@ -16,15 +16,16 @@ byte span of each `!important` to remove and deletes exactly those spans, so the
 only possible edit is the one intended. `verify()` then proves it.
 """
 import re
+import subprocess
 from pathlib import Path
 
+# EVERY tracked stylesheet, enumerated rather than listed. The hand-written list
+# this replaced named SIX files and was written when there were nine; the
+# migration ended with 33, so it would have swept a fifth of the corpus and
+# reported a total that looked like the whole job.
 SHEETS = [
-    'src/core/ui/styles/utilities.css',
-    'src/core/ui/styles/wizard.css',
-    'src/core/ui/styles/vscode-theme.css',
-    'src/core/ui/styles/reset.css',
-    'src/core/ui/styles/index.css',
-    'src/core/ui/styles/tokens.css',
+    f for f in subprocess.check_output(['git', 'ls-files', '*.css'], text=True).split()
+    if 'node_modules' not in f
 ]
 
 COMMENT = re.compile(r'/\*.*?\*/', re.S)
@@ -41,6 +42,12 @@ def layered_spans(text: str) -> list[tuple[int, int]]:
     masked = mask_comments(text)
     depth = 0
     layer_depths: list[int] = []
+    # `prefers-reduced-motion` is the ONE legitimate !important in a layered sheet.
+    # reset.css sits in `@layer reset`, the LOWEST layer, and its reduced-motion
+    # block exists to override everything above it. Strip that and accessibility
+    # reduced-motion silently stops working — no test fails, nothing renders wrong,
+    # and the people it matters to are not in the room.
+    reduced_depths: list[int] = []
     spans: list[tuple[int, int]] = []
     last_break = 0
 
@@ -52,14 +59,18 @@ def layered_spans(text: str) -> list[tuple[int, int]]:
             depth += 1
             if head.startswith('@layer'):
                 layer_depths.append(depth)
+            if 'prefers-reduced-motion' in head:
+                reduced_depths.append(depth)
             last_break = i + 1
         elif ch == '}':
             if layer_depths and layer_depths[-1] == depth:
                 layer_depths.pop()
+            if reduced_depths and reduced_depths[-1] == depth:
+                reduced_depths.pop()
             depth -= 1
             last_break = i + 1
         elif ch == ';':
-            if layer_depths:
+            if layer_depths and not reduced_depths:
                 for m in IMPORTANT.finditer(masked, last_break, i):
                     spans.append(m.span())
             last_break = i + 1

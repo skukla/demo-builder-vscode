@@ -14,9 +14,9 @@
 @layer theme {
 /* Dashboard status header - middle layer between header and content for depth */
 .dashboard-status-header {
-    background-color: var(--spectrum-global-color-gray-50) !important;
-    border-bottom: 1px solid var(--spectrum-global-color-gray-300) !important;
-    margin-bottom: 12px !important;
+    background-color: var(--spectrum-global-color-gray-50);
+    border-bottom: 1px solid var(--spectrum-global-color-gray-300);
+    margin-bottom: 12px;
 }
 
 /* The band is ambient context, not content — it should not claim the vertical
@@ -24,15 +24,15 @@
    `.page-header-section`, which the projects dashboard and integrations screen
    also use for their real titles. */
 .dashboard-status-header .page-header-section {
-    padding-top: 4px !important;
-    padding-bottom: 4px !important;
+    padding-top: 4px;
+    padding-bottom: 4px;
 }
 
 /* Match the height of the Projects List search header so content aligns */
 .dashboard-status-header > div {
-    min-height: 122px !important;
-    display: flex !important;
-    align-items: center !important;
+    min-height: 122px;
+    display: flex;
+    align-items: center;
 }
 
 /* Status header spans the standard content band (its padded container), badges
@@ -45,13 +45,13 @@
 
 /* Dashboard status — the badge row plus the "View AI Capabilities" link below it. */
 .dashboard-status-grid {
-    display: flex !important;
-    flex-direction: column !important;
+    display: flex;
+    flex-direction: column;
     /* Was 8px to separate the badge stack from the capabilities-link row below
        it. Both are gone — the link moved onto the AI badge line and the badges
        onto one row — so this now only ever spaces the single badge line from the
        org-mismatch notice, which appears on mismatch only. */
-    gap: 4px !important;
+    gap: 4px;
 }
 
 /* Badges STACKED one per line (2026-07-09, reversing the earlier inline row):
@@ -70,24 +70,24 @@
    tests/features/dashboard/ui/components/DashboardStatusHeader-layout.test.ts,
    which reads this stylesheet because jsdom resolves no layout. */
 .dashboard-status-badges {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: flex-start !important;
-    row-gap: 4px !important;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    row-gap: 4px;
 }
 
 /* Each badge is a self-contained inline unit: dot · label · value (· action). */
 .dashboard-status-badges .status-row {
-    display: flex !important;
-    align-items: center !important;
-    gap: 6px !important;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 /* Fixed label column so the stacked badges' VALUE texts align vertically.
    80px clears the widest label (FRONTEND/API MESH/IMS ORG at 11px uppercase);
    scoped to the masthead stack — other StatusCard uses keep natural widths. */
 .dashboard-status-badges .status-label {
-    min-width: 80px !important;
+    min-width: 80px;
 }
 
 /* "View AI Capabilities" on its own line, indented to the status column so it
@@ -104,25 +104,25 @@
    displaced the link no matter how much room the text was given. Taking the link
    out of the row removes the coupling instead of padding around it. */
 .dashboard-status-capabilities-link {
-    margin-left: 102px !important;
-    font-size: 12px !important;
+    margin-left: 102px;
+    font-size: 12px;
 }
 
 /* Dashboard status badges - match card grid style */
 .dashboard-status-badge .status-label,
 .dashboard-status-badge .status-text {
-    font-size: 11px !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.5px !important;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .dashboard-status-badge .status-label {
-    font-weight: 600 !important;
-    color: var(--spectrum-global-color-gray-700) !important;
+    font-weight: 600;
+    color: var(--spectrum-global-color-gray-700);
 }
 
 .dashboard-status-badge .status-text {
-    color: var(--spectrum-global-color-gray-600) !important;
+    color: var(--spectrum-global-color-gray-600);
 }
 
 /* Dashboard grid - left-align the stacked action zones so their left edge
@@ -176,70 +176,70 @@
    =========================================== */
 .dashboard-action-button {
     /* Base - lighter background matching cards */
-    background: var(--spectrum-global-color-gray-50) !important;
-    border-radius: 8px !important;
-    padding: 12px !important;
-    border: 1px solid var(--spectrum-global-color-gray-300) !important;
+    background: var(--spectrum-global-color-gray-50);
+    border-radius: 8px;
+    padding: 12px;
+    border: 1px solid var(--spectrum-global-color-gray-300);
 
     /* Smoother transition matching cards */
-    transition: all var(--spectrum-global-animation-duration-600) ease !important;
+    transition: all var(--spectrum-global-animation-duration-600) ease;
 
     /* Layout — compact square tiles (icon over label) */
-    text-align: center !important;
-    width: var(--dashboard-tile-size) !important;
-    height: auto !important;
-    aspect-ratio: 1 / 1 !important; /* Square buttons */
-    box-sizing: border-box !important;
-    display: flex !important;
-    flex-direction: column !important;
-    justify-content: center !important;
-    align-items: center !important;
-    gap: 6px !important;
-    cursor: pointer !important;
+    text-align: center;
+    width: var(--dashboard-tile-size);
+    height: auto;
+    aspect-ratio: 1 / 1; /* Square buttons */
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
 }
 
 /* Scale icons proportionally to the smaller tile */
 .dashboard-action-button svg {
-    width: 20px !important;
-    height: 20px !important;
+    width: 20px;
+    height: 20px;
 }
 
 /* Hero accent — emphasize the top-tier actions (Start/Stop, Open, AI).
    A modifier class, NOT a Spectrum variant, to keep the icon-over-label tile look. */
 .dashboard-action-button--hero {
-    background: var(--spectrum-global-color-blue-100) !important;
-    border-color: var(--spectrum-global-color-blue-400) !important;
+    background: var(--spectrum-global-color-blue-100);
+    border-color: var(--spectrum-global-color-blue-400);
 }
 
 .dashboard-action-button--hero:hover,
 .dashboard-action-button--hero:focus {
-    background: var(--spectrum-global-color-blue-200) !important;
-    border-color: var(--spectrum-global-color-blue-500) !important;
+    background: var(--spectrum-global-color-blue-200);
+    border-color: var(--spectrum-global-color-blue-500);
 }
 
 .dashboard-action-button--hero svg,
 .dashboard-action-button--hero .icon-label {
-    color: var(--spectrum-global-color-blue-700) !important;
+    color: var(--spectrum-global-color-blue-700);
 }
 
 .dashboard-action-button:hover,
 .dashboard-action-button:focus {
     /* Layered depth matching cards */
-    background: var(--spectrum-global-color-gray-75) !important;
-    border-color: var(--spectrum-global-color-gray-400) !important;
+    background: var(--spectrum-global-color-gray-75);
+    border-color: var(--spectrum-global-color-gray-400);
 
     /* Lift animation matching cards */
-    transform: translateY(-2px) !important;
+    transform: translateY(-2px);
 
     /* Shadow matching cards */
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 
-    outline: none !important;
+    outline: none;
 }
 
 .dashboard-action-button:focus-visible {
-    outline: 2px solid var(--spectrum-global-color-blue-400) !important;
-    outline-offset: 2px !important;
+    outline: 2px solid var(--spectrum-global-color-blue-400);
+    outline-offset: 2px;
 }
 
 /* Prevent internal Spectrum elements from showing their own hover states.
@@ -251,8 +251,8 @@
  * the same exemption, hence the shared `.tile-status-dot` marker. */
 .dashboard-action-button:hover *:not(.tile-status-dot),
 .dashboard-action-button:focus *:not(.tile-status-dot) {
-    background: transparent !important;
-    background-color: transparent !important;
+    background: transparent;
+    background-color: transparent;
 }
 
 /* Merged 3 declarations of this selector that the sheet carried separately.
@@ -268,13 +268,13 @@
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
-    line-height: 1.2 !important;
-    white-space: normal !important;
-    overflow: visible !important;
-    text-overflow: clip !important;
-    overflow-wrap: anywhere !important;
-    font-size: 12px !important;
-    margin-top: 8px !important;
+    line-height: 1.2;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
+    font-size: 12px;
+    margin-top: 8px;
 }
 
 /* ControlPanelLayout single-column fallback (no detail panel): pad the action
@@ -286,6 +286,6 @@
 
 /* Destructive overflow-menu entry (Delete lives at the bottom of "More"). */
 .menu-item-destructive {
-    color: var(--spectrum-global-color-red-600) !important;
+    color: var(--spectrum-global-color-red-600);
 }
 }
