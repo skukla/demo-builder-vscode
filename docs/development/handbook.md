@@ -424,15 +424,20 @@ Know the difference before relying on it.
 > those reaches a dependency array cannot be decided without following it into the
 > receiving hook.
 
-> **Convention.** The cascade order is `vendor < reset < theme < overrides`, declared
+> **Convention.** The cascade order is `reset < vendor < theme < overrides`, declared
 > once and carried by every bundle.
 > *Why:* layer precedence is fixed by the FIRST declaration a bundle sees, and sheets
 > arrive in whatever order the bundle graph produces. The declaration lived only in
 > `index.css`, which seven of the eight entries import — the SIDEBAR carried none and
 > took whatever order its own graph emitted. It worked by luck, which is the failure
-> ADR-018 named in advance and nothing was checking for. `vendor` is declared and
-> empty: nothing wraps Spectrum's CSS yet, and declaring an empty layer moves nothing
-> (verified by an empty diff across 2,700 elements, 2026-09-09).
+> ADR-018 named in advance and nothing was checking for.
+> **The order was `vendor < reset` until 2026-09-09 and that was wrong**: a reset
+> neutralises the BROWSER, so it belongs BELOW the component library, and `reset.css`
+> claimed to be the lowest layer while the declaration made it second-lowest. It cost
+> nothing only while Spectrum's CSS was unlayered. `@layer vendor` now carries that CSS
+> for the entries named in `LAYERED_VENDOR_ENTRIES` (esbuild.config.js) — two so far,
+> each measured at ZERO moved elements; under the old order the projects list moved 45
+> of 77, all of it from one `font: inherit` in the reset.
 > [ADR-018 §1](../architecture/adr/018-css-architecture.md) · Enforced by `layerOrder`
 > in `tests/sop/stylesheet-bundles.test.ts` — every declaration byte-identical, every
 > `@layer` block naming a declared layer, every BUILT bundle carrying the line, with a

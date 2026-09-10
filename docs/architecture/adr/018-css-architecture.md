@@ -28,11 +28,46 @@ document's §1.
 
 ## Decision
 
-### 1. Vendor CSS goes in the LOWEST layer; ours goes above it
+### 1. Vendor CSS goes below OUR styling, but above our RESET
 
 ```css
-@layer vendor, reset, theme, overrides;
+@layer reset, vendor, theme, overrides;
 ```
+
+**AMENDED 2026-09-09. This line originally read `@layer vendor, reset, theme,
+overrides;` — vendor lowest — and that was wrong in a way nothing could see until
+step 3 was actually attempted.**
+
+A reset exists to neutralise the BROWSER, so it must sit below the component
+library; putting it above means a reset outranks Spectrum. `reset.css` even
+described itself as "lowest cascade priority" while the declared order made it
+second-lowest, and the claim was false from the day it was written.
+
+It cost nothing while Spectrum's CSS was unlayered, because unlayered beats every
+layer. Wrapping Spectrum in `@layer vendor` is exactly the change that turns the
+mistake live, and it did:
+
+| | elements moved, projects list |
+|---|---|
+| `vendor, reset` (as first written) | **45 of 77** |
+| `reset, vendor` (corrected) | **0 of 77** |
+
+The whole 45 trace to **one declaration** — `font: inherit` on `input, button,
+textarea, select` in `reset.css`. The `font` shorthand sets `line-height` and
+`font-weight` together, which is why the two visible symptoms always appeared as
+a pair: inputs losing 11px of line-height, buttons losing their bold. Found with
+CDP `CSS.getMatchedStylesForNode`, which names the winning declaration and its
+layer; a hand-rolled CSSOM walk had reported "no rule matches" three times,
+because a plain `CSSStyleRule` also exposes an empty, truthy `.cssRules` since CSS
+nesting shipped, so testing `.cssRules` first treats every style rule as a group
+rule and reads none of them.
+
+**This also retires the 762-element figure this document carried.** That
+measurement was taken with the wrong order, so it measured the reset beating
+Spectrum across every surface at once — not the cost of layering vendor CSS.
+Both surfaces measured since move ZERO. What the number to beat actually is, on
+the six remaining entries, is now unknown and has to be re-measured rather than
+inherited.
 
 with `node_modules` CSS wrapped in `@layer vendor` by `cssInjectionPlugin` at
 build time, and the order statement prepended to every injected sheet (layer

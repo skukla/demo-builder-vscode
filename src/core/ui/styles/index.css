@@ -12,7 +12,7 @@
    Enforced by `layerOrder` in tests/sop/stylesheet-bundles.test.ts, which also
    checks that EVERY bundle carries this line — the sidebar carried none until
    2026-09-09 and took whatever order its graph happened to produce. */
-@layer vendor, reset, theme, overrides;
+@layer reset, vendor, theme, overrides;
 
 /* Import design system files */
 @import './reset.css';

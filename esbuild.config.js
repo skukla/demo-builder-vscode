@@ -76,7 +76,7 @@ const aliasPlugin = {
  * asserted byte-for-byte against the declarations in `src/` by
  * `tests/sop/stylesheet-bundles.test.ts`.
  */
-const LAYER_ORDER = '@layer vendor, reset, theme, overrides;';
+const LAYER_ORDER = '@layer reset, vendor, theme, overrides;';
 
 /**
  * Convert CSS imports to style-tag injection (replaces style-loader).
@@ -260,7 +260,7 @@ const WEBVIEW_ENTRIES = {
  * person before it lands — see the plugin's comment for why the all-at-once
  * version was rejected.
  */
-const LAYERED_VENDOR_ENTRIES = ['sidebar'];
+const LAYERED_VENDOR_ENTRIES = ['sidebar', 'projectsList'];
 
 function pick(entries, names) {
     return Object.fromEntries(Object.entries(entries).filter(([k]) => names.includes(k)));

@@ -145,8 +145,11 @@ describe('ADR-018 step 3: Spectrum in @layer vendor, one entry at a time', () =>
         // `.claude/skills/webview-visual-baseline` and a person looking at what
         // moved — so the list is pinned here and moves only with that evidence.
         //
-        // sidebar, 2026-09-09: 46 elements x 2 themes x 3 widths.
-        expect(LAYERED_VENDOR_ENTRIES).toStrictEqual(['sidebar']);
+        // sidebar,      2026-09-09: 46 elements x 2 themes x 3 widths, 0 moved.
+        // projectsList, 2026-09-09: 77 elements x 2 themes x 3 widths, 0 moved —
+        //   but only AFTER the cascade order was corrected. Under the original
+        //   `vendor, reset` it moved 45 of 77. See ADR-018 §1.
+        expect(LAYERED_VENDOR_ENTRIES).toStrictEqual(['sidebar', 'projectsList']);
     });
 });
 
@@ -256,7 +259,7 @@ describe('ADR-018 §1: one cascade order, declared, and every bundle carries it'
      * whatever order its own graph happened to emit. It worked by luck, which is
      * the failure ADR-018 named in advance and nothing was checking for.
      */
-    const CANONICAL = '@layer vendor, reset, theme, overrides;';
+    const CANONICAL = '@layer reset, vendor, theme, overrides;';
     const LAYERS = ['vendor', 'reset', 'theme', 'overrides'];
 
     const sheets = (): string[] =>

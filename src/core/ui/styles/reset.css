@@ -1,7 +1,19 @@
 /* ============================================
    CSS RESET
    Neutralizes VS Code defaults without breaking Spectrum
-   Part of @layer reset (lowest cascade priority)
+   Part of @layer reset — genuinely the LOWEST layer since 2026-09-09.
+
+   It was not, before. The declared order was `vendor, reset, theme, overrides`,
+   which put this file ABOVE the component library, and the line below claiming
+   "lowest cascade priority" was simply false. It did no harm only because
+   Spectrum's CSS was unlayered, and unlayered beats every layer.
+
+   The moment Spectrum went into `@layer vendor`, `font: inherit` on form
+   controls started beating every Spectrum font declaration on every input,
+   button, textarea and select — that one shorthand sets line-height AND
+   font-weight, and it moved 45 of 77 elements on the projects list: inputs lost
+   11px of line-height, buttons lost their bold. Reordering to `reset, vendor`
+   took it to zero. See ADR-018 §1.
    ============================================ */
 
 @layer reset {
