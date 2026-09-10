@@ -15,7 +15,7 @@
  * was written.
  *
  * **The class names are load-bearing and stay literal.** `pageContentAlignment`
- * and `DashboardStatusHeader-layout` parse `custom-spectrum.css` as TEXT for these
+ * and `DashboardStatusHeader-layout` parse `utilities.css` as TEXT for these
  * selectors and their px values, because jsdom resolves no layout and a rendering
  * test would pass either way. Renaming them here would not fail those suites — it
  * would silently leave the surfaces unstyled.

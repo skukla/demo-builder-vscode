@@ -13,10 +13,10 @@
  * The rail-collapse `@media (max-width: 1280px)` block was moved BY HAND, whole.
  * `--move` refuses a family with a rule inside a conditional at-rule, correctly:
  * lifting one out makes it apply at every width. The breakpoint registry naming
- * this and the other three literals stays in custom-spectrum.css, where the other
+ * this and the other three literals stays in utilities.css, where the other
  * blocks still are.
  *
- * Moved out of custom-spectrum.css by the CSS migration
+ * Moved out of utilities.css by the CSS migration
  * (.rptc/plans/css-architecture-migration), with the comment above each rule.
  * Verbatim otherwise: a move is only correct when the visual diff is empty.
  */
@@ -52,7 +52,7 @@
 /* The rail-collapse breakpoint, moved WHOLE — @media wrapper and all.
    Hoisting a rule out of its condition makes it apply always, so the block
    travels intact rather than rule by rule. The breakpoint REGISTRY that names
-   this and the other three literals stays in custom-spectrum.css, because the
+   this and the other three literals stays in utilities.css, because the
    other blocks are still there. */
 @media (max-width: 1280px) { /* bp: rail-collapse — SETUP PROGRESS rail → 56px dots + tooltips */
     .wizard-timeline-column {
@@ -334,4 +334,46 @@
     pointer-events: none !important;
     overflow: hidden !important;
 }
+}
+
+/* The animation(s) the rules above name. Moved out of the utility sheet
+   2026-09-09: a @keyframes is resolved by NAME, so it only has to live in a
+   sheet the consuming bundle loads — and this is the ONLY sheet that names it.
+   Sitting in the all-bundles sheet shipped it to eight bundles to serve one. */
+@layer theme {
+    /* === Wizard breakpoint registry (single source of truth — keep these in sync) ===
+     *   1280px  rail-collapse      (SETUP PROGRESS rail → 56px dots + tooltips)
+     *   1180px  two-column stack   (TwoColumnLayout row→column; Commerce nav panel→strip + summary hide)
+     *    600px  linear / single-col(Commerce nav hidden; connect-services service cards 2→1)
+     *    220px  card-min           (reflowing card grids: minmax(220px, 1fr))
+     * NOTE: plain CSS (no PostCSS) — @media cannot use var(); these literals are canonical.
+     * Annotate each @media below with its registry purpose. */
+    @keyframes timeline-step-tooltip-fade {
+        from { opacity: 0; transform: translateY(-50%) translateX(calc(-1 * var(--spectrum-global-dimension-size-50))); }
+        to { opacity: 1; transform: translateY(-50%) translateX(0); }
+    }
+    @keyframes timeline-enter {
+        0% {
+            opacity: 0;
+            max-height: 0;
+            margin-bottom: 0;
+        }
+        100% {
+            opacity: 1;
+            max-height: 50px;
+            margin-bottom: var(--spectrum-global-dimension-size-300);
+        }
+    }
+    @keyframes timeline-exit {
+        0% {
+            opacity: 1;
+            max-height: 50px;
+            margin-bottom: var(--spectrum-global-dimension-size-300);
+        }
+        100% {
+            opacity: 0;
+            max-height: 0;
+            margin-bottom: 0;
+        }
+    }
 }

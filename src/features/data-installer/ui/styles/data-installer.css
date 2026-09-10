@@ -7,7 +7,7 @@
  * error anywhere — so nothing outside this feature may reference these names.
  *
  * Card metrics come from the shared `--card-*` custom properties in
- * `custom-spectrum.css` rather than copied numbers, so this card cannot drift
+ * `utilities.css` rather than copied numbers, so this card cannot drift
  * away from `.project-card-spectrum` and `.integration-card`.
  */
 
@@ -104,7 +104,7 @@
 /* ===========================================
    Detail flyout
    =========================================== */
-/* Head/body chrome and the key/value rows come from custom-spectrum.css
+/* Head/body chrome and the key/value rows come from utilities.css
    (`db-drawer-*`, `integration-panel-row*`) — global, so they reach this bundle.
    Only what is specific to a datapack lives here. */
 @layer theme {

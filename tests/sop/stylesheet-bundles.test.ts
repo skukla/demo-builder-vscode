@@ -55,7 +55,7 @@ describe('ADR-017 §6: a class used in a bundle is styled by that bundle', () =>
         // Two specific known classes, one global and one feature-scoped, so a
         // parser that silently stopped matching compound or plain selectors
         // fails here rather than reporting a clean repo.
-        expect(defined.has('page-header-section')).toBe(true); // custom-spectrum.css (global)
+        expect(defined.has('page-header-section')).toBe(true); // utilities.css (global)
         expect(defined.has('text-orange-600')).toBe(true); // eds-steps.css (feature)
     });
 
@@ -389,7 +389,7 @@ describe('ADR-017 §7: a stylesheet lives where its owner lives', () => {
      * judgement is not mechanisable and is not attempted here.
      */
     const BASE_SHEETS = new Set([
-        'src/core/ui/styles/custom-spectrum.css',
+        'src/core/ui/styles/utilities.css',
         'src/core/ui/styles/index.css',
         'src/core/ui/styles/reset.css',
         'src/core/ui/styles/tokens.css',
@@ -564,7 +564,7 @@ describe('ADR-018 §2: !important is a symptom, not a mechanism', () => {
  * and that edit is a reviewed diff carrying a note.
  */
 describe('the CSS migration ratchets', () => {
-    const GOD_FILE = 'src/core/ui/styles/custom-spectrum.css';
+    const GOD_FILE = 'src/core/ui/styles/utilities.css';
 
     /**
      * Utility prefixes. Lives HERE rather than in the plan's prose so the
@@ -612,7 +612,7 @@ describe('the CSS migration ratchets', () => {
         // a shrinking one can.
         expect(total).toBeGreaterThan(0);
         expect(feature).toBeLessThanOrEqual(total);
-        const css = readFileSync(join(ROOT, 'src/core/ui/styles/custom-spectrum.css'), 'utf8');
+        const css = readFileSync(join(ROOT, 'src/core/ui/styles/utilities.css'), 'utf8');
         expect(css).toContain('.text-sm');
         expect(css.length).toBeGreaterThan(5_000);
     });

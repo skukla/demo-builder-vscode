@@ -8,7 +8,7 @@
  *
  * Those names are checked NOWHERE else against this component. The two existing
  * guards — `pageContentAlignment` and `DashboardStatusHeader-layout` — parse
- * `custom-spectrum.css` as TEXT, so they prove the RULES exist, never that
+ * `utilities.css` as TEXT, so they prove the RULES exist, never that
  * anything renders an element they select. Rename a class here and jsdom (which
  * resolves no layout) reports four perfectly healthy, entirely unstyled screens.
  * This suite is the other half of that pair.

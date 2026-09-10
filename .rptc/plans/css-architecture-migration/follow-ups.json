@@ -13,7 +13,7 @@
         {
             "id": "orphan-comments",
             "lane": "decided",
-            "what": "Comment blocks in custom-spectrum.css naming a departed family with NO rule beneath them.",
+            "what": "Comment blocks in utilities.css naming a departed family with NO rule beneath them.",
             "why": "The mover took the rule and left the comment for the first eight cycles. 74 were reunited on 2026-09-09 and the remaining 8 on the same day once the duplicate selectors blocking them were merged. One is left: a tombstone reading '.brand-card-check retired — replaced by the shared .selection-check-corner', which belongs next to its replacement rather than where the deleted rule used to be.",
             "derive": "orphanComments",
             "note": "CLOSED 2026-09-09 at 0. Seven, not the one this row claimed — the probe was right and the prose was stale. Six were section headers in one 64-line stretch whose families had all left, and they hid two @keyframes that should have travelled with their rules: vsteplist-step-enter -> vstep-list.css and sum-check-in -> build-summary.css, each with exactly one user. A @keyframes resolves by NAME, so it must sit in a sheet the consuming bundle loads; verified in the built bundles that both now reach exactly the entries that use them (wizard+configure, wizard) instead of all eight. The .brand-card-check tombstone moved next to its replacement in shared-ui.css. `--orphans` now PRINTS the list, because a probe that returns only a number cannot be acted on and this one had been wrong four times."
@@ -23,8 +23,8 @@
             "lane": "decided",
             "what": "Test suites that read a stylesheet BY PATH instead of using tests/helpers/cssRules.ts.",
             "why": "They assert on where a rule LIVES as much as on what it says, and this migration moves rules between sheets by design. Four suites have broken this way on moves that changed no rendering at all. Two more broke on the .page-* move on 2026-09-09 — pageContentAlignment and destinationRowType, each carrying its own copy of ruleFor — and were converted. That is six of the six that have ever broken; the rest either use the helper or read the sheet as data on purpose.",
-            "note": "CLOSED 2026-09-09. The count of 13 was a grep for the FILENAME, which mostly caught comments recording an earlier conversion. Exactly one suite still read a sheet by path — ProjectCard.test.tsx — and it had gone VACUOUS: it opened custom-spectrum.css for `.project-card-spectrum-components`, which moved to project-cards.css on 2026-09-09, so indexOf returned -1, the slice produced '' and both assertions passed on an empty string. Converted to tests/helpers/cssRules.ts, which THROWS on a missing selector. Proved non-vacuous by planting flex-grow:1 and watching it fail. The other three hits are the legitimate ones this row already named.",
-            "probe": "grep -rl custom-spectrum.css tests/ --include='*.ts' --include='*.tsx' | wc -l"
+            "note": "CLOSED 2026-09-09. The count of 13 was a grep for the FILENAME, which mostly caught comments recording an earlier conversion. Exactly one suite still read a sheet by path — ProjectCard.test.tsx — and it had gone VACUOUS: it opened utilities.css for `.project-card-spectrum-components`, which moved to project-cards.css on 2026-09-09, so indexOf returned -1, the slice produced '' and both assertions passed on an empty string. Converted to tests/helpers/cssRules.ts, which THROWS on a missing selector. Proved non-vacuous by planting flex-grow:1 and watching it fail. The other three hits are the legitimate ones this row already named.",
+            "probe": "grep -rl utilities.css tests/ --include='*.ts' --include='*.tsx' | wc -l"
         },
         {
             "id": "sheet-header-todo",
@@ -40,12 +40,12 @@
             "what": "src/features/project-creation/ui/styles/integration-flow.css holds only `.int-*`, the results LIST. The Add Integration flow is `.intflow-*` and lives in add-integration-flow.css.",
             "why": "The name predates the split and is wider than the file's contents, which is exactly the kind of thing the next person reads as authoritative. A rename is cheap and touches one import.",
             "probe": "grep -rl integration-flow.css src/features/project-creation/ui/wizard/ | wc -l",
-            "note": "CLOSED 2026-09-09 — renamed to integration-results.css. One import, plus cross-references in its own header and in add-integration-flow.css, which still described the .intflow-* family as living in custom-spectrum.css."
+            "note": "CLOSED 2026-09-09 — renamed to integration-results.css. One import, plus cross-references in its own header and in add-integration-flow.css, which still described the .intflow-* family as living in utilities.css."
         },
         {
             "id": "manage-apis-leftover",
             "lane": "decided",
-            "what": "`.manage-apis-body .intflow-api-picker` is still in custom-spectrum.css after .intflow-* left.",
+            "what": "`.manage-apis-body .intflow-api-picker` is still in utilities.css after .intflow-* left.",
             "why": "It is a `.manage-*` rule that styles intflow elements as descendants, so it belongs to that family and moves when `.manage-*` does. Correct as it stands, recorded so it is not mistaken for an incomplete move.",
             "note": "CLOSED 2026-09-09, and it found a SHIPPED BUG rather than a leftover. The .manage-* rules had already left for shared-ui.css with the shared-ui batch, so this row was stale. What was still true is worse: `.manage-apis-body .intflow-api-picker,` sat on its own line with `@layer theme {` inserted BELOW it, splitting a comma-separated selector list with an at-rule. Chrome keeps ZERO rules from that shape — measured in a real browser against the correct form as a control (flex-grow 0 vs 1). Three sheets shipped it (shared-ui, data-installer, connect-services) and nothing caught it: esbuild injects CSS as a string and never parses it, and the visual baseline had captured the broken state as its own 'before'. All three fixed; a parse check with a planted control now lives in tests/sop/stylesheet-bundles.test.ts, and control R in the mover's --selftest pins that a multi-line selector list starts at its FIRST line."
         },
@@ -55,7 +55,7 @@
             "what": "Selectors declared twice in one sheet with no conditional copy — i.e. real duplication.",
             "why": "Nine were merged on 2026-09-09. SEVEN groups remain and every one is a base rule plus a copy inside @media or prefers-reduced-motion, which is how a breakpoint is written. An earlier count of five came from looking at only the sheets that cycle touched; index.css and connect-services.css hold one each. The probe excludes conditional groups, so it reads 0 and a real regression would show.",
             "derive": "duplicateSelectors",
-            "note": "The seven legitimate overrides: .sidebar-tile-grid, .vsteplist-step, .choice-card and .choice-card:hover:not(:disabled) in custom-spectrum.css, .status-dot--pulse in index.css, .services-cards-grid in connect-services.css, .wizard-timeline-column in wizard-timeline.css."
+            "note": "The seven legitimate overrides: .sidebar-tile-grid, .vsteplist-step, .choice-card and .choice-card:hover:not(:disabled) in utilities.css, .status-dot--pulse in index.css, .services-cards-grid in connect-services.css, .wizard-timeline-column in wizard-timeline.css."
         },
         {
             "id": "blank-line-comments",

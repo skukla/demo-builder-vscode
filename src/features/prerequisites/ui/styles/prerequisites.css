@@ -8,7 +8,7 @@
  * sheet of its own; four rules do not earn a file, and that is what keeps this
  * migration from ending in forty single-family stylesheets.
  *
- * Moved out of custom-spectrum.css by the CSS migration
+ * Moved out of utilities.css by the CSS migration
  * (.rptc/plans/css-architecture-migration), each rule with the comment above it.
  * Verbatim otherwise: a move is only correct when the visual diff is empty.
  */

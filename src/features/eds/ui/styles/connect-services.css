@@ -15,7 +15,7 @@
 }
 }
 
-@media (max-width: 600px) { /* bp: linear / single-col — service cards 2→1 (registry: custom-spectrum.css) */
+@media (max-width: 600px) { /* bp: linear / single-col — service cards 2→1 (registry: utilities.css) */
 @layer theme {
     .services-cards-grid {
         grid-template-columns: 1fr;

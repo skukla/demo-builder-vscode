@@ -161,7 +161,7 @@ export function TimelineNav({
                         >
                             {/* Step item - role/tabIndex/keyboard conditionally applied when clickable */}
                             {/* The `data-step-name` attribute powers a CSS-only `::after` tooltip in
-                                custom-spectrum.css, scoped to the rail-collapse media query — it shows
+                                utilities.css, scoped to the rail-collapse media query — it shows
                                 each step's name on hover ONLY when the rail is collapsed (labels are
                                 hidden by then), and is structurally inert at wider viewports. */}
                             {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- role and tabIndex are conditionally set when isClickable; non-clickable steps are inert */}

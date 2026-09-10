@@ -35,7 +35,7 @@
 }
 }
 
-/* .text-orange-500 / .text-orange-600 moved to custom-spectrum.css (ADR-017 §6).
+/* .text-orange-500 / .text-orange-600 moved to utilities.css (ADR-017 §6).
    They are used by CORE components — StatusDisplay, AdobeAuthStep — which render
    on surfaces whose bundles never load this feature sheet, so the colour simply
    did not apply there. Kept UNLAYERED at the destination: this file declares no
@@ -45,7 +45,7 @@
 /* The typography and colour utilities that lived here — .text-sm, .text-xs,
    .letter-spacing-05, .font-medium, .font-semibold, .text-uppercase,
    .text-gray-500/600/700, .text-green-600 — were REMOVED 2026-09-08 (PL-21 phase 2).
-   custom-spectrum.css defines every one of them and reaches all eight bundles,
+   utilities.css defines every one of them and reaches all eight bundles,
    where this sheet reaches only the wizard.
 
    THEY WERE INERT, and the reason is the one thing about this cascade that is
@@ -64,7 +64,7 @@
    diverge. Removing the duplicates is therefore a PREREQUISITE for that sweep,
    not tidying to do afterwards.
 
-   Add a utility to custom-spectrum.css, not to a feature sheet. */
+   Add a utility to utilities.css, not to a feature sheet. */
 
 /* ========== Layout Utilities ========== */
 @layer theme {

@@ -5,7 +5,7 @@
  * when it was promoted out of the integrations feature. Structure mirrors
  * `IntegrationDetailPanel`: an always-mounted Drawer whose `isOpen` is "is
  * something selected", with head/body built from the shared `db-drawer-*` and
- * `integration-panel-row*` classes (both live in custom-spectrum.css, so they
+ * `integration-panel-row*` classes (both live in utilities.css, so they
  * reach this bundle — a feature-scoped class would not).
  *
  * The inventory is the payload that earns the flyout. `get-datapack-detail`

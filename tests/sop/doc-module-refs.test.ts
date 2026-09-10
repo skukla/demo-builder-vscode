@@ -422,7 +422,7 @@ describe('the counts a directory guide states match its own source', () => {
 
     it('sidebar: the 640px breakpoint it explains is the one the stylesheet uses', () => {
         // Read the SHEET THAT OWNS IT, not a named file. This asserted against
-        // custom-spectrum.css and broke the day `.sidebar-*` moved to its own sheet
+        // utilities.css and broke the day `.sidebar-*` moved to its own sheet
         // — a change that moved no pixel. The rule lives with the family now
         // (ADR-017 §7), so the check follows the family.
         const doc = read('src/features/sidebar/CLAUDE.md');

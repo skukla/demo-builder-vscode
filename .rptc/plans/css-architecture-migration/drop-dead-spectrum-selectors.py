@@ -23,7 +23,7 @@ import re
 from pathlib import Path
 
 SHEETS = [
-    'src/core/ui/styles/custom-spectrum.css',
+    'src/core/ui/styles/utilities.css',
     'src/core/ui/styles/wizard.css',
     'src/core/ui/styles/vscode-theme.css',
     'src/core/ui/styles/index.css',

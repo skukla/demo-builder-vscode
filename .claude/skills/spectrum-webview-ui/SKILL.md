@@ -41,7 +41,7 @@ identical. This has already happened here, which is why it is written in three p
   *child* of the (position:relative) target and center with `left:50%; transform:translateX(-50%)`.
   That is the true center by construction — immune to the scale mismatch and any wrapper offset.
   Reference: the timeline connector in `TimelineNav.tsx` + `.timeline-connector` in
-  `custom-spectrum.css` (a child of the `size-300` dot; the stretch case uses a tall line clipped
+  `utilities.css` (a child of the `size-300` dot; the stretch case uses a tall line clipped
   by `.timeline-step-wrap-clip`'s `overflow:hidden`).
 - **`DialogContainer type="fullscreen"` outranks the Dialog's `size` and every CSS override.**
   It renders `spectrum-Modal--fullscreen` / `spectrum-Dialog--fullscreen`, which size to the
@@ -130,7 +130,7 @@ cannot drift apart. A test catches this **only if it asserts the payload**
   rules win). An input that sets `width:100%` + `padding` + `border` MUST also set
   `box-sizing: border-box` explicitly (or add `.box-border`) or it overflows its container.
 - **Align content to `--content-width`** (960px, the canonical LEFT-aligned band in
-  `custom-spectrum.css`) and wrap in `.page-container-padded`. Don't hardcode widths.
+  `utilities.css`) and wrap in `.page-container-padded`. Don't hardcode widths.
 
 ### Dashboard / webview notice conventions
 The dashboard is minimal/dark — conform, don't invent.
@@ -158,10 +158,10 @@ anywhere.
 - **Earlier shape of the same trap:** warning-text utilities like `text-orange-500/600` are
   feature-scoped (`eds-steps.css`), NOT global — don't depend on them from the dashboard.
 - **Before reusing a component across surfaces**, confirm every class it needs lives in a sheet
-  the TARGET bundle loads. `custom-spectrum.css` / `index.css` / `vscode-theme.css` are imported
+  the TARGET bundle loads. `utilities.css` / `index.css` / `vscode-theme.css` are imported
   by every entry; anything under `src/features/*/ui/styles/` is not.
 - Small inline text-button actions have a global home: **`.inline-action-link`**
-  (`custom-spectrum.css`) — use it instead of EDS's `.service-action-link`.
+  (`utilities.css`) — use it instead of EDS's `.service-action-link`.
 
 ### Styling mechanics
 - Prefer a CSS class via `cn()` (see styling-guide.md) over inline styles. `GridLayout` /
@@ -186,7 +186,7 @@ renderer, so:
   had the same declarations, and rendered at a different height.
 - **Make parity structural instead.** One shared custom property that both surfaces consume
   (`--card-min-height` / `--card-min-width` / `--card-padding` / `--card-gap`, in
-  `custom-spectrum.css`). A number that exists once cannot drift; a number copied twice already
+  `utilities.css`). A number that exists once cannot drift; a number copied twice already
   has.
   - **Caveat — some of those numbers are READ AS TEXT by a guard, so leave them literal.**
     `tests/features/dashboard/ui/components/integrations/integrationsGridLayout.test.ts`

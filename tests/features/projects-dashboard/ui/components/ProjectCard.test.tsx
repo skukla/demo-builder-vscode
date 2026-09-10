@@ -246,7 +246,7 @@ describe('ProjectCard', () => {
         // margin, THIS one is a stylesheet rule, so it is observable here.
         it('does not let the stack summary absorb the card height', () => {
             // Read through the shared helper, which searches EVERY sheet and THROWS
-            // when a selector is absent. It used to open custom-spectrum.css by
+            // when a selector is absent. It used to open utilities.css by
             // path, and `.project-*` moved to project-cards.css on 2026-09-09 —
             // `indexOf` returned -1, the slice produced an empty string, and both
             // assertions below passed on "". Vacuously green, found 2026-09-09.

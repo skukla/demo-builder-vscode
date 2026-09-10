@@ -8,7 +8,7 @@
  * other five bundles, and an element using it there renders raw with no error
  * anywhere.
  *
- * Moved out of custom-spectrum.css by the CSS migration
+ * Moved out of utilities.css by the CSS migration
  * (.rptc/plans/css-architecture-migration), each rule with the comment above it.
  * Verbatim otherwise: a move is only correct when the visual diff is empty.
  */

@@ -12,7 +12,7 @@ interface CopyableTextProps {
  * Styled like code snippets with a visual feedback on copy.
  * Shows a copy icon that changes to a checkmark when clicked.
  *
- * SOP §11: Uses CSS classes from custom-spectrum.css instead of inline styles
+ * SOP §11: Uses CSS classes from utilities.css instead of inline styles
  */
 export function CopyableText({ children }: CopyableTextProps) {
     const [copied, setCopied] = useState(false);

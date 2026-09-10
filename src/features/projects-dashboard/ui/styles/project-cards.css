@@ -5,7 +5,7 @@
  * (ui/index.tsx). Verified at the move: 41 rules reach that bundle and zero reach
  * the other seven.
  *
- * Moved out of custom-spectrum.css by the CSS migration
+ * Moved out of utilities.css by the CSS migration
  * (.rptc/plans/css-architecture-migration), each rule with the comment above it.
  * Verbatim otherwise: a move is only correct when the visual diff is empty.
  */

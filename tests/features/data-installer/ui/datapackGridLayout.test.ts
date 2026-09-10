@@ -22,7 +22,7 @@ import { ruleFor as ruleAnywhere } from '../../../helpers/cssRules';
 /**
  * Read the rule from WHEREVER it ships, not from a named sheet.
  *
- * This suite read `custom-spectrum.css` by path and hand-rolled its own `ruleFor`.
+ * This suite read `utilities.css` by path and hand-rolled its own `ruleFor`.
  * It broke when `.projects-*` and `.integrations-*` moved to shared-ui.css — a
  * change that moved no pixel on any surface. The shared helper reads every
  * stylesheet under `src/`, so a rule's LOCATION stops being something a layout

@@ -7,7 +7,7 @@
  * first class decides ownership, and it is this area's override of the shared
  * layout at the 1180px breakpoint.
  *
- * Moved out of custom-spectrum.css by the CSS migration
+ * Moved out of utilities.css by the CSS migration
  * (.rptc/plans/css-architecture-migration), in source order, with the comment
  * above each rule. Verbatim otherwise.
  */

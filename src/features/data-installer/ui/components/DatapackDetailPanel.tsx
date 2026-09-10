@@ -8,7 +8,7 @@
  * `db-drawer-body` of key/value rows.
  *
  * It borrows `.integration-panel-row*` for those rows. Those classes live in
- * `custom-spectrum.css`, so they reach every bundle — a feature-scoped class
+ * `utilities.css`, so they reach every bundle — a feature-scoped class
  * would render raw here with no error anywhere. The name is a wart: they are a
  * generic drawer row that predates Drawer's promotion. Renaming them to
  * `db-drawer-row*` is the right cleanup at a THIRD consumer, when the rename is

@@ -181,7 +181,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **Two stale layout claims in the sidebar.** `custom-spectrum.css` and
+- **Two stale layout claims in the sidebar.** `utilities.css` and
   `sidebar/CLAUDE.md` both still derived the tile-wrap threshold from a
   `padding-top: 80px` that was replaced by centring long ago, quoting 572px where
   the current layout measures 524px. Found while checking whether a seventh tile
@@ -1730,7 +1730,7 @@ skip a published version.
   - Added `postinstall` script for automatic compilation after `npm install`
   - New `npm run setup` command combining install and compile steps
   - Ensures consistent builds across different development environments
-- **Centralized CSS System**: Created `custom-spectrum.css` with 850+ lines of reusable CSS classes for React Spectrum components
+- **Centralized CSS System**: Created `utilities.css` with 850+ lines of reusable CSS classes for React Spectrum components
 - **Class Name Utilities**: Added `classNames.ts` utility module with `cn()` function for composing CSS classes
 - **Per-Node-Version Prerequisites**: Support for installing prerequisites in specific Node.js versions
 - **Prerequisite Continuation**: Ability to continue prerequisite checking from a specific index after installation

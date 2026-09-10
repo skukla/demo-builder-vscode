@@ -17,7 +17,7 @@
  * If a family in here later proves to be used by one screen, take it out; the
  * sheet is a bucket, not a decision.
  *
- * Moved out of custom-spectrum.css by the CSS migration
+ * Moved out of utilities.css by the CSS migration
  * (.rptc/plans/css-architecture-migration), with the comment above each rule.
  * Verbatim otherwise: a move is only correct when the visual diff is empty.
  */
@@ -546,4 +546,14 @@
 div[class*="spectrum"] input[type="search"] {
     padding-left: 32px !important;
 }
+}
+
+/* The animation(s) the rules above name. Moved out of the utility sheet
+   2026-09-09: a @keyframes is resolved by NAME, so it only has to live in a
+   sheet the consuming bundle loads — and this is the ONLY sheet that names it.
+   Sitting in the all-bundles sheet shipped it to eight bundles to serve one. */
+@layer theme {
+    @keyframes loading-overlay-spin {
+        to { transform: rotate(360deg); }
+    }
 }

@@ -241,32 +241,9 @@ button[class*="spectrum-Button"][disabled],
        the rail collapsed, this viewport is too narrow for side-by-side.
    -------------------------------------------------------------------------- */
 
-/* === Wizard breakpoint registry (single source of truth — keep these in sync) ===
- *   1280px  rail-collapse      (SETUP PROGRESS rail → 56px dots + tooltips)
- *   1180px  two-column stack   (TwoColumnLayout row→column; Commerce nav panel→strip + summary hide)
- *    600px  linear / single-col(Commerce nav hidden; connect-services service cards 2→1)
- *    220px  card-min           (reflowing card grids: minmax(220px, 1fr))
- * NOTE: plain CSS (no PostCSS) — @media cannot use var(); these literals are canonical.
- * Annotate each @media below with its registry purpose. */
-@keyframes timeline-step-tooltip-fade {
-    from { opacity: 0; transform: translateY(-50%) translateX(calc(-1 * var(--spectrum-global-dimension-size-50))); }
-    to { opacity: 1; transform: translateY(-50%) translateX(0); }
-}
-
 /* ========================================
  * Expandable Brand Cards
  * ======================================== */
-
-@keyframes fadeInDown {
-    from {
-        opacity: 0;
-        transform: translateY(-8px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
 
 /* Individual architecture option (radio-like) - compact */
 
@@ -303,38 +280,7 @@ button[class*="spectrum-Button"][disabled],
    Note: @keyframes pulse is defined in index.css (canonical location)
    =========================================== */
 
-@keyframes slide-down {
-    from { transform: translateY(-10px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
-}
-
 .shadow { box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important; }
-
-@keyframes timeline-enter {
-    0% {
-        opacity: 0;
-        max-height: 0;
-        margin-bottom: 0;
-    }
-    100% {
-        opacity: 1;
-        max-height: 50px;
-        margin-bottom: var(--spectrum-global-dimension-size-300);
-    }
-}
-
-@keyframes timeline-exit {
-    0% {
-        opacity: 1;
-        max-height: 50px;
-        margin-bottom: var(--spectrum-global-dimension-size-300);
-    }
-    100% {
-        opacity: 0;
-        max-height: 0;
-        margin-bottom: 0;
-    }
-}
 
 /* AI badge + its capabilities link on one line. The link was a standalone row
    beneath the badges, which cost the band a whole row to say one thing. */
@@ -354,21 +300,6 @@ button[class*="spectrum-Button"][disabled],
    dashboard's bordered-tile attention idiom (cf. the Delete tile's accent
    border) while calling attention. Spans the standard content band (like the
    status header and integrations), below the status header. */
-/* Fade + slight rise so the notice eases in after the org check resolves,
-   instead of popping in. Disabled under prefers-reduced-motion (reset.css). */
-@keyframes inline-notice-fade-in {
-    from { opacity: 0; transform: translateY(-4px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-
-
-
-
-
-
-
-
 /* ===========================================
    Projects Dashboard Layout Prototypes
    =========================================== */
@@ -383,10 +314,6 @@ button[class*="spectrum-Button"][disabled],
    utility classes (.text-sm, .font-semibold, .text-gray-700) for
    name/description. Only the unique pieces live here: the source
    classification badge pill and the row separator. */
-
-@keyframes loading-overlay-spin {
-    to { transform: rotate(360deg); }
-}
 
 /* Progress bar entrance/exit animations */
 [class*="spectrum-ProgressBar"] {

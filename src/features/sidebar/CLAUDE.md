@@ -91,7 +91,7 @@ is one per row. Under `@media (max-height: 640px)` they wrap two per row.
 
 **The 640px threshold is DERIVED, not eyeballed.** It must exceed the height the
 roomy layout actually needs, or the last tile is clipped in the gap between the two
-modes — at 560px it was, by about 12px. `custom-spectrum.css` points at this file
+modes — at 560px it was, by about 12px. `utilities.css` points at this file
 for the arithmetic, so it lives here:
 
 ```

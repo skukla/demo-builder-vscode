@@ -129,7 +129,7 @@ exist and the "Change" button rendered as a raw grey box. Its styling in the
 wizard had been working by accident.
 
 So, before reusing a component across surfaces, confirm every class it needs
-lives in a sheet the TARGET bundle loads. `custom-spectrum.css`, `index.css` and
+lives in a sheet the TARGET bundle loads. `utilities.css`, `index.css` and
 `vscode-theme.css` are imported by every entry; anything under
 `src/features/*/ui/styles/` is not.
 
@@ -141,7 +141,7 @@ no stylesheet in that bundle defines. ~1.2s for all eight.
 
 Its first run found **8 sites across 3 classes**, all fixed in the same commit
 rather than ledgered: `.text-orange-500`/`.text-orange-600` moved out of EDS's
-feature sheet into `custom-spectrum.css`, and `.number-badge` out of
+feature sheet into `utilities.css`, and `.number-badge` out of
 `wizard.css` (which only 4 of 8 entries import) — each keeping its original
 layer, because moving a rule between `@layer theme` and unlayered changes the
 cascade and that would be a different bug from the one being fixed.
@@ -178,7 +178,7 @@ within their own bundle so it does not report them as missing.
 
 Section 6 says which bundles must load a sheet. It does not say where the sheet
 should sit, and for a year that question had one answer by default: everything
-went into `custom-spectrum.css`, which all eight entries load.
+went into `utilities.css`, which all eight entries load.
 
 The 2026-09-09 migration made the answer visible, because it had to place 503
 rules. There are exactly **three kinds of stylesheet** in this codebase, and the

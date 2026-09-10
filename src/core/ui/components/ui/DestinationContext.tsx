@@ -45,7 +45,7 @@ export function DestinationContext({
                 {project} · {workspace}
             </span>
             {onChange ? (
-                /* `.inline-action-link` (custom-spectrum.css), NOT EDS's
+                /* `.inline-action-link` (utilities.css), NOT EDS's
                    `.service-action-link` — that class lives in connect-services.css and
                    reaches only the wizard bundle. Stays a <button>: it performs an
                    action, so the role must not become "link". */

@@ -9,7 +9,7 @@
  * turns the row into a column. A sheet that is one `@media` block is unusual
  * enough to say so rather than leave the next reader wondering what is missing.
  *
- * Moved out of custom-spectrum.css by the CSS migration
+ * Moved out of utilities.css by the CSS migration
  * (.rptc/plans/css-architecture-migration), in source order, with the comment
  * above each rule. Verbatim otherwise.
  */

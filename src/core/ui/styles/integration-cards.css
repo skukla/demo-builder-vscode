@@ -11,7 +11,7 @@
  * core/ui/components/integrations. It is NOT global: `wizard.css` beside it reaches
  * four entries and is the precedent.
  *
- * Moved out of custom-spectrum.css by the CSS migration
+ * Moved out of utilities.css by the CSS migration
  * (.rptc/plans/css-architecture-migration), with the comment above each rule.
  * Verbatim otherwise: a move is only correct when the visual diff is empty.
  */

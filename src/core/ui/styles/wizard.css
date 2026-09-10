@@ -98,7 +98,7 @@
        into every webview; `.sample-data-note` above already relies on one.)
        The fallback is the accent blue rather than another grey — if the var is
        ever missing, a visible chip is the failure we want. */
-    /* .number-badge moved to custom-spectrum.css (ADR-017 §6). It is used by two
+    /* .number-badge moved to utilities.css (ADR-017 §6). It is used by two
        CORE components — NumberedInstructions and FieldHelpButton — and this sheet
        is imported by only 4 of the 8 entries, so the badge rendered unstyled on
        the other four. The rule kept its `@layer theme` wrapper at the
@@ -294,7 +294,7 @@
    the SAME DatapackCard, and a second column rule would let the two drift.
    Restated rather than shared because that class lives in the feature-scoped
    data-installer sheet, which this bundle never loads; the CARD's own styles
-   moved to custom-spectrum.css, which both bundles do load. */
+   moved to utilities.css, which both bundles do load. */
 @layer theme {
 .sample-data-grid {
     display: grid;

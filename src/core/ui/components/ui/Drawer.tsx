@@ -8,7 +8,7 @@
  * suites passed unedited across it.
  *
  * Its CSS lives in the "Integrations grid + drawer" section of
- * custom-spectrum.css. The classes (`db-drawer`, `db-drawer-scrim`) were already
+ * utilities.css. The classes (`db-drawer`, `db-drawer-scrim`) were already
  * generically named, so nothing moved with it — only that section comment is now
  * narrower than its contents.
  *
@@ -16,7 +16,7 @@
  * Instead: an always-mounted plain-div scrim + panel pair whose `.open`
  * class drives the slide (`translateX(100%) → 0`, visibility:hidden when
  * closed — see the "Integrations grid + drawer" section of
- * custom-spectrum.css).
+ * utilities.css).
  *
  * Behavior contract (test-pinned):
  *   - scrim click and document Esc close; Esc is SKIPPED when

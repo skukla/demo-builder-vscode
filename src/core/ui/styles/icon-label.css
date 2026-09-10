@@ -5,10 +5,10 @@
  * It is the ONLY family left in the migration that the sidebar renders, which is
  * why it gets a sheet of its own rather than joining shared-ui.css beside it.
  *
- * `.sidebar-action-tile .icon-label` stays in custom-spectrum.css: it is a
+ * `.sidebar-action-tile .icon-label` stays in utilities.css: it is a
  * `.sidebar-*` rule and belongs to that family's move.
  *
- * Moved out of custom-spectrum.css by the CSS migration
+ * Moved out of utilities.css by the CSS migration
  * (.rptc/plans/css-architecture-migration), with the comment above each rule.
  * Verbatim otherwise: a move is only correct when the visual diff is empty.
  */

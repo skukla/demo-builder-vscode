@@ -4,7 +4,7 @@
  * FEATURE-SCOPED (ADR-017 §6). Imported by the `wizard` entry ALONE — the only one
  * whose graph reaches BuildYourProjectSummary.
  *
- * Moved out of custom-spectrum.css by the CSS migration
+ * Moved out of utilities.css by the CSS migration
  * (.rptc/plans/css-architecture-migration), each rule with the comment above it.
  * Verbatim otherwise: a move is only correct when the visual diff is empty.
  */
@@ -87,7 +87,7 @@
 /* Completion feedback: the shared ✓ renders only when a row is done, so it mounts
  * on completion and this pop fires once — a subtle reward as each sub-step lands.
  * Zeroed under the global prefers-reduced-motion reset. Moved here from
- * custom-spectrum.css 2026-09-09 to sit with the rule that names it. */
+ * utilities.css 2026-09-09 to sit with the rule that names it. */
 @keyframes sum-check-in {
     from { opacity: 0; transform: scale(0.6); }
     to { opacity: 1; transform: scale(1); }

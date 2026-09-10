@@ -36,7 +36,7 @@ that caused it.
 
 1,946 of the 1,965 sit inside a cascade layer; 19 do not. The 19 live in
 `data-installer.css`, `connect-services.css`, `eds-steps.css` and two in the
-deliberate unlayered carve-out at the bottom of `custom-spectrum.css`.
+deliberate unlayered carve-out at the bottom of `utilities.css`.
 
 **Leave the 19 alone in this step.** An unlayered `!important` may be beating one
 of OUR layered rules rather than Spectrum's, which is a different question with a
@@ -45,7 +45,7 @@ different answer. Revisit them only once their sheets have been through step 3.
 ## The strip must be index-based, and here is why
 
 The first attempt walked the text with a character buffer and dropped that buffer
-whenever it met a comment, silently deleting 806 lines from `custom-spectrum.css`
+whenever it met a comment, silently deleting 806 lines from `utilities.css`
 while reporting the correct 1,946 removals. The 5,338-line diff was unreadable and
 the damage was invisible in it.
 

@@ -10,7 +10,7 @@
  * by FAMILY rather than by that text — a text match takes the first block, which
  * belongs to a different family.
  *
- * Moved out of custom-spectrum.css by the CSS migration
+ * Moved out of utilities.css by the CSS migration
  * (.rptc/plans/css-architecture-migration), with the comment above each rule.
  * Verbatim otherwise: a move is only correct when the visual diff is empty.
  */
@@ -97,7 +97,7 @@
     animation: vsteplist-step-enter var(--db-motion-slow) var(--db-motion-ease);
 }
 
-/* The animation the rule above names. It sat in custom-spectrum.css until
+/* The animation the rule above names. It sat in utilities.css until
    2026-09-09, four hundred lines from its only user and reaching all eight
    bundles to serve two. A @keyframes is resolved by NAME, so it has to live in a
    sheet the consuming bundle loads — which is exactly this one. */

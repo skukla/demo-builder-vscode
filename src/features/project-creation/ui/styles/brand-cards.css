@@ -9,7 +9,7 @@
  * split, which was wrong (see that commit's correction in the ledger) — but the
  * shared home is right either way.
  *
- * Moved out of custom-spectrum.css by the CSS migration
+ * Moved out of utilities.css by the CSS migration
  * (.rptc/plans/css-architecture-migration), each rule with the comment above it.
  * Verbatim otherwise: a move is only correct when the visual diff is empty.
  */
@@ -245,4 +245,21 @@
     box-shadow: none !important;
     background: var(--spectrum-global-color-gray-75) !important;
 }
+}
+
+/* The animation(s) the rules above name. Moved out of the utility sheet
+   2026-09-09: a @keyframes is resolved by NAME, so it only has to live in a
+   sheet the consuming bundle loads — and this is the ONLY sheet that names it.
+   Sitting in the all-bundles sheet shipped it to eight bundles to serve one. */
+@layer theme {
+    @keyframes fadeInDown {
+        from {
+            opacity: 0;
+            transform: translateY(-8px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
 }

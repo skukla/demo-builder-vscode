@@ -83,7 +83,7 @@ export interface ManageApisModalProps {
 /**
  * Reserved height for the loading/error views, so the pre-list states fill the
  * same band the list will. The dialog's height comes from `.manage-apis-body`
- * (custom-spectrum.css), which is a constant — see there for why.
+ * (utilities.css), which is a constant — see there for why.
  */
 const FEEDBACK_HEIGHT = '320px';
 

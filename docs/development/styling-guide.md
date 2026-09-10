@@ -9,7 +9,7 @@ half and deliberately does not restate any of it.
 
 ## Where the stylesheets are
 
-`src/core/ui/styles/` — `reset.css`, `tokens.css`, `custom-spectrum.css`,
+`src/core/ui/styles/` — `reset.css`, `tokens.css`, `utilities.css`,
 `vscode-theme.css`, `wizard.css`, and `index.css` which imports them. A few
 features carry their own sheet beside their UI (`data-installer`, `eds`).
 

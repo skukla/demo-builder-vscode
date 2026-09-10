@@ -25,7 +25,7 @@ import { ruleFor } from '../../../../helpers/cssRules';
 /**
  * Read the rule from WHEREVER it ships, not from a named sheet.
  *
- * This suite used to read `custom-spectrum.css` directly and broke the day the
+ * This suite used to read `utilities.css` directly and broke the day the
  * `.dashboard-*` family moved to the dashboard feature's own sheet — a change that
  * moved no pixel on any surface. The shared helper reads every stylesheet under
  * `src/`, so a rule's LOCATION stops being something a layout test asserts.

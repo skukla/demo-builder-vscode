@@ -27,7 +27,7 @@ export interface TwoColumnLayoutProps {
     /** Minimum width for the right column (default: '300px') - supports Spectrum tokens.
      *  Floors the summary panel so it stays legible while the left column gives up
      *  space first (max-width: 960px). At narrow viewports the responsive CSS in
-     *  custom-spectrum.css overrides this to 0 and stacks the columns vertically
+     *  utilities.css overrides this to 0 and stacks the columns vertically
      *  instead of letting the right column squeeze past readability. */
     rightMinWidth?: DimensionValue;
     /** Fixed width for the right column (default: unset) - supports Spectrum tokens.
@@ -97,7 +97,7 @@ export function TwoColumnLayout({
 }: TwoColumnLayoutProps) {
     // SOP §11: Static styles use utility classes, dynamic styles stay inline.
     // The `two-column-layout*` classes are the targets for the responsive
-    // stacking media query in custom-spectrum.css — at narrow viewports the
+    // stacking media query in utilities.css — at narrow viewports the
     // CSS swaps flex-direction to column and clears the left max-width / right
     // min-width / left border so the summary slides under the active column
     // instead of being squeezed.

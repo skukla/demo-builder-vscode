@@ -4,7 +4,7 @@
  *
  * Plan: .rptc/plans/css-architecture-migration/
  *
- * A cycle moves ONE feature family out of custom-spectrum.css into a feature
+ * A cycle moves ONE feature family out of utilities.css into a feature
  * sheet. This script does the parts a machine can do alone and REFUSES to declare
  * success on the part it cannot: the visual diff needs a browser, so this prints
  * what to verify and exits with a status the caller acts on.
@@ -27,7 +27,7 @@ import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 
 const ROOT = process.cwd();
-const GOD_FILE = 'src/core/ui/styles/custom-spectrum.css';
+const GOD_FILE = 'src/core/ui/styles/utilities.css';
 const LEDGER = 'tests/sop/webview-architecture-rules.exemptions.json';
 const FOLLOW_UPS = '.rptc/plans/css-architecture-migration/follow-ups.json';
 
@@ -198,7 +198,7 @@ function readRules(text) {
         // rule but records it as starting one line too late — and a move then
         // leaves the earlier selectors behind in the source file. That happened on
         // the first real cycle (2026-09-08): `.sidebar-action-tile:hover` stayed in
-        // custom-spectrum.css while its base rule moved out, and the VISUAL DIFF
+        // utilities.css while its base rule moved out, and the VISUAL DIFF
         // COULD NOT SEE IT, because the leftover still applied from the sheet the
         // bundle still imports. 51 lines in that file are selector-then-comma.
         let head = i;
@@ -214,7 +214,7 @@ function readRules(text) {
         const m = /^\s*([A-Za-z.#[][^{]*)\{/.exec(lines[i]);
         if (!m) continue;
         // Test the WHOLE selector list for a class, not just the `{` line. The
-        // rule at custom-spectrum.css:1543 carries its classes on the first four
+        // rule at utilities.css:1543 carries its classes on the first four
         // lines and ends `div[class*="spectrum"] input[type="search"] {`, so a
         // check against that last line alone found none and dropped the rule —
         // control P.
@@ -229,7 +229,7 @@ function readRules(text) {
             if (depth <= 0) { end = j; break; }
         }
         // Which cascade layer encloses this rule, if any. A move that drops the
-        // wrapper does not relocate a rule, it PROMOTES it: custom-spectrum's rules
+        // wrapper does not relocate a rule, it PROMOTES it: utilities's rules
         // sit in `@layer theme`, and an unlayered copy beats Spectrum where the
         // layered original lost. On the first real cycle that moved 90 sidebar
         // elements — tiles flipped from column to row and fonts grew — and it is
@@ -662,7 +662,7 @@ function cmdMove(prefix, target) {
           ` * entries that import it — TODO: name them here. A class defined here is absent\n` +
           ` * from every other webview bundle, and an element using it there renders raw\n` +
           ` * with no error anywhere.\n *\n` +
-          ` * Moved out of custom-spectrum.css by the CSS migration\n` +
+          ` * Moved out of utilities.css by the CSS migration\n` +
           ` * (.rptc/plans/css-architecture-migration), in source order, with the comment\n` +
           ` * above each rule. Verbatim otherwise: a move is only correct when the rules\n` +
           ` * are unchanged — check with \`--verify\`, not only with a visual diff.\n */\n\n`;

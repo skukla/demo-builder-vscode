@@ -79,7 +79,7 @@ in a built bundle is ours. For NORMAL declarations, unlayered beats layered. So
 wrapping our stylesheets in `@layer theme` put every plain rule we write BELOW
 Spectrum's, and `!important` became the only way a layered rule could win.
 
-The wrapper was deliberate; `custom-spectrum.css` says *"Wrapped in @layer theme
+The wrapper was deliberate; `utilities.css` says *"Wrapped in @layer theme
 for cascade control"*. It achieved the opposite of its intent.
 
 Proven on a real Spectrum Button in the running dashboard bundle:
@@ -101,7 +101,7 @@ It is not a tool of last resort here, it is a symptom of §1. Once §1 lands, th
 overwhelming majority are inert.
 
 **Measured, by doing it.** With the layer fix applied, **all 1,866 `!important`
-declarations were stripped from `custom-spectrum.css`** and the eight surfaces
+declarations were stripped from `utilities.css`** and the eight surfaces
 re-snapshotted:
 
 | | result |
@@ -123,7 +123,7 @@ narrow and strict: **"to override Spectrum" is not a justification.** A survivin
 `core/ui` component to live in a *globally-loaded* sheet. It now requires only
 what its own enforcer has always checked.
 
-`custom-spectrum.css`, `index.css` and `vscode-theme.css` reach every bundle;
+`utilities.css`, `index.css` and `vscode-theme.css` reach every bundle;
 anything under `src/features/*/ui/styles/` does not. The question is therefore not
 "could this component render anywhere" but "which entries actually reach it", and
 that is decided by the import graph.
@@ -195,7 +195,7 @@ The cost was not four components. By the time the god file was drained it was tw
 holding six rules between them, and **five were byte-identical to copies already
 sitting in a stylesheet** — redundant duplicates, not private styling. The sixth,
 `.text-green-500`, was referenced by no markup anywhere in `src/`: every call site
-uses `.text-green-600`, which is in `custom-spectrum.css`. So the whole remaining
+uses `.text-green-600`, which is in `utilities.css`. So the whole remaining
 population was five duplicates and one dead rule, and deleting both blocks changed
 nothing on screen (103 elements compared on the wizard surface, 102 byte-identical,
 the one difference an entrance animation caught mid-flight).
@@ -234,7 +234,7 @@ one that has them.
 - **The exact `!important` residue.** §2 says the count should collapse; it does
   not say to what. Each of the 7 elements that moved needs adjudicating, and only
   then is the surviving set known.
-- **Whether `custom-spectrum.css` gets split, and along what seam.** 6,217 lines
+- **Whether `utilities.css` gets split, and along what seam.** 6,217 lines
   is over the ceiling, but the file interleaves `@layer theme`, `@layer overrides`,
   `@layer theme` again and unlayered content, so "split it" is not yet a
   well-formed instruction.

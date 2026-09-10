@@ -206,7 +206,7 @@ describe('TwoColumnLayout', () => {
 
     it('should tag container and columns with responsive class hooks', () => {
       // These class names are the targets for the narrow-viewport media
-      // queries in custom-spectrum.css. If they change, the stacking and
+      // queries in utilities.css. If they change, the stacking and
       // rail-collapse styles no longer fire.
       const { container } = render(
         <TwoColumnLayout

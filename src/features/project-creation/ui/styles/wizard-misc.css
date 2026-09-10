@@ -14,7 +14,7 @@
  * several families at once, and the answer to that is to split the batch and
  * bisect rather than to guess.
  *
- * Moved out of custom-spectrum.css by the CSS migration
+ * Moved out of utilities.css by the CSS migration
  * (.rptc/plans/css-architecture-migration), with the comment above each rule.
  * Verbatim otherwise: a move is only correct when the visual diff is empty.
  */
@@ -166,4 +166,15 @@
     width: 20px !important;
     height: 20px !important;
 }
+}
+
+/* The animation(s) the rules above name. Moved out of the utility sheet
+   2026-09-09: a @keyframes is resolved by NAME, so it only has to live in a
+   sheet the consuming bundle loads — and this is the ONLY sheet that names it.
+   Sitting in the all-bundles sheet shipped it to eight bundles to serve one. */
+@layer theme {
+    @keyframes slide-down {
+        from { transform: translateY(-10px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
 }

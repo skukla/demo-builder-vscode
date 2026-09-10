@@ -15,7 +15,7 @@ it and does **not** govern this.
 core/ui/
 ├── components/   the shared visual vocabulary   (→ components/CLAUDE.md)
 ├── hooks/        the shared behaviour           (→ hooks/CLAUDE.md)
-├── styles/       reset, tokens, custom-spectrum, vscode-theme, wizard, index
+├── styles/       reset, tokens, utilities, vscode-theme, wizard, index
 └── utils/        cn(), spectrum tokens, WebviewClient
 ```
 

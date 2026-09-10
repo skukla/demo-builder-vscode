@@ -228,12 +228,12 @@ describe('SOP: Inline Styles', () => {
          * Verify we don't have excessive Tailwind-like utility classes.
          *
          * Pre-existing Technical Debt:
-         * - custom-spectrum.css contains ~15 utility classes (.px-3, .mb-2, etc.)
+         * - utilities.css contains ~15 utility classes (.px-3, .mb-2, etc.)
          * - These were added for quick Spectrum component overrides
          * - Removing them would require refactoring all usages
          * - Decision: Document as acceptable debt (LOW priority to remove)
          */
-        const KNOWN_UTILITY_CSS_FILES = ['custom-spectrum.css'];
+        const KNOWN_UTILITY_CSS_FILES = ['utilities.css'];
 
         it('should not have utility class patterns in non-documented CSS files', () => {
             const cssDir = path.resolve(__dirname, '../../src/core/ui/styles');
@@ -272,9 +272,9 @@ describe('SOP: Inline Styles', () => {
             expect(violations).toStrictEqual([]);
         });
 
-        it('should document custom-spectrum.css as having utility classes', () => {
+        it('should document utilities.css as having utility classes', () => {
             /**
-             * This test documents the known technical debt in custom-spectrum.css.
+             * This test documents the known technical debt in utilities.css.
              *
              * The file contains utility classes (~15 classes) that should ideally
              * be refactored to semantic class names. However, they are widely used
@@ -284,7 +284,7 @@ describe('SOP: Inline Styles', () => {
              * Priority: LOW
              * Impact: Maintainability (not functionality)
              */
-            expect(KNOWN_UTILITY_CSS_FILES).toContain('custom-spectrum.css');
+            expect(KNOWN_UTILITY_CSS_FILES).toContain('utilities.css');
         });
     });
 

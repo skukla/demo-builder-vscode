@@ -11,7 +11,7 @@ rather than Spectrum's — a different question.
 
 INDEX-BASED BY CONSTRUCTION. A first version walked the text with a character
 buffer and dropped the buffer whenever it met a comment, silently deleting 806
-lines from custom-spectrum.css. This version never rebuilds the text: it finds the
+lines from utilities.css. This version never rebuilds the text: it finds the
 byte span of each `!important` to remove and deletes exactly those spans, so the
 only possible edit is the one intended. `verify()` then proves it.
 """
@@ -19,7 +19,7 @@ import re
 from pathlib import Path
 
 SHEETS = [
-    'src/core/ui/styles/custom-spectrum.css',
+    'src/core/ui/styles/utilities.css',
     'src/core/ui/styles/wizard.css',
     'src/core/ui/styles/vscode-theme.css',
     'src/core/ui/styles/reset.css',

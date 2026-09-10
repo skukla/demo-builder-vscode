@@ -102,7 +102,7 @@ design review and not a bug hunt.
 ## The idea that does not work, recorded so it is not retried
 
 "Flip the cascade one surface at a time." There is no seam for it today:
-`custom-spectrum.css` is imported by all eight bundle entries and esbuild builds
+`utilities.css` is imported by all eight bundle entries and esbuild builds
 them in a single pass, so the injection plugin cannot know which bundle a sheet is
 destined for.
 
@@ -158,7 +158,7 @@ capturedProperties              26      <- instrument floor
 `.intflow-` 52, `.project-` 43, `.integration-` 35, `.dashboard-` 28,
 `.prerequisite-` 25, `.sidebar-` 24, `.architecture-` 24, `.modal-` 21.
 
-Sheet reach today: `custom-spectrum.css` 8 entries, `index.css` 7,
+Sheet reach today: `utilities.css` 8 entries, `index.css` 7,
 `vscode-theme.css` 6, `wizard.css` 4, and one entry each for `data-installer.css`,
 `eds-steps.css`, `connect-services.css`.
 

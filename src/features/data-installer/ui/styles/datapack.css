@@ -5,10 +5,10 @@
  * (ui/index.tsx) and `wizard`, which renders the same card on the Datapacks step
  * inside the Commerce area.
  *
- * These rules were in custom-spectrum's UNLAYERED carve-out and are emitted
+ * These rules were in utilities's UNLAYERED carve-out and are emitted
  * unlayered here, which is the layer preservation working in the other direction.
  *
- * Moved out of custom-spectrum.css by the CSS migration
+ * Moved out of utilities.css by the CSS migration
  * (.rptc/plans/css-architecture-migration), each rule with the comment above it.
  * Verbatim otherwise: a move is only correct when the visual diff is empty.
  */

@@ -11,11 +11,11 @@
  * NOT integration-results.css, which holds `.int-*` — the RESULTS list on the wizard
  * step, wizard-only. Two families, two audiences, two sheets.
  *
- * `.manage-apis-body .intflow-api-picker` stays in custom-spectrum.css: it is a
+ * `.manage-apis-body .intflow-api-picker` stays in utilities.css: it is a
  * `.manage-*` rule that styles these elements as descendants, so it belongs to
  * that family and not to this move.
  *
- * Moved out of custom-spectrum.css by the CSS migration
+ * Moved out of utilities.css by the CSS migration
  * (.rptc/plans/css-architecture-migration), with the comment above each rule.
  * Verbatim otherwise: a move is only correct when the visual diff is empty.
  */

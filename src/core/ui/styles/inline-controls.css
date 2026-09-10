@@ -9,11 +9,11 @@
  * THEY WERE HIDING IN THE UTILITY SHEET. `--move` selects on a class's PREFIX and
  * the utility list names `inline`, so `.inline-notice-body` and
  * `.inline-rename-input` read as utilities alongside `.inline-block`. Eighteen
- * rules of two components sat in custom-spectrum.css looking like part of the
+ * rules of two components sat in utilities.css looking like part of the
  * spacing scale — which is why that file still read as disorganised after the
  * migration said it was done.
  *
- * Moved out of custom-spectrum.css by the CSS migration
+ * Moved out of utilities.css by the CSS migration
  * (.rptc/plans/css-architecture-migration), in source order, with the comment
  * above each rule. Verbatim otherwise.
  */
@@ -185,4 +185,17 @@
 .inline-action-link:hover {
     text-decoration: underline;
 }
+}
+
+/* The animation(s) the rules above name. Moved out of the utility sheet
+   2026-09-09: a @keyframes is resolved by NAME, so it only has to live in a
+   sheet the consuming bundle loads — and this is the ONLY sheet that names it.
+   Sitting in the all-bundles sheet shipped it to eight bundles to serve one. */
+@layer theme {
+    /* Fade + slight rise so the notice eases in after the org check resolves,
+       instead of popping in. Disabled under prefers-reduced-motion (reset.css). */
+    @keyframes inline-notice-fade-in {
+        from { opacity: 0; transform: translateY(-4px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
 }
