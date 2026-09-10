@@ -132,3 +132,9 @@ Sources: [Atlassian](https://www.atlassian.com/blog/atlassian-engineering/faster
 [Next.js optimizePackageImports](https://nextjs.org/docs/app/api-reference/config/next-config-js/optimizePackageImports) ·
 [LedgerHQ #20595](https://github.com/LedgerHQ/ledger-live/pull/20595) ·
 [webpack tree-shaking guide](https://docs.webpack.js.org/guides/tree-shaking)
+
+## Reference notes
+
+- `optimizePackageImports` — a Next.js config option, cited above as external prior
+  art for the same problem this decision addresses. It belongs to Next.js and is
+  correctly absent from this repository; the link in the body is the reference.

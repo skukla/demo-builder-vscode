@@ -97,6 +97,28 @@ describe('the enforcer-suite count in CLAUDE.md matches the disk', () => {
         expect({ claimed, onDisk }).toEqual({ claimed: onDisk, onDisk });
     });
 
+    it('the stated PERIODIC counts equal what the registry actually holds', () => {
+        // The fourth row of that same cadence table, and the last one nobody
+        // checked. It said "10 scripted checks + 9 guided reviews" while the sweep
+        // ran 16 and named 10 — stale by six, in the file loaded into every
+        // session. Its three sibling rows were pinned; this one was not, which is
+        // the whole reason it drifted. Found 2026-09-10 by asking the registry
+        // instead of reading the sentence.
+        const row = readFileSync(CLAUDE_MD, 'utf8').match(
+            /\|\s*periodic\s*\|\s*(\d+) scripted checks \+ (\d+) guided reviews/
+        );
+        expect(row).not.toBeNull();
+
+        const periodic = INSTRUMENTS.filter((i) => i.cadence === 'periodic');
+        expect({
+            scripted: Number(row![1]),
+            guided: Number(row![2]),
+        }).toEqual({
+            scripted: sweepable().length,
+            guided: periodic.filter((i) => i.runs === null).length,
+        });
+    });
+
     it('the stated count equals the suites in tests/sop/', () => {
         const claimed = Number(
             readFileSync(CLAUDE_MD, 'utf8').match(
