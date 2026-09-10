@@ -616,7 +616,8 @@ check says so and names the file.
 > a system nobody adopted, which reached no bundle for five months without being
 > missed. Where the USER'S theme should win, defer to `--vscode-*` with our value as
 > the fallback (terminal colours, the number badge).
-> Enforced by `tests/core/ui/styles/tokens.test.ts` — every token reachable, terminal
+> [ADR-018 §7](../architecture/adr/018-css-architecture.md) · Enforced by
+> `tests/core/ui/styles/tokens.test.ts` — every token reachable, terminal
 > colours deferring to `--vscode-*`, and no `--db-status-*` at all, with a
 > planted-violation control.
 

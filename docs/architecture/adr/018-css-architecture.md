@@ -226,7 +226,67 @@ layered. Once vendor sits in a layer below us, unlayered stops being special and
 becomes merely un-ordered — and it would still lose to any `!important` we keep
 under §2. `overrides` is both stronger and explicit.
 
-## 7. What this ADR does NOT yet rule
+### 7. One design system: Adobe Spectrum's
+
+**Added 2026-09-09.** Our own custom properties do exactly two jobs: map the
+user's VS Code theme onto a semantic name, or hold a constant Spectrum has no
+opinion about. **They never restate a colour Spectrum already defines.**
+
+The repo had three palettes. Measured on the day this was written: **519 uses of
+`--spectrum-*`** across our sheets against **30 of `--db-*`**, and **65 of the 101
+`--db-*` tokens were referenced by nothing at all**. That is not a design system;
+it is an intention nobody adopted.
+
+It was worse than unused in one place. `--db-status-*` held `#10b981`, `#ef4444`,
+`#f59e0b`, `#3b82f6` — Tailwind — and `vscode-theme.css` used them to repaint
+elements Spectrum had ALREADY coloured through its own `color="positive"` prop.
+A second palette does not replace the first; it fights it, and loses in a way
+nobody can see except as "the greens don't quite match".
+
+**Where the user's theme should win, defer to it.** Terminal colours were pinned
+to VS Code's Dark+ inside a webview whose user may run any theme; they now read
+`--vscode-terminal-ansi*` with the old value as fallback, so a theme that supplies
+nothing renders exactly as before. `.number-badge` made the same trip to
+`--vscode-badge-*` in August, for the same reason: contrast against the user's
+background is the theme author's problem, not ours.
+
+**Not everything local is a duplicate.** `--db-motion-*` was proposed for deletion
+and kept: `200ms` against Spectrum's nearest `220ms`, and
+`cubic-bezier(0.2, 0, 0, 1)` against Spectrum's `ease-out` of
+`cubic-bezier(0, 0, .4, 1)`. Those are deliberate values, so swapping them would
+have changed the feel of four animations in order to delete one token family. The
+test for "does this belong" is whether Spectrum already answers the question — not
+whether the name starts with `--db-`.
+
+Enforced by `tests/core/ui/styles/tokens.test.ts`: every token reachable
+(transitively), terminal colours deferring to `--vscode-*`, and no `--db-status-*`
+at all. It replaced a suite that asserted ~60 individual token strings and passed
+for five months while `tokens.css` reached **no bundle at all** — see §8.
+
+### 8. Base stylesheets arrive through the bundle graph, never `@import`
+
+**Added 2026-09-09, after `reset.css` and `tokens.css` were found to have shipped
+nowhere since 2026-04-13.**
+
+`index.css` pulled both in with `@import './reset.css'`. Under webpack, css-loader
+inlined that at build time. The esbuild plugin that replaced it (`580495214`)
+reads each sheet as text and passes `@import` through untouched, leaving the
+browser to resolve a relative URL against a `vscode-webview://` document. It never
+resolved. **The entire reset and all 101 design tokens were absent from all eight
+bundles for five months**, and 30 `var(--db-*)` declarations — none carrying a
+fallback — collapsed to nothing.
+
+Nothing caught it, and two things that should have made it worse rather than
+better: the visual-baseline harness serves those two files next to its own HTML,
+so the relative `@import` resolved THERE and every measurement included a reset
+production did not have; and two tests asserted that `index.css` *contains*
+`@import`, so they agreed with the mechanism while the mechanism did nothing.
+
+**A stylesheet is imported by the entry that needs it.** That is ADR-017 §6 stated
+for the base layers specifically: the bundler follows it, the reach check can see
+it, and an `@import` inside a stylesheet is visible to neither.
+
+## What this ADR does NOT yet rule
 
 Named rather than omitted, because a document that hides its gaps is worse than
 one that has them.
