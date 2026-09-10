@@ -475,15 +475,6 @@ const AUTHORING: readonly Instrument[] = (
  */
 const PROGRAM_INSTRUMENTS: readonly Instrument[] = [
     {
-        id: 'check-ledger',
-        kind: 'rptc-instrument',
-        cadence: 'periodic',
-        resultKind: 'gate',
-        path: '.rptc/plans/pattern-conformance-audit/harness/check-ledger.mjs',
-        what: "the ADR-015 audit's done-gate: every unit accounted for, or exit non-zero",
-        runs: 'node .rptc/plans/pattern-conformance-audit/harness/check-ledger.mjs',
-    },
-    {
         id: 'program-metrics',
         kind: 'rptc-instrument',
         cadence: 'on-demand',
@@ -566,6 +557,14 @@ export const NON_INSTRUMENT_SCRIPTS: Readonly<Record<string, string>> = {
         'migration script for completed work',
     '.rptc/complete/frontend-architecture-cleanup/usage-analyzer.sh':
         'migration script for completed work',
+    '.rptc/plans/pattern-conformance-audit/harness/check-ledger.mjs':
+        "the ADR-015 audit's done-gate. RETIRED from the sweep 2026-09-10: it proves a " +
+        'ledger accounts for every unit AT THE TIME OF THE AUDIT, and PL-12 shipped on ' +
+        '2026-08-29. Re-run against a tree 1,600 commits later it measures drift, not ' +
+        'completeness — 66 of its rows named files that shipped work had since deleted, ' +
+        'mostly the barrels PL-31 retired. A gate that fails forever on work going well ' +
+        'is the crying-wolf pattern this repo has now paid for twice. Kept on disk as the ' +
+        "audit's record, and runnable by hand if the audit is ever redone.",
     '.rptc/plans/pattern-conformance-audit/harness/denominators.sh':
         'helper invoked by the censuses, not a standalone instrument',
     '.rptc/plans/pattern-conformance-audit/harness/kinds.mjs':
