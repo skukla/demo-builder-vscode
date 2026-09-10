@@ -46,6 +46,24 @@ case "$payload" in
     # exactly like a guard that simply never matches — the failure this
     # pre-filter has already caused once (see the --exclude note below).
     *"git commit"*) ;;
+    # 32-test-authoring, 33-new-instrument, 34-css-baseline (added 2026-09-10).
+    # NECESSARY conditions for each, and the reason these rules exist at all: none
+    # of these tokens was admitted before, so a Write to a `.test.ts`, a new script
+    # or a stylesheet exited HERE and no rule could ever have seen it. That gate is
+    # why a test-file splitter was invented while the splitting playbook sat unread.
+    #
+    # `.test.ts` also covers `.test.tsx` (substring), which rule 40 already claims —
+    # the rules sort it out, the gate only has to let it through.
+    *.test.ts*|*.testUtils.ts*) ;;
+    *.mjs*|*/scripts/*) ;;
+    *.css*) ;;
+    # 35-wizard-step, 36-ai-bundle, 37-mcp-tool (added 2026-09-10). NECESSARY
+    # conditions for each — every one is a literal from the rule's own matcher, so
+    # the gate cannot hide a real hit. Kept this narrow deliberately: a bare *.ts*
+    # would admit most of the repo and make the pre-filter pointless.
+    *wizard-steps.json*|*buildYourProjectAreas*|*commerceSections*) ;;
+    *aiBundle*|*RegenerateAiFiles*) ;;
+    *Descriptors.ts*|*mcp-server.ts*) ;;
     # 12-unquoted-glob. Each of these is a NECESSARY condition for that rule to
     # fire, so the gate cannot hide a real hit. Kept as the specific flag spellings
     # rather than a bare `*"*"*` (an asterisk appears in most payloads) — this stays

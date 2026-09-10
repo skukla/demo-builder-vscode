@@ -1,0 +1,37 @@
+# Delivers the instrument registry before a NEW script joins scripts/.
+#
+# Same shape as 31-registry-dir: it does not say "check the registry", it DELIVERS
+# the list. A rule that tells you to go and look is one you can rationalise past.
+#
+# Written 2026-09-10, after a session wrote four throwaway Python scanners for
+# things `toolingRegistry.ts` already lists — twice producing a wrong number that a
+# registered instrument reports correctly.
+rule_id=new-instrument
+rule_once=1
+
+rule_match() {
+    [ "$1" = "Write" ] || return 1
+    [ -n "$3" ] || return 1
+    case "$3" in
+        */scripts/*.mjs|*/scripts/*.js|*/scripts/*.ts) ;;
+        *) return 1 ;;
+    esac
+    [ -e "$3" ] && return 1
+    return 0
+}
+
+rule_message() {
+    root=$(git rev-parse --show-toplevel 2>/dev/null) || root=.
+    echo "You are adding a NEW script to scripts/. This repo already registers its"
+    echo "quality instruments in tests/sop/toolingRegistry.ts, and a suite fails the"
+    echo "build when the registry and the disk disagree — in BOTH directions."
+    echo
+    echo "The instruments that already exist:"
+    echo
+    grep -oE "id: '[^']+'" "$root/tests/sop/toolingRegistry.ts" 2>/dev/null \
+        | sed "s/id: '/  /; s/'$//" | sort | paste -sd'  ' - | fold -s -w 76 | sed 's/^/  /'
+    echo
+    echo "If yours measures something one of those already measures, run that instead."
+    echo "If it is genuinely new, it needs a registry row or the sweep will never run"
+    echo "it. This hook fires only once per session."
+}

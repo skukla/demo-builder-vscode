@@ -1,0 +1,39 @@
+# Routes MCP tool work to its skill.
+#
+# A tool reaches agents through a descriptor row AND a handler, and the two have
+# separate failure modes: a handler that needs a panel cannot be exposed headlessly,
+# a "read" that writes is a lie the agent surface cannot detect, and every tool must
+# declare its credential need or the build fails on a missing ledger row.
+rule_id=mcp-tool
+rule_once=1
+
+rule_match() {
+    case "$1" in
+        Edit|Write) ;;
+        *) return 1 ;;
+    esac
+    [ -n "$3" ] || return 1
+    case "$3" in
+        */features/ai/server/*Descriptors.ts) return 0 ;;
+        */mcp-server.ts) return 0 ;;
+    esac
+    return 1
+}
+
+rule_message() {
+    cat <<'MSG'
+You are changing the MCP tool surface. Invoke the `mcp-tool-authoring` skill
+(Skill tool, skill: "mcp-tool-authoring") first.
+
+It carries the three things a descriptor row cannot tell you: headless safety (a
+handler that needs a panel cannot serve an agent), read-vs-action honesty (a tool
+declared a read that writes is undetectable from the agent side), and the
+credential declaration every tool must carry — `needsAuth` is REQUIRED, so a new
+tool without it fails the build rather than failing a user.
+
+Counts are pinned in several places on purpose; if a count test fails after your
+change, the pin is usually right.
+
+This hook fires only once per session.
+MSG
+}

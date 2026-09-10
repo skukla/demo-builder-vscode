@@ -73,16 +73,43 @@ describe('every hook rule proof runs, and passes', () => {
     });
 });
 
-describe('a rule that can block has a proof', () => {
+describe('EVERY rule has a proof', () => {
     /**
-     * Not every rule needs one — the skill-nudge rules (`reuse-first`,
-     * `webview-test`, `adobe-docs`) fire once per session and are covered by
-     * router.test.ts. The rules that BLOCK a mechanical mistake every time are the
-     * ones whose exact match shape matters, and those carry a proof.
+     * This used to exempt the skill-nudge rules — `reuse-first`, `webview-test`,
+     * `adobe-docs` — on the reasoning that they fire once per session and are
+     * covered by `router.test.ts`, so only the mechanical rules' exact match shape
+     * mattered.
+     *
+     * That reasoning does not survive contact with what the nudge rules are FOR.
+     * They are the tier that stops an agent rebuilding something the repo already
+     * has, and whether the guidance arrives is decided entirely by a path pattern.
+     * Reachability is not shape coverage: rule 13's `grep -c` arm and rule 20's
+     * `sk-ant-` arm were both unreachable at the router's pre-filter while their
+     * rules looked healthy and their reachability probes stayed green.
+     *
+     * And the failure mode is worse here than for a mechanical rule. A dead
+     * jest-pipe guard shows up the next time someone pipes jest. A dead nudge rule
+     * shows up as a session that quietly reinvented something — indistinguishable
+     * from a session where nobody did. On 2026-09-10 a splitter was written for
+     * test files while the splitting playbook sat unread; nothing was broken, and
+     * nothing reported anything.
+     *
+     * So: every rule, no exemptions. Writing the three missing proofs immediately
+     * found three bugs — in the PROOFS, not the rules — each of which would have
+     * made a healthy rule look dead: a reused `session_id` spending the once-per-
+     * session marker, a relative path that cannot match a leading-slash-anchored pattern, and
+     * an exit-code check that cannot say WHICH of twelve rules answered.
      */
-    const MECHANICAL = ['12-unquoted-glob', '13-piped-exit-code', '16-unsplit-var'];
+    const RULES_DIR_ENTRIES = fs.readdirSync(RULES_DIR);
+    const allRules = RULES_DIR_ENTRIES.filter((f) => f.endsWith('.rule')).map((f) =>
+        f.replace(/\.rule$/, '')
+    );
 
-    it.each(MECHANICAL)('%s has a proof harness', (rule) => {
+    it('CONTROL: the rules directory is not empty', () => {
+        expect(allRules.length).toBeGreaterThan(5);
+    });
+
+    it.each(allRules)('%s has a proof harness', (rule) => {
         expect(fs.existsSync(path.join(RULES_DIR, `${rule}.proof.sh`))).toBe(true);
     });
 });

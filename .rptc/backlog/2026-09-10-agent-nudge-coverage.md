@@ -4,7 +4,7 @@ kind: fix
 area: platform
 needs: []
 value: high
-status: backlog
+status: built
 parent: PL-30
 ---
 
@@ -80,3 +80,4 @@ that actually happened on 2026-09-10.
 
 - 2026-09-10  Filed after the test-file-size audit
   (`.rptc/research/test-file-size-audit/research.md`)
+- 2026-09-10  2026-09-10  Proofs for all 4 nudge rules + 6 new rules (32-37), each with a stated convention

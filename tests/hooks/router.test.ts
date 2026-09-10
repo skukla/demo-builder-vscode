@@ -457,8 +457,11 @@ describe('secret-files rule — public repo defense-in-depth', () => {
     });
 
     it('allows the fake-test-password convention', () => {
+        // An EDIT, not a Write. `32-test-authoring` claims a Write to a test file
+        // that does not exist yet, so a Write here would exit 2 for a reason that
+        // has nothing to do with secrets — and this case is about rule 20 alone.
         const r = run(
-            write(path.join(REPO, 'tests/x.test.ts'), "const pw = 'fake-test-pw-not-a-secret';"),
+            edit(path.join(REPO, 'tests/x.test.ts'), "const pw = 'fake-test-pw-not-a-secret';"),
             fresh(),
             inRepo
         );
@@ -530,6 +533,22 @@ describe('every rule is reachable through the pre-filter', () => {
         // happened to contain another rule's token.
         'unsplit-var': () => run(bash('F=$(cat list.txt)\nnpx eslint --fix $F'), fresh()),
         'adobe-docs': () => run(mcp('mcp__adobe-exl__search_experience_league'), fresh()),
+        // The six added 2026-09-10. Each needed a NEW pre-filter token, and until
+        // those landed every one of these payloads exited at the gate — which is
+        // precisely why a `.test.ts` write reached no rule while the splitting
+        // playbook went unread.
+        'test-authoring': () =>
+            run(write(path.join(REPO2, 'tests/features/x/brand-new-suite.test.ts')), fresh()),
+        'new-instrument': () =>
+            run(write(path.join(REPO2, 'scripts/brandNewInstrument.mjs')), fresh()),
+        'css-baseline': () =>
+            run(edit(path.join(REPO2, 'src/core/ui/styles/index.css')), fresh()),
+        'wizard-step': () =>
+            run(edit(path.join(REPO2, 'src/features/project-creation/config/wizard-steps.json')), fresh()),
+        'ai-bundle': () =>
+            run(edit(path.join(REPO2, 'src/features/project-creation/services/aiBundle/aiToolingGate.ts')), fresh()),
+        'mcp-tool': () =>
+            run(edit(path.join(REPO2, 'src/features/ai/server/toolDescriptors.ts')), fresh()),
     };
 
     /** `rule_id=` as declared inside each rule file — the name the table keys on. */

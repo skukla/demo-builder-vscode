@@ -1,0 +1,42 @@
+# Routes a stylesheet edit to the instrument that proves it moved only what it meant to.
+#
+# ADR-018 sets the evidence bar for changing existing CSS, and `webview-visual-baseline`
+# is what meets it. The reason it needs a hook rather than a doc: a CSS change that
+# breaks a surface produces NO error anywhere. There are eight webview bundles and a
+# feature stylesheet reaches only the ones whose entry imports it, so a class can be
+# styled on one surface and absent on the next with nothing failing — CLAUDE.md calls
+# this the single most common styling surprise in the repo.
+rule_id=css-baseline
+rule_once=1
+
+rule_match() {
+    case "$1" in
+        Edit|Write) ;;
+        *) return 1 ;;
+    esac
+    [ -n "$3" ] || return 1
+    case "$3" in
+        */src/*.css) return 0 ;;
+    esac
+    return 1
+}
+
+rule_message() {
+    cat <<'MSG'
+You are changing a stylesheet. Before this edit, invoke the
+`webview-visual-baseline` skill (Skill tool, skill: "webview-visual-baseline") and
+capture a BEFORE fingerprint.
+
+A CSS change that breaks a surface fails silently. Eight webview bundles exist and a
+feature stylesheet reaches only the bundles whose entry imports it, so a class can be
+styled on one surface and simply absent on the next with no error anywhere. The
+computed-style fingerprint is what turns that into a diff you can read.
+
+Two things the skill will stop you getting wrong, both measured:
+  - `serve.sh` picks the port and the capture REFUSES to run without the sentinel —
+    another app answering your port looks exactly like a broken instrument.
+  - Run the capture against a build you have NOT changed before concluding anything.
+
+This hook fires only once per session.
+MSG
+}

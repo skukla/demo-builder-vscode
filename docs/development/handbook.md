@@ -603,6 +603,53 @@ check says so and names the file.
 > Enforced by `.claude/hooks/rules/31-registry-dir.rule`, which lists the directory's
 > contents at the moment you create the file.
 
+> **Convention.** Before creating a test file, read the splitting playbook.
+> *Why:* line count is a trigger, not a reason, and the mistakes are specific enough to
+> be listed: split by responsibility and name the file for it (never `-part2`), extract
+> shared setup into `.testUtils` FIRST, and keep the test count identical across the
+> move — a dropped `describe` is invisible in a green run. Measured 2026-09-10: a
+> session that had not read it invented a splitter, cut 11 files at their arithmetic
+> midpoint and broke 167 tests, while every one of those rules sat written down.
+> Enforced by `.claude/hooks/rules/32-test-authoring.rule`, which delivers the rules
+> themselves at the moment you create the file.
+
+> **Convention.** Before adding a script to `scripts/`, read what the instrument
+> registry already runs.
+> *Why:* `tests/sop/toolingRegistry.ts` lists 39 instruments and a suite fails the build
+> when it and the disk disagree — but nothing stops a fortieth being written for a job
+> one of the 39 already does. On 2026-09-10 four throwaway scanners were written for
+> measurements registered instruments already report, twice producing a wrong number.
+> Enforced by `.claude/hooks/rules/33-new-instrument.rule`, which lists the registry's
+> contents at the moment you create the file.
+
+> **Convention.** Capture a visual baseline before changing a stylesheet.
+> *Why:* a CSS change that breaks a surface produces no error anywhere. Eight bundles
+> exist and a feature stylesheet reaches only the ones whose entry imports it, so a class
+> can be styled on one surface and absent on the next with everything still green.
+> [ADR-018](../architecture/adr/018-css-architecture.md) sets this as the evidence bar
+> for changing existing CSS.
+> Enforced by `.claude/hooks/rules/34-css-baseline.rule`.
+
+> **Convention.** Wizard step order, area order and step bodies change together.
+> *Why:* `wizard-steps.json`, `buildYourProjectAreas.ts` and `commerceSections.ts` must
+> agree, and nothing compares them while you edit. A change to one typechecks, passes,
+> and silently disagrees with the others.
+> Enforced by `.claude/hooks/rules/35-wizard-step.rule`.
+
+> **Convention.** The AI-bundle gate has four seams; change all or none.
+> *Why:* `buildMcpConfig`, `installAiDefaultsMcpTools`, `componentInstallationOrchestrator`
+> and `handleRegenerateAiFiles` each apply the same predicate over separate call chains.
+> Miss one and project creation and "Regenerate AI Files" produce different bundles,
+> silently — and the flow you are testing exercises only one of them.
+> Enforced by `.claude/hooks/rules/36-ai-bundle.rule`.
+
+> **Convention.** A change to the MCP tool surface is made through its skill.
+> *Why:* a descriptor row cannot tell you the three things that decide whether a tool
+> works for an agent — headless safety, read-vs-action honesty, and the required
+> `needsAuth` declaration. The first two fail silently on the agent side; the third
+> fails the build.
+> Enforced by `.claude/hooks/rules/37-mcp-tool.rule`.
+
 > **Convention.** A webview component defines no CSS in a `<style>` block. Its styles go
 > in a stylesheet.
 > *Why:* a class defined in a style block exists only while that component is MOUNTED, so
@@ -1336,12 +1383,12 @@ it is, and the count of unenforced rules is stated rather than hidden.
 
 Conventions decay unless something checks them. Four layers do:
 
-- **Hooks** stop a bad action as it happens — 12 rules in `.claude/hooks/rules/`
+- **Hooks** stop a bad action as it happens — 18 rules in `.claude/hooks/rules/`
 - **Enforcer suites** fail the build when code drifts — 47 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 96 conventions. 96 of them are enforced; 0 are not.**
+**This handbook states 102 conventions. 102 of them are enforced; 0 are not.**
 
 The last one to get there was "vendor CSS sits in the lowest cascade layer", and it was
 outstanding because it was **not yet true**: `@layer vendor` existed in no bundle, so a

@@ -1,0 +1,37 @@
+# Routes wizard-step work to its skill.
+#
+# The wizard's step order lives in wizard-steps.json, its AREA order in
+# buildYourProjectAreas.ts, and the bodies in ui/steps/ — three places that must
+# agree, and nothing checks that they do at edit time. CLAUDE.md's "Hit every
+# surface" list names this shape: a change correct on the path you tested and
+# missing everywhere else, with every check still green.
+rule_id=wizard-step
+rule_once=1
+
+rule_match() {
+    case "$1" in
+        Edit|Write) ;;
+        *) return 1 ;;
+    esac
+    [ -n "$3" ] || return 1
+    case "$3" in
+        */config/wizard-steps.json) return 0 ;;
+        */ui/steps/buildYourProjectAreas.ts) return 0 ;;
+        */ui/steps/commerceSections.ts) return 0 ;;
+    esac
+    return 1
+}
+
+rule_message() {
+    cat <<'MSG'
+You are editing the wizard's step or area ORDER. Invoke the `wizard-step-authoring`
+skill (Skill tool, skill: "wizard-step-authoring") first.
+
+Three files have to agree and nothing checks them against each other while you
+edit: `wizard-steps.json` (the canonical step order), `buildYourProjectAreas.ts`
+(which areas are visible and in what order) and the step bodies under `ui/steps/`.
+A change to one of them typechecks, passes, and silently disagrees with the others.
+
+This hook fires only once per session.
+MSG
+}

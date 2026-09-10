@@ -17,7 +17,7 @@ cd "$(git rev-parse --show-toplevel)" || exit 1
 run() {
   local path="$1" label="$2" expect="$3"
   local payload out code got verdict
-  payload=$(P="$path" python3 -c 'import json,os;print(json.dumps({"tool_name":"Write","tool_input":{"file_path":os.environ["P"],"content":"x"},"session_id":"proof"}))')
+  payload=$(P="$path" S="reg-$RANDOM$RANDOM$$" python3 -c 'import json,os;print(json.dumps({"tool_name":"Write","tool_input":{"file_path":os.environ["P"],"content":"x"},"session_id":os.environ["S"]}))')
   out=$(printf '%s' "$payload" | bash .claude/hooks/router.sh 2>&1); code=$?
   got="pass"; [ "$code" -ne 0 ] && got="BLOCK"
   verdict="OK"; [ "$got" != "$expect" ] && verdict="*** WRONG ***"
@@ -34,11 +34,14 @@ echo
 echo "=== everything else stays silent ==="
 run "$ROOT/tests/sop/canonical-fakes.test.ts"      "EXISTING file — an edit, not a new member" pass
 run "$ROOT/src/features/x/brandNewThing.ts"        "new file outside the curated dirs" pass
-run "$ROOT/tests/features/eds/whatever.test.ts"    "new test outside tests/sop|helpers" pass
+# Rule 32 claims a NEW test file anywhere under tests/ as of 2026-09-10, so this
+# is no longer a silent case — it is simply not RULE 31 that answers. This proof
+# checks exit codes rather than attributing by message, so the expectation moves.
+run "$ROOT/tests/features/eds/whatever.test.ts"    "new test — rule 32 now claims it" BLOCK
 
 echo
 echo "=== the message must actually NAME what is already there ==="
-payload=$(P="$ROOT/tests/sop/does-not-exist-yet.test.ts" python3 -c 'import json,os;print(json.dumps({"tool_name":"Write","tool_input":{"file_path":os.environ["P"],"content":"x"},"session_id":"proof2"}))')
+payload=$(P="$ROOT/tests/sop/does-not-exist-yet.test.ts" S="reg-msg-$RANDOM$RANDOM$$" python3 -c 'import json,os;print(json.dumps({"tool_name":"Write","tool_input":{"file_path":os.environ["P"],"content":"x"},"session_id":os.environ["S"]}))')
 msg=$(printf '%s' "$payload" | bash .claude/hooks/router.sh 2>&1)
 # canonical-fakes.test.ts is a long-standing member; if the listing is empty the
 # path variable is wrong and the rule is delivering nothing.

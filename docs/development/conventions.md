@@ -12,8 +12,8 @@ were wrong within an hour of being written. This one is derived from the
 handbook's own callouts and checked against the enforcers on disk in both
 directions, so it cannot.
 
-- **96** conventions, **96** enforced
-- **27** name the decision record behind them
+- **102** conventions, **102** enforced
+- **28** name the decision record behind them
 - **6** name a procedure — an SOP or a skill
 - **1** have all three layers
 
@@ -103,6 +103,12 @@ it means the rule rests on somebody noticing.
 | A CSS class used in a bundle is styled by that bundle. |  |  | `stylesheet-bundles.test.ts` |
 | Before writing a new UI component, check whether the shared vocabulary already has it. |  |  | `30-reuse-first.rule` |
 | Before adding a file to a curated directory, read what is already in it. |  |  | `31-registry-dir.rule` |
+| Before creating a test file, read the splitting playbook. |  |  | `32-test-authoring.rule` |
+| Before adding a script to `scripts/`, read what the instrument registry already runs. |  |  | `33-new-instrument.rule` |
+| Capture a visual baseline before changing a stylesheet. | [ADR](../architecture/adr/018-css-architecture.md) |  | `34-css-baseline.rule` |
+| Wizard step order, area order and step bodies change together. |  |  | `35-wizard-step.rule` |
+| The AI-bundle gate has four seams; change all or none. |  |  | `36-ai-bundle.rule` |
+| A change to the MCP tool surface is made through its skill. |  |  | `37-mcp-tool.rule` |
 | A webview component defines no CSS in a `<style>` block. Its styles go in a stylesheet. | [ADR](../architecture/adr/018-css-architecture.md) |  | `stylesheet-bundles.test.ts` |
 | There is ONE design system — Adobe Spectrum's. Our own tokens map the user's VS Code theme onto a few semantic names, or hold a constant Spectrum has no opinion about. They never restate a colour Spectrum already defines. | [ADR](../architecture/adr/018-css-architecture.md) |  | `tokens.test.ts` |
 | A `prefers-reduced-motion: reduce` block sits directly in `@layer overrides`, and needs no `!important`. | [ADR](../architecture/adr/018-css-architecture.md) |  | `css-declarations.test.ts` |
