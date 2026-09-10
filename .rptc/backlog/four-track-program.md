@@ -219,3 +219,7 @@ the state table above is the record until there is real work to hold.
 - 2026-09-08  docs(backlog): the finish list for the four-track programme, measured not remembered (`353b62b6c`)
 - 2026-09-08  fix(backlog): the glossary item was on the roster in prose only (`c191e6bf4`)
 - 2026-09-10  2026-09-10  Table corrected: PL-47/48 shipped, PL-13/19/20/34 closed, conventions 88->109 all enforced
+- 2026-09-10  fix(program): three stale claims and two crying-wolf checks — sweep 3 failing gates to 1 (`1a3428adf`)
+- 2026-09-10  docs(backlog): two shipped, one demoted — "used" decided all three (`66e871331`)
+- 2026-09-10  docs(backlog): the work list, remade from the whole program (`38ddabd43`)
+- 2026-09-10  docs(backlog): the four-track table catches up with what shipped (`d959b4c21`)

@@ -93,3 +93,4 @@ such list is the five non-negotiables in CLAUDE.md plus the global quality SOP.
 
 - 2026-09-10  Filed after a full program pass; the gap is recorded in
   `.rptc/research/2026-09-10-program-worklist/`
+- 2026-09-10  docs(backlog): PL-55 — reversibility and error handling have no convention at all (`30e5b1bdf`)

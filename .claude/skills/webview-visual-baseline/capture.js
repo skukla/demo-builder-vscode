@@ -302,7 +302,52 @@ async function capture({ surfaces = SURFACES, themes = THEMES, widths = WIDTHS, 
             }
         }
     }
+    await recordCapture('resting', { sentinel, surfaces, themes, widths, capture: out });
     return out;
+}
+
+/**
+ * Tell the harness server this capture happened, so it can write the record.
+ *
+ * WHY. Until 2026-09-10 a capture left NO trace: the fingerprint came back in a
+ * tool result and vanished, so nothing downstream could answer "was a baseline
+ * taken for this change?" That is what let a dashboard CSS regression reach a
+ * release spot-check — the interaction capture had been run and the resting one
+ * had not, and the two were indistinguishable after the fact.
+ *
+ * DELIBERATELY NOT FATAL. A capture that succeeded is still a real capture, and
+ * throwing here would turn a bookkeeping failure into a lost measurement. It
+ * returns the server's answer so a caller can see the record was written; the
+ * ABSENCE of a record is what `captureInteractions` refuses on, which is the
+ * check that has teeth.
+ */
+async function recordCapture(kind, { sentinel, surfaces, themes, widths, capture: cells, note }) {
+    const body = {
+        kind,
+        sentinel,
+        surfaces: surfaces || [],
+        themes: themes || [],
+        widths: widths || [],
+        cells: cells ? Object.keys(cells).length : null,
+        elements: cells
+            ? Object.values(cells).reduce((n, v) => n + (Array.isArray(v) ? v.length : 0), 0)
+            : null,
+        note: note || null,
+    };
+    try {
+        const res = await fetch('/record', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
+        const json = await res.json();
+        if (!res.ok) return { recorded: false, error: json && json.error };
+        return { recorded: true, ...json };
+    } catch (err) {
+        // An older serve.sh (plain http.server) has no POST. Say so plainly rather
+        // than looking like the capture failed.
+        return { recorded: false, error: String(err && err.message ? err.message : err) };
+    }
 }
 
 /** Diff two captures; returns the moved elements, named by property. */

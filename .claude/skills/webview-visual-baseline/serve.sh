@@ -17,9 +17,17 @@
 # fetch from the browser can tell the two apart — which is why the sentinel is
 # now enforced by capture.js and capture-interactions.js rather than remembered.
 #
+# THE ONLY HARNESS LAUNCHER. `scripts/cssVisualHarness.mjs` was a second one doing
+# the same seven steps into the same /tmp/vr; it was deleted on 2026-09-10 and its
+# two extra flags (`--stop`, `--build`) folded in here. Keeping both meant one of
+# them was always the stale one, and it was: the script still served through plain
+# `python3 -m http.server`, which enforces no sentinel and cannot record a capture.
+#
 # Usage:
 #   eval "$(.claude/skills/webview-visual-baseline/serve.sh)"   # sets VR_BASE, VR_SENTINEL
+#   .claude/skills/webview-visual-baseline/serve.sh --build     # ...compiling first
 #   .claude/skills/webview-visual-baseline/serve.sh --restage   # rebuild bundles into a running server
+#   .claude/skills/webview-visual-baseline/serve.sh --stop      # tear down and remove the staging dir
 #
 set -euo pipefail
 
@@ -36,6 +44,24 @@ stage() {
     [ -f "$ROOT/node_modules/axe-core/axe.min.js" ] && cp "$ROOT/node_modules/axe-core/axe.min.js" "$STAGE"/
     node "$SKILL/build-fixtures.mjs" "$STAGE" >/dev/null
 }
+
+if [ "${1:-}" = "--stop" ]; then
+    # Folded in from scripts/cssVisualHarness.mjs when that second, parallel
+    # implementation of this file was deleted (2026-09-10). Two scripts staged the
+    # same directory, wrote their own sentinel and served the same bundles; the
+    # older one used a plain `python3 -m http.server`, so it enforced no sentinel
+    # and had no /record endpoint, while printing a hand-checked procedure this
+    # file exists to remove.
+    pkill -f "$SKILL/server.py" 2>/dev/null || true
+    rm -rf "$STAGE"
+    echo "harness stopped, $STAGE removed" >&2
+    exit 0
+fi
+
+if [ "${1:-}" = "--build" ] || [ "${2:-}" = "--build" ]; then
+    npm --prefix "$ROOT" run compile >/dev/null 2>&1 \
+        || { echo "npm run compile failed — run it directly to see why" >&2; exit 1; }
+fi
 
 if [ "${1:-}" = "--restage" ]; then
     # Re-copy bundles under a RUNNING server, for the after-half of a comparison.
@@ -61,7 +87,12 @@ for _ in $(seq 1 40); do
     if ! nc -z 127.0.0.1 "$PORT" 2>/dev/null; then break; fi
 done
 
-( cd "$STAGE" && exec python3 -m http.server "$PORT" >/dev/null 2>&1 ) &
+# NOT `python3 -m http.server`: that has no POST, and the captures need somewhere
+# to record themselves. They run inside the browser and cannot write to disk; this
+# process runs on the host, in the repo, and writes `reports/visual-baseline/`.
+# See server.py for why an unrecorded capture is the failure being fixed.
+python3 "$SKILL/server.py" --port "$PORT" --stage "$STAGE" --repo "$ROOT" \
+    --sentinel "$SENTINEL" >/dev/null 2>&1 &
 SERVER_PID=$!
 
 for _ in $(seq 1 50); do

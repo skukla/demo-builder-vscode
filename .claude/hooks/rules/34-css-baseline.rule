@@ -32,10 +32,19 @@ feature stylesheet reaches only the bundles whose entry imports it, so a class c
 styled on one surface and simply absent on the next with no error anywhere. The
 computed-style fingerprint is what turns that into a diff you can read.
 
-Two things the skill will stop you getting wrong, both measured:
+Three things the skill will stop you getting wrong, all measured:
   - `serve.sh` picks the port and the capture REFUSES to run without the sentinel —
     another app answering your port looks exactly like a broken instrument.
   - Run the capture against a build you have NOT changed before concluding anything.
+  - `capture()` (RESTING) is the base; `captureInteractions()` is the supplement, and
+    it now refuses until a resting capture has been recorded. On 2026-09-10 a day of
+    CSS work was verified with the interaction half alone, and a dashboard regression
+    — Spectrum's label padding eating 19px of a 96px tile once `box-sizing:
+    border-box` began applying — reached a release spot-check. No hover, focus or
+    active state can see a width change.
+
+Every capture now records itself to `reports/visual-baseline/`, so "was a baseline
+taken for this change?" is answerable afterwards. It was not, before.
 
 This hook fires only once per session.
 MSG

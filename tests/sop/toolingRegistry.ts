@@ -150,15 +150,6 @@ const PERIODIC: readonly Instrument[] = [
         writes: true,
     },
     {
-        id: 'css:harness',
-        kind: 'npm-script',
-        cadence: 'periodic',
-        resultKind: 'report',
-        what: 'stands up the computed-style comparison harness in one command — compile, stage eight bundles and the capture scripts, build fixtures, pick a free port, and print the sentinel that proves the browser reached THIS server',
-        runs: 'npm run css:harness',
-        writes: true,
-    },
-    {
         id: 'dead-mock-scan',
         kind: 'skill',
         cadence: 'periodic',
@@ -267,7 +258,7 @@ const JUDGEMENT: readonly Instrument[] = [
         id: 'test:mutation:focus',
         kind: 'npm-script',
         cadence: 'periodic',
-        what: 'Stryker over ONE module — 3 minutes instead of the sample\'s 16, so a survivor can be killed and re-measured inside a working session rather than a release cut',
+        what: "Stryker over ONE module — 3 minutes instead of the sample's 16, so a survivor can be killed and re-measured inside a working session rather than a release cut",
         runs: 'npm run test:mutation:focus',
         resultKind: 'report',
     },
@@ -450,7 +441,10 @@ const AUTHORING: readonly Instrument[] = (
         ['backlog-item', 'read and write the backlog through one CLI'],
         ['unattended-loop', 'the owner-away working mode'],
         ['reuse-first', 'find the house component before building a new one'],
-        ['ask-the-tool', 'let tsc, jest and eslint decide which sites a mechanical refactor must touch, instead of reading each one'],
+        [
+            'ask-the-tool',
+            'let tsc, jest and eslint decide which sites a mechanical refactor must touch, instead of reading each one',
+        ],
     ] as const
 ).map(
     ([id, what]): Instrument => ({
@@ -525,12 +519,12 @@ const PROGRAM_INSTRUMENTS: readonly Instrument[] = [
         kind: 'skill',
         cadence: 'on-demand',
         resultKind: 'report',
-        path: '.claude/skills/webview-visual-baseline/build-fixtures.mjs',
-        what: 'computed-style fingerprint of every webview — the baseline that makes an ADR-018 CSS change provable',
-        runs: 'node .claude/skills/webview-visual-baseline/build-fixtures.mjs <outdir>',
+        path: '.claude/skills/webview-visual-baseline/serve.sh',
+        what: 'computed-style fingerprint of every webview — the baseline that makes an ADR-018 CSS change provable. `serve.sh` is the ONE launcher (--build/--restage/--stop); it starts server.py, which serves the stage and records every capture to reports/visual-baseline/ so that "was a baseline taken?" is answerable',
+        runs: 'eval "$(.claude/skills/webview-visual-baseline/serve.sh --build)"',
         writes: true,
         unwiredReason:
-            'takes an output directory and drives a browser — a person reads the diff. Moved out of .rptc/research on 2026-08-29: PL-21 runs it repeatedly, and a research folder is where findings live, not instruments',
+            'drives a browser and a person reads the diff. Moved out of .rptc/research on 2026-08-29: PL-21 runs it repeatedly, and a research folder is where findings live, not instruments. The npm-script entry `css:harness` was a SECOND launcher for this same skill and was deleted with it on 2026-09-10',
     },
 ];
 

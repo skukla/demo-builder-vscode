@@ -165,10 +165,44 @@ missing is a fixture that produces such an element to force it on.
 
 | | |
 |---|---|
+| `serve.sh` | THE launcher — stages, serves, prints `VR_*`. `--build`, `--restage`, `--stop` |
+| `server.py` | the HTTP server it starts: serves the stage AND records every capture |
 | `harness.html` | loads one bundle standalone, stubs the VS Code API, serves fixtures |
 | `build-fixtures.mjs` | generates `fixtures.json` from REAL artifacts |
 | `capture.js` | the fingerprint + faithfulness control + diff, run in the browser |
 | `capture-interactions.js` | hover/focus/active fingerprints, driven from Playwright over CDP |
+
+There is ONE launcher. `scripts/cssVisualHarness.mjs` was a second implementation of
+`serve.sh` — same seven steps, same `/tmp/vr`, its own sentinel — and it was deleted
+on 2026-09-10 with its `--stop` and `--build` folded in here. Two launchers meant one
+was always the stale one, and it was: the script served through plain
+`python3 -m http.server`, so it enforced no sentinel and could not record a capture,
+while printing a hand-checked procedure `serve.sh` exists to remove.
+
+## Every capture records itself (2026-09-10)
+
+`capture()` and `captureInteractions()` POST to the harness server, which writes
+`reports/visual-baseline/<kind>-<stamp>.json` — kind, sentinel, git sha, the dirty
+paths at the time, the surface/theme/width matrix, and the cell and element counts.
+Gitignored: it is evidence about a working tree, not a shared artifact.
+
+**Why it had to be a side effect of capturing.** Until this landed, a capture left no
+trace at all. So "was a baseline taken for this CSS change?" could not be answered by
+the gate, by a pre-push check, by the owner, or by the agent an hour later. A step that
+has to be remembered is the step that gets missed.
+
+**`captureInteractions()` REFUSES when no resting capture has been recorded.** Pass
+`allowWithoutResting: true` to work on interaction states deliberately and alone —
+that is a decision, so it has to be typed, and it is written into the record's `note`.
+
+This exists because of a specific failure on 2026-09-10. A day of CSS work was verified
+with `capture-interactions.js` and nothing else. Interaction states are the SUPPLEMENT;
+the resting fingerprint is the base, and it is the one that sees a width, a padding, a
+rule that stopped applying. Spectrum's ActionButton label padding eating 19px of a 96px
+dashboard tile — once `box-sizing: border-box` began applying — is invisible to every
+hover, focus and active state, and it reached a release spot-check because running half
+the instrument was indistinguishable from running it. The skill already said which was
+which, so a doc could not fix it; the check lives at the point of the mistake instead.
 
 The two writeups stayed in `.rptc/research/webview-visual-testing/` — that tier is
 for findings, this one is for the instrument: `research.md` (how the approach was
@@ -178,10 +212,19 @@ finding). ADR-018 cites both.
 ## Procedure
 
 ```bash
-npm run compile                                    # CI does not build; the instrument must
-eval "$(.claude/skills/webview-visual-baseline/serve.sh)"   # stages + serves + prints the port
+eval "$(.claude/skills/webview-visual-baseline/serve.sh --build)"   # compiles, stages, serves
 echo "$VR_BASE $VR_SENTINEL"
+# ... capture, change CSS, --restage, capture again, diff ...
+.claude/skills/webview-visual-baseline/serve.sh --stop              # tear down
 ```
+
+`--build` runs `npm run compile` first (CI does not build; the instrument must).
+Drop it when `dist/` is already current — `serve.sh` refuses rather than serving a
+missing `dist/webview`.
+
+**Run `capture()` BEFORE `captureInteractions()`.** The resting fingerprint is the
+base and the interaction one is the supplement; the second now refuses until the
+first has been recorded. See "Every capture records itself" below for why.
 
 `serve.sh` does the staging, picks a RANDOM high port, writes a fresh sentinel and
 exports `VR_BASE`, `VR_SENTINEL`, `VR_PID`, `VR_STAGE`. For the after-half of a

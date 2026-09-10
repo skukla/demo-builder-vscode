@@ -135,8 +135,58 @@ async function assertServerIsOurs(page, base, sentinel) {
     }
 }
 
-async function captureInteractions(page, { surfaces = SURFACES, base, sentinel, theme = 'dark', width = 1280 } = {}) {
+/**
+ * Refuse to be mistaken for the whole instrument.
+ *
+ * THE FAILURE THIS EXISTS FOR, 2026-09-10. A day of CSS work was verified with
+ * this file and this file alone. Interaction states are the SUPPLEMENT; the
+ * resting fingerprint in `capture.js` is the base, and it is the one that sees a
+ * label's width, a box's padding, a rule that stopped applying. A dashboard
+ * regression — Spectrum's label padding eating 19px of a 96px tile once
+ * `box-sizing: border-box` began applying — is invisible to every hover, focus
+ * and active state, and it reached a release spot-check because running half the
+ * instrument looked exactly like running it.
+ *
+ * A doc could not fix that: the skill already said which was which. So the check
+ * lives at the point of the mistake, and it is a refusal rather than a warning —
+ * a warning is a thing you read after you have already decided you are done.
+ *
+ * Pass `allowWithoutResting: true` to work on interactions deliberately and on
+ * their own. That is a decision, and it has to be typed.
+ */
+async function assertRestingCaptureExists(page, base, sentinel) {
+    await page.goto(`${base}/records.json?cb=${Date.now()}`);
+    const raw = await page.evaluate(() => document.body.innerText);
+    let kinds = [];
+    try {
+        kinds = (JSON.parse(raw).kinds) || [];
+    } catch {
+        throw new Error(
+            `${base}/records.json did not return JSON. An older serve.sh served the harness with ` +
+            '`python3 -m http.server`, which has no recording endpoint — restart it with the ' +
+            'current serve.sh so captures leave a record.'
+        );
+    }
+    if (!kinds.includes('resting')) {
+        throw new Error(
+            'NO RESTING CAPTURE has been recorded against this harness (sentinel ' +
+            `${JSON.stringify(sentinel)}; recorded kinds: ${JSON.stringify(kinds)}).\n\n` +
+            'Interaction states are the SUPPLEMENT, not the verification. Run capture.js\'s ' +
+            'capture() first — it is what sees widths, padding and rules that stopped applying, ' +
+            'and it is what a resting-state regression shows up in.\n\n' +
+            'On 2026-09-10 a dashboard CSS regression shipped to a release spot-check because ' +
+            'only this half was run.\n\n' +
+            'Deliberately working on interactions alone? Pass allowWithoutResting: true.'
+        );
+    }
+}
+
+async function captureInteractions(page, {
+    surfaces = SURFACES, base, sentinel, theme = 'dark', width = 1280,
+    allowWithoutResting = false,
+} = {}) {
     await assertServerIsOurs(page, base, sentinel);
+    if (!allowWithoutResting) await assertRestingCaptureExists(page, base, sentinel);
     const out = {};
     for (const surface of surfaces) {
         await page.goto(`${base}/h.html?b=${surface}&t=${theme}&cb=${Date.now()}${Math.random()}`);
@@ -206,6 +256,26 @@ async function captureInteractions(page, { surfaces = SURFACES, base, sentinel, 
         }
         await cdp.detach();
     }
+    // Record this run too, so `records.json` shows what was actually measured
+    // rather than only what was measured first. Not fatal: a capture that ran is
+    // a real capture, and losing it to a bookkeeping failure would be worse.
+    await page.evaluate(async (body) => {
+        try {
+            await fetch('/record', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+        } catch { /* an older serve.sh has no POST; the refusal above already says so */ }
+    }, {
+        kind: 'interaction',
+        sentinel,
+        surfaces,
+        themes: [theme],
+        widths: [width],
+        cells: Object.keys(out).length,
+        note: allowWithoutResting ? 'ran with allowWithoutResting' : null,
+    });
     return out;
 }
 
