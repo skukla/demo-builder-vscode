@@ -168,12 +168,60 @@ function writeBuildInfo() {
     }
 }
 
+/**
+ * Write every output through a temp file and a rename, so a build is never
+ * observable half-done.
+ *
+ * WHY. esbuild writes an output file in place, non-atomically. `dist/extension.js`
+ * is ~5MB, so the window where it exists and is TRUNCATED is real, and the
+ * Extension Development Host reads that file the instant it launches. Load it
+ * mid-write and the host dies on sight — which reads as a random, intermittent
+ * crash, because whether it happens depends on the millisecond you pressed F5.
+ *
+ * Reported 2026-09-10: F5 killed the host twice and worked the third time. The
+ * build that produced it had finished 108 seconds earlier, mid-way through the
+ * first two attempts. Nothing was wrong with the extension; it was read while it
+ * was being written.
+ *
+ * A rename within the same directory is atomic on every filesystem this runs on,
+ * so a reader sees the OLD complete file or the NEW complete file and nothing in
+ * between. It applies to the webview bundles too — a half-written bundle blanks a
+ * surface the same way.
+ *
+ * This is a plugin rather than a step in `startContext` because watch-mode
+ * rebuilds happen inside esbuild and never come back through that function.
+ * `onEnd` fires for every rebuild; `startContext` fires once.
+ */
+const atomicWritePlugin = {
+    name: 'atomic-write',
+    setup(build) {
+        // Take writing away from esbuild — `outputFiles` is only populated when
+        // this is false, and we do the writing below.
+        build.initialOptions.write = false;
+        build.onEnd((result) => {
+            if (result.errors.length > 0) return; // a failed build writes nothing
+            for (const file of result.outputFiles ?? []) {
+                const dir = path.dirname(file.path);
+                fs.mkdirSync(dir, { recursive: true });
+                // Same directory, so the rename cannot cross filesystems. Dotted
+                // and pid-suffixed so two concurrent builds cannot collide on it.
+                const tmp = path.join(dir, `.${path.basename(file.path)}.${process.pid}.tmp`);
+                fs.writeFileSync(tmp, file.contents);
+                fs.renameSync(tmp, file.path);
+            }
+        });
+    },
+};
+
 // ---------------------------------------------------------------------------
 // Create a context, run the initial build, and return it for watch mode.
 // In non-watch mode the context is built once and disposed.
 // ---------------------------------------------------------------------------
 async function startContext(name, options) {
-    const ctx = await esbuild.context(options);
+    const ctx = await esbuild.context({
+        ...options,
+        plugins: [...(options.plugins ?? []), atomicWritePlugin],
+    });
     const result = await ctx.rebuild();
     logOutputSizes(result.metafile);
     if (!watch) {
