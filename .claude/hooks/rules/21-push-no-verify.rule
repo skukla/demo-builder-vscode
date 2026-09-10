@@ -1,0 +1,43 @@
+# Blocks `git push --no-verify`.
+#
+# NOT a nudge — this one blocks, every time. The pre-push hook runs the full gate,
+# and `--no-verify` is the one way to put an unverified tree on the remote. It is
+# also load-bearing that the gate runs PRE-PUSH rather than pre-commit: several sop
+# enforcers enumerate files with `git ls-files`, which lists tracked files only, so
+# a brand-new suite is invisible to them until it is committed.
+#
+# Measured 2026-09-03: a `--no-verify` push put a red family-rule state on the
+# remote. The escape hatch is real for a genuine emergency — run the command
+# yourself, outside the agent.
+rule_id=push-no-verify
+rule_once=0
+
+rule_match() {
+    [ "$1" = "Bash" ] || return 1
+    case "$2" in
+        *"git push"*) ;;
+        *) return 1 ;;
+    esac
+    case "$2" in
+        *--no-verify*) return 0 ;;
+        # `-n` is the short form and means the same thing.
+        *" -n "*|*" -n") return 0 ;;
+    esac
+    return 1
+}
+
+rule_message() {
+    cat <<'MSG'
+`git push --no-verify` skips the pre-push gate, which is the last check before the
+remote. Do not push this way.
+
+The gate runs PRE-push rather than pre-commit on purpose: several enforcer suites
+enumerate files with `git ls-files`, so a brand-new suite is invisible to them
+until it is committed. A pre-commit run has that blind spot; the pre-push one sees
+what CI sees.
+
+If the gate is failing, fix what it names or say so — a red tree on the remote
+costs more than the wait. If this is a genuine emergency, run the push yourself
+outside the agent.
+MSG
+}

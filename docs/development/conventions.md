@@ -12,7 +12,7 @@ were wrong within an hour of being written. This one is derived from the
 handbook's own callouts and checked against the enforcers on disk in both
 directions, so it cannot.
 
-- **102** conventions, **102** enforced
+- **109** conventions, **109** enforced
 - **28** name the decision record behind them
 - **6** name a procedure — an SOP or a skill
 - **1** have all three layers
@@ -109,6 +109,13 @@ it means the rule rests on somebody noticing.
 | Wizard step order, area order and step bodies change together. |  |  | `35-wizard-step.rule` |
 | The AI-bundle gate has four seams; change all or none. |  |  | `36-ai-bundle.rule` |
 | A change to the MCP tool surface is made through its skill. |  |  | `37-mcp-tool.rule` |
+| A source file that is already over its size limit does not grow. |  |  | `49-god-file.rule` |
+| Never push with the pre-push gate disabled. |  |  | `21-push-no-verify.rule` |
+| A new webview message is wired through its skill. |  |  | `38-webview-handler.rule` |
+| App Builder catalog edits go through the authoring skill. |  |  | `39-appbuilder-component.rule` |
+| Helix, DA.live and Config Service work goes through its skill. |  |  | `42-eds-publish.rule` |
+| Storefront config and dropin delivery go through their skill. |  |  | `43-eds-dropin.rule` |
+| Org and auth guard code follows the canonical org-context model. |  |  | `44-org-context.rule` |
 | A webview component defines no CSS in a `<style>` block. Its styles go in a stylesheet. | [ADR](../architecture/adr/018-css-architecture.md) |  | `stylesheet-bundles.test.ts` |
 | There is ONE design system — Adobe Spectrum's. Our own tokens map the user's VS Code theme onto a few semantic names, or hold a constant Spectrum has no opinion about. They never restate a colour Spectrum already defines. | [ADR](../architecture/adr/018-css-architecture.md) |  | `tokens.test.ts` |
 | A `prefers-reduced-motion: reduce` block sits directly in `@layer overrides`, and needs no `!important`. | [ADR](../architecture/adr/018-css-architecture.md) |  | `css-declarations.test.ts` |

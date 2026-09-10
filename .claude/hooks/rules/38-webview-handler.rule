@@ -1,0 +1,41 @@
+# Routes a new webview message to the skill that knows the whole chain.
+#
+# Adding one means touching a MessageType, a handler, a feature map, and the
+# webview request site — and the failure when you miss one is a message that is
+# sent and never answered, which presents as a slow surface rather than an error.
+rule_id=webview-handler
+rule_once=1
+
+rule_match() {
+    case "$1" in
+        Edit|Write) ;;
+        *) return 1 ;;
+    esac
+    [ -n "$3" ] || return 1
+    case "$3" in
+        */src/types/messages.ts) return 0 ;;
+        */src/types/handlers.ts) return 0 ;;
+    esac
+    # A brand-new handler map is the other end of the same change.
+    case "$3" in
+        */handlers/*Handlers.ts) [ -e "$3" ] || return 0 ;;
+    esac
+    return 1
+}
+
+rule_message() {
+    cat <<'MSG'
+You are changing the webview message contract. Invoke the `webview-command-handler`
+skill (Skill tool, skill: "webview-command-handler") first.
+
+A message is only wired when FOUR things agree: the MessageType, the handler, the
+feature's handler map, and the call site in the webview. Miss one and the message
+is sent and never answered — which shows up as a surface that never finishes
+loading, not as an error. Nothing typechecks the gap.
+
+Pattern B applies: a handler ANSWERS by returning its result. `sendMessage` is for
+progress pushes only.
+
+This hook fires only once per session.
+MSG
+}

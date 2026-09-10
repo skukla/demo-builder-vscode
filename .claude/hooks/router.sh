@@ -64,6 +64,20 @@ case "$payload" in
     *wizard-steps.json*|*buildYourProjectAreas*|*commerceSections*) ;;
     *aiBundle*|*RegenerateAiFiles*) ;;
     *Descriptors.ts*|*mcp-server.ts*) ;;
+    # 21-push-no-verify. NECESSARY: the rule only fires on a push.
+    *"git push"*) ;;
+    # 38/39/41/42/43/44 (added 2026-09-10). The four directory tokens are the kinds
+    # 41-god-file has a limit for, and they also admit 42/43/44, whose files all sit
+    # under services/. Broad on purpose: correctness before the ~55ms python parse
+    # this gate exists to avoid, and 41 has to measure a file before it can judge it.
+    */services/*|*/handlers/*|*/ui/components/*|*/utils/*|*/helpers/*) ;;
+    *messages.ts*|*app-builder-components.json*) ;;
+    # Two files the directory tokens above do NOT reach, each found by its rule's
+    # own proof rather than by review: `src/types/handlers.ts` has no `/handlers/`
+    # segment, and `core/shell/orgContextEnv.ts` is not under `/services/`. Both
+    # rules matched them and both were gated out — the fourth and fifth instance of
+    # the failure this pre-filter's docblock describes.
+    *handlers.ts*|*orgContextEnv*) ;;
     # 12-unquoted-glob. Each of these is a NECESSARY condition for that rule to
     # fire, so the gate cannot hide a real hit. Kept as the specific flag spellings
     # rather than a bare `*"*"*` (an asterisk appears in most payloads) — this stays

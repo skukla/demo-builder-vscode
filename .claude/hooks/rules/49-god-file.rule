@@ -1,0 +1,71 @@
+# Interrupts an edit to a source file that is ALREADY over its size limit.
+#
+# The thresholds are the ones `/sop-scan` Agent 11 uses and CLAUDE.md states:
+#   service >400   component >350   handler >500   util/helper >300
+#
+# WHY THIS IS A HOOK AND NOT A SCAN. The rule has existed for a long time and has
+# never been enforced anywhere: `godFile` in tests/sop refers only to the CSS god
+# file, the tooling registry holds no source-size instrument, and `npm run sweep`
+# does not run one. Agent 11 runs only when a person asks. Measured 2026-09-10:
+# 67 source files are over their limit, the worst at 1,156 lines against 400.
+#
+# It fires on the file you are ALREADY editing, which is the one moment the
+# information is actionable — and once per session, so it states the fact and gets
+# out of the way rather than blocking the work.
+#
+# NUMBERED LAST ON PURPOSE. Rules run in filename order and the first match wins.
+# This one is generic — "the file you are in is big" — while 42/43/44 name the
+# specific skill for the code in front of you. Numbered 41 it beat them:
+# `configGenerator.ts` is 598 lines AND a dropin-delivery file, and the size
+# notice answered instead of the routing rule. Specific beats generic, so this
+# sits at the end and catches everything nothing else claimed.
+rule_id=god-file
+rule_once=1
+
+rule_match() {
+    case "$1" in
+        Edit|Write) ;;
+        *) return 1 ;;
+    esac
+    [ -n "$3" ] || return 1
+    case "$3" in
+        */src/*.ts|*/src/*.tsx) ;;
+        *) return 1 ;;
+    esac
+    # Agent 11's exclusions: type definitions, barrels, config, tests.
+    case "$3" in
+        */types.ts|*/interfaces.ts|*/index.ts|*/index.tsx) return 1 ;;
+        */config/*|*.test.ts|*.test.tsx) return 1 ;;
+    esac
+    [ -f "$3" ] || return 1
+
+    RULE_LIMIT=0
+    case "$3" in
+        */handlers/*)      RULE_LIMIT=500 ;;
+        */services/*)      RULE_LIMIT=400 ;;
+        *.tsx)             RULE_LIMIT=350 ;;
+        */utils/*|*/helpers/*) RULE_LIMIT=300 ;;
+        *) return 1 ;;
+    esac
+    RULE_LINES=$(wc -l < "$3" 2>/dev/null | tr -d ' ')
+    [ -n "$RULE_LINES" ] || return 1
+    [ "$RULE_LINES" -gt "$RULE_LIMIT" ] || return 1
+    RULE_FILE="$3"
+    return 0
+}
+
+rule_message() {
+    echo "This file is ${RULE_LINES} lines, over the ${RULE_LIMIT}-line limit for its kind:"
+    echo "  ${RULE_FILE#*/src/}"
+    echo
+    echo "Editing it is fine. Adding to it is what this is about — if your change grows"
+    echo "the file, consider the \`decompose-god-file\` skill (Skill tool, skill:"
+    echo "\"decompose-god-file\") instead, which splits by responsibility without breaking"
+    echo "the public API."
+    echo
+    echo "The thresholds are /sop-scan Agent 11's: service >400, component >350,"
+    echo "handler >500, util >300. Nothing in this repo's build or sweep enforces them,"
+    echo "which is why this fires here. 67 files were over on 2026-09-10."
+    echo
+    echo "This hook fires only once per session."
+}

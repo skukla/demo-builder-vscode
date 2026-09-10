@@ -1,0 +1,42 @@
+# Routes org/auth guard work to the canonical model.
+#
+# IMS tokens are ORG-BOUND, and this is the single fact that ad-hoc org handling
+# keeps rediscovering. There is one approach here and no in-app org picker.
+rule_id=org-context
+rule_once=1
+
+rule_match() {
+    case "$1" in
+        Edit|Write) ;;
+        *) return 1 ;;
+    esac
+    [ -n "$3" ] || return 1
+    case "$3" in
+        */services/ensureOrgContext.ts) return 0 ;;
+        */services/detectProjectOrgMismatch.ts) return 0 ;;
+        */orgContextEnv.ts) return 0 ;;
+        */services/authenticationService.ts) return 0 ;;
+    esac
+    return 1
+}
+
+rule_message() {
+    cat <<'MSG'
+You are editing Adobe org/auth handling. Invoke the `adobe-org-context` skill
+(Skill tool, skill: "adobe-org-context") first — it is the canonical model, and
+ad-hoc org comparisons are the thing it exists to prevent.
+
+The load-bearing fact: IMS tokens are ORG-BOUND. A token issued for one org does
+not work for another, which is why the flow is `ensureOrgContext` +
+`detectProjectOrgMismatch` + per-operation `withOrgContext` targeting, with a
+forced re-login ("Switch IMS Org") as the recovery. There is NO in-app org picker
+and no place to compare org ids by hand.
+
+Related trap worth knowing before you read a response: a named field in an API
+response is a LEAD, not a finding. `ACCS-REST-API … enabled: false` was read as
+"this org has no entitlement"; reading the same catalog in the other org is what
+made the claim safe to write down.
+
+This hook fires only once per session.
+MSG
+}

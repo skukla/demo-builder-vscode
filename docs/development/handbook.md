@@ -650,6 +650,60 @@ check says so and names the file.
 > fails the build.
 > Enforced by `.claude/hooks/rules/37-mcp-tool.rule`.
 
+> **Convention.** A source file that is already over its size limit does not grow.
+> *Why:* the thresholds — service >400, component >350, handler >500, util >300 —
+> have been stated for a long time and enforced by nothing. `godFile` in `tests/sop/`
+> refers only to the CSS god file, the tooling registry holds no source-size
+> instrument, and the sweep runs none, so the check has only ever run when a person
+> invoked `/sop-scan`. Measured 2026-09-10: 67 files over, the worst at 1,156 lines
+> against 400.
+> Enforced by `.claude/hooks/rules/49-god-file.rule`, which measures the file you are
+> editing and states the number. Numbered last so a specific route wins over a
+> generic size notice.
+
+> **Convention.** Never push with the pre-push gate disabled.
+> *Why:* the gate runs pre-push rather than pre-commit because several enforcers
+> enumerate files with `git ls-files` and cannot see a new suite until it is
+> committed. Measured 2026-09-03: a `--no-verify` push put a red family-rule state on
+> the remote.
+> Enforced by `.claude/hooks/rules/21-push-no-verify.rule`, which blocks every time
+> rather than once per session.
+
+> **Convention.** A new webview message is wired through its skill.
+> *Why:* a message is only live when the MessageType, the handler, the feature's
+> handler map and the webview call site all agree. Miss one and the message is sent
+> and never answered — which presents as a surface that never finishes loading, not
+> as an error, and nothing typechecks the gap.
+> Enforced by `.claude/hooks/rules/38-webview-handler.rule`.
+
+> **Convention.** App Builder catalog edits go through the authoring skill.
+> *Why:* a catalog row drives the deploy/subscribe spine, where a partial
+> subscription PUT silently drops other components' subscriptions. And a config field
+> lives in three places — the JSON, its schema, and its TypeScript type.
+> Enforced by `.claude/hooks/rules/39-appbuilder-component.rule`.
+
+> **Convention.** Helix, DA.live and Config Service work goes through its skill.
+> *Why:* all three return SUCCESS for writes that did not take effect, which is why
+> every mutation in that feature is confirmed by a re-read. The auth and scoping rules
+> are not guessable — only the DA.live IMS bearer token bypasses a `/live` DELETE 403,
+> and `aem.repositoryId` must be written to the SITE config or AEM Assets silently
+> does not bind.
+> Enforced by `.claude/hooks/rules/42-eds-publish.rule`.
+
+> **Convention.** Storefront config and dropin delivery go through their skill.
+> *Why:* dropins reach the browser through the head.html import map and a vendored
+> `__dropins__` directory committed in the STOREFRONT repo (not this one), and they
+> share internal chunks — mixing generations blank-pages the storefront with no error
+> message.
+> Enforced by `.claude/hooks/rules/43-eds-dropin.rule`.
+
+> **Convention.** Org and auth guard code follows the canonical org-context model.
+> *Why:* IMS tokens are ORG-BOUND. The flow is `ensureOrgContext` +
+> `detectProjectOrgMismatch` + per-operation `withOrgContext`, with a forced re-login
+> as the recovery. There is no in-app org picker and no place to compare org ids by
+> hand; ad-hoc org handling is what this exists to prevent.
+> Enforced by `.claude/hooks/rules/44-org-context.rule`.
+
 > **Convention.** A webview component defines no CSS in a `<style>` block. Its styles go
 > in a stylesheet.
 > *Why:* a class defined in a style block exists only while that component is MOUNTED, so
@@ -1383,12 +1437,12 @@ it is, and the count of unenforced rules is stated rather than hidden.
 
 Conventions decay unless something checks them. Four layers do:
 
-- **Hooks** stop a bad action as it happens — 18 rules in `.claude/hooks/rules/`
+- **Hooks** stop a bad action as it happens — 25 rules in `.claude/hooks/rules/`
 - **Enforcer suites** fail the build when code drifts — 47 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 102 conventions. 102 of them are enforced; 0 are not.**
+**This handbook states 109 conventions. 109 of them are enforced; 0 are not.**
 
 The last one to get there was "vendor CSS sits in the lowest cascade layer", and it was
 outstanding because it was **not yet true**: `@layer vendor` existed in no bundle, so a

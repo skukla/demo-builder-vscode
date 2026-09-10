@@ -549,6 +549,22 @@ describe('every rule is reachable through the pre-filter', () => {
             run(edit(path.join(REPO2, 'src/features/project-creation/services/aiBundle/aiToolingGate.ts')), fresh()),
         'mcp-tool': () =>
             run(edit(path.join(REPO2, 'src/features/ai/server/toolDescriptors.ts')), fresh()),
+        // The seven added later on 2026-09-10. Two of them — `handlers.ts` and
+        // `core/shell/orgContextEnv.ts` — were gated out by the pre-filter on the
+        // first run and found by their own proofs, which is the fourth and fifth
+        // time that gate has been the actual bug.
+        'push-no-verify': () => run(bash(`git push --no-verify origin develop`), fresh()),
+        'webview-handler': () => run(edit(path.join(REPO2, 'src/types/messages.ts')), fresh()),
+        'appbuilder-component': () =>
+            run(edit(path.join(REPO2, 'src/features/components/config/app-builder-components.json')), fresh()),
+        'eds-publish': () =>
+            run(edit(path.join(REPO2, 'src/features/eds/services/helix/helixApiClient.ts')), fresh()),
+        'eds-dropin': () =>
+            run(edit(path.join(REPO2, 'src/features/eds/services/placeholderStubs.ts')), fresh()),
+        'org-context': () =>
+            run(edit(path.join(REPO2, 'src/features/authentication/services/ensureOrgContext.ts')), fresh()),
+        'god-file': () =>
+            run(edit(path.join(REPO2, 'src/features/app-builder/services/appBuilderComponentRunner.ts')), fresh()),
     };
 
     /** `rule_id=` as declared inside each rule file — the name the table keys on. */

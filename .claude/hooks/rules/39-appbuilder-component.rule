@@ -1,0 +1,33 @@
+# Routes App Builder catalog edits to the skill that carries the deploy/subscribe spine.
+rule_id=appbuilder-component
+rule_once=1
+
+rule_match() {
+    case "$1" in
+        Edit|Write) ;;
+        *) return 1 ;;
+    esac
+    [ -n "$3" ] || return 1
+    case "$3" in
+        */config/app-builder-components.json) return 0 ;;
+    esac
+    return 1
+}
+
+rule_message() {
+    cat <<'MSG'
+You are editing the App Builder catalog. Invoke the
+`appbuilder-component-authoring` skill (Skill tool, skill:
+"appbuilder-component-authoring") first.
+
+A catalog row is not just data — it drives the deploy/subscribe spine, and three
+things there are easy to get wrong and hard to see: axis-filter semantics, the
+FULL-UNION subscription PUT (a partial PUT silently drops other components'
+subscriptions), and the guard chain.
+
+A config field lives in THREE places — this JSON, its schema, and its TypeScript
+type. Changing one and not the others typechecks and fails at runtime.
+
+This hook fires only once per session.
+MSG
+}

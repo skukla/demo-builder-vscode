@@ -1,0 +1,40 @@
+# Routes Helix / DA.live / Config Service work to the skill with the auth+scoping rules.
+#
+# These three APIs share a property that makes guessing expensive: they RETURN
+# SUCCESS for writes that did not take effect. Every mutation in this feature is
+# confirmed by a re-read for that reason.
+rule_id=eds-publish
+rule_once=1
+
+rule_match() {
+    case "$1" in
+        Edit|Write) ;;
+        *) return 1 ;;
+    esac
+    [ -n "$3" ] || return 1
+    case "$3" in
+        */eds/services/helix/*) return 0 ;;
+        */eds/services/daLive/*) return 0 ;;
+        */eds/services/configService/*) return 0 ;;
+    esac
+    return 1
+}
+
+rule_message() {
+    cat <<'MSG'
+You are editing a Helix / DA.live / Config Service path. Invoke the
+`eds-publish-and-config` skill (Skill tool, skill: "eds-publish-and-config") first.
+
+These APIs return SUCCESS for writes that did not take effect, which is why every
+mutation here is confirmed by a re-read rather than by the write's own status. The
+skill carries the auth and scoping rules that are not guessable:
+
+  - which token each operation needs — a DELETE /live 403 "while source exists" is
+    checked against fstab.yaml and ONLY the DA.live IMS bearer token bypasses it
+  - site config vs org config: `aem.repositoryId` must be written to the SITE
+    config or the block library appears and AEM Assets does not
+  - `grantSiteAdmin` REPLACES the role list; use ensureSiteAdmin/revokeSiteAdmin
+
+This hook fires only once per session.
+MSG
+}
