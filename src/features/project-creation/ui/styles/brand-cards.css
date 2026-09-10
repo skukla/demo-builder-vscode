@@ -26,10 +26,12 @@
    starts at the same inset below the header as every other flow step; sides/bottom keep
    the layout's default 24px. */
 .brand-gallery-column {
-    /* ALL FOUR SIDES, because the component now passes `padding="0px"`. It used
-       to set only the top and inherit 24px from SingleColumnLayout's inline
-       default — which meant a prop and this stylesheet each owned part of one
-       element's padding, and the top could only win with `!important`. */
+    /* ALL FOUR SIDES. BrandGallery passes `padding={null}`, so
+       `.single-column-layout`'s padding rule excludes itself and this is the only
+       padding declaration on the element. It used to set just the top and inherit
+       24px from SingleColumnLayout's inline default — a prop and this stylesheet
+       each owning part of one element's padding, and the top could only win with
+       `!important`. */
     padding: var(--spectrum-global-dimension-size-400) 24px 24px;
 }
 

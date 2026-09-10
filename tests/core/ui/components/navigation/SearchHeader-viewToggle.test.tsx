@@ -86,8 +86,6 @@ function stripLayout(props: Record<string, unknown>): Record<string, unknown> {
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
 import type { SearchHeaderProps } from '@/core/ui/components/navigation/SearchHeader';
 
-const SELECTED_BACKGROUND = 'var(--spectrum-global-color-gray-200)';
-
 const baseProps: SearchHeaderProps = {
     searchQuery: '',
     onSearchQueryChange: jest.fn(),
@@ -103,10 +101,9 @@ function renderHeader(overrides: Partial<SearchHeaderProps> = {}) {
 const cardsButton = (): HTMLElement => screen.getByRole('button', { name: 'Card view' });
 const rowsButton = (): HTMLElement => screen.getByRole('button', { name: 'List view' });
 
-/** The UNSAFE_style object the component handed the button. */
-function unsafeStyle(el: HTMLElement): Record<string, unknown> | null {
-    return JSON.parse(el.getAttribute('data-unsafe-style') ?? 'null');
-}
+// `unsafeStyle()` and SELECTED_BACKGROUND lived here to read the style object
+// the component handed the button. It hands it none since 2026-09-10 — the fill
+// is CSS keyed on `aria-pressed`, which the buttons already carried.
 
 describe('SearchHeader view toggle', () => {
     beforeEach(() => {
@@ -181,21 +178,16 @@ describe('SearchHeader view toggle', () => {
         // as the CSS migration stopped a globally-loaded compound from making it look
         // defined.
 
-        it('fills only the active button, and rounds both', () => {
+        // THE FILL IS NOW CSS, keyed on `aria-pressed` — the attribute these
+        // buttons already carried. It used to be an UNSAFE_style whose ternary
+        // duplicated the pressed state, so the fill and the announced state were
+        // two facts that could disagree. Asserting `aria-pressed` (above) now
+        // covers both, and `.search-header-toggle` is what the rule keys on.
+        it('marks both buttons as the toggle the fill rule keys on', () => {
             renderHeader({ viewMode: 'cards', onViewModeChange: jest.fn() });
 
-            expect(unsafeStyle(cardsButton())).toEqual({
-                backgroundColor: SELECTED_BACKGROUND,
-                borderRadius: '4px',
-            });
-            expect(unsafeStyle(rowsButton())).toEqual({ borderRadius: '4px' });
-        });
-
-        it('moves the fill with the mode', () => {
-            renderHeader({ viewMode: 'rows', onViewModeChange: jest.fn() });
-
-            expect(unsafeStyle(rowsButton())?.backgroundColor).toBe(SELECTED_BACKGROUND);
-            expect(unsafeStyle(cardsButton())?.backgroundColor).toBeUndefined();
+            expect(cardsButton()).toHaveClass('search-header-toggle');
+            expect(rowsButton()).toHaveClass('search-header-toggle');
         });
     });
 });

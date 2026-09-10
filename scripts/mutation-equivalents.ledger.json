@@ -2710,7 +2710,7 @@
             "anchors": [
                 "return title && title.length > 0 ? title : name;"
             ],
-            "line": 157,
+            "line": 155,
             "mutants": 2,
             "category": "branch",
             "reason": "Forcing the length test true, or widening it to >= 0, changes the answer only for a title that is present but empty — and an empty string is falsy, so the && short-circuits to it and the ternary still takes the name branch. Both mutants therefore return the same value for every title: undefined, empty, or set. A test with title '' passes under all three.",
@@ -2723,7 +2723,7 @@
             "anchors": [
                 "if (!orgName && !projectName && !workspaceName) return <View />;"
             ],
-            "line": 187,
+            "line": 185,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this guard false makes AdobeIOSection render its card with no rows — but the component is only mounted inside the (orgName || projectName || workspaceName) test at line 385, so it is never called with all three absent. There is no wizard state that reaches this line with the condition true, which is why only the false direction survives.",
@@ -2736,7 +2736,7 @@
             "anchors": [
                 "...(stack.dependencies || []),"
             ],
-            "line": 291,
+            "line": 289,
             "mutants": 2,
             "category": "other",
             "reason": "Every stack in stacks.json declares dependencies as an empty array, and an empty array is truthy — so the || never falls through, and swapping it for && yields the mutant's own empty array instead, spreading to nothing either way. The uncovered array-literal mutant is the same fact from the other side: the fallback is unreachable while no stack omits the field.",
@@ -2749,7 +2749,7 @@
             "anchors": [
                 "...(state.selectedAppBuilderComponents || []).filter(isMeshComponentId),"
             ],
-            "line": 292,
+            "line": 290,
             "mutants": 1,
             "category": "other",
             "reason": "This fallback fires only when no App Builder components are selected, and whatever it produces goes straight through filter(isMeshComponentId). Stryker's placeholder string is not a mesh id, so it is filtered out and the dependencies list is empty either way. The .filter call itself is NOT equivalent — a test with a non-mesh selection kills that one.",
@@ -2762,7 +2762,7 @@
             "anchors": [
                 "() => resolveReviewIntegrationNames(state, packages ?? [], stacks ?? []),"
             ],
-            "line": 305,
+            "line": 303,
             "mutants": 2,
             "category": "other",
             "reason": "Both fallbacks fire only when the catalog prop is absent, and each is handed to resolveReviewIntegrationNames, which uses them for one thing: stacks.find(s => s.id === state.selectedStack) and the package lookup behind meshComponentForStack. A list holding Stryker's placeholder string matches no stack or package id, so the resolved names are identical to the empty-list case.",
@@ -2775,7 +2775,7 @@
             "anchors": [
                 "{(adobeOrgName || adobeProjectName || adobeWorkspaceName) && ("
             ],
-            "line": 381,
+            "line": 374,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this true always mounts AdobeIOSection, which opens with its own guard returning an empty View when all three names are absent — so the rendered output is the same empty element the falsy branch produces. The two guards are deliberately redundant, and that redundancy is exactly what makes this mutant unobservable.",

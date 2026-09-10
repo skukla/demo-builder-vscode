@@ -67,11 +67,10 @@ export function ProjectRow({
                         <span
                             data-testid="project-row-pin-indicator"
                             aria-label="Pinned"
-                            style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                color: 'var(--spectrum-global-color-gray-700)',
-                            }}
+                            className="pin-indicator"
+                            // ProjectRow's pin was the one WITHOUT `flex: 0 0 auto`,
+                            // so it keeps the default shrink behaviour it had.
+                            style={{ '--pin-flex': '0 1 auto' } as React.CSSProperties}
                         >
                             <PinOn size="XS" />
                         </span>

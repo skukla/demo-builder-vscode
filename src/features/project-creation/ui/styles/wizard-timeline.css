@@ -377,3 +377,16 @@
         }
     }
 }
+
+/* ==========================================================================
+   TimelineNav step spacing + cascade delay — moved out of TimelineNav.tsx
+   2026-09-10. Both were inline: the spacing applies only BETWEEN steps and the
+   delay staggers the entrance, so both are parameters, and both now arrive as
+   custom properties with the declarations here.
+   ========================================================================== */
+@layer theme {
+.timeline-step {
+    margin-bottom: var(--timeline-step-spacing, 0px);
+    animation-delay: var(--timeline-step-delay, 0ms);
+}
+}

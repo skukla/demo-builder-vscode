@@ -91,9 +91,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
         <View
             padding="size-200"
             borderRadius="medium"
-            UNSAFE_style={{
-                backgroundColor: 'var(--spectrum-gray-75)',
-            }}
+            UNSAFE_className="review-panel"
         >
             <Text
                 UNSAFE_className={cn(
@@ -362,20 +360,15 @@ export function ReviewStep({
             <Divider size="M" marginBottom="size-400" />
 
             <div
-                style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 1fr',
-                    gap: 'var(--spectrum-global-dimension-size-200)',
-                }}
+                className="review-grid"
             >
-                {/* Span both columns when no Adobe I/O section */}
-                <div
-                    style={
-                        !adobeOrgName && !adobeProjectName && !adobeWorkspaceName
-                            ? { gridColumn: '1 / -1' }
-                            : undefined
-                    }
-                >
+                {/* Span both columns when there is no Adobe I/O section. A data
+                    attribute, not a conditional style object — and note this one
+                    was invisible to the inline-style scan, which matches
+                    `style={{` and never saw `style={ cond ? {...} : ... }`. */}
+                <div data-span-columns={
+                    !adobeOrgName && !adobeProjectName && !adobeWorkspaceName ? 'true' : undefined
+                }>
                     <ProjectConfigSection packageName={packageName} stackName={stackName} />
                 </div>
                 {(adobeOrgName || adobeProjectName || adobeWorkspaceName) && (

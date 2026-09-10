@@ -172,11 +172,23 @@ export function TimelineNav({
                                 tabIndex={isClickable ? 0 : undefined}
                                 aria-current={!step.isExiting && actualIndex === currentStepIndex ? 'step' : undefined}
                                 aria-label={step.name}
-                                style={{
-                                    marginBottom: displayIndex < displaySteps.length - 1 && !isCurrentWithChildren ? stepSpacing : undefined,
-                                    // Staggered animation delay for cascade effect
-                                    animationDelay: isEntering ? `${displayIndex * 40}ms` : undefined,
-                                }}
+                                // Both values are PARAMETERS: the spacing applies only
+                                // between steps, and the delay staggers the cascade. They
+                                // arrive as custom properties so `margin-bottom` and
+                                // `animation-delay` stay declared in CSS, where a rule can
+                                // still reach them.
+                                style={
+                                    {
+                                        '--timeline-step-spacing':
+                                            displayIndex < displaySteps.length - 1 &&
+                                            !isCurrentWithChildren
+                                                ? stepSpacing
+                                                : '0px',
+                                        '--timeline-step-delay': isEntering
+                                            ? `${displayIndex * 40}ms`
+                                            : '0ms',
+                                    } as React.CSSProperties
+                                }
                                 // NO opacity here. This element hosts the collapsed-rail
                                 // `::after` name tooltip, and opacity below 1 would both dim
                                 // the tooltip and create a stacking context that traps its

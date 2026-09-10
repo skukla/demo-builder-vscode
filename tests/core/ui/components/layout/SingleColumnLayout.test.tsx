@@ -13,7 +13,7 @@ describe('SingleColumnLayout', () => {
         </SingleColumnLayout>
       );
       const contentColumn = container.firstChild as HTMLDivElement;
-      expect(contentColumn.style.padding).toBe('24px');
+      expect(contentColumn.style.getPropertyValue('--single-column-padding')).toBe('24px');
     });
 
     it('should translate maxWidth token size-6000 to 480px', () => {
@@ -24,7 +24,7 @@ describe('SingleColumnLayout', () => {
         </SingleColumnLayout>
       );
       const contentColumn = container.firstChild as HTMLDivElement;
-      expect(contentColumn.style.maxWidth).toBe('480px');
+      expect(contentColumn.style.getPropertyValue('--single-column-max-width')).toBe('480px');
     });
 
     it('should translate multiple token props simultaneously', () => {
@@ -37,8 +37,8 @@ describe('SingleColumnLayout', () => {
       );
       const contentColumn = container.firstChild as HTMLDivElement;
 
-      expect(contentColumn.style.padding).toBe('16px');
-      expect(contentColumn.style.maxWidth).toBe('480px');
+      expect(contentColumn.style.getPropertyValue('--single-column-padding')).toBe('16px');
+      expect(contentColumn.style.getPropertyValue('--single-column-max-width')).toBe('480px');
     });
 
     it('should handle mixed token and pixel values', () => {
@@ -50,8 +50,8 @@ describe('SingleColumnLayout', () => {
       );
       const contentColumn = container.firstChild as HTMLDivElement;
 
-      expect(contentColumn.style.maxWidth).toBe('480px');
-      expect(contentColumn.style.padding).toBe('32px');
+      expect(contentColumn.style.getPropertyValue('--single-column-max-width')).toBe('480px');
+      expect(contentColumn.style.getPropertyValue('--single-column-padding')).toBe('32px');
     });
   });
 
@@ -64,7 +64,7 @@ describe('SingleColumnLayout', () => {
         </SingleColumnLayout>
       );
       const contentColumn = container.firstChild as HTMLDivElement;
-      expect(contentColumn.style.padding).toBe('24px');
+      expect(contentColumn.style.getPropertyValue('--single-column-padding')).toBe('24px');
     });
 
     it('should pass through pixel string values unchanged', () => {
@@ -74,7 +74,7 @@ describe('SingleColumnLayout', () => {
         </SingleColumnLayout>
       );
       const contentColumn = container.firstChild as HTMLDivElement;
-      expect(contentColumn.style.padding).toBe('16px');
+      expect(contentColumn.style.getPropertyValue('--single-column-padding')).toBe('16px');
     });
 
     it('should use default values when props undefined', () => {
@@ -85,9 +85,9 @@ describe('SingleColumnLayout', () => {
       );
       const contentColumn = container.firstChild as HTMLDivElement;
 
-      expect(contentColumn.style.padding).toBe('24px');
-      expect(contentColumn.style.maxWidth).toBe('960px');
-      expect(contentColumn.style.margin).toBe('0px');
+      expect(contentColumn.style.getPropertyValue('--single-column-padding')).toBe('24px');
+      expect(contentColumn.style.getPropertyValue('--single-column-max-width')).toBe('960px');
+      expect(contentColumn.style.getPropertyValue('--single-column-margin')).toBe('0');
     });
   });
 
@@ -103,7 +103,7 @@ describe('SingleColumnLayout', () => {
       const contentColumn = container.firstChild as HTMLDivElement;
       // Invalid token should pass through to CSS unchanged (browser handles validation)
       // maxWidth accepts any string value, so invalid tokens pass through
-      expect(contentColumn.style.maxWidth).toBe('size-999');
+      expect(contentColumn.style.getPropertyValue('--single-column-max-width')).toBe('size-999');
     });
   });
 
@@ -116,10 +116,9 @@ describe('SingleColumnLayout', () => {
       );
       const contentColumn = container.firstChild as HTMLDivElement;
 
-      expect(contentColumn.style.maxWidth).toBe('960px');
-      expect(contentColumn.style.width).toBe('100%');
-      expect(contentColumn.style.margin).toBe('0px');
-      expect(contentColumn.style.padding).toBe('24px');
+      expect(contentColumn.style.getPropertyValue('--single-column-max-width')).toBe('960px');
+      expect(contentColumn.style.getPropertyValue('--single-column-margin')).toBe('0');
+      expect(contentColumn.style.getPropertyValue('--single-column-padding')).toBe('24px');
     });
 
     it('should constrain column with maxWidth', () => {
@@ -129,7 +128,7 @@ describe('SingleColumnLayout', () => {
         </SingleColumnLayout>
       );
       const contentColumn = container.firstChild as HTMLDivElement;
-      expect(contentColumn.style.maxWidth).toBe('600px');
+      expect(contentColumn.style.getPropertyValue('--single-column-max-width')).toBe('600px');
     });
 
     it('should render children correctly', () => {
@@ -151,7 +150,37 @@ describe('SingleColumnLayout', () => {
         </SingleColumnLayout>
       );
       const contentColumn = container.firstChild as HTMLDivElement;
-      expect(contentColumn.className).toBe('custom-class');
+      expect(contentColumn.className).toBe('single-column-layout custom-class');
+    });
+  });
+  describe('Padding ownership', () => {
+    it('stamps data-padding="none" and writes NO padding property when padding is null', () => {
+      const { container } = render(
+        <SingleColumnLayout padding={null} className="brand-gallery-column">
+          <div>Content</div>
+        </SingleColumnLayout>
+      );
+      const contentColumn = container.firstChild as HTMLDivElement;
+
+      // Both halves matter. The attribute is what the CSS rule excludes itself on,
+      // and the ABSENT property is why a stylesheet has nothing to outrank — a
+      // `0` here would still be a declaration owning the element's padding.
+      expect(contentColumn.getAttribute('data-padding')).toBe('none');
+      expect(contentColumn.style.getPropertyValue('--single-column-padding')).toBe('');
+    });
+
+    it('leaves data-padding off and writes the property for a normal value', () => {
+      const { container } = render(
+        <SingleColumnLayout padding="0px">
+          <div>Content</div>
+        </SingleColumnLayout>
+      );
+      const contentColumn = container.firstChild as HTMLDivElement;
+
+      // `'0px'` is NOT `null`: it declares zero padding rather than declining to
+      // declare any, and the rule still applies.
+      expect(contentColumn.hasAttribute('data-padding')).toBe(false);
+      expect(contentColumn.style.getPropertyValue('--single-column-padding')).toBe('0px');
     });
   });
 });

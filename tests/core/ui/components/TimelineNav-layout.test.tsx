@@ -211,7 +211,7 @@ describe('TimelineNav - entering and exiting steps', () => {
         renderNav(STEPS);
 
         expect(document.querySelectorAll('.timeline-step-enter')).toHaveLength(0);
-        expect(step('welcome').style.animationDelay).toBe('');
+        expect(step('welcome').style.getPropertyValue('--timeline-step-delay')).toBe('0ms');
     });
 
     it('flags a newly added step, and staggers its delay by position', () => {
@@ -229,10 +229,10 @@ describe('TimelineNav - entering and exiting steps', () => {
 
         expect(step('create').className).toContain('timeline-step-enter');
         // Fourth in the list -> 3 * 40ms.
-        expect(step('create').style.animationDelay).toBe('120ms');
+        expect(step('create').style.getPropertyValue('--timeline-step-delay')).toBe('120ms');
         // Steps that were already there are not re-animated.
         expect(step('welcome').className).not.toContain('timeline-step-enter');
-        expect(step('welcome').style.animationDelay).toBe('');
+        expect(step('welcome').style.getPropertyValue('--timeline-step-delay')).toBe('0ms');
     });
 
     it('keeps a removed step in place, flagged for exit and fully inert', () => {

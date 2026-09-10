@@ -309,15 +309,12 @@ describe('ProjectCard', () => {
             const project = createProjectsDashboardProject({ name: 'Pinned Demo', pinned: true });
             renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
 
-            // The whole inline style, not two of its four rules. `alignItems` and
-            // `color` were the module's only surviving mutants: both are knowable
-            // exactly, and neither had anything asserting it.
-            expect(screen.getByTestId('project-card-pin-indicator')).toHaveStyle({
-                display: 'inline-flex',
-                alignItems: 'center',
-                flex: '0 0 auto',
-                color: 'var(--spectrum-global-color-gray-700)',
-            });
+            // All four declarations are `.pin-indicator` (shared-ui.css) since
+            // 2026-09-10 — one rule for the three components that each carried
+            // their own copy. jsdom loads no stylesheets, so the contract here is
+            // the class; the declarations themselves are pinned by the visual
+            // fingerprint, which is the only thing that can actually see them.
+            expect(screen.getByTestId('project-card-pin-indicator')).toHaveClass('pin-indicator');
         });
     });
 

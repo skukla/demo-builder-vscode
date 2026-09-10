@@ -21,41 +21,51 @@ describe('StatusDot', () => {
         it('renders success variant with CSS variable', () => {
             renderWithProviders(<StatusDot variant="success" />);
             const dot = screen.getByRole('presentation');
-            expect(dot).toHaveStyle({
-                backgroundColor: 'var(--spectrum-semantic-positive-color-status)',
-            });
+            // The colour is declared by `.status-dot[data-variant='success']` in index.css.
+            // jsdom loads no stylesheets, so the checkable contract is the attribute
+            // the rule keys on — which the component is what decides.
+            expect(dot).toHaveClass('status-dot');
+            expect(dot).toHaveAttribute('data-variant', 'success');
         });
 
         it('renders error variant with CSS variable', () => {
             renderWithProviders(<StatusDot variant="error" />);
             const dot = screen.getByRole('presentation');
-            expect(dot).toHaveStyle({
-                backgroundColor: 'var(--spectrum-semantic-negative-color-status)',
-            });
+            // The colour is declared by `.status-dot[data-variant='error']` in index.css.
+            // jsdom loads no stylesheets, so the checkable contract is the attribute
+            // the rule keys on — which the component is what decides.
+            expect(dot).toHaveClass('status-dot');
+            expect(dot).toHaveAttribute('data-variant', 'error');
         });
 
         it('renders warning variant with CSS variable', () => {
             renderWithProviders(<StatusDot variant="warning" />);
             const dot = screen.getByRole('presentation');
-            expect(dot).toHaveStyle({
-                backgroundColor: 'var(--spectrum-semantic-notice-color-status)',
-            });
+            // The colour is declared by `.status-dot[data-variant='warning']` in index.css.
+            // jsdom loads no stylesheets, so the checkable contract is the attribute
+            // the rule keys on — which the component is what decides.
+            expect(dot).toHaveClass('status-dot');
+            expect(dot).toHaveAttribute('data-variant', 'warning');
         });
 
         it('renders info variant with CSS variable', () => {
             renderWithProviders(<StatusDot variant="info" />);
             const dot = screen.getByRole('presentation');
-            expect(dot).toHaveStyle({
-                backgroundColor: 'var(--spectrum-semantic-informative-color-status)',
-            });
+            // The colour is declared by `.status-dot[data-variant='info']` in index.css.
+            // jsdom loads no stylesheets, so the checkable contract is the attribute
+            // the rule keys on — which the component is what decides.
+            expect(dot).toHaveClass('status-dot');
+            expect(dot).toHaveAttribute('data-variant', 'info');
         });
 
         it('renders neutral variant with CSS variable', () => {
             renderWithProviders(<StatusDot variant="neutral" />);
             const dot = screen.getByRole('presentation');
-            expect(dot).toHaveStyle({
-                backgroundColor: 'var(--spectrum-global-color-gray-500)',
-            });
+            // The colour is declared by `.status-dot[data-variant='neutral']` in index.css.
+            // jsdom loads no stylesheets, so the checkable contract is the attribute
+            // the rule keys on — which the component is what decides.
+            expect(dot).toHaveClass('status-dot');
+            expect(dot).toHaveAttribute('data-variant', 'neutral');
         });
     });
 
@@ -64,8 +74,7 @@ describe('StatusDot', () => {
             renderWithProviders(<StatusDot variant="success" />);
             const dot = screen.getByRole('presentation');
             expect(dot).toHaveStyle({
-                width: '8px',
-                height: '8px',
+                '--status-dot-size': '8px',
             });
         });
 
@@ -73,18 +82,14 @@ describe('StatusDot', () => {
             renderWithProviders(<StatusDot variant="success" size={12} />);
             const dot = screen.getByRole('presentation');
             expect(dot).toHaveStyle({
-                width: '12px',
-                height: '12px',
+                '--status-dot-size': '12px',
             });
         });
 
         it('renders with large size', () => {
             renderWithProviders(<StatusDot variant="error" size={16} />);
             const dot = screen.getByRole('presentation');
-            expect(dot).toHaveStyle({
-                width: '16px',
-                height: '16px',
-            });
+            expect(dot).toHaveStyle({ '--status-dot-size': '16px' });
         });
     });
 
@@ -109,13 +114,13 @@ describe('StatusDot', () => {
         it('emits exactly the base classes when there is no pulse and no caller class', () => {
             renderWithProviders(<StatusDot variant="success" />);
             const dot = screen.getByRole('presentation');
-            expect(dot.getAttribute('class')).toBe('inline-block rounded-full shrink-0');
+            expect(dot.getAttribute('class')).toBe('status-dot inline-block rounded-full shrink-0');
         });
 
         it('appends the caller class after the base classes, with nothing between', () => {
             renderWithProviders(<StatusDot variant="neutral" className="tile-dot" />);
             const dot = screen.getByRole('presentation');
-            expect(dot.getAttribute('class')).toBe('inline-block rounded-full shrink-0 tile-dot');
+            expect(dot.getAttribute('class')).toBe('status-dot inline-block rounded-full shrink-0 tile-dot');
         });
 
         it('has flex-shrink of 0 via utility class', () => {
@@ -124,13 +129,15 @@ describe('StatusDot', () => {
             expect(dot).toHaveClass('shrink-0');
         });
 
-        // A bare <span> defaults to display:inline (ignores width/height). The
-        // dot pins display:inline-block inline so its box can't collapse if the
-        // .inline-block utility class fails to load in a given webview.
-        it('pins display:inline-block inline (box does not depend on a utility class)', () => {
+        // A bare <span> defaults to display:inline, which ignores width/height, so
+        // the dot needs `display: inline-block`. That used to be pinned INLINE, on
+        // the argument that the box must survive `.inline-block` failing to reach a
+        // webview. ADR-017 §6 already prevents that, verified across all eight
+        // bundles — and the argument did not hold anyway, since the colour was a
+        // var() needing the same stylesheets. `.status-dot` declares it now.
+        it('carries the class that declares its box', () => {
             renderWithProviders(<StatusDot variant="success" />);
-            const dot = screen.getByRole('presentation');
-            expect(dot).toHaveStyle({ display: 'inline-block' });
+            expect(screen.getByRole('presentation')).toHaveClass('status-dot');
         });
     });
 
@@ -148,11 +155,8 @@ describe('StatusDot', () => {
             );
             const dot = screen.getByRole('presentation');
             expect(dot).toHaveClass('custom-status');
-            expect(dot).toHaveStyle({
-                backgroundColor: 'var(--spectrum-semantic-notice-color-status)',
-                width: '10px',
-                height: '10px',
-            });
+            expect(dot).toHaveAttribute('data-variant', 'warning');
+            expect(dot).toHaveStyle({ '--status-dot-size': '10px' });
         });
     });
 

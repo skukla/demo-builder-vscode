@@ -184,3 +184,35 @@
         to { transform: translateY(0); opacity: 1; }
     }
 }
+
+/* ==========================================================================
+   ReviewStep panel + summary grid — moved out of ReviewStep.tsx 2026-09-10.
+   Both were static declarations in a style object; neither had anything dynamic
+   about it.
+
+   `--spectrum-gray-75` is kept verbatim from the original. It is a real Spectrum
+   token, but it is the ONLY use of that naming in this repo — everything else
+   says `--spectrum-global-color-gray-*`. Changing it is a colour decision, not
+   part of moving the declaration, so it moved unchanged.
+   ========================================================================== */
+@layer theme {
+.review-panel {
+    background-color: var(--spectrum-gray-75);
+}
+}
+
+@layer theme {
+.review-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spectrum-global-dimension-size-200);
+}
+}
+
+@layer theme {
+/* The project-configuration card spans both columns when no Adobe I/O card
+   shares the row with it. */
+.review-grid > [data-span-columns='true'] {
+    grid-column: 1 / -1;
+}
+}

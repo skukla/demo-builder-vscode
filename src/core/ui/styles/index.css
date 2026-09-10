@@ -347,8 +347,84 @@
 }
 
 @layer theme {
+/* ==========================================================================
+   SingleColumnLayout — the box, moved out of SingleColumnLayout.tsx 2026-09-10.
+
+   It escaped the earlier inline-style sweep because it wrote `style={style}`
+   from a VARIABLE, and the scan only ever matched `style={{`. Three parameters
+   still cross from JS, as custom properties; the rest is fixed and lives here.
+
+   The padding rule excludes itself with `:not([data-padding='none'])` rather
+   than setting a zero. `padding={null}` means "a stylesheet owns this" — and a
+   declaration of `0` is still a declaration a stylesheet has to outrank, which
+   is how `.brand-gallery-column` ended up needing `!important`.
+   ========================================================================== */
+.single-column-layout {
+    max-width: var(--single-column-max-width, 960px);
+    width: 100%;
+    /* Keep padding inside the 100% width. Without this the default content-box
+       adds it outside, so the column overflows its parent by 2x padding and
+       clips content at narrow/zoomed viewports. */
+    box-sizing: border-box;
+    margin: var(--single-column-margin, 0);
+}
+}
+
+@layer theme {
+.single-column-layout:not([data-padding='none']) {
+    padding: var(--single-column-padding, 24px);
+}
+}
+
+@layer theme {
 .page-layout-content {
     flex: 1;
     overflow-y: auto;
+}
+}
+
+/* ==========================================================================
+   StatusDot — the box and the colour, moved out of StatusDot.tsx 2026-09-10.
+
+   `data-variant` was already on the element, so the colour needs no parameter
+   passed through JS at all; only the SIZE varies, and that arrives as
+   `--status-dot-size`.
+
+   The old inline style was justified as making the dot "self-sufficient
+   regardless of which stylesheets loaded". It was not: the colour was already a
+   `var(--spectrum-*)`, so a missing stylesheet produced a correctly-sized
+   INVISIBLE dot. And the case it feared — a utility class not reaching a bundle —
+   is what ADR-017 §6 enforces, verified across all eight bundles.
+   ========================================================================== */
+@layer theme {
+.status-dot {
+    display: inline-block;
+    width: var(--status-dot-size, 8px);
+    height: var(--status-dot-size, 8px);
+    background-color: var(--spectrum-global-color-gray-500);
+}
+}
+
+@layer theme {
+.status-dot[data-variant='success'] {
+    background-color: var(--spectrum-semantic-positive-color-status);
+}
+}
+
+@layer theme {
+.status-dot[data-variant='error'] {
+    background-color: var(--spectrum-semantic-negative-color-status);
+}
+}
+
+@layer theme {
+.status-dot[data-variant='warning'] {
+    background-color: var(--spectrum-semantic-notice-color-status);
+}
+}
+
+@layer theme {
+.status-dot[data-variant='info'] {
+    background-color: var(--spectrum-semantic-informative-color-status);
 }
 }

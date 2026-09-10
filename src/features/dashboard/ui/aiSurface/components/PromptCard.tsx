@@ -165,7 +165,7 @@ export function PromptCard({
                     <span
                         data-testid="ai-prompt-pin-indicator"
                         aria-label="Pinned"
-                        className="prompt-card-pin"
+                        className="pin-indicator"
                     >
                         <PinOn size="XS" />
                     </span>

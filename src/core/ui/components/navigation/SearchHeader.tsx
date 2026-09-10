@@ -129,14 +129,7 @@ function renderViewToggle(
                     onPress={() => onViewModeChange('cards')}
                     aria-label="Card view"
                     aria-pressed={viewMode === 'cards'}
-                    UNSAFE_className="cursor-pointer"
-                    UNSAFE_style={{
-                        backgroundColor:
-                            viewMode === 'cards'
-                                ? 'var(--spectrum-global-color-gray-200)'
-                                : undefined,
-                        borderRadius: '4px',
-                    }}
+                    UNSAFE_className="cursor-pointer search-header-toggle"
                 >
                     <ViewGrid />
                 </ActionButton>
@@ -148,14 +141,7 @@ function renderViewToggle(
                     onPress={() => onViewModeChange('rows')}
                     aria-label="List view"
                     aria-pressed={viewMode === 'rows'}
-                    UNSAFE_className="cursor-pointer"
-                    UNSAFE_style={{
-                        backgroundColor:
-                            viewMode === 'rows'
-                                ? 'var(--spectrum-global-color-gray-200)'
-                                : undefined,
-                        borderRadius: '4px',
-                    }}
+                    UNSAFE_className="cursor-pointer search-header-toggle"
                 >
                     <ViewList />
                 </ActionButton>

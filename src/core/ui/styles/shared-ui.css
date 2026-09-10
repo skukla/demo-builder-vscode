@@ -597,3 +597,84 @@ div[class*="spectrum"] input[type="search"] {
     box-sizing: border-box;
 }
 }
+
+/* ==========================================================================
+   Pin indicator — ONE rule for three components.
+
+   PromptCard, ProjectCard and ProjectRow each carried their own inline copy of
+   the same four declarations; the first two were byte-identical and ProjectRow
+   differed only in `flex`. Moved here as one class rather than three, since the
+   whole point of taking them out of the JSX was to stop the same design existing
+   in several places that cannot see each other.
+
+   `--pin-flex` keeps ProjectRow's one difference expressible without a second
+   rule: the card and prompt pins do not shrink, the row's does, exactly as
+   before.
+   ========================================================================== */
+@layer theme {
+.pin-indicator {
+    display: inline-flex;
+    align-items: center;
+    flex: var(--pin-flex, 0 0 auto);
+    color: var(--spectrum-global-color-gray-700);
+}
+}
+
+/* ==========================================================================
+   Four more that were inline until 2026-09-10.
+   ========================================================================== */
+@layer theme {
+/* FadeTransition. The STATE is `data-show`; the DURATION a custom property.
+   An inline `transition` is also invisible to the motion enforcer, which reads
+   stylesheets only — this one carried a hand-written `${duration}ms`. */
+.fade-transition {
+    opacity: 0;
+    /* The fallback is a SPECTRUM token, not a hand-written 200ms — the motion
+       rule caught that within minutes of this rule being written, which is
+       what it is for. duration-300 is .19s, the nearest scale step to the
+       component's 200ms default. */
+    transition: opacity var(--fade-duration, var(--spectrum-global-animation-duration-300))
+        ease-in-out;
+}
+}
+
+@layer theme {
+.fade-transition[data-show='true'] {
+    opacity: 1;
+}
+}
+
+@layer theme {
+/* VerifiedField's two status messages. Constant colours — nothing dynamic
+   about them at all. */
+.text-positive {
+    color: var(--spectrum-semantic-positive-color-text-small);
+}
+}
+
+@layer theme {
+.text-negative {
+    color: var(--spectrum-semantic-negative-color-text-small);
+}
+}
+
+@layer theme {
+/* SearchHeader's view toggle. Both buttons are rounded; the ACTIVE one is
+   filled.
+
+   Keyed on `aria-pressed`, which these buttons ALREADY carry for assistive
+   tech — a `data-active` would have been a second attribute saying the same
+   thing, and the two could drift. The fill and the announced state now cannot
+   disagree, because they read the same source.
+
+   The colour is gray-200, exactly as the inline style had it. */
+.search-header-toggle {
+    border-radius: 4px;
+}
+}
+
+@layer theme {
+.search-header-toggle[aria-pressed='true'] {
+    background-color: var(--spectrum-global-color-gray-200);
+}
+}

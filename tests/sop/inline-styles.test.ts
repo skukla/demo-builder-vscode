@@ -15,6 +15,112 @@ import * as path from 'path';
 import { execSync } from 'child_process';
 import { loadLedger, expectCeiling } from './architectureScan';
 
+/**
+ * ONE definition of what an inline style IS, shared by the per-file checks and
+ * the aggregate ratchet below.
+ *
+ * They used to have SEPARATE scans of the same question and they disagreed: the
+ * ratchet counted `style={{` textually and subtracted dynamic PATTERN HITS, so
+ * on 2026-09-10 it read 6 static where this function read 0. Two counters for
+ * one rule is one counter that is always wrong somewhere.
+ */
+
+function countInlineStyles(content: string): {
+    total: number;
+    standard: number;
+    unsafeStyle: number;
+    dynamic: number;
+} {
+    // A style object that sets ONLY CUSTOM PROPERTIES is not styling — it is
+    // passing parameters. `--grid-columns: 3` declares nothing; the rule that
+    // reads it lives in a stylesheet, where the cascade can still reach it.
+    // That is the sanctioned way out of this list (GridLayout,
+    // ContentWithSidebar, ControlPanelLayout, 2026-09-10), so the counter has
+    // to recognise it or the way out is "reformat until the regex misses".
+    //
+    // Anything else in the object and it counts in full: one real declaration
+    // welded to the element is the whole problem, however many variables keep
+    // it company.
+    // BRACE-MATCHED, not lazily regexed. `[\s\S]*?\}` stops at the FIRST `}`,
+    // which truncates any multi-line object — and a truncated object loses the
+    // properties that would have classified it. TwoColumnLayout's
+    // custom-property-only object read as STATIC that way, because the visible
+    // fragment happened to contain a comment.
+    // COMMENTS BLANKED FIRST. LoadingOverlay's JSDoc carries
+    // `<div style={{ position: 'relative' }}>` in an @example, and it was being
+    // counted as an inline style in a file that has none — a documented
+    // exception granted for a code sample.
+    const code = content
+        .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '))
+        .replace(/^[^\S\n]*\/\/[^\n]*/gm, (m) => ' '.repeat(m.length));
+    // MATCHES `style={` AND SKIPS AHEAD TO THE OBJECT, so a CONDITIONAL one is
+    // seen too. Anchoring on `style={{` missed
+    // `style={ cond ? { gridColumn: '1 / -1' } : undefined }` entirely — ReviewStep
+    // carried exactly that, and this counter read the file as having zero inline
+    // styles right up until a test asserting the declaration failed.
+    const styleObjects: string[] = [];
+    for (const open of code.matchAll(/(?:UNSAFE_)?style=\{/g)) {
+        const brace = code.indexOf('{', open.index + open[0].length);
+        if (brace < 0) continue;
+        // Only an object literal counts. `style={someVariable}` has no object here
+        // to read, and a long or statement-like gap means this is not one.
+        // Only an OBJECT LITERAL counts. Between `style={` and the `{` there may be
+        // nothing (`style={{`) or a conditional preamble that is still open — i.e.
+        // text ending in an operator (`cond ? `, `cond && `). Anything else means
+        // this `{` belongs to a later attribute, not to a style object:
+        // `style={style}` would otherwise capture the `{` of `className={className}`.
+        const between = code.slice(open.index + open[0].length, brace);
+        if (between.trim() !== '' && !/[?&|:(]\s*$/.test(between)) continue;
+        let depth = 0;
+        let i = brace;
+        for (; i < code.length; i++) {
+            if (code[i] === '{') depth++;
+            else if (code[i] === '}') { depth--; if (depth === 0) break; }
+        }
+        styleObjects.push(code.slice(open.index, i + 1));
+    }
+    const onlyCustomProps = (obj: string): boolean => {
+        // A property name sits after `{` or `,` — NOT after arbitrary
+        // whitespace. The looser form read a ternary's `? value : other` as a
+        // property called `value`, so an object of nothing but custom
+        // properties containing one conditional counted as real styling.
+        const props = [...obj.matchAll(/[{,]\s*['"]?(--[\w-]+|[a-zA-Z][\w]*)['"]?\s*:/g)]
+            .map((m) => m[1]);
+        return props.length > 0 && props.every((k) => k.startsWith('--'));
+    };
+    const counted = styleObjects.filter((o) => !onlyCustomProps(o));
+    const standardMatches = counted.filter((o) => !o.startsWith('UNSAFE_')).length;
+    const unsafeMatches = counted.filter((o) => o.startsWith('UNSAFE_')).length;
+
+    // Detect dynamic patterns (spreading, function calls, ternaries)
+    const dynamicPatterns = [
+        /style=\{\{[^}]*\.\.\./g, // Spreading
+        /style=\{\{[^}]*\?[^}]*:/g, // Ternary
+        /style=\{\{[^}]*\([^)]+\)/g, // Function calls
+    ];
+
+    // STATIC AND DYNAMIC ARE SET COUNTS, and each object lands in exactly one.
+    //
+    // This used to be `standard = total - dynamicMatches`, where dynamicMatches
+    // counted PATTERN HITS across the whole file. An object with both a spread
+    // and a ternary counted twice, so the two numbers were not partitions of
+    // anything — and removing dynamic objects made the static number RISE while
+    // inline styling was falling. That is what it did on 2026-09-10: static
+    // read 2, then 6, with no static object added.
+    const isDynamic = (obj: string): boolean => dynamicPatterns.some((p) => {
+        p.lastIndex = 0;
+        return p.test(obj);
+    });
+    const dynamicCount = counted.filter(isDynamic).length;
+
+    return {
+        total: standardMatches,
+        standard: counted.filter((o) => !o.startsWith('UNSAFE_') && !isDynamic(o)).length,
+        unsafeStyle: unsafeMatches,
+        dynamic: dynamicCount,
+    };
+}
+
 describe('SOP: Inline Styles', () => {
     const srcDir = path.resolve(__dirname, '../../src');
 
@@ -23,52 +129,26 @@ describe('SOP: Inline Styles', () => {
      * Each entry explains why inline styles are acceptable
      */
     const DOCUMENTED_EXCEPTIONS: Record<string, string> = {
-        // Layout components with dynamic props.
-        // GridLayout, ContentWithSidebar and ControlPanelLayout LEFT this list on
-        // 2026-09-10: they pass their parameters as CUSTOM PROPERTIES and a
-        // stylesheet owns the declarations, so the cascade keeps control. A
-        // custom property is not a CSS property, which is why this scan stops
-        // counting them. `.control-panel-secondary-inner` also left the
-        // `classesDefinedNowhere` ledger in the same change — it had a class and
-        // no rule anywhere, because the inline style WAS the styling.
-        // GridLayout.tsx was here until 2026-09-10. It now passes columns/gap/
-        // maxWidth/padding as CUSTOM PROPERTIES and `.grid-layout` in
-        // two-column-layout.css turns them into CSS — so the declarations stay in
-        // the cascade instead of being welded to the element. This scan agrees:
-        // a custom property is not a CSS property, so it is not styling.
-        // That is the exit from this list, not a wider exception.
-        'TwoColumnLayout.tsx': 'Dynamic gap/ratio from props via translateSpectrumToken()',
-        // The Spectrum Flex 450px workaround — this project's OWN prescribed
-        // pattern for a full-width webview layout (root CLAUDE.md: "Adobe
-        // Spectrum Flex constrains width (450px): use a standard HTML div with
-        // flex styles for critical wizard layouts"). Following it necessarily
-        // produces an inline style, so these are exceptions by construction
-        // rather than by oversight.
-        // The evaluation surface has NO exceptions any more. Step 10's visual
-        // pass (2026-08-25) moved its whole layout into `workbench.css`, which
-        // is where it belonged: the look needs hover states, `::before`
-        // separators and `tabular-nums`, none of which an inline style can
-        // express. The Spectrum-Flex-450px trap is still avoided — the panel is
-        // plain divs — it is just that the flex now lives in a class.
-        // Components with conditional styles
-        'StatusDot.tsx': 'Dynamic color/size based on props',
-        'FadeTransition.tsx': 'Animation styles that must be inline for transitions',
-
-        // Spectrum UNSAFE_style (required for Spectrum overrides)
-        'SearchHeader.tsx': 'Spectrum UNSAFE_style for theme integration',
-        'TimelineNav.tsx': 'Spectrum UNSAFE_style for background colors',
-        'VerifiedField.tsx': 'Spectrum UNSAFE_style for semantic colors',
-
-        // Grid layouts (CSS Grid properties for complex layouts)
-        'ReviewStep.tsx': 'CSS Grid layout for two-column review summary',
-
-        // Pin indicators for projects (single-property style for inline icon color)
-        'ProjectCard.tsx': 'Inline color/flex style for the inline pin indicator next to project name',
-        'ProjectRow.tsx': 'Inline color/flex style for the inline pin indicator next to project name',
-
-        // AppBuilderComponent secret input (dashboard UI convention: box-sizing on width:100% input)
-
-        // Store structure listbox container
+        // EMPTY, 2026-09-10. Every entry was retired by converting the component,
+        // and not one of the reasons survived being checked:
+        //
+        //   "Dynamic gap/columns from props"  -> parameters, so custom properties
+        //                                        with the declaration in CSS.
+        //   "Dynamic color/size based on props" (StatusDot) -> `data-variant` was
+        //       already on the element, so the colour needed no parameter at all.
+        //       Its stated reason — that the dot must be "self-sufficient
+        //       regardless of which stylesheets loaded" — was false twice over: the
+        //       colour was already a `var(--spectrum-*)`, so a missing stylesheet
+        //       gave a correctly-sized INVISIBLE dot; and the failure it feared is
+        //       what ADR-017 §6 enforces, verified across all eight bundles.
+        //   "Animation styles that must be inline for transitions" -> a data
+        //       attribute and a custom property. Nothing must be inline for a
+        //       transition; an inline one is merely invisible to the motion rule.
+        //   "Spectrum UNSAFE_style for semantic colors" -> a constant colour.
+        //       There was nothing dynamic about it.
+        //   "CSS Grid layout" / "Inline color/flex" -> static declarations.
+        //
+        // Adding an entry here means re-arguing that, with a measurement.
     };
 
     /**
@@ -103,81 +183,6 @@ describe('SOP: Inline Styles', () => {
      * Count inline style occurrences in a file
      * Returns both total count and breakdown
      */
-    function countInlineStyles(content: string): {
-        total: number;
-        standard: number;
-        unsafeStyle: number;
-        dynamic: number;
-    } {
-        // A style object that sets ONLY CUSTOM PROPERTIES is not styling — it is
-        // passing parameters. `--grid-columns: 3` declares nothing; the rule that
-        // reads it lives in a stylesheet, where the cascade can still reach it.
-        // That is the sanctioned way out of this list (GridLayout,
-        // ContentWithSidebar, ControlPanelLayout, 2026-09-10), so the counter has
-        // to recognise it or the way out is "reformat until the regex misses".
-        //
-        // Anything else in the object and it counts in full: one real declaration
-        // welded to the element is the whole problem, however many variables keep
-        // it company.
-        // BRACE-MATCHED, not lazily regexed. `[\s\S]*?\}` stops at the FIRST `}`,
-        // which truncates any multi-line object — and a truncated object loses the
-        // properties that would have classified it. TwoColumnLayout's
-        // custom-property-only object read as STATIC that way, because the visible
-        // fragment happened to contain a comment.
-        // COMMENTS BLANKED FIRST. LoadingOverlay's JSDoc carries
-        // `<div style={{ position: 'relative' }}>` in an @example, and it was being
-        // counted as an inline style in a file that has none — a documented
-        // exception granted for a code sample.
-        const code = content
-            .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '))
-            .replace(/^[^\S\n]*\/\/[^\n]*/gm, (m) => ' '.repeat(m.length));
-        const styleObjects: string[] = [];
-        for (const open of code.matchAll(/(?:UNSAFE_)?style=\{\s*\{/g)) {
-            let depth = 0;
-            let i = open.index + open[0].length - 1;
-            for (; i < code.length; i++) {
-                if (code[i] === '{') depth++;
-                else if (code[i] === '}') { depth--; if (depth === 0) break; }
-            }
-            styleObjects.push(code.slice(open.index, i + 1));
-        }
-        const onlyCustomProps = (obj: string): boolean => {
-            const props = [...obj.matchAll(/(?:^|[{,\s])['"]?(--[\w-]+|[a-zA-Z][\w]*)['"]?\s*:/g)]
-                .map((m) => m[1]);
-            return props.length > 0 && props.every((k) => k.startsWith('--'));
-        };
-        const counted = styleObjects.filter((o) => !onlyCustomProps(o));
-        const standardMatches = counted.filter((o) => !o.startsWith('UNSAFE_')).length;
-        const unsafeMatches = counted.filter((o) => o.startsWith('UNSAFE_')).length;
-
-        // Detect dynamic patterns (spreading, function calls, ternaries)
-        const dynamicPatterns = [
-            /style=\{\{[^}]*\.\.\./g, // Spreading
-            /style=\{\{[^}]*\?[^}]*:/g, // Ternary
-            /style=\{\{[^}]*\([^)]+\)/g, // Function calls
-        ];
-
-        // STATIC AND DYNAMIC ARE SET COUNTS, and each object lands in exactly one.
-        //
-        // This used to be `standard = total - dynamicMatches`, where dynamicMatches
-        // counted PATTERN HITS across the whole file. An object with both a spread
-        // and a ternary counted twice, so the two numbers were not partitions of
-        // anything — and removing dynamic objects made the static number RISE while
-        // inline styling was falling. That is what it did on 2026-09-10: static
-        // read 2, then 6, with no static object added.
-        const isDynamic = (obj: string): boolean => dynamicPatterns.some((p) => {
-            p.lastIndex = 0;
-            return p.test(obj);
-        });
-        const dynamicCount = counted.filter(isDynamic).length;
-
-        return {
-            total: standardMatches,
-            standard: counted.filter((o) => !o.startsWith('UNSAFE_') && !isDynamic(o)).length,
-            unsafeStyle: unsafeMatches,
-            dynamic: dynamicCount,
-        };
-    }
 
     describe('Inline style documentation', () => {
 
@@ -379,18 +384,14 @@ describe('ADR-017: styling reaches Spectrum through cn(), not style objects', ()
      * merely bounded: the direction of travel is one way, and a fall gets locked in
      * so it cannot be spent again.
      *
-     * Measured 2026-08-30: 23 `style={{` occurrences, of which 20 are dynamic
-     * (spread, ternary or call) and 3 are static. Dynamic ones are legitimate — a
-     * value computed from props cannot live in a stylesheet — so both numbers are
-     * pinned separately rather than lumped together, or removing a static one could
-     * be paid for by adding a dynamic one.
+     * Measured 2026-08-30: 23 `style={{` occurrences, 20 dynamic and 3 static.
+     * Re-measured 2026-09-10 after the conversion: the two numbers are pinned
+     * separately so removing a static one cannot be paid for by adding a dynamic
+     * one. A value genuinely computed from props is legitimate — but most of what
+     * claimed to be were static values, or parameters that belong in a custom
+     * property with the declaration in a stylesheet.
      */
     const LEDGER = loadLedger('webview-architecture-rules.exemptions.json');
-    const DYNAMIC = [
-        /style=\{\{[^}]*\.\.\./g,
-        /style=\{\{[^}]*\?[^}]*:/g,
-        /style=\{\{[^}]*\([^)]+\)/g,
-    ];
 
     const TSX = execSync("git ls-files 'src/**/*.tsx'", { encoding: 'utf8' })
         .trim()
@@ -401,16 +402,45 @@ describe('ADR-017: styling reaches Spectrum through cn(), not style objects', ()
         let total = 0;
         let dynamic = 0;
         for (const f of TSX) {
-            const c = fs.readFileSync(f, 'utf-8');
-            total += (c.match(/style=\{\{/g) ?? []).length;
-            for (const p of DYNAMIC) dynamic += (c.match(p) ?? []).length;
+            const c = countInlineStyles(fs.readFileSync(f, 'utf-8'));
+            // `static + dynamic`, not a textual `style={{` count: an object of
+            // nothing but custom properties is not styling, and one that matches
+            // two dynamic patterns is still one object.
+            total += c.standard + c.dynamic + c.unsafeStyle;
+            dynamic += c.dynamic;
         }
         return { total, dynamic };
     }
 
-    it('CONTROL: the counter reads a real corpus', () => {
+    it('CONTROL: the counter reads a real corpus and can still see a style', () => {
         expect(TSX.length).toBeGreaterThan(50);
-        expect(counts().total).toBeGreaterThan(0);
+        // `counts().total` is ZERO now, so it can no longer serve as the control —
+        // an empty corpus and a clean one would look identical. Prove the counter
+        // still recognises the thing it is counting instead.
+        const planted = countInlineStyles(`<div style={{ color: 'red' }} />`);
+        expect(planted.standard).toBe(1);
+        const parameters = countInlineStyles(`<div style={{ '--x': y }} />`);
+        expect(parameters.standard + parameters.dynamic + parameters.unsafeStyle).toBe(0);
+    });
+
+    it('CONTROL: a style object hidden behind a conditional is still counted', () => {
+        // Every shape below writes CSS. The counter anchored on `style={{` until
+        // 2026-09-09 and saw only the first, so ReviewStep's conditional
+        // `gridColumn` read as zero inline styles while it was declaring one.
+        const conditional = countInlineStyles(
+            `<div style={cond ? { gridColumn: '1 / -1' } : undefined} />`
+        );
+        expect(conditional.standard).toBe(1);
+
+        const guarded = countInlineStyles(`<div style={cond && { top: 0 }} />`);
+        expect(guarded.standard).toBe(1);
+
+        // ...and the NEGATIVE half: `style={variable}` carries no object here, so
+        // the `{` that follows belongs to the next attribute and must not be read
+        // as one. Without this the guard captures `{className}` and reports a
+        // phantom style on every such element.
+        const indirect = countInlineStyles(`<div style={styleVar} className={cls} />`);
+        expect(indirect.standard + indirect.dynamic + indirect.unsafeStyle).toBe(0);
     });
 
     it('the static count never grows, and a fall is pinned', () => {

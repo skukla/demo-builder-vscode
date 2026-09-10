@@ -219,8 +219,12 @@ describe('StatusCard', () => {
                 const { container } = renderWithProviders(
                     <StatusCard status="Running" color="green" {...props} />
                 );
+                // The dot's `width` is declared by `.status-dot` in index.css and
+                // parameterised by `--status-dot-size`. Reading `.style.width` used
+                // to work because the width was welded to the element; the value
+                // this component actually decides is the variable.
                 return (container.querySelector('span[role="presentation"]') as HTMLElement).style
-                    .width;
+                    .getPropertyValue('--status-dot-size');
             };
 
             it('renders a 6px dot at S', () => {

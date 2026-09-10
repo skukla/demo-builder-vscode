@@ -34,12 +34,15 @@ export function FadeTransition({ show, duration = 200, children, className }: Fa
     }
 
     return (
+        // The STATE is a data attribute and the DURATION a custom property, so the
+        // opacity and the transition are declared in CSS. An inline `transition`
+        // is unreachable by any layer AND invisible to the motion enforcer, which
+        // only reads stylesheets — this one carried a hand-written `${duration}ms`
+        // that the Spectrum-scale rule could never have seen.
         <div
-            className={className}
-            style={{
-                opacity: show ? 1 : 0,
-                transition: `opacity ${duration}ms ease-in-out`,
-            }}
+            className={['fade-transition', className].filter(Boolean).join(' ')}
+            data-show={show ? 'true' : 'false'}
+            style={{ '--fade-duration': `${duration}ms` } as React.CSSProperties}
         >
             {children}
         </div>

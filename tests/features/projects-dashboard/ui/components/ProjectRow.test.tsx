@@ -124,9 +124,12 @@ describe('ProjectRow — pin, summary and aria-label', () => {
 
         const pin = screen.getByTestId('project-row-pin-indicator');
         expect(pin).toHaveAttribute('aria-label', 'Pinned');
-        // Without the inline style the icon breaks the row's baseline, which
-        // no text assertion would notice.
-        expect(pin).toHaveStyle({ display: 'inline-flex', alignItems: 'center' });
+        // The inline-flex baseline fix is `.pin-indicator` (shared-ui.css) since
+        // 2026-09-10 — one rule for the three components that each carried their
+        // own copy. Without it the icon breaks the row's baseline, which no text
+        // assertion would notice; jsdom cannot read the rule, so the contract here
+        // is the class.
+        expect(pin).toHaveClass('pin-indicator');
     });
 
     it('shows no pin indicator for a project that is not pinned', () => {

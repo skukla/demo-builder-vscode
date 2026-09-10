@@ -90,12 +90,7 @@ export function ProjectCard({
                         <span
                             data-testid="project-card-pin-indicator"
                             aria-label="Pinned"
-                            style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                flex: '0 0 auto',
-                                color: 'var(--spectrum-global-color-gray-700)',
-                            }}
+                            className="pin-indicator"
                         >
                             <PinOn size="XS" />
                         </span>

@@ -70,7 +70,7 @@ function renderReview(
 
 /** The wrapper the project-configuration card sits in — the grid's first cell. */
 function configCell(): HTMLElement {
-    const grid = document.querySelector('[style*="grid"]') as HTMLElement;
+    const grid = document.querySelector('.review-grid') as HTMLElement;
     return grid.firstElementChild as HTMLElement;
 }
 
@@ -84,32 +84,34 @@ describe('the two-column grid', () => {
     it('lays the cards out in two equal columns', () => {
         renderReview({ selectedStack: 'headless-paas' });
 
-        const grid = document.querySelector('[style*="grid-template-columns"]') as HTMLElement;
-        expect(grid).toHaveStyle({ display: 'grid', gridTemplateColumns: '1fr 1fr' });
+        const grid = document.querySelector('.review-grid') as HTMLElement;
+        // Declared in CSS since 2026-09-10; jsdom loads no stylesheets, so the
+        // contract this can check is the class or attribute the rule keys on.
+        expect(grid).toHaveClass('review-grid');
     });
 
     it('spans the project-configuration card across both columns when there is no Adobe I/O card', () => {
         renderReview({});
 
-        expect(configCell()).toHaveStyle({ gridColumn: '1 / -1' });
+        expect(configCell()).toHaveAttribute('data-span-columns', 'true');
     });
 
     it('leaves the card in one column when an organization is known', () => {
         renderReview({ adobeOrg: { id: 'o', code: '', name: 'Acme Org' } });
 
-        expect(configCell().getAttribute('style') ?? '').not.toContain('grid-column');
+        expect(configCell()).not.toHaveAttribute('data-span-columns');
     });
 
     it('leaves the card in one column when only a project is known', () => {
         renderReview({ adobeProject: { id: 'p', name: 'acme-proj' } });
 
-        expect(configCell().getAttribute('style') ?? '').not.toContain('grid-column');
+        expect(configCell()).not.toHaveAttribute('data-span-columns');
     });
 
     it('leaves the card in one column when only a workspace is known', () => {
         renderReview({ adobeWorkspace: { id: 'w', name: 'stage' } });
 
-        expect(configCell().getAttribute('style') ?? '').not.toContain('grid-column');
+        expect(configCell()).not.toHaveAttribute('data-span-columns');
     });
 });
 
@@ -130,7 +132,9 @@ describe('row and card presentation', () => {
         renderReview({ edsConfig: { repoName: 'acme-site' } as WizardState['edsConfig'] });
 
         const card = screen.getByText('EDGE DELIVERY SERVICES').parentElement as HTMLElement;
-        expect(card).toHaveStyle({ backgroundColor: 'var(--spectrum-gray-75)' });
+        // Declared in CSS since 2026-09-10; jsdom loads no stylesheets, so the
+        // contract this can check is the class or attribute the rule keys on.
+        expect(card).toHaveClass('review-panel');
     });
 
     it('wraps a plain string value in the shared text class', () => {

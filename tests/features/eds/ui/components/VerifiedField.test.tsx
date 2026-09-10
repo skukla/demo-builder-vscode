@@ -342,9 +342,9 @@ describe('VerifiedField', () => {
                 </TestWrapper>
             );
 
-            expect(screen.getByText('Verified').getAttribute('style')).toContain(
-                '--spectrum-semantic-positive-color-text-small'
-            );
+            // The colour is `.text-positive` (shared-ui.css) since 2026-09-10 — it was a
+            // CONSTANT var() in an UNSAFE_style, with nothing dynamic about it.
+            expect(screen.getByText('Verified')).toHaveClass('text-positive');
         });
 
         it('renders the error message in the negative semantic colour', async () => {
@@ -366,9 +366,7 @@ describe('VerifiedField', () => {
                 </TestWrapper>
             );
 
-            expect(screen.getByText('Organization not found').getAttribute('style')).toContain(
-                '--spectrum-semantic-negative-color-text-small'
-            );
+            expect(screen.getByText('Organization not found')).toHaveClass('text-negative');
         });
     });
 

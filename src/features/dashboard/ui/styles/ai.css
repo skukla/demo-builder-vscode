@@ -239,15 +239,6 @@
 }
 
 @layer theme {
-.prompt-card-pin {
-    display: inline-flex;
-    align-items: center;
-    flex: 0 0 auto;
-    color: var(--spectrum-global-color-gray-700);
-}
-}
-
-@layer theme {
 .prompt-card-title {
     display: -webkit-box;
     -webkit-line-clamp: 1;
