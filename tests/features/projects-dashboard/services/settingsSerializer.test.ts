@@ -19,6 +19,7 @@ import { SETTINGS_FILE_VERSION } from '@/types/settingsFile';
 import type { SettingsFile } from '@/types/settingsFile';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import { createMockProject, edsStorefrontInstance } from '../../../helpers/projectFake';
+import { assertNotOk, assertOk } from '../../../helpers/resultAssertions';
 
 describe('settingsSerializer', () => {
     describe('parseSettingsFile', () => {
@@ -34,19 +35,15 @@ describe('settingsSerializer', () => {
 
             const result = parseSettingsFile(json);
 
-            expect(result.success).toBe(true);
-            if (result.success) {
-                expect(result.settings.version).toBe(1);
-            }
+            assertOk(result);
+            expect(result.settings.version).toBe(1);
         });
 
         it('should return error for invalid JSON', () => {
             const result = parseSettingsFile('{ invalid json }');
 
-            expect(result.success).toBe(false);
-            if (!result.success) {
-                expect(result.error).toContain('corrupted');
-            }
+            assertNotOk(result);
+            expect(result.error).toContain('corrupted');
         });
 
         it('should return error for non-settings object', () => {
@@ -54,10 +51,8 @@ describe('settingsSerializer', () => {
 
             const result = parseSettingsFile(json);
 
-            expect(result.success).toBe(false);
-            if (!result.success) {
-                expect(result.error).toContain('Demo Builder settings');
-            }
+            assertNotOk(result);
+            expect(result.error).toContain('Demo Builder settings');
         });
     });
 
@@ -328,10 +323,8 @@ describe('settingsSerializer', () => {
 
             // Import (parse)
             const parseResult = parseSettingsFile(json);
-            expect(parseResult.success).toBe(true);
-            if (parseResult.success) {
-                expect(parseResult.settings.customBlockLibraries).toEqual(customLibs);
-            }
+            assertOk(parseResult);
+            expect(parseResult.settings.customBlockLibraries).toEqual(customLibs);
         });
     });
 

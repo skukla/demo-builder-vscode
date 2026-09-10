@@ -8,6 +8,7 @@ import {
     setupStandardMocks,
     cleanupTests,
 } from './checkHandler.testUtils';
+import { assertDefined } from '../../../helpers/resultAssertions';
 
 /**
  * Prerequisites Check Handler - Core Operations
@@ -326,12 +327,16 @@ describe('Prerequisites Check Handler - Per-Node-Version Filtering', () => {
         const statusCalls = (context.sendMessage as jest.Mock).mock.calls.filter(
             call => call[0] === 'prerequisite-status' && call[1].name === 'Adobe I/O CLI'
         );
+        // `if (lastStatusCall && ...nodeVersionStatus)` used to wrap these, so a run
+        // that sent NO status message — the most likely regression — passed having
+        // checked nothing. Both are asserted now.
         const lastStatusCall = statusCalls[statusCalls.length - 1];
-        if (lastStatusCall && lastStatusCall[1].nodeVersionStatus) {
-            const majors = lastStatusCall[1].nodeVersionStatus.map((v: any) => v.major);
-            expect(majors).not.toContain('18');
-            expect(majors).toContain('20');
-        }
+        assertDefined(lastStatusCall, 'a prerequisite-status message must be sent');
+        assertDefined(lastStatusCall[1].nodeVersionStatus, 'it must carry nodeVersionStatus');
+
+        const majors = lastStatusCall[1].nodeVersionStatus.map((v: any) => v.major);
+        expect(majors).not.toContain('18');
+        expect(majors).toContain('20');
     });
 
     it('should return empty nodeVersionStatus when no components match requiredFor', async () => {
@@ -536,10 +541,11 @@ describe('Prerequisites Check Handler - Per-Node-Version Filtering', () => {
             call => call[0] === 'prerequisite-status' && call[1].name === 'Adobe I/O CLI'
         );
         const lastStatusCall = statusCalls[statusCalls.length - 1];
-        if (lastStatusCall && lastStatusCall[1].nodeVersionStatus) {
-            const majors = lastStatusCall[1].nodeVersionStatus.map((v: any) => v.major);
-            expect(majors).toContain('18');
-            expect(majors).toContain('20');
-        }
+        assertDefined(lastStatusCall, 'a prerequisite-status message must be sent');
+        assertDefined(lastStatusCall[1].nodeVersionStatus, 'it must carry nodeVersionStatus');
+
+        const majors = lastStatusCall[1].nodeVersionStatus.map((v: any) => v.major);
+        expect(majors).toContain('18');
+        expect(majors).toContain('20');
     });
 });

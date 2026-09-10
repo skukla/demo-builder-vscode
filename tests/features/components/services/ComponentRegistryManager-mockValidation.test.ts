@@ -17,6 +17,7 @@ import {
     COMPONENT_SECTIONS,
     createMaliciousRegistry,
 } from './ComponentRegistryManager.testUtils';
+import { assertDefined } from '../../../helpers/resultAssertions';
 
 describe('Mock Structure Validation', () => {
     let actualComponentsJson: Record<string, unknown>;
@@ -66,24 +67,32 @@ describe('Mock Structure Validation', () => {
 
         it('should have component definitions with required fields', () => {
             // Check frontends have name and description
+            // The guard used to be `if (frontends)`, which meant a registry with NO
+            // frontends passed this test having checked nothing. Assert it is there.
             const frontends = mockRawRegistry.frontends;
-            if (frontends) {
-                Object.values(frontends).forEach((component) => {
-                    expect(component.name).toBeDefined();
-                    expect(component.description).toBeDefined();
-                    // Note: nodeVersion is optional - some components (EDS, PaaS) don't need Node
-                });
-            }
+            assertDefined(frontends);
+            expect(Object.keys(frontends).length).toBeGreaterThan(0);
+
+            const problems: string[] = [];
+            Object.entries(frontends).forEach(([id, component]) => {
+                // Note: nodeVersion is optional - some components (EDS, PaaS) don't need Node
+                if (component.name === undefined) problems.push(`frontends.${id}: no name`);
+                if (component.description === undefined) problems.push(`frontends.${id}: no description`);
+            });
+            expect(problems).toStrictEqual([]);
         });
 
         it('should have backends with name defined', () => {
             const backends = mockRawRegistry.backends;
-            if (backends) {
-                Object.values(backends).forEach((component) => {
-                    expect(component.name).toBeDefined();
-                    // Note: nodeVersion is optional - PaaS is a remote service without Node requirement
-                });
-            }
+            assertDefined(backends);
+            expect(Object.keys(backends).length).toBeGreaterThan(0);
+
+            const problems: string[] = [];
+            Object.entries(backends).forEach(([id, component]) => {
+                // Note: nodeVersion is optional - PaaS is a remote service without Node requirement
+                if (component.name === undefined) problems.push(`backends.${id}: no name`);
+            });
+            expect(problems).toStrictEqual([]);
         });
 
         it('should have nodeVersion for components that require local Node.js', () => {

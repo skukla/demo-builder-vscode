@@ -105,14 +105,19 @@ describe('ProcessCleanup - Error Handling', () => {
             const testPid = 12345;
 
             // When: Kill fails
-            try {
-                await processCleanup.killProcessTree(testPid, 'SIGTERM');
-                fail('Should have thrown error');
-            } catch (error: any) {
-                // Then: Error should contain EPERM details
-                expect(error.message).toMatch(/EPERM|operation not permitted/i);
-                expect(error.code).toBe('EPERM');
-            }
+            // The REJECTION is the claim. Captured with .then(resolve, reject) and
+            // asserted outside any catch, so the assertions always run — inside a
+            // catch they are skipped entirely if the call ever stops throwing, and
+            // `fail()` in the try is the only thing that was noticing.
+            const error = await processCleanup.killProcessTree(testPid, 'SIGTERM').then(
+                () => {
+                    throw new Error('expected a rejection, but the call resolved');
+                },
+                (caught: unknown) => caught as NodeJS.ErrnoException,
+            );
+            // Then: Error should contain EPERM details
+            expect(error.message).toMatch(/EPERM|operation not permitted/i);
+            expect(error.code).toBe('EPERM');
         });
     });
 
@@ -307,13 +312,18 @@ describe('ProcessCleanup - Error Handling', () => {
             const testPid = 99999;
 
             // When: Kill fails
-            try {
-                await processCleanup.killProcessTree(testPid, 'SIGTERM');
-                fail('Should have thrown');
-            } catch (error: any) {
-                // Then: Error should preserve error code
-                expect(error.code).toBe('EPERM');
-            }
+            // The REJECTION is the claim. Captured with .then(resolve, reject) and
+            // asserted outside any catch, so the assertions always run — inside a
+            // catch they are skipped entirely if the call ever stops throwing, and
+            // `fail()` in the try is the only thing that was noticing.
+            const error = await processCleanup.killProcessTree(testPid, 'SIGTERM').then(
+                () => {
+                    throw new Error('expected a rejection, but the call resolved');
+                },
+                (caught: unknown) => caught as NodeJS.ErrnoException,
+            );
+            // Then: Error should preserve error code
+            expect(error.code).toBe('EPERM');
         });
 
         it('should propagate original error message', async () => {
@@ -326,14 +336,19 @@ describe('ProcessCleanup - Error Handling', () => {
 
             const testPid = 12345;
 
-            try {
-                await processCleanup.killProcessTree(testPid, 'SIGTERM');
-                fail('Should have thrown');
-            } catch (error: any) {
-                // Then: Error should contain original message
-                expect(error.message).toContain('EPERM');
-                expect(error.message).toMatch(/operation not permitted|permission denied/i);
-            }
+            // The REJECTION is the claim. Captured with .then(resolve, reject) and
+            // asserted outside any catch, so the assertions always run — inside a
+            // catch they are skipped entirely if the call ever stops throwing, and
+            // `fail()` in the try is the only thing that was noticing.
+            const error = await processCleanup.killProcessTree(testPid, 'SIGTERM').then(
+                () => {
+                    throw new Error('expected a rejection, but the call resolved');
+                },
+                (caught: unknown) => caught as NodeJS.ErrnoException,
+            );
+            // Then: Error should contain original message
+            expect(error.message).toContain('EPERM');
+            expect(error.message).toMatch(/operation not permitted|permission denied/i);
         });
     });
 });

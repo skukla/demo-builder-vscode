@@ -19,6 +19,7 @@ import {
     RETRY_DELAYS_MS,
     RECONNECT_PAUSE_MS,
 } from '@/features/ai/server/mcpProxyReconnect';
+import { assertAction } from '../../../helpers/resultAssertions';
 
 describe('a socket that never connected does NOT schedule its own reconnect', () => {
     it('says nothing on close when connect never fired', () => {
@@ -73,20 +74,16 @@ describe('it stops rather than retrying forever', () => {
         // The actionable part: "not running" is only useful if the reader learns
         // that opening VS Code is what starts it.
         const decision = decideOnConnectError('ENOENT', 'no such file', RETRY_DELAYS_MS.length);
-        expect(decision).toMatchObject({ action: 'fail' });
-        if (decision.action === 'fail') {
-            expect(decision.message).toMatch(/not running/i);
-            expect(decision.message).toMatch(/VS Code/);
-        }
+        assertAction(decision, 'fail');
+        expect(decision.message).toMatch(/not running/i);
+        expect(decision.message).toMatch(/VS Code/);
     });
 
     it('fails IMMEDIATELY on a non-transient error, however early the attempt', () => {
         // EACCES will not fix itself; retrying ten times just delays the report.
         const decision = decideOnConnectError('EACCES', 'permission denied', 0);
-        expect(decision).toMatchObject({ action: 'fail' });
-        if (decision.action === 'fail') {
-            expect(decision.message).toContain('permission denied');
-        }
+        assertAction(decision, 'fail');
+        expect(decision.message).toContain('permission denied');
     });
 
     it('treats an unknown code as non-transient — fail closed', () => {

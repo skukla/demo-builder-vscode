@@ -297,13 +297,18 @@ describe('Manifest Error Investigation', () => {
             mockFs.rename.mockRejectedValue(specificError);
 
             // When: Saving fails
-            try {
-                await writer.saveProjectConfig(project, project.path);
-                fail('Should have thrown');
-            } catch (error) {
-                // Then: Original error preserved
-                expect(error).toBe(specificError);
-            }
+            // The REJECTION is the claim. Captured with .then(resolve, reject) and
+            // asserted outside any catch, so the assertions always run — inside a
+            // catch they are skipped entirely if the call ever stops throwing, and
+            // `fail()` in the try is the only thing that was noticing.
+            const error = await writer.saveProjectConfig(project, project.path).then(
+                () => {
+                    throw new Error('expected a rejection, but the call resolved');
+                },
+                (caught: unknown) => caught as NodeJS.ErrnoException,
+            );
+            // Then: Original error preserved
+            expect(error).toBe(specificError);
 
             // And: Error should be logged
             const errorCalls = mockLogger.getErrorCalls();

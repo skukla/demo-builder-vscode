@@ -14,6 +14,7 @@ import {
 } from '@/features/projects-dashboard/services/settingsSerializer';
 import type { AppBuilderComponentState, Project } from '@/types/base';
 import { SETTINGS_FILE_VERSION } from '@/types/settingsFile';
+import { assertOk } from '../../../helpers/resultAssertions';
 
 describe('settingsSerializer', () => {
     describe('extractSettingsFromProject - App Builder integration round-trip', () => {
@@ -239,28 +240,26 @@ describe('settingsSerializer', () => {
             const exported = extractSettingsFromProject(project, false);
             const parseResult = parseSettingsFile(JSON.stringify(exported));
 
-            expect(parseResult.success).toBe(true);
-            if (parseResult.success) {
-                expect(parseResult.settings.appBuilderComponentSources).toEqual({
-                    'firefly-image-gen': {
-                        owner: 'skukla',
-                        repo: 'app-builder-shell',
-                        branch: 'main',
-                        name: 'Firefly Image Gen',
-                    },
-                    'order-sync': {
-                        owner: 'skukla',
-                        repo: 'app-builder-shell',
-                        branch: 'main',
-                        name: 'Order Sync',
-                    },
-                    'acme-widget': { owner: 'acme', repo: 'widget', branch: 'dev' },
-                });
-                expect(parseResult.settings.additionalConsoleApis).toBeUndefined();
-                expect(parseResult.settings.componentApiPicks).toEqual({
-                    __existing__: ['AssetComputeSDK', 'CCAPI'],
-                });
-            }
+            assertOk(parseResult);
+            expect(parseResult.settings.appBuilderComponentSources).toEqual({
+                'firefly-image-gen': {
+                    owner: 'skukla',
+                    repo: 'app-builder-shell',
+                    branch: 'main',
+                    name: 'Firefly Image Gen',
+                },
+                'order-sync': {
+                    owner: 'skukla',
+                    repo: 'app-builder-shell',
+                    branch: 'main',
+                    name: 'Order Sync',
+                },
+                'acme-widget': { owner: 'acme', repo: 'widget', branch: 'dev' },
+            });
+            expect(parseResult.settings.additionalConsoleApis).toBeUndefined();
+            expect(parseResult.settings.componentApiPicks).toEqual({
+                __existing__: ['AssetComputeSDK', 'CCAPI'],
+            });
         });
     });
 });

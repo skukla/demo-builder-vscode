@@ -84,13 +84,11 @@ describe('SOP: HandlerContext comes from a factory', () => {
             const file = PRODUCERS.find((f) => path.basename(f) === base);
             expect(file).toBeDefined();
             const source = fs.readFileSync(file as string, 'utf-8');
-            if (role === 'deriver') {
-                // A deriver takes a context in; that is what makes it safe.
-                expect(source).toMatch(/:\s*HandlerContext[,)]/);
-            } else {
-                // A factory names the managers, which is the thing nobody else may do.
-                expect(source).toMatch(/componentRegistry:/);
-            }
+            // A deriver takes a context in; that is what makes it safe. A factory
+            // names the managers, which is the thing nobody else may do. The ROLE
+            // picks which pattern must appear; the assertion is unconditional.
+            const required = role === 'deriver' ? /:\s*HandlerContext[,)]/ : /componentRegistry:/;
+            expect(source).toMatch(required);
         }
     });
 });

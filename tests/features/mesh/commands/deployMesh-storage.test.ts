@@ -229,13 +229,12 @@ describe('DeployMeshCommand - Storage Behavior', () => {
 
             // Check that no component in componentConfigs has MESH_ENDPOINT
             const componentConfigs = capturedProject!.componentConfigs || {};
-            for (const [componentId, config] of Object.entries(componentConfigs)) {
-                expect(config).not.toHaveProperty('MESH_ENDPOINT');
-                // Extra assertion: Check the frontend specifically
-                if (componentId === 'frontend-headless') {
-                    expect((config as Record<string, unknown>)['MESH_ENDPOINT']).toBeUndefined();
-                }
-            }
+            // The per-component `if` was a second, weaker spelling of the same check
+            // the loop already makes. One list, one assertion, every offender named.
+            const carryingEndpoint = Object.entries(componentConfigs)
+                .filter(([, config]) => 'MESH_ENDPOINT' in (config as Record<string, unknown>))
+                .map(([componentId]) => componentId);
+            expect(carryingEndpoint).toStrictEqual([]);
         });
 
         it('should store the mesh endpoint on the KEYED entry (single source of truth)', async () => {

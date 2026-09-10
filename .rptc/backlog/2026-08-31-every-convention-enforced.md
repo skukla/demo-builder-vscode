@@ -228,3 +228,4 @@ is the current reference for the four-control pattern.
 - 2026-09-09  fix(css): a component <style> block is a rule too — six were outside every layer (`70295a01d`)
 - 2026-09-09  fix(css): every rule is in a layer now — the ratchet closed to 0 the day it shipped (`7848f1d16`)
 - 2026-09-09  feat(css): the cascade order is declared, carried by every bundle, and enforced (`e13f4caf1`)
+- 2026-09-10  docs(handbook): the last unenforced convention is enforced — 96 of 96 (`b304e7a2f`)

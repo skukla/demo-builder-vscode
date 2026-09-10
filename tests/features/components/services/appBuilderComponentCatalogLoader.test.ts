@@ -468,10 +468,16 @@ describe('appBuilderComponentCatalogLoader', () => {
                 schema.definitions.appBuilderComponent.properties.lifecycle.enum;
             expect(layoutEnum).toEqual(['standalone', 'extension']);
             expect(lifecycleEnum).toEqual(['deploy-only', 'app-management']);
+            const problems: string[] = [];
             for (const entry of catalog.appBuilderComponents) {
-                if (entry.layout !== undefined) expect(layoutEnum).toContain(entry.layout);
-                if (entry.lifecycle !== undefined) expect(lifecycleEnum).toContain(entry.lifecycle);
+                if (entry.layout !== undefined && !layoutEnum.includes(entry.layout)) {
+                    problems.push(`${entry.id}: layout '${entry.layout}' is not in the schema enum`);
+                }
+                if (entry.lifecycle !== undefined && !lifecycleEnum.includes(entry.lifecycle)) {
+                    problems.push(`${entry.id}: lifecycle '${entry.lifecycle}' is not in the schema enum`);
+                }
             }
+            expect(problems).toStrictEqual([]);
         });
 
         it('every env-schema item has {name, type} with type ∈ {text, secret}', () => {

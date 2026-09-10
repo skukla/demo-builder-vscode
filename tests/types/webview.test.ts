@@ -12,6 +12,7 @@
  */
 
 import { UnifiedProgress } from '@/types/webview';
+import { assertDefined } from '../helpers/resultAssertions';
 
 describe('UnifiedProgress - Milestone Tracking Fields', () => {
 
@@ -253,10 +254,11 @@ describe('UnifiedProgress - Milestone Tracking Fields', () => {
 
             // And: UI can access milestone data for rendering
             const { currentMilestoneIndex, totalMilestones } = uiProgress.command || {};
-            if (currentMilestoneIndex !== undefined && totalMilestones !== undefined) {
-                const displayText = `Step ${currentMilestoneIndex + 1} of ${totalMilestones}`;
-                expect(displayText).toBe('Step 2 of 3');
-            }
+            // Both are asserted present two lines above, so the old guard could only
+            // ever hide a failure — never prevent one.
+            assertDefined(currentMilestoneIndex);
+            assertDefined(totalMilestones);
+            expect(`Step ${currentMilestoneIndex + 1} of ${totalMilestones}`).toBe('Step 2 of 3');
         });
 
         it('should handle progress without milestones from ProgressUnifier', () => {

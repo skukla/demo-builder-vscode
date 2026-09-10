@@ -185,16 +185,21 @@ describe('deriveIntegrationCard — status matrix', () => {
     });
 
     it('Remove is present on every status EXCEPT deploying', () => {
+        const problems: string[] = [];
         for (const status of INTEGRATION_STATUSES) {
             const model = deriveIntegrationCard(integration({ status: 'not-deployed' }), {
                 status,
             });
-            if (status === 'deploying') {
-                expect(model.menuActions).not.toContain('remove');
-            } else {
-                expect(model.menuActions).toContain('remove');
+            const offersRemove = model.menuActions.includes('remove');
+            const shouldOffer = status !== 'deploying';
+            if (offersRemove !== shouldOffer) {
+                problems.push(
+                    `${status}: remove ${offersRemove ? 'present' : 'absent'}, expected ` +
+                        `${shouldOffer ? 'present' : 'absent'}`
+                );
             }
         }
+        expect(problems).toStrictEqual([]);
     });
 
     it('Manage APIs is present on not-deployed/deployed/stale/error (workspace-scoped, pre-deploy included)', () => {

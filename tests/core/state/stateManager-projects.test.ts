@@ -14,6 +14,7 @@ import {
     type TestMocks,
 } from './stateManager.testUtils';
 import type { Project } from '@/types/base';
+import { assertDefined } from '../../helpers/resultAssertions';
 
 // Re-declare mocks to ensure proper typing and hoisting
 jest.mock('fs/promises');
@@ -83,14 +84,12 @@ describe('StateManager - Project Management', () => {
             const manifestCall = (fs.writeFile as jest.Mock).mock.calls.find(
                 (call) => typeof call[0] === 'string' && call[0].endsWith('.demo-builder.json.tmp')
             );
-            expect(manifestCall).toBeDefined();
+            assertDefined(manifestCall);
 
             // Verify the manifest content includes expected fields
-            if (manifestCall) {
-                const manifestContent = JSON.parse(manifestCall[1]);
-                expect(manifestContent.name).toBe('Test Project');
-                expect(manifestContent.adobe).toEqual(project.adobe);
-            }
+            const manifestContent = JSON.parse(manifestCall[1]);
+            expect(manifestContent.name).toBe('Test Project');
+            expect(manifestContent.adobe).toEqual(project.adobe);
         });
 
         it('should create .env file with project configuration', async () => {
@@ -174,16 +173,14 @@ describe('StateManager - Project Management', () => {
                 (call) => typeof call[0] === 'string' && call[0].endsWith('.demo-builder.json.tmp')
             );
 
-            expect(manifestCall).toBeDefined();
+            assertDefined(manifestCall);
 
-            if (manifestCall) {
-                const manifestContent = JSON.parse(manifestCall[1]);
-                const manifestLastModified = manifestContent.lastModified;
+            const manifestContent = JSON.parse(manifestCall[1]);
+            const manifestLastModified = manifestContent.lastModified;
 
-                // Verify the manifest's lastModified is between timeBefore and timeAfter
-                expect(manifestLastModified >= timeBefore).toBe(true);
-                expect(manifestLastModified <= timeAfter).toBe(true);
-            }
+            // Verify the manifest's lastModified is between timeBefore and timeAfter
+            expect(manifestLastModified >= timeBefore).toBe(true);
+            expect(manifestLastModified <= timeAfter).toBe(true);
         });
     });
 

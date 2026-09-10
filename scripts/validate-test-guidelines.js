@@ -34,12 +34,26 @@ function validatePlaybookSections() {
   console.log('\n🔍 Validating playbook sections...\n');
 
   const content = fs.readFileSync(PLAYBOOK_PATH, 'utf8');
+  // MATCHED BY CONCEPT, NOT BY EXACT HEADING TEXT.
+  //
+  // These were four literal heading strings from an early draft. The playbook was
+  // later rewritten with better ones — 'When', 'Extract the shared setup FIRST',
+  // 'Then split', 'A real example' — and this check went red and STAYED red,
+  // reporting four missing sections against a document that covers all four.
+  //
+  // That matters more than a stale regex: a validator that cries wolf is one
+  // nobody reads, and this playbook is the guidance for splitting a test file. On
+  // 2026-09-10 a session invented its own splitter, cut 11 files at the arithmetic
+  // midpoint, named the halves `-part2` and broke 167 tests — every one of those
+  // mistakes is named in the playbook, which was never opened. This is the SECOND
+  // time this same validator has been failing on its own bug rather than on a
+  // finding (see the note in CLAUDE.md about its export detector).
   const requiredSections = [
-    { name: 'When to Split', pattern: /##\s+When to Split/i },
-    { name: 'How to Split', pattern: /##\s+How to Split/i },
-    { name: '.testUtils.ts Pattern', pattern: /##\s+\.testUtils\.ts Pattern/i },
-    { name: 'Examples', pattern: /##\s+(Examples|Successful Splits)/i },
-    { name: 'Decision Criteria', pattern: /(file size|line count|500 lines)/i }
+    { name: 'when to split', pattern: /##\s+When\b/i },
+    { name: 'how to split', pattern: /##\s+(How to Split|Then split)/i },
+    { name: 'the testUtils pattern', pattern: /\.testUtils\.tsx?\b/i },
+    { name: 'a worked example', pattern: /##\s+(Examples|Successful Splits|A real example)/i },
+    { name: 'decision criteria', pattern: /(file size|line count|500 lines)/i }
   ];
 
   let allPresent = true;

@@ -27,6 +27,7 @@ import type { RepoReadiness } from '@/features/eds/services/storefront/repoStore
 import { createMockLogger } from '../../../../helpers/loggerFake';
 
 import type { GithubFake } from '../../../../helpers/githubFake';
+import { assertKind } from '../../../../helpers/resultAssertions';
 const logger = createMockLogger();
 
 /** Stub GitHubFileOperations: `present` lists the paths that exist. */
@@ -81,13 +82,11 @@ describe('classifyRepoForStorefront', () => {
             logger
         );
 
-        expect(result.kind).toBe('not-a-storefront');
-        if (result.kind === 'not-a-storefront') {
-            expect(result.missing).toEqual(
-                expect.arrayContaining(['scripts/scripts.js', 'scripts/delayed.js'])
-            );
-            expect(result.missing).not.toContain('head.html');
-        }
+        assertKind(result, 'not-a-storefront');
+        expect(result.missing).toEqual(
+            expect.arrayContaining(['scripts/scripts.js', 'scripts/delayed.js'])
+        );
+        expect(result.missing).not.toContain('head.html');
     });
 
     it('does not call a populated non-storefront empty', async () => {

@@ -260,8 +260,8 @@ describe('webview handler coverage — every panel answers what its UI sends', (
             // Without this, a broken import walk would return nothing and every
             // coverage assertion below would pass while proving nothing.
             const count = sentTypes(entry).size;
-            if (noRequests) expect(count).toBe(0);
-            else expect(count).toBeGreaterThan(0);
+            // The fixture picks the EXPECTED shape; the assertion always runs.
+            expect(count === 0).toBe(Boolean(noRequests));
         }
     );
 

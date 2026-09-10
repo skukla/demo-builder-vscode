@@ -41,11 +41,9 @@ describe('EnvironmentSetup - Path Discovery', () => {
         });
 
         it('should use correct shell for platform', () => {
-            if (process.platform === 'win32') {
-                expect(DEFAULT_SHELL).toBe('cmd.exe');
-            } else {
-                expect(DEFAULT_SHELL).toBe('/bin/bash');
-            }
+            // The platform picks the EXPECTED VALUE; the assertion itself always runs.
+            const expected = process.platform === 'win32' ? 'cmd.exe' : '/bin/bash';
+            expect(DEFAULT_SHELL).toBe(expected);
         });
     });
 

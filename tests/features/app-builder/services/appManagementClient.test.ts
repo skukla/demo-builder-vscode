@@ -350,14 +350,20 @@ describe('appManagementClient', () => {
                 jsonResponse(409, { reason: 'not-installed', message: 'Nothing installed.' })
             );
 
-            try {
-                await makeClient(mockFetch).startUninstallation(VALIDATE_REQUEST);
-                throw new Error('expected a rejection');
-            } catch (error) {
-                const apiError = error as AppManagementApiError;
-                expect(apiError.status).toBe(409);
-                expect(apiError.reason).toBe('not-installed');
-            }
+            // Captured with .then(resolve, reject) so the assertions live outside
+            // the catch and always run. Inside one they are skipped entirely if the
+            // call stops rejecting, and only the throw above would notice.
+            const apiError = await makeClient(mockFetch)
+                .startUninstallation(VALIDATE_REQUEST)
+                .then(
+                    () => {
+                        throw new Error('expected a rejection, but the call resolved');
+                    },
+                    (caught: unknown) => caught as AppManagementApiError,
+                );
+
+            expect(apiError.status).toBe(409);
+            expect(apiError.reason).toBe('not-installed');
         });
 
         it('DELETEs the uninstallation record and the association (no body)', async () => {
@@ -504,13 +510,20 @@ describe('appManagementClient', () => {
         it('never leaks the access token into error messages', async () => {
             mockFetch.mockResolvedValue(jsonResponse(500, { message: 'boom' }));
 
-            try {
-                await makeClient(mockFetch).getInstallationState();
-                throw new Error('expected a rejection');
-            } catch (error) {
-                expect((error as Error).message).not.toContain(FAKE_TOKEN);
-                expect((error as Error).message).toBe('Get installation state failed (HTTP 500)');
-            }
+            const error = await makeClient(mockFetch)
+                .getInstallationState()
+                .then(
+                    () => {
+                        throw new Error('expected a rejection, but the call resolved');
+                    },
+                    (caught: unknown) => caught as Error,
+                );
+
+            // The token check matters most here, and it is the one that was inside
+            // the catch — a call that stopped throwing would have leaked without
+            // failing anything.
+            expect(error.message).not.toContain(FAKE_TOKEN);
+            expect(error.message).toBe('Get installation state failed (HTTP 500)');
         });
 
         it('reports a non-JSON 200 as a typed, sanitized error', async () => {

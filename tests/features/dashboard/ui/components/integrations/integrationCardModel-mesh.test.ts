@@ -224,18 +224,24 @@ describe('deriveMeshCard — identity + propagation', () => {
     // mesh does not have: 'open' (its endpoint answers POSTs, so it is copy-not-
     // browse) and 'manage-apis' (it has no API picks of its own).
     it('carries the status verb, and Redeploy only where there is a deployment to redo', () => {
+        // The branch decides what counts as WRONG; the assertion is outside it and
+        // always runs. It also names every offending status in one failure instead
+        // of stopping at the first.
+        const problems: string[] = [];
         for (const status of MESH_STATUSES) {
             const model = deriveMeshCard(display(), status, meshEntry(), false);
+            const got = model.menuActions;
             if (model.status === 'deploying' || model.status === 'checking') {
-                expect(model.menuActions).toStrictEqual([]);
+                if (got.length !== 0) problems.push(`${status}: expected no verbs, got [${got}]`);
             } else if (model.status === 'deployed') {
-                expect(model.menuActions).toEqual(['redeploy']);
+                if (got.join() !== 'redeploy') problems.push(`${status}: expected [redeploy], got [${got}]`);
             } else {
                 // deploy / update / retry / sign-in — one verb, never two.
-                expect(model.menuActions).toHaveLength(1);
-                expect(model.menuActions).not.toContain('redeploy');
+                if (got.length !== 1) problems.push(`${status}: expected exactly one verb, got [${got}]`);
+                if (got.includes('redeploy')) problems.push(`${status}: must not offer redeploy`);
             }
         }
+        expect(problems).toStrictEqual([]);
     });
 
     // The live text used to win for EVERY status, which is how the mesh card came

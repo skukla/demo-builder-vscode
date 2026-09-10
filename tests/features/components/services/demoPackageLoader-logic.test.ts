@@ -258,13 +258,16 @@ describe('shipped demo-packages.json (config integrity)', () => {
         it('uses the simplified string form for all addon configs', async () => {
             const packages = await loadDemoPackages();
 
+            const problems: string[] = [];
             packages.forEach((pkg) => {
-                if (pkg.addons) {
-                    Object.values(pkg.addons).forEach((config) => {
-                        expect(typeof config).toBe('string');
-                    });
-                }
+                if (!pkg.addons) return;
+                Object.entries(pkg.addons).forEach(([addon, config]) => {
+                    if (typeof config !== 'string') {
+                        problems.push(`${pkg.id}.addons.${addon} is ${typeof config}, not a string`);
+                    }
+                });
             });
+            expect(problems).toStrictEqual([]);
         });
     });
 });

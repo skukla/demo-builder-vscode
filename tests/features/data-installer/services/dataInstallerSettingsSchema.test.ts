@@ -83,7 +83,9 @@ describe('Data Installer settings schema', () => {
     it('carries no credential if a default is ever set', () => {
         const value = String(loadSettingSchema(SETTING)?.default ?? '');
         if (!value) {
-            expect(value).toBe('');
+            // Passes vacuously on the empty default BY DESIGN — see above. There is
+            // nothing to assert about a setting with no default, and saying
+            // `expect(value).toBe('')` inside the guard only restated the condition.
             return;
         }
 

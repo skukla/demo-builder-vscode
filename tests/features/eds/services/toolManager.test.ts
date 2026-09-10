@@ -285,12 +285,10 @@ describe('ToolManager', () => {
 
             // Should not contain raw newlines in values
             const lines = envContent.split('\n');
-            for (const line of lines) {
-                if (line.includes('=') && !line.startsWith('#')) {
-                    const [, value] = line.split('=');
-                    expect(value).not.toMatch(/[\r\n]/);
-                }
-            }
+            const offenders = lines
+                .filter((line) => line.includes('=') && !line.startsWith('#'))
+                .filter((line) => /[\r\n]/.test(line.split('=')[1] ?? ''));
+            expect(offenders).toStrictEqual([]);
         });
     });
 

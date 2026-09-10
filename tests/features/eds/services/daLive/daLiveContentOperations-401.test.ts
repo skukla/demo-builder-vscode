@@ -346,11 +346,12 @@ describe('DaLiveContentOperations - 401 Token Expiration', () => {
                 expect(authHeader?.Authorization).toBe('Bearer token-batch-1');
             }
 
-            // 6th POST call should use token-batch-2
-            if (postCalls.length > 5) {
-                const authHeader = (postCalls[5][1] as RequestInit)?.headers as Record<string, string>;
-                expect(authHeader?.Authorization).toBe('Bearer token-batch-2');
-            }
+            // 6th POST call should use token-batch-2. A run that made five or fewer
+            // POSTs never re-authenticated at all — the exact regression this test is
+            // for — and the old guard let it pass, so the count is asserted first.
+            expect(postCalls.length).toBeGreaterThan(5);
+            const secondBatchAuth = (postCalls[5][1] as RequestInit)?.headers as Record<string, string>;
+            expect(secondBatchAuth?.Authorization).toBe('Bearer token-batch-2');
         });
 
         it('should propagate DaLiveAuthError from copySingleFile', async () => {

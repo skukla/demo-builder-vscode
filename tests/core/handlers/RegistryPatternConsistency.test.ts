@@ -53,10 +53,11 @@ describe('Handler Map Pattern Consistency', () => {
             ({ handlers }) => {
                 const registeredTypes = getRegisteredTypes(handlers);
 
-                // First registered type should be findable
-                if (registeredTypes.length > 0) {
-                    expect(hasHandler(handlers, registeredTypes[0])).toBe(true);
-                }
+                // A handler map with NO types registered is itself a failure, and the
+                // guard used to let it pass silently. The sibling test above asserts
+                // the same thing; asserting it here makes the lookup unconditional.
+                expect(registeredTypes.length).toBeGreaterThan(0);
+                expect(hasHandler(handlers, registeredTypes[0])).toBe(true);
 
                 // Non-existent type should not be findable
                 expect(hasHandler(handlers, 'non-existent-handler-type')).toBe(false);

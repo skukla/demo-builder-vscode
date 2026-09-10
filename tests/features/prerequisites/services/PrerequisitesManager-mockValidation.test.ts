@@ -122,12 +122,12 @@ describe('Mock Structure Validation - Prerequisites', () => {
 
             // The mock should include these fields for each prerequisite
             const samplePrereq = actualPrerequisitesJson.prerequisites[0];
-            requiredFields.forEach(field => {
-                // optional field may be implicitly false (undefined)
-                if (field !== 'optional') {
-                    expect(samplePrereq[field as keyof typeof samplePrereq]).toBeDefined();
-                }
-            });
+            // `optional` may be implicitly false (undefined), so it is excluded from
+            // the list rather than skipped inside the loop.
+            const missing = requiredFields
+                .filter((field) => field !== 'optional')
+                .filter((field) => samplePrereq[field as keyof typeof samplePrereq] === undefined);
+            expect(missing).toStrictEqual([]);
         });
 
         it('documents check structure (command string, not args array)', () => {
@@ -150,10 +150,8 @@ describe('Mock Structure Validation - Prerequisites', () => {
             const sampleReq = Object.values(actualPrerequisitesJson.componentRequirements)[0];
 
             expect(Array.isArray(sampleReq.prerequisites)).toBe(true);
-            // plugins is optional
-            if (sampleReq.plugins) {
-                expect(Array.isArray(sampleReq.plugins)).toBe(true);
-            }
+            // plugins is optional — absent is fine, present-but-not-an-array is not.
+            expect(sampleReq.plugins === undefined || Array.isArray(sampleReq.plugins)).toBe(true);
         });
 
         it('documents install.steps structure for dynamic prerequisites', () => {

@@ -90,11 +90,15 @@ describe('handleGetProjectUrls', () => {
 
         expect(result.success).toBe(true);
         expect(vscode.env.openExternal).not.toHaveBeenCalled();
-        expect(vscode.window.showInformationMessage ?? (() => {})).toBeDefined();
-        // No admin-panel prompt path — showInformationMessage is not even called.
-        if (vscode.window.showInformationMessage) {
-            expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
-        }
+
+        // "Never prompts" was asserted inside `if (vscode.window.showInformationMessage)`,
+        // and the shared vscode mock does not define that function at all — so the
+        // guard was always false and the assertion NEVER RAN. Install a spy first,
+        // which is what makes the claim checkable rather than merely written down.
+        const prompt = jest.fn();
+        vscode.window.showInformationMessage = prompt;
+        await run(mockContext);
+        expect(prompt).not.toHaveBeenCalled();
     });
 
     it('returns the local storefront URL only when a frontend port is assigned', async () => {

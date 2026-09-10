@@ -437,11 +437,16 @@ describe('registerConfigurationService - overlay registration failure is surface
             SERVICES
         );
 
+            // `expect.any(String)` is a MATCHER, not an assertion — but the rule sees
+            // an `expect` call inside a conditional and cannot tell. Building the
+            // matcher first, then choosing it, keeps the meaning and drops the shape.
+            const anyString = expect.any(String);
+            const expectedAuthMessage = expectsAuthMessage ? anyString : undefined;
             expect(mockSurfaceOverlayFailure).toHaveBeenCalledWith(
                 expect.anything(),
                 expect.anything(),
                 updateStatus,
-                expectsAuthMessage ? expect.any(String) : undefined
+                expectedAuthMessage
             );
         },
     );

@@ -104,11 +104,26 @@ describe('check-test-file-sizes script', () => {
         fs.mkdirSync(path.dirname(testFile), { recursive: true });
         fs.writeFileSync(testFile, 'test line\n'.repeat(800));
 
-        // Act & Assert: Should report relative path
-        try {
-            execSync(`node ${scriptPath} ${tempTestDir}`, { encoding: 'utf8' });
-        } catch (error: any) {
-            expect(error.stdout || error.stderr).toContain('tests/subdir/test.test.ts');
-        }
+        // Act: capture the outcome without asserting inside the catch.
+        //
+        // THE OLD VERSION COULD NOT FAIL. It asserted only in the catch and had no
+        // `fail()` in the try, so if the size check ever stopped exiting non-zero —
+        // exactly the regression this test exists to catch — execSync would return
+        // normally, the catch would never run, and the test would pass having
+        // checked nothing. An 800-line file is over the 750 limit; exiting non-zero
+        // is half the claim and belongs in an assertion.
+        const outcome = ((): { failed: boolean; output: string } => {
+            try {
+                execSync(`node ${scriptPath} ${tempTestDir}`, { encoding: 'utf8' });
+                return { failed: false, output: '' };
+            } catch (error) {
+                const e = error as { stdout?: string; stderr?: string };
+                return { failed: true, output: e.stdout || e.stderr || '' };
+            }
+        })();
+
+        // Assert
+        expect(outcome.failed).toBe(true);
+        expect(outcome.output).toContain('tests/subdir/test.test.ts');
     });
 });

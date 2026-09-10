@@ -222,14 +222,19 @@ describe('ProcessCleanup - Mocked Tests', () => {
                 }
             );
 
-            try {
-                await cleanup.killProcessTree(testPid, 'SIGTERM');
-                fail('Should have thrown');
-            } catch (error: any) {
-                // Error may not include PID if tree-kill threw
-                // Main thing is it throws an error
-                expect(error).toBeDefined();
-            }
+            // The REJECTION is the claim. Captured with .then(resolve, reject) and
+            // asserted outside any catch, so the assertions always run — inside a
+            // catch they are skipped entirely if the call ever stops throwing, and
+            // `fail()` in the try is the only thing that was noticing.
+            const error = await cleanup.killProcessTree(testPid, 'SIGTERM').then(
+                () => {
+                    throw new Error('expected a rejection, but the call resolved');
+                },
+                (caught: unknown) => caught as NodeJS.ErrnoException,
+            );
+            // Error may not include PID if tree-kill threw
+            // Main thing is it throws an error
+            expect(error).toBeDefined();
         });
     });
 

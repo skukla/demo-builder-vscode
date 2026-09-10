@@ -88,6 +88,50 @@ interface EdsContentDeps {
 }
 
 /**
+ * Run a setup step that must not abort the pipeline.
+ *
+ * Five steps here were the same seven lines — try, await, catch, warn — and each
+ * `catch` is a branch, which is most of why this function sat at complexity 26
+ * against a limit of 25. The message format is unchanged: `<label> failed: <why>`.
+ */
+async function nonFatal(label: string, logger: Logger, run: () => Promise<void>): Promise<void> {
+    try {
+        await run();
+    } catch (error) {
+        logger.warn(`[EDS Content] ${label} failed: ${(error as Error).message}`);
+    }
+}
+
+/**
+ * Does the site already have content in DA.live?
+ *
+ * DA.live's source API is the source of truth and avoids CDN caching issues. A
+ * failed check means "not known to exist" — never an abort.
+ */
+async function contentExistsInDaLive(
+    config: EdsContentConfig,
+    // `getAccessToken()` returns `string | null`; the parameter takes the real
+    // shape rather than making the caller coerce it.
+    token: string | null | undefined,
+    logger: Logger,
+): Promise<boolean> {
+    const checkUrl = `${DA_LIVE_BASE_URL}/source/${config.daLiveOrg}/${config.daLiveSite}/index.html`;
+    logger.debug(`[EDS Content] Checking DA.live: ${checkUrl}`);
+    try {
+        const response = await fetch(checkUrl, {
+            method: 'HEAD',
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+            signal: AbortSignal.timeout(TIMEOUTS.QUICK),
+        });
+        logger.debug(`[EDS Content] DA.live check response: ${response.status}`);
+        return response.ok;
+    } catch (error) {
+        logger.debug(`[EDS Content] DA.live check failed: ${(error as Error).message}`);
+        return false;
+    }
+}
+
+/**
  * Verify that DA.live content exists and is published to the CDN.
  * Populates from the template source if missing.
  *
@@ -123,24 +167,10 @@ export async function ensureEdsContent(
     const daLiveContentOps = new DaLiveContentOperations(daLiveTokenProvider, logger);
 
     // Quick check: does content already exist in DA.live?
-    // Check DA.live source API directly — it's the source of truth and avoids CDN caching issues.
     const token = await daLiveAuthService.getAccessToken();
-    const checkUrl = `${DA_LIVE_BASE_URL}/source/${config.daLiveOrg}/${config.daLiveSite}/index.html`;
-    logger.debug(`[EDS Content] Checking DA.live: ${checkUrl}`);
-
-    try {
-        const response = await fetch(checkUrl, {
-            method: 'HEAD',
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
-            signal: AbortSignal.timeout(TIMEOUTS.QUICK),
-        });
-        logger.debug(`[EDS Content] DA.live check response: ${response.status}`);
-        if (response.ok) {
-            logger.debug('[EDS Content] Content already exists in DA.live, skipping copy');
-            return false;
-        }
-    } catch (error) {
-        logger.debug(`[EDS Content] DA.live check failed: ${(error as Error).message}`);
+    if (await contentExistsInDaLive(config, token, logger)) {
+        logger.debug('[EDS Content] Content already exists in DA.live, skipping copy');
+        return false;
     }
 
     logger.info('[EDS Content] Content not found in DA.live, copying from template source...');
@@ -208,55 +238,49 @@ export async function ensureEdsContent(
 
     // DA.live permissions (non-fatal)
     onProgress?.('Configuring site permissions...', 'Granting DA.live access');
-    try {
+    await nonFatal('Permissions setup', logger, async () => {
         const userEmail = await daLiveAuthService.getUserEmail();
-        if (userEmail) {
-            await configureDaLivePermissions(daLiveTokenProvider, config.daLiveOrg, config.daLiveSite, userEmail, logger);
-        } else {
+        if (!userEmail) {
             logger.warn('[EDS Content] No user email available for permissions');
+            return;
         }
-    } catch (error) {
-        logger.warn(`[EDS Content] Permissions setup failed: ${(error as Error).message}`);
-    }
+        await configureDaLivePermissions(
+            daLiveTokenProvider, config.daLiveOrg, config.daLiveSite, userEmail, logger,
+        );
+    });
 
     // Block library from template (non-fatal, skip if no template info)
     let libraryPaths: string[] = [];
     if (config.templateOwner && config.templateRepo) {
         onProgress?.('Configuring block library...', 'Setting up block library from template');
-        try {
+        await nonFatal('Block library setup', logger, async () => {
             const { GitHubFileOperations } = await import('@/features/eds/services/github/githubFileOperations');
             const githubFileOps = new GitHubFileOperations(githubTokenService, logger);
             const libResult = await daLiveContentOps.createBlockLibraryFromTemplate(
                 config.daLiveOrg,
                 config.daLiveSite,
-                config.templateOwner,
-                config.templateRepo,
+                config.templateOwner as string,
+                config.templateRepo as string,
                 (owner, repo, path) => githubFileOps.getFileContent(owner, repo, path),
             );
             if (libResult.blocksCount > 0) {
                 logger.info(`[EDS Content] Block library: ${libResult.blocksCount} blocks configured`);
                 libraryPaths = libResult.paths;
             }
-        } catch (error) {
-            logger.warn(`[EDS Content] Block library setup failed: ${(error as Error).message}`);
-        }
+        });
     }
 
     // EDS settings — AEM Assets / Universal Editor (non-fatal)
     onProgress?.('Applying EDS settings...', 'Configuring AEM Assets and Universal Editor');
-    try {
-        await applyDaLiveOrgConfigSettings(daLiveContentOps, config.daLiveOrg, config.daLiveSite, logger);
-    } catch (error) {
-        logger.warn(`[EDS Content] EDS settings failed: ${(error as Error).message}`);
-    }
+    await nonFatal('EDS settings', logger, () =>
+        applyDaLiveOrgConfigSettings(daLiveContentOps, config.daLiveOrg, config.daLiveSite, logger),
+    );
 
     // Cache purge before publishing (non-fatal)
     onProgress?.('Publishing storefront content...', 'Purging stale cache');
-    try {
-        await helixService.purgeCacheAll(repoInfo.owner, repoInfo.repo, 'main');
-    } catch (error) {
-        logger.warn(`[EDS Content] Cache purge failed: ${(error as Error).message}`);
-    }
+    await nonFatal('Cache purge', logger, () =>
+        helixService.purgeCacheAll(repoInfo.owner, repoInfo.repo, 'main'),
+    );
 
     // Publish content to CDN (preview + live)
     onProgress?.('Publishing storefront content...', 'Making content available on CDN');
@@ -270,13 +294,11 @@ export async function ensureEdsContent(
 
     // Publish block library paths (non-fatal, may be missed by publishAllSiteContent)
     if (libraryPaths.length > 0) {
-        try {
+        await nonFatal('Block library publish', logger, async () => {
             await publishLibraryPaths(helixService, repoInfo.owner, repoInfo.repo, libraryPaths, logger);
             // The publish reporting success proves nothing — see verifyLibraryPreviewed.
             await verifyLibraryPreviewed(repoInfo.owner, repoInfo.repo, logger, helixService);
-        } catch (error) {
-            logger.warn(`[EDS Content] Block library publish failed: ${(error as Error).message}`);
-        }
+        });
     }
 
     logger.info('[EDS Content] Content published to CDN');

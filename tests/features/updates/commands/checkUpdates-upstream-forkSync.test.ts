@@ -327,10 +327,12 @@ describe('CheckUpdatesCommand — Integration: Full Flow Order', () => {
 
         expect(executionOrder[0]).toBe('fork-sync');
         expect(executionOrder[1]).toBe('template-sync');
-        if (executionOrder.includes('component-update')) {
-            expect(executionOrder.indexOf('component-update')).toBeGreaterThan(
-                executionOrder.indexOf('template-sync')
-            );
-        }
+        // component-update is optional; when it runs it must come AFTER template-sync.
+        // Expressed as a value so the assertion runs either way — the old guard meant
+        // a run that skipped the step entirely checked nothing.
+        const componentAt = executionOrder.indexOf('component-update');
+        const afterTemplateSync =
+            componentAt === -1 || componentAt > executionOrder.indexOf('template-sync');
+        expect(afterTemplateSync).toBe(true);
     });
 });
