@@ -73,6 +73,33 @@ describe('every hook rule proof runs, and passes', () => {
     });
 });
 
+describe('shell writes reach the path-keyed rules', () => {
+    /**
+     * `writtenPaths.probe.py` proves the other half of the routing surface: a rule
+     * keyed on a file path fires when the file is written through the SHELL, not
+     * only through Write/Edit. It exists because that half was silent — for most of
+     * 2026-09-10 an agent editing via heredoc'd python triggered none of the fifteen
+     * path rules, including the god-file one on a 910-line handler.
+     *
+     * Run here for the same reason every `.proof.sh` is: a proof nobody runs is
+     * documentation. This makes it a test.
+     */
+    it('passes its own cases, firing and silent', () => {
+        const probe = path.join(__dirname, '../../.claude/hooks/writtenPaths.probe.py');
+        expect(fs.existsSync(probe)).toBe(true);
+
+        const out = execFileSync('python3', [probe], {
+            encoding: 'utf8',
+            cwd: path.resolve(__dirname, '../..'),
+            timeout: 60_000,
+        });
+
+        const wrong = out.split('\n').filter((l) => l.includes('*** WRONG ***'));
+        const cases = out.split('\n').filter((l) => /expect=\S+\s+got=/.test(l));
+        expect({ wrong, exercised: cases.length > 0 }).toEqual({ wrong: [], exercised: true });
+    });
+});
+
 describe('EVERY rule has a proof', () => {
     /**
      * This used to exempt the skill-nudge rules — `reuse-first`, `webview-test`,

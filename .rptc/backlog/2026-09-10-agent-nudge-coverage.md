@@ -84,3 +84,4 @@ that actually happened on 2026-09-10.
 - 2026-09-10  2026-09-10  All 13 gaps closed — 25 rules, every one proved; 109 conventions
 - 2026-09-10  2026-09-10  All 13 gaps routed: 25 rules, 25 proofs, 109 conventions (46a737d6e)
 - 2026-09-10  2026-09-10  SHIPPED: its user is the agent, and the rules fired in real use the day they landed — 31 and 32 on the new enforcer, 42 on the daLive edit, 49 on the god file.
+- 2026-09-10  2026-09-10  BYPASS CLOSED: path-keyed rules were silent for shell writes (cat >, sed -i, heredoc'd python) because only Write/Edit carry file_path. router.sh now extracts written paths from a Bash command and re-evaluates the rules per path. writtenPaths.probe.py, 9 cases both directions, run by tests/hooks/rule-proofs.test.ts.

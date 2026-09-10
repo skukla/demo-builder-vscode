@@ -164,33 +164,68 @@ IFS=$'\037' read -r TOOL CMD FILE CONTENT SESSION <<<"$fields"
 RULES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/rules"
 [ -d "$RULES_DIR" ] || exit 0
 
-for rule in "$RULES_DIR"/*.rule; do
-    [ -f "$rule" ] || continue
+# Evaluate every rule against one (tool, cmd, file, content). Returns 2 to block.
+evaluate() {
+    local T="$1" C="$2" F="$3" X="$4"
+    local rule rule_id rule_once marker
+    for rule in "$RULES_DIR"/*.rule; do
+        [ -f "$rule" ] || continue
 
-    # Each rule redefines these; clear them so a malformed rule cannot inherit
-    # the previous one's matcher and fire on its behalf.
-    unset -f rule_match rule_message 2>/dev/null
-    rule_id=""
-    rule_once=1
+        # Each rule redefines these; clear them so a malformed rule cannot inherit
+        # the previous one's matcher and fire on its behalf.
+        unset -f rule_match rule_message 2>/dev/null
+        rule_id=""
+        rule_once=1
 
-    # shellcheck disable=SC1090
-    . "$rule" 2>/dev/null || continue
-    [ -n "$rule_id" ] || continue
-    declare -f rule_match >/dev/null 2>&1 || continue
-    declare -f rule_message >/dev/null 2>&1 || continue
+        # shellcheck disable=SC1090
+        . "$rule" 2>/dev/null || continue
+        [ -n "$rule_id" ] || continue
+        declare -f rule_match >/dev/null 2>&1 || continue
+        declare -f rule_message >/dev/null 2>&1 || continue
 
-    rule_match "$TOOL" "$CMD" "$FILE" "$CONTENT" || continue
+        rule_match "$T" "$C" "$F" "$X" || continue
 
-    if [ "$rule_once" = "1" ]; then
-        marker="${TMPDIR:-/tmp}/.dbv-${rule_id}-${SESSION}"
-        # Already spent this session — fall through to the remaining rules rather
-        # than returning, so one rule's marker cannot suppress another's.
-        [ -f "$marker" ] && continue
-        touch "$marker" 2>/dev/null
+        if [ "$rule_once" = "1" ]; then
+            marker="${TMPDIR:-/tmp}/.dbv-${rule_id}-${SESSION}"
+            # Already spent this session — fall through to the remaining rules rather
+            # than returning, so one rule's marker cannot suppress another's.
+            [ -f "$marker" ] && continue
+            touch "$marker" 2>/dev/null
+        fi
+
+        rule_message >&2
+        return 2
+    done
+    return 0
+}
+
+# The payload as it arrived.
+evaluate "$TOOL" "$CMD" "$FILE" "$CONTENT" || exit 2
+
+# THEN THE SHELL WRITES. Every path-keyed rule matches on `tool_input.file_path`,
+# which only Write and Edit carry — so an agent editing through `cat >`, `sed -i` or
+# a heredoc'd python sends a Bash payload with no path, and all fifteen routing rules
+# stay silent. That is not hypothetical: on 2026-09-10 rule 49 did not fire on an
+# edit to a 910-line handler, because the edit went through python, and the same was
+# true of every other path rule for most of that session's work.
+#
+# So: pull the paths a Bash command actually WRITES to, and evaluate the rules again
+# for each as if it were the tool that matches its effect — Write for a path that
+# does not exist yet, Edit for one that does. The extractor is deliberately
+# conservative and only reports a path the write intent is ATTACHED to; it is proved
+# by `writtenPaths.proof.sh`.
+#
+# FAILS OPEN like everything else here: no python3, no extractor, or no output and
+# this does nothing.
+if [ "$TOOL" = "Bash" ] && [ -n "$CMD" ]; then
+    EXTRACT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/writtenPaths.py"
+    if [ -f "$EXTRACT" ]; then
+        while IFS= read -r written; do
+            [ -n "$written" ] || continue
+            if [ -e "$written" ]; then synth=Edit; else synth=Write; fi
+            evaluate "$synth" "$CMD" "$PWD/$written" "$CONTENT" || exit 2
+        done < <(printf '%s' "$CMD" | CLAUDE_PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$PWD}" python3 "$EXTRACT" 2>/dev/null)
     fi
-
-    rule_message >&2
-    exit 2
-done
+fi
 
 exit 0
