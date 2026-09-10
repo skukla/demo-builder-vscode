@@ -49,7 +49,7 @@ export function SecretFieldRow({
                 autoComplete="off"
                 placeholder={placeholder}
                 onChange={handleChange}
-                style={{ width: '100%', boxSizing: 'border-box' }}
+                className="secret-field-input"
             />
             {isSet && (
                 <Text UNSAFE_className="text-gray-600 text-sm">Secret is set</Text>

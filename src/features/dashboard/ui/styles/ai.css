@@ -169,6 +169,29 @@
    that launches Claude Code with the prompt pre-filled. Subtle outline,
    rounded corners, hover state. Matches the wizard's existing aesthetic. */
 .ai-prompt-card {
+    /* THE BOX, moved here from PromptCard.tsx's STYLE_PROMPT_CARD on 2026-09-10.
+       It went into this rule rather than a second class because this one already
+       owned the card's hover and focus — one card, one class. A flex column
+       anchors the title row at the top and the body directly under it, so every
+       card shares a content baseline whatever its body length. Fixed height, not
+       min-height: the title clamps to 1 line and the body to 3, so content always
+       fits and every card is identical. The right padding reserves room for the
+       absolutely-positioned kebab, so a long title cannot slide underneath the
+       menu trigger before it clamps. */
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: var(--prompt-card-height);
+    overflow: hidden;
+    text-align: left;
+    padding: 10px 40px 10px 12px;
+    border: 1px solid var(--spectrum-global-color-gray-300);
+    border-radius: 4px;
+    background: var(--spectrum-global-color-gray-50);
+    cursor: pointer;
+    font: inherit;
+    color: inherit;
+    box-sizing: border-box;
     transition: background var(--spectrum-global-animation-duration-100) ease-in-out, border-color var(--spectrum-global-animation-duration-100) ease-in-out;
 }
 
@@ -180,5 +203,89 @@
 .ai-prompt-card:focus-visible {
     outline: 2px solid var(--spectrum-semantic-cta-color-default);
     outline-offset: 2px;
+}
+}
+
+/* ==========================================================================
+   AI prompt cards — moved out of PromptCard.tsx / PromptGrid.tsx 2026-09-10.
+
+   These were seven hoisted `STYLE_*` objects: an entire card design written in
+   JavaScript, welded to the elements by inline styles that no stylesheet could
+   reach. Hoisting them out of the JSX had already made them constants; it did
+   not make them styleable.
+
+   `--prompt-card-height` replaces the exported PROMPT_CARD_HEIGHT constant,
+   which existed so the "+ New prompt" tile could match the cards exactly. One
+   value, one place, and now a place a theme can reach.
+   ========================================================================== */
+@layer theme {
+:root {
+    --prompt-card-height: 108px;
+}
+}
+
+@layer theme {
+.prompt-card-wrapper {
+    position: relative;
+}
+}
+
+@layer theme {
+.prompt-card-kebab {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+}
+}
+
+@layer theme {
+.prompt-card-pin {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    color: var(--spectrum-global-color-gray-700);
+}
+}
+
+@layer theme {
+.prompt-card-title {
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    overflow-wrap: break-word;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+}
+
+@layer theme {
+.prompt-card-body {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    overflow-wrap: break-word;
+}
+}
+
+@layer theme {
+/* The "+ New prompt" tile. Fixed height matches .prompt-card so the tile is the
+   same size whether the grid is empty or populated — min-height would let it
+   shrink when alone and stretch when sharing a row with cards. */
+.prompt-new-tile {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: var(--prompt-card-height);
+    padding: 10px 12px;
+    border: 1px dashed var(--spectrum-global-color-gray-400);
+    border-radius: 4px;
+    background: transparent;
+    cursor: pointer;
+    font: inherit;
+    color: inherit;
+    box-sizing: border-box;
 }
 }

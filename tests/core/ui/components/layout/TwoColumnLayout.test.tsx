@@ -15,7 +15,7 @@ describe('TwoColumnLayout', () => {
         />
       );
       const flexContainer = container.firstChild as HTMLDivElement;
-      expect(flexContainer.style.gap).toBe('24px');
+      expect(flexContainer.style.getPropertyValue('--two-col-gap')).toBe('24px');
     });
 
     it('should translate leftPadding token size-200 to 16px', () => {
@@ -27,8 +27,8 @@ describe('TwoColumnLayout', () => {
           rightContent={<div>Right</div>}
         />
       );
-      const leftColumn = container.firstChild?.childNodes[0] as HTMLDivElement;
-      expect(leftColumn.style.padding).toBe('16px');
+      const flexContainer = container.firstChild as HTMLDivElement;
+      expect(flexContainer.style.getPropertyValue('--two-col-left-padding')).toBe('16px');
     });
 
     it('should translate rightPadding token size-400 to 32px', () => {
@@ -40,8 +40,8 @@ describe('TwoColumnLayout', () => {
           rightContent={<div>Right</div>}
         />
       );
-      const rightColumn = container.firstChild?.childNodes[1] as HTMLDivElement;
-      expect(rightColumn.style.padding).toBe('32px');
+      const flexContainer = container.firstChild as HTMLDivElement;
+      expect(flexContainer.style.getPropertyValue('--two-col-right-padding')).toBe('32px');
     });
 
     it('should translate leftMaxWidth token size-6000 to 480px', () => {
@@ -53,8 +53,8 @@ describe('TwoColumnLayout', () => {
           rightContent={<div>Right</div>}
         />
       );
-      const leftColumn = container.firstChild?.childNodes[0] as HTMLDivElement;
-      expect(leftColumn.style.maxWidth).toBe('480px');
+      const flexContainer = container.firstChild as HTMLDivElement;
+      expect(flexContainer.style.getPropertyValue('--two-col-left-max-width')).toBe('480px');
     });
 
     it('should translate multiple token props simultaneously', () => {
@@ -73,13 +73,11 @@ describe('TwoColumnLayout', () => {
         />
       );
       const flexContainer = container.firstChild as HTMLDivElement;
-      const leftColumn = flexContainer.childNodes[0] as HTMLDivElement;
-      const rightColumn = flexContainer.childNodes[1] as HTMLDivElement;
 
-      expect(flexContainer.style.gap).toBe('24px');
-      expect(leftColumn.style.padding).toBe('16px');
-      expect(rightColumn.style.padding).toBe('32px');
-      expect(leftColumn.style.maxWidth).toBe('480px');
+      expect(flexContainer.style.getPropertyValue('--two-col-gap')).toBe('24px');
+      expect(flexContainer.style.getPropertyValue('--two-col-left-padding')).toBe('16px');
+      expect(flexContainer.style.getPropertyValue('--two-col-right-padding')).toBe('32px');
+      expect(flexContainer.style.getPropertyValue('--two-col-left-max-width')).toBe('480px');
     });
 
     it('should handle mixed token and pixel values', () => {
@@ -93,10 +91,9 @@ describe('TwoColumnLayout', () => {
         />
       );
       const flexContainer = container.firstChild as HTMLDivElement;
-      const leftColumn = flexContainer.childNodes[0] as HTMLDivElement;
 
-      expect(flexContainer.style.gap).toBe('24px');
-      expect(leftColumn.style.padding).toBe('32px');
+      expect(flexContainer.style.getPropertyValue('--two-col-gap')).toBe('24px');
+      expect(flexContainer.style.getPropertyValue('--two-col-left-padding')).toBe('32px');
     });
   });
 
@@ -110,8 +107,8 @@ describe('TwoColumnLayout', () => {
           rightContent={<div>Right</div>}
         />
       );
-      const leftColumn = container.firstChild?.childNodes[0] as HTMLDivElement;
-      expect(leftColumn.style.padding).toBe('24px');
+      const flexContainer = container.firstChild as HTMLDivElement;
+      expect(flexContainer.style.getPropertyValue('--two-col-left-padding')).toBe('24px');
     });
 
     it('should pass through pixel string values unchanged', () => {
@@ -123,7 +120,7 @@ describe('TwoColumnLayout', () => {
         />
       );
       const flexContainer = container.firstChild as HTMLDivElement;
-      expect(flexContainer.style.gap).toBe('16px');
+      expect(flexContainer.style.getPropertyValue('--two-col-gap')).toBe('16px');
     });
 
     it('should use default values when props undefined', () => {
@@ -134,13 +131,11 @@ describe('TwoColumnLayout', () => {
         />
       );
       const flexContainer = container.firstChild as HTMLDivElement;
-      const leftColumn = flexContainer.childNodes[0] as HTMLDivElement;
-      const rightColumn = flexContainer.childNodes[1] as HTMLDivElement;
 
-      expect(flexContainer.style.gap).toBe('0');
-      expect(leftColumn.style.padding).toBe('24px');
-      expect(rightColumn.style.padding).toBe('24px');
-      expect(leftColumn.style.maxWidth).toBe('960px');
+      expect(flexContainer.style.getPropertyValue('--two-col-gap')).toBe('0');
+      expect(flexContainer.style.getPropertyValue('--two-col-left-padding')).toBe('24px');
+      expect(flexContainer.style.getPropertyValue('--two-col-right-padding')).toBe('24px');
+      expect(flexContainer.style.getPropertyValue('--two-col-left-max-width')).toBe('960px');
     });
   });
 
@@ -157,7 +152,7 @@ describe('TwoColumnLayout', () => {
       );
       const flexContainer = container.firstChild as HTMLDivElement;
       // Invalid token should pass through unchanged (graceful degradation)
-      expect(flexContainer.style.gap).toBe('size-999');
+      expect(flexContainer.style.getPropertyValue('--two-col-gap')).toBe('size-999');
     });
   });
 
@@ -200,8 +195,8 @@ describe('TwoColumnLayout', () => {
           rightContent={<div>Right</div>}
         />
       );
-      const leftColumn = container.firstChild?.childNodes[0] as HTMLDivElement;
-      expect(leftColumn.style.maxWidth).toBe('800px');
+      const flexContainer = container.firstChild as HTMLDivElement;
+      expect(flexContainer.style.getPropertyValue('--two-col-left-max-width')).toBe('800px');
     });
 
     it('should tag container and columns with responsive class hooks', () => {
@@ -236,7 +231,7 @@ describe('TwoColumnLayout', () => {
         />
       );
       const flexContainer = container.firstChild as HTMLDivElement;
-      expect(flexContainer.style.maxWidth).toBe('1200px');
+      expect(flexContainer.style.getPropertyValue('--two-col-max-width')).toBe('1200px');
     });
 
     it('centers the flex container with margin auto', () => {
@@ -247,7 +242,10 @@ describe('TwoColumnLayout', () => {
         />
       );
       const flexContainer = container.firstChild as HTMLDivElement;
-      expect(flexContainer.style.margin).toBe('0px auto');
+      // `margin: 0 auto` is in `.two-column-layout` (two-column-layout.css) since
+      // 2026-09-10. jsdom loads no stylesheets, so the contract to assert here is
+      // that the component applies the class.
+      expect(flexContainer).toHaveClass('two-column-layout');
     });
 
     it('honors a pixel maxWidth override on the container', () => {
@@ -259,7 +257,7 @@ describe('TwoColumnLayout', () => {
         />
       );
       const flexContainer = container.firstChild as HTMLDivElement;
-      expect(flexContainer.style.maxWidth).toBe('1000px');
+      expect(flexContainer.style.getPropertyValue('--two-col-max-width')).toBe('1000px');
     });
 
     it('translates a Spectrum-token maxWidth (size-6000 -> 480px)', () => {
@@ -272,7 +270,7 @@ describe('TwoColumnLayout', () => {
         />
       );
       const flexContainer = container.firstChild as HTMLDivElement;
-      expect(flexContainer.style.maxWidth).toBe('480px');
+      expect(flexContainer.style.getPropertyValue('--two-col-max-width')).toBe('480px');
     });
 
     it('allows opting out of the cap with maxWidth="none"', () => {
@@ -284,7 +282,7 @@ describe('TwoColumnLayout', () => {
         />
       );
       const flexContainer = container.firstChild as HTMLDivElement;
-      expect(flexContainer.style.maxWidth).toBe('none');
+      expect(flexContainer.style.getPropertyValue('--two-col-max-width')).toBe('none');
     });
 
     it('keeps the capped-primary left column (maxWidth, no fixed width)', () => {
@@ -294,10 +292,11 @@ describe('TwoColumnLayout', () => {
           rightContent={<div>Right</div>}
         />
       );
+      const flexContainer = container.firstChild as HTMLDivElement;
       const leftColumn = container.firstChild?.childNodes[0] as HTMLDivElement;
-      expect(leftColumn.style.maxWidth).toBe('960px');
+      expect(flexContainer.style.getPropertyValue('--two-col-left-max-width')).toBe('960px');
       expect(leftColumn.style.width).toBe('');
-      expect(leftColumn.style.flex).toBe('');
+      expect(flexContainer).not.toHaveAttribute('data-fixed-right');
     });
   });
 
@@ -312,9 +311,12 @@ describe('TwoColumnLayout', () => {
           rightContent={<div>Right</div>}
         />
       );
-      const rightColumn = container.firstChild?.childNodes[1] as HTMLDivElement;
-      expect(rightColumn.style.flex).toBe('0 0 320px');
-      expect(rightColumn.style.width).toBe('320px');
+      const flexContainer = container.firstChild as HTMLDivElement;
+      // Pinned sidebar: the MODE is a data attribute and the WIDTH a variable;
+      // `flex: 0 0 <width>` is declared in CSS off both.
+      expect(flexContainer).toHaveAttribute('data-fixed-right', 'true');
+      expect(flexContainer.style.getPropertyValue('--two-col-right-width')).toBe('320px');
+      expect(flexContainer.style.getPropertyValue('--two-col-right-width')).toBe('320px');
     });
 
     it('drops the flex-1 grow class from the right column when rightWidth is set', () => {
@@ -339,10 +341,14 @@ describe('TwoColumnLayout', () => {
           rightContent={<div>Right</div>}
         />
       );
-      const leftColumn = container.firstChild?.childNodes[0] as HTMLDivElement;
+      const flexContainer = container.firstChild as HTMLDivElement;
       // jsdom normalizes the unitless flex-basis to '0px' but keeps min-width '0'.
-      expect(leftColumn.style.flex).toBe('1 1 0px');
-      expect(leftColumn.style.minWidth).toBe('0');
+      // Fixed-right mode makes the left column the flexible majority — declared
+      // in CSS under `[data-fixed-right='true']`.
+      expect(flexContainer).toHaveAttribute('data-fixed-right', 'true');
+      // `min-width: 0` is declared in CSS under `[data-fixed-right='true']`,
+      // asserted above. jsdom loads no stylesheets, so reading it back here
+      // would assert nothing.
     });
 
     it('drops the left maxWidth cap when rightWidth is set', () => {
@@ -356,8 +362,13 @@ describe('TwoColumnLayout', () => {
           rightContent={<div>Right</div>}
         />
       );
-      const leftColumn = container.firstChild?.childNodes[0] as HTMLDivElement;
-      expect(leftColumn.style.maxWidth).toBe('');
+      // The cap is dropped by `max-width: none` in the fixed-right CSS rule, not
+      // by withholding the variable — `--two-col-left-max-width` still carries the
+      // caller's 800px, and the rule overrides it. Asserting the attribute is
+      // asserting the thing the component actually decides.
+      const flexContainer = container.firstChild as HTMLDivElement;
+      expect(flexContainer).toHaveAttribute('data-fixed-right', 'true');
+      expect(flexContainer.style.getPropertyValue('--two-col-left-max-width')).toBe('800px');
     });
 
     it('translates a Spectrum-token rightWidth (size-4000 -> 320px)', () => {
@@ -369,9 +380,12 @@ describe('TwoColumnLayout', () => {
           rightContent={<div>Right</div>}
         />
       );
-      const rightColumn = container.firstChild?.childNodes[1] as HTMLDivElement;
-      expect(rightColumn.style.flex).toBe('0 0 320px');
-      expect(rightColumn.style.width).toBe('320px');
+      const flexContainer = container.firstChild as HTMLDivElement;
+      // Pinned sidebar: the MODE is a data attribute and the WIDTH a variable;
+      // `flex: 0 0 <width>` is declared in CSS off both.
+      expect(flexContainer).toHaveAttribute('data-fixed-right', 'true');
+      expect(flexContainer.style.getPropertyValue('--two-col-right-width')).toBe('320px');
+      expect(flexContainer.style.getPropertyValue('--two-col-right-width')).toBe('320px');
     });
 
     it('keeps the existing flexible behavior when rightWidth is omitted', () => {
@@ -384,14 +398,14 @@ describe('TwoColumnLayout', () => {
           rightContent={<div>Right</div>}
         />
       );
-      const leftColumn = container.firstChild?.childNodes[0] as HTMLDivElement;
+      const flexContainer = container.firstChild as HTMLDivElement;
       const rightColumn = container.firstChild?.childNodes[1] as HTMLDivElement;
 
       expect(rightColumn).toHaveClass('flex-1');
-      expect(rightColumn.style.flex).toBe('');
-      expect(rightColumn.style.width).toBe('');
-      expect(leftColumn.style.maxWidth).toBe('800px');
-      expect(leftColumn.style.flex).toBe('');
+      expect(flexContainer).not.toHaveAttribute('data-fixed-right');
+      expect(flexContainer.style.getPropertyValue('--two-col-right-width')).toBe('');
+      expect(flexContainer.style.getPropertyValue('--two-col-left-max-width')).toBe('800px');
+      expect(flexContainer).not.toHaveAttribute('data-fixed-right');
     });
   });
 
@@ -406,8 +420,8 @@ describe('TwoColumnLayout', () => {
           rightContent={<div>Right</div>}
         />
       );
-      const rightColumn = container.firstChild?.childNodes[1] as HTMLDivElement;
-      expect(rightColumn.style.minWidth).toBe('300px');
+      const flexContainer = container.firstChild as HTMLDivElement;
+      expect(flexContainer.style.getPropertyValue('--two-col-right-min-width')).toBe('300px');
     });
 
     it('honors a pixel rightMinWidth override', () => {
@@ -418,8 +432,8 @@ describe('TwoColumnLayout', () => {
           rightContent={<div>Right</div>}
         />
       );
-      const rightColumn = container.firstChild?.childNodes[1] as HTMLDivElement;
-      expect(rightColumn.style.minWidth).toBe('400px');
+      const flexContainer = container.firstChild as HTMLDivElement;
+      expect(flexContainer.style.getPropertyValue('--two-col-right-min-width')).toBe('400px');
     });
 
     it('translates a Spectrum-token rightMinWidth', () => {
@@ -434,8 +448,8 @@ describe('TwoColumnLayout', () => {
           rightContent={<div>Right</div>}
         />
       );
-      const rightColumn = container.firstChild?.childNodes[1] as HTMLDivElement;
-      expect(rightColumn.style.minWidth).toBe('48px');
+      const flexContainer = container.firstChild as HTMLDivElement;
+      expect(flexContainer.style.getPropertyValue('--two-col-right-min-width')).toBe('48px');
     });
   });
 
@@ -451,9 +465,8 @@ describe('TwoColumnLayout', () => {
         />
       );
       const rightColumn = container.firstChild?.childNodes[1] as HTMLDivElement;
-      expect(rightColumn.style.borderLeft).toBe(
-        '1px solid var(--spectrum-global-color-gray-200)'
-      );
+      // The border is CSS under `[data-show-border='true']`.
+      expect(rightColumn).toHaveAttribute('data-show-border', 'true');
     });
 
     it('omits the border when showBorder is false', () => {
@@ -465,7 +478,7 @@ describe('TwoColumnLayout', () => {
         />
       );
       const rightColumn = container.firstChild?.childNodes[1] as HTMLDivElement;
-      expect(rightColumn.style.borderLeft).toBe('');
+      expect(rightColumn).not.toHaveAttribute('data-show-border');
     });
   });
 

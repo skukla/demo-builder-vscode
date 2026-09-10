@@ -64,8 +64,7 @@ export function renderStepIndicator(status: TimelineStatus): React.ReactNode {
             <View
                 width="size-100"
                 height="size-100"
-                UNSAFE_className="rounded-full"
-                UNSAFE_style={{ backgroundColor: '#ffffff' }}
+                UNSAFE_className="rounded-full timeline-dot"
             />
         );
     }
@@ -76,8 +75,7 @@ export function renderStepIndicator(status: TimelineStatus): React.ReactNode {
             <View
                 width="size-100"
                 height="size-100"
-                UNSAFE_className={cn('rounded-full', 'animate-pulse')}
-                UNSAFE_style={{ backgroundColor: '#ffffff' }}
+                UNSAFE_className={cn('rounded-full', 'animate-pulse', 'timeline-dot')}
             />
         );
     }

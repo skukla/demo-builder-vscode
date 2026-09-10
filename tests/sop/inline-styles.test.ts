@@ -38,8 +38,6 @@ describe('SOP: Inline Styles', () => {
         // a custom property is not a CSS property, so it is not styling.
         // That is the exit from this list, not a wider exception.
         'TwoColumnLayout.tsx': 'Dynamic gap/ratio from props via translateSpectrumToken()',
-        'PageLayout.tsx': 'Dynamic backgroundColor from props',
-        'SingleColumnLayout.tsx': 'Dynamic gap from props via translateSpectrumToken()',
         // The Spectrum Flex 450px workaround — this project's OWN prescribed
         // pattern for a full-width webview layout (root CLAUDE.md: "Adobe
         // Spectrum Flex constrains width (450px): use a standard HTML div with
@@ -55,12 +53,10 @@ describe('SOP: Inline Styles', () => {
         // Components with conditional styles
         'StatusDot.tsx': 'Dynamic color/size based on props',
         'FadeTransition.tsx': 'Animation styles that must be inline for transitions',
-        'LoadingOverlay.tsx': 'Position relative for overlay stacking context',
 
         // Spectrum UNSAFE_style (required for Spectrum overrides)
         'SearchHeader.tsx': 'Spectrum UNSAFE_style for theme integration',
         'TimelineNav.tsx': 'Spectrum UNSAFE_style for background colors',
-        'timelineNav.helpers.tsx': 'Spectrum UNSAFE_style for true-white inner dot',
         'VerifiedField.tsx': 'Spectrum UNSAFE_style for semantic colors',
 
         // Grid layouts (CSS Grid properties for complex layouts)
@@ -71,7 +67,6 @@ describe('SOP: Inline Styles', () => {
         'ProjectRow.tsx': 'Inline color/flex style for the inline pin indicator next to project name',
 
         // AppBuilderComponent secret input (dashboard UI convention: box-sizing on width:100% input)
-        'SecretFieldRow.tsx': 'box-sizing:border-box on a width:100% masked input (dashboard UI convention)',
 
         // Store structure listbox container
     };
@@ -124,7 +119,28 @@ describe('SOP: Inline Styles', () => {
         // Anything else in the object and it counts in full: one real declaration
         // welded to the element is the whole problem, however many variables keep
         // it company.
-        const styleObjects = (content.match(/(?:UNSAFE_)?style=\{\s*\{[\s\S]*?\}/g) || []);
+        // BRACE-MATCHED, not lazily regexed. `[\s\S]*?\}` stops at the FIRST `}`,
+        // which truncates any multi-line object — and a truncated object loses the
+        // properties that would have classified it. TwoColumnLayout's
+        // custom-property-only object read as STATIC that way, because the visible
+        // fragment happened to contain a comment.
+        // COMMENTS BLANKED FIRST. LoadingOverlay's JSDoc carries
+        // `<div style={{ position: 'relative' }}>` in an @example, and it was being
+        // counted as an inline style in a file that has none — a documented
+        // exception granted for a code sample.
+        const code = content
+            .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '))
+            .replace(/^[^\S\n]*\/\/[^\n]*/gm, (m) => ' '.repeat(m.length));
+        const styleObjects: string[] = [];
+        for (const open of code.matchAll(/(?:UNSAFE_)?style=\{\s*\{/g)) {
+            let depth = 0;
+            let i = open.index + open[0].length - 1;
+            for (; i < code.length; i++) {
+                if (code[i] === '{') depth++;
+                else if (code[i] === '}') { depth--; if (depth === 0) break; }
+            }
+            styleObjects.push(code.slice(open.index, i + 1));
+        }
         const onlyCustomProps = (obj: string): boolean => {
             const props = [...obj.matchAll(/(?:^|[{,\s])['"]?(--[\w-]+|[a-zA-Z][\w]*)['"]?\s*:/g)]
                 .map((m) => m[1]);
@@ -141,14 +157,23 @@ describe('SOP: Inline Styles', () => {
             /style=\{\{[^}]*\([^)]+\)/g, // Function calls
         ];
 
-        let dynamicCount = 0;
-        for (const pattern of dynamicPatterns) {
-            dynamicCount += (content.match(pattern) || []).length;
-        }
+        // STATIC AND DYNAMIC ARE SET COUNTS, and each object lands in exactly one.
+        //
+        // This used to be `standard = total - dynamicMatches`, where dynamicMatches
+        // counted PATTERN HITS across the whole file. An object with both a spread
+        // and a ternary counted twice, so the two numbers were not partitions of
+        // anything — and removing dynamic objects made the static number RISE while
+        // inline styling was falling. That is what it did on 2026-09-10: static
+        // read 2, then 6, with no static object added.
+        const isDynamic = (obj: string): boolean => dynamicPatterns.some((p) => {
+            p.lastIndex = 0;
+            return p.test(obj);
+        });
+        const dynamicCount = counted.filter(isDynamic).length;
 
         return {
             total: standardMatches,
-            standard: standardMatches - dynamicCount,
+            standard: counted.filter((o) => !o.startsWith('UNSAFE_') && !isDynamic(o)).length,
             unsafeStyle: unsafeMatches,
             dynamic: dynamicCount,
         };

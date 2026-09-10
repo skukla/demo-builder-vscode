@@ -117,10 +117,13 @@ describe('row and card presentation', () => {
     it('gives every label a fixed width so the cards line up', () => {
         renderReview({ edsConfig: { repoName: 'acme-site' } as WizardState['edsConfig'] });
 
-        expect(document.querySelector('.review-label')).toHaveStyle({
-            width: '120px',
-            flexShrink: '0',
-        });
+        // `width: 120px` and `flex-shrink: 0` moved into `.review-label`
+        // (wizard-misc.css) on 2026-09-10; they were an UNSAFE_style bolted onto
+        // that very class, so one label's sizing lived half in CSS and half in
+        // the JSX. jsdom loads no stylesheets, so the checkable contract here is
+        // that every label carries the class the rule keys on.
+        const labels = document.querySelectorAll('.review-label');
+        expect(labels.length).toBeGreaterThan(0);
     });
 
     it('gives each card the subtle background that separates it from the page', () => {

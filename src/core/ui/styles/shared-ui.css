@@ -557,3 +557,43 @@ div[class*="spectrum"] input[type="search"] {
         to { transform: rotate(360deg); }
     }
 }
+
+/* ==========================================================================
+   FormField wrapper — moved out of FormField.tsx 2026-09-10.
+
+   It was a `wrapperStyle` object rebuilt on every render and spread onto three
+   branches of a switch. `scroll-margin-top` keeps a field clear of the sticky
+   header when something scrolls it into view (validation focus, deep link).
+   ========================================================================== */
+@layer theme {
+.form-field-wrapper {
+    scroll-margin-top: 24px;
+}
+}
+
+/* ==========================================================================
+   Three declarations that were inline until 2026-09-10.
+
+   `.timeline-dot` replaces `UNSAFE_style={{ backgroundColor: '#ffffff' }}` on
+   two timeline markers — a HARD-CODED WHITE in a themed app, which is wrong on
+   any light theme and was unreachable by the theming this repo just spent a day
+   consolidating. It now takes the same token the rest of the UI uses.
+   ========================================================================== */
+@layer theme {
+.timeline-dot {
+    /* gray-900, NOT gray-50. Spectrum's grey ramp is THEME-RELATIVE: under the
+       dark theme this app imposes, 900 is rgb(255,255,255) and 50 is
+       rgb(0,0,0) — the opposite of the intuition that a low number means light.
+       Picking 50 turned this marker black on the light-blue rail it sits on, and
+       the visual fingerprint caught it as the only element that moved. */
+    background-color: var(--spectrum-global-color-gray-900);
+}
+}
+
+@layer theme {
+/* Fills the field's row and keeps the border inside that width. */
+.secret-field-input {
+    width: 100%;
+    box-sizing: border-box;
+}
+}

@@ -327,3 +327,28 @@
 }
 }
 }
+
+/* ==========================================================================
+   PageLayout — the page shell, moved out of PageLayout.tsx 2026-09-10.
+
+   It was a `PAGE_LAYOUT_STYLES` constant spread inline. Hoisting a style object
+   out of the JSX makes it a constant; it does not make it styleable — the
+   declarations were still welded to the element, so no stylesheet could adjust
+   the page shell. `backgroundColor` remains a parameter and arrives as a custom
+   property, which keeps `background-color` itself in the cascade.
+   ========================================================================== */
+@layer theme {
+.page-layout {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--page-layout-background, transparent);
+}
+}
+
+@layer theme {
+.page-layout-content {
+    flex: 1;
+    overflow-y: auto;
+}
+}

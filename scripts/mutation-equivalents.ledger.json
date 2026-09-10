@@ -2697,7 +2697,7 @@
             "anchors": [
                 "{subItems && subItems.length > 0 && ("
             ],
-            "line": 81,
+            "line": 77,
             "mutants": 2,
             "category": "branch",
             "reason": "Both survivors relax the length test on the right of the &&, so the only input that could render differently is a subItems array that exists and is EMPTY. No caller produces one: buildComponentInfoList writes 'features.length > 0 ? features : undefined' for the backend row, and EdsSection passes a one-element array holding the repo or site mode. The left operand still short-circuits for the undefined case.",
@@ -2710,7 +2710,7 @@
             "anchors": [
                 "return title && title.length > 0 ? title : name;"
             ],
-            "line": 161,
+            "line": 157,
             "mutants": 2,
             "category": "branch",
             "reason": "Forcing the length test true, or widening it to >= 0, changes the answer only for a title that is present but empty — and an empty string is falsy, so the && short-circuits to it and the ternary still takes the name branch. Both mutants therefore return the same value for every title: undefined, empty, or set. A test with title '' passes under all three.",
@@ -2723,7 +2723,7 @@
             "anchors": [
                 "if (!orgName && !projectName && !workspaceName) return <View />;"
             ],
-            "line": 191,
+            "line": 187,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this guard false makes AdobeIOSection render its card with no rows — but the component is only mounted inside the (orgName || projectName || workspaceName) test at line 385, so it is never called with all three absent. There is no wizard state that reaches this line with the condition true, which is why only the false direction survives.",
@@ -2736,7 +2736,7 @@
             "anchors": [
                 "...(stack.dependencies || []),"
             ],
-            "line": 295,
+            "line": 291,
             "mutants": 2,
             "category": "other",
             "reason": "Every stack in stacks.json declares dependencies as an empty array, and an empty array is truthy — so the || never falls through, and swapping it for && yields the mutant's own empty array instead, spreading to nothing either way. The uncovered array-literal mutant is the same fact from the other side: the fallback is unreachable while no stack omits the field.",
@@ -2749,7 +2749,7 @@
             "anchors": [
                 "...(state.selectedAppBuilderComponents || []).filter(isMeshComponentId),"
             ],
-            "line": 296,
+            "line": 292,
             "mutants": 1,
             "category": "other",
             "reason": "This fallback fires only when no App Builder components are selected, and whatever it produces goes straight through filter(isMeshComponentId). Stryker's placeholder string is not a mesh id, so it is filtered out and the dependencies list is empty either way. The .filter call itself is NOT equivalent — a test with a non-mesh selection kills that one.",
@@ -2762,7 +2762,7 @@
             "anchors": [
                 "() => resolveReviewIntegrationNames(state, packages ?? [], stacks ?? []),"
             ],
-            "line": 309,
+            "line": 305,
             "mutants": 2,
             "category": "other",
             "reason": "Both fallbacks fire only when the catalog prop is absent, and each is handed to resolveReviewIntegrationNames, which uses them for one thing: stacks.find(s => s.id === state.selectedStack) and the package lookup behind meshComponentForStack. A list holding Stryker's placeholder string matches no stack or package id, so the resolved names are identical to the empty-list case.",
@@ -2775,7 +2775,7 @@
             "anchors": [
                 "{(adobeOrgName || adobeProjectName || adobeWorkspaceName) && ("
             ],
-            "line": 385,
+            "line": 381,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this true always mounts AdobeIOSection, which opens with its own guard returning an empty View when all three names are absent — so the rendered output is the same empty element the falsy branch produces. The two guards are deliberately redundant, and that redundancy is exactly what makes this mutant unobservable.",
@@ -14005,7 +14005,7 @@
             "anchors": [
                 "return null;"
             ],
-            "line": 176,
+            "line": 171,
             "mutants": 1,
             "category": "branch",
             "reason": "Removing this return leaves the default arm empty, so the component falls out of the switch and returns undefined instead of null. React 18 renders both as nothing — undefined stopped being an error in React 18 — so the DOM, the container and every query are identical, and no Spectrum primitive is called either way. Planted by replacing the return with a break; both suites stay green, including the one that asserts the container is empty and that neither TextField nor Picker was called for an unhandled type.",
@@ -16635,12 +16635,12 @@
         {
             "module": "src/core/ui/components/layout/TwoColumnLayout.tsx",
             "anchors": [
-                "maxWidth: maxWidth === 'none' ? 'none' : translateSpectrumToken(maxWidth),"
+                "maxWidth === 'none' ? 'none' : translateSpectrumToken(maxWidth),"
             ],
-            "line": 163,
+            "line": 160,
             "mutants": 1,
             "category": "branch",
-            "reason": "Stryker forces the false arm, so maxWidth='none' becomes translateSpectrumToken('none'). That function passes any string it does not recognise through unchanged — verified by planting a probe suite that asserts translateSpectrumToken('none') === 'none', which passed — so both arms produce the identical style value for every input the prop type allows. The ternary exists for the COMPILER: maxWidth is typed DimensionValue | 'none' and translateSpectrumToken takes DimensionValue | undefined, so the equality check is what narrows 'none' away before the call. No render can tell the two arms apart.",
+            "reason": "Stryker forces the false arm, so maxWidth='none' becomes translateSpectrumToken('none'). That function passes any string it does not recognise through unchanged — verified by planting a probe suite that asserts translateSpectrumToken('none') === 'none', which passed — so both arms produce the identical style value for every input the prop type allows. The ternary exists for the COMPILER: maxWidth is typed DimensionValue | 'none' and translateSpectrumToken takes DimensionValue | undefined, so the equality check is what narrows 'none' away before the call. No render can tell the two arms apart. ANCHOR RE-POINTED 2026-09-10: the property was renamed to `--two-col-max-width` and re-wrapped when TwoColumnLayout stopped writing inline styles. The ternary is unchanged, so the equivalence claim stands; only the text the anchor matches moved.",
             "decision": "none — both arms yield the same computed style; the check is a type narrowing, not a behavioural branch",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-06"

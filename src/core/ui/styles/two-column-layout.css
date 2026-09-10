@@ -89,3 +89,67 @@
     width: 100%;
 }
 }
+
+/* ==========================================================================
+   TwoColumnLayout — moved out of TwoColumnLayout.tsx 2026-09-10.
+
+   Three style objects, two of them branching on `fixedRight`. The branch is now
+   a DATA ATTRIBUTE and the varying values arrive as custom properties, so the
+   declarations live here where a consumer can still reach them. A style object
+   cannot be reached by any stylesheet at any specificity — which is how two of
+   the three conflicts in the 1,294 -> 0 !important sweep were created.
+
+   `box-sizing: border-box` on the columns keeps padding INSIDE the column width,
+   so a padded 100%/fixed-width column never overflows its parent and clips
+   content at narrow or zoomed viewports.
+   ========================================================================== */
+@layer theme {
+.two-column-layout {
+    gap: var(--two-col-gap, 24px);
+    max-width: var(--two-col-max-width, none);
+    margin: 0 auto;
+}
+}
+
+@layer theme {
+/* Default: capped primary column, for readable line length. */
+.two-column-layout-left {
+    box-sizing: border-box;
+    padding: var(--two-col-left-padding, 0);
+    max-width: var(--two-col-left-max-width, none);
+}
+}
+
+@layer theme {
+/* Fixed-right mode: the left column becomes the flexible majority and drops its
+   cap, so it fills whatever the pinned sidebar leaves. */
+.two-column-layout[data-fixed-right='true'] .two-column-layout-left {
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: none;
+}
+}
+
+@layer theme {
+.two-column-layout-right {
+    box-sizing: border-box;
+    padding: var(--two-col-right-padding, 0);
+    background-color: var(--two-col-right-background, transparent);
+    min-width: var(--two-col-right-min-width, auto);
+}
+}
+
+@layer theme {
+/* Fixed-right mode: a pinned sidebar — no grow, no shrink. */
+.two-column-layout[data-fixed-right='true'] .two-column-layout-right {
+    flex: 0 0 var(--two-col-right-width);
+    width: var(--two-col-right-width);
+    min-width: auto;
+}
+}
+
+@layer theme {
+.two-column-layout-right[data-show-border='true'] {
+    border-left: 1px solid var(--spectrum-global-color-gray-200);
+}
+}

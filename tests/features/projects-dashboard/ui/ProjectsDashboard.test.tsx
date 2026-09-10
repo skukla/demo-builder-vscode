@@ -289,14 +289,17 @@ describe('ProjectsDashboard', () => {
             );
 
             // Then: PageLayout provides 100vh flex column container via inline styles
-            // PageLayout uses a plain div with inline styles (not Spectrum View)
-            const layoutContainer = container.querySelector('[style*="height: 100vh"]');
+            // PageLayout's shell is `.page-layout` (index.css) since 2026-09-10.
+            // This used to select on `[style*="height: 100vh"]` — finding an element
+            // by its styling, which breaks the moment the styling moves to a
+            // stylesheet and silently keeps "working" if the height changes.
+            const layoutContainer = container.querySelector('.page-layout');
             expect(layoutContainer).toBeInTheDocument();
-            // PageLayout sets display: flex and flex-direction: column via inline style
-            expect(layoutContainer).toHaveStyle({
-                display: 'flex',
-                flexDirection: 'column',
-            });
+            // `display: flex` and `flex-direction: column` are declared in
+            // `.page-layout` (index.css) since 2026-09-10. jsdom loads no
+            // stylesheets, so reading them back here asserts nothing — the
+            // contract this test can actually check is that the shell is applied.
+            expect(layoutContainer).toHaveClass('page-layout');
         });
 
         it('should have scrollable content area provided by PageLayout', () => {
@@ -313,7 +316,7 @@ describe('ProjectsDashboard', () => {
             );
 
             // Then: PageLayout provides scrollable content area with overflow-y: auto
-            const scrollableArea = container.querySelector('[style*="overflow-y: auto"]');
+            const scrollableArea = container.querySelector('.page-layout-content');
             expect(scrollableArea).toBeInTheDocument();
         });
 
@@ -331,7 +334,7 @@ describe('ProjectsDashboard', () => {
 
             // Then: Loading state does NOT have scrollable area (no overflow-y: auto)
             // because it doesn't use PageLayout - it uses original View/Flex structure
-            const scrollableArea = container.querySelector('[style*="overflow-y: auto"]');
+            const scrollableArea = container.querySelector('.page-layout-content');
             expect(scrollableArea).not.toBeInTheDocument();
         });
 
@@ -348,7 +351,7 @@ describe('ProjectsDashboard', () => {
 
             // Then: Empty state does NOT have scrollable area (no overflow-y: auto)
             // because it doesn't use PageLayout - it uses original View/Flex structure
-            const scrollableArea = container.querySelector('[style*="overflow-y: auto"]');
+            const scrollableArea = container.querySelector('.page-layout-content');
             expect(scrollableArea).not.toBeInTheDocument();
         });
     });

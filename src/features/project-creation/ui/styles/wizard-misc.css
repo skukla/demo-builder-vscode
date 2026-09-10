@@ -95,11 +95,17 @@
 /* Label width for label/value pairs (ReviewStep, etc.) */
 .review-label-width { min-width: 100px; }
 
-/* Review label - label/value pair label */
+/* Review label - label/value pair label.
+   `width` and `flex-shrink` moved here from ReviewStep.tsx on 2026-09-10; they
+   were an UNSAFE_style bolted onto this very class, so one label's sizing lived
+   half here and half in the JSX. The fixed 120px overrides the 100px floor and
+   is what actually applied. */
 .review-label {
     font-size: 14px;
     color: var(--spectrum-global-color-gray-500);
     min-width: 100px;
+    width: 120px;
+    flex-shrink: 0;
 }
 
 .user-select-none { user-select: none; }

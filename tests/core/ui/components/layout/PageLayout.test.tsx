@@ -24,8 +24,11 @@ const renderWithProvider = (ui: React.ReactElement) => {
 
 // Helper to find the PageLayout container (skips Provider wrapper)
 const findLayoutContainer = (container: HTMLElement): HTMLElement | null => {
-    // PageLayout has height: 100vh style which is unique
-    return container.querySelector('[style*="height: 100vh"]');
+    // Found by CLASS. This used to select on `[style*="height: 100vh"]` —
+    // locating an element by its styling, which stops working the moment the
+    // styling moves to a stylesheet (2026-09-10) and would have kept "working"
+    // if the height silently changed.
+    return container.querySelector('.page-layout');
 };
 
 describe('PageLayout', () => {
@@ -71,7 +74,7 @@ describe('PageLayout', () => {
             );
 
             // Then: Content is inside a scrollable div (overflow-y: auto)
-            const scrollableDiv = container.querySelector('[style*="overflow"]');
+            const scrollableDiv = container.querySelector('.page-layout-content');
             expect(scrollableDiv).toBeInTheDocument();
             expect(scrollableDiv).toContainElement(screen.getByTestId('scroll-content'));
         });
@@ -126,8 +129,8 @@ describe('PageLayout', () => {
             const content = screen.getByTestId('content-elem');
 
             // Compare DOM positions
-            const headerParent = header.closest('[style*="flex"]');
-            const contentParent = content.closest('[style*="overflow"]');
+            const headerParent = header.closest('.page-layout');
+            const contentParent = content.closest('.page-layout-content');
 
             expect(headerParent).toBeInTheDocument();
             expect(contentParent).toBeInTheDocument();
@@ -225,7 +228,12 @@ describe('PageLayout', () => {
             // Note: JSDOM normalizes hex colors to rgb()
             const layoutContainer = findLayoutContainer(container);
             expect(layoutContainer).toBeInTheDocument();
-            expect(layoutContainer?.style.backgroundColor).toBe('rgb(245, 245, 245)');
+            // The colour is a PARAMETER now: the component writes
+            // `--page-layout-background` and `.page-layout` reads it, so the
+            // declaration stays in the cascade.
+            expect(layoutContainer?.style.getPropertyValue('--page-layout-background')).toBe(
+                '#f5f5f5'
+            );
         });
 
         it('should apply spectrum color variable as backgroundColor', () => {
@@ -239,7 +247,9 @@ describe('PageLayout', () => {
             // Then: Spectrum color applied (verify via style attribute)
             const layoutContainer = findLayoutContainer(container);
             expect(layoutContainer).toBeInTheDocument();
-            expect(layoutContainer?.style.backgroundColor).toBe('var(--spectrum-global-color-gray-75)');
+            expect(layoutContainer?.style.getPropertyValue('--page-layout-background')).toBe(
+                'var(--spectrum-global-color-gray-75)'
+            );
         });
 
         it('should render without backgroundColor when not specified', () => {
@@ -293,10 +303,15 @@ describe('PageLayout', () => {
                 </PageLayout>
             );
 
-            // Then: Container has 100vh height (use findLayoutContainer to skip Provider wrapper)
+            // Then: the container is the page shell. HEIGHT AND DISPLAY ARE NOT
+            // ASSERTED HERE ANY MORE — they live in `.page-layout` (index.css) and
+            // jsdom loads no stylesheets, so reading them back would assert
+            // nothing. The component's contract is that it applies the class; what
+            // that class declares is the stylesheet's business, checked by the
+            // visual baseline rather than by a renderer with no CSS.
             const layoutContainer = findLayoutContainer(container);
             expect(layoutContainer).toBeInTheDocument();
-            expect(layoutContainer?.style.height).toBe('100vh');
+            expect(layoutContainer).toHaveClass('page-layout');
         });
 
         it('should use flex column layout', () => {
@@ -310,8 +325,7 @@ describe('PageLayout', () => {
             // Then: Container uses flex column (verify via style property)
             const layoutContainer = findLayoutContainer(container);
             expect(layoutContainer).toBeInTheDocument();
-            expect(layoutContainer?.style.display).toBe('flex');
-            expect(layoutContainer?.style.flexDirection).toBe('column');
+            expect(layoutContainer).toHaveClass('page-layout');
         });
 
         it('should make content area flexible with flex: 1', () => {
@@ -322,8 +336,11 @@ describe('PageLayout', () => {
                 </PageLayout>
             );
 
-            // Then: Content area has flex: 1
-            const scrollableArea = container.querySelector('[style*="flex: 1"]');
+            // Then: the content area is the one `.page-layout-content` marks.
+            // `flex: 1` is declared in index.css, and jsdom loads no stylesheets,
+            // so selecting on `[style*="flex: 1"]` found the element only while the
+            // declaration was welded to it.
+            const scrollableArea = container.querySelector('.page-layout-content');
             expect(scrollableArea).toBeInTheDocument();
         });
     });

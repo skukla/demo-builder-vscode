@@ -52,71 +52,11 @@ export interface PromptCardProps {
 }
 
 /**
- * Fixed card height. Exported so sibling tiles in the same grid (e.g. the
- * "+ New prompt" tile in PromptGrid) can match it exactly, preventing
- * empty-state vs populated-state height drift.
+ * The card height now lives in CSS as `--prompt-card-height` (ai.css), which is
+ * also what the "+ New prompt" tile in PromptGrid reads. It was exported from
+ * here so the two could match; one value in one place still holds, and the place
+ * is now one a stylesheet can reach.
  */
-export const PROMPT_CARD_HEIGHT = '108px';
-
-const STYLE_PROMPT_CARD = {
-    // Flex column lets us anchor the title row at the top and the body
-    // directly under it, giving every card the same content baseline even
-    // when bodies vary in length.
-    display: 'flex',
-    flexDirection: 'column' as const,
-    width: '100%',
-    // Fixed height (not minHeight) — every card is identical regardless of
-    // prompt length. Title clamps to 1 line, body clamps to 3 lines, so all
-    // content fits within this box.
-    height: PROMPT_CARD_HEIGHT,
-    overflow: 'hidden',
-    textAlign: 'left' as const,
-    // Right padding reserves room for the absolutely-positioned kebab so a
-    // long title doesn't slide underneath the menu trigger before clamping.
-    padding: '10px 40px 10px 12px',
-    border: '1px solid var(--spectrum-global-color-gray-300)',
-    borderRadius: '4px',
-    background: 'var(--spectrum-global-color-gray-50)',
-    cursor: 'pointer',
-    font: 'inherit',
-    color: 'inherit',
-    boxSizing: 'border-box' as const,
-} as const;
-
-const STYLE_CARD_WRAPPER = {
-    position: 'relative' as const,
-} as const;
-
-const STYLE_KEBAB_WRAPPER = {
-    position: 'absolute' as const,
-    top: '4px',
-    right: '4px',
-} as const;
-
-const STYLE_PIN_INLINE = {
-    display: 'inline-flex',
-    alignItems: 'center',
-    flex: '0 0 auto',
-    color: 'var(--spectrum-global-color-gray-700)',
-} as const;
-
-const STYLE_TITLE_CLAMP = {
-    display: '-webkit-box',
-    WebkitLineClamp: 1,
-    WebkitBoxOrient: 'vertical' as const,
-    overflow: 'hidden',
-    overflowWrap: 'break-word' as const,
-    flex: '1 1 auto',
-    minWidth: 0,
-} as const;
-
-const STYLE_BODY_CLAMP = {
-    display: '-webkit-box',
-    WebkitLineClamp: 3,
-    WebkitBoxOrient: 'vertical' as const,
-    overflow: 'hidden',
-    overflowWrap: 'break-word' as const,
-} as const;
 
 interface PromptKebabProps {
     isPinned: boolean;
@@ -171,7 +111,7 @@ function PromptKebab({
     return (
         // The wrapper owns POSITIONING only (the card's concern); CardActionsMenu
         // brings the trigger, the menu, and its own click containment.
-        <div style={STYLE_KEBAB_WRAPPER}>
+        <div className="prompt-card-kebab">
             <CardActionsMenu ariaLabel="More actions" onAction={handleAction}>
                 <Item key="pin-toggle" textValue={isPinned ? 'Unpin' : 'Pin'}>
                     {renderMenuIcon(isPinned ? 'pinOff' : 'pinOn')}
@@ -219,24 +159,23 @@ export function PromptCard({
             data-testid="ai-prompt-card"
             className="ai-prompt-card"
             onClick={handleClick}
-            style={STYLE_PROMPT_CARD}
         >
             <Flex direction="row" alignItems="center" gap="size-75">
                 {isPinned && (
                     <span
                         data-testid="ai-prompt-pin-indicator"
                         aria-label="Pinned"
-                        style={STYLE_PIN_INLINE}
+                        className="prompt-card-pin"
                     >
                         <PinOn size="XS" />
                     </span>
                 )}
-                <div style={STYLE_TITLE_CLAMP}>
+                <div className="prompt-card-title">
                     <Text UNSAFE_className="text-sm font-semibold">{prompt.title}</Text>
                 </div>
             </Flex>
             <View marginTop="size-50">
-                <div style={STYLE_BODY_CLAMP}>
+                <div className="prompt-card-body">
                     <Text UNSAFE_className="text-xs text-gray-700">{prompt.prompt}</Text>
                 </div>
             </View>
@@ -256,7 +195,7 @@ export function PromptCard({
     const handlePinToggle = onPinToggle ?? (() => undefined);
 
     return (
-        <div style={STYLE_CARD_WRAPPER} data-testid="ai-prompt-card-wrapper">
+        <div className="prompt-card-wrapper" data-testid="ai-prompt-card-wrapper">
             {cardButton}
             <PromptKebab
                 isPinned={isPinned}

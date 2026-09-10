@@ -62,10 +62,6 @@ function LabelValue({
         <Flex gap="size-200" alignItems="start">
             <Text
                 UNSAFE_className="review-label"
-                UNSAFE_style={{
-                    width: '120px',
-                    flexShrink: 0,
-                }}
             >
                 {label}
             </Text>

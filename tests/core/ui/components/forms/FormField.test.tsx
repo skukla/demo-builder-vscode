@@ -237,8 +237,12 @@ describe('FormField', () => {
                     onChange={handleChange}
                 />
             );
+            // The value lives in `.form-field-wrapper` (shared-ui.css) since
+            // 2026-09-10, not in an inline style. jsdom loads no stylesheets, so
+            // asserting the computed value here would assert nothing; the
+            // component's contract is that it applies the class.
             const wrapper = container.querySelector('#field-test');
-            expect(wrapper).toHaveStyle({ scrollMarginTop: '24px' });
+            expect(wrapper).toHaveClass('form-field-wrapper');
         });
     });
 

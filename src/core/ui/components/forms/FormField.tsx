@@ -90,11 +90,6 @@ export const FormField = React.memo<FormFieldProps>(({
         onChange(val);
     }, [onChange]);
 
-    // Common wrapper for scroll margin
-    const wrapperStyle = {
-        scrollMarginTop: '24px',
-    };
-
     // Render label with optional help button
     const renderLabel = () => {
         if (!help) {
@@ -118,7 +113,7 @@ export const FormField = React.memo<FormFieldProps>(({
         case 'url':
         case 'number':
             return (
-                <div key={fieldKey} id={`field-${fieldKey}`} style={wrapperStyle}>
+                <div key={fieldKey} id={`field-${fieldKey}`} className="form-field-wrapper">
                     <TextField
                         label={renderLabel()}
                         value={String(value)}
@@ -137,7 +132,7 @@ export const FormField = React.memo<FormFieldProps>(({
 
         case 'password':
             return (
-                <div key={fieldKey} id={`field-${fieldKey}`} style={wrapperStyle}>
+                <div key={fieldKey} id={`field-${fieldKey}`} className="form-field-wrapper">
                     <TextField
                         label={renderLabel()}
                         type="password"
@@ -156,7 +151,7 @@ export const FormField = React.memo<FormFieldProps>(({
 
         case 'select':
             return (
-                <div key={fieldKey} id={`field-${fieldKey}`} style={wrapperStyle}>
+                <div key={fieldKey} id={`field-${fieldKey}`} className="form-field-wrapper">
                     <Picker
                         label={renderLabel()}
                         selectedKey={value as string}
