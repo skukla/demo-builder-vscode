@@ -1421,6 +1421,18 @@ check says so and names the file.
 > *Why:* the test then checks the mock rather than the shipped configuration.
 > Enforced by `tests/sop/no-config-leaf-mocks.test.ts`.
 
+> **Convention.** Never assign a `jest.fn()` onto a Node builtin's namespace
+> (`fs`, `fs.promises`, `os`, …). Use `jest.spyOn`, and restore in `afterEach`.
+> *Why:* a builtin is ONE object per worker process, and jest resets its module
+> registry between files but does not rebuild Node's builtins — so the assignment is a
+> global mutation every later suite in that worker inherits. `restoreMocks` cannot undo
+> it, because jest restores only the spies it created. Measured 2026-09-10: an
+> unrestored `fs.unlink` mock made a DIFFERENT suite fail with four calls it never
+> made, only when the two files shared a worker, so it read as flakiness and passed in
+> isolation. A hand-rolled restore at the end of the test body is not enough either —
+> it never runs when an assertion above it throws.
+> Enforced by `tests/sop/no-builtin-namespace-mock-assignment.test.ts`.
+
 > **Convention.** Do not lower one test's timeout below the file's budget.
 > *Why:* it hides a slow path instead of fixing it, and fails on a busier machine.
 > Enforced by `tests/sop/no-lowered-test-timeout.test.ts`.
@@ -1446,11 +1458,11 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 25 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 48 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 49 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 109 conventions. 109 of them are enforced; 0 are not.**
+**This handbook states 110 conventions. 110 of them are enforced; 0 are not.**
 
 The last one to get there was "vendor CSS sits in the lowest cascade layer", and it was
 outstanding because it was **not yet true**: `@layer vendor` existed in no bundle, so a
