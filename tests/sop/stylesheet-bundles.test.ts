@@ -149,7 +149,17 @@ describe('ADR-018 step 3: Spectrum in @layer vendor, one entry at a time', () =>
         // projectsList, 2026-09-09: 77 elements x 2 themes x 3 widths, 0 moved —
         //   but only AFTER the cascade order was corrected. Under the original
         //   `vendor, reset` it moved 45 of 77. See ADR-018 §1.
-        expect(LAYERED_VENDOR_ENTRIES).toStrictEqual(['sidebar', 'projectsList']);
+        // the last six, 2026-09-10: 327 elements, 0 moved. Every surface carried
+        //   its own tamper control, and the wizard document was confirmed to have
+        //   32 live @layer vendor blocks with the order statement parsed.
+        //
+        // ALL EIGHT ARE NOW LAYERED, so this list is complete and the assertion
+        // is no longer a ratchet — it is the finished state. What it still guards
+        // is an entry being ADDED to WEBVIEW_ENTRIES and quietly left out.
+        expect([...LAYERED_VENDOR_ENTRIES].sort()).toStrictEqual([
+            'aiOverview', 'configure', 'dashboard', 'dataInstaller',
+            'integrations', 'projectsList', 'sidebar', 'wizard',
+        ]);
     });
 });
 

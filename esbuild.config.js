@@ -260,7 +260,10 @@ const WEBVIEW_ENTRIES = {
  * person before it lands — see the plugin's comment for why the all-at-once
  * version was rejected.
  */
-const LAYERED_VENDOR_ENTRIES = ['sidebar', 'projectsList'];
+const LAYERED_VENDOR_ENTRIES = [
+    'sidebar', 'projectsList', 'aiOverview', 'configure',
+    'dashboard', 'dataInstaller', 'integrations', 'wizard',
+];
 
 function pick(entries, names) {
     return Object.fromEntries(Object.entries(entries).filter(([k]) => names.includes(k)));
