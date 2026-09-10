@@ -275,6 +275,24 @@
     overflow-wrap: anywhere;
     font-size: 12px;
     margin-top: 8px;
+    /* Spectrum's ActionButton gives its label `padding: 0 12px 0 7px`, sized for
+       a normal button and meaningless inside a 96px square tile. The label is
+       laid out 70px wide, so those 19px have ALWAYS been wrong — under
+       content-box they pushed the text outside the box and `overflow: visible`
+       hid it. When reset.css reached the bundles on 2026-09-09 and
+       `* { box-sizing: border-box }` began applying, the same 19px came out of
+       the INSIDE instead: 70px of text width became 51px, and single-word labels
+       ("Configure", "Republish", "Datapacks") started breaking mid-word on
+       `overflow-wrap: anywhere`.
+
+       This is the same defect, from the same commit, as the one fixed on
+       `.sidebar-action-tile .icon-label` — that block carries the long-form
+       version of this note. The sidebar was fixed and the dashboard was not.
+
+       NO `!important`: the dashboard is a LAYERED_VENDOR_ENTRIES entry
+       (ADR-018 step 3), so Spectrum sits in `@layer vendor`, below `theme`, and
+       a plain declaration of ours wins. Verified in the browser, not assumed. */
+    padding: 0;
 }
 
 /* ControlPanelLayout single-column fallback (no detail panel): pad the action
