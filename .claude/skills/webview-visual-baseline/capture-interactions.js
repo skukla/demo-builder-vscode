@@ -93,7 +93,50 @@ const FREEZE_TRANSITIONS = `
     }
 `;
 
-async function captureInteractions(page, { surfaces = SURFACES, base, theme = 'dark', width = 1280 } = {}) {
+/**
+ * Prove the browser reached OUR server before capturing anything.
+ *
+ * `host.docker.internal:<port>` can be answered by an unrelated app inside the
+ * container while the local bind succeeded — so a running server, a clean
+ * `lsof`, and a page that renders are all consistent with never having reached
+ * the harness at all. Every fetch then returns someone else's 404: the surface
+ * does not mount, no element responds to a forced pseudo-state, and the failure
+ * reads as a broken instrument.
+ *
+ * That misreading is on the record. The 2026-09-09 note in SKILL.md concluded
+ * `CSS.forcePseudoState` "does not take through that session" and marked the
+ * interaction route unavailable. Forcing works — re-verified 2026-09-10 against
+ * a trivial page AND the real sidebar, where all six elements respond. What had
+ * failed was the port.
+ *
+ * The check was documented as a manual step for two days and skipped both times
+ * it mattered, so it lives HERE now, where it cannot be forgotten.
+ *
+ * @param {import('playwright').Page} page
+ * @param {string} base   e.g. http://host.docker.internal:31427
+ * @param {string} sentinel  the value serve.sh printed as VR_SENTINEL
+ */
+async function assertServerIsOurs(page, base, sentinel) {
+    if (!sentinel) {
+        throw new Error(
+            'no sentinel given. Run serve.sh and pass the VR_SENTINEL it prints — ' +
+            'without it a capture cannot tell your harness from another app on the ' +
+            'same port, and a clean result would mean nothing.'
+        );
+    }
+    await page.goto(`${base}/sentinel.txt?cb=${Date.now()}`);
+    const got = (await page.evaluate(() => document.body.innerText)).trim();
+    if (got !== sentinel) {
+        throw new Error(
+            `${base} is NOT your harness — /sentinel.txt returned ${JSON.stringify(got.slice(0, 120))}, ` +
+            `expected ${JSON.stringify(sentinel)}. Something else answers this port from inside the ` +
+            `browser container. Re-run serve.sh for a new port; do not debug the harness.`
+        );
+    }
+}
+
+async function captureInteractions(page, { surfaces = SURFACES, base, sentinel, theme = 'dark', width = 1280 } = {}) {
+    await assertServerIsOurs(page, base, sentinel);
     const out = {};
     for (const surface of surfaces) {
         await page.goto(`${base}/h.html?b=${surface}&t=${theme}&cb=${Date.now()}${Math.random()}`);

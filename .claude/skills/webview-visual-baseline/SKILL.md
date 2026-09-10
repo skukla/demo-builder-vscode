@@ -75,7 +75,9 @@ await page.goto(BASE + '/capture-interactions.js');
 const code = await page.evaluate(() => document.body.innerText);
 const mod = { exports: {} };
 new Function('module','exports', code + '\nmodule.exports={captureInteractions,diffInteractions,assertForcingWorks};')(mod, mod.exports);
-const before = await mod.exports.captureInteractions(page, { base: BASE });
+const before = await mod.exports.captureInteractions(page, {
+  base: BASE, sentinel: SENTINEL,         // refuses to run without it
+});
 mod.exports.assertForcingWorks(before);   // NEVER skip this
 ```
 
@@ -103,6 +105,34 @@ at mount AND before every read, because forcing a state can start an animation.
 responds to a forced state, either CDP never reached the page or the surface did
 not mount — and a clean interaction diff would then mean nothing at all. It throws
 rather than returning a verdict.
+
+### What it found the first time it ran end-to-end (2026-09-10)
+
+Comparing the pre-session build against the post-sweep one over all 8 surfaces:
+**33 cells moved, none of them a regression.** Recorded because two of the three
+causes look exactly like one.
+
+- **Sidebar, 12 cells.** Hover and focus were DEAD before — `assertForcingWorks`
+  found zero responsive elements on that surface, and every forced cell was
+  byte-identical to its own rest. They respond now (background plus four border
+  colours). This is the `@layer vendor` flip giving Spectrum's own interaction
+  rules back, which is what that change was for.
+- **17 cells across wizard, dashboard and projectsList: the FREEZE, not the CSS.**
+  Before, forced hover read `transform: matrix(1,0,0,1,0,0)` and `box-shadow:
+  rgba(0,0,0,0) 0 0 0 0` — the identity and a fully transparent shadow, i.e. a
+  transition read at t=0. The harness freeze is an UNLAYERED `transition: none
+  !important` and a LAYERED `!important` beats it; the old tree had 51 `!important`
+  transitions, 48 transforms and 33 box-shadows, and the new one has none of any.
+  So the freeze takes now and the capture reads the settled state: a real 2px lift
+  and a real shadow. **The instrument could not see these hover states at all
+  before.** Read without checking, this is 17 regressions.
+- **4 cells on integrations**: the "Event providers" button, deliberately removed
+  in `4a3889049`. An element that vanishes shows up as `absent in AFTER`, which is
+  worth keeping distinct from a value that moved.
+
+The moral for the next comparison: a moved interaction cell has three plausible
+causes — the CSS changed, the FREEZE started or stopped working, or the ELEMENT
+went. Check which before reporting any of them.
 
 ### Coverage, measured 2026-09-08
 
@@ -148,39 +178,41 @@ finding). ADR-018 cites both.
 ## Procedure
 
 ```bash
-# 1. Build — CI does not, so the instrument must
-npm run compile
-
-# 2. Stage bundles, styles, harness and fixtures together
-mkdir -p /tmp/vr && cp dist/webview/*-bundle.js /tmp/vr/
-cp src/core/ui/styles/reset.css src/core/ui/styles/tokens.css /tmp/vr/
-cp .claude/skills/webview-visual-baseline/harness.html /tmp/vr/h.html
-# Only needed for auditContrast() — the WCAG rule jsdom cannot judge.
-cp node_modules/axe-core/axe.min.js /tmp/vr/
-node .claude/skills/webview-visual-baseline/build-fixtures.mjs /tmp/vr
-
-# 3. Serve where the browser can reach it
-cd /tmp/vr && python3 -m http.server 8899
+npm run compile                                    # CI does not build; the instrument must
+eval "$(.claude/skills/webview-visual-baseline/serve.sh)"   # stages + serves + prints the port
+echo "$VR_BASE $VR_SENTINEL"
 ```
+
+`serve.sh` does the staging, picks a RANDOM high port, writes a fresh sentinel and
+exports `VR_BASE`, `VR_SENTINEL`, `VR_PID`, `VR_STAGE`. For the after-half of a
+comparison, rebuild and `serve.sh --restage` — that re-copies the bundles under the
+running server and deliberately leaves the sentinel alone, because it identifies the
+SERVER, not the build.
 
 Then drive a browser at `http://host.docker.internal:8899/h.html?b=dashboard`
 (`host.docker.internal`, not `localhost` — the MCP browser is containerised) and
 evaluate `capture.js`'s `capture()`.
 
-**PROVE THE BROWSER REACHED *YOUR* SERVER FIRST.** On 2026-09-08 port 8899 was
-already answered by an unrelated Fastify app from inside the container, so every
-iframe got a JSON 404 — `#root` missing, no theme class, transparent background.
-Read naively that is "the theme switch is inert", and the run was minutes from
-being reported as a broken instrument. Drop a sentinel next to the harness and
-fetch it through the browser before trusting anything:
+**THE SENTINEL IS ENFORCED, NOT REMEMBERED (2026-09-10).** Pass `sentinel:
+process.env.VR_SENTINEL` to `capture()` and `captureInteractions()`. Both REFUSE to
+run without it, and refuse a value that does not match what the server serves. There
+is nothing to remember and nothing to skip.
 
-```bash
-echo "VR-SENTINEL-$RANDOM" > /tmp/vr/sentinel.txt
-```
+It had to move into the code because it was a documented manual step and was skipped
+both times it mattered. `host.docker.internal:<port>` can be answered by an unrelated
+app inside the browser container while the local bind succeeded — so a running
+server, a clean `lsof` and a page that renders are all consistent with never having
+reached the harness. Every fetch returns someone else's 404, and the run reports a
+broken instrument:
 
-Navigate to `/sentinel.txt` and confirm the browser reads back the value you
-wrote. A 404 page and a working page both render; only the sentinel tells them
-apart.
+- **2026-09-08**, port 8899, a Fastify app: `#root` missing, no theme class,
+  transparent background — read as "the theme switch is inert".
+- **2026-09-09**, same shape: read as "`CSS.forcePseudoState` does not work through
+  this session", and the interaction route was recorded as unavailable for a day.
+
+`serve.sh` now picks a random high port, so the collision is unlikely; the guard is
+what makes it harmless when it happens. If the guard fires, **re-run `serve.sh` for a
+new port — do not debug the harness.**
 
 To compare: capture, change CSS, `npm run compile`, re-copy the bundles, capture
 again, `diff(before, after)`.
@@ -294,26 +326,32 @@ Before fixtures this was 209 elements with four surfaces under 16 — and an
 "IDENTICAL" verdict on a five-element surface is not evidence of anything, which
 is what the ADR-018 audit found.
 
-## The interaction harness needs Playwright, and its forcing failed in Chrome-MCP (2026-09-09)
+## The interaction harness needs Playwright. Forcing WORKS — the port did not (2026-09-10)
 
 `capture.js` runs anywhere you can evaluate JavaScript. **`capture-interactions.js`
 does not** — it takes a Playwright `page` and opens its own CDP session to call
-`CSS.forcePseudoState`. Driven through the containerised Playwright MCP (reachable
-at `host.docker.internal`, not `127.0.0.1`), it captured 24 cells for the sidebar
-and then `assertForcingWorks` threw: **no element responded to a forced
-pseudo-state.**
+`CSS.forcePseudoState`. Reach it at `host.docker.internal`, not `127.0.0.1`.
 
-**Run it against a build you have NOT changed before concluding anything.** That
-distinction is the whole value of the control and it is not automatic: a dead
-forcing mechanism and a change that flattened every hover style produce the same
-throw. The sidebar's `@layer vendor` flip was measured this way — the unlayered
-control build threw identically, so the instrument was at fault and the change was
-exonerated. Reported the other way round it would have been a false regression on
-a change that moved nothing.
+**This section said forcing was broken for a day. It is not.** Re-measured
+2026-09-10 through the same containerised Playwright MCP:
 
-Unresolved: why forcing does not take through that session. Until it is, an
-interaction result from this route is unavailable rather than clean, and the
-fallback is the owner hovering the surface in the Extension Development Host.
+- a trivial page with one `:hover` rule: forced hover and focus both take, and
+  clearing restores the resting value;
+- the real sidebar: all six interactive elements respond to hover and focus with
+  `background-color` and four border colours;
+- `assertForcingWorks` returns `{sidebar: 12}` rather than throwing.
+
+What had actually failed was the port — the harness was never reached, so nothing
+could respond. See the sentinel section above; the guard that prevents this now runs
+inside `captureInteractions` and cannot be skipped.
+
+**The habit that DID hold up: run it against a build you have not changed before
+concluding anything.** A dead forcing mechanism and a change that flattened every
+hover style produce the same throw. The sidebar's `@layer vendor` flip was measured
+that way — the unlayered control build threw identically, so the change was
+exonerated. That reasoning was sound; only the conclusion drawn about the instrument
+was wrong, and it was wrong because no control distinguished "forcing is broken" from
+"this is not our server".
 
 ## `width`/`height` are box-sizing-dependent — a box-model change fakes a diff
 

@@ -4,9 +4,13 @@
  * file passed the repo's 750-line test-file limit — six checks were added to it
  * in one day and it had stopped being about one subject.
  *
- * Here: reduced-motion keeps its `!important`, motion timings come from
- * Spectrum's scale, and every sheet actually PARSES. `stylesheet-bundles`
- * keeps the reach and cascade-order questions.
+ * Here: reduced-motion wins from `@layer overrides` with NO `!important`,
+ * motion timings come from Spectrum's scale, and every sheet actually PARSES.
+ * `stylesheet-bundles` keeps the reach and cascade-order questions.
+ *
+ * (This line said "reduced-motion keeps its `!important`" until 2026-09-10 — a
+ * summary written before the block moved, contradicting the describe directly
+ * below it. The header is the half nobody re-reads.)
  */
 import { execSync } from 'child_process';
 import { readFileSync, writeFileSync, unlinkSync } from 'fs';

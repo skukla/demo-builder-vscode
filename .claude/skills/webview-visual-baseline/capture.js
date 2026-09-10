@@ -202,8 +202,33 @@ function assertPropertiesCovered(cssText) {
  * inherited defaults, and a diff against it reports a screenful of regressions
  * that do not exist. Abort rather than report.
  */
-async function assertHarnessFaithful() {
+async function assertHarnessFaithful(sentinel) {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+    // FIRST: is this even our server? `host.docker.internal:<port>` can be
+    // answered by an unrelated app inside the browser container while the local
+    // bind succeeded — every fetch then returns someone else's 404, the app
+    // never mounts, and the checks below report a broken harness instead of a
+    // wrong port. That misdiagnosis is on the record twice (2026-09-08 read as
+    // "the theme switch is inert"; 2026-09-09 as "forcePseudoState does not
+    // work"). It was a documented manual step and was skipped both times, so it
+    // runs here now.
+    //
+    // A sentinel is REQUIRED. Skipping it silently is the failure being fixed.
+    if (!sentinel) {
+        throw new Error(
+            'capture() needs the sentinel serve.sh printed (VR_SENTINEL). Without it a ' +
+            'clean fingerprint cannot be distinguished from one taken of another app.'
+        );
+    }
+    const got = (await (await fetch(`/sentinel.txt?cb=${Date.now()}`)).text()).trim();
+    if (got !== sentinel) {
+        throw new Error(
+            `this is NOT your harness — /sentinel.txt returned ${JSON.stringify(got.slice(0, 120))}, ` +
+            `expected ${JSON.stringify(sentinel)}. Re-run serve.sh for a new port.`
+        );
+    }
+
     const frame = document.createElement('iframe');
     frame.style.cssText = 'width:1280px;height:900px;border:0;position:absolute;left:-9999px';
     frame.src = `/h.html?b=dashboard&cb=ctl${Date.now()}`;
@@ -267,8 +292,8 @@ async function assertHarnessFaithful() {
  * such. A run is 8 x 2 x 3 = 48 loads at the settle time above, so budget a
  * couple of minutes; pass a narrower matrix while iterating on one surface.
  */
-async function capture({ surfaces = SURFACES, themes = THEMES, widths = WIDTHS } = {}) {
-    await assertHarnessFaithful();
+async function capture({ surfaces = SURFACES, themes = THEMES, widths = WIDTHS, sentinel } = {}) {
+    await assertHarnessFaithful(sentinel);
     const out = {};
     for (const s of surfaces) {
         for (const t of themes) {
