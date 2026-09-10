@@ -331,25 +331,37 @@ it**, whenever the change could touch the box model. The rect is box-sizing
 independent; the computed style is not. Read the delta first: if it equals the
 element's padding (or border), suspect this before hunting for a layout cause.
 
-## The fingerprint is BLIND to motion — twice over
+## Motion IS captured — and the value to watch is a duration going to `0s`
 
-`PROPS` captures 26 properties and **not one of them is `transition-*` or
-`animation-*`**. And `capture()` injects a transition freeze, so even a probe you
-write by hand inside the harness reads `transition-duration: 0s` for everything.
+`MOTION_PROPS` adds seven properties after `PROPS`:
+`transition-duration|transition-timing-function|transition-property|animation-duration|animation-timing-function|animation-name|animation-iteration-count`.
 
-Both bit on 2026-09-10, converting 84 duration literals to Spectrum's scale. A
-probe reported that ZERO of ten animated elements could resolve
-`--spectrum-global-animation-duration-600`, which would have made the whole change
-impossible. It was the freeze: a **literal** `.3s` read back as `0s` in the same
-probe, and that control is what exposed it. Reading the custom property directly —
-which the freeze cannot touch — showed all ten resolved fine.
+They are read in their own pass **with the CSS freeze switched off**, via the
+harness's `__MOTION__(read)`. That matters more than it sounds: the freeze is
+`transition: none !important` on `*`, so under it every duration reads `0s` — and
+`0s` is exactly what a **failed `var()`** produces. An instrument that cannot tell
+"this animation was retimed" from "this animation died" is not covering motion.
 
-**To verify a motion change, fingerprint motion yourself, in a frame where
-`capture()` has never run:** walk the DOM, record
-`transitionDuration|animationDuration|transitionTimingFunction|animationTimingFunction`
-per element, and diff those. The check that matters is not "did a value change" —
-it is **"did a duration become `0s`"**, because that is what a failed `var()` looks
-like, and it means the motion died rather than moved.
+`captureSurface` throws if NO element has a non-zero duration with the freeze
+lifted, because that means `__MOTION__` did not work and a clean motion diff would
+be meaningless.
+
+**Read a motion diff for `-> 0s` first, count second.** On the run that added this,
+converting 84 duration literals to Spectrum's scale, the very first diff showed
+`transition-duration: 0.2s -> 0s` on `BODY`. Spectrum's tokens are defined on its
+THEME CLASS, and `wizard.css` carries a UNIVERSAL `* { transition: ... }` — which
+also matches `body`, `#root`, and everything outside the Provider, where the token
+does not resolve. A failed `var()` is invalid at computed-value time, so the
+declaration does not degrade, it disappears. The fix is a fallback inside the
+`var()`; the point is that no other instrument here could have seen it.
+
+**The freeze was, and still is, partial.** It is an UNLAYERED `!important`, and a
+LAYERED `!important` beats it — so rules inside `@layer theme` keep their real
+durations under it while a hand-written probe next to them reads `0s`. That
+mismatch is what made an earlier probe report that no element could resolve
+Spectrum's tokens, which was false and nearly killed a viable change. `__FREEZE__()`
+(Web Animations API) is what actually stops animation, where the cascade cannot
+reach.
 
 ## Known gaps
 

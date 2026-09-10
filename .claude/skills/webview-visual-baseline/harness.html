@@ -39,16 +39,7 @@
     --vscode-input-background: #ffffff; --vscode-input-foreground: #3b3b3b;
     --vscode-sideBar-background: #f8f8f8; --vscode-list-hoverBackground: #f2f2f2;
   }
-  /* FREEZE EVERYTHING TIME-DEPENDENT.
-     Without this a snapshot is not reproducible: the dashboard's .status-dot
-     pulses, and two captures 2s apart caught opacity 0.736 vs 0.766. Animations
-     and transitions are the only nondeterminism found in a 72-element full-tree
-     fingerprint — kill them and the capture is exact. */
-  *, *::before, *::after {
-    animation: none !important;
-    transition: none !important;
-    caret-color: transparent !important;
-  }
+  *, *::before, *::after { caret-color: transparent !important; }
   body { margin:0; background:var(--vscode-editor-background); color:var(--vscode-foreground);
          font-family:var(--vscode-font-family); font-size:var(--vscode-font-size); }
 </style></head><body>
@@ -126,11 +117,26 @@
    * and pinning its time is not a specificity contest. The CSS rule stays as a
    * cheap first pass for transitions.
    */
+  /**
+   * Read motion properties with the CSS freeze OFF, then put it back.
+   *
+   * `transition-duration` under the freeze reads `0s` for anything the freeze
+   * can reach, which is indistinguishable from a `var()` that failed — the exact
+   * failure a motion fingerprint exists to catch. So the freeze is lifted for
+   * this read alone.
+   */
+  window.__MOTION__ = (read) => {
+    const sheet = document.getElementById('vr-freeze');
+    if (sheet) sheet.disabled = true;
+    try { return read(); } finally { if (sheet) sheet.disabled = false; }
+  };
+
   window.__FREEZE__ = () => {
     try {
       for (const a of document.getAnimations()) { a.pause(); a.currentTime = 0; }
     } catch (e) { /* getAnimations is Chrome 84+; the target is Chrome 91 */ }
   };
+  document.head.insertAdjacentHTML('beforeend', "<style id=\"vr-freeze\">\n  /* FREEZE EVERYTHING TIME-DEPENDENT.\n     Without this a snapshot is not reproducible: the dashboard's .status-dot\n     pulses, and two captures 2s apart caught opacity 0.736 vs 0.766.\n\n     IT LIVES IN ITS OWN SHEET so `__MOTION__()` can switch it off, read the\n     motion properties, and switch it back on. Folded into the main <style> it\n     was unreachable, and `transition-duration` was therefore uncapturable —\n     the fingerprint had no motion coverage at all until 2026-09-10.\n\n     IT IS ALSO ONLY PARTIAL, and always was: this is an UNLAYERED !important,\n     and a LAYERED !important beats it. Rules inside `@layer theme` keep their\n     real durations, which is why a hand-written probe here disagreed with the\n     elements next to it. `__FREEZE__()` below is what actually stops animation,\n     via the Web Animations API, where the cascade cannot reach. */\n  *, *::before, *::after {\n    animation: none !important;\n    transition: none !important;\n  }\n</style>");
   const s = document.createElement('script');
   // CACHE-BUST THE BUNDLE, not just the page. Without this the browser serves
   // the previously-fetched bundle and a before/after comparison silently

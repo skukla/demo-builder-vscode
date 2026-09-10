@@ -16,6 +16,24 @@
  * which is what this codebase's CSS failures actually are.
  */
 
+/**
+ * MOTION, captured separately because the harness freezes it.
+ *
+ * These are appended to every fingerprint line AFTER `PROPS`, so `diff` names
+ * them like any other property. They are read with the CSS freeze lifted — see
+ * `captureSurface` — because under it they all read `0s`, and `0s` is exactly
+ * what a failed `var()` produces. A fingerprint that cannot tell "this animation
+ * was retimed" from "this animation died" is not covering motion.
+ *
+ * Added 2026-09-10, after 84 duration literals were converted to Spectrum's
+ * scale and the fingerprint could not see one of them.
+ */
+const MOTION_PROPS = [
+    'transition-duration', 'transition-timing-function', 'transition-property',
+    'animation-duration', 'animation-timing-function', 'animation-name',
+    'animation-iteration-count',
+];
+
 const PROPS = [
     'color', 'background-color', 'font-size', 'font-weight', 'padding', 'margin',
     'display', 'position', 'width', 'height', 'border', 'flex-direction',
@@ -90,7 +108,36 @@ async function captureSurface(bundle, theme = 'dark', width = 1280) {
     const doc = frame.contentDocument;
     const win = frame.contentWindow;
 
-    // Pin animations before reading. The CSS freeze alone is not enough:
+    // MOTION FIRST, with the freeze lifted. Read under the freeze,
+    // `transition-duration` is `0s` for everything the freeze can reach — which
+    // is indistinguishable from a `var()` that failed, and a failed var is the
+    // one motion regression worth catching. `__MOTION__` switches the freeze
+    // sheet off for this read alone and switches it back.
+    const motion = new Map();
+    const readMotion = () => {
+        const visit = (el, path) => {
+            const cs = win.getComputedStyle(el);
+            motion.set(path, MOTION_PROPS.map((p) => cs.getPropertyValue(p)).join('|'));
+            [...el.children].forEach((child, i) => visit(child, `${path}/${i}`));
+        };
+        visit(doc.body, '');
+    };
+    if (win.__MOTION__) win.__MOTION__(readMotion);
+    else readMotion();
+
+    // CONTROL: with the freeze off, a real surface has SOME motion. All-zero
+    // means the freeze did not lift and every motion value is a false `0s`,
+    // which would report a killed animation as no change at all.
+    const moving = [...motion.values()].filter((v) => !/^0s\|/.test(v)).length;
+    if (moving === 0) {
+        throw new Error(
+            `capture ${bundle}@${theme}@${width}: no element has a non-zero duration ` +
+            `with the freeze lifted — __MOTION__ is not working, and a clean motion ` +
+            `diff would be meaningless.`
+        );
+    }
+
+    // Pin animations before reading the rest. The CSS freeze alone is not enough:
     // `.animate-pulse` is `!important` inside `@layer theme`, and a layered
     // `!important` beats an unlayered one — ADR-018 §1, biting the instrument
     // built to help fix it.
@@ -99,7 +146,8 @@ async function captureSurface(bundle, theme = 'dark', width = 1280) {
     const lines = [];
     const walk = (el, path) => {
         const cs = win.getComputedStyle(el);
-        lines.push(`${path}\t${el.tagName}\t${PROPS.map((p) => cs.getPropertyValue(p)).join('|')}`);
+        const rest = PROPS.map((p) => cs.getPropertyValue(p)).join('|');
+        lines.push(`${path}\t${el.tagName}\t${rest}|${motion.get(path) ?? ''}`);
         [...el.children].forEach((child, i) => walk(child, `${path}/${i}`));
     };
     walk(doc.body, '');
@@ -247,7 +295,7 @@ function diff(before, after) {
             const [path, tag, av] = a[i].split('\t');
             const bv = b[i].split('\t')[2];
             const before_ = av.split('|'), after_ = bv.split('|');
-            const changed = PROPS
+            const changed = [...PROPS, ...MOTION_PROPS]
                 .map((p, k) => (before_[k] !== after_[k] ? `${p}: ${before_[k]} -> ${after_[k]}` : null))
                 .filter(Boolean);
             moved.push({ surface, tag, path, changed });

@@ -204,10 +204,25 @@
     /* Error Message Styling */
     
 
-    /* Smooth Transitions */
-    * {
-        transition: opacity var(--spectrum-global-animation-duration-300) ease, transform var(--spectrum-global-animation-duration-300) ease;
-    }
+    /* THE UNIVERSAL TRANSITION IS GONE, and nothing replaced it.
+
+       It was `* { transition: opacity ..., transform ... }` in a sheet FOUR
+       entries import — every element on four surfaces given a transition it
+       never asked for. On the wizard that was 84 elements, `<script>`, `<style>`
+       and `<path>` among them.
+
+       It looked load-bearing because `.step-content.transitioning` toggles
+       opacity and transform right above and needs something to animate them. It
+       was not: that element carries the `transition-all` UTILITY CLASS in its
+       markup, which sets `transition: all` at 0.3s and wins anyway. The step
+       crossfade never came from here.
+
+       Found while converting durations to Spectrum's scale — the rule could not
+       take a token, because `*` also matches `body` and `#root`, outside the
+       Spectrum theme scope where the token does not resolve, and a failed
+       `var()` deletes the declaration rather than degrading it. The first motion
+       fingerprint caught it as `transition-duration: 0.2s -> 0s` on BODY.
+       A fallback would have hidden a rule that should not exist. */
 
     /* Remove default focus outlines for cleaner look */
     
