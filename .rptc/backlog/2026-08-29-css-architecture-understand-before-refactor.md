@@ -449,3 +449,4 @@ WHAT THIS LEAVES. The layer fix is correct in principle — unlayered normal bea
 - 2026-09-09  refactor(css): one design system — Spectrum's — and tokens.css becomes a map (`2043df846`)
 - 2026-09-10  feat(css): ADR-018 step 3 is done — all eight entries layered (`a372b23f1`)
 - 2026-09-09  docs(css): ADR-018 gains the two decisions that had no record (`f58b08ad1`)
+- 2026-09-10  refactor(css): motion joins the one design system — 84 literals, one scale (`c4432ddd5`)
