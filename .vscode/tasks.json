@@ -16,12 +16,6 @@
             "script": "compile",
             "problemMatcher": "$tsc",
             "group": "build"
-        },
-        {
-            "type": "npm",
-            "script": "test-compile",
-            "problemMatcher": "$tsc",
-            "group": "test"
         }
     ]
 }
