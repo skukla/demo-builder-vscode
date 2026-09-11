@@ -58,6 +58,7 @@ const PROOFS = [
         id: 'builtin-namespace-mocks',
         convention: 'Never assign a jest.fn() onto a Node builtin namespace',
         enforcer: 'tests/sop/no-builtin-namespace-mock-assignment.test.ts',
+        expects: /no builtin namespace is mutated with jest\.fn/,
         plant: {
             path: 'tests/features/zzProof/builtinMock.test.ts',
             content: [
@@ -76,6 +77,7 @@ const PROOFS = [
         id: 'vsix-contents',
         convention: 'Every top-level directory ships or is excluded by .vscodeignore',
         enforcer: 'tests/sop/vsix-contents.test.ts',
+        expects: /every top-level directory is classified/,
         // The violation is an UNCLASSIFIED top-level directory — the case the suite
         // exists to force a decision on.
         plant: { path: 'zzProofDir/.gitkeep', content: '' },
@@ -84,6 +86,7 @@ const PROOFS = [
         id: 'reversibility',
         convention: 'A capability that creates something names what undoes it',
         enforcer: 'tests/sop/reversibility-ledger.test.ts',
+        expects: /every create-shaped tool has a ledger row/,
         // A create-shaped tool with no ledger row. Registered the hand-written way so
         // the shared surface reader finds it.
         plant: {
@@ -97,15 +100,157 @@ const PROOFS = [
             ].join('\n'),
         },
     },
+    {
+        id: 'no-bare-sleep',
+        convention: 'No hand-rolled sleep in src/ — use the shared helper',
+        enforcer: 'tests/sop/no-bare-sleep.test.ts',
+        expects: /finds no hand-rolled sleep in src/,
+        plant: {
+            path: 'src/core/utils/zzProofSleep.ts',
+            content: [
+                '/** Planted by convention-proofs.mjs. */',
+                'export async function zzProofWait(ms: number): Promise<void> {',
+                '    await new Promise((resolve) => setTimeout(resolve, ms));',
+                '}',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 'nested-ternary',
+        convention: 'No nested ternary operators in source files',
+        enforcer: 'tests/sop/complex-expressions.test.ts',
+        expects: /should not have nested ternary operators/,
+        plant: {
+            path: 'src/core/utils/zzProofTernary.ts',
+            content: [
+                '/** Planted by convention-proofs.mjs. */',
+                'export function zzProofPick(a: number): string {',
+                "    const label = a > 2 ? 'big' : a > 1 ? 'mid' : 'small';",
+                '    return label;',
+                '}',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 'naming-pascal-tsx',
+        convention: 'A PascalCase .tsx exports a symbol of the same name',
+        enforcer: 'tests/sop/naming-conventions.test.ts',
+        expects: /a PascalCase \.tsx exports a symbol of the same name/,
+        plant: {
+            path: 'src/core/ui/components/ZzProofWidget.tsx',
+            content: [
+                '/** Planted by convention-proofs.mjs — the export does NOT match the file. */',
+                'export function somethingElseEntirely(): null {',
+                '    return null;',
+                '}',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 'lenient-emptiness',
+        convention: 'Assert emptiness with toStrictEqual, never toEqual',
+        enforcer: 'tests/sop/no-lenient-emptiness.test.ts',
+        expects: /no test asserts emptiness with toEqual/,
+        plant: {
+            path: 'tests/features/zzProof/lenient.test.ts',
+            content: [
+                "describe('planted', () => {",
+                "    it('asserts emptiness leniently', () => {",
+                '        expect([]).toEqual([]);',
+                '    });',
+                '});',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 'disjunction-assertions',
+        convention: 'No assertion accepts either of two outcomes',
+        enforcer: 'tests/sop/no-disjunction-assertions.test.ts',
+        expects: /no assertion accepts either of two outcomes/,
+        plant: {
+            path: 'tests/features/zzProof/disjunction.test.ts',
+            content: [
+                "describe('planted', () => {",
+                "    it('accepts either outcome', () => {",
+                '        const a = 1;',
+                '        expect(a === 1 || a === 2).toBe(true);',
+                '    });',
+                '});',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 'jest-environment-docblock',
+        convention: 'No test file chooses its own jest environment',
+        enforcer: 'tests/sop/no-jest-environment-docblocks.test.ts',
+        expects: /no @jest-environment docblock anywhere under tests/,
+        plant: {
+            path: 'tests/features/zzProof/envDocblock.test.ts',
+            content: [
+                '/**',
+                ' * @jest-environment jsdom',
+                ' */',
+                "describe('planted', () => {",
+                "    it('picks its own environment', () => {",
+                '        expect(1).toBe(1);',
+                '    });',
+                '});',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 'src-erases-no-types',
+        convention: 'PRODUCTION erases no types — as any and as never are banned in src/',
+        enforcer: 'tests/sop/src-erases-no-types.test.ts',
+        expects: /no file in src\/ casts to any or never/,
+        plant: {
+            path: 'src/core/utils/zzProofCast.ts',
+            content: [
+                '/** Planted by convention-proofs.mjs. */',
+                'export function zzProofErase(value: unknown): string {',
+                '    return (value as any).whatever;',
+                '}',
+                '',
+            ].join('\n'),
+        },
+    },
 ];
 
 function run(cmd, args, cwd) {
     try {
-        execFileSync(cmd, args, { cwd, stdio: 'pipe', encoding: 'utf8' });
-        return 0;
+        const out = execFileSync(cmd, args, { cwd, stdio: 'pipe', encoding: 'utf8' });
+        return { status: 0, out };
     } catch (e) {
-        return e.status ?? 1;
+        return { status: e.status ?? 1, out: `${e.stdout ?? ''}${e.stderr ?? ''}` };
     }
+}
+
+/**
+ * Which assertions failed, by name.
+ *
+ * ATTRIBUTION IS THE POINT, and it is the same lesson the hook proofs learned: 25
+ * rules share one router, so "something blocked" says nothing about which rule
+ * answered, and they attribute by message instead. Here, six suites back MORE THAN ONE
+ * convention — `architecture-rules.test.ts` backs ten — so "the suite went red" does
+ * not say which rule caught the violation. Ten proofs against that suite could all be
+ * passing for the same reason, or for a reason unrelated to the convention they claim:
+ * a syntax error in the planted file turns the suite red just as well.
+ *
+ * Jest prints `● <describe> › <test name>` for each failure, twice; dedup and match.
+ */
+function failedAssertions(output) {
+    const names = new Set();
+    for (const m of output.matchAll(/●\s+(.+?)\n/g)) {
+        const name = m[1].trim();
+        if (name && !/Console$/.test(name)) names.add(name);
+    }
+    return [...names];
 }
 
 /** A throwaway checkout of HEAD, sharing .git and borrowing node_modules. */
@@ -135,8 +280,12 @@ function proveOne(proof) {
         // BASELINE: the enforcer must PASS on a clean tree. Without this a
         // permanently-red suite would read as a working proof.
         const clean = run('npx', jest, tree.wt);
-        if (clean !== 0) {
-            return { ...proof, verdict: 'BROKEN', detail: 'enforcer fails on a CLEAN tree' };
+        if (clean.status !== 0) {
+            return {
+                ...proof,
+                verdict: 'BROKEN',
+                detail: `enforcer fails on a CLEAN tree — ${failedAssertions(clean.out)[0] ?? 'no assertion named'}`,
+            };
         }
 
         // PLANT: write the violation and stage it — `git ls-files` lists tracked
@@ -147,9 +296,25 @@ function proveOne(proof) {
         execSync(`git add -f "${proof.plant.path}"`, { cwd: tree.wt });
 
         const planted = run('npx', jest, tree.wt);
-        return planted === 0
-            ? { ...proof, verdict: 'UNPROVEN', detail: 'enforcer PASSED with the violation planted' }
-            : { ...proof, verdict: 'PROVEN', detail: 'rejected the planted violation' };
+        if (planted.status === 0) {
+            return { ...proof, verdict: 'UNPROVEN', detail: 'enforcer PASSED with the violation planted' };
+        }
+
+        const failed = failedAssertions(planted.out);
+        // ATTRIBUTED, not merely red. A proof without `expects` claims only that the
+        // suite failed, which for a suite backing ten conventions is nearly no claim
+        // at all — so it is required.
+        if (!proof.expects) {
+            return { ...proof, verdict: 'UNATTRIBUTED', detail: `no \`expects\`; suite failed at: ${failed.join(' | ') || 'unknown'}` };
+        }
+        const hit = failed.find((n) => proof.expects.test(n));
+        return hit
+            ? { ...proof, verdict: 'PROVEN', detail: `rejected it at "${hit}"` }
+            : {
+                  ...proof,
+                  verdict: 'WRONG-REASON',
+                  detail: `suite failed, but not where expected. Failed at: ${failed.join(' | ') || 'unknown'}`,
+              };
     } finally {
         dropWorktree(tree);
     }
@@ -170,6 +335,7 @@ const SELF_TEST = {
     id: 'SELFTEST',
     convention: 'the harness can report failure',
     enforcer: 'tests/sop/vsix-contents.test.ts',
+    expects: /every top-level directory is classified/,
     plant: {
         path: 'tests/features/zzProof/wrongEnforcer.test.ts',
         content: [
