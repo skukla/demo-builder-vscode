@@ -17,7 +17,7 @@ Item: [[EDS-13c]]. Decision: D10 (a published contract). Depends on the contract
 4. What "Add a demo" reads when the file is absent, so a colleague knows the fallback.
 5. That SCs who add your demo keep a fork of it by default, with your full history: do not
    share a repo whose history carries a secret.
-5. The words: "demo" on the grid, "storefront" in the Storefront area, and why.
+6. The words: "demo" on the grid, "storefront" in the Storefront area, and why.
 
 Pinned: the doc's field list against the schema by the config-contract test family (a doc
 that names a field the schema does not have goes red); `cited-identifiers.test.ts` for

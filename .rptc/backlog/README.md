@@ -224,7 +224,7 @@ each item's own file; what has already landed against an item is in its
 | `AI-7` | question | [Unattended teardown consent — how does a commissioned journey get to zero?](2026-08-28-unattended-teardown-consent.md) | — | med | shipped |
 | `AI-8` | question | [Audit our context files against what the research actually says](2026-08-29-context-file-audit-against-evidence.md) | — | high | backlog |
 
-### eds  (18)
+### eds  (19)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -244,6 +244,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-13b` | feature | └ ["Share this demo": turn an existing project into a demo others can add](2026-09-11-share-a-demo-export.md) | EDS-13c | med | backlog |
 | `EDS-13c` | chore | └ [The shareable-demo process, published: how to make a storefront addable](2026-09-11-shareable-demo-contract.md) | PL-56a | high | planned |
 | `EDS-13d` | feature | └ [A team catalog of shared demos](2026-09-11-team-demo-catalog.md) | EDS-13a, EDS-13b | low | backlog |
+| `EDS-13e` | feature | └ [Share a headless demo](2026-09-11-share-a-headless-demo.md) | EDS-13b | low | backlog |
 | `EDS-14` | fix | [Template update falls back to a full reset on conflict, overwriting the SC's own edits](2026-09-11-template-update-conflict-fallback-overwrites-edits.md) | — | med | backlog |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | backlog |
 
@@ -491,7 +492,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-3` [Monorepo Support with Independent Release Tracking - Implementation Plan](monorepo-independent-release-tracking/overview.md) — backlog
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 
-*93 item(s) sit outside the A–G chain.*
+*94 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 

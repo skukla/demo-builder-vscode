@@ -42,12 +42,19 @@ we found"; Spectrum `Switch`.
 
 ## The fork tick box (decided 2026-09-11)
 
-Stage 2 carries a tick box, on by default: keep my own copy of this demo's code, with the
-target namespace from the repo step's existing namespace picker (personal login or a team
-org the SC belongs to). It is the visible confirmation of a cloud write (P5). GitHub
-allows one fork of a repo per account, so the fork is per added demo, never per project.
-When the SC already has a fork of that repo, the box reads as already satisfied and points
-at it.
+Stage 2 carries a tick box, on by default: keep my own copy of this demo's code, naming
+the SC's own GitHub account (D28: personal account only; no namespace picker here, so the
+row in the reuse map that lifted the picker's option builder is not needed by this step).
+It is the visible confirmation of a cloud write (P5). GitHub allows one fork of a repo per
+account, so the fork is per added demo, never per project. When the SC already has a fork
+of that repo, the box reads as already satisfied and points at it. When the link is the SC's
+own repo, the box is not shown; their repo is the source.
+
+## When the link is one of ours (D30)
+
+The found panel reads "This is the demo behind Starter (B2B + B2C)" and the footer button
+reads "Use Starter"; pressing it selects the shipped card and closes the dialog. Nothing is
+remembered and no fork is offered.
 
 ## Copy
 

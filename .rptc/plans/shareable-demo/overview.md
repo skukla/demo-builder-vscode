@@ -2,7 +2,7 @@
 
 Items: [[EDS-13a]] Add a demo · [[EDS-13b]] Share this demo · [[EDS-13c]] the published
 process. Part of the program [[EDS-13]] (`../portable-demos/overview.md`, which holds the
-full decisions ledger D1–D15 and the contract step this feature builds on). Research:
+full decisions ledger D1–D25 and the contract step this feature builds on). Research:
 `.rptc/research/colleague-storefront/research.md`. This file is where the FEATURE's design
 iteration is logged; the program overview is where the tracks are ordered.
 
@@ -48,8 +48,8 @@ is shown.
 copy, else the colleague's `main`) and re-copies their content; for a forked demo the
 update check says "Jen has updated this demo: N changes. Pull them in?" and one click
 merges them;
-Configure opens with the demo card present; republish keeps the B2B flags; the update
-check compares to their `main`. Caveats from the dry check of our five load-bearing
+for an unforked demo the update check compares to the colleague's `main` instead.
+Configure opens with the demo card present; republish keeps the B2B flags. Caveats from the dry check of our five load-bearing
 patches read in SC words ("Product deep links may 404 on this storefront").
 
 **When the original disappears.** A forked demo does not notice. An unforked one shows a
@@ -227,6 +227,74 @@ was rejected and why. Detail in the research sections named.
   the same list; the check re-runs on every reset; nothing persists on the dashboard.
   Rejected: per-patch lines (five lines, no extra meaning), today's toast (written for us), a
   persistent dashboard notice (nags about something the SC cannot fix), create-only.
+
+## Review findings (2026-09-11, a full re-read of every plan file)
+
+Housekeeping fixed in the same pass: stale step numbering in the program ledger and its
+recommended design; a stale open list; a sentence in "After creation" that said both "one
+click merges" and "compares to their `main`"; a duplicate item number in step 08; a step-05
+test that referred to a tick that no longer exists.
+
+**Settled in the review (small enough to decide, recorded so they are not silent):**
+
+- **Store codes for both backends.** A colleague's `config.json` carries one set of codes;
+  the prefill writes them under BOTH key families (PaaS `ADOBE_COMMERCE_*` and ACCS
+  `ACCS_*`), as shipped packages carry both, so the SC's backend choice does not lose them.
+- **Precedence when sources disagree:** description file > `config.json` > dependency list >
+  the SC's switch. The stored row is a snapshot taken at add time; it is re-probed only by
+  "Change source", and a re-probe that contradicts the SC's stored B2B answer shows the
+  switch again rather than silently overwriting.
+- **Forking your own repo.** GitHub refuses a fork into the namespace that owns the source.
+  When the pasted link is the SC's own repo, the tick box is not shown; their repo is the
+  source. When it is a team org's repo and the SC picks that org, likewise.
+- **Change source** rewrites the project only. A second, unticked box, "Also update the
+  remembered demo", changes the settings entry.
+- **Forget's project count** is projects on this computer, and the confirm says so.
+- **Agent surface completeness (D15):** Forget and Change source get action tools in step
+  06; Share's tool is in step 09. Step 07 covers probe, add, list and create.
+- **Forward compatibility of the description file.** It carries a `version`; an unknown
+  field is a warning in the found panel, never a refusal, so a file written for a newer
+  extension still adds on an older one. `additionalProperties: false` applies to the
+  project file (ours), not to the description file (theirs).
+- **Headless probe rows.** Nothing is read for store codes from a Next.js repo in v1; the
+  "published pages" row is omitted; the SC types the codes as for any brand.
+- **Importing a project built on an added demo** (PL-56d) runs the same add path for a demo
+  the receiver has not seen: remembered entry plus the fork offer.
+- **Added-demo ids** carry a prefix so they can never collide with a shipped package id.
+
+**For the owner, in order of consequence:**
+
+1. **Headless demos have no repo of the SC's own.** A Next.js storefront is a local clone
+   (`componentInstallation.ts:84`: branch HEAD, or the latest release tag when the source
+   declares one); reset deletes and re-clones (`projectResetService.ts:437`); nothing ever
+   pushes it to GitHub. So for a headless added demo the fork works as the source, reset
+   re-clones it, and "Pull Jen's changes" syncs the fork; but "Share this demo" has nowhere
+   to write the description file, and the how-to cannot promise it. **Decided: Share is
+   Edge Delivery only in v1.** Adding a headless demo works fully; the how-to says a headless
+   demo is shared by pushing your clone to a repository yourself; headless Share is a
+   follow-on item (filed as [[EDS-13e]]).
+2. **Fork namespace: personal only, or team orgs too?** A team-org fork is shared by every
+   SC in the org; one fork per repo per org means the second SC finds it already made, and
+   Forget's delete-the-fork box would remove a colleague's source. **Decided: personal
+   account only** (D28). One owner, every action reversible by the person who took it, no
+   org-policy failure path; team-level sharing stays with the team catalog ([[EDS-13d]]).
+3. **Data.** Shipped brands do not pre-select a datapack (the Sample Data step is an
+   explicit choice), so parity says no. But a colleague's demo may only make sense with
+   their datapack, and nothing in the description file can say so. **Decided: yes,
+   optional.** The storefront slice gains an optional datapack name; when present the Sample
+   Data step starts with it selected and says why; the SC can change it; shipped brands gain
+   the same optional field (D26).
+4. **Integrations a demo depends on.** The description file's scope is a catalog entry's
+   fields, which carry `requiresMesh` but not "this demo needs Jen's App Builder app".
+   **Decided: yes.** The file may list catalog integration ids and custom-app links; the
+   Integrations area starts with them added (custom ones through the existing by-link path,
+   `appBuilderComponentSources`); shipped catalog entries gain the same field so the two stay
+   equal (D29).
+5. **Pasting a link to one of our own templates** (for example the B2B boilerplate).
+   **Decided: recognise it and point at the shipped card.** An exact owner/repo match
+   against a shipped entry's `templateOwner`/`templateRepo` (never a fork of it) makes the
+   found panel say "This is the demo behind Starter (B2B + B2C)" and selects that card, with
+   our ledger and pinning (D30). The seed rule `buildCustomIntegrationEntry` already uses.
 
 ## Open (this feature)
 

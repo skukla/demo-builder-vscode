@@ -27,7 +27,10 @@ description a second way without a test going red.
 
 1. **The storefront slice** is a named type: the brand fields a shipped package carries
    (`name`, `description`, `icon`, `configDefaults`, `configFlags`, `requiresMesh`, default
-   block libraries) plus the storefront row fields a repo can meaningfully state. It is
+   block libraries, and, new for both shipped entries and description files, an optional
+   datapack name (D26) and an optional list of integrations the demo depends on: catalog ids
+   and custom-app links in the `appBuilderComponentSources` shape (D29)) plus the storefront
+   row fields a repo can meaningfully state. It is
    derived from, not duplicated beside, `DemoPackage`/`Storefront` (a `Pick`/composition in
    the type; a `$ref` in the schema), so the catalog and the slice cannot drift.
 2. **The project file v2** is `SettingsFile` grown to carry what the manifest persists and

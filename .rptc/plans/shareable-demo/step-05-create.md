@@ -38,6 +38,14 @@ code patches run as a dry check whose misses become caveats.
 - Block libraries offered for an added demo (D22): the shipped libraries without
   `onlyForPackages` plus the SC's custom ones, none locked, none pre-ticked unless the
   description file names them. The demo's own blocks are never registered as a library.
+- Integrations (D29): when the stored row names integrations, the Integrations area starts
+  with them added through `useProjectBuilder`'s existing handlers (`onAppBuilderComponentToggle`
+  for catalog ids; the by-link path writing `appBuilderComponentSources` for custom apps);
+  `selectedAppBuilderComponents` stays the single mesh authority. The SC can remove any.
+- Sample Data (D26): when the stored row names a datapack, the Sample Data step
+  (`SampleDataStep.tsx`, the Commerce strip's "Datapacks" entry) starts with it selected and
+  shows one line saying the demo asked for it; the SC can change it; `project.datapack`
+  is written as today.
 - Storefront area (D21): `buildSummary.ts` `storefrontSummaryGroup` gains a first row
   "Demo — {name} · {kind}" for every EDS brand; the existing-repo tick in
   `repoSelectionInline.helpers.tsx:826` reads "Reset to {name} (replaces all content)".
@@ -75,8 +83,8 @@ code patches run as a dry check whose misses become caveats.
 Creation-wire field-set test (one list); phase-1 branch on `isTemplate` (assert the
 ARGUMENT to `createFromTemplate` vs `resetToTemplate`, not the mock's outcome); manifest
 round trip of the stored row; config flags re-expressed from the stored row on a second
-generate; dry check produces caveats only on precondition misses; content skipped when
-unticked.
+generate; dry check produces caveats only on precondition misses; pages skipped only when no
+index was found, with the note present.
 
 ## Done when
 

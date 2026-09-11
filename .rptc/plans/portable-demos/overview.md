@@ -36,21 +36,21 @@ export, import and copy carry the whole project, on one versioned file.
 
 | # | Decision | Where it bites |
 |---|---|---|
-| D1 | A shared storefront is its own brand card, at the brand level, not a frontend swap | step 05, 06 |
-| D2 | Paste a link; the PROJECT stores the synthesized storefront row; the link is remembered in the SC's user settings | step 05, 06, 07 |
-| D3 | Edge Delivery and headless both; the probe tells which | step 04 |
-| D4 | The colleague owns the storefront; we own the integration contract. Reset → the demo's source (the SC's fork by D16, else their `main`); no LKG pin, no patches, no brand assets. The five load-bearing code patches are dry-checked; each miss is a caveat | step 06, 07 |
+| D1 | A shared storefront is its own brand card, at the brand level, not a frontend swap | shareable-demo 04, 05 |
+| D2 | Paste a link; the PROJECT stores the synthesized storefront row; the link is remembered in the SC's user settings | shareable-demo 04, 05, 06 |
+| D3 | Edge Delivery and headless both; the probe tells which | shareable-demo 03 |
+| D4 | The colleague owns the storefront; we own the integration contract. Reset → the demo's source (the SC's fork by D16, else their `main`); no LKG pin, no patches, no brand assets. The five load-bearing code patches are dry-checked; each miss is a caveat | shareable-demo 05, 06 |
 | D5 | Copy their published pages whenever a published index exists; skip with a note when none (AMENDED 2026-09-11: the skippable half dropped, no tick for anyone); probe the index before Continue | shareable-demo 03, 05 |
-| D6 | Prefill exactly what shipped brands prefill: the three store codes, read from their `config.json` | step 04, 06 |
-| D7 | B2B: detect from `config.json`, then the dependency list; only when both fail show a switch, off by default, with a plain reason; the answer is stored with the project and re-expressed on every regenerate | step 04, 05, 06, 07 |
-| D8 | Words: plus card "Add a demo"; shipped "Custom (B2B + B2C)" → "Starter (B2B + B2C)"; "shared", "custom", "import", "from GitHub" rejected (research §9) | step 03, 05 |
-| D9 | The door opens the Add Integration dialog shape; EVERY surface, pattern and word is an existing one (research §9a is the gate) | step 05 |
-| D10 | A colleague may commit a description file: exactly what a shipped catalog entry may say; it wins over what we read, and we say what it overrode | step 01, 04 |
-| D11 | "Share this demo" / "Stop sharing" writes that file from a project; template flag is an off-by-default tick box | step 10 |
+| D6 | Prefill exactly what shipped brands prefill: the three store codes, read from their `config.json` | shareable-demo 03, 05 |
+| D7 | B2B: detect from `config.json`, then the dependency list; only when both fail show a switch, off by default, with a plain reason; the answer is stored with the project and re-expressed on every regenerate | shareable-demo 03, 04, 05, 06 |
+| D8 | Words: plus card "Add a demo"; shipped "Custom (B2B + B2C)" → "Starter (B2B + B2C)"; "shared", "custom", "import", "from GitHub" rejected (research §9) | shareable-demo 02, 04 |
+| D9 | The door opens the Add Integration dialog shape; EVERY surface, pattern and word is an existing one (research §9a is the gate) | shareable-demo 04 |
+| D10 | A colleague may commit a description file: exactly what a shipped catalog entry may say; it wins over what we read, and we say what it overrode | program 01, shareable-demo 03 |
+| D11 | "Share this demo" / "Stop sharing" writes that file from a project; template flag is an off-by-default tick box | shareable-demo 09 |
 | D12 | Team catalog after add and share ship | later |
-| D13 | ONE contract: the versioned project file; the storefront description is the slice that travels with a repo | step 01 |
+| D13 | ONE contract: the versioned project file; the storefront description is the slice that travels with a repo | program 01 |
 | D14 | Copy and Edit both stay, fed by that one complete file | PL-56 children |
-| D15 | Agent surface ships with each human surface | step 08 |
+| D15 | Agent surface ships with each human surface | shareable-demo 07, 09; PL-56f |
 | D16 | Fork on add, ticked by default: the SC's fork is the demo's source; updates are "Pull Jen's changes"; Forget offers to delete the fork | shareable-demo 04–07 |
 | D17 | Source gone (unforked): dashboard notice, reset refuses up front, rename self-heal, "Change source" repoints via the Add dialog; content gone: reset offers to keep current content | shareable-demo 06 |
 | D20 | A demo's blocks always arrive complete: they are code in the generated repo, the palette is generated from that code, and the example pages are copied from the demo's content site as library doc pages regardless of the page copy | shareable-demo 05 |
@@ -59,6 +59,11 @@ export, import and copy carry the whole project, on one versioned file.
 | D23 | Dry-check caveats are worded by consequence in the SC's words (three lines for five patches, ids only in the debug log), shown in the completion card at create and again at reset; nothing persists on the dashboard | shareable-demo 05, 06 |
 | D24 | The project file never carries a credential (no include flag, no stamp); it shares the demo's SHAPE. Import names what the receiver must supply and the existing Commerce step collects it; same-machine Copy moves credentials keychain to keychain; follow-on: offer reuse of a login already saved for the same backend | PL-56a, 56c, 56d |
 | D25 | Everything else can travel; stale sign-ins and Adobe context are re-proven through the EXISTING prompts (edit-mode seeding, "Switch IMS Org") before anything continues | PL-56a, 56d |
+| D26 | The description file (and a shipped catalog entry) may name the datapack the demo expects; the Sample Data step pre-selects it and says why; the SC can change it | program 01, shareable-demo 05 |
+| D27 | Share this demo is Edge Delivery only in v1; a headless project has no repo of the SC's own; headless Share is EDS-13e | shareable-demo 09 |
+| D28 | The fork lives in the SC's personal GitHub account only; no team-org forks in v1 | shareable-demo 04, 05, 06 |
+| D29 | The description file (and a shipped catalog entry) may name integrations the demo depends on: catalog ids and custom-app links; the Integrations area starts with them added | program 01, shareable-demo 05 |
+| D30 | A link to one of our own templates (exact owner/repo, never a fork) is recognised and selects the shipped card | shareable-demo 03, 04 |
 | D19 | Updates: the existing updater applies unchanged (fork sync per template repo + per-project template merge, one picker); no new mechanism for shared demos | shareable-demo 06 |
 | D18 | Forget removes the card only; "Also delete my copy" is an unticked tick box naming the projects that still use the fork, confirmed again before the repo goes; project deletion never touches the fork | shareable-demo 04, 06 |
 
@@ -66,25 +71,25 @@ export, import and copy carry the whole project, on one versioned file.
 
 **One resolver, one contract, one door.**
 
-1. **Contract (step 01).** A typed, schema-checked, versioned project file whose storefront
+1. **The file format (program step 01).** A typed, schema-checked, versioned project file whose storefront
    slice is the same shape as a `demo-packages.json` storefront entry plus the package-level
    brand fields (name, description, icon, `configDefaults`, `configFlags`, `requiresMesh`,
    default block libraries). Three places it can live: our catalog, a colleague's repo, a
    project file. Names to settle in step 01; nothing is invented here.
-2. **Resolver (step 02).** `resolveStorefrontForProject(project)` returns the project-stored
+2. **One lookup (feature step 01).** `resolveStorefrontForProject(project)` returns the project-stored
    storefront row when present, else the catalog row for `selectedPackage`/`selectedStack`.
    Every site in research §3b moves onto it. Pinned as a spine chokepoint. For shipped
    packages this is behaviour-preserving (the catalog still wins, so a package can still
    change what it patches between releases and existing projects follow).
-3. **Door (steps 04–05).** A host-side probe handler (Pattern B) reads the repo once and
+3. **The card and dialog (feature steps 03–04).** A host-side probe handler (Pattern B) reads the repo once and
    returns a typed result; the Welcome step's plus card opens the existing dialog shell with
    two stages; Continue commits a synthesized package into wizard state and remembers the
    link.
-4. **Create and after creation (steps 06–07).** The synthesized row rides the existing wire,
+4. **Create, then reset/update/edit/forget (feature steps 05–06).** The synthesized row rides the existing wire,
    the pipeline runs unchanged except `generate` → create-empty + fetch fallback, the row is
    persisted with the project, and the resolver makes reset, edit, republish, names and the
    update check work.
-5. **Agent surface (step 08)**, **publish the process (step 09)**, **Share (step 10)**.
+5. **The same actions for agents (07)**, **the how-to (08)**, **Share this demo (09)**.
 
 ### Alternatives considered
 
@@ -132,25 +137,22 @@ as the risk. Owner's gate before development (2026-09-11).
 ## Verification
 
 - Every step names its focused checks. The `gate` skill runs before any push.
-- Step 02 proves itself by the existing suites not moving (behaviour-preserving refactor).
-- Steps 04–07 are driven in the Extension Dev Host against a real colleague repo, and the
-  webview-visual-baseline is taken before and after step 05 on the wizard bundle.
-- Step 08 is verified with `mcp-live-probe` against the running server.
+- Feature step 01 proves itself by the existing suites not moving (behaviour-preserving).
+- Feature steps 03–06 are driven in the Extension Dev Host against a real colleague repo, and
+  the webview-visual-baseline is taken before and after step 04 on the wizard bundle.
+- Feature step 07 is verified with `mcp-live-probe` against the running server.
 - Reversal is exercised per step: forget a demo, delete a project, stop sharing.
 
 ## Rollback
 
-Each step is its own commit on the branch; none changes on-disk project data except step 06,
-which ADDS a field. A project created with the field loads on an older extension (unknown
+Each step is its own commit on the branch; none changes on-disk project data except feature
+step 05, which ADDS a field. A project created with the field loads on an older extension (unknown
 manifest fields are ignored by `projectFileLoader`) but reset would refuse there; that is
 the pre-existing behaviour for an unknown package, not a regression.
 
 ## Open, to settle as iteration continues
 
-- Step 01: the storefront description filename (not the project manifest's name) and the
-  project file's extension; icon format.
-- Step 04: exact headless marker; exact B2B drop-in package names (verify, do not invent).
-- Step 05: whether added demos ALSO appear as their own cards under a row label, or only
-  inside the dialog's stage 1 (research §9 assumed both; confirm).
-- Step 10: where "Share" gets description text and icon.
-- PL-56 children: the cut, and their order after step 01.
+- Icon format for the description file (a path in the repo vs inline).
+- The exact headless marker and B2B drop-in package names: verified against real repos in
+  the "Read a colleague's repository" step, never written from memory.
+- The gaps found in the 2026-09-11 plan review (feature plan, "Review findings").

@@ -67,6 +67,7 @@ New: none.
 | Headless kind | `componentInstallation.ts:104` validates git URL/ref | build new: a dependency-list check, marker VERIFIED against `skukla/citisignal-nextjs` first |
 | B2B from dependencies | `b2bReadinessDetection.ts` (backend probe, not repo) | build new: a repo-side check, package names VERIFIED against `adobe-commerce/boilerplate-b2b-template` first |
 | Validate the description file | the step-A schema + `validateManifestShape` (`manifestValidation.ts:65`) pattern | use as is pattern |
+| Recognise one of our own templates (D30) | the seed lookup in `buildCustomIntegrationEntry` (`appBuilderComponentCatalogLoader.ts:266`: exact owner/repo match against authored entries) | use as is pattern: the same comparison against shipped storefronts' `templateOwner`/`templateRepo` |
 | Guarding the input | `parseGitHubUrl` (`core/utils/githubUrlParser.ts`), `assertGitHubName` / `assertGitRef` (`appBuilderComponentCatalogLoader.ts`) | make it shared: the asserts move to `core/utils/githubUrlParser.ts` so two features share them |
 | The handler shape | `MessageHandler` returning `{success,data?,error?}` (Pattern B) in the EDS map (`edsGitHubHandlers.ts` family), `HandlerContext` builder in tests | use as is |
 | Result type | `src/types/webviewRequests.ts` (ONE declaration per channel) | build new type, in the typed file, never a literal |
@@ -87,7 +88,7 @@ New: 3 small readers/parsers + the result type. The transport, guards and readin
 | Added-demos list in stage 1 | `selection/SelectionStepContent` + `useSelectionStep` (the repo picker's list) | use as is |
 | "What we found" rows | the summary-row vocabulary (`buildSummary.ts` `SummaryRow`) | use as is |
 | B2B switch | Spectrum `Switch` as the wizard's other toggles | use as is |
-| Fork tick box + namespace | the namespace `Picker` in `DaLiveServiceCard.tsx:140` ("GitHub namespace for this demo", personal first, orgs after) | make it shared: lift the options builder (`:89–120`) to a hook both the Accounts card and the dialog use |
+| Fork tick box | the SC's login from `githubAuth.user.login` (already in `edsConfig`); the namespace `Picker` in `DaLiveServiceCard.tsx:140` is NOT reused (D28: personal only) | use as is: one line of copy naming the account |
 | Request from the dialog | `useVSCodeRequest` (`core/ui/hooks/useVSCodeRequest.ts`) or `webviewClient.request` as `AddIntegrationFlowModal` does | use as is |
 | Commit into wizard state | `useProjectBuilder.ts` handlers; `WelcomeStep.handlePackageSelect` (`WelcomeStep.tsx:85`) | add to it: the commit hands a synthesized `DemoPackage` to the same select path |
 | Remembered demos: the setting | `demoBuilder.blockLibraries.custom` shape (`package.json:246`), `parseCustomBlockLibrarySettings` (`customBlockLibraryUtils.ts:41`), `SETTING_KEYS` (`settingsTools.ts:52`) | add to it: a sibling key, a sibling parser, one more `SETTING_KEYS` row |
@@ -114,6 +115,8 @@ New: the storefront flow's stage ids and copy; the `add` card variant. Two gener
 | Palette from the demo's code | `pipelineConfigureBlockLibrary` reading `component-definition.json` from the template (`edsPipeline.ts:531`) | use as is |
 | Dry check of the five patches | `applyCodePatch`'s three-state outcome (`codePatchRegistry.ts:237`: applied / `alreadyApplied` / precondition missing), `fetchExternalPatches` (`externalPatchFetcher.ts:110`) | add to it: a check-only mode that never writes; the consequence grouping is a typed constant beside the ids |
 | Showing caveats | `pdpCaveats` → `warnings` (`storefrontSetupTypes.ts:88`, `webviewPayloads.ts:577`, `StorefrontSetupStep.tsx:604`) | use as is |
+| Integrations the demo names (D29) | `useProjectBuilder.onAppBuilderComponentToggle`; `appBuilderComponentSources` + `buildCustomIntegrationEntry` for custom links; `selectedAppBuilderComponents` as the single mesh authority | use as is: the row's list is replayed through the same handlers |
+| The datapack the demo names (D26) | `SampleDataStep.tsx` + `project.datapack` | add to it: a preselected value and one line of copy |
 | Storefront summary "Demo" row | `storefrontSummaryGroup` (`buildSummary.ts:69`) | add to it: one row |
 | "Reset to Isle5 by Jen" tick wording | `repoSelectionInline.helpers.tsx:826` | add to it: interpolate the demo name |
 | Headless clone | `executorComponentLoading.ts:73` → `componentInstallation.ts:86` | use as is |
@@ -255,8 +258,8 @@ New: none.
 | 16 | the process page | I | none exists |
 | 17 | the portability page | P | one table row exists |
 
-Two generalisations carry the real risk and are named so they are watched: lifting the
-integration flow's stage core to `core/ui/hooks/`, and lifting the namespace picker's
-options builder to a hook. Each is attempted in its step; if either fights the code, the
-step copies the SHAPE (two small files) and records which reuse row it rejected and why,
-which is what `reuse-first` asks for.
+One generalisation carries the real risk and is named so it is watched: lifting the
+integration flow's stage core to `core/ui/hooks/`. (The namespace-picker lift was dropped
+with D28: the fork goes to the personal account, so the dialog needs no picker.) It is
+attempted in its step; if it fights the code, the step copies the SHAPE (two small files)
+and records which reuse row it rejected and why, which is what `reuse-first` asks for.

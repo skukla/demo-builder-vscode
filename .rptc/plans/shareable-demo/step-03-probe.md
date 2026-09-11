@@ -41,6 +41,12 @@ overrode), `warnings: string[]` in SC words. Headless marker and B2B drop-in nam
 VERIFIED against `skukla/citisignal-nextjs` and `adobe-commerce/boilerplate-b2b-template`
 before they are written; the plan does not state them.
 
+Recognition (D30): before anything else, the owner/repo is compared exactly against every
+shipped storefront's `templateOwner`/`templateRepo` (the seed rule in
+`buildCustomIntegrationEntry`, `appBuilderComponentCatalogLoader.ts:266`: exact match, a
+fork is not recognised). A match returns `shippedPackageId` and the dialog selects that card
+instead of adding a demo.
+
 Nothing is written anywhere by this handler (it will be a read tool).
 
 ## Tests first
