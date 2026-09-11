@@ -66,3 +66,4 @@ project first and the catalog second.
   from `origin/develop`); children filed.
 - 2026-09-11  Research, design and program filing (d5f84e1f5)
 - 2026-09-11  Program plan + shareable-demo feature plan (0c78af9a0)
+- 2026-09-11  Decisions D16–D17 and four smaller ones recorded in the plans (b72ee40aa)
