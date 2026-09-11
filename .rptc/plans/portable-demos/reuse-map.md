@@ -7,7 +7,7 @@ shape), **make it shared** (lift a feature-local thing to `core/` so two feature
 **build new** (nothing does this; the row says why the nearest thing would not do). The count
 of **build new** rows is the honest size of the program. Measured over the tables below:
 108 rows; 48 use as is, 46 add to it, 7 make it shared, 7 marked build new inline, and the closing table
-names 17 new pieces once the inline "new" cells and the per-section "New:" lines are
+names 18 new pieces once the inline "new" cells and the per-section "New:" lines are
 counted together.
 
 Rules that bind this map: `reuse-first` (fires on any new file under `ui/`); the job →
@@ -173,6 +173,8 @@ New: the page.
 | The fields | the same serializer the export uses (`extractSettingsFromProject`) projected to the slice | add to it |
 | Description text/icon prefilled, editable | `Modal` + `OptionalNameField` + Spectrum `TextArea`; icon picker = a file picker over `listRepoFiles` (`githubFileOperations.ts:261`) | use as is |
 | Checks before sharing | the step-D probe run against the SC's own repo/site; `DefaultBranchNotice` copy | use as is |
+| A named datapack missing from the service (D32) | the item-API route DI-3 proves: `get-export-items` + `create-datapack` + `add-data-item` + `promote` through `dataInstallerWriteClient.ts`, composed behind `exportHandlers.ts`'s existing door | add to it: the write client gains the item and pack calls; Share offers the door |
+| A private custom-app repository (D32) | nothing sets repository visibility | build new: `setRepositoryVisibility` on `GitHubRepoOperations`, confirmed, reversible |
 | Offer Publish when content is unpublished | the republish path (`storefrontRepublishService.ts`) | use as is |
 | Template flag tick box | the step-F `setTemplateFlag` | use as is |
 | "Stop sharing" | the writer's `remove` on proof of ownership; unset the flag if we set it (recorded on the project) | use as is |
@@ -256,6 +258,7 @@ New: none.
 | 14 | fork-deletion confirm naming projects | G | the delete-project confirm names one project |
 | 15 | GitHub-backed generated-file writer | J | ONLY if writing locally + sync does not fit |
 | 16 | the process page | I | none exists |
+| 18 | `setRepositoryVisibility` | J, K | nothing changes a repo's visibility |
 | 17 | the portability page | P | one table row exists |
 
 One generalisation carries the real risk and is named so it is watched: lifting the

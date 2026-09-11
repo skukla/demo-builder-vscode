@@ -3,7 +3,7 @@ id: EDS-13b
 kind: feature
 area: eds
 parent: EDS-13
-needs: [EDS-13c]
+needs: [EDS-13c, DI-3]
 value: med
 status: backlog
 ---

@@ -29,6 +29,13 @@ is created with integrations and mesh hardcoded empty whatever the file said.
 - Credentials: the wizard lists what the new project needs and cannot have ("3 need your
   input: admin password, catalog API key, …") and the existing Commerce connection step
   collects them; same-machine Copy moves them SecretStorage → SecretStorage directly.
+- Data (D31): the named pack is pre-selected in Sample Data with community packs shown when
+  needed; the banner adds "install it from the dashboard once your instance is connected" or
+  "not published; ask the owner to export it". Verify first what a re-import into an instance
+  that already holds the pack does, so the verb is true.
+- Integrations: identity only; the one-mesh-per-workspace reuse rule
+  (`executorMeshPhase.ts:161`) stays; verify what a second App Management association to
+  the same instance from another workspace does.
 - The banner designed in 2025-12 and never built: "Brought in 14 settings from
   <sourceDescription>; 3 need your input", on the Welcome step, using the wizard's existing
   notice vocabulary. `sourceDescription` finally has a consumer.

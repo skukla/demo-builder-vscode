@@ -23,6 +23,14 @@ Dashboard action "Share this demo" (the More menu, beside Export and Republish,
    published with an index (offers Publish if not); repo reachable; default branch `main`.
 3. A tick box, off by default: "Also mark the repository as a template" (one GitHub settings
    write; unticking undoes it).
+3a. Reachability checks (D32): the named datapack is in the datapack service (else: "Your
+   demo uses isle5, which is not in the datapack service. Publish it now?" runs the
+   item-API export route [[DI-3]] proves (`get-export-items` → `create-datapack` →
+   `add-data-item` → `promote`), behind the existing `start-datapack-export` door in
+   `exportHandlers.ts`); each custom-app link is a repository others can
+   read (else: "jen-adobe/pricing-app is private. Make it public?", a confirmed GitHub
+   settings write, undone the same way). Curation is never touched. **Dependency:** [[DI-3]], the spike at the head of the program. If Share
+   ships first, the check warns and names the pack.
 4. Hands the SC the link to send.
 
 "Stop sharing" removes the file (only when the seam proves it is ours) and unsets the

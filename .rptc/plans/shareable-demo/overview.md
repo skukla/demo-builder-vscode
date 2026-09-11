@@ -296,7 +296,31 @@ test that referred to a tick that no longer exists.
    found panel say "This is the demo behind Starter (B2B + B2C)" and selects that card, with
    our ledger and pinning (D30). The seed rule `buildCustomIntegrationEntry` already uses.
 
+- **2026-09-11 · Datapacks and integrations in a shared project.** Facts: a project records
+  its pack by name + version and installs from the dashboard; the catalog is the datapack
+  service's, reached by every SC through the brokered credential (ADR-014); curated packs
+  show by default and everything else under "include community" (`dataInstallerHandlers.ts:232`);
+  the `shared` flag is curation, set service-side, and the extension has no call to set it;
+  a pack that exists only on an instance becomes shareable through the existing stage-3
+  export. Integrations travel by identity (catalog id, custom link, name, API picks), never
+  by deploy state; the one-mesh-per-workspace reuse rule on import survives because the
+  endpoint travels as a config value (`wizardHelpers.ts:459`). Decisions: D31 (pre-select,
+  include community, tell the SC, install stays on the dashboard) and D32 (Share/Export check
+  reachability, offer the owner's export for a missing pack and offer making a private
+  custom-app repo public, never touch curation). To verify before copy is written: what a
+  re-import of a pack into an instance that already holds it does; what a second App
+  Management association from another workspace to the same instance does. **Dependency
+  picked up:** the publish offer in D32 is the item-API export route the research records
+  from the service author (`get-export-items` → `create-datapack` → `add-data-item` →
+  `promote`, no bulk store step). The owner placed a spike, [[DI-3]], at the head of the
+  program to prove it end to end; EDS-13b carries it in `needs`. Two earlier notes here
+  conflated the bulk export action's failing store step with the route; corrected.
+
 ## Open (this feature)
 
 - The exact headless marker and B2B drop-in names, verified in step 03, never written from
   memory.
+- Re-import of a datapack into an instance that already holds it: additive, replace, or
+  error? Verify against the data installer before the import banner promises a verb.
+- A second App Management association from another workspace to one Commerce instance:
+  accepted, rejected or replacing? Verify before PL-56d.

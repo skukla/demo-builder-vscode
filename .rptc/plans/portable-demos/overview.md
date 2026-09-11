@@ -64,6 +64,8 @@ export, import and copy carry the whole project, on one versioned file.
 | D28 | The fork lives in the SC's personal GitHub account only; no team-org forks in v1 | shareable-demo 04, 05, 06 |
 | D29 | The description file (and a shipped catalog entry) may name integrations the demo depends on: catalog ids and custom-app links; the Integrations area starts with them added | program 01, shareable-demo 05 |
 | D30 | A link to one of our own templates (exact owner/repo, never a fork) is recognised and selects the shipped card | shareable-demo 03, 04 |
+| D31 | Data on import/add: the named datapack (name + version) is pre-selected in Sample Data, community packs shown when needed; the banner says to install it from the dashboard, or that it is not published and the owner must export it; no install runs during creation | shareable-demo 05; PL-56d |
+| D32 | Share and Export check reachability: a pack missing from the datapack service offers the owner's own stage-3 export; a private custom-app repository offers to make it public (a confirmed GitHub settings write); curation (the shared flag) is never touched. **The publish offer is the item-API export route [[DI-3]] proves** (`get-export-items` → `create-datapack` with `shared: false` → `add-data-item` → `promote`; no bulk store step) | shareable-demo 09; PL-56c; DI-3 |
 | D19 | Updates: the existing updater applies unchanged (fork sync per template repo + per-project template merge, one picker); no new mechanism for shared demos | shareable-demo 06 |
 | D18 | Forget removes the card only; "Also delete my copy" is an unticked tick box naming the projects that still use the fork, confirmed again before the repo goes; project deletion never touches the fork | shareable-demo 04, 06 |
 
@@ -118,20 +120,31 @@ export, import and copy carry the whole project, on one versioned file.
 
 | Step | Slice | Depends on | Item |
 |---|---|---|---|
+| 00 | Spike: export a pack to the service through the item APIs ([[DI-3]]) | — | DI-3 |
 | 01 | Define the project file format (`step-01-contract.md`) | — | PL-56a |
 | — | The Shareable Demo feature: nine steps in its own plan, `../shareable-demo/overview.md` (look up a storefront in one place; rename Custom to Starter; read a colleague's repository; the Add a demo card and dialog; create from an added demo; reset, update, edit and forget; the same actions for agents; the how-to; Share this demo) | 01 | EDS-13a, 13b, 13c |
 | later | Team catalog | shareable-demo 04, 09 | EDS-13d |
 | later | Export completeness, import parity, dead-code deletion, docs | 01 | PL-56 children |
 
-The contract, the resolver and the Starter rename can start in parallel. The resolver is the
+The spike, the contract, the resolver and the Starter rename can start in parallel; the
+spike is first because the owner placed it at the head of the program. The resolver is the
 representative vertical slice: if the eleven sites fight it, the design is revised before
 the probe is built.
+
+## Dependencies outside the program
+
+- [[DI-3]] spike, at the head of the program: export a pack to the datapack service through
+  the item APIs (`get-export-items` → `create-datapack` → `add-data-item` → `promote`), the
+  route the service author described and the research records as working on the shared
+  deployment. It is what "Publish it now?" (D32) calls; EDS-13b carries `needs: DI-3`.
+  [[DI-1]]'s authoring loop rides the same route afterwards. The reachability CHECK and its
+  warning do not depend on the spike.
 
 ## Reuse map
 
 `reuse-map.md` beside this file maps every feature (A–P) to the existing code it is built
 from and how (use as is / add to it / make it shared / build new). 108 rows: 48 use as is,
-46 add to it, 7 make it shared; 17 genuinely new pieces named in its closing table; two generalisations flagged
+46 add to it, 7 make it shared; 18 genuinely new pieces named in its closing table; two generalisations flagged
 as the risk. Owner's gate before development (2026-09-11).
 
 ## Verification

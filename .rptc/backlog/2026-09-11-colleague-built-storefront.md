@@ -35,6 +35,19 @@ project, on one versioned contract of which the storefront description file is a
 Both halves carry their agent surface in the same change (CLAUDE.md "Hit every surface"
 #4): probe, add, share, and `list_demo_packages` / `create_project` reading added demos.
 
+## Dependencies outside the program
+
+- **[[DI-3]] Spike: export a pack through the item APIs** — the HEAD of the program
+  (owner, 2026-09-11). D32 has Share (and Export) offer "Publish it now?" when a demo names
+  a pack that is not in the datapack service. The research records, from the service
+  author's design conversation and the Postman map, a route that uses only calls proven on
+  the shared deployment: `get-export-items` (a pure read) → `create-datapack` (the SC's own
+  pack) → `add-data-item` → `promote`. The bulk export action's store step, which fails on
+  stage, is not on that route. DI-3 proves the route end to end and lands it behind the
+  existing export door; [[DI-1]]'s authoring loop then rides the same route. EDS-13b carries
+  `needs: DI-3`. Two earlier notes here said export was blocked; they conflated the bulk
+  action with the route, and the owner corrected them.
+
 ## Why it is not a one-field change
 
 A storefront here is a catalog row, and the project keeps only the row's KEY

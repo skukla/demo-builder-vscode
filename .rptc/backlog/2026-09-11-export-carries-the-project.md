@@ -29,6 +29,12 @@ split are decided there).
 - Both dashboard doors and the MCP tool go through one function; the "Demo Builder
   Settings" save-dialog filter label says "Demo Builder project".
 
+## Reachability checks (D32)
+
+Export runs the same checks Share runs: a named datapack must be in the datapack service
+(offer to publish it through the item-API export route [[DI-3]] proves, if not); a custom-app link must be readable by others
+(offer to make the repository public, confirmed). Warnings, never blocks.
+
 ## Tests first
 
 The serializer suite gains a field-set test pinned to the contract's list (a manifest
