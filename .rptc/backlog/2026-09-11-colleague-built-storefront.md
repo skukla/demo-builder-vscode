@@ -83,3 +83,4 @@ project first and the catalog second.
 - 2026-09-11  Reuse map + plain step names (94c217020)
 - 2026-09-11  Plan review: D26–D30 (1b214f7f8)
 - 2026-09-11  D31–D32, DI-3 spike filed at the head (1d0248ac1)
+- 2026-09-11  DI-3 spiked, not a gate (17b0509ee)
