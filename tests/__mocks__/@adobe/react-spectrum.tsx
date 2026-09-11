@@ -1,12 +1,14 @@
-/* eslint-disable max-lines */
 /**
  * Mock for @adobe/react-spectrum
  *
  * Lightweight stubs to avoid loading the full Spectrum library (~6MB)
  * in Jest tests. This prevents memory exhaustion in parallel test runs.
  *
- * Note: eslint-disable max-lines is used here because mock files naturally
- * need to be large to cover all the components they mock.
+ * It carried an `eslint-disable max-lines` until 2026-09-10, with a note saying
+ * a mock file is naturally large. Both are gone because the rule is: test file
+ * size is owned by `scripts/check-test-file-sizes.js`, and eslint no longer has
+ * a second opinion about it. If this file ever needs an exemption again, it goes
+ * in `.testfilesizerc.json` where that instrument reads it.
  */
 import React from 'react';
 
