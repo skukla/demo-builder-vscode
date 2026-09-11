@@ -1,6 +1,8 @@
-# Step 05 — Creating a project from an added demo
+# Step 05 — Create a project from an added demo
 
 Item: [[EDS-13a]]. Decisions: D2, D4, D5, D6, D7. Depends on steps 01 and 04.
+
+**Reuse:** section F of `../portable-demos/reuse-map.md` lists every existing thing this step is built from and how (use as is / add to it / make it shared / build new). A new file, hook, shape or word not in that section names the row it replaces and why.
 
 ## Goal
 

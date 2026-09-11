@@ -1,7 +1,9 @@
-# Step 03 — The probe: read a repo once, return what an SC needs to know
+# Step 03 — Read a colleague's repository
 
 Item: [[EDS-13a]]. Decisions: D3, D5, D6, D7, D10. Depends on the contract step (portable-demos/step-01-contract) (the slice type is the
 result's shape).
+
+**Reuse:** section D of `../portable-demos/reuse-map.md` lists every existing thing this step is built from and how (use as is / add to it / make it shared / build new). A new file, hook, shape or word not in that section names the row it replaces and why.
 
 ## Goal
 

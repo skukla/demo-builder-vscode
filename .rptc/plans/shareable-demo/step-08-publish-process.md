@@ -1,6 +1,8 @@
-# Step 08 — Publish the process: how to make a storefront addable
+# Step 08 — Write the how-to for sharing a demo
 
 Item: [[EDS-13c]]. Decision: D10 (a published contract). Depends on the contract step (portable-demos/step-01-contract).
+
+**Reuse:** section I of `../portable-demos/reuse-map.md` lists every existing thing this step is built from and how (use as is / add to it / make it shared / build new). A new file, hook, shape or word not in that section names the row it replaces and why.
 
 ## What gets written, in `docs/systems/`
 

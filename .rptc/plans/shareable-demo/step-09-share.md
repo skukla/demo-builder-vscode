@@ -1,6 +1,8 @@
-# Step 09 — "Share this demo" (shape decided; details open)
+# Step 09 — Share this demo
 
 Item: [[EDS-13b]]. Decisions: D11. Depends on the contract step (portable-demos/step-01-contract) and step 08. One question open at the bottom.
+
+**Reuse:** section J of `../portable-demos/reuse-map.md` lists every existing thing this step is built from and how (use as is / add to it / make it shared / build new). A new file, hook, shape or word not in that section names the row it replaces and why.
 
 ## Shape
 

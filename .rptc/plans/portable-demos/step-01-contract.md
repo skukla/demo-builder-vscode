@@ -1,6 +1,8 @@
-# Step 01 — The contract: one versioned project file, and the storefront slice of it
+# Step 01 — Define the project file format
 
 Item: [[PL-56a]]. Decisions: D10, D13. Depends on nothing; everything else depends on it.
+
+**Reuse:** section A of `reuse-map.md` lists every existing thing this step is built from and how (use as is / add to it / make it shared / build new). A new file, hook, shape or word not in that section names the row it replaces and why.
 
 ## Goal
 

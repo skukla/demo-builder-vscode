@@ -1,6 +1,8 @@
-# Step 06 — Living with it: reset, edit, republish, names, update check
+# Step 06 — Reset, update, edit and forget an added demo
 
 Item: [[EDS-13a]]. Decisions: D2, D4. Depends on steps 01 and 05.
+
+**Reuse:** section G of `../portable-demos/reuse-map.md` lists every existing thing this step is built from and how (use as is / add to it / make it shared / build new). A new file, hook, shape or word not in that section names the row it replaces and why.
 
 ## Goal
 

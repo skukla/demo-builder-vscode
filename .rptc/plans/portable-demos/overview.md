@@ -80,7 +80,7 @@ export, import and copy carry the whole project, on one versioned file.
    returns a typed result; the Welcome step's plus card opens the existing dialog shell with
    two stages; Continue commits a synthesized package into wizard state and remembers the
    link.
-4. **Create and live with it (steps 06–07).** The synthesized row rides the existing wire,
+4. **Create and after creation (steps 06–07).** The synthesized row rides the existing wire,
    the pipeline runs unchanged except `generate` → create-empty + fetch fallback, the row is
    persisted with the project, and the resolver makes reset, edit, republish, names and the
    update check work.
@@ -113,14 +113,21 @@ export, import and copy carry the whole project, on one versioned file.
 
 | Step | Slice | Depends on | Item |
 |---|---|---|---|
-| 01 | The contract: type, schema, names, migration rule (`step-01-contract.md`) | — | PL-56a |
-| — | The Shareable Demo feature: nine steps in its own plan, `../shareable-demo/overview.md` (resolver, Starter rename, probe, door, create, live with it, agent surface, publish the process, Share) | 01 | EDS-13a, 13b, 13c |
+| 01 | Define the project file format (`step-01-contract.md`) | — | PL-56a |
+| — | The Shareable Demo feature: nine steps in its own plan, `../shareable-demo/overview.md` (look up a storefront in one place; rename Custom to Starter; read a colleague's repository; the Add a demo card and dialog; create from an added demo; reset, update, edit and forget; the same actions for agents; the how-to; Share this demo) | 01 | EDS-13a, 13b, 13c |
 | later | Team catalog | shareable-demo 04, 09 | EDS-13d |
 | later | Export completeness, import parity, dead-code deletion, docs | 01 | PL-56 children |
 
 The contract, the resolver and the Starter rename can start in parallel. The resolver is the
 representative vertical slice: if the eleven sites fight it, the design is revised before
 the probe is built.
+
+## Reuse map
+
+`reuse-map.md` beside this file maps every feature (A–P) to the existing code it is built
+from and how (use as is / add to it / make it shared / build new). 108 rows: 48 use as is,
+46 add to it, 7 make it shared; 17 genuinely new pieces named in its closing table; two generalisations flagged
+as the risk. Owner's gate before development (2026-09-11).
 
 ## Verification
 

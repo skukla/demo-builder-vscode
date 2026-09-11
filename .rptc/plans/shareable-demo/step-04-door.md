@@ -1,7 +1,9 @@
-# Step 04 — The door: the plus card, the dialog, remembered demos
+# Step 04 — The "Add a demo" card and dialog
 
 Item: [[EDS-13a]]. Decisions: D1, D2, D8, D9. Depends on step 03. **Gate: research §9a.**
 A new component, hook, stage shell, settings shape or noun must name the row it replaces.
+
+**Reuse:** section E of `../portable-demos/reuse-map.md` lists every existing thing this step is built from and how (use as is / add to it / make it shared / build new). A new file, hook, shape or word not in that section names the row it replaces and why.
 
 ## What the SC sees
 

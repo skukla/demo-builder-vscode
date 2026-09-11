@@ -1,6 +1,8 @@
-# Step 02 — Starter: the unbranded brand gets its honest name
+# Step 02 — Rename the "Custom" brand to "Starter"
 
 Item: [[EDS-13a]]. Decision: D8. Depends on nothing.
+
+**Reuse:** section C of `../portable-demos/reuse-map.md` lists every existing thing this step is built from and how (use as is / add to it / make it shared / build new). A new file, hook, shape or word not in that section names the row it replaces and why.
 
 ## What exists
 

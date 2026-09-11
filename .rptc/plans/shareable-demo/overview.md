@@ -72,20 +72,26 @@ names the rows it reuses. A new component, hook, stage shell, settings shape or 
 say which row it replaces and why the row would not do. `reuse-first` fires on any new file
 under `ui/`.
 
+## Reuse map
+
+The program-level map `../portable-demos/reuse-map.md`, sections B–J, lists every existing
+thing each step below is built from and how. It supersedes the shorter table in research
+§9a and is the gate the steps are checked against.
+
 ## Steps
 
 | Step | Slice | Depends on | Item |
 |---|---|---|---|
 | — | The contract (program plan, `../portable-demos/step-01-contract.md`) | — | PL-56a |
-| 01 | One resolver for a project's storefront; the eleven catalog lookups move onto it | contract | EDS-13a |
-| 02 | Starter: rename the unbranded brand | — | EDS-13a |
-| 03 | The probe handler | contract | EDS-13a |
-| 04 | The door: plus card, dialog, remembered demos | 03 | EDS-13a |
-| 05 | Creating a project from an added demo | 01, 04 | EDS-13a |
-| 06 | Living with it: reset, edit, republish, names, update check | 01, 05 | EDS-13a |
-| 07 | Agent surface for add | 03, 05 | EDS-13a |
-| 08 | Publish the process | contract | EDS-13c |
-| 09 | Share this demo (shape decided, details open) | contract, 08 | EDS-13b |
+| 01 | Look up a project's storefront in one place | contract | EDS-13a |
+| 02 | Rename the "Custom" brand to "Starter" | — | EDS-13a |
+| 03 | Read a colleague's repository | contract | EDS-13a |
+| 04 | The "Add a demo" card and dialog | 03 | EDS-13a |
+| 05 | Create a project from an added demo | 01, 04 | EDS-13a |
+| 06 | Reset, update, edit and forget an added demo | 01, 05 | EDS-13a |
+| 07 | The same actions for AI agents | 03, 05 | EDS-13a |
+| 08 | Write the how-to for sharing a demo | contract | EDS-13c |
+| 09 | Share this demo | contract, 08 | EDS-13b |
 
 Step 01 is the representative vertical slice: if the eleven sites fight the resolver, the
 design is revised before step 03.

@@ -1,6 +1,8 @@
-# Step 07 — Agent surface for adding a demo
+# Step 07 — The same actions for AI agents
 
 Item: [[EDS-13a]]. Decision: D15. Depends on steps 03 and 05. Rules: `mcp-tool-authoring`.
+
+**Reuse:** section H of `../portable-demos/reuse-map.md` lists every existing thing this step is built from and how (use as is / add to it / make it shared / build new). A new file, hook, shape or word not in that section names the row it replaces and why.
 
 ## Tools
 

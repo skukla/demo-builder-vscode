@@ -1,6 +1,8 @@
-# Step 01 — One resolver for a project's storefront
+# Step 01 — Look up a project's storefront in one place
 
 Item: [[EDS-13a]]. Decisions: D2 (the project stores the row). Depends on the contract step (portable-demos/step-01-contract) for the stored-row type. **The representative vertical slice**: if the sites fight this, revise before step 03.
+
+**Reuse:** section B of `../portable-demos/reuse-map.md` lists every existing thing this step is built from and how (use as is / add to it / make it shared / build new). A new file, hook, shape or word not in that section names the row it replaces and why.
 
 ## Goal
 
