@@ -340,7 +340,8 @@ Asked one at a time, recommendation first. Answers recorded here as they arrive.
    evidence, no single stamp). What we cannot: their currency, the template flag, the
    published index, what they push later.
 5. Content: copy the colleague's published DA.live content by default?
-   **Answered 2026-09-11 (owner): copy by default, skippable.** Content source read from
+   **Answered 2026-09-11 (owner): copy by default, skippable.** AMENDED later the same day:
+   no tick for anyone; pages copy whenever a published index exists (plan D5, D20). Content source read from
    the repo's `fstab.yaml`; the published index is probed before Continue; the SC can untick
    "copy content" for an empty site; a missing index is reported and the empty-site path
    offered instead of a mid-create failure.

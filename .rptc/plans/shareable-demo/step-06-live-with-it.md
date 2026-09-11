@@ -10,13 +10,13 @@ project, plus the few places that need a colleague-specific rule.
 
 | Door | Expected after steps 01 + 05 | Colleague-specific rule |
 |---|---|---|
-| Reset (both dashboard doors, MCP) | resolves the stored row; re-fetches the colleague's `main`; re-copies content | no LKG pin (`edsResetRepoHelper.ts:286` branch is skipped because no `codePatchSource`); the dry check re-runs |
+| Reset (both dashboard doors, MCP) | resolves the stored row; re-fetches the demo's source; re-copies pages | no LKG pin (`edsResetRepoHelper.ts:286` branch is skipped because no `codePatchSource`); the dry check re-runs and reset's completion message gains the same consequence-worded caveat list the wizard card shows (reset has no caveat channel today: `edsResetUI.ts` shows none); nothing persists (D23) |
 | `refresh_block_library` | passes the template guard | — |
 | Edit-mode rebuild | rehydration finds the row | a MISS logs at warn (step 01) |
 | Republish / `.env` regenerate | flags from the stored row | the SC's B2B answer is one of those flags |
 | Dashboard subtitle, projects-list card | the demo's name | — |
 | AGENTS.md | the demo's name | — |
-| Update checker / template sync | forked demo: the fork-sync path (`forkSyncService.ts`, already wired into `checkUpdates.ts`) reports how far the fork is behind the colleague's repo and offers "Pull Jen's changes" (merge-upstream); unforked: compare to their `main` as today | the notice below when the source is unreachable |
+| Update checker / template sync | UNCHANGED code: `checkForkSyncUpdates` already checks whether the project's template repo is a fork behind its parent (the SC's fork behind Jen) and offers a pre-ticked sync per repo; `TemplateUpdateChecker`'s non-thin-layer path offers each project "N changes behind" its template (Jen's `main` when unforked, the fork when forked); both in one picker, one confirmation | `getTemplateSource` (`updateTypes.ts:90`) reads instance metadata: Change source and rename self-heal must update it together with the project row, or step 01's resolver becomes what it reads |
 | Name migration, site-config repair | resolve without overlay | — |
 | Block-library audience, inspector overrides | defaults | accepted degradation, named in docs |
 

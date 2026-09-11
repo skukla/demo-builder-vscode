@@ -26,8 +26,19 @@ code patches run as a dry check whose misses become caveats.
   switch) are written on every regenerate.
 - The code-patch engine's three-state outcome (`codePatchRegistry.ts:237`) for the dry check;
   the PDP caveat plumbing in `configServiceRegistration.ts:142` for showing it.
-- Content: `contentSource` from the probe; `skipContent` when the SC unticked copy or no
-  index was found (`storefrontSetupPhases.ts:369` already self-skips on absence).
+- Pages: `contentSource` from the probe; `skipContent` only when no index was found
+  (`storefrontSetupPhases.ts:369` already self-skips on absence), with the note shown in the
+  Storefront area and the completion report. No tick (D5 amended).
+- Blocks and their example pages (D20): the demo's content site is passed as a library
+  content source (`libraryContentSources`, `edsPipeline.ts:513` `copyLibraryDocPages`) so the
+  per-block example pages arrive even when pages are skipped; the palette is generated from
+  the template repo's `component-definition.json` as today (`:531`).
+- Block libraries offered for an added demo (D22): the shipped libraries without
+  `onlyForPackages` plus the SC's custom ones, none locked, none pre-ticked unless the
+  description file names them. The demo's own blocks are never registered as a library.
+- Storefront area (D21): `buildSummary.ts` `storefrontSummaryGroup` gains a first row
+  "Demo — {name} · {kind}" for every EDS brand; the existing-repo tick in
+  `repoSelectionInline.helpers.tsx:826` reads "Reset to {name} (replaces all content)".
 
 ## Design
 
@@ -41,10 +52,19 @@ code patches run as a dry check whose misses become caveats.
   chosen namespace and run the existing `resetToTemplate` against the source.
 - Persist: the contract's storefront slice onto the manifest beside `selectedPackage`
   (`projectConfigWriter.ts:28`), read back in `projectFileLoader.ts:186`.
-- Dry check: run the five load-bearing patches in check-only mode against the created repo;
-  `alreadyApplied` and `applied-would-be` are silent; a precondition miss becomes a caveat
-  worded for an SC ("Product deep links may 404 on this storefront"), surfaced beside the
-  PDP caveats and in the completion report. Nothing is written.
+- Dry check (D23): run the five load-bearing patches in check-only mode against the created
+  repo; `alreadyApplied` and would-apply are silent; misses are grouped by CONSEQUENCE into at
+  most three caveats in SC words (the SKU-encoding trio → "Product links on this storefront
+  use a different address format from Demo Builder's product pages. Links straight to a
+  product may open an empty page."; `pdp-empty-data-redirect` → "A product page with no
+  matching product shows a blank page instead of sending the visitor back to the catalog.";
+  `aem-assets-sku-sanitization` → "Product images from AEM Assets may not load for products
+  whose SKU has special characters."), each ending "This storefront's owner controls its
+  code; Demo Builder does not change it." They ride the existing `pdpCaveats` →
+  `warnings` channel into the wizard's completion card (`StorefrontSetupStep.tsx:604`). Patch
+  ids and targets go to the debug log. Nothing is written to the repo. The grouping table is a
+  typed constant beside the patch ids, pinned by a test that fails when a sixth load-bearing
+  id appears without a consequence.
 - Headless: the synthesized `source` (git URL, branch = default branch, shallow) rides
   `executorComponentLoading.ts:73` unchanged.
 

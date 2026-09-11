@@ -40,7 +40,7 @@ export, import and copy carry the whole project, on one versioned file.
 | D2 | Paste a link; the PROJECT stores the synthesized storefront row; the link is remembered in the SC's user settings | step 05, 06, 07 |
 | D3 | Edge Delivery and headless both; the probe tells which | step 04 |
 | D4 | The colleague owns the storefront; we own the integration contract. Reset → the demo's source (the SC's fork by D16, else their `main`); no LKG pin, no patches, no brand assets. The five load-bearing code patches are dry-checked; each miss is a caveat | step 06, 07 |
-| D5 | Copy their published content by default, skippable; probe the index before Continue | step 04, 05, 06 |
+| D5 | Copy their published pages whenever a published index exists; skip with a note when none (AMENDED 2026-09-11: the skippable half dropped, no tick for anyone); probe the index before Continue | shareable-demo 03, 05 |
 | D6 | Prefill exactly what shipped brands prefill: the three store codes, read from their `config.json` | step 04, 06 |
 | D7 | B2B: detect from `config.json`, then the dependency list; only when both fail show a switch, off by default, with a plain reason; the answer is stored with the project and re-expressed on every regenerate | step 04, 05, 06, 07 |
 | D8 | Words: plus card "Add a demo"; shipped "Custom (B2B + B2C)" → "Starter (B2B + B2C)"; "shared", "custom", "import", "from GitHub" rejected (research §9) | step 03, 05 |
@@ -53,6 +53,12 @@ export, import and copy carry the whole project, on one versioned file.
 | D15 | Agent surface ships with each human surface | step 08 |
 | D16 | Fork on add, ticked by default: the SC's fork is the demo's source; updates are "Pull Jen's changes"; Forget offers to delete the fork | shareable-demo 04–07 |
 | D17 | Source gone (unforked): dashboard notice, reset refuses up front, rename self-heal, "Change source" repoints via the Add dialog; content gone: reset offers to keep current content | shareable-demo 06 |
+| D20 | A demo's blocks always arrive complete: they are code in the generated repo, the palette is generated from that code, and the example pages are copied from the demo's content site as library doc pages regardless of the page copy | shareable-demo 05 |
+| D21 | The Storefront area names the demo: a first summary row "Demo — Isle5 by Jen · Edge Delivery" and the existing-repo tick reads "Reset to Isle5 by Jen (replaces all content)"; same for shipped brands | shareable-demo 05 |
+| D22 | A shared demo's blocks belong to that demo only: Add never registers them as a block library for other demos; the palette and example pages come with the demo itself | shareable-demo 05 |
+| D23 | Dry-check caveats are worded by consequence in the SC's words (three lines for five patches, ids only in the debug log), shown in the completion card at create and again at reset; nothing persists on the dashboard | shareable-demo 05, 06 |
+| D19 | Updates: the existing updater applies unchanged (fork sync per template repo + per-project template merge, one picker); no new mechanism for shared demos | shareable-demo 06 |
+| D18 | Forget removes the card only; "Also delete my copy" is an unticked tick box naming the projects that still use the fork, confirmed again before the repo goes; project deletion never touches the fork | shareable-demo 04, 06 |
 
 ## Recommended design
 

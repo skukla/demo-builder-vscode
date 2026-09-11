@@ -39,8 +39,9 @@ and Add still works.
 
 **Build Your Project.** Unchanged in shape. Commerce: the three store codes are prefilled
 from the demo, the SC supplies the backend address and secrets as for any brand.
-Storefront: the frontend piece shows as fixed by the demo; "Copy content" is ticked when
-the index was found and unticked with a note when it was not. Integrations: the mesh toggle
+Storefront: the summary's first row names the demo and its frontend kind; the demo's pages
+copy automatically when a published index exists (a note says the site starts empty when
+not); the demo's blocks, palette and example pages arrive regardless. Integrations: the mesh toggle
 is shown.
 
 **After creation.** Reset goes back to the demo's source (the SC's fork when they kept a
@@ -175,6 +176,51 @@ was rejected and why. Detail in the research sections named.
   of the same kind or to a fork made now; when the content site is gone, reset offers to
   keep current content. Rejected: notice only (midway failures stay), no repointing (one
   thing that cannot be undone).
+- **2026-09-11 · Forgetting.** Forget always removes the card and never touches projects
+  (they carry their own row). A tick box "Also delete my copy of the code" is off by default;
+  the dialog names how many projects use the fork as their source and that they lose reset
+  and updates until repointed; deleting the repo is confirmed once more, as project cleanup
+  does. Deleting a project runs today's cleanup (`cleanupBehavior`: ask / deleteAll /
+  localOnly) on ITS repo and site only; the fork is shared and never touched; the remembered
+  demo stays. Rejected: ticked-when-unused (a default that deletes a repo the moment a count
+  reads zero), never delete from Forget (clutter made permanent).
+- **2026-09-11 · Updates.** Owner asked how the shipped-template updater applies. It applies
+  whole, with no new mechanism: `checkUpdates.ts` already (1) asks whether a project's
+  TEMPLATE repo is a fork behind its parent and offers a pre-ticked fork sync per repo
+  (`checkForkSyncUpdates`, `checkUpdates.ts:362`), and (2) offers each project "N changes
+  behind" its template with the merge-then-reset-on-conflict apply (`templateSyncService`),
+  in one picker with one confirmation. Unforked demo: (2) against Jen's `main`. Forked demo:
+  (1) for the fork plus (2) per project. Never LKG pinning or patches (D4). Two obligations:
+  the updater reads the template from instance metadata (`getTemplateSource`,
+  `updateTypes.ts:90`), so Change source and rename self-heal must keep it and the project
+  row in step; and the reset-on-conflict fallback overwrites the SC's own edits, a
+  pre-existing P2 concern that forking sends more traffic through (filed).
+- **2026-09-11 · The Storefront area.** Accounts, namespace, Code Sync, the empty repo-name
+  box and the site named after the repo are unchanged. Added: a first summary row naming
+  the demo and its frontend kind, and the existing-repo tick worded "Reset to Isle5 by Jen"
+  (same for shipped brands). Rejected: a sentence under the name box (one more line to keep
+  true), nothing extra (the card is far away by then).
+- **2026-09-11 · Pages, blocks and example pages.** Owner pushed back on a "copy content"
+  tick because an SC expects the colleague's custom blocks to come with the demo. They
+  always do: blocks are code, the palette is generated from the code, and the per-block
+  example pages are copied from the demo's content site as library doc pages regardless of
+  anything else (the mechanism shipped libraries already use). With that settled, D5 is
+  AMENDED: pages copy automatically whenever a published index exists, skip with a note when
+  not; no tick for any brand. Rejected: a tick for everyone (the empty-site choice was not
+  wanted), a tick for added demos only (behaviour depending on where the demo came from).
+  Owner then decided: a shared demo's blocks are associated with that demo only; Add never
+  registers them as a library for other demos (D22). An SC who wants them elsewhere uses the
+  custom block library setting by hand, as today.
+- **2026-09-11 · Dry-check caveats.** Today's channels: the wizard's "Storefront Published,
+  with warnings" list (fed by the PDP caveats) and a patch toast written for us (ids, targets,
+  reasons). Decision: caveats worded by CONSEQUENCE, three lines for the five patches (product
+  deep links may open an empty page; a product page with no product shows blank instead of
+  redirecting; AEM Assets images may not load for SKUs with special characters), each ending
+  "This storefront's owner controls its code; Demo Builder does not change it." Ids and
+  targets go to the debug log only. Shown in the completion card at create, and reset gains
+  the same list; the check re-runs on every reset; nothing persists on the dashboard.
+  Rejected: per-patch lines (five lines, no extra meaning), today's toast (written for us), a
+  persistent dashboard notice (nags about something the SC cannot fix), create-only.
 
 ## Open (this feature)
 

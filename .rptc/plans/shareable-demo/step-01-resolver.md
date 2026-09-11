@@ -27,6 +27,11 @@ the EDS instance metadata written at `executorEdsPhase.ts:88` and read by
   services fetched only at the boundary; this is a pure function over a `Project`). Returns
   `{ package, storefront, source: 'project' | 'catalog' }` so callers that care (rehydration's
   log line, the dashboard subtitle) can say where the answer came from.
+- The updater's `getTemplateSource` (`updateTypes.ts:90`) reads `templateOwner`/`templateRepo`
+  from the EDS instance metadata, not from any row. Either it moves onto this resolver, or
+  the resolver treats the instance metadata as the project-level source of template identity
+  and step 05 writes the row's template fields THERE (one write, two readers is the split
+  being closed). Decide in this step; do not leave a third reader.
 - The project-stored row is the contract's storefront slice, on the manifest beside `selectedPackage`,
   written by step 05, read by `projectFileLoader`.
 - Each of the eleven sites is moved in its own commit with its existing tests unchanged;
