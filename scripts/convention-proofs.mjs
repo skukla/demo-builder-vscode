@@ -719,6 +719,159 @@ const PROOFS = [
         },
     },
     {
+        id: 'cross-bundle-class',
+        convention: 'A CSS class used in a bundle is styled by that bundle',
+        enforcer: 'tests/sop/stylesheet-bundles.test.ts',
+        expects: /every cross-bundle class use is a reasoned ledger entry/,
+        // `repo-private-badge` is defined in eds-steps.css and in NOTHING ELSE,
+        // and the SIDEBAR entry does not import that sheet. That is the whole
+        // defect in one line: the class is real, the sheet is real, and the
+        // surface renders it bare with no error anywhere.
+        //
+        // The first plant used `text-orange-600` — the class the enforcer's own
+        // positive control names — and came back UNPROVEN, because utilities.css
+        // ALSO defines it and the sidebar imports utilities.css. A class defined
+        // in two sheets is styled on any bundle that loads either one. The plant
+        // has to be a class exactly one sheet defines.
+        plant: {
+            path: 'src/features/sidebar/ui/index.tsx',
+            append: true,
+            content: [
+                '',
+                '/** Planted by convention-proofs.mjs — a class this bundle does not load. */',
+                'export function ZzProofCrossBundle(): React.ReactElement {',
+                '    return <div className="repo-private-badge" />;',
+                '}',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 'important-ceiling',
+        convention: '!important is a symptom, not a mechanism — the count may only fall',
+        enforcer: 'tests/sop/stylesheet-bundles.test.ts',
+        expects: /the count never grows, and a fall is pinned/,
+        plant: {
+            path: 'src/core/ui/styles/zz-proof-important.css',
+            content: [
+                '/* Planted by convention-proofs.mjs — one !important against a ceiling of zero. */',
+                '@layer overrides {',
+                '    .zz-proof-important { color: red !important; }',
+                '}',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 'vendor-layer-measured',
+        convention: 'Vendor CSS is layered only for entries that have been measured',
+        enforcer: 'tests/sop/stylesheet-bundles.test.ts',
+        expects: /only entries that have been MEASURED are layered/,
+        plant: {
+            path: 'esbuild.config.js',
+            transform: (text) => {
+                const from = 'const LAYERED_VENDOR_ENTRIES = [';
+                if (!text.includes(from)) throw new Error('LAYERED_VENDOR_ENTRIES not found');
+                return text.replace(from, `${from}\n    'zzProofUnmeasured',`);
+            },
+        },
+    },
+    {
+        id: 'stylesheet-owner',
+        convention: 'A stylesheet lives where its owner lives',
+        enforcer: 'tests/sop/stylesheet-bundles.test.ts',
+        expects: /a core\/ui sheet holds shared-component or cross-feature classes, never one feature's/,
+        // TWO FILES, and the second is the point. A sheet in core/ui is only
+        // MISPLACED once exactly one feature uses it — a sheet nobody uses is dead
+        // CSS, which the enforcer deliberately reports as a different defect. So
+        // the plant has to create a user, and exactly one.
+        plant: [
+            {
+                path: 'src/core/ui/styles/zz-proof-owner.css',
+                // TWO RULES, and the first one is scaffolding. The reader splits the
+                // sheet on `}` and takes the first `{` in each piece, so the opening
+                // piece of a layered sheet is the `@layer` line itself and its
+                // selector holds no class at all. A sheet with ONE rule is therefore
+                // invisible to this check — the first plant had exactly that shape
+                // and came back UNPROVEN.
+                content: [
+                    '/* Planted by convention-proofs.mjs — one feature\'s classes in a shared sheet. */',
+                    '@layer overrides {',
+                    '    .zzproofowner-anchor { color: red; }',
+                    '    .zzproofowner-thing { color: blue; }',
+                    '}',
+                    '',
+                ].join('\n'),
+            },
+            {
+                path: 'src/features/dashboard/ui/ZzProofOwner.tsx',
+                content: [
+                    '/** Planted by convention-proofs.mjs — the single feature using it. */',
+                    "import React from 'react';",
+                    '',
+                    'export function ZzProofOwner(): React.ReactElement {',
+                    '    return <div className="zzproofowner-thing" />;',
+                    '}',
+                    '',
+                ].join('\n'),
+            },
+        ],
+    },
+    {
+        id: 'motion-timings',
+        convention: "Motion timings come from Spectrum's scale, not hand-written milliseconds",
+        enforcer: 'tests/sop/css-declarations.test.ts',
+        expects: /no hand-written sub-second duration survives/,
+        plant: {
+            path: 'src/core/ui/styles/zz-proof-motion.css',
+            content: [
+                '/* Planted by convention-proofs.mjs — a hand-written sub-second timing. */',
+                '@layer overrides {',
+                '    .zz-proof-motion { transition: opacity 0.2s ease; }',
+                '}',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 'stylesheet-parses',
+        convention: 'Every stylesheet parses — no selector list is interrupted by an at-rule',
+        enforcer: 'tests/sop/css-declarations.test.ts',
+        expects: /no selector list is interrupted by an at-rule/,
+        // The exact shape that shipped three times: the migration's mover found
+        // rules by their BRACE line, so a selector list spread over several lines
+        // had the wrapper inserted into the middle of it. Chrome keeps zero rules
+        // from that, and nothing in the build ever parses the CSS to notice.
+        plant: {
+            path: 'src/core/ui/styles/zz-proof-parse.css',
+            content: [
+                '/* Planted by convention-proofs.mjs — a selector list broken by an at-rule. */',
+                '.zz-proof-a,',
+                '@layer overrides {',
+                '.zz-proof-b { color: red; }',
+                '}',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 'utility-class-explosion',
+        convention: 'Utility classes live in one documented sheet, not scattered',
+        enforcer: 'tests/sop/inline-styles.test.ts',
+        expects: /should not have utility class patterns in non-documented CSS files/,
+        plant: {
+            path: 'src/core/ui/styles/zz-proof-utilities.css',
+            content: [
+                '/* Planted by convention-proofs.mjs — Tailwind-shaped utilities outside utilities.css. */',
+                '@layer overrides {',
+                '    .mt-4 { margin-top: 1rem; }',
+                '    .px-3 { padding-inline: 0.75rem; }',
+                '}',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
         id: 'scan-declares-a-control',
         convention: 'Every SOP scan declares a control',
         enforcer: 'tests/sop/every-scan-declares-a-control.test.ts',
