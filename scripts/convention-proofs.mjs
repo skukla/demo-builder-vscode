@@ -296,6 +296,59 @@ const PROOFS = [
             ].join('\n'),
         },
     },
+    {
+        id: 'cited-setting-identifiers',
+        convention: 'Never publish an identifier you have not read from the source',
+        enforcer: 'tests/sop/cited-identifiers.test.ts',
+        expects: /every demoBuilder\.\* identifier a current-tense document names is real/,
+        plant: {
+            path: 'docs/zzProofCitation.md',
+            content: [
+                '# Planted by convention-proofs.mjs',
+                '',
+                'The setting `demoBuilder.zzProofSettingThatDoesNotExist` controls nothing,',
+                'because it does not exist. This document is written in the present tense.',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 'cited-npm-scripts',
+        convention: 'An npm script a current-tense document names is a real script',
+        enforcer: 'tests/sop/cited-identifiers.test.ts',
+        expects: /every `npm run` a current-tense document names is a real script/,
+        plant: {
+            path: 'docs/zzProofScript.md',
+            content: [
+                '# Planted by convention-proofs.mjs',
+                '',
+                'Run `npm run zz-proof-script-that-does-not-exist` to do the thing.',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 'logger-wording-assertions',
+        convention: 'No test asserts on logger wording',
+        enforcer: 'tests/sop/no-logger-wording-assertions.test.ts',
+        // Named exactly. A loose /logger|wording/ matched too, and would have
+        // matched nearly any assertion in that suite -- which is attribution in
+        // name only.
+        expects: /no file exceeds its ceiling, and no unlisted file has any/,
+        plant: {
+            path: 'tests/features/zzProof/loggerWording.test.ts',
+            content: [
+                "describe('planted', () => {",
+                "    it('asserts on log text', () => {",
+                '        const mockLogger = { error: jest.fn() };',
+                "        mockLogger.error('boom');",
+                "        expect(mockLogger.error).toHaveBeenCalledWith('boom');",
+                '    });',
+                '});',
+                '',
+            ].join('\n'),
+        },
+    },
 ];
 
 function run(cmd, args, cwd) {
