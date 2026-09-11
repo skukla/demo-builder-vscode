@@ -12,7 +12,7 @@ were wrong within an hour of being written. This one is derived from the
 handbook's own callouts and checked against the enforcers on disk in both
 directions, so it cannot.
 
-- **118** conventions, **118** enforced
+- **119** conventions, **119** enforced
 - **28** name the decision record behind them
 - **6** name a procedure — an SOP or a skill
 - **1** have all three layers
@@ -81,6 +81,7 @@ it means the rule rests on somebody noticing.
 | A handler answers by RETURNING its result — **Pattern B**. `sendMessage` is for progress pushes only, never for the answer itself. row 2 · Enforced by the `patternBSendMessageCeiling` ratchet in `tests/sop/architecture-rules.exemptions.json` — the count may not grow. |  |  | *named in prose* |
 | Message shapes come from a typed file, never written from memory into a string or a `.mjs`. enforced by `npm run typecheck:tests`. |  |  | *named in prose* |
 | A domain error class lives with the domain that throws it. `src/core/errors/` is the legacy central hierarchy and may only shrink. |  |  | `architecture-rules.test.ts` |
+| A failure a PERSON reads is translated, never the library's own words. |  |  | `user-facing-errors.test.ts` |
 
 ## 7. The user interface
 

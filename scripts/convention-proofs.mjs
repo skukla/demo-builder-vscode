@@ -980,6 +980,22 @@ const PROOFS = [
         },
     },
     {
+        id: 'user-facing-error-translated',
+        convention: "A failure a person reads is translated, never the library's own words",
+        enforcer: 'tests/sop/user-facing-errors.test.ts',
+        expects: /every site handing over a raw message is a reasoned ledger entry/,
+        plant: {
+            path: 'src/core/utils/zzProofRawMessage.ts',
+            content: [
+                '/** Planted by convention-proofs.mjs - a library\'s own words handed to a person. */',
+                'export function zzProofRawMessage(error: unknown): { success: false; error: string } {',
+                '    return { success: false, error: (error as Error).message };',
+                '}',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
         id: 'doc-anchor-resolves',
         convention: 'A link to a heading reaches a heading that exists',
         enforcer: 'tests/sop/doc-module-refs.test.ts',
