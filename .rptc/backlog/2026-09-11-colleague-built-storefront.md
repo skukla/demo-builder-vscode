@@ -65,3 +65,4 @@ project first and the catalog second.
 - 2026-09-11  Research, seam map and design on `feature/colleague-storefront` (worktree
   from `origin/develop`); children filed.
 - 2026-09-11  Research, design and program filing (d5f84e1f5)
+- 2026-09-11  Program plan + shareable-demo feature plan (0c78af9a0)
