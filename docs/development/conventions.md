@@ -12,7 +12,7 @@ were wrong within an hour of being written. This one is derived from the
 handbook's own callouts and checked against the enforcers on disk in both
 directions, so it cannot.
 
-- **111** conventions, **111** enforced
+- **112** conventions, **112** enforced
 - **28** name the decision record behind them
 - **6** name a procedure — an SOP or a skill
 - **1** have all three layers
@@ -164,6 +164,7 @@ it means the rule rests on somebody noticing.
 | PRODUCTION erases no types. `as any` and `as never` are banned in `src/` outright. |  |  | `src-erases-no-types.test.ts` |
 | No test erases a type. `as any` and `as never` are banned anywhere in `tests/`. A builder is declared as the REAL type it stands for; where the structural fake cannot satisfy that type honestly, cast the object literal INTO it at the builder's boundary as `as unknown as X` — once, where it is visible. | [ADR](../architecture/adr/016-test-strategy.md) |  | `type-erasing-casts.test.ts`<br>`eslint.config.mjs` |
 | Do not mock a configuration leaf. |  |  | `no-config-leaf-mocks.test.ts` |
+| A stylesheet change is not pushed until a RESTING visual baseline has been captured while it was in the tree. |  |  | `.githooks/` |
 | Never assign a `jest.fn()` onto a Node builtin's namespace (`fs`, `fs.promises`, `os`, …). Use `jest.spyOn`, and restore in `afterEach`. |  |  | `no-builtin-namespace-mock-assignment.test.ts` |
 | Do not lower one test's timeout below the file's budget. |  |  | `no-lowered-test-timeout.test.ts` |
 | Never pipe jest through `tail`, `head` or `grep`. Redirect to a file with `> file 2>&1` and read that. |  |  | `10-jest-pipe.rule`<br>`11-jest-redirect.rule` |

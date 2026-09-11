@@ -365,6 +365,16 @@ const NPM_CHECKS: readonly Instrument[] = [
         runs: 'npm run validate:test-file-sizes',
     },
     {
+        id: 'validate:css-baseline',
+        kind: 'npm-script',
+        cadence: 'per-push',
+        resultKind: 'gate',
+        what: 'a stylesheet change pushed with no resting visual baseline captured while it was modified — the evidence gap that let a dashboard regression reach a release spot-check on 2026-09-10',
+        runs: 'npm run validate:css-baseline',
+        unwiredReason:
+            'runs from .githooks/pre-push, not from `npm run gate`. Gate is the inner-loop command, where mid-edit is exactly when no capture exists yet; and CI runs the same checks with no browser and no reports/visual-baseline, so there it would fail every time and be switched off',
+    },
+    {
         id: 'validate:jest-config',
         kind: 'npm-script',
         cadence: 'periodic',

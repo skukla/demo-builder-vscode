@@ -23,10 +23,26 @@
 set -uo pipefail
 
 # Nothing to check when the push only deletes refs.
+#
+# The ranges are collected in the SAME loop, because stdin is readable once and
+# the CSS-baseline check below needs to know what is actually being pushed.
+ZERO=0000000000000000000000000000000000000000
 only_deletes=1
-while read -r _local_ref local_sha _remote_ref _remote_sha; do
-    if [ "$local_sha" != "0000000000000000000000000000000000000000" ]; then
+# An ARRAY, not a space-joined string. This file is bash, where an unquoted
+# expansion would word-split correctly — but that is the pattern that silently
+# passes one newline-joined argument where N were meant, and it has cost this
+# repo three debugging sessions. Say what is meant instead.
+ranges=()
+while read -r _local_ref local_sha _remote_ref remote_sha; do
+    if [ "$local_sha" != "$ZERO" ]; then
         only_deletes=0
+        if [ "$remote_sha" = "$ZERO" ]; then
+            # A branch the remote has never seen: everything it adds to master.
+            base=$(git merge-base "$local_sha" origin/master 2>/dev/null || true)
+            [ -n "$base" ] && ranges+=("$base..$local_sha")
+        else
+            ranges+=("$remote_sha..$local_sha")
+        fi
     fi
 done
 if [ "$only_deletes" -eq 1 ]; then
@@ -39,6 +55,24 @@ echo
 if npm run gate; then
     echo
     echo "pre-push: gate passed."
+
+    # A stylesheet change needs a resting visual baseline behind it. NOT part of
+    # `gate`: gate is the inner-loop command and CI runs the same checks with no
+    # browser and no records, so there it would fail every time and be switched
+    # off. The question is a pre-push one — you are about to publish this.
+    #
+    # GUARDED ON EXISTENCE, and that guard is not cosmetic: without it the hook
+    # refused every push in any tree that lacks the script, because `node` on a
+    # missing file exits non-zero and that read as a refusal. `dogfood.sh` caught
+    # it on the MUST-NOT-BLOCK case the moment it was wired in. A missing
+    # instrument is not a finding.
+    if [ -f scripts/check-css-baseline.mjs ]; then
+        for r in "${ranges[@]}"; do
+            if ! node scripts/check-css-baseline.mjs "$r"; then
+                exit 1
+            fi
+        done
+    fi
     exit 0
 fi
 

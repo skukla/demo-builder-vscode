@@ -1421,6 +1421,25 @@ check says so and names the file.
 > *Why:* the test then checks the mock rather than the shipped configuration.
 > Enforced by `tests/sop/no-config-leaf-mocks.test.ts`.
 
+> **Convention.** A stylesheet change is not pushed until a RESTING visual
+> baseline has been captured while it was in the tree.
+> *Why:* a CSS change that breaks a surface produces no error anywhere — there are
+> eight webview bundles and a feature stylesheet reaches only the ones whose entry
+> imports it, so a class can be styled on one surface and absent on the next with
+> nothing failing. On 2026-09-10 a dashboard regression reached a release
+> spot-check because the day's CSS work was verified with the INTERACTION capture
+> alone, which cannot see a width, a padding, or a rule that stopped applying.
+> *How it is checked:* `scripts/check-css-baseline.mjs`, from `.githooks/pre-push`
+> — deliberately NOT from `npm run gate`, because gate is the inner-loop command
+> (mid-edit is exactly when no capture exists yet) and CI runs the same checks with
+> no browser and no records, where it would fail every time and be switched off. It
+> reads the `dirtyPaths` each capture records, so it asks a direct question rather
+> than comparing a capture time against a commit time — captures happen on a dirty
+> tree before the commit, so a timestamp rule would reject the correct workflow.
+> It proves a baseline was taken, not that anyone read the diff. Bypass with
+> `CSS_BASELINE_BYPASS="reason"`, which keeps the rest of the gate that
+> `--no-verify` discards.
+
 > **Convention.** Never assign a `jest.fn()` onto a Node builtin's namespace
 > (`fs`, `fs.promises`, `os`, …). Use `jest.spyOn`, and restore in `afterEach`.
 > *Why:* a builtin is ONE object per worker process, and jest resets its module
@@ -1462,7 +1481,7 @@ Conventions decay unless something checks them. Four layers do:
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 111 conventions. 111 of them are enforced; 0 are not.**
+**This handbook states 112 conventions. 112 of them are enforced; 0 are not.**
 
 The last one to get there was "vendor CSS sits in the lowest cascade layer", and it was
 outstanding because it was **not yet true**: `@layer vendor` existed in no bundle, so a
