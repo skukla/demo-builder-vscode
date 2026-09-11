@@ -45,6 +45,7 @@ import {
     existsSync,
     mkdirSync,
     mkdtempSync,
+    readFileSync,
     rmSync,
     symlinkSync,
     writeFileSync,
@@ -677,6 +678,46 @@ const PROOFS = [
             ].join('\n'),
         },
     },
+    {
+        id: 'component-style-block',
+        convention: 'A webview component defines no CSS in a <style> block',
+        enforcer: 'tests/sop/stylesheet-bundles.test.ts',
+        expects: /a webview component defines NO CSS in a <style> block/,
+        plant: {
+            path: 'src/core/ui/components/ZzProofStyleBlock.tsx',
+            content: [
+                '/** Planted by convention-proofs.mjs. */',
+                'export function ZzProofStyleBlock(): JSX.Element {',
+                '    return (',
+                '        <div>',
+                '            <style>{`.zz-proof { color: red; }`}</style>',
+                '        </div>',
+                '    );',
+                '}',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 'credential-env-registered',
+        convention: 'A credential environment variable is registered as a secret',
+        enforcer: 'tests/sop/credential-env-vars-registered.test.ts',
+        expects: /registers every credential-shaped env var in SECRET_ENV_KEYS/,
+        // TRANSFORMED, not written: the enforcer reads ONE file, components.json, so
+        // a new file is invisible to it — the first plant created one and came back
+        // UNPROVEN. Appending would break the JSON, hence the third mode.
+        plant: {
+            path: 'src/features/components/config/components.json',
+            transform: (text) => {
+                const doc = JSON.parse(text);
+                // TOP-LEVEL `envVars`, which is what the enforcer reads. The second
+                // attempt added it to a component's own `env` and was invisible —
+                // the reader is `catalog.envVars`, and nothing else.
+                doc.envVars = { ...(doc.envVars ?? {}), ZZ_PROOF_API_KEY: {} };
+                return `${JSON.stringify(doc, null, 4)}\n`;
+            },
+        },
+    },
 ];
 
 function run(cmd, args, cwd) {
@@ -717,6 +758,12 @@ function makeWorktree() {
     execSync(`git worktree add --detach --quiet "${wt}" HEAD`, { cwd: ROOT });
     // jest needs the deps; symlinking beats a multi-minute copy.
     symlinkSync(join(ROOT, 'node_modules'), join(wt, 'node_modules'), 'dir');
+    // Five enforcers read the BUILT bundles. Without this their baseline run fails
+    // on a clean worktree and the harness reports BROKEN rather than proving
+    // anything. Borrowed read-only, exactly like node_modules — no proof rebuilds.
+    if (existsSync(join(ROOT, 'dist'))) {
+        symlinkSync(join(ROOT, 'dist'), join(wt, 'dist'), 'dir');
+    }
     return { dir, wt };
 }
 
@@ -752,7 +799,13 @@ function proveOne(proof) {
         // APPEND when the violation has to live inside an existing file. Some rules
         // cannot be broken by adding a new file at all — a handbook citing an
         // enforcer that does not exist is a defect IN the handbook.
-        if (proof.plant.append) {
+        if (proof.plant.transform) {
+            // The third mode, and JSON forced it: some rules are broken only by
+            // EDITING a specific file, where appending raw text would produce
+            // something the enforcer cannot even parse. `transform` reads the real
+            // content and returns the modified version.
+            writeFileSync(target, proof.plant.transform(readFileSync(target, 'utf8')));
+        } else if (proof.plant.append) {
             appendFileSync(target, proof.plant.content);
         } else {
             writeFileSync(target, proof.plant.content);
