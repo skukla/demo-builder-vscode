@@ -3,7 +3,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { mergeEnvContent, parseEnvFile } from './envMerge';
 import { isMeshComponentId } from '@/core/constants';
-import { toAppError, isTimeout, isNetwork } from '@/core/errors';
+import { classifyTransience, extractErrorMessage } from '@/core/errors';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -199,16 +199,16 @@ export class ComponentUpdater {
    * Uses typed error detection for common failure types and provides helpful context
    */
     private formatUpdateError(error: Error): string {
-        const appError = toAppError(error);
+        const transience = classifyTransience(error);
         const message = error.message.toLowerCase();
 
         // Network/offline errors - use typed error detection
-        if (isNetwork(appError)) {
+        if (transience.kind === 'network') {
             return 'Update failed: No internet connection. Please check your network and try again.';
         }
 
         // Timeout errors - use typed error detection
-        if (isTimeout(appError)) {
+        if (transience.kind === 'timeout') {
             return 'Update failed: Download timed out. Please try again with a better connection.';
         }
 
@@ -228,8 +228,16 @@ export class ComponentUpdater {
             return 'Update failed: Downloaded component is incomplete or corrupted. Please try again.';
         }
 
-        // Generic fallback with user message from typed error
-        return `Update failed and was rolled back: ${appError.userMessage}`;
+        // The message is THIS EXTENSION'S OWN, not a library's, which is why it is
+        // passed through rather than replaced by a generic. Everything reaching here
+        // was thrown by our code with a deliberate sentence -- "Build failed (exit 1):
+        // tsc: 3 errors", "Security check failed: not a GitHub host". Convention 1 bans
+        // handing over the LIBRARY's words; these are already the translation.
+        //
+        // Replacing it with a generic was tried on 2026-09-11 and six tests caught it
+        // immediately: the rule is about whose words they are, not which field they
+        // arrived in.
+        return `Update failed and was rolled back: ${extractErrorMessage(error)}`;
     }
 
     /**

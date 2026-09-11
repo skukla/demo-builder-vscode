@@ -1,6 +1,6 @@
 import { RateLimiter } from './rateLimiter';
 import type { RetryStrategy, CommandResult } from './types';
-import { toAppError, isTimeout, isNetwork } from '@/core/errors';
+import { classifyTransience, extractErrorMessage } from '@/core/errors';
 import { getLogger } from '@/core/logging/debugLogger';
 import { sleep } from '@/core/utils/sleep';
 import { formatDuration } from '@/core/utils/timeFormatting';
@@ -33,9 +33,8 @@ export class RetryStrategyManager {
             maxDelay: TIMEOUTS.RETRY_MAX_DELAY,
             backoffFactor: 2,
             shouldRetry: (error) => {
-                // Use typed error detection for network and timeout errors
-                const appError = toAppError(error);
-                return isNetwork(appError) || isTimeout(appError);
+                // The retry question, asked of the thing that only answers it.
+                return classifyTransience(error).retryable;
             },
         });
 
@@ -63,7 +62,6 @@ export class RetryStrategyManager {
             backoffFactor: 1.5,
             shouldRetry: (error, attempt) => {
                 const message = error.message.toLowerCase();
-                const appError = toAppError(error);
 
                 /**
                  * KNOWN WORKAROUND: Shell syntax check
@@ -87,7 +85,7 @@ export class RetryStrategyManager {
 
                 // Use typed error detection where possible, with fallback for Adobe-specific patterns
                 return attempt === 1 && (
-                    isTimeout(appError) ||
+                    classifyTransience(error).kind === 'timeout' ||
                     message.includes('token') ||
                     message.includes('unauthorized') ||
                     message.includes('session')
@@ -158,17 +156,16 @@ export class RetryStrategyManager {
                 return result;
             } catch (error) {
                 lastError = error as Error;
-                const appError = toAppError(error);
 
                 // Log errors only on final attempt
                 if (attempt === strategy.maxAttempts) {
                     this.logger.debug(`[Retry Strategy] Command failed after ${strategy.maxAttempts} attempts:`);
                     this.logger.debug(`  Command: ${commandDescription}`);
-                    this.logger.debug(`  Error: ${appError.userMessage}`);
+                    this.logger.debug(`  Error: ${extractErrorMessage(error)}`);
                 }
 
                 // Don't retry on timeout errors - use typed error detection
-                if (isTimeout(appError)) {
+                if (classifyTransience(error).kind === 'timeout') {
                     this.logger.warn('[Retry Strategy] Command timed out - not retrying');
                     throw error;
                 }

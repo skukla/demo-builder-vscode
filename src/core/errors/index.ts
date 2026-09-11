@@ -91,16 +91,12 @@ export class TimeoutError extends AppError {
     public readonly timeoutMs: number;
 
     constructor(operation: string, timeoutMs: number, options?: { cause?: Error }) {
-        super(
-            `${operation} timed out after ${timeoutMs}ms`,
-            ErrorCode.TIMEOUT,
-            {
-                userMessage: `${operation} took too long. Please try again.`,
-                technical: `Timeout after ${timeoutMs}ms`,
-                recoverable: true,
-                cause: options?.cause,
-            },
-        );
+        super(`${operation} timed out after ${timeoutMs}ms`, ErrorCode.TIMEOUT, {
+            userMessage: `${operation} took too long. Please try again.`,
+            technical: `Timeout after ${timeoutMs}ms`,
+            recoverable: true,
+            cause: options?.cause,
+        });
         this.name = 'TimeoutError';
         this.operation = operation;
         this.timeoutMs = timeoutMs;
@@ -188,7 +184,6 @@ export class AuthError extends AppError {
     }
 }
 
-
 // ===== Type Guards =====
 
 /**
@@ -263,6 +258,69 @@ function isAuthErrorMessage(lowerMessage: string): boolean {
     if (lowerMessage.includes('auth failed')) return true;
     if (lowerMessage.includes('auth token')) return true;
     return false;
+}
+
+/** What the message matching suggests happened. A GUESS, and treated as one. */
+export type TransientKind = 'timeout' | 'network' | 'auth' | 'unknown';
+
+/**
+ * The answer to ONE question: is trying again worth it?
+ *
+ * Deliberately carries nothing displayable. That is the whole point of the type —
+ * see `classifyTransience`.
+ */
+export interface Transience {
+    /** Which shape the error text suggests. Never shown to anyone. */
+    readonly kind: TransientKind;
+    /** Whether a retry has a chance of behaving differently. */
+    readonly retryable: boolean;
+}
+
+/**
+ * Guess whether a failure is transient, by matching its message text.
+ *
+ * GUESSING IS FINE HERE AND NOWHERE ELSE, which is why this returns a shape with no
+ * message on it. The two uses of message matching have opposite tolerances:
+ *
+ * - "Should I retry?" — a wrong guess costs one retry. Nobody notices.
+ * - "What do we tell the person?" — a wrong guess tells someone the wrong thing to do.
+ *
+ * This repo made that judgement once and then half-unmade it. A generic FORMATTER was
+ * tried and removed because "a shared one has to guess which provider produced a
+ * string"; a generic CLASSIFIER doing exactly that guessing survived as `toAppError`,
+ * which matched `includes('unauthorized')` and handed back a `userMessage`. Nine call
+ * sites put that straight in front of an SC — so any failure whose text happened to
+ * contain "unauthorized" told a person to sign in, including when the real cause was a
+ * missing permission on a site, where signing in changes nothing and they would do it
+ * again.
+ *
+ * The replacement cannot be misused, because there is nothing on it to misuse: display
+ * comes from a formatter that KNOWS its provider, or from a domain error constructed
+ * knowing what went wrong. The raw text still reaches the Debug Logs, where it belongs.
+ *
+ * Owner-decided 2026-09-11; see `.rptc/plans/error-handling-strategy/`.
+ */
+export function classifyTransience(error: unknown): Transience {
+    const lowerMessage = extractErrorMessage(error).toLowerCase();
+
+    if (
+        error instanceof TimeoutError ||
+        lowerMessage.includes('timeout') ||
+        lowerMessage.includes('timed out') ||
+        lowerMessage.includes('etimedout')
+    ) {
+        return { kind: 'timeout', retryable: true };
+    }
+    if (error instanceof NetworkError || isNetworkErrorMessage(lowerMessage)) {
+        return { kind: 'network', retryable: true };
+    }
+    // Auth is classified but NOT retryable: repeating the same call with the same
+    // credentials does the same thing. It is separated from `unknown` because callers
+    // branch on it to prompt a sign-in rather than to try again.
+    if (error instanceof AuthError || isAuthErrorMessage(lowerMessage)) {
+        return { kind: 'auth', retryable: false };
+    }
+    return { kind: 'unknown', retryable: false };
 }
 
 /**

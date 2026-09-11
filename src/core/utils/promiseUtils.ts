@@ -2,7 +2,7 @@
  * Promise utilities for timeout and cancellation handling
  */
 
-import { TimeoutError, toAppError, isTimeout } from '@/core/errors';
+import { TimeoutError, classifyTransience, extractErrorMessage } from '@/core/errors';
 import { ErrorCode } from '@/types/errorCodes';
 
 export interface TimeoutOptions {
@@ -140,7 +140,6 @@ export async function tryWithTimeout<T>(
             cancelled: false,
         };
     } catch (error) {
-        const appError = toAppError(error);
 
         // Use typed error detection instead of string matching.
         //
@@ -150,14 +149,14 @@ export async function tryWithTimeout<T>(
         // CANCELLED-coded error by handing back an AppError it was given, and
         // such an error is itself an Error carrying the same code — so the
         // second half was already true whenever the first was.
-        const timedOut = isTimeout(appError);
+        const timedOut = classifyTransience(error).kind === 'timeout';
         const cancelled = error instanceof Error &&
             (error as Error & { code?: string }).code === ErrorCode.CANCELLED;
 
         return {
             timedOut,
             cancelled,
-            error: error instanceof Error ? error : new Error(appError.userMessage),
+            error: error instanceof Error ? error : new Error(extractErrorMessage(error)),
         };
     }
 }
