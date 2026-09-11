@@ -8,8 +8,7 @@
  * `createProjectTool.testUtils.ts`.
  */
 
-import { ErrorCode } from '@/types/errorCodes';
-import { AuthError } from '@/core/errors';
+import { AdobeOrgMismatchError } from '@/features/authentication/services/authenticationErrors';
 
 import {
     EDS,
@@ -103,7 +102,7 @@ describe('create_project', () => {
 
         it('maps an ORG_MISMATCH from creation to a typed non-retryable result', async () => {
             (executeProjectCreation as jest.Mock).mockRejectedValueOnce(
-                new AuthError(ErrorCode.ORG_MISMATCH, 'wrong org')
+                new AdobeOrgMismatchError()
             );
             const s = toolServer();
             const res = await s.call(HEADLESS);
@@ -117,7 +116,7 @@ describe('create_project', () => {
             (getResolvedMeshRequirement as jest.Mock).mockReturnValueOnce(true);
             (getAdobeTarget as jest.Mock).mockReturnValueOnce(SESSION_TARGET);
             (executeProjectCreation as jest.Mock).mockRejectedValueOnce(
-                new AuthError(ErrorCode.ORG_MISMATCH, 'wrong org')
+                new AdobeOrgMismatchError()
             );
             const s = toolServer();
 
@@ -287,7 +286,7 @@ describe('create_project', () => {
 
         it('maps an ORG_MISMATCH during project finalization to a typed non-retryable result', async () => {
             (executeProjectCreation as jest.Mock).mockRejectedValueOnce(
-                new AuthError(ErrorCode.ORG_MISMATCH, 'wrong org')
+                new AdobeOrgMismatchError()
             );
             const s = toolServer();
             const res = await s.call(EDS);
