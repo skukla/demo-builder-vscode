@@ -21,6 +21,41 @@
 import { ErrorCode, getErrorTitle, isRecoverableError } from '@/types/errorCodes';
 
 /**
+ * What a failure carries when it crosses a boundary toward a person or an agent.
+ *
+ * THE SHAPE SURVIVES; THE HIERARCHY DOES NOT. Owner-decided 2026-09-11. The central
+ * classes were available for months and accounted for four throws in the whole
+ * codebase — errors are most useful carrying domain knowledge, and domain knowledge
+ * does not live in `core/`. What was worth keeping is this decomposition, and the
+ * strongest argument for it is that the MCP specification arrived at the same one
+ * independently: a message for the reader to act on, kept distinct from the transport
+ * detail underneath.
+ *
+ * Two audiences want different fields from one failure, which is why it is an envelope
+ * and not a string:
+ *
+ * | | for |
+ * |---|---|
+ * | `code` | programmatic branching |
+ * | `userMessage` | the SC — plain, actionable, never a library's own words |
+ * | `technical` | the Debug Logs channel |
+ * | `recoverable` | whether offering "Retry" is honest |
+ *
+ * A domain error implements this where it is thrown (see `TimeoutError` in
+ * `@/core/utils/timeoutError`). Nothing needs to extend a base class to do so.
+ */
+export interface FailureShape {
+    /** For programmatic branching. */
+    readonly code: ErrorCode;
+    /** Written for an SC. Never a library's own words — see the handbook. */
+    readonly userMessage: string;
+    /** For the Debug Logs channel, not for a person. */
+    readonly technical?: string;
+    /** Whether offering a retry is honest. */
+    readonly recoverable: boolean;
+}
+
+/**
  * Base application error with structured error data
  */
 export class AppError extends Error {

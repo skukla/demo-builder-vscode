@@ -2,7 +2,8 @@
  * Promise utilities for timeout and cancellation handling
  */
 
-import { TimeoutError, classifyTransience, extractErrorMessage } from '@/core/errors';
+import { TimeoutError } from './timeoutError';
+import { classifyTransience, extractErrorMessage } from '@/core/errors';
 import { ErrorCode } from '@/types/errorCodes';
 
 export interface TimeoutOptions {
