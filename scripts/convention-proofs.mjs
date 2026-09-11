@@ -719,6 +719,260 @@ const PROOFS = [
         },
     },
     {
+        id: 'duplicate-test-file',
+        convention: 'No test file repeats another file\'s tests wholesale',
+        enforcer: 'tests/sop/duplicate-test-files.test.ts',
+        expects: /no file's entire test set is byte-identical inside a sibling file/,
+        // TWO SIBLINGS with the same test, because containment is the rule: a file
+        // whose whole test set already lives inside a neighbour adds nothing and
+        // doubles the maintenance. One file alone cannot be redundant.
+        plant: [
+            {
+                path: 'tests/core/utils/zzProofDupeOne.test.ts',
+                content: [
+                    '/** Planted by convention-proofs.mjs — one half of a duplicate pair. */',
+                    "it('zz proof duplicate', () => {",
+                    '    expect(1).toBe(1);',
+                    '});',
+                    '',
+                ].join('\n'),
+            },
+            {
+                path: 'tests/core/utils/zzProofDupeTwo.test.ts',
+                content: [
+                    '/** Planted by convention-proofs.mjs — the other half, byte-identical. */',
+                    "it('zz proof duplicate', () => {",
+                    '    expect(1).toBe(1);',
+                    '});',
+                    '',
+                ].join('\n'),
+            },
+        ],
+    },
+    {
+        id: 'fake-mirrors-subject',
+        convention: "A canonical fake covers its subject's whole public surface",
+        enforcer: 'tests/sop/fake-mirrors-subject.test.ts',
+        expects: /the fake covers every public method and invents none/,
+        // The violation is a change to the SUBJECT, not to the fake, because that
+        // is how this drifts in real life: a service gains a method and the fake
+        // every suite hands to it silently stops covering the surface.
+        plant: {
+            path: 'src/features/authentication/services/authenticationService.ts',
+            transform: (text) => {
+                const at = text.indexOf('export class AuthenticationService');
+                if (at < 0) throw new Error('AuthenticationService class not found');
+                const open = text.indexOf('{', at);
+                const method = [
+                    '',
+                    '    /** Planted by convention-proofs.mjs — a method the fake does not have. */',
+                    '    public zzProofNewCapability(): void {',
+                    '        /* nothing */',
+                    '    }',
+                ].join('\n');
+                return text.slice(0, open + 1) + method + text.slice(open + 1);
+            },
+        },
+    },
+    {
+        id: 'mutation-anchor-resolves',
+        convention: 'A mutant recorded as unkillable names its code by source text',
+        enforcer: 'tests/sop/mutation-equivalents-ledger.test.ts',
+        expects: /every anchor resolves to exactly one line of that module/,
+        // A TEXT edit to the LAST entry's anchor. Two reasons it is written this
+        // way. The ledger carries escaped unicode, and a JSON.parse/stringify
+        // round-trip rewrites all 1,492 lines of it — the failure this repo hit on
+        // 2026-09-10. And the FIRST entry is the one the suite's own control reads,
+        // so drifting that one would fail the control as well and muddy which
+        // assertion caught the plant.
+        plant: {
+            path: 'scripts/mutation-equivalents.ledger.json',
+            transform: (text) => {
+                const at = text.lastIndexOf('"anchors": [');
+                if (at < 0) throw new Error('no anchors array in the ledger');
+                const start = text.indexOf('"', at + '"anchors": ['.length);
+                const end = text.indexOf('"', start + 1);
+                if (start < 0 || end < 0) throw new Error('could not read the last anchor');
+                return `${text.slice(0, start + 1)}zz proof drifted anchor${text.slice(end)}`;
+            },
+        },
+    },
+    {
+        id: 'mutation-config-pairing',
+        convention: 'A measurement runs the tests the module actually has',
+        enforcer: 'tests/sop/mutation-config-pairing.test.ts',
+        expects: /no mutated module is left with no test selected/,
+        plant: {
+            path: 'stryker.config.json',
+            transform: (text) => {
+                const from = '"mutate": [\n';
+                if (!text.includes(from)) throw new Error('mutate array not found');
+                return text.replace(from, `${from}        "src/core/utils/zzProofUncovered.ts",\n`);
+            },
+        },
+    },
+    {
+        id: 'doc-anchor-resolves',
+        convention: 'A link to a heading reaches a heading that exists',
+        enforcer: 'tests/sop/doc-module-refs.test.ts',
+        expects: /every anchor names a real heading/,
+        plant: {
+            path: 'docs/development/zz-proof-anchor.md',
+            content: [
+                '# Zz Proof Anchor',
+                '',
+                'Planted by convention-proofs.mjs — a link to a heading nobody wrote:',
+                '[the rule](handbook.md#zz-proof-no-such-heading).',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 'type-aware-lint-config',
+        convention: 'The type-aware lint config can still see a pointless cast',
+        enforcer: 'tests/sop/eslint-type-aware.test.ts',
+        expects: /finds an unnecessary assertion that is really there/,
+        // Turning the rule OFF is the realistic failure. The config is ad-hoc and
+        // outside `npm run lint`, so nothing else in the repo would notice — the
+        // cast sweep would simply start reporting a clean tree.
+        plant: {
+            path: 'eslint.casts.mjs',
+            transform: (text) => {
+                const from = "'@typescript-eslint/no-unnecessary-type-assertion': 'error'";
+                if (!text.includes(from)) throw new Error('the cast rule is not set to error');
+                return text.replace(from, "'@typescript-eslint/no-unnecessary-type-assertion': 'off'");
+            },
+        },
+    },
+    {
+        id: 'codemod-self-test',
+        convention: 'The codemod harness declares a control and it still fails',
+        enforcer: 'tests/sop/codemod-harness.test.ts',
+        expects: /passes its own self-test, including the negative control/,
+        // Renaming the negative control, NOT deleting it. The suite filters FAIL
+        // lines containing "CONTROL", so a control that stops announcing itself
+        // reads as a real failure — which is exactly what it would be, since
+        // nothing else could then tell a working harness from a silent one.
+        plant: {
+            path: 'scripts/codemod/selftest.mjs',
+            transform: (text) => {
+                const from = "check('CONTROL: a deliberately false assertion is reported'";
+                if (!text.includes(from)) throw new Error('the negative control is not where expected');
+                return text.replace(from, "check('a deliberately false assertion is reported'");
+            },
+        },
+    },
+    {
+        id: 'shared-component-class-reach',
+        convention: 'A class used by shared components lives in a sheet every bundle that renders it loads',
+        enforcer: 'tests/sop/stylesheet-bundles.test.ts',
+        expects: /every cross-bundle class use is a reasoned ledger entry/,
+        // The SHARED-COMPONENT flavour of the cross-bundle rule, and the handbook
+        // states it as its own convention. The class is defined in one feature's
+        // sheet; the component using it is rendered by several surfaces, so it is
+        // styled on the one that loads that sheet and bare on the rest.
+        plant: {
+            path: 'src/core/ui/components/ui/Modal.tsx',
+            append: true,
+            content: [
+                '',
+                '/** Planted by convention-proofs.mjs — a feature class on a shared component. */',
+                'export function ZzProofSharedClass(): React.ReactElement {',
+                '    return <div className="repo-private-badge" />;',
+                '}',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 'inline-style-ceiling',
+        convention: 'Styling reaches Spectrum through UNSAFE_className and cn(), not style objects',
+        enforcer: 'tests/sop/inline-styles.test.ts',
+        expects: /the static count never grows, and a fall is pinned/,
+        plant: {
+            path: 'src/core/ui/components/ZzProofInlineStyle.tsx',
+            content: [
+                '/** Planted by convention-proofs.mjs — a style object outside the cascade. */',
+                "import React from 'react';",
+                '',
+                'export function ZzProofInlineStyle(): React.ReactElement {',
+                '    return <div style={{ marginTop: 10 }} />;',
+                '}',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 'hook-inline-literal',
+        convention: 'A custom-hook call takes no inline [] or {} literal',
+        enforcer: 'tests/sop/webview-architecture-rules.test.ts',
+        expects: /every flagged file is a reasoned ledger entry/,
+        plant: {
+            path: 'src/core/ui/components/ZzProofHookRef.tsx',
+            content: [
+                '/** Planted by convention-proofs.mjs — a new object every render. */',
+                "import React from 'react';",
+                '',
+                'declare function useZzProofThing(options: object): void;',
+                '',
+                'export function ZzProofHookRef(): React.ReactElement {',
+                '    useZzProofThing({});',
+                '    return <div />;',
+                '}',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 'shared-fake-placement',
+        convention: 'A fake a second feature directory needs lives in tests/helpers/',
+        enforcer: 'tests/sop/canonical-fakes.test.ts',
+        expects: /no builder outside tests\/helpers\/ is imported by a second feature directory/,
+        // THREE FILES, because the rule is about REACH and the check counts
+        // IMPORTERS, not the definition. A builder defined in one feature's test
+        // tree is fine there; it is a violation once TWO feature directories
+        // import it. The first plant had one importer and reported UNPROVEN --
+        // correctly: a builder used by exactly one area is exactly where it
+        // belongs. The check also resolves each import to its defining module
+        // rather than matching the name, so these imports have to be real.
+        plant: [
+            {
+                path: 'tests/features/dashboard/zzProofSharedFake.ts',
+                content: [
+                    '/** Planted by convention-proofs.mjs — a builder outside tests/helpers/. */',
+                    'export function createZzProofSharedFake(): { id: string } {',
+                    "    return { id: 'zz' };",
+                    '}',
+                    '',
+                ].join('\n'),
+            },
+            {
+                path: 'tests/features/dashboard/zzProofSharedFakeOwner.test.ts',
+                content: [
+                    '/** Planted by convention-proofs.mjs — the first feature using it. */',
+                    "import { createZzProofSharedFake } from './zzProofSharedFake';",
+                    '',
+                    "it('zz proof owner', () => {",
+                    "    expect(createZzProofSharedFake().id).toBe('zz');",
+                    '});',
+                    '',
+                ].join('\n'),
+            },
+            {
+                path: 'tests/features/eds/zzProofSharedFakeUser.test.ts',
+                content: [
+                    '/** Planted by convention-proofs.mjs — a SECOND feature importing it. */',
+                    "import { createZzProofSharedFake } from '../dashboard/zzProofSharedFake';",
+                    '',
+                    "it('zz proof shared fake', () => {",
+                    "    expect(createZzProofSharedFake().id).toBe('zz');",
+                    '});',
+                    '',
+                ].join('\n'),
+            },
+        ],
+    },
+    {
         id: 'fetch-boundary',
         convention: 'Services are fetched only at the boundary',
         enforcer: 'tests/sop/architecture-rules.test.ts',
@@ -1399,9 +1653,26 @@ const PROOFS = [
  * applied. (Found 2026-09-11, PL-55.)
  */
 
+/**
+ * MAXBUFFER IS LOAD-BEARING. Node's default is 1MB, and a child that exceeds it is
+ * KILLED — `execFileSync` then throws with no exit status and truncated output, which
+ * this function reports as a failure and `proveOne` reads as "the enforcer is red on a
+ * clean tree". That is a BROKEN verdict against a perfectly healthy suite.
+ *
+ * Found 2026-09-11 by the mutation-equivalents ledger proof, whose enforcer runs 5,423
+ * assertions and prints a whole ledger entry per describe.each title — several megabytes
+ * of green output. It passed when run by hand and came back BROKEN through the harness,
+ * every time. Any enforcer that prints enough would have been mislabelled the same way.
+ */
 function run(cmd, args, cwd) {
+    const MAX_OUTPUT = 256 * 1024 * 1024;
     try {
-        const out = execFileSync(cmd, args, { cwd, stdio: 'pipe', encoding: 'utf8' });
+        const out = execFileSync(cmd, args, {
+            cwd,
+            stdio: 'pipe',
+            encoding: 'utf8',
+            maxBuffer: MAX_OUTPUT,
+        });
         return { status: 0, out };
     } catch (e) {
         return { status: e.status ?? 1, out: `${e.stdout ?? ''}${e.stderr ?? ''}` };
@@ -1420,11 +1691,24 @@ function run(cmd, args, cwd) {
  * a syntax error in the planted file turns the suite red just as well.
  *
  * Jest prints `● <describe> › <test name>` for each failure, twice; dedup and match.
+ *
+ * A TITLE CAN SPAN LINES. `describe.each` interpolates its case into the title, and a
+ * `%o` case is printed as a multi-line object — so the mutation ledger's failures read
+ * `● equivalent-mutant ledger › entry 1354 — {` on the first line and carry the test's
+ * own name several lines later, after the closing brace. Reading only the first line
+ * reported WRONG-REASON against a proof that had landed exactly where it aimed
+ * (2026-09-11). So the whole header block is kept, up to the blank line that ends it,
+ * and `expects` is matched against all of it.
  */
 function failedAssertions(output) {
     const names = new Set();
-    for (const m of output.matchAll(/●\s+(.+?)\n/g)) {
-        const name = m[1].trim();
+    const lines = output.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+        const start = /●\s+(.*)$/.exec(lines[i]);
+        if (!start) continue;
+        const block = [start[1]];
+        for (let j = i + 1; j < lines.length && lines[j].trim() !== ''; j++) block.push(lines[j]);
+        const name = block.join(' ').replace(/\s+/g, ' ').trim();
         if (name && !/Console$/.test(name)) names.add(name);
     }
     return [...names];
