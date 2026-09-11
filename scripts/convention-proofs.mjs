@@ -220,6 +220,82 @@ const PROOFS = [
             ].join('\n'),
         },
     },
+    {
+        id: 'react-fc',
+        convention: 'A component is declared one way — never React.FC',
+        enforcer: 'tests/sop/one-component-form.test.ts',
+        expects: /no component is declared as React\.FC/,
+        plant: {
+            path: 'src/core/ui/components/ZzProofFc.tsx',
+            content: [
+                "import React from 'react';",
+                '/** Planted by convention-proofs.mjs. */',
+                'export const ZzProofFc: React.FC = () => null;',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 'mirror-placement',
+        convention: 'A test file lives at the path mirroring the source it covers',
+        enforcer: 'tests/sop/mirror-placement.test.ts',
+        expects: /no test file lives in a tier directory|every test file is under a src\/ mirror/,
+        plant: {
+            path: 'tests/unit/zzProofMisplaced.test.ts',
+            content: [
+                "describe('planted', () => {",
+                "    it('sits in a tier directory', () => {",
+                '        expect(1).toBe(1);',
+                '    });',
+                '});',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 'credential-shaped-fixtures',
+        convention: 'No credential-shaped fixture in the tree',
+        enforcer: 'tests/sop/no-credential-shaped-fixtures.test.ts',
+        // Two assertions enforce this convention: a hard ban on the URL/JWT shapes,
+        // and a per-file CEILING on credential-shaped assignments. A planted
+        // `secret = '...'` trips the ceiling, not the ban — the first `expects`
+        // named the ban and the harness reported WRONG-REASON, which is the whole
+        // point of attributing rather than accepting any red.
+        expects: /credential-shaped assignments than its recorded ceiling|no file carries either shape/,
+        plant: {
+            path: 'tests/features/zzProof/credShape.test.ts',
+            content: [
+                "describe('planted', () => {",
+                "    it('carries a credential-shaped literal', () => {",
+                // A STANDALONE word: the ban is `\\bsecret\\b`, and `clientSecret`
+                // has no word boundary before it — the first plant missed for
+                // exactly that reason and the harness reported UNPROVEN.
+                "        const secret = 'abcd1234efgh5678';",
+                '        expect(clientSecret).toBeDefined();',
+                '    });',
+                '});',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 'redundant-automocks',
+        convention: 'No bare automock of a module moduleNameMapper already redirects',
+        enforcer: 'tests/sop/redundant-automocks.test.ts',
+        expects: /no test bare-automocks a module moduleNameMapper already redirects/,
+        plant: {
+            path: 'tests/features/zzProof/automock.test.ts',
+            content: [
+                "jest.mock('vscode');",
+                "describe('planted', () => {",
+                "    it('bare-automocks a mapped module', () => {",
+                '        expect(1).toBe(1);',
+                '    });',
+                '});',
+                '',
+            ].join('\n'),
+        },
+    },
 ];
 
 function run(cmd, args, cwd) {
