@@ -643,6 +643,40 @@ const PROOFS = [
             ].join('\n'),
         },
     },
+    {
+        id: 'webview-channel-singleton',
+        convention: 'One message channel per bundle, and it is a singleton',
+        enforcer: 'tests/sop/webview-architecture-rules.test.ts',
+        expects: /every channel-acquiring file is a reasoned ledger entry/,
+        plant: {
+            path: 'src/core/ui/utils/zzProofChannel.ts',
+            content: [
+                '/** Planted by convention-proofs.mjs — a second channel acquisition. */',
+                'declare function acquireVsCodeApi(): unknown;',
+                'export const zzProofApi = acquireVsCodeApi();',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 'webview-inline-literal-prop',
+        convention: 'No empty [] or {} literal is passed as a JSX prop',
+        enforcer: 'tests/sop/webview-architecture-rules.test.ts',
+        expects: /no empty \[\] or \{\} literal is passed as a JSX prop/,
+        plant: {
+            path: 'src/core/ui/components/ZzProofLiteralProp.tsx',
+            content: [
+                '/** Planted by convention-proofs.mjs. */',
+                'function ZzProofChild(_p: { items: string[] }): null {',
+                '    return null;',
+                '}',
+                'export function ZzProofLiteralProp(): JSX.Element {',
+                '    return <ZzProofChild items={[]} />;',
+                '}',
+                '',
+            ].join('\n'),
+        },
+    },
 ];
 
 function run(cmd, args, cwd) {
