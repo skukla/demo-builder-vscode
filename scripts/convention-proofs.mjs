@@ -581,6 +581,68 @@ const PROOFS = [
             ].join('\n'),
         },
     },
+    {
+        id: 'handler-imports-react',
+        convention: 'A handler translates and returns — it never renders',
+        enforcer: 'tests/sop/architecture-rules.test.ts',
+        expects: /no handler imports React/,
+        plant: {
+            path: 'src/features/dashboard/handlers/zzProofRenderingHandler.ts',
+            content: [
+                "import React from 'react';",
+                '/** Planted by convention-proofs.mjs. */',
+                'export const zzProofReact = React;',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 'core-imports-feature',
+        convention: 'core/ imports neither features nor commands',
+        enforcer: 'tests/sop/architecture-rules.test.ts',
+        expects: /every crossing is a reasoned ledger entry/,
+        plant: {
+            path: 'src/core/utils/zzProofCrossing.ts',
+            content: [
+                "import { registerProjectTools } from '@/features/ai/server/mcpToolResult';",
+                '/** Planted by convention-proofs.mjs — core reaching into a feature. */',
+                'export const zzProofCrossing = registerProjectTools;',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 'central-error-hierarchy',
+        convention: 'The central error hierarchy only shrinks',
+        enforcer: 'tests/sop/architecture-rules.test.ts',
+        expects: /the central error hierarchy only shrinks/,
+        // APPENDED: the ratchet counts classes IN that module, so a new file
+        // elsewhere would not move it.
+        plant: {
+            path: 'src/core/errors/index.ts',
+            append: true,
+            content: [
+                '',
+                '/** Planted by convention-proofs.mjs. */',
+                'export class ZzProofError extends AppError {}',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 'feature-barrel',
+        convention: 'Features get no new barrel',
+        enforcer: 'tests/sop/architecture-rules.test.ts',
+        expects: /every feature-level barrel is a reasoned ledger entry/,
+        plant: {
+            path: 'src/features/mesh/index.ts',
+            content: [
+                '/** Planted by convention-proofs.mjs — a new feature barrel. */',
+                "export * from './services/meshService';",
+                '',
+            ].join('\n'),
+        },
+    },
 ];
 
 function run(cmd, args, cwd) {
