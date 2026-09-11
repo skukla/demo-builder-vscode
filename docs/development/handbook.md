@@ -879,6 +879,30 @@ promising an agent that every response parses.
 > that it works — AB-7 is an open defect where `remove_integration` reported success
 > while leaving deployed code running, and this would not have caught it.
 
+> **Convention.** A tool that fails says so — the result carries `isError: true`. Never
+> a successful result whose text happens to report a failure.
+> *Why:* MCP has two error mechanisms and they are not interchangeable. A JSON-RPC error
+> means the REQUEST was wrong — unknown tool, malformed call — and is opaque to a model.
+> `isError` on a normal result means the call RAN and failed, and the specification asks
+> clients to hand those back: "Tool Execution Errors contain actionable feedback that
+> language models can use to self-correct and retry with adjusted parameters ... Clients
+> SHOULD provide tool execution errors to language models to enable self-correction."
+> Measured 2026-09-11: this flag was set NOWHERE in `src/`, so every failed call returned
+> as a success whose text said otherwise, and no client could tell them apart. The agent
+> surface had been losing its recovery path for as long as it existed.
+> *Only the TOP-LEVEL `success` counts.* Cancellation is
+> `{ success: true, data: { success: false, error: 'cancelled' } }` — a handler that ran
+> correctly and is reporting that the user backed out. A check that recursed would mark
+> every cancelled operation as a failure and teach agents to retry what a person just
+> declined.
+> *How it is set:* `asText` reads the answer's own top-level `success`, because handlers
+> already answer `{ success, … }` (Pattern B) — so this restates a fact rather than making
+> a judgement. `asRawText` takes a string and must be TOLD.
+> Enforced by `tests/features/ai/server/toolFailureEnvelope.test.ts`, which is not the
+> shape suite next to it: a response can be perfectly shaped and still lie about whether
+> it worked.
+> [MCP spec, Tools](https://modelcontextprotocol.io/specification/2025-11-25/server/tools)
+
 > **Convention.** A tool requires an explicit `confirm: true` when its effect is hard to
 > walk back: it DELETES something, or it PUSHES to a live site. Merely mutating is
 > deliberately not the bar — deploys, lifecycle and config writes stay ungated, because
@@ -1525,7 +1549,7 @@ Conventions decay unless something checks them. Four layers do:
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 114 conventions. 114 of them are enforced; 0 are not.**
+**This handbook states 115 conventions. 115 of them are enforced; 0 are not.**
 
 The last one to get there was "vendor CSS sits in the lowest cascade layer", and it was
 outstanding because it was **not yet true**: `@layer vendor` existed in no bundle, so a
