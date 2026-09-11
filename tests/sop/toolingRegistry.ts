@@ -357,6 +357,14 @@ const NPM_CHECKS: readonly Instrument[] = [
         runs: 'npm run validate:tsc-blindspots',
     },
     {
+        id: 'validate:source-duplication',
+        kind: 'npm-script',
+        cadence: 'per-push',
+        resultKind: 'gate',
+        what: "copy-paste in src/ may not GROW: a shrink-only pin on jscpd's clone-pair count. The periodic code-duplication-scan reads the same number and proposes fixes; this one stops a new copy landing between release cuts. Source duplication had no automatic check of any kind until 2026-09-11 — the existing clone ledger scans tests, and the reuse-first hook fires only on WRITE of a file that does not exist yet, which is not how a third copy arrives",
+        runs: 'npm run validate:source-duplication',
+    },
+    {
         id: 'validate:test-file-sizes',
         kind: 'npm-script',
         cadence: 'per-push',

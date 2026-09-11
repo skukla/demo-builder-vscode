@@ -567,24 +567,42 @@ check says so and names the file.
 > *Why:* they escape the cascade layers, so they cannot be themed or overridden.
 > Enforced by `tests/sop/inline-styles.test.ts`.
 
-> **Convention.** Markup repeated in three or more places becomes a component.
-> *Why:* three is where copies start drifting apart instead of being found.
+> **Convention.** Copy-paste in `src/` may not grow. The clone count is a shrink-only
+> pin, and a fall must be banked.
+> *Why:* whether two similar blocks SHOULD be one is a judgement, and it is scheduled —
+> `component-extraction-scan` at release cuts. Nothing scheduled stops a third copy being
+> pasted on a Tuesday, and until 2026-09-11 nothing did: the existing clone ledger scans
+> `tests`, and the reuse-first hook fires only on WRITE of a path that does not exist yet,
+> which is not how a third copy arrives. Zero is deliberately not the target — the
+> remainder is adjudicated variants, and welding those together is worse than the
+> duplication.
+> Enforced by `scripts/check-source-duplication.mjs`, step 7 of `npm run gate`.
+>
+> **It does not enforce the Rule of Three, and must not be read as doing so.** A clone
+> pair is two fragments; a three-site pattern is a judgement about what they mean. The
+> entry that used to sit here claimed `tests/sop/component-extraction.test.ts` enforced
+> "markup repeated in three or more places becomes a component" — that suite checks
+> abstract classes, HOC naming and generic wrappers, and nothing about repeated markup, so
+> the rule was enforced by nothing for as long as the claim stood. Three copies becoming a
+> component now lives in §11, where its lack of an enforcer is stated rather than implied.
+
+> **Convention.** An abstract class has at least two implementations.
+> *Why:* one implementation behind an abstraction is a guess about the second, and the
+> guess shapes the first badly. `BaseCommand` and `BaseWebviewCommand` earn theirs with
+> ten each.
 > Enforced by `tests/sop/component-extraction.test.ts`.
->
-> **Two thresholds live here and they are not in conflict**, which is worth stating
-> because they look it. CREATING a component from repeated markup waits for the third
-> site — that is this rule. PROMOTING a component that already exists from a feature
-> into `core/` happens at the SECOND consumer
-> ([where-code-goes.md](../architecture/where-code-goes.md) rows 7, 8 and 11). Different
-> decisions: the first is "is this pattern real yet", the second is "does this belong to
-> one feature or to everyone", and the second question is already answered the moment a
-> second feature needs it.
->
-> The **override** — extract at two when the same behaviour has already been FIXED
-> separately on two surfaces — is judgement rather than law, and is stated where you
-> meet it (`src/core/ui/components/CLAUDE.md`, the `reuse-first` skill). It has no
-> violation condition, so it can have no enforcer: a bug fixed twice is evidence the
-> copies must agree, which is the thing the count of three is a proxy for.
+
+> **Convention.** No higher-order components — no `withX`, no `createXComponent`.
+> *Why:* hooks are this codebase's composition mechanism, and mixing the two means two
+> ways to share behaviour and no rule for which. `withTimeout` is a promise helper, not an
+> HOC, and is named in the allowlist for that reason.
+> Enforced by `tests/sop/component-extraction.test.ts`.
+
+> **Convention.** A component generic over `<T>` earns it with size and real reuse.
+> *Why:* a generic wrapper with one caller is indirection with no payer. The two that
+> qualify — `SearchableList` and `SelectionStepContent` — are named in the suite with
+> their line counts and consumers.
+> Enforced by `tests/sop/component-extraction.test.ts`.
 
 > **Convention.** A `HandlerContext` is built by a factory — `createPanelHandlerContext`
 > or `createHeadlessHandlerContext` — never assembled as an object literal at the surface.
@@ -1549,7 +1567,7 @@ Conventions decay unless something checks them. Four layers do:
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 115 conventions. 115 of them are enforced; 0 are not.**
+**This handbook states 118 conventions. 118 of them are enforced; 0 are not.**
 
 The last one to get there was "vendor CSS sits in the lowest cascade layer", and it was
 outstanding because it was **not yet true**: `@layer vendor` existed in no bundle, so a
@@ -1860,6 +1878,33 @@ passing it, delete it.
 > run that first.
 > *Why:* a cause is cheap to assert, expensive to retract, and the reader usually cannot
 > check it. **Not enforced.**
+
+> **Discipline.** Markup repeated in three or more places becomes a component.
+> *Why:* three is where copies start drifting apart instead of being found.
+> **Not enforced** — and the reason is worth stating precisely, because this rule spent a
+> long time appearing to be. A check can FIND the copies; `component-extraction-scan` does,
+> and `scripts/check-source-duplication.mjs` now stops their number growing. Neither can
+> decide that two similar blocks are the same job — that verdict is the rule, and it is
+> scheduled at release cuts rather than automated. This sat in the enforced list citing
+> `tests/sop/component-extraction.test.ts`, which checks four adjacent things and none of
+> this one; the citation resolved and the suite was green, so nothing ever said otherwise.
+> Found 2026-09-11 by the convention proofs, which could not plant a violation that made
+> the named enforcer fail.
+>
+> **Two thresholds live here and they are not in conflict**, which is worth stating
+> because they look it. CREATING a component from repeated markup waits for the third
+> site — that is this rule. PROMOTING a component that already exists from a feature
+> into `core/` happens at the SECOND consumer
+> ([where-code-goes.md](../architecture/where-code-goes.md) rows 7, 8 and 11). Different
+> decisions: the first is "is this pattern real yet", the second is "does this belong to
+> one feature or to everyone", and the second question is already answered the moment a
+> second feature needs it.
+>
+> The **override** — extract at two when the same behaviour has already been FIXED
+> separately on two surfaces — is judgement rather than law, and is stated where you
+> meet it (`src/core/ui/components/CLAUDE.md`, the `reuse-first` skill). A bug fixed
+> twice is evidence the copies must agree, which is the thing the count of three is a
+> proxy for.
 
 ## Where the reasoning lives
 

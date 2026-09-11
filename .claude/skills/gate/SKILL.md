@@ -140,12 +140,19 @@ What `npm run gate` runs, so you can read a failure without opening package.json
 | 4 | `npm run validate:tsc-blindspots` | files tsc silently skips (basename shadowing) |
 | 5 | `npm run validate:test-file-sizes` | the 750-line CI limit — its own workflow, and it was missing here |
 | 6 | `npx jest --no-coverage` | full suite |
-| 7 | `dead-code-scan/scan.sh src` | ~5s — cruft the compiler cannot see |
+| 7 | `npm run validate:source-duplication` | ~6s — copy-paste in `src/` may not grow |
+| 8 | `dead-code-scan/scan.sh src` | ~5s — cruft the compiler cannot see |
 
 It stops at the first failure, so fix and re-run rather than reading ahead. Run
 jest on its own if you need the output in a file — never pipe it through `tail`.
 
-The scan is advisory, not a gate: ts-prune reports entry points and DI/config-registered
+**Step 7 IS a gate; step 8 is not.** Duplication is a shrink-only pin: it fails when
+copy-paste in `src/` grows above the recorded number, and it also fails when the number
+FALLS, because an improvement nobody banks grows back. Both arms are deliberate. Fixing
+one means sharing the block, or writing in the ledger why two things that look alike must
+stay apart — variants that change independently are a real answer.
+
+The dead-code scan is advisory: ts-prune reports entry points and DI/config-registered
 symbols as unused. Read it, do not obey it. What IS reliable is its doc-drift section —
 docs naming a symbol that no longer exists, confirmed against `git log`. Treat a hit
 there as a real finding.

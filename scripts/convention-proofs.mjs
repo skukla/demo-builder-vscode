@@ -812,6 +812,113 @@ const PROOFS = [
         },
     },
     {
+        id: 'source-duplication-ratchet',
+        convention: 'Copy-paste in src/ may not grow',
+        enforcer: 'scripts/check-source-duplication.mjs',
+        command: ['node', 'scripts/check-source-duplication.mjs'],
+        expects: /GREW_ABOVE_CEILING/,
+        // TWO FILES CARRYING THE SAME BLOCK, because one copy is not duplication.
+        // The block has to clear jscpd's floor to register at all — 8 lines and 60
+        // tokens with the flags the script pins — so this is deliberately a real
+        // chunk of work rather than a token gesture.
+        plant: [
+            {
+                path: 'src/core/utils/zzProofCloneA.ts',
+                content: [
+                    "/** Planted by convention-proofs.mjs \u2014 one half of a duplicated block. */",
+                    "interface ZzProofRow { enabled: boolean; visible: boolean; group: string; name: string; weight?: number }",
+                    "",
+                    "export function zzProofSummariseA(input: ZzProofRow[]): unknown {",
+                    "    const rows = input.filter((entry) => entry.enabled && entry.visible);",
+                    "    const byName = new Map();",
+                    "    for (const row of rows) {",
+                    "        const key = `${row.group}:${row.name}`;",
+                    "        byName.set(key, { ...row, key, weight: row.weight ?? 0 });",
+                    "    }",
+                    "    const ordered = [...byName.values()].sort((a, b) => b.weight - a.weight);",
+                    "    const head = ordered.slice(0, 10);",
+                    "    const tail = ordered.slice(10);",
+                    "    return { head, tail, total: ordered.length };",
+                    "}",
+                    "",
+                ].join('\n'),
+            },
+            {
+                path: 'src/core/utils/zzProofCloneB.ts',
+                content: [
+                    "/** Planted by convention-proofs.mjs \u2014 one half of a duplicated block. */",
+                    "interface ZzProofRow { enabled: boolean; visible: boolean; group: string; name: string; weight?: number }",
+                    "",
+                    "export function zzProofSummariseB(input: ZzProofRow[]): unknown {",
+                    "    const rows = input.filter((entry) => entry.enabled && entry.visible);",
+                    "    const byName = new Map();",
+                    "    for (const row of rows) {",
+                    "        const key = `${row.group}:${row.name}`;",
+                    "        byName.set(key, { ...row, key, weight: row.weight ?? 0 });",
+                    "    }",
+                    "    const ordered = [...byName.values()].sort((a, b) => b.weight - a.weight);",
+                    "    const head = ordered.slice(0, 10);",
+                    "    const tail = ordered.slice(10);",
+                    "    return { head, tail, total: ordered.length };",
+                    "}",
+                    "",
+                ].join('\n'),
+            },
+        ],
+    },
+    {
+        id: 'abstract-class-implementations',
+        convention: 'An abstract class has at least two implementations',
+        enforcer: 'tests/sop/component-extraction.test.ts',
+        expects: /should not have abstract classes with fewer than 2 implementations/,
+        plant: {
+            path: 'src/core/utils/zzProofAbstract.ts',
+            content: [
+                '/** Planted by convention-proofs.mjs — an abstraction with no second implementation. */',
+                'export abstract class ZzProofAbstractThing {',
+                '    public abstract run(): void;',
+                '}',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 'no-higher-order-components',
+        convention: 'No higher-order components',
+        enforcer: 'tests/sop/component-extraction.test.ts',
+        expects: /should not have HOC patterns/,
+        plant: {
+            path: 'src/core/ui/components/ZzProofHoc.tsx',
+            content: [
+                '/** Planted by convention-proofs.mjs — an HOC where hooks are the mechanism. */',
+                "import React from 'react';",
+                '',
+                'export function withZzProofThing(Wrapped: React.ComponentType): React.ComponentType {',
+                '    return () => <Wrapped />;',
+                '}',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 'generic-wrapper-component',
+        convention: 'A component generic over <T> earns it with size and real reuse',
+        enforcer: 'tests/sop/component-extraction.test.ts',
+        expects: /should not have overly generic wrapper components/,
+        plant: {
+            path: 'src/core/ui/components/ZzProofGeneric.tsx',
+            content: [
+                '/** Planted by convention-proofs.mjs — indirection with one caller. */',
+                "import React from 'react';",
+                '',
+                'export function ZzProofGeneric<T extends object>(props: { item: T }): React.ReactElement {',
+                '    return <div>{String(props.item)}</div>;',
+                '}',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
         id: 'doc-anchor-resolves',
         convention: 'A link to a heading reaches a heading that exists',
         enforcer: 'tests/sop/doc-module-refs.test.ts',
@@ -1742,16 +1849,33 @@ function dropWorktree({ dir, wt }) {
 function proveOne(proof) {
     const tree = makeWorktree();
     try {
-        const jest = ['jest', '--no-coverage', '--selectProjects', 'node', '--runTestsByPath', proof.enforcer];
+        // NOT EVERY ENFORCER IS A JEST SUITE. The duplicated-source ratchet runs from
+        // `npm run gate` because jscpd costs ~6s, which is a third of the full suite's
+        // runtime to pay on every inner-loop run. A convention enforced by a script is
+        // still a convention, and leaving it unproven would reproduce exactly the defect
+        // this harness exists to find — so `command` runs the script instead, and
+        // attribution matches `expects` against its OUTPUT rather than jest's failure
+        // titles, which a script does not have.
+        const asScript = Boolean(proof.command);
+        const invoke = asScript
+            ? () => run(proof.command[0], proof.command.slice(1), tree.wt)
+            : () =>
+                  run(
+                      'npx',
+                      ['jest', '--no-coverage', '--selectProjects', 'node', '--runTestsByPath', proof.enforcer],
+                      tree.wt
+                  );
+        /** What a failing run blames, in whichever form this enforcer produces. */
+        const blames = (out) => (asScript ? [out.trim()] : failedAssertions(out));
 
         // BASELINE: the enforcer must PASS on a clean tree. Without this a
         // permanently-red suite would read as a working proof.
-        const clean = run('npx', jest, tree.wt);
+        const clean = invoke();
         if (clean.status !== 0) {
             return {
                 ...proof,
                 verdict: 'BROKEN',
-                detail: `enforcer fails on a CLEAN tree — ${failedAssertions(clean.out)[0] ?? 'no assertion named'}`,
+                detail: `enforcer fails on a CLEAN tree — ${blames(clean.out)[0] ?? 'no assertion named'}`,
             };
         }
 
@@ -1782,12 +1906,12 @@ function proveOne(proof) {
             execSync(`git add -f "${step.path}"`, { cwd: tree.wt });
         }
 
-        const planted = run('npx', jest, tree.wt);
+        const planted = invoke();
         if (planted.status === 0) {
             return { ...proof, verdict: 'UNPROVEN', detail: 'enforcer PASSED with the violation planted' };
         }
 
-        const failed = failedAssertions(planted.out);
+        const failed = blames(planted.out);
         // ATTRIBUTED, not merely red. A proof without `expects` claims only that the
         // suite failed, which for a suite backing ten conventions is nearly no claim
         // at all — so it is required.
@@ -1796,7 +1920,13 @@ function proveOne(proof) {
         }
         const hit = failed.find((n) => proof.expects.test(n));
         return hit
-            ? { ...proof, verdict: 'PROVEN', detail: `rejected it at "${hit}"` }
+            ? {
+                  ...proof,
+                  verdict: 'PROVEN',
+                  // A script's whole output is one "blame", so quote only the matching
+                  // line rather than pasting a page of it into the summary.
+                  detail: `rejected it at "${asScript ? (hit.split('\n').find((l) => proof.expects.test(l)) ?? hit).trim() : hit}"`,
+              }
             : {
                   ...proof,
                   verdict: 'WRONG-REASON',

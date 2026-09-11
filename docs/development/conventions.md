@@ -12,7 +12,7 @@ were wrong within an hour of being written. This one is derived from the
 handbook's own callouts and checked against the enforcers on disk in both
 directions, so it cannot.
 
-- **115** conventions, **115** enforced
+- **118** conventions, **118** enforced
 - **28** name the decision record behind them
 - **6** name a procedure — an SOP or a skill
 - **1** have all three layers
@@ -98,7 +98,10 @@ it means the rule rests on somebody noticing.
 | A class used by shared components lives in a sheet every bundle that RENDERS it loads. | [ADR](../architecture/adr/018-css-architecture.md) |  | `stylesheet-bundles.test.ts` |
 | A stylesheet lives where its OWNER lives, and there are three owners: a feature, a shared component, or the base layer. | [ADR](../architecture/adr/017-webview-architecture.md) |  | `stylesheet-bundles.test.ts` |
 | No inline styles. |  |  | `inline-styles.test.ts` |
-| Markup repeated in three or more places becomes a component. |  |  | `component-extraction.test.ts` |
+| Copy-paste in `src/` may not grow. The clone count is a shrink-only pin, and a fall must be banked. |  |  | `component-extraction.test.ts` |
+| An abstract class has at least two implementations. |  |  | `component-extraction.test.ts` |
+| No higher-order components — no `withX`, no `createXComponent`. |  |  | `component-extraction.test.ts` |
+| A component generic over `<T>` earns it with size and real reuse. |  |  | `component-extraction.test.ts` |
 | A `HandlerContext` is built by a factory — `createPanelHandlerContext` or `createHeadlessHandlerContext` — never assembled as an object literal at the surface. |  |  | `handler-context-from-factory.test.ts` |
 | Modals are hosted in one place, not mounted wherever they are opened. |  |  | `modal-hosting.test.ts` |
 | A CSS class used in a bundle is styled by that bundle. |  |  | `stylesheet-bundles.test.ts` |
