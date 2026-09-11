@@ -4,8 +4,8 @@ kind: question
 area: data-installer
 parent: EDS-13
 needs: []
-value: high
-status: open
+value: low
+status: spiked
 ---
 
 # Spike: export a pack to the service through the item APIs, end to end
@@ -46,6 +46,32 @@ model.
   them behind the same `start-datapack-export` door so the dashboard and the MCP tool are
   unchanged.
 - The credential path is unchanged (ADR-014 broker).
+
+## Measured 2026-09-11 (first session; reads only)
+
+`.rptc/research/data-installer/spike-di3-item-api-export-2026-09-11.md`. Step 1 of the route
+does not hold: `get-export-items` returns an index (`{id, display_name}` and the like, `metadata`
+null on every type), never the entity, so it is not a row source. Steps 2–4 stand: a pack is
+written per data type, one call per type, the whole list as a JSON string in the processors'
+wrapper shapes. The open question is now where the rows come from: the export action's own
+response with `verbose: "full"` (one call, owner-gated), the client fetching Commerce REST per
+type (a build), or the service (the Postman collections, not in this repo, are where to look).
+
+## Measured 2026-09-11 (second pass; one owner-approved export attempt)
+
+The export action with `verbose: "full"` returns no rows; it reaches the store step and
+fails there ("MongoDB connection URI required. Provide MONGO_URI in params or environment
+variable"). Nothing was created. So the service's API today has no read of an instance's
+rows in pack shape: the picker index is names only, and the exporter's fetch never leaves the
+action. The item APIs remain a working WRITE path (one call per data type).
+
+What is left, for the owner to choose between: the client fetches Commerce REST itself per
+data type and wraps rows in the processors' shapes (a build the size of eighteen fetchers);
+or the service gains either a rows endpoint or the store-step fix (the error text shows the
+action already reads `MONGO_URI` from params or environment; other actions on the same
+deployment write to the same store, so the gap is in the export processors' code path, as
+the 2026-08-14 probe concluded). Until one of those exists, "Publish it now?" in Share can
+only warn.
 
 ## Done when
 

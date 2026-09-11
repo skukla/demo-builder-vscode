@@ -313,8 +313,12 @@ test that referred to a tick that no longer exists.
   picked up:** the publish offer in D32 is the item-API export route the research records
   from the service author (`get-export-items` → `create-datapack` → `add-data-item` →
   `promote`, no bulk store step). The owner placed a spike, [[DI-3]], at the head of the
-  program to prove it end to end; EDS-13b carries it in `needs`. Two earlier notes here
-  conflated the bulk export action's failing store step with the route; corrected.
+  program to prove it end to end. **Spiked the same day:** the picker index carries names
+  only and the export action's `verbose: "full"` response carries no rows, so the service
+  cannot hand back an instance's rows today (one owner-approved attempt; nothing created).
+  Owner's call: not a gate on the program; Share warns until the service can export rows;
+  EDS-13b's dependency on DI-3 removed. Two earlier notes here conflated the bulk export
+  action's failing store step with a route around it; corrected.
 
 ## Open (this feature)
 

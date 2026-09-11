@@ -65,7 +65,7 @@ export, import and copy carry the whole project, on one versioned file.
 | D29 | The description file (and a shipped catalog entry) may name integrations the demo depends on: catalog ids and custom-app links; the Integrations area starts with them added | program 01, shareable-demo 05 |
 | D30 | A link to one of our own templates (exact owner/repo, never a fork) is recognised and selects the shipped card | shareable-demo 03, 04 |
 | D31 | Data on import/add: the named datapack (name + version) is pre-selected in Sample Data, community packs shown when needed; the banner says to install it from the dashboard, or that it is not published and the owner must export it; no install runs during creation | shareable-demo 05; PL-56d |
-| D32 | Share and Export check reachability: a pack missing from the datapack service offers the owner's own stage-3 export; a private custom-app repository offers to make it public (a confirmed GitHub settings write); curation (the shared flag) is never touched. **The publish offer is the item-API export route [[DI-3]] proves** (`get-export-items` → `create-datapack` with `shared: false` → `add-data-item` → `promote`; no bulk store step) | shareable-demo 09; PL-56c; DI-3 |
+| D32 | Share and Export check reachability: a pack missing from the datapack service offers the owner's own stage-3 export; a private custom-app repository offers to make it public (a confirmed GitHub settings write); curation (the shared flag) is never touched. **The publish offer waits on the service being able to export rows** ([[DI-3]], spiked: not possible today); until then Share and Export WARN that the pack is unpublished | shareable-demo 09; PL-56c |
 | D19 | Updates: the existing updater applies unchanged (fork sync per template repo + per-project template merge, one picker); no new mechanism for shared demos | shareable-demo 06 |
 | D18 | Forget removes the card only; "Also delete my copy" is an unticked tick box naming the projects that still use the fork, confirmed again before the repo goes; project deletion never touches the fork | shareable-demo 04, 06 |
 
@@ -120,25 +120,24 @@ export, import and copy carry the whole project, on one versioned file.
 
 | Step | Slice | Depends on | Item |
 |---|---|---|---|
-| 00 | Spike: export a pack to the service through the item APIs ([[DI-3]]) | — | DI-3 |
 | 01 | Define the project file format (`step-01-contract.md`) | — | PL-56a |
 | — | The Shareable Demo feature: nine steps in its own plan, `../shareable-demo/overview.md` (look up a storefront in one place; rename Custom to Starter; read a colleague's repository; the Add a demo card and dialog; create from an added demo; reset, update, edit and forget; the same actions for agents; the how-to; Share this demo) | 01 | EDS-13a, 13b, 13c |
+| later | Publishing a pack from an instance ([[DI-3]], spiked: the service cannot hand back rows today; not a gate on anything above) | — | DI-3, DI-1 |
 | later | Team catalog | shareable-demo 04, 09 | EDS-13d |
 | later | Export completeness, import parity, dead-code deletion, docs | 01 | PL-56 children |
 
-The spike, the contract, the resolver and the Starter rename can start in parallel; the
-spike is first because the owner placed it at the head of the program. The resolver is the
+The contract, the resolver and the Starter rename can start in parallel. The resolver is the
 representative vertical slice: if the eleven sites fight it, the design is revised before
 the probe is built.
 
 ## Dependencies outside the program
 
-- [[DI-3]] spike, at the head of the program: export a pack to the datapack service through
-  the item APIs (`get-export-items` → `create-datapack` → `add-data-item` → `promote`), the
-  route the service author described and the research records as working on the shared
-  deployment. It is what "Publish it now?" (D32) calls; EDS-13b carries `needs: DI-3`.
-  [[DI-1]]'s authoring loop rides the same route afterwards. The reachability CHECK and its
-  warning do not depend on the spike.
+- [[DI-3]] (spiked 2026-09-11): exporting an instance's rows to the datapack service is not
+  possible through the service's API today (the picker index carries names only; the export
+  action reaches its store step and fails there; the item APIs are a working write path with
+  nothing to feed them). Owner's call the same day: this is NOT a gate on the program. Share's
+  "Publish it now?" (D32) warns until the service can export rows; EDS-13b no longer depends
+  on it. The measurement is in `.rptc/research/data-installer/spike-di3-item-api-export-2026-09-11.md`.
 
 ## Reuse map
 
