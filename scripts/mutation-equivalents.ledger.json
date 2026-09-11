@@ -15966,7 +15966,7 @@
             "anchors": [
                 "const events: CapturedEvent[] = [];"
             ],
-            "line": 195,
+            "line": 196,
             "mutants": 1,
             "category": "other",
             "reason": "Stryker seeds the capture sink with a sentinel string. The sink has two readers: withCapturedProgress, which only appends, and payloadOfEvent, which walks backwards comparing each entry's .type to the requested event name \u2014 a string has no .type, so the sentinel can never match and never be returned. Any real event pushed by the handler sits after it and is found first. Verified by planting the sentinel: all 36 tests pass, while a planted control inverting destructiveHint's confirm test fails.",
