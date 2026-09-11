@@ -57,6 +57,8 @@ export, import and copy carry the whole project, on one versioned file.
 | D21 | The Storefront area names the demo: a first summary row "Demo — Isle5 by Jen · Edge Delivery" and the existing-repo tick reads "Reset to Isle5 by Jen (replaces all content)"; same for shipped brands | shareable-demo 05 |
 | D22 | A shared demo's blocks belong to that demo only: Add never registers them as a block library for other demos; the palette and example pages come with the demo itself | shareable-demo 05 |
 | D23 | Dry-check caveats are worded by consequence in the SC's words (three lines for five patches, ids only in the debug log), shown in the completion card at create and again at reset; nothing persists on the dashboard | shareable-demo 05, 06 |
+| D24 | The project file never carries a credential (no include flag, no stamp); it shares the demo's SHAPE. Import names what the receiver must supply and the existing Commerce step collects it; same-machine Copy moves credentials keychain to keychain; follow-on: offer reuse of a login already saved for the same backend | PL-56a, 56c, 56d |
+| D25 | Everything else can travel; stale sign-ins and Adobe context are re-proven through the EXISTING prompts (edit-mode seeding, "Switch IMS Org") before anything continues | PL-56a, 56d |
 | D19 | Updates: the existing updater applies unchanged (fork sync per template repo + per-project template merge, one picker); no new mechanism for shared demos | shareable-demo 06 |
 | D18 | Forget removes the card only; "Also delete my copy" is an unticked tick box naming the projects that still use the fork, confirmed again before the repo goes; project deletion never touches the fork | shareable-demo 04, 06 |
 

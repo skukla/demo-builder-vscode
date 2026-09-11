@@ -30,13 +30,33 @@ description a second way without a test going red.
    the type; a `$ref` in the schema), so the catalog and the slice cannot drift.
 2. **The project file v2** is `SettingsFile` grown to carry what the manifest persists and
    is not machine-local, with `version: 2`, and a read-side migration from v1 in the same
-   style as `projectFileLoader`'s. Which manifest fields are "not machine-local" is the
-   design question of this step; the import/export research lists the candidates. Secrets:
-   `SECRET_ENV_KEYS` (`envVarKeys.ts:129`) is the register; a file an SC may send to
-   someone else is secret-free by default.
-3. **The schema gap is closed**: `hidden`, `byomOverlayUrl`, `patches` added;
+   style as `projectFileLoader`'s. **The split, decided 2026-09-11 (owner: "everything can
+   travel"):**
+
+   | Travels | Stays local |
+   |---|---|
+   | title and slug; package, stack, addons, block libraries (shipped + custom), the stored storefront row; component selections and config VALUES (never credentials, see 3); the Commerce connection (URL, environment id, store codes); the discovered store structure (a cache); the datapack; Adobe org/project/workspace ids AND names; App Builder integrations by catalog id, custom sources and attributed API picks (never deploy state, endpoints, timestamps); saved AI prompts; provenance (source project, extension version, date) | path, dates, status; component instances (paths, ports, statuses) and versions; installed block-library and inspector snapshots; mesh/app/storefront status summaries and last-publish state; AI context version and file hashes; publish-key date; pinned; the legacy flat API-picks field; the manifest's own format version |
+
+   **Stale context is re-proven, never assumed (owner):** import seeds GitHub and DA.live as
+   edit mode does (`buildEditModeEdsConfig`, `useWizardState.ts:77`: not proven, checking;
+   the Accounts hooks validate on visit) instead of asserting them valid
+   (`buildImportModeEdsConfig`, `:130`, which is deleted); the Adobe context goes through
+   the Adobe step's existing mismatch handling and "Switch IMS Org" forced sign-in
+   (`AdobeAuthStep.tsx:80`). No new prompt; the existing ones run before anything continues.
+3. **Secrets never travel in the file.** Commerce credentials live in VS Code SecretStorage
+   (`commerceCredentialStore.ts`, read-first; migration + activation sweep converge old
+   projects); App Builder secrets are routed there at the boundary and never reach
+   `componentConfigs`. Export today reads only the config map, so on a converged project
+   "include secrets" writes NO Commerce secrets and stamps `includesSecrets: true`, the
+   mirror of the 2026-08-11 defect. **Decided 2026-09-11 (owner): never in the file.**
+   The file carries no credentials and no `includesSecrets` field at all (nothing
+   soft-deprecated; the `export_project_settings` flag goes with it); import lists the
+   credentials the new project needs and the existing Commerce connection step collects
+   them; same-machine Copy moves them SecretStorage → SecretStorage directly, never through
+   the file. `SECRET_ENV_KEYS` stays the register of what a credential is.
+4. **The schema gap is closed**: `hidden`, `byomOverlayUrl`, `patches` added;
    `additionalProperties: false` where the type is closed.
-4. **Names — decided 2026-09-11 (owner).** One family, the kind spelled out before the
+5. **Names — decided 2026-09-11 (owner).** One family, the kind spelled out before the
    shared suffix:
    - project manifest: `.demo-builder.json` (unchanged; hidden; machine-local);
    - exported project: `<name>.project.demo-builder.json` (today `<name>.demo-builder.json`,

@@ -5,7 +5,7 @@ area: platform
 parent: EDS-13
 needs: []
 value: high
-status: backlog
+status: planned
 ---
 
 # Project portability: export, import and copy carry the whole project
@@ -26,24 +26,21 @@ format has one version number that has never changed and no migration. Both dash
 export doors write secrets unconditionally. Edit mode is fed by the same serializer, so
 every field export drops is a field Edit can delete.
 
-## What the track owns (children to be filed once the cut is agreed)
+## Children (filed 2026-09-11, in run order after the contract)
 
-1. **The portable-project contract** — filed as [[PL-56a]], first in the program. The
-   shared-storefront description file ([[EDS-13c]]) is the storefront's slice of it.
-2. **Export completeness.** Export carries what the manifest persists, minus secrets by
-   default in anything an SC might send to someone else, with an explicit "include secrets"
-   for local moves. The MCP tool follows.
-3. **Import parity with create.** An imported or copied project is created with exactly
-   what the file says: integrations, mesh, custom sources, API picks, datapack, store
-   structure. Auth is verified, not assumed. The SC is told what was brought in and what
-   needs their input (the designed, never-built banner).
-4. **Copy and Edit on one file.** Decided 2026-09-11: both stay; both read the complete
-   versioned file so neither can drop what the other keeps. Folding Edit into Copy stays
-   open for later.
-5. **Agent surface.** An import tool and a copy tool beside `export_project_settings`.
-6. **Delete the dead.** `ImportResult`, `additionalConsoleApis`, the exported-never-read
-   `installedBlockLibraries`, `sourceDescription` plumbing. Nothing soft-deprecated.
-7. **Docs.** A feature page in `docs/systems/`; today there is one table row.
+| Item | Kind | What |
+|---|---|---|
+| [[PL-56a]] | feature | The contract: v2 file, the travels/local split, no credentials in the file, names, migration |
+| [[PL-56b]] | chore | Delete what is already dead (runs first, independent) |
+| [[PL-56c]] | feature | Export carries the whole project, never a credential |
+| [[PL-56d]] | fix | Import creates what the file says, re-proves sign-ins, tells the SC what it did |
+| [[PL-56e]] | fix | Copy and Edit read the same complete file |
+| [[PL-56f]] | feature | Agent tools for import and copy |
+| [[PL-56g]] | chore | A feature page |
+
+Decided 2026-09-11 (owner): everything can travel; stale context is re-proven through the
+existing prompts before anything continues; credentials stay in VS Code SecretStorage and
+the design keeps using it.
 
 ## Relationship to the shared-storefront track
 

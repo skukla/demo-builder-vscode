@@ -119,6 +119,15 @@ therefore also a field Edit's Finish can DELETE, because the same serializer see
   a colleague adds to their repo is the slice of it that travels with a repo. One schema,
   one migration rule, one set of tests. Filed as [[PL-56a]]; [[EDS-13a]] and [[EDS-13c]]
   build against it.
+- **Everything can travel; stale context is re-proven, never assumed** (the edit-mode
+  seeding and the Adobe step's "Switch IMS Org" are the existing prompts). Found on the way:
+  export never read SecretStorage, so a converged project's "with secrets" file had no
+  Commerce secrets and claimed it did.
+- **The file never carries a credential.** It shares the demo's shape; the receiver types
+  their own login once (the common case on a team is a shared instance each SC already has a
+  login to); same-machine Copy moves credentials keychain to keychain; the include flag and
+  the `includesSecrets` stamp are deleted. Sharing across machines stays possible and becomes
+  safe for exactly this reason.
 - **Copy and Edit both stay, on one complete file.** Edit changes a project in place; Copy
   derives a new one; both read the full, versioned file so neither can drop what the other
   keeps. Folding Edit into Copy (the `edit-mode-removal-audit` proposal) stays open for
