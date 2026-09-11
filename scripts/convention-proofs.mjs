@@ -397,6 +397,62 @@ const PROOFS = [
             ].join('\n'),
         },
     },
+    {
+        id: 'lowered-test-timeout',
+        convention: 'Do not lower one test timeout below the file budget',
+        enforcer: 'tests/sop/no-lowered-test-timeout.test.ts',
+        expects: /finds no per-test timeout that undercuts its file/,
+        plant: {
+            path: 'tests/features/zzProof/loweredTimeout.test.ts',
+            content: [
+                'jest.setTimeout(20000);',
+                '',
+                "describe('planted', () => {",
+                "    it('undercuts the file budget', () => {",
+                '        expect(1).toBe(1);',
+                '    }, 50);',
+                '});',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 'wall-clock-bounds',
+        convention: 'No test bounds a measured duration from above',
+        enforcer: 'tests/sop/no-wall-clock-bounds.test.ts',
+        expects: /no test bounds a measured duration from above/,
+        plant: {
+            path: 'tests/features/zzProof/wallClock.test.ts',
+            content: [
+                "describe('planted', () => {",
+                "    it('bounds a duration from above', () => {",
+                '        const started = Date.now();',
+                '        const elapsed = Date.now() - started;',
+                '        expect(elapsed).toBeLessThan(100);',
+                '    });',
+                '});',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 'config-leaf-mocks',
+        convention: 'Do not mock a configuration leaf',
+        enforcer: 'tests/sop/no-config-leaf-mocks.test.ts',
+        expects: /has no NEW config-leaf mocks outside the allowlist/,
+        plant: {
+            path: 'tests/features/zzProof/configLeaf.test.ts',
+            content: [
+                "jest.mock('@/features/components/config/components.json', () => ({}));",
+                "describe('planted', () => {",
+                "    it('mocks a config leaf', () => {",
+                '        expect(1).toBe(1);',
+                '    });',
+                '});',
+                '',
+            ].join('\n'),
+        },
+    },
 ];
 
 function run(cmd, args, cwd) {
