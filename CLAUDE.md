@@ -181,7 +181,7 @@ red, and so is a registry entry for something deleted.
 | per-jest-run | 51 enforcer suites in `tests/sop/` | automatic |
 | per-push | lint, both typecheckers, 2 validators | CI |
 | per-push (local) | the CSS baseline check — `.githooks/pre-push` only, never CI | the git hook |
-| periodic | 15 scripted checks + 10 guided reviews | **`npm run sweep`** |
+| periodic | 16 scripted checks + 10 guided reviews | **`npm run sweep`** |
 
 Read a sweep by its labels, not its exit code: a `reported` row always exits 0
 and its OUTPUT is the result; a failing `gate` row is a real failure; `COULD NOT
