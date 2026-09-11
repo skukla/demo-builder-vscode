@@ -68,3 +68,4 @@ project first and the catalog second.
 - 2026-09-11  Program plan + shareable-demo feature plan (0c78af9a0)
 - 2026-09-11  Decisions D16–D17 and four smaller ones recorded in the plans (b72ee40aa)
 - 2026-09-11  Walkthrough decisions D18–D23, D5 amended; EDS-14 filed (4adf0aadc)
+- 2026-09-11  Reuse map + plain step names (94c217020)
