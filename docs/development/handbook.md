@@ -385,7 +385,8 @@ meant.
 > hierarchy. Deleted 2026-09-10; both typecheckers confirmed nothing referenced them.
 > Error SHAPE is ruled separately and already was — see the Pattern B convention above,
 > which is why this one is about where a type lives, not about how failure travels.
-> Enforced by the `coreErrorClasses` ratchet in `tests/sop/architecture-rules.test.ts`.
+> [ADR-023](../architecture/adr/023-error-handling.md) · Enforced by the `coreErrorClasses`
+> ratchet in `tests/sop/architecture-rules.test.ts`.
 
 > **Convention.** A failure a PERSON reads is translated, never the library's own words.
 > *Why:* the extension's job at a failure is to say what went wrong and what to do about
@@ -406,7 +407,8 @@ meant.
 >
 > 67 sites predate the rule and are ledgered; the list may only shrink, because a rule
 > arriving as 67 build failures is a rule people switch off.
-> Enforced by `tests/sop/user-facing-errors.test.ts` against a shrink-only ledger.
+> [ADR-023](../architecture/adr/023-error-handling.md) · Enforced by
+> `tests/sop/user-facing-errors.test.ts` against a shrink-only ledger.
 
 ---
 
@@ -940,6 +942,7 @@ promising an agent that every response parses.
 > Enforced by `tests/features/ai/server/toolFailureEnvelope.test.ts`, which is not the
 > shape suite next to it: a response can be perfectly shaped and still lie about whether
 > it worked.
+> [ADR-023](../architecture/adr/023-error-handling.md) ·
 > [MCP spec, Tools](https://modelcontextprotocol.io/specification/2025-11-25/server/tools)
 
 > **Convention.** A tool requires an explicit `confirm: true` when its effect is hard to
