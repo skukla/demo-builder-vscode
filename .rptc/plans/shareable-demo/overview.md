@@ -25,7 +25,10 @@ at this demo…" while the extension reads the repository, then stage 2: an edit
 prefilled from the repository, a short read-only table "What we found in this demo"
 (storefront kind, published pages, store codes), and, only when the extension could not
 tell, a switch "Uses company (B2B) features", off, with two lines: why we are asking and
-what happens if it stays off wrongly. Back and "Add demo". Adding closes the dialog; the new
+what happens if it stays off wrongly. Below the table, a tick box, on by default: "Keep my own copy of this demo's code, so it
+still works if the original changes", naming the account or team org it goes to (the
+repo step's namespace picker). Back and "Add demo". Adding creates the fork when ticked,
+closes the dialog; the new
 card is selected; the plus card moves to the end; the link is remembered in the SC's VS Code
 settings for next time.
 
@@ -40,10 +43,18 @@ Storefront: the frontend piece shows as fixed by the demo; "Copy content" is tic
 the index was found and unticked with a note when it was not. Integrations: the mesh toggle
 is shown.
 
-**After creation.** Reset goes back to the colleague's `main` and re-copies their content;
+**After creation.** Reset goes back to the demo's source (the SC's fork when they kept a
+copy, else the colleague's `main`) and re-copies their content; for a forked demo the
+update check says "Jen has updated this demo: N changes. Pull them in?" and one click
+merges them;
 Configure opens with the demo card present; republish keeps the B2B flags; the update
 check compares to their `main`. Caveats from the dry check of our five load-bearing
 patches read in SC words ("Product deep links may 404 on this storefront").
+
+**When the original disappears.** A forked demo does not notice. An unforked one shows a
+notice on the project, reset refuses up front with the same sentence, renames are followed
+silently, and "Change source" points the project at a new link or a fork made now. When
+the content site is gone, reset offers to keep the current content.
 
 **What the SC never sees.** GitHub API calls, `fstab.yaml`, `config.json`, the template
 flag, "storefront row", "custom", "shared", "import", "repo", "template".
@@ -134,12 +145,38 @@ was rejected and why. Detail in the research sections named.
 - **2026-09-11 · Team catalog (option 3).** After add and share ship. (§11)
 - **2026-09-11 · One contract.** The description file is the storefront slice of the
   versioned project file; the program's first step. (§12)
+- **2026-09-11 · Added demos on the grid.** An added demo is an ordinary card beside the
+  shipped brands, one click to select, no dialog; the plus card stays at the end; the
+  dialog's stage 1 also lists them. Rejected: dialog-only (two extra clicks, demo invisible
+  until the door opens), a separate "Added by you" row (splits a grid that is not split
+  today). The second visit is identical to picking a shipped brand.
+- **2026-09-11 · File names.** One family, kind first, shared suffix: `.demo-builder.json`
+  (manifest, unchanged), `<name>.project.demo-builder.json` (exported project),
+  `demo.demo-builder.json` (the description file at a repo root). Rejected: keeping the
+  export's current name (differs from the manifest only by a prefix, and the agent tool
+  writes it beside the manifest); short coined extensions (jargon).
+- **2026-09-11 · Share's inputs.** Prefilled from the brand the project was built on (title
+  for a Starter build), icon from that brand with a picker for a repo image, all editable in
+  the share dialog before the file is written. Rejected: no dialog (a Starter build would
+  share as "Starter"), nothing prefilled (typing for the common case).
+- **2026-09-11 · When the source disappears; fork on add.** Today a vanished template repo
+  makes reset fail midway with raw git output and the update check go silent; nothing
+  shows a project's source and nothing can repoint it. Owner asked whether to help the SC
+  fork the repo. Decision: offer a fork into the SC's own account (or team org) at add
+  time, ticked by default: the fork is the demo's source for this SC, projects generate
+  from it, the update check offers "Pull Jen's changes" through the fork-sync service the
+  extension already has (`forkSyncService.ts`), and Forget offers to delete the fork.
+  Rejected: off by default (the default case keeps the exposure), always fork (a cloud write
+  with no visible choice), notice-and-repoint only (a demo whose original is gone cannot
+  be reset).
+- **2026-09-11 · When the source is gone (unforked demos; content for all).** A dashboard
+  notice; reset refuses up front with the same sentence; a GitHub rename is followed and the
+  stored name updated; a "Change source" action reopens the Add dialog to repoint to a link
+  of the same kind or to a fork made now; when the content site is gone, reset offers to
+  keep current content. Rejected: notice only (midway failures stay), no repointing (one
+  thing that cannot be undone).
 
 ## Open (this feature)
 
-- Whether added demos ALSO render as their own cards under a row label on the grid, or only
-  inside the dialog's stage 1 (both were drawn; confirm).
-- The description file's name (with the contract step).
-- Where Share gets the description text and icon.
 - The exact headless marker and B2B drop-in names, verified in step 03, never written from
   memory.

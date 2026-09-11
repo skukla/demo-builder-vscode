@@ -597,13 +597,30 @@ happens when the list is unreachable) are decided then, with use behind them.
 
 **Open, to settle in the plan rather than here:**
 
-- The description file's name (must not collide with the project manifest
-  `.demo-builder.json`) and its icon format.
-- Where "Share this demo" gets the description text and icon from (a prompt, or defaults
-  from the package the project started on).
+- Decided later the same day: the description file is `demo.demo-builder.json` at the repo
+  root; the exported project becomes `<name>.project.demo-builder.json`; the manifest stays
+  `.demo-builder.json`. Icon format still open.
+- Decided later the same day: Share prefills name, description and icon from the brand the
+  project was built on (the project title for a Starter build), editable in the share dialog
+  before anything is written.
 - The exact headless probe (which `package.json` dependency marks a Next.js storefront)
   and the exact B2B drop-in package names for the config.json fallback; both verified
   against the real boilerplates before being relied on.
+
+## 12a. Fork on add (2026-09-11, owner)
+
+Asked: should we help the SC fork the colleague's repo? Facts: `forkSyncService.ts` already
+checks fork status and syncs via GitHub's merge-upstream call and `checkUpdates.ts` uses it;
+no code creates a fork; a vanished template repo today fails reset midway with git output
+and silences the update check; GitHub allows one fork per repo per account. Decision:
+offer a fork into the SC's account or team org at add time, ticked by default; the fork is
+the demo's source for that SC (we can flag it as a template ourselves), projects generate
+from it, updates become "Pull Jen's changes", Forget offers to delete it. Content is not
+forkable; a gone source site means reset offers to keep current content.
+
+For unforked demos (2026-09-11, owner): a dashboard notice, reset refusing up front with the
+same sentence, silent rename self-heal, and a "Change source" action that reopens the Add
+dialog to repoint to a same-kind link or a fork made now.
 
 ## 12. Expanded into a program (2026-09-11, owner)
 

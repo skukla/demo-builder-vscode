@@ -39,7 +39,7 @@ export, import and copy carry the whole project, on one versioned file.
 | D1 | A shared storefront is its own brand card, at the brand level, not a frontend swap | step 05, 06 |
 | D2 | Paste a link; the PROJECT stores the synthesized storefront row; the link is remembered in the SC's user settings | step 05, 06, 07 |
 | D3 | Edge Delivery and headless both; the probe tells which | step 04 |
-| D4 | The colleague owns the storefront; we own the integration contract. Reset → their `main`; no LKG pin, no patches, no brand assets. The five load-bearing code patches are dry-checked; each miss is a caveat | step 06, 07 |
+| D4 | The colleague owns the storefront; we own the integration contract. Reset → the demo's source (the SC's fork by D16, else their `main`); no LKG pin, no patches, no brand assets. The five load-bearing code patches are dry-checked; each miss is a caveat | step 06, 07 |
 | D5 | Copy their published content by default, skippable; probe the index before Continue | step 04, 05, 06 |
 | D6 | Prefill exactly what shipped brands prefill: the three store codes, read from their `config.json` | step 04, 06 |
 | D7 | B2B: detect from `config.json`, then the dependency list; only when both fail show a switch, off by default, with a plain reason; the answer is stored with the project and re-expressed on every regenerate | step 04, 05, 06, 07 |
@@ -51,6 +51,8 @@ export, import and copy carry the whole project, on one versioned file.
 | D13 | ONE contract: the versioned project file; the storefront description is the slice that travels with a repo | step 01 |
 | D14 | Copy and Edit both stay, fed by that one complete file | PL-56 children |
 | D15 | Agent surface ships with each human surface | step 08 |
+| D16 | Fork on add, ticked by default: the SC's fork is the demo's source; updates are "Pull Jen's changes"; Forget offers to delete the fork | shareable-demo 04–07 |
+| D17 | Source gone (unforked): dashboard notice, reset refuses up front, rename self-heal, "Change source" repoints via the Add dialog; content gone: reset offers to keep current content | shareable-demo 06 |
 
 ## Recommended design
 

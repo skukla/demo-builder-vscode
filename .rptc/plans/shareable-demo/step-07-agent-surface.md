@@ -7,7 +7,7 @@ Item: [[EDS-13a]]. Decision: D15. Depends on steps 03 and 05. Rules: `mcp-tool-a
 | Tool | Kind | Backed by |
 |---|---|---|
 | probe a demo link | read descriptor row (`readDescriptors.ts`), `readOnly: true`, no writes hiding in the read | the step-03 handler |
-| add a demo | action row, `readOnly: false`; remembers the link in the SC's setting | the step-04 commit path's host half |
+| add a demo | action row, `readOnly: false`; remembers the link in the SC's setting; `keepCopy` (fork) defaults true and is a real cloud write, so `AGENT_ALERT_COPY` names the repo it will create | the step-04 commit path's host half |
 | `list_demo_packages` | existing (`discoveryTools.ts:88`); returns added demos beside shipped ones with a `source` field | the resolver + the setting |
 | `create_project` | existing (`createProjectTool.ts:416`); accepts an added demo's id, or a link (probe + add inline) | steps 03–05 |
 

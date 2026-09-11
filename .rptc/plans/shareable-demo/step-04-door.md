@@ -38,6 +38,15 @@ we found"; Spectrum `Switch`.
 - Edit mode: the project's own added demo is appended as `WizardContainer.tsx:145` appends a
   hidden package today, sourced from the step-01 resolver.
 
+## The fork tick box (decided 2026-09-11)
+
+Stage 2 carries a tick box, on by default: keep my own copy of this demo's code, with the
+target namespace from the repo step's existing namespace picker (personal login or a team
+org the SC belongs to). It is the visible confirmation of a cloud write (P5). GitHub
+allows one fork of a repo per account, so the fork is per added demo, never per project.
+When the SC already has a fork of that repo, the box reads as already satisfied and points
+at it.
+
 ## Copy
 
 "Add a demo" · "Use a demo a colleague built, or one of your own. You'll need its link." ·
@@ -54,7 +63,9 @@ absent when `b2b !== 'unknown'`; Add commits through `useProjectBuilder`; a remo
 prunes the card but not a project's own demo in edit mode. `webview-visual-baseline` before
 and after on the wizard bundle.
 
-## Open
+## Decided 2026-09-11
 
-Whether added demos also render as their own cards under a row label on the grid, or live
-only in the dialog's stage 1 (research §9 drew both; confirm with the owner).
+Added demos render as ordinary cards on the grid (no separate row label), selectable in one
+click; the plus card stays last; the dialog's stage 1 also lists them. Cards come from the
+host-pushed list (remembered demos) plus, in edit mode, the project's own demo via the
+resolver.

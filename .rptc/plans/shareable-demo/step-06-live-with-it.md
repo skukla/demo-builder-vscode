@@ -16,9 +16,32 @@ project, plus the few places that need a colleague-specific rule.
 | Republish / `.env` regenerate | flags from the stored row | the SC's B2B answer is one of those flags |
 | Dashboard subtitle, projects-list card | the demo's name | — |
 | AGENTS.md | the demo's name | — |
-| Update checker / template sync | unchanged: instance metadata, compare to their `main` | — |
+| Update checker / template sync | forked demo: the fork-sync path (`forkSyncService.ts`, already wired into `checkUpdates.ts`) reports how far the fork is behind the colleague's repo and offers "Pull Jen's changes" (merge-upstream); unforked: compare to their `main` as today | the notice below when the source is unreachable |
 | Name migration, site-config repair | resolve without overlay | — |
 | Block-library audience, inspector overrides | defaults | accepted degradation, named in docs |
+
+## When the source is unreachable (unforked demos; and content for all)
+
+Today: reset fails midway with raw git output (`githubRepoOperations.ts:551`), the update
+check logs a warning and shows nothing (`templateUpdateChecker.ts:205`), nothing displays a
+project's source. Decided 2026-09-11 (owner):
+
+- **Notice.** The dashboard shows a notice on the project (the dashboard-notice convention in
+  `spectrum-webview-ui`): "Jen's demo can't be reached. Reset and updates are unavailable
+  until it is." The source is probed by the same handler as step 03, read-only.
+- **Reset refuses up front** with that sentence, before the confirmation dialog, instead of
+  failing midway with git output. The check is a preflight in `extractResetParams`'s caller.
+- **Rename self-heal.** When GitHub answers with a different `full_name` (a redirect), the
+  stored owner/repo in the project row and the remembered setting are updated silently and
+  logged, the way the storefront name migration already self-heals names.
+- **Change source.** A dashboard action reopens the Add dialog on stage 1 to point the
+  project at a new link of the SAME kind (EDS to EDS, headless to headless), or at a fork
+  made now if the original still exists. It rewrites the project row's source and, when the
+  SC asks, the remembered setting; it touches neither the SC's repo nor their site.
+  Pointing back undoes it.
+- **Content is not forkable.** When the colleague's DA.live site (or the fork's upstream
+  site) has no reachable index at reset time, reset offers "keep my current content" and
+  resets code only, instead of failing on the index.
 
 ## Tests first
 

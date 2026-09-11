@@ -33,8 +33,12 @@ code patches run as a dry check whose misses become caveats.
 
 - The wire carries the whole slice once (close the two half-lists as part of this step:
   one list, one place, a field-set test pinning it).
-- New-repo branch: `isTemplate` → `generate`; else create an empty repo under the chosen
-  namespace and run the existing `resetToTemplate` against the colleague's repo.
+- The demo's SOURCE is the SC's fork when they kept a copy (created at add time via GitHub's
+  fork call, which the extension does not use anywhere yet; the fork-status half exists in
+  `forkSyncService.ts`), else the colleague's repo. We own the fork, so we can set its
+  template flag ourselves: the `generate` fast path then needs nothing from the colleague.
+- New-repo branch: source `isTemplate` → `generate`; else create an empty repo under the
+  chosen namespace and run the existing `resetToTemplate` against the source.
 - Persist: the contract's storefront slice onto the manifest beside `selectedPackage`
   (`projectConfigWriter.ts:28`), read back in `projectFileLoader.ts:186`.
 - Dry check: run the five load-bearing patches in check-only mode against the created repo;

@@ -36,8 +36,15 @@ description a second way without a test going red.
    someone else is secret-free by default.
 3. **The schema gap is closed**: `hidden`, `byomOverlayUrl`, `patches` added;
    `additionalProperties: false` where the type is closed.
-4. **Names.** The description file's filename must not be `.demo-builder.json` (the project
-   manifest). Candidates to settle with the owner; nothing named here.
+4. **Names — decided 2026-09-11 (owner).** One family, the kind spelled out before the
+   shared suffix:
+   - project manifest: `.demo-builder.json` (unchanged; hidden; machine-local);
+   - exported project: `<name>.project.demo-builder.json` (today `<name>.demo-builder.json`,
+     `settingsSerializer.ts:239`; old exports still import because the file's `version`
+     decides, not its name);
+   - storefront description in a repo: `demo.demo-builder.json`, visible at the repo root.
+   Each file also carries a `kind` field so a door can tell which it was handed regardless
+   of name.
 
 ## Tests first
 
@@ -56,5 +63,5 @@ states the contract for a reader who is not us (the page step 09 links to).
 
 ## Open
 
-Filenames and extension; icon format (a path in the repo vs an inline data URL); the exact
-list of manifest fields that travel.
+Icon format (a path in the repo vs an inline data URL); the exact list of manifest fields
+that travel.
