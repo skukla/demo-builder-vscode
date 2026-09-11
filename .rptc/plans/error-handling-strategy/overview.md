@@ -8,6 +8,13 @@ module that had been abandoned.
 Some of what follows keeps current practice and some deletes it, and each is argued
 from evidence rather than from precedent.
 
+**Revised 2026-09-11 after external research.** The first version of this document
+ranked four strategies from internal measurement plus general programming knowledge,
+with no sourced research into what is recommended for an application of this shape.
+The owner asked whether that research had been done; it had not. Doing it left the
+core recommendation standing and added one finding that the internal measurement could
+not have produced — see "What the research changed".
+
 ---
 
 ## The recommendation, first
@@ -28,6 +35,10 @@ Four concrete changes:
 4. **Write the ADR.** There are 22 decision records and none covers errors, which is
    exactly how a whole error module got built, abandoned, and left half-alive for
    months without anything noticing.
+5. **Mark failed tool calls as failures on the agent surface.** Added by the research:
+   the MCP specification reports tool failures as a result carrying `isError: true`,
+   and this server never sets it — zero uses in `src/`. Every failure currently returns
+   as a SUCCESSFUL result whose text happens to say `success: false`.
 
 What NOT to do, argued below: do not adopt a Result type everywhere, and do not
 convert the 345 raw throws to typed errors. Both are large, and neither fixes what is
@@ -166,6 +177,77 @@ work, not because they are there.
 
 ---
 
+## What the research changed
+
+Three sources, chosen because they are the two platforms this application actually
+sits on plus the language it is written in. Each claim below was read on the page, not
+inferred from a search summary.
+
+### The MCP specification — this is the finding
+
+[Tools, MCP specification 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25/server/tools)
+defines two error mechanisms and is explicit about which is which:
+
+> **Protocol Errors**: Standard JSON-RPC errors for issues like unknown tools,
+> malformed requests, server errors.
+> **Tool Execution Errors**: Reported in tool results with `isError: true` — API
+> failures, input validation errors, business logic errors.
+>
+> Tool Execution Errors contain actionable feedback that language models can use to
+> **self-correct and retry with adjusted parameters** ... Clients **SHOULD** provide
+> tool execution errors to language models to enable self-correction.
+
+**This server never sets `isError`.** Measured: zero occurrences in `src/` (the 11
+matches are an unrelated `isError` type guard in `typeGuards.ts`). No
+`structuredContent` and no `outputSchema` either. So a failed tool call is returned as
+a *successful* result whose text contains `success: false`, and a client cannot
+distinguish it from a success at the protocol level — which is precisely the
+distinction the spec asks clients to act on.
+
+Two consequences, and the second is the one that matters:
+
+1. It is a conformance gap.
+2. **It costs the agent its best recovery path.** The spec's own example of a good tool
+   error is `"Invalid departure date: must be in the future. Current date is
+   08/08/2025."` — specific enough to retry against. `Request failed with status code
+   403` is not, for a model or a person.
+
+This also sharpens the core rule rather than contradicting it. "Never hand over the
+library's own words" holds for BOTH audiences, but the useful translation differs: an
+SC needs plain and actionable, an agent needs specific enough to change its arguments
+and try again. Those are two fields, not one — and `AppError`'s existing shape
+(`code`, `userMessage`, `technical`, `recoverable`) already models exactly that split.
+The strongest argument for keeping that envelope is that an independent specification
+arrived at the same decomposition.
+
+### VS Code platform guidance — no mandate, mild support
+
+[UX Guidelines: Notifications](https://code.visualstudio.com/api/ux-guidelines/notifications)
+is about restraint, not error typing: "Respect the user's attention by only sending
+notifications when absolutely necessary", "Show one notification at a time", do not
+"send repeated notifications", and add a "Do not show again" where it fits. Its error
+example is described as "a failure notification **with an action to resolve the
+issue**".
+
+The platform has no opinion on error classes or hierarchies. What it does support is
+actionability — a failure should come with something to do — and logging detail to an
+output channel rather than into a dialog. This repo already does both.
+
+**This is worth stating plainly because it is a negative result:** nothing in the VS
+Code guidance argues for or against any of the four options. Option A is not
+recommended practice for extensions; it is simply absent from the guidance, which is
+weak evidence, and I would not have known that without looking.
+
+### What was NOT established
+
+- No authoritative source was found stating a preferred error-handling architecture
+  for VS Code extensions specifically. Absence of guidance, not guidance against.
+- Perplexity and Context7 were unavailable this session (their MCP servers were
+  disconnected), so this used WebSearch and direct page fetches. A second provenance on
+  the TypeScript/Node half — when a typed hierarchy earns its place, `cause` chaining —
+  was NOT obtained, and the claims in option B rest on general knowledge rather than a
+  cited source. Treat that option's reasoning as the weakest part of this document.
+
 ## What it costs
 
 | Step | Size | Risk |
@@ -189,5 +271,15 @@ here requires touching the 345 throws or the 664 catches.
 2. **Do the four central classes go?** They are barely used; retiring them is the
    "no soft deprecation" answer, but it is your call whether the hierarchy has a future.
 3. **ADR-023 — yes?**
+4. **`isError` on the agent surface — fix now or file it?** It is a small, mechanical
+   change at one chokepoint (the descriptor registrar and `mcpToolResult`), it is
+   spec-conformance rather than taste, and it is independent of questions 1–3. My
+   recommendation is to do it regardless of what you decide about the rest.
 
 Nothing here has been implemented. This is a proposal.
+
+## Sources
+
+- [Tools — Model Context Protocol specification, 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25/server/tools)
+- [UX Guidelines: Notifications — VS Code Extension API](https://code.visualstudio.com/api/ux-guidelines/notifications)
+- [UX Guidelines overview — VS Code Extension API](https://code.visualstudio.com/api/ux-guidelines/overview)
