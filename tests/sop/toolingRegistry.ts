@@ -375,6 +375,16 @@ const NPM_CHECKS: readonly Instrument[] = [
             'runs from .githooks/pre-push, not from `npm run gate`. Gate is the inner-loop command, where mid-edit is exactly when no capture exists yet; and CI runs the same checks with no browser and no reports/visual-baseline, so there it would fail every time and be switched off',
     },
     {
+        id: 'validate:convention-proofs',
+        kind: 'npm-script',
+        cadence: 'on-demand',
+        resultKind: 'gate',
+        what: "whether a convention's named enforcer would actually go RED if the rule were broken - it plants a real violation in a throwaway worktree and requires the enforcer to reject it. The handbook's 'all enforced' claim is otherwise verified only as far as the cited path RESOLVES; hook rules have carried .proof.sh for this since August and test-enforced conventions carried nothing",
+        runs: 'npm run validate:convention-proofs',
+        unwiredReason:
+            'runs jest inside throwaway git worktrees, one per proof, so it is minutes rather than seconds and must not overlap another jest run. Periodic by design; `--selftest` is its own negative control and exits non-zero if the harness cannot report a failure',
+    },
+    {
         id: 'validate:jest-config',
         kind: 'npm-script',
         cadence: 'periodic',
