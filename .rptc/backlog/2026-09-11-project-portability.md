@@ -47,3 +47,7 @@ the design keeps using it.
 A shared storefront is a piece of a project. The description file [[EDS-13c]] defines
 must be the same slice of the project file this track defines, or the builder ends up with
 two ways to describe one storefront. That is why both sit under one program.
+
+## Shipped so far
+
+- 2026-09-11  Cut into six children; D24-D25 decided (6a66780e6)
