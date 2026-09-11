@@ -862,8 +862,15 @@ promising an agent that every response parses.
 > fully enumerable list of capabilities in the repo — every tool is a `registerTool(…)`
 > call or a `{ tool: … }` row. The human surface has no equivalent registry (a button is
 > a React element), so this rules the half that can be ruled instead of guessing at the
-> rest. Of 109 tools, 15 create something; 9 name a reversal and 6 carry a written reason
-> they cannot, and that second number is pinned so it can only fall.
+> rest. Of 109 tools, 15 create something; 11 name a reversal and 4 carry a written
+> reason they cannot, and that second number is pinned so it can only fall.
+> *The first pass wrote 6, and two of them were wrong* — a gap was recorded without
+> checking whether the capability already existed. `set_console_apis` sets
+> subscriptions to exactly a list, so it un-adds what `add_console_apis` added;
+> `reset_datapack` removes a datapack's data from the instance, which is what
+> `start_datapack_import` put there. Both were found by asking "is there already a
+> reversal?" instead of "is the name paired?", which is the question the ledger exists
+> to force and which its own author skipped.
 > *Not a naming rule, and that was measured:* inferring `delete_x` from `create_x` flags
 > ten tools of which at least three are reversible under another verb — `deploy_mesh` by
 > `delete_mesh`, `deploy_integration` by `remove_integration`, `publish_page` by

@@ -8,7 +8,7 @@
         "The reversal need not share a verb stem. `deploy_mesh` is undone by `delete_mesh`, `publish_page` by `delete_page`. A naming rule was measured and REJECTED - it wrongly flags at least three - see PL-55's design section."
     ],
     "_measured": "2026-09-10: 109 tools across both registration forms, read via tests/sop/tool.testUtils.ts (`src/features/ai/server/*.ts`, `src/mcp-server.ts`, `src/mcp/*.ts`). 15 create-shaped. An earlier hand-rolled walk read only one directory and found 100 - the shared helper exists because that mistake has now been made twice.",
-    "openReasonCeiling": 6,
+    "openReasonCeiling": 4,
     "entries": [
         {
             "tool": "add_integration",
@@ -60,7 +60,8 @@
         },
         {
             "tool": "add_console_apis",
-            "reason": "API subscription is a full-union PUT, so removal means issuing the PUT without the entry. No tool exposes that, so an agent can add a subscription and cannot take it back. PL-55 walkthrough."
+            "reverses": "set_console_apis",
+            "note": "Corrected 2026-09-11: the first pass recorded this as having no reversal. set_console_apis sets the subscriptions to EXACTLY a list -- 'anything currently subscribed and not listed is REMOVED, pass an empty array to clear the extras' -- so it is the un-add. The handbook already described it as 'a delete wearing a setter's name'. Recording a gap without checking whether the capability already existed is how a ledger becomes fiction."
         },
         {
             "tool": "connect_dalive",
@@ -72,7 +73,8 @@
         },
         {
             "tool": "start_datapack_import",
-            "reason": "Imports into a live Commerce instance; there is no per-import undo. reset_datapack and the instance-wipe item (DI-2) are adjacent capabilities, neither of which is this import's inverse. PL-55 walkthrough."
+            "reverses": "reset_datapack",
+            "note": "Corrected 2026-09-11, same mistake: reset_datapack removes a datapack's data from the Commerce instance so the project can be reused, which is precisely what the import put there. The first pass called it 'adjacent' without reading its description."
         }
     ]
 }
