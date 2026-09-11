@@ -3,9 +3,13 @@
  *
  * The content-copy cluster of the DA.live stack: single-file and recursive
  * copy, spreadsheet handling, HTML patching/transform, whole-site duplication,
- * reference-following discovery, and the account-chrome overlay. Extracted from
- * `DaLiveContentOperations` as part of its decomposition; the facade constructs
- * one and delegates.
+ * and reference-following discovery. Extracted from `DaLiveContentOperations` as
+ * part of its decomposition; the facade constructs one and delegates.
+ *
+ * Two neighbours were cut out of here and are delegated to, not reimplemented:
+ * `daLiveSpreadsheetCopy` (2026-09-10) and `daLiveAccountChrome` (2026-09-10) —
+ * the account-chrome overlay and the auth-page stubs, which are about the auth
+ * surfaces rather than about copying a document because it exists.
  *
  * Keep this module `vscode`-free (the MCP server constructs the DA.live stack
  * in a separate Node process).
@@ -19,7 +23,6 @@ import {
     isDeferredReference,
     type PatchReport,
 } from '../patches/patchReportHelper';
-import { RUNTIME_SURFACES } from '../runtimeSurfaceInventory';
 import { getRuntimeSurfaces, type RuntimeSurfaceSource } from '../runtimeSurfaceResolver';
 import {
     DaLiveAuthError,
@@ -27,6 +30,10 @@ import {
     type DaLiveProgressCallback,
     type DaLiveContentSource,
 } from '../types';
+import {
+    createAuthPageStubs as createAuthPageStubsImpl,
+    overlayAccountChrome as overlayAccountChromeImpl,
+} from './daLiveAccountChrome';
 import { DaLiveApiClient } from './daLiveApiClient';
 import {
     CONTENT_COPY_BATCH_SIZE,
@@ -730,72 +737,19 @@ export class DaLiveContentCopy {
         destSite: string,
         patchReport?: PatchReport,
     ): Promise<DaLiveCopyResult> {
-        const baseUrl = `https://main--${accountSource.site}--${accountSource.org}.aem.live`;
-        const dest = { org: destOrg, site: destSite };
-        const discoveredPaths = new Set<string>();
-        const copiedFiles: string[] = [];
-        const failedFiles: { path: string; error: string }[] = [];
-
-        // Entry points: the auth pages that actually exist on the account source.
-        const entryPaths: string[] = [];
-        for (const authPage of RUNTIME_SURFACES.authPages) {
-            try {
-                const probe = await fetch(`${baseUrl}${authPage.path}.plain.html`, {
-                    method: 'HEAD',
-                });
-                if (probe.ok) entryPaths.push(authPage.path);
-            } catch {
-                // Unreachable on the account source — skip.
-            }
-        }
-
-        if (entryPaths.length === 0) {
-            this.logger.warn(
-                `[DA.live] Account-chrome overlay: no auth pages found on ${accountSource.org}/${accountSource.site}`,
-            );
-            return { success: true, copiedFiles, failedFiles, totalFiles: 0 };
-        }
-
-        const token = await this.apiClient.getImsToken();
-        for (const path of entryPaths) {
-            const ok = await this.copySingleFile(
-                token,
-                accountSource,
-                path,
-                dest,
-                path,
-                undefined,
-                undefined,
-                patchReport,
-                discoveredPaths,
-            );
-            if (ok) copiedFiles.push(path);
-            else failedFiles.push({ path, error: 'Copy failed' });
-        }
-
-        // Follow references (pulls /customer/nav + any sub-fragments) from the account source.
-        const discovered = await this.discoverAndCopyReferences(
+        return overlayAccountChromeImpl(
+            this.logger,
+            this.apiClient,
+            {
+                copySingleFile: this.copySingleFile.bind(this),
+                discoverAndCopyReferences: this.discoverAndCopyReferences.bind(this),
+            },
             accountSource,
-            dest,
-            entryPaths,
-            discoveredPaths,
-            undefined,
-            undefined,
+            destOrg,
+            destSite,
             patchReport,
         );
-        copiedFiles.push(...discovered);
-
-        this.logger.info(
-            `[DA.live] Account-chrome overlay from ${accountSource.org}/${accountSource.site}: ${copiedFiles.join(', ') || '(none)'}`,
-        );
-        return {
-            success: failedFiles.length === 0,
-            copiedFiles,
-            failedFiles,
-            totalFiles: copiedFiles.length + failedFiles.length,
-        };
     }
-
 
     /**
      * Copy the enumerated paths in parallel batches (extracted 2026-08-24,
@@ -869,67 +823,6 @@ export class DaLiveContentCopy {
         this.logger.debug(
             `[DA.live] Content copy total: ${totalFiles} files in ${formatDuration(Date.now() - contentStart)}`,
         );
-    }
-
-    /**
-     * Create stub pages for auth pages missing on source (extracted 2026-08-24,
-     * function-length pass — body unchanged). Returns how many stubs were
-     * created; created paths are appended to `copiedFiles`.
-     */
-    private async createAuthPageStubs(
-        destOrg: string,
-        destSite: string,
-        missingAuthPages: Array<{ path: string; blockClass: string }>,
-        copiedFiles: string[],
-    ): Promise<number> {
-        let created = 0;
-        // Each stub uses the correct block class so the dropin renders properly.
-        if (missingAuthPages.length > 0) {
-            const token = await this.apiClient.getImsToken();
-            for (const { path: authPath, blockClass } of missingAuthPages) {
-                try {
-                    const daPath = resolveDaPath(authPath, true);
-                    const stubHtml = [
-                        '<body><header></header><main><div>',
-                        `<div class="${blockClass}"><div><div></div></div></div>`,
-                        '</div></main><footer></footer></body>',
-                    ].join('');
-                    const blob = new Blob([stubHtml], { type: 'text/html' });
-
-                    const destUrl = `${DA_LIVE_BASE_URL}/source/${destOrg}/${destSite}/${daPath}`;
-                    // DA.live write via the shared client (retry + fresh
-                    // FormData per attempt; 429 tolerated per stub).
-                    const response = await this.apiClient.fetchWithRetry(
-                        destUrl,
-                        () => {
-                            const fd = new FormData();
-                            fd.append('data', blob);
-                            return {
-                                method: 'POST',
-                                headers: { Authorization: `Bearer ${token}` },
-                                body: fd,
-                            };
-                        },
-                        { rateLimit: 'return' },
-                    );
-
-                    if (response.ok) {
-                        copiedFiles.push(authPath);
-                        created++;
-                        this.logger.info(`[DA.live] Created stub page for ${authPath}`);
-                    } else {
-                        this.logger.warn(
-                            `[DA.live] Failed to create stub for ${authPath}: ${response.status}`,
-                        );
-                    }
-                } catch (error) {
-                    this.logger.warn(
-                        `[DA.live] Failed to create stub for ${authPath}: ${(error as Error).message}`,
-                    );
-                }
-            }
-        }
-        return created;
     }
 
     /**
@@ -1060,7 +953,14 @@ export class DaLiveContentCopy {
         }
 
         // Create stub pages for auth pages that don't exist on source.
-        totalFiles += await this.createAuthPageStubs(destOrg, destSite, missingAuthPages, copiedFiles);
+        totalFiles += await createAuthPageStubsImpl(
+            this.logger,
+            this.apiClient,
+            destOrg,
+            destSite,
+            missingAuthPages,
+            copiedFiles,
+        );
 
         // Final progress update
         if (progressCallback) {
