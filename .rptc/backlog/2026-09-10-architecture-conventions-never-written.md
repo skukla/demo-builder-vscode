@@ -4,7 +4,7 @@ kind: chore
 area: platform
 needs: []
 value: high
-status: backlog
+status: built
 parent: PL-30
 ---
 
@@ -148,9 +148,36 @@ the open ones and they go to the walkthrough queue:
 - `start_datapack_export` — writes into a SHARED datapack; reversal is not obviously
   defined.
 
+## Step 3 done — the re-count, and it found a THIRD gap
+
+This item's own step 3 was "re-count by section and see whether any other domain is
+thin for the same reason". Done by its own stated method: compare the conventions
+against the five never-compromise properties in CLAUDE.md, which is the only
+independent list of what this codebase says it cares about.
+
+| Never-compromise property | Conventions |
+|---|---|
+| 1. Whatever can be done can be undone | **1** — written by this item |
+| 2. A user's own edits are never overwritten | **0** |
+| 3. Existing projects keep working | 1 (the AI-bundle four-seam rule) |
+| 4. This repository is public | 8 |
+| 5. Cloud operations are real and consequential | 1 (the `confirm: true` gate) |
+
+**Property 2 has nothing, and it is the most user-consequential of the five.** The
+extension writes files into projects that people then edit by hand. CLAUDE.md states
+the mechanism and, in its last sentence, states a checkable rule: "Every
+generated-bundle write goes through the ADR-013 hash-and-skip seam
+(`generatedFileWriter.ts`) ... A writer that calls `writeFile` directly has quietly
+opted out of that."
+
+Filed separately rather than absorbed here — this item is named for two domains and
+has closed both, and a third deserves its own record. See [[PL-56]].
+
 ## Shipped so far
 
 - 2026-09-10  Filed after a full program pass; the gap is recorded in
   `.rptc/research/2026-09-10-program-worklist/`
 - 2026-09-10  docs(backlog): PL-55 — reversibility and error handling have no convention at all (`30e5b1bdf`)
 - 2026-09-11  Staleness check at pickup: count refreshed 109->112 (three conventions landed since filing, none in either domain); both zero-claims re-verified by reading the 5 reversibility hits, not counting them; controls fired
+- 2026-09-11  Reversibility domain CLOSED as a rule: convention 113 + tests/sop/reversibility-ledger.test.ts over a 15-row ledger (9 paired, 6 reasoned, ceiling pinned). Six product decisions to the walkthrough. Error handling still open.
+- 2026-09-11  Error-handling domain closed: convention 114 (a domain error lives with its domain; core/errors legacy, shrink-only ratchet at 4) + 3 dead classes deleted + the architecture doc corrected. PL-55's 'zero conventions' claim corrected — error SHAPE was already ruled by Pattern B.
