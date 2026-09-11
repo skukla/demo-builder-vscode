@@ -83,6 +83,23 @@ coverage/**
 # instead whenever it exists.
 reports/**
 
+# The mutation SANDBOX, which is not the same directory as the reports above and
+# was missed when they were fixed. Stryker copies the entire repo into
+# `.stryker-tmp/sandbox-<id>/` to mutate it, and leaves it behind.
+#
+# Caught 2026-09-10 while cutting beta.146: the release-cut sweep runs
+# `mutation-test-pilot`, `npm run package` ran minutes later, and the VSIX went
+# out at 41.2 MB against beta.145's 7.7 MB — 112 MB and 8,836 files of sandbox,
+# five times the whole extension. It had never happened before because the sweep
+# and the packaging do not normally run within minutes of each other, which is
+# precisely the kind of gap a per-release eyeball never closes.
+#
+# Same lesson as the entry above, for the fourth time: `.gitignore` covers this
+# path (line 102) and that is worth NOTHING here — vsce reads THIS file instead
+# whenever it exists, so a directory hidden from git is invisible to review and
+# still ships. Pinned by tests/sop/vsix-contents.test.ts.
+.stryker-tmp*/**
+
 # Build and quality tooling. Nothing in `scripts/` runs at extension runtime —
 # checked 2026-09-08: every `scripts/` path in `src/` refers to a file inside a
 # STOREFRONT repo, not this one, and no code spawns a node script from the

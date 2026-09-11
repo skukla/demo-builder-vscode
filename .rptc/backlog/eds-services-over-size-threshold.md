@@ -320,3 +320,4 @@ section above, which is the same argument and was right the first time.
 
 - 2026-09-10  2026-09-10  Gated: god-file-ratchet.test.ts pins 68 candidates / 31 coupled; rule 49 measures on edit (2987e8623)
 - 2026-09-10  2026-09-10  First cut of the worst coupled file: spreadsheet copy out of daLiveContentCopy 1157->1082 (d412b0652)
+- 2026-09-11  Second cut of daLiveContentCopy: account chrome + auth stubs out, 1081->981 (220-line daLiveAccountChrome); suites untouched
