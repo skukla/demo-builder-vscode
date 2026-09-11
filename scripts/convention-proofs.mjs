@@ -40,7 +40,15 @@
  * random (the repo blocks that with a hook for the same reason).
  */
 import { execFileSync, execSync } from 'child_process';
-import { mkdtempSync, rmSync, writeFileSync, mkdirSync, symlinkSync, existsSync } from 'fs';
+import {
+    appendFileSync,
+    existsSync,
+    mkdirSync,
+    mkdtempSync,
+    rmSync,
+    symlinkSync,
+    writeFileSync,
+} from 'fs';
 import { tmpdir } from 'os';
 import { dirname, join } from 'path';
 
@@ -515,6 +523,64 @@ const PROOFS = [
             ].join('\n'),
         },
     },
+    {
+        id: 'handbook-cites-real-enforcers',
+        convention: 'Every enforcer the handbook names exists',
+        enforcer: 'tests/sop/handbook-links.test.ts',
+        expects: /every named enforcer — test, hook rule, script, git hook — exists/,
+        // APPENDED, not written: this rule cannot be broken by adding a file. The
+        // defect is the handbook naming something that is not there.
+        plant: {
+            path: 'docs/development/handbook.md',
+            append: true,
+            content: [
+                '',
+                '> **Convention.** Planted by convention-proofs.mjs.',
+                '> Enforced by `tests/sop/zz-proof-enforcer-that-does-not-exist.test.ts`.',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 'convention-scorecard',
+        convention: 'The stated convention count matches the conventions actually written',
+        enforcer: 'tests/sop/handbook-links.test.ts',
+        expects: /the convention scorecard matches the conventions actually stated/,
+        plant: {
+            path: 'docs/development/handbook.md',
+            append: true,
+            // Cites a REAL enforcer on purpose, so the only thing broken is the COUNT.
+            // Naming a fake one would trip the enforcer-exists assertion instead and
+            // the proof would pass for the wrong reason.
+            content: [
+                '',
+                '> **Convention.** Planted by convention-proofs.mjs — the count is now stale.',
+                '> Enforced by `tests/sop/handbook-links.test.ts`.',
+                // TWO trailing blanks, and it is not cosmetic: a convention block is
+                // matched up to `(?=\n\n)`, so a block ending at EOF with one newline
+                // is never counted and the plant does nothing. First attempt: UNPROVEN.
+                '',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 'doc-module-refs',
+        convention: 'Every module path a current-tense document cites must resolve',
+        enforcer: 'tests/sop/doc-module-refs.test.ts',
+        expects: /every backticked repo path names a file that exists/,
+        plant: {
+            path: 'docs/systems/mcp-server.md',
+            append: true,
+            content: [
+                '',
+                '## Planted by convention-proofs.mjs',
+                '',
+                'The implementation lives in `src/features/zz/proofModuleThatDoesNotExist.ts`.',
+                '',
+            ].join('\n'),
+        },
+    },
 ];
 
 function run(cmd, args, cwd) {
@@ -587,7 +653,14 @@ function proveOne(proof) {
         // files only, so an unstaged file is invisible to most enforcers here.
         const target = join(tree.wt, proof.plant.path);
         mkdirSync(dirname(target), { recursive: true });
-        writeFileSync(target, proof.plant.content);
+        // APPEND when the violation has to live inside an existing file. Some rules
+        // cannot be broken by adding a new file at all — a handbook citing an
+        // enforcer that does not exist is a defect IN the handbook.
+        if (proof.plant.append) {
+            appendFileSync(target, proof.plant.content);
+        } else {
+            writeFileSync(target, proof.plant.content);
+        }
         execSync(`git add -f "${proof.plant.path}"`, { cwd: tree.wt });
 
         const planted = run('npx', jest, tree.wt);
