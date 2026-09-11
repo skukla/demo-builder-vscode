@@ -14,3 +14,7 @@ status: backlog
      months later. The frontmatter carries the structure so the prose need not. -->
 
 Filed 2026-09-11.
+
+## Shipped so far
+
+- 2026-09-11  chore(backlog): PL-57 — the component-extraction convention is enforced by nothing (`d6156aedd`)
