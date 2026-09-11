@@ -12911,7 +12911,7 @@
             "anchors": [
                 "if (args?.confirm !== true || args?.confirmName !== projectName) {"
             ],
-            "line": 203,
+            "line": 263,
             "mutants": 2,
             "category": "optionalChain",
             "reason": "Both optional chains on this line are unreachable-nullish. Lines 194-198 read args?.projectId and args?.projectName and return early unless BOTH trim to a non-empty string, which is only possible when args is an object. So by the time control reaches this line args can never be null or undefined, and dropping the '?.' cannot throw or yield a different value for any input the handler can be given.",

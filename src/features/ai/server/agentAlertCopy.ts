@@ -127,6 +127,15 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         target: ['projectName'],
         sessionGrant: false,
     },
+    delete_adobe_workspace: {
+        action: 'Delete an Adobe workspace',
+        consequence:
+            "Deletes the workspace and its credentials from the Adobe project. Anything deployed to it stops working, and this can't be undone.",
+        // NOT workspaceId, for the same reason delete_adobe_project shows the name:
+        // nobody can verify a Console id by reading it.
+        target: ['workspaceName'],
+        sessionGrant: false,
+    },
     cleanup_dalive_site: {
         action: 'Delete all content for a site',
         consequence: "Removes every page and asset from the DA.live site. This can't be undone.",
