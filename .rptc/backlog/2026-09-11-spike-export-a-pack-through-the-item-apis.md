@@ -53,3 +53,7 @@ A pack exported from a real instance through this route imports cleanly into ano
 instance, with the measurements recorded in `.rptc/research/data-installer/` (redacted:
 no instance ids, no names of people). Then [[DI-1]]'s Route A/Route B split collapses to
 one route, and [[EDS-13b]]'s "Publish it now?" has its implementation.
+
+## Shipped so far
+
+- 2026-09-11  Filed at the head of EDS-13 (1d0248ac1)
