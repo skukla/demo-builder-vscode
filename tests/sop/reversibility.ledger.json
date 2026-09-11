@@ -52,11 +52,11 @@
         },
         {
             "tool": "install_prerequisite",
-            "reason": "No uninstall exists. Whether uninstalling Node, the aio CLI or its plugins should be a capability at all is a product decision nobody has taken - these are machine-level tools an SC may depend on outside this extension. PL-55 walkthrough."
+            "reason": "DECIDED 2026-09-11 (owner): uninstall should NOT exist. Node, the aio CLI and its plugins are machine-level tools an SC almost certainly uses outside this extension; removing them because a demo ended is a worse outcome than the asymmetry. This is a stated decision, not an open question."
         },
         {
             "tool": "create_adobe_workspace",
-            "reason": "No delete_adobe_workspace, although delete_adobe_project exists. A real gap on the agent surface rather than an impossibility - the Console API supports deleting one. PL-55 walkthrough."
+            "reason": "No delete_adobe_workspace, although delete_adobe_project exists. A real gap rather than an impossibility - the Console API supports deleting one. DECIDED 2026-09-11 (owner): BUILD IT. Tracked to closure; this row goes when the tool lands."
         },
         {
             "tool": "add_console_apis",
@@ -65,11 +65,11 @@
         },
         {
             "tool": "connect_dalive",
-            "reason": "A sign-in, not a created resource - nothing is provisioned that could be deleted. Whether sign-OUT belongs on the agent surface is a different question from reversibility. PL-55 walkthrough."
+            "reason": "A sign-in, not a created resource - nothing is provisioned that could be deleted, so reversibility does not apply. DECIDED 2026-09-11 (owner): whether an agent should be able to sign you OUT is a question about agent power rather than about undo, and is out of scope for this ledger."
         },
         {
             "tool": "start_datapack_export",
-            "reason": "Writes into the SHARED datapack catalog, so the reversal is not merely a delete - it would have to consider other consumers. Not defined, and defining it is a product decision. PL-55 walkthrough."
+            "reason": "Writes into the SHARED datapack catalog, so the reversal is not merely a delete - it would have to consider other consumers. DECIDED 2026-09-11 (owner): design it now. Note the boundary - the catalog is owned by the data-installer service, so the design may conclude the reversal does not live in this repo."
         },
         {
             "tool": "start_datapack_import",
