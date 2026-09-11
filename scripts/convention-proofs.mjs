@@ -919,6 +919,67 @@ const PROOFS = [
         },
     },
     {
+        id: 'css-baseline-before-push',
+        convention: 'A stylesheet change is not pushed until a resting baseline was captured',
+        enforcer: 'scripts/check-css-baseline.mjs',
+        // An EXPLICIT range. Left to itself the script asks for `@{upstream}` and falls
+        // back to HEAD~1..HEAD, which in a detached throwaway worktree measures whatever
+        // the last commit happened to touch — a proof that passes or fails on unrelated
+        // history. `HEAD` diffs the staged plant against HEAD, which is exactly the
+        // question the push-time check asks.
+        command: ['node', 'scripts/check-css-baseline.mjs', 'HEAD'],
+        expects: /REFUSED/,
+        plant: {
+            path: 'src/core/ui/styles/utilities.css',
+            append: true,
+            content: [
+                '',
+                '/* Planted by convention-proofs.mjs — a stylesheet edit with no baseline. */',
+                '@layer overrides {',
+                '    .zz-proof-baseline { color: red; }',
+                '}',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 'test-file-size-limit',
+        convention: 'A test file stays under the 750-line limit that fails the build',
+        enforcer: 'scripts/check-test-file-sizes.js',
+        command: ['node', 'scripts/check-test-file-sizes.js'],
+        expects: /exceed 750-line limit/,
+        plant: {
+            path: 'tests/core/utils/zzProofOversized.test.ts',
+            content: [
+                '/** Planted by convention-proofs.mjs — past the 750-line limit. */',
+                "describe('zz proof oversized', () => {",
+                ...Array.from(
+                    { length: 800 },
+                    (_, i) => `    it('case ${i}', () => { expect(${i}).toBe(${i}); });`
+                ),
+                '});',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 'tool-confirm-gate-published',
+        convention: 'The generated tool catalog states every confirm gate',
+        enforcer: 'tests/sop/tool-catalog-gating.test.ts',
+        expects: /publishes no tool as ungated while its source gates it/,
+        // The catalog is GENERATED, which is the whole hazard: a regeneration that
+        // drops a gate leaves an agent reading "safe" about a tool that deletes
+        // something. Stripping the flag from one row is what that looks like.
+        plant: {
+            path: 'docs/systems/mcp-tools.md',
+            transform: (text) => {
+                const from = '| `delete_mesh` | **confirm** |';
+                if (!text.includes(from)) throw new Error('delete_mesh row not found');
+                return text.replace(from, '| `delete_mesh` |  |');
+            },
+        },
+    },
+    {
         id: 'doc-anchor-resolves',
         convention: 'A link to a heading reaches a heading that exists',
         enforcer: 'tests/sop/doc-module-refs.test.ts',
