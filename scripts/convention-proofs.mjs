@@ -718,7 +718,191 @@ const PROOFS = [
             },
         },
     },
+    {
+        id: 'magic-timeout',
+        convention: 'A timeout is a named constant, not a number at the call site',
+        enforcer: 'tests/sop/magic-timeouts.test.ts',
+        expects: /should not have magic timeout numbers in core UI components/,
+        plant: {
+            path: 'src/core/ui/components/ZzProofMagicTimeout.tsx',
+            content: [
+                '/** Planted by convention-proofs.mjs — a raw millisecond literal. */',
+                'export function zzProofMagicTimeout(done: () => void): void {',
+                '    setTimeout(done, 5000);',
+                '}',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 'credential-sink-scope',
+        convention: 'A setting naming a credential sink is machine-scoped',
+        enforcer: 'tests/sop/credential-sink-settings-scoped.test.ts',
+        expects: /demoBuilder\.byom\.overlayUrl is machine-scoped/,
+        // A TEXT transform, not JSON.parse/stringify. package.json's user-visible
+        // settings descriptions carry em-dashes, and a round-trip through
+        // JSON.stringify is fine but a round-trip through Python's json.dumps is
+        // not — that one escaped every one of them to — across the file on
+        // 2026-09-10. Editing the one line keeps the blast radius at one line.
+        plant: {
+            path: 'package.json',
+            transform: (text) => {
+                const at = text.indexOf('"demoBuilder.byom.overlayUrl"');
+                if (at < 0) throw new Error('byom.overlayUrl setting not found');
+                const head = text.slice(0, at);
+                const tail = text.slice(at).replace('"scope": "machine"', '"scope": "window"');
+                return head + tail;
+            },
+        },
+    },
+    {
+        id: 'modal-hosting',
+        convention: 'Modals are hosted in one place, not mounted where they are opened',
+        enforcer: 'tests/sop/modal-hosting.test.ts',
+        expects: /hosts every Modal in a DialogContainer or DialogTrigger/,
+        plant: {
+            path: 'src/core/ui/components/ZzProofUnhostedModal.tsx',
+            content: [
+                '/** Planted by convention-proofs.mjs — a Modal with no host. */',
+                "import React from 'react';",
+                '',
+                "import { Modal } from '@/core/ui/components/ui/Modal';",
+                '',
+                'export function ZzProofUnhostedModal(): React.ReactElement {',
+                '    return <Modal isOpen onClose={() => undefined} />;',
+                '}',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 'handler-context-factory',
+        convention: 'A HandlerContext is built by a factory, never by hand',
+        enforcer: 'tests/sop/handler-context-from-factory.test.ts',
+        expects: /builds its context through a factory/,
+        plant: {
+            path: 'src/core/communication/zzProofHandContext.ts',
+            content: [
+                '/** Planted by convention-proofs.mjs — a hand-assembled context. */',
+                "import type { HandlerContext } from '@/types/handlers';",
+                '',
+                'export function zzProofBuildContext(): HandlerContext {',
+                '    return {} as HandlerContext;',
+                '}',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 'god-file-ceiling',
+        convention: 'A source file stays within the size limit for its kind',
+        enforcer: 'tests/sop/god-file-ratchet.test.ts',
+        expects: /the number of files over their limit only falls/,
+        // A SERVICE path, so the limit is 400. The limit is chosen by the path,
+        // not by the content, so the directory is the load-bearing half of this
+        // plant — the same 450 lines under `src/core/` would have no stated limit
+        // and the ratchet would never see them.
+        plant: {
+            path: 'src/features/dashboard/services/zzProofGodFile.ts',
+            content: [
+                '/** Planted by convention-proofs.mjs — a service over its 400-line limit. */',
+                'export const ZZ_PROOF_ROWS: number[] = [',
+                ...Array.from({ length: 450 }, (_, i) => `    ${i},`),
+                '];',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 'class-defined-nowhere',
+        convention: 'A CSS class a component uses is defined somewhere',
+        enforcer: 'tests/sop/stylesheet-bundles.test.ts',
+        expects: /every class defined NOWHERE is a reasoned ledger entry/,
+        // PLANTED INTO A BUNDLE ENTRY, not into a new file. The first attempt
+        // created `src/core/ui/components/ZzProofUndefinedClass.tsx` and reported
+        // UNPROVEN: the scan walks the module graph esbuild resolves from the eight
+        // entries, so a component NOTHING IMPORTS is never read. That is correct
+        // behaviour by the enforcer — an unreachable file styles no surface — and a
+        // wrong plant by me. An entry file is reachable by definition.
+        plant: {
+            path: 'src/features/sidebar/ui/index.tsx',
+            append: true,
+            content: [
+                '',
+                '/** Planted by convention-proofs.mjs — a class no stylesheet defines. */',
+                'export function ZzProofUndefinedClass(): React.ReactElement {',
+                '    return <div className="zz-proof-class-defined-nowhere" />;',
+                '}',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 'undeclared-layer',
+        convention: 'Every @layer block names a layer the cascade order declares',
+        enforcer: 'tests/sop/stylesheet-bundles.test.ts',
+        expects: /every @layer block names a layer the order declares/,
+        plant: {
+            path: 'src/core/ui/styles/zz-proof-layer.css',
+            content: [
+                '/* Planted by convention-proofs.mjs — a layer nobody declared. */',
+                '@layer zzProofUndeclared {',
+                '    .zz-proof-layered { color: red; }',
+                '}',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 'rules-outside-a-layer',
+        convention: 'Rules outside every cascade layer may not grow',
+        enforcer: 'tests/sop/stylesheet-bundles.test.ts',
+        expects: /rules outside every layer may not grow/,
+        plant: {
+            path: 'src/core/ui/styles/zz-proof-unlayered.css',
+            content: [
+                '/* Planted by convention-proofs.mjs — a rule in no layer at all. */',
+                '.zz-proof-unlayered { color: blue; }',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 'static-inline-styles',
+        convention: 'The static inline-style count never grows',
+        enforcer: 'tests/sop/inline-styles.test.ts',
+        expects: /the static count never grows, and a fall is pinned/,
+        plant: {
+            path: 'src/core/ui/components/ZzProofInlineStyle.tsx',
+            content: [
+                '/** Planted by convention-proofs.mjs. */',
+                'export function ZzProofInlineStyle(): JSX.Element {',
+                '    return <div style={{ margin: 10, padding: 4 }} />;',
+                '}',
+                '',
+            ].join('\n'),
+        },
+    },
 ];
+
+/**
+ * CONVENTIONS WITH NO WRITEABLE PROOF — the harness found what it was built to find.
+ *
+ * `component-extraction`: the handbook states "markup repeated in three or more places
+ * becomes a component" and names `tests/sop/component-extraction.test.ts`. That suite
+ * asserts four ADJACENT things — abstract classes with under two implementations, HOC
+ * naming, over-generic wrappers, and usage counts for four named shared components —
+ * and NOTHING about repeated markup. No violation of the stated convention can make it
+ * red, so no proof can be written for it.
+ *
+ * This is not obviously a bug in the suite. CLAUDE.md states that duplication is the one
+ * defect class deliberately left without an automatic hook, because deciding whether two
+ * things SHOULD be one needs judgement — `component-extraction-scan` is the guided review
+ * that owns it. So the likely correction is to the HANDBOOK: say what the suite enforces,
+ * and move the three-copies rule to the reviewed tier. That changes the "every convention
+ * is enforced" scorecard, which is the owner's call, so it is recorded here rather than
+ * applied. (Found 2026-09-11, PL-55.)
+ */
 
 function run(cmd, args, cwd) {
     try {
