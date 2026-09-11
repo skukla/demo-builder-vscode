@@ -4,14 +4,16 @@ kind: epic
 area: eds
 needs: []
 value: high
-status: backlog
+status: planned
 ---
 
 # Portable demos: share storefronts, move whole projects
 
 Filed 2026-09-11 by the owner. An SC can only build a project on a demo that ships in
 `demo-packages.json`. SCs want to build on a demo a colleague made, and to share their own.
-Research and every decision: `.rptc/research/colleague-storefront/research.md`.
+Research and every decision: `.rptc/research/colleague-storefront/research.md`. Plans:
+`.rptc/plans/portable-demos/` (program: ledger, contract step, track order) and
+`.rptc/plans/shareable-demo/` (the feature: nine steps and its iteration log).
 
 Expanded 2026-09-11 (owner) from "shareable storefronts" into a PROGRAM with two tracks: a
 storefront is a piece of a project, and the project's own export, import and copy have

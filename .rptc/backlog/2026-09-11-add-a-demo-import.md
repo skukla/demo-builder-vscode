@@ -5,12 +5,13 @@ area: eds
 parent: EDS-13
 needs: [PL-56a]
 value: high
-status: backlog
+status: planned
 ---
 
 # "Add a demo": build a project on a demo someone shared by link
 
-Filed 2026-09-11. The import half of [[EDS-13]]. Research and every decision:
+Filed 2026-09-11. The import half of [[EDS-13]]. Plan: `.rptc/plans/shareable-demo/`
+(overview carries the feature's design iteration log). Research and every decision:
 `.rptc/research/colleague-storefront/research.md` (§7 flow, §8 gap analysis, §9 decisions,
 §9a the reuse mapping the plan is gated on).
 
