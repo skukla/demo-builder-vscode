@@ -113,7 +113,38 @@ tests, no lint findings.
 | Reversibility is a rule | convention + enforcer over a 15-row ledger |
 | Error types live with their domain | convention + shrink-only ratchet; 3 dead classes deleted |
 | Failed tool calls report failure | the MCP flag, set nowhere before |
-| Convention proofs | harness + 14 proven |
+| Convention proofs | harness + **77 proven, 1 that cannot be** |
+
+### The proofs, finished
+
+Every test-enforced convention now has a proof except one, and that one is the
+finding.
+
+**`component-extraction` cannot be proven, because nothing enforces it.** The
+handbook says "markup repeated in three or more places becomes a component" and
+names a test file. That file checks abstract classes, HOC naming, over-generic
+wrappers, and four components' usage counts — and nothing about repeated markup.
+No violation of the stated rule can make it fail. The citation resolves, the suite
+is green, and the scorecard has counted it as enforced the whole time. Filed as
+**PL-57** with a recommendation, not fixed: the likely correction is to the
+handbook rather than the suite, and it moves the "every convention is enforced"
+count, which is your call.
+
+**The harness had two bugs of its own, and both were silent.** Node kills a child
+process that prints more than 1MB, and the harness read that as "this enforcer is
+broken" — against a perfectly healthy suite whose only sin was printing several
+megabytes of GREEN output. Separately, a failure title that spans lines had its
+first line read and the rest dropped, which reported a proof as landing in the
+wrong place when it had landed exactly right. Both are the harness's own version
+of the thing it exists to catch.
+
+**Four plants were wrong before they were right**, and each is written down next
+to the proof it belongs to, because they document the rules better than the rules
+do. Two examples: a component that nothing imports is never read by the stylesheet
+scan, so planting a new file proves nothing — the class has to sit in code a
+bundle actually reaches. And a test builder used by exactly ONE feature is not a
+violation of "a shared fake lives in tests/helpers"; it takes a second importer
+before there is anything to complain about.
 
 ## Handed off — needs you
 
