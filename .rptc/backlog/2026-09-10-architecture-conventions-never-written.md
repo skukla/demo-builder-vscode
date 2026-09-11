@@ -181,3 +181,16 @@ has closed both, and a third deserves its own record. See [[PL-56]].
 - 2026-09-11  Staleness check at pickup: count refreshed 109->112 (three conventions landed since filing, none in either domain); both zero-claims re-verified by reading the 5 reversibility hits, not counting them; controls fired
 - 2026-09-11  Reversibility domain CLOSED as a rule: convention 113 + tests/sop/reversibility-ledger.test.ts over a 15-row ledger (9 paired, 6 reasoned, ceiling pinned). Six product decisions to the walkthrough. Error handling still open.
 - 2026-09-11  Error-handling domain closed: convention 114 (a domain error lives with its domain; core/errors legacy, shrink-only ratchet at 4) + 3 dead classes deleted + the architecture doc corrected. PL-55's 'zero conventions' claim corrected — error SHAPE was already ruled by Pattern B.
+- 2026-09-11  fix(tooling): the convention proofs actually run now — they were registered and unrun (`2407c7962`)
+- 2026-09-11  feat(tooling): four more convention proofs — and two were wrong before they were right (`497313e9d`)
+- 2026-09-11  feat(tooling): convention proofs attribute, and seven more are proven (`5b1683427`)
+- 2026-09-11  feat(tooling): proofs for test-enforced conventions — the half hook rules already had (`7f98641f3`)
+- 2026-09-11  docs(handbook): the tool-failure rule is a convention now, not just code (`513fd9b0d`)
+- 2026-09-11  feat(mcp): a failed tool call reports that it failed (`610c30c9c`)
+- 2026-09-11  docs(plan): the error research as three conventions to develop against (`e3a28b15e`)
+- 2026-09-11  docs(plan): error strategy revised with sourced research (`8babd76ad`)
+- 2026-09-11  docs(plan): a proposal for the error strategy, measured not assumed (`ea723bd28`)
+- 2026-09-11  fix(sop): two reversibility gaps were not gaps — the reversal already existed (`87eac7dd0`)
+- 2026-09-11  docs(backlog): PL-55 built, both domains ruled; PL-56 filed from its step 3 (`c67c6faa6`)
+- 2026-09-11  refactor(errors): the central hierarchy was half dead — delete it and rule the rest (`d505ffe34`)
+- 2026-09-11  feat(sop): reversibility is a rule now, not just a stated principle (`e96d07915`)
