@@ -349,6 +349,54 @@ const PROOFS = [
             ].join('\n'),
         },
     },
+    {
+        id: 'stable-hook-arguments',
+        convention: 'A value handed to a hook that depends on it must be stable across renders',
+        enforcer: 'tests/sop/stable-hook-arguments.test.ts',
+        expects: /no hook is handed a value that is new on every render/,
+        // Shape taken from tests/fixtures/unstable-hook-args/probe.tsx, the suite's
+        // own control fixture, rather than invented. The first attempt guessed a hook
+        // name and a prop and came back UNPROVEN: the detector resolves the CALL to
+        // the hook's declaration and reads its dependency array, so the hook has to
+        // genuinely depend on the whole object for the caller to be a violation.
+        plant: {
+            path: 'src/core/ui/hooks/useZzProofUnstable.tsx',
+            content: [
+                "import { useEffect, useState } from 'react';",
+                '',
+                '/** Planted by convention-proofs.mjs. Depends on its whole parameter. */',
+                'export function useZzProofLoop(opts: { items: string[] }): void {',
+                '    const [, setN] = useState(0);',
+                '    useEffect(() => {',
+                '        setN((n) => n + 1);',
+                '    }, [opts.items]);',
+                '}',
+                '',
+                '/** The violation: a NEW array on every render, handed to a hook that depends on it. */',
+                'export function ZzProofCaller(): null {',
+                '    useZzProofLoop({ items: [] });',
+                '    return null;',
+                '}',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 'reduced-motion-layer',
+        convention: 'Every reduced-motion block sits directly in @layer overrides',
+        enforcer: 'tests/sop/css-declarations.test.ts',
+        expects: /every reduced-motion block sits directly in @layer overrides/,
+        plant: {
+            path: 'src/core/ui/styles/zz-proof.css',
+            content: [
+                '/* Planted by convention-proofs.mjs — outside any layer. */',
+                '@media (prefers-reduced-motion: reduce) {',
+                '    .zz-proof-thing { animation: none; }',
+                '}',
+                '',
+            ].join('\n'),
+        },
+    },
 ];
 
 function run(cmd, args, cwd) {
