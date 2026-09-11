@@ -719,6 +719,187 @@ const PROOFS = [
         },
     },
     {
+        id: 'scan-declares-a-control',
+        convention: 'Every SOP scan declares a control',
+        enforcer: 'tests/sop/every-scan-declares-a-control.test.ts',
+        expects: /names a CONTROL test in every scan suite/,
+        plant: {
+            path: 'tests/sop/zzProofNoControl.test.ts',
+            content: [
+                '/** Planted by convention-proofs.mjs — a scan suite with no declared control. */',
+                "it('finds no violations', () => {",
+                '    expect([]).toStrictEqual([]);',
+                '});',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 'enforcer-count-stated',
+        convention: 'The stated enforcer-suite count matches the disk',
+        enforcer: 'tests/sop/tooling-registry.test.ts',
+        expects: /the stated count equals the suites in tests\/sop\//,
+        // The SAME shape of plant as the proof above, aimed at a different suite.
+        // One new file under tests/sop/ is both an undeclared scan and an
+        // uncounted enforcer, and the two enforcers catch it independently —
+        // which is the clearest demonstration available that these proofs are
+        // attributing to the right assertion rather than to "something went red".
+        plant: {
+            path: 'tests/sop/zzProofExtraScan.test.ts',
+            content: [
+                '/** Planted by convention-proofs.mjs — an enforcer the count does not know about. */',
+                "it('CONTROL: this planted suite is visible', () => {",
+                '    expect(true).toBe(true);',
+                '});',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 'ratchet-fails-both-ways',
+        convention: 'A ratchet helper fails in both directions',
+        enforcer: 'tests/sop/ratchet-controls.test.ts',
+        expects: /fails when the count GREW above the pin/,
+        // The violation here is not a new file — it is the RATCHET ITSELF going
+        // one-sided, which is the failure the suite exists to catch and the one
+        // nothing else could see: every ledger suite in the repo stays green
+        // while a blunted `expectCeiling` banks regressions as easily as gains.
+        plant: {
+            path: 'tests/sop/architectureScan.ts',
+            transform: (text) => {
+                const from = "count > ceiling ? 'GREW_ABOVE_CEILING'";
+                if (!text.includes(from)) throw new Error('expectCeiling verdict not found');
+                return text.replace(from, "count > ceiling ? 'at'");
+            },
+        },
+    },
+    {
+        id: 'test-family-shared-setup',
+        convention: 'A split test family shares its setup',
+        enforcer: 'tests/sop/test-family-setup.test.ts',
+        expects: /no NEW family arrives without a shared setup/,
+        // THREE FILES, because one is a violation of nothing. A family needs two
+        // suites before it is a family, and the detector only treats a group as
+        // real when a SOURCE file carries the subject's name — otherwise every
+        // pair of suites whose names share a token would be a family.
+        plant: [
+            {
+                path: 'src/core/utils/zzProofFamily.ts',
+                content: [
+                    '/** Planted by convention-proofs.mjs — the subject a family needs. */',
+                    'export const zzProofFamily = (): number => 1;',
+                    '',
+                ].join('\n'),
+            },
+            {
+                path: 'tests/core/utils/zzProofFamily.test.ts',
+                content: [
+                    "it('zz proof one', () => {",
+                    '    expect(1).toBe(1);',
+                    '});',
+                    '',
+                ].join('\n'),
+            },
+            {
+                path: 'tests/core/utils/zzProofFamily-extra.test.ts',
+                content: [
+                    "it('zz proof two', () => {",
+                    '    expect(2).toBe(2);',
+                    '});',
+                    '',
+                ].join('\n'),
+            },
+        ],
+    },
+    {
+        id: 'type-erasing-cast',
+        convention: 'A test never erases a type',
+        enforcer: 'tests/sop/type-erasing-casts.test.ts',
+        expects: /the count only ever falls/,
+        plant: {
+            path: 'tests/core/utils/zzProofCast.test.ts',
+            content: [
+                '/** Planted by convention-proofs.mjs — a cast that erases its target. */',
+                "it('zz proof cast', () => {",
+                '    const widget = {} as any;',
+                '    expect(widget).toBeDefined();',
+                '});',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 'mock-wall-order',
+        convention: 'A shared mock wall is imported before the subject',
+        enforcer: 'tests/sop/mock-wall-import-order.test.ts',
+        expects: /no NEW suite imports its subject before the wall/,
+        // TWO FILES: the wall has to exist before a suite can import it in the
+        // wrong order. The detector finds walls by reading every non-suite file
+        // under tests/ for a top-level jest.mock, so the wall must be real.
+        plant: [
+            {
+                path: 'tests/core/utils/zzProofWall.ts',
+                content: [
+                    '/** Planted by convention-proofs.mjs — a module wall. */',
+                    "jest.mock('@/core/logging/debugLogger');",
+                    '',
+                    'export const zzProofWallReady = true;',
+                    '',
+                ].join('\n'),
+            },
+            {
+                path: 'tests/core/utils/zzProofOrder.test.ts',
+                content: [
+                    '/** Planted by convention-proofs.mjs — the subject imported ABOVE the wall. */',
+                    "import { zzProofFamily } from '@/core/utils/zzProofFamily';",
+                    '',
+                    "import { zzProofWallReady } from './zzProofWall';",
+                    '',
+                    "it('zz proof order', () => {",
+                    '    expect(zzProofWallReady && zzProofFamily()).toBe(1);',
+                    '});',
+                    '',
+                ].join('\n'),
+            },
+            {
+                path: 'src/core/utils/zzProofFamily.ts',
+                content: [
+                    '/** Planted by convention-proofs.mjs — the subject the suite imports. */',
+                    'export const zzProofFamily = (): number => 1;',
+                    '',
+                ].join('\n'),
+            },
+        ],
+    },
+    {
+        id: 'builder-uniqueness',
+        convention: 'A test builder name has one definition',
+        enforcer: 'tests/sop/builder-uniqueness.test.ts',
+        expects: /no NEW name becomes duplicated/,
+        plant: [
+            {
+                path: 'tests/core/utils/zzProofBuilderOne.ts',
+                content: [
+                    '/** Planted by convention-proofs.mjs — one of two definitions. */',
+                    'export function createZzProofThing(): number {',
+                    '    return 1;',
+                    '}',
+                    '',
+                ].join('\n'),
+            },
+            {
+                path: 'tests/core/utils/zzProofBuilderTwo.ts',
+                content: [
+                    '/** Planted by convention-proofs.mjs — the second definition of the same name. */',
+                    'export function createZzProofThing(): number {',
+                    '    return 2;',
+                    '}',
+                    '',
+                ].join('\n'),
+            },
+        ],
+    },
+    {
         id: 'magic-timeout',
         convention: 'A timeout is a named constant, not a number at the call site',
         enforcer: 'tests/sop/magic-timeouts.test.ts',
@@ -978,23 +1159,30 @@ function proveOne(proof) {
 
         // PLANT: write the violation and stage it — `git ls-files` lists tracked
         // files only, so an unstaged file is invisible to most enforcers here.
-        const target = join(tree.wt, proof.plant.path);
-        mkdirSync(dirname(target), { recursive: true });
-        // APPEND when the violation has to live inside an existing file. Some rules
-        // cannot be broken by adding a new file at all — a handbook citing an
-        // enforcer that does not exist is a defect IN the handbook.
-        if (proof.plant.transform) {
-            // The third mode, and JSON forced it: some rules are broken only by
-            // EDITING a specific file, where appending raw text would produce
-            // something the enforcer cannot even parse. `transform` reads the real
-            // content and returns the modified version.
-            writeFileSync(target, proof.plant.transform(readFileSync(target, 'utf8')));
-        } else if (proof.plant.append) {
-            appendFileSync(target, proof.plant.content);
-        } else {
-            writeFileSync(target, proof.plant.content);
+        //
+        // A plant may be a LIST. Some conventions cannot be broken by one file:
+        // "a split test family shares its setup" needs two siblings before there
+        // is a family at all, and "a builder name has one definition" needs a
+        // second definition. One file each would be a violation of nothing.
+        for (const step of [proof.plant].flat()) {
+            const target = join(tree.wt, step.path);
+            mkdirSync(dirname(target), { recursive: true });
+            // APPEND when the violation has to live inside an existing file. Some rules
+            // cannot be broken by adding a new file at all — a handbook citing an
+            // enforcer that does not exist is a defect IN the handbook.
+            if (step.transform) {
+                // The third mode, and JSON forced it: some rules are broken only by
+                // EDITING a specific file, where appending raw text would produce
+                // something the enforcer cannot even parse. `transform` reads the real
+                // content and returns the modified version.
+                writeFileSync(target, step.transform(readFileSync(target, 'utf8')));
+            } else if (step.append) {
+                appendFileSync(target, step.content);
+            } else {
+                writeFileSync(target, step.content);
+            }
+            execSync(`git add -f "${step.path}"`, { cwd: tree.wt });
         }
-        execSync(`git add -f "${proof.plant.path}"`, { cwd: tree.wt });
 
         const planted = run('npx', jest, tree.wt);
         if (planted.status === 0) {
