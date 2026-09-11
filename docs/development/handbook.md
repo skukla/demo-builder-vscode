@@ -370,6 +370,23 @@ meant.
 
 > **How to add one.** [webview-command-handler](../../.claude/skills/webview-command-handler/SKILL.md)
 
+> **Convention.** A domain error class lives with the domain that throws it.
+> `src/core/errors/` is the legacy central hierarchy and may only shrink.
+> *Why:* this states what is TRUE rather than what sounded tidy, and the difference
+> was measured. Across all 21 `Error` subclasses in `src/`, the central hierarchy
+> accounted for **four throws in the entire codebase** against 354 plain
+> `throw new Error(...)`; the errors people actually use are defined beside the code
+> that throws them — `DaLiveAuthError` 8 thrown and 11 caught, `DataInstallerApiError`
+> 9 and 4, `ToolManagerError` 9 and 1. A convention telling everyone to use the
+> central classes would have been a policy with 354 counter-examples.
+> *The evidence that it was not working:* three of core's six domain errors —
+> `ValidationError`, `PrerequisiteError`, `MeshError` — had never been thrown or caught
+> anywhere, while `docs/architecture/error-handling.md` listed all three as part of the
+> hierarchy. Deleted 2026-09-10; both typecheckers confirmed nothing referenced them.
+> Error SHAPE is ruled separately and already was — see the Pattern B convention above,
+> which is why this one is about where a type lives, not about how failure travels.
+> Enforced by the `coreErrorClasses` ratchet in `tests/sop/architecture-rules.test.ts`.
+
 ---
 
 ## 7. The user interface
@@ -1501,7 +1518,7 @@ Conventions decay unless something checks them. Four layers do:
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 113 conventions. 113 of them are enforced; 0 are not.**
+**This handbook states 114 conventions. 114 of them are enforced; 0 are not.**
 
 The last one to get there was "vendor CSS sits in the lowest cascade layer", and it was
 outstanding because it was **not yet true**: `@layer vendor` existed in no bundle, so a

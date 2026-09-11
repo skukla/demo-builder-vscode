@@ -349,6 +349,30 @@ describe('ADR-015: handlers return results (push-message ratchet)', () => {
     });
 });
 
+describe('a domain error lives with the domain that throws it', () => {
+    it('the central error hierarchy only shrinks', () => {
+        // Measured 2026-09-10 across all 21 Error subclasses in src/: the CENTRAL
+        // module accounted for four throws in the whole codebase, against 354 plain
+        // `throw new Error(...)`. The errors that are actually used are defined beside
+        // the code that throws them — DaLiveAuthError 8 thrown / 11 caught,
+        // DataInstallerApiError 9/4, ToolManagerError 9/1.
+        //
+        // Three of core's six domain errors — ValidationError, PrerequisiteError,
+        // MeshError — had never been thrown OR caught anywhere, while
+        // docs/architecture/error-handling.md listed all three as part of the
+        // hierarchy. They were deleted the day this was measured.
+        //
+        // So the rule is not "use the central errors" — that would be a policy against
+        // 354 counter-examples. It is that the central module is legacy and may only
+        // shrink; a new domain error goes next to its domain, where the used ones live.
+        const errorsModule = src.get('src/core/errors/index.ts') as string;
+        const count = (errorsModule.match(/^export class \w+/gm) ?? []).length;
+        // A zero would mean the file moved and this stopped measuring anything.
+        expect(count).toBeGreaterThan(0);
+        expectCeiling(LEDGER, 'coreErrorClasses', count);
+    });
+});
+
 describe('ADR-015: a handler translates and returns — it never renders', () => {
     /**
      * A handler's job is to turn a message into a result. The moment it imports
