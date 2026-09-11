@@ -1,0 +1,78 @@
+{
+    "_what": "One row per CREATE-SHAPED capability on the agent surface. Each row either NAMES the tool that undoes it, or carries a `reason` saying why no reversal exists. This is CLAUDE.md's first never-compromise property written down: 'New capabilities ship with their reversal - create/delete, deploy/undeploy, install/uninstall - or they state plainly why reversal is impossible.' Enforced by tests/sop/reversibility-ledger.test.ts.",
+    "_rules": [
+        "A create-shaped tool with no row fails the build. Adding the tool means answering the question.",
+        "`reverses` names a tool that EXISTS. A row pointing at a tool nobody registered is stale and fails.",
+        "`reason` is for a capability that genuinely cannot be undone, or whose reversal is a product decision nobody has taken. It is not a way to skip the question - the text is read by a person.",
+        "A `reason` row is a DEBT, not a resolution. The set of them should shrink, and the enforcer pins it so it cannot grow silently.",
+        "The reversal need not share a verb stem. `deploy_mesh` is undone by `delete_mesh`, `publish_page` by `delete_page`. A naming rule was measured and REJECTED - it wrongly flags at least three - see PL-55's design section."
+    ],
+    "_measured": "2026-09-10: 109 tools across both registration forms, read via tests/sop/tool.testUtils.ts (`src/features/ai/server/*.ts`, `src/mcp-server.ts`, `src/mcp/*.ts`). 15 create-shaped. An earlier hand-rolled walk read only one directory and found 100 - the shared helper exists because that mistake has now been made twice.",
+    "openReasonCeiling": 6,
+    "entries": [
+        {
+            "tool": "add_integration",
+            "reverses": "remove_integration"
+        },
+        {
+            "tool": "create_adobe_project",
+            "reverses": "delete_adobe_project"
+        },
+        {
+            "tool": "create_github_repo",
+            "reverses": "delete_github_repo"
+        },
+        {
+            "tool": "create_project",
+            "reverses": "delete_project"
+        },
+        {
+            "tool": "start_demo",
+            "reverses": "stop_demo"
+        },
+        {
+            "tool": "deploy_mesh",
+            "reverses": "delete_mesh",
+            "note": "Different verb stem, deliberately: the mesh is deleted rather than undeployed. This row is why the enforcer pairs by ledger and not by name."
+        },
+        {
+            "tool": "deploy_integration",
+            "reverses": "remove_integration",
+            "note": "remove_integration undeploys it remotely, then cleans up that integration's files and keyed state. AB-7 is an open defect in exactly this reversal - it reported success while leaving deployed code running - which is what an unenforced principle looks like in production."
+        },
+        {
+            "tool": "install_integration",
+            "reverses": "remove_integration",
+            "note": "install_integration re-runs the Commerce install/associate pass for an already-deployed integration; remove_integration uninstalls it from Commerce before undeploying."
+        },
+        {
+            "tool": "publish_page",
+            "reverses": "delete_page",
+            "note": "delete_page unpublishes AND deletes the source, so it is a WIDER reversal than publish_page's exact inverse - there is no unpublish-but-keep-source tool. Recorded because the published state can be undone; narrowing it is a product question, not a defect."
+        },
+        {
+            "tool": "install_prerequisite",
+            "reason": "No uninstall exists. Whether uninstalling Node, the aio CLI or its plugins should be a capability at all is a product decision nobody has taken - these are machine-level tools an SC may depend on outside this extension. PL-55 walkthrough."
+        },
+        {
+            "tool": "create_adobe_workspace",
+            "reason": "No delete_adobe_workspace, although delete_adobe_project exists. A real gap on the agent surface rather than an impossibility - the Console API supports deleting one. PL-55 walkthrough."
+        },
+        {
+            "tool": "add_console_apis",
+            "reason": "API subscription is a full-union PUT, so removal means issuing the PUT without the entry. No tool exposes that, so an agent can add a subscription and cannot take it back. PL-55 walkthrough."
+        },
+        {
+            "tool": "connect_dalive",
+            "reason": "A sign-in, not a created resource - nothing is provisioned that could be deleted. Whether sign-OUT belongs on the agent surface is a different question from reversibility. PL-55 walkthrough."
+        },
+        {
+            "tool": "start_datapack_export",
+            "reason": "Writes into the SHARED datapack catalog, so the reversal is not merely a delete - it would have to consider other consumers. Not defined, and defining it is a product decision. PL-55 walkthrough."
+        },
+        {
+            "tool": "start_datapack_import",
+            "reason": "Imports into a live Commerce instance; there is no per-import undo. reset_datapack and the instance-wipe item (DI-2) are adjacent capabilities, neither of which is this import's inverse. PL-55 walkthrough."
+        }
+    ]
+}

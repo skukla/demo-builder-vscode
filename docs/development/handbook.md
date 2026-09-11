@@ -835,6 +835,26 @@ promising an agent that every response parses.
 > *Why:* one envelope is what lets an agent parse any tool's answer the same way — and the
 > helper has already been re-duplicated once after being extracted.
 
+> **Convention.** A capability that CREATES something names the capability that undoes
+> it, or states why none can exist. Both go in `tests/sop/reversibility.ledger.json`.
+> *Why:* this is the extension's first never-compromise property — "whatever can be done
+> can be undone" — and until 2026-09-10 it was the only one with no enforcement. Demos
+> get rebuilt, reset and re-run constantly, so an SC must be able to return to zero. A
+> capability that cannot be undone strands them on a demo they cannot rebuild.
+> *Where it is checked, and why only there:* the agent surface, because it is the one
+> fully enumerable list of capabilities in the repo — every tool is a `registerTool(…)`
+> call or a `{ tool: … }` row. The human surface has no equivalent registry (a button is
+> a React element), so this rules the half that can be ruled instead of guessing at the
+> rest. Of 109 tools, 15 create something; 9 name a reversal and 6 carry a written reason
+> they cannot, and that second number is pinned so it can only fall.
+> *Not a naming rule, and that was measured:* inferring `delete_x` from `create_x` flags
+> ten tools of which at least three are reversible under another verb — `deploy_mesh` by
+> `delete_mesh`, `deploy_integration` by `remove_integration`, `publish_page` by
+> `delete_page`. A rule that fires on correct code teaches people to ignore it.
+> Enforced by `tests/sop/reversibility-ledger.test.ts`. It proves a reversal EXISTS, not
+> that it works — AB-7 is an open defect where `remove_integration` reported success
+> while leaving deployed code running, and this would not have caught it.
+
 > **Convention.** A tool requires an explicit `confirm: true` when its effect is hard to
 > walk back: it DELETES something, or it PUSHES to a live site. Merely mutating is
 > deliberately not the bar — deploys, lifecycle and config writes stay ungated, because
@@ -1477,11 +1497,11 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 25 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 50 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 51 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 112 conventions. 112 of them are enforced; 0 are not.**
+**This handbook states 113 conventions. 113 of them are enforced; 0 are not.**
 
 The last one to get there was "vendor CSS sits in the lowest cascade layer", and it was
 outstanding because it was **not yet true**: `@layer vendor` existed in no bundle, so a

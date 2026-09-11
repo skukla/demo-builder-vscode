@@ -15,18 +15,35 @@ conventions that we hadn't even started."* Checked, and that is right.
 
 ## What is missing
 
-The handbook states **109 conventions, all 109 enforced**, which reads as complete.
+The handbook states **112 conventions, all 112 enforced**, which reads as complete.
 It is not complete — it is complete *for the domains it covers*. Counted by section:
 
 ```
   39  §7  the user interface
-  29  §9  tests
-  13  §10 what stops this drifting
+  31  §9  tests
+  14  §10 what stops this drifting
   10  §3  code gets what it needs handed to it
    4  §2  code grouped by what it does      4  §8  agents are a second door
    3  §4  behaviour is data                 3  §6  the two halves talk by message
    2  §1  two programs                      2  §5  what survives between calls
 ```
+
+**Re-verified 2026-09-10, later the same day (count refreshed from 109 to 112).**
+Three conventions landed between filing and pickup — builtin-namespace mocks and the
+CSS-baseline push gate into §9, VSIX contents into §10 — and NONE of them touches
+either domain below, so both claims hold. Checked rather than assumed, because a
+"this returns zero" claim is exactly the kind that rots:
+
+- **error handling: still 0** in both the handbook and the generated index, for
+  `error type`, `domain error`, `granular catch`, `error class`, `DemoBuilderError`.
+- **reversibility: still 0 conventions.** A broader search (`reversib`, `undone`,
+  `undo`, `counterpart`, `uninstall`, `undeploy`) returns 5 handbook lines, and
+  reading all five is what makes this a finding rather than a count: two are inside
+  the `confirm: true` agent-tool convention this item already named and excluded, and
+  the other three use "undo/undone" incidentally inside conventions about erased types
+  and about restoring jest spies. No convention requires a reversal to exist.
+- Positive controls fired as they did at filing: cascade layers 19 handbook lines,
+  dependency injection 5. The search was aimed correctly.
 
 Sixty-eight of the 109 are UI and tests — the two tracks that actually ran. The
 architecture half of track 4 produced seven ADRs and roughly 28 conventions, and two
@@ -89,8 +106,51 @@ such list is the five non-negotiables in CLAUDE.md plus the global quality SOP.
 3. Then re-count by section and see whether any other domain is thin for the same
    reason rather than because it is genuinely small.
 
+## Design — reversibility, decided 2026-09-10 before any code
+
+**What entity is this.** Not a new one. The thing being ruled is a CAPABILITY —
+specifically a capability as exposed on the agent surface, which is the one surface in
+this repo that is fully enumerable. Every MCP tool is declared in exactly two ways
+(`tool: '...'` descriptor rows, and `server.registerTool('...')` hand-registrations),
+so "every capability" is a list a script can build. The human surface has no equivalent
+registry: a button is a React element, and there is no file that names them all.
+
+**What owns it and where it lives.** A shrink-only ledger plus a `tests/sop/` enforcer —
+the established pattern here, the same shape as the god-file and cast ledgers. The
+ledger holds one row per create-shaped tool; the row either NAMES the reversal or
+carries a reason none exists. That directly implements the words CLAUDE.md already
+uses: "ship with their reversal ... or they state plainly why reversal is impossible."
+
+**Alternatives rejected.**
+
+- *A naming rule* (`create_x` implies `delete_x`) — measured and wrong. Of ten tools it
+  flags as unpaired, at least three are reversible under a different verb:
+  `deploy_mesh` is undone by `delete_mesh`, `deploy_integration` by
+  `remove_integration` (which "undeploys it remotely"), `publish_page` by `delete_page`
+  ("Unpublish and delete"). A rule that fires on those teaches people to ignore it.
+- *An eslint rule* — it cannot see across files to know whether a reversal exists.
+- *Checking the human surface too* — no registry to read; deferred rather than guessed.
+
+**Measured today, both registration paths, with controls.** 100 tools. 15 create-shaped.
+The first count said 48 and was wrong: it read only descriptor rows, and the control
+(`get_auth_status`, hand-registered) failed, which is what caught it.
+
+**Which decisions are product intent — NOT taken unattended.** Whether a given gap
+SHOULD be closed is a capability decision. Recording that it is open, and forcing the
+next create-shaped tool to answer, is not. So the ledger seeds honest `reason` rows for
+the open ones and they go to the walkthrough queue:
+
+- `install_prerequisite` — should uninstalling Node / the aio CLI be a thing at all?
+- `create_adobe_workspace` — `delete_adobe_project` exists; the workspace has no delete.
+- `add_console_apis` — subscription is a full-union PUT, so removal means PUT-without,
+  which no tool exposes.
+- `connect_dalive` — a sign-in, not a created resource; is it even in scope?
+- `start_datapack_export` — writes into a SHARED datapack; reversal is not obviously
+  defined.
+
 ## Shipped so far
 
 - 2026-09-10  Filed after a full program pass; the gap is recorded in
   `.rptc/research/2026-09-10-program-worklist/`
 - 2026-09-10  docs(backlog): PL-55 — reversibility and error handling have no convention at all (`30e5b1bdf`)
+- 2026-09-11  Staleness check at pickup: count refreshed 109->112 (three conventions landed since filing, none in either domain); both zero-claims re-verified by reading the 5 reversibility hits, not counting them; controls fired
