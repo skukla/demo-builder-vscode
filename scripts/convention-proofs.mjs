@@ -719,6 +719,167 @@ const PROOFS = [
         },
     },
     {
+        id: 'fetch-boundary',
+        convention: 'Services are fetched only at the boundary',
+        enforcer: 'tests/sop/architecture-rules.test.ts',
+        expects: /every out-of-boundary fetch is a reasoned ledger entry/,
+        plant: {
+            path: 'src/features/dashboard/services/zzProofFetch.ts',
+            content: [
+                '/** Planted by convention-proofs.mjs — a fetch below the boundary. */',
+                "import { ServiceLocator } from '@/core/services/serviceLocator';",
+                '',
+                'export function zzProofFetch(): unknown {',
+                "    return ServiceLocator.get('stateManager');",
+                '}',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 'stateful-construction',
+        convention: 'A class that accumulates state is constructed in one place',
+        enforcer: 'tests/sop/architecture-rules.test.ts',
+        expects: /every out-of-boundary construction of a STATEFUL class is a reasoned ledger entry/,
+        // GitHubTokenService, because the enforcer's own control pins it as
+        // stateful (it carries a validation cache). A stateless class here would
+        // be no violation at all — the rule is about forking state, not about the
+        // word `new`.
+        plant: {
+            path: 'src/features/dashboard/services/zzProofConstruct.ts',
+            content: [
+                '/** Planted by convention-proofs.mjs — a second owner of a cached service. */',
+                "import { GitHubTokenService } from '@/features/eds/services/github/gitHubTokenService';",
+                '',
+                'export function zzProofConstruct(): unknown {',
+                '    return new GitHubTokenService();',
+                '}',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 'composition-point-lifetime',
+        convention: 'A repeated composition point builds nothing stateful',
+        enforcer: 'tests/sop/architecture-rules.test.ts',
+        expects: /every stateful class built in a repeated composition point is a reasoned ledger entry/,
+        // Planted INTO a composition point, because that is what the rule is about.
+        // The same construction anywhere else is the rule above; here the defect is
+        // the LIFETIME — this factory runs per incoming message, so a cache built
+        // in it is empty every time it is read.
+        plant: {
+            path: 'src/commands/handlerContextFactory.ts',
+            append: true,
+            content: [
+                '',
+                '/** Planted by convention-proofs.mjs — a cache with a per-message lifetime. */',
+                'export const zzProofCache = (): unknown => new PrerequisitesCacheManager();',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 'command-base-class',
+        convention: 'Commands extend BaseCommand or BaseWebviewCommand',
+        enforcer: 'tests/sop/architecture-rules.test.ts',
+        expects: /every non-extending command class is a reasoned ledger entry/,
+        plant: {
+            path: 'src/commands/zzProofCommand.ts',
+            content: [
+                '/** Planted by convention-proofs.mjs — a command extending nothing. */',
+                'export class ZzProofCommand {',
+                '    public execute(): void {',
+                '        /* nothing */',
+                '    }',
+                '}',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 'types-purity',
+        convention: 'Files in src/types/ use import type only',
+        enforcer: 'tests/sop/architecture-rules.test.ts',
+        expects: /every runtime-importing types file is a reasoned ledger entry/,
+        plant: {
+            path: 'src/types/zzProofTypes.ts',
+            content: [
+                '/** Planted by convention-proofs.mjs — a runtime import in a types file. */',
+                "import { join } from 'path';",
+                '',
+                'export interface ZzProofShape {',
+                '    path: string;',
+                '}',
+                '',
+                'export const zzProofJoin = join;',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 'one-dependency-bundle',
+        convention: 'A service takes one dependency bundle per call',
+        enforcer: 'tests/sop/architecture-rules.test.ts',
+        expects: /no function takes two dependency bundles/,
+        plant: {
+            path: 'src/features/dashboard/services/zzProofTwoDeps.ts',
+            content: [
+                '/** Planted by convention-proofs.mjs — two envelopes in one signature. */',
+                'interface ZzProofFooDeps { a: number }',
+                'interface ZzProofBarDeps { b: number }',
+                '',
+                'export function zzProofTwoDeps(foo: ZzProofFooDeps, bar: ZzProofBarDeps): number {',
+                '    return foo.a + bar.b;',
+                '}',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 'argument-cast',
+        convention: 'Never pass an argument as any or never',
+        enforcer: 'tests/sop/architecture-rules.test.ts',
+        expects: /no argument is passed as any or never/,
+        plant: {
+            path: 'src/features/dashboard/services/zzProofArgCast.ts',
+            content: [
+                '/** Planted by convention-proofs.mjs — a silenced type error at a call. */',
+                'function zzProofTake(value: { id: string }): string {',
+                '    return value.id;',
+                '}',
+                '',
+                'export function zzProofArgCast(payload: unknown): string {',
+                '    return zzProofTake(payload as any);',
+                '}',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 're-export-index',
+        convention: 'A module is imported by the path that defines the symbol',
+        enforcer: 'tests/sop/architecture-rules.test.ts',
+        expects: /every re-exporting index file is a reasoned ledger entry/,
+        plant: [
+            {
+                path: 'src/core/utils/zzProofBarrel/thing.ts',
+                content: [
+                    '/** Planted by convention-proofs.mjs — the real home of the symbol. */',
+                    'export const zzProofThing = 1;',
+                    '',
+                ].join('\n'),
+            },
+            {
+                path: 'src/core/utils/zzProofBarrel/index.ts',
+                content: [
+                    '/** Planted by convention-proofs.mjs — a second path to the same symbol. */',
+                    "export { zzProofThing } from './thing';",
+                    '',
+                ].join('\n'),
+            },
+        ],
+    },
+    {
         id: 'cross-bundle-class',
         convention: 'A CSS class used in a bundle is styled by that bundle',
         enforcer: 'tests/sop/stylesheet-bundles.test.ts',
