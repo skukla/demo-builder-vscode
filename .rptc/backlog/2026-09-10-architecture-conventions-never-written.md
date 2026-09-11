@@ -208,3 +208,5 @@ has closed both, and a third deserves its own record. See [[PL-56]].
 - 2026-09-11  feat(tooling): two more convention proofs — 19 of 68 (`30a96452a`)
 - 2026-09-11  feat(tooling): three more convention proofs — 17 of 68 (`d33939f90`)
 - 2026-09-11  docs(handoff): the overnight run, for someone who was not there (`51bee69ed`)
+- 2026-09-11  feat(tooling): every convention's enforcer is proven — 86, none left over (`0bdd03544`)
+- 2026-09-11  docs(handoff): the proofs are finished — 77 proven, 1 that cannot be (`2f3337b19`)

@@ -113,22 +113,51 @@ tests, no lint findings.
 | Reversibility is a rule | convention + enforcer over a 15-row ledger |
 | Error types live with their domain | convention + shrink-only ratchet; 3 dead classes deleted |
 | Failed tool calls report failure | the MCP flag, set nowhere before |
-| Convention proofs | harness + **77 proven, 1 that cannot be** |
+| Convention proofs | harness + **86 proven; every convention's enforcer covered** |
 
 ### The proofs, finished
 
 Every test-enforced convention now has a proof except one, and that one is the
 finding.
 
-**`component-extraction` cannot be proven, because nothing enforces it.** The
+**RESOLVED the same day, after you pushed back on my recommendation.** What follows
+is what was found; the fix is in the next section.
+
+**`component-extraction` could not be proven, because nothing enforced it.** The
 handbook says "markup repeated in three or more places becomes a component" and
 names a test file. That file checks abstract classes, HOC naming, over-generic
 wrappers, and four components' usage counts — and nothing about repeated markup.
 No violation of the stated rule can make it fail. The citation resolves, the suite
 is green, and the scorecard has counted it as enforced the whole time. Filed as
-**PL-57** with a recommendation, not fixed: the likely correction is to the
-handbook rather than the suite, and it moves the "every convention is enforced"
-count, which is your call.
+**PL-57** with a recommendation to fix the wording and leave duplication to the
+periodic review.
+
+### That recommendation was wrong
+
+Your objection was that a periodic scan catches duplication AFTER it is built, and
+the rule is about what happens WHILE it is being built. Checking instead of arguing
+turned up two things I had assumed:
+
+- The clone ledger I called "the protection" scans **tests**, not source. Source
+  duplication had no automatic check of any kind.
+- The build-time hook that looked like it covered this fires only when a file is
+  CREATED, and returns early when the file already exists — "editing an existing
+  component is not the reflex being guarded". A third copy arrives as an edit to
+  existing files, so it was outside that hook by design.
+
+I had also read "duplication is the one thing we judge by hand" as forbidding a
+check. It says deciding whether two things SHOULD be one needs judgment — which
+counting does not do.
+
+**So both halves shipped, split along that line.** The COUNT is now a pin that may
+only fall: 58 duplicated blocks, checked on every `npm run gate`, failing both when
+it grows and when it falls without being banked. The VERDICT stays a judgment, now
+written down as a rule that says plainly it has no enforcer, instead of naming one
+that never checked it.
+
+The three rules that suite really does enforce are conventions now, each with a
+proof. The handbook count went 115 → 118 — up, because the record got more accurate.
+One test that tested nothing (it asserted a two-item list had two items) is gone.
 
 **The harness had two bugs of its own, and both were silent.** Node kills a child
 process that prints more than 1MB, and the harness read that as "this enforcer is
