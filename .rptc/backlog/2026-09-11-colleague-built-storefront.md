@@ -1,0 +1,64 @@
+---
+id: EDS-13
+kind: epic
+area: eds
+needs: []
+value: high
+status: backlog
+---
+
+# Portable demos: share storefronts, move whole projects
+
+Filed 2026-09-11 by the owner. An SC can only build a project on a demo that ships in
+`demo-packages.json`. SCs want to build on a demo a colleague made, and to share their own.
+Research and every decision: `.rptc/research/colleague-storefront/research.md`.
+
+Expanded 2026-09-11 (owner) from "shareable storefronts" into a PROGRAM with two tracks: a
+storefront is a piece of a project, and the project's own export, import and copy have
+"grown horridly stale" (measured: `.rptc/research/project-import-export/research.md`).
+
+**Track 1, shared storefronts:**
+
+- [[EDS-13a]] "Add a demo": build a project on a demo someone shared by link (the import
+  half; the Welcome-step plus card, the dialog, the resolver every later lookup moves onto).
+- [[EDS-13b]] "Share this demo": turn an existing project into a demo others can add (the
+  export half; un-built).
+- [[EDS-13c]] The shareable-demo contract: the description file, its rules and the
+  process, published in `docs/`.
+- [[EDS-13d]] A team catalog of shared demos (after 13a and 13b).
+
+**Track 2, project portability:** [[PL-56]], export, import and copy carrying the whole
+project, on one versioned contract of which the storefront description file is a slice.
+
+Both halves carry their agent surface in the same change (CLAUDE.md "Hit every surface"
+#4): probe, add, share, and `list_demo_packages` / `create_project` reading added demos.
+
+## Why it is not a one-field change
+
+A storefront here is a catalog row, and the project keeps only the row's KEY
+(`selectedPackage` + `selectedStack`), never its contents (`src/types/settingsFile.ts:58`).
+Eleven production sites re-resolve the id against the bundled JSON after creation, and
+reset refuses outright for an unknown id. The design move is where a shared demo LIVES so
+those sites can still find it: the project stores its own row, and one resolver reads the
+project first and the catalog second.
+
+## Decisions made with the owner (2026-09-11)
+
+1. Its own brand card, at the brand level (not a frontend swap under a shipped brand).
+2. Paste a link, and remember it in the SC's settings; the project stores the row.
+3. EDS and headless together.
+4. Their `main`, report only: the colleague owns the storefront, we own the integration
+   contract; no pinning, no patches; the five load-bearing patches are dry-checked.
+5. Copy their published content by default, skippable; index probed before Continue.
+6. Prefill exactly what shipped brands prefill: the three store codes.
+7. Words: "Add a demo" plus card; the shipped "Custom (B2B + B2C)" becomes "Starter";
+   "shared", "custom", "import" and "from GitHub" rejected for the reasons in research §9.
+8. The dialog is the Add Integration shape; every surface and word is an existing one
+   (research §9a is the gate).
+9. Option 2 (the in-repo description file) is in, as a published contract; option 3 (a
+   team catalog) is next, not now.
+
+## Shipped so far
+
+- 2026-09-11  Research, seam map and design on `feature/colleague-storefront` (worktree
+  from `origin/develop`); children filed.

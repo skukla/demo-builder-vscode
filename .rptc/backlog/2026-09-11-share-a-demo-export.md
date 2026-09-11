@@ -1,0 +1,56 @@
+---
+id: EDS-13b
+kind: feature
+area: eds
+parent: EDS-13
+needs: [EDS-13c]
+value: med
+status: backlog
+---
+
+# "Share this demo": turn an existing project into a demo others can add
+
+Filed 2026-09-11 by the owner as the other half of [[EDS-13]]. Un-built; nothing in the
+extension does this today.
+
+## The ask
+
+An SC who built and customised a demo wants a colleague to be able to add it with one
+link. Today that means hand-writing the description file ([[EDS-13c]]), remembering to
+publish the content site, and knowing about the template flag. The extension already knows
+everything the file needs.
+
+## What it does
+
+From the project dashboard, "Share this demo":
+
+1. Writes the description file into the project's own storefront repo from what the
+   project already holds: name, description, store codes (from the Commerce config),
+   B2B flags, selected block libraries, mesh posture. Through the generated-file seam
+   (ADR-013) so a hand-edited file is never clobbered.
+2. Checks what a colleague's "Add a demo" will need and says so in plain words: content
+   site published with an index (offers to publish if not), repo reachable, default branch
+   `main`, template flag (optional; explains the fast path).
+3. Hands the SC the link to send.
+
+Reversal: "Stop sharing" removes the file (again through the ADR-013 seam, only when the
+file is ours). The project is unchanged either way.
+
+Agent surface in the same change: an action tool that does 1–3 and returns the link, so an
+agent asked "share this demo with Jen" can.
+
+## Naming trap
+
+"Export" already means settings export in the projects dashboard
+(`settingsSerializer.ts`). This action must not use that word in anything the SC reads.
+"Share this demo" is the candidate; settle it before building.
+
+## Decided 2026-09-11
+
+- Name: "Share this demo" / "Stop sharing".
+- The template flag is a tick box in the share dialog, off by default; unticking undoes it.
+
+## Open
+
+- Where the SC's description text and icon come from at share time (a prompt, or defaults
+  from the package they started on).
