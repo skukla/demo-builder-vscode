@@ -453,6 +453,68 @@ const PROOFS = [
             ].join('\n'),
         },
     },
+    {
+        id: 'canonical-fakes',
+        convention: 'A fake that has a builder in tests/helpers/ is imported, not written',
+        enforcer: 'tests/sop/canonical-fakes.test.ts',
+        expects: /no test file hand-rolls a fake that has a canonical builder/,
+        plant: {
+            path: 'tests/features/zzProof/handRolledLogger.test.ts',
+            content: [
+                "describe('planted', () => {",
+                "    it('hand-rolls a logger fake', () => {",
+                '        const logger = {',
+                '            info: jest.fn(),',
+                '            warn: jest.fn(),',
+                '            error: jest.fn(),',
+                '            debug: jest.fn(),',
+                '        };',
+                '        expect(logger.info).toBeDefined();',
+                '    });',
+                '});',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 'tool-auth-declared',
+        convention: 'Every MCP tool declares which sign-ins it needs',
+        enforcer: 'tests/sop/tool-auth-declarations.test.ts',
+        expects: /every tool answers the question|each tool is declared exactly once/,
+        plant: {
+            path: 'src/features/ai/server/zzProofAuthTools.ts',
+            content: [
+                '/** Planted by convention-proofs.mjs — registers a tool with no needsAuth. */',
+                'export function registerZzProofAuthTools(server: {',
+                '    registerTool: (...a: unknown[]) => void;',
+                '}): void {',
+                "    server.registerTool('get_zz_proof_undeclared', {}, async () => ({}));",
+                '}',
+                '',
+            ].join('\n'),
+        },
+    },
+    {
+        id: 'jsx-and-chains',
+        convention: 'No 4+ condition && chains in JSX conditionals',
+        enforcer: 'tests/sop/complex-expressions.test.ts',
+        expects: /should not have 4\+ condition && chains in JSX conditionals/,
+        plant: {
+            path: 'src/core/ui/components/ZzProofChain.tsx',
+            content: [
+                '/** Planted by convention-proofs.mjs. */',
+                'export function ZzProofChain(p: {',
+                '    a: boolean; b: boolean; c: boolean; d: boolean;',
+                '}): JSX.Element {',
+                // The pattern is `\{[^{}]*&&[^{}]*&&[^{}]*&&[^{}]*\(` — it requires a
+                // PARENTHESISED tail. The first plant ended the chain with `<span>`
+                // directly and matched nothing, so the harness said UNPROVEN.
+                '    return <div>{p.a && p.b && p.c && p.d && (<span>yes</span>)}</div>;',
+                '}',
+                '',
+            ].join('\n'),
+        },
+    },
 ];
 
 function run(cmd, args, cwd) {
