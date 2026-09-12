@@ -298,7 +298,6 @@ describe('demo-packages.schema.json - validation rules', () => {
                         id: 'test-package',
                         name: 'Test Package',
                         description: 'Test description',
-                        icon: 'test-icon',
                         featured: true,
                         addons: {
                             'some-addon': 'required'

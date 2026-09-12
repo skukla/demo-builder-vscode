@@ -280,7 +280,7 @@ describe('useProjectBuilder — edsConfig derivation on stack select', () => {
 
     it('clears edsConfig for a non-EDS (headless) stack', () => {
         const { result, updateState } = setup({
-            selectedPackage: 'custom',
+            selectedPackage: 'starter',
             edsConfig: { templateOwner: 'stale', templateRepo: 'stale-repo' },
         });
         act(() => {
@@ -457,7 +457,7 @@ describe('required NON-mesh components cannot be removed (generic guard)', () =>
 
     it('still removes it for a package it is NOT native to', () => {
         const { result, updateState } = setup({
-            selectedPackage: 'custom',
+            selectedPackage: 'starter',
             selectedStack: 'headless-paas',
             selectedAppBuilderComponents: ['native-thing'],
         });

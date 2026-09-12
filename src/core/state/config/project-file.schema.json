@@ -187,10 +187,6 @@
           "type": "string",
           "description": "Display name for the package"
         },
-        "icon": {
-          "type": "string",
-          "description": "Icon identifier for the package"
-        },
         "configFlags": {
           "type": "object",
           "additionalProperties": {

@@ -43,10 +43,10 @@ const STOREFRONT = {
  */
 /** The catalog the lookups read: one package, one stack, the storefront above. */
 function catalogWith(storefront: Partial<Storefront> = STOREFRONT) {
-    return [makeDemoPackage({ id: 'custom', storefronts: { 'eds-accs': makeStorefront(storefront) } })];
+    return [makeDemoPackage({ id: 'starter', storefronts: { 'eds-accs': makeStorefront(storefront) } })];
 }
 
-const LOOKUP = { selectedPackage: 'custom', selectedStack: 'eds-accs' };
+const LOOKUP = { selectedPackage: 'starter', selectedStack: 'eds-accs' };
 
 const EDIT_MODE_CONFIG: {
     repoName: string;
@@ -153,7 +153,7 @@ describe('rehydratePackageDerivedConfig', () => {
     it('warns when it cannot resolve, rather than no-opping in silence', () => {
         // A silent no-op here is what let a missing `selectedStack` disable every
         // patch with no trace in the log — the same failure this function fixes.
-        rehydratePackageDerivedConfig(EDIT_MODE_CONFIG, { selectedPackage: 'custom' }, logger, catalogWith());
+        rehydratePackageDerivedConfig(EDIT_MODE_CONFIG, { selectedPackage: 'starter' }, logger, catalogWith());
 
         expect(logger.warn).toHaveBeenCalled();
         expect(logger.warn.mock.calls.flat().join(' ')).toContain('stack=missing');

@@ -6,7 +6,6 @@
       "id": "isle5",
       "name": "Isle5",
       "description": "Isle5-branded commerce demo with custom EDS blocks",
-      "icon": "isle5",
       "featured": true,
       "hidden": true,
       "requiresMesh": false,
@@ -83,10 +82,9 @@
       }
     },
     {
-      "id": "custom",
-      "name": "Custom (B2B + B2C)",
-      "description": "Unbranded B2C + B2B demo with company accounts, quotes, and purchase orders",
-      "icon": "custom",
+      "id": "starter",
+      "name": "Starter (B2B + B2C)",
+      "description": "Adobe's B2B boilerplate with no brand: company accounts, quotes and purchase orders. Build a demo from scratch.",
       "featured": false,
       "requiresMesh": false,
       "addons": {
@@ -112,7 +110,7 @@
           "featured": true,
           "tags": [
             "eds",
-            "custom",
+            "starter",
             "paas"
           ],
           "source": {
@@ -152,7 +150,7 @@
           "featured": false,
           "tags": [
             "eds",
-            "custom",
+            "starter",
             "accs"
           ],
           "source": {
@@ -191,7 +189,6 @@
       "id": "citisignal",
       "name": "CitiSignal",
       "description": "Hybrid commerce demo serving both B2C and B2B customers from one storefront",
-      "icon": "citisignal",
       "featured": true,
       "requiresMesh": false,
       "addons": {
@@ -348,7 +345,6 @@
       "id": "buildright",
       "name": "BuildRight",
       "description": "BuildRight-branded commerce demo for construction and hardware",
-      "icon": "buildright",
       "featured": false,
       "hidden": true,
       "requiresMesh": true,
@@ -389,7 +385,6 @@
       "id": "bodea",
       "name": "Bodea",
       "description": "Bodea-branded B2B demo for data center equipment",
-      "icon": "bodea",
       "featured": false,
       "hidden": false,
       "requiresMesh": false,

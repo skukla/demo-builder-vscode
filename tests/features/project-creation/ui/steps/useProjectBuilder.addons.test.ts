@@ -125,7 +125,7 @@ describe('useProjectBuilder — onStackSelect addon seeding (parity)', () => {
     });
 
     it('seeds an empty addon array for a stack with no default optionalAddons', () => {
-        const { result, updateState } = setup({ selectedPackage: 'custom' });
+        const { result, updateState } = setup({ selectedPackage: 'starter' });
         act(() => {
             result.current.onStackSelect('headless-paas');
         });
@@ -208,7 +208,7 @@ describe('useProjectBuilder — onStackSelect block library seeding (parity)', (
     it('clears selectedBlockLibraries + customBlockLibraries for a non-EDS stack', () => {
         const { result, updateState } = setup(
             {
-                selectedPackage: 'custom',
+                selectedPackage: 'starter',
                 selectedBlockLibraries: ['stale-lib'],
                 customBlockLibraries: [customLib],
             },
@@ -223,7 +223,7 @@ describe('useProjectBuilder — onStackSelect block library seeding (parity)', (
     });
 
     it('does not call the block library loaders for a non-EDS stack', () => {
-        const { result } = setup({ selectedPackage: 'custom' });
+        const { result } = setup({ selectedPackage: 'starter' });
         act(() => {
             result.current.onStackSelect('headless-paas');
         });

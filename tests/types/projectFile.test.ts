@@ -36,7 +36,6 @@ describe('SharedDemoDescription — the storefront slice a colleague may commit'
             version: 1,
             name: 'Isle5 by Jen',
             description: 'Isle5-branded B2B demo with custom blocks',
-            icon: 'assets/isle5.svg',
             configDefaults: { ACCS_WEBSITE_CODE: 'isle5' },
             configFlags: { 'commerce-b2b-enabled': true },
             requiresMesh: 'optional',

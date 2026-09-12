@@ -66,7 +66,7 @@ export const ADDED_DEMO_ID_PREFIX = 'added:';
  * state it to add an `indexPath`, or to override.
  */
 export interface SharedDemoDescription
-    extends Pick<DemoPackage, 'name' | 'icon' | 'configFlags' | 'requiresMesh' | 'datapack' | 'integrations'> {
+    extends Pick<DemoPackage, 'name' | 'configFlags' | 'requiresMesh' | 'datapack' | 'integrations'> {
     kind: 'demo';
     version: number;
     /** Optional here and below; `DemoPackage` requires them because a shipped brand always has a card and store codes. */

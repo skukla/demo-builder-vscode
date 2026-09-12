@@ -83,7 +83,6 @@ function packageFromAddedDemo(demo: AddedDemo, stackId: string | undefined): Dem
         id: addedDemoId(demo),
         name: demo.name,
         description: demo.description ?? '',
-        icon: demo.icon,
         configDefaults: demo.configDefaults ?? {},
         configFlags: demo.configFlags,
         requiresMesh: demo.requiresMesh,

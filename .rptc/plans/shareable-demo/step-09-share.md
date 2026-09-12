@@ -38,9 +38,9 @@ template flag if we set it. Never "export" or "publish" in anything the SC reads
 ## Decided 2026-09-11
 
 The share dialog prefills name and description from the brand the project was built on
-(the project's title for a Starter build) and the icon from that brand's icon, with a field
-to pick an image file from the repo; the SC edits before the file is written. Nothing is
-written silently.
+(the project's title for a Starter build); the SC edits before the file is written. Nothing is
+written silently. No icon: the owner dropped the package icon on 2026-09-12 (no reader in the
+code; nothing displays it), so neither the catalog nor the description file carries one.
 
 ## Open
 

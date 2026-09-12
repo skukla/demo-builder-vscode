@@ -163,8 +163,8 @@ was rejected and why. Detail in the research sections named.
   export's current name (differs from the manifest only by a prefix, and the agent tool
   writes it beside the manifest); short coined extensions (jargon).
 - **2026-09-11 · Share's inputs.** Prefilled from the brand the project was built on (title
-  for a Starter build), icon from that brand with a picker for a repo image, all editable in
-  the share dialog before the file is written. Rejected: no dialog (a Starter build would
+  for a Starter build), all editable in the share dialog before the file is written. (The
+  icon and its picker were dropped 2026-09-12: no package icon, see step 02.) Rejected: no dialog (a Starter build would
   share as "Starter"), nothing prefilled (typing for the common case).
 - **2026-09-11 · When the source disappears; fork on add.** Today a vanished template repo
   makes reset fail midway with raw git output and the update check go silent; nothing

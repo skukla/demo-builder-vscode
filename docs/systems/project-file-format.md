@@ -74,7 +74,7 @@ as this build understands it and flagged, never refused.
 
 Exactly what a shipped catalog entry in `src/features/components/config/demo-packages.json`
 may say about a demo, because the shared-demo shape is derived from the catalog's type: a
-name, a description, an icon, store-code defaults, storefront config flags, whether a mesh is
+name, a description, store-code defaults, storefront config flags, whether a mesh is
 required, the datapack the demo expects, and the integrations it depends on. Two things the
 file may add that the catalog expresses elsewhere: which shipped block libraries to pre-tick,
 and a content source with an index path.

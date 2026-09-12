@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **The "Custom (B2B + B2C)" demo is now "Starter (B2B + B2C)".** Same boilerplate, same B2B features; the old name read as build-it-yourself beside the coming "Add a demo" card. Existing projects built on it keep working.
+
 ## [1.0.0-beta.146] - 2026-09-10
 
 The styling layer is the headline: the CSS reset and every design token had not been

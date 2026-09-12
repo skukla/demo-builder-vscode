@@ -245,9 +245,6 @@ export interface DemoPackage {
     /** Description of the package */
     description: string;
 
-    /** Icon identifier for the package */
-    icon?: string;
-
     /** Whether this package should be featured in the UI */
     featured?: boolean;
 

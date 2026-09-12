@@ -49,7 +49,6 @@ describe('resolveStorefrontForProject', () => {
     it('prefers the project row over the catalog, whatever selectedPackage says', () => {
         const demo = makeAddedDemo({
             name: 'Isle5 by Jen',
-            icon: 'isle5',
             configFlags: { 'commerce-b2b-enabled': true },
             configDefaults: { ACCS_WEBSITE_CODE: 'isle5' },
             requiresMesh: 'optional',
@@ -66,7 +65,6 @@ describe('resolveStorefrontForProject', () => {
             id: `${ADDED_DEMO_ID_PREFIX}jen/isle5-demo`,
             name: 'Isle5 by Jen',
             description: '',
-            icon: 'isle5',
             configDefaults: { ACCS_WEBSITE_CODE: 'isle5' },
             configFlags: { 'commerce-b2b-enabled': true },
             requiresMesh: 'optional',

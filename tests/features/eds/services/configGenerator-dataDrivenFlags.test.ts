@@ -176,7 +176,7 @@ describe('configGenerator — data-driven config flags', () => {
                 packages: () => ({}),
             });
 
-            const result = generateConfigJson({ ...BASE, selectedPackage: 'custom' }, mockLogger);
+            const result = generateConfigJson({ ...BASE, selectedPackage: 'starter' }, mockLogger);
 
             expect(result.success).toBe(true);
             expect(
@@ -197,7 +197,7 @@ describe('configGenerator — data-driven config flags', () => {
         it('still generates rather than failing, and injects nothing', async () => {
             const { generateConfigJson } = await loadGeneratorWith({ template: emptyTemplate });
 
-            const result = generateConfigJson({ ...BASE, selectedPackage: 'custom' }, mockLogger);
+            const result = generateConfigJson({ ...BASE, selectedPackage: 'starter' }, mockLogger);
 
             expect(result.success).toBe(true);
             expect(JSON.parse(result.content!)).toEqual({ robots: { txt: 'User-agent: *' } });

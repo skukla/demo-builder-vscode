@@ -40,7 +40,6 @@ export const DEFAULT_PACKAGE: DemoPackage = {
     id: 'default',
     name: 'Default',
     description: 'Generic storefront with default content',
-    icon: 'default',
     configDefaults: {
         ADOBE_COMMERCE_STORE_VIEW_CODE: 'default_us',
     },
@@ -54,7 +53,6 @@ export const CITISIGNAL_PACKAGE: DemoPackage = {
     id: 'citisignal',
     name: 'CitiSignal',
     description: 'Telecommunications demo with CitiSignal branding',
-    icon: 'citisignal',
     configDefaults: {
         ADOBE_COMMERCE_STORE_VIEW_CODE: 'citisignal_us',
         // A key only this brand owns — it is how a clear that drops the INCOMING

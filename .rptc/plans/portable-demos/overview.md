@@ -75,7 +75,7 @@ export, import and copy carry the whole project, on one versioned file.
 
 1. **The file format (program step 01).** A typed, schema-checked, versioned project file whose storefront
    slice is the same shape as a `demo-packages.json` storefront entry plus the package-level
-   brand fields (name, description, icon, `configDefaults`, `configFlags`, `requiresMesh`,
+   brand fields (name, description, `configDefaults`, `configFlags`, `requiresMesh`,
    default block libraries). Three places it can live: our catalog, a colleague's repo, a
    project file. Names to settle in step 01; nothing is invented here.
 2. **One lookup (feature step 01).** `resolveStorefrontForProject(project)` returns the project-stored
