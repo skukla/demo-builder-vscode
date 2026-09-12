@@ -94,3 +94,53 @@ index was found, with the note present.
 
 A project is created from a real colleague repo in the Dev Host in both repo modes, its
 manifest carries the row, and a second "Regenerate" produces the same `config.json` flags.
+
+## Built (2026-09-12)
+
+**The row travels.** `ProjectCreationConfig.demo` rides the create request from wizard
+state; the executor persists it (an edit session keeps what it had); the manifest writer
+stores it; the loader reads it back (step 01). The setup request carries it too, and the
+handler copies it onto the one config the phases read.
+
+**The repository.** `createRepoFromSource` (phase 1) is the one place a new repository is
+created: a shipped brand generates from its template as before; an added demo's source is
+read live, `generate` when GitHub flags it a template, else an empty repository
+(`createEmptyRepository`, initialised so it has a branch) reset onto the source on the
+source's own branch (`resetToTemplate` gained a `templateBranch`). The wizard's pre-create
+button takes the same branch through `fromAddedDemo`. The add flags a kept copy as a
+template (`setTemplateFlag`, best effort), so a fork generates.
+
+**The dry check (D23).** `loadBearingPatches.ts`: the five ids the owner named, each with a
+consequence; the ledger resolved from the shipped catalog (the CitiSignal storefront carries
+all five today); the engine run on a throwaway file set, on the demo's branch; misses grouped
+into at most three caveats in SC words, ending "This storefront's owner controls its code;
+Demo Builder does not change it." They ride `demoCaveats` into the completion card's
+`warnings`, under their own headline ("Storefront created. A few things to know about this
+demo."), never the PDP one. Ids and targets go to the debug log.
+
+**The wizard.** On the stack pick the row seeds the shipped libraries its description file
+names (D22, through the availability rule) and the integrations it depends on (D29, catalog
+ids as they are, custom apps by link under the by-link id), on the first pick only. The Sample
+Data step fetches the community half when a demo asks for a pack, pre-selects it at the asked
+version (the default version when that one is gone, and says so), and says when the pack is
+not published. The Storefront summary's first row names the demo and its kind, and says when
+the site will start empty. The reset tick reads "Reset to Isle5 by Jen (replaces all
+content)". The demo's content site joins the library content sources (D20).
+
+**One list (the plan's own ask).** `STOREFRONT_DERIVED_FIELDS` in `edsConfigFromStorefront.ts`
+is now the one list: the wizard's mapper, the create request (which had been missing
+`byomOverlayUrl` and `brandAssets`) and edit-mode rehydration (which had been missing the
+template and content-source fields) all read it, and the field-set test pins its content.
+
+**Left out, on purpose, and where it goes:**
+- The Dev Host round trip with a real colleague repository in both repo modes ("Done when")
+  is not done here; it needs the owner's GitHub account and a colleague repository, and is
+  the check to run before this feature ships.
+- The Sample Data line does not yet ask the connected instance whether the pack is already
+  installed; the wizard has no connected instance at that point. Stays with the dashboard.
+- The Storefront summary row is added for an added demo only, not "every EDS brand": the
+  summary has no package name for a shipped brand without the catalog, and the shipped card
+  is visible on the Welcome step anyway.
+- The agent's `create_project` tool does not take a demo yet (step 07).
+- `storefrontSetupDemo.ts` holds the two demo rules the phases call, so the phases file
+  stays under its size limit; 18 mutation-ledger anchors moved with the edits.

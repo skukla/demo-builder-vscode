@@ -89,7 +89,7 @@ describe('useAddDemoFlow', () => {
         });
 
         expect(mockRequest).toHaveBeenLastCalledWith('add-shared-demo', {
-            demo: expect.objectContaining({ name: 'Isle5 Demo', source: { owner: 'jen', repo: 'isle5-demo' } }),
+            demo: expect.objectContaining({ name: 'Isle5 Demo', source: { owner: 'jen', repo: 'isle5-demo', branch: 'main' } }),
             keepCopy: true,
         });
         expect(onDemoAdded).toHaveBeenCalledWith(remembered);

@@ -799,6 +799,7 @@ export function ResetToTemplateOption({
     disabled = false,
     readiness,
     unusable = false,
+    templateName,
 }: {
     resetToTemplate: boolean;
     onResetToTemplateChange: (isSelected: boolean) => void;
@@ -812,6 +813,8 @@ export function ResetToTemplateOption({
      * is the only thing asking for attention.
      */
     unusable?: boolean;
+    /** What the reset goes back to, when it is an added demo ("Reset to Isle5 by Jen"). */
+    templateName?: string;
 }): React.ReactElement {
     const { checked, locked, tone, message } = describeResetOption(
         readiness,
@@ -823,7 +826,7 @@ export function ResetToTemplateOption({
     return (
         <Flex direction="column" gap="size-50" UNSAFE_className="reset-to-template-top">
             <Checkbox isSelected={checked} isDisabled={locked} onChange={onResetToTemplateChange}>
-                Reset to template (replaces all content)
+                {`Reset to ${templateName ?? 'template'} (replaces all content)`}
             </Checkbox>
 
             <View marginStart="size-300" UNSAFE_className="reset-warning-container">

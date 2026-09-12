@@ -24,7 +24,7 @@ describe('evaluateGitHubLink', () => {
 });
 
 describe('GitHubLinkField', () => {
-    function renderField(isDuplicate = () => false) {
+    function renderField(isDuplicate = () => false, acceptSiteAddress = false) {
         const onSourceChange = jest.fn();
         render(
             <GitHubLinkField
@@ -33,6 +33,7 @@ describe('GitHubLinkField', () => {
                 invalidMessage={MESSAGES.invalid}
                 duplicateMessage={MESSAGES.duplicate}
                 isDuplicate={isDuplicate}
+                acceptSiteAddress={acceptSiteAddress}
                 onSourceChange={onSourceChange}
             />,
         );
@@ -53,4 +54,32 @@ describe('GitHubLinkField', () => {
         fireEvent.change(input, { target: { value: 'https://github.com/jen/isle5-demo' } });
         expect(screen.getByTestId('spectrum-textfield-error')).toHaveTextContent('Already added');
     });
+});
+
+describe('GitHubLinkField — site addresses', () => {
+    it('accepts a site address only when asked to', () => {
+        const strict = renderStrict();
+        fireEvent.change(strict.input, { target: { value: 'https://main--isle5-demo--jen.aem.live' } });
+        expect(strict.onSourceChange).toHaveBeenLastCalledWith(undefined);
+        strict.unmount();
+
+        const open = renderOpen();
+        fireEvent.change(open.input, { target: { value: 'https://main--isle5-demo--jen.aem.live' } });
+        expect(open.onSourceChange).toHaveBeenLastCalledWith({ owner: 'jen', repo: 'isle5-demo' });
+    });
+
+    function renderStrict() {
+        const onSourceChange = jest.fn();
+        const view = render(
+            <GitHubLinkField label="l" placeholder="p" invalidMessage="i" duplicateMessage="d" isDuplicate={() => false} onSourceChange={onSourceChange} />,
+        );
+        return { onSourceChange, input: screen.getByPlaceholderText('p'), unmount: view.unmount };
+    }
+    function renderOpen() {
+        const onSourceChange = jest.fn();
+        render(
+            <GitHubLinkField label="l" placeholder="p" invalidMessage="i" duplicateMessage="d" isDuplicate={() => false} acceptSiteAddress onSourceChange={onSourceChange} />,
+        );
+        return { onSourceChange, input: screen.getByPlaceholderText('p') };
+    }
 });

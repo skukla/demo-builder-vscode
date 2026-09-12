@@ -16,6 +16,7 @@ import * as vscode from 'vscode';
 import { GitHubTokenService } from '../services/github/githubTokenService';
 import { GITHUB_SCOPES } from '../services/types';
 import { getGitHubServices } from './edsHelpers';
+import { createRepoFromSource } from './storefrontSetup/storefrontSetupPhase1';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 import type { GitHubAuthStatusPayload, GitHubOAuthErrorPayload } from '@/types/webviewPayloads';
 
@@ -360,6 +361,12 @@ interface CreateGitHubRepoPayload {
     templateOwner: string;
     templateRepo: string;
     isPrivate?: boolean;
+    /**
+     * The template is an added demo's source, which may not be a GitHub
+     * template: check the flag and fall back to an empty repository reset onto
+     * the source (`createRepoFromSource`). Shipped brands never set this.
+     */
+    fromAddedDemo?: boolean;
 }
 
 /**
@@ -377,7 +384,7 @@ export async function handleCreateGitHubRepo(
     context: HandlerContext,
     payload?: CreateGitHubRepoPayload,
 ): Promise<HandlerResponse> {
-    const { repoName, templateOwner, templateRepo, isPrivate } = payload || {};
+    const { repoName, templateOwner, templateRepo, isPrivate, fromAddedDemo } = payload || {};
 
     if (!repoName || !templateOwner || !templateRepo) {
         const error = 'Missing required parameters: repoName, templateOwner, templateRepo';
@@ -389,12 +396,14 @@ export async function handleCreateGitHubRepo(
         context.logger.info(`[EDS] Creating GitHub repository: ${repoName} from ${templateOwner}/${templateRepo}`);
         const { repoOperations } = getGitHubServices(context.context.secrets);
 
-        // Create repository from template
-        const repo = await repoOperations.createFromTemplate(
+        // Create repository from template — or, for an added demo whose source
+        // is not a template, an empty repository reset onto the source.
+        const repo = await createRepoFromSource(
+            repoOperations,
+            { newRepoName: repoName, isPrivate: isPrivate ?? false, fromAddedDemo: Boolean(fromAddedDemo) },
             templateOwner,
             templateRepo,
-            repoName,
-            isPrivate ?? false,
+            context.logger,
         );
 
         context.logger.debug(`[EDS] Repository created: ${repo.fullName}`);

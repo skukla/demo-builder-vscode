@@ -148,6 +148,8 @@ export interface ProjectCreationConfig {
     importedMeshEndpoint?: string;
     // Package/Stack selections
     selectedPackage?: string;
+    /** The storefront row when the project is built on an added demo (D2); persisted with the project. */
+    demo?: AddedDemo;
     datapack?: { name: string; version: string };
     selectedStack?: string;
     // Selected App Builder integration ids (Model B deploy) + custom GitHub sources
@@ -334,6 +336,8 @@ export interface StorefrontSetupStartPayload {
     selectedPackage?: string;
     /** Selected stack ID (e.g. 'eds-accs') — needed to resolve package-derived settings */
     selectedStack?: string;
+    /** The storefront row when the project is built on an added demo: the phases read it for the repo branch, the pages and the dry check. */
+    demo?: AddedDemo;
     edsConfig: {
         repoName: string;
         repoMode?: 'new' | 'existing';
@@ -369,6 +373,11 @@ export interface StorefrontSetupStartPayload {
          * as a bogus "Config Service incomplete" warning.
          */
         byomAbsentReason?: string;
+        /**
+         * The added demo's row, copied here by the handler from the payload so
+         * the phases read one config. Absent for a shipped brand.
+         */
+        demo?: AddedDemo;
         // Selected existing repository — the wizard's own repo-list item type
         // (ONE declaration; this used to be an inline four-field twin).
         selectedRepo?: GitHubRepoItem;

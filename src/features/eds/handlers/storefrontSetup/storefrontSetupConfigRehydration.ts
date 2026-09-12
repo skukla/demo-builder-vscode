@@ -24,6 +24,10 @@ import {
     resolveStorefrontForProject,
     type StorefrontLookup,
 } from '@/features/components/services/storefrontResolver';
+import {
+    STOREFRONT_DERIVED_FIELDS,
+    type StorefrontDerivedField,
+} from '@/features/project-creation/ui/steps/edsConfigFromStorefront';
 import type { DemoPackage, Storefront } from '@/types/demoPackages';
 import type { Logger } from '@/types/logger';
 
@@ -34,18 +38,9 @@ import type { Logger } from '@/types/logger';
  * and go missing together, so they are restored together — fixing only the code
  * patches would leave content patches failing in precisely the same silent way.
  */
-const PACKAGE_DERIVED_KEYS = [
-    'patches',
-    'contentPatches',
-    'contentPatchSource',
-    'codePatches',
-    'codePatchSource',
-    'byomOverlayUrl',
-    'accountContentSource',
-    'brandAssets',
-] as const;
+const PACKAGE_DERIVED_KEYS = STOREFRONT_DERIVED_FIELDS;
 
-type PackageDerivedKey = (typeof PACKAGE_DERIVED_KEYS)[number];
+type PackageDerivedKey = StorefrontDerivedField;
 
 /**
  * Fill in any package-derived field the caller left undefined.

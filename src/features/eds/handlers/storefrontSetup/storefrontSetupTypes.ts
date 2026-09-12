@@ -34,6 +34,8 @@ export interface StorefrontSetupResult {
     repoName?: string;
     /** See {@link RepoInfo.pdpCaveats} — spread in from the threaded repoInfo. */
     pdpCaveats?: string[];
+    /** See {@link RepoInfo.demoCaveats} — spread in from the threaded repoInfo. */
+    demoCaveats?: string[];
     // Note: previewUrl/liveUrl not included - derived from githubRepo by typeGuards
 }
 
@@ -86,4 +88,10 @@ export interface RepoInfo {
      * completion message says.
      */
     pdpCaveats?: string[];
+    /**
+     * What the dry check of the load-bearing patches found on an added demo's
+     * code (D23), in SC words. Separate from {@link pdpCaveats}: those say PDPs
+     * will not load at all; these say what may not work on this demo.
+     */
+    demoCaveats?: string[];
 }

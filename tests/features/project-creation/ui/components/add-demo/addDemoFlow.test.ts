@@ -51,6 +51,7 @@ describe('isBuildable', () => {
 describe('foundRows', () => {
     it('names the kind, the pages, the codes and the B2B answer when known', () => {
         expect(foundRows(READ)).toEqual([
+            { label: 'Code', value: 'github.com/jen/isle5-demo', done: true },
             { label: 'Storefront', value: 'Edge Delivery', done: true },
             { label: 'Pages', value: '12 published pages', done: true },
             { label: 'Store codes', value: 'isle5 · isle5_store · isle5_us', done: true },
@@ -66,13 +67,13 @@ describe('foundRows', () => {
             storeCodes: undefined,
             contentPublished: { indexFound: false },
         });
-        expect(rows.map((r) => r.label)).toEqual(['Storefront', 'Pages', 'Store codes']);
-        expect(rows[1]).toEqual({ label: 'Pages', value: undefined, done: false });
-        expect(rows[2]).toEqual({ label: 'Store codes', value: undefined, done: false });
+        expect(rows.map((r) => r.label)).toEqual(['Code', 'Storefront', 'Pages', 'Store codes']);
+        expect(rows[2]).toEqual({ label: 'Pages', value: undefined, done: false });
+        expect(rows[3]).toEqual({ label: 'Store codes', value: undefined, done: false });
     });
 
     it('does not ask a headless demo for pages', () => {
-        expect(foundRows({ ...READ, kind: 'headless' })[1]).toEqual({
+        expect(foundRows({ ...READ, kind: 'headless' })[2]).toEqual({
             label: 'Pages',
             value: 'Not needed for a headless demo',
             done: true,
@@ -97,7 +98,7 @@ describe('buildAddedDemo', () => {
             },
             configFlags: { 'commerce-b2b-enabled': true, 'commerce-companies-enabled': true },
             contentSource: { org: 'jen', site: 'isle5-demo' },
-            source: { owner: 'jen', repo: 'isle5-demo' },
+            source: { owner: 'jen', repo: 'isle5-demo', branch: 'main' },
             storefrontKind: 'eds',
         });
     });

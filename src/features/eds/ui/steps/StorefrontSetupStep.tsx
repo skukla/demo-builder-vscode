@@ -369,6 +369,7 @@ export function StorefrontSetupStep({
                 ]),
             ],
             selectedAddons: state.selectedAddons,
+            demo: state.demo,
             selectedBlockLibraries: state.selectedBlockLibraries,
             customBlockLibraries: state.customBlockLibraries,
             selectedPackage: state.selectedPackage,
@@ -377,6 +378,7 @@ export function StorefrontSetupStep({
     }, [
         state.projectName,
         state.edsConfig,
+        state.demo,
         state.componentConfigs,
         state.components?.backend,
         state.components?.dependencies,
@@ -427,6 +429,7 @@ export function StorefrontSetupStep({
         customBlockLibraries: state.customBlockLibraries,
         selectedPackage: state.selectedPackage,
         selectedStack: state.selectedStack,
+        demo: state.demo,
     });
 
     // Update running state and partialState ref when phase changes
@@ -521,6 +524,7 @@ export function StorefrontSetupStep({
             customBlockLibraries: initialConfigRef.current.customBlockLibraries,
             selectedPackage: initialConfigRef.current.selectedPackage,
             selectedStack: initialConfigRef.current.selectedStack,
+            demo: initialConfigRef.current.demo,
         } satisfies StorefrontSetupStartPayload);
     }, []);
 

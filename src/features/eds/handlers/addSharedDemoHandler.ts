@@ -61,6 +61,14 @@ export async function handleAddSharedDemo(
                 const [owner, repo] = fork.fullName.split('/');
                 row = { ...demo, source: { owner, repo, branch: fork.defaultBranch } };
                 forkedTo = fork.fullName;
+                // We own the copy, so it can be a GitHub template: project creation
+                // then generates from it. Best effort; the create path reads the
+                // flag live and falls back to a reset when it is not set.
+                try {
+                    await repoOperations.setTemplateFlag(owner, repo);
+                } catch (error) {
+                    context.logger.warn(`[SharedDemo] Could not flag ${fork.fullName} as a template: ${(error as Error).message}`);
+                }
             } catch (error) {
                 context.logger.warn(`[SharedDemo] Could not keep a copy of ${demo.source.owner}/${demo.source.repo}: ${(error as Error).message}`);
                 return {

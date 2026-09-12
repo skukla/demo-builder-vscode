@@ -11,9 +11,10 @@ import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
 
 const createFork = jest.fn();
+const setTemplateFlag = jest.fn();
 const validateToken = jest.fn();
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
-    getGitHubServices: () => ({ tokenService: { validateToken }, repoOperations: { createFork } }),
+    getGitHubServices: () => ({ tokenService: { validateToken }, repoOperations: { createFork, setTemplateFlag } }),
 }));
 
 jest.mock('@/features/project-creation/services/addedDemoSettings', () => ({
@@ -34,6 +35,17 @@ describe('handleAddSharedDemo', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         validateToken.mockResolvedValue({ valid: true, user: { login: 'steve' } });
+        setTemplateFlag.mockResolvedValue(undefined);
+    });
+
+    it('flags the kept copy as a template, and shrugs when GitHub refuses', async () => {
+        createFork.mockResolvedValue({ fullName: 'steve/isle5-demo', defaultBranch: 'main' });
+        await handleAddSharedDemo(ctx(), { demo: JEN, keepCopy: true });
+        expect(setTemplateFlag).toHaveBeenCalledWith('steve', 'isle5-demo');
+
+        setTemplateFlag.mockRejectedValueOnce(new Error('nope'));
+        const result = await handleAddSharedDemo(ctx(), { demo: JEN, keepCopy: true });
+        expect(result.success).toBe(true);
     });
 
     it('remembers the row as given when no copy is asked for', async () => {

@@ -121,6 +121,15 @@ describe('AddDemoModal', () => {
         expect(props.onClose).not.toHaveBeenCalled();
     });
 
+    it("takes a demo's site address and probes the repository it names", async () => {
+        renderModal();
+        mockRequest.mockResolvedValueOnce({ success: true, result: READ });
+        typeLink('https://main--isle5-demo--jen.aem.live');
+        await click('Continue');
+        expect(mockRequest).toHaveBeenCalledWith('probe-shared-demo', { owner: 'jen', repo: 'isle5-demo' });
+        expect(screen.getByTestId('found-Code')).toHaveTextContent('github.com/jen/isle5-demo');
+    });
+
     it('mounts nothing while closed', () => {
         renderModal({ isOpen: false });
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument();

@@ -160,6 +160,54 @@ export class GitHubRepoOperations {
     }
 
     /**
+     * Create an EMPTY repository (initialised with one commit, so it has a
+     * default branch to reset onto): the new-repo path for a demo whose source
+     * is not a GitHub template, where `generate` is refused. Under the target
+     * namespace when given, else the authenticated user.
+     */
+    async createEmptyRepository(
+        newRepoName: string,
+        isPrivate = false,
+        targetOwner?: string,
+    ): Promise<GitHubRepo> {
+        const octokit = await this.ensureAuthenticated();
+        const body = { name: newRepoName, private: isPrivate, auto_init: true };
+        try {
+            const response = targetOwner
+                ? await octokit.request('POST /orgs/{org}/repos', { org: targetOwner, ...body })
+                : await octokit.request('POST /user/repos', body);
+            return toGitHubRepo(response.data);
+        } catch (error) {
+            const apiError = error as GitHubApiError & { errors?: Array<{ message: string }> };
+            if (apiError.status === 422 && apiError.errors?.some((e) => e.message.includes('already exists'))) {
+                throw new Error(ERROR_MESSAGES.REPO_EXISTS);
+            }
+            if (apiError.status === 404 && targetOwner) {
+                // GitHub answers 404 for an org the user cannot create in; a personal
+                // account is never an org, so fall back to the user's own namespace.
+                const response = await octokit.request('POST /user/repos', body);
+                return toGitHubRepo(response.data);
+            }
+            throw error;
+        }
+    }
+
+    /**
+     * Mark a repository we own as a GitHub template, so `generate` works from
+     * it. Used on the SC's own copy of an added demo (we own the fork), and by
+     * Share.
+     */
+    async setTemplateFlag(owner: string, repo: string, isTemplate = true): Promise<void> {
+        const octokit = await this.ensureAuthenticated();
+        await octokit.request('PATCH /repos/{owner}/{repo}', {
+            owner,
+            repo,
+            is_template: isTemplate,
+        });
+        this.logger.debug(`[GitHub] Repository ${owner}/${repo} template flag set to ${isTemplate}`);
+    }
+
+    /**
      * Fork `owner/repo` into the authenticated user's account: the one call
      * "keep my own copy of this demo" makes. GitHub answers with the user's
      * existing fork when they already have one, which is what makes the add
@@ -544,6 +592,9 @@ export class GitHubRepoOperations {
         templateRepo: string,
         branch = 'main',
         commitMessage = 'chore: reset to template',
+        // The template's branch, when it is not the one being reset: an added
+        // demo's repository may default to something other than `main`.
+        templateBranch = branch,
     ): Promise<{ commitSha: string }> {
         const token = await this.tokenService.getToken();
         if (!token) {
@@ -579,7 +630,7 @@ export class GitHubRepoOperations {
                 cwd: repoDir, timeout: TIMEOUTS.QUICK, shell: DEFAULT_SHELL,
             });
 
-            const fetchResult = await this.commandManager.execute(`git fetch template ${branch}`, {
+            const fetchResult = await this.commandManager.execute(`git fetch template ${templateBranch}`, {
                 cwd: repoDir, timeout: TIMEOUTS.LONG, shell: DEFAULT_SHELL,
             });
             if (fetchResult.code !== 0) {
@@ -592,7 +643,7 @@ export class GitHubRepoOperations {
             // Get template's tree and create a commit with it on our branch
             // Using read-tree to replace our working tree with template's content
             const readTreeResult = await this.commandManager.execute(
-                `git read-tree --reset -u template/${branch}`,
+                `git read-tree --reset -u template/${templateBranch}`,
                 { cwd: repoDir, timeout: TIMEOUTS.NORMAL, shell: DEFAULT_SHELL },
             );
             if (readTreeResult.code !== 0) {

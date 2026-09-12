@@ -7,8 +7,10 @@
  * @module features/eds/handlers/storefrontSetup/storefrontSetupPhase1
  */
 
+import type { GitHubRepoOperations } from '../../services/github/githubRepoOperations';
 import { pinRepoToLkg } from '../../services/patches/lkgPinHelper';
 import type { PatchReport } from '../../services/patches/patchReportHelper';
+import type { GitHubRepo } from '../../services/types';
 import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
 import { checkGitHubAppForExistingRepo } from './storefrontSetupPhaseHelpers';
 import type { RepoInfo, SetupServices, StorefrontSetupResult } from './storefrontSetupTypes';
@@ -328,6 +330,60 @@ async function executePhaseExistingRepo(
 }
 
 /**
+ * Create the new repository from its source. A shipped brand's template is a
+ * GitHub template, so `generate` is the whole story. An added demo's source
+ * is whatever the colleague has: when GitHub flags it as a template (or it is
+ * the SC's own copy, which the add flagged) `generate` still works; otherwise
+ * an empty repository is created and reset onto the source, the same reset an
+ * existing repo gets. Read live, not from the row, so a flag set after the add
+ * is honoured and a removed one does not break the run.
+ */
+export interface NewRepoRequest {
+    newRepoName: string;
+    isPrivate: boolean;
+    /** The GitHub namespace to create under; undefined = the authenticated user. */
+    namespace?: string;
+    /** The source is an added demo's repository, which may not be a GitHub template. */
+    fromAddedDemo: boolean;
+}
+
+export async function createRepoFromSource(
+    repoOps: Pick<
+        GitHubRepoOperations,
+        'createFromTemplate' | 'createEmptyRepository' | 'resetToTemplate' | 'getRepository'
+    >,
+    request: NewRepoRequest,
+    templateOwner: string,
+    templateRepo: string,
+    logger: HandlerContext['logger'],
+): Promise<GitHubRepo> {
+    const { newRepoName, isPrivate, namespace } = request;
+    if (!request.fromAddedDemo) {
+        return repoOps.createFromTemplate(templateOwner, templateRepo, newRepoName, isPrivate, namespace);
+    }
+    const source = await repoOps.getRepository(templateOwner, templateRepo);
+    if (source.isTemplate) {
+        logger.info(`[Storefront Setup] ${templateOwner}/${templateRepo} is a template — generating`);
+        return repoOps.createFromTemplate(templateOwner, templateRepo, newRepoName, isPrivate, namespace);
+    }
+    logger.info(
+        `[Storefront Setup] ${templateOwner}/${templateRepo} is not a template — creating an empty repository and resetting it onto the source`,
+    );
+    const created = await repoOps.createEmptyRepository(newRepoName, isPrivate, namespace);
+    const [owner, name] = created.fullName.split('/');
+    await repoOps.resetToTemplate(
+        owner,
+        name,
+        templateOwner,
+        templateRepo,
+        created.defaultBranch,
+        'chore: start from the demo',
+        source.defaultBranch,
+    );
+    return created;
+}
+
+/**
  * Handle new repository creation from template
  */
 async function executePhaseNewRepo(
@@ -357,12 +413,17 @@ async function executePhaseNewRepo(
     // when daLiveOrg is empty preserves the legacy default of "create under
     // the authenticated user" — defensive against any state that escapes
     // the picker (e.g., direct invocation paths).
-    const repo = await services.githubRepoOps.createFromTemplate(
+    const repo = await createRepoFromSource(
+        services.githubRepoOps,
+        {
+            newRepoName: repoInfo.repoName,
+            isPrivate: edsConfig.isPrivate ?? false,
+            namespace: edsConfig.daLiveOrg || undefined,
+            fromAddedDemo: Boolean(edsConfig.demo),
+        },
         templateOwner,
         templateRepo,
-        repoInfo.repoName,
-        edsConfig.isPrivate ?? false,
-        edsConfig.daLiveOrg || undefined,
+        logger,
     );
 
     repoInfo.repoUrl = repo.htmlUrl;

@@ -48,6 +48,7 @@ export function LinkStage({
                             demo.source.repo.toLowerCase() === parsed.repo.toLowerCase(),
                     )
                 }
+                acceptSiteAddress
                 source={source}
                 onSourceChange={onSourceChange}
             />

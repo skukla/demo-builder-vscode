@@ -65,13 +65,36 @@ export function SampleDataStep({ state, updateState }: BaseStepProps): React.JSX
         'find-datapacks',
     );
 
+    // The pack an added demo asks for (D26): the catalog is fetched with the
+    // community half included, because a colleague's pack is rarely curated.
+    const asked = state.demo?.datapack;
+    const includeCommunity = Boolean(asked);
     useEffect(() => {
-        // Curated only: the community half of the catalog is developer scratch,
-        // and this is a first-run choice, not a browsing surface.
-        load({ includeCommunity: false });
-    }, [load]);
+        // Curated only, unless a demo asks for a pack: the community half of the
+        // catalog is developer scratch, and this is a first-run choice, not a
+        // browsing surface.
+        load({ includeCommunity });
+    }, [load, includeCommunity]);
 
     const groups = useMemo(() => groupDatapacks(value?.items ?? []), [value]);
+    const askedGroup = useMemo(
+        () => (asked ? groups.find((group) => group.name === asked.name) : undefined),
+        [groups, asked],
+    );
+
+    // Pre-select the demo's pack once the catalog is here and nothing is chosen yet.
+    // A vanished version falls back to the default rule; the SC can change it.
+    const askedName = asked?.name;
+    const askedVersion = asked?.version;
+    const chosenName = state.datapack?.name;
+    useEffect(() => {
+        if (!settled || !askedGroup || chosenName !== undefined) return;
+        const version =
+            askedVersion && askedGroup.versions.some((v) => v.id.version === askedVersion)
+                ? askedVersion
+                : pickDefaultVersion(askedGroup);
+        if (version) updateState({ datapack: { name: askedGroup.name, version } });
+    }, [settled, askedGroup, askedName, askedVersion, chosenName, updateState]);
 
     /** Opens VS Code settings at the section the refusal names. */
     const openDataInstallerSettings = useCallback((): void => {
@@ -185,6 +208,13 @@ export function SampleDataStep({ state, updateState }: BaseStepProps): React.JSX
                         onChange={setQuery}
                         width="100%"
                     />
+                    {asked ? (
+                        <p className="sample-data-note" data-testid="demo-datapack-note">
+                            {askedGroup
+                                ? `This demo asks for ${askedGroup.displayName}${askedVersion && !askedGroup.versions.some((v) => v.id.version === askedVersion) ? ` (version ${askedVersion} is no longer published; the default version is selected)` : ''}.`
+                                : `This demo asks for ${asked.name}, which isn't published yet. Ask the demo's owner to export it.`}
+                        </p>
+                    ) : null}
                     <div className="sample-data-grid" role="radiogroup" aria-label="Datapacks">
                         {/* None is the opt-out, not a catalog entry, so no query
                             hides it — filtering it away would leave the group with

@@ -12,7 +12,7 @@
 
 import { TextField } from '@adobe/react-spectrum';
 import React, { useState } from 'react';
-import { parseGitHubUrl, type GitHubRepoInfo } from '@/core/utils/githubUrlParser';
+import { parseGitHubUrl, parseStorefrontLink, type GitHubRepoInfo } from '@/core/utils/githubUrlParser';
 
 export interface GitHubLinkFieldProps {
     label: string;
@@ -22,6 +22,11 @@ export interface GitHubLinkFieldProps {
     /** Shown when `isDuplicate` says the parsed source is already in the list. */
     duplicateMessage: string;
     isDuplicate: (source: GitHubRepoInfo) => boolean;
+    /**
+     * Also accept an Edge Delivery site address (`main--repo--owner.aem.live`),
+     * which names its repository. Off by default: an integration is a repository.
+     */
+    acceptSiteAddress?: boolean;
     /** The source to prefill from (returning to the field with a draft). */
     source?: GitHubRepoInfo;
     /** Emits the parsed source on a valid, non-duplicate link; undefined otherwise. */
@@ -33,10 +38,11 @@ export function evaluateGitHubLink(
     raw: string,
     isDuplicate: (source: GitHubRepoInfo) => boolean,
     messages: { invalid: string; duplicate: string },
+    acceptSiteAddress = false,
 ): { source?: GitHubRepoInfo; message?: string } {
     const trimmed = raw.trim();
     if (trimmed === '') return {};
-    const parsed = parseGitHubUrl(trimmed);
+    const parsed = acceptSiteAddress ? parseStorefrontLink(trimmed) : parseGitHubUrl(trimmed);
     if (!parsed) return { message: messages.invalid };
     if (isDuplicate(parsed)) return { message: messages.duplicate };
     return { source: parsed };
@@ -54,6 +60,7 @@ export function GitHubLinkField({
     invalidMessage,
     duplicateMessage,
     isDuplicate,
+    acceptSiteAddress = false,
     source,
     onSourceChange,
 }: GitHubLinkFieldProps): React.ReactElement {
@@ -61,10 +68,10 @@ export function GitHubLinkField({
         source ? `https://github.com/${source.owner}/${source.repo}` : '',
     );
     const messages = { invalid: invalidMessage, duplicate: duplicateMessage };
-    const { message } = evaluateGitHubLink(text, isDuplicate, messages);
+    const { message } = evaluateGitHubLink(text, isDuplicate, messages, acceptSiteAddress);
     const handleChange = (next: string): void => {
         setText(next);
-        onSourceChange(evaluateGitHubLink(next, isDuplicate, messages).source);
+        onSourceChange(evaluateGitHubLink(next, isDuplicate, messages, acceptSiteAddress).source);
     };
     return (
         <TextField

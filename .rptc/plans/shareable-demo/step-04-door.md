@@ -59,7 +59,7 @@ remembered and no fork is offered.
 ## Copy
 
 "Add a demo" · "Use a demo a colleague built, or one of your own. You'll need its link." ·
-"Link to the demo" · "Enter a GitHub link, like https://github.com/name/demo" · "You've
+"Link to the demo" · "Enter a GitHub link, like https://github.com/name/demo, or the demo's site address" (a site address, `main--repo--owner.aem.live`, names its repository and is accepted; long dashes from a chat client are read as the two hyphens; decided 2026-09-12) · "You've
 already added this demo." · "Reading the demo…" over the repository name, with what is being checked underneath · "This doesn't look like a demo we
 can build on" (+ what is missing) · "What we found in this demo" · "Uses company (B2B)
 features" + the two lines accepted in research §9. No "storefront", "custom", "shared",

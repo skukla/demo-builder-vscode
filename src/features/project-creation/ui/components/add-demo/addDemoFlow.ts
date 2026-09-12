@@ -34,10 +34,10 @@ export interface AddDemoDraft {
 
 export const COPY = {
     title: 'Add a demo',
-    lead: "Use a demo a colleague built, or one of your own. You'll need its link.",
+    lead: "Use a demo a colleague built, or one of your own. You'll need its link: the GitHub link, or the demo's site address.",
     linkLabel: 'Link to the demo',
     linkPlaceholder: 'https://github.com/name/demo',
-    invalidLink: 'Enter a GitHub link, like https://github.com/name/demo',
+    invalidLink: "Enter a GitHub link, like https://github.com/name/demo, or the demo's site address",
     duplicateLink: "You've already added this demo.",
     looking: 'Reading the demo…',
     lookingFor: 'Checking what kind of storefront it is, its store codes, and whether its pages are published.',
@@ -80,6 +80,8 @@ export function foundRows(read: SharedDemoRead): SummaryRow[] {
         ? `${read.contentPublished.pageCount ?? 0} published pages`
         : undefined;
     return [
+        // Where the code lives, first: a site address was read back to it.
+        { label: 'Code', value: `github.com/${read.fullName}`, done: true },
         { label: 'Storefront', value: KIND_LABEL[read.kind], done: true },
         {
             label: 'Pages',
@@ -130,7 +132,7 @@ export function buildAddedDemo(read: SharedDemoRead, draft: AddDemoDraft): Added
         ...(description?.integrations ? { integrations: description.integrations } : {}),
         ...(description?.blockLibraries ? { blockLibraries: description.blockLibraries } : {}),
         ...(read.contentSource ? { contentSource: read.contentSource } : {}),
-        source: { owner, repo },
+        source: { owner, repo, branch: read.defaultBranch },
         storefrontKind: read.kind === 'headless' ? 'headless' : 'eds',
     };
 }

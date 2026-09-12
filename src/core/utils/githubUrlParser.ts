@@ -11,6 +11,45 @@ export interface GitHubRepoInfo {
 }
 
 /**
+ * An Edge Delivery site address carries its repository: the host is
+ * `<ref>--<repo>--<owner>` under `aem.live` / `aem.page` (or the older
+ * `hlx.live` / `hlx.page`), which is exactly how the extension builds every
+ * storefront's own address. Reading one back is exact, not a guess.
+ *
+ * Long dashes are read as the two hyphens they were before a chat client
+ * "corrected" them: a colleague pastes a site address from a message far
+ * more often than from a browser bar.
+ */
+const SITE_HOST = /^([^.]+)\.(?:aem|hlx)\.(?:live|page)$/i;
+
+/**
+ * Parse a link to a demo's CODE: a GitHub link, or an Edge Delivery site
+ * address. Used where a colleague's link is pasted; the GitHub-only parser
+ * above stays for every path that must be a repository link.
+ *
+ * @param url - What was pasted
+ * @returns The owner and repo, or null when the text names neither
+ */
+export function parseStorefrontLink(url: string | undefined): GitHubRepoInfo | null {
+    const fromGitHub = parseGitHubUrl(url);
+    if (fromGitHub) return fromGitHub;
+    if (!url) return null;
+    const normalised = url.trim().replace(/[\u2013\u2014]/g, '--');
+    let host: string;
+    try {
+        host = new URL(normalised.includes('://') ? normalised : `https://${normalised}`).hostname;
+    } catch {
+        return null;
+    }
+    const match = SITE_HOST.exec(host);
+    if (!match) return null;
+    const parts = match[1].split('--');
+    if (parts.length !== 3 || parts.some((part) => part === '')) return null;
+    const [, repo, owner] = parts;
+    return { owner, repo };
+}
+
+/**
  * GitHub owner/repo charset. owner/repo are interpolated into a shell-executed
  * `git clone` and into path segments, so shell metacharacters and dot-only
  * names are rejected fail-fast. Sources can arrive from imported settings

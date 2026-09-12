@@ -3385,7 +3385,7 @@
             "anchors": [
                 "): void {"
             ],
-            "line": 476,
+            "line": 477,
             "mutants": 2,
             "category": "block",
             "reason": "This row covers the body-deletion mutant on BOTH validation helpers \u2014 validateStackPackageConfig at line 476 and validateStackLookup at line 511 \u2014 because their signature lines are textually identical and cannot be anchored apart. Each function returns void and does nothing but write to console.warn and console.log, so emptying either body changes nothing a caller or a test can observe, and the only way to notice would be to assert log output.",
@@ -4751,11 +4751,11 @@
         {
             "module": "src/features/project-creation/ui/steps/SampleDataStep.tsx",
             "anchors": [
-                "}, [load]);"
+                "}, [load, includeCommunity]);"
             ],
             "mutants": 1,
             "category": "other",
-            "reason": "The effect fetches once per mount, and emptying its dependency list keeps that true: load is a useCallback inside useDataInstallerRequest keyed on the execute function useVSCodeRequest memoises, so it never changes identity for a given request type. A test could only tell the two apart by making load change identity, which would mean the hook had started re-fetching on every render \u2014 a defect that hook is what prevents.",
+            "reason": "The effect fetches once per mount, and emptying its dependency list keeps that true: load is a useCallback inside useDataInstallerRequest keyed on the execute function useVSCodeRequest memoises, so it never changes identity for a given request type. A test could only tell the two apart by making load change identity, which would mean the hook had started re-fetching on every render \u2014 a defect that hook is what prevents. (Re-anchored 2026-09-12: the effect now also depends on whether an added demo asks for a pack.)",
             "decision": "none \u2014 the dependency is declared because exhaustive-deps requires it, not because it varies",
             "recorded": "2026-09-04",
             "source": "PL-22 batch MUT-02"
@@ -4765,7 +4765,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 79,
+            "line": 102,
             "mutants": 1,
             "category": "other",
             "reason": "openDataInstallerSettings posts a fixed message and closes over nothing at all. The Stryker replacement is a constant literal that compares equal on every render, so useCallback returns the same function either way, and the message it posts is identical. There is no render, click or payload a test could read that differs.",
@@ -5913,7 +5913,7 @@
             "anchors": [
                 "setGitHubAppStatus({ isChecking: false, isInstalled: null });"
             ],
-            "line": 313,
+            "line": 320,
             "mutants": 1,
             "category": "branch",
             "reason": "Right after a successful creation this writes 'not asked yet'. Flipping isChecking to true is invisible because the very next effect - the created-repo App check, armed by the isInstalled null this line sets - calls probeRepoCodeSync, whose first action is to set isChecking true anyway. The two writes land in the same commit as far as any assertion is concerned, and the created-repo probe IS tested (it runs against the repository just created).",
@@ -6000,7 +6000,7 @@
             "anchors": [
                 "}, [repoMode, selectedRepo]);"
             ],
-            "line": 374,
+            "line": 381,
             "mutants": 3,
             "category": "block",
             "reason": "The effect this closes resets the App status when the repo mode or selection changes. On mount it writes exactly the initial state, so it is a no-op there. On a change it is immediately followed by the Code Sync probe for the new selection, which sets isChecking true - measured while writing these tests, that probe fires even when the new repository's readiness has not landed, because the effect reads the previous selection's readiness. So the reset and the probe land in the same commit from any assertion's point of view, and emptying the effect body, emptying its write, or emptying this dependency array all leave the same observable sequence.",
@@ -6121,7 +6121,7 @@
             "anchors": [
                 "const failures = [];"
             ],
-            "line": 402,
+            "line": 414,
             "mutants": 1,
             "category": "other",
             "reason": "The mutant seeds the failures list with one junk string, which flips the aggregate to 'cleanup had errors'. Its return value is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. So nothing this expression computes can reach a test except through log wording.",
@@ -6134,7 +6134,7 @@
             "anchors": [
                 "if (!result.github.success && !result.github.skipped) {"
             ],
-            "line": 403,
+            "line": 415,
             "mutants": 6,
             "category": "branch",
             "reason": "Every variant of this guard \u2014 forced true, forced false, && to ||, either negation dropped, and the body emptied \u2014 changes only whether a 'GitHub: ...' string joins the failure list. The GitHub deletion itself already happened inside CleanupService; this line classifies its report. Its return value is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. So nothing this expression computes can reach a test except through log wording.",
@@ -6147,7 +6147,7 @@
             "anchors": [
                 "if (!result.daLive.success && !result.daLive.skipped) {"
             ],
-            "line": 406,
+            "line": 418,
             "mutants": 6,
             "category": "branch",
             "reason": "The DA.live twin of the GitHub guard above, with the same shape and the same fate: it appends a 'DA.live: ...' string to the failure list after the deletion has already been attempted. Its return value is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. So nothing this expression computes can reach a test except through log wording.",
@@ -6160,7 +6160,7 @@
             "anchors": [
                 "if (failures.length > 0) {"
             ],
-            "line": 410,
+            "line": 422,
             "mutants": 5,
             "category": "branch",
             "reason": "This is the point where the failure list becomes a success flag, so it is the closest thing here to a decision \u2014 but the flag has one reader and that reader picks a log line. Forcing it either way, or comparing with >= or <=, changes 'Cleanup completed successfully' into 'Cleanup completed with errors' or the reverse. Its return value is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. So nothing this expression computes can reach a test except through log wording.",
@@ -6173,7 +6173,7 @@
             "anchors": [
                 "return { success: false, error: failures.join('; ') };"
             ],
-            "line": 411,
+            "line": 423,
             "mutants": 2,
             "category": "other",
             "reason": "Emptying this object literal, or flipping its false to true, changes the shape and the verdict of the cleanup report. The value returned here is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way.",
@@ -6186,7 +6186,7 @@
             "anchors": [
                 "return { success: true };"
             ],
-            "line": 414,
+            "line": 426,
             "mutants": 2,
             "category": "other",
             "reason": "The all-clear answer from the cleanup helper. Emptying the literal or flipping its true to false turns a clean cleanup into a reported failure. The value returned here is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way.",
@@ -6199,7 +6199,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 415,
+            "line": 427,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying this catch body makes the helper return undefined instead of a failure verdict. The caller then throws a TypeError reading .success on undefined, which its own catch swallows into a different log line \u2014 so the handler still resolves { success: true } and no resource is treated differently. The value returned here is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way.",
@@ -6212,7 +6212,7 @@
             "anchors": [
                 "return { success: false, error: (error as Error).message };"
             ],
-            "line": 416,
+            "line": 428,
             "mutants": 2,
             "category": "other",
             "reason": "The failure verdict for an exception thrown anywhere in the helper \u2014 including the fail-fast when there is no authenticated session. Emptying the literal or flipping its false to true changes only that verdict. The value returned here is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. The fail-fast ITSELF is tested: with no authManager, no CleanupService is constructed and cleanupEdsResources is never called.",
@@ -8396,7 +8396,7 @@
             "anchors": [
                 "if (!patchIds || patchIds.length === 0) return [];"
             ],
-            "line": 70,
+            "line": 72,
             "mutants": 3,
             "category": "branch",
             "reason": "This is a fast path, not a decision. With the guard gone an empty id list flows into getCodePatches, which has the identical guard and returns [] without fetching, then into applyCodePatches, which also returns [] for an empty list \u2014 so the wrapper still returns [] and still makes no network call. The || to && form differs only when patchIds is null or undefined, which the signature forbids and which all three call sites (edsPipeline, lkgPinHelper, edsResetRepoHelper) already guard against before calling.",
@@ -8409,7 +8409,7 @@
             "anchors": [
                 "if (!patchIds || patchIds.length === 0) return [];"
             ],
-            "line": 130,
+            "line": 132,
             "mutants": 3,
             "category": "branch",
             "reason": "The block-phase copy of the same fast path. Removing it lets an empty id list reach getCodePatches, which returns [] without fetching, so blockPatches is empty, uniqueTargets is empty, no repo read or write happens and applyCodePatches returns [] for the empty list \u2014 the same [] the guard returns. The || to && variant needs a null patchIds, which the signature forbids and which every call site guards before calling.",
@@ -8470,7 +8470,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 93,
+            "line": 95,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger.warn. Emptying it does not stop the catch from swallowing the template-fetch error, so control still continues to the next patch target, the target still never enters fileOverrides, and the engine still reports the patch not-applied. The rejecting-fetch test now covers this path and asserts those outcomes; the only thing the mutant removes is the warning text.",
@@ -8483,7 +8483,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 148,
+            "line": 150,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger.warn. Emptying it still swallows the getFileContent failure, so the loop still moves to the next target, the unreadable target still stays out of the working set, and the engine still reports it not-applied while the other targets are patched and written. The failing-read test covers exactly that and asserts the surviving target is still written; only the warn text goes.",
@@ -8496,7 +8496,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 182,
+            "line": 184,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger.warn. Emptying it still absorbs a failing createOrUpdateFile, so the write loop continues to the remaining targets and the engine results are still returned to the caller rather than thrown at the pipeline. The failing-write test covers this path and asserts the results come back intact; the mutant changes only the warn text.",
@@ -16705,10 +16705,11 @@
             ],
             "mutants": 1,
             "category": "branch",
-            "reason": "Stryker replaces the guard's condition with false, so the falsy-url fast path never fires. Nothing observable changes: every value that makes `!url` true is also rejected by `new URL`, which throws into the function's own `catch { return null }`. Verified by planting the mutation and diffing both versions over undefined, null, '', 0, false and NaN plus the valid and invalid URL cases the suite already covers \u2014 zero differences on any input. The function has no side effects and logs nothing, so there is no other channel a test could observe.",
+            "reason": "Stryker replaces the guard's condition with false, so the falsy-url fast path never fires. Nothing observable changes: every value that makes `!url` true is also rejected by `new URL`, which throws into the function's own `catch { return null }`. Verified by planting the mutation and diffing both versions over undefined, null, '', 0, false and NaN plus the valid and invalid URL cases the suite already covers \u2014 zero differences on any input. The function has no side effects and logs nothing, so there is no other channel a test could observe. (Pinned to parseGitHubUrl's guard on 2026-09-12: parseStorefrontLink below opens with the same line.)",
             "decision": "none \u2014 the guard is a correct, cheap fast path for the argument's declared `string | undefined` type",
             "recorded": "2026-09-06",
-            "source": "mutationLedger add"
+            "source": "mutationLedger add",
+            "line": 36
         },
         {
             "module": "src/core/utils/githubUrlParser.ts",
