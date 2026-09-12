@@ -63,3 +63,4 @@ unchanged from there: the Storefront area shows the frontend piece as fixed by t
 - 2026-09-12  6a49396ca Step: the Custom brand is Starter (id and label); the package icon removed
 - 2026-09-12  79edc51ee Step: read a colleague's repository - probe-shared-demo, markers verified against three real repos
 - 2026-09-12  c768db042 Step: the Add a demo card and dialog - probe, fork on add, remembered demos as cards
+- 2026-09-12  792564379 Step: create a project from an added demo - row on the wire, repo by template flag, dry check, wizard seeding, one field list, site-address links
