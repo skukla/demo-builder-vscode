@@ -35,6 +35,7 @@ import { registerCurrentProjectTool } from '@/features/ai/server/currentProjectT
 import { registerDeleteProjectTool } from '@/features/ai/server/deleteProjectTool';
 import { registerDiagnosticsTools } from '@/features/ai/server/diagnosticsTools';
 import { registerDiscoveryTools } from '@/features/ai/server/discoveryTools';
+import { registerAddedDemoTools } from '@/features/ai/server/addedDemoTools';
 import { registerEdsResetTool } from '@/features/ai/server/edsResetTool';
 import { registerLifecycleTools } from '@/features/ai/server/lifecycleTools';
 import { registerCommerceEndpointsTool } from '@/features/ai/server/commerceEndpointsTool';
@@ -139,6 +140,7 @@ describe('registration against the real MCP SDK', () => {
             registerSettingsTools(s, () => undefined);
             registerContentAuthoringTools(s, ctxFactory);
             registerEdsResetTool(s, ctxFactory);
+            registerAddedDemoTools(s, ctxFactory);
             registerDeleteProjectTool(s, ctxFactory);
             registerApplyUpdatesTool(s, ctxFactory);
             registerViewTools(s, async () => undefined);

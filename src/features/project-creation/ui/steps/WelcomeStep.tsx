@@ -5,6 +5,7 @@ import { BrandGallery } from '../components/BrandGallery';
 import { buildEdsConfigFromStorefront } from './edsConfigFromStorefront';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
+import { webviewClient } from '@/core/ui/utils/vscode-api';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { normalizeProjectName, getProjectNameError } from '@/core/validation/normalizers';
 import { removeKeysFromComponents } from '@/features/components/services/componentConfigWrites';
@@ -12,6 +13,7 @@ import { addedDemoId, packageFromAddedDemo } from '@/features/components/service
 import { DemoPackage } from '@/types/demoPackages';
 import type { AddedDemo } from '@/types/projectFile';
 import { Stack } from '@/types/stacks';
+import type { ForgetAddedDemoRequest, ForgetAddedDemoResult } from '@/types/webviewRequests';
 import { BaseStepProps } from '@/types/wizard';
 
 interface WelcomeStepProps extends BaseStepProps {
@@ -151,6 +153,31 @@ export function WelcomeStep({
         [updateState, state.selectedPackage, state.componentConfigs, packages, addedDemos],
     );
 
+    /**
+     * Forget from the card's menu. The host confirms (it counts the projects
+     * built on the demo) and the card leaves through the settings push; a
+     * forgotten demo that was selected is deselected here, its row with it.
+     */
+    const handleForgetDemo = useCallback(
+        (packageId: string) => {
+            const demo = addedDemos.find((row) => addedDemoId(row) === packageId);
+            if (!demo) return;
+            const request: ForgetAddedDemoRequest = {
+                name: demo.name,
+                source: { owner: demo.source.owner, repo: demo.source.repo },
+            };
+            void webviewClient
+                .request<{ success?: boolean; result?: ForgetAddedDemoResult }>('forget-added-demo', request)
+                .then((answer) => {
+                    if (answer?.result?.forgotten && state.selectedPackage === packageId) {
+                        updateState({ selectedPackage: undefined, demo: undefined });
+                    }
+                })
+                .catch(() => undefined);
+        },
+        [addedDemos, state.selectedPackage, updateState],
+    );
+
     /** The dialog's commits: a demo just added, or a remembered one picked from its list. */
     const selectAddedDemo = useCallback(
         (demo: AddedDemo) => {
@@ -278,6 +305,7 @@ export function WelcomeStep({
                     customBlockLibraries={state.customBlockLibraries}
                     headerContent={projectNameField}
                     onAddDemo={openAddDemo}
+                    onForgetDemo={handleForgetDemo}
                 />
                 <AddDemoModal
                     isOpen={addDemoOpen}

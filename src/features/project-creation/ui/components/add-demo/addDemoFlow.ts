@@ -16,10 +16,17 @@
 
 import type { SummaryRow } from '../BuildYourProjectSummary';
 import { deriveBlockLibraryName } from '@/features/project-creation/services/customBlockLibraryUtils';
-import { SHARED_DEMO_FILE_VERSION, type AddedDemo } from '@/types/projectFile';
+import { SHARED_DEMO_FILE_VERSION, type AddedDemo, type StorefrontKind } from '@/types/projectFile';
 import type { SharedDemoProbeResult, SharedDemoRead } from '@/types/webviewRequests';
 
 export type AddDemoStage = 'link' | 'found';
+
+/**
+ * Add: remember a demo for the Welcome grid. Change: point the open project
+ * at another copy of its demo (the dashboard's "Change source"; same
+ * storefront kind only, decided 2026-09-11).
+ */
+export type AddDemoMode = 'add' | 'change';
 
 /** What the dialog holds until "Add demo". */
 export interface AddDemoDraft {
@@ -30,6 +37,8 @@ export interface AddDemoDraft {
     b2bOn: boolean;
     /** Keep my own copy: on by default (decided 2026-09-11). */
     keepCopy: boolean;
+    /** Change mode only: also move the remembered demo to the new source. Off by default. */
+    updateRemembered: boolean;
 }
 
 export const COPY = {
@@ -50,9 +59,30 @@ export const COPY = {
     keepCopy: "Keep my own copy of this demo's code, so it still works if the original changes",
     remembered: 'Demos you have added',
     add: 'Add demo',
+    /** The dashboard's "Change source" door: the same dialog, a different commit. */
+    change: {
+        title: 'Change the demo source',
+        lead: "Point this project at another copy of its demo: a colleague's link, your own copy, or the demo's site address. Only where reset and updates read from changes; the project's code and pages stay as they are.",
+        commit: 'Change source',
+        updateRemembered: 'Also update the remembered demo',
+        shipped: "A project can't be pointed at a demo we ship. Use the demo's own repository.",
+        wrongKindTitle: 'This demo is a different kind of storefront',
+    },
 } as const;
 
-export const INITIAL_DRAFT: AddDemoDraft = { name: '', b2bOn: false, keepCopy: true };
+export const INITIAL_DRAFT: AddDemoDraft = { name: '', b2bOn: false, keepCopy: true, updateRemembered: false };
+
+/** The one rule of change mode: an Edge Delivery project takes an Edge Delivery demo, a headless one a headless demo. */
+export function wrongKindMessage(currentKind: StorefrontKind): string {
+    const built = currentKind === 'eds' ? 'an Edge Delivery' : 'a headless';
+    return `This project is built on ${built} demo; pick a demo of the same kind.`;
+}
+
+/** Whether the read demo can be this project's source (change mode). */
+export function kindMatches(read: SharedDemoRead, currentKind: StorefrontKind | undefined): boolean {
+    if (!currentKind) return true;
+    return (read.kind === 'headless' ? 'headless' : 'eds') === currentKind;
+}
 
 /** The name the dialog prefills: the description file's, else the repository's, spelled for people. */
 export function defaultDemoName(read: SharedDemoRead): string {
@@ -142,8 +172,10 @@ export function continueLabel(
     stage: AddDemoStage,
     result: SharedDemoProbeResult | undefined,
     shippedName: string | undefined,
+    mode: AddDemoMode = 'add',
 ): string {
     if (stage === 'link') return 'Continue';
+    if (mode === 'change') return COPY.change.commit;
     if (result?.outcome === 'shipped') return `Use ${shippedName ?? 'the demo'}`;
     return COPY.add;
 }

@@ -7,9 +7,11 @@ import * as vscode from 'vscode';
 import {
     ADDED_DEMOS_SETTING,
     addedDemoKey,
+    forgetAddedDemo,
     parseAddedDemoSettings,
     readAddedDemos,
     rememberAddedDemo,
+    renameAddedDemoSource,
 } from '@/features/project-creation/services/addedDemoSettings';
 import { makeAddedDemo } from '../../../helpers/demoPackageFixtures';
 
@@ -75,5 +77,54 @@ describe('rememberAddedDemo', () => {
         const renamed = { ...JEN, name: 'Isle5 (renamed)' };
         const next = await rememberAddedDemo(renamed);
         expect(next).toEqual([renamed]);
+    });
+});
+
+describe('renameAddedDemoSource', () => {
+    const update = jest.fn();
+
+    beforeEach(() => {
+        update.mockReset().mockResolvedValue(undefined);
+        (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
+            get: jest.fn((key: string, fallback: unknown) => (key === ADDED_DEMOS_SETTING ? [JEN, BOB] : fallback)),
+            update,
+        });
+    });
+
+    it('moves a remembered row to its new repository and keeps everything else on it', async () => {
+        const moved = await renameAddedDemoSource({ owner: 'Jen', repo: 'ISLE5-DEMO' }, { owner: 'jen', repo: 'isle5-2026' });
+
+        expect(moved).toBe(true);
+        expect(update).toHaveBeenCalledWith(
+            ADDED_DEMOS_SETTING,
+            [{ ...JEN, source: { owner: 'jen', repo: 'isle5-2026' } }, BOB],
+            vscode.ConfigurationTarget.Global,
+        );
+    });
+
+    it('writes nothing when the demo is not remembered', async () => {
+        const moved = await renameAddedDemoSource({ owner: 'nobody', repo: 'x' }, { owner: 'nobody', repo: 'y' });
+
+        expect(moved).toBe(false);
+        expect(update).not.toHaveBeenCalled();
+    });
+});
+
+describe('forgetAddedDemo', () => {
+    const update = jest.fn();
+
+    beforeEach(() => {
+        update.mockReset().mockResolvedValue(undefined);
+        (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
+            get: jest.fn((key: string, fallback: unknown) => (key === ADDED_DEMOS_SETTING ? [JEN, BOB] : fallback)),
+            update,
+        });
+    });
+
+    it('removes the row for that repository and answers what is left', async () => {
+        const next = await forgetAddedDemo({ owner: 'JEN', repo: 'isle5-demo' });
+
+        expect(next).toEqual([BOB]);
+        expect(update).toHaveBeenCalledWith(ADDED_DEMOS_SETTING, [BOB], vscode.ConfigurationTarget.Global);
     });
 });

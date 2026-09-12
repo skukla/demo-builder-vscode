@@ -3562,7 +3562,7 @@
             "decision": "none \u2014 a fast path the following lookup already covers",
             "recorded": "2026-09-04",
             "source": "mutationLedger add",
-            "line": 192
+            "line": 219
         },
         {
             "module": "src/features/project-creation/ui/steps/WelcomeStep.tsx",
@@ -3575,14 +3575,14 @@
             "decision": "none \u2014 a fast path the following lookup already covers",
             "recorded": "2026-09-04",
             "source": "mutationLedger add",
-            "line": 216
+            "line": 243
         },
         {
             "module": "src/features/project-creation/ui/components/BrandGallery.tsx",
             "anchors": [
                 "selectedBlockLibraries = [],"
             ],
-            "line": 90,
+            "line": 96,
             "mutants": 1,
             "category": "other",
             "reason": "PackageCard's default only applies when the prop is omitted, and BrandGallery passes 'isSelected ? selectedBlockLibraries : undefined'. For the selected card that is always an array (BrandGallery defaults it to [] itself), so the default is never used there. For an unselected card the default DOES apply, but 'isComplete' is false for that card, so the block-library summary the count feeds is not rendered at all. No render shows the difference.",
@@ -8708,7 +8708,7 @@
             "anchors": [
                 "const panel = BaseWebviewCommand.getActivePanel('demoBuilder.projectDashboard');"
             ],
-            "line": 298,
+            "line": 307,
             "mutants": 1,
             "category": "branch",
             "reason": "Same shape as the Configure command's copy: forcing the following 'if (panel)' true calls dispose() on undefined, and the TypeError lands in the try/catch already there for the already-disposed case. Both paths end as a no-op. The false variant is killed by the test that asserts an open panel is disposed.",
@@ -8881,7 +8881,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 234,
+            "line": 238,
             "mutants": 1,
             "category": "other",
             "reason": "The mount effect's empty dependency list. Stryker replaces it with a one-element array of its own constant string, which React compares equal to itself on every render \u2014 so the effect still runs exactly once, subscribes once and cleans up once.",
@@ -8918,7 +8918,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 262,
+            "line": 266,
             "mutants": 1,
             "category": "other",
             "reason": "runVerify's empty useCallback dependency list, with the same Stryker filler-array substitution: a constant string array is equal to itself across renders, so the callback keeps its identity and every memo built on it is unchanged.",
@@ -9732,7 +9732,7 @@
             "anchors": [
                 "} catch (err) {"
             ],
-            "line": 153,
+            "line": 154,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here the step is the agent-trace file sink, and the test that makes it throw asserts activation degrades to channel-only rather than failing.",
@@ -9745,7 +9745,7 @@
             "anchors": [
                 "} catch (err) {"
             ],
-            "line": 257,
+            "line": 258,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here the step is seeding the built-in AI prompts.",
@@ -9770,7 +9770,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 491,
+            "line": 492,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a logger.error plus a showErrorMessage whose text is built from the error. Activation's own tests assert showErrorMessage was NOT called on every success path, which is the observable half; the wording of the message when it IS called is the rest.",
@@ -9783,7 +9783,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 527,
+            "line": 528,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here the step is the global ~/.claude.json repair, and a test makes it reject and asserts activation still registers its commands.",
@@ -9796,7 +9796,7 @@
             "anchors": [
                 "} catch (err) {"
             ],
-            "line": 749,
+            "line": 751,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here the step is starting the in-extension MCP server, whose failure must never abort activation.",
@@ -9809,7 +9809,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 794,
+            "line": 796,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here it is the commerce-secret sweep, whose arguments are asserted and whose failure a test drives.",
@@ -9822,7 +9822,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 816,
+            "line": 818,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here it is the publish-key renewal sweep.",
@@ -9835,7 +9835,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 840,
+            "line": 842,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here it is the manifest-format sweep.",

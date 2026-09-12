@@ -199,6 +199,15 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand<Dashboard
             // No catalog seed: the add-integration picker lives on the dedicated
             // integrations surface, whose own payload carries the catalog.
             appBuilderComponents: project?.appBuilderComponents,
+            ...(project?.demo
+                ? {
+                      demo: {
+                          name: project.demo.name,
+                          source: project.demo.source,
+                          storefrontKind: project.demo.storefrontKind,
+                      },
+                  }
+                : {}),
         };
     }
 

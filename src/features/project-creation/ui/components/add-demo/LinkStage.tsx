@@ -8,7 +8,7 @@
 
 import React from 'react';
 import { ChoiceCard } from '../ChoiceCard';
-import { COPY, type AddDemoDraft } from './addDemoFlow';
+import { COPY, type AddDemoDraft, type AddDemoMode } from './addDemoFlow';
 import { GitHubLinkField } from '@/core/ui/components/forms/GitHubLinkField';
 import { addedDemoId } from '@/features/components/services/storefrontResolver';
 import type { AddedDemo } from '@/types/projectFile';
@@ -19,6 +19,7 @@ export interface LinkStageProps {
     onSourceChange: (source: AddDemoDraft['source']) => void;
     /** Pick a demo already remembered: selects its card and closes. */
     onPickRemembered: (demo: AddedDemo) => void;
+    mode?: AddDemoMode;
 }
 
 /**
@@ -32,10 +33,11 @@ export function LinkStage({
     source,
     onSourceChange,
     onPickRemembered,
+    mode = 'add',
 }: LinkStageProps): React.ReactElement {
     return (
         <div className="add-demo-stage">
-            <p className="intflow-stage-lead">{COPY.lead}</p>
+            <p className="intflow-stage-lead">{mode === 'change' ? COPY.change.lead : COPY.lead}</p>
             <GitHubLinkField
                 label={COPY.linkLabel}
                 placeholder={COPY.linkPlaceholder}

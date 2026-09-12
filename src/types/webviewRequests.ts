@@ -105,6 +105,45 @@ export interface AddSharedDemoResult {
 }
 
 /**
+ * `forget-added-demo` — take a demo off the Add a demo list. The host asks
+ * for confirmation itself (it knows how many projects on this computer were
+ * built on the demo) and, when the source is the SC's own copy, offers to
+ * delete that copy too (decided 2026-09-11: off by default, confirmed twice).
+ */
+export interface ForgetAddedDemoRequest {
+    name: string;
+    source: { owner: string; repo: string };
+}
+
+export interface ForgetAddedDemoResult {
+    /** False when the SC cancelled at the confirmation. */
+    forgotten: boolean;
+    /** Set when the SC's own copy was deleted from GitHub as well. */
+    deletedCopy?: boolean;
+}
+
+/**
+ * `change-demo-source` — point the current project at another copy of its
+ * demo (the same storefront kind). Rewrites the project's row and the
+ * instance metadata the update check reads; the remembered demo only when
+ * asked. Touches neither the SC's repository nor their site, so pointing
+ * back undoes it (decided 2026-09-11).
+ */
+export interface ChangeDemoSourceRequest {
+    demo: AddedDemo;
+    keepCopy: boolean;
+    updateRemembered: boolean;
+}
+
+export interface ChangeDemoSourceResult {
+    /** The project's row now; its `source` is the fork when one was kept. */
+    demo: AddedDemo;
+    /** Where the project read from before, so the change can be pointed back. */
+    previous: { owner: string; repo: string };
+    forkedTo?: string;
+}
+
+/**
  * Frontend source from template (same shape as TemplateSource)
  */
 export interface FrontendSource {

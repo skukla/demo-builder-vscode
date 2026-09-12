@@ -64,6 +64,11 @@ export interface EdsResetParams {
     verifyCdn?: boolean;
     /** Redeploy API Mesh after reset (default: false) */
     redeployMesh?: boolean;
+    /**
+     * Keep the site's current content: reset the code only. Offered when an
+     * added demo's content site cannot be reached (content is not forkable).
+     */
+    keepContent?: boolean;
     /** Content patches to apply during content copy */
     contentPatches?: string[];
     /** External source for content patches (sibling of codePatchSource). */
@@ -102,6 +107,11 @@ export interface EdsResetResult extends HandlerResponse {
     meshRedeployed?: boolean;
     /** Specific error type for UI handling */
     errorType?: string;
+    /**
+     * What the dry check of the load-bearing patches found on an added demo's
+     * code (D23), in SC words. Present only for a project built on an added demo.
+     */
+    demoCaveats?: string[];
     /** Additional error details */
     errorDetails?: Record<string, unknown>;
 }

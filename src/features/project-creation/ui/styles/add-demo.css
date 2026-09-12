@@ -49,4 +49,19 @@
     .expandable-brand-card.add-demo-card .brand-card-name::before {
         content: '+ ';
     }
+
+    /* An added demo's menu: the integration card's hover-reveal kebab, in the
+       brand card's corner (the selection check sits on the other side). */
+    .brand-card-menu-button {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        opacity: 0;
+        transition: opacity var(--spectrum-global-animation-duration-100) ease;
+    }
+
+    .expandable-brand-card:hover .brand-card-menu-button,
+    .expandable-brand-card:focus-within .brand-card-menu-button {
+        opacity: 1;
+    }
 }

@@ -19,6 +19,7 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { EnvFileWatcherService } from '@/core/vscode/envFileWatcherService';
 import { WorkspaceWatcherManager } from '@/core/vscode/workspaceWatcherManager';
 import { ACTION_DESCRIPTORS } from '@/features/ai/server/actionDescriptors';
+import { registerAddedDemoTools } from '@/features/ai/server/addedDemoTools';
 import { registerAdobeResourceTools } from '@/features/ai/server/adobeResourceTools';
 import { registerAdobeTools } from '@/features/ai/server/adobeTools';
 import {
@@ -733,6 +734,7 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
                 });
                 registerContentAuthoringTools(mcpServer, connCtxFactory);
                 registerEdsResetTool(mcpServer, connCtxFactory);
+                registerAddedDemoTools(mcpServer, connCtxFactory);
                 registerDeleteProjectTool(mcpServer, connCtxFactory);
                 registerApplyUpdatesTool(mcpServer, connCtxFactory);
                 registerViewTools(mcpServer, (commandId) =>

@@ -70,6 +70,11 @@ export interface DashboardInitialData {
     dataInstallerAvailable: boolean;
     /** Keyed appBuilderComponents map (drives the summary tile's count + dot). */
     appBuilderComponents?: Record<string, AppBuilderComponentState>;
+    /**
+     * The added demo this project was built on, when it was: enough for the
+     * "Change source" door (same storefront kind only) and the notice's words.
+     */
+    demo?: Pick<AddedDemo, 'name' | 'source' | 'storefrontKind'>;
 }
 
 /**

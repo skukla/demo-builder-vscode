@@ -26,9 +26,10 @@ export interface AddDemoModalProps extends UseAddDemoFlowArgs {
 
 function Journey(props: Omit<AddDemoModalProps, 'isOpen'>): React.ReactElement {
     const flow = useAddDemoFlow(props);
+    const mode = props.mode ?? 'add';
     return (
         <Modal
-            title={COPY.title}
+            title={mode === 'change' ? COPY.change.title : COPY.title}
             size="L"
             fitContent
             onClose={props.onClose}
@@ -50,6 +51,7 @@ function Journey(props: Omit<AddDemoModalProps, 'isOpen'>): React.ReactElement {
                         source={flow.draft.source}
                         onSourceChange={flow.setSource}
                         onPickRemembered={props.onPickRemembered}
+                        mode={mode}
                     />
                 ) : (
                     <FoundStage
@@ -60,6 +62,9 @@ function Journey(props: Omit<AddDemoModalProps, 'isOpen'>): React.ReactElement {
                         onNameChange={flow.setName}
                         onB2bChange={flow.setB2bOn}
                         onKeepCopyChange={flow.setKeepCopy}
+                        onUpdateRememberedChange={flow.setUpdateRemembered}
+                        mode={mode}
+                        currentKind={props.currentKind}
                     />
                 )}
             </div>

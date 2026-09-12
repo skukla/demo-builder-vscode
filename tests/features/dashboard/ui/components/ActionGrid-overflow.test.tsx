@@ -56,6 +56,25 @@ describe('ActionGrid — overflow menu', () => {
             expect(items[items.length - 2]).toHaveTextContent('Reset');
         });
 
+        it('offers Change Demo Source, before Reset, only for a project built on an added demo', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            const handleChangeDemoSource = jest.fn();
+            const first = render(<ActionGrid {...defaultProps} />);
+            expect(screen.queryByText('Change Demo Source')).not.toBeInTheDocument();
+            first.unmount();
+
+            const { container } = render(
+                <ActionGrid {...defaultProps} handleChangeDemoSource={handleChangeDemoSource} />
+            );
+            const menu = container.querySelector('[role="menu"]') as HTMLElement;
+            const labels = within(menu).getAllByRole('menuitem').map((item) => item.textContent);
+            expect(labels.indexOf('Change Demo Source')).toBe(labels.indexOf('Reset') - 1);
+
+            await user.click(screen.getByText('Change Demo Source'));
+
+            expect(handleChangeDemoSource).toHaveBeenCalled();
+        });
+
         it('should call handleExportProject when Export clicked', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             render(<ActionGrid {...defaultProps} />);

@@ -6,13 +6,14 @@
 import { applyCanonicalCodePatches } from '@/features/eds/services/patches/codePatchPipelineHelpers';
 import type { CodePatchResult } from '@/features/eds/services/patches/codePatchRegistry';
 import {
+    addedDemoCaveats,
     CONSEQUENCE_CAVEATS,
     LOAD_BEARING_PATCHES,
     caveatsFor,
     dryCheckLoadBearingPatches,
     resolveDryCheckSource,
 } from '@/features/eds/services/patches/loadBearingPatches';
-import { makeDemoPackage, makeStorefront } from '../../../../helpers/demoPackageFixtures';
+import { makeAddedDemo, makeDemoPackage, makeStorefront } from '../../../../helpers/demoPackageFixtures';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 
 jest.mock('@/features/eds/services/patches/codePatchPipelineHelpers', () => ({
@@ -90,5 +91,20 @@ describe('dryCheckLoadBearingPatches', () => {
         expect(await dryCheckLoadBearingPatches({ owner: 'jen', repo: 'x', branch: 'main' }, logger, undefined)).toStrictEqual([]);
         expect(mockApply).not.toHaveBeenCalled();
         expect(logger.warn).toHaveBeenCalled();
+    });
+});
+
+describe('addedDemoCaveats', () => {
+    beforeEach(() => jest.clearAllMocks());
+
+    it("runs the dry check against the demo's own branch from the shipped ledger, and main when the row names none", async () => {
+        mockApply.mockResolvedValue(IDS.map((i) => result(i, true)));
+        const logger = createMockLogger();
+
+        await addedDemoCaveats(makeAddedDemo({ source: { owner: 'jen', repo: 'isle5-demo', branch: 'demo' } }), { owner: 'jen', repo: 'isle5-demo' }, logger);
+        expect(mockApply).toHaveBeenLastCalledWith(expect.any(Map), 'jen', 'isle5-demo', IDS, expect.objectContaining({ repo: expect.any(String) }), logger, 'demo');
+
+        await addedDemoCaveats(makeAddedDemo(), { owner: 'jen', repo: 'isle5-demo' }, logger);
+        expect(mockApply).toHaveBeenLastCalledWith(expect.any(Map), 'jen', 'isle5-demo', IDS, expect.anything(), logger, 'main');
     });
 });

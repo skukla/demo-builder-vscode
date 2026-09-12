@@ -383,6 +383,62 @@ describe('Executor - EDS Standard Flow', () => {
         });
     });
 
+    describe('EDS metadata for an added demo', () => {
+        it("records the demo's branch so reset and the update check read it", async () => {
+            const savedProjects: any[] = [];
+            const edsConfig = {
+                projectName: 'test-eds-added-demo',
+                selectedStack: 'eds-paas',
+                demo: {
+                    kind: 'demo' as const,
+                    version: 1 as const,
+                    name: 'Isle5 by Jen',
+                    source: { owner: 'jen', repo: 'isle5-demo', branch: 'demo-2026' },
+                    storefrontKind: 'eds' as const,
+                },
+                edsConfig: {
+                    repoName: 'test-repo',
+                    repoMode: 'new' as const,
+                    repoUrl: 'https://github.com/testuser/test-repo',
+                    previewUrl: 'https://main--test-repo--testuser.aem.page',
+                    liveUrl: 'https://main--test-repo--testuser.aem.live',
+                    daLiveOrg: 'test-org',
+                    daLiveSite: 'test-site',
+                    githubOwner: 'testuser',
+                    templateOwner: 'jen',
+                    templateRepo: 'isle5-demo',
+                },
+                components: { frontend: 'eds-storefront', dependencies: [] },
+                componentConfigs: {},
+            };
+            mockContext = createMockContext();
+            mockContext.componentRegistry = new (jest.requireMock(
+                '@/features/components/services/ComponentRegistryManager'
+            ).ComponentRegistryManager)();
+            mockContext.stateManager = createMockStateManager({
+                getCurrentProject: jest.fn().mockResolvedValue(null),
+                saveProject: jest.fn().mockImplementation((project) => {
+                    savedProjects.push(JSON.parse(JSON.stringify(project)));
+                    return Promise.resolve();
+                }),
+            });
+            const { executeProjectCreation } = await import(
+                '@/features/project-creation/handlers/executor'
+            );
+
+            await executeProjectCreation(mockContext as HandlerContext, edsConfig);
+
+            const withMetadata = savedProjects.find(
+                (p) => p.componentInstances?.['eds-storefront']?.metadata?.githubRepo
+            );
+            expect(withMetadata?.componentInstances?.['eds-storefront']?.metadata).toMatchObject({
+                templateOwner: 'jen',
+                templateRepo: 'isle5-demo',
+                templateBranch: 'demo-2026',
+            });
+        });
+    });
+
     describe('Non-EDS Stack Behavior', () => {
         it('should use frontendSource for non-EDS stacks', async () => {
             const headlessConfig = {

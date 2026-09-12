@@ -54,6 +54,7 @@ Deleting things
 
 Replacing or wiping
 - `reset_eds_project` · `reset_datapack` · `migrate_storefront_name`
+- `forget_added_demo` (with `deleteCopy` it deletes a repository)
 
 Reaching other people
 - `set_site_admin` · `republish` · `sync_content`

@@ -7,15 +7,17 @@
  * ArchitectureModal was retired in Slice 2 (Project Builder step).
  */
 
-import { Text } from '@adobe/react-spectrum';
+import { Item, Text } from '@adobe/react-spectrum';
 import React, { useState, useMemo, useCallback } from 'react';
 import { sortPackages, filterPackagesBySearchQuery } from './brandGalleryHelpers';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
+import { CardActionsMenu } from '@/core/ui/components/ui/CardActionsMenu';
 import { SelectionCheck } from '@/core/ui/components/ui/SelectionCheck';
 import { useActivateOnKey } from '@/core/ui/hooks/useActivateOnKey';
 import { cn } from '@/core/ui/utils/classNames';
 import { getBlockLibraryName } from '@/features/components/services/blockLibraryLoader';
+import { isAddedDemoId } from '@/features/components/services/storefrontResolver';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
@@ -36,6 +38,8 @@ export interface BrandGalleryProps {
     headerContent?: React.ReactNode;
     /** Open "Add a demo". When absent the plus card is not rendered. */
     onAddDemo?: () => void;
+    /** Forget an added demo (its card carries a menu only when this is given). */
+    onForgetDemo?: (packageId: string) => void;
 }
 
 /** The plus card's words, accepted 2026-09-11. */
@@ -79,6 +83,8 @@ interface PackageCardProps {
     isComplete: boolean;
     isDimmed: boolean;
     onCardClick: () => void;
+    /** Present only on an added demo's card: the one action its menu offers. */
+    onForget?: () => void;
 }
 
 /**
@@ -93,6 +99,7 @@ function PackageCard({
     isComplete,
     isDimmed,
     onCardClick,
+    onForget,
 }: PackageCardProps) {
     const isComingSoon = pkg.status === 'coming-soon';
 
@@ -131,6 +138,17 @@ function PackageCard({
         >
             {isComingSoon && <span className="architecture-badge">Coming Soon</span>}
             {isSelected && <SelectionCheck corner />}
+            {onForget ? (
+                <CardActionsMenu
+                    ariaLabel={`More actions for ${pkg.name}`}
+                    className="brand-card-menu-button"
+                    onAction={onForget}
+                >
+                    <Item key="forget" textValue="Forget">
+                        <Text>Forget</Text>
+                    </Item>
+                </CardActionsMenu>
+            ) : null}
             <div className="brand-card-header">
                 <div className="brand-card-title-row">
                     <Text UNSAFE_className="brand-card-name">{pkg.name}</Text>
@@ -187,6 +205,7 @@ export function BrandGallery({
     customBlockLibraries = [],
     headerContent,
     onAddDemo,
+    onForgetDemo,
 }: BrandGalleryProps) {
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -245,6 +264,11 @@ export function BrandGallery({
                             isComplete={isSelected && !!selectedStackObj}
                             isDimmed={isDimmed}
                             onCardClick={() => onPackageSelect(pkg.id)}
+                            onForget={
+                                onForgetDemo && isAddedDemoId(pkg.id)
+                                    ? () => onForgetDemo(pkg.id)
+                                    : undefined
+                            }
                         />
                     );
                 })}

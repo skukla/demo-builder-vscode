@@ -10,6 +10,8 @@ import {
     foundRows,
     INITIAL_DRAFT,
     isBuildable,
+    kindMatches,
+    wrongKindMessage,
 } from '@/features/project-creation/ui/components/add-demo/addDemoFlow';
 import type { SharedDemoRead } from '@/types/webviewRequests';
 
@@ -152,5 +154,26 @@ describe('continueLabel', () => {
             continueLabel('found', { outcome: 'shipped', shippedPackageId: 'starter', fullName: 'a/b' }, 'Starter (B2B + B2C)'),
         ).toBe('Use Starter (B2B + B2C)');
         expect(continueLabel('found', READ, undefined)).toBe('Add demo');
+    });
+});
+
+describe('change mode', () => {
+    it('labels the commit Change source whatever the probe said', () => {
+        expect(continueLabel('found', READ, undefined, 'change')).toBe('Change source');
+        expect(continueLabel('found', { outcome: 'shipped', shippedPackageId: 'starter', fullName: 'a/b' }, 'Starter', 'change')).toBe('Change source');
+        expect(continueLabel('link', undefined, undefined, 'change')).toBe('Continue');
+    });
+
+    it('matches kinds, and says what the project is built on when they differ', () => {
+        expect(kindMatches(READ, 'eds')).toBe(true);
+        expect(kindMatches(READ, 'headless')).toBe(false);
+        expect(kindMatches({ ...READ, kind: 'headless' }, 'headless')).toBe(true);
+        expect(kindMatches(READ, undefined)).toBe(true);
+        expect(wrongKindMessage('eds')).toBe('This project is built on an Edge Delivery demo; pick a demo of the same kind.');
+        expect(wrongKindMessage('headless')).toBe('This project is built on a headless demo; pick a demo of the same kind.');
+    });
+
+    it('starts with the update-remembered box off', () => {
+        expect(INITIAL_DRAFT.updateRemembered).toBe(false);
     });
 });

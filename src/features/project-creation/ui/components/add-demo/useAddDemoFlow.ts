@@ -14,15 +14,19 @@ import {
     continueLabel as continueLabelFor,
     INITIAL_DRAFT,
     isBuildable,
+    kindMatches,
     type AddDemoDraft,
+    type AddDemoMode,
     type AddDemoStage,
 } from './addDemoFlow';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
 import type { DemoPackage } from '@/types/demoPackages';
-import type { AddedDemo } from '@/types/projectFile';
+import type { AddedDemo, StorefrontKind } from '@/types/projectFile';
 import type {
     AddSharedDemoRequest,
     AddSharedDemoResult,
+    ChangeDemoSourceRequest,
+    ChangeDemoSourceResult,
     ProbeSharedDemoRequest,
     SharedDemoProbeResult,
 } from '@/types/webviewRequests';
@@ -45,9 +49,16 @@ export interface UseAddDemoFlowArgs {
     packages: DemoPackage[];
     /** "Use Starter": select the shipped card instead of adding. */
     onUseShipped: (packageId: string) => void;
-    /** The remembered row, after the host kept a copy (when asked) and remembered it. */
+    /**
+     * The row the host committed: remembered (add mode), or now the open
+     * project's source (change mode).
+     */
     onDemoAdded: (demo: AddedDemo) => void;
     onClose: () => void;
+    /** Add (default) or the dashboard's change-source door. */
+    mode?: AddDemoMode;
+    /** Change mode: the project's storefront kind, which the new source must match. */
+    currentKind?: StorefrontKind;
 }
 
 export interface UseAddDemoFlowReturn {
@@ -65,10 +76,12 @@ export interface UseAddDemoFlowReturn {
     setName: (name: string) => void;
     setB2bOn: (on: boolean) => void;
     setKeepCopy: (keep: boolean) => void;
+    setUpdateRemembered: (update: boolean) => void;
 }
 
 const PROBE_FAILED = "We couldn't look at this demo. Check the link and try again.";
 const ADD_FAILED = "We couldn't add this demo. Try again.";
+const CHANGE_FAILED = "We couldn't change the source. Try again.";
 
 /**
  * The dialog's state machine.
@@ -77,7 +90,7 @@ const ADD_FAILED = "We couldn't add this demo. Try again.";
  * @returns the stage, the draft, the probe state, and the footer surfaces
  */
 export function useAddDemoFlow(args: UseAddDemoFlowArgs): UseAddDemoFlowReturn {
-    const { packages, onUseShipped, onDemoAdded, onClose } = args;
+    const { packages, onUseShipped, onDemoAdded, onClose, mode = 'add', currentKind } = args;
     const [stage, setStage] = useState<AddDemoStage>('link');
     const [draft, setDraft] = useState<AddDemoDraft>(INITIAL_DRAFT);
     const [probe, setProbe] = useState<ProbeState>({ status: 'idle' });
@@ -110,34 +123,46 @@ export function useAddDemoFlow(args: UseAddDemoFlowArgs): UseAddDemoFlowReturn {
         }
     }, [draft.source]);
 
-    const commitAdd = useCallback(async (): Promise<void> => {
+    /** The one host call of the found stage: add remembers, change repoints the project. */
+    const commit = useCallback(async (): Promise<void> => {
         if (!isBuildable(result)) return;
         const keepCopy = draft.keepCopy && !result.viewer?.ownsRepo;
-        const request: AddSharedDemoRequest = { demo: buildAddedDemo(result, draft), keepCopy };
+        const demo = buildAddedDemo(result, draft);
+        const failed = mode === 'change' ? CHANGE_FAILED : ADD_FAILED;
         setAdding(true);
         setAddError(undefined);
         try {
-            const answer = await webviewClient.request<Answer<AddSharedDemoResult>>(
-                'add-shared-demo',
-                request,
-            );
+            const answer =
+                mode === 'change'
+                    ? await webviewClient.request<Answer<ChangeDemoSourceResult>>('change-demo-source', {
+                          demo,
+                          keepCopy,
+                          updateRemembered: draft.updateRemembered,
+                      } satisfies ChangeDemoSourceRequest)
+                    : await webviewClient.request<Answer<AddSharedDemoResult>>('add-shared-demo', {
+                          demo,
+                          keepCopy,
+                      } satisfies AddSharedDemoRequest);
             if (!answer.success || !answer.result) {
-                setAddError(answer.error ?? ADD_FAILED);
+                setAddError(answer.error ?? failed);
                 return;
             }
             onDemoAdded(answer.result.demo);
             onClose();
         } catch (error) {
-            setAddError((error as Error).message || ADD_FAILED);
+            setAddError((error as Error).message || failed);
         } finally {
             setAdding(false);
         }
-    }, [result, draft, onDemoAdded, onClose]);
+    }, [result, draft, mode, onDemoAdded, onClose]);
 
+    // Change mode never takes a shipped template (nothing to read a row from)
+    // and only a demo of the project's own kind.
+    const buildable = isBuildable(result) && (mode === 'add' || kindMatches(result, currentKind));
     const canContinue =
         stage === 'link'
             ? draft.source !== undefined
-            : !adding && (result?.outcome === 'shipped' || isBuildable(result));
+            : !adding && ((mode === 'add' && result?.outcome === 'shipped') || buildable);
 
     const onContinue = useCallback((): void => {
         if (!canContinue) return;
@@ -150,8 +175,8 @@ export function useAddDemoFlow(args: UseAddDemoFlowArgs): UseAddDemoFlowReturn {
             onClose();
             return;
         }
-        void commitAdd();
-    }, [canContinue, stage, runProbe, result, onUseShipped, onClose, commitAdd]);
+        void commit();
+    }, [canContinue, stage, runProbe, result, onUseShipped, onClose, commit]);
 
     const onBack = useCallback((): void => {
         if (stage !== 'found' || adding) return;
@@ -172,6 +197,9 @@ export function useAddDemoFlow(args: UseAddDemoFlowArgs): UseAddDemoFlowReturn {
     const setKeepCopy = useCallback((keepCopy: boolean): void => {
         setDraft((d) => ({ ...d, keepCopy }));
     }, []);
+    const setUpdateRemembered = useCallback((updateRemembered: boolean): void => {
+        setDraft((d) => ({ ...d, updateRemembered }));
+    }, []);
 
     return {
         stage,
@@ -181,12 +209,13 @@ export function useAddDemoFlow(args: UseAddDemoFlowArgs): UseAddDemoFlowReturn {
         addError,
         canContinue,
         canGoBack: stage === 'found' && !adding,
-        continueLabel: continueLabelFor(stage, result, shippedName),
+        continueLabel: continueLabelFor(stage, result, shippedName, mode),
         onContinue,
         onBack,
         setSource,
         setName,
         setB2bOn,
         setKeepCopy,
+        setUpdateRemembered,
     };
 }

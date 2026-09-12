@@ -104,6 +104,7 @@ type OverflowKey =
     | 'syncStorefront'
     | 'refreshBlockLibrary'
     | 'devConsole'
+    | 'changeDemoSource'
     | 'reset'
     | 'delete';
 
@@ -187,6 +188,12 @@ export interface ActionGridProps {
     handleEditProject?: () => void;
     /** Handler for the Export overflow item */
     handleExportProject: () => void;
+    /**
+     * Handler for the Change Demo Source overflow item. Present only for a
+     * project built on an added demo: it points the project at another copy
+     * of that demo (the notice offers the same door when the source is gone).
+     */
+    handleChangeDemoSource?: () => void;
     /** Handler for the Reset overflow item (always shown, last in the menu) */
     handleResetProject: () => void;
     /** Handler for Delete button */
@@ -505,6 +512,7 @@ export function ActionGrid({
     handleOpenDevConsole,
     handleEditProject,
     handleExportProject,
+    handleChangeDemoSource,
     handleResetProject,
     handleDeleteProject,
 }: ActionGridProps): React.ReactElement {
@@ -529,6 +537,7 @@ export function ActionGrid({
             syncStorefront: handleSyncStorefront,
             refreshBlockLibrary: handleRefreshBlockLibrary,
             devConsole: handleOpenDevConsole,
+            changeDemoSource: handleChangeDemoSource,
             reset: handleResetProject,
             delete: handleDeleteProject,
         });
@@ -643,6 +652,9 @@ export function ActionGrid({
                                     <Item key="refreshBlockLibrary">Refresh Block Library</Item>
                                 ) : null}
                                 <Item key="devConsole">Dev Console</Item>
+                                {handleChangeDemoSource ? (
+                                    <Item key="changeDemoSource">Change Demo Source</Item>
+                                ) : null}
                                 <Item key="reset">Reset</Item>
                                 {/* Destructive — LAST, per overflow-menu convention.
                                     The confirm dialog behind handleDeleteProject

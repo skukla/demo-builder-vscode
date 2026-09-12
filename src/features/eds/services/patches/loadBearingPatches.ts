@@ -22,6 +22,7 @@ import type { CodePatchResult } from './codePatchRegistry';
 import { bundledDemoPackages } from '@/features/components/services/storefrontResolver';
 import type { CodePatchSource, DemoPackage } from '@/types/demoPackages';
 import type { Logger } from '@/types/logger';
+import type { AddedDemo } from '@/types/projectFile';
 
 /** What a missed patch costs the SC, grouped so the card says three things at most. */
 export type LoadBearingConsequence = 'product-links' | 'empty-product-page' | 'asset-images';
@@ -101,6 +102,24 @@ export interface DryCheckTarget {
  * @param source - The ledger (`resolveDryCheckSource()` for the shipped one); undefined skips the check
  * @returns The caveats, in SC words; empty when every patch applies or is already present
  */
+/**
+ * The caveats for a project built on an added demo: the dry check against the
+ * demo's own code at the branch its row names (D4: never patched; D23: each
+ * miss becomes a caveat). Shared by project creation and reset, so both say
+ * the same things about the same code.
+ */
+export async function addedDemoCaveats(
+    demo: Pick<AddedDemo, 'source'>,
+    template: { owner: string; repo: string },
+    logger: Logger,
+): Promise<string[]> {
+    return dryCheckLoadBearingPatches(
+        { owner: template.owner, repo: template.repo, branch: demo.source.branch ?? 'main' },
+        logger,
+        resolveDryCheckSource(),
+    );
+}
+
 export async function dryCheckLoadBearingPatches(
     target: DryCheckTarget,
     logger: Logger,

@@ -70,6 +70,45 @@ export function readAddedDemos(): AddedDemo[] {
 }
 
 /**
+ * A demo's source moved (GitHub answered with a different repository name):
+ * follow it in the remembered setting, silently, the way stored storefront
+ * names already self-heal. No-op when the demo is not remembered.
+ *
+ * @returns Whether a remembered row was updated
+ */
+export async function renameAddedDemoSource(
+    from: { owner: string; repo: string },
+    to: { owner: string; repo: string },
+): Promise<boolean> {
+    const current = readAddedDemos();
+    const key = addedDemoKey({ source: from });
+    const index = current.findIndex((row) => addedDemoKey(row) === key);
+    if (index < 0) return false;
+    const next = current.map((row, i) =>
+        i === index ? { ...row, source: { ...row.source, owner: to.owner, repo: to.repo } } : row,
+    );
+    await vscode.workspace
+        .getConfiguration('demoBuilder')
+        .update(ADDED_DEMOS_SETTING, next, vscode.ConfigurationTarget.Global);
+    return true;
+}
+
+/**
+ * Forget a demo: remove its row from the setting. Projects built on it keep
+ * their own row (D2) and are never touched here.
+ *
+ * @returns The list as it is now remembered
+ */
+export async function forgetAddedDemo(source: { owner: string; repo: string }): Promise<AddedDemo[]> {
+    const key = addedDemoKey({ source });
+    const next = readAddedDemos().filter((row) => addedDemoKey(row) !== key);
+    await vscode.workspace
+        .getConfiguration('demoBuilder')
+        .update(ADDED_DEMOS_SETTING, next, vscode.ConfigurationTarget.Global);
+    return next;
+}
+
+/**
  * Remember a demo in the user's settings. A row for the same repository is
  * replaced in place, so re-adding refreshes what was read without a duplicate card.
  *

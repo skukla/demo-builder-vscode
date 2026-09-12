@@ -14,7 +14,7 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { deriveAiInventoryView, deriveAiReadyState } from './aiStatusDerivations';
-import { routeCheckOutcome } from './dashboardCheckRouting';
+import { routeCheckOutcome, type DemoSourceIssue } from './dashboardCheckRouting';
 import {
     isMeshBusy,
     isMeshDeploying,
@@ -122,6 +122,9 @@ export function useDashboardStatus(
     // orgChecked flips true once resolved; orgStatus carries the typed outcome so
     // the badge can distinguish ok / mismatch / unknown ("sign in to check").
     const [orgMismatch, setOrgMismatch] = useState<OrgMismatchInfo | undefined>(undefined);
+    // The demo-source check's warning (a project built on an added demo whose
+    // repository or content site does not answer); drives the notice.
+    const [demoSourceIssue, setDemoSourceIssue] = useState<DemoSourceIssue | undefined>(undefined);
     const [orgChecked, setOrgChecked] = useState(false);
     const [orgStatus, setOrgStatus] = useState<CheckStatus | undefined>(undefined);
     // Name of the org the token currently reaches — shown in the "IMS Org" badge.
@@ -207,6 +210,7 @@ export function useDashboardStatus(
                 setVerifyResult,
                 setVerifyFailed,
                 setAiBusy,
+                setDemoSourceIssue,
             });
         });
 
@@ -464,6 +468,7 @@ export function useDashboardStatus(
         meshStatus,
         orgMismatch,
         orgCheckState,
+        demoSourceIssue,
         imsOrgDisplay,
         aiReady,
         aiSkills,

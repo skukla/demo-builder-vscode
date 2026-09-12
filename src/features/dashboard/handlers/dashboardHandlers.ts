@@ -68,6 +68,9 @@ import {
     handleListConsoleApis,
     handleSetConsoleApis,
 } from '@/features/dashboard/handlers/consoleApiHandlers';
+import { handleAddSharedDemo } from '@/features/eds/handlers/addSharedDemoHandler';
+import { handleChangeDemoSource } from '@/features/eds/handlers/changeDemoSourceHandler';
+import { handleProbeSharedDemo } from '@/features/eds/handlers/probeSharedDemoHandler';
 import {
     MessageHandler,
     defineHandlers,
@@ -296,4 +299,13 @@ export const dashboardHandlers = defineHandlers({
 
     // Adobe deploy destination (project-scoped — one target for every integration)
     setProjectDestination: handleSetProjectDestination,
+
+    // "Change source" for a project built on an added demo: the Add a demo
+    // dialog in its change mode probes with the wizard's own handler, then
+    // repoints the project's row and instance metadata.
+    'probe-shared-demo': handleProbeSharedDemo,
+    'change-demo-source': handleChangeDemoSource,
+    // The dialog's add mode commits here; the dashboard never opens that mode,
+    // but the dialog is one component and every message it can send is answered.
+    'add-shared-demo': handleAddSharedDemo,
 });

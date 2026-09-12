@@ -17,6 +17,7 @@ import { generateInspectorTreeEntries, installInspectorTagging } from '../inspec
 import { applyCanonicalCodePatches } from '../patches/codePatchPipelineHelpers';
 import type { CodePatchResult } from '../patches/codePatchRegistry';
 import { readLkgSha } from '../patches/lkgReader';
+import { addedDemoCaveats } from '../patches/loadBearingPatches';
 import { installSmart404Handler } from '../pdp/pdp404HandlerPublisher';
 import { addPlaceholderStubOverrides } from '../placeholderStubs';
 import { installQuickEdit } from '../quickEditPublisher';
@@ -234,6 +235,8 @@ export async function resetRepoToTemplate(
     blockCollectionIds?: string[];
     libraryContentSources: Array<{ org: string; site: string }>;
     canonicalCodePatchResults?: CodePatchResult[];
+    /** The dry check's caveats for an added demo (D23); absent for a shipped brand. */
+    demoCaveats?: string[];
 }> {
     const {
         repoOwner,
@@ -281,8 +284,9 @@ export async function resetRepoToTemplate(
     // (codePatchSource configured) pin to the verified canonical LKG SHA;
     // legacy / forked packages continue to use `main` HEAD. LKG fetch
     // failure falls back to `main` with a warn (ADR-006 D1 proceed-and-warn)
-    // so a transient patches-repo outage doesn't block reset entirely.
-    let templateRef = 'main';
+    // so a transient patches-repo outage doesn't block reset entirely. An
+    // added demo resets to its source's own branch (D4: their code, as it is).
+    let templateRef = project.demo?.source.branch ?? 'main';
     if (codePatchSource) {
         const lkg = await readLkgSha(
             {
@@ -336,6 +340,11 @@ export async function resetRepoToTemplate(
     );
     report(1, `Reset ${resetResult.fileCount} files`);
 
+    // An added demo's dry check re-runs on every reset; its caveats ride the result (D23).
+    const demoCaveats = project.demo
+        ? await addedDemoCaveats(project.demo, { owner: templateOwner, repo: templateRepo }, context.logger)
+        : undefined;
+
     const { blockCollectionIds, libraryContentSources } = await reinstallBlockLibraries(
         project,
         repoOwner,
@@ -381,6 +390,7 @@ export async function resetRepoToTemplate(
     await installQuickEdit(githubFileOps, repoOwner, repoName, context.logger);
 
     return {
+        ...(demoCaveats ? { demoCaveats } : {}),
         filesReset: resetResult.fileCount,
         blockCollectionIds,
         libraryContentSources,

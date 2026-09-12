@@ -7,7 +7,7 @@
  * @module features/eds/handlers/storefrontSetup/storefrontSetupDemo
  */
 
-import { dryCheckLoadBearingPatches, resolveDryCheckSource } from '../../services/patches/loadBearingPatches';
+import { addedDemoCaveats } from '../../services/patches/loadBearingPatches';
 import type { RepoInfo } from './storefrontSetupTypes';
 import type { Logger } from '@/types/logger';
 import type { AddedDemo } from '@/types/projectFile';
@@ -22,11 +22,7 @@ export async function dryCheckDemo(
     template: { owner: string; repo: string },
     logger: Logger,
 ): Promise<void> {
-    repoInfo.demoCaveats = await dryCheckLoadBearingPatches(
-        { owner: template.owner, repo: template.repo, branch: demo.source.branch ?? 'main' },
-        logger,
-        resolveDryCheckSource(),
-    );
+    repoInfo.demoCaveats = await addedDemoCaveats(demo, template, logger);
 }
 
 /**

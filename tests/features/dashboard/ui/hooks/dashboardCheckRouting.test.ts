@@ -28,10 +28,38 @@ function createActions(): jest.Mocked<CheckRoutingActions> {
         setVerifyResult: jest.fn(),
         setVerifyFailed: jest.fn(),
         setAiBusy: jest.fn(),
+        setDemoSourceIssue: jest.fn(),
     };
 }
 
 describe('routeCheckOutcome', () => {
+    describe('demo-source', () => {
+        it("sets the notice from a warning's sentence and payload", () => {
+            const actions = createActions();
+            routeCheckOutcome(
+                {
+                    checkId: CHECK_IDS.DEMO_SOURCE,
+                    status: 'warning',
+                    message: "jen's demo can't be reached. Reset and updates are unavailable until it is.",
+                    data: { demoName: 'Isle5 by Jen', unreachable: true, contentUnreachable: true },
+                } as CheckOutcome<OrgContextCheckData>,
+                actions,
+            );
+
+            expect(actions.setDemoSourceIssue).toHaveBeenCalledWith({
+                message: "jen's demo can't be reached. Reset and updates are unavailable until it is.",
+                data: { demoName: 'Isle5 by Jen', unreachable: true, contentUnreachable: true },
+            });
+            expect(actions.setOrgMismatch).not.toHaveBeenCalled();
+        });
+
+        it('clears the notice on any other outcome', () => {
+            const actions = createActions();
+            routeCheckOutcome({ checkId: CHECK_IDS.DEMO_SOURCE, status: 'ok' }, actions);
+            expect(actions.setDemoSourceIssue).toHaveBeenCalledWith(undefined);
+        });
+    });
+
     describe('org-context', () => {
         it('should reset org state when the check goes pending', () => {
             const actions = createActions();

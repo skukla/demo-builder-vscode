@@ -20,6 +20,7 @@ import { createMockExtensionContext } from '../../../helpers/extensionContextFak
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockProject } from '../../../helpers/projectFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { makeAddedDemo } from '../../../helpers/demoPackageFixtures';
 
 jest.mock('@/features/components/services/demoPackageLoader', () => ({
     loadDemoPackages: jest.fn(async () => []),
@@ -52,6 +53,25 @@ function commandFor(project: Project | undefined): ProjectDashboardWebviewComman
 function initialData(project: Project | undefined): Promise<DashboardInitialData> {
     return internals(commandFor(project)).getInitialData<DashboardInitialData>();
 }
+
+describe('ProjectDashboardWebviewCommand - getInitialData - the added demo', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        vscode.window.activeColorTheme = { kind: vscode.ColorThemeKind.Dark };
+    });
+
+    it("names the demo, its source and its kind for a project built on an added demo, and nothing otherwise", async () => {
+        const demo = makeAddedDemo({ source: { owner: 'jen', repo: 'isle5-demo', branch: 'main' } });
+        const data = await initialData(createMockProject({ demo }));
+        expect(data.demo).toEqual({
+            name: 'Isle5 by Jen',
+            source: { owner: 'jen', repo: 'isle5-demo', branch: 'main' },
+            storefrontKind: 'eds',
+        });
+
+        expect('demo' in (await initialData(createMockProject()))).toBe(false);
+    });
+});
 
 describe('ProjectDashboardWebviewCommand - getInitialData', () => {
     beforeEach(() => {

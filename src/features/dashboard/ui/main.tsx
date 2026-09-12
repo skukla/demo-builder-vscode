@@ -49,6 +49,13 @@ import '@/core/ui/styles/drawer.css';
 import '@/core/ui/styles/two-column-layout.css';
 // .inline-notice-*, .inline-rename-* — two small shared components.
 import '@/core/ui/styles/inline-controls.css';
+// The Add a demo dialog in its change mode (the "Change source" door): its own
+// sheet plus the three it borrows classes from (ADR-017: a sheet reaches only
+// the bundles whose entry imports it).
+import '@/features/project-creation/ui/styles/add-demo.css';
+import '@/features/project-creation/ui/styles/add-integration-flow.css';
+import '@/features/project-creation/ui/styles/build-summary.css';
+import '@/features/project-creation/ui/styles/choice-cards.css';
 
 // Get root element
 const container = document.getElementById('root');

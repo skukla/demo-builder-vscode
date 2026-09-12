@@ -13,6 +13,9 @@ jest.mock('@/core/ui/utils/vscode-api', () => ({
     webviewClient: { request: jest.fn() },
 }));
 
+import { webviewClient } from '@/core/ui/utils/vscode-api';
+import { act } from '@testing-library/react';
+
 const JEN = makeAddedDemo({ configDefaults: { ACCS_WEBSITE_CODE: 'isle5' } });
 const JEN_CARD = packageFromAddedDemo(JEN, undefined);
 
@@ -54,5 +57,58 @@ describe('WelcomeStep — added demos', () => {
         fireEvent.click(screen.getByTestId('add-demo-card'));
 
         expect(screen.getByRole('heading', { name: 'Add a demo' })).toBeInTheDocument();
+    });
+});
+
+describe('WelcomeStep — forgetting an added demo', () => {
+    const request = webviewClient.request as jest.Mock;
+
+    beforeEach(() => {
+        request.mockReset();
+    });
+
+    it('asks the host to forget the demo by name and source', async () => {
+        request.mockResolvedValue({ success: true, result: { forgotten: true } });
+        renderWelcome({ packages: [...PACKAGES, JEN_CARD], stacks: STACKS, addedDemos: [JEN] });
+
+        await act(async () => {
+            screen.getByLabelText('More actions for Isle5 by Jen').click();
+        });
+        await act(async () => {
+            screen.getByRole('menuitem', { name: 'Forget' }).click();
+        });
+
+        expect(request).toHaveBeenCalledWith('forget-added-demo', {
+            name: 'Isle5 by Jen',
+            source: { owner: 'jen', repo: 'isle5-demo' },
+        });
+    });
+
+    it('deselects a forgotten demo that was the selection, row included; leaves a cancelled one alone', async () => {
+        request.mockResolvedValueOnce({ success: true, result: { forgotten: false } });
+        const { updateState } = renderWelcome({
+            packages: [...PACKAGES, JEN_CARD],
+            stacks: STACKS,
+            addedDemos: [JEN],
+            state: { selectedPackage: addedDemoId(JEN), demo: JEN },
+        });
+        updateState.mockClear();
+
+        await act(async () => {
+            screen.getByLabelText('More actions for Isle5 by Jen').click();
+        });
+        await act(async () => {
+            screen.getByRole('menuitem', { name: 'Forget' }).click();
+        });
+        expect(updateState).not.toHaveBeenCalled();
+
+        request.mockResolvedValueOnce({ success: true, result: { forgotten: true } });
+        await act(async () => {
+            screen.getByLabelText('More actions for Isle5 by Jen').click();
+        });
+        await act(async () => {
+            screen.getByRole('menuitem', { name: 'Forget' }).click();
+        });
+        expect(updateState).toHaveBeenCalledWith({ selectedPackage: undefined, demo: undefined });
     });
 });

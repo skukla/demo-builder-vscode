@@ -1,0 +1,153 @@
+/**
+ * forget-added-demo: confirm host-side naming the projects built on the demo,
+ * remove the row, and delete the SC's own copy only when asked twice.
+ */
+
+import * as vscode from 'vscode';
+import { handleForgetAddedDemo } from '@/features/eds/handlers/forgetAddedDemoHandler';
+import { forgetAddedDemo } from '@/features/project-creation/services/addedDemoSettings';
+import { makeAddedDemo } from '../../../helpers/demoPackageFixtures';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockProject } from '../../../helpers/projectFake';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+
+const deleteRepository = jest.fn();
+const validateToken = jest.fn();
+jest.mock('@/features/eds/handlers/edsHelpers', () => ({
+    getGitHubServices: () => ({ tokenService: { validateToken }, repoOperations: { deleteRepository } }),
+}));
+
+jest.mock('@/features/project-creation/services/addedDemoSettings', () => ({
+    ...jest.requireActual('@/features/project-creation/services/addedDemoSettings'),
+    forgetAddedDemo: jest.fn(async () => []),
+}));
+
+const JEN = makeAddedDemo();
+const OWN = makeAddedDemo({ source: { owner: 'steve', repo: 'isle5-demo', branch: 'main' } });
+const REQUEST = { name: JEN.name, source: JEN.source };
+const warn = vscode.window.showWarningMessage as jest.Mock;
+
+function ctx(projectsBuiltOnJen = 0) {
+    const projects = [
+        ...Array.from({ length: projectsBuiltOnJen }, (_, i) =>
+            createMockProject({ name: `p${i}`, path: `/p${i}`, demo: JEN }),
+        ),
+        createMockProject({ name: 'other', path: '/other', demo: OWN }),
+        createMockProject({ name: 'shipped', path: '/shipped' }),
+    ];
+    return createMockHandlerContext({
+        logger: createMockLogger(),
+        context: createMockExtensionContext({ secrets: createMockSecretStorage().secrets }),
+        stateManager: createMockStateManager({
+            getAllProjects: jest.fn().mockResolvedValue(
+                projects.map((p) => ({ name: p.name, path: p.path, lastModified: new Date(0) })),
+            ),
+            loadProjectFromPath: jest.fn(async (path: string) => projects.find((p) => p.path === path) ?? null),
+        }),
+    });
+}
+
+beforeEach(() => {
+    jest.clearAllMocks();
+    validateToken.mockResolvedValue({ valid: true, user: { login: 'steve' } });
+    deleteRepository.mockResolvedValue(undefined);
+});
+
+describe('handleForgetAddedDemo', () => {
+    it('confirms with the count of projects on this computer built on the demo, then forgets', async () => {
+        warn.mockResolvedValueOnce('Forget');
+
+        const result = await handleForgetAddedDemo(ctx(2), REQUEST);
+
+        expect(warn).toHaveBeenCalledWith(
+            'Forget "Isle5 by Jen"? It leaves the Add a demo list.',
+            { modal: true, detail: '2 projects on this computer were built on it and will keep working.' },
+            'Forget',
+        );
+        expect(forgetAddedDemo).toHaveBeenCalledWith(JEN.source);
+        expect(result).toEqual({ success: true, result: { forgotten: true } });
+    });
+
+    it('says when no project was built on it, and never offers a delete for a repository that is not the SC\'s', async () => {
+        warn.mockResolvedValueOnce('Forget');
+
+        await handleForgetAddedDemo(ctx(0), REQUEST);
+
+        expect(warn.mock.calls[0][1]).toEqual({
+            modal: true,
+            detail: 'No project on this computer was built on it.',
+        });
+        expect(warn.mock.calls[0].slice(2)).toEqual(['Forget']);
+    });
+
+    it('does nothing when the confirmation is dismissed', async () => {
+        warn.mockResolvedValueOnce(undefined);
+
+        const result = await handleForgetAddedDemo(ctx(1), REQUEST);
+
+        expect(result).toEqual({ success: true, result: { forgotten: false } });
+        expect(forgetAddedDemo).not.toHaveBeenCalled();
+    });
+
+    it("offers to delete the SC's own copy, names what that costs, and deletes only after a second confirmation", async () => {
+        warn.mockResolvedValueOnce('Forget and delete my copy').mockResolvedValueOnce('Delete repository');
+
+        const result = await handleForgetAddedDemo(ctx(), { name: OWN.name, source: OWN.source });
+
+        expect(warn).toHaveBeenNthCalledWith(
+            1,
+            'Forget "Isle5 by Jen"? It leaves the Add a demo list.',
+            {
+                modal: true,
+                detail:
+                    '1 project on this computer was built on it and will keep working. ' +
+                    'Deleting your copy (steve/isle5-demo) would leave them without reset and updates until they are pointed at another source.',
+            },
+            'Forget',
+            'Forget and delete my copy',
+        );
+        expect(warn).toHaveBeenNthCalledWith(
+            2,
+            'Delete steve/isle5-demo from GitHub? This cannot be undone.',
+            { modal: true },
+            'Delete repository',
+        );
+        expect(forgetAddedDemo).toHaveBeenCalledWith(OWN.source);
+        expect(deleteRepository).toHaveBeenCalledWith('steve', 'isle5-demo');
+        expect(result).toEqual({ success: true, result: { forgotten: true, deletedCopy: true } });
+    });
+
+    it('forgets but keeps the copy when the second confirmation is dismissed', async () => {
+        warn.mockResolvedValueOnce('Forget and delete my copy').mockResolvedValueOnce(undefined);
+
+        const result = await handleForgetAddedDemo(ctx(), { name: OWN.name, source: OWN.source });
+
+        expect(deleteRepository).not.toHaveBeenCalled();
+        expect(result).toEqual({ success: true, result: { forgotten: true, deletedCopy: false } });
+    });
+
+    it('reports a delete GitHub refused without undoing the forget', async () => {
+        warn.mockResolvedValueOnce('Forget and delete my copy').mockResolvedValueOnce('Delete repository');
+        deleteRepository.mockRejectedValueOnce(new Error('403'));
+
+        const result = await handleForgetAddedDemo(ctx(), { name: OWN.name, source: OWN.source });
+
+        expect(result).toEqual({ success: true, result: { forgotten: true, deletedCopy: false } });
+        expect(warn).toHaveBeenLastCalledWith(
+            'The demo was forgotten, but steve/isle5-demo could not be deleted: 403',
+        );
+    });
+
+    it('refuses a request without a name and source, and a malformed repository name', async () => {
+        expect(await handleForgetAddedDemo(ctx(), { source: JEN.source })).toEqual({
+            success: false,
+            error: 'A demo name and source are required',
+        });
+        const bad = await handleForgetAddedDemo(ctx(), { name: 'x', source: { owner: 'jen', repo: '../x' } });
+        expect(bad.success).toBe(false);
+        expect(warn).not.toHaveBeenCalled();
+    });
+});

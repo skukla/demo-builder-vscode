@@ -22,11 +22,13 @@ import * as components from '@/features/components/handlers/componentHandlers';
 import { dataInstallerHandlers } from '@/features/data-installer/handlers/dataInstallerHandlers';
 import { handleOpenDataInstallerSettings } from '@/features/data-installer/handlers/settingsHandlers';
 import { handleAddSharedDemo } from '@/features/eds/handlers/addSharedDemoHandler';
+import { handleChangeDemoSource } from '@/features/eds/handlers/changeDemoSourceHandler';
 import { handleCheckRepoReadiness } from '@/features/eds/handlers/checkRepoReadinessHandler';
 import { handleCheckCredentialService } from '@/features/eds/handlers/credentialServiceHandler';
 import { handleCheckDaLiveAuth, handleClearDaLiveAuth, handleOpenDaLiveLogin, handleStoreDaLiveTokenWithOrg } from '@/features/eds/handlers/daLive/edsDaLiveHandlers';
 import { handleCheckGitHubAuth, handleCreateGitHubRepo, handleGetGitHubRepos, handleGitHubChangeAccount, handleGitHubOAuth } from '@/features/eds/handlers/edsGitHubHandlers';
 import { handleDiscoverStoreStructure } from '@/features/eds/handlers/edsHandlers';
+import { handleForgetAddedDemo } from '@/features/eds/handlers/forgetAddedDemoHandler';
 import { handleProbeSharedDemo } from '@/features/eds/handlers/probeSharedDemoHandler';
 import { handleCancelStorefrontSetup, handleStartStorefrontSetup } from '@/features/eds/handlers/storefrontSetup/storefrontSetupHandlers';
 import { meshHandlers } from '@/features/mesh/handlers/meshHandlers';
@@ -106,6 +108,11 @@ export const projectCreationHandlers = defineHandlers({
     // Reads a colleague's repository before "Add a demo" offers it (step 04's dialog).
     'probe-shared-demo': handleProbeSharedDemo,
     'add-shared-demo': handleAddSharedDemo,
+    // Takes a demo off the list; confirms host-side, naming the projects built on it.
+    'forget-added-demo': handleForgetAddedDemo,
+    // The dialog's change mode commits here; the wizard never opens that mode,
+    // but the dialog is one component and every message it can send is answered.
+    'change-demo-source': handleChangeDemoSource,
     'create-github-repo': handleCreateGitHubRepo,
     'github-oauth': handleGitHubOAuth,
     'github-change-account': handleGitHubChangeAccount,

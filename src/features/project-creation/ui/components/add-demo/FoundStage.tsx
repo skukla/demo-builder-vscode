@@ -11,12 +11,22 @@
 
 import { Checkbox, Switch, TextField } from '@adobe/react-spectrum';
 import React from 'react';
-import { COPY, defaultDemoName, foundRows, isBuildable, type AddDemoDraft } from './addDemoFlow';
+import {
+    COPY,
+    defaultDemoName,
+    foundRows,
+    isBuildable,
+    kindMatches,
+    wrongKindMessage,
+    type AddDemoDraft,
+    type AddDemoMode,
+} from './addDemoFlow';
 import type { ProbeState } from './useAddDemoFlow';
 import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import type { DemoPackage } from '@/types/demoPackages';
+import type { StorefrontKind } from '@/types/projectFile';
 import type { SharedDemoRead } from '@/types/webviewRequests';
 
 export interface FoundStageProps {
@@ -27,6 +37,10 @@ export interface FoundStageProps {
     onNameChange: (name: string) => void;
     onB2bChange: (on: boolean) => void;
     onKeepCopyChange: (keep: boolean) => void;
+    onUpdateRememberedChange?: (update: boolean) => void;
+    mode?: AddDemoMode;
+    /** Change mode: the project's kind, which the found demo must match. */
+    currentKind?: StorefrontKind;
 }
 
 /** What is missing, from what the probe found, in a sentence. */
@@ -77,6 +91,9 @@ export function FoundStage({
     onNameChange,
     onB2bChange,
     onKeepCopyChange,
+    onUpdateRememberedChange,
+    mode = 'add',
+    currentKind,
 }: FoundStageProps): React.ReactElement {
     if (probe.status === 'idle' || probe.status === 'loading') {
         // The three-row contract: the step, the thing it is reading, what to expect.
@@ -94,7 +111,9 @@ export function FoundStage({
         const name = packages.find((pkg) => pkg.id === result.shippedPackageId)?.name ?? 'a demo we ship';
         return (
             <InlineNotice tone="info" title={`This is the demo behind ${name}`} testId="shipped-notice">
-                {`Use the ${name} card instead; it comes with everything we keep up to date for it.`}
+                {mode === 'change'
+                    ? COPY.change.shipped
+                    : `Use the ${name} card instead; it comes with everything we keep up to date for it.`}
             </InlineNotice>
         );
     }
@@ -105,6 +124,16 @@ export function FoundStage({
                 title={COPY.notADemo}
                 message="A demo is a storefront: an Edge Delivery site, or a Next.js site."
                 details={refusalDetails(result)}
+                height="auto"
+            />
+        );
+    }
+    if (mode === 'change' && currentKind && !kindMatches(result, currentKind)) {
+        return (
+            <StatusDisplay
+                variant="error"
+                title={COPY.change.wrongKindTitle}
+                message={wrongKindMessage(currentKind)}
                 height="auto"
             />
         );
@@ -150,8 +179,17 @@ export function FoundStage({
                 </div>
             ) : null}
             <KeepCopyBox read={result} draft={draft} onKeepCopyChange={onKeepCopyChange} />
+            {mode === 'change' ? (
+                <Checkbox
+                    isSelected={draft.updateRemembered}
+                    onChange={onUpdateRememberedChange}
+                    data-testid="update-remembered"
+                >
+                    {COPY.change.updateRemembered}
+                </Checkbox>
+            ) : null}
             {addError ? (
-                <InlineNotice title="Not added" testId="add-error">
+                <InlineNotice title={mode === 'change' ? 'Not changed' : 'Not added'} testId="add-error">
                     {addError}
                 </InlineNotice>
             ) : null}

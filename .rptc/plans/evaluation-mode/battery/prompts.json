@@ -857,5 +857,23 @@
       "search_commerce_docs"
     ],
     "why": "The ERP journey's build phase ran on general knowledge; the commerce-extensibility server ships the starter-kit rules. Measures whether a build-phase question reaches that surface at all."
+  },
+  {
+    "id": "t2-change-demo-source",
+    "prompt": "My battery-scratch project was built on a colleague's demo and their repository is gone. Point it at my own fork, github.com/battery-scratch/isle5-demo, using the extension's tool \u2014 don't edit the project file by hand.",
+    "expect": [
+      "change_demo_source"
+    ],
+    "why": "Step 06 of the shareable-demo program (EDS-13a): the repoint is the one recovery for a project whose added demo vanished; without the tool an agent rewrites .demo-builder.json and leaves the instance metadata behind, which is exactly the split the tool exists to prevent. Tier 2: it writes the current project, so it runs only under --tier2 against the scratch project.",
+    "tier": 2
+  },
+  {
+    "id": "t2-forget-added-demo",
+    "prompt": "Forget the added demo at github.com/battery-scratch/isle5-demo \u2014 take it off my Add a demo list. Keep my copy of the code.",
+    "expect": [
+      "forget_added_demo"
+    ],
+    "why": "Step 06 of the shareable-demo program (EDS-13a): the list lives in a user setting, so an agent without the tool edits settings.json directly and skips the project count the confirmation is built around. Tier 2: it writes a user setting, so it runs only under --tier2.",
+    "tier": 2
   }
 ]

@@ -69,7 +69,10 @@ export async function populateEdsMetadata(
     // it falls through to template HEAD. The lkgSource — when set — is
     // persisted alongside so the update checker can compare against the
     // same LKG file the create flow consulted.
-    const lastSyncedCommit = await fetchTemplateCommitSha(context, typedConfig.edsConfig);
+    // An added demo's code may live on a branch other than main; the update
+    // check and the baseline commit both read that branch.
+    const templateBranch = typedConfig.demo?.source.branch;
+    const lastSyncedCommit = await fetchTemplateCommitSha(context, typedConfig.edsConfig, templateBranch);
 
     const templateOwner = typedConfig.edsConfig.templateOwner;
     const templateRepo = typedConfig.edsConfig.templateRepo;
@@ -93,6 +96,7 @@ export async function populateEdsMetadata(
         daLiveSite: typedConfig.edsConfig.daLiveSite,
         templateOwner,
         templateRepo,
+        ...(templateBranch ? { templateBranch } : {}),
         lastSyncedCommit,
         ...(lkgSource ? { lkgSource } : {}),
     };
@@ -118,6 +122,7 @@ export async function populateEdsMetadata(
 async function fetchTemplateCommitSha(
     context: HandlerContext,
     edsConfig: NonNullable<ProjectCreationConfig['edsConfig']>,
+    templateBranch = 'main',
 ): Promise<string | undefined> {
     const { templateOwner, templateRepo, codePatchSource } = edsConfig;
     if (!templateOwner || !templateRepo) return undefined;
@@ -149,7 +154,7 @@ async function fetchTemplateCommitSha(
         // Both from the cache; the two dynamic imports went with them.
         const { fileOperations: githubFileOps } = getGitHubServices(context.context.secrets);
         const sha =
-            (await githubFileOps.getLatestCommitSha(templateOwner, templateRepo, 'main')) ??
+            (await githubFileOps.getLatestCommitSha(templateOwner, templateRepo, templateBranch)) ??
             undefined;
         context.logger.debug(
             `[Project Creation] Fetched template commit SHA: ${sha?.substring(0, 7)}`,

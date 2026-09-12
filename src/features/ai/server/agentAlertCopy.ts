@@ -140,6 +140,13 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         target: ['path'],
         sessionGrant: false,
     },
+    forget_added_demo: {
+        action: 'Forget an added demo',
+        consequence:
+            'Removes it from the Add a demo list; with deleteCopy, also deletes your copy of its code from GitHub, and projects built on it lose reset and updates.',
+        target: ['owner', 'repo'],
+        sessionGrant: false,
+    },
     reset_eds_project: {
         action: 'Reset this storefront',
         consequence:

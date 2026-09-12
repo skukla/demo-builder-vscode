@@ -79,6 +79,11 @@ export function addedDemoId(demo: Pick<AddedDemo, 'source'>): string {
     return `${ADDED_DEMO_ID_PREFIX}${demo.source.owner}/${demo.source.repo}`;
 }
 
+/** Is this package id an added demo's (the prefix no shipped package can carry)? */
+export function isAddedDemoId(packageId: string): boolean {
+    return packageId.startsWith(ADDED_DEMO_ID_PREFIX);
+}
+
 /**
  * The row as a catalog entry, so readers that want a `DemoPackage` get one. The
  * storefront is keyed under the project's stack when it has one; with no stack
