@@ -2,7 +2,7 @@
  * Tests for fstabGenerator - Single source of truth for fstab.yaml generation
  */
 
-import { generateFstabContent, FstabConfig } from '@/features/eds/services/fstabGenerator';
+import { generateFstabContent, FstabConfig, parseFstabContentSource } from '@/features/eds/services/fstabGenerator';
 
 describe('fstabGenerator', () => {
     describe('generateFstabContent', () => {
@@ -114,5 +114,19 @@ describe('fstabGenerator', () => {
             expect(() => generateFstabContent({ daLiveOrg: 'my-org', daLiveSite: 'my_site' }))
                 .not.toThrow();
         });
+    });
+});
+
+describe('parseFstabContentSource', () => {
+    it('reads back exactly what generateFstabContent writes', () => {
+        const text = generateFstabContent({ daLiveOrg: 'jen', daLiveSite: 'isle5-demo' });
+        expect(parseFstabContentSource(text)).toEqual({ org: 'jen', site: 'isle5-demo' });
+    });
+
+    it('is undefined for a mount that is not DA.live', () => {
+        expect(
+            parseFstabContentSource('mountpoints:\n  /: https://adobe.sharepoint.com/sites/x/Shared%20Documents/site\n'),
+        ).toBeUndefined();
+        expect(parseFstabContentSource('')).toBeUndefined();
     });
 });

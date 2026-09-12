@@ -20,7 +20,14 @@ import Ajv, { type ValidateFunction } from 'ajv';
 import { stripSecretValues } from '@/core/config/envVarKeys';
 import { UNATTRIBUTED_PICKS_KEY } from '@/core/state/componentApiPicks';
 import projectFileSchema from '@/core/state/config/project-file.schema.json';
-import { PROJECT_FILE_VERSION, type ProjectFile, type ProjectFileSource } from '@/types/projectFile';
+import sharedDemoSchema from '@/core/state/config/shared-demo.schema.json';
+import {
+    PROJECT_FILE_VERSION,
+    SHARED_DEMO_FILE_VERSION,
+    type ProjectFile,
+    type ProjectFileSource,
+    type SharedDemoDescription,
+} from '@/types/projectFile';
 import type { SettingsFile } from '@/types/settingsFile';
 
 export type ReadProjectFileResult =
@@ -36,6 +43,65 @@ export type ReadProjectFileResult =
 
 const NOT_JSON = "This file couldn't be read. It may have been corrupted.";
 const NOT_A_PROJECT_FILE = "This doesn't appear to be a Demo Builder project file.";
+const NOT_A_DEMO_FILE = "This doesn't appear to be a Demo Builder demo description.";
+
+export type ReadSharedDemoResult =
+    | {
+          ok: true;
+          description: SharedDemoDescription;
+          /** Unknown fields and a newer version, in plain words: a warning, never a refusal (D10). */
+          warnings: string[];
+      }
+    | { ok: false; error: string };
+
+/**
+ * Parse text as a shared-demo description file (`demo.demo-builder.json`).
+ *
+ * The file is a colleague's, so it is read tolerantly: a field this build does
+ * not know warns and is kept; a newer version warns and is read as far as this
+ * build understands it. Only a file that is not JSON, or does not say
+ * `kind: 'demo'` with the fields the slice requires, is refused.
+ *
+ * @param text - The file's contents
+ * @returns The description with warnings, or a plain-words refusal
+ */
+export function readSharedDemoDescription(text: string): ReadSharedDemoResult {
+    let parsed: unknown;
+    try {
+        parsed = JSON.parse(text);
+    } catch {
+        return { ok: false, error: NOT_JSON };
+    }
+    if (!isSharedDemoDescription(parsed)) {
+        return { ok: false, error: NOT_A_DEMO_FILE };
+    }
+    const warnings: string[] = [];
+    const known = new Set(Object.keys(sharedDemoSchema.definitions.SharedDemoDescription.properties));
+    const unknown = Object.keys(parsed).filter((key) => !known.has(key));
+    if (unknown.length > 0) {
+        warnings.push(
+            `This demo's description has settings this version of Demo Builder doesn't know: ${unknown.join(', ')}. They were ignored.`,
+        );
+    }
+    if (parsed.version > SHARED_DEMO_FILE_VERSION) {
+        warnings.push(
+            "This demo's description was written for a newer Demo Builder. What this version understands was used.",
+        );
+    }
+    return { ok: true, description: parsed, warnings };
+}
+
+let compiledSharedDemo: ValidateFunction<SharedDemoDescription> | null = null;
+
+/** The generated shared-demo schema is the guard; it is tolerant of unknown fields by design. */
+function isSharedDemoDescription(value: unknown): value is SharedDemoDescription {
+    if (!compiledSharedDemo) {
+        compiledSharedDemo = new Ajv({ allErrors: true, strict: false }).compile<SharedDemoDescription>(
+            sharedDemoSchema,
+        );
+    }
+    return isRecord(value) && value.kind === 'demo' && compiledSharedDemo(value);
+}
 
 /**
  * Parse text as a project file.

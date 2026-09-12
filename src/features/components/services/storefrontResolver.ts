@@ -40,8 +40,13 @@ export interface ResolvedStorefront {
     source: 'project' | 'catalog';
 }
 
-// `Partial`: the JSON is cast, not checked, and a catalog with no collection at all must answer "nothing" rather than throw.
-const BUNDLED_PACKAGES: readonly DemoPackage[] =
+/**
+ * The bundled catalog. `Partial`: the JSON is cast, not checked, and a catalog
+ * with no collection at all must answer "nothing" rather than throw. Exported
+ * for the one reader that needs the whole list synchronously without importing
+ * the JSON itself (the shared-demo probe's template recognition).
+ */
+export const bundledDemoPackages: readonly DemoPackage[] =
     (demoPackagesConfig as unknown as Partial<DemoPackagesConfig>).packages ?? [];
 
 /**
@@ -54,7 +59,7 @@ const BUNDLED_PACKAGES: readonly DemoPackage[] =
  */
 export function resolveStorefrontForProject(
     project: StorefrontLookup,
-    packages: readonly DemoPackage[] = BUNDLED_PACKAGES,
+    packages: readonly DemoPackage[] = bundledDemoPackages,
 ): ResolvedStorefront | undefined {
     if (project.demo) {
         const pkg = packageFromAddedDemo(project.demo, project.selectedStack);

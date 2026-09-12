@@ -26,6 +26,7 @@ import { handleCheckCredentialService } from '@/features/eds/handlers/credential
 import { handleCheckDaLiveAuth, handleClearDaLiveAuth, handleOpenDaLiveLogin, handleStoreDaLiveTokenWithOrg } from '@/features/eds/handlers/daLive/edsDaLiveHandlers';
 import { handleCheckGitHubAuth, handleCreateGitHubRepo, handleGetGitHubRepos, handleGitHubChangeAccount, handleGitHubOAuth } from '@/features/eds/handlers/edsGitHubHandlers';
 import { handleDiscoverStoreStructure } from '@/features/eds/handlers/edsHandlers';
+import { handleProbeSharedDemo } from '@/features/eds/handlers/probeSharedDemoHandler';
 import { handleCancelStorefrontSetup, handleStartStorefrontSetup } from '@/features/eds/handlers/storefrontSetup/storefrontSetupHandlers';
 import { meshHandlers } from '@/features/mesh/handlers/meshHandlers';
 import { handleCheckPrerequisites } from '@/features/prerequisites/handlers/checkHandler';
@@ -101,6 +102,8 @@ export const projectCreationHandlers = defineHandlers({
     'check-github-auth': handleCheckGitHubAuth,
     'check-github-app': checkGitHubApp,
     'check-repo-readiness': handleCheckRepoReadiness,
+    // Reads a colleague's repository before "Add a demo" offers it (step 04's dialog).
+    'probe-shared-demo': handleProbeSharedDemo,
     'create-github-repo': handleCreateGitHubRepo,
     'github-oauth': handleGitHubOAuth,
     'github-change-account': handleGitHubChangeAccount,

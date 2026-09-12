@@ -195,6 +195,7 @@ describe('GitHubRepoOperations — Octokit paths', () => {
                 htmlUrl: 'https://github.com/owner/repo',
                 cloneUrl: 'https://github.com/owner/repo.git',
                 defaultBranch: 'main',
+                isTemplate: false,
             });
         });
 
@@ -356,6 +357,7 @@ describe('GitHubRepoOperations — Octokit paths', () => {
                     htmlUrl: 'https://github.com/owner/repo',
                     cloneUrl: 'https://github.com/owner/repo.git',
                     defaultBranch: 'main',
+                    isTemplate: false,
                 },
             });
         });

@@ -48,6 +48,10 @@ export interface GitHubRepo {
     cloneUrl: string;
     /** Default branch name */
     defaultBranch: string;
+    /** GitHub's template flag (`is_template`). */
+    isTemplate?: boolean;
+    /** The repository this one was forked from (`parent.full_name`), when it is a fork. */
+    forkParent?: string;
     /** Repository description (optional, for listing) */
     description?: string | null;
     /** Last updated timestamp (optional, for listing) */

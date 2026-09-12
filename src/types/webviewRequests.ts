@@ -17,8 +17,68 @@ import type { AdobeConfig } from './base';
 import type { CustomBlockLibrary } from './blockLibraries';
 import type { CommerceStoreStructure } from './commerceStore';
 import type { ComponentConfigs, EnvVarDefinition, ServiceDefinition } from './components';
+import type { DaLiveContentSource } from './demoPackages';
+import type { SharedDemoDescription } from './projectFile';
 import type { GitHubRepoItem } from './webview';
 import type { GitHubUser } from './webviewPayloads';
+
+/**
+ * `probe-shared-demo` — read a colleague's repository before "Add a demo"
+ * offers it (shareable-demo step 03). Owner and repo, already split by the
+ * sender; the handler validates the charset.
+ */
+export interface ProbeSharedDemoRequest {
+    owner: string;
+    repo: string;
+}
+
+/** Which of the storefront kinds a repository holds, or that it holds none. */
+export type SharedDemoKind = 'eds' | 'headless' | 'not-a-storefront';
+
+/** Where a value in the probe result came from, so the dialog can say what was overridden. */
+export type SharedDemoValueSource = 'description-file' | 'config-json' | 'dependencies' | 'fstab';
+
+/**
+ * What `probe-shared-demo` answers. Three outcomes the dialog branches on: the
+ * link is one of our own shipped templates (select that card instead, D30); the
+ * repository could not be read at all; or it was read, and every field is what
+ * was READ — nothing here is written anywhere. `description` is the repository's
+ * own `demo.demo-builder.json` when present and readable; its values already win
+ * in the other fields, and `overrides` names which ones it replaced (D10).
+ */
+export type SharedDemoProbeResult =
+    | { outcome: 'shipped'; shippedPackageId: string; fullName: string }
+    | { outcome: 'unreadable'; reason: string }
+    | SharedDemoRead;
+
+export interface SharedDemoRead {
+    outcome: 'read';
+    /** The repository as GitHub names it now; differs from the request after a rename. */
+    fullName: string;
+    defaultBranch: string;
+    /** GitHub's template flag on the repository. */
+    isTemplate: boolean;
+    /** The repository this one was forked from, when it is a fork. */
+    forkParent?: string;
+    kind: SharedDemoKind;
+    /** For `not-a-storefront`: the canonical files that were missing, or the reason nothing could be read. */
+    missing?: string[];
+    /** The DA.live site the storefront's `fstab.yaml` mounts, for an EDS storefront. */
+    contentSource?: DaLiveContentSource;
+    /** Whether the content site publishes an index, and how many pages it lists. */
+    contentPublished: { indexFound: boolean; pageCount?: number };
+    /** Store codes read from `config.json`, or from the description file's defaults. */
+    storeCodes?: { websiteCode?: string; storeCode?: string; storeViewCode?: string };
+    /** B2B posture and where it was read from; `unknown` when nothing said. */
+    b2b: 'on' | 'off' | 'unknown';
+    b2bSource?: SharedDemoValueSource;
+    /** The description file's content, when the repository carries one that validates. */
+    description?: SharedDemoDescription;
+    /** Which read values the description file replaced, in the result's field names. */
+    overrides: string[];
+    /** Things the SC should hear, in plain words. */
+    warnings: string[];
+}
 
 /**
  * Frontend source from template (same shape as TemplateSource)

@@ -61,3 +61,48 @@ index → `indexFound: false` (no throw); description file present → its value
 
 The handler answers for all three real repos in the Dev Host, and `mcp-live-probe` shows
 the same answer through the read tool step 07 adds.
+
+## Built (2026-09-12)
+
+`probeSharedDemo` in `src/features/eds/services/storefront/sharedDemoProbe.ts`, behind the
+`probe-shared-demo` handler (`probeSharedDemoHandler.ts`, registered in the wizard's
+handler registry). The answer is a union the dialog branches on: `shipped` (the link is one
+of our own templates, with the package id to select), `unreadable` (not found, no access,
+or a canonical file could not be read; never a guess), or `read` with everything the goal
+lists. Read-only: GitHub reads and one GET of the content index.
+
+**Markers, read from the real repositories on 2026-09-12, not written from memory:**
+headless is `dependencies.next` (`skukla/citisignal-nextjs`); B2B is any of five drop-ins
+(`@dropins/storefront-company-management`, `-company-switcher`, `-purchase-order`,
+`-quote-management`, `-requisition-list`) in `adobe-commerce/boilerplate-b2b-template`'s
+package.json, none of which a B2C boilerplate ships. The B2B template carries no
+`fstab.yaml` and no `config.json` at all (Demo Builder writes both), so for a bare template
+the codes are absent and B2B comes from the dependency list.
+
+**Precedence when sources disagree:** description file > `config.json` > dependencies, and
+the result names the source (`b2bSource`) and the fields the file replaced (`overrides`).
+The index probe follows the description file's content source and index path when it
+overrides the fstab's.
+
+**Reused, as the map said:** `classifyRepoForStorefront` as is; `GitHubRepoOperations.getRepository`
+now surfaces `isTemplate` and `forkParent` (one `toGitHubRepo` builder replaced two
+identical literals); the fstab parser is the inverse of `generateFstabContent`, beside it;
+the config.json reader is `parseStorefrontConfigJson`, extracted from
+`fetchServedStorefrontConfig` and shared with it; the description file is read by
+`readSharedDemoDescription` beside `readProjectFile`, tolerant (unknown fields and a newer
+version warn, never refuse); `assertGitHubName` / `assertGitRef` moved to
+`core/utils/githubUrlParser.ts` and the App Builder catalog loader imports them from there.
+The bundled catalog is exported from the resolver module for template recognition, so the
+catalog-JSON chokepoint pin still holds at two files.
+
+**Recognition (D30)** compares owner/repo case-insensitively (GitHub names are), exactly
+otherwise: a fork of our template is probed like any other repository.
+
+**Tests:** contract fixtures captured from the three real repositories (the fixture file says
+which and what was replaced: the instance endpoint); every path in the plan's list; the
+handler's guards; the parsers; the reader. One mutation-ledger entry was deleted rather than
+re-anchored: the optional chain it excused now lives in a pure parser whose own test hands it
+`null`, so the mutant is killed, not equivalent.
+
+**Not yet done, from "Done when":** the Dev Host round trip needs a caller, which step 04's
+dialog is; the agent-surface check needs step 07's tool. Both are recorded there.

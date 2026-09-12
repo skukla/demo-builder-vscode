@@ -7,7 +7,7 @@
  */
 
 import { UNATTRIBUTED_PICKS_KEY } from '@/core/state/componentApiPicks';
-import { readProjectFile } from '@/core/state/projectFileReader';
+import { readProjectFile, readSharedDemoDescription } from '@/core/state/projectFileReader';
 import { CATALOG_API_KEY, PAAS_ADMIN_PASSWORD } from '@/core/config/envVarKeys';
 import { settingsFileV1WithSecrets } from '../../helpers/projectFileFixtures';
 
@@ -89,5 +89,43 @@ describe('readProjectFile', () => {
         expect(readProjectFile(JSON.stringify(v9))).toEqual(
             expect.objectContaining({ ok: true, newerThanSupported: true }),
         );
+    });
+});
+
+describe('readSharedDemoDescription', () => {
+    const valid = { kind: 'demo', version: 1, name: 'Isle5 by Jen' };
+
+    it('reads a minimal description with no warnings', () => {
+        expect(readSharedDemoDescription(JSON.stringify(valid))).toEqual({
+            ok: true,
+            description: valid,
+            warnings: [],
+        });
+    });
+
+    it('warns on a field this build does not know, and keeps reading (never refuses)', () => {
+        const result = readSharedDemoDescription(JSON.stringify({ ...valid, futureThing: 1 }));
+        expect(result).toEqual({
+            ok: true,
+            description: { ...valid, futureThing: 1 },
+            warnings: [expect.stringMatching(/futureThing/)],
+        });
+    });
+
+    it('warns on a newer version and reads what it understands', () => {
+        const result = readSharedDemoDescription(JSON.stringify({ ...valid, version: 9 }));
+        expect(result).toEqual(expect.objectContaining({ ok: true, warnings: [expect.stringMatching(/newer/)] }));
+    });
+
+    it('refuses text that is not JSON, and JSON that is not a demo description', () => {
+        expect(readSharedDemoDescription('{nope')).toEqual({ ok: false, error: expect.stringMatching(/couldn't be read/) });
+        expect(readSharedDemoDescription(JSON.stringify({ kind: 'project', version: 2 }))).toEqual({
+            ok: false,
+            error: expect.stringMatching(/demo description/),
+        });
+        expect(readSharedDemoDescription(JSON.stringify({ kind: 'demo', version: 1 }))).toEqual({
+            ok: false,
+            error: expect.stringMatching(/demo description/),
+        });
     });
 });

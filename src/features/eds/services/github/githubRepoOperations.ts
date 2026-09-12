@@ -53,6 +53,32 @@ const ERROR_MESSAGES = {
 /**
  * GitHub Repository Operations Service
  */
+/** The fields of a `GET /repos/{owner}/{repo}` response this extension keeps. */
+interface RepoResponseData {
+    id: number;
+    name: string;
+    full_name: string;
+    html_url: string;
+    clone_url: string;
+    default_branch: string;
+    is_template?: boolean;
+    parent?: { full_name: string } | null;
+}
+
+/** One reading of the repository response, shared by every method that fetches it. */
+function toGitHubRepo(data: RepoResponseData): GitHubRepo {
+    return {
+        id: data.id,
+        name: data.name,
+        fullName: data.full_name,
+        htmlUrl: data.html_url,
+        cloneUrl: data.clone_url,
+        defaultBranch: data.default_branch,
+        isTemplate: data.is_template ?? false,
+        ...(data.parent?.full_name ? { forkParent: data.parent.full_name } : {}),
+    };
+}
+
 export class GitHubRepoOperations {
     private logger: Logger;
     private tokenService: GitHubTokenService;
@@ -148,14 +174,7 @@ export class GitHubRepoOperations {
                 repo,
             });
 
-            return {
-                id: response.data.id,
-                name: response.data.name,
-                fullName: response.data.full_name,
-                htmlUrl: response.data.html_url,
-                cloneUrl: response.data.clone_url,
-                defaultBranch: response.data.default_branch,
-            };
+            return toGitHubRepo(response.data);
         } catch (error) {
             const apiError = error as GitHubApiError;
 
@@ -352,17 +371,7 @@ export class GitHubRepoOperations {
                 };
             }
 
-            return {
-                hasAccess: true,
-                repo: {
-                    id: response.data.id,
-                    name: response.data.name,
-                    fullName: response.data.full_name,
-                    htmlUrl: response.data.html_url,
-                    cloneUrl: response.data.clone_url,
-                    defaultBranch: response.data.default_branch,
-                },
-            };
+            return { hasAccess: true, repo: toGitHubRepo(response.data) };
         } catch (error) {
             const apiError = error as GitHubApiError;
 
