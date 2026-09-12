@@ -47,3 +47,4 @@ contract for a reader who is not us.
 ## Shipped so far
 
 - 2026-09-12  Built: types, reader, generated schemas, docs (aafc547d9)
+- 2026-09-12  chore(backlog): log the contract step's commit on PL-56a and close DI-3 (`71d642c72`)

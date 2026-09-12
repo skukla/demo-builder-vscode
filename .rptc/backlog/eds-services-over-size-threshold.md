@@ -4,7 +4,7 @@ kind: chore
 area: platform
 needs: []
 value: high
-status: backlog
+status: active
 layer: G
 ---
 # Files over the god-file threshold
@@ -321,3 +321,5 @@ section above, which is the same argument and was right the first time.
 - 2026-09-10  2026-09-10  Gated: god-file-ratchet.test.ts pins 68 candidates / 31 coupled; rule 49 measures on edit (2987e8623)
 - 2026-09-10  2026-09-10  First cut of the worst coupled file: spreadsheet copy out of daLiveContentCopy 1157->1082 (d412b0652)
 - 2026-09-11  Second cut of daLiveContentCopy: account chrome + auth stubs out, 1081->981 (220-line daLiveAccountChrome); suites untouched
+- 2026-09-10  chore(backlog): log the account-chrome cut to EDS-8 (`9c3ac64a4`)
+- 2026-09-10  refactor(eds): account chrome out of daLiveContentCopy — 1081 to 981 (`b590a8993`)

@@ -64,3 +64,9 @@ unchanged from there: the Storefront area shows the frontend piece as fixed by t
 - 2026-09-12  79edc51ee Step: read a colleague's repository - probe-shared-demo, markers verified against three real repos
 - 2026-09-12  c768db042 Step: the Add a demo card and dialog - probe, fork on add, remembered demos as cards
 - 2026-09-12  792564379 Step: create a project from an added demo - row on the wire, repo by template flag, dry check, wizard seeding, one field list, site-address links
+- 2026-09-12  feat(eds): reset, update, change the source of and forget an added demo (`40144edcc`)
+- 2026-09-12  chore(backlog): log the create-from-demo step on the add-a-demo item (`962143a7e`)
+- 2026-09-12  chore(backlog): log the Add a demo dialog on the add-a-demo item (`4d10cfd41`)
+- 2026-09-12  chore(backlog): log the repository probe on the add-a-demo item (`fd0421ba2`)
+- 2026-09-12  chore(backlog): log the Starter rename on the add-a-demo item (`dab889ec4`)
+- 2026-09-12  chore(backlog): log the resolver commit on the add-a-demo item; it is active (`df2fc6b7c`)

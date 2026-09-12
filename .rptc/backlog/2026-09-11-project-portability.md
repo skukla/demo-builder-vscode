@@ -51,3 +51,4 @@ two ways to describe one storefront. That is why both sit under one program.
 ## Shipped so far
 
 - 2026-09-11  Cut into six children; D24-D25 decided (6a66780e6)
+- 2026-09-11  chore(backlog): log the cut commit on PL-56 (`1416a2075`)
