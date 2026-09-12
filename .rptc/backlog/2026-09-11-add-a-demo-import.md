@@ -61,3 +61,4 @@ unchanged from there: the Storefront area shows the frontend piece as fixed by t
 
 - 2026-09-12  5fc236f40 Step: look up a project's storefront in one place — resolver, eight sites moved, chokepoint pin
 - 2026-09-12  6a49396ca Step: the Custom brand is Starter (id and label); the package icon removed
+- 2026-09-12  79edc51ee Step: read a colleague's repository - probe-shared-demo, markers verified against three real repos
