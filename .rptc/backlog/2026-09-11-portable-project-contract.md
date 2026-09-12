@@ -43,3 +43,7 @@ The type, the schema, the migration rule and the filenames are in the repo, pinn
 `tests/templates/config-contracts.test.ts` (schema/data) and
 `config-interface-contracts.test.ts` (type/JSON agreement), and `docs/` states the
 contract for a reader who is not us.
+
+## Shipped so far
+
+- 2026-09-12  Built: types, reader, generated schemas, docs (aafc547d9)

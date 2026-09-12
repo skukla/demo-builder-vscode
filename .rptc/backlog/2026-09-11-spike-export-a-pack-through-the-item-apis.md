@@ -94,3 +94,4 @@ one route, and [[EDS-13b]]'s "Publish it now?" has its implementation.
 
 - 2026-09-11  Filed at the head of EDS-13 (1d0248ac1)
 - 2026-09-11  Spiked: service cannot export rows today (17b0509ee)
+- 2026-09-12  Closed on three measurements (aafc547d9)
