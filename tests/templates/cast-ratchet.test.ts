@@ -29,7 +29,7 @@ import * as path from 'path';
 // took its two registry casts with it.
 // 2026-09-05: 29 → 28. Deleting the dead `getAddonSource` in demoPackageLoader
 // took its `stacksConfig as unknown as StacksConfig` cast with it.
-const BASELINE = 28;
+const BASELINE = 25;
 
 const ROOT = path.join(__dirname, '../..');
 

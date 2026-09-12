@@ -51,6 +51,9 @@ export const PROJECT_FILE_VERSION = 2;
 /** The shared-demo description file's current version. */
 export const SHARED_DEMO_FILE_VERSION = 1;
 
+/** Prefix of a project's package id when it was built on an added demo, so it never collides with a shipped id. */
+export const ADDED_DEMO_ID_PREFIX = 'added:';
+
 /**
  * The storefront slice: what a demo package says about a demo, in any of its
  * three homes. Derived from `DemoPackage` so the catalog cannot drift from it.

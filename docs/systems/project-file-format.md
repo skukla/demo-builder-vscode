@@ -40,6 +40,17 @@ Everything the manifest persists that describes the demo rather than the machine
 What stays local and is never in the file: paths, dates, statuses, component instances and
 versions, installed snapshots, publish state, AI file hashes, the pinned flag.
 
+## Where a project's storefront is looked up
+
+One function answers "what storefront is this project on":
+`resolveStorefrontForProject` in `src/features/components/services/storefrontResolver.ts`.
+It reads the project's own row first (`demo` on the manifest, present when the project was
+built on an added demo) and the shipped catalog second, and hands back the package, its
+storefront for the project's stack, and which of the two answered. Reset, republish, the
+dashboards, the AI bundle and the config generator all go through it, so a project on a
+colleague's storefront behaves like one on a shipped brand. The catalog JSON itself is
+imported by the resolver and the package loader only; a test pins that.
+
 ## Credentials never travel
 
 The file shares the demo's shape, not a login. Credentials live in VS Code's secret storage

@@ -57,3 +57,55 @@ the EDS instance metadata written at `executorEdsPhase.ts:88` and read by
 
 All eleven sites import the resolver, the pin is green, and `architecture-duplication-scan`
 would no longer report the reset/update split.
+
+## Built (2026-09-12)
+
+`resolveStorefrontForProject(project, packages?)` in
+`src/features/components/services/storefrontResolver.ts`: the project's `demo` row first,
+the catalog second; returns `{ package, storefront, source }` or `undefined`. A row is
+handed back as a `DemoPackage` (id `added:<owner>/<repo>`, `ADDED_DEMO_ID_PREFIX`) with one
+storefront derived from its repository: template = the repository itself, no patches,
+pinning, overlay or brand assets (D4). `Project.demo?: AddedDemo` is on the manifest
+(`projectFileLoader` passes it through; schema regenerated). Its input is a `Pick` of three
+fields, so a wizard state or a payload can call it, not only a `Project`.
+
+**Sites.** Through the resolver now: `resolveStorefrontConfig` (reset, name migration,
+config repair), config-flag injection, the dashboard subtitle, the projects list card,
+the AI bundle header, and edit-mode rehydration (which now warns on a miss with both ids
+present). Three of the eleven were not moved, each for a reason:
+
+- `WizardContainer.tsx`: a webview; the wizard state has no row until step 06 puts one
+  there for editing an added demo. It stays on `getPackageById`, which is the loader, so
+  the pin holds. Moves in step 06.
+- `executorComponentLoading.ts:146`: an error message that names the catalog file, not a
+  lookup.
+- `edsResetRepoHelper.ts:54`: a block-library audience check by package id, not a
+  storefront lookup. An added demo's id never matches `onlyForPackages`, which is D22.
+
+**Decision — template identity for updates.** The update checker compares
+`lastSyncedCommit` against the repository that commit belongs to; the SHA and the
+repository are one record, written into the EDS instance metadata at creation and on
+every reset. The resolver does not read it, and `getTemplateSource` stays its one reader.
+Two facts, not a split: the resolver says where a reset goes; the record says what an
+update compares against. Step 05 writes both through the paths shipped brands already use
+(the row on the manifest; the record through `executorEdsPhase`); Change source (step 06)
+must rewrite both.
+
+**Pin.** `spine-chokepoints.test.ts`: the catalog JSON is imported by the loader and the
+resolver only; six other importers are gone (`StorefrontConfigSource` deleted with them).
+
+**Tests that moved, and why** (the plan promised "unchanged"; these are the exceptions):
+
+- `storefrontSetupConfigRehydration.test.ts`: the module mock of the loader became an
+  injected catalog (the seam standard); its `accountContentSource` fixture was shape-wrong
+  (`owner/repo` for an `org/site` field) and the typed builder caught it; the "lookup
+  throws" test has no counterpart (the resolver is pure over data); the unknown-package test
+  now also asserts the warn.
+- `edsResetParams.test.ts` and the three `edsResetUI-*` suites: fixtures typed with
+  `tests/helpers/demoPackageFixtures.ts`; the `resolveStorefrontConfig` test asserts the
+  whole storefront, since that is what it returns now.
+- `showDashboard-initialData.test.ts`: one fake package gained `storefronts: {}`, the field
+  the type requires.
+
+Housekeeping the gate demanded: `docs/README.md` lacked the format doc from PL-56a; the
+mutation ledger's anchors for three files moved with the edits; the cast baseline fell 28 → 25.

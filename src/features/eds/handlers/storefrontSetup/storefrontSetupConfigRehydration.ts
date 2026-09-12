@@ -20,7 +20,11 @@
  * patches between releases and existing projects pick it up on their next run.
  */
 
-import { getStorefrontForStack } from '@/features/components/services/demoPackageLoader';
+import {
+    resolveStorefrontForProject,
+    type StorefrontLookup,
+} from '@/features/components/services/storefrontResolver';
+import type { DemoPackage, Storefront } from '@/types/demoPackages';
 import type { Logger } from '@/types/logger';
 
 /**
@@ -41,6 +45,8 @@ const PACKAGE_DERIVED_KEYS = [
     'brandAssets',
 ] as const;
 
+type PackageDerivedKey = (typeof PACKAGE_DERIVED_KEYS)[number];
+
 /**
  * Fill in any package-derived field the caller left undefined.
  *
@@ -48,21 +54,23 @@ const PACKAGE_DERIVED_KEYS = [
  * deliberate choice must never be clobbered by the package default.
  *
  * Degrades to the input on every failure path — unknown package, missing
- * package/stack, malformed config. Setup proceeding without patches is the
- * behavior that shipped for months; taking setup down over a config lookup
+ * package/stack — and never in silence. Setup proceeding without patches is
+ * the behavior that shipped for months; taking setup down over a config lookup
  * would be a worse outcome than the bug this fixes.
  *
  * @param edsConfig - Storefront config as assembled by the caller
- * @param packageId - Project's selected package (e.g. `'custom'`)
- * @param stackId - Project's selected stack (e.g. `'eds-accs'`)
+ * @param lookup - The project's package, stack and (when built on an added demo) row
  * @param logger - Logger; restored fields are reported at info
+ * @param packages - The catalog; injectable for tests, defaults to the bundled one
  */
-export async function rehydratePackageDerivedConfig<T extends object>(
+export function rehydratePackageDerivedConfig<T extends object>(
     edsConfig: T,
-    packageId: string | undefined,
-    stackId: string | undefined,
+    lookup: StorefrontLookup,
     logger: Logger,
-): Promise<T> {
+    packages?: readonly DemoPackage[],
+): T {
+    const packageId = lookup.selectedPackage;
+    const stackId = lookup.selectedStack;
     if (!packageId || !stackId) {
         // Never silent. This returned without a word when selectedStack failed to
         // reach the payload, and the whole patch subsystem stayed dead with no
@@ -75,20 +83,19 @@ export async function rehydratePackageDerivedConfig<T extends object>(
         return edsConfig;
     }
 
-    let storefront: Record<string, unknown> | undefined;
-    try {
-        storefront = (await getStorefrontForStack(packageId, stackId)) as
-            | Record<string, unknown>
-            | undefined;
-    } catch (error) {
+    const storefront: Pick<Storefront, PackageDerivedKey> | undefined = resolveStorefrontForProject(
+        lookup,
+        packages,
+    )?.storefront;
+    if (!storefront) {
+        // A miss with both ids present used to be silent (research §3b): the
+        // patches stayed off and nothing said why.
         logger.warn(
-            `[Storefront Setup] Could not read package config for ${packageId}/${stackId}: ` +
-                `${(error as Error).message} — continuing without package-derived settings`,
+            `[Storefront Setup] No storefront found for ${packageId}/${stackId} — ` +
+                'continuing without package-derived settings',
         );
         return edsConfig;
     }
-
-    if (!storefront) return edsConfig;
 
     const current = edsConfig as Record<string, unknown>;
     const restored: string[] = [];

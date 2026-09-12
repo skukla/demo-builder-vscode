@@ -42,8 +42,9 @@ import {
     getMeshAppBuilderComponent,
 } from '@/core/state/appBuilderComponentState';
 import componentsConfig from '@/features/components/config/components.json';
-import demoPackagesConfig from '@/features/components/config/demo-packages.json';
+import { resolveStorefrontForProject } from '@/features/components/services/storefrontResolver';
 import type { Project } from '@/types/base';
+import type { DemoPackage } from '@/types/demoPackages';
 import type { Logger } from '@/types/logger';
 
 // Bundled template - single source of truth
@@ -98,6 +99,10 @@ export interface ConfigGeneratorParams {
     selectedAddons?: string[];
     /** Selected demo package ID (e.g., 'b2b') - drives package-level configFlags */
     selectedPackage?: string;
+    /** The project's storefront row when it was built on an added demo; its flags win over the catalog's. */
+    demo?: Project['demo'];
+    /** The catalog; injectable for tests, defaults to the bundled one. */
+    packages?: readonly DemoPackage[];
 }
 
 /**
@@ -363,6 +368,7 @@ export function extractConfigParams(project: Project): Partial<ConfigGeneratorPa
         ),
         selectedAddons: project.selectedAddons,
         selectedPackage: project.selectedPackage,
+        demo: project.demo,
     };
 }
 
@@ -453,25 +459,23 @@ function injectAddonConfigFlags(
 /**
  * Inject demo-package-specific config flags into the config object.
  *
- * Reads configFlags from the selected package definition in demo-packages.json.
- * This is data-driven — any package with a `configFlags` object will have its
- * flags injected into config.public.default. The B2B package uses this to set
- * commerce-b2b-enabled / commerce-companies-enabled, which gate the
- * auth/permissions event the commerce-account-nav block depends on.
+ * Reads configFlags from the project's package — its own row first, the
+ * catalog second. This is data-driven — any package with a `configFlags`
+ * object will have its flags injected into config.public.default. The B2B
+ * package uses this to set commerce-b2b-enabled / commerce-companies-enabled,
+ * which gate the auth/permissions event the commerce-account-nav block depends on.
  */
 function injectPackageConfigFlags(
     config: Record<string, Record<string, Record<string, unknown>>>,
-    selectedPackage: string,
+    params: ConfigGeneratorParams,
     logger: Logger,
 ): void {
-    const packages = (
-        demoPackagesConfig as {
-            packages?: Array<{ id: string; configFlags?: Record<string, boolean> }>;
-        }
-    ).packages;
-    const pkg = packages?.find((p) => p.id === selectedPackage);
-
-    injectConfigFlags(config, pkg?.configFlags, `package: ${selectedPackage}`, logger);
+    const resolved = resolveStorefrontForProject(
+        { selectedPackage: params.selectedPackage, demo: params.demo },
+        params.packages,
+    );
+    const label = `package: ${resolved?.package.id ?? params.selectedPackage}`;
+    injectConfigFlags(config, resolved?.package.configFlags, label, logger);
 }
 
 /**
@@ -571,8 +575,8 @@ export function generateConfigJson(
         }
 
         // Inject demo-package-specific config flags (e.g., B2B flags)
-        if (params.selectedPackage) {
-            injectPackageConfigFlags(finalConfig, params.selectedPackage, logger);
+        if (params.selectedPackage || params.demo) {
+            injectPackageConfigFlags(finalConfig, params, logger);
         }
 
         // Serialize with proper formatting

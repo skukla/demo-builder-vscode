@@ -251,7 +251,7 @@ describe('ProjectDashboardWebviewCommand - getInitialData', () => {
 
         it('still resolves the PACKAGE when the stack id is unknown', async () => {
             (loadDemoPackages as jest.Mock).mockResolvedValue([
-                { id: 'citisignal', name: 'CitiSignal' },
+                { id: 'citisignal', name: 'CitiSignal', storefronts: {} },
             ]);
             (ConfigurationLoader as jest.Mock).mockImplementation(() => ({
                 load: jest.fn().mockResolvedValue({ stacks: [] }),

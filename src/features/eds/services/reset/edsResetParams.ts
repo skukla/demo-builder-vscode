@@ -11,9 +11,14 @@
  */
 
 import { COMPONENT_IDS } from '@/core/constants';
-import demoPackagesConfig from '@/features/components/config/demo-packages.json';
+import { resolveStorefrontForProject } from '@/features/components/services/storefrontResolver';
 import type { Project } from '@/types/base';
-import type { BrandAssetsConfig, CodePatchSource } from '@/types/demoPackages';
+import type {
+    BrandAssetsConfig,
+    CodePatchSource,
+    DemoPackage,
+    Storefront,
+} from '@/types/demoPackages';
 import type { HandlerResponse } from '@/types/handlers';
 
 // ==========================================================
@@ -159,51 +164,35 @@ function validateGitHubSlugs(slugs: Array<{ value: string; field: string }>): st
     }
 }
 
-/**
- * The subset of a demo package this module reads: id + storefronts keyed by
- * stack. Structural on purpose — typing the injectable param by the bundled
- * JSON's inferred literal (`typeof demoPackagesConfig.packages`) forced test
- * fixtures to clone the entire JSON shape.
- */
-export interface StorefrontConfigSource {
-    id: string;
-    // `| undefined` because the bundled JSON's inferred type unions storefront
-    // keys across packages, so keys absent from one package type as undefined.
-    storefronts?: Record<string, StorefrontConfig | undefined>;
-}
-
-/** Storefront-derived template configuration for a project's selected stack. */
-interface StorefrontConfig {
-    templateOwner?: string;
-    templateRepo?: string;
-    contentSource?: { org: string; site: string; indexPath?: string };
-    accountContentSource?: { org: string; site: string };
-    contentPatches?: string[];
-    contentPatchSource?: { owner: string; repo: string; path: string };
-    codePatches?: string[];
-    codePatchSource?: CodePatchSource;
-    brandAssets?: BrandAssetsConfig;
-    byomOverlayUrl?: string;
-}
+/** The storefront-derived template configuration a reset reads. */
+type StorefrontConfig = Partial<
+    Pick<
+        Storefront,
+        | 'templateOwner'
+        | 'templateRepo'
+        | 'contentSource'
+        | 'accountContentSource'
+        | 'contentPatches'
+        | 'contentPatchSource'
+        | 'codePatches'
+        | 'codePatchSource'
+        | 'brandAssets'
+        | 'byomOverlayUrl'
+    >
+>;
 
 /**
- * Resolve the storefront template configuration for a project from the demo
- * packages config (source of truth), keyed by selected package + stack.
+ * The storefront template configuration a project resets to: its own row
+ * first, the catalog second (`resolveStorefrontForProject`).
  *
  * @returns The matching storefront config, or an empty object if none matches.
  */
 export function resolveStorefrontConfig(
     project: Project,
-    // Same injectable default as `buildEdsResetParams`, so a caller that only
-    // needs the package's storefront config does not have to import and cast the
-    // bundled JSON itself.
-    packages: StorefrontConfigSource[] = demoPackagesConfig.packages as unknown as StorefrontConfigSource[],
+    // Injectable for tests; defaults to the bundled catalog inside the resolver.
+    packages?: readonly DemoPackage[],
 ): StorefrontConfig {
-    const pkg = packages.find((p) => p.id === project.selectedPackage);
-    const storefront = project.selectedStack
-        ? pkg?.storefronts?.[project.selectedStack]
-        : undefined;
-    return storefront ?? {};
+    return resolveStorefrontForProject(project, packages)?.storefront ?? {};
 }
 
 // ==========================================================
@@ -220,8 +209,8 @@ export function resolveStorefrontConfig(
  */
 export function extractResetParams(
     project: Project,
-    // Injectable for tests; defaults to the bundled demo-packages config.
-    packages: StorefrontConfigSource[] = demoPackagesConfig.packages as unknown as StorefrontConfigSource[],
+    // Injectable for tests; defaults to the bundled catalog inside the resolver.
+    packages?: readonly DemoPackage[],
 ): ExtractParamsResult {
     // Get EDS metadata from component instance (project-specific data)
     const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];

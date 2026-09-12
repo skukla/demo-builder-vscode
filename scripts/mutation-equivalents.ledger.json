@@ -6121,7 +6121,7 @@
             "anchors": [
                 "const failures = [];"
             ],
-            "line": 403,
+            "line": 402,
             "mutants": 1,
             "category": "other",
             "reason": "The mutant seeds the failures list with one junk string, which flips the aggregate to 'cleanup had errors'. Its return value is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. So nothing this expression computes can reach a test except through log wording.",
@@ -6134,7 +6134,7 @@
             "anchors": [
                 "if (!result.github.success && !result.github.skipped) {"
             ],
-            "line": 404,
+            "line": 403,
             "mutants": 6,
             "category": "branch",
             "reason": "Every variant of this guard \u2014 forced true, forced false, && to ||, either negation dropped, and the body emptied \u2014 changes only whether a 'GitHub: ...' string joins the failure list. The GitHub deletion itself already happened inside CleanupService; this line classifies its report. Its return value is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. So nothing this expression computes can reach a test except through log wording.",
@@ -6147,7 +6147,7 @@
             "anchors": [
                 "if (!result.daLive.success && !result.daLive.skipped) {"
             ],
-            "line": 407,
+            "line": 406,
             "mutants": 6,
             "category": "branch",
             "reason": "The DA.live twin of the GitHub guard above, with the same shape and the same fate: it appends a 'DA.live: ...' string to the failure list after the deletion has already been attempted. Its return value is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. So nothing this expression computes can reach a test except through log wording.",
@@ -6160,7 +6160,7 @@
             "anchors": [
                 "if (failures.length > 0) {"
             ],
-            "line": 411,
+            "line": 410,
             "mutants": 5,
             "category": "branch",
             "reason": "This is the point where the failure list becomes a success flag, so it is the closest thing here to a decision \u2014 but the flag has one reader and that reader picks a log line. Forcing it either way, or comparing with >= or <=, changes 'Cleanup completed successfully' into 'Cleanup completed with errors' or the reverse. Its return value is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. So nothing this expression computes can reach a test except through log wording.",
@@ -6173,7 +6173,7 @@
             "anchors": [
                 "return { success: false, error: failures.join('; ') };"
             ],
-            "line": 412,
+            "line": 411,
             "mutants": 2,
             "category": "other",
             "reason": "Emptying this object literal, or flipping its false to true, changes the shape and the verdict of the cleanup report. The value returned here is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way.",
@@ -6186,7 +6186,7 @@
             "anchors": [
                 "return { success: true };"
             ],
-            "line": 415,
+            "line": 414,
             "mutants": 2,
             "category": "other",
             "reason": "The all-clear answer from the cleanup helper. Emptying the literal or flipping its true to false turns a clean cleanup into a reported failure. The value returned here is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way.",
@@ -6199,7 +6199,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 416,
+            "line": 415,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying this catch body makes the helper return undefined instead of a failure verdict. The caller then throws a TypeError reading .success on undefined, which its own catch swallows into a different log line \u2014 so the handler still resolves { success: true } and no resource is treated differently. The value returned here is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way.",
@@ -6212,7 +6212,7 @@
             "anchors": [
                 "return { success: false, error: (error as Error).message };"
             ],
-            "line": 417,
+            "line": 416,
             "mutants": 2,
             "category": "other",
             "reason": "The failure verdict for an exception thrown anywhere in the helper \u2014 including the fail-fast when there is no authenticated session. Emptying the literal or flipping its false to true changes only that verdict. The value returned here is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. The fail-fast ITSELF is tested: with no authManager, no CleanupService is constructed and cleanupEdsResources is never called.",
@@ -7619,11 +7619,11 @@
         {
             "module": "src/features/eds/services/configGenerator.ts",
             "anchors": [
-                "if (params.selectedPackage) {"
+                "if (params.selectedPackage || params.demo) {"
             ],
             "mutants": 1,
             "category": "branch",
-            "reason": "Forcing the guard true calls injectPackageConfigFlags with an undefined package id. demo-packages.json has no entry whose id is undefined, so the find returns undefined, the flags are undefined, and injectConfigFlags's own `flags &&` short-circuits \u2014 the generated config.json is byte-identical. Killing it would need a catalog carrying a package with no id, which is a shape the real file cannot hold.",
+            "reason": "Forcing the guard true calls injectPackageConfigFlags with an undefined package id and no row. The resolver answers undefined for that, the flags are undefined, and injectConfigFlags's own `flags &&` short-circuits \u2014 the generated config.json is byte-identical. Killing it would need a catalog carrying a package with no id, which is a shape the real file cannot hold.",
             "decision": "none \u2014 the guard skips a lookup that is guaranteed to miss",
             "recorded": "2026-09-05",
             "source": "PL-22 MUT-08 focus run, 2026-09-05"
@@ -8622,7 +8622,7 @@
             "anchors": [
                 "return undefined;"
             ],
-            "line": 125,
+            "line": 118,
             "mutants": 1,
             "category": "block",
             "reason": "Stryker empties resolveOverlayForNewName's catch block. Nothing follows the try/catch in that function, so an empty catch falls off the end and the function still evaluates to undefined \u2014 the same value the explicit `return undefined` produces. Both versions return undefined for a throwing resolveStorefrontConfig, so the existing 'still yields a candidate when the package config throws' test (which asserts byomOverlayUrl is undefined) passes either way, and no other assertion can separate them.",
@@ -8708,7 +8708,7 @@
             "anchors": [
                 "const panel = BaseWebviewCommand.getActivePanel('demoBuilder.projectDashboard');"
             ],
-            "line": 299,
+            "line": 298,
             "mutants": 1,
             "category": "branch",
             "reason": "Same shape as the Configure command's copy: forcing the following 'if (panel)' true calls dispose() on undefined, and the TypeError lands in the try/catch already there for the already-disposed case. Both paths end as a no-op. The false variant is killed by the test that asserts an open panel is disposed.",

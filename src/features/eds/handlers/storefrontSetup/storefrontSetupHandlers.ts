@@ -205,10 +205,9 @@ export async function handleStartStorefrontSetup(
 
     // Edit mode rebuilds edsConfig from project metadata, which carries no
     // package-derived settings — restore them before any phase reads them.
-    const edsConfig = await rehydratePackageDerivedConfig(
+    const edsConfig = rehydratePackageDerivedConfig(
         payload.edsConfig,
-        payload.selectedPackage,
-        payload.selectedStack,
+        { selectedPackage: payload.selectedPackage, selectedStack: payload.selectedStack },
         context.logger,
     );
 

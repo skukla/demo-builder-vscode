@@ -7,6 +7,7 @@
 
 import { COMPONENT_IDS } from '@/core/constants';
 import { getStackById } from '@/features/components/services/demoPackageLoader';
+import { resolveStorefrontForProject } from '@/features/components/services/storefrontResolver';
 import type { Project } from '@/types/base';
 import { getComponentInstanceValues } from '@/types/typeGuards';
 
@@ -89,14 +90,10 @@ export function getBrandStackSummary(project: Project): string | undefined {
 
     const parts: string[] = [];
 
-    // Get package name
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const demoPackagesConfig = require('@/features/components/config/demo-packages.json');
-    const pkg = demoPackagesConfig.packages?.find(
-        (p: { id: string }) => p.id === project.selectedPackage,
-    );
-    if (pkg) {
-        parts.push(pkg.name);
+    // Get package name: the project's own row first, the catalog second
+    const resolved = resolveStorefrontForProject(project);
+    if (resolved) {
+        parts.push(resolved.package.name);
     }
 
     // Get stack name

@@ -87,6 +87,7 @@ export interface ProjectManifest {
     edsStorefrontState?: Project['edsStorefrontState'];
     edsStorefrontStatusSummary?: Project['edsStorefrontStatusSummary'];
     selectedPackage?: string;
+    demo?: Project['demo'];
     datapack?: { name: string; version: string };
     selectedStack?: string;
     selectedAddons?: string[];
@@ -184,6 +185,7 @@ export class ProjectFileLoader {
                 edsStorefrontState: manifest.edsStorefrontState,
                 edsStorefrontStatusSummary: manifest.edsStorefrontStatusSummary,
                 selectedPackage: normalizePackageId(manifest.selectedPackage),
+                demo: manifest.demo,
                 datapack: manifest.datapack,
                 selectedStack: manifest.selectedStack,
                 selectedAddons: manifest.selectedAddons,

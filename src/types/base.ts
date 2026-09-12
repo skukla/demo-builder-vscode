@@ -8,6 +8,7 @@
 import type { CustomBlockLibrary, InstalledBlockLibrary } from './blockLibraries';
 import type { CommerceStoreStructure } from './commerceStore';
 import type { ServiceDefinition } from './components';
+import type { AddedDemo } from './projectFile';
 
 /**
  * AiPrompt - A user-saved AI prompt
@@ -98,6 +99,12 @@ export interface Project {
     // Package/Stack/Addons selections (vertical + architecture)
     /** Package ID selected during project creation (e.g., 'citisignal', 'buildright') */
     selectedPackage?: string;
+    /**
+     * The storefront row for a project built on an added demo (D2): the
+     * demo's description and its repository. Read before the catalog by
+     * `resolveStorefrontForProject`; absent for a project on a shipped brand.
+     */
+    demo?: AddedDemo;
     /**
      * Sample data chosen during creation, installed later from the dashboard.
      *

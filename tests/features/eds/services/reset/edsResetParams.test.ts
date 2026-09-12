@@ -16,13 +16,14 @@ import {
     extractResetParams,
     resolveStorefrontConfig,
 } from '@/features/eds/services/reset/edsResetParams';
-import type { StorefrontConfigSource } from '@/features/eds/services/reset/edsResetParams';
+import type { DemoPackage } from '@/types/demoPackages';
+import { makeDemoPackage, makeStorefront } from '../../../../helpers/demoPackageFixtures';
 import { createMockProject } from '../../../../helpers/projectFake';
 
-const mockPackages: StorefrontConfigSource[] = [{
+const mockPackages: DemoPackage[] = [makeDemoPackage({
     id: 'citisignal',
     storefronts: {
-        'eds-paas': {
+        'eds-paas': makeStorefront({
             templateOwner: 'template-owner',
             templateRepo: 'template-repo',
             contentSource: { org: 'content-org', site: 'content-site' },
@@ -33,14 +34,14 @@ const mockPackages: StorefrontConfigSource[] = [{
                 files: [{ from: 'styles/theme.css', to: 'styles/theme.css' }],
                 headSnippet: '<link rel="stylesheet" href="/styles/theme.css">',
             },
-        },
-        'eds-paas-no-overlay': {
+        }),
+        'eds-paas-no-overlay': makeStorefront({
             templateOwner: 'template-owner',
             templateRepo: 'template-repo',
             contentSource: { org: 'content-org', site: 'content-site' },
-        },
+        }),
     },
-}];
+})];
 
 function createProject(stackId: string): Project {
     return createMockProject({
@@ -292,16 +293,22 @@ describe('extractResetParams - template validation', () => {
     };
 
     it('refuses when the storefront declares an owner but no template repo', () => {
-        const packages: StorefrontConfigSource[] = [
-            { id: 'citisignal', storefronts: { 'eds-paas': { templateOwner: 'template-owner' } } },
+        const packages = [
+            makeDemoPackage({
+                id: 'citisignal',
+                storefronts: { 'eds-paas': makeStorefront({ templateOwner: 'template-owner' }) },
+            }),
         ];
 
         expect(extractResetParams(createProject('eds-paas'), packages)).toStrictEqual(TEMPLATE_MISSING);
     });
 
     it('refuses when the storefront declares a template repo but no owner', () => {
-        const packages: StorefrontConfigSource[] = [
-            { id: 'citisignal', storefronts: { 'eds-paas': { templateRepo: 'template-repo' } } },
+        const packages = [
+            makeDemoPackage({
+                id: 'citisignal',
+                storefronts: { 'eds-paas': makeStorefront({ templateRepo: 'template-repo' }) },
+            }),
         ];
 
         expect(extractResetParams(createProject('eds-paas'), packages)).toStrictEqual(TEMPLATE_MISSING);
@@ -324,12 +331,15 @@ describe('extractResetParams - assembled params', () => {
     it('carries only the declared optional fields, keyed off the selected package', () => {
         const contentPatchSource = { owner: 'patch-owner', repo: 'patch-repo', path: 'content' };
         const codePatchSource = { owner: 'patch-owner', repo: 'patch-repo', path: 'code' };
-        const packages: StorefrontConfigSource[] = [
-            { id: 'other-package', storefronts: { 'eds-paas': { templateOwner: 'wrong', templateRepo: 'wrong' } } },
-            {
+        const packages = [
+            makeDemoPackage({
+                id: 'other-package',
+                storefronts: { 'eds-paas': makeStorefront({ templateOwner: 'wrong', templateRepo: 'wrong' }) },
+            }),
+            makeDemoPackage({
                 id: 'citisignal',
                 storefronts: {
-                    'eds-paas': {
+                    'eds-paas': makeStorefront({
                         templateOwner: 'template-owner',
                         templateRepo: 'template-repo',
                         contentSource: { org: 'content-org', site: 'content-site', indexPath: '/idx' },
@@ -338,9 +348,9 @@ describe('extractResetParams - assembled params', () => {
                         contentPatchSource,
                         codePatches: ['code-a'],
                         codePatchSource,
-                    },
+                    }),
                 },
-            },
+            }),
         ];
         const project = createProject('eds-paas');
 
@@ -365,11 +375,13 @@ describe('extractResetParams - assembled params', () => {
     });
 
     it('omits every optional source when the storefront declares none', () => {
-        const packages: StorefrontConfigSource[] = [
-            {
+        const packages = [
+            makeDemoPackage({
                 id: 'citisignal',
-                storefronts: { 'eds-paas': { templateOwner: 'template-owner', templateRepo: 'template-repo' } },
-            },
+                storefronts: {
+                    'eds-paas': makeStorefront({ templateOwner: 'template-owner', templateRepo: 'template-repo' }),
+                },
+            }),
         ];
         const project = createProject('eds-paas');
 
@@ -396,11 +408,9 @@ describe('extractResetParams - assembled params', () => {
 
 describe('resolveStorefrontConfig', () => {
     it('returns the storefront for the selected package and stack', () => {
-        expect(resolveStorefrontConfig(createProject('eds-paas-no-overlay'), mockPackages)).toStrictEqual({
-            templateOwner: 'template-owner',
-            templateRepo: 'template-repo',
-            contentSource: { org: 'content-org', site: 'content-site' },
-        });
+        expect(resolveStorefrontConfig(createProject('eds-paas-no-overlay'), mockPackages)).toStrictEqual(
+            mockPackages[0].storefronts['eds-paas-no-overlay'],
+        );
     });
 
     it('returns an empty config when no stack is selected', () => {
@@ -417,7 +427,7 @@ describe('resolveStorefrontConfig', () => {
     });
 
     it('returns an empty config when the package declares no storefronts', () => {
-        const packages: StorefrontConfigSource[] = [{ id: 'citisignal' }];
+        const packages = [makeDemoPackage({ id: 'citisignal' })];
 
         expect(resolveStorefrontConfig(createProject('eds-paas'), packages)).toStrictEqual({});
     });

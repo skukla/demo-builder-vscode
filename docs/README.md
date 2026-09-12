@@ -100,7 +100,8 @@ Enforced by `tests/sop/doc-module-refs.test.ts` — each area's front door must 
 - [systems/agent-alerts.md](systems/agent-alerts.md) ·
   [systems/data-installer.md](systems/data-installer.md) ·
   [systems/prerequisites-system.md](systems/prerequisites-system.md) ·
-  [systems/custom-block-libraries.md](systems/custom-block-libraries.md)
+  [systems/custom-block-libraries.md](systems/custom-block-libraries.md) ·
+  [systems/project-file-format.md](systems/project-file-format.md)
 - [systems/logging-system.md](systems/logging-system.md) ·
   [systems/error-logging.md](systems/error-logging.md) ·
   [systems/debugging.md](systems/debugging.md) ·
