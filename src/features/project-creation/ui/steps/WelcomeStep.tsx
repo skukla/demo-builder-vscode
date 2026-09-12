@@ -1,5 +1,6 @@
 import { TextField, Text } from '@adobe/react-spectrum';
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useState } from 'react';
+import { AddDemoModal } from '../components/add-demo/AddDemoModal';
 import { BrandGallery } from '../components/BrandGallery';
 import { buildEdsConfigFromStorefront } from './edsConfigFromStorefront';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
@@ -7,7 +8,9 @@ import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { normalizeProjectName, getProjectNameError } from '@/core/validation/normalizers';
 import { removeKeysFromComponents } from '@/features/components/services/componentConfigWrites';
+import { addedDemoId, packageFromAddedDemo } from '@/features/components/services/storefrontResolver';
 import { DemoPackage } from '@/types/demoPackages';
+import type { AddedDemo } from '@/types/projectFile';
 import { Stack } from '@/types/stacks';
 import { BaseStepProps } from '@/types/wizard';
 
@@ -19,7 +22,14 @@ interface WelcomeStepProps extends BaseStepProps {
     packages?: DemoPackage[];
     /** Available stacks/architectures for selection (display only — chosen on the next step) */
     stacks?: Stack[];
+    /** Demos the SC has added from a link; their cards are already in `packages`. */
+    addedDemos?: AddedDemo[];
+    /** The dialog added a demo (the host remembered it): the container shows its card. */
+    onDemoAdded?: (demo: AddedDemo) => void;
 }
+
+/** Stable empty list (a fresh `[]` per render would defeat the memoised handlers). */
+const NO_ADDED_DEMOS: AddedDemo[] = [];
 
 export function WelcomeStep({
     state,
@@ -29,8 +39,11 @@ export function WelcomeStep({
     initialViewMode: _initialViewMode,
     packages,
     stacks,
+    addedDemos = NO_ADDED_DEMOS,
+    onDemoAdded,
 }: WelcomeStepProps) {
     const defaultProjectName = 'my-commerce-demo';
+    const [addDemoOpen, setAddDemoOpen] = useState(false);
     const selectableDefaultProps = useSelectableDefault();
 
     // Check if packages are provided (unified package + stack architecture)
@@ -83,10 +96,14 @@ export function WelcomeStep({
     // Re-picking a brand clears the previously chosen stack so the Project Builder
     // step re-resolves architecture for the new package.
     const handlePackageSelect = useCallback(
-        (packageId: string) => {
+        (packageId: string, added?: AddedDemo) => {
             if (packageId !== state.selectedPackage) {
-                // Find the package to get its configDefaults
-                const pkg = packages?.find((p) => p.id === packageId);
+                // Find the package to get its configDefaults. An added demo's card is
+                // derived from its row, so a row just added resolves even before the
+                // container's list has caught up.
+                const pkg = added
+                    ? packageFromAddedDemo(added, undefined)
+                    : packages?.find((p) => p.id === packageId);
                 // Package configDefaults are FILL-only in useComponentConfig (they
                 // never override a stored value — overriding is what stomped a saved
                 // Business Structure scope on every wizard load, 2026-08-13). A real
@@ -104,6 +121,8 @@ export function WelcomeStep({
                         brandOwnedKeys,
                     ),
                     selectedPackage: packageId,
+                    // The row travels with the selection (D2); a shipped brand clears it.
+                    demo: added ?? addedDemos.find((demo) => addedDemoId(demo) === packageId),
                     // Clear ALL architecture-derived selections so a new package never
                     // inherits the previous package's stack/backend/mesh deps/block
                     // libraries. The backend MUST clear too: it is not auto-selected,
@@ -129,8 +148,19 @@ export function WelcomeStep({
                 });
             }
         },
-        [updateState, state.selectedPackage, state.componentConfigs, packages],
+        [updateState, state.selectedPackage, state.componentConfigs, packages, addedDemos],
     );
+
+    /** The dialog's commits: a demo just added, or a remembered one picked from its list. */
+    const selectAddedDemo = useCallback(
+        (demo: AddedDemo) => {
+            onDemoAdded?.(demo);
+            handlePackageSelect(addedDemoId(demo), demo);
+        },
+        [onDemoAdded, handlePackageSelect],
+    );
+    const closeAddDemo = useCallback(() => setAddDemoOpen(false), []);
+    const openAddDemo = useCallback(() => setAddDemoOpen(true), []);
 
     useEffect(() => {
         // `getProjectNameError` already refuses anything shorter than three
@@ -237,16 +267,31 @@ export function WelcomeStep({
     // When importing, package/stack are pre-selected in state - gallery handles display
     if (hasPackages && hasStacks) {
         return (
-            <BrandGallery
-                packages={packages}
-                stacks={stacks}
-                selectedPackage={state.selectedPackage}
-                selectedStack={state.selectedStack}
-                onPackageSelect={handlePackageSelect}
-                selectedBlockLibraries={state.selectedBlockLibraries}
-                customBlockLibraries={state.customBlockLibraries}
-                headerContent={projectNameField}
-            />
+            <>
+                <BrandGallery
+                    packages={packages}
+                    stacks={stacks}
+                    selectedPackage={state.selectedPackage}
+                    selectedStack={state.selectedStack}
+                    onPackageSelect={handlePackageSelect}
+                    selectedBlockLibraries={state.selectedBlockLibraries}
+                    customBlockLibraries={state.customBlockLibraries}
+                    headerContent={projectNameField}
+                    onAddDemo={openAddDemo}
+                />
+                <AddDemoModal
+                    isOpen={addDemoOpen}
+                    packages={packages}
+                    addedDemos={addedDemos}
+                    onUseShipped={handlePackageSelect}
+                    onDemoAdded={selectAddedDemo}
+                    onPickRemembered={(demo) => {
+                        selectAddedDemo(demo);
+                        closeAddDemo();
+                    }}
+                    onClose={closeAddDemo}
+                />
+            </>
         );
     }
 

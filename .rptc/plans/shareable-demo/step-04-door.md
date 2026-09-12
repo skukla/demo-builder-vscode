@@ -60,7 +60,7 @@ remembered and no fork is offered.
 
 "Add a demo" · "Use a demo a colleague built, or one of your own. You'll need its link." ·
 "Link to the demo" · "Enter a GitHub link, like https://github.com/name/demo" · "You've
-already added this demo." · "Looking at this demo…" · "This doesn't look like a demo we
+already added this demo." · "Reading the demo…" over the repository name, with what is being checked underneath · "This doesn't look like a demo we
 can build on" (+ what is missing) · "What we found in this demo" · "Uses company (B2B)
 features" + the two lines accepted in research §9. No "storefront", "custom", "shared",
 "import", "GitHub" as a noun, "repo", "template" in anything the SC reads.
@@ -78,3 +78,62 @@ Added demos render as ordinary cards on the grid (no separate row label), select
 click; the plus card stays last; the dialog's stage 1 also lists them. Cards come from the
 host-pushed list (remembered demos) plus, in edit mode, the project's own demo via the
 resolver.
+
+## Built (2026-09-12)
+
+**The card.** `BrandGallery` renders a plus card last, "Add a demo" with the accepted
+line under it, only when handed `onAddDemo`; it dims with the others once a package is
+selected and steps aside while the grid is filtered. Same card shape, dashed, no selection.
+
+**The dialog.** `ui/components/add-demo/`: a pure stage module (`addDemoFlow.ts`: copy,
+the found rows, the row the dialog commits), a hook (`useAddDemoFlow.ts`: two commitment
+points and nothing else talks to the host), two stages, and a shell on the core `Modal`
+in a `DialogContainer` mounted only while open. Stage 1: the link field (the shared
+`GitHubLinkField`, extracted from the integration flow's custom stage, which now uses it
+too) plus the remembered demos as choice cards. Continue probes ("Reading the demo…" over the repository name, with what is being checked underneath,
+`LoadingDisplay`), then stage 2: the name (prefilled from the description file, else the
+repository's name spelled for people), "What we found in this demo" as summary rows
+(storefront kind, published pages, store codes, company features when known), the SC's
+switch only when the probe could not tell, and the keep-a-copy tick box, on, naming the
+account; hidden for the SC's own repository; read-only "already kept" when they have a
+fork. Refusals are `StatusDisplay` with what is missing; a shipped template shows "This is
+the demo behind Starter (B2B + B2C)" and the footer reads "Use Starter (B2B + B2C)".
+
+**The commit.** "Add demo" sends the row and the copy choice to `add-shared-demo`, which
+forks into the SC's account when asked (`GitHubRepoOperations.createFork`, beside the
+other repo-level mutations where the chokepoint pin keeps every GitHub write; never for
+the SC's own repository), remembers the row in `demoBuilder.demos.added`, and returns the
+row with the fork as its source. A failed fork adds nothing and says so inside the dialog.
+The Welcome step then selects the new card through the same path a shipped brand takes,
+with the row on `state.demo` (D2) and the package derived from the row, so the selection
+does not wait for the pushed list.
+
+**Remembered demos** reach the wizard as the custom block libraries do: read at open
+(`addedDemos` on the init payload), pushed on change (`addedDemosUpdated`), appended
+optimistically on add. `addedDemoCards` makes the cards: every remembered demo, and in
+edit mode the project's own row when the setting no longer lists it, so a removed setting
+prunes a card and never a project's demo. The row rides on `SettingsFile.demo` so edit
+mode and the v1 export carry it; the reader's migration keeps it.
+
+**What the probe handler gained:** the viewer facts (their login, whether the repository
+is theirs, their existing fork), read-only, so the tick box is worded from them.
+
+**Two reuse-map rows rejected, each with its reason in the module docstring:** the
+integration flow's stage core (its order, gates and draft are integration-specific; this
+journey has two fixed stages) and `SelectionStepContent` (a host-fetched list with loading
+and refresh states, where the remembered demos are a static handful of cards).
+
+**Not settled by this step, on purpose:** a bare `owner/repo` without `https://github.com/`
+is not accepted (the parser wants a link; the owner was told and did not ask for it);
+`create-project` does not yet carry the row, so a project built on an added demo is step
+05's; Forget and Change source are step 06's.
+
+**Visual baseline (wizard, dark, 1280 and 420):** before and after the stylesheet, the only
+differences are the five elements of the new plus card and the gallery growing by one row
+to hold it; no existing element's computed style moved. The harness was started from the
+temporary worktree that held the unchanged build, so its capture records went there and
+were removed with it; the numbers above are the record.
+
+**Housekeeping:** 36 mutation-ledger anchors moved with the edits, one re-anchored onto the
+ternary its line became; the wizard skill's "import only from its index.ts" line named a
+file that does not exist and now names the two dialog modules instead.

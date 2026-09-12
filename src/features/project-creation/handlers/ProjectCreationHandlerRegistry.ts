@@ -21,6 +21,7 @@ import { handleCheckProjectApis, handleEnsureOrgSelected } from '@/features/auth
 import * as components from '@/features/components/handlers/componentHandlers';
 import { dataInstallerHandlers } from '@/features/data-installer/handlers/dataInstallerHandlers';
 import { handleOpenDataInstallerSettings } from '@/features/data-installer/handlers/settingsHandlers';
+import { handleAddSharedDemo } from '@/features/eds/handlers/addSharedDemoHandler';
 import { handleCheckRepoReadiness } from '@/features/eds/handlers/checkRepoReadinessHandler';
 import { handleCheckCredentialService } from '@/features/eds/handlers/credentialServiceHandler';
 import { handleCheckDaLiveAuth, handleClearDaLiveAuth, handleOpenDaLiveLogin, handleStoreDaLiveTokenWithOrg } from '@/features/eds/handlers/daLive/edsDaLiveHandlers';
@@ -104,6 +105,7 @@ export const projectCreationHandlers = defineHandlers({
     'check-repo-readiness': handleCheckRepoReadiness,
     // Reads a colleague's repository before "Add a demo" offers it (step 04's dialog).
     'probe-shared-demo': handleProbeSharedDemo,
+    'add-shared-demo': handleAddSharedDemo,
     'create-github-repo': handleCreateGitHubRepo,
     'github-oauth': handleGitHubOAuth,
     'github-change-account': handleGitHubChangeAccount,

@@ -170,6 +170,7 @@ function migrateV1(v1: SettingsFile): ProjectFile {
         exportedAt: v1.exportedAt,
         source,
         selectedPackage: v1.selectedPackage,
+        demo: v1.demo,
         selectedStack: v1.selectedStack,
         selectedAddons: v1.selectedAddons,
         selectedBlockLibraries: v1.selectedBlockLibraries,

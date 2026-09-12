@@ -18,7 +18,7 @@ import type { CustomBlockLibrary } from './blockLibraries';
 import type { CommerceStoreStructure } from './commerceStore';
 import type { ComponentConfigs, EnvVarDefinition, ServiceDefinition } from './components';
 import type { DaLiveContentSource } from './demoPackages';
-import type { SharedDemoDescription } from './projectFile';
+import type { AddedDemo, SharedDemoDescription, StorefrontKind } from './projectFile';
 import type { GitHubRepoItem } from './webview';
 import type { GitHubUser } from './webviewPayloads';
 
@@ -33,7 +33,7 @@ export interface ProbeSharedDemoRequest {
 }
 
 /** Which of the storefront kinds a repository holds, or that it holds none. */
-export type SharedDemoKind = 'eds' | 'headless' | 'not-a-storefront';
+export type SharedDemoKind = StorefrontKind | 'not-a-storefront';
 
 /** Where a value in the probe result came from, so the dialog can say what was overridden. */
 export type SharedDemoValueSource = 'description-file' | 'config-json' | 'dependencies' | 'fstab';
@@ -78,6 +78,30 @@ export interface SharedDemoRead {
     overrides: string[];
     /** Things the SC should hear, in plain words. */
     warnings: string[];
+    /**
+     * What the handler knows about the signed-in GitHub user and this repository:
+     * whether it is their own (no copy to offer), and their existing fork of it
+     * when they already have one (the copy is already kept).
+     */
+    viewer?: { login: string; ownsRepo: boolean; existingFork?: string };
+}
+
+/**
+ * `add-shared-demo` — the dialog's "Add demo" commit. The row as the dialog
+ * built it from the probe; `keepCopy` asks for a fork into the SC's own
+ * account first (the tick box is the visible confirmation of that cloud
+ * write), and the returned row's `source` is then the fork.
+ */
+export interface AddSharedDemoRequest {
+    demo: AddedDemo;
+    keepCopy: boolean;
+}
+
+export interface AddSharedDemoResult {
+    /** The remembered row; its `source` is the fork when one was kept. */
+    demo: AddedDemo;
+    /** Set when a fork was created (or found) for this add: its `owner/repo`. */
+    forkedTo?: string;
 }
 
 /**

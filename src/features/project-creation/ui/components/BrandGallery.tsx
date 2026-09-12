@@ -34,6 +34,40 @@ export interface BrandGalleryProps {
     customBlockLibraries?: CustomBlockLibrary[];
     /** Optional content to render above the gallery (e.g., project name field) */
     headerContent?: React.ReactNode;
+    /** Open "Add a demo". When absent the plus card is not rendered. */
+    onAddDemo?: () => void;
+}
+
+/** The plus card's words, accepted 2026-09-11. */
+export const ADD_DEMO_CARD = {
+    name: 'Add a demo',
+    description: "Use a demo a colleague built, or one of your own. You'll need its link.",
+} as const;
+
+/**
+ * The plus card at the end of the grid: the package card's shape with nothing
+ * to select, so it reads as one of the cards and behaves as a door.
+ */
+function AddDemoCard({ onOpen, isDimmed }: { onOpen: () => void; isDimmed: boolean }) {
+    const handleKeyDown = useActivateOnKey(onOpen);
+    return (
+        <div
+            role="button"
+            tabIndex={0}
+            data-testid="add-demo-card"
+            onClick={onOpen}
+            onKeyDown={handleKeyDown}
+            className={cn('expandable-brand-card', 'add-demo-card', isDimmed && 'dimmed')}
+            aria-label={`${ADD_DEMO_CARD.name}: ${ADD_DEMO_CARD.description}`}
+        >
+            <div className="brand-card-header">
+                <div className="brand-card-title-row">
+                    <Text UNSAFE_className="brand-card-name">{ADD_DEMO_CARD.name}</Text>
+                </div>
+                <Text UNSAFE_className="brand-card-description">{ADD_DEMO_CARD.description}</Text>
+            </div>
+        </div>
+    );
 }
 
 interface PackageCardProps {
@@ -152,6 +186,7 @@ export function BrandGallery({
     selectedBlockLibraries = [],
     customBlockLibraries = [],
     headerContent,
+    onAddDemo,
 }: BrandGalleryProps) {
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -213,6 +248,9 @@ export function BrandGallery({
                         />
                     );
                 })}
+                {onAddDemo && !searchQuery ? (
+                    <AddDemoCard onOpen={onAddDemo} isDimmed={selectedPackage !== undefined} />
+                ) : null}
             </div>
 
             {searchQuery && filteredPackages.length === 0 && (

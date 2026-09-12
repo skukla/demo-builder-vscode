@@ -16,6 +16,7 @@ import { render } from '@testing-library/react';
 import React from 'react';
 import { WelcomeStep } from '@/features/project-creation/ui/steps/WelcomeStep';
 import type { DemoPackage, Storefront } from '@/types/demoPackages';
+import type { AddedDemo } from '@/types/projectFile';
 import type { Stack } from '@/types/stacks';
 import type { WizardState } from '@/types/webview';
 
@@ -93,6 +94,8 @@ export interface RenderWelcomeOptions {
     packages?: DemoPackage[];
     stacks?: Stack[];
     existingProjectNames?: string[];
+    addedDemos?: AddedDemo[];
+    onDemoAdded?: jest.Mock;
     updateState?: jest.Mock;
     setCanProceed?: jest.Mock;
 }
@@ -121,6 +124,8 @@ export function renderWelcome(options: RenderWelcomeOptions = {}): RenderedWelco
                 existingProjectNames={opts.existingProjectNames}
                 packages={opts.packages}
                 stacks={opts.stacks}
+                addedDemos={opts.addedDemos}
+                onDemoAdded={opts.onDemoAdded}
             />
         </Provider>
     );

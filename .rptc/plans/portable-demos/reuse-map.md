@@ -83,7 +83,7 @@ New: 3 small readers/parsers + the result type. The transport, guards and readin
 | Stage machinery | `useIntegrationFlow` (`useIntegrationFlow.ts:161`), `flowStages.ts` (`FlowDraft`, `deriveStageOrder`, `CANONICAL_ORDER`) | make it shared: the stage-order/draft/commit core is integration-specific today (`IntegrationKind`); lift the generic part to `core/ui/hooks/` and let both flows declare their stage ids. If lifting fights the code, a storefront flow copies the SHAPE (two files) and states which rows it rejected |
 | Link field + live validation + duplicate guard | `CustomStage.tsx` (`INVALID_MESSAGE`, `DUPLICATE_MESSAGE`, `evaluateUrl`) | make it shared: the field is integration-flavoured only in its copy and the id it dedupes on; parameterise both |
 | Editable name | `OptionalNameField.tsx` | use as is |
-| "Looking at this demo…" | `feedback/LoadingDisplay` (+ `useElapsedStage` if it runs long) | use as is |
+| "Reading the demo…" over the repository name, with what is being checked underneath | `feedback/LoadingDisplay` (+ `useElapsedStage` if it runs long) | use as is |
 | "This doesn't look like a demo we can build on" | `feedback/StatusDisplay` with `actions[]` | use as is |
 | Added-demos list in stage 1 | `selection/SelectionStepContent` + `useSelectionStep` (the repo picker's list) | use as is |
 | "What we found" rows | the summary-row vocabulary (`buildSummary.ts` `SummaryRow`) | use as is |

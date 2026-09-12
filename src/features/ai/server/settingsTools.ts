@@ -59,6 +59,7 @@ export const SETTING_KEYS = [
     'demoBuilder.blockLibraries.defaults',
     'demoBuilder.blockLibraries.custom',
     'demoBuilder.blockLibraries.syncBehavior',
+    'demoBuilder.demos.added',
     'demoBuilder.appBuilderComponents.custom',
     'demoBuilder.ai.enableThirdPartyTools',
     // Read-visible so an agent can tell whether destructive calls will raise

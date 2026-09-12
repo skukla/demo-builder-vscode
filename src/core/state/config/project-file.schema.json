@@ -258,15 +258,20 @@
             "owner",
             "repo"
           ]
+        },
+        "storefrontKind": {
+          "$ref": "#/definitions/StorefrontKind",
+          "description": "Read from the repository when the demo was added, never from the description file."
         }
       },
       "required": [
         "kind",
         "name",
         "source",
+        "storefrontKind",
         "version"
       ],
-      "description": "The stored storefront row for a project built on an added demo (D2): the slice plus where it came from. Every post-creation lookup resolves this before the catalog."
+      "description": "The stored storefront row for a project built on an added demo (D2): the slice plus where it came from and what kind it is. Every post-creation lookup resolves this before the catalog."
     },
     "DatapackReference": {
       "type": "object",
@@ -344,6 +349,14 @@
         "site"
       ],
       "description": "DaLiveContentSource - DA.live content source configuration\n\nUsed by EDS storefronts to specify the source of demo content. This is explicit configuration, NOT derived from the GitHub template URL."
+    },
+    "StorefrontKind": {
+      "type": "string",
+      "enum": [
+        "eds",
+        "headless"
+      ],
+      "description": "The two kinds of storefront a repository can hold."
     },
     "SettingsSelections": {
       "type": "object",

@@ -8,11 +8,13 @@
  * @module features/eds/handlers/probeSharedDemoHandler
  */
 
+import type { GitHubRepoOperations } from '../services/github/githubRepoOperations';
+import type { GitHubTokenService } from '../services/github/githubTokenService';
 import { probeSharedDemo } from '../services/storefront/sharedDemoProbe';
 import { getGitHubServices } from './edsHelpers';
 import { assertGitHubName } from '@/core/utils/githubUrlParser';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
-import type { ProbeSharedDemoRequest, SharedDemoProbeResult } from '@/types/webviewRequests';
+import type { ProbeSharedDemoRequest, SharedDemoProbeResult, SharedDemoRead } from '@/types/webviewRequests';
 
 /**
  * Probe the requested repository.
@@ -36,12 +38,42 @@ export async function handleProbeSharedDemo(
         return { success: false, error: (error as Error).message };
     }
 
-    const { fileOperations, repoOperations } = getGitHubServices(context.context.secrets);
+    const { fileOperations, repoOperations, tokenService } = getGitHubServices(context.context.secrets);
     const result = await probeSharedDemo(
         { fileOps: fileOperations, repoOps: repoOperations },
         owner,
         repo,
         context.logger,
     );
-    return { success: true, result };
+    if (result.outcome !== 'read') return { success: true, result };
+    const viewer = await describeViewer(tokenService, repoOperations, owner, repo, context.logger);
+    return { success: true, result: viewer ? { ...result, viewer } : result };
+}
+
+/**
+ * Whether the repository is the viewer's own, and their existing fork of it if
+ * any: the two facts the "keep my own copy" tick box is worded from. Best
+ * effort; a viewer who cannot be identified simply gets the default wording.
+ */
+async function describeViewer(
+    tokenService: Pick<GitHubTokenService, 'validateToken'>,
+    repoOps: Pick<GitHubRepoOperations, 'getRepository'>,
+    owner: string,
+    repo: string,
+    logger: HandlerContext['logger'],
+): Promise<SharedDemoRead['viewer'] | undefined> {
+    const validation = await tokenService.validateToken();
+    const login = validation.user?.login;
+    if (!login) return undefined;
+    const ownsRepo = login.toLowerCase() === owner.toLowerCase();
+    if (ownsRepo) return { login, ownsRepo };
+    try {
+        const own = await repoOps.getRepository(login, repo);
+        const parent = own.forkParent?.toLowerCase();
+        const existingFork = parent === `${owner}/${repo}`.toLowerCase() ? own.fullName : undefined;
+        return { login, ownsRepo, ...(existingFork ? { existingFork } : {}) };
+    } catch (error) {
+        logger.debug(`[SharedDemo] No fork of ${owner}/${repo} under ${login}: ${(error as Error).message}`);
+        return { login, ownsRepo };
+    }
 }

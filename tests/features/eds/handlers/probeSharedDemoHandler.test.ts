@@ -16,9 +16,22 @@ jest.mock('@/features/eds/services/storefront/sharedDemoProbe', () => ({
 
 const fileOperations = { getFileContent: jest.fn() };
 const repoOperations = { getRepository: jest.fn() };
+const tokenService = { validateToken: jest.fn() };
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
-    getGitHubServices: () => ({ fileOperations, repoOperations }),
+    getGitHubServices: () => ({ fileOperations, repoOperations, tokenService }),
 }));
+
+const READ = {
+    outcome: 'read',
+    fullName: 'jen/isle5-demo',
+    defaultBranch: 'main',
+    isTemplate: false,
+    kind: 'eds',
+    contentPublished: { indexFound: false },
+    b2b: 'unknown',
+    overrides: [],
+    warnings: [],
+};
 
 function ctx() {
     return createMockHandlerContext({
@@ -29,7 +42,43 @@ function ctx() {
 }
 
 describe('handleProbeSharedDemo', () => {
-    beforeEach(() => jest.clearAllMocks());
+    beforeEach(() => {
+        jest.clearAllMocks();
+        tokenService.validateToken.mockResolvedValue({ valid: true, user: { login: 'steve' } });
+        repoOperations.getRepository.mockRejectedValue(new Error('Repository not found'));
+    });
+
+    it('says whose repository it is and names an existing fork, on a read result', async () => {
+        probe.mockResolvedValue(READ);
+        repoOperations.getRepository.mockResolvedValue({ fullName: 'steve/isle5-demo', forkParent: 'jen/isle5-demo' });
+
+        const result = await handleProbeSharedDemo(ctx(), { owner: 'jen', repo: 'isle5-demo' });
+
+        expect(repoOperations.getRepository).toHaveBeenCalledWith('steve', 'isle5-demo');
+        expect(result.result).toEqual({
+            ...READ,
+            viewer: { login: 'steve', ownsRepo: false, existingFork: 'steve/isle5-demo' },
+        });
+    });
+
+    it("marks the viewer's own repository and looks for no fork", async () => {
+        probe.mockResolvedValue(READ);
+        tokenService.validateToken.mockResolvedValue({ valid: true, user: { login: 'Jen' } });
+
+        const result = await handleProbeSharedDemo(ctx(), { owner: 'jen', repo: 'isle5-demo' });
+
+        expect(repoOperations.getRepository).not.toHaveBeenCalled();
+        expect(result.result).toEqual({ ...READ, viewer: { login: 'Jen', ownsRepo: true } });
+    });
+
+    it('leaves the viewer out when nobody is signed in to GitHub', async () => {
+        probe.mockResolvedValue(READ);
+        tokenService.validateToken.mockResolvedValue({ valid: false });
+
+        const result = await handleProbeSharedDemo(ctx(), { owner: 'jen', repo: 'isle5-demo' });
+
+        expect(result.result).toEqual(READ);
+    });
 
     it('returns the probe result for a well-formed request', async () => {
         probe.mockResolvedValue({ outcome: 'unreadable', reason: 'nope' });

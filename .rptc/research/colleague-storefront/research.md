@@ -534,7 +534,7 @@ checked against it (`reuse-first` fires on any new file under `ui/`):
 | Stage machinery (Back / Continue, draft committed at the end) | `useIntegrationFlow` + `flowStages.ts` (`FlowDraft`, `deriveStageOrder`); a storefront flow adds its own stage ids in the same shape |
 | The link field with live validation and the duplicate guard | `CustomStage.tsx` (`parseGitHubUrl`, `INVALID_MESSAGE`, `DUPLICATE_MESSAGE`) |
 | The editable name | `OptionalNameField` |
-| "Looking at this demo…" | `LoadingDisplay` |
+| "Reading the demo…" over the repository name, with what is being checked underneath | `LoadingDisplay` |
 | "This doesn't look like a demo we can build on" | `StatusDisplay` (never a bare Retry) |
 | Kind detection | `classifyRepoForStorefront` (`repoStorefrontReadiness.ts`) for EDS; a headless probe added beside it |
 | Non-`main` default branch warning | the existing `DefaultBranchNotice` |

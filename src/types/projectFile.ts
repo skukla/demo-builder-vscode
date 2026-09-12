@@ -92,13 +92,18 @@ export interface ProjectFileSource {
     };
 }
 
+/** The two kinds of storefront a repository can hold. */
+export type StorefrontKind = 'eds' | 'headless';
+
 /**
  * The stored storefront row for a project built on an added demo (D2): the
- * slice plus where it came from. Every post-creation lookup resolves this
- * before the catalog.
+ * slice plus where it came from and what kind it is. Every post-creation
+ * lookup resolves this before the catalog.
  */
 export interface AddedDemo extends SharedDemoDescription {
     source: { owner: string; repo: string; branch?: string };
+    /** Read from the repository when the demo was added, never from the description file. */
+    storefrontKind: StorefrontKind;
 }
 
 /**

@@ -87,9 +87,12 @@ describe('resolveStorefrontForProject', () => {
         });
     });
 
-    it('derives a storefront for the row with no stack and no branch: main, and no patches', () => {
+    it('offers a row with no stack yet under every stack of its kind, on main, with no patches', () => {
         const result = resolveStorefrontForProject({ demo: makeAddedDemo() }, catalog);
-        expect(result?.package.storefronts).toStrictEqual({});
+        // The Welcome grid has no stack yet; the Build step's choice then finds a storefront.
+        expect(Object.keys(result?.package.storefronts ?? {})).toEqual(['eds-paas', 'eds-accs']);
+        const headless = resolveStorefrontForProject({ demo: makeAddedDemo({ storefrontKind: 'headless' }) }, catalog);
+        expect(Object.keys(headless?.package.storefronts ?? {})).toEqual(['headless-paas', 'headless-accs']);
         expect(result?.storefront?.source.branch).toBe('main');
         // D4: a colleague's code is never patched, pinned or vendored into.
         expect(result?.storefront).not.toHaveProperty('codePatches');

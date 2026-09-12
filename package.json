@@ -270,6 +270,20 @@
                 }
             },
             {
+                "title": "Demos",
+                "properties": {
+                    "demoBuilder.demos.added": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "description": "A demo added from a link: its description and the repository it comes from. Written by \"Add a demo\"; each entry is the demo.demo-builder.json shape plus a source."
+                        },
+                        "default": [],
+                        "description": "Demos you've added from a link. They appear as cards on the Welcome step. Remove an entry to forget a demo; projects already built on it keep their own copy."
+                    }
+                }
+            },
+            {
                 "title": "App Builder Components",
                 "properties": {
                     "demoBuilder.appBuilderComponents.custom": {

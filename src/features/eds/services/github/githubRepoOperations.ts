@@ -160,6 +160,32 @@ export class GitHubRepoOperations {
     }
 
     /**
+     * Fork `owner/repo` into the authenticated user's account: the one call
+     * "keep my own copy of this demo" makes. GitHub answers with the user's
+     * existing fork when they already have one, which is what makes the add
+     * idempotent; the fork itself is created asynchronously.
+     *
+     * @returns The fork (the existing one when the user already had it)
+     */
+    async createFork(owner: string, repo: string): Promise<GitHubRepo> {
+        const octokit = await this.ensureAuthenticated();
+        try {
+            const response = await octokit.request('POST /repos/{owner}/{repo}/forks', {
+                owner,
+                repo,
+                default_branch_only: false,
+            });
+            this.logger.info(`[GitHub:Fork] ${owner}/${repo} → ${response.data.full_name}`);
+            return { ...toGitHubRepo(response.data), forkParent: `${owner}/${repo}` };
+        } catch (error) {
+            const apiError = error as GitHubApiError;
+            if (apiError.status === 404) throw new Error('Repository not found');
+            if (apiError.status === 403) throw new Error('Access denied to this repository');
+            throw error;
+        }
+    }
+
+    /**
      * Get repository information
      * @param owner - Repository owner
      * @param repo - Repository name

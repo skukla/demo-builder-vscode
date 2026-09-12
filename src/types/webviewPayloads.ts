@@ -23,6 +23,7 @@ import type {
 import type { CustomBlockLibrary } from './blockLibraries';
 import type { CommerceStoreStructure } from './commerceStore';
 import type { EnvVarDefinition, TransformedComponentDefinition } from './components';
+import type { AddedDemo } from './projectFile';
 import type { SettingsFile } from './settingsFile';
 import type { ComponentSelection, CreationProgress, ThemeMode, UnifiedProgress } from './webview';
 import type { EditProjectConfig, WizardStepDefinition } from './wizard';
@@ -111,6 +112,8 @@ export interface WizardInitialData {
     blockLibraryDefaults: string[];
     /** Custom block libraries from VS Code settings. */
     customBlockLibraryDefaults: CustomBlockLibrary[];
+    /** Demos the SC has added from a link, remembered in VS Code settings. */
+    addedDemos: AddedDemo[];
 }
 
 /**
@@ -532,6 +535,11 @@ export interface BlockLibraryDefaultsUpdatedPayload {
 /** `customBlockLibraryDefaultsUpdated` — the custom block-library setting changed. */
 export interface CustomBlockLibraryDefaultsUpdatedPayload {
     customBlockLibraryDefaults: CustomBlockLibrary[];
+}
+
+/** `addedDemosUpdated` — the remembered-demos setting changed. */
+export interface AddedDemosUpdatedPayload {
+    addedDemos: AddedDemo[];
 }
 
 /**

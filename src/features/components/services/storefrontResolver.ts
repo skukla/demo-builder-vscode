@@ -24,9 +24,11 @@
  */
 
 import demoPackagesConfig from '../config/demo-packages.json';
+import stacksConfig from '../config/stacks.json';
 import type { Project } from '@/types/base';
 import type { DemoPackage, DemoPackagesConfig, Storefront } from '@/types/demoPackages';
 import { ADDED_DEMO_ID_PREFIX, type AddedDemo } from '@/types/projectFile';
+import type { Stack } from '@/types/stacks';
 
 /** The three fields a lookup reads — a wizard state or a payload can satisfy it, not only a `Project`. */
 export type StorefrontLookup = Pick<Project, 'selectedPackage' | 'selectedStack' | 'demo'>;
@@ -79,10 +81,11 @@ export function addedDemoId(demo: Pick<AddedDemo, 'source'>): string {
 
 /**
  * The row as a catalog entry, so readers that want a `DemoPackage` get one. The
- * storefront is keyed under the project's stack when it has one; a row is one
- * storefront, whichever stack the project chose.
+ * storefront is keyed under the project's stack when it has one; with no stack
+ * yet (the Welcome grid), it is offered under every stack of the row's kind, so
+ * the Build step's stack choice finds a storefront whichever it picks.
  */
-function packageFromAddedDemo(demo: AddedDemo, stackId: string | undefined): DemoPackage {
+export function packageFromAddedDemo(demo: AddedDemo, stackId: string | undefined): DemoPackage {
     const storefront = storefrontFromAddedDemo(demo);
     return {
         id: addedDemoId(demo),
@@ -93,8 +96,20 @@ function packageFromAddedDemo(demo: AddedDemo, stackId: string | undefined): Dem
         requiresMesh: demo.requiresMesh,
         datapack: demo.datapack,
         integrations: demo.integrations,
-        storefronts: stackId ? { [stackId]: storefront } : {},
+        storefronts: stackId
+            ? { [stackId]: storefront }
+            : Object.fromEntries(stackIdsOfKind(demo.storefrontKind).map((id) => [id, storefront])),
     };
+}
+
+/** The EDS frontend's registry id, as `stacks.json` names it; every other frontend is headless. */
+const EDS_FRONTEND_ID = 'eds-storefront';
+
+/** The stacks whose frontend is this kind, from the bundled stack list. */
+function stackIdsOfKind(kind: AddedDemo['storefrontKind']): string[] {
+    return (stacksConfig.stacks as Stack[])
+        .filter((stack) => (stack.frontend === EDS_FRONTEND_ID) === (kind === 'eds'))
+        .map((stack) => stack.id);
 }
 
 /**

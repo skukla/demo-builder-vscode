@@ -4,6 +4,7 @@ import type { CustomBlockLibrary } from './blockLibraries';
 import type { CommerceStoreStructure } from './commerceStore';
 import type { ComponentConfigs } from './components';
 import type { ErrorCode } from './errorCodes';
+import type { AddedDemo } from './projectFile';
 import type { PrerequisitePluginState, GitHubUser } from './webviewPayloads';
 
 export type ThemeMode = 'light' | 'dark';
@@ -100,6 +101,7 @@ export interface WizardState {
      */
     projectTitle?: string;
     selectedPackage?: string; // Selected package ID (e.g., 'citisignal', 'buildright')
+    demo?: AddedDemo; // The storefront row when the selected package is an added demo (D2); cleared when a shipped brand is picked
     selectedBackend?: string; // Persisted Commerce backend id (e.g., 'adobe-commerce-paas'); source of truth for the backend choice + the "frontend pending" display. selectedStack stays the downstream key.
     selectedStack?: string; // Selected stack ID (e.g., 'headless-paas', 'eds-paas')
     selectedAddons?: string[]; // Selected addon IDs (e.g., ['adobe-commerce-aco'])

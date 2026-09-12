@@ -38,6 +38,7 @@ export function makeAddedDemo(overrides: Partial<AddedDemo> = {}): AddedDemo {
         version: 1,
         name: 'Isle5 by Jen',
         source: { owner: 'jen', repo: 'isle5-demo' },
+        storefrontKind: 'eds',
         ...overrides,
     };
 }
