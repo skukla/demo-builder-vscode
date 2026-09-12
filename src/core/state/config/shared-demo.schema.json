@@ -1,0 +1,156 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$ref": "#/definitions/SharedDemoDescription",
+  "definitions": {
+    "SharedDemoDescription": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Display name for the package"
+        },
+        "icon": {
+          "type": "string",
+          "description": "Icon identifier for the package"
+        },
+        "configFlags": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "boolean"
+          },
+          "description": "Storefront config.json public flags injected for this package (e.g., commerce-b2b-enabled). Merged into config.public.default by the config generator — data-driven, mirrors addon configFlags."
+        },
+        "requiresMesh": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string",
+              "const": "optional"
+            }
+          ],
+          "description": "API Mesh requirement for this package.\n- true: mesh auto-included, no user choice\n- false (default): no mesh, no user choice\n- 'optional': mesh toggle shown, user decides"
+        },
+        "datapack": {
+          "$ref": "#/definitions/DatapackReference",
+          "description": "The datapack this demo expects (D26). The Sample Data step pre-selects it and says why; the SC can change it. Optional: shipped brands may leave the choice open."
+        },
+        "integrations": {
+          "$ref": "#/definitions/DemoIntegrations",
+          "description": "Integrations this demo depends on (D29). The Integrations area starts with them added; the SC can remove any. The same field a shared-demo description file carries, so the catalog and the slice cannot drift."
+        },
+        "kind": {
+          "type": "string",
+          "const": "demo"
+        },
+        "version": {
+          "type": "number"
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional here and below; `DemoPackage` requires them because a shipped brand always has a card and store codes."
+        },
+        "configDefaults": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Default configuration values (env var name to value) - embedded brand data"
+        },
+        "blockLibraries": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "contentSource": {
+          "$ref": "#/definitions/DaLiveContentSource"
+        }
+      },
+      "required": [
+        "kind",
+        "name",
+        "version"
+      ],
+      "description": "The storefront slice: what a demo package says about a demo, in any of its three homes. Derived from `DemoPackage` so the catalog cannot drift from it.\n\n`blockLibraries` is file-only: our catalog expresses the same fact the other way round (`block-libraries.json`'s `defaultForPackages`), which a colleague's repo cannot edit. It names shipped library ids to pre-tick.\n\n`contentSource` is normally read from the repo's `fstab.yaml`; the file may state it to add an `indexPath`, or to override."
+    },
+    "DatapackReference": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "description": "A datapack a demo expects (D26). `version` absent means the catalog's default rule."
+    },
+    "DemoIntegrations": {
+      "type": "object",
+      "properties": {
+        "catalog": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "custom": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/CustomIntegrationSource"
+          }
+        }
+      },
+      "description": "Integrations a demo depends on (D29): catalog ids, and custom apps by link."
+    },
+    "CustomIntegrationSource": {
+      "type": "object",
+      "properties": {
+        "owner": {
+          "type": "string"
+        },
+        "repo": {
+          "type": "string"
+        },
+        "branch": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "owner",
+        "repo"
+      ],
+      "description": "A custom App Builder app by GitHub coordinates, the `appBuilderComponentSources` shape."
+    },
+    "DaLiveContentSource": {
+      "type": "object",
+      "properties": {
+        "org": {
+          "type": "string",
+          "description": "DA.live organization name"
+        },
+        "site": {
+          "type": "string",
+          "description": "DA.live site name"
+        },
+        "indexPath": {
+          "type": "string",
+          "description": "Optional custom path to content index (defaults to /full-index.json)"
+        }
+      },
+      "required": [
+        "org",
+        "site"
+      ],
+      "description": "DaLiveContentSource - DA.live content source configuration\n\nUsed by EDS storefronts to specify the source of demo content. This is explicit configuration, NOT derived from the GitHub template URL."
+    }
+  }
+}

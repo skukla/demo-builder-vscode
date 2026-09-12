@@ -5,7 +5,7 @@ area: platform
 parent: PL-56
 needs: []
 value: high
-status: planned
+status: built
 ---
 
 # The portable-project contract: one versioned file, and the storefront slice of it

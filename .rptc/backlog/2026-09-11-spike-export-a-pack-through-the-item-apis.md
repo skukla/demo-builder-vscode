@@ -65,13 +65,23 @@ variable"). Nothing was created. So the service's API today has no read of an in
 rows in pack shape: the picker index is names only, and the exporter's fetch never leaves the
 action. The item APIs remain a working WRITE path (one call per data type).
 
-What is left, for the owner to choose between: the client fetches Commerce REST itself per
-data type and wraps rows in the processors' shapes (a build the size of eighteen fetchers);
-or the service gains either a rows endpoint or the store-step fix (the error text shows the
-action already reads `MONGO_URI` from params or environment; other actions on the same
-deployment write to the same store, so the gap is in the export processors' code path, as
-the 2026-08-14 probe concluded). Until one of those exists, "Publish it now?" in Share can
-only warn.
+Owner's call the same day: not a gate on the program. The service's own documentation
+(read 2026-09-12; eight Confluence pages the owner supplied) confirms the design: export
+fetches from Commerce, transforms, validates, and its last step is "Store: Save exported
+data to MongoDB datapack"; no documented mode returns rows without storing. "No database
+content required" in that page is about the read side. So the row source is the service's
+export path working (a fix in the service's deployment or code) or a rows endpoint the
+service adds; neither is built here. Until one exists, "Publish it now?" in Share warns.
+Research: `.rptc/research/data-installer/spike-di3-item-api-export-2026-09-11.md`.
+
+2026-09-12, the Postman collections: a `datapack_type` field (`accs` / `aco`) the docs never
+mention and the extension never sends; the promote route is `promote-datapack-version`; the
+item write's `data` is the list of wrapped rows; an async export exists. Tested the one
+hypothesis the field raised (store step keyed by type): falsified, same store error, nothing
+created. The async export was then tested too (2026-09-12): 202, polled to terminal, `status: "fail"`,
+same all-zero counts, nothing created. DI-3 is closed on three measurements: no export path
+on this deployment stores what it fetches; the fix is in the service and belongs to its
+owner; the program does not wait on it.
 
 ## Done when
 

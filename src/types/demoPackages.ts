@@ -208,6 +208,26 @@ export type AddonConfig = 'required' | 'optional' | 'excluded';
  */
 export type Addons = Record<string, AddonConfig>;
 
+/** A datapack a demo expects (D26). `version` absent means the catalog's default rule. */
+export interface DatapackReference {
+    name: string;
+    version?: string;
+}
+
+/** A custom App Builder app by GitHub coordinates, the `appBuilderComponentSources` shape. */
+export interface CustomIntegrationSource {
+    owner: string;
+    repo: string;
+    branch?: string;
+    name?: string;
+}
+
+/** Integrations a demo depends on (D29): catalog ids, and custom apps by link. */
+export interface DemoIntegrations {
+    catalog?: string[];
+    custom?: Record<string, CustomIntegrationSource>;
+}
+
 /**
  * DemoPackage - A unified demo package definition
  *
@@ -260,6 +280,19 @@ export interface DemoPackage {
      * config generator — data-driven, mirrors addon configFlags.
      */
     configFlags?: Record<string, boolean>;
+
+    /**
+     * The datapack this demo expects (D26). The Sample Data step pre-selects it and
+     * says why; the SC can change it. Optional: shipped brands may leave the choice open.
+     */
+    datapack?: DatapackReference;
+
+    /**
+     * Integrations this demo depends on (D29). The Integrations area starts with them
+     * added; the SC can remove any. The same field a shared-demo description file
+     * carries, so the catalog and the slice cannot drift.
+     */
+    integrations?: DemoIntegrations;
 
     /** Storefronts keyed by stack ID (e.g., 'headless-paas', 'eds-paas', 'eds-accs') */
     storefronts: Record<string, Storefront>;

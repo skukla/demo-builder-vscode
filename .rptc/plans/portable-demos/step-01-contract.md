@@ -90,3 +90,36 @@ states the contract for a reader who is not us (the page step 09 links to).
 
 Icon format (a path in the repo vs an inline data URL); the exact list of manifest fields
 that travel.
+
+## Built 2026-09-11 (code landed; not yet used by export or import)
+
+- `src/types/projectFile.ts`: `SharedDemoDescription` (the slice, a `Pick` over `DemoPackage`
+  plus `blockLibraries` and `contentSource`), `AddedDemo` (the slice + its repo), `ProjectFile`
+  (v2, `kind: 'project'`), `ProjectFileSource` (provenance), and the four constants
+  (`PROJECT_FILE_VERSION = 2`, `SHARED_DEMO_FILE_VERSION = 1`, `PROJECT_FILE_SUFFIX`,
+  `SHARED_DEMO_FILE_NAME`). `DemoPackage` gained `datapack` (D26) and `integrations` (D29)
+  so the slice picks them rather than copying them.
+- `src/core/state/projectFileReader.ts`: `readProjectFile(text)`: v2 passes through and is
+  guarded by the GENERATED schema compiled with Ajv (no cast; the cast ratchet stays at 28);
+  v1 migrates on read (flat picks fold under the unattributed key, exported-never-read fields
+  and the `includesSecrets` stamp dropped, repo and site become provenance); credentials are
+  stripped whatever the file claims; a newer version is read and flagged.
+- Schemas: `scripts/generate-manifest-schema.js` now has three targets;
+  `src/core/state/config/project-file.schema.json` and `shared-demo.schema.json` are
+  generated and pinned fresh by `tests/templates/manifest-schema-freshness.test.ts`; the
+  catalog schema gained `hidden`, `configFlags`, `requiresMesh`, `datapack`, `integrations`
+  (package) and `byomOverlayUrl`, `patches`, `requiresMesh` (storefront).
+- Docs: `docs/systems/project-file-format.md` states the contract for a reader.
+- Tests: `tests/types/projectFile.test.ts`, `tests/core/state/projectFileReader.test.ts`
+  (fixture typed to `SettingsFile` in `tests/helpers/projectFileFixtures.ts`), the schema
+  rule additions in `demo-packages-schema.test.ts`. Full gate green (1560 suites).
+
+**One deviation from the design above, with the reason:** item 4 said
+`additionalProperties: false` "where the type is closed". The CATALOG schema is closed
+(package and storefront), because a config field lives in three places and a field the type
+lacks must fail. The two USER-file schemas are tolerant, like the manifest's: files cross
+extension versions in both directions, so an unknown field must not refuse a read; the
+`version` and `kind` fields are the mechanism, not strictness.
+
+**Still open from this step:** icon format for the description file (a repo path is what the
+type allows today; inline data was not needed by any decided flow).

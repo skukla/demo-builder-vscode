@@ -3,7 +3,10 @@
   "title": "Demo Builder Demo Packages Schema",
   "description": "Schema for defining demo packages with nested storefronts by stack type",
   "type": "object",
-  "required": ["version", "packages"],
+  "required": [
+    "version",
+    "packages"
+  ],
   "properties": {
     "$schema": {
       "type": "string",
@@ -26,7 +29,13 @@
   "definitions": {
     "package": {
       "type": "object",
-      "required": ["id", "name", "description", "configDefaults", "storefronts"],
+      "required": [
+        "id",
+        "name",
+        "description",
+        "configDefaults",
+        "storefronts"
+      ],
       "properties": {
         "id": {
           "type": "string",
@@ -52,14 +61,21 @@
         },
         "status": {
           "type": "string",
-          "enum": ["active", "coming-soon"],
+          "enum": [
+            "active",
+            "coming-soon"
+          ],
           "description": "Availability status (default: active). 'coming-soon' disables selection."
         },
         "addons": {
           "type": "object",
           "additionalProperties": {
             "type": "string",
-            "enum": ["required", "optional", "excluded"]
+            "enum": [
+              "required",
+              "optional",
+              "excluded"
+            ]
           },
           "description": "Addon availability overrides (blacklist model: unlisted addons allowed by default, set 'excluded' to hide)"
         },
@@ -76,12 +92,102 @@
           "additionalProperties": {
             "$ref": "#/definitions/storefront"
           }
+        },
+        "hidden": {
+          "type": "boolean",
+          "description": "Hide from the new-project picker and the AI create/discovery tools; id lookups for existing projects still resolve."
+        },
+        "configFlags": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "boolean"
+          },
+          "description": "Storefront config.json public flags injected for this package (ADR-009)."
+        },
+        "requiresMesh": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string",
+              "enum": [
+                "optional"
+              ]
+            }
+          ],
+          "description": "true: mesh auto-included; false: no mesh; 'optional': the SC decides."
+        },
+        "datapack": {
+          "type": "object",
+          "required": [
+            "name"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "version": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "description": "The datapack this demo expects (D26); the Sample Data step pre-selects it."
+        },
+        "integrations": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "catalog": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "custom": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object",
+                "required": [
+                  "owner",
+                  "repo"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "owner": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "repo": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "branch": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "name": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "description": "Integrations this demo depends on (D29): catalog ids and custom apps by link."
         }
-      }
+      },
+      "additionalProperties": false
     },
     "storefront": {
       "type": "object",
-      "required": ["name", "description", "source"],
+      "required": [
+        "name",
+        "description",
+        "source"
+      ],
       "properties": {
         "name": {
           "type": "string",
@@ -150,22 +256,55 @@
         },
         "codePatchSource": {
           "$ref": "#/definitions/codePatchSource",
-          "description": "External repository for code patches. When set, the storefront is thin-layer per ADR-006 — lastSyncedCommit records the LKG SHA and reset pins to LKG."
+          "description": "External repository for code patches. When set, the storefront is thin-layer per ADR-006 \u2014 lastSyncedCommit records the LKG SHA and reset pins to LKG."
         },
         "brandAssets": {
           "$ref": "#/definitions/brandAssets",
           "description": "Additive brand files (theme CSS, brand modules) copied from a source repo into the generated storefront repo, plus an optional marker-bounded head.html snippet. ADR-006's prescribed shape for brand CSS."
+        },
+        "byomOverlayUrl": {
+          "type": "string",
+          "description": "BYOM content overlay URL registered with Config Service (ADR-005)."
+        },
+        "patches": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Patch ids applied during reset (repurpose flow)."
+        },
+        "requiresMesh": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string",
+              "enum": [
+                "optional"
+              ]
+            }
+          ],
+          "description": "Overrides the package-level requiresMesh for this storefront."
         }
-      }
+      },
+      "additionalProperties": false
     },
     "brandAssets": {
       "type": "object",
       "description": "Additive brand files vendored into generated storefront repos, applied during the shared EDS pipeline (create + reset).",
-      "required": ["source", "files"],
+      "required": [
+        "source",
+        "files"
+      ],
       "properties": {
         "source": {
           "type": "object",
-          "required": ["owner", "repo", "branch"],
+          "required": [
+            "owner",
+            "repo",
+            "branch"
+          ],
           "properties": {
             "owner": {
               "type": "string",
@@ -189,7 +328,10 @@
           "minItems": 1,
           "items": {
             "type": "object",
-            "required": ["from", "to"],
+            "required": [
+              "from",
+              "to"
+            ],
             "properties": {
               "from": {
                 "type": "string",
@@ -199,7 +341,7 @@
               "to": {
                 "type": "string",
                 "minLength": 1,
-                "description": "Target path in the generated storefront repo. Must be under styles/ with a .css extension or scripts/ with a .js extension — any other target is refused at publish time (non-fatal warn)"
+                "description": "Target path in the generated storefront repo. Must be under styles/ with a .css extension or scripts/ with a .js extension \u2014 any other target is refused at publish time (non-fatal warn)"
               }
             }
           },
@@ -208,14 +350,18 @@
         "headSnippet": {
           "type": "string",
           "minLength": 1,
-          "description": "Optional HTML snippet vendored into head.html between demo-builder brand-assets markers (idempotent re-vendor on reset). Only <link rel=\"stylesheet\" href=\"/...\"> and <script type=\"module\" src=\"/...\"></script> lines with root-relative paths are accepted; path characters are restricted to A-Za-z0-9 . _ / - (no query strings, spaces, or percent-escapes) — anything else is refused at publish time (non-fatal warn)"
+          "description": "Optional HTML snippet vendored into head.html between demo-builder brand-assets markers (idempotent re-vendor on reset). Only <link rel=\"stylesheet\" href=\"/...\"> and <script type=\"module\" src=\"/...\"></script> lines with root-relative paths are accepted; path characters are restricted to A-Za-z0-9 . _ / - (no query strings, spaces, or percent-escapes) \u2014 anything else is refused at publish time (non-fatal warn)"
         }
       }
     },
     "codePatchSource": {
       "type": "object",
       "description": "External GitHub repository for code patches (thin-layer storefronts per ADR-006). Canonical home: skukla/eds-demo-patches.",
-      "required": ["owner", "repo", "path"],
+      "required": [
+        "owner",
+        "repo",
+        "path"
+      ],
       "properties": {
         "owner": {
           "type": "string",
@@ -235,14 +381,18 @@
         "lkgFile": {
           "type": "string",
           "minLength": 1,
-          "description": "Optional. Repo-relative path to the LKG file when the ledger tracks a non-default canonical (multi-canonical patches repos). Defaults to root 'last-known-good'. Example: b2b → 'b2b/last-known-good'."
+          "description": "Optional. Repo-relative path to the LKG file when the ledger tracks a non-default canonical (multi-canonical patches repos). Defaults to root 'last-known-good'. Example: b2b \u2192 'b2b/last-known-good'."
         }
       }
     },
     "contentPatchSource": {
       "type": "object",
       "description": "External GitHub repository for content patches",
-      "required": ["owner", "repo", "path"],
+      "required": [
+        "owner",
+        "repo",
+        "path"
+      ],
       "properties": {
         "owner": {
           "type": "string",
@@ -263,7 +413,10 @@
     },
     "daLiveContentSource": {
       "type": "object",
-      "required": ["org", "site"],
+      "required": [
+        "org",
+        "site"
+      ],
       "properties": {
         "org": {
           "type": "string",
@@ -284,11 +437,18 @@
     },
     "gitSource": {
       "type": "object",
-      "required": ["type", "url", "branch", "gitOptions"],
+      "required": [
+        "type",
+        "url",
+        "branch",
+        "gitOptions"
+      ],
       "properties": {
         "type": {
           "type": "string",
-          "enum": ["git"],
+          "enum": [
+            "git"
+          ],
           "description": "Source type (currently only git is supported)"
         },
         "url": {
@@ -303,7 +463,9 @@
         },
         "gitOptions": {
           "type": "object",
-          "required": ["shallow"],
+          "required": [
+            "shallow"
+          ],
           "properties": {
             "shallow": {
               "type": "boolean",

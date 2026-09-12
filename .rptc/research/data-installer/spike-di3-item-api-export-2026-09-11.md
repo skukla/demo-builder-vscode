@@ -72,3 +72,88 @@ Option 1 below is closed. What remains:
   knows this; the research notes did not name it).
 - The DI-3 item text assumed `get-export-items` returns rows. It does not; the item is
   amended.
+
+## The service's own documentation (read 2026-09-12; owner supplied the Confluence exports)
+
+Eight pages: API User Guide, Architecture Summary, API Reference, Export, Export Usage
+Examples, Import, Postman Collections, Quick Start. The Postman page names three collection
+files (admin-auth, client-auth, ACO) and does not contain them.
+
+What the Export page says export IS, verbatim in its step list: "Fetch Data … Apply Filters
+… Apply Exclusions … Transform Data … Clean SKU Fields … Track Dependencies … Validate …
+**Store: Save exported data to MongoDB datapack**." Its "Key Differences from Import" list
+opens with "**No database content required** — data is fetched from Commerce API". That
+sentence is about the READ side: export does not read from the service's database. Every
+documented export scenario and every response example ends with `stored: N` and "exported
+and stored". There is no documented mode that returns the rows without storing them, and
+no request parameter for the database address; the Architecture Summary lists MongoDB as
+the service's own persistence (four env-named collections) that a caller never configures.
+
+So the phrase "export without MongoDB" describes where export reads FROM, not whether it
+writes. The measurement of 2026-09-11 stands: on the stage deployment the export path
+reaches its store step and cannot store, while every other write path on the same
+deployment stores fine. That is the service's deployment or code, not a caller's option.
+
+`add-data-item`, confirmed from the API Reference: body `datapack_name`, `data_type`,
+`version`, `data` (any JSON; stringified by the service); ONE data type per call; 409 when
+the type already exists; `update-data-item` (PUT) upserts; `validate_mode` reject / warn /
+skip against the type's schema. Matches the per-type write path measured live.
+
+**Verdict for DI-3, final:** the row source has to be the service's export path working, or
+a rows endpoint the service adds. Neither is ours to build here; "Publish it now?" in Share
+warns until one exists.
+
+## The Postman collections (owner supplied 2026-09-12; three files, dated newer than the docs)
+
+What they add to the record, with hosts and secrets left out:
+
+- **A `datapack_type` body field** on create-datapack, promote, add-data-item, update-data-item
+  and every export request: `accs` in the Commerce collections, `aco` in the ACO one. It is
+  in no documentation page and the extension has never sent it.
+- **The promote route is `POST promote-datapack-version`** with `datapack_name`,
+  `datapack_type`, `source_version`, `target_version`, `archive_version`. The earlier research
+  note's `/datapacks/{name}/promote` was wrong.
+- **`add-data-item`'s `data` is the list of wrapped rows** (`[{ "product": {…} }]`), the same
+  shape stored packs hold. Confirms the per-type write path.
+- **An async export exists**: `process-datapack-async` with `operation_mode: export`, polled
+  through `async-process-status/{activationId}` and `datapack-process-status/{activationId}`.
+- The ACO collection exports "from ACCS to ACO datapack" through `process-aco-datapack`, a
+  separate pipeline.
+
+**Hypothesis tested and falsified (owner-approved second attempt, 2026-09-12).** If the export
+store step selected its database by `datapack_type`, a request without it might reach the
+store with no configuration and fail with exactly the measured message. Re-ran the same
+export (`customer_groups`, `verbose: "full"`, the Bodea instance) with `datapack_type: "accs"`
+and a fresh token with the ACCS pair present: pre-flight `authentication: true`,
+`commerce_instance_connectivity: true`; result `success: false`,
+`responses.customer_groups_export`: `500 "Failed to store exported data: MongoDB connection
+URI required. Provide MONGO_URI in params or environment variable."` Catalog afterwards: zero
+spike packs. Identical to the first attempt. The field does not change the outcome.
+
+(A first re-run the same morning went out without the pair because the CLI's IMS token had
+expired thirteen hours earlier and the credential broker refused it; it is not counted. Worth
+noting on its own: the datapack service accepted that expired token for `process-datapack`
+and ran the export to its store step, while the discovery service's broker returned 401 for
+the same token. The health check reports `IMS_VALIDATION_ENABLED: not set` on stage.)
+
+**The one lead not yet tested:** the async export runs as a separate activation
+(`process-datapack-async`). The August probe found thirteen actions declare `MONGO_URI` and
+the sync export path is the one that cannot store; whether the async worker's store path is
+configured differently is a one-call question, owner-gated like the others.
+
+**The async export, tested (owner-approved, 2026-09-12).** `POST process-datapack-async`
+with the same body returned 202 and an activation id. Polled to terminal:
+`datapack-process-status`: `customer_groups: { status: "fail", error: "Processing failed" }`;
+`async-process-status`: pre-flight authentication and connectivity both true, the same
+all-zero counts as the sync run. Catalog afterwards: zero spike packs. The worker path stores
+no better than the synchronous one.
+
+**DI-3, closed on three measurements.** No export path on this deployment stores what it
+fetches: not the synchronous action, not with `datapack_type`, not the async worker. The
+service's own documentation says storing is the last step of export by design. The item APIs
+write a pack per data type and work; nothing on the service reads an instance's rows into
+that shape except the export processors, whose store step is what fails. The fix is in the
+service (its export store path does not receive the database configuration the rest of the
+same deployment has), and it belongs to the service's owner. Two things to hand them: this
+file's measurements, and the observation that `process-datapack` accepted an expired IMS
+token while the discovery service's broker refused it.
