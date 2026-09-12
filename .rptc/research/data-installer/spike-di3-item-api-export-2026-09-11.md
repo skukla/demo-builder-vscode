@@ -157,3 +157,44 @@ service (its export store path does not receive the database configuration the r
 same deployment has), and it belongs to the service's owner. Two things to hand them: this
 file's measurements, and the observation that `process-datapack` accepted an expired IMS
 token while the discovery service's broker refused it.
+
+## Gaps found by reading every document against the collections (2026-09-12)
+
+Corrections to this record and to the program's notes, each with where it now lives:
+
+1. **The extension CAN set a pack's `shared` flag.** `update-datapack-metadata` (PUT) takes
+   `shared` as an optional field. The program's research said "the extension has no call
+   to set it"; wrong. The DECISION (D32: curation is never touched from Share) stands as
+   policy, and the research note is corrected to say so.
+2. **`get-export-items` is documented to carry the full item in `metadata`** ("Full item data
+   is available in the metadata field", Export Usage Examples, with worked examples). The
+   deployed service returned `metadata: null` for every type on 2026-09-11. That is a
+   divergence between the docs and the stage deployment, not a fact about the API's design,
+   and it belongs in the handover to the service owner beside the store-step failure. Even
+   as documented, `metadata` is the raw REST entity, not the transformed, substituted,
+   SKU-cleaned row a pack holds; the export processors do that transform.
+3. **Re-importing a pack into an instance that already holds it is safe and documented**
+   (Import page): items that already exist are logged as "skipped" with a reason and the run
+   returns success. That answers the plan's open verification about the banner's verb.
+4. **`get-installed-datapacks` is the source of truth for "is this pack on this instance"**
+   (records written on successful import, removed on delete; the extension already calls
+   it). The import banner and the Sample Data step should read it rather than guess.
+5. **`compare-datapacks` exists** (POST; normalises ids and timestamps, returns match and
+   differences). Not in the collections, not in the extension, not in the research. A ready
+   verifier for "the pack I published equals the one I meant to" and for DI-1's round trips.
+6. **Direct-upload import exists** (scenarios 3 and 4: `data_type` + `data`, or `items[]`,
+   no stored pack). Not used by the extension. Not needed by the program (D31 records, never
+   applies), but it is the mechanism a future "seed from a file" would use.
+7. **Exported packs may be owned by the service, not the user.** The live catalog holds
+   `aco_bodea@main` with `owner: data-installer-export`, and the export request has no owner
+   field. If "Publish it now?" is ever to produce a pack the SC owns, create-datapack (with
+   `owner`) probably has to precede the export, or update-datapack-metadata follow it. To
+   verify when the export path works.
+8. **`datapack_type` is in the collections and in no document.** Semantics unknown
+   (`accs` / `aco`; the request log carries a separate `site_type`). A question for the
+   service owner; it did not change the export outcome.
+9. Smaller divergences between docs and the deployment, for the drift checker:
+   `get-datapack-metadata` documents `data_types` as `[{data_type}]`, live returns strings;
+   `batch-get-data-items` is documented as GET with `items[]`, live is POST with
+   `results[]`; the docs' `pagination.total_items` is `total_count` live; the docs' 11-type
+   export dependency list is 18 types live.

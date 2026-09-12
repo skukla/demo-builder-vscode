@@ -31,8 +31,9 @@ is created with integrations and mesh hardcoded empty whatever the file said.
   collects them; same-machine Copy moves them SecretStorage → SecretStorage directly.
 - Data (D31): the named pack is pre-selected in Sample Data with community packs shown when
   needed; the banner adds "install it from the dashboard once your instance is connected" or
-  "not published; ask the owner to export it". Verify first what a re-import into an instance
-  that already holds the pack does, so the verb is true.
+  "not published; ask the owner to export it", or "already installed on your instance" when
+  `get-installed-datapacks` says so. Re-import is documented safe (existing items skipped,
+  run succeeds), so "install" is a true verb.
 - Integrations: identity only; the one-mesh-per-workspace reuse rule
   (`executorMeshPhase.ts:161`) stays; verify what a second App Management association to
   the same instance from another workspace does.

@@ -47,7 +47,9 @@ code patches run as a dry check whose misses become caveats.
   selected, requests the catalog with `includeCommunity` when the pack is not curated, shows
   one line saying the demo asked for it, and says "not published; ask the owner to export it"
   when the pack is not in the service; a vanished version falls back to the default rule with
-  a note. The SC can change it; `project.datapack` is written as today; no install runs.
+  a note; when `get-installed-datapacks` (the extension's `getInstalledDatapacks`) says the
+  pack is already on the connected instance, the line says so instead. The SC can change it;
+  `project.datapack` is written as today; no install runs.
 - Storefront area (D21): `buildSummary.ts` `storefrontSummaryGroup` gains a first row
   "Demo — {name} · {kind}" for every EDS brand; the existing-repo tick in
   `repoSelectionInline.helpers.tsx:826` reads "Reset to {name} (replaces all content)".

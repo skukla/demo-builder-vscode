@@ -300,7 +300,8 @@ test that referred to a tick that no longer exists.
   its pack by name + version and installs from the dashboard; the catalog is the datapack
   service's, reached by every SC through the brokered credential (ADR-014); curated packs
   show by default and everything else under "include community" (`dataInstallerHandlers.ts:232`);
-  the `shared` flag is curation, set service-side, and the extension has no call to set it;
+  the `shared` flag is curation (CORRECTED 2026-09-12: `update-datapack-metadata` CAN set it;
+  the decision that Share never touches it is policy, not a missing call);
   a pack that exists only on an instance becomes shareable through the existing stage-3
   export. Integrations travel by identity (catalog id, custom link, name, API picks), never
   by deploy state; the one-mesh-per-workspace reuse rule on import survives because the
@@ -324,7 +325,9 @@ test that referred to a tick that no longer exists.
 
 - The exact headless marker and B2B drop-in names, verified in step 03, never written from
   memory.
-- Re-import of a datapack into an instance that already holds it: additive, replace, or
-  error? Verify against the data installer before the import banner promises a verb.
+- ~~Re-import of a datapack into an instance that already holds it~~ Answered by the
+  service's Import page (2026-09-12): existing items are skipped with a reason and the run
+  succeeds. "Install" is a safe verb; `get-installed-datapacks` says whether it is already
+  there.
 - A second App Management association from another workspace to one Commerce instance:
   accepted, rejected or replacing? Verify before PL-56d.
