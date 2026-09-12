@@ -5,7 +5,7 @@ area: eds
 parent: EDS-13
 needs: [PL-56a]
 value: high
-status: planned
+status: active
 ---
 
 # "Add a demo": build a project on a demo someone shared by link
@@ -56,3 +56,7 @@ unchanged from there: the Storefront area shows the frontend piece as fixed by t
   existing id rename map, so "custom" stops meaning make-it-yourself beside the plus card.
 - Every surface, pattern and word is an existing one (research §9a). A new component,
   hook, stage shell, settings shape or noun has to name the row it replaces and why.
+
+## Shipped so far
+
+- 2026-09-12  5fc236f40 Step: look up a project's storefront in one place — resolver, eight sites moved, chokepoint pin
