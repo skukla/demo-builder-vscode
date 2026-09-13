@@ -84,6 +84,9 @@ already holds. When it is present, its values win, and the SC is told what it ov
 Unknown fields warn and never refuse, so a file written for a newer extension still adds on an
 older one.
 
+How to make a storefront addable, and what a colleague needs from you, is
+[sharing-a-demo.md](sharing-a-demo.md).
+
 The catalog schema, `src/features/components/config/demo-packages.schema.json`, is closed:
 a field the package or storefront type does not have fails validation, which is the check
 that a config field lives in three places (the JSON, its schema, and its type).

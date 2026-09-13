@@ -22,3 +22,27 @@ Item: [[EDS-13c]]. Decision: D10 (a published contract). Depends on the contract
 Pinned: the doc's field list against the schema by the config-contract test family (a doc
 that names a field the schema does not have goes red); `cited-identifiers.test.ts` for
 every path and setting key it names.
+
+## Built (2026-09-13)
+
+`docs/systems/sharing-a-demo.md`, written for an SC and for the colleague on the other
+side of the link, in that order: what "Add a demo" needs (the two link forms, a readable
+repository, a named content site with a published index under one of the three paths, the
+default branch), the description file with its field table and a complete example, what is
+read when there is no file (the four repository files and the rules, as the probe applies
+them), the ownership line (no patches, the five dry-checked behaviours in the caveats'
+words, the files Demo Builder writes into each project), copies and forks (the default,
+the template flag, the history warning), what happens after the demo changes (updates,
+rename, deletion, Change source), the words, headless demos, and the agent's tools. It says
+to send the link, not a zip, ahead of step 10.
+
+Two things the plan listed are stated as they are now, not as planned: the file is written
+by hand until step 09's "Share this demo" exists (the page does not promise the button),
+and the words section explains "demo" and "storefront" without the dialog copy quoting it.
+
+Pinned by `tests/templates/sharing-a-demo-doc.test.ts`: the field table names exactly
+the description file's schema fields; the example validates against the schema; the file
+name, the three index paths, the three canonical storefront files and the company drop-ins
+the page names are the code's own constants. The existing doc pins (cited identifiers,
+module references, the docs index) cover the setting key, the paths and the index entry.
+`project-file-format.md` links to the page from its shared-demo section.
