@@ -48,3 +48,7 @@ from the tools, so the two do not drift again.
 
 The agent tools work. Project deletion's own cleanup (`resourceCleanupHelpers.ts`)
 was not measured either and belongs in the same check.
+
+## Shipped so far
+
+- 2026-09-13  chore(backlog): file the DA.live cleanup command's token question (`790a6545b`)

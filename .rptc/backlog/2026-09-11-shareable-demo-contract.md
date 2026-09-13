@@ -5,7 +5,7 @@ area: eds
 parent: EDS-13
 needs: [PL-56a]
 value: high
-status: planned
+status: active
 ---
 
 # The shareable-demo process, published: how to make a storefront addable
@@ -40,3 +40,7 @@ In `docs/` where SCs and colleagues can find it:
 Nothing waits on the doc as prose, but the file's name and fields are the interface both
 halves are built against; deciding them here keeps [[EDS-13a]] and [[EDS-13b]] from
 inventing two.
+
+## Shipped so far
+
+- 2026-09-13  docs(eds): the how-to for sharing a demo (`744301d8a`)

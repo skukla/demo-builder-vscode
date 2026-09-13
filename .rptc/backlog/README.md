@@ -242,7 +242,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-13` | epic | [Portable demos: share storefronts, move whole projects](2026-09-11-colleague-built-storefront.md) | — | high | planned |
 | `EDS-13a` | feature | └ ["Add a demo": build a project on a demo someone shared by link](2026-09-11-add-a-demo-import.md) | PL-56a | high | active |
 | `EDS-13b` | feature | └ ["Share this demo": turn an existing project into a demo others can add](2026-09-11-share-a-demo-export.md) | EDS-13c | med | backlog |
-| `EDS-13c` | chore | └ [The shareable-demo process, published: how to make a storefront addable](2026-09-11-shareable-demo-contract.md) | PL-56a | high | planned |
+| `EDS-13c` | chore | └ [The shareable-demo process, published: how to make a storefront addable](2026-09-11-shareable-demo-contract.md) | PL-56a | high | active |
 | `EDS-13d` | feature | └ [A team catalog of shared demos](2026-09-11-team-demo-catalog.md) | EDS-13a, EDS-13b | low | backlog |
 | `EDS-13e` | feature | └ [Share a headless demo](2026-09-11-share-a-headless-demo.md) | EDS-13b | low | backlog |
 | `EDS-14` | fix | [Template update falls back to a full reset on conflict, overwriting the SC's own edits](2026-09-11-template-update-conflict-fallback-overwrites-edits.md) | — | med | backlog |
