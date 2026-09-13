@@ -75,3 +75,4 @@ unchanged from there: the Storefront area shows the frontend piece as fixed by t
 - 2026-09-13  fix(ai): what the live run found — the agent's create path, the probe's fstab, DA.live's token, and one voice for its notifications (`eb8c1ec15`)
 - 2026-09-12  chore(backlog): log the agent-actions step on the add-a-demo item (`c1e471ab2`)
 - 2026-09-13  chore(backlog): log the live-run fixes on the add-a-demo item (`a9268f79f`)
+- 2026-09-13  fix(eds): the probe names the site and the repository when only the site answers (`39f1d6679`)

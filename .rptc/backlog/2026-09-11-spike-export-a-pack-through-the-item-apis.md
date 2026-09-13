@@ -99,3 +99,4 @@ one route, and [[EDS-13b]]'s "Publish it now?" has its implementation.
 - 2026-09-13  Fourth attempt after the service owner's reply ("the runtime URL has the db connections; you used a local build"): same export through the extension's own door, same store-step error, nothing created. The record went back to him with the error text.
 - 2026-09-13  fix(data-installer): a failed export is logged as a failure (`52f0b7cdb`)
 - 2026-09-13  docs(research): the fourth export attempt, through the extension's own door, fails at the same store step (`25a92d1a4`)
+- 2026-09-13  docs(research): the Postman request, sent by hand, fails at the same store step (`6d8fdf321`)
