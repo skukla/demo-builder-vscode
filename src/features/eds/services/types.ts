@@ -173,7 +173,7 @@ export interface DaLiveContentSource {
     org: string;
     /** Source site name */
     site: string;
-    /** URL to fetch content index (full-index.json) */
+    /** URL of the content index to copy from (`contentIndexUrl` builds it) */
     indexUrl: string;
     /** Optional URL to fetch media index (media-index.json) */
     mediaIndexUrl?: string;
@@ -324,7 +324,7 @@ export interface EdsProjectConfig {
     contentSource?: {
         org: string;
         site: string;
-        indexPath?: string;
+        indexPath: string;
     };
     /** Selected backend component ID (from stack definition) */
     backendComponentId: string;

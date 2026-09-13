@@ -336,6 +336,7 @@ describe('Executor - EDS Standard Flow', () => {
                     contentSource: {
                         org: 'source-org',
                         site: 'source-site',
+                        indexPath: '/full-index.json',
                     },
                 },
                 components: {

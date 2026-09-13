@@ -12,7 +12,7 @@ were wrong within an hour of being written. This one is derived from the
 handbook's own callouts and checked against the enforcers on disk in both
 directions, so it cannot.
 
-- **112** conventions, **112** enforced
+- **113** conventions, **113** enforced
 - **28** name the decision record behind them
 - **6** name a procedure — an SOP or a skill
 - **1** have all three layers
@@ -65,6 +65,7 @@ it means the rule rests on somebody noticing.
 | A registry edit matches the `*.schema.json` beside it. Enforced by the template suites under `tests/templates/`. |  |  | *named in prose* |
 | A credential environment variable is registered as a secret. |  |  | `credential-env-vars-registered.test.ts` |
 | A setting that receives credentials is scoped to the user, never the workspace. |  |  | `credential-sink-settings-scoped.test.ts` |
+| Whoever names a content site names its index path. The catalog, the project row and a description file all state where a site lists its pages; every reader (the copy step, the import path, the reset door) takes the stated path from `contentIndex.ts` and none guesses one. Only the Add a demo probe looks a path up, for a repository that names a site with no path, and it records what it found. |  |  | `content-index-path.test.ts` |
 
 ## 5. What survives between calls
 

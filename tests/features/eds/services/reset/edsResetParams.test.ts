@@ -26,7 +26,7 @@ const mockPackages: DemoPackage[] = [makeDemoPackage({
         'eds-paas': makeStorefront({
             templateOwner: 'template-owner',
             templateRepo: 'template-repo',
-            contentSource: { org: 'content-org', site: 'content-site' },
+            contentSource: { org: 'content-org', site: 'content-site', indexPath: '/full-index.json' },
             contentPatches: ['patch-a'],
             byomOverlayUrl: 'https://byom.example.com',
             brandAssets: {
@@ -38,7 +38,7 @@ const mockPackages: DemoPackage[] = [makeDemoPackage({
         'eds-paas-no-overlay': makeStorefront({
             templateOwner: 'template-owner',
             templateRepo: 'template-repo',
-            contentSource: { org: 'content-org', site: 'content-site' },
+            contentSource: { org: 'content-org', site: 'content-site', indexPath: '/full-index.json' },
         }),
     },
 })];

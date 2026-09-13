@@ -15,6 +15,8 @@ import type { McpToolServer } from './mcpToolServer';
 import appBuilderCatalog from '@/features/components/config/app-builder-components.json';
 import componentsConfig from '@/features/components/config/components.json';
 import { getSelectablePackages } from '@/features/components/services/demoPackageLoader';
+import { packageFromAddedDemo } from '@/features/components/services/storefrontResolver';
+import { readAddedDemos } from '@/features/project-creation/services/addedDemoSettings';
 import { loadStacks } from '@/features/project-creation/ui/helpers/brandStackLoader';
 
 /**
@@ -92,19 +94,34 @@ export function registerDiscoveryTools(
             annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'List Demo Packages',
             description:
-                'List demo packages (brands) and the stacks each supports, for project creation',
+                'List demo packages (brands) and the stacks each supports, for project creation. ' +
+                'Includes demos added from a colleague\'s link (source: "added"); pass their id to create_project.',
             inputSchema: {},
         },
         async () => {
             const packages = await getSelectablePackages();
-            const lean = packages.map((p) => ({
+            const shipped = packages.map((p) => ({
                 id: p.id,
                 name: p.name,
                 description: p.description,
                 // The keys of the storefronts map ARE the valid stacks for this package.
                 availableStacks: Object.keys(p.storefronts ?? {}),
+                source: 'shipped' as const,
             }));
-            return asText(lean);
+            // The demos the SC added from a link sit beside the shipped ones, as
+            // they do on the Welcome grid; their id is what create_project takes.
+            const added = readAddedDemos().map((demo) => {
+                const pkg = packageFromAddedDemo(demo, undefined);
+                return {
+                    id: pkg.id,
+                    name: pkg.name,
+                    description: pkg.description,
+                    availableStacks: Object.keys(pkg.storefronts),
+                    source: 'added' as const,
+                    repository: `${demo.source.owner}/${demo.source.repo}`,
+                };
+            });
+            return asText([...shipped, ...added]);
         },
     );
 

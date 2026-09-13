@@ -101,7 +101,12 @@ export function FoundStage({
         return <LoadingDisplay size="L" message={COPY.looking} subMessage={repo} helperText={COPY.lookingFor} />;
     }
     if (probe.status === 'failed') {
-        return <StatusDisplay variant="error" title={COPY.notADemo} message={probe.error} height="auto" />;
+        // A missing sign-in is not a verdict on the demo: say what to do instead.
+        return probe.needsAuth ? (
+            <StatusDisplay variant="error" title={COPY.signInFirst} message={COPY.signInHow} height="auto" />
+        ) : (
+            <StatusDisplay variant="error" title={COPY.notADemo} message={probe.error} height="auto" />
+        );
     }
     const { result } = probe;
     if (result.outcome === 'unreadable') {

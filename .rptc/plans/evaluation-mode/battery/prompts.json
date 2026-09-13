@@ -875,5 +875,22 @@
     ],
     "why": "Step 06 of the shareable-demo program (EDS-13a): the list lives in a user setting, so an agent without the tool edits settings.json directly and skips the project count the confirmation is built around. Tier 2: it writes a user setting, so it runs only under --tier2.",
     "tier": 2
+  },
+  {
+    "id": "probe-shared-demo",
+    "prompt": "A colleague sent me https://main--isle5-demo--jen.aem.live and says it's a demo I can build on. Before I add it, tell me what kind of storefront it is, its store codes, and whether its pages are published.",
+    "expect": [
+      "probe_shared_demo"
+    ],
+    "why": "Step 07 of the shareable-demo program (EDS-13a): the read that the Add a demo dialog does before offering a demo. Without the tool the agent hand-fetches fstab.yaml and config.json from GitHub and guesses the kind; the tool answers all of it in one call, from a link or owner+repo."
+  },
+  {
+    "id": "t2-add-shared-demo",
+    "prompt": "Add my colleague's demo at https://github.com/battery-scratch/isle5-demo to my Add a demo list without making a copy of it, so I can create projects from it.",
+    "expect": [
+      "add_shared_demo"
+    ],
+    "why": "Step 07 of the shareable-demo program (EDS-13a): the dialog's Add commit. The list lives in a user setting, so an agent without the tool writes settings.json by hand and skips the probe that decides the row's kind and codes. Tier 2: it writes a user setting (and forks when a copy is kept), so it runs only under --tier2.",
+    "tier": 2
   }
 ]

@@ -243,7 +243,7 @@ describe('whether content is copied at all', () => {
         // Their existing site keeps its content: setup is being re-run over it.
         await runSetup(
             createEdsConfig({
-                contentSource: { org: 'src-org', site: 'src-site' },
+                contentSource: { org: 'src-org', site: 'src-site', indexPath: '/full-index.json' },
                 selectedSite: { id: 'existing-site', name: 'Existing site' },
             })
         );
@@ -254,7 +254,7 @@ describe('whether content is copied at all', () => {
     it('copies content into a picked site when the SC asked to reset it', async () => {
         await runSetup(
             createEdsConfig({
-                contentSource: { org: 'src-org', site: 'src-site' },
+                contentSource: { org: 'src-org', site: 'src-site', indexPath: '/full-index.json' },
                 selectedSite: { id: 'existing-site', name: 'Existing site' },
                 resetSiteContent: true,
             })
@@ -265,7 +265,7 @@ describe('whether content is copied at all', () => {
     });
 
     it('copies content into a brand new site', async () => {
-        await runSetup(createEdsConfig({ contentSource: { org: 'src-org', site: 'src-site' } }));
+        await runSetup(createEdsConfig({ contentSource: { org: 'src-org', site: 'src-site', indexPath: '/full-index.json' } }));
 
         expect(pipelineInput().skipContent).toBe(false);
         expect(pipelineInput().clearExistingContent).toBe(false);
@@ -284,7 +284,7 @@ describe('whether the CDN cache is purged', () => {
     it('purges after a content reset', async () => {
         await runSetup(
             createEdsConfig({
-                contentSource: { org: 'src-org', site: 'src-site' },
+                contentSource: { org: 'src-org', site: 'src-site', indexPath: '/full-index.json' },
                 selectedSite: { id: 'existing-site', name: 'Existing site' },
                 resetSiteContent: true,
             })
@@ -344,7 +344,7 @@ describe('the rest of the pipeline instruction', () => {
     it('names the repo, the site, the template and the block library work', async () => {
         await runSetup(
             createEdsConfig({
-                contentSource: { org: 'src-org', site: 'src-site' },
+                contentSource: { org: 'src-org', site: 'src-site', indexPath: '/full-index.json' },
                 byomOverlayUrl: 'https://overlay.example/render-pdp',
             }),
             { blockLibraries: ['known-library'] }
@@ -358,7 +358,7 @@ describe('the rest of the pipeline instruction', () => {
                 daLiveSite: 'test-site',
                 templateOwner: 'template-owner',
                 templateRepo: 'template-repo',
-                contentSource: { org: 'src-org', site: 'src-site' },
+                contentSource: { org: 'src-org', site: 'src-site', indexPath: '/full-index.json' },
                 byomOverlayUrl: 'https://overlay.example/render-pdp',
                 includeBlockLibrary: true,
             })

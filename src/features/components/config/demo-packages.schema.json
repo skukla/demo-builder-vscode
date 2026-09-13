@@ -217,7 +217,7 @@
           "description": "DA.live content source for EDS storefronts (required for EDS stacks)"
         },
         "accountContentSource": {
-          "$ref": "#/definitions/daLiveContentSource",
+          "$ref": "#/definitions/daLiveSite",
           "description": "Optional second content source for the customer account chrome (/customer/* auth pages + the /customer/nav fragment). Used by hybrid packages whose brand content comes from one site but whose B2B account experience must come from the canonical B2B content site. Overlaid after the main content copy."
         },
         "templateOwner": {
@@ -407,7 +407,7 @@
         }
       }
     },
-    "daLiveContentSource": {
+    "daLiveSite": {
       "type": "object",
       "required": [
         "org",
@@ -423,11 +423,31 @@
           "type": "string",
           "minLength": 1,
           "description": "DA.live site name"
+        }
+      },
+      "description": "A DA.live site named without an index: pages are copied from it by path, not from a list"
+    },
+    "daLiveContentSource": {
+      "type": "object",
+      "required": [
+        "org",
+        "site",
+        "indexPath"
+      ],
+      "properties": {
+        "org": {
+          "type": "string",
+          "minLength": 1,
+          "description": "DA.live organization name"
+        },
+        "site": {
+          "type": "string",
+          "minLength": 1,
+          "description": "DA.live site name"
         },
         "indexPath": {
           "type": "string",
-          "default": "/full-index.json",
-          "description": "Path to the content index file (defaults to /full-index.json)"
+          "description": "Where the site lists its pages. Required: whoever names a content site names its index path; readers never guess one."
         }
       }
     },

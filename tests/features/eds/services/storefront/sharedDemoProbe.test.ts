@@ -45,15 +45,17 @@ interface FakeRepo {
     /** Reads of these paths throw, as a network failure would. */
     throwOn?: string[];
     emptyRepo?: boolean;
-    index?: { ok: boolean; data?: unknown[] };
+    /** The published index: `path` limits the answer to one index path (any path answers when absent). */
+    index?: { ok: boolean; data?: unknown[]; path?: string };
 }
 
 function deps(fake: FakeRepo, packages: readonly ReturnType<typeof makeDemoPackage>[] = NO_CATALOG): SharedDemoProbeDeps {
-    const fetchImpl = jest.fn(async () => {
+    const fetchImpl = jest.fn(async (url: string) => {
         const index = fake.index ?? { ok: false };
+        const ok = index.ok && (!index.path || url.endsWith(index.path));
         return {
-            ok: index.ok,
-            status: index.ok ? 200 : 404,
+            ok,
+            status: ok ? 200 : 404,
             json: async () => ({ data: index.data ?? [] }),
         } as unknown as Response;
     });
@@ -104,7 +106,8 @@ describe('probeSharedDemo', () => {
             defaultBranch: 'main',
             isTemplate: false,
             kind: 'eds',
-            contentSource: { org: 'skukla', site: 'kukla-bodea' },
+            // The row always names its index path: recorded from the lookup, here the first path.
+            contentSource: { org: 'skukla', site: 'kukla-bodea', indexPath: '/full-index.json' },
             contentPublished: { indexFound: true, pageCount: 3 },
             storeCodes: { websiteCode: 'bodea', storeCode: 'bodea_store', storeViewCode: 'bodea_us' },
             b2b: 'on',
@@ -123,6 +126,38 @@ describe('probeSharedDemo', () => {
             'https://main--kukla-bodea--skukla.aem.live/full-index.json',
             expect.objectContaining({ method: 'GET' }),
         );
+    });
+
+    it("tries the paths the shipped brands publish under, and records the one that answers on the row's content source", async () => {
+        // The real kukla-bodea site (2026-09-12): no full-index.json, a sitemap.json.
+        const d = deps({ ...BODEA, index: { ok: true, data: [{}, {}], path: '/sitemap.json' } });
+        const result = await probeSharedDemo(d, 'skukla', 'kukla-bodea', logger);
+
+        assertOutcome(result, 'read');
+        expect(d.fetchImpl).toHaveBeenCalledTimes(2);
+        expect(d.fetchImpl).toHaveBeenLastCalledWith(
+            'https://main--kukla-bodea--skukla.aem.live/sitemap.json',
+            expect.objectContaining({ method: 'GET' }),
+        );
+        expect(result.contentSource).toEqual({ org: 'skukla', site: 'kukla-bodea', indexPath: '/sitemap.json' });
+        expect(result.contentPublished).toEqual({ indexFound: true, pageCount: 2 });
+    });
+
+    it('reads a stated index path as stated, without trying the others', async () => {
+        const d = deps({
+            ...BODEA,
+            files: edsFiles({ 'demo.demo-builder.json': JSON.stringify({ kind: 'demo', version: 1, name: 'B', contentSource: { org: 'skukla', site: 'kukla-bodea', indexPath: '/pages.json' } }) }),
+            index: { ok: false },
+        });
+        const result = await probeSharedDemo(d, 'skukla', 'kukla-bodea', logger);
+
+        assertOutcome(result, 'read');
+        expect(d.fetchImpl).toHaveBeenCalledTimes(1);
+        expect(d.fetchImpl).toHaveBeenCalledWith(
+            'https://main--kukla-bodea--skukla.aem.live/pages.json',
+            expect.objectContaining({ method: 'GET' }),
+        );
+        expect(result.contentPublished).toEqual({ indexFound: false });
     });
 
     it('reads the B2B boilerplate: no content site, no codes, B2B from its drop-ins, template flag', async () => {

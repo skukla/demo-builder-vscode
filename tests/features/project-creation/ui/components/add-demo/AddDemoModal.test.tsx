@@ -100,6 +100,15 @@ describe('AddDemoModal', () => {
         expect(button('Back')).toHaveAttribute('aria-disabled', 'false');
     });
 
+    it('says to sign in to GitHub first, not that the link is not a demo, when there is no session', async () => {
+        renderModal();
+        await probeWith({ success: false, error: 'Sign in to GitHub to read this demo.', needsAuth: 'github' });
+        expect(screen.getByText('Sign in to GitHub first')).toBeInTheDocument();
+        expect(screen.getByText(/Sign in to GitHub in VS Code/)).toBeInTheDocument();
+        expect(screen.queryByText("This doesn't look like a demo we can build on")).not.toBeInTheDocument();
+        expect(button('Add demo')).toHaveAttribute('aria-disabled', 'true');
+    });
+
     it('offers our own card when the link is one of our templates', async () => {
         const { props } = renderModal();
         await probeWith({

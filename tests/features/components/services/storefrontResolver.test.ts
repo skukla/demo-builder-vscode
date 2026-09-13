@@ -53,7 +53,7 @@ describe('resolveStorefrontForProject', () => {
             configDefaults: { ACCS_WEBSITE_CODE: 'isle5' },
             requiresMesh: 'optional',
             datapack: { name: 'isle5' },
-            contentSource: { org: 'jen', site: 'isle5-demo' },
+            contentSource: { org: 'jen', site: 'isle5-demo', indexPath: '/full-index.json' },
             source: { owner: 'jen', repo: 'isle5-demo', branch: 'demo' },
         });
         const result = resolveStorefrontForProject(
@@ -81,7 +81,7 @@ describe('resolveStorefrontForProject', () => {
                 branch: 'demo',
                 gitOptions: { shallow: true },
             },
-            contentSource: { org: 'jen', site: 'isle5-demo' },
+            contentSource: { org: 'jen', site: 'isle5-demo', indexPath: '/full-index.json' },
             templateOwner: 'jen',
             templateRepo: 'isle5-demo',
         });

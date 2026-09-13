@@ -36,7 +36,7 @@ type ProgressCall = {
     percentage?: number;
 };
 
-const CONTENT_SOURCE = { org: 'src-org', site: 'src-site' };
+const CONTENT_SOURCE = { org: 'src-org', site: 'src-site', indexPath: '/full-index.json' };
 
 describe('executeEdsPipeline - step detail', () => {
     let mockCopyContentFromSource: jest.Mock;

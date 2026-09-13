@@ -36,13 +36,15 @@ interface Answer<R> {
     success: boolean;
     error?: string;
     result?: R;
+    /** The probe's refusal when no GitHub session can be found. */
+    needsAuth?: string;
 }
 
 export type ProbeState =
     | { status: 'idle' }
     | { status: 'loading' }
     | { status: 'done'; result: SharedDemoProbeResult }
-    | { status: 'failed'; error: string };
+    | { status: 'failed'; error: string; needsAuth?: boolean };
 
 export interface UseAddDemoFlowArgs {
     /** The shipped catalog, for naming the card a recognised template maps to. */
@@ -114,7 +116,11 @@ export function useAddDemoFlow(args: UseAddDemoFlowArgs): UseAddDemoFlowReturn {
                 request,
             );
             if (!answer.success || !answer.result) {
-                setProbe({ status: 'failed', error: answer.error ?? PROBE_FAILED });
+                setProbe({
+                    status: 'failed',
+                    error: answer.error ?? PROBE_FAILED,
+                    ...(answer.needsAuth ? { needsAuth: true } : {}),
+                });
                 return;
             }
             setProbe({ status: 'done', result: answer.result });

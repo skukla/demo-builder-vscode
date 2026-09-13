@@ -37,13 +37,27 @@ export interface GitSource {
  * Used by EDS storefronts to specify the source of demo content.
  * This is explicit configuration, NOT derived from the GitHub template URL.
  */
+/** A DA.live site named without an index: pages are copied from it by path, not from a list. */
+export interface DaLiveSite {
+    /** DA.live organization name */
+    org: string;
+    /** DA.live site name */
+    site: string;
+}
+
 export interface DaLiveContentSource {
     /** DA.live organization name */
     org: string;
     /** DA.live site name */
     site: string;
-    /** Optional custom path to content index (defaults to /full-index.json) */
-    indexPath?: string;
+    /**
+     * Where the site lists its pages. Required: whoever names a content site
+     * names its index path (the catalog, the project row, a description file);
+     * only the Add a demo probe looks one up, for a repository that names no
+     * site of its own, and records what it found. `contentIndex.ts` builds the
+     * URL every reader uses.
+     */
+    indexPath: string;
 }
 
 /**
@@ -139,7 +153,7 @@ export interface Storefront {
      *  packages whose brand/catalog content comes from one site but whose B2B
      *  account experience must come from the canonical B2B content site
      *  (B2B base + brand overlay). Overlaid after the main content copy. */
-    accountContentSource?: DaLiveContentSource;
+    accountContentSource?: DaLiveSite;
     /** Optional BYOM content overlay URL. When set, Config Service registers a
      *  `content.overlay` alongside the DA.live content source so a backend
      *  service can serve dynamic markup (e.g., per-SKU PDP HTML).

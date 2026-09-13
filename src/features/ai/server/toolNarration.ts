@@ -181,6 +181,8 @@ export const TOOL_NARRATION: Record<string, string> = {
     refresh_block_library: 'Rebuilding the block library',
     migrate_storefront_name: 'Renaming the storefront',
     reset_eds_project: 'Resetting the storefront',
+    probe_shared_demo: "Reading the colleague's demo",
+    add_shared_demo: 'Adding the demo to the list',
     forget_added_demo: 'Forgetting the added demo',
     change_demo_source: "Changing where the project's demo comes from",
     repair_site_configuration: 'Repairing the site configuration',

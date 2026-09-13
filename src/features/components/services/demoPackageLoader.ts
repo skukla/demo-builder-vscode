@@ -204,8 +204,9 @@ export function getStackById(stackId: string): Stack | undefined {
 export async function getAutoSelectedOptionalDependencies(
     packageId: string,
     stackId: string,
+    packages?: DemoPackage[],
 ): Promise<string[]> {
-    const pkg = await getPackageById(packageId);
+    const pkg = await getPackageById(packageId, packages);
     const meshRequirement = getResolvedMeshRequirement(pkg, stackId);
     if (meshRequirement !== true) {
         return [];

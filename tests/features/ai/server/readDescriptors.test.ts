@@ -4,7 +4,7 @@
  * the catalog wiring so a row can't silently point at the wrong handler.
  */
 
-import { descriptorFor } from './readDescriptors.testUtils';
+import { descriptorFor, shapeOf, shaped } from './readDescriptors.testUtils';
 
 import { READ_DESCRIPTORS } from '@/features/ai/server/readDescriptors';
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
@@ -287,5 +287,18 @@ describe('list_console_apis search', () => {
         expect(out.apis).toHaveLength(2);
         expect(out.matched).toBeUndefined();
         expect(out.totalUnfiltered).toBeUndefined();
+    });
+});
+
+describe('probe_shared_demo', () => {
+    it("answers the probe's result itself, not the {result} wrapper the dialog reads", () => {
+        const result = { outcome: 'read', fullName: 'jen/isle5-demo', kind: 'eds' };
+        expect(shaped('probe_shared_demo', { success: true, result })).toEqual(result);
+    });
+
+    it('answers a refusal as the default error line', () => {
+        expect(shapeOf('probe_shared_demo')({ success: false, error: 'owner and repo are required' }, {})).toBe(
+            'Error: owner and repo are required',
+        );
     });
 });

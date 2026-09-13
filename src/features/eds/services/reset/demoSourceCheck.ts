@@ -15,7 +15,7 @@
 
 import type { GitHubRepoOperations } from '../github/githubRepoOperations';
 import { COMPONENT_IDS } from '@/core/constants';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { resolveContentIndex } from '../contentIndex';
 import { renameAddedDemoSource } from '@/features/project-creation/services/addedDemoSettings';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
@@ -109,19 +109,12 @@ async function followRename(
     );
 }
 
-/** GET the content index the reset would copy from; a demo with no site has nothing to lose. */
+/** Read the content index the reset would copy from; a demo with no site has nothing to lose. */
 async function indexReachable(
-    contentSource: { org: string; site: string; indexPath?: string } | undefined,
+    contentSource: { org: string; site: string; indexPath: string } | undefined,
     fetchImpl: typeof fetch,
     logger: Logger,
 ): Promise<boolean> {
     if (!contentSource) return true;
-    const url = `https://main--${contentSource.site}--${contentSource.org}.aem.live${contentSource.indexPath || '/full-index.json'}`;
-    try {
-        const response = await fetchImpl(url, { method: 'GET', signal: AbortSignal.timeout(TIMEOUTS.QUICK) });
-        return response.ok;
-    } catch (error) {
-        logger.debug(`[DemoSource] Could not read ${url}: ${(error as Error).message}`);
-        return false;
-    }
+    return (await resolveContentIndex(contentSource, fetchImpl, logger)).found;
 }

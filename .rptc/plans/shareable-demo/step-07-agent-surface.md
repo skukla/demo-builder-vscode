@@ -24,3 +24,91 @@ updated.
 
 `mcp-live-probe`: `serverInfo` names the build; the probe tool answers for the three real
 repos from step 03; `create_project` with a link creates the same project the wizard does.
+
+## Built (2026-09-12)
+
+**`probe_shared_demo`** — a read-descriptor row over the dialog's own handler
+(`probe-shared-demo` on the dashboard map). Takes owner+repo, or a `link` (a GitHub
+link or the demo's site address), which the handler now reads to a repository the
+way the dialog's field does. The row's `shape` answers the probe's result itself
+rather than the `{result}` wrapper the dialog reads; the response-size suite says
+plainly that it unwraps and does not shrink. `needsAuth: ['github']`, `readOnly`.
+
+**`add_shared_demo`** — in `addedDemoTools.ts` beside forget and change source
+(a direct registration: it composes the probe, the row and the add handler, which
+a descriptor row cannot). `keepCopy` defaults true as the dialog's box does; because
+that is a fork into the SC's account, the tool refuses without `confirm:true` exactly
+when a fork would be made, naming the repository and the account, and needs no
+confirm for `keepCopy:false`, the SC's own repository, or a fork that already exists.
+Answers the `added:owner/repo` id `create_project` takes. A shipped template's
+repository is answered with its package id instead of being added. No agent-alert
+entry: a fork is recoverable (forget with `deleteCopy`), the same reasoning that keeps
+`create_project` off that list. `readDemoRow` is the shared read-and-build step for
+add and change source; the B2B question the dialog asks is not asked, and the
+warnings say the unknown case reads as off.
+
+**`list_demo_packages`** — the remembered demos follow the shipped ones, each with
+`source: 'added'`, its `repository`, and the stacks of its kind; shipped rows carry
+`source: 'shipped'`.
+
+**`create_project`** — `package` may be an added demo's id, or `link` may stand in
+for it (probed and added first, the copy kept unless `keepCopy:false`).
+`createProjectPackage.ts` resolves what the creation builds on: for an added demo
+the package is derived from its row for the chosen stack, the stack must be one of
+its kind (the refusal names the demo's kind and its stacks), the derived package joins
+the catalog the creation reads, and the row rides both the storefront-setup payload
+and the wizard state exactly as the wizard sends them. `getAutoSelectedOptionalDependencies`
+takes an injected package list so a row that requires a mesh seeds the same dependency
+a shipped brand does. Unknown ids list the shipped and the added ids together.
+
+**Pins moved:** the read-descriptor catalog (one row), the create tool's schema
+(`link`, `keepCopy`, `package` optional at the schema level with the handler
+insisting on one of the two), sign-in totals (GitHub 12 → 14, 113 tools), narration,
+ceilings, two battery prompts (the probe as a read; add as tier 2), two mutation-ledger
+anchors, and the generated tool catalog.
+
+**Live check (2026-09-12, `mcp-live-probe` against a second VS Code window launched from
+this worktree, `feature/colleague-storefront@c7c1d9863+`, 113 tools).** The probe read all
+three real repositories from step 03 as expected: `skukla/kukla-bodea` → Edge Delivery,
+B2B on from `config.json`, codes `bodea · bodea_store · bodea_us`, owner is the viewer;
+`adobe-commerce/boilerplate-b2b-template` → shipped, `starter`;
+`skukla/citisignal-nextjs` → headless on `master`, B2B unknown. The same repository read
+from its site address gave the same answer; a bad link refuses in the field's words.
+`add_shared_demo` from the site address (own repository: no fork, no confirm) put
+`added:skukla/kukla-bodea` in `list_demo_packages` under the two Edge Delivery stacks;
+`forget_added_demo` refused without confirm naming the demo and a project count of zero,
+then forgot it, and the list was back to the three shipped packages.
+
+**Found and fixed by the live check:** without a GitHub session the probe answered
+"We couldn't find this repository, or you don't have access to it" for a repository that
+exists, and the dialog would have said "not a demo" to an SC who opens Add a demo before
+the Storefront step's sign-in. The probe handler now adopts the GitHub session VS Code
+already holds (`adoptExistingGitHubSession`, shared with the auth check, which had the
+same block inline) and, when there is none, refuses with `needsAuth: 'github'`; the
+dialog shows "Sign in to GitHub first" and what to do. Confirmed live after a rebuild
+and `reload_window`.
+
+**Found and fixed by the live check (2):** `kukla-bodea` publishes no `/full-index.json`
+while its home page is live and its pages are listed under `/sitemap.json`, the path the
+Bodea brand's catalog entry names. The probe and the copy step each spelled the default
+path themselves, so the probe said "no published pages" for a published site and a
+project created from it through Add a demo would have copied nothing. Decided with the
+owner (2026-09-12): **whoever names a content site names its index path.** The catalog
+states it for every brand (Starter and CitiSignal now say `/full-index.json` instead of
+relying on a default), the project row and the description file require it inside their
+content-site block (the file's block itself stays optional), and every reader (the copy
+step, the import path, the reset door) takes the stated path from `contentIndexUrl` in
+`contentIndex.ts`; no reader has a fallback branch any more. Only the Add a demo probe
+looks a path up, for a repository that names a site with no path, trying the shipped
+brands' paths in order and recording the answer on the row (the first path, with "pages
+not published", when nothing answers). The account-chrome source got its own site-only
+type and schema shape, since pages are copied from it by path, not from a list.
+Convention 113 in the handbook, enforced by `tests/sop/content-index-path.test.ts`: no
+other source file spells an index path, every catalog entry states one, both schemas
+require it, and the tried list covers every path the catalog names. Confirmed live before
+the tightening: the same site answers `indexPath: /sitemap.json`, 157 pages.
+
+**Not run:** `create_project` from a link, then `change_demo_source` and
+`reset_eds_project` on the result. They create a real GitHub repository and DA.live
+content, and the isolated window has no DA.live session (a token paste); waiting on the
+owner's go-ahead and the site names to use.

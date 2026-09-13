@@ -290,6 +290,16 @@ check says so and names the file.
 > this repository is public.
 > Enforced by `tests/sop/credential-sink-settings-scoped.test.ts`.
 
+> **Convention.** Whoever names a content site names its index path. The catalog, the
+> project row and a description file all state where a site lists its pages; every reader
+> (the copy step, the import path, the reset door) takes the stated path from `contentIndex.ts`
+> and none guesses one. Only the Add a demo probe looks a path up, for a repository that names
+> a site with no path, and it records what it found.
+> *Why:* the shipped brands publish their index under two different names. When readers each
+> spelled a default, a demo built from one brand read as "no published pages" in the probe while
+> the copy step knew better — found live, 2026-09-12.
+> Enforced by `tests/sop/content-index-path.test.ts`.
+
 ## 5. What survives between calls
 
 **Position.** Anything cached exists once per session, is built on first use, and can be
@@ -1477,11 +1487,11 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 25 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 50 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 51 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 112 conventions. 112 of them are enforced; 0 are not.**
+**This handbook states 113 conventions. 113 of them are enforced; 0 are not.**
 
 The last one to get there was "vendor CSS sits in the lowest cascade layer", and it was
 outstanding because it was **not yet true**: `@layer vendor` existed in no bundle, so a

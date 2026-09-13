@@ -125,7 +125,8 @@
           "templateRepo": "boilerplate-b2b-template",
           "contentSource": {
             "org": "adobe-commerce",
-            "site": "boilerplate-b2b"
+            "site": "boilerplate-b2b",
+            "indexPath": "/full-index.json"
           },
           "codePatches": [
             "header-nav-tools-defensive",
@@ -165,7 +166,8 @@
           "templateRepo": "boilerplate-b2b-template",
           "contentSource": {
             "org": "adobe-commerce",
-            "site": "boilerplate-b2b"
+            "site": "boilerplate-b2b",
+            "indexPath": "/full-index.json"
           },
           "codePatches": [
             "header-nav-tools-defensive",
@@ -249,7 +251,8 @@
           "templateRepo": "boilerplate-b2b-template",
           "contentSource": {
             "org": "demo-system-stores",
-            "site": "accs-citisignal"
+            "site": "accs-citisignal",
+            "indexPath": "/full-index.json"
           },
           "accountContentSource": {
             "org": "adobe-commerce",
@@ -306,7 +309,8 @@
           "templateRepo": "boilerplate-b2b-template",
           "contentSource": {
             "org": "demo-system-stores",
-            "site": "accs-citisignal"
+            "site": "accs-citisignal",
+            "indexPath": "/full-index.json"
           },
           "accountContentSource": {
             "org": "adobe-commerce",

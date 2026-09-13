@@ -189,7 +189,7 @@ describe('storefrontSummaryGroup', () => {
             value: 'Isle5 by Jen · Edge Delivery (no published pages yet: the site starts empty)',
             done: true,
         });
-        const withPages = { ...demo, contentSource: { org: 'jen', site: 'isle5-demo' } };
+        const withPages = { ...demo, contentSource: { org: 'jen', site: 'isle5-demo', indexPath: '/full-index.json' } };
         expect(storefrontSummaryGroup(state({ demo: withPages })).rows[0].value).toBe('Isle5 by Jen · Edge Delivery');
         expect(storefrontSummaryGroup(state({})).rows[0].label).not.toBe('Demo');
     });

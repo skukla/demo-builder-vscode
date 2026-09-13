@@ -28,8 +28,10 @@ import type { GitHubUser } from './webviewPayloads';
  * sender; the handler validates the charset.
  */
 export interface ProbeSharedDemoRequest {
-    owner: string;
-    repo: string;
+    owner?: string;
+    repo?: string;
+    /** A GitHub link or an Edge Delivery site address, read to owner/repo when those are absent. */
+    link?: string;
 }
 
 /** Which of the storefront kinds a repository holds, or that it holds none. */
@@ -233,7 +235,7 @@ export interface ProjectCreationConfig {
         contentSource?: {
             org: string;
             site: string;
-            indexPath?: string;
+            indexPath: string;
         };
         // Second content source for the account chrome (hybrid packages).
         accountContentSource?: {
@@ -394,7 +396,7 @@ export interface StorefrontSetupStartPayload {
         contentSource?: {
             org: string;
             site: string;
-            indexPath?: string;
+            indexPath: string;
         };
         // Second content source for the account chrome (hybrid packages).
         accountContentSource?: {

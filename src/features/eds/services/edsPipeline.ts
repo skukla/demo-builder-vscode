@@ -17,6 +17,7 @@
  * @module features/eds/services/edsPipeline
  */
 
+import { contentIndexUrl } from './contentIndex';
 import { failedTargets, publishBrandAssets } from './brandAssetPublisher';
 import { prewarmCatalog } from './catalogPrewarmService';
 import type { DaLiveContentOperations } from './daLive/daLiveContentOperations';
@@ -65,7 +66,7 @@ export interface EdsPipelineParams {
     /** Delete all existing DA.live content before populating (true = clean slate) */
     clearExistingContent?: boolean;
     skipContent?: boolean;
-    contentSource?: { org: string; site: string; indexPath?: string };
+    contentSource?: { org: string; site: string; indexPath: string };
     /** Optional second content source for the customer account chrome
      *  (`/customer/*` + the `/customer/nav` fragment), overlaid after the main
      *  copy. Used by hybrid packages (B2B base + brand overlay). */
@@ -334,7 +335,7 @@ async function pipelineClearContent(
  */
 async function pipelineCopyContent(
     daLiveContentOps: DaLiveContentOperations,
-    contentSource: { org: string; site: string; indexPath?: string },
+    contentSource: { org: string; site: string; indexPath: string },
     daLiveOrg: string,
     daLiveSite: string,
     contentPatches: string[] | undefined,
@@ -361,11 +362,10 @@ async function pipelineCopyContent(
         ];
     }
 
-    const indexPath = contentSource.indexPath || '/full-index.json';
     const fullContentSource = {
         org: contentSource.org,
         site: contentSource.site,
-        indexUrl: `https://main--${contentSource.site}--${contentSource.org}.aem.live${indexPath}`,
+        indexUrl: contentIndexUrl(contentSource),
     };
 
     logger.info(

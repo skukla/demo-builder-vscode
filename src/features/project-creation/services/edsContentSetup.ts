@@ -14,6 +14,7 @@
  * - configureDaLivePermissions / applyDaLiveOrgConfigSettings from edsHelpers
  */
 
+import { contentIndexUrl } from '@/features/eds/services/contentIndex';
 import * as vscode from 'vscode';
 import { parseGitHubUrl } from '@/core/utils/githubUrlParser';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -33,7 +34,7 @@ interface EdsContentConfig {
     contentSource: {
         org: string;
         site: string;
-        indexPath?: string;
+        indexPath: string;
     };
     /** Optional second content source for the customer account chrome
      *  (`/customer/*` + the `/customer/nav` fragment), overlaid after the main
@@ -177,7 +178,6 @@ export async function ensureEdsContent(
     onProgress?.('Setting up storefront content...', 'Copying content from template');
 
     const contentSource = config.contentSource;
-    const indexPath = contentSource.indexPath || '/full-index.json';
 
     // Aggregate per-page content-patch results so the final reportUnapplied call
     // can surface them in one warning toast (ADR-006 D1 — mirrors the create/reset
@@ -189,7 +189,7 @@ export async function ensureEdsContent(
         {
             org: contentSource.org,
             site: contentSource.site,
-            indexUrl: `https://main--${contentSource.site}--${contentSource.org}.aem.live${indexPath}`,
+            indexUrl: contentIndexUrl(contentSource),
         },
         config.daLiveOrg,
         config.daLiveSite,

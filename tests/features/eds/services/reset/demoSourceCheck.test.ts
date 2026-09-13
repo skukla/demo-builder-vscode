@@ -29,7 +29,7 @@ const REPO = { fullName: 'jen/isle5-demo', defaultBranch: 'main' };
 function project(overrides: Partial<Project> = {}): Project {
     const eds = edsStorefrontInstance();
     return createMockProject({
-        demo: makeAddedDemo({ contentSource: { org: 'jen', site: 'isle5-content' } }),
+        demo: makeAddedDemo({ contentSource: { org: 'jen', site: 'isle5-content', indexPath: '/full-index.json' } }),
         componentInstances: {
             [COMPONENT_IDS.EDS_STOREFRONT]: {
                 ...eds,
@@ -54,8 +54,8 @@ function repoOps(answer: Promise<unknown>): Pick<GitHubRepoOperations, 'getRepos
     >;
 }
 
-const okFetch = jest.fn(async () => ({ ok: true })) as unknown as typeof fetch;
-const goneFetch = jest.fn(async () => ({ ok: false })) as unknown as typeof fetch;
+const okFetch = jest.fn(async () => ({ ok: true, status: 200, json: async () => ({ data: [] }) })) as unknown as typeof fetch;
+const goneFetch = jest.fn(async () => ({ ok: false, status: 404 })) as unknown as typeof fetch;
 
 beforeEach(() => {
     jest.clearAllMocks();

@@ -68,21 +68,10 @@ export async function handleCheckGitHubAuth(
 
         // Check VS Code for existing GitHub session (without prompting)
         // This catches users who are already signed into GitHub in VS Code
-        const existingSession = await vscode.authentication.getSession(
-            'github',
-            [...GITHUB_SCOPES],
-            { createIfNone: false, silent: true },
-        );
+        const existingSession = await adoptExistingGitHubSession(tokenService);
 
         if (existingSession) {
             context.logger.debug('[EDS] Found existing VS Code GitHub session:', existingSession.account.label);
-
-            // Store the token for API operations
-            await tokenService.storeToken({
-                token: existingSession.accessToken,
-                tokenType: 'bearer',
-                scopes: [...GITHUB_SCOPES],
-            });
 
             // Get full user info by validating the new token
             const validation = await tokenService.validateToken();
@@ -213,6 +202,29 @@ export async function handleGitHubOAuth(
         } satisfies GitHubOAuthErrorPayload);
         return { success: false, error: errorMessage };
     }
+}
+
+/**
+ * Adopt the GitHub session VS Code already holds, without prompting: an SC
+ * signed into GitHub in VS Code has a session the extension can use, and
+ * this stores its token for the API operations. Undefined when there is none.
+ * Shared by the auth check and by the reads that run before the Storefront
+ * step's sign-in (the Add a demo probe).
+ */
+export async function adoptExistingGitHubSession(
+    tokenService: GitHubTokenService,
+): Promise<vscode.AuthenticationSession | undefined> {
+    const session = await vscode.authentication.getSession('github', [...GITHUB_SCOPES], {
+        createIfNone: false,
+        silent: true,
+    });
+    if (!session) return undefined;
+    await tokenService.storeToken({
+        token: session.accessToken,
+        tokenType: 'bearer',
+        scopes: [...GITHUB_SCOPES],
+    });
+    return session;
 }
 
 /**

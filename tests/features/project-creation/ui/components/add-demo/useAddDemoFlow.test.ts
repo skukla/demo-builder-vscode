@@ -71,6 +71,16 @@ describe('useAddDemoFlow', () => {
         expect(hook.result.current.canContinue).toBe(true);
     });
 
+    it('carries the sign-in handoff on a failed probe, so the stage can say what to do', async () => {
+        const { hook } = setup();
+        await walkToFound(hook, { success: false, error: 'Sign in to GitHub to read this demo.', needsAuth: 'github' });
+        expect(hook.result.current.probe).toEqual({
+            status: 'failed',
+            error: 'Sign in to GitHub to read this demo.',
+            needsAuth: true,
+        });
+    });
+
     it('turns a refused probe into a failed state the stage shows, with Continue disabled', async () => {
         const { hook } = setup();
         await walkToFound(hook, { success: false, error: 'owner and repo are required' });

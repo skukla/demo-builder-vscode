@@ -21,13 +21,13 @@
  * @module features/eds/services/storefront/sharedDemoProbe
  */
 
+import { resolveContentIndex, type ResolvedContentIndex, type UnresolvedContentSource } from '../contentIndex';
 import { parseFstabContentSource } from '../fstabGenerator';
 import type { GitHubFileOperations } from '../github/githubFileOperations';
 import type { GitHubRepoOperations } from '../github/githubRepoOperations';
 import { CANONICAL_STOREFRONT_FILES, classifyRepoForStorefront } from './repoStorefrontReadiness';
 import { parseStorefrontConfigJson } from './servedStorefrontConfig';
 import { readSharedDemoDescription } from '@/core/state/projectFileReader';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { bundledDemoPackages } from '@/features/components/services/storefrontResolver';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Logger } from '@/types/logger';
@@ -96,7 +96,7 @@ export async function probeSharedDemo(
 
     const read = new RepoReader(deps.fileOps, owner, repo, logger);
     const description = await read.description();
-    const base: SharedDemoRead = {
+    const base: ProbeDraft = {
         outcome: 'read',
         fullName: repository.fullName,
         defaultBranch: repository.defaultBranch,
@@ -113,7 +113,7 @@ export async function probeSharedDemo(
     if (readiness.kind === 'empty') {
         base.missing = [...CANONICAL_STOREFRONT_FILES];
         base.warnings.push('This repository is empty.');
-        return applyDescription(base, description.value);
+        return withoutSite(applyDescription(base, description.value));
     }
 
     const dependencies = await read.dependencies();
@@ -124,7 +124,7 @@ export async function probeSharedDemo(
         } else {
             base.missing = readiness.missing;
         }
-        return applyDescription(base, description.value);
+        return withoutSite(applyDescription(base, description.value));
     }
 
     base.kind = 'eds';
@@ -145,12 +145,7 @@ export async function probeSharedDemo(
         base.b2bSource = 'dependencies';
     }
     const withDescription = applyDescription(base, description.value);
-    withDescription.contentPublished = await probePublishedIndex(
-        withDescription.contentSource,
-        deps.fetchImpl ?? fetch,
-        logger,
-    );
-    return withDescription;
+    return withPublishedIndex(withDescription, deps.fetchImpl ?? fetch, logger);
 }
 
 /** D30: an exact owner/repo match against a shipped storefront's template; a fork is not a match. */
@@ -174,9 +169,18 @@ function recogniseShippedTemplate(
  * The description file's values win over what was read (D10), and the result
  * says which fields it replaced. Only fields both sides have are compared.
  */
-function applyDescription(read: SharedDemoRead, description: SharedDemoDescription | undefined): SharedDemoRead {
+/** The read while it is still being assembled: the site is known, its index path not yet. */
+type ProbeDraft = Omit<SharedDemoRead, 'contentSource'> & { contentSource?: UnresolvedContentSource };
+
+/** A read that never reached the site (not a storefront): it carries no content source. */
+function withoutSite(draft: ProbeDraft): SharedDemoRead {
+    const { contentSource: _unread, ...rest } = draft;
+    return rest;
+}
+
+function applyDescription(read: ProbeDraft, description: SharedDemoDescription | undefined): ProbeDraft {
     if (!description) return read;
-    const next: SharedDemoRead = { ...read };
+    const next: ProbeDraft = { ...read };
     if (description.contentSource) {
         if (next.contentSource) next.overrides.push('contentSource');
         next.contentSource = description.contentSource;
@@ -210,27 +214,27 @@ function storeCodesFromDefaults(
     return Object.values(codes).some(Boolean) ? codes : undefined;
 }
 
-/** GET the content site's index (the URL `edsPipeline` copies from). Absent or failing → not found, never a throw. */
-async function probePublishedIndex(
-    contentSource: SharedDemoRead['contentSource'],
-    fetchImpl: typeof fetch,
-    logger: Logger,
-): Promise<SharedDemoRead['contentPublished']> {
-    if (!contentSource) return { indexFound: false };
-    const indexPath = contentSource.indexPath || '/full-index.json';
-    const url = `https://main--${contentSource.site}--${contentSource.org}.aem.live${indexPath}`;
-    try {
-        const response = await fetchImpl(url, { method: 'GET', signal: AbortSignal.timeout(TIMEOUTS.QUICK) });
-        if (!response.ok) {
-            logger.debug(`[SharedDemo] ${url} returned HTTP ${response.status}`);
-            return { indexFound: false };
-        }
-        const body = (await response.json()) as { data?: unknown[] };
-        return { indexFound: true, pageCount: Array.isArray(body.data) ? body.data.length : 0 };
-    } catch (error) {
-        logger.debug(`[SharedDemo] Could not read ${url}: ${(error as Error).message}`);
-        return { indexFound: false };
-    }
+/**
+ * Read the content site's index (the URL the copy step reads from). A repository
+ * names its site but not its index path, so the paths the shipped brands use are
+ * tried in order and the answer is recorded on the row: from here on every
+ * reader has a stated path and none guesses. A path a description file states is
+ * read as stated. Absent or failing → not found, never a throw.
+ */
+async function withPublishedIndex(read: ProbeDraft, fetchImpl: typeof fetch, logger: Logger): Promise<SharedDemoRead> {
+    if (!read.contentSource) return { ...read, contentSource: undefined, contentPublished: { indexFound: false } };
+    const index = await resolveContentIndex(read.contentSource, fetchImpl, logger);
+    return {
+        ...read,
+        contentSource: { org: read.contentSource.org, site: read.contentSource.site, indexPath: index.indexPath },
+        contentPublished: publishedFrom(index),
+    };
+}
+
+/** The row's "pages" answer from a resolved index. */
+function publishedFrom(index: ResolvedContentIndex): SharedDemoRead['contentPublished'] {
+    if (!index.found) return { indexFound: false };
+    return { indexFound: true, pageCount: index.pageCount ?? 0 };
 }
 
 /** The four files an EDS probe reads, each absent-tolerant. */

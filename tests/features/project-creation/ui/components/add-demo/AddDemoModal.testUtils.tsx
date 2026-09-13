@@ -29,7 +29,7 @@ export const READ: SharedDemoRead = {
     defaultBranch: 'main',
     isTemplate: false,
     kind: 'eds',
-    contentSource: { org: 'jen', site: 'isle5-demo' },
+    contentSource: { org: 'jen', site: 'isle5-demo', indexPath: '/full-index.json' },
     contentPublished: { indexFound: true, pageCount: 12 },
     storeCodes: { websiteCode: 'isle5', storeCode: 'isle5_store', storeViewCode: 'isle5_us' },
     b2b: 'on',

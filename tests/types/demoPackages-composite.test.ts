@@ -55,6 +55,7 @@ describe('DemoPackage type (nested storefronts structure)', () => {
                     contentSource: {
                         org: 'test-org',
                         site: 'test-site',
+                        indexPath: '/full-index.json',
                     },
                 },
             },

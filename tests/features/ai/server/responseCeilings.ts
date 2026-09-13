@@ -119,6 +119,14 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
     list_github_repos: { bytes: 6_000, why: 'paged at 30; 2,835 live across 173 repos' },
     list_dalive_sites: { bytes: 8_000, why: 'paged summary; 204 live' },
     delete_github_repo: { bytes: 1_000, why: 'delete outcome or refusal' },
+    probe_shared_demo: {
+        bytes: 4_000,
+        why: 'one read: the kind, codes, pages, B2B posture, the description file when present, and its warnings',
+    },
+    add_shared_demo: {
+        bytes: 1_500,
+        why: 'the id, name, source and kind of the remembered row plus the probe warnings, or the fork refusal',
+    },
     forget_added_demo: {
         bytes: 1_000,
         why: 'the demo name, its source, a project count and the outcome, or the confirm refusal naming the same',

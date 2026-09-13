@@ -101,7 +101,7 @@ describe('executeEdsPipeline - operations', () => {
         });
 
         it('should copy content when source is provided', async () => {
-            const contentSource = { org: 'src-org', site: 'src-site' };
+            const contentSource = { org: 'src-org', site: 'src-site', indexPath: '/full-index.json' };
             const result = await executeEdsPipeline(
                 { ...baseParams, contentSource },
                 services,
@@ -151,7 +151,7 @@ describe('executeEdsPipeline - operations', () => {
         });
 
         it('should pass content patches to copy operation', async () => {
-            const contentSource = { org: 'src-org', site: 'src-site' };
+            const contentSource = { org: 'src-org', site: 'src-site', indexPath: '/full-index.json' };
             const contentPatches = ['patch-1', 'patch-2'];
             const contentPatchSource = { owner: 'patch-owner', repo: 'patch-repo', path: '/patches' };
 
@@ -191,7 +191,7 @@ describe('executeEdsPipeline - operations', () => {
             });
 
             const result = await executeEdsPipeline(
-                { ...baseParams, contentSource: { org: 'o', site: 's' } },
+                { ...baseParams, contentSource: { org: 'o', site: 's', indexPath: '/full-index.json' } },
                 services,
             );
 
@@ -452,7 +452,7 @@ describe('executeEdsPipeline - operations', () => {
 
         it('should publish content when content was copied', async () => {
             await executeEdsPipeline(
-                { ...baseParams, contentSource: { org: 'o', site: 's' } },
+                { ...baseParams, contentSource: { org: 'o', site: 's', indexPath: '/full-index.json' } },
                 services,
             );
 
@@ -520,7 +520,7 @@ describe('executeEdsPipeline - operations', () => {
             // When/Then: Pipeline should re-throw DaLiveAuthError, not return { success: false }
             await expect(
                 executeEdsPipeline(
-                    { ...baseParams, contentSource: { org: 'src', site: 'src' } },
+                    { ...baseParams, contentSource: { org: 'src', site: 'src', indexPath: '/full-index.json' } },
                     services,
                 ),
             ).rejects.toThrow(DaLiveAuthError);
@@ -534,7 +534,7 @@ describe('executeEdsPipeline - operations', () => {
 
             // When: Pipeline runs
             const result = await executeEdsPipeline(
-                { ...baseParams, contentSource: { org: 'src', site: 'src' } },
+                { ...baseParams, contentSource: { org: 'src', site: 'src', indexPath: '/full-index.json' } },
                 services,
             );
 

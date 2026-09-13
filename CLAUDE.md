@@ -178,7 +178,7 @@ red, and so is a registry entry for something deleted.
 | Cadence | What runs | Who triggers it |
 |---|---|---|
 | per-tool-call | 25 hook rules in `.claude/hooks/rules/` | automatic |
-| per-jest-run | 50 enforcer suites in `tests/sop/` | automatic |
+| per-jest-run | 51 enforcer suites in `tests/sop/` | automatic |
 | per-push | lint, both typecheckers, 2 validators | CI |
 | per-push (local) | the CSS baseline check — `.githooks/pre-push` only, never CI | the git hook |
 | periodic | 15 scripted checks + 10 guided reviews | **`npm run sweep`** |
@@ -250,7 +250,7 @@ without producing a signal.
 ## The conventions live in one place
 
 **[docs/development/handbook.md](docs/development/handbook.md)** states every convention
-this codebase holds itself to — 112 of them, 112 with an enforcer that fails the build — and
+this codebase holds itself to — 113 of them, 113 with an enforcer that fails the build — and
 explains each one for a human reader. Read it once, start to finish.
 
 Some rules appear both there and here, deliberately: this file is loaded into every agent

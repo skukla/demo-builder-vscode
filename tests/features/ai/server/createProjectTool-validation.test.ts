@@ -37,7 +37,7 @@ describe('create_project — argument guards', () => {
     it('refuses a call with no arguments at all', async () => {
         const res = await toolServer().call(undefined);
 
-        expect(res.error).toMatch(/projectName, package, and stack are all required/);
+        expect(res.error).toMatch(/projectName, package \(or link\), and stack are all required/);
         expect(getSelectablePackages).not.toHaveBeenCalled();
         expect(executeProjectCreation).not.toHaveBeenCalled();
     });
@@ -49,7 +49,7 @@ describe('create_project — argument guards', () => {
         async (field) => {
             const res = await toolServer().call({ ...HEADLESS, [field]: undefined });
 
-            expect(res.error).toMatch(/projectName, package, and stack are all required/);
+            expect(res.error).toMatch(/projectName, package \(or link\), and stack are all required/);
             expect(executeProjectCreation).not.toHaveBeenCalled();
         },
     );
@@ -135,7 +135,7 @@ describe('create_project — registered schema', () => {
         expect(def().description.length).toBeGreaterThan(0);
     });
 
-    it('accepts the three required ids, the four EDS options, and confirm', () => {
+    it('accepts the ids (package or link), the four EDS options, keepCopy and confirm', () => {
         const schema = schemaOf(def());
 
         expect(Object.keys(schema.shape).sort()).toEqual([
@@ -143,6 +143,8 @@ describe('create_project — registered schema', () => {
             'confirm',
             'daLiveOrg',
             'daLiveSite',
+            'keepCopy',
+            'link',
             'package',
             'projectName',
             'repoName',
@@ -156,6 +158,9 @@ describe('create_project — registered schema', () => {
         // The EDS fields are optional at the schema level and enforced by the
         // handler, which is the only place that knows the stack is an EDS one.
         expect(schema.safeParse({ projectName: 'p', package: 'k' }).success).toBe(false);
+        // `package` is optional at the schema level because `link` can stand in;
+        // the handler is what insists on one of the two.
+        expect(schema.safeParse({ projectName: 'p', link: 'https://github.com/jen/demo', stack: 's' }).success).toBe(true);
         expect(schema.safeParse({ projectName: 1, package: 'k', stack: 's' }).success).toBe(false);
         expect(
             schema.safeParse({ projectName: 'p', package: 'k', stack: 's', confirm: 'yes' }).success,

@@ -51,6 +51,8 @@ export const COPY = {
     looking: 'Reading the demo…',
     lookingFor: 'Checking what kind of storefront it is, its store codes, and whether its pages are published.',
     notADemo: "This doesn't look like a demo we can build on",
+    signInFirst: 'Sign in to GitHub first',
+    signInHow: 'Reading a demo needs your GitHub sign-in. Sign in to GitHub in VS Code (Accounts, bottom left), then Continue again.',
     found: 'What we found in this demo',
     nameLabel: 'Name',
     b2bSwitch: 'Uses company (B2B) features',

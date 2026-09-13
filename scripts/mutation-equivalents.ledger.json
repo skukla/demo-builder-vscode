@@ -4949,7 +4949,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 128,
+            "line": 129,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is one logger.debug call. Emptying it still swallows the probe failure and still returns false, so the copy runs anyway \u2014 pinned by 'copies content anyway when the probe itself fails'. Only the debug line differs. Re-anchored 2026-09-10 (142 -> 128): the probe moved into contentExistsInDaLive when ensureEdsContent was decomposed. Same code, new line.",
@@ -6237,7 +6237,7 @@
             "anchors": [
                 "if (!result.success) {"
             ],
-            "line": 199,
+            "line": 200,
             "mutants": 4,
             "category": "branch",
             "reason": "publishBrandAssets never throws \u2014 fetch and write failures come back as a partly-successful result \u2014 and this guard's whole body is a logger.warn naming the targets that did not land. Nothing downstream reads result: the pipeline proceeds to the next step either way, deliberately, because an incomplete brand set degrades to an unbranded storefront rather than a failed run (proceed-and-warn, ADR-006 D1). Forcing the guard either way, or emptying it, changes only whether that warn prints.",
@@ -10868,7 +10868,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 145,
+            "line": 144,
             "mutants": 1,
             "category": "block",
             "reason": "Stryker empties the catch, so a throwing validateToken leaves githubOk unassigned instead of false. Both readings are falsy at the 'if (!githubOk)' below, so the tool returns the same needsAuth:'github' handoff and calls the same collaborators either way. The only difference is the variable's binding, which nothing observes; a test asserting it would have to reach inside the function.",
@@ -10881,7 +10881,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 158,
+            "line": 157,
             "mutants": 1,
             "category": "block",
             "reason": "Stryker empties the catch, so a throwing isAuthenticated leaves daLiveOk unassigned instead of false. Both readings are falsy at the 'if (!daLiveOk)' below, so the tool returns the same needsAuth:'dalive' handoff and calls the same collaborators either way. The only difference is the variable's binding, which nothing observes; a test asserting it would have to reach inside the function.",
@@ -16979,7 +16979,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 100,
+            "line": 101,
             "mutants": 1,
             "category": "block",
             "reason": "REPLACES the block-library-publish catch entry removed 2026-09-10. Five identical per-step try/catch blocks became one `nonFatal` helper, so there is ONE equivalent mutant here where there were five. Emptying this catch still swallows the failure and still returns normally \u2014 every caller is declared non-fatal \u2014 so only the warn line differs.",

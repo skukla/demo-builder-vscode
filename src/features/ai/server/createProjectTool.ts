@@ -30,6 +30,7 @@ import * as path from 'path';
 import { z } from 'zod';
 import { getAdobeTarget, runWithAdobeTarget } from './adobeTargetStore';
 import { isOrgMismatchError, orgMismatchResult } from './adobeTools';
+import { resolvePackage } from './createProjectPackage';
 import { asText } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
 import {
@@ -42,10 +43,7 @@ import { dispatchHandler } from '@/core/handlers/dispatchHandler';
 import { resolveProjectsRoot } from '@/core/utils/projectsRoot';
 import {
     getAutoSelectedOptionalDependencies,
-    getAvailableStacksForPackage,
     getResolvedMeshRequirement,
-    getStorefrontForStack,
-    getSelectablePackages,
 } from '@/features/components/services/demoPackageLoader';
 import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
@@ -56,6 +54,7 @@ import {
 } from '@/features/project-creation/ui/wizard/wizardHelpers';
 import type { DemoPackage, Storefront } from '@/types/demoPackages';
 import type { HandlerContext } from '@/types/handlers';
+import type { AddedDemo } from '@/types/projectFile';
 import type { WizardState } from '@/types/webview';
 
 /** Project a possibly-undefined org down to the lean `{ id, name }` surfaced on a mismatch. */
@@ -169,12 +168,15 @@ async function edsAuthHandoff(ctx: HandlerContext): Promise<Record<string, unkno
 }
 
 /** Headless (non-EDS) creation path. */
-async function createHeadless(
-    ctx: HandlerContext,
-    args: { projectName: string; pkgId: string; stackId: string },
-    pkg: DemoPackage,
-    packages: DemoPackage[],
-) {
+/** What the two creation paths share: the ids, and the row when the package is an added demo (D2). */
+interface CreateArgs {
+    projectName: string;
+    pkgId: string;
+    stackId: string;
+    demo?: AddedDemo;
+}
+
+async function createHeadless(ctx: HandlerContext, args: CreateArgs, pkg: DemoPackage, packages: DemoPackage[]) {
     let adobe:
         | {
               org: WizardState['adobeOrg'];
@@ -197,7 +199,9 @@ async function createHeadless(
         selectedAppBuilderComponents: await getAutoSelectedOptionalDependencies(
             args.pkgId,
             args.stackId,
+            packages,
         ),
+        demo: args.demo,
         adobeOrg: adobe?.org,
         adobeProject: adobe?.project,
         adobeWorkspace: adobe?.workspace,
@@ -227,10 +231,7 @@ async function createHeadless(
 /** EDS creation path: provision the storefront (captured), then create the project. */
 async function createEds(
     ctx: HandlerContext,
-    args: {
-        projectName: string;
-        pkgId: string;
-        stackId: string;
+    args: CreateArgs & {
         repoName?: string;
         daLiveOrg?: string;
         daLiveSite?: string;
@@ -288,7 +289,7 @@ async function createEds(
     // wizard's orchestration; progress is captured into `events`. Run under the
     // stored session org context so any `aio` work (mesh) targets the selected
     // org/workspace via env (no global mutation).
-    const setupDeps = await getAutoSelectedOptionalDependencies(args.pkgId, args.stackId);
+    const setupDeps = await getAutoSelectedOptionalDependencies(args.pkgId, args.stackId, packages);
     const setupRes = await runWithAdobeTarget(() =>
         dispatchHandler(edsHandlers, capturing, 'storefront-setup-start', {
             projectName: args.projectName,
@@ -297,6 +298,9 @@ async function createEds(
             // …) requires BOTH the package and the stack id.
             selectedStack: args.stackId,
             dependencies: setupDeps,
+            // The row rides too: the phases read it for the repo branch, the
+            // pages and the dry check, exactly as the wizard sends it.
+            demo: args.demo,
             edsConfig: edsConfigInput,
         }),
     );
@@ -321,7 +325,9 @@ async function createEds(
         selectedAppBuilderComponents: await getAutoSelectedOptionalDependencies(
             args.pkgId,
             args.stackId,
+            packages,
         ),
+        demo: args.demo,
         adobeOrg: adobe?.org,
         adobeProject: adobe?.project,
         adobeWorkspace: adobe?.workspace,
@@ -376,10 +382,21 @@ export function registerCreateProjectTool(server: McpToolServer, ctxFactory: () 
             annotations: { readOnlyHint: false, destructiveHint: false },
             title: 'Create Project',
             description:
-                'Create a new Demo Builder project headlessly from a package + stack. EDS stacks also provision a GitHub repo + DA.live content. Requires confirm:true',
+                "Create a new Demo Builder project headlessly from a package + stack. The package is a shipped brand id, an added demo's id (added:owner/repo, from list_demo_packages), or a colleague's demo given as link (probed and added first). EDS stacks also provision a GitHub repo + DA.live content. Requires confirm:true",
             inputSchema: {
                 projectName: z.string().describe('Name for the new project'),
-                package: z.string().describe('Demo package / brand id (from list_demo_packages)'),
+                package: z
+                    .string()
+                    .optional()
+                    .describe('Demo package / brand id, or an added demo id (from list_demo_packages). Omit when passing link.'),
+                link: z
+                    .string()
+                    .optional()
+                    .describe("A colleague's demo: a GitHub link or its site address. Added to your list first, then built on. Omit when passing package."),
+                keepCopy: z
+                    .boolean()
+                    .optional()
+                    .describe('With link: fork the demo into your own GitHub account first (default true)'),
                 stack: z.string().describe('Architecture stack id (from list_stacks)'),
                 repoName: z
                     .string()
@@ -402,10 +419,11 @@ export function registerCreateProjectTool(server: McpToolServer, ctxFactory: () 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         async (args: any) => {
             const projectName = String(args?.projectName ?? '').trim();
+            const link = args?.link ? String(args.link) : undefined;
             const pkgId = String(args?.package ?? '');
             const stackId = String(args?.stack ?? '');
-            if (!projectName || !pkgId || !stackId) {
-                return asText({ error: 'projectName, package, and stack are all required.' });
+            if (!projectName || (!pkgId && !link) || !stackId) {
+                return asText({ error: 'projectName, package (or link), and stack are all required.' });
             }
             if (args?.confirm !== true) {
                 return asText({
@@ -413,27 +431,20 @@ export function registerCreateProjectTool(server: McpToolServer, ctxFactory: () 
                 });
             }
 
-            const packages = await getSelectablePackages();
-            const pkg = packages.find((p) => p.id === pkgId);
-            if (!pkg) {
-                return asText({
-                    error: `Unknown package: ${pkgId}`,
-                    validPackages: packages.map((p) => p.id),
-                });
-            }
-            const storefront = await getStorefrontForStack(pkgId, stackId);
-            if (!storefront) {
-                return asText({
-                    error: `Package "${pkgId}" has no "${stackId}" storefront.`,
-                    validStacksForPackage: await getAvailableStacksForPackage(pkgId),
-                });
-            }
-
             const ctx = ctxFactory();
-            const baseArgs = {
-                projectName,
+            const resolved = await resolvePackage(ctx, {
                 pkgId,
                 stackId,
+                link,
+                keepCopy: args?.keepCopy,
+            });
+            if ('error' in resolved) return asText(resolved.error);
+            const { pkg, storefront, packages, demo } = resolved;
+            const baseArgs = {
+                projectName,
+                pkgId: pkg.id,
+                stackId,
+                demo,
                 repoName: args.repoName ? String(args.repoName) : undefined,
                 daLiveOrg: args.daLiveOrg ? String(args.daLiveOrg) : undefined,
                 daLiveSite: args.daLiveSite ? String(args.daLiveSite) : undefined,

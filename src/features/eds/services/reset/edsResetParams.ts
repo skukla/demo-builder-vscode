@@ -43,7 +43,7 @@ export interface EdsResetParams {
     contentSource?: {
         org: string;
         site: string;
-        indexPath?: string;
+        indexPath: string;
     };
     /** Optional second content source for the customer account chrome (hybrid
      *  packages: B2B base + brand overlay). Overlaid after the main copy. */

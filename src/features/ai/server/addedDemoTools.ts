@@ -1,6 +1,10 @@
 /**
- * The agent's doors for a demo added from a colleague's link (step 06, D15):
+ * The agent's doors for a demo added from a colleague's link (steps 06–07, D15):
  *
+ * - `add_shared_demo` — the dialog's "Add demo" without the dialog: read the
+ *   repository, build the same row, keep a copy when asked (a fork into the
+ *   SC's own account, so a real cloud write: gated by `confirm:true` exactly
+ *   when it would fork), remember it.
  * - `forget_added_demo` — take a demo off the Add a demo list, and with
  *   `deleteCopy` also delete the SC's own copy of its code. The human door
  *   confirms in two modals; here the gate is `confirm:true`, and the refusal
@@ -19,6 +23,8 @@ import { z } from 'zod';
 import { requireGitHub } from './edsToolGuards';
 import { asText } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
+import { addedDemoId } from '@/features/components/services/storefrontResolver';
+import { handleAddSharedDemo } from '@/features/eds/handlers/addSharedDemoHandler';
 import { handleChangeDemoSource } from '@/features/eds/handlers/changeDemoSourceHandler';
 import {
     countProjectsBuiltOn,
@@ -30,11 +36,68 @@ import { handleProbeSharedDemo } from '@/features/eds/handlers/probeSharedDemoHa
 import { addedDemoKey, readAddedDemos } from '@/features/project-creation/services/addedDemoSettings';
 import { buildAddedDemo, INITIAL_DRAFT } from '@/features/project-creation/ui/components/add-demo/addDemoFlow';
 import type { HandlerContext } from '@/types/handlers';
+import type { AddedDemo } from '@/types/projectFile';
+import type { SharedDemoRead } from '@/types/webviewRequests';
 
 const SOURCE_SHAPE = {
     owner: z.string().describe('GitHub owner of the demo repository'),
     repo: z.string().describe('GitHub repository name of the demo'),
 };
+
+/** Where a demo is: owner+repo, or a link the probe reads to them. */
+const LINK_SHAPE = {
+    owner: z.string().optional().describe('GitHub owner of the demo repository'),
+    repo: z.string().optional().describe('GitHub repository name of the demo'),
+    link: z
+        .string()
+        .optional()
+        .describe('Instead of owner+repo: a GitHub link, or the demo site address (main--repo--owner.aem.live)'),
+    name: z.string().optional().describe('A name for the demo; defaults to what the repository says'),
+};
+
+type LinkArgs = { owner?: string; repo?: string; link?: string; name?: string };
+
+/**
+ * Read the repository the way the dialog does and build the row it would
+ * commit; the B2B question the dialog asks is not asked here (unknown reads
+ * as off, and the warnings say so). Shared by add and change.
+ */
+export async function readDemoRow(
+    ctx: HandlerContext,
+    args: LinkArgs,
+): Promise<{ demo: AddedDemo; read: SharedDemoRead; warnings: string[] } | { error: Record<string, unknown> }> {
+    const probe = await handleProbeSharedDemo(ctx, { owner: args.owner, repo: args.repo, link: args.link });
+    if (!probe.success || !probe.result) {
+        return { error: { error: probe.error ?? 'The repository could not be read.' } };
+    }
+    const read = probe.result;
+    if (read.outcome === 'shipped') {
+        return {
+            error: {
+                error: `This is the repository behind a demo we ship (${read.shippedPackageId}); use that package id with create_project instead.`,
+                shippedPackageId: read.shippedPackageId,
+            },
+        };
+    }
+    if (read.outcome === 'unreadable') return { error: { error: read.reason } };
+    if (read.kind === 'not-a-storefront') {
+        return {
+            error: {
+                error: 'This repository is not a storefront we can build on.',
+                ...(read.missing?.length ? { missing: read.missing } : {}),
+                warnings: read.warnings,
+            },
+        };
+    }
+    const demo = buildAddedDemo(read, { ...INITIAL_DRAFT, name: args.name ?? '' });
+    const warnings = [
+        ...read.warnings,
+        ...(read.b2b === 'unknown'
+            ? ['Whether this demo uses company (B2B) features could not be read; it is treated as off.']
+            : []),
+    ];
+    return { demo, read, warnings };
+}
 
 /**
  * Register the added-demo tools on `server`.
@@ -43,6 +106,63 @@ const SOURCE_SHAPE = {
  * @param ctxFactory Builds a headless HandlerContext for each invocation
  */
 export function registerAddedDemoTools(server: McpToolServer, ctxFactory: () => HandlerContext): void {
+    server.registerTool(
+        'add_shared_demo',
+        {
+            needsAuth: ['github'],
+            annotations: { readOnlyHint: false, destructiveHint: false },
+            description:
+                "Add a colleague's demo (or one of your own) to the Add a demo list from its GitHub link or site address, so create_project can build on it. keepCopy (default true) forks the repository into your own GitHub account first, so the demo keeps working if the original changes; that fork needs confirm:true. Use probe_shared_demo first to see what the demo is.",
+            inputSchema: {
+                ...LINK_SHAPE,
+                keepCopy: z
+                    .boolean()
+                    .optional()
+                    .describe('Fork the repository into your own account and read from the fork (default true; skipped for your own repository)'),
+                confirm: z.boolean().optional().describe('Must be true when a fork will be made'),
+            },
+        },
+        async (args: LinkArgs & { keepCopy?: boolean; confirm?: boolean }) => {
+            const ctx = ctxFactory();
+            const github = await requireGitHub(ctx);
+            if (github) return asText(github);
+
+            const row = await readDemoRow(ctx, args);
+            if ('error' in row) return asText(row.error);
+            const { demo, read, warnings } = row;
+            const keepCopy = (args.keepCopy ?? true) && !read.viewer?.ownsRepo && !read.viewer?.existingFork;
+            if (keepCopy && args.confirm !== true) {
+                const account = read.viewer?.login ? `your GitHub account (${read.viewer.login})` : 'your GitHub account';
+                return asText({
+                    error:
+                        `add_shared_demo would fork ${read.fullName} into ${account} and read from the fork. ` +
+                        'Call again with confirm:true to make the fork, or keepCopy:false to add the demo without one.',
+                    demo: demo.name,
+                    source: demo.source,
+                    wouldFork: read.fullName,
+                });
+            }
+            // An existing fork is the copy already (the dialog says so); the add
+            // handler reads from it by asking for a fork, which GitHub answers with
+            // the one that exists.
+            const added = await handleAddSharedDemo(ctx, {
+                demo,
+                keepCopy: (args.keepCopy ?? true) && !read.viewer?.ownsRepo,
+            });
+            if (!added.success || !added.result) return asText({ error: added.error });
+            return asText({
+                added: true,
+                id: addedDemoId(added.result.demo),
+                demo: added.result.demo.name,
+                source: added.result.demo.source,
+                storefrontKind: added.result.demo.storefrontKind,
+                ...(added.result.forkedTo ? { forkedTo: added.result.forkedTo } : {}),
+                warnings,
+                hint: 'create_project takes the id above as its package; list_demo_packages lists it beside the shipped ones.',
+            });
+        },
+    );
+
     server.registerTool(
         'forget_added_demo',
         {
@@ -64,7 +184,7 @@ export function registerAddedDemoTools(server: McpToolServer, ctxFactory: () => 
             const source = { owner: args.owner, repo: args.repo };
             const demo = readAddedDemos().find((row) => addedDemoKey(row) === addedDemoKey({ source }));
             if (!demo) {
-                return asText({ error: `No added demo at ${args.owner}/${args.repo}. list_added_demos shows what is remembered.` });
+                return asText({ error: `No added demo at ${args.owner}/${args.repo}. list_demo_packages shows what is remembered.` });
             }
             const github = await requireGitHub(ctx);
             if (github) return asText(github);
@@ -103,32 +223,19 @@ export function registerAddedDemoTools(server: McpToolServer, ctxFactory: () => 
             description:
                 "Point the open project (built on an added demo) at another copy of that demo: a colleague's repository or your own fork. Same storefront kind only. Rewrites where reset and updates read from; the project's code and pages stay as they are. Pointing back undoes it.",
             inputSchema: {
-                ...SOURCE_SHAPE,
+                ...LINK_SHAPE,
                 keepCopy: z.boolean().optional().describe('Fork the repository into your own account first and read from the fork'),
                 updateRemembered: z.boolean().optional().describe('Also move the remembered demo on the Add a demo list to the new source'),
-                name: z.string().optional().describe('A name for the demo; defaults to what the repository says'),
             },
         },
-        async (args: { owner: string; repo: string; keepCopy?: boolean; updateRemembered?: boolean; name?: string }) => {
+        async (args: LinkArgs & { keepCopy?: boolean; updateRemembered?: boolean }) => {
             const ctx = ctxFactory();
             const github = await requireGitHub(ctx);
             if (github) return asText(github);
 
-            const probe = await handleProbeSharedDemo(ctx, { owner: args.owner, repo: args.repo });
-            if (!probe.success || !probe.result) return asText({ error: probe.error ?? 'The repository could not be read.' });
-            const read = probe.result;
-            if (read.outcome === 'shipped') {
-                return asText({ error: "A project can't be pointed at a demo we ship. Use the demo's own repository." });
-            }
-            if (read.outcome === 'unreadable') return asText({ error: read.reason });
-            if (read.kind === 'not-a-storefront') {
-                return asText({
-                    error: 'This repository is not a storefront we can build on.',
-                    ...(read.missing?.length ? { missing: read.missing } : {}),
-                    warnings: read.warnings,
-                });
-            }
-            const demo = buildAddedDemo(read, { ...INITIAL_DRAFT, name: args.name ?? '' });
+            const row = await readDemoRow(ctx, args);
+            if ('error' in row) return asText(row.error);
+            const { demo, read, warnings } = row;
             const changed = await handleChangeDemoSource(ctx, {
                 demo,
                 keepCopy: Boolean(args.keepCopy) && !read.viewer?.ownsRepo,
@@ -141,13 +248,7 @@ export function registerAddedDemoTools(server: McpToolServer, ctxFactory: () => 
                 source: changed.result.demo.source,
                 previous: changed.result.previous,
                 ...(changed.result.forkedTo ? { forkedTo: changed.result.forkedTo } : {}),
-                // The B2B answer is not asked here: 'unknown' reads as off, which the warnings say.
-                warnings: [
-                    ...read.warnings,
-                    ...(read.b2b === 'unknown'
-                        ? ['Whether this demo uses company (B2B) features could not be read; it is treated as off.']
-                        : []),
-                ],
+                warnings,
             });
         },
     );

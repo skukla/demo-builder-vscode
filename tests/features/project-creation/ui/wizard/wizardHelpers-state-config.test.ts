@@ -384,6 +384,7 @@ describe('wizardHelpers - state & config', () => {
                     contentSource: {
                         org: 'content-org',
                         site: 'content-site',
+                        indexPath: '/full-index.json',
                     },
                 },
             };
@@ -417,6 +418,7 @@ describe('wizardHelpers - state & config', () => {
             expect(config.edsConfig?.contentSource).toEqual({
                 org: 'content-org',
                 site: 'content-site',
+                indexPath: '/full-index.json',
             });
         });
 

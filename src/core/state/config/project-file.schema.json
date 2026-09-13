@@ -341,14 +341,14 @@
         },
         "indexPath": {
           "type": "string",
-          "description": "Optional custom path to content index (defaults to /full-index.json)"
+          "description": "Where the site lists its pages. Required: whoever names a content site names its index path (the catalog, the project row, a description file); only the Add a demo probe looks one up, for a repository that names no site of its own, and records what it found. `contentIndex.ts` builds the URL every reader uses."
         }
       },
       "required": [
         "org",
-        "site"
-      ],
-      "description": "DaLiveContentSource - DA.live content source configuration\n\nUsed by EDS storefronts to specify the source of demo content. This is explicit configuration, NOT derived from the GitHub template URL."
+        "site",
+        "indexPath"
+      ]
     },
     "StorefrontKind": {
       "type": "string",
