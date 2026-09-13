@@ -249,6 +249,17 @@ describe('probeSharedDemo', () => {
         expect(result).toEqual({ outcome: 'unreadable', reason: expect.stringMatching(/couldn't find/) });
     });
 
+    it('names both halves when the site answers but the repository does not', async () => {
+        const d = deps({ files: {}, index: { ok: true } });
+        const result = await probeSharedDemo(d, 'sayurihanki', 'razer', logger);
+
+        expect(result).toEqual({
+            outcome: 'unreadable',
+            reason: "The site main--razer--sayurihanki.aem.live is up, but its repository sayurihanki/razer couldn't be found, or you don't have access to it. Ask its owner to make it public or give you access.",
+        });
+        expect(d.fetchImpl).toHaveBeenCalledWith('https://main--razer--sayurihanki.aem.live/', expect.objectContaining({ method: 'HEAD' }));
+    });
+
     it('is unreadable when a canonical file cannot be read, rather than guessing', async () => {
         const flaky: FakeRepo = {
             repo: 'skukla/kukla-bodea',

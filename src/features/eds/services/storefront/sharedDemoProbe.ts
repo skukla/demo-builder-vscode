@@ -28,6 +28,7 @@ import type { GitHubRepoOperations } from '../github/githubRepoOperations';
 import { CANONICAL_STOREFRONT_FILES, classifyRepoForStorefront } from './repoStorefrontReadiness';
 import { parseStorefrontConfigJson } from './servedStorefrontConfig';
 import { readSharedDemoDescription } from '@/core/state/projectFileReader';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { bundledDemoPackages } from '@/features/components/services/storefrontResolver';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Logger } from '@/types/logger';
@@ -50,6 +51,25 @@ const HEADLESS_DEPENDENCY = 'next';
 const B2B_FLAG = 'commerce-b2b-enabled';
 
 const CANNOT_READ = "We couldn't find this repository, or you don't have access to it.";
+
+/**
+ * The refusal when the repository cannot be read. An SC who pasted a site address
+ * can see the site in a browser and will not know which half is the problem, so
+ * when the site answers the sentence names both halves (found live 2026-09-13:
+ * `main--razer--sayurihanki.aem.live` is up; its repository is private).
+ */
+async function cannotReadReason(owner: string, repo: string, fetchImpl: typeof fetch, logger: Logger): Promise<string> {
+    const site = `main--${repo}--${owner}.aem.live`;
+    try {
+        const response = await fetchImpl(`https://${site}/`, { method: 'HEAD', signal: AbortSignal.timeout(TIMEOUTS.QUICK) });
+        if (response.ok) {
+            return `The site ${site} is up, but its repository ${owner}/${repo} couldn't be found, or you don't have access to it. Ask its owner to make it public or give you access.`;
+        }
+    } catch (error) {
+        logger.debug(`[SharedDemo] ${site} did not answer: ${(error as Error).message}`);
+    }
+    return CANNOT_READ;
+}
 
 export interface SharedDemoProbeDeps {
     fileOps: Pick<GitHubFileOperations, 'getFileContent'>;
@@ -86,7 +106,7 @@ export async function probeSharedDemo(
         repository = await deps.repoOps.getRepository(owner, repo);
     } catch (error) {
         logger.warn(`[SharedDemo] Could not read ${owner}/${repo}: ${(error as Error).message}`);
-        return { outcome: 'unreadable', reason: CANNOT_READ };
+        return { outcome: 'unreadable', reason: await cannotReadReason(owner, repo, deps.fetchImpl ?? fetch, logger) };
     }
 
     const readiness = await classifyRepoForStorefront(deps.fileOps, owner, repo, logger);
