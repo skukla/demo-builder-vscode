@@ -221,3 +221,29 @@ processor reaches it. What the service owner is describing is a different deploy
 change not yet deployed, or a misreading of the report; only he can say which. The reply to
 him carries this section's error text and the fact that the call came from the deployed
 action, not a local build.
+
+## Fifth attempt, 2026-09-13 (owner-approved): the Postman request, sent by hand
+
+The service owner asked the owner to "simply try a Postman call". Done as a plain HTTP
+request built from the owner's own Postman collection (the client-auth one, "Export
+Operations → Scenario 2: Export All Items"), field for field — `datapack_name`, `version`,
+`datapack_type: "accs"`, `operation_mode: "export"`, `commerce_instance`, `client_id`,
+`client_secret` — narrowed to `data_types: ["customer_groups"]` so a success would create
+one small pack. Same deployment (the configured runtime address), same Bodea instance, the
+pair from the credential broker, the CLI's IMS token (valid until 23:41). No Demo Builder
+code in the path; nothing but the collection's request shape.
+
+Result, HTTP 200 in 3.0 s: `success: false`; pre-flight authentication and connectivity both
+true; `results[0]`: `CustomerGroupExportProcessor`, `success: false`, `responses: null`,
+`scenario: "DATAPACK_SPECIFIC_ITEMS"`, every count zero. That is exactly what Postman shows
+for this body: a failure with no reason, because the collection's request does not send
+`verbose`. Sent once more with `verbose: "full"` added and nothing else changed:
+`responses.customer_groups_export`: `statusCode 500`, `error: "Failed to store exported
+data: MongoDB connection URI required. Provide MONGO_URI in params or environment
+variable."` Catalog afterwards (`find-datapacks?datapack_name=di3-spike-bodea`): count 0.
+
+Five attempts, four clients (hand-built request, the extension's tool, the async worker, the
+Postman body), one outcome. The deployment behind the configured address reaches the
+export processor and fails at its store step for want of a database connection. What the
+Postman collection would show the service owner is the same failure with the reason
+hidden; `verbose: "full"` is what surfaces it.
