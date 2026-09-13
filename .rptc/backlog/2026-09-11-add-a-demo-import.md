@@ -72,3 +72,5 @@ unchanged from there: the Storefront area shows the frontend piece as fixed by t
 - 2026-09-12  chore(backlog): log the resolver commit on the add-a-demo item; it is active (`df2fc6b7c`)
 - 2026-09-12  feat(ai): the agent's demo actions, and one place for the content index path (`f534fd89e`)
 - 2026-09-12  chore(backlog): log the after-creation step on the add-a-demo item (`c7c1d9863`)
+- 2026-09-13  fix(ai): what the live run found — the agent's create path, the probe's fstab, DA.live's token, and one voice for its notifications (`eb8c1ec15`)
+- 2026-09-12  chore(backlog): log the agent-actions step on the add-a-demo item (`c1e471ab2`)
