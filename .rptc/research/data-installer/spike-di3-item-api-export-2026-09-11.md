@@ -198,3 +198,26 @@ Corrections to this record and to the program's notes, each with where it now li
    `batch-get-data-items` is documented as GET with `items[]`, live is POST with
    `results[]`; the docs' `pagination.total_items` is `total_count` live; the docs' 11-type
    export dependency list is 18 types live.
+
+## Fourth attempt, 2026-09-13 (owner-approved), after the service owner's reply
+
+The service owner, told of the three failures, answered that the runtime URL configured
+in the extension has "all the db connections in the background" and that the failure was
+from "using it as a local build". The record disagrees on both counts: every attempt ran
+against the deployed actions at the configured address, and none touched a local build or
+a local database. So the same export was run once more, now through the extension's own
+export door rather than a hand-built request, to remove the last difference in method:
+the `start_datapack_export` tool from a running extension host, the Bodea instance,
+`customer_groups` only, pack `di3-spike-bodea@spike`, the ACCS pair through the credential
+broker, the CLI's IMS token (valid for another seventeen hours).
+
+Result, verbatim: `success: false`; `customer_groups`: `exported 0, excluded 0, reason:
+"Failed to store exported data: MongoDB connection URI required. Provide MONGO_URI in
+params or environment variable."` Catalog afterwards: no spike pack. Identical to the three
+before it, through a different client.
+
+So the store step on that deployment still has no database connection when the export
+processor reaches it. What the service owner is describing is a different deployment, a
+change not yet deployed, or a misreading of the report; only he can say which. The reply to
+him carries this section's error text and the fact that the call came from the deployed
+action, not a local build.

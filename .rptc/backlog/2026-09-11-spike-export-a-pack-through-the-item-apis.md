@@ -96,3 +96,4 @@ one route, and [[EDS-13b]]'s "Publish it now?" has its implementation.
 - 2026-09-11  Spiked: service cannot export rows today (17b0509ee)
 - 2026-09-12  Closed on three measurements (aafc547d9)
 - 2026-09-12  docs(research): cross-reference the data installer docs and collections against the spike (`39b9e8dc3`)
+- 2026-09-13  Fourth attempt after the service owner's reply ("the runtime URL has the db connections; you used a local build"): same export through the extension's own door, same store-step error, nothing created. The record went back to him with the error text.
