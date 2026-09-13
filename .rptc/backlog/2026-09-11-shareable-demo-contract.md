@@ -44,3 +44,4 @@ inventing two.
 ## Shipped so far
 
 - 2026-09-13  docs(eds): the how-to for sharing a demo (`744301d8a`)
+- 2026-09-13  chore(backlog): log the how-to on the publish-process item (`f477610db`)

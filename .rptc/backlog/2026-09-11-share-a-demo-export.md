@@ -5,7 +5,7 @@ area: eds
 parent: EDS-13
 needs: [EDS-13c]
 value: med
-status: backlog
+status: active
 ---
 
 # "Share this demo": turn an existing project into a demo others can add
@@ -68,3 +68,7 @@ agent asked "share this demo with Jen" can.
 - Rehomed the same day: the storefront part lives in the dashboard's **Export** dialog
   ("Storefront as demo package"), not on its own row. Export is the umbrella for everything
   that leaves a project; the decision of record is on [[PL-56]].
+
+## Shipped so far
+
+- 2026-09-13  feat(dashboard): Export becomes the umbrella, with the storefront as a demo package (`e7ddcd37e`)
