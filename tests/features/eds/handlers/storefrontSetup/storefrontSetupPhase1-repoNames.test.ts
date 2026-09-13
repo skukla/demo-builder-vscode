@@ -275,13 +275,14 @@ describe('creating a brand-new repo', () => {
         });
     });
 
-    it('reports creating, waiting and ready, in that order', async () => {
+    it('reports creating, waiting and ready, in that order — and no pin line for a storefront with no patches', async () => {
+        // The pin is announced only when there is one to make (the routing suite
+        // covers the patched case); a colleague's code carries no patches (D4).
         const { context } = await run(config({ repoMode: 'new' }), makeServices(), { ...NEW });
 
         expect(sentPayloads(context).map((p) => p.message)).toEqual([
             'Creating GitHub repository from template...',
             'Waiting for repository content...',
-            'Pinning to verified canonical state...',
             'Repository ready',
         ]);
         expect(sentPayloads(context)[0]).toEqual({

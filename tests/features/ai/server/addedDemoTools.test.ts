@@ -39,6 +39,8 @@ import type { SharedDemoRead } from '@/types/webviewRequests';
 import { makeAddedDemo } from '../../../helpers/demoPackageFixtures';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockProject } from '../../../helpers/projectFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 const mockRequireGitHub = requireGitHub as jest.Mock;
 const mockRead = readAddedDemos as jest.Mock;
@@ -77,7 +79,12 @@ function fakeServer() {
     };
 }
 
-const ctx = createMockHandlerContext({ logger: createMockLogger() });
+const ctx = createMockHandlerContext({
+    logger: createMockLogger(),
+    stateManager: createMockStateManager({
+        getCurrentProject: jest.fn().mockResolvedValue(createMockProject({ demo: makeAddedDemo({ name: 'Summit, as I named it' }) })),
+    }),
+});
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -185,6 +192,19 @@ describe('change_demo_source', () => {
                 'Whether this demo uses company (B2B) features could not be read; it is treated as off.',
             ],
         });
+    });
+
+    it("keeps the project's demo name across a source change unless a new one is given", async () => {
+        mockProbe.mockResolvedValue({ success: true, result: READ });
+        mockChange.mockResolvedValue({ success: true, result: { demo: OWN, previous: { owner: 'jen', repo: 'isle5-demo' } } });
+        const s = fakeServer();
+        registerAddedDemoTools(s, () => ctx);
+
+        await s.call('change_demo_source', { owner: 'steve', repo: 'isle5-copy' });
+        expect(mockChange).toHaveBeenLastCalledWith(ctx, expect.objectContaining({ demo: expect.objectContaining({ name: 'Summit, as I named it' }) }));
+
+        await s.call('change_demo_source', { owner: 'steve', repo: 'isle5-copy', name: 'Renamed' });
+        expect(mockChange).toHaveBeenLastCalledWith(ctx, expect.objectContaining({ demo: expect.objectContaining({ name: 'Renamed' }) }));
     });
 
     it("passes the handler's refusal through (the other kind, or no added demo)", async () => {

@@ -13,6 +13,7 @@
  * @module features/ai/server/consentText
  */
 
+import { agentNotice } from './agentNotice';
 import { alertCopyFor } from './agentAlertCopy';
 
 /** Longest arg value the consent dialog will print before eliding. */
@@ -112,7 +113,7 @@ export function buildConsentPrompt(
         ? renderTargetForConsent(args, copy.target)
         : (fallbackTarget ?? '');
     return {
-        title: `Demo Builder: ${copy.action}?`,
+        title: `${agentNotice(copy.action)}?`,
         detail: [copy.consequence, target].filter(Boolean).join('\n\n'),
     };
 }

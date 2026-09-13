@@ -123,6 +123,22 @@ describe('parseFstabContentSource', () => {
         expect(parseFstabContentSource(text)).toEqual({ org: 'jen', site: 'isle5-demo' });
     });
 
+    it("reads the nested form a colleague's repository carries (the AEM Code Sync bot's `url:` + `type: markup`)", () => {
+        // Verbatim from a shared storefront's fstab.yaml (2026-09-12), comments included.
+        const text = [
+            '# Note: After you install the AEM Code Sync bot, this file',
+            '# is used once to set the site\'s initial configuration in the config service.',
+            'mountpoints:',
+            '  /:',
+            '    url: https://content.da.live/vinodsivagnanam-pm/citisignal-b2b-summit/',
+            '    type: markup',
+            'folders:',
+            '  /products/: /products/default',
+            '',
+        ].join('\n');
+        expect(parseFstabContentSource(text)).toEqual({ org: 'vinodsivagnanam-pm', site: 'citisignal-b2b-summit' });
+    });
+
     it('is undefined for a mount that is not DA.live', () => {
         expect(
             parseFstabContentSource('mountpoints:\n  /: https://adobe.sharepoint.com/sites/x/Shared%20Documents/site\n'),

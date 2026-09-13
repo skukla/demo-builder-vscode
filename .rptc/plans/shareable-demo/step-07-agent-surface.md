@@ -108,7 +108,49 @@ other source file spells an index path, every catalog entry states one, both sch
 require it, and the tried list covers every path the catalog names. Confirmed live before
 the tightening: the same site answers `indexPath: /sitemap.json`, 157 pages.
 
-**Not run:** `create_project` from a link, then `change_demo_source` and
-`reset_eds_project` on the result. They create a real GitHub repository and DA.live
-content, and the isolated window has no DA.live session (a token paste); waiting on the
-owner's go-ahead and the site names to use.
+**Live run of the whole flow (2026-09-12, owner's go-ahead, DA.live token pasted into the
+second window).** The colleague's own repository is private to the owner's account, so a
+zip the colleague had shared was pushed by hand to `kukla-demos/citisignal-b2b-summit` as
+the stand-in (an organization repository, so the fork path runs). Through the tools:
+`probe_shared_demo` read it (Edge Delivery, B2B on from `config.json`, content site
+`vinodsivagnanam-pm/citisignal-b2b-summit` under `/sitemap.json`, 61 pages, no fork yet);
+`add_shared_demo` refused without confirm naming the fork, then forked it into the owner's
+account and remembered the row; `list_demo_packages` showed it under the two Edge Delivery
+stacks; `create_project` built `summit-test` on `eds-paas` from the fork (49 pages
+published, site live, the repository, the row and the fork recorded on the project);
+`reset_eds_project` reset it (3,486 files, 83 pages copied, one caveat in the SC's words
+about product pages with no matching product); `change_demo_source` pointed the project at
+the organization repository and back, the row and the instance metadata moving together
+each time. Cleanup: the project, its repository, the fork and the stand-in repository are
+deleted, and the DA.live site `skukla/demo-builder-test-summit` too (69 items), after
+one more finding: `cleanup_dalive_site` and `list_dalive_sites` built their DA.live
+operations on the Adobe IMS token, which DA.live refused — it listed zero sites for an
+org with six and answered 403 for a site the reset tool had just written to with the
+DA.live session's token. The two tools now build on the DA.live session first, the IMS
+token as the fallback they always had, and declare the DA.live sign-in. The human
+"Cleanup DA.live sites" command wires the IMS token the same way; whether it works
+against DA.live today is a separate question, worth a backlog item rather than a change
+inside this step.
+
+**Found and fixed by the live run (3–6):**
+- The colleague's `fstab.yaml` is in the nested form (`/:` over `url:` and `type: markup`,
+  the AEM Code Sync bot's); `parseFstabContentSource` read only the one-line form the
+  extension writes, so the demo showed no content site. Both forms read now, the real file
+  as the test.
+- `create_project` never named the GitHub account to create the repository under, so every
+  agent creation of an Edge Delivery project refused with "GitHub owner not configured".
+  It names the signed-in account, or a `githubOwner` the caller gives; `buildProjectConfig`
+  lets a stated owner win over the auth status (the wizard sets neither differently).
+- `create_project` read the repository URL from the setup-complete payload under `repoUrl`,
+  an invented key (the payload names it `githubRepo`), so the project was saved without its
+  repository and reset would have refused it. The test fixture had invented the same key;
+  both now use the declared type.
+- The missing-referenced-pages notice closed with "the patch is likely obsolete" when no
+  patch was involved; with only pages missing it now says they don't exist on the content
+  site the demo copies from. The "Pinning to verified canonical state" progress line is
+  announced only when there is a pin to make. The agent's progress card title lost its
+  colon and ellipsis (VS Code adds its own colon before the phase). `change_demo_source`
+  keeps the project's demo name unless a new one is given.
+
+**Step 10** (add a storefront from a zip file) was added to the plan on the owner's request
+the same day; the how-to will say to share the link, not a zip.

@@ -121,12 +121,17 @@ async function announcePinAndComplete(
     templateRepo: string,
     patchReport: PatchReport | undefined,
 ): Promise<void> {
-    await context.sendMessage('storefront-setup-progress', {
-        phase: 'repository',
-        message: 'Pinning to verified canonical state...',
-        subMessage: `${repoInfo.repoOwner}/${repoInfo.repoName}`,
-        progress: 12,
-    } satisfies StorefrontSetupProgressPayload);
+    // Announced only when there is a pin to make: an added demo carries no
+    // patches (D4), and "Pinning to verified canonical state" over a colleague's
+    // code named a step that was not happening (seen live, 2026-09-12).
+    if (edsConfig.codePatchSource && edsConfig.codePatches) {
+        await context.sendMessage('storefront-setup-progress', {
+            phase: 'repository',
+            message: 'Pinning to verified canonical state...',
+            subMessage: `${repoInfo.repoOwner}/${repoInfo.repoName}`,
+            progress: 12,
+        } satisfies StorefrontSetupProgressPayload);
+    }
     await pinIfThinLayer(
         edsConfig,
         services,

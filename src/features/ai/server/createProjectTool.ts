@@ -134,21 +134,35 @@ async function requireAdobeWorkspace(ctx: HandlerContext): Promise<
     };
 }
 
-/** Pre-flight GitHub + DA.live auth; return a needsAuth handoff or null. */
-async function edsAuthHandoff(ctx: HandlerContext): Promise<Record<string, unknown> | null> {
+/**
+ * Pre-flight GitHub + DA.live auth. Answers a needsAuth handoff, or the
+ * signed-in GitHub login: the account the repository is created under when
+ * the caller names no organization. The wizard fills the same field from its
+ * auth status; without it storefront setup refuses with "GitHub owner not
+ * configured" — which is what every agent creation of an EDS project did
+ * until 2026-09-12, found live.
+ */
+async function edsAuthHandoff(
+    ctx: HandlerContext,
+): Promise<{ handoff: Record<string, unknown> } | { login: string | undefined }> {
     // Declared without an initializer on purpose: both arms below assign, so a
     // starting value would be a store nothing can read.
     let githubOk: boolean;
+    let login: string | undefined;
     try {
-        githubOk = (await getGitHubServices(ctx.context.secrets).tokenService.validateToken()).valid;
+        const validation = await getGitHubServices(ctx.context.secrets).tokenService.validateToken();
+        githubOk = validation.valid;
+        login = validation.user?.login;
     } catch {
         githubOk = false;
     }
     if (!githubOk) {
         return {
-            needsAuth: 'github',
-            message:
-                'GitHub sign-in required to create the storefront repo. Check get_auth_status, then sign_in(provider:"github", confirm:true).',
+            handoff: {
+                needsAuth: 'github',
+                message:
+                    'GitHub sign-in required to create the storefront repo. Check get_auth_status, then sign_in(provider:"github", confirm:true).',
+            },
         };
     }
     let daLiveOk: boolean;
@@ -159,12 +173,14 @@ async function edsAuthHandoff(ctx: HandlerContext): Promise<Record<string, unkno
     }
     if (!daLiveOk) {
         return {
-            needsAuth: 'dalive',
-            message:
-                'DA.live sign-in required for content setup. sign_in(provider:"dalive", confirm:true), paste the token in VS Code, then retry.',
+            handoff: {
+                needsAuth: 'dalive',
+                message:
+                    'DA.live sign-in required for content setup. sign_in(provider:"dalive", confirm:true), paste the token in VS Code, then retry.',
+            },
         };
     }
-    return null;
+    return { login };
 }
 
 /** Headless (non-EDS) creation path. */
@@ -233,6 +249,7 @@ async function createEds(
     ctx: HandlerContext,
     args: CreateArgs & {
         repoName?: string;
+        githubOwner?: string;
         daLiveOrg?: string;
         daLiveSite?: string;
         accsEndpoint?: string;
@@ -268,8 +285,12 @@ async function createEds(
         if ('error' in resolved) return asText(resolved.error);
         adobe = resolved;
     }
-    const handoff = await edsAuthHandoff(ctx);
-    if (handoff) return asText(handoff);
+    const auth = await edsAuthHandoff(ctx);
+    if ('handoff' in auth) return asText(auth.handoff);
+    const githubOwner = args.githubOwner ?? auth.login;
+    if (!githubOwner) {
+        return asText({ error: 'GitHub did not name the signed-in account; pass githubOwner (your login or an organization you belong to).' });
+    }
 
     const events: CapturedEvent[] = [];
     const capturing = withCapturedProgress(ctx, events);
@@ -277,6 +298,7 @@ async function createEds(
     const edsConfigInput = {
         repoName: args.repoName,
         repoMode: 'new' as const,
+        githubOwner,
         daLiveOrg: args.daLiveOrg,
         daLiveSite: args.daLiveSite,
         accsEndpoint: args.accsEndpoint,
@@ -314,7 +336,11 @@ async function createEds(
             hint: 'Fix the cause (e.g. re-auth via sign_in) and call create_project again — already-created resources (the repo) are skipped on retry.',
         });
     }
-    const repoUrl = lastCompleteData(events)?.repoUrl as string | undefined;
+    // The completion payload names the repository `githubRepo` (typed on
+    // StorefrontSetupCompletePayload); `repoUrl` was an invented key, read as
+    // undefined for every agent creation until 2026-09-12, so the project was
+    // saved without its repository and reset refused it.
+    const repoUrl = lastCompleteData(events)?.githubRepo as string | undefined;
 
     // Phase 2: create the project, with preflight results threaded in.
     const wizardState: ProjectConfigSource = {
@@ -402,6 +428,10 @@ export function registerCreateProjectTool(server: McpToolServer, ctxFactory: () 
                     .string()
                     .optional()
                     .describe('EDS only: name for the new GitHub storefront repo'),
+                githubOwner: z
+                    .string()
+                    .optional()
+                    .describe('EDS only: the GitHub account or organization to create the repo under (default: the signed-in account)'),
                 daLiveOrg: z.string().optional().describe('EDS only: DA.live organization'),
                 daLiveSite: z.string().optional().describe('EDS only: DA.live site name'),
                 accsEndpoint: z
@@ -446,6 +476,7 @@ export function registerCreateProjectTool(server: McpToolServer, ctxFactory: () 
                 stackId,
                 demo,
                 repoName: args.repoName ? String(args.repoName) : undefined,
+                githubOwner: args.githubOwner ? String(args.githubOwner) : undefined,
                 daLiveOrg: args.daLiveOrg ? String(args.daLiveOrg) : undefined,
                 daLiveSite: args.daLiveSite ? String(args.daLiveSite) : undefined,
                 accsEndpoint: args.accsEndpoint ? String(args.accsEndpoint) : undefined,

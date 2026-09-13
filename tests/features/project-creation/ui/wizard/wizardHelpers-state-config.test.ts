@@ -486,6 +486,49 @@ describe('wizardHelpers - state & config', () => {
             expect(config.customBlockLibraries).toStrictEqual([]);
         });
 
+        it('keeps a stated GitHub owner over the auth status, and falls back to the signed-in login', () => {
+            const packages = [
+                {
+                    id: 'citisignal',
+                    name: 'CitiSignal',
+                    description: '',
+                    configDefaults: {},
+                    storefronts: {
+                        'eds-paas': {
+                            name: 'CitiSignal EDS',
+                            description: '',
+                            source: {
+                                type: 'git' as const,
+                                url: 'https://github.com/demo-system-stores/accs-citisignal',
+                                branch: 'main',
+                                gitOptions: { shallow: true },
+                            },
+                        },
+                    },
+                },
+            ];
+            const base = {
+                ...REVIEW_BASE,
+                selectedPackage: 'citisignal',
+                selectedStack: 'eds-paas',
+            };
+            const auth = { isAuthenticated: true, user: { login: 'steve', name: 'Steve', email: null, avatarUrl: null } } as WizardState['edsConfig'] extends infer E ? (E extends { githubAuth?: infer A } ? A : never) : never;
+
+            const stated = buildProjectConfig(
+                { ...base, edsConfig: { repoName: 'r', daLiveOrg: 'o', daLiveSite: 's', githubOwner: 'kukla-demos', githubAuth: auth } },
+                null,
+                packages,
+            );
+            expect(stated.edsConfig?.githubOwner).toBe('kukla-demos');
+
+            const fromAuth = buildProjectConfig(
+                { ...base, edsConfig: { repoName: 'r', daLiveOrg: 'o', daLiveSite: 's', githubAuth: auth } },
+                null,
+                packages,
+            );
+            expect(fromAuth.edsConfig?.githubOwner).toBe('steve');
+        });
+
         it('should handle missing frontendSource and contentSource gracefully', () => {
             const state: WizardState = {
                 ...REVIEW_BASE,

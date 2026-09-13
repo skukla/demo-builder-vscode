@@ -15,7 +15,7 @@
  *
  * THE RULES THE TEXT FOLLOWS
  *
- * - `action` completes "Demo Builder: ___?" — a verb phrase, no trailing period.
+ * - `action` completes "Agent · ___?" — a verb phrase, no trailing period.
  * - `consequence` is ONE plain sentence saying what changes. It is not a
  *   description of the tool. The reader has already decided they want the thing;
  *   they are deciding whether they want it NOW, to THIS.
@@ -47,7 +47,7 @@
 
 /** Authored strings for one tool's alerts. */
 export interface AgentAlertCopy {
-    /** Completes "Demo Builder: ___?". Verb phrase, no full stop. */
+    /** Completes "Agent · ___?". Verb phrase, no full stop. */
     action: string;
     /** One sentence: what changes if they allow it. */
     consequence: string;
@@ -108,7 +108,7 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     delete_project: {
         action: 'Delete this project',
         consequence:
-            "Removes the project folder and its settings from this machine. Cloud resources aren't touched. This can't be undone.",
+            "Removes the project folder and settings from this machine; cloud resources stay. This can't be undone.",
         target: ['name'],
         sessionGrant: false,
     },
@@ -136,14 +136,14 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     delete_page: {
         action: 'Delete a page',
         consequence:
-            "Unpublishes the page and removes it from the storefront. Visitors stop seeing it immediately. This can't be undone.",
+            "Unpublishes and removes the page; visitors stop seeing it at once. This can't be undone.",
         target: ['path'],
         sessionGrant: false,
     },
     forget_added_demo: {
         action: 'Forget an added demo',
         consequence:
-            'Removes it from the Add a demo list; with deleteCopy, also deletes your copy of its code from GitHub, and projects built on it lose reset and updates.',
+            'Takes it off the Add a demo list. With deleteCopy, also deletes your copy of the code; projects built on it then lose reset and updates.',
         target: ['owner', 'repo'],
         sessionGrant: false,
     },
@@ -179,7 +179,7 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     delete_event_provider: {
         action: 'Delete an event provider',
         consequence:
-            'Deletes the provider (and the named registrations first) from the project workspace. Events of these types can no longer be published.',
+            'Deletes the provider and its registrations from the workspace. Events of these types stop publishing.',
         target: ['providerId'],
         sessionGrant: false,
     },

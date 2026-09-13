@@ -49,6 +49,7 @@ jest.mock('@/core/di/serviceLocator', () => ({
 import {
     createAgentConsentGate,
     createAgentOperationNotifier,
+    phaseLine,
 } from '@/features/ai/server/agentOperationNotifier';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
@@ -84,7 +85,7 @@ describe('createAgentOperationNotifier', () => {
             expect.any(Function)
         );
         expect(mockSetStatusBarMessage).toHaveBeenCalledWith(
-            expect.stringContaining('Pushing the storefront code to GitHub — done'),
+            expect.stringContaining('Agent · Pushing the storefront code to GitHub — done'),
             expect.any(Number)
         );
         expect(mockShowWarningMessage).not.toHaveBeenCalled();
@@ -105,6 +106,13 @@ describe('createAgentOperationNotifier', () => {
             expect.stringContaining('Republishing the storefront configuration failed: CDN said no')
         );
         expect(mockSetStatusBarMessage).not.toHaveBeenCalled();
+    });
+
+    it('drops the services\' trailing dots from a phase line and keeps the step counter', () => {
+        expect(phaseLine('Resetting repository to template... (3/11)')).toBe('Resetting repository to template (3/11)');
+        expect(phaseLine('Publishing to CDN…')).toBe('Publishing to CDN');
+        expect(phaseLine('Published 49 pages to CDN')).toBe('Published 49 pages to CDN');
+        expect(phaseLine('Site is live!')).toBe('Site is live!');
     });
 
     it("feeds the operation's own phase strings into the notification", async () => {
@@ -167,7 +175,7 @@ describe('createAgentConsentGate', () => {
         await gate('delete_project', { confirm: true });
 
         expect(consentTitle(mockShowWarningMessage.mock.calls[0])).toBe(
-            'Demo Builder: Delete this project?'
+            'Agent · Delete this project?'
         );
     });
 
@@ -224,7 +232,7 @@ describe('createAgentConsentGate', () => {
         await gate('some_unwritten_tool', { confirm: true });
 
         expect(consentTitle(mockShowWarningMessage.mock.calls[0])).toBe(
-            'Demo Builder: some_unwritten_tool?'
+            'Agent · some_unwritten_tool?'
         );
     });
 

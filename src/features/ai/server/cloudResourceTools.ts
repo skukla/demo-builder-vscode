@@ -21,8 +21,12 @@ import { isOrgMismatchError, orgMismatchResult } from './adobeTools';
 import { asText } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';
-import { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
+import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
+import {
+    createDaLiveServiceTokenProvider,
+    DaLiveContentOperations,
+    type TokenProvider,
+} from '@/features/eds/services/daLive/daLiveContentOperations';
 import { DaLiveOrgOperations } from '@/features/eds/services/daLive/daLiveOrgOperations';
 import type { HandlerContext } from '@/types/handlers';
 
@@ -42,31 +46,51 @@ const NEEDS_GITHUB = {
 };
 
 const NEEDS_ADOBE = {
-    needsAuth: 'adobe',
+    needsAuth: 'dalive',
     message:
-        'Adobe sign-in required for DA.live operations. Check get_auth_status, then sign_in(provider:"adobe", confirm:true) once the user agrees.',
+        'DA.live sign-in required for DA.live operations. Check get_auth_status, then sign_in(provider:"dalive", confirm:true) and paste the token once the user agrees.',
 };
 
 /**
- * Build DA.live org + content operations from the Adobe IMS token, mirroring the
- * cleanup command's wiring. Returns null when the IMS token is missing/expired
- * (the caller turns that into a `needsAuth` handoff).
+ * Build DA.live org + content operations on the DA.live session when there is
+ * one, else on the Adobe IMS token. Returns null when neither is available (the
+ * caller turns that into a `needsAuth` handoff).
+ *
+ * The DA.live token first, because it is the one DA.live accepts: measured live
+ * 2026-09-12, the IMS token listed ZERO sites for an org that has many and was
+ * refused (403) when asked to list a site the reset tool had just written to
+ * with the DA.live token. The IMS path stays as the fallback it always was —
+ * it is what the human cleanup command wires, and that command's own behaviour
+ * against DA.live is a separate question, filed rather than changed here.
  */
 async function buildDaLiveOps(
     ctx: HandlerContext,
 ): Promise<{ org: DaLiveOrgOperations; content: DaLiveContentOperations } | null> {
+    const tokenProvider = (await daLiveTokenProvider(ctx)) ?? (await imsTokenProvider());
+    if (!tokenProvider) return null;
+    return {
+        org: new DaLiveOrgOperations(tokenProvider, ctx.logger),
+        content: new DaLiveContentOperations(tokenProvider, ctx.logger),
+    };
+}
+
+/** The DA.live session's token, when the SC has pasted one. */
+async function daLiveTokenProvider(ctx: HandlerContext): Promise<TokenProvider | null> {
+    try {
+        const service = getDaLiveAuthService(ctx.context);
+        if (!(await service.getAccessToken())) return null;
+        return createDaLiveServiceTokenProvider(service);
+    } catch {
+        return null;
+    }
+}
+
+/** The Adobe IMS token, when valid. */
+async function imsTokenProvider(): Promise<TokenProvider | null> {
     try {
         const tokenManager = ServiceLocator.getAuthenticationService().getTokenManager();
-        if (!(await tokenManager.inspectToken()).valid) {
-            return null;
-        }
-        const tokenProvider = {
-            getAccessToken: async () => (await tokenManager.inspectToken()).token ?? null,
-        };
-        return {
-            org: new DaLiveOrgOperations(tokenProvider, ctx.logger),
-            content: new DaLiveContentOperations(tokenProvider, ctx.logger),
-        };
+        if (!(await tokenManager.inspectToken()).valid) return null;
+        return { getAccessToken: async () => (await tokenManager.inspectToken()).token ?? null };
     } catch {
         return null;
     }
@@ -255,7 +279,7 @@ export function registerCloudResourceTools(
     server.registerTool(
         'list_dalive_sites',
         {
-            needsAuth: ['adobe'],
+            needsAuth: ['dalive'],
             annotations: { readOnlyHint: true, destructiveHint: false },
             description: 'List DA.live sites in an organization (paginated summary)',
             inputSchema: {
@@ -294,7 +318,7 @@ export function registerCloudResourceTools(
     server.registerTool(
         'cleanup_dalive_site',
         {
-            needsAuth: ['adobe'],
+            needsAuth: ['dalive'],
             annotations: { readOnlyHint: false, destructiveHint: true },
             description:
                 'Delete all content for a DA.live site (irreversible). Requires confirm:true and confirmName="org/site".',

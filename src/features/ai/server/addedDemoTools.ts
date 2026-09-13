@@ -233,7 +233,10 @@ export function registerAddedDemoTools(server: McpToolServer, ctxFactory: () => 
             const github = await requireGitHub(ctx);
             if (github) return asText(github);
 
-            const row = await readDemoRow(ctx, args);
+            // The project's demo keeps its name across a source change unless a new
+            // one is given; the repository's spelling is the default for a NEW demo.
+            const current = await ctx.stateManager.getCurrentProject();
+            const row = await readDemoRow(ctx, { ...args, name: args.name ?? current?.demo?.name });
             if ('error' in row) return asText(row.error);
             const { demo, read, warnings } = row;
             const changed = await handleChangeDemoSource(ctx, {

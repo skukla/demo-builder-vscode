@@ -41,8 +41,11 @@ const PROVIDERS = new Set(['adobe', 'dalive', 'github', 'commerce']);
  * some tool's declared sign-ins changed, which is a product decision, not a refactor.
  */
 const EXPECTED: Record<string, number> = {
-    adobe: 37,
-    dalive: 19,
+    // 37 -> 35 and 19 -> 21 on 2026-09-12: list_dalive_sites and cleanup_dalive_site
+    // build their DA.live operations on the DA.live session, the sign-in DA.live
+    // accepts (the IMS token listed zero sites and was refused, measured live).
+    adobe: 35,
+    dalive: 21,
     // 10 -> 12 on 2026-09-12: forget_added_demo and change_demo_source (step 06
     // of the shareable-demo program) both read and write GitHub; 12 -> 14 the
     // same day for probe_shared_demo and add_shared_demo (step 07).

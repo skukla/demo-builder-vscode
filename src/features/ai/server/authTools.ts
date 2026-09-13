@@ -11,6 +11,7 @@
  * directly and return structured results instead.
  */
 
+import { agentNotice } from './agentNotice';
 import * as vscode from 'vscode';
 import { z } from 'zod';
 import { clearAdobeTarget } from './adobeTargetStore';
@@ -237,14 +238,14 @@ export function registerAuthTools(server: McpToolServer, ctxFactory: () => Handl
             // the eventual outcome lands in the window (observed live
             // 2026-08-23 — the item this fixes).
             vscode.window.setStatusBarMessage(
-                '$(key) Demo Builder: an agent requested DA.live sign-in — complete the prompts in this window',
+                `$(key) ${agentNotice('DA.live sign-in requested')} — complete the prompts in this window`,
                 TIMEOUTS.STATUS_BAR_SUCCESS,
             );
             void showDaLiveAuthQuickPick(ctx).then(
                 (res) => {
                     if (res.success) {
                         vscode.window.setStatusBarMessage(
-                            '$(check) DA.live sign-in complete',
+                            `$(check) ${agentNotice('DA.live sign-in complete')}`,
                             TIMEOUTS.STATUS_BAR_SUCCESS,
                         );
                     }

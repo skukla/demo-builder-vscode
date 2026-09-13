@@ -165,7 +165,7 @@ point the claim is made rather than in review.
 
 ## Writing the copy
 
-`action` completes "Demo Builder: ___?" — a verb phrase, no full stop.
+`action` completes "Agent · ___?" — a verb phrase, no full stop. Every agent notification opens with the same "Agent ·" (`agentNotice.ts`).
 `consequence` is ONE sentence saying what changes.
 
 - Say what changes, not what the tool is. The reader already wants the thing;

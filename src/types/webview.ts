@@ -430,6 +430,12 @@ export interface EDSConfig {
     /** ACCS validation error message */
     accsValidationError?: string;
     /** GitHub authentication state */
+    /**
+     * The GitHub account or organization the repository is created under, when
+     * stated (the agent's create tool names one). The wizard leaves it unset and
+     * the auth status's login applies.
+     */
+    githubOwner?: string;
     githubAuth?: {
         isAuthenticated: boolean;
         isAuthenticating?: boolean;

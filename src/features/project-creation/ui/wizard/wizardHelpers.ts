@@ -537,7 +537,9 @@ function buildProjectEdsConfig(wizardState: ProjectConfigSource) {
         daLiveOrg: eds.daLiveOrg || '',
         daLiveSite: eds.selectedSite?.name || eds.daLiveSite || '',
         accsEndpoint: eds.accsHost,
-        githubOwner: eds.githubAuth?.user?.login || '',
+        // A stated owner wins (the agent's create tool names one; the wizard's
+        // namespace picker writes it); the auth status is the wizard's default.
+        githubOwner: eds.githubOwner || eds.githubAuth?.user?.login || '',
         isPrivate: eds.selectedRepo?.isPrivate,
         skipContent: eds.skipContent,
         skipTools: !wizardState.selectedAddons?.includes('adobe-commerce-aco'),
