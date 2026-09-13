@@ -42,6 +42,26 @@ Decided 2026-09-11 (owner): everything can travel; stale context is re-proven th
 existing prompts before anything continues; credentials stay in VS Code SecretStorage and
 the design keeps using it.
 
+## Decided 2026-09-13 (owner): Export is the umbrella
+
+"Export" is the one door for handing a demo to someone else to use, and it grows to cover
+every touch point an end user has. One More-menu row, one dialog, one section per part;
+parts arrive as they are built and the dialog leaves out what the project does not have.
+
+| Part | What leaves | State on 2026-09-13 |
+|---|---|---|
+| Setup file | the settings file a colleague imports (Commerce, Adobe, GitHub and DA.live names) | exists; still carries credentials, which [[PL-56c]] removes |
+| Storefront as demo package | the description file in the SC's repository, the card on their Welcome step, the link | built ([[EDS-13b]], shareable-demo step 09), as the dialog's second section |
+| Datapack | the SC's sample data published to the datapack service | waits on the service being able to export rows ([[DI-3]]) |
+| Content | the DA.live pages | today they travel by being published, and a project built from the card copies them; a content bundle is unbuilt |
+| Integrations | custom apps' repositories readable by others | today a check and a sentence; the confirmed "make it public?" offer is in [[PL-56c]] |
+| Storefront theme | a storefront's look, separate from its code | unbuilt; whether a theme is a separable thing in EDS is open |
+
+Words, settled the same day: not "Share" (it promises the whole demo when only a part
+leaves), not "Export project" (same promise), not "Export settings" (an SC new to the result
+would not know why they'd want it). The parts are named by what they are; the row is the
+umbrella.
+
 ## Relationship to the shared-storefront track
 
 A shared storefront is a piece of a project. The description file [[EDS-13c]] defines

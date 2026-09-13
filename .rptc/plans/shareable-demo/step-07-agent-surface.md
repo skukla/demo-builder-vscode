@@ -152,5 +152,19 @@ inside this step.
   colon and ellipsis (VS Code adds its own colon before the phase). `change_demo_source`
   keeps the project's demo name unless a new one is given.
 
+**Owner's report, after the live run (logged 2026-09-13).** Eighteen GitHub emails
+"[skukla/demo-builder-test-summit] Build workflow run" failed between 11:00 PM and 11:26 PM
+on 2026-09-12 — the window in which the test project was created and reset from the
+colleague's repository. The colleague's repository carries `.github/workflows/main.yaml`
+("Build": `npm ci` + `npm run lint` on every push, the aem-boilerplate's), and Demo Builder
+pushes a commit per file it writes during setup and reset, so every push ran the workflow
+in the new repository and every run failed there. Checked the same day: the shipped Isle5
+template (`stephen-garner-adobe/isle5`) carries the same seven workflows, so this is not
+specific to a colleague's demo; the Starter and BuildRight templates carry different ones
+(`sync-from-upstream.yml`, `deploy-pages.yml`). Not fixed in this program. The candidate
+fix is for repository creation to leave `.github/workflows/` out of the copy (or disable
+Actions on the new repository through the API), which is a product decision: those
+workflows are the template author's, and some SCs may want them.
+
 **Step 10** (add a storefront from a zip file) was added to the plan on the owner's request
 the same day; the how-to will say to share the link, not a zip.

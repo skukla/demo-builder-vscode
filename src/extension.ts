@@ -40,6 +40,7 @@ import { registerCreateProjectTool } from '@/features/ai/server/createProjectToo
 import { registerCurrentProjectTool } from '@/features/ai/server/currentProjectTool';
 import { DATA_INSTALLER_DESCRIPTORS } from '@/features/ai/server/dataInstallerDescriptors';
 import { registerDeleteProjectTool } from '@/features/ai/server/deleteProjectTool';
+import { registerDemoPackageTools } from '@/features/ai/server/demoPackageTools';
 import { registerDiagnosticsTools } from '@/features/ai/server/diagnosticsTools';
 import { registerDiscoveryTools } from '@/features/ai/server/discoveryTools';
 import { registerEdsResetTool } from '@/features/ai/server/edsResetTool';
@@ -735,6 +736,7 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
                 registerContentAuthoringTools(mcpServer, connCtxFactory);
                 registerEdsResetTool(mcpServer, connCtxFactory);
                 registerAddedDemoTools(mcpServer, connCtxFactory);
+                registerDemoPackageTools(mcpServer, connCtxFactory);
                 registerDeleteProjectTool(mcpServer, connCtxFactory);
                 registerApplyUpdatesTool(mcpServer, connCtxFactory);
                 registerViewTools(mcpServer, (commandId) =>

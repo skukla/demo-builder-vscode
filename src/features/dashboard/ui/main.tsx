@@ -35,6 +35,8 @@ import './styles/ai.css';
 // .dashboard-* rules, moved out of utilities.css by the same migration.
 // This is the ONLY entry whose graph reaches a component using them.
 import './styles/dashboard.css';
+// The Export dialog and its parts (More menu).
+import './styles/export-dialog.css';
 // .modal-* — the shared Modal shell.
 import '@/core/ui/styles/modal.css';
 // The shared UI vocabulary — 19 small families. Seven of the eight entries.

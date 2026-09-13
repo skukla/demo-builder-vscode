@@ -54,3 +54,17 @@ agent asked "share this demo with Jen" can.
 
 - Where the SC's description text and icon come from at share time (a prompt, or defaults
   from the package they started on).
+
+## Decided 2026-09-13
+
+- Renamed **"Save as demo package"** / **"Remove demo package"** after the owner pushed back on
+  "Share": what leaves is the storefront as a starting point, not the whole demo, and Export
+  already means the settings file. The word is the glossary's: a demo package is the card on
+  the Welcome step.
+- Save also puts the card on the SC's own Add a demo list, so an SC can reuse their own
+  storefront without pasting their own link; the link is how a colleague gets the same card.
+- The description text comes from the brand or demo the project was built on (the project's
+  title for a Starter build), editable in the dialog. No icon (dropped 2026-09-12).
+- Rehomed the same day: the storefront part lives in the dashboard's **Export** dialog
+  ("Storefront as demo package"), not on its own row. Export is the umbrella for everything
+  that leaves a project; the decision of record is on [[PL-56]].

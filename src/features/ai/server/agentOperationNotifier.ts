@@ -26,9 +26,9 @@
  * @module features/ai/server/agentOperationNotifier
  */
 
-import { agentNotice } from './agentNotice';
 import * as vscode from 'vscode';
 import { alertCopyFor } from './agentAlertCopy';
+import { agentNotice } from './agentNotice';
 import { buildConsentPrompt } from './consentText';
 import type { ConsentVerdict } from './inExtensionMcpServer';
 import { asRawText } from './mcpToolResult';

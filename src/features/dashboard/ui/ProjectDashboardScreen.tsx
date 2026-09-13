@@ -15,6 +15,7 @@ import { ActionGrid } from './components/ActionGrid';
 import { AiCapabilitiesModal } from './components/AiCapabilitiesModal';
 import { DashboardStatusHeader } from './components/DashboardStatusHeader';
 import { DemoSourceNotice } from './components/DemoSourceNotice';
+import { ExportModal } from './components/export/ExportModal';
 import { OrgContextNotice } from './components/OrgContextNotice';
 import { isStartActionDisabled } from './dashboardPredicates';
 import { useDashboardActions } from './hooks/useDashboardActions';
@@ -106,6 +107,10 @@ export function ProjectDashboardScreen({
     const onSourceChanged = (): void => {
         webviewClient.postMessage('requestStatus');
     };
+    // Export is the umbrella for everything that can leave the project (owner,
+    // 2026-09-13): the More row opens the dialog; the setup file is saved from it.
+    const [exportOpen, setExportOpen] = useState(false);
+    const openExport = (): void => setExportOpen(true);
     // Inline title rename commit (null = success; string = inline error).
     const renameInline = useInlineRename();
 
@@ -285,7 +290,7 @@ export function ProjectDashboardScreen({
                                     handleConfigure={handleConfigure}
                                     handleOpenDevConsole={handleOpenDevConsole}
                                     handleEditProject={handleEditProject}
-                                    handleExportProject={handleExportProject}
+                                    handleExportProject={openExport}
                                     handleChangeDemoSource={openChangeSource}
                                     handleResetProject={handleResetProject}
                                     handleDeleteProject={handleDeleteProject}
@@ -310,6 +315,11 @@ export function ProjectDashboardScreen({
                     onDemoAdded={onSourceChanged}
                     onClose={() => setChangeSourceOpen(false)}
                 />
+            ) : null}
+
+            {/* Export — mounted only while open, like Change source. */}
+            {exportOpen ? (
+                <ExportModal isOpen isEds={isEdsStable} onExportSetup={handleExportProject} onClose={() => setExportOpen(false)} />
             ) : null}
 
             {/* Capability catalog — reached from the "View AI Capabilities" link,

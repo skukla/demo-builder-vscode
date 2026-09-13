@@ -1,0 +1,69 @@
+/* The Export dialog and its parts. Stage chrome and the section label are the
+   Add Integration flow's (`.intflow-*`); only the parts' own layout lives here. */
+
+@layer theme {
+    .export-body {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .export-section {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+        padding-top: 16px;
+        border-top: 1px solid var(--spectrum-global-color-gray-300);
+    }
+
+    .export-section-text {
+        margin: 0;
+        font-size: 13px;
+        line-height: 1.5;
+    }
+
+    .demo-package-body {
+        display: flex;
+        flex-direction: column;
+        align-self: stretch;
+        gap: 16px;
+    }
+
+    .demo-package-checks-title {
+        margin: 0 0 6px;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .demo-package-checks {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .demo-package-check {
+        display: flex;
+        gap: 8px;
+        align-items: baseline;
+        font-size: 13px;
+        line-height: 1.4;
+    }
+
+    .demo-package-template {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .demo-package-hint {
+        display: block;
+        margin: 4px 0 0;
+        font-size: 12px;
+        line-height: 1.4;
+        color: var(--spectrum-global-color-gray-700);
+    }
+}

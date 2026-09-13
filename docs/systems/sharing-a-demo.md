@@ -149,10 +149,50 @@ On the Welcome grid and in the dialog it is a **demo**: the thing you share and 
 they build on. Inside a project it is a **storefront**: that project's own code and site,
 which the Storefront area configures. One demo, many storefronts.
 
+## Export → Storefront as demo package
+
+For an Edge Delivery project you built here, the dashboard writes the description file for
+you and puts your storefront on your own Welcome step. **More → Export** opens the Export
+dialog: everything that can leave the project for someone else to use, one part per
+section. Today it has two parts, and more arrive as they are built (the whole-project
+export item in the backlog names them: datapack, content, integrations).
+
+- **Setup file.** Your Commerce, Adobe, GitHub and DA.live settings in one file. A colleague
+  imports it to build a project with the same setup. This is the export the dashboard has
+  always had.
+- **Storefront as demo package.** Your storefront becomes a demo package in the same sense
+  as Isle5 or Starter: a card on the Welcome step that new projects are built from, starting
+  from your code and content, with the store codes, datapack and integrations the file
+  names. Your Commerce connection, credentials and Adobe project are not part of it; a
+  project built from the card connects to its own.
+
+In the storefront part, the name and description come prefilled from the brand or demo the
+project was built on (the project's own title for a Starter build); edit them, then
+**Save**. Two things happen: the file is written into your own storefront repository from
+what the project already holds, and the card is added to your Add a demo list, so it is on
+your Welcome step right away. The dialog then hands you the link; a colleague pastes it into
+"Add a demo" and gets the same card.
+
+Above the button, one line per check says what colleagues get: whether the repository is
+public, which branch it is built from (the default branch), how many pages are published
+and indexed, whether the datapack is in the datapack service, and whether each custom app's
+repository can be read. A site with no published index says so and points at Republish.
+Nothing in the list stops you saving; it tells you what to fix first.
+
+A tick box, off by default, also marks the repository as a GitHub template, which shows the
+"Use this template" button there.
+
+Demo Builder rewrites only a description file it wrote itself, and knows it by the file's
+recorded revision. A file you wrote or edited by hand is left alone and the dialog says so;
+the card still goes on your list. **Remove demo package** takes the file out (again only
+when it is ours), takes the card off your list, and turns the template flag back off if Demo
+Builder turned it on. Colleagues who already added the demo keep it; projects built from it
+are untouched either way.
+
 ## Headless demos
 
 A Next.js demo adds the same way; its pages live in the app, so there is no content site
-to index. There is no "Share this demo" for a headless project, because a headless project
+to index. There is no storefront part in Export for a headless project, because a headless project
 is a local clone with no repository of the SC's own: share one by pushing your clone to a
 repository and sending the link.
 
@@ -162,6 +202,11 @@ The same doors exist as tools, in [mcp-tools.md](mcp-tools.md): `probe_shared_de
 a demo from a link, `add_shared_demo` adds it, `create_project` takes an added demo's id or
 a link, `change_demo_source` repoints a project, and `forget_added_demo` takes a demo off
 the list. The demos an SC has added live in the `demoBuilder.demos.added` setting.
+
+Saving has the same three doors as the dialog: `get_demo_package_preview` reads what a
+project built from the card would get, `save_demo_package` writes the file, puts the card on
+the list (and sets the template flag when asked) and answers the link, and
+`remove_demo_package` undoes it. Both writes need `confirm:true`.
 
 ## Related
 

@@ -147,6 +147,13 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         target: ['owner', 'repo'],
         sessionGrant: false,
     },
+    remove_demo_package: {
+        action: 'Remove this demo package',
+        consequence:
+            'Takes the description file out of your storefront repository and the card off your Add a demo list; colleagues can no longer add it from its link.',
+        target: [],
+        sessionGrant: false,
+    },
     reset_eds_project: {
         action: 'Reset this storefront',
         consequence:

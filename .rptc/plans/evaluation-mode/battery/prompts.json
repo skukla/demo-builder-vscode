@@ -892,5 +892,32 @@
     ],
     "why": "Step 07 of the shareable-demo program (EDS-13a): the dialog's Add commit. The list lives in a user setting, so an agent without the tool writes settings.json by hand and skips the probe that decides the row's kind and codes. Tier 2: it writes a user setting (and forks when a copy is kept), so it runs only under --tier2.",
     "tier": 2
+  },
+  {
+    "id": "t1-get-demo-package-preview",
+    "prompt": "Before I save this storefront as a demo package, tell me what a project built from it would get: is my repository public, which branch, how many pages are published, and is the datapack in the service?",
+    "expect": [
+      "get_demo_package_preview"
+    ],
+    "why": "Step 09 of the shareable-demo program (EDS-13b): the read behind the Save as demo package dialog. Without it an agent runs four separate GitHub, aem.live and datapack calls and never learns the link or the prefilled name. Tier 1: a read.",
+    "tier": 1
+  },
+  {
+    "id": "t2-save-demo-package",
+    "prompt": "Save this storefront as a demo package so it shows up on my Welcome step and my colleague can add it from a link. Call it \"Bodea by Steve\" and don't mark the repository as a template.",
+    "expect": [
+      "save_demo_package"
+    ],
+    "why": "Step 09 of the shareable-demo program (EDS-13b): the Save commit. Without the tool an agent writes demo.demo-builder.json by hand from memory of the format, pushes it, and edits the demos.added setting, skipping the ownership rule that keeps a hand-edited file from being overwritten. Tier 2: it writes into the SC's GitHub repository and a user setting, so it runs only under --tier2.",
+    "tier": 2
+  },
+  {
+    "id": "t2-remove-demo-package",
+    "prompt": "Remove this demo package. Take the description file back out of my repository and the card off my Welcome step.",
+    "expect": [
+      "remove_demo_package"
+    ],
+    "why": "Step 09 of the shareable-demo program (EDS-13b): the undo. Without the tool an agent deletes the file with a GitHub call and leaves the card, the template flag and the project's record behind. Tier 2: it removes a file from the SC's GitHub repository, so it runs only under --tier2.",
+    "tier": 2
   }
 ]

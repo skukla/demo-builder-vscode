@@ -21,6 +21,7 @@
  */
 
 import * as vscode from 'vscode';
+import { handleGetDemoPackagePreview, handleSaveDemoPackage, handleRemoveDemoPackage } from './demoPackageHandlers';
 import { handleSetProjectDestination } from './destinationHandlers';
 import {
     handleSyncStorefront,
@@ -299,6 +300,13 @@ export const dashboardHandlers = defineHandlers({
 
     // Adobe deploy destination (project-scoped — one target for every integration)
     setProjectDestination: handleSetProjectDestination,
+
+    // "Save as demo package": the description file into the project's own
+    // storefront repository, the card on the SC's Add a demo list, the checks a
+    // project built from it needs, and the undo.
+    getDemoPackagePreview: handleGetDemoPackagePreview,
+    saveDemoPackage: handleSaveDemoPackage,
+    removeDemoPackage: handleRemoveDemoPackage,
 
     // "Change source" for a project built on an added demo: the Add a demo
     // dialog in its change mode probes with the wizard's own handler, then

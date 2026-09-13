@@ -55,6 +55,8 @@ const ERROR_MESSAGES = {
  */
 /** The fields of a `GET /repos/{owner}/{repo}` response this extension keeps. */
 interface RepoResponseData {
+    /** GitHub's `private`; the colleague-facing checks read it as visibility. */
+    private?: boolean;
     id: number;
     name: string;
     full_name: string;
@@ -75,6 +77,7 @@ function toGitHubRepo(data: RepoResponseData): GitHubRepo {
         cloneUrl: data.clone_url,
         defaultBranch: data.default_branch,
         isTemplate: data.is_template ?? false,
+        isPrivate: data.private,
         ...(data.parent?.full_name ? { forkParent: data.parent.full_name } : {}),
     };
 }

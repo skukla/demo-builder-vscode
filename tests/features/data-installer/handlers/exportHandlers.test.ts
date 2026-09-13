@@ -237,9 +237,10 @@ describe('start-datapack-export', () => {
         expect(JSON.stringify(result.data)).toContain('MongoDB connection URI required');
         // The logs say so too: the service answers 200 with the failure inside, and
         // the door used to log "200" and "ok" — a failed export read as a success.
-        expect(harness.logger.warn).toHaveBeenCalledWith(
-            '[Data Installer] attribute_sets export to captured-pack@v1 failed: Failed to store exported data: MongoDB connection URI required.',
-        );
+        // The LEVEL is the assertion (a failure is a warning, not an info line); the
+        // wording is not pinned (tests/sop/no-logger-wording-assertions.test.ts).
+        expect(harness.logger.warn).toHaveBeenCalledTimes(1);
+        expect(harness.logger.info).not.toHaveBeenCalledWith(expect.stringContaining('Exported'));
     });
 
     it('logs each data type that exported, with its counts', async () => {
@@ -251,7 +252,7 @@ describe('start-datapack-export', () => {
 
         await importHandlers['start-datapack-export'](harness, PAYLOAD);
 
-        expect(harness.logger.info).toHaveBeenCalledWith('[Data Installer] Exported 4 attribute_sets to captured-pack@v1 (1 excluded)');
+        expect(harness.logger.info).toHaveBeenCalledTimes(1);
         expect(harness.logger.warn).not.toHaveBeenCalled();
     });
 

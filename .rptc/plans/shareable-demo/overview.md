@@ -91,7 +91,7 @@ thing each step below is built from and how. It supersedes the shorter table in 
 | 06 | Reset, update, edit and forget an added demo | 01, 05 | EDS-13a |
 | 07 | The same actions for AI agents | 03, 05 | EDS-13a |
 | 08 | Write the how-to for sharing a demo | contract | EDS-13c |
-| 09 | Share this demo | contract, 08 | EDS-13b |
+| 09 | Export → Storefront as demo package (was Share this demo; rehomed under Export 2026-09-13) | contract, 08 | EDS-13b |
 | 10 | Add a storefront from a zip file | 04, 05, 07 | EDS-13a |
 
 Step 01 is the representative vertical slice: if the eleven sites fight the resolver, the

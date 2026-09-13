@@ -168,7 +168,7 @@ New: the page.
 
 | Needs | Existing | How |
 |---|---|---|
-| The action | dashboard More menu (`ActionGrid.tsx:528` area, `useDashboardActions.ts`), projects-grid kebab (`ProjectActionsMenu.tsx`) | add to it: one row each |
+| The action | dashboard More menu (`ActionGrid.tsx:528` area, `useDashboardActions.ts`), projects-grid kebab (`ProjectActionsMenu.tsx`) | add to it: one row each — **built as a section of the Export dialog instead (owner, 2026-09-13: Export is the umbrella)** |
 | Write the description file without clobbering a hand edit | `createGeneratedFileWriter` (`aiBundle/generatedFileWriter.ts:73`: `writeMerged`, `remove` on proof of ownership, `hashes()` → `project.aiFileHashes`) | make it shared: the writer is aiBundle-local and writes into the PROJECT directory; the description file goes into the storefront REPO via GitHub. Either lift the hash-and-skip rule into a GitHub-backed twin (`createOrUpdateFile` + a recorded sha on the project), or write locally into the storefront component path and let the existing sync push it. Decide in the step; the ADR-013 rule is what is reused, not necessarily the file |
 | The fields | the same serializer the export uses (`extractSettingsFromProject`) projected to the slice | add to it |
 | Description text/icon prefilled, editable | `Modal` + `OptionalNameField` + Spectrum `TextArea`; icon picker = a file picker over `listRepoFiles` (`githubFileOperations.ts:261`) | use as is |
@@ -181,6 +181,21 @@ New: the page.
 | Agent action | `ACTION_DESCRIPTORS` + `AGENT_ALERT_COPY` (writes to the SC's repo) | use as is |
 
 New: the GitHub-backed twin of the generated-file writer IF the local-write route does not fit. That is the one design question in this step.
+
+**Resolved in the build (2026-09-13; the action was renamed "Save as demo package" the same day and also puts the card on the SC's own list through `rememberAddedDemo`).** The GitHub-backed twin it is:
+`eds/services/share/sharedDemoFile.ts` (`writeSharedDemoFile` / `removeSharedDemoFile`),
+because a local write into the storefront component path would reach the repository only
+through the next sync, and Share must hand back a link that works now. The fields come from
+`describeProject` in `shareDemoService.ts`, not from `extractSettingsFromProject`: the
+export serializer describes a project's SETTINGS (endpoints, credentials to redact), the
+description file describes the DEMO (codes, flags, mesh posture, datapack, integrations,
+libraries, content site), and the two slices share almost no fields. No icon picker: the
+owner dropped the icon (2026-09-12). `setRepositoryVisibility` was not built; the check
+says the custom app's repository is private and colleagues need access. The agent doors
+are direct tools (`ai/server/shareDemoTools.ts`), not descriptor rows, because the share
+tool composes the preview into its `confirm:true` refusal; `stop_sharing_demo` is in
+`AGENT_ALERT_COPY`. The projects-grid kebab row is not added: the dialog needs the open
+project's Commerce config and instance metadata, which the grid does not load.
 
 ## K. Export the whole project (PL-56c)
 

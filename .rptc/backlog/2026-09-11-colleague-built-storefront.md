@@ -72,6 +72,12 @@ project first and the catalog second.
 9. Option 2 (the in-repo description file) is in, as a published contract; option 3 (a
    team catalog) is next, not now.
 
+## Decided 2026-09-13 (owner)
+
+Export is the umbrella for everything that leaves a project for someone else to use; the
+shared storefront is one of its parts. The decision of record, with the parts table, is on
+[[PL-56]].
+
 ## Shipped so far
 
 - 2026-09-11  Research, seam map and design on `feature/colleague-storefront` (worktree

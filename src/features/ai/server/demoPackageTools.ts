@@ -1,0 +1,135 @@
+/**
+ * The agent's doors for "Save as demo package" (step 09): the dashboard
+ * dialog's three messages, on the same handlers, minus the dialog.
+ *
+ * - `get_demo_package_preview` — what the card would carry, the checks a
+ *   project built from it will need, whether it is already on the SC's list,
+ *   and the link. A read.
+ * - `save_demo_package` — write the description file into the SC's own
+ *   storefront repository, put the card on their Add a demo list, mark the
+ *   repository a template when asked, and answer the link. A write into the
+ *   SC's GitHub, so `confirm:true`; the refusal says what it would write and where.
+ * - `remove_demo_package` — take back what save_demo_package did. Destructive
+ *   for colleagues holding the link, so `confirm:true` and the consent dialog.
+ *
+ * @module features/ai/server/demoPackageTools
+ */
+
+import { z } from 'zod';
+import { requireGitHub } from './edsToolGuards';
+import { asText } from './mcpToolResult';
+import type { McpToolServer } from './mcpToolServer';
+import {
+    handleGetDemoPackagePreview,
+    handleRemoveDemoPackage,
+    handleSaveDemoPackage,
+} from '@/features/dashboard/handlers/demoPackageHandlers';
+import type { HandlerContext } from '@/types/handlers';
+import type { DemoPackagePreview, RemoveDemoPackageResult, SaveDemoPackageResult } from '@/types/webviewRequests';
+
+const HINT =
+    'The card is on your Welcome step; create_project takes its id (list_demo_packages shows it). A colleague pastes the link into "Add a demo", or hands it to add_shared_demo.';
+
+/**
+ * Register the demo-package tools on `server`.
+ *
+ * @param server     The MCP server
+ * @param ctxFactory Builds a headless HandlerContext for each invocation
+ */
+export function registerDemoPackageTools(server: McpToolServer, ctxFactory: () => HandlerContext): void {
+    server.registerTool(
+        'get_demo_package_preview',
+        {
+            needsAuth: ['github'],
+            annotations: { readOnlyHint: true, destructiveHint: false },
+            description:
+                "What saving the open project's storefront as a demo package would give: the name and description the card would carry, whether the repository is public, which branch a project built from it gets, how many pages are published, whether the datapack is in the service, whether it is already on your Add a demo list, and the link a colleague adds it from. Edge Delivery projects only. Read this before save_demo_package.",
+            inputSchema: {},
+        },
+        async () => {
+            const ctx = ctxFactory();
+            const github = await requireGitHub(ctx);
+            if (github) return asText(github);
+            const answer = await handleGetDemoPackagePreview(ctx, undefined);
+            if (!answer.success || !answer.data) return asText({ error: answer.error });
+            return asText(answer.data as DemoPackagePreview);
+        },
+    );
+
+    server.registerTool(
+        'save_demo_package',
+        {
+            needsAuth: ['github'],
+            annotations: { readOnlyHint: false, destructiveHint: false },
+            description:
+                "Save the open project's storefront as a demo package: write its description file (demo.demo-builder.json) into your own storefront repository and put the card on your Add a demo list, so you and colleagues (from the link) can build new projects on it. Optionally mark the repository as a GitHub template. Never overwrites a file it did not write. Requires confirm:true; remove_demo_package undoes it.",
+            inputSchema: {
+                name: z.string().optional().describe('The name on the card; defaults to the brand or demo the project was built on'),
+                description: z.string().optional().describe('One or two sentences about the demo'),
+                markTemplate: z.boolean().optional().describe('Also mark the repository as a GitHub template (default false)'),
+                confirm: z.boolean().optional().describe('Must be true — a file is written into your repository'),
+            },
+        },
+        async (args: { name?: string; description?: string; markTemplate?: boolean; confirm?: boolean }) => {
+            const ctx = ctxFactory();
+            const github = await requireGitHub(ctx);
+            if (github) return asText(github);
+
+            const preview = await handleGetDemoPackagePreview(ctx, undefined);
+            if (!preview.success || !preview.data) return asText({ error: preview.error });
+            const { draft, link, checks, saved, onList } = preview.data as DemoPackagePreview;
+            const name = args.name?.trim() || draft.name;
+            const description = args.description?.trim() || draft.description;
+            if (args.confirm !== true) {
+                return asText({
+                    error:
+                        `save_demo_package would write demo.demo-builder.json named "${name}" into ${link}, put the card on your Add a demo list` +
+                        `${args.markTemplate ? ', and mark the repository as a template' : ''}. ` +
+                        'Call again with confirm:true to do it.',
+                    name,
+                    description,
+                    checks,
+                    alreadySaved: saved,
+                    alreadyOnList: onList,
+                });
+            }
+            const result = await handleSaveDemoPackage(ctx, { name, description, markTemplate: args.markTemplate === true });
+            if (!result.success || !result.data) return asText({ error: result.error });
+            const data = result.data as SaveDemoPackageResult;
+            return asText({ ...data, hint: HINT });
+        },
+    );
+
+    server.registerTool(
+        'remove_demo_package',
+        {
+            needsAuth: ['github'],
+            annotations: { readOnlyHint: false, destructiveHint: true },
+            description:
+                "Remove the open project's demo package: take the description file save_demo_package wrote out of your storefront repository, take the card off your Add a demo list, and unset the template flag if save_demo_package set it. Colleagues who already added it keep it. Requires confirm:true.",
+            inputSchema: {
+                confirm: z.boolean().optional().describe('Must be true — the description file is removed from your repository'),
+            },
+        },
+        async (args: { confirm?: boolean }) => {
+            const ctx = ctxFactory();
+            const github = await requireGitHub(ctx);
+            if (github) return asText(github);
+            if (args.confirm !== true) {
+                const project = await ctx.stateManager.getCurrentProject();
+                return asText({
+                    error:
+                        'remove_demo_package takes the description file out of your storefront repository and the card off your Add a demo list; colleagues can no longer add it from its link. ' +
+                        'Call again with confirm:true.',
+                    ...(project?.demoPackage
+                        ? { savedAt: project.demoPackage.savedAt, templateFlagSet: project.demoPackage.templateFlagSet }
+                        : {}),
+                    destructive: true,
+                });
+            }
+            const result = await handleRemoveDemoPackage(ctx, undefined);
+            if (!result.success || !result.data) return asText({ error: result.error });
+            return asText(result.data as RemoveDemoPackageResult);
+        },
+    );
+}

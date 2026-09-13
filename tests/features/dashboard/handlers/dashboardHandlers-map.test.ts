@@ -130,14 +130,14 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'exportProjectSettings')).toBe(true);
         });
 
-        it('should have exactly 41 handlers', () => {
+        it('should have exactly 44 handlers', () => {
             // Given: dashboardHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(dashboardHandlers) as Array<
                 keyof typeof dashboardHandlers
             >;
 
-            // Then: exactly 41, derived in the map's own declaration order so a
+            // Then: exactly 44, derived in the map's own declaration order so a
             // reader can check it against the source top to bottom.
             //
             // NOTE: the previous derivation did not add up — it said "9
@@ -175,8 +175,14 @@ describe('dashboardHandlers', () => {
             //                      add-shared-demo (the dialog's other commit;
             //                      the dashboard never opens that mode, but a
             //                      message the dialog can send is answered)
+            //   3  demo package    getDemoPackagePreview (the Save as demo package
+            //                      dialog's read: draft, checks, link),
+            //                      saveDemoPackage (write the description file into
+            //                      the SC's own storefront repository and put the
+            //                      card on their list) and removeDemoPackage
+            //                      (take back only what we did)
             //  ==
-            //  41
+            //  44
             //
             // Retired, so they are absent by design: verifyAppBuilderComponent
             // (2026-08-03); the 4 singular App Builder actions (addApp,
@@ -194,7 +200,7 @@ describe('dashboardHandlers', () => {
             // the integrations surface's Eventing section — workspace-scoped
             // I/O event providers/registrations, same service as the MCP
             // event tools.
-            expect(types).toHaveLength(41);
+            expect(types).toHaveLength(44);
         });
 
         it('should have handlers as functions', () => {

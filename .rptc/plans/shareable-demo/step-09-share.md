@@ -1,4 +1,4 @@
-# Step 09 — Share this demo
+# Step 09 — Export → Storefront as demo package (was "Share this demo", then "Save as demo package")
 
 Item: [[EDS-13b]]. Decisions: D11. Depends on the contract step (portable-demos/step-01-contract) and step 08. One question open at the bottom.
 
@@ -41,6 +41,72 @@ The share dialog prefills name and description from the brand the project was bu
 (the project's title for a Starter build); the SC edits before the file is written. Nothing is
 written silently. No icon: the owner dropped the package icon on 2026-09-12 (no reader in the
 code; nothing displays it), so neither the catalog nor the description file carries one.
+
+## Built (2026-09-13)
+
+**Host.** `sharedDemoFile.ts` is the ADR-013 rule over GitHub: the file is rewritten or
+removed only when its blob sha is the one the project recorded (`Project.sharing.fileSha`);
+a file present with another sha, or present with none recorded, is skipped and the reason
+says it was not written by Demo Builder or was edited since. `shareDemoService.ts` builds
+the description file from the project alone (`describeProject`): codes under both key
+families, flags, mesh posture (storefront over package), datapack, catalog and custom
+integrations, block libraries, and the content site with the index path the probe's
+convention resolves (`resolveOwnContentSource`; the fallback path with "not found" when
+none answers). `shareChecks` answers in SC words: repository public or private, default
+branch, page count or "no list of pages" with the Republish action, datapack in the service
+(asked only when the Data Installer can be reached without a prompt; silent otherwise),
+each custom app's repository readable. Three dashboard handlers (`getShareDemoPreview`,
+`shareDemo`, `stopSharingDemo`), Edge Delivery only; the headless refusal names the how-to's
+by-hand path. The template flag is set once and unset only when we set it.
+
+**Human surface (as first built; see "Rehomed" below).** More → "Save as demo package" opens
+`ShareDemoModal`: prefilled name and description, the checks as a dotted list, the
+template tick box off by default, the link via `CopyableText` once saved, "Remove demo package"
+beside "Save"/"Update". Mounted only while open, like Change source.
+
+**Agent surface.** `get_share_demo_preview` (read), `share_demo` (confirm:true; the refusal
+names the file, the name and the repository) and `stop_sharing_demo` (confirm:true and the
+consent dialog). Narration, ceilings, battery prompts, auth totals (github 14 → 17, tools
+113 → 116), the tool catalog and the alerts list updated.
+
+**Live (2026-09-13, isolated dev host, the owner's Bodea project).** `get_share_demo_preview`
+answered the prefilled name and description from the Bodea card, "skukla/kukla-bodea is
+public", the default branch, 157 pages indexed, the datapack in the service, and the link.
+The first run refused the project as "not an Edge Delivery project": the service read a
+`daLiveSite` field off the storefront instance that a real project file does not carry (the
+site name is the repository name; `getEdsDaLiveTarget` knows that, and the service now uses
+it). The write (`share_demo`) was not run live: it puts a file into the owner's real
+repository, which is the owner's call; `stop_sharing_demo` takes it back out.
+
+**Renamed and widened the same day (owner, 2026-09-13).** The owner pushed back on
+"Share": it implies the whole demo leaves, when what leaves is the storefront as a starting
+point plus the defaults the file records, and Export already means the settings file that
+carries the environment. What the action produces is a demo package in the glossary's sense
+(a card on the Welcome step), so it is **"Save as demo package"** / **"Remove demo package"**,
+and Save now also puts the card on the SC's own Add a demo list (`rememberAddedDemo`, the
+same row a colleague's add builds, with the default branch), so reuse and handing over are
+one act and the link is just how a colleague gets the same card. Remove takes the card off
+the list too. Identifiers followed the words: `demoPackageHandlers.ts`,
+`demoPackageService.ts`, `DemoPackageModal`, `useDemoPackage`, `demoPackageTools.ts`
+(`get_demo_package_preview`, `save_demo_package`, `remove_demo_package`),
+`Project.demoPackage` (was `sharing`). The description file keeps its name (`SharedDemoDescription`,
+`demo.demo-builder.json`): that is the file format, read by the probe since step 03.
+
+**Rehomed under Export (owner, 2026-09-13).** The owner's direction, now the decision of
+record on [[PL-56]]: Export is the umbrella for everything an end user touches, and a
+sibling row would ship the very confusion this step was meant to remove. The More row is
+**Export** and opens `ExportModal` (`dashboard/ui/components/export/`), one section per part:
+"Setup file" (the existing save flow, one button) and "Storefront as demo package"
+(`DemoPackageSection`, EDS only, with its own Save and Remove buttons). `DemoPackageModal`
+is gone; `useDemoPackage` and the handlers are unchanged; the agent tools keep their names
+since an agent picks parts by tool. Every sentence in the dialog was tightened the same day
+(the walkthrough the owner asked for is in the session; the copy lives in `PACKAGE_COPY` and
+`EXPORT_COPY`).
+
+**Not built, by decision.** "Publish it now?" for a missing datapack waits on [[DI-3]]. The
+"Make it public?" offer for a private custom app is a sentence, not a button, for now: the
+check names the repository and says colleagues need access. The open question below stays
+open.
 
 ## Open
 

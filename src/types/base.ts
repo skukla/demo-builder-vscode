@@ -42,6 +42,16 @@ export interface AiPrompt {
  * Project - Core project definition
  */
 
+/** What "Save as demo package" left behind, so it can be undone exactly. */
+export interface SavedDemoPackage {
+    /** Blob sha of the description file as we last wrote it. */
+    fileSha: string;
+    /** We set the repository's template flag (Remove demo package unsets it). */
+    templateFlagSet: boolean;
+    /** ISO date of the last save. */
+    savedAt: string;
+}
+
 export interface Project {
     /**
      * The SLUG. Folder name under `~/.demo-builder/projects/`, the key
@@ -116,6 +126,14 @@ export interface Project {
     selectedStack?: string;
     /** Optional addons selected during project creation (e.g., ['adobe-commerce-aco']) */
     selectedAddons?: string[];
+    /**
+     * "Save as demo package" wrote the description file into this project's
+     * storefront repository: the blob sha GitHub answered (the proof the file is
+     * ours, so a hand edit is never clobbered and Remove takes out only what we
+     * wrote) and whether we set the repository's template flag (so Remove unsets
+     * only what we set). Absent when the storefront is not a demo package.
+     */
+    demoPackage?: SavedDemoPackage;
     /** Block library IDs selected during project creation (e.g., ['isle5', 'demo-team-blocks']) */
     selectedBlockLibraries?: string[];
     /** Custom block libraries added by URL */

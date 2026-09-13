@@ -135,6 +135,18 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
         bytes: 2_000,
         why: 'the new and previous sources plus the probe warnings; the row itself is not echoed',
     },
+    get_demo_package_preview: {
+        bytes: 2_500,
+        why: 'the prefilled draft, up to a handful of one-sentence checks, the link and three flags',
+    },
+    save_demo_package: {
+        bytes: 2_500,
+        why: 'the link, what happened to the file, the template flag, the same checks and one hint; or the refusal carrying the checks',
+    },
+    remove_demo_package: {
+        bytes: 600,
+        why: 'what happened to the file, the card and the flag; or the refusal with the save date',
+    },
     cleanup_dalive_site: { bytes: 1_000, why: 'delete outcome or refusal' },
 
     // ── Diagnostics ─────────────────────────────────────────────────────────

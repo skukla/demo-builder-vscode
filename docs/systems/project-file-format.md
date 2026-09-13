@@ -6,7 +6,7 @@ versioned, and neither ever carries a credential.
 | File | Name | Lives | Written by | Read by |
 |---|---|---|---|---|
 | Project file | `<project-name>.project.demo-builder.json` | wherever the SC saves it | Export (projects dashboard; the `export_project_settings` tool) | Import from File, Copy from Existing |
-| Shared-demo file | `demo.demo-builder.json` | the root of a storefront repository | "Share this demo", or a colleague by hand | "Add a demo" |
+| Shared-demo file | `demo.demo-builder.json` | the root of a storefront repository | Export → Storefront as demo package, or a colleague by hand | "Add a demo" |
 
 They are one family with the project manifest, `.demo-builder.json`, which stays in the
 project folder and never leaves the machine. The kind is spelled out before the shared

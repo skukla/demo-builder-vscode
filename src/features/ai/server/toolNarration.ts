@@ -185,6 +185,9 @@ export const TOOL_NARRATION: Record<string, string> = {
     add_shared_demo: 'Adding the demo to the list',
     forget_added_demo: 'Forgetting the added demo',
     change_demo_source: "Changing where the project's demo comes from",
+    get_demo_package_preview: 'Reading what the demo package would carry',
+    save_demo_package: 'Saving the storefront as a demo package',
+    remove_demo_package: 'Removing the demo package',
     repair_site_configuration: 'Repairing the site configuration',
     // Grants OR revokes.
     set_site_admin: 'Changing who can administer the site',

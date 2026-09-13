@@ -137,6 +137,61 @@ export interface ChangeDemoSourceRequest {
     updateRemembered: boolean;
 }
 
+/**
+ * "Save as demo package" (step 09). `getDemoPackagePreview` answers what the
+ * card would carry and what a project built from it will need; `saveDemoPackage`
+ * writes the description file, puts the card on the SC's own Add a demo list
+ * (and sets the template flag when asked) and answers the link;
+ * `removeDemoPackage` undoes exactly what saveDemoPackage did.
+ */
+export interface DemoPackageCheck {
+    id: 'repository' | 'branch' | 'index' | 'datapack' | 'custom-app';
+    ok: boolean;
+    message: string;
+    action?: 'republish';
+    repository?: string;
+}
+
+export interface DemoPackagePreview {
+    /** Prefilled from the brand or demo the project was built on; the SC edits before writing. */
+    draft: { name: string; description: string };
+    checks: DemoPackageCheck[];
+    /** The link a colleague pastes into "Add a demo". */
+    link: string;
+    /** Whether the description file in the repository is ours (written by a save). */
+    saved: boolean;
+    /** Whether the card is on the SC's own Add a demo list. */
+    onList: boolean;
+    /** Whether we set the repository's template flag. */
+    templateFlagSet: boolean;
+}
+
+export interface SaveDemoPackageRequest {
+    name: string;
+    description: string;
+    /** Also mark the repository as a template (one GitHub settings write; Remove unsets it). */
+    markTemplate: boolean;
+}
+
+export interface SaveDemoPackageResult {
+    link: string;
+    /** What happened to the file: written, unchanged, or skipped because it is not ours. */
+    file: 'written' | 'unchanged' | 'skipped';
+    /** Why the file was skipped, when it was. */
+    fileReason?: string;
+    /** The card is on the SC's own Add a demo list now (always, after a save). */
+    onList: true;
+    templateFlagSet: boolean;
+    checks: DemoPackageCheck[];
+}
+
+export interface RemoveDemoPackageResult {
+    file: 'removed' | 'skipped' | 'absent';
+    templateFlagUnset: boolean;
+    /** The card was on the SC's list and is now off it. */
+    removedFromList: boolean;
+}
+
 export interface ChangeDemoSourceResult {
     /** The project's row now; its `source` is the fork when one was kept. */
     demo: AddedDemo;

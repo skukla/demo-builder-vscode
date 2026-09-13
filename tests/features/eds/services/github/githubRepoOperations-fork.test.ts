@@ -38,6 +38,7 @@ describe('GitHubRepoOperations.createFork', () => {
             cloneUrl: 'https://github.com/owner/repo.git',
             defaultBranch: 'main',
             isTemplate: false,
+            isPrivate: false,
             forkParent: 'jen/isle5-demo',
         });
     });
