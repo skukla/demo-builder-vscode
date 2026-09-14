@@ -57,3 +57,83 @@ offline (no `add`/`replace`, no error).
 Deployed to a scratch workspace with the ERP from step 02: install green, an order placed
 on Bodea gets an ERP number, a status change in the ERP reaches the order, a price edit
 reaches the product, reset leaves the ERP mirrored and the ledger empty.
+
+## Result so far (2026-09-14)
+
+Built in `skukla/commerce-erp-integration` (scratchpad clone; not committed, waiting for
+"commit") from the kit's current `main` (4.0.0 layout: node 24, `app.commerce.config.ts`,
+`.generated/`, vitest, biome). Kept from the kit: the product created/updated event chain
+(sender now imports the product into the ERP), `starter-kit/info`, `src/lib/utils.js`,
+telemetry, the generated App Management actions. Dropped: customer, ingestion, order events,
+external product/stock/order handlers, `check-stock`. Added: `src/lib/{erp,commerce,ledger,
+mirror,drain,webhook}.js`; actions `erp/{status,mirror,reset,drain,set-offline}` and
+`webhook/{order-create,item-prices,discounts}`; the Admin UI SDK page under
+`src/commerce-backend-ui-2/`; 58 vitest tests; biome clean.
+
+**As built, in the plan's terms**
+
+- Webhooks (all `required: false`, `requireAdobeAuth: true` as the kit does; Bodea, a
+  Cloud Service instance, lists all three hooks in `/V1/webhooks/supportedList`):
+  `observer.sales_order_place_before` → `POST orders` on the ERP → `replace
+  data/order/ext_order_id` (the path root Nishant Kapoor's four lost orders established);
+  totals-collector `item_prices` → ERP quote → `replace result/price_updates` with
+  `{item_id, base_price}`; totals-collector `execute` → ceiling clawback as a negative
+  `base_discount` on `result`. Buyer hints sent to the ERP: customer group, email,
+  customer id; the ERP resolves the partner by id → Commerce company → email domain →
+  customer group → default (email domain added to the ERP today: Bodea's companies mostly
+  share customer group 1, so the group alone cannot tell them apart).
+- ERP → Commerce is a pull: `erp/drain` every minute (alarm feed `minutes: 1`; the param
+  name is `minutes`, `minute` is rejected at deploy) and on demand. Kinds: `material.price`
+  → `PUT products/{sku}`; `material.stock` → `POST inventory/source-items`;
+  `partner.creditLimit` → `PUT companyCredits/{id}` (ledgered); `partner.blocked` → `PUT
+  company/{id}` status 3/1 (ledgered); `order.status` confirmed → comment, shipped →
+  `POST order/{id}/ship` of every open line, invoiced → `POST order/{id}/invoice` +
+  comment, cancelled → `POST orders/{id}/cancel`.
+- Ledger in App Builder State (one key, one-year TTL, the max); reset = revert → wipe →
+  mirror; a failed revert keeps only the failed entries.
+- Mirror reads `products` (enabled), `inventory/source-items` (summed per SKU), `company`
+  + `companyCredits/company/{id}` (404 → no B2B → no partners) and posts one import.
+- Company events from Commerce are NOT subscribed (no verified event name); the mirror,
+  reset and the Admin page's "Mirror" button keep partners fresh. Product deletes are not
+  mirrored (the ERP has no delete route); a reset clears them.
+
+**Live, on a scratch workspace with the ERP beside it (ErpSpikeq3e9; still deployed for
+the install test):** status reaches the ERP with the injected S2S token alone (no shared
+secret, decision 12 proven); a seeded material + partner give: item-prices → contract price
+28 on list 35 (20% contract); discounts → clawback 13 when a Commerce rule pushes the line
+below the 30% ceiling, "success" within it; order-create → `ext_order_id 0000001001` with
+the partner resolved by email domain; offline → every webhook answers "success".
+
+**Not yet exercised: everything that needs Commerce.** `mirror`, `reset`, `drain` writes
+and the Admin page inside the Commerce Admin all need the App Management INSTALL into an
+instance (association record → Commerce client; webhook + event registration; Admin UI
+registration). That install writes into the live Bodea instance: ask the owner before
+running it (cloud operations are confirmed, never speculative).
+
+**Facts the build taught (each cost a deploy)**
+
+1. The lib-app's postinstall validator refuses `-` in a menu id (use `erp_integration`)
+   and `;` or apostrophes in event descriptions.
+2. The CLI writes no `web-src/src/config.json` (action URL map) for an extension-layout
+   app. The Admin page derives its action URLs from `window.location.origin` +
+   `/api/v1/web/erp/…`; safe because Demo Builder renames runtime packages only for plain
+   apps (`appConfigPackages.ts`), never for extension apps.
+3. When `web-src` pre-exists, the lib-app hook skips `prepareWebSourcePackage`, so
+   `@parcel/resolver-default.packageExports` and `@parcel/bundler-default.manualSharedBundles`
+   must be in package.json by hand or `#app.commerce.config` does not resolve.
+4. **The Admin page deployed blank** ("jsxDEV is not a function"): `aio app deploy` (11.1.2
+   here, 14.8.2 latest, same code) never passes Parcel a `mode`, so JSX compiles with the
+   development runtime, while the lib-app hook pins `NODE_ENV=production` into `.env`, which
+   Parcel inlines, so React resolves its production runtime, which has no `jsxDEV`.
+   `--web-optimize`, NODE_ENV in the process env and clearing the cache change nothing.
+   Fix: a `build-static` hook in `commerce-backend-ui-2/ext.config.yaml` running Parcel in
+   production mode against a named browser target (the kit's `engines.node` otherwise
+   makes Parcel infer a Node target and externalise every dependency: a 6 KB bundle).
+   Demo Builder's deploy needs no flag. Standalone the page now renders (its "No sign-in"
+   notice, as designed outside a host). Memory: `reference_admin_ui_sdk_page_blank_jsxdev`.
+5. Inside the Experience Cloud shell the page stayed dark (the shell's frame never
+   completed its handshake; the ExC route is the lib-admin-ui's fallback host, the Commerce
+   Admin is the real one). Verify inside the Commerce Admin after the install; if the shell
+   matters, compare with the lib-app template, which ships no `exc-runtime.js` loader.
+6. The App Builder CDN caches `index.html` for minutes after a deploy (`x-cache: Hit`,
+   age 278 s), so a redeployed page can show the previous bundle for a while.
