@@ -168,8 +168,9 @@ describe('dashboardHandlers', () => {
             //                      republishContent
             //   1  reset           resetProject
             //   1  destination     setProjectDestination
+            //   2  ERP integration getErpStatus, resetErpRecords (plan step 05)
             //  ==
-            //  38
+            //  40
             //
             // Retired, so they are absent by design: verifyAppBuilderComponent
             // (2026-08-03); the 4 singular App Builder actions (addApp,
@@ -187,7 +188,7 @@ describe('dashboardHandlers', () => {
             // the integrations surface's Eventing section — workspace-scoped
             // I/O event providers/registrations, same service as the MCP
             // event tools.
-            expect(types).toHaveLength(38);
+            expect(types).toHaveLength(40);
         });
 
         it('should have handlers as functions', () => {

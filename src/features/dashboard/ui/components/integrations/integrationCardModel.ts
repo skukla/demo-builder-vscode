@@ -34,7 +34,13 @@ import {
     PAAS_STORE_VIEW_CODE,
 } from '@/core/config/envVarKeys';
 import type { IdentifiedAppBuilderComponent } from '@/core/state/appBuilderComponentState';
-import type { CardAction, CardStatus, CommerceScopePart, IntegrationCardModel } from '@/core/ui/components/integrations/integrationCardModel.types';
+import type {
+    BoundSystemModel,
+    CardAction,
+    CardStatus,
+    CommerceScopePart,
+    IntegrationCardModel,
+} from '@/core/ui/components/integrations/integrationCardModel.types';
 import { getStatusDisplay, severityToDot } from '@/core/ui/utils/statusVocabulary';
 import {
     getAppBuilderComponentEntry,
@@ -55,6 +61,7 @@ import type { CommerceStoreStructure } from '@/types/commerceStore';
  * project is built.
  */
 export type {
+    BoundSystemModel,
     CardAction,
     CardStatus,
     CommerceScopePart,
@@ -125,8 +132,9 @@ function buildMenuActions(
     status: IntegrationStatus,
     url: string | undefined,
     installFailed = false,
+    system?: BoundSystemModel,
 ): CardAction[] {
-    if (status === 'deploying') return [];
+    if (status === 'deploying' || system?.status === 'deploying') return [];
     // The status verb leads: on a card that needs something, that something is the
     // first thing in the menu. Redeploy only where there is a deployment to redo —
     // 'deploy'/'retry'/'update' already cover the other states, and offering both
@@ -137,14 +145,90 @@ function buildMenuActions(
     // the ONLY retry was a full redeploy round. The install verb leads for the
     // same reason the status verb does: it is what the card needs.
     const install: CardAction[] = status === 'deployed' && installFailed ? ['install'] : [];
+    // The bound system's verbs sit after the integration's own: its screen, its
+    // reset (only with both halves deployed — the reset runs THROUGH the
+    // integration), its redeploy.
+    const systemVerbs: CardAction[] = system
+        ? [
+              ...(system.url ? (['open-system'] as CardAction[]) : []),
+              ...(status === 'deployed' && system.status === 'deployed' ? (['reset-system'] as CardAction[]) : []),
+              ...(system.status === 'deployed' || system.status === 'error' ? (['redeploy-system'] as CardAction[]) : []),
+          ]
+        : [];
     return [
         ...(verb ? [verb] : []),
         ...install,
         ...(url ? (['open'] as CardAction[]) : []),
         ...redeploy,
+        ...systemVerbs,
         'manage-apis',
         'remove',
     ];
+}
+
+/** Worse first: the order the pair's face status is picked in. */
+const STATUS_SEVERITY: IntegrationStatus[] = ['error', 'stale', 'deploying', 'not-deployed', 'deployed'];
+
+/**
+ * The bound system's part of the card, from its persisted row (with its own
+ * live override), or undefined when the integration stands alone.
+ */
+function deriveBoundSystem(
+    system: IdentifiedAppBuilderComponent | undefined,
+    override: RowStatusOverride | undefined,
+): BoundSystemModel | undefined {
+    if (!system) return undefined;
+    const status = normalizeIntegrationStatus(override?.status ?? system.status);
+    const shared = getStatusDisplay(status);
+    const liveStep = status === 'deploying' ? override?.message : undefined;
+    return {
+        id: system.id,
+        name: override?.name ?? system.name ?? system.id,
+        status,
+        statusLabel: liveStep ?? shared?.label ?? '',
+        dotVariant: severityToDot(shared?.severity ?? 'neutral'),
+        message: status === 'error' ? (override?.message ?? system.error) : undefined,
+        url: resolvePrimaryUrl(system),
+        lastDeployed: formatLastDeployed(system.lastDeployed),
+    };
+}
+
+/** The pair's face status: the worse of the two (error > stale > deploying > not-deployed > deployed). */
+function worstOf(a: IntegrationStatus, b: CardStatus | undefined): IntegrationStatus {
+    if (!b) return a;
+    const other = normalizeIntegrationStatus(b);
+    return STATUS_SEVERITY.indexOf(a) <= STATUS_SEVERITY.indexOf(other) ? a : other;
+}
+
+/**
+ * What the card FACE shows for an integration and its bound system together.
+ *
+ * The status is the pair's worst: an integration whose ERP failed is not
+ * "Deployed" to the SC, and a healthy face over a broken half is the one lie
+ * the tile must not tell (plan step 05). While the SYSTEM is the one deploying
+ * (the ERP deploys first), its step is the label; when the worse status is the
+ * system's, the message names which half is wrong.
+ */
+function pairFace(
+    ownStatus: IntegrationStatus,
+    system: BoundSystemModel | undefined,
+    override: RowStatusOverride | undefined,
+    entry: IdentifiedAppBuilderComponent,
+): { status: IntegrationStatus; statusLabel: string; message?: string } {
+    const status = worstOf(ownStatus, system?.status);
+    const staticLabel = getStatusDisplay(status)?.label ?? '';
+    const systemStep =
+        system?.status === 'deploying' && ownStatus !== 'deploying' ? system.statusLabel : undefined;
+    const liveStep = status === 'deploying' ? (override?.message ?? systemStep) : undefined;
+    const systemNote =
+        system && status !== ownStatus && status !== 'deploying'
+            ? `${system.name}: ${system.statusLabel}`
+            : undefined;
+    return {
+        status,
+        statusLabel: liveStep ?? staticLabel,
+        message: resolveCardMessage(ownStatus, liveStep, override, entry) ?? systemNote,
+    };
 }
 
 /**
@@ -272,13 +356,15 @@ function resolveCardMessage(
 export function deriveIntegrationCard(
     entry: IdentifiedAppBuilderComponent,
     override?: RowStatusOverride,
+    boundSystem?: { component: IdentifiedAppBuilderComponent; override?: RowStatusOverride },
 ): IntegrationCardModel {
-    const status = normalizeIntegrationStatus(override?.status ?? entry.status);
+    const system = deriveBoundSystem(boundSystem?.component, boundSystem?.override);
+    const ownStatus = normalizeIntegrationStatus(override?.status ?? entry.status);
+    const face = pairFace(ownStatus, system, override, entry);
+    const { status } = face;
     const facet = deriveKindFacet(entry);
     const primaryUrl = resolvePrimaryUrl(entry);
-    const shared = getStatusDisplay(status);
-    const staticLabel = shared?.label ?? '';
-    const dotVariant = severityToDot(shared?.severity ?? 'neutral');
+    const dotVariant = severityToDot(getStatusDisplay(status)?.severity ?? 'neutral');
 
     // While deploying, the live step IS the label — because the card FACE renders
     // `statusLabel` and nothing else (IntegrationCard.tsx). Putting the step on
@@ -291,8 +377,6 @@ export function deriveIntegrationCard(
     // Only while DEPLOYING. A failure reason is a full CLI sentence and would
     // blow out an 11px uppercase card face, so an error keeps the terse label and
     // leaves its reason for the drawer.
-    const liveStep = status === 'deploying' ? override?.message : undefined;
-    const statusLabel = liveStep ?? staticLabel;
     const installation = deriveInstallation(entry);
 
     return {
@@ -303,17 +387,18 @@ export function deriveIntegrationCard(
         sourceLine: facet.sourceLine,
         sourceIsAi: facet.sourceIsAi,
         status,
-        statusLabel,
+        statusLabel: face.statusLabel,
         dotVariant,
-        message: resolveCardMessage(status, liveStep, override, entry),
+        message: face.message,
         url: primaryUrl,
         urlLabel: 'App URL',
         deployedUrls: entry.deployedUrls,
         apis: facet.apis,
         lastDeployed: formatLastDeployed(entry.lastDeployed),
         installation,
-        menuActions: buildMenuActions(status, primaryUrl, installation?.failed),
+        menuActions: buildMenuActions(ownStatus, primaryUrl, installation?.failed, system),
         canRename: entry.kind === 'integration' && !facet.isCatalog,
+        ...(system ? { system } : {}),
     };
 }
 
@@ -519,9 +604,23 @@ export function buildIntegrationCards(
     meshCardComponentId?: string,
 ): IntegrationCardModel[] {
     const integrations = components.filter((component) => component.kind === 'integration');
-    const cards = integrations.map((component) =>
-        deriveIntegrationCard(component, overrides[component.id]),
-    );
+    // A SYSTEM (the ERP) never becomes a card: it rides its integration's card
+    // as a second section. The pairing is the catalog's `boundTo`, read off the
+    // system row's own entry (the caller's catalog first, the bundled one else).
+    const entryOf = (id: string): AppBuilderComponentCatalogEntry | undefined =>
+        catalog?.find((e) => e.id === id) ?? getAppBuilderComponentEntry(id);
+    const systemFor = (integrationId: string): IdentifiedAppBuilderComponent | undefined =>
+        components.find(
+            (component) => component.kind === 'system' && entryOf(component.id)?.boundTo === integrationId,
+        );
+    const cards = integrations.map((component) => {
+        const system = systemFor(component.id);
+        return deriveIntegrationCard(
+            component,
+            overrides[component.id],
+            system ? { component: system, override: overrides[system.id] } : undefined,
+        );
+    });
 
     // Ids already on screen. `integrations` deliberately omits the mesh, so
     // WITHOUT the caller naming its mesh card's component id the mesh's own row
@@ -533,7 +632,14 @@ export function buildIntegrationCards(
     // ADD there is no mesh yet and so no derived card, and then the synthesized
     // card is the only feedback the operation has — suppressing it by kind
     // instead would trade a duplicate for silence.
+    //
+    // Every system in the project is covered too: its row status rides its
+    // integration's card, so an ERP's own 'deploying' push must never
+    // synthesize an ERP card beside the pair.
     const covered = new Set(integrations.map((component) => component.id));
+    for (const component of components) {
+        if (component.kind === 'system') covered.add(component.id);
+    }
     if (meshCardComponentId) {
         covered.add(meshCardComponentId);
     }

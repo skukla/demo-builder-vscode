@@ -23,6 +23,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { AppBuilderComponentRemoveDialog } from '../AppBuilderComponentRemoveDialog';
+import { ErpResetDialog } from '../ErpResetDialog';
 import { ManageApisModal } from '../ManageApisModal';
 import { type CardAction, type IntegrationCardModel } from './integrationCardModel';
 import { IntegrationDetailPanel } from './IntegrationDetailPanel';
@@ -95,6 +96,9 @@ export function IntegrationsGrid({
     // used to hold the id alone and pass it as `componentName`, so the modal read
     // "Manage Adobe API access for erp-sync".
     const [manageApis, setManageApis] = useState<{ id: string; name: string } | null>(null);
+    // The ERP reset awaiting confirmation: the INTEGRATION's id (the reset runs
+    // through it) and the ERP's name (what the dialog says).
+    const [pendingReset, setPendingReset] = useState<{ id: string; erpName: string } | null>(null);
 
     // Looked up fresh each render: the open drawer tracks live pushes, and a
     // card that left the map closes it.
@@ -150,6 +154,26 @@ export function IntegrationsGrid({
                 setManageApis({ id: model.componentId ?? model.id, name: model.name });
                 return;
             }
+            // The bound system's verbs (the ERP): its screen, its reset (confirmed,
+            // through the integration), its own redeploy by its own id.
+            if (action === 'open-system') {
+                if (model.system?.url) {
+                    webviewClient.postMessage('openLiveSite', { url: model.system.url });
+                }
+                return;
+            }
+            if (action === 'reset-system') {
+                if (model.system) {
+                    setPendingReset({ id: model.id, erpName: model.system.name });
+                }
+                return;
+            }
+            if (action === 'redeploy-system') {
+                if (model.system) {
+                    webviewClient.postMessage('redeployAppBuilderComponent', { id: model.system.id });
+                }
+                return;
+            }
             const message = KEYED_MESSAGES[action];
             if (message) {
                 webviewClient.postMessage(message, { id: model.id });
@@ -164,10 +188,24 @@ export function IntegrationsGrid({
     // honest consequence of the verb, and it belongs in front of the click.
     const removeConsequence = useMemo((): string | undefined => {
         const target = cards.find((card) => (card.componentId ?? card.id) === pendingRemoveId);
-        return target?.isMesh
-            ? 'Your storefront loses its API Mesh endpoint until you deploy a new mesh.'
-            : undefined;
+        if (target?.isMesh) {
+            return 'Your storefront loses its API Mesh endpoint until you deploy a new mesh.';
+        }
+        // The pair is a unit (decision 2): removing the integration removes its
+        // ERP. Its records outlive the undeploy in the workspace's database.
+        if (target?.system) {
+            return `Removes the integration and its ${target.system.name} too. The ERP's records stay in the workspace's database until a new ERP replaces them.`;
+        }
+        return undefined;
     }, [cards, pendingRemoveId]);
+
+    const closeResetDialog = useCallback((): void => setPendingReset(null), []);
+    const confirmReset = useCallback((): void => {
+        if (pendingReset) {
+            webviewClient.postMessage('resetErpRecords', { id: pendingReset.id });
+        }
+        setPendingReset(null);
+    }, [pendingReset]);
 
     const closeRemoveDialog = useCallback((): void => setPendingRemoveId(null), []);
     const confirmRemove = useCallback((): void => {
@@ -218,6 +256,13 @@ export function IntegrationsGrid({
                 componentId={manageApis?.id}
                 componentName={manageApis?.name ?? ''}
                 onClose={() => setManageApis(null)}
+            />
+
+            <ErpResetDialog
+                isOpen={pendingReset !== null}
+                erpName={pendingReset?.erpName ?? 'the ERP'}
+                onConfirm={confirmReset}
+                onClose={closeResetDialog}
             />
         </div>
     );

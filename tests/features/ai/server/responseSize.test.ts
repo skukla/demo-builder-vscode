@@ -360,6 +360,12 @@ describe('rows with no output safety net are classified', () => {
         // `{data: {id, persisted, live}}` (appManagementInstallHandlers.ts).
         'install_integration',
         'get_integration_install_status',
+        // The ERP pair (plan step 05), category 2, read before listing:
+        // `handleGetErpStatus` returns `{id, integration, erp, live}` and
+        // `handleResetErpRecords` returns `{id, erp, report}` — both fixed
+        // shapes the STUB cannot see.
+        'get_erp_status',
+        'reset_erp_records',
     ];
 
     it('the set matches exactly — a new row must be classified before it ships', async () => {
@@ -462,6 +468,12 @@ describe('the ceiling table tracks the tool surface', () => {
         // not by anything that scales with the project.
         'install_integration',
         'get_integration_install_status',
+        // The ERP pair. `get_erp_status` is the integration's own status
+        // action (a health object, a base URL, one ledger count) beside two
+        // persisted rows; `reset_erp_records` is the reset's report (four
+        // counts). Neither scales with the project or the instance.
+        'get_erp_status',
+        'reset_erp_records',
     ]);
 
     it('records a ceiling for every DESCRIPTOR tool that is not deliberately exempt', () => {

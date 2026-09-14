@@ -53,7 +53,7 @@ Deleting things
 - `cleanup_dalive_site` · `remove_block_from_library` · `remove_integration`
 
 Replacing or wiping
-- `reset_eds_project` · `reset_datapack` · `migrate_storefront_name`
+- `reset_eds_project` · `reset_datapack` · `migrate_storefront_name` · `reset_erp_records`
 
 Reaching other people
 - `set_site_admin` · `republish` · `sync_content`

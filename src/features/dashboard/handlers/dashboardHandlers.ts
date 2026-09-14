@@ -69,6 +69,10 @@ import {
     handleSetConsoleApis,
 } from '@/features/dashboard/handlers/consoleApiHandlers';
 import {
+    handleGetErpStatus,
+    handleResetErpRecords,
+} from '@/features/dashboard/handlers/erpIntegrationHandlers';
+import {
     MessageHandler,
     defineHandlers,
     type HandlerContext,
@@ -265,6 +269,10 @@ export const dashboardHandlers = defineHandlers({
     // install-without-redeploy retry.
     installAppBuilderComponent: handleInstallAppBuilderComponent,
     getAppBuilderInstallStatus: handleGetAppBuilderInstallStatus,
+    // The ERP integration's two verbs (plan step 05): the ERP's health as the
+    // integration sees it, and the reset that re-mirrors Commerce into it.
+    getErpStatus: handleGetErpStatus,
+    resetErpRecords: handleResetErpRecords,
 
     // Console API access (runtime API subscription — list_console_apis / add_console_apis)
     listConsoleApis: handleListConsoleApis,

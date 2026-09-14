@@ -87,6 +87,9 @@ describe('ACTION_DESCRIPTORS', () => {
             'install_prerequisite',
             'refresh_block_library',
             'remove_integration',
+            // Wipes the ERP and undoes what it wrote into Commerce companies
+            // (plan step 05, 2026-09-14).
+            'reset_erp_records',
             // Says "set", not "delete", and removes on a live workspace credential
             // — exactly the case the delete_* rule above cannot see.
             'set_console_apis',

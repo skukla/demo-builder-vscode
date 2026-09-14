@@ -291,6 +291,21 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
         },
     },
     {
+        tool: 'get_erp_status',
+        needsAuth: false,
+        readOnly: true,
+        description:
+            "Read the ERP integration's state: the ERP's health as the integration sees it " +
+            '(reachable, its base URL, how many company writes it holds in its ledger) plus the ' +
+            'persisted rows of the integration and its ERP (name, status, the ERP screen\'s URL). ' +
+            'Use before reset_erp_records, or to answer "is the ERP up". Takes the integration id.',
+        map: dashboardHandlers,
+        type: 'getErpStatus',
+        inputSchema: {
+            id: z.string().describe('The ERP integration id (from get_project)'),
+        },
+    },
+    {
         tool: 'list_console_apis',
         needsAuth: ['adobe'],
         readOnly: true,

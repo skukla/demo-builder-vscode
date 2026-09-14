@@ -63,6 +63,13 @@ const CATALOG: Row[] = [
         args: ['id'],
     },
     {
+        tool: 'get_erp_status',
+        map: dashboardHandlers,
+        type: 'getErpStatus',
+        needsAuth: false,
+        args: ['id'],
+    },
+    {
         tool: 'list_console_apis',
         map: dashboardHandlers,
         type: 'listConsoleApis',

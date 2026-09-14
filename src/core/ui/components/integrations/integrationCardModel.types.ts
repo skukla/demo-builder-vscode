@@ -33,7 +33,12 @@ export type CardAction =
     | 'manage-apis'
     | 'remove'
     | 'sign-in'
-    | 'open';
+    | 'open'
+    // The bound system's verbs (the ERP that comes with the ERP integration;
+    // plan step 05): its own screen, its reset, its redeploy.
+    | 'open-system'
+    | 'reset-system'
+    | 'redeploy-system';
 
 /** Everything a card face, drawer body, and drawer action bar render. */
 export interface IntegrationCardModel {
@@ -114,6 +119,30 @@ export interface IntegrationCardModel {
      * (a mesh deployed before this shipped, or never deployed at all).
      */
     commerceScope?: CommerceScopePart[];
+    /**
+     * The SYSTEM bound to this integration — the ERP that comes with the ERP
+     * integration (`kind: 'system'`, catalog `boundTo`). A system never has a
+     * card of its own: its status, its screen's URL and its verbs ride the
+     * integration's card and flyout as a second section. Absent on every card
+     * whose integration stands alone.
+     */
+    system?: BoundSystemModel;
+}
+
+/** The bound system's part of a card: what the flyout's second section renders. */
+export interface BoundSystemModel {
+    /** The keyed `appBuilderComponents` id the system's own verbs address. */
+    id: string;
+    name: string;
+    status: CardStatus;
+    statusLabel: string;
+    dotVariant: StatusDotVariant;
+    /** The failure reason, when the system is in error. */
+    message?: string;
+    /** The system's own screen (its hosted page), when deployed. */
+    url?: string;
+    /** Preformatted locale display string. */
+    lastDeployed?: string;
 }
 
 /** One sub-labelled line of the Commerce scope row. */

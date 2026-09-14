@@ -28,6 +28,8 @@ import { ActionButton, Link } from '@adobe/react-spectrum';
 import Close from '@spectrum-icons/workflow/Close';
 import React from 'react';
 import type { CardAction, IntegrationCardModel } from './integrationCardModel';
+import { PanelRow } from './PanelRow';
+import { SystemSection } from './SystemSection';
 import { InlineRenameField } from '@/core/ui/components/forms/InlineRenameField';
 import { IntegrationActionsMenu } from '@/core/ui/components/integrations/IntegrationActionsMenu';
 import { CopyableText } from '@/core/ui/components/ui/CopyableText';
@@ -72,29 +74,6 @@ function selectEndpoints(
 }
 
 /** One key/value detail row. */
-function PanelRow({
-    label,
-    mono = false,
-    children,
-}: {
-    label: string;
-    mono?: boolean;
-    children: React.ReactNode;
-}): React.ReactElement {
-    return (
-        <div className="integration-panel-row">
-            <span className="integration-panel-row-key">{label}</span>
-            <span
-                className={cn(
-                    'integration-panel-row-value',
-                    mono && 'integration-panel-row-value--mono',
-                )}
-            >
-                {children}
-            </span>
-        </div>
-    );
-}
 
 /** Head + body + action bar for the selected card. */
 function PanelContent({
@@ -288,6 +267,7 @@ function PanelContent({
                 {model.lastDeployed && (
                     <PanelRow label="Last deploy">{model.lastDeployed}</PanelRow>
                 )}
+                <SystemSection model={model} onAction={onAction} />
                 {/* LAST, deliberately. Every row above is fixed-size — one apiece —
                     while this group grows with the app's web actions and is the only
                     thing here without a bound. Above the metadata it strands Last

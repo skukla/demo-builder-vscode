@@ -301,6 +301,23 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         },
     },
     {
+        tool: 'reset_erp_records',
+        needsAuth: ['adobe'],
+        readOnly: false,
+        description:
+            "Reset the ERP that comes with the ERP integration: undo the credit limits and " +
+            'company blocks it wrote into Commerce, clear the ERP order numbers from Commerce ' +
+            'orders, wipe every ERP record, then mirror the Commerce products and companies into it ' +
+            'again as they stand. Commerce is the master; the ERP is transitory. Confirm with the ' +
+            'user first. Takes the integration id.',
+        map: dashboardHandlers,
+        type: 'resetErpRecords',
+        confirm: true,
+        inputSchema: {
+            id: z.string().describe('The ERP integration id (from get_project)'),
+        },
+    },
+    {
         tool: 'stop_demo',
         needsAuth: false,
         readOnly: false,

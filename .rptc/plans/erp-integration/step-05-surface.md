@@ -40,3 +40,34 @@ wizard card. Then the full gate.
 
 
 **Decision 19 (2026-09-14):** no "ERP offline" switch and no `set_erp_offline` tool on this surface. The demo is the flow between the two systems with the ERP shown as the supposed master; unavailability is a robustness property, tested on the ERP's own Settings screen.
+
+## Built (2026-09-14)
+
+`IntegrationCardModel.system` (`BoundSystemModel`: id, name, status, label, dot, message,
+url, last deploy) is derived in `buildIntegrationCards` by pairing a `kind: 'system'` row to
+the integration its catalog entry names in `boundTo` (the caller's catalog first, the bundled
+one else); a system never becomes a card and its own `deploying` push never synthesizes one.
+The face reads the pair's worse status and names the wrong half in `message`; while the ERP
+deploys first, its step is the face's label. Three `CardAction`s: `open-system`,
+`reset-system`, `redeploy-system` (offered after the integration's own verbs; reset only with
+both halves deployed). `IntegrationDetailPanel` gains the system's section (status, "Open
+<name>", last deploy). `IntegrationsGrid` dispatches them: the ERP screen via `openLiveSite`,
+the redeploy by the ERP's own id, the reset through a new `ErpResetDialog` that posts
+`resetErpRecords` with the INTEGRATION's id; Remove on the pair says the ERP goes too and
+where its records stay.
+
+Handlers (`erpIntegrationHandlers.ts`): `getErpStatus` (read, headless-safe, typed
+AUTH_REQUIRED) and `resetErpRecords` (guards → progress → the integration's `erp/reset`),
+over `erpIntegrationClient.ts` (bearer + org header, URLs off `deployedUrls`). Dashboard map
+38 → 40. Tools: `get_erp_status` (read descriptor) and `reset_erp_records` (confirm-gated,
+`AGENT_ALERT_COPY`), narration, response-size classification, catalog regen, two battery
+prompts, `agent-alerts.md`. Removing the ERP alone is refused by the runner, so
+`remove_integration` on it answers in words.
+
+Wizard: catalog rows carry `companion` (the bound system's name); the card's subline says
+"Comes with <name>"; the review and the build summary list the system as its own row. The
+Integrations area's gallery still lists integrations only. Creation phase 3b needs no change:
+the runner's add deploys the pair, and its progress rides the phase's reporter.
+
+Not done here: live acceptance (step 06, owner-gated "install"); the ERP's name editable in
+place on the flyout (Configure Project edits it today); updates (step 07).
