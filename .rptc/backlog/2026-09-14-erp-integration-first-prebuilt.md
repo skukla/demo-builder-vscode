@@ -1,0 +1,50 @@
+---
+id: AB-9
+kind: feature
+area: app-builder
+parent: AB-1
+needs: []
+value: high
+status: planned
+---
+
+# ERP integration: the first pre-built integration in the catalog
+
+Filed 2026-09-14 by the owner. The integrations gallery is empty today (the two catalog
+entries are the starter-kit seed and the blank shell); this is its first tile.
+
+## The ask, in the owner's words
+
+Use the Commerce integration starter kit to create an integration with an ERP modeled on
+SAP. It ships two things: the ERP clone and the App Builder integration to it, so the SC can
+demonstrate both the SAP side and the Commerce integration. Bidirectional. Works whatever
+data the Commerce instance holds. Every ERP record resettable. Nishant Kapoor's private
+`agilent-erp-mock` is the reference.
+
+## The shape (plan: `.rptc/plans/erp-integration/`, thirteen-plus decisions in its ledger)
+
+Two public repositories (`skukla/demo-erp`, `skukla/commerce-erp-integration`), two catalog
+entries, one gallery tile "ERP integration" named by the SE at pick time. The ERP is a new
+kind of component, `system`: a plain App Builder app in the demo's own project and
+workspace, App Builder Database for its records, its own screen, provides `ERP_BASE_URL`,
+knows nothing of Commerce, and is a UNIT with its integration (added before it, removed
+with it, shown as the second section of its card, never a card of its own). The integration
+is the workspace's one App Management app, built on the kit: the order and pricing webhooks,
+syncs both ways, company write-back with a ledger, the mirror and reset, an Admin UI SDK
+screen inside Commerce Admin. Reset: Commerce is master of what it owns; the ERP is
+transitory; only the company blocks and credit limits the ERP set are reverted.
+
+## Steps
+
+01 spike the four unknowns on a scratch workspace · 02 the ERP repository · 03 the
+integration repository · 04 catalog entries, the unit's add/remove, naming · 05 the card,
+the flyout, the agent tools · 06 live acceptance on Bodea and docs.
+
+## Rules the owner set
+
+- Build both apps with our tooling to Adobe's standards (the starter-kit skills, the App
+  Builder patterns); Nishant Kapoor's code is used where it meets that bar, assessed rather than trusted.
+- The scratch workspace for the spike is created and deleted by the agent through the
+  proven SDK path; no owner action needed.
+- The ERP's display name is an input of the integration's configuration, default "Acme ERP".
+- An instance without B2B companies gets one default business partner named for the project.
