@@ -1,15 +1,17 @@
 /**
- * DemoPackageSection — the "Storefront as demo package" part of the Export
- * dialog: the prefilled name and description, the checks a project built from
- * the card will need, the link once saved, and the Save and Remove buttons. Edge Delivery projects only; the dialog leaves the section
- * out for a headless project.
+ * DemoPackageSection — the body of "Save as demo package": the prefilled name
+ * and description, the checks a project built from the card will need, and the
+ * link once saved. One view at a time, in the house vocabulary (owner,
+ * 2026-09-14): the spinner while reading, saving or removing; the success state
+ * when a save or a removal lands; the form otherwise. Its Save and Remove
+ * buttons are the dialog's footer actions (DemoPackageModal's `packageActions`).
  *
  * @module features/dashboard/ui/components/demo-package/DemoPackageSection
  */
 
-import { Button, ButtonGroup, TextArea, TextField } from '@adobe/react-spectrum';
+import { TextArea, TextField } from '@adobe/react-spectrum';
 import React from 'react';
-import { useDemoPackage, type PackageOutcome, type UseDemoPackage } from './useDemoPackage';
+import type { PackageOutcome, UseDemoPackage } from './useDemoPackage';
 import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
@@ -28,6 +30,11 @@ export const PACKAGE_COPY = {
     checksTitle: 'What colleagues get',
     republishHint: 'Republish, then save again.',
     savedTitle: "Saved. It's on your Welcome step now.",
+    saving: 'Saving the demo package…',
+    savingFor: 'Writing its name and description into your repository.',
+    removing: 'Removing the demo package…',
+    savedSuccess: 'Saved as a demo package',
+    savedHow: `It's on your Welcome step. Colleagues paste this link into "Add a demo package".`,
     linkHow: 'Colleagues paste this link into "Add a demo package".',
     skippedTitle: 'Card saved; the file in your repository was left alone',
     removed: 'Demo package removed',
@@ -60,38 +67,34 @@ function LinkNotice({ link }: { link: string }): React.ReactElement {
     );
 }
 
-function OutcomeNotice({ outcome, link }: { outcome?: PackageOutcome; link: string }): React.ReactElement | null {
-    if (!outcome) return null;
+/** The result of a save or a removal, in the house status display. */
+function OutcomeView({ outcome, link }: { outcome: PackageOutcome; link: string }): React.ReactElement {
     if (outcome.kind === 'removed') {
         return (
-            <InlineNotice tone="info" title={PACKAGE_COPY.removed} testId="package-removed">
-                {outcome.file === 'skipped' ? PACKAGE_COPY.removedSkipped : PACKAGE_COPY.removedHow}
-            </InlineNotice>
+            <div data-testid="package-removed">
+                <StatusDisplay
+                    variant="success"
+                    title={PACKAGE_COPY.removed}
+                    message={outcome.file === 'skipped' ? PACKAGE_COPY.removedSkipped : PACKAGE_COPY.removedHow}
+                    centerMessage
+                    height="280px"
+                />
+            </div>
         );
     }
-    if (outcome.file === 'skipped') {
-        return (
-            <InlineNotice tone="warning" title={PACKAGE_COPY.skippedTitle} testId="package-skipped">
-                {outcome.fileReason}
-            </InlineNotice>
-        );
-    }
-    return <LinkNotice link={link} />;
-}
-
-function Actions({ flow }: { flow: UseDemoPackage }): React.ReactElement | null {
-    if (flow.load.status !== 'ready') return null;
+    const skipped = outcome.file === 'skipped';
     return (
-        <ButtonGroup align="end">
-            {flow.load.saved ? (
-                <Button variant="secondary" onPress={flow.remove} isDisabled={Boolean(flow.busy)}>
-                    {PACKAGE_COPY.remove}
-                </Button>
-            ) : null}
-            <Button variant="accent" onPress={flow.save} isDisabled={!flow.canSave}>
-                {flow.load.saved ? PACKAGE_COPY.update : PACKAGE_COPY.save}
-            </Button>
-        </ButtonGroup>
+        <div data-testid={skipped ? 'package-skipped' : 'package-saved'}>
+            <StatusDisplay
+                variant={skipped ? 'warning' : 'success'}
+                title={skipped ? PACKAGE_COPY.skippedTitle : PACKAGE_COPY.savedSuccess}
+                message={skipped ? outcome.fileReason : PACKAGE_COPY.savedHow}
+                centerMessage
+                height="280px"
+            >
+                <CopyableText>{link}</CopyableText>
+            </StatusDisplay>
+        </div>
     );
 }
 
@@ -110,6 +113,20 @@ function Body({ flow }: { flow: UseDemoPackage }): React.ReactElement {
     if (load.status === 'failed') {
         return <StatusDisplay variant="error" title={PACKAGE_COPY.cannot} message={load.error} height="auto" />;
     }
+    if (flow.busy) {
+        // The write goes to GitHub and takes a moment; a form that sits still
+        // meanwhile reads as a press that did nothing (owner, 2026-09-14).
+        return (
+            <CenteredFeedbackContainer height="280px">
+                <LoadingDisplay
+                    size="L"
+                    message={flow.busy === 'save' ? PACKAGE_COPY.saving : PACKAGE_COPY.removing}
+                    helperText={flow.busy === 'save' ? PACKAGE_COPY.savingFor : undefined}
+                />
+            </CenteredFeedbackContainer>
+        );
+    }
+    if (flow.outcome) return <OutcomeView outcome={flow.outcome} link={load.link} />;
     return (
         <>
             <p className="export-section-text">{PACKAGE_COPY.intro}</p>
@@ -136,8 +153,7 @@ function Body({ flow }: { flow: UseDemoPackage }): React.ReactElement {
                     ))}
                 </ul>
             </div>
-            {load.saved && !flow.outcome ? <LinkNotice link={load.link} /> : null}
-            <OutcomeNotice outcome={flow.outcome} link={load.link} />
+            {load.saved ? <LinkNotice link={load.link} /> : null}
             {flow.actionError ? (
                 <InlineNotice tone="warning" title={PACKAGE_COPY.failed} testId="package-error">
                     {flow.actionError}
@@ -148,16 +164,15 @@ function Body({ flow }: { flow: UseDemoPackage }): React.ReactElement {
 }
 
 /**
- * The storefront part of the Export dialog.
+ * The dialog body.
  *
- * @returns the section body with its own Save and Remove buttons
+ * @param props.flow - the dialog's state, owned by the modal so its footer can bind the actions
+ * @returns the current view
  */
-export function DemoPackageSection(): React.ReactElement {
-    const flow = useDemoPackage();
+export function DemoPackageSection({ flow }: { flow: UseDemoPackage }): React.ReactElement {
     return (
         <div className="demo-package-body" data-testid="demo-package-section">
             <Body flow={flow} />
-            <Actions flow={flow} />
         </div>
     );
 }
