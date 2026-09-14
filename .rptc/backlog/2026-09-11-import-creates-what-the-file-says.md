@@ -5,7 +5,7 @@ area: platform
 parent: PL-56
 needs: [PL-56c]
 value: high
-status: backlog
+status: active
 ---
 
 # Import creates what the file says, re-proves sign-ins, and tells the SC what it did
@@ -62,3 +62,7 @@ wizard's zip door both read a demo bundle's setup and open the wizard pre-filled
 the storefront became (`setupForCard` drops the sender's repository and site names). What
 remains here is the rest of the ask: re-prove the sign-ins the setup names before anything
 continues, and tell the SC what was applied and what was not.
+
+## Shipped so far
+
+- 2026-09-13  feat(eds): a demo bundle's setup opens the wizard pre-filled, on the card its storefront became (`abba851b5`)
