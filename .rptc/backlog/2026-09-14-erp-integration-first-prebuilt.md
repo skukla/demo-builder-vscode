@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-1
 needs: []
 value: high
-status: planned
+status: active
 ---
 
 # ERP integration: the first pre-built integration in the catalog
@@ -55,3 +55,6 @@ the flyout, the agent tools · 06 live acceptance on Bodea and docs.
 - 2026-09-14  docs(rptc): record the ERP integration build and what its deploys taught (`c5ec66682`)
 - 2026-09-14  docs(rptc): decisions 19 to 21 and the integration step as rebuilt (`449ac0c1a`)
 - 2026-09-14  docs(rptc): step 07, how the ERP and the integration are updated (`e0f4bd2e4`)
+- 2026-09-14  feat(wizard): the ERP integration's card says what comes with it; docs for the pair (`68086fabb`)
+- 2026-09-14  feat(dashboard): the ERP rides its integration's card, with two verbs for people and agents (`edaf98784`)
+- 2026-09-14  feat(app-builder): the ERP pair in the catalog — a system kind, bound to its integration (`f4c20c83d`)
