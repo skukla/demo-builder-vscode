@@ -13,9 +13,9 @@
  * @module features/eds/services/reset/demoSourceCheck
  */
 
+import { resolveContentIndex } from '../contentIndex';
 import type { GitHubRepoOperations } from '../github/githubRepoOperations';
 import { COMPONENT_IDS } from '@/core/constants';
-import { resolveContentIndex } from '../contentIndex';
 import { renameAddedDemoSource } from '@/features/project-creation/services/addedDemoSettings';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';

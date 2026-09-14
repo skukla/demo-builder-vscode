@@ -13,8 +13,8 @@
  * @module features/ai/server/consentText
  */
 
-import { agentNotice } from './agentNotice';
 import { alertCopyFor } from './agentAlertCopy';
+import { agentNotice } from './agentNotice';
 
 /** Longest arg value the consent dialog will print before eliding. */
 const CONSENT_DETAIL_VALUE_MAX = 60;

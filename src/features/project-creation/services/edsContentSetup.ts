@@ -14,12 +14,12 @@
  * - configureDaLivePermissions / applyDaLiveOrgConfigSettings from edsHelpers
  */
 
-import { contentIndexUrl } from '@/features/eds/services/contentIndex';
 import * as vscode from 'vscode';
 import { parseGitHubUrl } from '@/core/utils/githubUrlParser';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { LibraryPublishHelix } from '@/features/eds/handlers/blockLibraryPublish';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
+import { contentIndexUrl } from '@/features/eds/services/contentIndex';
 import { DA_LIVE_BASE_URL } from '@/features/eds/services/daLive/daLiveConstants';
 import type { TokenProvider } from '@/features/eds/services/daLive/daLiveOrgOperations';
 import type { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';

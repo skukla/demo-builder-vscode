@@ -11,10 +11,10 @@
  * directly and return structured results instead.
  */
 
-import { agentNotice } from './agentNotice';
 import * as vscode from 'vscode';
 import { z } from 'zod';
 import { clearAdobeTarget } from './adobeTargetStore';
+import { agentNotice } from './agentNotice';
 import { asRawText, asText } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
 import { dispatchHandler } from '@/core/handlers/dispatchHandler';

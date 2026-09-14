@@ -17,9 +17,9 @@
  * @module features/eds/services/edsPipeline
  */
 
-import { contentIndexUrl } from './contentIndex';
 import { failedTargets, publishBrandAssets } from './brandAssetPublisher';
 import { prewarmCatalog } from './catalogPrewarmService';
+import { contentIndexUrl } from './contentIndex';
 import type { DaLiveContentOperations } from './daLive/daLiveContentOperations';
 import type { GitHubFileOperations } from './github/githubFileOperations';
 import type { HelixService } from './helix/helixService';
