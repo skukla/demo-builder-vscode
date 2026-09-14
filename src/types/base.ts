@@ -232,8 +232,14 @@ export interface Project {
     updatedAt?: Date;
 }
 
-/** An App Builder component's kind: a mesh artifact or a custom App Builder integration. */
-export type AppBuilderComponentKind = 'mesh' | 'integration';
+/**
+ * An App Builder component's kind: a mesh artifact, an App Builder integration,
+ * or a SYSTEM — a stand-in for an external system an integration talks to (the
+ * demo ERP). A system is a plain App Builder app with no Commerce install; it
+ * never gets a card of its own and comes and goes with the integration it is
+ * bound to (`AppBuilderComponentCatalogEntry.boundTo`; decision 13, 2026-09-14).
+ */
+export type AppBuilderComponentKind = 'mesh' | 'integration' | 'system';
 
 /**
  * Keyed appBuilderComponent state (Model B). One concept replaces the singular

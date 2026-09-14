@@ -105,7 +105,7 @@ function AppBuilderComponentGroup({
                     key={field.name}
                     appBuilderComponentId={group.id}
                     field={field}
-                    value={String(groupConfig[field.name] ?? '')}
+                    value={String(groupConfig[field.name] ?? field.default ?? '')}
                     onTextChange={onTextChange}
                 />
             ))}

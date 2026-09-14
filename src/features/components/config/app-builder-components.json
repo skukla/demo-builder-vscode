@@ -11,8 +11,14 @@
       "layout": "extension",
       "lifecycle": "app-management",
       "nodeVersion": "24",
-      "compatibleBackends": ["adobe-commerce-paas", "adobe-commerce-accs"],
-      "requiredApis": ["CloudIntegrationSDK", "commerceeventing"],
+      "compatibleBackends": [
+        "adobe-commerce-paas",
+        "adobe-commerce-accs"
+      ],
+      "requiredApis": [
+        "CloudIntegrationSDK",
+        "commerceeventing"
+      ],
       "source": {
         "owner": "adobe",
         "repo": "commerce-integration-starter-kit",
@@ -28,6 +34,71 @@
       "source": {
         "owner": "skukla",
         "repo": "app-builder-shell",
+        "branch": "main"
+      }
+    },
+    {
+      "id": "demo-erp",
+      "name": "ERP",
+      "description": "A stand-in ERP the integration talks to: products, business partners, contract prices and sales orders, every record resettable, with its own screen. Comes with the ERP integration and goes with it.",
+      "kind": "system",
+      "boundTo": "erp-integration",
+      "nodeVersion": "24",
+      "compatibleBackends": [
+        "adobe-commerce-paas",
+        "adobe-commerce-accs"
+      ],
+      "providesEnvVars": [
+        "ERP_BASE_URL"
+      ],
+      "envSchema": [
+        {
+          "name": "ERP_DISPLAY_NAME",
+          "type": "text",
+          "label": "ERP name",
+          "default": "Acme ERP"
+        }
+      ],
+      "source": {
+        "owner": "skukla",
+        "repo": "demo-erp",
+        "branch": "main"
+      },
+      "nameFromEnvVar": "ERP_DISPLAY_NAME"
+    },
+    {
+      "id": "erp-integration",
+      "name": "ERP integration",
+      "description": "Adobe Commerce and an ERP, on the Commerce integration starter kit: orders get an ERP number, price, stock and order-status changes in the ERP land in Commerce, contract prices apply in the cart, and a screen inside the Commerce Admin shows it all. Comes with its own ERP.",
+      "kind": "integration",
+      "layout": "extension",
+      "lifecycle": "app-management",
+      "nodeVersion": "24",
+      "compatibleBackends": [
+        "adobe-commerce-paas",
+        "adobe-commerce-accs"
+      ],
+      "requiredApis": [
+        "CloudIntegrationSDK",
+        "commerceeventing"
+      ],
+      "envSchema": [
+        {
+          "name": "ERP_BASE_URL",
+          "type": "text",
+          "label": "ERP address",
+          "providedBy": "demo-erp"
+        },
+        {
+          "name": "ERP_DISPLAY_NAME",
+          "type": "text",
+          "label": "ERP name",
+          "default": "Acme ERP"
+        }
+      ],
+      "source": {
+        "owner": "skukla",
+        "repo": "commerce-erp-integration",
         "branch": "main"
       }
     }

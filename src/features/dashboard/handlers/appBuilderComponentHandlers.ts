@@ -202,8 +202,13 @@ export interface UserSuppliedEnvVars {
  */
 export function userSuppliedEnvVars(entry: AppBuilderComponentCatalogEntry): UserSuppliedEnvVars {
     const { userText, userSecret } = classifyEnvSchema(entry.envSchema ?? []);
+    // A text var WITH a default needs nobody: the deploy uses the default and
+    // Configure lets the SC change it later (the ERP's display name). Stopping
+    // the add for it would send the user to Configure to confirm a value that
+    // is already there.
+    const mustType = userText.filter((envVar) => envVar.default === undefined);
     return {
-        names: [...userText, ...userSecret].map((envVar) => envVar.name),
+        names: [...mustType, ...userSecret].map((envVar) => envVar.name),
         hasSecret: userSecret.length > 0,
     };
 }
@@ -603,7 +608,9 @@ export type GuardableResult = {
 
 /** What the card calls a component: its kind, title-cased for the status line. */
 function kindNoun(kind: AppBuilderComponentKind | undefined): string {
-    return kind === 'mesh' ? 'Mesh' : 'Integration';
+    if (kind === 'mesh') return 'Mesh';
+    if (kind === 'system') return 'System';
+    return 'Integration';
 }
 
 /**

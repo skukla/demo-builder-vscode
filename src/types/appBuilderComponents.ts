@@ -22,6 +22,12 @@ export interface AppBuilderComponentEnvVar {
     derivedFrom?: string;
     /** Provided by another appBuilderComponent that declares it in providesEnvVars. */
     providedBy?: string;
+    /**
+     * The value used when nobody typed one. A text var with a default is not
+     * something the add door has to stop for: the app deploys with the default
+     * and Configure lets the SC change it later (the ERP's display name).
+     */
+    default?: string;
 }
 
 /** A pre-built appBuilderComponent catalog entry. */
@@ -77,6 +83,18 @@ export interface AppBuilderComponentCatalogEntry {
      * loader's source recognition.
      */
     seed?: boolean;
+    /**
+     * For `kind: 'system'` only: the id of the integration this system belongs
+     * to. The two are a UNIT — adding the integration adds and deploys the
+     * system first, removing the integration removes the system after it, and
+     * the system alone is never offered or removed on its own (decision 2).
+     */
+    boundTo?: string;
+    /**
+     * The env var whose value NAMES this component's row (the ERP's row reads
+     * "Acme ERP", or whatever the SC typed). Absent = the entry's `name`.
+     */
+    nameFromEnvVar?: string;
     /** Pre-built source repo (owner/repo/branch). */
     source: AddonSource;
     /** Backend ids this appBuilderComponent fits (omitted/empty = any backend). */

@@ -32,6 +32,7 @@
 
 import { recordDeployOutcome, type DeployOutcome } from './appBuilderDeployOutcome';
 import { detectAppLayout, listDeclaredPackageNames, type AppConfigLayout } from './appConfigPackages';
+import { deriveProvidedValues, resolveDeployInputs, resolveDisplayName } from './deployInputs';
 import { deriveOwPackage } from './owPackageName';
 import type { AppDeploymentResult } from './types';
 import { isMeshComponentId } from '@/core/constants';
@@ -380,12 +381,20 @@ async function persistOutcome(
     await refreshBundleQuietly(project, deps, 'add');
 }
 
-/** Republish the storefront when the project carries provided env vars (else no-op). */
+/** The one provided value the storefront config reads (configGenerator). */
+const STOREFRONT_PROVIDED_VAR = 'MESH_ENDPOINT';
+
+/**
+ * Republish the storefront when the project carries the provided var the
+ * storefront config READS (else no-op). A component that provides only to other
+ * components — the ERP's base URL to its integration — changes nothing the
+ * storefront serves, so it earns no republish.
+ */
 async function republishIfProvided(
     project: Project,
     deps: AppBuilderComponentRunnerDeps,
 ): Promise<void> {
-    if (Object.keys(getProvidedEnvVars(project)).length === 0) {
+    if (!(STOREFRONT_PROVIDED_VAR in getProvidedEnvVars(project))) {
         return;
     }
     await deps.republishStorefront({ project, secrets: deps.secrets, logger: deps.logger });
@@ -428,17 +437,25 @@ async function meshOutcome(
     };
 }
 
-/** Build the persisted AppBuilderComponentState from a successful integration deploy. */
+/**
+ * Build the persisted state from a successful app deploy (integration or
+ * system). What the app PROVIDES to other components is read off its deployed
+ * URLs here (the ERP's web base becomes `ERP_BASE_URL`), and a row named from
+ * an input (`nameFromEnvVar`) takes that name.
+ */
 function integrationOutcome(
     entry: AppBuilderComponentCatalogEntry,
     data: AppDeploymentResult['data'],
+    displayName: string,
 ): DeployOutcome {
     return {
         status: 'deployed',
         ...identityOf(entry),
+        name: displayName,
         url: data?.url,
         deployedUrls: data?.deployedUrls,
         lastDeployed: new Date().toISOString(),
+        providesEnvVars: deriveProvidedValues(entry, data?.deployedUrls),
     };
 }
 
@@ -542,16 +559,21 @@ async function dispatchDeploy(
         };
     }
     const owPackage = deriveOwPackage(entry.id);
+    // The app's own inputs — Configure values, a bound integration's values, the
+    // schema defaults, and what other components provide (the ERP's base URL to
+    // its integration) — ride the deploy's process env, the same way the
+    // credentials below do. Catalog app repos ship no `.env` by design.
+    const inputs = resolveDeployInputs(project, entry);
+    let extraEnv: Record<string, string> = { ...inputs };
     // App Management apps authenticate their actions with the workspace S2S
     // credential, taken as deploy-time env inputs. Resolved here — the one
     // kind-dispatched seam — so add and redeploy cannot drift on it. A resolve
     // failure fails the deploy: without these vars the app deploys BROKEN (its
     // installer cannot authenticate — the first live install proved it).
-    let extraEnv: Record<string, string> | undefined;
     if (entry.lifecycle === 'app-management' && deps.resolveAppManagementEnv) {
         deps.onProgress?.('Resolving Commerce IMS credentials...');
         try {
-            extraEnv = await deps.resolveAppManagementEnv(project);
+            extraEnv = { ...extraEnv, ...(await deps.resolveAppManagementEnv(project)) };
         } catch (error) {
             return {
                 ok: false,
@@ -569,12 +591,46 @@ async function dispatchDeploy(
             nodeVersion: entry.nodeVersion,
             layout: entry.layout,
             confirmToolchainRefresh: deps.confirmToolchainRefresh,
-            extraEnv,
+            extraEnv: Object.keys(extraEnv).length > 0 ? extraEnv : undefined,
         },
     );
     return result.success
-        ? { ok: true, outcome: integrationOutcome(entry, result.data) }
+        ? { ok: true, outcome: integrationOutcome(entry, result.data, resolveDisplayName(entry, inputs)) }
         : { ok: false, error: result.error || 'App deployment failed.' };
+}
+
+/** The `kind: 'system'` catalog entry bound to an integration, when one exists. */
+function boundSystemOf(
+    entry: AppBuilderComponentCatalogEntry,
+    catalog: AppBuilderComponentCatalogEntry[],
+): AppBuilderComponentCatalogEntry | undefined {
+    return catalog.find((candidate) => candidate.kind === 'system' && candidate.boundTo === entry.id);
+}
+
+/**
+ * The bound SYSTEM comes first: an integration whose ERP is not in the project
+ * yet gets it added and deployed before its own deploy, so the provider check
+ * passes and its base URL is there to inject (decision 2). A system that failed
+ * an earlier add (`status: 'error'`, folder kept) is retried the same way.
+ */
+async function addBoundSystemFirst(
+    project: Project,
+    entry: AppBuilderComponentCatalogEntry,
+    deps: AppBuilderComponentRunnerDeps,
+): Promise<RunnerResult> {
+    const system = boundSystemOf(entry, deps.catalog);
+    if (!system) return { success: true };
+    const existing = project.appBuilderComponents?.[system.id];
+    if (existing && existing.status !== 'error') return { success: true };
+    deps.onProgress?.(`Adding ${system.name} first…`);
+    const result = await addAppBuilderComponent(project, system, deps);
+    if (!result.success) {
+        return {
+            success: false,
+            error: `Could not add ${system.name}, which ${entry.name} needs: ${result.error}`,
+        };
+    }
+    return { success: true };
 }
 
 /**
@@ -588,6 +644,9 @@ export async function addAppBuilderComponent(
     entry: AppBuilderComponentCatalogEntry,
     deps: AppBuilderComponentRunnerDeps,
 ): Promise<RunnerResult> {
+    const boundSystem = await addBoundSystemFirst(project, entry, deps);
+    if (!boundSystem.success) return boundSystem;
+
     const missingProvider = findMissingProvider(project, entry);
     if (missingProvider) {
         return {
@@ -624,7 +683,7 @@ export async function addAppBuilderComponent(
         // mismatched or malformed repo here (before any deploy) rather than
         // silently landing it on the shared default package where it would prune
         // sibling integrations.
-        if (entry.kind === 'integration') {
+        if (entry.kind !== 'mesh') {
             const expected: AppConfigLayout = entry.layout ?? 'standalone';
             const detected = await detectAppLayout(installed.path);
             if (detected !== expected) {
@@ -639,7 +698,7 @@ export async function addAppBuilderComponent(
             [entry.id]: {
                 kind: entry.kind,
                 status: 'deploying',
-                name: entry.name,
+                name: resolveDisplayName(entry, resolveDeployInputs(project, entry)),
                 source: {
                     owner: entry.source.owner,
                     repo: entry.source.repo,
@@ -1009,9 +1068,12 @@ export async function removeAppBuilderComponent(
         return { success: false, error: `AppBuilderComponent "${id}" not found.` };
     }
 
-    const provided = Boolean(
-        state.providesEnvVars && Object.keys(state.providesEnvVars).length > 0,
-    );
+    const refused = refuseBoundSystemAlone(project, id, state, deps.catalog);
+    if (refused) return refused;
+
+    // The storefront config reads ONE provided var; a component providing only
+    // to other components (the ERP) earns no republish on its way out.
+    const provided = Boolean(state.providesEnvVars && STOREFRONT_PROVIDED_VAR in state.providesEnvVars);
 
     // BEFORE the undeploy, while the app's own API still exists to call: the
     // uninstall pass removes what the installer created (event registrations,
@@ -1117,5 +1179,73 @@ export async function removeAppBuilderComponent(
         });
     }
 
+    await removeBoundSystemAfter(cleared, project, id, deps);
+
     return { success: true, ...(runtimeCleanup ? { runtimeCleanup } : {}) };
+}
+
+/**
+ * A system is never removed on its own while its integration is here: the pair
+ * is a unit, and the integration's own remove takes the system with it.
+ */
+function refuseBoundSystemAlone(
+    project: Project,
+    id: string,
+    state: AppBuilderComponentState,
+    catalog: AppBuilderComponentCatalogEntry[],
+): RunnerResult | undefined {
+    const consumer = boundConsumerInProject(project, id, catalog);
+    if (!consumer) return undefined;
+    return {
+        success: false,
+        error:
+            `"${state.name ?? id}" comes with "${consumer.name}". Remove the integration ` +
+            `instead — its ${state.name ?? 'system'} goes with it.`,
+    };
+}
+
+/**
+ * The integration is gone; its bound system goes after it (decision 2). The
+ * system's records survive in the workspace's database — an undeploy removes
+ * actions, not data — which the confirmation dialog says. Best-effort: a
+ * failure is logged, the integration's own removal already stands.
+ */
+async function removeBoundSystemAfter(
+    cleared: Project,
+    caller: Project,
+    integrationId: string,
+    deps: AppBuilderComponentRunnerDeps,
+): Promise<void> {
+    const system = boundSystemInProject(cleared, integrationId, deps.catalog);
+    if (!system) return;
+    deps.onProgress?.(`Removing ${cleared.appBuilderComponents?.[system.id]?.name ?? system.name}…`);
+    const result = await removeAppBuilderComponent(cleared, system.id, deps);
+    if (!result.success) {
+        deps.logger.warn(
+            `[AppBuilderComponent Runner] ${system.id} was not removed with ${integrationId}: ${result.error}`,
+        );
+    }
+    // The caller's reference follows the second removal too.
+    caller.appBuilderComponents = cleared.appBuilderComponents;
+}
+
+/** The integration in the PROJECT that a system id is bound to, if both are present. */
+function boundConsumerInProject(
+    project: Project,
+    systemId: string,
+    catalog: AppBuilderComponentCatalogEntry[],
+): AppBuilderComponentCatalogEntry | undefined {
+    const system = catalog.find((entry) => entry.id === systemId && entry.kind === 'system');
+    if (!system?.boundTo || !project.appBuilderComponents?.[system.boundTo]) return undefined;
+    return catalog.find((entry) => entry.id === system.boundTo);
+}
+
+/** The system in the PROJECT bound to an integration id, if present. */
+function boundSystemInProject(
+    project: Project,
+    integrationId: string,
+    catalog: AppBuilderComponentCatalogEntry[],
+): AppBuilderComponentCatalogEntry | undefined {
+    const system = catalog.find((entry) => entry.kind === 'system' && entry.boundTo === integrationId);
+    return system && project.appBuilderComponents?.[system.id] ? system : undefined;
 }

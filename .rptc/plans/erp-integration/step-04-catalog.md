@@ -54,3 +54,29 @@ starts with a reset (decision 8) so the records match the instance again.
 `appBuilderComponentCatalogLoader.test.ts` (gallery = the integration alone; providers
 hidden), `appBuilderComponentSelection.test.ts`, `tileStatus.test.ts`, the schema test,
 `dashboardHandlers-map` if a handler is added, `tool-catalog-gating`.
+
+## Built (2026-09-14)
+
+Catalog: `demo-erp` (`kind: system`, `boundTo: erp-integration`, `nodeVersion: 24`, provides
+`ERP_BASE_URL`, `nameFromEnvVar: ERP_DISPLAY_NAME`) and `erp-integration` (extension layout,
+App Management lifecycle, node 24, `CloudIntegrationSDK` + `commerceeventing`, consumes
+`ERP_BASE_URL` from `demo-erp`, takes `ERP_DISPLAY_NAME` with default "Acme ERP"). Ids follow
+the repository names rather than the plan's `erp-sap-style` — the SAP word stays out of
+everything the SC reads (owner, "products not materials"). Type, schema and JSON moved
+together: `AppBuilderComponentKind` gains `system`; entries gain `boundTo` and
+`nameFromEnvVar`; env vars gain `default`.
+
+The runner (`appBuilderComponentRunner.ts`): `addBoundSystemFirst` adds and deploys the bound
+system before its integration (retrying a system in `error`); `removeAppBuilderComponent`
+refuses a system whose integration is present, and removes the system after its integration.
+`deployInputs.ts` is new: text inputs (Configure → the bound integration's Configure → the
+default) and `providedBy` values ride the deploy's process env beside the S2S credentials,
+for add and redeploy alike; a non-mesh component's `providesEnvVars` resolve to its deployed
+package's web base; `nameFromEnvVar` names the row. The storefront republish is gated on
+`MESH_ENDPOINT` being among the provided vars — the ERP provides only to its integration.
+The add door no longer stops for a text var with a default (`userSuppliedEnvVars`); Configure
+prefills it.
+
+Pins moved: catalog loader (gallery = `['erp-integration']`, kind enum), the schema test,
+`appBuilderComponentHandlers-plumbing`. New: `deployInputs.test.ts`,
+`appBuilderComponentRunner-boundSystem.test.ts`, bound-pair cases in the loader test.

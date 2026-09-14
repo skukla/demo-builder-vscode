@@ -55,9 +55,10 @@
           "type": "string",
           "enum": [
             "mesh",
-            "integration"
+            "integration",
+            "system"
           ],
-          "description": "AppBuilderComponent kind"
+          "description": "AppBuilderComponent kind. 'system' = a stand-in for an external system an integration talks to (the demo ERP): a plain App Builder app, no Commerce install, no card of its own; comes and goes with the integration named in boundTo."
         },
         "source": {
           "$ref": "#/definitions/gitHubSource"
@@ -117,7 +118,7 @@
             "standalone",
             "extension"
           ],
-          "description": "App Builder app layout. Omitted = standalone (app.config.yaml declares application.runtimeManifest.packages at the root). 'extension' = the config declares extensions: (e.g. commerce/extensibility/1) with the runtime manifest in an ext.config.yaml \u2014 the App Management generation's shape; the deploy path branches on this and skips the ow-package rewrite."
+          "description": "App Builder app layout. Omitted = standalone (app.config.yaml declares application.runtimeManifest.packages at the root). 'extension' = the config declares extensions: (e.g. commerce/extensibility/1) with the runtime manifest in an ext.config.yaml — the App Management generation's shape; the deploy path branches on this and skips the ow-package rewrite."
         },
         "lifecycle": {
           "type": "string",
@@ -139,6 +140,15 @@
         "seed": {
           "type": "boolean",
           "description": "SEED scaffolding a custom app starts from (e.g. the Commerce integration starter kit), NOT a finished pre-built integration. Excluded from the pre-built gallery; offered beside 'Blank' on the Build-custom naming stage."
+        },
+        "boundTo": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "kind 'system' only: the id of the integration this system belongs to. Added before it, removed after it, never offered alone."
+        },
+        "nameFromEnvVar": {
+          "type": "string",
+          "description": "The env var whose value names this component's row (the ERP's display name). Omitted = the entry's name."
         }
       }
     },
@@ -161,7 +171,7 @@
             "text",
             "secret"
           ],
-          "description": "secret \u2192 masked + SecretStorage; text \u2192 Configure UI \u2192 .env"
+          "description": "secret → masked + SecretStorage; text → Configure UI → .env"
         },
         "label": {
           "type": "string",
@@ -175,6 +185,10 @@
         "providedBy": {
           "type": "string",
           "description": "Provided by another appBuilderComponent that declares it in providesEnvVars"
+        },
+        "default": {
+          "type": "string",
+          "description": "The value used when nobody typed one. A text var with a default does not block the add; Configure lets the user change it later."
         }
       }
     },

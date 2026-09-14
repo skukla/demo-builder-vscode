@@ -242,6 +242,17 @@ describe('userSuppliedEnvVars — what a PERSON must type', () => {
         expect(result.hasSecret).toBe(true);
     });
 
+    it('excludes a text var that carries a default — the deploy uses it and Configure can change it', () => {
+        expect(
+            userSuppliedEnvVars(
+                entryWithSchema([
+                    { name: 'ERP_DISPLAY_NAME', label: 'ERP name', type: 'text', default: 'Acme ERP' },
+                    { name: 'ERP_HOST', label: 'Host', type: 'text' },
+                ])
+            )
+        ).toEqual({ names: ['ERP_HOST'], hasSecret: false });
+    });
+
     it('excludes an auto-wired var — naming it sends the user hunting', () => {
         expect(
             userSuppliedEnvVars(

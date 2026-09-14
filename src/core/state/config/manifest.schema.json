@@ -735,9 +735,10 @@
       "type": "string",
       "enum": [
         "mesh",
-        "integration"
+        "integration",
+        "system"
       ],
-      "description": "An App Builder component's kind: a mesh artifact or a custom App Builder integration."
+      "description": "An App Builder component's kind: a mesh artifact, an App Builder integration, or a SYSTEM — a stand-in for an external system an integration talks to (the demo ERP). A system is a plain App Builder app with no Commerce install; it never gets a card of its own and comes and goes with the integration it is bound to (`AppBuilderComponentCatalogEntry.boundTo`; decision 13, 2026-09-14)."
     },
     "CustomBlockLibrary": {
       "type": "object",

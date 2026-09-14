@@ -11,7 +11,16 @@ silently if you don't know them. Learned the hard way shipping the blank shell
 
 ## The catalog (`src/features/components/config/app-builder-components.json`)
 
-- Entry shape: schema in `app-builder-components.schema.json`. `kind: 'mesh' | 'integration'`.
+- Entry shape: schema in `app-builder-components.schema.json`. `kind: 'mesh' | 'integration' | 'system'`.
+  A **system** (the demo ERP, 2026-09-14) is a stand-in for an external system an
+  integration talks to: a plain app, no Commerce install, never a gallery row or a card of
+  its own. It names its integration in `boundTo` and the two are a UNIT — the runner adds
+  and deploys the system FIRST (`addBoundSystemFirst`), removes it AFTER its integration,
+  and refuses to remove it alone. Its `providesEnvVars` resolve to its deployed package's
+  web base (`deployInputs.ts`); `nameFromEnvVar` names its row from an input; a text
+  `envSchema` var with a `default` never blocks the add. Text inputs and provided values
+  reach the deploy through the process env (`resolveDeployInputs`), the same way the S2S
+  credentials do — catalog repos ship no `.env`.
   **No runtime validation** — the loader (`appBuilderComponentCatalogLoader.ts`) is a plain
   cast; the schema is documentation plus one structural Jest test.
 - **Omitted axes match EVERYTHING.** `compatibleBackends`/`compatibleFrontends` left out
