@@ -4,7 +4,8 @@ kind: fix
 area: eds
 needs: []
 value: high
-status: active
+status: gated
+waiting-on: Khalil re-saving his Code Sync installation on hardie to show whether GitHub reopens the AEM setup page with a key
 ---
 
 # The "no admin role" remedy sent people to a page that cannot grant anything
@@ -43,3 +44,8 @@ Whether saving an EXISTING Code Sync installation's repository access sends GitH
 back to the setup page with a key. Testing it is a cloud write on a sacrificial
 repo and needs the owner's go-ahead. If it does not, the GitHub button in Manage
 Site Access is also a dead end and should be removed.
+
+## Shipped so far
+
+- 2026-09-14  fix(eds): stop sending no-role users to a setup page that cannot grant (`bba76c2a5`)
+- 2026-09-14  Next step handed to Khalil (kmanns installed Code Sync himself): on hardie, re-save the Code Sync installation on GitHub (no-op Save, else remove and re-add the repo) and report whether GitHub opens tools.aem.live/bot/setup with #token=. If it does, note who is already under Site users, add his Adobe email, run Manage Site Access then Repair Site Configuration, and add those steps to the Manage Site Access message. If it does not, remove the GitHub button and point to Adobe. His answer replaces the sacrificial-repo test.
