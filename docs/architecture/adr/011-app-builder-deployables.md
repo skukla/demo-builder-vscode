@@ -127,6 +127,14 @@ Introduce the catalog + keyed state + a `kind`-dispatching add/deploy/remove pat
 
 ## Reference notes
 
+- **The first pre-built integration** landed 2026-09-14 (`docs/systems/erp-integration.md`):
+  two catalog entries, one gallery tile. It added a third kind, `system` — a stand-in for an
+  external system an integration talks to, a plain app with no Commerce install — and the
+  `boundTo` link that makes a system and its integration a unit: the runner adds the system
+  first and removes it after (`addBoundSystemFirst`, `removeAppBuilderComponent`). The
+  "dependencies flow through env vars" rule above carried it unchanged: the ERP provides
+  `ERP_BASE_URL` from its deployed package's web base, and the integration consumes it.
+
 - `subscribeCredentialToServices` — the name used while designing this decision. The
   shipped function is `ensureMeshApiSubscribed`
   (`src/features/mesh/handlers/subscribeHandler.ts`). Kept because the ADR records the

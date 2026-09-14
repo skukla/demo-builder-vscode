@@ -208,8 +208,10 @@ export function resolveReviewIntegrationNames(
     const catalog = getAvailableAppBuilderComponents(
         stack?.backend ?? '',
         stack?.frontend ?? '',
-    ).filter((entry) => entry.kind === 'integration');
+    ).filter((entry) => entry.kind === 'integration' || entry.kind === 'system');
+    // A row with a companion (the ERP integration) lists the system it brings
+    // as its own line: the review names everything the build will deploy.
     return resolveIntegrationRows(state, meshComponentForStack(state, packages, stacks), catalog)
         .filter((row) => row.kind !== 'mesh')
-        .map((row) => row.name);
+        .flatMap((row) => (row.companion ? [row.name, row.companion] : [row.name]));
 }

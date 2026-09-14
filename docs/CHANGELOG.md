@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **The ERP integration, the first pre-built integration in the catalog.** One tile in the Integrations gallery gives a project two things: an ERP modelled on SAP with its own screen, and an Adobe Commerce integration to it built on the Commerce integration starter kit. Adding the tile deploys the ERP first, then the integration; the ERP mirrors the instance's products and companies; orders get an ERP number, ERP price, stock and status changes land in Commerce, contract prices apply in the cart, and a screen inside the Commerce Admin shows it. The integration's card carries the ERP's status, "Open ERP", "Reset ERP records" and "Redeploy ERP"; removing the integration removes the ERP with it. Agents get `get_erp_status` and `reset_erp_records`. Live acceptance on a Commerce instance is still to run.
+
 ## [1.0.0-beta.146] - 2026-09-10
 
 The styling layer is the headline: the CSS reset and every design token had not been

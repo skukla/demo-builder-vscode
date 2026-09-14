@@ -246,12 +246,14 @@ export function IntegrationsStep({
                       stack.backend,
                       stack.frontend,
                       stack.id,
-                  ).filter((entry) => entry.kind === 'integration')
+                  ).filter((entry) => entry.kind === 'integration' || entry.kind === 'system')
                 : [],
         [pkg, stack],
     );
     const catalog = useMemo(
-        () => integrationEntries.filter((entry) => !entry.blank),
+        // Systems (the ERP) ride `integrationEntries` so a catalog row can name
+        // what comes with it; they are never gallery rows themselves.
+        () => integrationEntries.filter((entry) => !entry.blank && entry.kind === 'integration'),
         [integrationEntries],
     );
     const blankComponent = useMemo(
@@ -387,7 +389,7 @@ export function IntegrationsStep({
                             model={card}
                             onAction={handleCardAction}
                             onRename={commitRename}
-                            subline={sublineFor(card)}
+                            subline={sublineFor(card, row?.companion)}
                             onOpen={
                                 row && isApiEditable(row.kind)
                                     ? () => handleCardAction(card, 'manage-apis')

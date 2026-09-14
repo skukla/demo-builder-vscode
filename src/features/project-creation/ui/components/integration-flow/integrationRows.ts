@@ -50,6 +50,12 @@ export interface IntegrationRow {
      */
     renamable?: boolean;
     /**
+     * The name of the SYSTEM that comes with this integration (the ERP with the
+     * ERP integration; catalog `boundTo`). The card's subline says so; the
+     * review step lists it as its own row. Absent for every other row.
+     */
+    companion?: string;
+    /**
      * True when the package's resolved mesh requirement locks this row in the
      * build (mesh rows only; `requiresMesh` with the storefront override
      * honoured). The card layer withholds Remove and says why.
@@ -92,6 +98,14 @@ function isShellInstanceSource(
     return (
         template !== undefined && source.owner === template.owner && source.repo === template.repo
     );
+}
+
+/** The bound system's name for an integration id, when the caller's list carries one. */
+function companionOf(
+    integrationId: string,
+    components: AppBuilderComponentCatalogEntry[],
+): string | undefined {
+    return components.find((entry) => entry.kind === 'system' && entry.boundTo === integrationId)?.name;
 }
 
 /** Whether the shared Adobe I/O destination (project + workspace) is committed. */
@@ -208,6 +222,7 @@ export function resolveIntegrationRows(
             // requirement:'required' in the selection model and gets the same
             // row/card lock the required mesh does.
             required: entry.requirement === 'required',
+            ...(companionOf(id, components) ? { companion: companionOf(id, components) } : {}),
         });
     }
 

@@ -32,6 +32,16 @@ jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () 
             kind: 'integration',
             source: { owner: 'adobe', repo: 'reco', branch: 'main' },
         },
+        // The ERP that comes with Recommendations here, so the summary's
+        // companion row can be pinned without the real catalog.
+        {
+            id: 'cat-erp',
+            name: 'Acme ERP',
+            description: 'the ERP',
+            kind: 'system',
+            boundTo: 'cat-reco',
+            source: { owner: 'skukla', repo: 'demo-erp', branch: 'main' },
+        },
     ];
     return {
         ...actual,
@@ -312,6 +322,23 @@ describe('integrationsSummaryGroup', () => {
         expect(meshAvailable.rows).toStrictEqual([]);
     });
 
+    it('lists the system that comes with an integration as its own row, with the same readiness', () => {
+        const group = integrationsSummaryGroup(
+            state({
+                selectedPackage: 'citisignal',
+                selectedStack: 'eds-accs',
+                selectedAppBuilderComponents: ['cat-reco'],
+                ...COMMITTED_DEST,
+            }),
+            packages,
+            stacks
+        );
+        expect(group.rows).toEqual([
+            { label: 'Recommendations', value: 'Ready', done: true },
+            { label: 'Acme ERP', value: 'Ready', done: true },
+        ]);
+    });
+
     it('adds a "Needs setup" row for a selected mesh without a destination', () => {
         const group = integrationsSummaryGroup(
             state({
@@ -368,7 +395,9 @@ describe('integrationsSummaryGroup', () => {
             packages,
             stacks
         );
-        expect(group.rows.map((r) => r.label)).toEqual(['API Mesh', 'Recommendations', 'widget']);
+        // Recommendations brings Acme ERP with it in this fixture, so the ERP is
+        // its own row, right after the integration it comes with.
+        expect(group.rows.map((r) => r.label)).toEqual(['API Mesh', 'Recommendations', 'Acme ERP', 'widget']);
         expect(group.rows.every((r) => r.done && r.value === 'Ready')).toBe(true);
     });
 
@@ -403,15 +432,16 @@ describe('integrationsSummaryGroup', () => {
 });
 
 describe('integrationsSummaryGroup - the catalog it hands over', () => {
-    it('passes the integration entries only, never the mesh entry', () => {
+    it('passes the integration and system entries, never the mesh entry', () => {
         // The mesh reaches the resolver as its own argument; leaving it in the
-        // catalog list too would offer it twice.
+        // catalog list too would offer it twice. Systems ride along so a row can
+        // name what comes with it; they never become rows themselves.
         (resolveIntegrationRows as jest.Mock).mockClear();
 
         integrationsSummaryGroup(state({ selectedStack: 'eds-accs' }), packages, stacks);
 
         const [, , catalog] = (resolveIntegrationRows as jest.Mock).mock.calls[0];
-        expect(catalog.map((e: { id: string }) => e.id)).toEqual(['cat-reco']);
+        expect(catalog.map((e: { id: string }) => e.id)).toEqual(['cat-reco', 'cat-erp']);
     });
 });
 

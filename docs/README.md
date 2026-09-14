@@ -98,6 +98,7 @@ Enforced by `tests/sop/doc-module-refs.test.ts` — each area's front door must 
 - [systems/mcp-tools.md](systems/mcp-tools.md) — the tool catalogue. **Generated**
   by `npm run docs:tools`.
 - [systems/agent-alerts.md](systems/agent-alerts.md) ·
+  [systems/erp-integration.md](systems/erp-integration.md) ·
   [systems/data-installer.md](systems/data-installer.md) ·
   [systems/prerequisites-system.md](systems/prerequisites-system.md) ·
   [systems/custom-block-libraries.md](systems/custom-block-libraries.md)

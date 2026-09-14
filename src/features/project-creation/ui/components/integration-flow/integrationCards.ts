@@ -126,11 +126,14 @@ export function toIntegrationCards(rows: IntegrationRow[]): IntegrationCardModel
  * @param card - a card model from {@link toIntegrationCards}
  * @returns the subline text
  */
-export function sublineFor(card: IntegrationCardModel): string {
+export function sublineFor(card: IntegrationCardModel, companion?: string): string {
     const count = card.apis?.length ?? 0;
     const segments = [
         card.sourceLine,
         count > 0 ? `${count} ${count === 1 ? 'API' : 'APIs'}` : undefined,
+        // The system that comes with this integration (the ERP): the wizard has
+        // no second card for it, so the pair is said here (decision 2).
+        companion ? `Comes with ${companion}` : undefined,
         // A required card has no kebab (no Remove to offer) — the subline is
         // where the missing affordance gets its explanation.
         card.required ? 'Required by this package' : undefined,

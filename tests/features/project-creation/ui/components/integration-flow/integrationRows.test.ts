@@ -175,6 +175,27 @@ describe('resolveIntegrationRows — catalog rows', () => {
         ]);
     });
 
+    it('names the SYSTEM that comes with a catalog integration (the ERP pair), and nothing for one that stands alone', () => {
+        const erpSystem: AppBuilderComponentCatalogEntry = {
+            id: 'demo-erp',
+            name: 'ERP',
+            description: 'the ERP',
+            kind: 'system',
+            boundTo: 'erp-sync',
+            source: { owner: 'skukla', repo: 'demo-erp', branch: 'main' },
+        };
+        const rows = resolveIntegrationRows(
+            state({ selectedAppBuilderComponents: ['erp-sync'] }),
+            MESH_ENTRY,
+            [...CATALOG, erpSystem]
+        );
+        expect(rows).toHaveLength(1); // the system is never a row of its own
+        expect(rows[0]).toMatchObject({ id: 'erp-sync', companion: 'ERP' });
+
+        const alone = resolveIntegrationRows(state({ selectedAppBuilderComponents: ['erp-sync'] }), MESH_ENTRY, CATALOG);
+        expect(alone[0]).not.toHaveProperty('companion');
+    });
+
     it('catalog sourceLine falls back to "Catalog · {name}" when the description is empty', () => {
         const bare = { ...ERP_ENTRY, description: '' };
         const rows = resolveIntegrationRows(

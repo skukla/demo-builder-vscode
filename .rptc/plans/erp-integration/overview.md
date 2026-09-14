@@ -52,7 +52,9 @@ the provider, and the add path checks it.
 
 ## Plan status
 
-Complete 2026-09-14; backlog item [[AB-9]] filed under [[AB-1]]. Next: step 01.
+Complete 2026-09-14; backlog item [[AB-9]] filed under [[AB-1]]. Steps 01–05 and 07's plan
+built 2026-09-14 (`step-04-catalog.md` and `step-05-surface.md` carry the "Built" notes).
+Next: step 06, the live acceptance on Bodea — owner-gated on "install" — then step 07's code.
 
 ## Facts gathered for the plan (2026-09-14)
 

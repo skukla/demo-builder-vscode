@@ -121,12 +121,17 @@ export function integrationsSummaryGroup(
     const catalog = getAvailableAppBuilderComponents(
         stack?.backend ?? '',
         stack?.frontend ?? '',
-    ).filter((entry) => entry.kind === 'integration');
-    const rows: SummaryRow[] = resolveIntegrationRows(state, meshComponent, catalog).map((row) => ({
-        label: row.name,
-        value: row.needsSetup ? 'Needs setup' : 'Ready',
-        done: !row.needsSetup,
-    }));
+    ).filter((entry) => entry.kind === 'integration' || entry.kind === 'system');
+    // The system that comes with an integration (the ERP) is its own row: the
+    // summary names everything the build will deploy (decision 2).
+    const rows: SummaryRow[] = resolveIntegrationRows(state, meshComponent, catalog).flatMap((row) => {
+        const own: SummaryRow = {
+            label: row.name,
+            value: row.needsSetup ? 'Needs setup' : 'Ready',
+            done: !row.needsSetup,
+        };
+        return row.companion ? [own, { ...own, label: row.companion }] : [own];
+    });
     return { heading: 'Integrations', rows };
 }
 

@@ -205,6 +205,12 @@ describe('sublineFor', () => {
         ).toBe('Custom integration · acme/erp-sync · 1 API');
     });
 
+    it('says what comes with the integration when the row names a companion', () => {
+        expect(sublineFor(toIntegrationCards([row()])[0], 'Acme ERP')).toBe(
+            'Custom integration · acme/erp-sync · 2 APIs · Comes with Acme ERP'
+        );
+    });
+
     it('drops the source segment when the row has none', () => {
         expect(sublineFor(toIntegrationCards([row({ sourceLine: '' })])[0])).toBe('2 APIs');
     });
