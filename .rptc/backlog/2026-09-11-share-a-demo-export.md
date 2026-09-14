@@ -75,3 +75,4 @@ agent asked "share this demo with Jen" can.
 - 2026-09-14  fix(demo-package): the Save dialog says what colleagues get, and reset keeps the file (`fc7ab73c5`)
 - 2026-09-14  fix(export): the link form is the link and Copy link; no warning, nothing to save first (`d57944af9`)
 - 2026-09-14  refactor(demo-package): bring Export and the reset helper back inside the conventions (`a966c719f`)
+- 2026-09-14  feat(demo-package): Save shows the house spinner, the house success state and footer actions (`fc811e690`)
