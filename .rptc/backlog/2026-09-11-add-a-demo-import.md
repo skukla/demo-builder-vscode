@@ -78,3 +78,4 @@ unchanged from there: the Storefront area shows the frontend piece as fixed by t
 - 2026-09-13  fix(eds): the probe names the site and the repository when only the site answers (`39f1d6679`)
 - 2026-09-13  feat(eds): a storefront arrives as a zip, a demo leaves as a link or a file (`6b67cf95c`)
 - 2026-09-14  docs(research): patches and the pre-render on saved demo packages and third-party storefronts (`58f378e77`)
+- 2026-09-14  feat(add-demo): two ways in, one form at a time, and a warning where the structure is known (`64c9f1f38`)
