@@ -13,15 +13,65 @@ import { COPY } from './addDemoFlow';
 import { FoundStage } from './FoundStage';
 import { LinkStage } from './LinkStage';
 import { useAddDemoFlow, type UseAddDemoFlowArgs } from './useAddDemoFlow';
+import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import type { AddedDemo } from '@/types/projectFile';
 
 export interface AddDemoModalProps extends UseAddDemoFlowArgs {
     isOpen: boolean;
-    /** The demos already remembered: listed on the first stage, and the duplicate guard. */
+    /** The demos already added: the duplicate guard. */
     addedDemos: AddedDemo[];
-    /** Pick a remembered demo: selects its card and closes. */
-    onPickRemembered: (demo: AddedDemo) => void;
+}
+
+type BodyProps = Omit<AddDemoModalProps, 'isOpen'> & {
+    flow: ReturnType<typeof useAddDemoFlow>;
+    mode: NonNullable<AddDemoModalProps['mode']>;
+};
+
+/** One view at a time: the push, the first stage, or what was found. */
+function Body({ flow, mode, ...props }: BodyProps): React.ReactElement {
+    if (flow.importing) {
+        // Shown for the whole push, whichever stage the dialog is on: the import
+        // starts from the first stage and can take a minute.
+        return (
+            <CenteredFeedbackContainer height="280px">
+                <LoadingDisplay size="L" message={COPY.importing} helperText={COPY.importingFor} />
+            </CenteredFeedbackContainer>
+        );
+    }
+    if (flow.stage === 'link') {
+        return (
+            <LinkStage
+                addedDemos={props.addedDemos}
+                source={flow.draft.source}
+                onSourceChange={flow.setSource}
+                mode={mode}
+                zip={{
+                    way: flow.way,
+                    onWayChange: flow.setWay,
+                    error: flow.zipError,
+                    makePublic: flow.makePublic,
+                    onMakePublicChange: flow.setMakePublic,
+                }}
+            />
+        );
+    }
+    return (
+        <FoundStage
+            probe={flow.probe}
+            draft={flow.draft}
+            packages={props.packages}
+            addError={flow.addError}
+            onNameChange={flow.setName}
+            onB2bChange={flow.setB2bOn}
+            onKeepCopyChange={flow.setKeepCopy}
+            onUpdateRememberedChange={flow.setUpdateRemembered}
+            mode={mode}
+            currentKind={props.currentKind}
+            bundle={flow.bundleSetup && mode === 'add' ? { onStart: flow.startFromBundle, busy: flow.adding } : undefined}
+        />
+    );
 }
 
 function Journey(props: Omit<AddDemoModalProps, 'isOpen'>): React.ReactElement {
@@ -45,37 +95,7 @@ function Journey(props: Omit<AddDemoModalProps, 'isOpen'>): React.ReactElement {
             ]}
         >
             <div className="intflow-stage-body">
-                {flow.stage === 'link' ? (
-                    <LinkStage
-                        addedDemos={props.addedDemos}
-                        source={flow.draft.source}
-                        onSourceChange={flow.setSource}
-                        onPickRemembered={props.onPickRemembered}
-                        mode={mode}
-                        zip={{
-                            onImport: flow.importZip,
-                            importing: flow.importing,
-                            error: flow.zipError,
-                            makePublic: flow.makePublic,
-                            onMakePublicChange: flow.setMakePublic,
-                        }}
-                    />
-                ) : (
-                    <FoundStage
-                        probe={flow.probe}
-                        draft={flow.draft}
-                        packages={props.packages}
-                        addError={flow.addError}
-                        onNameChange={flow.setName}
-                        onB2bChange={flow.setB2bOn}
-                        onKeepCopyChange={flow.setKeepCopy}
-                        onUpdateRememberedChange={flow.setUpdateRemembered}
-                        mode={mode}
-                        currentKind={props.currentKind}
-                        importing={flow.importing}
-                        bundle={flow.bundleSetup && mode === 'add' ? { onStart: flow.startFromBundle, busy: flow.adding } : undefined}
-                    />
-                )}
+                <Body {...props} flow={flow} mode={mode} />
             </div>
         </Modal>
     );

@@ -18,6 +18,7 @@ import {
     type AddDemoDraft,
     type AddDemoMode,
     type AddDemoStage,
+    type AddDemoWay,
 } from './addDemoFlow';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
 import type { DemoPackage } from '@/types/demoPackages';
@@ -69,6 +70,9 @@ export interface UseAddDemoFlowArgs {
 
 export interface UseAddDemoFlowReturn {
     stage: AddDemoStage;
+    /** Which way in the first stage shows: a link field, or the zip's options. */
+    way: AddDemoWay;
+    setWay: (way: AddDemoWay) => void;
     draft: AddDemoDraft;
     probe: ProbeState;
     adding: boolean;
@@ -83,8 +87,7 @@ export interface UseAddDemoFlowReturn {
     setB2bOn: (on: boolean) => void;
     setKeepCopy: (keep: boolean) => void;
     setUpdateRemembered: (update: boolean) => void;
-    /** The zip door (add mode): the host picks the file, creates the repository, and the probe reads it. */
-    importZip: () => void;
+    /** The zip is becoming a repository: the host is picking, unpacking and pushing. */
     importing: boolean;
     zipError?: string;
     makePublic: boolean;
@@ -95,7 +98,7 @@ export interface UseAddDemoFlowReturn {
     startFromBundle: () => void;
 }
 
-const PROBE_FAILED = "We couldn't look at this demo. Check the link and try again.";
+const PROBE_FAILED = "We couldn't read this storefront. Check the link and try again.";
 const IMPORT_FAILED = "We couldn't add this zip. Try again.";
 const ADD_FAILED = "We couldn't add this demo. Try again.";
 const CHANGE_FAILED = "We couldn't change the source. Try again.";
@@ -109,6 +112,7 @@ const CHANGE_FAILED = "We couldn't change the source. Try again.";
 export function useAddDemoFlow(args: UseAddDemoFlowArgs): UseAddDemoFlowReturn {
     const { packages, onUseShipped, onDemoAdded, onClose, mode = 'add', currentKind } = args;
     const [stage, setStage] = useState<AddDemoStage>('link');
+    const [way, setWay] = useState<AddDemoWay>('link');
     const [draft, setDraft] = useState<AddDemoDraft>(INITIAL_DRAFT);
     const [probe, setProbe] = useState<ProbeState>({ status: 'idle' });
     const [adding, setAdding] = useState(false);
@@ -226,15 +230,17 @@ export function useAddDemoFlow(args: UseAddDemoFlowArgs): UseAddDemoFlowReturn {
     // Change mode never takes a shipped template (nothing to read a row from)
     // and only a demo of the project's own kind.
     const buildable = isBuildable(result) && (mode === 'add' || kindMatches(result, currentKind));
+    // The zip way reads nothing from the form: its Continue IS the picker.
+    const zipWay = mode === 'add' && way === 'zip';
     const canContinue =
         stage === 'link'
-            ? draft.source !== undefined && !importing
+            ? !importing && (zipWay || draft.source !== undefined)
             : !adding && !importing && ((mode === 'add' && result?.outcome === 'shipped') || buildable);
 
     const onContinue = useCallback((): void => {
         if (!canContinue) return;
         if (stage === 'link') {
-            void runProbe();
+            void (zipWay ? importZip() : runProbe());
             return;
         }
         if (result?.outcome === 'shipped') {
@@ -243,7 +249,7 @@ export function useAddDemoFlow(args: UseAddDemoFlowArgs): UseAddDemoFlowReturn {
             return;
         }
         void commit();
-    }, [canContinue, stage, runProbe, result, onUseShipped, onClose, commit]);
+    }, [canContinue, stage, zipWay, importZip, runProbe, result, onUseShipped, onClose, commit]);
 
     const onBack = useCallback((): void => {
         if (stage !== 'found' || adding) return;
@@ -270,13 +276,15 @@ export function useAddDemoFlow(args: UseAddDemoFlowArgs): UseAddDemoFlowReturn {
 
     return {
         stage,
+        way,
+        setWay,
         draft,
         probe,
         adding,
         addError,
         canContinue,
         canGoBack: stage === 'found' && !adding,
-        continueLabel: continueLabelFor(stage, result, shippedName, mode),
+        continueLabel: continueLabelFor(stage, result, shippedName, mode, way),
         onContinue,
         onBack,
         setSource,
@@ -284,7 +292,6 @@ export function useAddDemoFlow(args: UseAddDemoFlowArgs): UseAddDemoFlowReturn {
         setB2bOn,
         setKeepCopy,
         setUpdateRemembered,
-        importZip: () => void importZip(),
         importing,
         zipError,
         makePublic,

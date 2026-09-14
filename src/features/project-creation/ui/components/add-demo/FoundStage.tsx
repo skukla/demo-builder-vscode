@@ -1,5 +1,5 @@
 /**
- * FoundStage — the dialog's second stage: "Reading the demo…" while the
+ * FoundStage — the dialog's second stage: "Reading the storefront…" while the
  * probe runs, then the found panel (name, what we found, the B2B switch only
  * when nothing said, the keep-a-copy tick box), or the refusal.
  *
@@ -41,8 +41,6 @@ export interface FoundStageProps {
     mode?: AddDemoMode;
     /** Change mode: the project's kind, which the found demo must match. */
     currentKind?: StorefrontKind;
-    /** The zip door is creating the repository; the probe follows. */
-    importing?: boolean;
     /** The zip was a bundle with setup: offer to start a project from it, on this card. */
     bundle?: { onStart: () => void; busy: boolean };
 }
@@ -66,17 +64,17 @@ function KeepCopyBox({
     if (viewer?.existingFork) {
         return (
             <Checkbox isSelected isDisabled data-testid="keep-copy">
-                {`You already have your own copy at ${viewer.existingFork}; it will be used.`}
+                {`You already have a copy at ${viewer.existingFork}. It will be used.`}
             </Checkbox>
         );
     }
-    const account = viewer?.login ? `your GitHub account (${viewer.login})` : 'your GitHub account';
+    const account = viewer?.login ? `your GitHub account, ${viewer.login}` : 'your GitHub account';
     return (
         <div className="add-demo-keep-copy">
             <Checkbox isSelected={draft.keepCopy} onChange={onKeepCopyChange} data-testid="keep-copy">
                 {COPY.keepCopy}
             </Checkbox>
-            <p className="add-demo-note">{`Your copy goes to ${account}.`}</p>
+            <p className="add-demo-note">{`Saved to ${account}. Your projects keep working if the original changes.`}</p>
         </div>
     );
 }
@@ -98,12 +96,8 @@ export function FoundStage({
     onUpdateRememberedChange,
     mode = 'add',
     currentKind,
-    importing = false,
     bundle,
 }: FoundStageProps): React.ReactElement {
-    if (importing) {
-        return <LoadingDisplay size="L" message={COPY.importing} helperText={COPY.importingFor} />;
-    }
     if (probe.status === 'idle' || probe.status === 'loading') {
         // The three-row contract: the step, the thing it is reading, what to expect.
         const repo = draft.source ? `${draft.source.owner}/${draft.source.repo}` : undefined;

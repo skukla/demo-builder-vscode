@@ -137,3 +137,13 @@ were removed with it; the numbers above are the record.
 **Housekeeping:** 36 mutation-ledger anchors moved with the edits, one re-anchored onto the
 ternary its line became; the wizard skill's "import only from its index.ts" line named a
 file that does not exist and now names the two dialog modules instead.
+
+**Revised 2026-09-14 (owner review).** The first stage showed the link field and the whole
+zip section at once, plus the demos already added, and read as too busy. It now asks
+**Where is the demo?** with two choice cards, **From a link** and **From a zip file** (the
+shape of Export's "How will you hand it over?"), and shows only the chosen way's form. The
+zip's action is the footer's main button, **Choose a zip file…**. The list of demos already
+added is gone: each is a card on the Welcome step behind the dialog, and removing one
+happens on that card. The intro line is gone in add mode; change mode keeps its lead. The
+"Creating your repository from the zip…" spinner now shows for the whole push; it used to
+render only on the found stage, which the dialog reaches after the push.

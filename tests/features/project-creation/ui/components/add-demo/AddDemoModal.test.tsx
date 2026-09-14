@@ -16,34 +16,44 @@ import {
     renderModal,
     resetModalMocks,
     typeLink,
+    chooseWay,
 } from './AddDemoModal.testUtils';
 
 describe('AddDemoModal', () => {
     beforeEach(resetModalMocks);
 
-    it('opens on the link stage with the accepted words and Continue disabled', () => {
+    it('opens on the two ways in, "From a link" picked, with only the link field below', () => {
         renderModal();
         expect(screen.getByRole('heading', { name: 'Add a demo' })).toBeInTheDocument();
-        expect(screen.getByText(/Use a demo a colleague built/)).toBeInTheDocument();
+        expect(screen.getByText('Where is the demo?')).toBeInTheDocument();
+        expect(screen.getByTestId('add-demo-way-link')).toHaveTextContent('From a link');
+        expect(screen.getByTestId('add-demo-way-zip')).toHaveTextContent('From a zip file');
         expect(linkInput()).toBeInTheDocument();
+        // One form at a time (owner, 2026-09-14: the dialog showed both and was too busy).
+        expect(screen.queryByTestId('zip-public')).not.toBeInTheDocument();
+        expect(screen.queryByText(/Use a demo a colleague built/)).not.toBeInTheDocument();
         expect(button('Continue')).toHaveAttribute('aria-disabled', 'true');
         expect(button('Back')).toHaveAttribute('aria-disabled', 'true');
     });
 
-    it('lists the demos already added, and picking one selects it and closes', async () => {
-        const { props } = renderModal({ addedDemos: [JEN] });
-        expect(screen.getByText('Demos you have added')).toBeInTheDocument();
-        await click(/Isle5 by Jen/);
-        expect(props.onPickRemembered).toHaveBeenCalledWith(JEN);
+    it('does not list the demos already added: they are cards on the Welcome step behind it', () => {
+        renderModal({ addedDemos: [JEN] });
+        expect(screen.queryByText('Demos you have added')).not.toBeInTheDocument();
+        expect(screen.queryByText(/Isle5 by Jen/)).not.toBeInTheDocument();
     });
 
-    it('offers the zip door in add mode only, and asks the host for a private repository unless the box is ticked', async () => {
+    it('offers the zip way in add mode only; picked, the footer opens the picker with the visibility the box says', async () => {
         const change = renderModal({ mode: 'change', currentKind: 'eds' });
-        expect(screen.queryByTestId('add-demo-zip')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('add-demo-way-zip')).not.toBeInTheDocument();
+        expect(linkInput()).toBeInTheDocument();
         change.unmount();
 
         renderModal();
-        expect(screen.getByTestId('add-demo-zip')).toHaveTextContent('Or add from a zip file');
+        await chooseWay('zip');
+        expect(screen.queryByPlaceholderText('https://github.com/name/demo')).not.toBeInTheDocument();
+        expect(screen.getByTestId('zip-public')).toHaveTextContent('Make the repository public');
+        expect(screen.queryByRole('button', { name: 'Continue' })).not.toBeInTheDocument();
+
         mockRequest.mockResolvedValueOnce({ success: true, result: { cancelled: true } });
         await click('Choose a zip file…');
         expect(mockRequest).toHaveBeenLastCalledWith('import-storefront-zip', { isPrivate: true });
@@ -53,6 +63,9 @@ describe('AddDemoModal', () => {
         await click('Choose a zip file…');
         expect(mockRequest).toHaveBeenLastCalledWith('import-storefront-zip', { isPrivate: false });
         expect(screen.getByTestId('zip-error')).toHaveTextContent('it has no head.html');
+
+        await chooseWay('link');
+        expect(linkInput()).toBeInTheDocument();
     });
 
     it('says when a link is already added, whatever its case', () => {
@@ -66,15 +79,16 @@ describe('AddDemoModal', () => {
         const { props } = renderModal();
         await probeWith({ success: true, result: READ });
 
-        expect(screen.getByText('What we found in this demo')).toBeInTheDocument();
-        expect(screen.getByTestId('found-Storefront')).toHaveTextContent('Edge Delivery');
-        expect(screen.getByTestId('found-Pages')).toHaveTextContent('12 published pages');
-        expect(screen.getByTestId('found-Store codes')).toHaveTextContent('isle5 · isle5_store · isle5_us');
+        expect(screen.getByText('What we found')).toBeInTheDocument();
+        expect(screen.getByTestId('found-Type')).toHaveTextContent('Edge Delivery');
+        expect(screen.getByTestId('found-Pages')).toHaveTextContent('12 published');
+        expect(screen.getByTestId('found-Business structure')).toHaveTextContent('Website isle5 · Store isle5_store · Store view isle5_us');
         expect(screen.getByTestId('found-Company (B2B) features')).toHaveTextContent('On');
         expect(screen.queryByTestId('b2b-switch')).not.toBeInTheDocument();
         const keep = screen.getByTestId('keep-copy').querySelector('input') as HTMLInputElement;
         expect(keep.checked).toBe(true);
-        expect(screen.getByText(/Your copy goes to your GitHub account \(steve\)/)).toBeInTheDocument();
+        expect(screen.getByTestId('keep-copy')).toHaveTextContent('Keep my own copy of the code');
+        expect(screen.getByText('Saved to your GitHub account, steve. Your projects keep working if the original changes.')).toBeInTheDocument();
 
         mockRequest.mockResolvedValueOnce({ success: true, result: { demo: JEN } });
         await click('Add demo');
@@ -103,7 +117,7 @@ describe('AddDemoModal', () => {
             success: true,
             result: { ...READ, viewer: { login: 'steve', ownsRepo: false, existingFork: 'steve/isle5-demo' } },
         });
-        expect(screen.getByTestId('keep-copy')).toHaveTextContent('You already have your own copy at steve/isle5-demo');
+        expect(screen.getByTestId('keep-copy')).toHaveTextContent('You already have a copy at steve/isle5-demo. It will be used.');
     });
 
     it('refuses a repository that is not a demo, naming what is missing', async () => {
@@ -173,7 +187,7 @@ describe('AddDemoModal — while reading', () => {
         typeLink('https://github.com/jen/isle5-demo');
         await click('Continue');
 
-        expect(screen.getByText('Reading the demo…')).toBeInTheDocument();
+        expect(screen.getByText('Reading the storefront…')).toBeInTheDocument();
         expect(screen.getByText('jen/isle5-demo')).toBeInTheDocument();
         expect(screen.getByText(/what kind of storefront it is, its store codes/)).toBeInTheDocument();
 
@@ -181,5 +195,23 @@ describe('AddDemoModal — while reading', () => {
         await act(async () => {
             release({ success: true, result: READ });
         });
+    });
+
+    it('shows the push is under way while the zip becomes a repository', async () => {
+        // This spinner used to render only on the found stage, which the dialog
+        // reaches AFTER the push: a minute-long upload showed a frozen form.
+        let release: (value: unknown) => void = () => {};
+        mockRequest.mockImplementationOnce(() => new Promise((resolve) => { release = resolve; }));
+        renderModal();
+        await chooseWay('zip');
+        await click('Choose a zip file…');
+
+        expect(screen.getByText('Creating your repository from the zip…')).toBeInTheDocument();
+        expect(screen.queryByTestId('add-demo-way-zip')).not.toBeInTheDocument();
+
+        await act(async () => {
+            release({ success: true, result: { cancelled: true } });
+        });
+        expect(screen.getByTestId('add-demo-way-zip')).toBeInTheDocument();
     });
 });

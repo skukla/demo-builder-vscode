@@ -45,7 +45,7 @@ export interface BrandGalleryProps {
 /** The plus card's words, accepted 2026-09-11. */
 export const ADD_DEMO_CARD = {
     name: 'Add a demo',
-    description: "Use a demo a colleague built, or one of your own. You'll need its link.",
+    description: "Use a colleague's storefront or your own, from a link or a zip file.",
 } as const;
 
 /**

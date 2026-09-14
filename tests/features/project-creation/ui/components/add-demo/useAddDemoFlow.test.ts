@@ -48,8 +48,28 @@ async function walkToFound(hook: ReturnType<typeof setup>['hook'], answer: unkno
     });
 }
 
+/** Pick "From a zip file", then press the footer's main button. */
+async function continueWithZip(hook: ReturnType<typeof setup>['hook']): Promise<void> {
+    act(() => hook.result.current.setWay('zip'));
+    await act(async () => {
+        hook.result.current.onContinue();
+    });
+}
+
 describe('useAddDemoFlow', () => {
     beforeEach(() => jest.clearAllMocks());
+
+    it('starts on "From a link"; picking the zip needs no link and relabels Continue as the picker', () => {
+        const { hook } = setup();
+        expect(hook.result.current.way).toBe('link');
+        expect(hook.result.current.continueLabel).toBe('Continue');
+
+        act(() => hook.result.current.setWay('zip'));
+
+        expect(hook.result.current.canContinue).toBe(true);
+        expect(hook.result.current.continueLabel).toBe('Choose a zip file…');
+        expect(mockRequest).not.toHaveBeenCalled();
+    });
 
     it('starts on the link stage with Continue disabled until a source is set, and never calls the host for typing', () => {
         const { hook } = setup();
@@ -94,7 +114,7 @@ describe('useAddDemoFlow', () => {
         mockRequest.mockResolvedValueOnce({ success: true, result: READ });
 
         act(() => hook.result.current.setMakePublic(true));
-        await act(async () => hook.result.current.importZip());
+        await continueWithZip(hook);
 
         expect(mockRequest).toHaveBeenNthCalledWith(1, 'import-storefront-zip', { isPrivate: false });
         expect(mockRequest).toHaveBeenNthCalledWith(2, 'probe-shared-demo', { owner: 'steve', repo: 'summit' });
@@ -108,7 +128,7 @@ describe('useAddDemoFlow', () => {
         const SETUP = { version: 1, exportedAt: 'x', source: {}, includesSecrets: false, selections: {}, configs: {} };
         mockRequest.mockResolvedValueOnce({ success: true, result: { owner: 'steve', repo: 'summit', setup: SETUP } });
         mockRequest.mockResolvedValueOnce({ success: true, result: { ...READ, fullName: 'steve/summit', viewer: { login: 'steve', ownsRepo: true } } });
-        await act(async () => hook.result.current.importZip());
+        await continueWithZip(hook);
         expect(hook.result.current.bundleSetup).toEqual(SETUP);
 
         const remembered = { kind: 'demo', version: 1, name: 'Summit', source: { owner: 'steve', repo: 'summit', branch: 'main' }, storefrontKind: 'eds' };
@@ -124,12 +144,12 @@ describe('useAddDemoFlow', () => {
     it('stays on the link stage when the picker is dismissed, and shows the refusal when the zip is not a storefront', async () => {
         const { hook } = setup();
         mockRequest.mockResolvedValueOnce({ success: true, result: { cancelled: true } });
-        await act(async () => hook.result.current.importZip());
+        await continueWithZip(hook);
         expect(hook.result.current.stage).toBe('link');
         expect(hook.result.current.zipError).toBeUndefined();
 
         mockRequest.mockResolvedValueOnce({ success: false, error: 'This zip is not an Edge Delivery storefront: it has no head.html.' });
-        await act(async () => hook.result.current.importZip());
+        await continueWithZip(hook);
         expect(hook.result.current.stage).toBe('link');
         expect(hook.result.current.zipError).toBe('This zip is not an Edge Delivery storefront: it has no head.html.');
         expect(mockRequest).toHaveBeenCalledTimes(2);

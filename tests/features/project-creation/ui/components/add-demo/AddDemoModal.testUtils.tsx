@@ -46,7 +46,6 @@ export function renderModal(overrides: Partial<AddDemoModalProps> = {}) {
         addedDemos: [],
         onUseShipped: jest.fn(),
         onDemoAdded: jest.fn(),
-        onPickRemembered: jest.fn(),
         onClose: jest.fn(),
         ...overrides,
     };
@@ -64,6 +63,12 @@ export function linkInput(): HTMLElement {
 
 export function typeLink(value: string): void {
     fireEvent.change(linkInput(), { target: { value } });
+}
+
+/** Pick one of the two ways in. */
+export async function chooseWay(way: 'link' | 'zip'): Promise<void> {
+    fireEvent.click(screen.getByTestId(`add-demo-way-${way}`));
+    await settle();
 }
 
 export function button(name: string | RegExp): HTMLElement {

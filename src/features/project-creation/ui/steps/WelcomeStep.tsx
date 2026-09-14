@@ -313,10 +313,6 @@ export function WelcomeStep({
                     addedDemos={addedDemos}
                     onUseShipped={handlePackageSelect}
                     onDemoAdded={selectAddedDemo}
-                    onPickRemembered={(demo) => {
-                        selectAddedDemo(demo);
-                        closeAddDemo();
-                    }}
                     onClose={closeAddDemo}
                 />
             </>

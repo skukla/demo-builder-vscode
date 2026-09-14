@@ -33,8 +33,9 @@ Three things have to be true of the repository:
 Send the link, not a zip. A zip loses the history and your later changes can never reach
 the projects built on it.
 
-If a zip is what you were given anyway, the Add a demo dialog has a second way in: **Or add
-from a zip file**. Pick the zip and Demo Builder unpacks it, leaves out what a repository
+If a zip is what you were given anyway, the Add a demo dialog asks **Where is the demo?** and
+offers **From a zip file** beside **From a link**. Pick it, then **Choose a zip file…**, and
+Demo Builder unpacks it, leaves out what a repository
 would not keep (`node_modules`, caches, whatever its `.gitignore` says), refuses it if it is
 not an Edge Delivery storefront, creates a repository in your own GitHub account named after
 the zip (private unless you tick the box), pushes the files as one commit, and adds the demo
@@ -204,7 +205,7 @@ This is about you. Handing the demo to someone else is Export.
 - **Send a file**, when they can't. One zip, `<project>-demo-bundle.zip`. **What to include**
   lists the two parts you can tick: **Setup** (your Commerce, Adobe, GitHub and DA.live
   settings, never a credential) and **Storefront** (the repository's code with the demo's
-  description file inside). A colleague adds the storefront with "Or add from a zip file",
+  description file inside). A colleague adds the storefront with Add a demo's **From a zip file**,
   which reads the bundle. Setup alone writes the plain settings file the projects list
   imports today.
 
@@ -214,7 +215,7 @@ Parts that do not exist yet are not listed. When one is built, it is added to th
 storefront zip. On the projects list, **Import** takes the bundle: the storefront becomes a
 repository in their account and a card on their Welcome step, and the setup part opens the
 wizard pre-filled on that card, with your repository and site names dropped so they name
-theirs. Inside the wizard, "Or add from a zip file" does the same for the storefront and,
+theirs. Inside the wizard, Add a demo's **From a zip file** does the same for the storefront and,
 when the bundle carries setup, offers **Start a project with it**, which adds the card and
 reopens the wizard pre-filled. The setup never carries a credential; the colleague signs in
 to their own accounts as the wizard asks.

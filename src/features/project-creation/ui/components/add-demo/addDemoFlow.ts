@@ -7,9 +7,7 @@
  * order, gates and draft are integration-specific (kinds, destinations, API
  * picks), and this journey has two fixed stages with one asynchronous step
  * between them. The SHAPE is copied (a pure module beside a hook beside a
- * modal shell). Two reuse-map rows are rejected on purpose: the stage core
- * (above) and `SelectionStepContent` (a host-fetched list with loading and
- * refresh states, where the remembered demos are a static handful of cards).
+ * modal shell). The stage core (above) is rejected on purpose.
  *
  * @module features/project-creation/ui/components/add-demo/addDemoFlow
  */
@@ -20,6 +18,9 @@ import { SHARED_DEMO_FILE_VERSION, type AddedDemo, type StorefrontKind } from '@
 import type { SharedDemoProbeResult, SharedDemoRead } from '@/types/webviewRequests';
 
 export type AddDemoStage = 'link' | 'found';
+
+/** The two ways in on the first stage (add mode only; change mode takes a link). */
+export type AddDemoWay = 'link' | 'zip';
 
 /**
  * Add: remember a demo for the Welcome grid. Change: point the open project
@@ -43,27 +44,28 @@ export interface AddDemoDraft {
 
 export const COPY = {
     title: 'Add a demo',
-    lead: "Use a demo a colleague built, or one of your own. You'll need its link: the GitHub link, or the demo's site address.",
+    /** The two ways in, as choice cards: the same shape as Export's "How will you hand it over?". */
+    wayQuestion: 'Where is the demo?',
+    wayLink: 'From a link',
+    wayLinkWhy: "A GitHub link or the demo's site address. Keeps its history and later changes.",
+    wayZip: 'From a zip file',
+    wayZipWhy: 'Becomes a repository in your GitHub account. No history or later changes.',
     linkLabel: 'Link to the demo',
     linkPlaceholder: 'https://github.com/name/demo',
     invalidLink: "Enter a GitHub link, like https://github.com/name/demo, or the demo's site address",
     duplicateLink: "You've already added this demo.",
-    looking: 'Reading the demo…',
+    looking: 'Reading the storefront…',
     lookingFor: 'Checking what kind of storefront it is, its store codes, and whether its pages are published.',
     notADemo: "This doesn't look like a demo we can build on",
     signInFirst: 'Sign in to GitHub first',
     signInHow: 'Reading a demo needs your GitHub sign-in. Sign in to GitHub in VS Code (Accounts, bottom left), then Continue again.',
-    found: 'What we found in this demo',
-    nameLabel: 'Name',
+    found: 'What we found',
+    nameLabel: 'Demo name',
     b2bSwitch: 'Uses company (B2B) features',
     b2bWhy: "We couldn't tell whether this demo uses company accounts, quotes and purchase orders.",
     b2bIfWrong: 'If it does and this stays off, company users will see an empty account menu.',
-    keepCopy: "Keep my own copy of this demo's code, so it still works if the original changes",
-    remembered: 'Demos you have added',
+    keepCopy: 'Keep my own copy of the code',
     /** The second way in (step 10): a storefront that arrived as a zip file. */
-    zipLead: 'Or add from a zip file',
-    zipNote:
-        "The zip becomes a repository in your GitHub account, and the demo is added from there. Ask for the link when you can: a zip loses the history, and later changes can't be pulled.",
     zipPublic: 'Make the repository public',
     zipButton: 'Choose a zip file…',
     importing: 'Creating your repository from the zip…',
@@ -117,22 +119,29 @@ const KIND_LABEL: Record<SharedDemoRead['kind'], string> = {
 /** The "What we found" rows, in the summary's own vocabulary. */
 export function foundRows(read: SharedDemoRead): SummaryRow[] {
     const codes = read.storeCodes;
-    const codeValue = codes
-        ? [codes.websiteCode, codes.storeCode, codes.storeViewCode].filter(Boolean).join(' · ')
+    // Labelled, because three bare codes read as noise: which is the website?
+    const structure = codes
+        ? [
+              codes.websiteCode && `Website ${codes.websiteCode}`,
+              codes.storeCode && `Store ${codes.storeCode}`,
+              codes.storeViewCode && `Store view ${codes.storeViewCode}`,
+          ]
+              .filter(Boolean)
+              .join(' · ')
         : undefined;
     const pages = read.contentPublished.indexFound
-        ? `${read.contentPublished.pageCount ?? 0} published pages`
+        ? `${read.contentPublished.pageCount ?? 0} published`
         : undefined;
     return [
         // Where the code lives, first: a site address was read back to it.
         { label: 'Code', value: `github.com/${read.fullName}`, done: true },
-        { label: 'Storefront', value: KIND_LABEL[read.kind], done: true },
+        { label: 'Type', value: KIND_LABEL[read.kind], done: true },
         {
             label: 'Pages',
             value: read.kind === 'eds' ? pages : 'Not needed for a headless demo',
             done: Boolean(pages) || read.kind === 'headless',
         },
-        { label: 'Store codes', value: codeValue, done: Boolean(codeValue) },
+        { label: 'Business structure', value: structure || undefined, done: Boolean(structure) },
         ...(read.b2b === 'unknown'
             ? []
             : [{ label: 'Company (B2B) features', value: read.b2b === 'on' ? 'On' : 'Off', done: true }]),
@@ -181,14 +190,15 @@ export function buildAddedDemo(read: SharedDemoRead, draft: AddDemoDraft): Added
     };
 }
 
-/** The footer's main button, by stage and by what the probe said. */
+/** The footer's main button, by stage, by the way in, and by what the probe said. */
 export function continueLabel(
     stage: AddDemoStage,
     result: SharedDemoProbeResult | undefined,
     shippedName: string | undefined,
     mode: AddDemoMode = 'add',
+    way: AddDemoWay = 'link',
 ): string {
-    if (stage === 'link') return 'Continue';
+    if (stage === 'link') return mode === 'add' && way === 'zip' ? COPY.zipButton : 'Continue';
     if (mode === 'change') return COPY.change.commit;
     if (result?.outcome === 'shipped') return `Use ${shippedName ?? 'the demo'}`;
     return COPY.add;

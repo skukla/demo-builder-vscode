@@ -54,9 +54,9 @@ describe('foundRows', () => {
     it('names the kind, the pages, the codes and the B2B answer when known', () => {
         expect(foundRows(READ)).toEqual([
             { label: 'Code', value: 'github.com/jen/isle5-demo', done: true },
-            { label: 'Storefront', value: 'Edge Delivery', done: true },
-            { label: 'Pages', value: '12 published pages', done: true },
-            { label: 'Store codes', value: 'isle5 · isle5_store · isle5_us', done: true },
+            { label: 'Type', value: 'Edge Delivery', done: true },
+            { label: 'Pages', value: '12 published', done: true },
+            { label: 'Business structure', value: 'Website isle5 · Store isle5_store · Store view isle5_us', done: true },
             { label: 'Company (B2B) features', value: 'On', done: true },
         ]);
     });
@@ -69,9 +69,9 @@ describe('foundRows', () => {
             storeCodes: undefined,
             contentPublished: { indexFound: false },
         });
-        expect(rows.map((r) => r.label)).toEqual(['Code', 'Storefront', 'Pages', 'Store codes']);
+        expect(rows.map((r) => r.label)).toEqual(['Code', 'Type', 'Pages', 'Business structure']);
         expect(rows[2]).toEqual({ label: 'Pages', value: undefined, done: false });
-        expect(rows[3]).toEqual({ label: 'Store codes', value: undefined, done: false });
+        expect(rows[3]).toEqual({ label: 'Business structure', value: undefined, done: false });
     });
 
     it('does not ask a headless demo for pages', () => {
@@ -150,6 +150,7 @@ describe('buildAddedDemo', () => {
 describe('continueLabel', () => {
     it('is Continue on the link stage, Use <name> for a shipped template, Add demo otherwise', () => {
         expect(continueLabel('link', undefined, undefined)).toBe('Continue');
+        expect(continueLabel('link', undefined, undefined, 'add', 'zip')).toBe('Choose a zip file…');
         expect(
             continueLabel('found', { outcome: 'shipped', shippedPackageId: 'starter', fullName: 'a/b' }, 'Starter (B2B + B2C)'),
         ).toBe('Use Starter (B2B + B2C)');

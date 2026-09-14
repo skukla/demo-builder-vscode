@@ -18,7 +18,7 @@ describe('BrandGallery — the Add a demo card', () => {
 
         renderGallery({ onAddDemo: jest.fn() });
         const card = addCard();
-        expect(card).toHaveAccessibleName(/^Add a demo: Use a demo a colleague built/);
+        expect(card).toHaveAccessibleName("Add a demo: Use a colleague's storefront or your own, from a link or a zip file.");
         expect(card!.parentElement!.lastElementChild).toBe(card);
         expect(cards()).toHaveLength(3);
     });

@@ -309,7 +309,6 @@ export function ProjectDashboardScreen({
                     packages={NO_PACKAGES}
                     addedDemos={NO_ADDED_DEMOS}
                     onUseShipped={noop}
-                    onPickRemembered={noop}
                     onDemoAdded={onSourceChanged}
                     onClose={() => setChangeSourceOpen(false)}
                 />
