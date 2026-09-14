@@ -72,3 +72,4 @@ agent asked "share this demo with Jen" can.
 ## Shipped so far
 
 - 2026-09-13  feat(dashboard): Export becomes the umbrella, with the storefront as a demo package (`e7ddcd37e`)
+- 2026-09-14  fix(demo-package): the Save dialog says what colleagues get, and reset keeps the file (`fc7ab73c5`)
