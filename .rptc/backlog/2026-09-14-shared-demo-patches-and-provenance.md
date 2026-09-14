@@ -40,3 +40,4 @@ history to merge from.
 ## Shipped so far
 
 - 2026-09-14  docs(rptc): plan boilerplate provenance, patches that fit and the version gap for shared demos (`a878f69ed`)
+- 2026-09-14  docs(rptc): the card stays streamlined, the storefront report is one door away, diagnostics learns the same facts (`ac3ab675d`)
