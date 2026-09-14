@@ -1,6 +1,6 @@
 /**
- * addDemoFlow — the PURE part of the "Add a demo" dialog: its two stages, the
- * copy the SC reads, the rows of "What we found", and the row the dialog
+ * addDemoFlow — the PURE part of the "Add a demo package" dialog: its two stages, the
+ * copy the SC reads, the rows under "Package details", and the row the dialog
  * commits from a probe result.
  *
  * The Add Integration flow's stage machine was considered and not lifted: its
@@ -34,6 +34,8 @@ export interface AddDemoDraft {
     source?: { owner: string; repo: string };
     /** The typed name; '' means the default. */
     name: string;
+    /** The typed description; '' means the description file's, or none. */
+    description: string;
     /** The B2B switch, asked only when the probe could not tell. */
     b2bOn: boolean;
     /** Keep my own copy: on by default (decided 2026-09-11). */
@@ -43,7 +45,7 @@ export interface AddDemoDraft {
 }
 
 export const COPY = {
-    title: 'Add a demo',
+    title: 'Add a demo package',
     /** The two ways in, as choice cards: the same shape as Export's "How will you hand it over?". */
     wayQuestion: 'Where is the demo?',
     wayLink: 'From a link',
@@ -59,7 +61,8 @@ export const COPY = {
     notADemo: "This doesn't look like a demo we can build on",
     signInFirst: 'Sign in to GitHub first',
     signInHow: 'Reading a demo needs your GitHub sign-in. Sign in to GitHub in VS Code (Accounts, bottom left), then Continue again.',
-    found: 'What we found',
+    found: 'Package details',
+    descriptionLabel: 'Description',
     nameLabel: 'Demo name',
     b2bSwitch: 'Uses company (B2B) features',
     b2bWhy: "We couldn't tell whether this demo uses company accounts, quotes and purchase orders.",
@@ -74,19 +77,22 @@ export const COPY = {
     bundleSetup: 'This bundle also carries setup',
     bundleSetupWhy: 'Commerce, Adobe, GitHub and DA.live settings from whoever sent it. Start a project from them, on this card.',
     bundleStart: 'Start a project with it',
-    add: 'Add demo',
+    add: 'Add demo package',
+    adding: 'Adding the demo package…',
+    addingCopy: 'Making your own copy of the code in your GitHub account.',
     /** The dashboard's "Change source" door: the same dialog, a different commit. */
     change: {
         title: 'Change the demo source',
         lead: "Point this project at another copy of its demo: a colleague's link, your own copy, or the demo's site address. Only where reset and updates read from changes; the project's code and pages stay as they are.",
         commit: 'Change source',
+        changing: 'Changing the source…',
         updateRemembered: 'Also update the remembered demo',
         shipped: "A project can't be pointed at a demo we ship. Use the demo's own repository.",
         wrongKindTitle: 'This demo is a different kind of storefront',
     },
 } as const;
 
-export const INITIAL_DRAFT: AddDemoDraft = { name: '', b2bOn: false, keepCopy: true, updateRemembered: false };
+export const INITIAL_DRAFT: AddDemoDraft = { name: '', description: '', b2bOn: false, keepCopy: true, updateRemembered: false };
 
 /** The one rule of change mode: an Edge Delivery project takes an Edge Delivery demo, a headless one a headless demo. */
 export function wrongKindMessage(currentKind: StorefrontKind): string {
@@ -116,19 +122,9 @@ const KIND_LABEL: Record<SharedDemoRead['kind'], string> = {
     'not-a-storefront': 'Not a storefront',
 };
 
-/** The "What we found" rows, in the summary's own vocabulary. */
+/** The rows under "Package details", in the summary's own vocabulary. */
 export function foundRows(read: SharedDemoRead): SummaryRow[] {
     const codes = read.storeCodes;
-    // Labelled, because three bare codes read as noise: which is the website?
-    const structure = codes
-        ? [
-              codes.websiteCode && `Website ${codes.websiteCode}`,
-              codes.storeCode && `Store ${codes.storeCode}`,
-              codes.storeViewCode && `Store view ${codes.storeViewCode}`,
-          ]
-              .filter(Boolean)
-              .join(' · ')
-        : undefined;
     const pages = read.contentPublished.indexFound
         ? `${read.contentPublished.pageCount ?? 0} published`
         : undefined;
@@ -141,7 +137,10 @@ export function foundRows(read: SharedDemoRead): SummaryRow[] {
             value: read.kind === 'eds' ? pages : 'Not needed for a headless demo',
             done: Boolean(pages) || read.kind === 'headless',
         },
-        { label: 'Business structure', value: structure || undefined, done: Boolean(structure) },
+        // One row per level, labelled like every other row (owner, 2026-09-14).
+        { label: 'Website', value: codes?.websiteCode, done: Boolean(codes?.websiteCode) },
+        { label: 'Store', value: codes?.storeCode, done: Boolean(codes?.storeCode) },
+        { label: 'Store view', value: codes?.storeViewCode, done: Boolean(codes?.storeViewCode) },
         ...(read.b2b === 'unknown'
             ? []
             : [{ label: 'Company (B2B) features', value: read.b2b === 'on' ? 'On' : 'Off', done: true }]),
@@ -172,12 +171,15 @@ export function buildAddedDemo(read: SharedDemoRead, draft: AddDemoDraft): Added
     const [owner, repo] = read.fullName.split('/');
     const b2b = read.b2b === 'unknown' ? draft.b2bOn : read.b2b === 'on';
     const description = read.description;
+    const descriptionText = draft.description.trim() || description?.description;
     const configDefaults = description?.configDefaults ?? configDefaultsFromCodes(read.storeCodes);
     return {
         kind: 'demo',
         version: SHARED_DEMO_FILE_VERSION,
         name: draft.name.trim() || defaultDemoName(read),
-        ...(description?.description ? { description: description.description } : {}),
+        // What the SC typed wins; a blank field keeps the file's (owner, 2026-09-14:
+        // an added card with no description reads as unfinished).
+        ...(descriptionText ? { description: descriptionText } : {}),
         ...(configDefaults ? { configDefaults } : {}),
         ...(b2b ? { configFlags: { 'commerce-b2b-enabled': true, 'commerce-companies-enabled': true } } : {}),
         ...(description?.requiresMesh !== undefined ? { requiresMesh: description.requiresMesh } : {}),

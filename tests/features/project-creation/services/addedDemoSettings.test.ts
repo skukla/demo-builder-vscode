@@ -7,6 +7,7 @@ import * as vscode from 'vscode';
 import {
     ADDED_DEMOS_SETTING,
     addedDemoKey,
+    editAddedDemo,
     forgetAddedDemo,
     parseAddedDemoSettings,
     readAddedDemos,
@@ -126,5 +127,37 @@ describe('forgetAddedDemo', () => {
 
         expect(next).toEqual([BOB]);
         expect(update).toHaveBeenCalledWith(ADDED_DEMOS_SETTING, [BOB], vscode.ConfigurationTarget.Global);
+    });
+});
+
+describe('editAddedDemo', () => {
+    const update = jest.fn();
+    const DESCRIBED = { ...JEN, description: 'Old words' };
+
+    beforeEach(() => {
+        update.mockReset().mockResolvedValue(undefined);
+        (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
+            get: jest.fn((key: string, fallback: unknown) => (key === ADDED_DEMOS_SETTING ? [DESCRIBED, BOB] : fallback)),
+            update,
+        });
+    });
+
+    it('renames and re-describes the row in place, trimmed, and keeps everything else on it', async () => {
+        const edited = await editAddedDemo({ owner: 'JEN', repo: 'isle5-demo' }, { name: '  Isle5 luxury  ', description: ' New words ' });
+
+        const expected = { ...DESCRIBED, name: 'Isle5 luxury', description: 'New words' };
+        expect(edited).toStrictEqual(expected);
+        expect(update).toHaveBeenCalledWith(ADDED_DEMOS_SETTING, [expected, BOB], vscode.ConfigurationTarget.Global);
+    });
+
+    it('takes a blank description off the row rather than storing an empty one', async () => {
+        const edited = await editAddedDemo(JEN.source, { name: 'Isle5 by Jen', description: '   ' });
+
+        expect(edited).not.toHaveProperty('description');
+    });
+
+    it('writes nothing and answers nothing for a demo that is not on the Welcome step', async () => {
+        expect(await editAddedDemo({ owner: 'nobody', repo: 'nothing' }, { name: 'X', description: '' })).toBeUndefined();
+        expect(update).not.toHaveBeenCalled();
     });
 });

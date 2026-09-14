@@ -7,7 +7,7 @@ import { fireEvent, screen } from '@testing-library/react';
 import { renderDashboard, setupTestContext } from './ProjectDashboardScreen.testUtils';
 
 // Both dialogs render the core Modal, whose Spectrum pieces this suite's partial
-// Spectrum mock does not carry (same reason the Add a demo dialog is stubbed in
+// Spectrum mock does not carry (same reason the Add a demo package dialog is stubbed in
 // the demo-source suite). Their own suites render them real.
 jest.mock('@/features/dashboard/ui/components/export/ExportModal', () => ({
     ExportModal: ({ onClose }: any) => (

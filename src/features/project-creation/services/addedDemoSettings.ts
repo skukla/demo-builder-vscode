@@ -109,6 +109,32 @@ export async function forgetAddedDemo(source: { owner: string; repo: string }): 
 }
 
 /**
+ * Rename a remembered demo's card and change its description (owner,
+ * 2026-09-14). Only these two fields: the source, the kind and what was read
+ * stay as they are. A blank description comes off the row. Projects built on
+ * the demo keep their own row (D2) and are not touched.
+ *
+ * @returns The edited row, or undefined when the demo is not remembered
+ */
+export async function editAddedDemo(
+    source: { owner: string; repo: string },
+    edit: { name: string; description: string },
+): Promise<AddedDemo | undefined> {
+    const current = readAddedDemos();
+    const key = addedDemoKey({ source });
+    const index = current.findIndex((row) => addedDemoKey(row) === key);
+    if (index < 0) return undefined;
+    const { description: _previous, ...rest } = current[index];
+    const description = edit.description.trim();
+    const edited: AddedDemo = { ...rest, name: edit.name.trim(), ...(description ? { description } : {}) };
+    const next = current.map((row, i) => (i === index ? edited : row));
+    await vscode.workspace
+        .getConfiguration('demoBuilder')
+        .update(ADDED_DEMOS_SETTING, next, vscode.ConfigurationTarget.Global);
+    return edited;
+}
+
+/**
  * Remember a demo in the user's settings. A row for the same repository is
  * replaced in place, so re-adding refreshes what was read without a duplicate card.
  *

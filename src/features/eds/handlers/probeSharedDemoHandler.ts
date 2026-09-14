@@ -1,5 +1,5 @@
 /**
- * probe-shared-demo — read a colleague's repository before "Add a demo" offers it.
+ * probe-shared-demo — read a colleague's repository before "Add a demo package" offers it.
  *
  * Its own file, like `checkRepoReadinessHandler`: `edsGitHubHandlers` sits at
  * the handler size threshold. Pattern B: the answer is RETURNED; nothing is
@@ -27,7 +27,7 @@ export const GITHUB_SIGN_IN_REQUIRED = 'Sign in to GitHub to read this demo.';
  * later, a `git clone`). A probe that cannot read the repository is a result
  * (`outcome: 'unreadable'`), not a failure: the dialog shows it. A missing
  * GitHub sign-in IS a failure, with `needsAuth` for the agent: every read here
- * needs a token, and the Add a demo dialog opens before the Storefront step's
+ * needs a token, and the Add a demo package dialog opens before the Storefront step's
  * sign-in, so the session VS Code already holds is adopted first. Found live
  * 2026-09-12: without this an unauthenticated probe answered "we couldn't find
  * this repository" for a repository that exists.

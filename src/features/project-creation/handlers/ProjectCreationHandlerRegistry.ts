@@ -28,6 +28,7 @@ import { handleCheckCredentialService } from '@/features/eds/handlers/credential
 import { handleCheckDaLiveAuth, handleClearDaLiveAuth, handleOpenDaLiveLogin, handleStoreDaLiveTokenWithOrg } from '@/features/eds/handlers/daLive/edsDaLiveHandlers';
 import { handleCheckGitHubAuth, handleCreateGitHubRepo, handleGetGitHubRepos, handleGitHubChangeAccount, handleGitHubOAuth } from '@/features/eds/handlers/edsGitHubHandlers';
 import { handleDiscoverStoreStructure } from '@/features/eds/handlers/edsHandlers';
+import { handleEditAddedDemo } from '@/features/eds/handlers/editAddedDemoHandler';
 import { handleForgetAddedDemo } from '@/features/eds/handlers/forgetAddedDemoHandler';
 import { handleImportStorefrontZip, handleUseBundleSetup } from '@/features/eds/handlers/importStorefrontZipHandler';
 import { handleProbeSharedDemo } from '@/features/eds/handlers/probeSharedDemoHandler';
@@ -106,7 +107,7 @@ export const projectCreationHandlers = defineHandlers({
     'check-github-auth': handleCheckGitHubAuth,
     'check-github-app': checkGitHubApp,
     'check-repo-readiness': handleCheckRepoReadiness,
-    // Reads a colleague's repository before "Add a demo" offers it (step 04's dialog).
+    // Reads a colleague's repository before "Add a demo package" offers it (step 04's dialog).
     'probe-shared-demo': handleProbeSharedDemo,
     'add-shared-demo': handleAddSharedDemo,
     // The dialog's second way in: a zip becomes a repository in the SC's account.
@@ -115,6 +116,7 @@ export const projectCreationHandlers = defineHandlers({
     'use-bundle-setup': handleUseBundleSetup,
     // Takes a demo off the list; confirms host-side, naming the projects built on it.
     'forget-added-demo': handleForgetAddedDemo,
+    'edit-added-demo': handleEditAddedDemo,
     // The dialog's change mode commits here; the wizard never opens that mode,
     // but the dialog is one component and every message it can send is answered.
     'change-demo-source': handleChangeDemoSource,

@@ -1,5 +1,5 @@
 /**
- * Read a colleague's repository before "Add a demo" offers it (shareable-demo
+ * Read a colleague's repository before "Add a demo package" offers it (shareable-demo
  * step 03): is it a storefront we can build on, of which kind; where its
  * content is and whether it is published; its store codes; its B2B posture;
  * its template flag and default branch; and the description file's content

@@ -9,7 +9,7 @@ import { setupTestContext, renderDashboard, TestContext } from './ProjectDashboa
 
 jest.mock('@/features/dashboard/ui/components/export/ExportModal', () => ({
     // The real dialog renders the core Modal, whose Spectrum pieces this suite's
-    // partial Spectrum mock does not carry (same reason the Add a demo dialog is
+    // partial Spectrum mock does not carry (same reason the Add a demo package dialog is
     // stubbed in the demo-source suite). Its own suite renders it real.
     ExportModal: ({ onClose }: any) => (
         <div role="dialog" aria-label="Export">

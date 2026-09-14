@@ -7,7 +7,7 @@ change in it, and what happens to their projects when your demo changes.
 The same page, read the other way, is what you need from a colleague whose demo you want
 to add.
 
-## What "Add a demo" needs
+## What "Add a demo package" needs
 
 Send the link. Either one works:
 
@@ -33,7 +33,7 @@ Three things have to be true of the repository:
 Send the link, not a zip. A zip loses the history and your later changes can never reach
 the projects built on it.
 
-If a zip is what you were given anyway, the Add a demo dialog asks **Where is the demo?** and
+If a zip is what you were given anyway, the Add a demo package dialog asks **Where is the demo?** and
 offers **From a zip file** beside **From a link**. Pick it, then **Choose a zip file…**, and
 Demo Builder unpacks it, leaves out what a repository
 would not keep (`node_modules`, caches, whatever its `.gitignore` says), refuses it if it is
@@ -165,9 +165,9 @@ storefront into a card on your own Welcome step, the way Isle5 is one, so you ca
 projects from it. The dialog opens with the name and description prefilled from the brand or
 demo the project was built on (the project's own title for a Starter build); edit them,
 then **Save**. Two things happen: the description file is written into your own storefront
-repository from what the project already holds, and the card is added to your Add a demo
-list. Nothing else about the repository changes: it is not marked as a GitHub template,
-because Add a demo forks it, and a copy made from a template would lose "pull in their
+repository from what the project already holds, and the card is added to your Welcome step.
+Nothing else about the repository changes: it is not marked as a GitHub template,
+because Add a demo package forks it, and a copy made from a template would lose "pull in their
 changes" (a template copy has no link back to the original).
 
 Above the button, "What colleagues get" says, one line each, what a project built from the
@@ -185,7 +185,7 @@ card and its link keep working.
 Demo Builder rewrites only a description file it wrote itself, and knows it by the file's
 recorded revision. A file you wrote or edited by hand is left alone and the dialog says so;
 the card still goes on your list. **Remove demo package** takes the file out (again only
-when it is ours) and takes the card off your list. The card's own menu on the Welcome step, always visible, has **Remove**
+when it is ours) and takes the card off your list. The card's own menu on the Welcome step, always visible, has **Edit** (rename the card and change its description) and **Remove**
 too: it takes the card off the list and nothing else, and never offers to delete a repository
 that is one of your projects' storefronts. Colleagues who already added the demo keep it.
 
@@ -205,7 +205,7 @@ This is about you. Handing the demo to someone else is Export.
 - **Send a file**, when they can't. One zip, `<project>-demo-bundle.zip`. **What to include**
   lists the two parts you can tick: **Setup** (your Commerce, Adobe, GitHub and DA.live
   settings, never a credential) and **Storefront** (the repository's code with the demo's
-  description file inside). A colleague adds the storefront with Add a demo's **From a zip file**,
+  description file inside). A colleague adds the storefront with Add a demo package's **From a zip file**,
   which reads the bundle. Setup alone writes the plain settings file the projects list
   imports today.
 
@@ -215,7 +215,7 @@ Parts that do not exist yet are not listed. When one is built, it is added to th
 storefront zip. On the projects list, **Import** takes the bundle: the storefront becomes a
 repository in their account and a card on their Welcome step, and the setup part opens the
 wizard pre-filled on that card, with your repository and site names dropped so they name
-theirs. Inside the wizard, Add a demo's **From a zip file** does the same for the storefront and,
+theirs. Inside the wizard, Add a demo package's **From a zip file** does the same for the storefront and,
 when the bundle carries setup, offers **Start a project with it**, which adds the card and
 reopens the wizard pre-filled. The setup never carries a credential; the colleague signs in
 to their own accounts as the wizard asks.
@@ -231,8 +231,8 @@ repository and sending the link.
 
 The same doors exist as tools, in [mcp-tools.md](mcp-tools.md): `probe_shared_demo` reads
 a demo from a link, `add_shared_demo` adds it, `create_project` takes an added demo's id or
-a link, `change_demo_source` repoints a project, and `forget_added_demo` takes a demo off
-the list. The demos an SC has added live in the `demoBuilder.demos.added` setting.
+a link, `change_demo_source` repoints a project, `edit_added_demo` renames a card and changes
+its description, and `forget_added_demo` takes a demo off the list. The demos an SC has added live in the `demoBuilder.demos.added` setting.
 `add_shared_demo` also takes `zipPath` for a storefront that arrived as a zip file or a demo
 bundle: the repository it creates in the SC's account needs `confirm:true`, like a fork. When
 the bundle carries setup, the answer says so and points at the projects list's Import, which

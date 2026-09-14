@@ -3,7 +3,7 @@
  * structure the chosen demo's storefront expects?
  *
  * The expected codes are the demo card's configDefaults (a shipped package's,
- * or the codes Add a demo read from a colleague's storefront). The backend's
+ * or the codes Add a demo package read from a colleague's storefront). The backend's
  * structure is what Business Structure discovered. A code the backend lacks is
  * a storefront pointed at a website, store or store view that does not exist
  * there (owner, 2026-09-14: alert the SC on this step, where the structure is

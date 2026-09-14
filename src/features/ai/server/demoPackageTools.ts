@@ -6,7 +6,7 @@
  *   project built from it will need, whether it is already on the SC's list,
  *   and the link. A read.
  * - `save_demo_package` — write the description file into the SC's own
- *   storefront repository, put the card on their Add a demo list, mark the
+ *   storefront repository, put the card on their Welcome step, mark the
  *   repository a template when asked, and answer the link. A write into the
  *   SC's GitHub, so `confirm:true`; the refusal says what it would write and where.
  * - `remove_demo_package` — take back what save_demo_package did. Destructive
@@ -37,7 +37,7 @@ import type {
 } from '@/types/webviewRequests';
 
 const HINT =
-    'The card is on your Welcome step; create_project takes its id (list_demo_packages shows it). A colleague pastes the link into "Add a demo", or hands it to add_shared_demo.';
+    'The card is on your Welcome step; create_project takes its id (list_demo_packages shows it). A colleague pastes the link into "Add a demo package", or hands it to add_shared_demo.';
 
 /**
  * Register the demo-package tools on `server`.
@@ -52,7 +52,7 @@ export function registerDemoPackageTools(server: McpToolServer, ctxFactory: () =
             needsAuth: ['github'],
             annotations: { readOnlyHint: true, destructiveHint: false },
             description:
-                "What saving the open project's storefront as a demo package would give: the name and description the card would carry, whether colleagues can open its code, whether they start with your published pages, whether the sample data is available to them, whether it is already on your Add a demo list, and the link a colleague adds it from. Edge Delivery projects only. Read this before save_demo_package.",
+                "What saving the open project's storefront as a demo package would give: the name and description the card would carry, whether colleagues can open its code, whether they start with your published pages, whether the sample data is available to them, whether it is already on your Welcome step, and the link a colleague adds it from. Edge Delivery projects only. Read this before save_demo_package.",
             inputSchema: {},
         },
         async () => {
@@ -71,7 +71,7 @@ export function registerDemoPackageTools(server: McpToolServer, ctxFactory: () =
             needsAuth: ['github'],
             annotations: { readOnlyHint: false, destructiveHint: false },
             description:
-                "Save the open project's storefront as a demo package: write its description file (demo.demo-builder.json) into your own storefront repository and put the card on your Add a demo list, so you and colleagues (from the link) can build new projects on it. Never overwrites a file it did not write. Requires confirm:true; remove_demo_package undoes it.",
+                "Save the open project's storefront as a demo package: write its description file (demo.demo-builder.json) into your own storefront repository and put the card on your Welcome step, so you and colleagues (from the link) can build new projects on it. Never overwrites a file it did not write. Requires confirm:true; remove_demo_package undoes it.",
             inputSchema: {
                 name: z.string().optional().describe('The name on the card; defaults to the brand or demo the project was built on'),
                 description: z.string().optional().describe('One or two sentences about the demo'),
@@ -91,7 +91,7 @@ export function registerDemoPackageTools(server: McpToolServer, ctxFactory: () =
             if (args.confirm !== true) {
                 return asText({
                     error:
-                        `save_demo_package would write demo.demo-builder.json named "${name}" into ${link} and put the card on your Add a demo list. ` +
+                        `save_demo_package would write demo.demo-builder.json named "${name}" into ${link} and put the card on your Welcome step. ` +
                         'Call again with confirm:true to do it.',
                     name,
                     description,
@@ -113,7 +113,7 @@ export function registerDemoPackageTools(server: McpToolServer, ctxFactory: () =
             needsAuth: ['github'],
             annotations: { readOnlyHint: false, destructiveHint: true },
             description:
-                "Remove the open project's demo package: take the description file save_demo_package wrote out of your storefront repository, and take the card off your Add a demo list. Colleagues who already added it keep it. Requires confirm:true.",
+                "Remove the open project's demo package: take the description file save_demo_package wrote out of your storefront repository, and take the card off your Welcome step. Colleagues who already added it keep it. Requires confirm:true.",
             inputSchema: {
                 confirm: z.boolean().optional().describe('Must be true — the description file is removed from your repository'),
             },
@@ -126,7 +126,7 @@ export function registerDemoPackageTools(server: McpToolServer, ctxFactory: () =
                 const project = await ctx.stateManager.getCurrentProject();
                 return asText({
                     error:
-                        'remove_demo_package takes the description file out of your storefront repository and the card off your Add a demo list; colleagues can no longer add it from its link. ' +
+                        'remove_demo_package takes the description file out of your storefront repository and the card off your Welcome step; colleagues can no longer add it from its link. ' +
                         'Call again with confirm:true.',
                     ...(project?.demoPackage ? { savedAt: project.demoPackage.savedAt } : {}),
                     destructive: true,

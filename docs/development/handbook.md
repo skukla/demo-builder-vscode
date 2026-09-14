@@ -293,7 +293,7 @@ check says so and names the file.
 > **Convention.** Whoever names a content site names its index path. The catalog, the
 > project row and a description file all state where a site lists its pages; every reader
 > (the copy step, the import path, the reset door) takes the stated path from `contentIndex.ts`
-> and none guesses one. Only the Add a demo probe looks a path up, for a repository that names
+> and none guesses one. Only the Add a demo package probe looks a path up, for a repository that names
 > a site with no path, and it records what it found.
 > *Why:* the shipped brands publish their index under two different names. When readers each
 > spelled a default, a demo built from one brand read as "no published pages" in the probe while

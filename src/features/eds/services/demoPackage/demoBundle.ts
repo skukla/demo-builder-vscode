@@ -7,7 +7,7 @@
  *   <name>-demo-bundle/
  *     setup.demo-builder.json     the setup part: the settings file, never a credential
  *     storefront/                 the storefront part: the repository's files
- *       demo.demo-builder.json    with the description file inside, so "Add a demo"
+ *       demo.demo-builder.json    with the description file inside, so "Add a demo package"
  *                                 reads the same card a link would give
  *
  * "Or add from a zip file" reads a bundle as well as a bare storefront zip.

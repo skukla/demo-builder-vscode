@@ -131,6 +131,10 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
         bytes: 1_000,
         why: 'the demo name, its source, a project count and the outcome, or the confirm refusal naming the same',
     },
+    edit_added_demo: {
+        bytes: 600,
+        why: 'the id, the name and the description of the edited card, or the refusal naming the repository',
+    },
     change_demo_source: {
         bytes: 2_000,
         why: 'the new and previous sources plus the probe warnings; the row itself is not echoed',

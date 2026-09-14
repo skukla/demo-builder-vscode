@@ -1,5 +1,5 @@
 /**
- * AddDemoModal — the "Add a demo" dialog shell: the core Modal in a
+ * AddDemoModal — the "Add a demo package" dialog shell: the core Modal in a
  * DialogContainer, mounted only while open (the reset-on-open seam the Add
  * Integration modal established), a two-stage body over {@link useAddDemoFlow},
  * and a Back/Continue footer driven by the hook.
@@ -29,7 +29,14 @@ type BodyProps = Omit<AddDemoModalProps, 'isOpen'> & {
     mode: NonNullable<AddDemoModalProps['mode']>;
 };
 
-/** One view at a time: the push, the first stage, or what was found. */
+/** Whether the commit in flight makes a copy: asked for, and not the SC's own repository or an existing copy. */
+function makesCopy(flow: BodyProps['flow']): boolean {
+    const result = flow.probe.status === 'done' ? flow.probe.result : undefined;
+    const viewer = result?.outcome === 'read' ? result.viewer : undefined;
+    return flow.draft.keepCopy && !viewer?.ownsRepo && !viewer?.existingFork;
+}
+
+/** One view at a time: the push, the commit, the first stage, or what was found. */
 function Body({ flow, mode, ...props }: BodyProps): React.ReactElement {
     if (flow.importing) {
         // Shown for the whole push, whichever stage the dialog is on: the import
@@ -37,6 +44,19 @@ function Body({ flow, mode, ...props }: BodyProps): React.ReactElement {
         return (
             <CenteredFeedbackContainer height="280px">
                 <LoadingDisplay size="L" message={COPY.importing} helperText={COPY.importingFor} />
+            </CenteredFeedbackContainer>
+        );
+    }
+    if (flow.adding) {
+        // The commit can fork a repository first, which takes a moment; a form
+        // that sits unchanged meanwhile reads as a press that did nothing.
+        return (
+            <CenteredFeedbackContainer height="280px">
+                <LoadingDisplay
+                    size="L"
+                    message={mode === 'change' ? COPY.change.changing : COPY.adding}
+                    helperText={makesCopy(flow) ? COPY.addingCopy : undefined}
+                />
             </CenteredFeedbackContainer>
         );
     }
@@ -64,6 +84,7 @@ function Body({ flow, mode, ...props }: BodyProps): React.ReactElement {
             packages={props.packages}
             addError={flow.addError}
             onNameChange={flow.setName}
+            onDescriptionChange={flow.setDescription}
             onB2bChange={flow.setB2bOn}
             onKeepCopyChange={flow.setKeepCopy}
             onUpdateRememberedChange={flow.setUpdateRemembered}

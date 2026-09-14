@@ -9,7 +9,7 @@
  * @module features/project-creation/ui/components/add-demo/FoundStage
  */
 
-import { Button, Checkbox, Switch, TextField } from '@adobe/react-spectrum';
+import { Button, Checkbox, Switch, TextArea, TextField } from '@adobe/react-spectrum';
 import React from 'react';
 import {
     COPY,
@@ -35,6 +35,7 @@ export interface FoundStageProps {
     packages: DemoPackage[];
     addError?: string;
     onNameChange: (name: string) => void;
+    onDescriptionChange: (description: string) => void;
     onB2bChange: (on: boolean) => void;
     onKeepCopyChange: (keep: boolean) => void;
     onUpdateRememberedChange?: (update: boolean) => void;
@@ -91,6 +92,7 @@ export function FoundStage({
     packages,
     addError,
     onNameChange,
+    onDescriptionChange,
     onB2bChange,
     onKeepCopyChange,
     onUpdateRememberedChange,
@@ -154,6 +156,14 @@ export function FoundStage({
                 placeholder={defaultDemoName(result)}
                 onChange={onNameChange}
                 width="100%"
+            />
+            <TextArea
+                label={COPY.descriptionLabel}
+                value={draft.description}
+                placeholder={result.description?.description}
+                onChange={onDescriptionChange}
+                width="100%"
+                data-testid="demo-description"
             />
             <div className="add-demo-found">
                 <p className="intflow-section-label">{COPY.found}</p>

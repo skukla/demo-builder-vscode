@@ -162,7 +162,7 @@ describe('handleSaveDemoPackage', () => {
             storefrontKind: 'eds',
         });
         // Save never touches the repository's settings (the template tick box was
-        // removed 2026-09-14: Add a demo forks, and a template copy loses updates).
+        // removed 2026-09-14: Add a demo package forks, and a template copy loses updates).
         expect(repoOperations.setTemplateFlag).not.toHaveBeenCalled();
         const saved = saveProject.mock.calls[0][0] as Project;
         expect(saved.demoPackage).toMatchObject({ fileSha: 'blob-1' });

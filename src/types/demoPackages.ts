@@ -53,7 +53,7 @@ export interface DaLiveContentSource {
     /**
      * Where the site lists its pages. Required: whoever names a content site
      * names its index path (the catalog, the project row, a description file);
-     * only the Add a demo probe looks one up, for a repository that names no
+     * only the Add a demo package probe looks one up, for a repository that names no
      * site of its own, and records what it found. `contentIndex.ts` builds the
      * URL every reader uses.
      */

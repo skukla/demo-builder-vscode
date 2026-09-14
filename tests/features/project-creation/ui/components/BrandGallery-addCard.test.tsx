@@ -1,5 +1,5 @@
 /**
- * The plus card at the end of the grid: "Add a demo".
+ * The plus card at the end of the grid: "Add a demo package".
  */
 
 import { fireEvent, screen } from '@testing-library/react';
@@ -10,7 +10,7 @@ function addCard(): HTMLElement | null {
     return screen.queryByTestId('add-demo-card');
 }
 
-describe('BrandGallery — the Add a demo card', () => {
+describe('BrandGallery — the Add a demo package card', () => {
     it('is rendered last, with the accepted words, only when a handler is given', () => {
         const first = renderGallery();
         expect(addCard()).not.toBeInTheDocument();
@@ -18,7 +18,7 @@ describe('BrandGallery — the Add a demo card', () => {
 
         renderGallery({ onAddDemo: jest.fn() });
         const card = addCard();
-        expect(card).toHaveAccessibleName("Add a demo: Use a colleague's storefront or your own, from a link or a zip file.");
+        expect(card).toHaveAccessibleName("Add a demo package: Use a colleague's storefront or your own, from a link or a zip file.");
         expect(card!.parentElement!.lastElementChild).toBe(card);
         expect(cards()).toHaveLength(3);
     });

@@ -101,7 +101,7 @@ export function ProjectDashboardScreen({
     // State for browser opening (passed to actions hook)
     const [isOpeningBrowser, setIsOpeningBrowser] = useState(false);
     const [showCapabilities, setShowCapabilities] = useState(false);
-    // "Change source" (a project built on an added demo): the Add a demo dialog in
+    // "Change source" (a project built on an added demo): the Add a demo package dialog in
     // change mode; afterwards status is re-requested so the source check re-runs.
     const [changeSourceOpen, setChangeSourceOpen] = useState(false);
     const openChangeSource = demo ? () => setChangeSourceOpen(true) : undefined;

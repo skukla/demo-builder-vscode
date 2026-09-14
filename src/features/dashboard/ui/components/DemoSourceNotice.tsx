@@ -4,7 +4,7 @@
  * The dashboard's notice for a project built on an added demo whose source
  * does not answer: the demo-source check's own sentence ("Jen's demo can't be
  * reached. Reset and updates are unavailable until it is.") with the one
- * recovery, "Change source", which reopens the Add a demo dialog to point the
+ * recovery, "Change source", which reopens the Add a demo package dialog to point the
  * project at another copy of the same kind. The same shape as
  * `OrgContextNotice`: an `InlineNotice` shown only on a warning, null otherwise.
  *

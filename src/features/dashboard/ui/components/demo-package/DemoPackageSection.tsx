@@ -28,7 +28,7 @@ export const PACKAGE_COPY = {
     checksTitle: 'What colleagues get',
     republishHint: 'Republish, then save again.',
     savedTitle: "Saved. It's on your Welcome step now.",
-    linkHow: 'Colleagues paste this link into "Add a demo".',
+    linkHow: 'Colleagues paste this link into "Add a demo package".',
     skippedTitle: 'Card saved; the file in your repository was left alone',
     removed: 'Demo package removed',
     removedHow: 'The card is off your Welcome step and the file is out of your repository. The storefront is untouched.',

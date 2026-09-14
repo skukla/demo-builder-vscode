@@ -184,6 +184,7 @@ export const TOOL_NARRATION: Record<string, string> = {
     probe_shared_demo: "Reading the colleague's demo",
     add_shared_demo: 'Adding the demo to the list',
     forget_added_demo: 'Forgetting the added demo',
+    edit_added_demo: "Editing the added demo package's name and description",
     change_demo_source: "Changing where the project's demo comes from",
     get_demo_package_preview: 'Reading what the demo package would carry',
     save_demo_package: 'Saving the storefront as a demo package',

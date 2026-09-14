@@ -1,6 +1,6 @@
 /**
  * "Add a storefront from a zip file" (shareable-demo step 10): the host half of
- * the Add a demo dialog's second way in. Picks the file (when the webview asks
+ * the Add a demo package dialog's second way in. Picks the file (when the webview asks
  * without a path), unpacks it, refuses what is not an Edge Delivery storefront
  * by the probe's own rule, creates a repository in the SC's own GitHub account
  * (D28: personal account only), pushes the files as one commit, flags the

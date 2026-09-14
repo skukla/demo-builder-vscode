@@ -1,6 +1,6 @@
 /**
  * "Save as demo package": what the extension already knows about a project,
- * written as the description file a colleague's "Add a demo" reads, and the
+ * written as the description file a colleague's "Add a demo package" reads, and the
  * checks that say whether their add will work.
  *
  * The file is built from the project (never typed again): the brand or demo
@@ -180,7 +180,7 @@ export async function resolveOwnContentSource(
 }
 
 /**
- * Everything a colleague's "Add a demo" will need, checked now and said plainly.
+ * Everything a colleague's "Add a demo package" will need, checked now and said plainly.
  */
 export async function packageChecks(
     project: Project,

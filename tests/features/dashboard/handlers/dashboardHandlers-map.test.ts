@@ -170,7 +170,7 @@ describe('dashboardHandlers', () => {
             //                      republishContent
             //   1  reset           resetProject
             //   1  destination     setProjectDestination
-            //   5  demo source     probe-shared-demo (the Add a demo dialog's
+            //   5  demo source     probe-shared-demo (the Add a demo package dialog's
             //                      read, shared with the wizard),
             //                      change-demo-source (point a project built on
             //                      an added demo at another copy of it),

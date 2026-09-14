@@ -2,7 +2,7 @@
  * useDemoPackage — the "Save as demo package" dialog's state. One read on open
  * (the prefilled draft, the checks, the link), then two commitment points: Save
  * writes the description file into the SC's own storefront repository and puts
- * the card on their Add a demo list; Remove takes both back. Typing never
+ * the card on their Welcome step; Remove takes both back. Typing never
  * talks to the host (`docs/patterns/selection-pattern.md`).
  *
  * @module features/dashboard/ui/components/demo-package/useDemoPackage

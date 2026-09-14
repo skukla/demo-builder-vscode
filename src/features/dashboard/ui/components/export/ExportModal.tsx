@@ -50,7 +50,7 @@ export const EXPORT_COPY = {
     looking: 'Checking the storefront',
     lookingFor: 'Reading the repository and the published pages.',
     isPackage: 'Send this link:',
-    linkHow: 'Colleagues paste it into "Add a demo". They get your storefront\'s code and content, and your later changes.',
+    linkHow: 'Colleagues paste it into "Add a demo package". They get your storefront\'s code and content, and your later changes.',
     linkWrites: "Copying also writes the demo's name and description into your repository, so that is what their card shows.",
     copyLink: 'Copy link',
     copied: 'Copied',

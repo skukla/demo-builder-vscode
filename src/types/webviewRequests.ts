@@ -24,7 +24,7 @@ import type { GitHubRepoItem } from './webview';
 import type { GitHubUser } from './webviewPayloads';
 
 /**
- * `probe-shared-demo` — read a colleague's repository before "Add a demo"
+ * `probe-shared-demo` — read a colleague's repository before "Add a demo package"
  * offers it (shareable-demo step 03). Owner and repo, already split by the
  * sender; the handler validates the charset.
  */
@@ -142,7 +142,7 @@ export interface AddSharedDemoResult {
 }
 
 /**
- * `forget-added-demo` — take a demo off the Add a demo list. The host asks
+ * `forget-added-demo` — take a demo off your Welcome step. The host asks
  * for confirmation itself (it knows how many projects on this computer were
  * built on the demo) and, when the source is the SC's own copy, offers to
  * delete that copy too (decided 2026-09-11: off by default, confirmed twice).
@@ -157,6 +157,22 @@ export interface ForgetAddedDemoResult {
     forgotten: boolean;
     /** Set when the SC's own copy was deleted from GitHub as well. */
     deletedCopy?: boolean;
+}
+
+/**
+ * `edit-added-demo` — rename an added demo package's card and change its
+ * description. Settings only, so no confirmation: editing again undoes it.
+ * The card updates through the settings listener's `addedDemosUpdated` push.
+ */
+export interface EditAddedDemoRequest {
+    source: { owner: string; repo: string };
+    name: string;
+    /** '' takes the description off the card. */
+    description: string;
+}
+
+export interface EditAddedDemoResult {
+    demo: AddedDemo;
 }
 
 /**
@@ -175,7 +191,7 @@ export interface ChangeDemoSourceRequest {
 /**
  * "Save as demo package" (step 09). `getDemoPackagePreview` answers what the
  * card would carry and what a project built from it will need; `saveDemoPackage`
- * writes the description file, puts the card on the SC's own Add a demo list
+ * writes the description file, puts the card on the SC's own Welcome step
  * and answers the link; `removeDemoPackage` undoes exactly what saveDemoPackage
  * did.
  */
@@ -191,11 +207,11 @@ export interface DemoPackagePreview {
     /** Prefilled from the brand or demo the project was built on; the SC edits before writing. */
     draft: { name: string; description: string };
     checks: DemoPackageCheck[];
-    /** The link a colleague pastes into "Add a demo". */
+    /** The link a colleague pastes into "Add a demo package". */
     link: string;
     /** Whether the description file in the repository is ours (written by a save). */
     saved: boolean;
-    /** Whether the card is on the SC's own Add a demo list. */
+    /** Whether the card is on the SC's own Welcome step. */
     onList: boolean;
 }
 
@@ -210,7 +226,7 @@ export interface SaveDemoPackageResult {
     file: 'written' | 'unchanged' | 'skipped';
     /** Why the file was skipped, when it was. */
     fileReason?: string;
-    /** The card is on the SC's own Add a demo list now (always, after a save). */
+    /** The card is on the SC's own Welcome step now (always, after a save). */
     onList: true;
     checks: DemoPackageCheck[];
 }

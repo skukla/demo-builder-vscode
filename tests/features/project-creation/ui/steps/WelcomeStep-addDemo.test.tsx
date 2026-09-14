@@ -50,13 +50,13 @@ describe('WelcomeStep — added demos', () => {
         );
     });
 
-    it('opens the Add a demo dialog from the plus card', () => {
+    it('opens the Add a demo package dialog from the plus card', () => {
         renderWelcome({ packages: PACKAGES, stacks: STACKS });
-        expect(screen.queryByRole('heading', { name: 'Add a demo' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('heading', { name: 'Add a demo package' })).not.toBeInTheDocument();
 
         fireEvent.click(screen.getByTestId('add-demo-card'));
 
-        expect(screen.getByRole('heading', { name: 'Add a demo' })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Add a demo package' })).toBeInTheDocument();
     });
 });
 
@@ -110,5 +110,75 @@ describe('WelcomeStep — forgetting an added demo', () => {
             screen.getByRole('menuitem', { name: 'Remove' }).click();
         });
         expect(updateState).toHaveBeenCalledWith({ selectedPackage: undefined, demo: undefined });
+    });
+});
+
+describe('WelcomeStep — editing an added demo', () => {
+    const request = webviewClient.request as jest.Mock;
+
+    beforeEach(() => {
+        request.mockReset();
+    });
+
+    async function openEdit(): Promise<void> {
+        await act(async () => {
+            screen.getByLabelText('More actions for Isle5 by Jen').click();
+        });
+        await act(async () => {
+            screen.getByRole('menuitem', { name: 'Edit' }).click();
+        });
+    }
+
+    it('opens Edit demo package with the name and description filled in, and saves both by the demo\'s repository', async () => {
+        const described = { ...JEN, description: 'Old words' };
+        const edited = { ...described, name: 'Isle5 luxury', description: 'New words' };
+        request.mockResolvedValue({ success: true, result: { demo: edited } });
+        const { updateState } = renderWelcome({
+            packages: [...PACKAGES, packageFromAddedDemo(described, undefined)],
+            stacks: STACKS,
+            addedDemos: [described],
+            state: { selectedPackage: addedDemoId(described), demo: described },
+        });
+        updateState.mockClear();
+
+        await openEdit();
+        expect(screen.getByRole('heading', { name: 'Edit demo package' })).toBeInTheDocument();
+        const name = screen.getByLabelText('Demo name', { selector: 'input' }) as HTMLInputElement;
+        const description = screen.getByLabelText('Description', { selector: 'textarea' }) as HTMLTextAreaElement;
+        expect(name.value).toBe('Isle5 by Jen');
+        expect(description.value).toBe('Old words');
+
+        fireEvent.change(name, { target: { value: 'Isle5 luxury' } });
+        fireEvent.change(description, { target: { value: 'New words' } });
+        await act(async () => {
+            screen.getByRole('button', { name: 'Save' }).click();
+        });
+
+        expect(request).toHaveBeenCalledWith('edit-added-demo', {
+            source: { owner: 'jen', repo: 'isle5-demo' },
+            name: 'Isle5 luxury',
+            description: 'New words',
+        });
+        // The selected card's row follows, so the Build summary shows the new name.
+        expect(updateState).toHaveBeenCalledWith({ demo: edited });
+        expect(screen.queryByRole('heading', { name: 'Edit demo package' })).not.toBeInTheDocument();
+    });
+
+    it('will not save a blank name, and keeps the dialog open with the refusal when the host says no', async () => {
+        request.mockResolvedValue({ success: false, error: 'jen/isle5-demo is not on your Welcome step.' });
+        renderWelcome({ packages: [...PACKAGES, JEN_CARD], stacks: STACKS, addedDemos: [JEN] });
+
+        await openEdit();
+        const name = screen.getByLabelText('Demo name', { selector: 'input' });
+        fireEvent.change(name, { target: { value: '   ' } });
+        expect(screen.getByRole('button', { name: 'Save' })).toHaveAttribute('aria-disabled', 'true');
+
+        fireEvent.change(name, { target: { value: 'Isle5' } });
+        await act(async () => {
+            screen.getByRole('button', { name: 'Save' }).click();
+        });
+
+        expect(screen.getByTestId('edit-demo-error')).toHaveTextContent('jen/isle5-demo is not on your Welcome step.');
+        expect(screen.getByRole('heading', { name: 'Edit demo package' })).toBeInTheDocument();
     });
 });

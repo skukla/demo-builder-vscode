@@ -54,7 +54,7 @@ import '@/core/ui/styles/step-scaffold.css';
 import '@/core/ui/styles/vstep-list.css';
 // .choice-* — the option cards, also rendered on the integrations surface.
 import '../styles/choice-cards.css';
-// The "Add a demo" dialog and its plus card; sits on the flow and summary styles above.
+// The "Add a demo package" dialog and its plus card; sits on the flow and summary styles above.
 import '../styles/add-demo.css';
 // .db-* — the shared detail drawer.
 import '@/core/ui/styles/drawer.css';

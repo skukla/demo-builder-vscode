@@ -1,5 +1,5 @@
 /**
- * useAddDemoFlow — the "Add a demo" dialog's state: the draft, the probe, the
+ * useAddDemoFlow — the "Add a demo package" dialog's state: the draft, the probe, the
  * add commit. Backend calls happen at the two commitment points only
  * (`docs/patterns/selection-pattern.md`): Continue off the link stage probes;
  * "Add demo" keeps a copy when asked and remembers the row. Typing and
@@ -84,6 +84,7 @@ export interface UseAddDemoFlowReturn {
     onBack: () => void;
     setSource: (source: AddDemoDraft['source']) => void;
     setName: (name: string) => void;
+    setDescription: (description: string) => void;
     setB2bOn: (on: boolean) => void;
     setKeepCopy: (keep: boolean) => void;
     setUpdateRemembered: (update: boolean) => void;
@@ -264,6 +265,9 @@ export function useAddDemoFlow(args: UseAddDemoFlowArgs): UseAddDemoFlowReturn {
     const setName = useCallback((name: string): void => {
         setDraft((d) => ({ ...d, name }));
     }, []);
+    const setDescription = useCallback((description: string): void => {
+        setDraft((d) => ({ ...d, description }));
+    }, []);
     const setB2bOn = useCallback((b2bOn: boolean): void => {
         setDraft((d) => ({ ...d, b2bOn }));
     }, []);
@@ -289,6 +293,7 @@ export function useAddDemoFlow(args: UseAddDemoFlowArgs): UseAddDemoFlowReturn {
         onBack,
         setSource,
         setName,
+        setDescription,
         setB2bOn,
         setKeepCopy,
         setUpdateRemembered,

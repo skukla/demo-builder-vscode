@@ -877,6 +877,15 @@
     "tier": 2
   },
   {
+    "id": "t2-edit-added-demo",
+    "prompt": "Rename the Isle5 demo package I added from github.com/battery-scratch/isle5-demo to \"Isle5 luxury\" and give it the description \"Luxury B2C on Edge Delivery\".",
+    "expect": [
+      "edit_added_demo"
+    ],
+    "why": "The Welcome step's Edit on an added demo package (EDS-13a): the card lives in a user setting, so an agent without the tool edits settings.json directly and can break the row the card reads. Tier 2: it writes a user setting, so it runs only under --tier2.",
+    "tier": 2
+  },
+  {
     "id": "probe-shared-demo",
     "prompt": "A colleague sent me https://main--isle5-demo--jen.aem.live and says it's a demo I can build on. Before I add it, tell me what kind of storefront it is, its store codes, and whether its pages are published.",
     "expect": [

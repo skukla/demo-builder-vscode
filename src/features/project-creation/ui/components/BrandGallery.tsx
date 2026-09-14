@@ -36,15 +36,17 @@ export interface BrandGalleryProps {
     customBlockLibraries?: CustomBlockLibrary[];
     /** Optional content to render above the gallery (e.g., project name field) */
     headerContent?: React.ReactNode;
-    /** Open "Add a demo". When absent the plus card is not rendered. */
+    /** Open "Add a demo package". When absent the plus card is not rendered. */
     onAddDemo?: () => void;
-    /** Forget an added demo (its card carries a menu only when this is given). */
+    /** Forget an added demo (its card carries a menu only when this or Edit is given). */
     onForgetDemo?: (packageId: string) => void;
+    /** Rename an added demo's card and change its description. */
+    onEditDemo?: (packageId: string) => void;
 }
 
 /** The plus card's words, accepted 2026-09-11. */
 export const ADD_DEMO_CARD = {
-    name: 'Add a demo',
+    name: 'Add a demo package',
     description: "Use a colleague's storefront or your own, from a link or a zip file.",
 } as const;
 
@@ -83,8 +85,10 @@ interface PackageCardProps {
     isComplete: boolean;
     isDimmed: boolean;
     onCardClick: () => void;
-    /** Present only on an added demo's card: the one action its menu offers. */
+    /** Present only on an added demo's card: its menu's Remove. */
     onForget?: () => void;
+    /** Present only on an added demo's card: its menu's Edit. */
+    onEdit?: () => void;
 }
 
 /**
@@ -100,6 +104,7 @@ function PackageCard({
     isDimmed,
     onCardClick,
     onForget,
+    onEdit,
 }: PackageCardProps) {
     const isComingSoon = pkg.status === 'coming-soon';
 
@@ -137,21 +142,30 @@ function PackageCard({
             aria-label={`${pkg.name}: ${pkg.description}`}
         >
             {isComingSoon && <span className="architecture-badge">Coming Soon</span>}
-            {isSelected && <SelectionCheck corner />}
-            {onForget ? (
+            {onForget || onEdit ? (
                 <CardActionsMenu
                     ariaLabel={`More actions for ${pkg.name}`}
                     className="brand-card-menu-button"
-                    onAction={onForget}
+                    onAction={(key) => (key === 'edit' ? onEdit?.() : onForget?.())}
                 >
-                    <Item key="forget" textValue="Remove">
-                        <Text>Remove</Text>
-                    </Item>
+                    {onEdit ? (
+                        <Item key="edit" textValue="Edit">
+                            <Text>Edit</Text>
+                        </Item>
+                    ) : null}
+                    {onForget ? (
+                        <Item key="forget" textValue="Remove">
+                            <Text>Remove</Text>
+                        </Item>
+                    ) : null}
                 </CardActionsMenu>
             ) : null}
             <div className="brand-card-header">
                 <div className="brand-card-title-row">
                     <Text UNSAFE_className="brand-card-name">{pkg.name}</Text>
+                    {/* Inline, beside the name: an added demo's menu holds the corner,
+                        the way the Integrations card's button does. */}
+                    {isSelected && <SelectionCheck />}
                 </div>
                 <Text UNSAFE_className="brand-card-description">{pkg.description}</Text>
             </div>
@@ -206,6 +220,7 @@ export function BrandGallery({
     headerContent,
     onAddDemo,
     onForgetDemo,
+    onEditDemo,
 }: BrandGalleryProps) {
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -269,6 +284,7 @@ export function BrandGallery({
                                     ? () => onForgetDemo(pkg.id)
                                     : undefined
                             }
+                            onEdit={onEditDemo && isAddedDemoId(pkg.id) ? () => onEditDemo(pkg.id) : undefined}
                         />
                     );
                 })}

@@ -45,7 +45,8 @@ describe('ExportModal', () => {
             const link = screen.getByTestId('export-link');
             expect(link).toHaveTextContent(LINK);
             expect(link).not.toHaveTextContent(/writes the demo's name/);
-            expect(screen.queryByText(/demo package/)).not.toBeInTheDocument();
+            // No save hand-off: the storefront already carries its description.
+            expect(screen.queryByText(/as a demo package/)).not.toBeInTheDocument();
 
             await click('Copy link');
 

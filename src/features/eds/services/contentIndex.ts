@@ -3,7 +3,7 @@
  * place this repo says where to look.
  *
  * The copy step (creation, import, reset) reads a site's index to know which
- * pages to copy; the Add a demo probe reads it to say whether a colleague's
+ * pages to copy; the Add a demo package probe reads it to say whether a colleague's
  * pages are published; the reset door reads it to know whether the copy can
  * run. The shipped brands publish theirs under two different names, and a
  * site names its own path in its catalog entry or description file. Found live

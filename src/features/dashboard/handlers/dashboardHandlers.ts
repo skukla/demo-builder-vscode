@@ -301,7 +301,7 @@ export const dashboardHandlers = defineHandlers({
     setProjectDestination: handleSetProjectDestination,
 
     // "Save as demo package": the description file into the project's own
-    // storefront repository, the card on the SC's Add a demo list, the checks a
+    // storefront repository, the card on the SC's Welcome step, the checks a
     // project built from it needs, and the undo.
     getDemoPackagePreview: handleGetDemoPackagePreview,
     saveDemoPackage: handleSaveDemoPackage,
@@ -309,7 +309,7 @@ export const dashboardHandlers = defineHandlers({
     // Export, "Send a file": one bundle of the ticked parts (setup, storefront).
     exportDemoBundle: handleExportDemoBundle,
 
-    // "Change source" for a project built on an added demo: the Add a demo
+    // "Change source" for a project built on an added demo: the Add a demo package
     // dialog in its change mode probes with the wizard's own handler, then
     // repoints the project's row and instance metadata.
     'probe-shared-demo': handleProbeSharedDemo,

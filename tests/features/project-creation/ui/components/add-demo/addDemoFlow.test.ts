@@ -1,5 +1,5 @@
 /**
- * The pure half of "Add a demo": the found rows, the row the dialog commits,
+ * The pure half of "Add a demo package": the found rows, the row the dialog commits,
  * and the footer label.
  */
 
@@ -56,7 +56,9 @@ describe('foundRows', () => {
             { label: 'Code', value: 'github.com/jen/isle5-demo', done: true },
             { label: 'Type', value: 'Edge Delivery', done: true },
             { label: 'Pages', value: '12 published', done: true },
-            { label: 'Business structure', value: 'Website isle5 · Store isle5_store · Store view isle5_us', done: true },
+            { label: 'Website', value: 'isle5', done: true },
+            { label: 'Store', value: 'isle5_store', done: true },
+            { label: 'Store view', value: 'isle5_us', done: true },
             { label: 'Company (B2B) features', value: 'On', done: true },
         ]);
     });
@@ -69,9 +71,9 @@ describe('foundRows', () => {
             storeCodes: undefined,
             contentPublished: { indexFound: false },
         });
-        expect(rows.map((r) => r.label)).toEqual(['Code', 'Type', 'Pages', 'Business structure']);
+        expect(rows.map((r) => r.label)).toEqual(['Code', 'Type', 'Pages', 'Website', 'Store', 'Store view']);
         expect(rows[2]).toEqual({ label: 'Pages', value: undefined, done: false });
-        expect(rows[3]).toEqual({ label: 'Business structure', value: undefined, done: false });
+        expect(rows[3]).toEqual({ label: 'Website', value: undefined, done: false });
     });
 
     it('does not ask a headless demo for pages', () => {
@@ -111,6 +113,19 @@ describe('buildAddedDemo', () => {
         const row = buildAddedDemo(unknown, { ...INITIAL_DRAFT, b2bOn: true, name: '  Isle5 by Jen  ' });
         expect(row.configFlags).toEqual({ 'commerce-b2b-enabled': true, 'commerce-companies-enabled': true });
         expect(row.name).toBe('Isle5 by Jen');
+    });
+
+    it('takes the typed description, trimmed, over the file; a blank one leaves the file\'s or none', () => {
+        expect(buildAddedDemo(READ, { ...INITIAL_DRAFT, description: '  Luxury B2C on Edge Delivery  ' }).description).toBe(
+            'Luxury B2C on Edge Delivery',
+        );
+        expect(buildAddedDemo(READ, { ...INITIAL_DRAFT, description: '   ' })).not.toHaveProperty('description');
+        const withFile: SharedDemoRead = {
+            ...READ,
+            description: { kind: 'demo', version: 1, name: 'Isle5 by Jen', description: 'From the file' },
+        };
+        expect(buildAddedDemo(withFile, INITIAL_DRAFT).description).toBe('From the file');
+        expect(buildAddedDemo(withFile, { ...INITIAL_DRAFT, description: 'Typed' }).description).toBe('Typed');
     });
 
     it("carries the description file's own statements and its defaults over the read codes", () => {
@@ -154,7 +169,7 @@ describe('continueLabel', () => {
         expect(
             continueLabel('found', { outcome: 'shipped', shippedPackageId: 'starter', fullName: 'a/b' }, 'Starter (B2B + B2C)'),
         ).toBe('Use Starter (B2B + B2C)');
-        expect(continueLabel('found', READ, undefined)).toBe('Add demo');
+        expect(continueLabel('found', READ, undefined)).toBe('Add demo package');
     });
 });
 

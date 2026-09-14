@@ -1,5 +1,5 @@
 /**
- * An added demo's card carries a menu with one action, Remove; a shipped
+ * An added demo's card carries a menu with Edit and Remove; a shipped
  * brand's card carries none, and neither does an added card when no handler
  * is given.
  */
@@ -50,16 +50,39 @@ describe('BrandGallery — forgetting an added demo', () => {
                     stacks={STACKS}
                     onPackageSelect={onPackageSelect}
                     onForgetDemo={onForgetDemo}
+                    onEditDemo={jest.fn()}
                 />
             </Provider>,
         );
 
         screen.getByLabelText('More actions for Isle5 by Jen').click();
         const items = screen.getAllByRole('menuitem').map((item) => item.textContent);
-        expect(items).toEqual(['Remove']);
+        expect(items).toEqual(['Edit', 'Remove']);
         screen.getByRole('menuitem', { name: 'Remove' }).click();
 
         expect(onForgetDemo).toHaveBeenCalledWith(JEN_CARD.id);
+        expect(onPackageSelect).not.toHaveBeenCalled();
+    });
+
+    it("offers Edit, which reports the card's package id without selecting the card", () => {
+        const onEditDemo = jest.fn();
+        const onPackageSelect = jest.fn();
+        render(
+            <Provider theme={defaultTheme} colorScheme="light">
+                <BrandGallery
+                    packages={[...PACKAGES, JEN_CARD]}
+                    stacks={STACKS}
+                    onPackageSelect={onPackageSelect}
+                    onForgetDemo={jest.fn()}
+                    onEditDemo={onEditDemo}
+                />
+            </Provider>,
+        );
+
+        screen.getByLabelText('More actions for Isle5 by Jen').click();
+        screen.getByRole('menuitem', { name: 'Edit' }).click();
+
+        expect(onEditDemo).toHaveBeenCalledWith(JEN_CARD.id);
         expect(onPackageSelect).not.toHaveBeenCalled();
     });
 });

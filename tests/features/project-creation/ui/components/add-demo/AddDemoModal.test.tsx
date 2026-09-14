@@ -1,5 +1,5 @@
 /**
- * The "Add a demo" dialog, end to end over the mocked host: the link stage,
+ * The "Add a demo package" dialog, end to end over the mocked host: the link stage,
  * the found panel and its conditional controls, the refusals, the commits.
  */
 
@@ -24,7 +24,7 @@ describe('AddDemoModal', () => {
 
     it('opens on the two ways in, "From a link" picked, with only the link field below', () => {
         renderModal();
-        expect(screen.getByRole('heading', { name: 'Add a demo' })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Add a demo package' })).toBeInTheDocument();
         expect(screen.getByText('Where is the demo?')).toBeInTheDocument();
         expect(screen.getByTestId('add-demo-way-link')).toHaveTextContent('From a link');
         expect(screen.getByTestId('add-demo-way-zip')).toHaveTextContent('From a zip file');
@@ -79,10 +79,13 @@ describe('AddDemoModal', () => {
         const { props } = renderModal();
         await probeWith({ success: true, result: READ });
 
-        expect(screen.getByText('What we found')).toBeInTheDocument();
+        expect(screen.getByText('Package details')).toBeInTheDocument();
         expect(screen.getByTestId('found-Type')).toHaveTextContent('Edge Delivery');
         expect(screen.getByTestId('found-Pages')).toHaveTextContent('12 published');
-        expect(screen.getByTestId('found-Business structure')).toHaveTextContent('Website isle5 · Store isle5_store · Store view isle5_us');
+        // One row per level, labelled on the left like every other row (owner, 2026-09-14).
+        expect(screen.getByTestId('found-Website')).toHaveTextContent('isle5');
+        expect(screen.getByTestId('found-Store')).toHaveTextContent('isle5_store');
+        expect(screen.getByTestId('found-Store view')).toHaveTextContent('isle5_us');
         expect(screen.getByTestId('found-Company (B2B) features')).toHaveTextContent('On');
         expect(screen.queryByTestId('b2b-switch')).not.toBeInTheDocument();
         const keep = screen.getByTestId('keep-copy').querySelector('input') as HTMLInputElement;
@@ -90,10 +93,17 @@ describe('AddDemoModal', () => {
         expect(screen.getByTestId('keep-copy')).toHaveTextContent('Keep my own copy of the code');
         expect(screen.getByText('Saved to your GitHub account, steve. Your projects keep working if the original changes.')).toBeInTheDocument();
 
-        mockRequest.mockResolvedValueOnce({ success: true, result: { demo: JEN } });
-        await click('Add demo');
+        // A description the card carries (owner, 2026-09-14: an added card had none).
+        const description = screen.getByTestId('demo-description');
+        fireEvent.change(description.querySelector('textarea') ?? description, { target: { value: 'Luxury B2C demo' } });
 
-        expect(mockRequest).toHaveBeenLastCalledWith('add-shared-demo', expect.objectContaining({ keepCopy: true }));
+        mockRequest.mockResolvedValueOnce({ success: true, result: { demo: JEN } });
+        await click('Add demo package');
+
+        expect(mockRequest).toHaveBeenLastCalledWith(
+            'add-shared-demo',
+            expect.objectContaining({ keepCopy: true, demo: expect.objectContaining({ description: 'Luxury B2C demo' }) }),
+        );
         expect(props.onDemoAdded).toHaveBeenCalledWith(JEN);
         expect(props.onClose).toHaveBeenCalled();
     });
@@ -128,7 +138,7 @@ describe('AddDemoModal', () => {
         });
         expect(screen.getByText("This doesn't look like a demo we can build on")).toBeInTheDocument();
         expect(screen.getByText(/missing scripts\/scripts.js/)).toBeInTheDocument();
-        expect(button('Add demo')).toHaveAttribute('aria-disabled', 'true');
+        expect(button('Add demo package')).toHaveAttribute('aria-disabled', 'true');
         expect(button('Back')).toHaveAttribute('aria-disabled', 'false');
     });
 
@@ -138,7 +148,7 @@ describe('AddDemoModal', () => {
         expect(screen.getByText('Sign in to GitHub first')).toBeInTheDocument();
         expect(screen.getByText(/Sign in to GitHub in VS Code/)).toBeInTheDocument();
         expect(screen.queryByText("This doesn't look like a demo we can build on")).not.toBeInTheDocument();
-        expect(button('Add demo')).toHaveAttribute('aria-disabled', 'true');
+        expect(button('Add demo package')).toHaveAttribute('aria-disabled', 'true');
     });
 
     it('offers our own card when the link is one of our templates', async () => {
@@ -157,7 +167,7 @@ describe('AddDemoModal', () => {
         const { props } = renderModal();
         await probeWith({ success: true, result: READ });
         mockRequest.mockResolvedValueOnce({ success: false, error: "We couldn't make your own copy of this demo." });
-        await click('Add demo');
+        await click('Add demo package');
         expect(screen.getByTestId('add-error')).toHaveTextContent(/own copy/);
         expect(props.onClose).not.toHaveBeenCalled();
     });
@@ -194,6 +204,24 @@ describe('AddDemoModal — while reading', () => {
         // Let the probe finish inside act, so the found panel's render is not stray.
         await act(async () => {
             release({ success: true, result: READ });
+        });
+    });
+
+    it('shows the add is under way, naming the copy it makes, instead of a frozen form', async () => {
+        // Owner, 2026-09-14: pressing Add showed nothing for a second while the
+        // host forked the repository.
+        renderModal();
+        await probeWith({ success: true, result: READ });
+        let release: (value: unknown) => void = () => {};
+        mockRequest.mockImplementationOnce(() => new Promise((resolve) => { release = resolve; }));
+        await click('Add demo package');
+
+        expect(screen.getByText('Adding the demo package…')).toBeInTheDocument();
+        expect(screen.getByText('Making your own copy of the code in your GitHub account.')).toBeInTheDocument();
+        expect(screen.queryByTestId('demo-description')).not.toBeInTheDocument();
+
+        await act(async () => {
+            release({ success: true, result: { demo: JEN } });
         });
     });
 

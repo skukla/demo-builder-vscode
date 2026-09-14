@@ -6,11 +6,14 @@
  *   SC's own account, so a real cloud write: gated by `confirm:true` exactly
  *   when it would fork), remember it. With `zipPath` (step 10) the zip first
  *   becomes a repository in the SC's account, gated the same way.
- * - `forget_added_demo` — take a demo off the Add a demo list, and with
+ * - `forget_added_demo` — take a demo off your Welcome step, and with
  *   `deleteCopy` also delete the SC's own copy of its code. The human door
  *   confirms in two modals; here the gate is `confirm:true`, and the refusal
  *   names the demo, how many projects on this computer were built on it, and
  *   what a delete would cost them.
+ * - `edit_added_demo` — rename an added demo package's card and change its
+ *   description, on the handler the Welcome step's Edit uses. No confirm:
+ *   settings only, and editing again undoes it.
  * - `change_demo_source` — point the open project at another copy of its
  *   demo. Reads the repository the way the dialog does, builds the same row,
  *   and hands it to the same handler (same storefront kind only).
@@ -27,6 +30,7 @@ import type { McpToolServer } from './mcpToolServer';
 import { addedDemoId } from '@/features/components/services/storefrontResolver';
 import { handleAddSharedDemo } from '@/features/eds/handlers/addSharedDemoHandler';
 import { handleChangeDemoSource } from '@/features/eds/handlers/changeDemoSourceHandler';
+import { handleEditAddedDemo, notOnWelcomeStep } from '@/features/eds/handlers/editAddedDemoHandler';
 import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import {
     countProjectsBuiltOn,
@@ -57,9 +61,13 @@ const LINK_SHAPE = {
         .optional()
         .describe('Instead of owner+repo: a GitHub link, or the demo site address (main--repo--owner.aem.live)'),
     name: z.string().optional().describe('A name for the demo; defaults to what the repository says'),
+    description: z
+        .string()
+        .optional()
+        .describe("What the demo's card says under its name; defaults to the repository's description file, else none"),
 };
 
-type LinkArgs = { owner?: string; repo?: string; link?: string; name?: string };
+type LinkArgs = { owner?: string; repo?: string; link?: string; name?: string; description?: string };
 type ZipArgs = { zipPath?: string; repoName?: string; isPrivate?: boolean; confirm?: boolean };
 
 /**
@@ -141,7 +149,7 @@ export async function readDemoRow(
             },
         };
     }
-    const demo = buildAddedDemo(read, { ...INITIAL_DRAFT, name: args.name ?? '' });
+    const demo = buildAddedDemo(read, { ...INITIAL_DRAFT, name: args.name ?? '', description: args.description ?? '' });
     const warnings = [
         ...read.warnings,
         ...(read.b2b === 'unknown'
@@ -164,7 +172,7 @@ export function registerAddedDemoTools(server: McpToolServer, ctxFactory: () => 
             needsAuth: ['github'],
             annotations: { readOnlyHint: false, destructiveHint: false },
             description:
-                "Add a colleague's demo (or one of your own) to the Add a demo list from its GitHub link or site address, so create_project can build on it. keepCopy (default true) forks the repository into your own GitHub account first, so the demo keeps working if the original changes; that fork needs confirm:true. Use probe_shared_demo first to see what the demo is. With zipPath instead of a link, a storefront that arrived as a zip file first becomes a repository in your own account (private unless isPrivate:false; named after the zip unless repoName is given), which also needs confirm:true.",
+                "Add a colleague's demo (or one of your own) to your Welcome step from its GitHub link or site address, so create_project can build on it. keepCopy (default true) forks the repository into your own GitHub account first, so the demo keeps working if the original changes; that fork needs confirm:true. Use probe_shared_demo first to see what the demo is. With zipPath instead of a link, a storefront that arrived as a zip file first becomes a repository in your own account (private unless isPrivate:false; named after the zip unless repoName is given), which also needs confirm:true.",
             inputSchema: {
                 ...LINK_SHAPE,
                 keepCopy: z
@@ -187,7 +195,7 @@ export function registerAddedDemoTools(server: McpToolServer, ctxFactory: () => 
             if (args.zipPath) {
                 const created = await repositoryFromZip(ctx, { ...args, zipPath: args.zipPath });
                 if ('answer' in created) return asText(created.answer);
-                where = { owner: created.owner, repo: created.repo, name: args.name };
+                where = { owner: created.owner, repo: created.repo, name: args.name, description: args.description };
                 fromZip = { fileCount: created.fileCount, dropped: created.dropped, setupIncluded: created.setupIncluded };
             }
 
@@ -238,7 +246,7 @@ export function registerAddedDemoTools(server: McpToolServer, ctxFactory: () => 
             needsAuth: ['github'],
             annotations: { readOnlyHint: false, destructiveHint: true },
             description:
-                'Take a demo added from a link off the Add a demo list; with deleteCopy:true also delete your own copy of its code from GitHub. Projects built on it are never touched. Requires confirm:true.',
+                'Take a demo added from a link off your Welcome step; with deleteCopy:true also delete your own copy of its code from GitHub. Projects built on it are never touched. Requires confirm:true.',
             inputSchema: {
                 ...SOURCE_SHAPE,
                 deleteCopy: z
@@ -271,7 +279,7 @@ export function registerAddedDemoTools(server: McpToolServer, ctxFactory: () => 
                     : '';
                 return asText({
                     error:
-                        `forget_added_demo removes "${demo.name}" from the Add a demo list. ${projectsSentence(projectsBuiltOn)}${cost} ` +
+                        `forget_added_demo removes "${demo.name}" from your Welcome step. ${projectsSentence(projectsBuiltOn)}${cost} ` +
                         'Verify this is the intended demo, then call again with confirm:true.',
                     demo: demo.name,
                     source: demo.source,
@@ -285,6 +293,39 @@ export function registerAddedDemoTools(server: McpToolServer, ctxFactory: () => 
     );
 
     server.registerTool(
+        'edit_added_demo',
+        {
+            needsAuth: false,
+            annotations: { readOnlyHint: false, destructiveHint: false },
+            description:
+                "Rename an added demo package's card on the Welcome step, change its description, or both. Omitted fields stay as they are; an empty description takes it off the card. Projects built on the demo keep their own name.",
+            inputSchema: {
+                ...SOURCE_SHAPE,
+                name: z.string().optional().describe('The new name on the card'),
+                description: z.string().optional().describe('The new description under the name; empty removes it'),
+            },
+        },
+        async (args: { owner: string; repo: string; name?: string; description?: string }) => {
+            const source = { owner: args.owner, repo: args.repo };
+            const demo = readAddedDemos().find((row) => addedDemoKey(row) === addedDemoKey({ source }));
+            if (!demo) return asText({ error: notOnWelcomeStep(source) });
+            const answer = await handleEditAddedDemo(ctxFactory(), {
+                source,
+                name: args.name ?? demo.name,
+                description: args.description ?? demo.description ?? '',
+            });
+            if (!answer.success || !answer.result) return asText({ error: answer.error });
+            const edited = answer.result.demo;
+            return asText({
+                edited: true,
+                id: addedDemoId(edited),
+                name: edited.name,
+                ...(edited.description ? { description: edited.description } : {}),
+            });
+        },
+    );
+
+    server.registerTool(
         'change_demo_source',
         {
             needsAuth: ['github'],
@@ -294,7 +335,7 @@ export function registerAddedDemoTools(server: McpToolServer, ctxFactory: () => 
             inputSchema: {
                 ...LINK_SHAPE,
                 keepCopy: z.boolean().optional().describe('Fork the repository into your own account first and read from the fork'),
-                updateRemembered: z.boolean().optional().describe('Also move the remembered demo on the Add a demo list to the new source'),
+                updateRemembered: z.boolean().optional().describe('Also move the remembered demo on your Welcome step to the new source'),
             },
         },
         async (args: LinkArgs & { keepCopy?: boolean; updateRemembered?: boolean }) => {

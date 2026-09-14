@@ -34,6 +34,7 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 jest.mock('@/features/project-creation/services/addedDemoSettings', () => ({
     ...jest.requireActual('@/features/project-creation/services/addedDemoSettings'),
     readAddedDemos: jest.fn(),
+    editAddedDemo: jest.fn(),
 }));
 jest.mock('@/features/ai/server/edsToolGuards', () => ({
     requireGitHub: jest.fn(),
@@ -47,7 +48,7 @@ import { countProjectsBuiltOn, forgetDemo, isOwnCopy } from '@/features/eds/hand
 import { handleImportStorefrontZip, refusalFor } from '@/features/eds/handlers/importStorefrontZipHandler';
 import { handleProbeSharedDemo } from '@/features/eds/handlers/probeSharedDemoHandler';
 import { readStorefrontZip } from '@/features/eds/services/storefront/zipStorefrontImport';
-import { readAddedDemos } from '@/features/project-creation/services/addedDemoSettings';
+import { editAddedDemo, readAddedDemos } from '@/features/project-creation/services/addedDemoSettings';
 import type { SharedDemoRead } from '@/types/webviewRequests';
 import { makeAddedDemo } from '../../../helpers/demoPackageFixtures';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
@@ -302,8 +303,12 @@ describe('add_shared_demo', () => {
         registerAddedDemoTools(s, () => ctx);
 
         mockProbe.mockResolvedValueOnce({ success: true, result: NOT_MINE });
-        expect((await s.call('add_shared_demo', { owner: 'jen', repo: 'isle5-demo', keepCopy: false })).added).toBe(true);
-        expect(mockAdd).toHaveBeenLastCalledWith(ctx, expect.objectContaining({ keepCopy: false }));
+        expect((await s.call('add_shared_demo', { owner: 'jen', repo: 'isle5-demo', keepCopy: false, description: 'Luxury B2C demo' })).added).toBe(true);
+        // The agent can give the card a description, as the dialog's field does.
+        expect(mockAdd).toHaveBeenLastCalledWith(
+            ctx,
+            expect.objectContaining({ keepCopy: false, demo: expect.objectContaining({ description: 'Luxury B2C demo' }) }),
+        );
 
         mockProbe.mockResolvedValueOnce({ success: true, result: READ });
         expect((await s.call('add_shared_demo', { owner: 'steve', repo: 'isle5-copy' })).added).toBe(true);
@@ -382,5 +387,42 @@ describe('add_shared_demo from a zip file', () => {
         registerAddedDemoTools(s, () => ctx);
         const res = await s.call('add_shared_demo', { zipPath: '/tmp/bodea-demo-bundle.zip', confirm: true });
         expect(res).toMatchObject({ setupIncluded: true, setupHint: expect.stringContaining('Import the bundle from the projects list') });
+    });
+});
+
+describe('edit_added_demo', () => {
+    const mockEditDemo = editAddedDemo as jest.Mock;
+
+    it('renames and re-describes the card on the same handler the Welcome step uses, with no confirm', async () => {
+        const s = fakeServer();
+        registerAddedDemoTools(s, () => ctx);
+        mockEditDemo.mockResolvedValue({ ...JEN, name: 'Isle5 luxury', description: 'New words' });
+
+        const res = await s.call('edit_added_demo', { owner: 'jen', repo: 'isle5-demo', name: 'Isle5 luxury', description: 'New words' });
+
+        expect(mockEditDemo).toHaveBeenCalledWith({ owner: 'jen', repo: 'isle5-demo' }, { name: 'Isle5 luxury', description: 'New words' });
+        expect(res).toStrictEqual({ edited: true, id: 'added:jen/isle5-demo', name: 'Isle5 luxury', description: 'New words' });
+    });
+
+    it('keeps what is not given: an omitted name or description stays as it was', async () => {
+        const s = fakeServer();
+        registerAddedDemoTools(s, () => ctx);
+        mockRead.mockReturnValue([{ ...JEN, description: 'Kept words' }]);
+        mockEditDemo.mockResolvedValue({ ...JEN, name: 'Renamed', description: 'Kept words' });
+
+        await s.call('edit_added_demo', { owner: 'jen', repo: 'isle5-demo', name: 'Renamed' });
+
+        expect(mockEditDemo).toHaveBeenCalledWith({ owner: 'jen', repo: 'isle5-demo' }, { name: 'Renamed', description: 'Kept words' });
+    });
+
+    it('answers the refusal when the demo is not on the Welcome step', async () => {
+        const s = fakeServer();
+        registerAddedDemoTools(s, () => ctx);
+        mockRead.mockReturnValue([]);
+
+        const res = await s.call('edit_added_demo', { owner: 'nobody', repo: 'nothing', name: 'X' });
+
+        expect(res).toStrictEqual({ error: 'nobody/nothing is not on your Welcome step.' });
+        expect(mockEditDemo).not.toHaveBeenCalled();
     });
 });

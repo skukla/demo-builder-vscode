@@ -1,6 +1,7 @@
 import { TextField, Text } from '@adobe/react-spectrum';
 import React, { useEffect, useCallback, useState } from 'react';
 import { AddDemoModal } from '../components/add-demo/AddDemoModal';
+import { EditDemoPackageModal } from '../components/add-demo/EditDemoPackageModal';
 import { BrandGallery } from '../components/BrandGallery';
 import { buildEdsConfigFromStorefront } from './edsConfigFromStorefront';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
@@ -46,6 +47,7 @@ export function WelcomeStep({
 }: WelcomeStepProps) {
     const defaultProjectName = 'my-commerce-demo';
     const [addDemoOpen, setAddDemoOpen] = useState(false);
+    const [editingDemo, setEditingDemo] = useState<AddedDemo | undefined>(undefined);
     const selectableDefaultProps = useSelectableDefault();
 
     // Check if packages are provided (unified package + stack architecture)
@@ -178,6 +180,18 @@ export function WelcomeStep({
         [addedDemos, state.selectedPackage, updateState],
     );
 
+    /** Edit from the card's menu; a selected card's row follows the save, so the summary shows the new name. */
+    const handleEditDemo = useCallback(
+        (packageId: string) => setEditingDemo(addedDemos.find((row) => addedDemoId(row) === packageId)),
+        [addedDemos],
+    );
+    const handleDemoEdited = useCallback(
+        (demo: AddedDemo) => {
+            if (state.selectedPackage === addedDemoId(demo)) updateState({ demo });
+        },
+        [state.selectedPackage, updateState],
+    );
+
     /** The dialog's commits: a demo just added, or a remembered one picked from its list. */
     const selectAddedDemo = useCallback(
         (demo: AddedDemo) => {
@@ -306,7 +320,9 @@ export function WelcomeStep({
                     headerContent={projectNameField}
                     onAddDemo={openAddDemo}
                     onForgetDemo={handleForgetDemo}
+                    onEditDemo={handleEditDemo}
                 />
+                <EditDemoPackageModal demo={editingDemo} onClose={() => setEditingDemo(undefined)} onSaved={handleDemoEdited} />
                 <AddDemoModal
                     isOpen={addDemoOpen}
                     packages={packages}

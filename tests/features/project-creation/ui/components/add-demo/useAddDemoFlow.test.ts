@@ -87,7 +87,7 @@ describe('useAddDemoFlow', () => {
         expect(mockRequest).toHaveBeenCalledWith('probe-shared-demo', { owner: 'jen', repo: 'isle5-demo' });
         expect(hook.result.current.stage).toBe('found');
         expect(hook.result.current.probe).toEqual({ status: 'done', result: READ });
-        expect(hook.result.current.continueLabel).toBe('Add demo');
+        expect(hook.result.current.continueLabel).toBe('Add demo package');
         expect(hook.result.current.canContinue).toBe(true);
     });
 

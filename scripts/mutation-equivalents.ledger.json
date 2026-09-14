@@ -3573,7 +3573,7 @@
             "decision": "none \u2014 a fast path the following lookup already covers",
             "recorded": "2026-09-04",
             "source": "mutationLedger add",
-            "line": 219
+            "line": 233
         },
         {
             "module": "src/features/project-creation/ui/steps/WelcomeStep.tsx",
@@ -3586,14 +3586,14 @@
             "decision": "none \u2014 a fast path the following lookup already covers",
             "recorded": "2026-09-04",
             "source": "mutationLedger add",
-            "line": 243
+            "line": 257
         },
         {
             "module": "src/features/project-creation/ui/components/BrandGallery.tsx",
             "anchors": [
                 "selectedBlockLibraries = [],"
             ],
-            "line": 96,
+            "line": 100,
             "mutants": 1,
             "category": "other",
             "reason": "PackageCard's default only applies when the prop is omitted, and BrandGallery passes 'isSelected ? selectedBlockLibraries : undefined'. For the selected card that is always an array (BrandGallery defaults it to [] itself), so the default is never used there. For an unselected card the default DOES apply, but 'isComplete' is false for that card, so the block-library summary the count feeds is not rendered at all. No render shows the difference.",

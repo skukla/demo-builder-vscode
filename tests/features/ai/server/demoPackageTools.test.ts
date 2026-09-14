@@ -102,7 +102,7 @@ describe('save_demo_package', () => {
     it('refuses without confirm, naming the file, the name it would carry, the repository and the list, and writes nothing', async () => {
         const refusal = await server().call('save_demo_package', {});
         expect(refusal.error).toBe(
-            'save_demo_package would write demo.demo-builder.json named "Bodea" into https://github.com/steve/kukla-bodea and put the card on your Add a demo list. Call again with confirm:true to do it.',
+            'save_demo_package would write demo.demo-builder.json named "Bodea" into https://github.com/steve/kukla-bodea and put the card on your Welcome step. Call again with confirm:true to do it.',
         );
         expect(refusal).toMatchObject({ name: 'Bodea', description: 'Bodea-branded B2B demo', alreadySaved: false, alreadyOnList: false });
         expect(mockSave).not.toHaveBeenCalled();
@@ -111,7 +111,7 @@ describe('save_demo_package', () => {
     it('hands the handler the given name and description, the prefilled ones when absent', async () => {
         const result = await server().call('save_demo_package', { name: ' Bodea by Steve ', confirm: true });
         expect(mockSave).toHaveBeenCalledWith(ctx, { name: 'Bodea by Steve', description: 'Bodea-branded B2B demo' });
-        expect(result).toMatchObject({ link: PREVIEW.link, file: 'written', onList: true, hint: expect.stringContaining('Add a demo') });
+        expect(result).toMatchObject({ link: PREVIEW.link, file: 'written', onList: true, hint: expect.stringContaining('Add a demo package') });
     });
 
     it("passes the handler's failure through", async () => {
@@ -124,7 +124,7 @@ describe('remove_demo_package', () => {
     it('refuses without confirm, saying what is removed and when it was saved, and removes nothing', async () => {
         const refusal = await server().call('remove_demo_package', {});
         expect(refusal).toMatchObject({ destructive: true, savedAt: '2026-09-12T00:00:00.000Z' });
-        expect(refusal.error).toMatch(/takes the description file out of your storefront repository and the card off your Add a demo list/);
+        expect(refusal.error).toMatch(/takes the description file out of your storefront repository and the card off your Welcome step/);
         expect(mockRemove).not.toHaveBeenCalled();
     });
 

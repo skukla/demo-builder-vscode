@@ -209,7 +209,7 @@ export async function handleGitHubOAuth(
  * signed into GitHub in VS Code has a session the extension can use, and
  * this stores its token for the API operations. Undefined when there is none.
  * Shared by the auth check and by the reads that run before the Storefront
- * step's sign-in (the Add a demo probe).
+ * step's sign-in (the Add a demo package probe).
  */
 export async function adoptExistingGitHubSession(
     tokenService: GitHubTokenService,

@@ -1,5 +1,5 @@
 /**
- * forget-added-demo — take a demo off the Add a demo list.
+ * forget-added-demo — take a demo off your Welcome step.
  *
  * Forget always removes the card and never touches a project: each project
  * carries its own row (D2). The confirmation names how many projects on this

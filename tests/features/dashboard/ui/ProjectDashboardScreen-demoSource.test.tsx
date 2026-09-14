@@ -3,7 +3,7 @@
  *
  * The demo-source check's warning shows the notice with the check's own
  * sentence; "Change source" (the notice's button and the overflow item) opens
- * the Add a demo dialog in its change mode, and a change re-requests status so
+ * the Add a demo package dialog in its change mode, and a change re-requests status so
  * the check re-runs. Without a demo row there is no door at all.
  */
 

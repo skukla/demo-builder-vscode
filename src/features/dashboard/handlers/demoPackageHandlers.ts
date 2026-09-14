@@ -3,7 +3,7 @@
  * are RETURNED): `getDemoPackagePreview` (a read: the draft, the checks, the
  * link, whether the card is already on the SC's list), `saveDemoPackage`
  * (writes the description file into the project's own storefront repository
- * through the ownership rule, puts the card on the SC's own Add a demo list,
+ * through the ownership rule, puts the card on the SC's own Welcome step,
  * records what it did on the project) and `removeDemoPackage` (removes only
  * what we wrote and takes the card off the list).
  *
@@ -158,7 +158,7 @@ export const handleSaveDemoPackage: MessageHandler<SaveDemoPackageRequest> = asy
     project.demoPackage = { fileSha, savedAt: new Date().toISOString() };
     await context.stateManager.saveProject(project);
     context.logger.info(
-        `[Demo package] ${project.name}: description file ${written.outcome} in ${storefront.owner}/${storefront.repo}, card on the Add a demo list`,
+        `[Demo package] ${project.name}: description file ${written.outcome} in ${storefront.owner}/${storefront.repo}, card on your Welcome step`,
     );
 
     const checks = await packageChecks(project, storefront, own, checkDeps(context));

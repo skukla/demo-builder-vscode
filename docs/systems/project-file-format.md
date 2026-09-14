@@ -6,7 +6,7 @@ versioned, and neither ever carries a credential.
 | File | Name | Lives | Written by | Read by |
 |---|---|---|---|---|
 | Project file | `<project-name>.project.demo-builder.json` | wherever the SC saves it | Export (projects dashboard; the `export_project_settings` tool) | Import from File, Copy from Existing |
-| Shared-demo file | `demo.demo-builder.json` | the root of a storefront repository | Export → Storefront as demo package, or a colleague by hand | "Add a demo" |
+| Shared-demo file | `demo.demo-builder.json` | the root of a storefront repository | Export → Storefront as demo package, or a colleague by hand | "Add a demo package" |
 
 They are one family with the project manifest, `.demo-builder.json`, which stays in the
 project folder and never leaves the machine. The kind is spelled out before the shared
@@ -79,7 +79,7 @@ required, the datapack the demo expects, and the integrations it depends on. Two
 file may add that the catalog expresses elsewhere: which shipped block libraries to pre-tick,
 and a content source with an index path.
 
-A shared-demo file is optional. When it is absent, "Add a demo" reads what the repository
+A shared-demo file is optional. When it is absent, "Add a demo package" reads what the repository
 already holds. When it is present, its values win, and the SC is told what it overrode.
 Unknown fields warn and never refuse, so a file written for a newer extension still adds on an
 older one.
