@@ -79,3 +79,5 @@ unchanged from there: the Storefront area shows the frontend piece as fixed by t
 - 2026-09-13  feat(eds): a storefront arrives as a zip, a demo leaves as a link or a file (`6b67cf95c`)
 - 2026-09-14  docs(research): patches and the pre-render on saved demo packages and third-party storefronts (`58f378e77`)
 - 2026-09-14  feat(add-demo): two ways in, one form at a time, and a warning where the structure is known (`64c9f1f38`)
+- 2026-09-14  feat(add-demo): Add a demo package, with a description, a loading state and Edit (`b7d964ad1`)
+- 2026-09-14  refactor(integrations): the mesh flyout's Commerce scope lines are one component (`0d548a497`)
