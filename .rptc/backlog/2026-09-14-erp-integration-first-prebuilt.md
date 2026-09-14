@@ -48,3 +48,7 @@ the flyout, the agent tools · 06 live acceptance on Bodea and docs.
   proven SDK path; no owner action needed.
 - The ERP's display name is an input of the integration's configuration, default "Acme ERP".
 - An instance without B2B companies gets one default business partner named for the project.
+
+## Shipped so far
+
+- 2026-09-14  docs(rptc): plan the ERP integration, the first pre-built catalog entry (`2b3490a65`)
