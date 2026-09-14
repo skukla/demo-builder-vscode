@@ -56,13 +56,15 @@ function Journey({ demo, onClose, onSaved }: EditDemoPackageModalProps & { demo:
             );
             if (!answer.success || !answer.result) {
                 setError(answer.error ?? EDIT_COPY.fallback);
+                setSaving(false);
                 return;
             }
+            // `saving` stays on while the dialog closes: DialogContainer keeps
+            // rendering it through the exit animation.
             onSaved(answer.result.demo);
             onClose();
         } catch (failure) {
             setError((failure as Error).message || EDIT_COPY.fallback);
-        } finally {
             setSaving(false);
         }
     };

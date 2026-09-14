@@ -207,16 +207,19 @@ export function useAddDemoFlow(args: UseAddDemoFlowArgs): UseAddDemoFlowReturn {
                       } satisfies AddSharedDemoRequest);
             if (!answer.success || !answer.result) {
                 setAddError(answer.error ?? failed);
+                setAdding(false);
                 return undefined;
             }
+            // `adding` stays on: the dialog is closing, and Spectrum's
+            // DialogContainer keeps rendering it through the exit animation.
+            // Turning it off here flashed the form on the way out.
             onDemoAdded(answer.result.demo);
             onClose();
             return answer.result.demo;
         } catch (error) {
             setAddError((error as Error).message || failed);
-            return undefined;
-        } finally {
             setAdding(false);
+            return undefined;
         }
     }, [result, draft, mode, onDemoAdded, onClose]);
 

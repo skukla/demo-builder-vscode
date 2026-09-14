@@ -171,6 +171,11 @@ describe('useAddDemoFlow', () => {
         });
         expect(onDemoAdded).toHaveBeenCalledWith(remembered);
         expect(onClose).toHaveBeenCalled();
+        // The spinner stays up after a successful add. Spectrum's DialogContainer
+        // keeps rendering the closing dialog through its exit animation, so
+        // turning `adding` off here flashed the form before the dialog went
+        // (owner, 2026-09-14).
+        expect(hook.result.current.adding).toBe(true);
     });
 
     it("asks for no copy of the SC's own repository, whatever the box says", async () => {
