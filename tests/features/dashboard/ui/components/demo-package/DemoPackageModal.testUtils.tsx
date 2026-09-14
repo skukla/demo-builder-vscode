@@ -23,18 +23,16 @@ export const LINK = 'https://github.com/steve/kukla-bodea';
 export const PREVIEW: DemoPackagePreview = {
     draft: { name: 'Bodea', description: 'Bodea-branded B2B demo' },
     checks: [
-        { id: 'repository', ok: true, message: 'steve/kukla-bodea is public.' },
-        { id: 'branch', ok: true, message: 'Built from main, the default branch.' },
-        { id: 'index', ok: false, message: 'No published page list, so new projects would start empty.', action: 'republish' },
+        { id: 'repository', ok: true, message: "Colleagues can open this storefront's code." },
+        { id: 'index', ok: false, message: 'Colleagues would start with an empty site.', action: 'republish' },
     ],
     link: LINK,
     saved: false,
     onList: false,
-    templateFlagSet: false,
 };
 
-export const SAVED: SaveDemoPackageResult = { link: LINK, file: 'written', onList: true, templateFlagSet: false, checks: PREVIEW.checks };
-export const REMOVED: RemoveDemoPackageResult = { file: 'removed', templateFlagUnset: true, removedFromList: true };
+export const SAVED: SaveDemoPackageResult = { link: LINK, file: 'written', onList: true, checks: PREVIEW.checks };
+export const REMOVED: RemoveDemoPackageResult = { file: 'removed', removedFromList: true };
 
 export function answer<D>(data: D): { success: true; data: D } {
     return { success: true, data };
@@ -46,6 +44,12 @@ export async function renderPackage(preview: unknown = answer(PREVIEW)) {
     const view = render(<DemoPackageModal isOpen onClose={onClose} />);
     await settle();
     return { ...view, onClose };
+}
+
+/** Render with the preview request left unanswered, so the loading state stays up. */
+export function renderPackagePending(): void {
+    mockRequest.mockReturnValueOnce(new Promise(() => undefined));
+    render(<DemoPackageModal isOpen onClose={jest.fn()} />);
 }
 
 export function resetPackageMocks(): void {
@@ -62,7 +66,7 @@ export async function click(name: string | RegExp): Promise<void> {
     await settle();
 }
 
-/** The stubs put the test id on the control for a TextField and on the label for a Checkbox. */
+/** The stub puts the test id on the control for a TextField. */
 function control(testId: string): HTMLInputElement {
     const el = screen.getByTestId(testId);
     return (el.tagName === 'INPUT' ? el : el.querySelector('input')) as HTMLInputElement;
@@ -70,8 +74,4 @@ function control(testId: string): HTMLInputElement {
 
 export function nameInput(): HTMLInputElement {
     return control('package-name');
-}
-
-export function templateBox(): HTMLInputElement {
-    return control('package-template');
 }

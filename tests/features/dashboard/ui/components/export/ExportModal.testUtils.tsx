@@ -22,11 +22,10 @@ export const LINK = 'https://github.com/steve/kukla-bodea';
 
 export const PREVIEW: DemoPackagePreview = {
     draft: { name: 'Bodea', description: 'Bodea-branded B2B demo' },
-    checks: [{ id: 'repository', ok: true, message: 'steve/kukla-bodea is public.' }],
+    checks: [{ id: 'repository', ok: true, message: "Colleagues can open this storefront's code." }],
     link: LINK,
     saved: false,
     onList: false,
-    templateFlagSet: false,
 };
 
 export function answer<D>(data: D): { success: true; data: D } {

@@ -52,7 +52,7 @@ export function registerDemoPackageTools(server: McpToolServer, ctxFactory: () =
             needsAuth: ['github'],
             annotations: { readOnlyHint: true, destructiveHint: false },
             description:
-                "What saving the open project's storefront as a demo package would give: the name and description the card would carry, whether the repository is public, which branch a project built from it gets, how many pages are published, whether the datapack is in the service, whether it is already on your Add a demo list, and the link a colleague adds it from. Edge Delivery projects only. Read this before save_demo_package.",
+                "What saving the open project's storefront as a demo package would give: the name and description the card would carry, whether colleagues can open its code, whether they start with your published pages, whether the sample data is available to them, whether it is already on your Add a demo list, and the link a colleague adds it from. Edge Delivery projects only. Read this before save_demo_package.",
             inputSchema: {},
         },
         async () => {
@@ -71,15 +71,14 @@ export function registerDemoPackageTools(server: McpToolServer, ctxFactory: () =
             needsAuth: ['github'],
             annotations: { readOnlyHint: false, destructiveHint: false },
             description:
-                "Save the open project's storefront as a demo package: write its description file (demo.demo-builder.json) into your own storefront repository and put the card on your Add a demo list, so you and colleagues (from the link) can build new projects on it. Optionally mark the repository as a GitHub template. Never overwrites a file it did not write. Requires confirm:true; remove_demo_package undoes it.",
+                "Save the open project's storefront as a demo package: write its description file (demo.demo-builder.json) into your own storefront repository and put the card on your Add a demo list, so you and colleagues (from the link) can build new projects on it. Never overwrites a file it did not write. Requires confirm:true; remove_demo_package undoes it.",
             inputSchema: {
                 name: z.string().optional().describe('The name on the card; defaults to the brand or demo the project was built on'),
                 description: z.string().optional().describe('One or two sentences about the demo'),
-                markTemplate: z.boolean().optional().describe('Also mark the repository as a GitHub template (default false)'),
                 confirm: z.boolean().optional().describe('Must be true — a file is written into your repository'),
             },
         },
-        async (args: { name?: string; description?: string; markTemplate?: boolean; confirm?: boolean }) => {
+        async (args: { name?: string; description?: string; confirm?: boolean }) => {
             const ctx = ctxFactory();
             const github = await requireGitHub(ctx);
             if (github) return asText(github);
@@ -92,8 +91,7 @@ export function registerDemoPackageTools(server: McpToolServer, ctxFactory: () =
             if (args.confirm !== true) {
                 return asText({
                     error:
-                        `save_demo_package would write demo.demo-builder.json named "${name}" into ${link}, put the card on your Add a demo list` +
-                        `${args.markTemplate ? ', and mark the repository as a template' : ''}. ` +
+                        `save_demo_package would write demo.demo-builder.json named "${name}" into ${link} and put the card on your Add a demo list. ` +
                         'Call again with confirm:true to do it.',
                     name,
                     description,
@@ -102,7 +100,7 @@ export function registerDemoPackageTools(server: McpToolServer, ctxFactory: () =
                     alreadyOnList: onList,
                 });
             }
-            const result = await handleSaveDemoPackage(ctx, { name, description, markTemplate: args.markTemplate === true });
+            const result = await handleSaveDemoPackage(ctx, { name, description });
             if (!result.success || !result.data) return asText({ error: result.error });
             const data = result.data as SaveDemoPackageResult;
             return asText({ ...data, hint: HINT });
@@ -115,7 +113,7 @@ export function registerDemoPackageTools(server: McpToolServer, ctxFactory: () =
             needsAuth: ['github'],
             annotations: { readOnlyHint: false, destructiveHint: true },
             description:
-                "Remove the open project's demo package: take the description file save_demo_package wrote out of your storefront repository, take the card off your Add a demo list, and unset the template flag if save_demo_package set it. Colleagues who already added it keep it. Requires confirm:true.",
+                "Remove the open project's demo package: take the description file save_demo_package wrote out of your storefront repository, and take the card off your Add a demo list. Colleagues who already added it keep it. Requires confirm:true.",
             inputSchema: {
                 confirm: z.boolean().optional().describe('Must be true — the description file is removed from your repository'),
             },
@@ -130,9 +128,7 @@ export function registerDemoPackageTools(server: McpToolServer, ctxFactory: () =
                     error:
                         'remove_demo_package takes the description file out of your storefront repository and the card off your Add a demo list; colleagues can no longer add it from its link. ' +
                         'Call again with confirm:true.',
-                    ...(project?.demoPackage
-                        ? { savedAt: project.demoPackage.savedAt, templateFlagSet: project.demoPackage.templateFlagSet }
-                        : {}),
+                    ...(project?.demoPackage ? { savedAt: project.demoPackage.savedAt } : {}),
                     destructive: true,
                 });
             }

@@ -120,6 +120,21 @@ to delete a repository that is one of the SC's own storefronts.
 check names the repository and says colleagues need access. The open question below stays
 open.
 
+## Changed after the first live look (2026-09-14, owner)
+
+- The loading state is the spinner alone; the intro paragraph arrives with the form.
+- No help text under the name field.
+- "What colleagues get" says what a colleague gets, in plain words: no branch name (true of
+  every project), no page count, no "is public", no "datapack service". The sample-data line
+  confirms the pack exists in the service and uploads nothing.
+- Reset carries the description file (`readSharedDemoFile` → the reset's file overrides)
+  for a project with a package record. Found while answering "what if the repo already
+  exists": the reset replaced the tree and the file was silently gone while the project
+  still recorded a package.
+- The template tick box is gone, with `markTemplate`, `templateFlagSet` and
+  `templateFlagUnset`. It served only the by-hand "Use this template" path, and a copy made
+  from a template has no upstream, so "Jen has updated this demo" could never work for it.
+
 ## Open
 
 - Whether Share should also verify the five load-bearing patches are present in the SC's

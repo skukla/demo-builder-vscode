@@ -149,18 +149,19 @@ describe('packageChecks', () => {
     const logger = createMockLogger();
     const repo = (fullName: string, isPrivate: boolean, defaultBranch = 'main') => ({ fullName, isPrivate, defaultBranch, htmlUrl: '', cloneUrl: '', id: 1, name: fullName.split('/')[1] });
 
-    it('says the repository is public, names the default branch, counts the pages, and confirms the datapack', async () => {
+    it('says, as what colleagues get, that the code is open, the pages are there, and the sample data is available', async () => {
         const repoOps = { getRepository: jest.fn().mockResolvedValue(repo('steve/kukla-bodea', false)) };
         const checks = await packageChecks(edsProject({ datapack: { name: 'bodea', version: 'main' } }), OWN, { indexFound: true, pageCount: 157 }, {
             repoOps,
             datapackExists: async () => true,
             logger,
         });
+        // Owner, 2026-09-14: every line says what a COLLEAGUE gets, in plain words.
+        // No branch name, no page count, no "public", no "datapack service".
         expect(checks.map((c) => [c.id, c.ok, c.message])).toEqual([
-            ['repository', true, 'steve/kukla-bodea is public.'],
-            ['branch', true, 'Built from main, the default branch.'],
-            ['index', true, '157 pages are published and indexed.'],
-            ['datapack', true, 'The datapack "bodea" is in the datapack service.'],
+            ['repository', true, "Colleagues can open this storefront's code."],
+            ['index', true, 'Colleagues start with your published pages.'],
+            ['datapack', true, 'Colleagues can install the same sample data (bodea).'],
         ]);
     });
 
@@ -178,11 +179,10 @@ describe('packageChecks', () => {
         const checks = await packageChecks(project, OWN, { indexFound: false }, { repoOps, datapackExists: async () => false, logger });
 
         expect(checks).toEqual([
-            { id: 'repository', ok: false, message: 'steve/kukla-bodea is private. Colleagues need access to it, or make it public.' },
-            { id: 'branch', ok: true, message: 'Built from develop, the default branch.' },
-            { id: 'index', ok: false, message: 'No published page list, so new projects would start empty.', action: 'republish' },
-            { id: 'datapack', ok: false, message: 'The datapack "bodea" isn\'t in the datapack service yet.' },
-            { id: 'custom-app', ok: false, message: "jen/erp-sync is private or can't be read. Colleagues need access to it for this integration.", repository: 'jen/erp-sync' },
+            { id: 'repository', ok: false, message: "This storefront's code is private. Colleagues will need access to it, or make it public." },
+            { id: 'index', ok: false, message: 'Colleagues would start with an empty site.', action: 'republish' },
+            { id: 'datapack', ok: false, message: "The sample data this demo uses (bodea) isn't available to colleagues yet." },
+            { id: 'custom-app', ok: false, message: "The erp-sync integration's code is private. Colleagues will need access to it.", repository: 'jen/erp-sync' },
         ]);
     });
 
@@ -194,6 +194,6 @@ describe('packageChecks', () => {
             logger,
         });
         expect(checks.map((c) => c.id)).toEqual(['repository', 'index']);
-        expect(checks[0]).toMatchObject({ ok: false, message: "The repository can't be read with your GitHub sign-in." });
+        expect(checks[0]).toMatchObject({ ok: false, message: "This storefront's code can't be read with your GitHub sign-in." });
     });
 });

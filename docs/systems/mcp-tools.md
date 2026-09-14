@@ -168,8 +168,8 @@ server IS — transport, lifecycle, scoping, security — is in
 | Tool | | What it does |
 |---|---|---|
 | `export_demo_bundle` |  | Export the open project as a file to send to someone who can't reach your GitHub or the shared services: one zip bundle with the ticked parts — setup (your settings, never a credential) and the storef |
-| `get_demo_package_preview` |  | What saving the open project's storefront as a demo package would give: the name and description the card would carry, whether the repository is public, which branch a project built from it gets, how |
-| `remove_demo_package` | **confirm** | Remove the open project's demo package: take the description file save_demo_package wrote out of your storefront repository, take the card off your Add a demo list, and unset the template flag if save |
+| `get_demo_package_preview` |  | What saving the open project's storefront as a demo package would give: the name and description the card would carry, whether colleagues can open its code, whether they start with your published page |
+| `remove_demo_package` | **confirm** | Remove the open project's demo package: take the description file save_demo_package wrote out of your storefront repository, and take the card off your Add a demo list. Colleagues who already added it |
 | `save_demo_package` | **confirm** | Save the open project's storefront as a demo package: write its description file (demo.demo-builder.json) into your own storefront repository and put the card on your Add a demo list, so you and colle |
 
 ## `src/features/ai/server/diagnosticsTools.ts`

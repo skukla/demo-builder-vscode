@@ -38,11 +38,10 @@ const mockBundle = handleExportDemoBundle as jest.Mock;
 
 const PREVIEW: DemoPackagePreview = {
     draft: { name: 'Bodea', description: 'Bodea-branded B2B demo' },
-    checks: [{ id: 'repository', ok: true, message: 'steve/kukla-bodea is public.' }],
+    checks: [{ id: 'repository', ok: true, message: "Colleagues can open this storefront's code." }],
     link: 'https://github.com/steve/kukla-bodea',
     saved: false,
     onList: false,
-    templateFlagSet: false,
 };
 
 function fakeServer() {
@@ -60,7 +59,7 @@ function fakeServer() {
 const ctx = createMockHandlerContext({
     stateManager: createMockStateManager({
         getCurrentProject: jest.fn().mockResolvedValue(
-            createMockProject({ demoPackage: { fileSha: 'blob-1', templateFlagSet: true, savedAt: '2026-09-12T00:00:00.000Z' } }),
+            createMockProject({ demoPackage: { fileSha: 'blob-1', savedAt: '2026-09-12T00:00:00.000Z' } }),
         ),
     }),
 });
@@ -77,9 +76,9 @@ beforeEach(() => {
     mockPreview.mockResolvedValue({ success: true, data: PREVIEW });
     mockSave.mockResolvedValue({
         success: true,
-        data: { link: PREVIEW.link, file: 'written', onList: true, templateFlagSet: false, checks: PREVIEW.checks },
+        data: { link: PREVIEW.link, file: 'written', onList: true, checks: PREVIEW.checks },
     });
-    mockRemove.mockResolvedValue({ success: true, data: { file: 'removed', templateFlagUnset: true, removedFromList: true } });
+    mockRemove.mockResolvedValue({ success: true, data: { file: 'removed', removedFromList: true } });
 });
 
 describe('get_demo_package_preview', () => {
@@ -101,17 +100,17 @@ describe('get_demo_package_preview', () => {
 
 describe('save_demo_package', () => {
     it('refuses without confirm, naming the file, the name it would carry, the repository and the list, and writes nothing', async () => {
-        const refusal = await server().call('save_demo_package', { markTemplate: true });
+        const refusal = await server().call('save_demo_package', {});
         expect(refusal.error).toBe(
-            'save_demo_package would write demo.demo-builder.json named "Bodea" into https://github.com/steve/kukla-bodea, put the card on your Add a demo list, and mark the repository as a template. Call again with confirm:true to do it.',
+            'save_demo_package would write demo.demo-builder.json named "Bodea" into https://github.com/steve/kukla-bodea and put the card on your Add a demo list. Call again with confirm:true to do it.',
         );
         expect(refusal).toMatchObject({ name: 'Bodea', description: 'Bodea-branded B2B demo', alreadySaved: false, alreadyOnList: false });
         expect(mockSave).not.toHaveBeenCalled();
     });
 
-    it('hands the handler the given name and description, the prefilled ones when absent, and the template choice', async () => {
+    it('hands the handler the given name and description, the prefilled ones when absent', async () => {
         const result = await server().call('save_demo_package', { name: ' Bodea by Steve ', confirm: true });
-        expect(mockSave).toHaveBeenCalledWith(ctx, { name: 'Bodea by Steve', description: 'Bodea-branded B2B demo', markTemplate: false });
+        expect(mockSave).toHaveBeenCalledWith(ctx, { name: 'Bodea by Steve', description: 'Bodea-branded B2B demo' });
         expect(result).toMatchObject({ link: PREVIEW.link, file: 'written', onList: true, hint: expect.stringContaining('Add a demo') });
     });
 
@@ -124,13 +123,13 @@ describe('save_demo_package', () => {
 describe('remove_demo_package', () => {
     it('refuses without confirm, saying what is removed and when it was saved, and removes nothing', async () => {
         const refusal = await server().call('remove_demo_package', {});
-        expect(refusal).toMatchObject({ destructive: true, savedAt: '2026-09-12T00:00:00.000Z', templateFlagSet: true });
+        expect(refusal).toMatchObject({ destructive: true, savedAt: '2026-09-12T00:00:00.000Z' });
         expect(refusal.error).toMatch(/takes the description file out of your storefront repository and the card off your Add a demo list/);
         expect(mockRemove).not.toHaveBeenCalled();
     });
 
     it('runs the handler with confirm and answers what it undid', async () => {
-        expect(await server().call('remove_demo_package', { confirm: true })).toEqual({ file: 'removed', templateFlagUnset: true, removedFromList: true });
+        expect(await server().call('remove_demo_package', { confirm: true })).toEqual({ file: 'removed', removedFromList: true });
         expect(mockRemove).toHaveBeenCalledWith(ctx, undefined);
     });
 });

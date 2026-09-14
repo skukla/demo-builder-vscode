@@ -91,12 +91,6 @@
         line-height: 1.4;
     }
 
-    .demo-package-template {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-    }
-
     .demo-package-hint {
         display: block;
         margin: 4px 0 0;

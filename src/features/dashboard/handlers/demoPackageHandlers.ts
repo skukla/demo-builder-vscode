@@ -4,9 +4,8 @@
  * link, whether the card is already on the SC's list), `saveDemoPackage`
  * (writes the description file into the project's own storefront repository
  * through the ownership rule, puts the card on the SC's own Add a demo list,
- * sets the template flag when asked, records what it did on the project) and
- * `removeDemoPackage` (removes only what we wrote, takes the card off the
- * list, unsets only what we set).
+ * records what it did on the project) and `removeDemoPackage` (removes only
+ * what we wrote and takes the card off the list).
  *
  * Edge Delivery projects only (decided 2026-09-11): a headless project is a
  * local clone with no repository of the SC's own; the how-to says how to hand
@@ -112,7 +111,6 @@ export const handleGetDemoPackagePreview: MessageHandler = async (context) => {
         link: linkFor(storefront),
         saved: Boolean(project.demoPackage?.fileSha),
         onList: isOnList(storefront),
-        templateFlagSet: project.demoPackage?.templateFlagSet ?? false,
     };
     return { success: true, data: preview };
 };
@@ -135,7 +133,6 @@ export const handleSaveDemoPackage: MessageHandler<SaveDemoPackageRequest> = asy
     if ('response' in ready) return ready.response;
     const { project, storefront } = ready;
     const draft = { name: data?.name ?? '', description: data?.description ?? '' };
-    const markTemplate = data?.markTemplate === true;
 
     const own = await resolveOwnContentSource(storefront, { logger: context.logger });
     const description = describeProject(project, draft, own.contentSource);
@@ -155,19 +152,13 @@ export const handleSaveDemoPackage: MessageHandler<SaveDemoPackageRequest> = asy
     const repository = await repoOperations.getRepository(storefront.owner, storefront.repo).catch(() => undefined);
     await rememberAddedDemo(cardFor(description, storefront, repository?.defaultBranch));
 
-    let templateFlagSet = project.demoPackage?.templateFlagSet ?? false;
-    if (markTemplate && !templateFlagSet) {
-        await repoOperations.setTemplateFlag(storefront.owner, storefront.repo, true);
-        templateFlagSet = true;
-    }
-
     // Record what is ours to undo: the file's sha when we wrote it (empty when the
-    // file was not ours to write), and the flag when we set it.
+    // file was not ours to write).
     const fileSha = written.outcome === 'skipped' ? (project.demoPackage?.fileSha ?? '') : written.sha;
-    project.demoPackage = { fileSha, templateFlagSet, savedAt: new Date().toISOString() };
+    project.demoPackage = { fileSha, savedAt: new Date().toISOString() };
     await context.stateManager.saveProject(project);
     context.logger.info(
-        `[Demo package] ${project.name}: description file ${written.outcome} in ${storefront.owner}/${storefront.repo}, card on the Add a demo list${templateFlagSet ? ', repository is a template' : ''}`,
+        `[Demo package] ${project.name}: description file ${written.outcome} in ${storefront.owner}/${storefront.repo}, card on the Add a demo list`,
     );
 
     const checks = await packageChecks(project, storefront, own, checkDeps(context));
@@ -176,7 +167,6 @@ export const handleSaveDemoPackage: MessageHandler<SaveDemoPackageRequest> = asy
         file: written.outcome,
         ...(written.outcome === 'skipped' ? { fileReason: written.reason } : {}),
         onList: true,
-        templateFlagSet,
         checks,
     };
     return { success: true, data: result };
@@ -186,15 +176,10 @@ export const handleRemoveDemoPackage: MessageHandler = async (context) => {
     const ready = await candidate(context);
     if ('response' in ready) return ready.response;
     const { project, storefront } = ready;
-    const { fileOperations, repoOperations } = getGitHubServices(context.context.secrets);
+    const { fileOperations } = getGitHubServices(context.context.secrets);
     const file = await removeSharedDemoFile(fileOperations, storefront, project.demoPackage?.fileSha || undefined);
     const removedFromList = isOnList(storefront);
     if (removedFromList) await forgetAddedDemo(storefront);
-    let templateFlagUnset = false;
-    if (project.demoPackage?.templateFlagSet) {
-        await repoOperations.setTemplateFlag(storefront.owner, storefront.repo, false);
-        templateFlagUnset = true;
-    }
     if (file === 'skipped') {
         context.logger.warn(
             `[Demo package] ${storefront.owner}/${storefront.repo}: the description file is not the one Demo Builder wrote; it was left as it is.`,
@@ -203,8 +188,8 @@ export const handleRemoveDemoPackage: MessageHandler = async (context) => {
     delete project.demoPackage;
     await context.stateManager.saveProject(project);
     context.logger.info(
-        `[Demo package] ${project.name}: removed (file ${file}${removedFromList ? ', card off the list' : ''}${templateFlagUnset ? ', template flag unset' : ''})`,
+        `[Demo package] ${project.name}: removed (file ${file}${removedFromList ? ', card off the list' : ''})`,
     );
-    const result: RemoveDemoPackageResult = { file, templateFlagUnset, removedFromList };
+    const result: RemoveDemoPackageResult = { file, removedFromList };
     return { success: true, data: result };
 };

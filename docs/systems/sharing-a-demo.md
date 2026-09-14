@@ -165,20 +165,26 @@ projects from it. The dialog opens with the name and description prefilled from 
 demo the project was built on (the project's own title for a Starter build); edit them,
 then **Save**. Two things happen: the description file is written into your own storefront
 repository from what the project already holds, and the card is added to your Add a demo
-list. A tick box, off by default, also marks the repository as a GitHub template.
+list. Nothing else about the repository changes: it is not marked as a GitHub template,
+because Add a demo forks it, and a copy made from a template would lose "pull in their
+changes" (a template copy has no link back to the original).
 
-Above the button, one line per check says what a project built from the card will get:
-whether the repository is public, which branch it is built from (the default branch), how
-many pages are published and indexed, whether the datapack is in the datapack service, and
-whether each custom app's repository can be read. A site with no published index says so
-and points at Republish. Nothing in the list stops you saving; it tells you what to fix
-first.
+Above the button, "What colleagues get" says, one line each, what a project built from the
+card will start with: whether colleagues can open the storefront's code (a private repository
+needs access, or make it public), whether they start with your published pages (a site with
+no published page list says so and points at Republish), whether the sample data the demo
+uses is available to them, and whether each custom integration's code can be read. The
+sample-data line only confirms; nothing is uploaded. Nothing in the list stops you saving;
+it tells you what to fix first.
+
+Resetting the project keeps the file: a reset replaces the storefront's code with the
+template's, and the description file rides along with `fstab.yaml` and `config.json`, so the
+card and its link keep working.
 
 Demo Builder rewrites only a description file it wrote itself, and knows it by the file's
 recorded revision. A file you wrote or edited by hand is left alone and the dialog says so;
 the card still goes on your list. **Remove demo package** takes the file out (again only
-when it is ours), takes the card off your list, and turns the template flag back off if Demo
-Builder turned it on. The card's own menu on the Welcome step, always visible, has **Remove**
+when it is ours) and takes the card off your list. The card's own menu on the Welcome step, always visible, has **Remove**
 too: it takes the card off the list and nothing else, and never offers to delete a repository
 that is one of your projects' storefronts. Colleagues who already added the demo keep it.
 
@@ -232,8 +238,7 @@ is the door that opens the wizard pre-filled.
 
 Saving has the same doors as the dialog: `get_demo_package_preview` reads what a project
 built from the card would get, `save_demo_package` writes the file, puts the card on the
-list (and sets the template flag when asked) and answers the link, and `remove_demo_package`
-undoes it. Both writes need `confirm:true`. Export's file form is `export_demo_bundle`,
+list and answers the link, and `remove_demo_package` undoes it. Both writes need `confirm:true`. Export's file form is `export_demo_bundle`,
 which writes the bundle inside the project directory.
 
 ## Related

@@ -106,7 +106,7 @@ describe('handleGetDemoPackagePreview', () => {
 
     it('answers the prefilled draft, the checks, the link, and whether the file is ours and the card is on the list', async () => {
         mockList.mockReturnValue([OWN_CARD]);
-        const { context } = contextFor(edsProject({ demoPackage: { fileSha: 'blob-0', templateFlagSet: true, savedAt: '2026-09-12T00:00:00.000Z' } }));
+        const { context } = contextFor(edsProject({ demoPackage: { fileSha: 'blob-0', savedAt: '2026-09-12T00:00:00.000Z' } }));
         const result = await handleGetDemoPackagePreview(context);
         expect(result.success).toBe(true);
         const preview = result.data as DemoPackagePreview;
@@ -114,10 +114,9 @@ describe('handleGetDemoPackagePreview', () => {
             link: 'https://github.com/steve/kukla-bodea',
             saved: true,
             onList: true,
-            templateFlagSet: true,
         });
         expect(preview.draft.name).toBe('Bodea');
-        expect(preview.checks.map((c) => [c.id, c.ok])).toEqual([['repository', true], ['branch', true], ['index', true]]);
+        expect(preview.checks.map((c) => [c.id, c.ok])).toEqual([['repository', true], ['index', true]]);
         // No datapack on this project, so the datapack service is never asked.
         expect(mockAccess).not.toHaveBeenCalled();
     });
@@ -137,16 +136,15 @@ describe('handleGetDemoPackagePreview', () => {
 });
 
 describe('handleSaveDemoPackage', () => {
-    it('writes the description file, puts the same card on the list with the default branch, records the sha, and leaves the flag alone unless asked', async () => {
+    it('writes the description file, puts the same card on the list with the default branch, and records the sha', async () => {
         const { context, saveProject } = contextFor(edsProject());
-        const result = await handleSaveDemoPackage(context, { name: 'Bodea by Steve', description: 'Data center gear', markTemplate: false });
+        const result = await handleSaveDemoPackage(context, { name: 'Bodea by Steve', description: 'Data center gear' });
 
         expect(result.success).toBe(true);
         expect(result.data as SaveDemoPackageResult).toMatchObject({
             link: 'https://github.com/steve/kukla-bodea',
             file: 'written',
             onList: true,
-            templateFlagSet: false,
         });
         const [owner, repo, path, content] = fileOperations.createOrUpdateFile.mock.calls[0];
         expect([owner, repo, path]).toEqual(['steve', 'kukla-bodea', 'demo.demo-builder.json']);
@@ -163,29 +161,17 @@ describe('handleSaveDemoPackage', () => {
             source: { owner: 'steve', repo: 'kukla-bodea', branch: 'main' },
             storefrontKind: 'eds',
         });
+        // Save never touches the repository's settings (the template tick box was
+        // removed 2026-09-14: Add a demo forks, and a template copy loses updates).
         expect(repoOperations.setTemplateFlag).not.toHaveBeenCalled();
         const saved = saveProject.mock.calls[0][0] as Project;
-        expect(saved.demoPackage).toMatchObject({ fileSha: 'blob-1', templateFlagSet: false });
-    });
-
-    it('sets the template flag when asked, once', async () => {
-        const { context, saveProject } = contextFor(edsProject());
-        await handleSaveDemoPackage(context, { name: 'Bodea', description: '', markTemplate: true });
-        expect(repoOperations.setTemplateFlag).toHaveBeenCalledWith('steve', 'kukla-bodea', true);
-        expect((saveProject.mock.calls[0][0] as Project).demoPackage?.templateFlagSet).toBe(true);
-
-        // Saving again with the flag already set does not touch GitHub's flag again.
-        repoOperations.setTemplateFlag.mockClear();
-        const again = contextFor(edsProject({ demoPackage: { fileSha: 'blob-1', templateFlagSet: true, savedAt: 'x' } }));
-        fileOperations.getFileContent.mockResolvedValue({ content: '{}', sha: 'blob-1' });
-        await handleSaveDemoPackage(again.context, { name: 'Bodea', description: '', markTemplate: true });
-        expect(repoOperations.setTemplateFlag).not.toHaveBeenCalled();
+        expect(saved.demoPackage).toMatchObject({ fileSha: 'blob-1' });
     });
 
     it('leaves a description file it did not write alone, says so, still puts the card on the list, and records no sha as ours', async () => {
         fileOperations.getFileContent.mockResolvedValue({ content: '{"kind":"demo","name":"hand-written"}', sha: 'theirs' });
         const { context, saveProject } = contextFor(edsProject());
-        const result = await handleSaveDemoPackage(context, { name: 'Bodea', description: '', markTemplate: false });
+        const result = await handleSaveDemoPackage(context, { name: 'Bodea', description: '' });
         const data = result.data as SaveDemoPackageResult;
         expect(data.file).toBe('skipped');
         expect(data.fileReason).toMatch(/not written by Demo Builder/);
@@ -198,23 +184,23 @@ describe('handleSaveDemoPackage', () => {
 });
 
 describe('handleRemoveDemoPackage', () => {
-    it('removes the file we wrote, takes the card off the list, unsets the flag we set, and forgets the record', async () => {
+    it('removes the file we wrote, takes the card off the list, and forgets the record', async () => {
         fileOperations.getFileContent.mockResolvedValue({ content: '{}', sha: 'blob-1' });
         mockList.mockReturnValue([OWN_CARD]);
-        const { context, saveProject } = contextFor(edsProject({ demoPackage: { fileSha: 'blob-1', templateFlagSet: true, savedAt: 'x' } }));
+        const { context, saveProject } = contextFor(edsProject({ demoPackage: { fileSha: 'blob-1', savedAt: 'x' } }));
         const result = await handleRemoveDemoPackage(context);
-        expect(result.data as RemoveDemoPackageResult).toEqual({ file: 'removed', templateFlagUnset: true, removedFromList: true });
+        expect(result.data as RemoveDemoPackageResult).toEqual({ file: 'removed', removedFromList: true });
         expect(fileOperations.deleteFile).toHaveBeenCalledWith('steve', 'kukla-bodea', 'demo.demo-builder.json', expect.any(String), 'blob-1');
         expect(mockForget).toHaveBeenCalledWith(expect.objectContaining({ owner: 'steve', repo: 'kukla-bodea' }));
-        expect(repoOperations.setTemplateFlag).toHaveBeenCalledWith('steve', 'kukla-bodea', false);
+        expect(repoOperations.setTemplateFlag).not.toHaveBeenCalled();
         expect((saveProject.mock.calls[0][0] as Project).demoPackage).toBeUndefined();
     });
 
-    it('leaves a file that is not ours, a card that is not there, and a flag we never set, and still clears the record', async () => {
+    it('leaves a file that is not ours and a card that is not there, and still clears the record', async () => {
         fileOperations.getFileContent.mockResolvedValue({ content: '{}', sha: 'theirs' });
-        const { context } = contextFor(edsProject({ demoPackage: { fileSha: 'blob-1', templateFlagSet: false, savedAt: 'x' } }));
+        const { context } = contextFor(edsProject({ demoPackage: { fileSha: 'blob-1', savedAt: 'x' } }));
         const result = await handleRemoveDemoPackage(context);
-        expect(result.data as RemoveDemoPackageResult).toEqual({ file: 'skipped', templateFlagUnset: false, removedFromList: false });
+        expect(result.data as RemoveDemoPackageResult).toEqual({ file: 'skipped', removedFromList: false });
         expect(fileOperations.deleteFile).not.toHaveBeenCalled();
         expect(mockForget).not.toHaveBeenCalled();
         expect(repoOperations.setTemplateFlag).not.toHaveBeenCalled();

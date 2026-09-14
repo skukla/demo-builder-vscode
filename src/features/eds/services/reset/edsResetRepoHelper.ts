@@ -11,6 +11,7 @@
 
 import { installBlockCollections } from '../blockCollectionHelpers';
 import { generateConfigJson, buildConfigGeneratorParams } from '../configGenerator';
+import { readSharedDemoFile } from '../demoPackage/sharedDemoFile';
 import { generateFstabContent } from '../fstabGenerator';
 import type { GitHubFileOperations } from '../github/githubFileOperations';
 import { generateInspectorTreeEntries, installInspectorTagging } from '../inspectorHelpers';
@@ -33,6 +34,7 @@ import type { Project } from '@/types/base';
 import type { AddonSource } from '@/types/demoPackages';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
+import { SHARED_DEMO_FILE_NAME } from '@/types/projectFile';
 
 // ==========================================================
 // Helpers
@@ -279,6 +281,21 @@ export async function resetRepoToTemplate(
     // JS can suppress; the stubs answer 200 and are shadowed by real DA
     // content the moment a brand authors sheets (content-over-code).
     addPlaceholderStubOverrides(fileOverrides);
+
+    // A project saved as a demo package carries its description file through
+    // the reset. The reset replaces the tree with the template's, and the file
+    // is Demo Builder's to keep, like fstab.yaml: without this the card's link
+    // kept working but lost the name, description and sample-data hint, while
+    // the project still recorded a package (found 2026-09-14). Only a project
+    // with a package record: one built FROM an added demo takes the file the
+    // source repository has, as it takes everything else.
+    if (project.demoPackage) {
+        const description = await readSharedDemoFile(githubFileOps, { owner: repoOwner, repo: repoName });
+        if (description !== undefined) {
+            fileOverrides.set(SHARED_DEMO_FILE_NAME, description);
+            context.logger.info('[EdsReset] Carrying the demo package description file through the reset');
+        }
+    }
 
     // Determine the template ref to reset against. Thin-layer storefronts
     // (codePatchSource configured) pin to the verified canonical LKG SHA;

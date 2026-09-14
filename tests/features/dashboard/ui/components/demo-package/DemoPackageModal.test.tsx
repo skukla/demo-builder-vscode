@@ -4,7 +4,7 @@
  */
 
 import { fireEvent, screen } from '@testing-library/react';
-import { answer, click, LINK, mockRequest, nameInput, PREVIEW, REMOVED, renderPackage, resetPackageMocks, SAVED, templateBox } from './DemoPackageModal.testUtils';
+import { answer, click, LINK, mockRequest, nameInput, PREVIEW, REMOVED, renderPackage, renderPackagePending, resetPackageMocks, SAVED } from './DemoPackageModal.testUtils';
 
 describe('DemoPackageModal', () => {
     beforeEach(resetPackageMocks);
@@ -16,8 +16,21 @@ describe('DemoPackageModal', () => {
         expect(screen.getByText(/Puts this storefront on your Welcome step as a card/)).toBeInTheDocument();
         expect(nameInput().value).toBe('Bodea');
         expect(screen.getByTestId('package-check-index')).toHaveTextContent('Republish, then save again.');
-        expect(templateBox().checked).toBe(false);
+        // Owner, 2026-09-14: no help under the name field, and no template tick box.
+        expect(screen.queryByText('What the card says on the Welcome step.')).not.toBeInTheDocument();
+        expect(screen.queryByText(/mark the repository as a template/)).not.toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Remove demo package' })).not.toBeInTheDocument();
+    });
+
+    it('while looking at the storefront, the spinner is the whole body — no intro, no form', async () => {
+        // Owner, 2026-09-14: the loading state carries nothing but the spinner
+        // and its own two lines. The intro arrives with the form it introduces.
+        renderPackagePending();
+
+        expect(screen.getByText('Looking at your storefront')).toBeInTheDocument();
+        expect(screen.queryByText(/Puts this storefront on your Welcome step as a card/)).not.toBeInTheDocument();
+        expect(screen.queryByTestId('package-name')).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument();
     });
 
     it('shows the refusal when the storefront cannot become a demo package', async () => {
@@ -26,15 +39,14 @@ describe('DemoPackageModal', () => {
         expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument();
     });
 
-    it('sends the edited name, the description and the template choice at Save, then shows the link', async () => {
+    it('sends the edited name and the description at Save, then shows the link', async () => {
         await renderPackage();
         fireEvent.change(nameInput(), { target: { value: ' Bodea by Steve ' } });
-        fireEvent.click(templateBox());
-        mockRequest.mockResolvedValueOnce(answer({ ...SAVED, templateFlagSet: true }));
+        mockRequest.mockResolvedValueOnce(answer(SAVED));
 
         await click('Save');
 
-        expect(mockRequest).toHaveBeenLastCalledWith('saveDemoPackage', { name: 'Bodea by Steve', description: 'Bodea-branded B2B demo', markTemplate: true });
+        expect(mockRequest).toHaveBeenLastCalledWith('saveDemoPackage', { name: 'Bodea by Steve', description: 'Bodea-branded B2B demo' });
         expect(screen.getByTestId('package-link')).toHaveTextContent("Saved. It's on your Welcome step now.");
         expect(screen.getByTestId('package-link')).toHaveTextContent(LINK);
         expect(screen.getByRole('button', { name: 'Remove demo package' })).toBeInTheDocument();
@@ -56,8 +68,7 @@ describe('DemoPackageModal', () => {
     });
 
     it('offers Remove for a saved package (or a card already on the list) and reports what it undid', async () => {
-        await renderPackage(answer({ ...PREVIEW, saved: false, onList: true, templateFlagSet: true }));
-        expect(templateBox().checked).toBe(true);
+        await renderPackage(answer({ ...PREVIEW, saved: false, onList: true }));
         mockRequest.mockResolvedValueOnce(answer(REMOVED));
 
         await click('Remove demo package');
@@ -65,7 +76,6 @@ describe('DemoPackageModal', () => {
         expect(mockRequest).toHaveBeenLastCalledWith('removeDemoPackage');
         expect(screen.getByTestId('package-removed')).toHaveTextContent('The card is off your Welcome step and the file is out of your repository.');
         expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument();
-        expect(templateBox().checked).toBe(false);
     });
 
     it('shows a failed commit as a notice and keeps the form, and closes from Close', async () => {

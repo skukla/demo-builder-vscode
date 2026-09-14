@@ -145,7 +145,7 @@ export function describeProject(
 
 /** One thing a colleague's add will need, checked, in a sentence the SC reads. */
 export interface PackageCheck {
-    id: 'repository' | 'branch' | 'index' | 'datapack' | 'custom-app';
+    id: 'repository' | 'index' | 'datapack' | 'custom-app';
     ok: boolean;
     message: string;
     /** The door that fixes it, when one exists on the dashboard. */
@@ -191,30 +191,29 @@ export async function packageChecks(
     const checks: PackageCheck[] = [];
     const repository = await readRepository(deps.repoOps, storefront.owner, storefront.repo, deps.logger);
     if (!repository) {
-        checks.push({ id: 'repository', ok: false, message: "The repository can't be read with your GitHub sign-in." });
+        checks.push({
+            id: 'repository',
+            ok: false,
+            message: "This storefront's code can't be read with your GitHub sign-in.",
+        });
     } else {
         checks.push(
             repository.isPrivate
                 ? {
                       id: 'repository',
                       ok: false,
-                      message: `${repository.fullName} is private. Colleagues need access to it, or make it public.`,
+                      message: "This storefront's code is private. Colleagues will need access to it, or make it public.",
                   }
-                : { id: 'repository', ok: true, message: `${repository.fullName} is public.` },
+                : { id: 'repository', ok: true, message: "Colleagues can open this storefront's code." },
         );
-        checks.push({
-            id: 'branch',
-            ok: true,
-            message: `Built from ${repository.defaultBranch}, the default branch.`,
-        });
     }
     checks.push(
         index.indexFound
-            ? { id: 'index', ok: true, message: `${index.pageCount ?? 0} pages are published and indexed.` }
+            ? { id: 'index', ok: true, message: 'Colleagues start with your published pages.' }
             : {
                   id: 'index',
                   ok: false,
-                  message: 'No published page list, so new projects would start empty.',
+                  message: 'Colleagues would start with an empty site.',
                   action: 'republish',
               },
     );
@@ -224,10 +223,14 @@ export async function packageChecks(
             checks.push({
                 id: 'datapack',
                 ok: false,
-                message: `The datapack "${project.datapack.name}" isn't in the datapack service yet.`,
+                message: `The sample data this demo uses (${project.datapack.name}) isn't available to colleagues yet.`,
             });
         } else if (exists === true) {
-            checks.push({ id: 'datapack', ok: true, message: `The datapack "${project.datapack.name}" is in the datapack service.` });
+            checks.push({
+                id: 'datapack',
+                ok: true,
+                message: `Colleagues can install the same sample data (${project.datapack.name}).`,
+            });
         }
     }
     for (const [id, state] of Object.entries(project.appBuilderComponents ?? {})) {
@@ -236,11 +239,11 @@ export async function packageChecks(
         const custom = await readRepository(deps.repoOps, state.source.owner, state.source.repo, deps.logger);
         checks.push(
             custom && !custom.isPrivate
-                ? { id: 'custom-app', ok: true, message: `${fullName} is public.`, repository: fullName }
+                ? { id: 'custom-app', ok: true, message: `Colleagues can add the ${id} integration.`, repository: fullName }
                 : {
                       id: 'custom-app',
                       ok: false,
-                      message: `${fullName} is private or can't be read. Colleagues need access to it for this integration.`,
+                      message: `The ${id} integration's code is private. Colleagues will need access to it.`,
                       repository: fullName,
                   },
         );

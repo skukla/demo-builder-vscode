@@ -60,6 +60,21 @@ export async function writeSharedDemoFile(
 }
 
 /**
+ * The file as it is in the repository, for a reset to carry over. A reset
+ * replaces the whole tree with the template's; without this the description a
+ * Save wrote would be gone and the project would still believe it is a package.
+ *
+ * @returns the file's text, or undefined when there is none
+ */
+export async function readSharedDemoFile(
+    fileOps: Pick<GitHubFileOperations, 'getFileContent'>,
+    target: SharedDemoFileTarget,
+): Promise<string | undefined> {
+    const current = await fileOps.getFileContent(target.owner, target.repo, SHARED_DEMO_FILE_NAME);
+    return current?.content;
+}
+
+/**
  * Remove the file, only on proof that we wrote it.
  */
 export async function removeSharedDemoFile(

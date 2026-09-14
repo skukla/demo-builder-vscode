@@ -2,8 +2,8 @@
  * useDemoPackage — the "Save as demo package" dialog's state. One read on open
  * (the prefilled draft, the checks, the link), then two commitment points: Save
  * writes the description file into the SC's own storefront repository and puts
- * the card on their Add a demo list; Remove takes both back. Typing and ticking
- * never talk to the host (`docs/patterns/selection-pattern.md`).
+ * the card on their Add a demo list; Remove takes both back. Typing never
+ * talks to the host (`docs/patterns/selection-pattern.md`).
  *
  * @module features/dashboard/ui/components/demo-package/useDemoPackage
  */
@@ -28,7 +28,6 @@ interface Answer<D> {
 export interface PackageDraft {
     name: string;
     description: string;
-    markTemplate: boolean;
 }
 
 /** What the last commit did, in the words the dialog shows. */
@@ -46,7 +45,6 @@ export interface UseDemoPackage {
     draft: PackageDraft;
     setName: (name: string) => void;
     setDescription: (description: string) => void;
-    setMarkTemplate: (on: boolean) => void;
     /** 'save' or 'remove' while that request is in flight. */
     busy?: 'save' | 'remove';
     outcome?: PackageOutcome;
@@ -56,7 +54,7 @@ export interface UseDemoPackage {
     remove: () => void;
 }
 
-const EMPTY_DRAFT: PackageDraft = { name: '', description: '', markTemplate: false };
+const EMPTY_DRAFT: PackageDraft = { name: '', description: '' };
 
 /**
  * The dialog's state and its two commits.
@@ -80,8 +78,8 @@ export function useDemoPackage(): UseDemoPackage {
                     setLoad({ status: 'failed', error: answer.error ?? 'The project could not be read.' });
                     return;
                 }
-                const { draft: prefilled, checks, link, saved, onList, templateFlagSet } = answer.data;
-                setDraft({ name: prefilled.name, description: prefilled.description, markTemplate: templateFlagSet });
+                const { draft: prefilled, checks, link, saved, onList } = answer.data;
+                setDraft({ name: prefilled.name, description: prefilled.description });
                 // "Saved" means there is something to remove: our file, or our card.
                 setLoad({ status: 'ready', link, checks, saved: saved || onList });
             })
@@ -98,7 +96,6 @@ export function useDemoPackage(): UseDemoPackage {
         const request: SaveDemoPackageRequest = {
             name: draft.name.trim(),
             description: draft.description.trim(),
-            markTemplate: draft.markTemplate,
         };
         setBusy('save');
         setActionError(undefined);
@@ -129,7 +126,6 @@ export function useDemoPackage(): UseDemoPackage {
                     return;
                 }
                 setOutcome({ kind: 'removed', file: answer.data.file });
-                setDraft((current) => ({ ...current, markTemplate: false }));
                 setLoad({ ...load, saved: false });
             })
             .catch((error: Error) => setActionError(error.message))
@@ -142,10 +138,6 @@ export function useDemoPackage(): UseDemoPackage {
         setName: useCallback((name: string) => setDraft((current) => ({ ...current, name })), []),
         setDescription: useCallback(
             (description: string) => setDraft((current) => ({ ...current, description })),
-            [],
-        ),
-        setMarkTemplate: useCallback(
-            (markTemplate: boolean) => setDraft((current) => ({ ...current, markTemplate })),
             [],
         ),
         busy,

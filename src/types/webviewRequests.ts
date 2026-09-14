@@ -176,11 +176,11 @@ export interface ChangeDemoSourceRequest {
  * "Save as demo package" (step 09). `getDemoPackagePreview` answers what the
  * card would carry and what a project built from it will need; `saveDemoPackage`
  * writes the description file, puts the card on the SC's own Add a demo list
- * (and sets the template flag when asked) and answers the link;
- * `removeDemoPackage` undoes exactly what saveDemoPackage did.
+ * and answers the link; `removeDemoPackage` undoes exactly what saveDemoPackage
+ * did.
  */
 export interface DemoPackageCheck {
-    id: 'repository' | 'branch' | 'index' | 'datapack' | 'custom-app';
+    id: 'repository' | 'index' | 'datapack' | 'custom-app';
     ok: boolean;
     message: string;
     action?: 'republish';
@@ -197,15 +197,11 @@ export interface DemoPackagePreview {
     saved: boolean;
     /** Whether the card is on the SC's own Add a demo list. */
     onList: boolean;
-    /** Whether we set the repository's template flag. */
-    templateFlagSet: boolean;
 }
 
 export interface SaveDemoPackageRequest {
     name: string;
     description: string;
-    /** Also mark the repository as a template (one GitHub settings write; Remove unsets it). */
-    markTemplate: boolean;
 }
 
 export interface SaveDemoPackageResult {
@@ -216,7 +212,6 @@ export interface SaveDemoPackageResult {
     fileReason?: string;
     /** The card is on the SC's own Add a demo list now (always, after a save). */
     onList: true;
-    templateFlagSet: boolean;
     checks: DemoPackageCheck[];
 }
 
@@ -245,7 +240,6 @@ export interface ExportDemoBundleResult {
 
 export interface RemoveDemoPackageResult {
     file: 'removed' | 'skipped' | 'absent';
-    templateFlagUnset: boolean;
     /** The card was on the SC's list and is now off it. */
     removedFromList: boolean;
 }

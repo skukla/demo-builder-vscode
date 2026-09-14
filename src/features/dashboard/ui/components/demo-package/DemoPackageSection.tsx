@@ -1,19 +1,19 @@
 /**
  * DemoPackageSection — the "Storefront as demo package" part of the Export
  * dialog: the prefilled name and description, the checks a project built from
- * the card will need, the template tick box, the link once saved, and the Save
- * and Remove buttons. Edge Delivery projects only; the dialog leaves the section
+ * the card will need, the link once saved, and the Save and Remove buttons. Edge Delivery projects only; the dialog leaves the section
  * out for a headless project.
  *
  * @module features/dashboard/ui/components/demo-package/DemoPackageSection
  */
 
-import { Button, ButtonGroup, Checkbox, TextArea, TextField } from '@adobe/react-spectrum';
+import { Button, ButtonGroup, TextArea, TextField } from '@adobe/react-spectrum';
 import React from 'react';
 import { useDemoPackage, type PackageOutcome, type UseDemoPackage } from './useDemoPackage';
 import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
+import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { CopyableText } from '@/core/ui/components/ui/CopyableText';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import type { DemoPackageCheck } from '@/types/webviewRequests';
@@ -25,11 +25,8 @@ export const PACKAGE_COPY = {
     cannot: "This storefront can't become a demo package",
     name: 'Name',
     description: 'Description',
-    nameHelp: 'What the card says on the Welcome step.',
     checksTitle: 'What colleagues get',
     republishHint: 'Republish, then save again.',
-    template: 'Also mark the repository as a template',
-    templateNote: 'Shows the "Use this template" button on GitHub. Remove turns it off.',
     savedTitle: "Saved. It's on your Welcome step now.",
     linkHow: 'Colleagues paste this link into "Add a demo".',
     skippedTitle: 'Card saved; the file in your repository was left alone',
@@ -101,18 +98,25 @@ function Actions({ flow }: { flow: UseDemoPackage }): React.ReactElement | null 
 function Body({ flow }: { flow: UseDemoPackage }): React.ReactElement {
     const { load, draft } = flow;
     if (load.status === 'loading') {
-        return <LoadingDisplay size="M" message={PACKAGE_COPY.looking} helperText={PACKAGE_COPY.lookingFor} />;
+        // The house modal loading state (GitHubAppInstallDialog, the AI modal):
+        // the large centred spinner in a reserved-height box, so the dialog does
+        // not jump when the form arrives.
+        return (
+            <CenteredFeedbackContainer height="280px">
+                <LoadingDisplay size="L" message={PACKAGE_COPY.looking} helperText={PACKAGE_COPY.lookingFor} />
+            </CenteredFeedbackContainer>
+        );
     }
     if (load.status === 'failed') {
         return <StatusDisplay variant="error" title={PACKAGE_COPY.cannot} message={load.error} height="auto" />;
     }
     return (
         <>
+            <p className="export-section-text">{PACKAGE_COPY.intro}</p>
             <TextField
                 label={PACKAGE_COPY.name}
                 value={draft.name}
                 onChange={flow.setName}
-                description={PACKAGE_COPY.nameHelp}
                 isRequired
                 width="100%"
                 data-testid="package-name"
@@ -131,12 +135,6 @@ function Body({ flow }: { flow: UseDemoPackage }): React.ReactElement {
                         <CheckRow key={`${check.id}-${check.repository ?? ''}`} check={check} />
                     ))}
                 </ul>
-            </div>
-            <div className="demo-package-template">
-                <Checkbox isSelected={draft.markTemplate} onChange={flow.setMarkTemplate} data-testid="package-template">
-                    {PACKAGE_COPY.template}
-                </Checkbox>
-                <p className="demo-package-hint">{PACKAGE_COPY.templateNote}</p>
             </div>
             {load.saved && !flow.outcome ? <LinkNotice link={load.link} /> : null}
             <OutcomeNotice outcome={flow.outcome} link={load.link} />
@@ -158,7 +156,6 @@ export function DemoPackageSection(): React.ReactElement {
     const flow = useDemoPackage();
     return (
         <div className="demo-package-body" data-testid="demo-package-section">
-            <p className="export-section-text">{PACKAGE_COPY.intro}</p>
             <Body flow={flow} />
             <Actions flow={flow} />
         </div>
