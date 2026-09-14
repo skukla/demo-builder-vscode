@@ -10,6 +10,7 @@
  */
 
 import type { GitHubFileOperations } from '../github/githubFileOperations';
+import type { Logger } from '@/types/logger';
 import { SHARED_DEMO_FILE_NAME } from '@/types/projectFile';
 
 export interface SharedDemoFileTarget {
@@ -60,18 +61,27 @@ export async function writeSharedDemoFile(
 }
 
 /**
- * The file as it is in the repository, for a reset to carry over. A reset
- * replaces the whole tree with the template's; without this the description a
- * Save wrote would be gone and the project would still believe it is a package.
+ * Carry the file through a storefront reset, as an override on the rewritten tree.
  *
- * @returns the file's text, or undefined when there is none
+ * A reset replaces the tree with the template's, and the file is Demo Builder's
+ * to keep, like fstab.yaml: without this the card's link kept working but lost
+ * the name, description and sample-data hint, while the project still recorded
+ * a package (found 2026-09-14). Call it only for a project with a package
+ * record: one built FROM an added demo takes the file its source repository
+ * has, as it takes everything else.
+ *
+ * @param fileOverrides - the reset's path → content overrides; gains the file when there is one
  */
-export async function readSharedDemoFile(
+export async function carrySharedDemoFile(
     fileOps: Pick<GitHubFileOperations, 'getFileContent'>,
     target: SharedDemoFileTarget,
-): Promise<string | undefined> {
+    fileOverrides: Map<string, string>,
+    logger: Logger,
+): Promise<void> {
     const current = await fileOps.getFileContent(target.owner, target.repo, SHARED_DEMO_FILE_NAME);
-    return current?.content;
+    if (current === undefined || current === null) return;
+    fileOverrides.set(SHARED_DEMO_FILE_NAME, current.content);
+    logger.info('[EdsReset] Carrying the demo package description file through the reset');
 }
 
 /**

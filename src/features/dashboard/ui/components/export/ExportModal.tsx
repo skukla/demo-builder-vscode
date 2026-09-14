@@ -88,6 +88,12 @@ function FormChoice({ form, onChange }: { form: ExportForm; onChange: (form: Exp
     );
 }
 
+/** The Copy link button's words: preparing, then copied for a moment, else the action. */
+function copyLabel(busy: boolean, copied: boolean): string {
+    if (busy) return EXPORT_COPY.preparing;
+    return copied ? EXPORT_COPY.copied : EXPORT_COPY.copyLink;
+}
+
 /** What the dialog knows about the storefront: read once on open, before anything else shows. */
 type StorefrontState =
     | { status: 'loading' }
@@ -156,7 +162,7 @@ function LinkCopy({ preview }: { preview: DemoPackagePreview }): React.ReactElem
             setBusy(false);
         }
     };
-    const label = busy ? EXPORT_COPY.preparing : copied ? EXPORT_COPY.copied : EXPORT_COPY.copyLink;
+    const label = copyLabel(busy, copied);
     return (
         <div className="export-link" data-testid="export-link">
             <span className="export-part-name">{EXPORT_COPY.isPackage}</span>

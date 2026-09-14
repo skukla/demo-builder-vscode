@@ -10,9 +10,6 @@
  */
 
 import { installBlockCollections } from '../blockCollectionHelpers';
-import { generateConfigJson, buildConfigGeneratorParams } from '../configGenerator';
-import { readSharedDemoFile } from '../demoPackage/sharedDemoFile';
-import { generateFstabContent } from '../fstabGenerator';
 import type { GitHubFileOperations } from '../github/githubFileOperations';
 import { generateInspectorTreeEntries, installInspectorTagging } from '../inspectorHelpers';
 import { applyCanonicalCodePatches } from '../patches/codePatchPipelineHelpers';
@@ -20,9 +17,9 @@ import type { CodePatchResult } from '../patches/codePatchRegistry';
 import { readLkgSha } from '../patches/lkgReader';
 import { addedDemoCaveats } from '../patches/loadBearingPatches';
 import { installSmart404Handler } from '../pdp/pdp404HandlerPublisher';
-import { addPlaceholderStubOverrides } from '../placeholderStubs';
 import { installQuickEdit } from '../quickEditPublisher';
 import type { GitHubTreeInput } from '../types';
+import { buildResetFileOverrides } from './edsResetFileOverrides';
 import { type EdsResetParams } from './edsResetParams';
 import {
     getBlockLibrarySource,
@@ -34,7 +31,6 @@ import type { Project } from '@/types/base';
 import type { AddonSource } from '@/types/demoPackages';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
-import { SHARED_DEMO_FILE_NAME } from '@/types/projectFile';
 
 // ==========================================================
 // Helpers
@@ -224,7 +220,7 @@ async function reinstallBlockLibraries(
 
 /**
  * Step 1: Reset repository to template using bulk Git Tree operations.
- * Builds file overrides (fstab.yaml, config.json, placeholders) and pushes a single commit.
+ * Takes its file overrides from buildResetFileOverrides and pushes a single commit.
  * @returns Number of files reset and optional block collection IDs.
  */
 export async function resetRepoToTemplate(
@@ -255,47 +251,7 @@ export async function resetRepoToTemplate(
     report(1, 'Resetting repository to template...');
     context.logger.info(`[EdsReset] Resetting repo using bulk tree operations`);
 
-    const fstabContent = generateFstabContent({ daLiveOrg, daLiveSite });
-    const fileOverrides = new Map<string, string>();
-    fileOverrides.set('fstab.yaml', fstabContent);
-
-    // Generate config.json with Commerce configuration
-    const configResult = generateConfigJson(buildConfigGeneratorParams(project), context.logger);
-    if (configResult.success && configResult.content) {
-        fileOverrides.set('config.json', configResult.content);
-        fileOverrides.set('demo-config.json', configResult.content);
-        context.logger.info('[EdsReset] Generated config.json for reset');
-    } else {
-        context.logger.warn(
-            `[EdsReset] Failed to generate demo-config.json: ${configResult.error}`,
-        );
-    }
-
-    // Placeholder sheets are deliberately NOT fetched here (fetch deleted
-    // 2026-08-23). They are UI-label dictionaries and belong to CONTENT: the
-    // DA.live copy's full-tree walk carries any /placeholders sheets a source
-    // authors (sheets are .xlsx on DA.live — see daLiveContentCopy), verified
-    // live on isle5. Dropins ship English defaults compiled in. What DOES go
-    // in are static sentinel STUBS — the boilerplate requests these 16 sheets
-    // per page load and the browser prints every 404 to the console, which no
-    // JS can suppress; the stubs answer 200 and are shadowed by real DA
-    // content the moment a brand authors sheets (content-over-code).
-    addPlaceholderStubOverrides(fileOverrides);
-
-    // A project saved as a demo package carries its description file through
-    // the reset. The reset replaces the tree with the template's, and the file
-    // is Demo Builder's to keep, like fstab.yaml: without this the card's link
-    // kept working but lost the name, description and sample-data hint, while
-    // the project still recorded a package (found 2026-09-14). Only a project
-    // with a package record: one built FROM an added demo takes the file the
-    // source repository has, as it takes everything else.
-    if (project.demoPackage) {
-        const description = await readSharedDemoFile(githubFileOps, { owner: repoOwner, repo: repoName });
-        if (description !== undefined) {
-            fileOverrides.set(SHARED_DEMO_FILE_NAME, description);
-            context.logger.info('[EdsReset] Carrying the demo package description file through the reset');
-        }
-    }
+    const fileOverrides = await buildResetFileOverrides(params, githubFileOps, context.logger);
 
     // Determine the template ref to reset against. Thin-layer storefronts
     // (codePatchSource configured) pin to the verified canonical LKG SHA;
