@@ -17,8 +17,9 @@
 - The project's EDS instance metadata beside `templateOwner`, `templateRepo`,
   `lastSyncedCommit`, `lkgSource`: `boilerplate` at creation and after each reset.
 - `SharedDemoDescription` version 2: `builtWith` (step 02 says what it carries).
-- The add dialog's "What we found in this demo" table gains a row; the completion card
-  gains a line. Both in SC words; never the field names.
+- The add dialog's "What we found in this demo" table gains ONE row ("Built on Adobe's
+  boilerplate 4.0.1"); the completion card gains one line and the door "See the storefront
+  report". Cards carry nothing more (decision 7); the rest is the report (steps 04, 07).
 
 ## Pins that move
 
