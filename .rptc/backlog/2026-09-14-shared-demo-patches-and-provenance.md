@@ -36,3 +36,7 @@ means; the caveat wording names what the extension does write.
 The version-gap policy (plan step 05): what to offer when a colleague's storefront is older
 than the current boilerplate, given that a template-generated repository has no shared
 history to merge from.
+
+## Shipped so far
+
+- 2026-09-14  docs(rptc): plan boilerplate provenance, patches that fit and the version gap for shared demos (`a878f69ed`)
