@@ -10,8 +10,7 @@ Owner-gated. On Bodea (ACCS), through the extension and its tools:
 4. In the ERP, change a list price and a stock figure → the product in Commerce follows.
 5. Add a contract price for a business partner → that company's cart prices from it, the
    ceiling holds.
-6. Switch the ERP offline → the cart still totals, an order places without an ERP number;
-   switch back.
+6. Robustness, not a scene (decision 19): with the ERP made unavailable from its own Settings screen, the cart still totals and an order still places (without an ERP number); back online, the flow resumes.
 7. Block a company in the ERP → the Commerce company is blocked; Reset ERP records → the
    block is undone, the ERP is re-mirrored, order numbers continue from where they were, the
    old order shows "before last reset".

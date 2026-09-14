@@ -13,17 +13,16 @@ destination, URL, APIs in use, action bar.
 Section 2, the ERP's name (default "Acme ERP", editable in place like the integration's name): status, "Open ERP" (the SPA URL from `deployedUrls`), "Reset ERP
 records" (confirm dialog: "Wipes the ERP and mirrors Commerce again; company blocks and
 credit limits the ERP set are undone; orders in Commerce keep their ERP numbers."), the
-"ERP offline" switch (with the sentence: "Commerce keeps its own prices and orders place
-without an ERP number until it is back."), Redeploy. The integration's Remove names both:
+Redeploy. The integration's Remove names both:
 "Removes the integration and its ERP."
 
-Handlers: `resetErpRecords`, `setErpOffline`, `getErpStatus` (health + settings), all
+Handlers: `resetErpRecords`, `getErpStatus` (health + settings), all
 headless-safe, on the dashboard map (pins move).
 
 ## Agent tools
 
 `reset_erp_records` (confirm:true + `AGENT_ALERT_COPY`: it wipes records and writes to
-Commerce companies), `set_erp_offline` (`{offline: boolean}`; readOnly false, not destructive),
+Commerce companies),
 `get_erp_status` (read). Narration, ceilings, battery prompts, auth totals, catalog regen. The
 existing per-id deploy/redeploy tools cover both components; `remove_integration` on the
 integration removes the unit, and on the system alone it is refused in words.
@@ -38,3 +37,6 @@ deploys provider then consumer with one progress card each.
 Card model pairing and worst-status; flyout section rendering and the three actions;
 handler suites with the ERP client mocked at the boundary; tool gates and arguments; the
 wizard card. Then the full gate.
+
+
+**Decision 19 (2026-09-14):** no "ERP offline" switch and no `set_erp_offline` tool on this surface. The demo is the flow between the two systems with the ERP shown as the supposed master; unavailability is a robustness property, tested on the ERP's own Settings screen.

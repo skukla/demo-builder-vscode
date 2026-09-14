@@ -21,7 +21,7 @@ test/                      node --test over lib/
 
 | Collection | What | Key |
 |---|---|---|
-| `materials` | mirrored products: material number (= SKU), description, list price (source of truth), unit, stock, plant | SKU |
+| `materials` | mirrored products: material number (= SKU), description, list price, unit, stock, plant. Every import from Commerce overwrites what it carries; the ERP's own edits are demo moves that flow to Commerce and come back | SKU |
 | `businessPartners` | mirrored companies: partner number, name, sales org, credit limit, credit used, blocked, payment terms; `commerceCompanyId` | partner no. |
 | `pricingConditions` | contract prices per partner × material, max-discount ceiling per material and per partner × material | composite |
 | `salesOrders` | ERP order: number (monotonic counter, never rewinds), partner, lines, status (created → confirmed → shipped → invoiced), `commerceOrderId`, `commerceIncrementId` | order no. |
@@ -43,7 +43,7 @@ test/                      node --test over lib/
 | `outbox` | `GET` pending (oldest first), `POST /ack { ids[] }` |
 
 While `settings.offline` is true every record route answers `503 ERP_OFFLINE`; health, settings and
-admin keep working (so a reset can run through an outage). Errors: `{ status:'ERROR', errorCode, errorMessage }`.
+admin keep working (so a reset can run while the ERP is switched off). Errors: `{ status:'ERROR', errorCode, errorMessage }`.
 
 ## The screen (web-src)
 
