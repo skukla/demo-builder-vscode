@@ -919,5 +919,23 @@
     ],
     "why": "Step 09 of the shareable-demo program (EDS-13b): the undo. Without the tool an agent deletes the file with a GitHub call and leaves the card, the template flag and the project's record behind. Tier 2: it removes a file from the SC's GitHub repository, so it runs only under --tier2.",
     "tier": 2
+  },
+  {
+    "id": "t2-add-demo-from-zip",
+    "prompt": "A colleague sent me their storefront as ~/Downloads/summit-main.zip instead of a link. Add it to my Add a demo list: make it a repository in my own GitHub account first, kept private.",
+    "expect": [
+      "add_shared_demo"
+    ],
+    "why": "Step 10 of the shareable-demo program (EDS-13a): the zip door. Without it an agent unzips by hand, runs git init and push with a token it has to find, and pastes its own link back into the add tool. Tier 2: it creates a repository in the SC's GitHub account, so it runs only under --tier2.",
+    "tier": 2
+  },
+  {
+    "id": "t2-export-demo-bundle",
+    "prompt": "My colleague can't get to my GitHub repository or our shared services. Export this project as one file I can send them, with my setup and the storefront in it, so they can add the demo from the file.",
+    "expect": [
+      "export_demo_bundle"
+    ],
+    "why": "Export umbrella (PL-56), the file form: one bundle of the ticked parts (owner, 2026-09-13: export hands an artifact to someone else, by link or by file). Without the tool an agent downloads the archive with curl, forgets the description file, and sends the settings file with credentials in it. Tier 2: it writes a file into the project directory, so it runs only under --tier2.",
+    "tier": 2
   }
 ]

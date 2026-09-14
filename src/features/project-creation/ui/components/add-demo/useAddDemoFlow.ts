@@ -27,6 +27,8 @@ import type {
     AddSharedDemoResult,
     ChangeDemoSourceRequest,
     ChangeDemoSourceResult,
+    ImportStorefrontZipRequest,
+    ImportStorefrontZipResult,
     ProbeSharedDemoRequest,
     SharedDemoProbeResult,
 } from '@/types/webviewRequests';
@@ -79,9 +81,16 @@ export interface UseAddDemoFlowReturn {
     setB2bOn: (on: boolean) => void;
     setKeepCopy: (keep: boolean) => void;
     setUpdateRemembered: (update: boolean) => void;
+    /** The zip door (add mode): the host picks the file, creates the repository, and the probe reads it. */
+    importZip: () => void;
+    importing: boolean;
+    zipError?: string;
+    makePublic: boolean;
+    setMakePublic: (on: boolean) => void;
 }
 
 const PROBE_FAILED = "We couldn't look at this demo. Check the link and try again.";
+const IMPORT_FAILED = "We couldn't add this zip. Try again.";
 const ADD_FAILED = "We couldn't add this demo. Try again.";
 const CHANGE_FAILED = "We couldn't change the source. Try again.";
 
@@ -98,6 +107,9 @@ export function useAddDemoFlow(args: UseAddDemoFlowArgs): UseAddDemoFlowReturn {
     const [probe, setProbe] = useState<ProbeState>({ status: 'idle' });
     const [adding, setAdding] = useState(false);
     const [addError, setAddError] = useState<string | undefined>(undefined);
+    const [importing, setImporting] = useState(false);
+    const [zipError, setZipError] = useState<string | undefined>(undefined);
+    const [makePublic, setMakePublic] = useState(false);
 
     const result = probe.status === 'done' ? probe.result : undefined;
     const shippedName =
@@ -105,12 +117,11 @@ export function useAddDemoFlow(args: UseAddDemoFlowArgs): UseAddDemoFlowReturn {
             ? packages.find((pkg) => pkg.id === result.shippedPackageId)?.name
             : undefined;
 
-    const runProbe = useCallback(async (): Promise<void> => {
-        if (!draft.source) return;
+    const probeSource = useCallback(async (source: NonNullable<AddDemoDraft['source']>): Promise<void> => {
         setProbe({ status: 'loading' });
         setStage('found');
         try {
-            const request: ProbeSharedDemoRequest = draft.source;
+            const request: ProbeSharedDemoRequest = source;
             const answer = await webviewClient.request<Answer<SharedDemoProbeResult>>(
                 'probe-shared-demo',
                 request,
@@ -127,7 +138,39 @@ export function useAddDemoFlow(args: UseAddDemoFlowArgs): UseAddDemoFlowReturn {
         } catch (error) {
             setProbe({ status: 'failed', error: (error as Error).message || PROBE_FAILED });
         }
-    }, [draft.source]);
+    }, []);
+
+    const runProbe = useCallback(async (): Promise<void> => {
+        if (draft.source) await probeSource(draft.source);
+    }, [draft.source, probeSource]);
+
+    /**
+     * The zip door: one host call that picks the file, creates the repository in
+     * the SC's account and pushes the files; then the same probe as for a link.
+     * A dismissed picker leaves the dialog where it was.
+     */
+    const importZip = useCallback(async (): Promise<void> => {
+        setImporting(true);
+        setZipError(undefined);
+        try {
+            const answer = await webviewClient.request<Answer<ImportStorefrontZipResult>>('import-storefront-zip', {
+                isPrivate: !makePublic,
+            } satisfies ImportStorefrontZipRequest);
+            if (!answer.success || !answer.result) {
+                setZipError(answer.error ?? IMPORT_FAILED);
+                return;
+            }
+            const { cancelled, owner, repo } = answer.result;
+            if (cancelled || !owner || !repo) return;
+            const source = { owner, repo };
+            setDraft((d) => ({ ...d, source }));
+            await probeSource(source);
+        } catch (error) {
+            setZipError((error as Error).message || IMPORT_FAILED);
+        } finally {
+            setImporting(false);
+        }
+    }, [makePublic, probeSource]);
 
     /** The one host call of the found stage: add remembers, change repoints the project. */
     const commit = useCallback(async (): Promise<void> => {
@@ -167,8 +210,8 @@ export function useAddDemoFlow(args: UseAddDemoFlowArgs): UseAddDemoFlowReturn {
     const buildable = isBuildable(result) && (mode === 'add' || kindMatches(result, currentKind));
     const canContinue =
         stage === 'link'
-            ? draft.source !== undefined
-            : !adding && ((mode === 'add' && result?.outcome === 'shipped') || buildable);
+            ? draft.source !== undefined && !importing
+            : !adding && !importing && ((mode === 'add' && result?.outcome === 'shipped') || buildable);
 
     const onContinue = useCallback((): void => {
         if (!canContinue) return;
@@ -223,5 +266,10 @@ export function useAddDemoFlow(args: UseAddDemoFlowArgs): UseAddDemoFlowReturn {
         setB2bOn,
         setKeepCopy,
         setUpdateRemembered,
+        importZip: () => void importZip(),
+        importing,
+        zipError,
+        makePublic,
+        setMakePublic,
     };
 }

@@ -11,6 +11,9 @@
  *   SC's GitHub, so `confirm:true`; the refusal says what it would write and where.
  * - `remove_demo_package` — take back what save_demo_package did. Destructive
  *   for colleagues holding the link, so `confirm:true` and the consent dialog.
+ * - `export_demo_bundle` — Export's "Send a file": one bundle of the ticked parts
+ *   (setup without credentials, the storefront with its description file),
+ *   written inside the project directory. A local file, so no gate.
  *
  * @module features/ai/server/demoPackageTools
  */
@@ -24,8 +27,14 @@ import {
     handleRemoveDemoPackage,
     handleSaveDemoPackage,
 } from '@/features/dashboard/handlers/demoPackageHandlers';
+import { handleExportDemoBundle } from '@/features/dashboard/handlers/exportDemoBundleHandler';
 import type { HandlerContext } from '@/types/handlers';
-import type { DemoPackagePreview, RemoveDemoPackageResult, SaveDemoPackageResult } from '@/types/webviewRequests';
+import type {
+    DemoPackagePreview,
+    ExportDemoBundleResult,
+    RemoveDemoPackageResult,
+    SaveDemoPackageResult,
+} from '@/types/webviewRequests';
 
 const HINT =
     'The card is on your Welcome step; create_project takes its id (list_demo_packages shows it). A colleague pastes the link into "Add a demo", or hands it to add_shared_demo.';
@@ -130,6 +139,29 @@ export function registerDemoPackageTools(server: McpToolServer, ctxFactory: () =
             const result = await handleRemoveDemoPackage(ctx, undefined);
             if (!result.success || !result.data) return asText({ error: result.error });
             return asText(result.data as RemoveDemoPackageResult);
+        },
+    );
+
+    server.registerTool(
+        'export_demo_bundle',
+        {
+            needsAuth: ['github'],
+            annotations: { readOnlyHint: false, destructiveHint: false },
+            description:
+                "Export the open project as a file to send to someone who can't reach your GitHub or the shared services: one zip bundle with the ticked parts — setup (your settings, never a credential) and the storefront (the repository's code with the demo's description file inside, Edge Delivery only). Written inside the project directory as <project>-demo-bundle.zip unless path is given. Setup alone writes the plain settings file the projects list imports. Prefer sharing a link (save_demo_package): a file has no history and never gets later changes.",
+            inputSchema: {
+                path: z.string().optional().describe('Where to write, inside the project directory (default <project>/<project>-demo-bundle.zip)'),
+                setup: z.boolean().optional().describe('Include the setup part (default true)'),
+                storefront: z.boolean().optional().describe('Include the storefront part (default true; Edge Delivery only)'),
+            },
+        },
+        async (args: { path?: string; setup?: boolean; storefront?: boolean }) => {
+            const ctx = ctxFactory();
+            const github = await requireGitHub(ctx);
+            if (github) return asText(github);
+            const result = await handleExportDemoBundle(ctx, { path: args.path, setup: args.setup, storefront: args.storefront });
+            if (!result.success || !result.data) return asText({ error: result.error });
+            return asText(result.data as ExportDemoBundleResult);
         },
     );
 }

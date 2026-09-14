@@ -143,6 +143,10 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
         bytes: 2_500,
         why: 'the link, what happened to the file, the template flag, the same checks and one hint; or the refusal carrying the checks',
     },
+    export_demo_bundle: {
+        bytes: 500,
+        why: 'the path, the file count, the byte size and the parts; or one error sentence',
+    },
     remove_demo_package: {
         bytes: 600,
         why: 'what happened to the file, the card and the flag; or the refusal with the save date',

@@ -88,6 +88,35 @@ describe('useAddDemoFlow', () => {
         expect(hook.result.current.canContinue).toBe(false);
     });
 
+    it('imports a zip through the host, then probes the repository it created, with the visibility the tick box says', async () => {
+        const { hook } = setup();
+        mockRequest.mockResolvedValueOnce({ success: true, result: { owner: 'steve', repo: 'summit', fullName: 'steve/summit', fileCount: 3, dropped: 1, isPrivate: false } });
+        mockRequest.mockResolvedValueOnce({ success: true, result: READ });
+
+        act(() => hook.result.current.setMakePublic(true));
+        await act(async () => hook.result.current.importZip());
+
+        expect(mockRequest).toHaveBeenNthCalledWith(1, 'import-storefront-zip', { isPrivate: false });
+        expect(mockRequest).toHaveBeenNthCalledWith(2, 'probe-shared-demo', { owner: 'steve', repo: 'summit' });
+        expect(hook.result.current.stage).toBe('found');
+        expect(hook.result.current.draft.source).toEqual({ owner: 'steve', repo: 'summit' });
+        expect(hook.result.current.importing).toBe(false);
+    });
+
+    it('stays on the link stage when the picker is dismissed, and shows the refusal when the zip is not a storefront', async () => {
+        const { hook } = setup();
+        mockRequest.mockResolvedValueOnce({ success: true, result: { cancelled: true } });
+        await act(async () => hook.result.current.importZip());
+        expect(hook.result.current.stage).toBe('link');
+        expect(hook.result.current.zipError).toBeUndefined();
+
+        mockRequest.mockResolvedValueOnce({ success: false, error: 'This zip is not an Edge Delivery storefront: it has no head.html.' });
+        await act(async () => hook.result.current.importZip());
+        expect(hook.result.current.stage).toBe('link');
+        expect(hook.result.current.zipError).toBe('This zip is not an Edge Delivery storefront: it has no head.html.');
+        expect(mockRequest).toHaveBeenCalledTimes(2);
+    });
+
     it('commits through add-shared-demo with the row and the copy choice, then reports and closes', async () => {
         const { hook, onDemoAdded, onClose } = setup();
         await walkToFound(hook, { success: true, result: READ });

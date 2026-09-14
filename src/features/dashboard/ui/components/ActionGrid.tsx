@@ -105,6 +105,7 @@ type OverflowKey =
     | 'refreshBlockLibrary'
     | 'devConsole'
     | 'changeDemoSource'
+    | 'saveDemoPackage'
     | 'reset'
     | 'delete';
 
@@ -194,6 +195,11 @@ export interface ActionGridProps {
      * of that demo (the notice offers the same door when the source is gone).
      */
     handleChangeDemoSource?: () => void;
+    /**
+     * "Save as demo package" (EDS only): turn this storefront into a card on the
+     * SC's own Welcome step. About the SC; Export is about handing over.
+     */
+    handleSaveDemoPackage?: () => void;
     /** Handler for the Reset overflow item (always shown, last in the menu) */
     handleResetProject: () => void;
     /** Handler for Delete button */
@@ -513,6 +519,7 @@ export function ActionGrid({
     handleEditProject,
     handleExportProject,
     handleChangeDemoSource,
+    handleSaveDemoPackage,
     handleResetProject,
     handleDeleteProject,
 }: ActionGridProps): React.ReactElement {
@@ -538,6 +545,7 @@ export function ActionGrid({
             refreshBlockLibrary: handleRefreshBlockLibrary,
             devConsole: handleOpenDevConsole,
             changeDemoSource: handleChangeDemoSource,
+            saveDemoPackage: handleSaveDemoPackage,
             reset: handleResetProject,
             delete: handleDeleteProject,
         });
@@ -645,6 +653,9 @@ export function ActionGrid({
                             </ActionButton>
                             <Menu onAction={handleOverflowAction}>
                                 <Item key="export">Export</Item>
+                                {isEds && handleSaveDemoPackage ? (
+                                    <Item key="saveDemoPackage">Save as demo package</Item>
+                                ) : null}
                                 {isEds && handleSyncStorefront ? (
                                     <Item key="syncStorefront">Sync Storefront</Item>
                                 ) : null}

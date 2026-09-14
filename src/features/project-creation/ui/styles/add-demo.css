@@ -30,6 +30,15 @@
         color: var(--spectrum-global-color-gray-700);
     }
 
+    .add-demo-zip {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+        padding-top: 12px;
+        border-top: 1px solid var(--spectrum-global-color-gray-300);
+    }
+
     .add-demo-b2b,
     .add-demo-keep-copy {
         display: flex;
@@ -50,18 +59,13 @@
         content: '+ ';
     }
 
-    /* An added demo's menu: the integration card's hover-reveal kebab, in the
-       brand card's corner (the selection check sits on the other side). */
+    /* An added demo's menu, in the brand card's corner (the selection check sits
+       on the other side). Always visible (owner, 2026-09-13): removing a card
+       an SC added is an affordance the card itself has to show, not one that
+       appears on hover. */
     .brand-card-menu-button {
         position: absolute;
         top: 8px;
         right: 8px;
-        opacity: 0;
-        transition: opacity var(--spectrum-global-animation-duration-100) ease;
-    }
-
-    .expandable-brand-card:hover .brand-card-menu-button,
-    .expandable-brand-card:focus-within .brand-card-menu-button {
-        opacity: 1;
     }
 }

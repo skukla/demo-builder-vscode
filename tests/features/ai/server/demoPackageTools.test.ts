@@ -10,12 +10,16 @@ jest.mock('@/features/dashboard/handlers/demoPackageHandlers', () => ({
     handleSaveDemoPackage: jest.fn(),
     handleRemoveDemoPackage: jest.fn(),
 }));
+jest.mock('@/features/dashboard/handlers/exportDemoBundleHandler', () => ({
+    handleExportDemoBundle: jest.fn(),
+}));
 jest.mock('@/features/ai/server/edsToolGuards', () => ({
     requireGitHub: jest.fn(),
 }));
 
 import { registerDemoPackageTools } from '@/features/ai/server/demoPackageTools';
 import { requireGitHub } from '@/features/ai/server/edsToolGuards';
+import { handleExportDemoBundle } from '@/features/dashboard/handlers/exportDemoBundleHandler';
 import {
     handleGetDemoPackagePreview,
     handleRemoveDemoPackage,
@@ -30,6 +34,7 @@ const mockRequireGitHub = requireGitHub as jest.Mock;
 const mockPreview = handleGetDemoPackagePreview as jest.Mock;
 const mockSave = handleSaveDemoPackage as jest.Mock;
 const mockRemove = handleRemoveDemoPackage as jest.Mock;
+const mockBundle = handleExportDemoBundle as jest.Mock;
 
 const PREVIEW: DemoPackagePreview = {
     draft: { name: 'Bodea', description: 'Bodea-branded B2B demo' },
@@ -127,5 +132,25 @@ describe('remove_demo_package', () => {
     it('runs the handler with confirm and answers what it undid', async () => {
         expect(await server().call('remove_demo_package', { confirm: true })).toEqual({ file: 'removed', templateFlagUnset: true, removedFromList: true });
         expect(mockRemove).toHaveBeenCalledWith(ctx, undefined);
+    });
+});
+
+describe('export_demo_bundle', () => {
+    it('hands the path and the parts to the handler and answers what was written where', async () => {
+        mockBundle.mockResolvedValue({ success: true, data: { path: '/p/bodea-demo-bundle.zip', fileCount: 813, bytes: 1000, parts: ['setup', 'storefront'] } });
+        expect(await server().call('export_demo_bundle', { path: 'out/bundle.zip', setup: false })).toEqual({
+            path: '/p/bodea-demo-bundle.zip',
+            fileCount: 813,
+            bytes: 1000,
+            parts: ['setup', 'storefront'],
+        });
+        expect(mockBundle).toHaveBeenCalledWith(ctx, { path: 'out/bundle.zip', setup: false, storefront: undefined });
+    });
+
+    it("passes the handler's refusal through, and the GitHub refusal first", async () => {
+        mockBundle.mockResolvedValue({ success: false, error: 'Only an Edge Delivery project has a storefront to put in the file.' });
+        expect(await server().call('export_demo_bundle', {})).toEqual({ error: 'Only an Edge Delivery project has a storefront to put in the file.' });
+        mockRequireGitHub.mockResolvedValue({ error: 'Sign in to GitHub first.', needsAuth: 'github' });
+        expect(await server().call('export_demo_bundle', {})).toMatchObject({ needsAuth: 'github' });
     });
 });

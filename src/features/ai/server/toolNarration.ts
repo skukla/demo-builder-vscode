@@ -188,6 +188,7 @@ export const TOOL_NARRATION: Record<string, string> = {
     get_demo_package_preview: 'Reading what the demo package would carry',
     save_demo_package: 'Saving the storefront as a demo package',
     remove_demo_package: 'Removing the demo package',
+    export_demo_bundle: 'Saving the demo as a file to send',
     repair_site_configuration: 'Repairing the site configuration',
     // Grants OR revokes.
     set_site_admin: 'Changing who can administer the site',

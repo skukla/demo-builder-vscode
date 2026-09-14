@@ -62,6 +62,52 @@ kept, what is dropped, the refusal for a non-storefront); the repository creatio
 push against the GitHub fakes; the dialog's second way in; the tool's `zipPath` argument;
 the how-to sentence.
 
+## Built (2026-09-13)
+
+**Host.** `zipStorefrontImport.ts` unpacks in memory with adm-zip (already a dependency),
+strips the single root folder, drops what a repository never carries (`.git/`,
+`node_modules/`, `.npm-cache/`, `.DS_Store`, `.env`) and what the zip's own `.gitignore`
+says (names, directories, rooted globs with `*` and `**`; negations are not honoured, which
+drops rather than keeps), and gives the probe's own verdict over the files through
+`classifyRepoForStorefront` behind an in-memory file reader. `githubTreePush.ts` pushes the
+files as one commit: text inline, fonts and images through `createBlob` (new on
+`GitHubFileOperations`), trees in the request-sized batches `resetRepoToTemplate` uses.
+`importStorefrontZipHandler.ts` picks the file when the webview asks without a path,
+refuses in words ("This zip is not an Edge Delivery storefront: it has no …"), creates the
+repository in the SC's own account (private by default; `createEmptyRepository` with
+`auto_init`), waits for it, pushes, flags it a template, answers owner/repo. Registered on
+the wizard map and, because the dialog is one component, on the dashboard map (44 → 45).
+
+**Human surface.** The link stage's second section in add mode only: "Or add from a zip
+file", the note that says to ask for the link when you can, a tick box "Make the repository
+public" (off), and "Choose a zip file…". The found stage shows "Creating your repository
+from the zip…" while the host works, then the same probe result as for a link; the
+repository is the SC's, so no keep-a-copy box.
+
+**Agent surface.** `add_shared_demo` takes `zipPath` (with `repoName` and `isPrivate`) as
+the third way in: the tool reads the zip the way the handler will, refuses a non-storefront,
+and gates the repository creation behind `confirm:true` with the refusal naming the
+repository, the account, and the file counts. The added demo is then read from the new
+repository and remembered without a copy.
+
+**Tests.** The zip reader over a zip built in the test from the 2026-09-12 shapes (root
+folder, `.npm-cache/`, its own `.gitignore`, a font); the push against a fake client
+(arguments, not outcomes); the handler with the picker, the refusal and GitHub's "already
+exists"; the flow and the dialog; the tool's gate and its confirmed path.
+
+**Live (2026-09-13).** The read half only: `add_shared_demo` with the colleague's 47 MB zip
+and no confirm answered the would-create refusal with the real counts. The confirmed run
+creates a repository in the owner's account, so it waits for the owner.
+
+**Export as a zip file (owner, 2026-09-13: a first-class part of Export).** The other half
+of the zip door, built the same day after the owner overruled the recommendation to leave
+it to GitHub's "Download ZIP": `storefrontZipExport.ts` puts the description file into the
+repository archive GitHub serves (`downloadRepoArchive`, now public on the file operations),
+`exportStorefrontZipHandler.ts` asks where with the save dialog from the webview or writes
+`<repo>.zip` inside the project directory for an agent (a given path must resolve inside
+it, the settings export's rule), and the Export dialog's third section "Storefront as a zip
+file" and the `export_storefront_zip` tool call it. Dashboard map 45 → 46, tools 116 → 117.
+
 ## Done when
 
 A zip of an Edge Delivery storefront becomes a demo on the Welcome grid through the dialog

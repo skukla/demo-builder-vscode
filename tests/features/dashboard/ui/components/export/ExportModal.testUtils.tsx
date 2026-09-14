@@ -1,7 +1,7 @@
 /**
- * Preamble for the ExportModal suite: the host boundary is mocked; the
- * sections and the core Modal render real over the global Spectrum stubs. Owns
- * the SUT import (webview-test-authoring §3).
+ * Preamble for the ExportModal suite: the host boundary is mocked; the forms
+ * and the core Modal render real over the global Spectrum stubs. Owns the SUT
+ * import (webview-test-authoring §3).
  */
 
 import { fireEvent, render, screen } from '@testing-library/react';
@@ -16,47 +16,27 @@ jest.mock('@/core/ui/utils/vscode-api', () => ({
 
 // The SUT binds below the mocks on purpose (webview-test-authoring §3).
 import { ExportModal, type ExportModalProps } from '@/features/dashboard/ui/components/export/ExportModal';
-import type { DemoPackagePreview, RemoveDemoPackageResult, SaveDemoPackageResult } from '@/types/webviewRequests';
+import type { DemoPackagePreview } from '@/types/webviewRequests';
 
 export const LINK = 'https://github.com/steve/kukla-bodea';
 
 export const PREVIEW: DemoPackagePreview = {
     draft: { name: 'Bodea', description: 'Bodea-branded B2B demo' },
-    checks: [
-        { id: 'repository', ok: true, message: 'steve/kukla-bodea is public.' },
-        { id: 'branch', ok: true, message: 'Built from main, the default branch.' },
-        {
-            id: 'index',
-            ok: false,
-            message: 'No published page list, so new projects would start empty.',
-            action: 'republish',
-        },
-    ],
+    checks: [{ id: 'repository', ok: true, message: 'steve/kukla-bodea is public.' }],
     link: LINK,
     saved: false,
     onList: false,
     templateFlagSet: false,
 };
 
-export const SAVED: SaveDemoPackageResult = {
-    link: LINK,
-    file: 'written',
-    onList: true,
-    templateFlagSet: false,
-    checks: PREVIEW.checks,
-};
-
-export const REMOVED: RemoveDemoPackageResult = { file: 'removed', templateFlagUnset: true, removedFromList: true };
-
 export function answer<D>(data: D): { success: true; data: D } {
     return { success: true, data };
 }
 
+/** The link form reads the storefront preview on open for an Edge Delivery project. */
 export async function renderExport(preview: unknown = answer(PREVIEW), overrides: Partial<ExportModalProps> = {}) {
-    // Only the storefront part reads on open; a headless render must not leave a
-    // queued answer behind for the next test to consume.
     if (overrides.isEds !== false) mockRequest.mockResolvedValueOnce(preview);
-    const props: ExportModalProps = { isOpen: true, isEds: true, onClose: jest.fn(), onExportSetup: jest.fn(), ...overrides };
+    const props: ExportModalProps = { isOpen: true, isEds: true, onClose: jest.fn(), onSaveDemoPackage: jest.fn(), ...overrides };
     const view = render(<ExportModal {...props} />);
     await settle();
     return { ...view, props };
@@ -64,7 +44,6 @@ export async function renderExport(preview: unknown = answer(PREVIEW), overrides
 
 export function resetExportMocks(): void {
     jest.clearAllMocks();
-    // Drops any once-answer a failed test left queued (clearAllMocks keeps them).
     mockRequest.mockReset();
 }
 
@@ -77,16 +56,12 @@ export async function click(name: string | RegExp): Promise<void> {
     await settle();
 }
 
-/** The stubs put the test id on the control for a TextField and on the label for a Checkbox. */
-function control(testId: string): HTMLInputElement {
+export async function chooseFile(): Promise<void> {
+    fireEvent.click(screen.getByTestId('export-form-file'));
+    await settle();
+}
+
+export function partBox(testId: string): HTMLInputElement {
     const el = screen.getByTestId(testId);
     return (el.tagName === 'INPUT' ? el : el.querySelector('input')) as HTMLInputElement;
-}
-
-export function nameInput(): HTMLInputElement {
-    return control('package-name');
-}
-
-export function templateBox(): HTMLInputElement {
-    return control('package-template');
 }

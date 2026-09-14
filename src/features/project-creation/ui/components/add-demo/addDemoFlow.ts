@@ -60,6 +60,15 @@ export const COPY = {
     b2bIfWrong: 'If it does and this stays off, company users will see an empty account menu.',
     keepCopy: "Keep my own copy of this demo's code, so it still works if the original changes",
     remembered: 'Demos you have added',
+    /** The second way in (step 10): a storefront that arrived as a zip file. */
+    zipLead: 'Or add from a zip file',
+    zipNote:
+        "The zip becomes a repository in your GitHub account, and the demo is added from there. Ask for the link when you can: a zip loses the history, and later changes can't be pulled.",
+    zipPublic: 'Make the repository public',
+    zipButton: 'Choose a zip file…',
+    importing: 'Creating your repository from the zip…',
+    importingFor: 'Unpacking the files and pushing them to your GitHub account. A large storefront can take a minute.',
+    zipFailed: "We couldn't add this zip",
     add: 'Add demo',
     /** The dashboard's "Change source" door: the same dialog, a different commit. */
     change: {

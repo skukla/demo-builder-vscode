@@ -20,6 +20,17 @@ jest.mock('@/features/eds/handlers/addSharedDemoHandler', () => ({
 jest.mock('@/features/eds/handlers/probeSharedDemoHandler', () => ({
     handleProbeSharedDemo: jest.fn(),
 }));
+jest.mock('@/features/eds/handlers/importStorefrontZipHandler', () => ({
+    handleImportStorefrontZip: jest.fn(),
+    refusalFor: jest.fn(),
+}));
+jest.mock('@/features/eds/services/storefront/zipStorefrontImport', () => ({
+    ...jest.requireActual('@/features/eds/services/storefront/zipStorefrontImport'),
+    readStorefrontZip: jest.fn(),
+}));
+jest.mock('@/features/eds/handlers/edsHelpers', () => ({
+    getGitHubServices: () => ({ tokenService: { validateToken: async () => ({ valid: true, user: { login: 'steve' } }) } }),
+}));
 jest.mock('@/features/project-creation/services/addedDemoSettings', () => ({
     ...jest.requireActual('@/features/project-creation/services/addedDemoSettings'),
     readAddedDemos: jest.fn(),
@@ -33,7 +44,9 @@ import { requireGitHub } from '@/features/ai/server/edsToolGuards';
 import { handleAddSharedDemo } from '@/features/eds/handlers/addSharedDemoHandler';
 import { handleChangeDemoSource } from '@/features/eds/handlers/changeDemoSourceHandler';
 import { countProjectsBuiltOn, forgetDemo, isOwnCopy } from '@/features/eds/handlers/forgetAddedDemoHandler';
+import { handleImportStorefrontZip, refusalFor } from '@/features/eds/handlers/importStorefrontZipHandler';
 import { handleProbeSharedDemo } from '@/features/eds/handlers/probeSharedDemoHandler';
+import { readStorefrontZip } from '@/features/eds/services/storefront/zipStorefrontImport';
 import { readAddedDemos } from '@/features/project-creation/services/addedDemoSettings';
 import type { SharedDemoRead } from '@/types/webviewRequests';
 import { makeAddedDemo } from '../../../helpers/demoPackageFixtures';
@@ -50,6 +63,9 @@ const mockForget = forgetDemo as jest.Mock;
 const mockProbe = handleProbeSharedDemo as jest.Mock;
 const mockChange = handleChangeDemoSource as jest.Mock;
 const mockAdd = handleAddSharedDemo as jest.Mock;
+const mockImport = handleImportStorefrontZip as jest.Mock;
+const mockRefusal = refusalFor as jest.Mock;
+const mockReadZip = readStorefrontZip as jest.Mock;
 
 const JEN = makeAddedDemo();
 const OWN = makeAddedDemo({ name: 'My copy', source: { owner: 'steve', repo: 'isle5-demo', branch: 'main' } });
@@ -311,5 +327,51 @@ describe('add_shared_demo', () => {
         expect(res).toMatchObject({ shippedPackageId: 'starter' });
         expect(res.error).toContain('use that package id with create_project');
         expect(mockAdd).not.toHaveBeenCalled();
+    });
+});
+
+describe('add_shared_demo from a zip file', () => {
+    const MINE: SharedDemoRead = { ...READ, fullName: 'steve/summit', viewer: { login: 'steve', ownsRepo: true } };
+
+    beforeEach(() => {
+        mockReadZip.mockReturnValue({ files: new Map([['head.html', Buffer.from('x')]]), rootName: 'summit-main', dropped: 4 });
+        mockRefusal.mockResolvedValue(undefined);
+        mockImport.mockResolvedValue({ success: true, result: { owner: 'steve', repo: 'summit', fullName: 'steve/summit', fileCount: 1, dropped: 4, isPrivate: true } });
+        mockProbe.mockResolvedValue({ success: true, result: MINE });
+        mockAdd.mockResolvedValue({ success: true, result: { demo: { ...JEN, source: { owner: 'steve', repo: 'summit', branch: 'main' } } } });
+    });
+
+    it('refuses without confirm, naming the repository it would create, the account and the file counts, and creates nothing', async () => {
+        const s = fakeServer();
+        registerAddedDemoTools(s, () => ctx);
+
+        const res = await s.call('add_shared_demo', { zipPath: '/tmp/summit-main.zip' });
+
+        expect(res.error).toContain('would create the private repository summit in your GitHub account (steve) from /tmp/summit-main.zip (1 files; 4 entries');
+        expect(res).toMatchObject({ repoName: 'summit', fileCount: 1, dropped: 4, wouldCreate: 'summit' });
+        expect(mockImport).not.toHaveBeenCalled();
+        expect(mockAdd).not.toHaveBeenCalled();
+    });
+
+    it('refuses a zip that is not a storefront before asking to confirm', async () => {
+        mockRefusal.mockResolvedValue('This zip is not an Edge Delivery storefront: it has no head.html.');
+        const s = fakeServer();
+        registerAddedDemoTools(s, () => ctx);
+        expect(await s.call('add_shared_demo', { zipPath: '/tmp/notes.zip', confirm: true })).toEqual({
+            error: 'This zip is not an Edge Delivery storefront: it has no head.html.',
+        });
+        expect(mockImport).not.toHaveBeenCalled();
+    });
+
+    it('creates the repository on confirm with the given name and visibility, probes it, and adds without a copy', async () => {
+        const s = fakeServer();
+        registerAddedDemoTools(s, () => ctx);
+
+        const res = await s.call('add_shared_demo', { zipPath: '/tmp/summit-main.zip', repoName: 'summit-demo', isPrivate: false, confirm: true });
+
+        expect(mockImport).toHaveBeenCalledWith(ctx, { zipPath: '/tmp/summit-main.zip', repoName: 'summit-demo', isPrivate: false });
+        expect(mockProbe).toHaveBeenCalledWith(ctx, { owner: 'steve', repo: 'summit', link: undefined });
+        expect(mockAdd).toHaveBeenCalledWith(ctx, { demo: expect.objectContaining({ source: { owner: 'steve', repo: 'summit', branch: 'main' } }), keepCopy: false });
+        expect(res).toMatchObject({ added: true, createdFromZip: 'steve/summit', fileCount: 1, dropped: 4 });
     });
 });

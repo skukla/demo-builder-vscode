@@ -1,5 +1,5 @@
 /**
- * An added demo's card carries a menu with one action, Forget; a shipped
+ * An added demo's card carries a menu with one action, Remove; a shipped
  * brand's card carries none, and neither does an added card when no handler
  * is given.
  */
@@ -40,7 +40,7 @@ describe('BrandGallery — forgetting an added demo', () => {
         expect(within(cardFor('Active Brand')).queryByLabelText(/More actions/)).not.toBeInTheDocument();
     });
 
-    it('offers Forget, which reports the card\'s package id without selecting the card', () => {
+    it('offers Remove, which reports the card\'s package id without selecting the card', () => {
         const onForgetDemo = jest.fn();
         const onPackageSelect = jest.fn();
         render(
@@ -56,8 +56,8 @@ describe('BrandGallery — forgetting an added demo', () => {
 
         screen.getByLabelText('More actions for Isle5 by Jen').click();
         const items = screen.getAllByRole('menuitem').map((item) => item.textContent);
-        expect(items).toEqual(['Forget']);
-        screen.getByRole('menuitem', { name: 'Forget' }).click();
+        expect(items).toEqual(['Remove']);
+        screen.getByRole('menuitem', { name: 'Remove' }).click();
 
         expect(onForgetDemo).toHaveBeenCalledWith(JEN_CARD.id);
         expect(onPackageSelect).not.toHaveBeenCalled();

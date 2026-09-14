@@ -45,13 +45,28 @@ the design keeps using it.
 ## Decided 2026-09-13 (owner): Export is the umbrella
 
 "Export" is the one door for handing a demo to someone else to use, and it grows to cover
-every touch point an end user has. One More-menu row, one dialog, one section per part;
-parts arrive as they are built and the dialog leaves out what the project does not have.
+every touch point an end user has. One More-menu row, one dialog. Refined the same day:
+
+- **Two questions, not one list.** HOW it travels — a link (the colleague can reach the
+  SC's GitHub and the shared services; history and later changes flow) or a file (one
+  bundle, `<project>-demo-bundle.zip`, of the ticked parts) — and WHAT goes (the parts).
+  Parts not built are shown greyed so the shape is visible.
+- **Export is not Save as demo package.** Saving a package is about the SC: a new card on
+  their own Welcome step from a demo they built, with its own More row, dialog and undo.
+  Export is about someone else. They touch in one place: sending the storefront by link
+  requires it to be a package, and Export points at the Save door rather than saving on
+  the SC's behalf. Sending by file has no such dependency.
+- **The receiving side mirrors it.** "Add a demo" takes a link, a storefront zip, or a
+  bundle (its `storefront/` folder). Setup from a bundle is [[PL-56d]]'s import work.
+- **Remove on the card.** An SC removes a card they added from the Welcome step itself; the
+  affordance is always visible, and it never offers to delete a repository that is one of
+  their projects' storefronts.
 
 | Part | What leaves | State on 2026-09-13 |
 |---|---|---|
 | Setup file | the settings file a colleague imports (Commerce, Adobe, GitHub and DA.live names) | exists; still carries credentials, which [[PL-56c]] removes |
 | Storefront as demo package | the description file in the SC's repository, the card on their Welcome step, the link | built ([[EDS-13b]], shareable-demo step 09), as the dialog's second section |
+| Storefront, by file | in the bundle: the repository's code with the description file inside; the receiving half is "Or add from a zip file", which reads a bundle | built 2026-09-13 as the file form's storefront part, after the owner made the file form first-class (the recommendation had been to leave it to GitHub's own download) |
 | Datapack | the SC's sample data published to the datapack service | waits on the service being able to export rows ([[DI-3]]) |
 | Content | the DA.live pages | today they travel by being published, and a project built from the card copies them; a content bundle is unbuilt |
 | Integrations | custom apps' repositories readable by others | today a check and a sentence; the confirmed "make it public?" offer is in [[PL-56c]] |

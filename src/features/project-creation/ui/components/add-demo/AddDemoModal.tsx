@@ -52,6 +52,13 @@ function Journey(props: Omit<AddDemoModalProps, 'isOpen'>): React.ReactElement {
                         onSourceChange={flow.setSource}
                         onPickRemembered={props.onPickRemembered}
                         mode={mode}
+                        zip={{
+                            onImport: flow.importZip,
+                            importing: flow.importing,
+                            error: flow.zipError,
+                            makePublic: flow.makePublic,
+                            onMakePublicChange: flow.setMakePublic,
+                        }}
                     />
                 ) : (
                     <FoundStage
@@ -65,6 +72,7 @@ function Journey(props: Omit<AddDemoModalProps, 'isOpen'>): React.ReactElement {
                         onUpdateRememberedChange={flow.setUpdateRemembered}
                         mode={mode}
                         currentKind={props.currentKind}
+                        importing={flow.importing}
                     />
                 )}
             </div>

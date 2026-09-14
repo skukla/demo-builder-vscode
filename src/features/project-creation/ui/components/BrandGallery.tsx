@@ -144,8 +144,8 @@ function PackageCard({
                     className="brand-card-menu-button"
                     onAction={onForget}
                 >
-                    <Item key="forget" textValue="Forget">
-                        <Text>Forget</Text>
+                    <Item key="forget" textValue="Remove">
+                        <Text>Remove</Text>
                     </Item>
                 </CardActionsMenu>
             ) : null}

@@ -21,10 +21,11 @@ import { getGitHubServices } from './edsHelpers';
 import { assertGitHubName } from '@/core/utils/githubUrlParser';
 import { addedDemoKey, forgetAddedDemo } from '@/features/project-creation/services/addedDemoSettings';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
+import { getEdsGithubRepo } from '@/types/typeGuards';
 import type { ForgetAddedDemoRequest, ForgetAddedDemoResult } from '@/types/webviewRequests';
 
-const FORGET = 'Forget';
-const FORGET_AND_DELETE = 'Forget and delete my copy';
+const FORGET = 'Remove';
+const FORGET_AND_DELETE = 'Remove and delete my copy';
 const DELETE_REPOSITORY = 'Delete repository';
 
 function isRequest(value: unknown): value is ForgetAddedDemoRequest {
@@ -55,6 +56,21 @@ export async function countProjectsBuiltOn(
 }
 
 /** Whether the signed-in GitHub account owns the repository (so it is the SC's own copy). */
+/** The name of a project on this computer whose own storefront is `source`, if any. */
+export async function projectWithStorefront(
+    context: Pick<HandlerContext, 'stateManager'>,
+    source: ForgetAddedDemoRequest['source'],
+): Promise<string | undefined> {
+    const wanted = `${source.owner}/${source.repo}`.toLowerCase();
+    for (const summary of await context.stateManager.getAllProjects()) {
+        const project = await context.stateManager.loadProjectFromPath(summary.path, undefined, {
+            persistAfterLoad: false,
+        });
+        if (project && getEdsGithubRepo(project)?.toLowerCase() === wanted) return project.name;
+    }
+    return undefined;
+}
+
 export async function isOwnCopy(
     context: Pick<HandlerContext, 'context'>,
     source: ForgetAddedDemoRequest['source'],
@@ -113,15 +129,21 @@ export async function handleForgetAddedDemo(
         return { success: false, error: (error as Error).message };
     }
 
-    const ownCopy = await isOwnCopy(context, source);
-    const count = await countProjectsBuiltOn(context, source);
     const repo = `${source.owner}/${source.repo}`;
+    // A repository that IS one of this computer's storefronts (a demo package
+    // saved from a project) is never offered for deletion: removing the card
+    // takes it off the Welcome step and nothing else.
+    const storefrontOf = await projectWithStorefront(context, source);
+    const ownCopy = !storefrontOf && (await isOwnCopy(context, source));
+    const count = await countProjectsBuiltOn(context, source);
 
-    const detail = ownCopy
-        ? `${projectsSentence(count)} Deleting your copy (${repo}) would leave them without reset and updates until they are pointed at another source.`
-        : projectsSentence(count);
+    const detail = storefrontOf
+        ? `${repo} is the storefront of your project "${storefrontOf}"; the card goes, the project and its repository stay.`
+        : ownCopy
+          ? `${projectsSentence(count)} Deleting your copy (${repo}) would leave them without reset and updates until they are pointed at another source.`
+          : projectsSentence(count);
     const choice = await vscode.window.showWarningMessage(
-        `Forget "${name}"? It leaves the Add a demo list.`,
+        `Remove "${name}" from your Welcome step?`,
         { modal: true, detail },
         FORGET,
         ...(ownCopy ? [FORGET_AND_DELETE] : []),

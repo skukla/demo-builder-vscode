@@ -75,6 +75,22 @@ describe('ActionGrid — overflow menu', () => {
             expect(handleChangeDemoSource).toHaveBeenCalled();
         });
 
+        it('offers Save as demo package, right after Export, for an EDS project only', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            const handleSaveDemoPackage = jest.fn();
+            const headless = render(<ActionGrid {...defaultProps} handleSaveDemoPackage={handleSaveDemoPackage} />);
+            expect(screen.queryByText('Save as demo package')).not.toBeInTheDocument();
+            headless.unmount();
+
+            const { container } = render(<ActionGrid {...edsProps} handleSaveDemoPackage={handleSaveDemoPackage} />);
+            const menu = container.querySelector('[role="menu"]') as HTMLElement;
+            const labels = within(menu).getAllByRole('menuitem').map((item) => item.textContent);
+            expect(labels.indexOf('Save as demo package')).toBe(labels.indexOf('Export') + 1);
+
+            await user.click(screen.getByText('Save as demo package'));
+            expect(handleSaveDemoPackage).toHaveBeenCalled();
+        });
+
         it('should call handleExportProject when Export clicked', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             render(<ActionGrid {...defaultProps} />);

@@ -14,12 +14,14 @@ import React, { useState, useRef } from 'react';
 import { ActionGrid } from './components/ActionGrid';
 import { AiCapabilitiesModal } from './components/AiCapabilitiesModal';
 import { DashboardStatusHeader } from './components/DashboardStatusHeader';
+import { DemoPackageModal } from './components/demo-package/DemoPackageModal';
 import { DemoSourceNotice } from './components/DemoSourceNotice';
 import { ExportModal } from './components/export/ExportModal';
 import { OrgContextNotice } from './components/OrgContextNotice';
 import { isStartActionDisabled } from './dashboardPredicates';
 import { useDashboardActions } from './hooks/useDashboardActions';
 import { useDashboardStatus, isMeshBusy } from './hooks/useDashboardStatus';
+import { useHandoverDialogs } from './hooks/useHandoverDialogs';
 import { useInlineRename } from './hooks/useInlineRename';
 import { useLiveDaLiveUrl } from './hooks/useLiveDaLiveUrl';
 import { useOrgSwitchFlow } from './hooks/useOrgSwitchFlow';
@@ -99,18 +101,14 @@ export function ProjectDashboardScreen({
     // State for browser opening (passed to actions hook)
     const [isOpeningBrowser, setIsOpeningBrowser] = useState(false);
     const [showCapabilities, setShowCapabilities] = useState(false);
-    // "Change source" for a project built on an added demo: the Add a demo
-    // dialog in its change mode. After a change the status is re-requested so
-    // the demo-source check re-runs and its notice clears.
+    // "Change source" (a project built on an added demo): the Add a demo dialog in
+    // change mode; afterwards status is re-requested so the source check re-runs.
     const [changeSourceOpen, setChangeSourceOpen] = useState(false);
     const openChangeSource = demo ? () => setChangeSourceOpen(true) : undefined;
     const onSourceChanged = (): void => {
         webviewClient.postMessage('requestStatus');
     };
-    // Export is the umbrella for everything that can leave the project (owner,
-    // 2026-09-13): the More row opens the dialog; the setup file is saved from it.
-    const [exportOpen, setExportOpen] = useState(false);
-    const openExport = (): void => setExportOpen(true);
+    const handover = useHandoverDialogs(isEdsStable); // Export, Save as demo package
     // Inline title rename commit (null = success; string = inline error).
     const renameInline = useInlineRename();
 
@@ -155,7 +153,6 @@ export function ProjectDashboardScreen({
         handleEditProject,
         handleOpenDevConsole,
         handleDeleteProject,
-        handleExportProject,
         handleRepublishContent,
         handleRestartDemo,
         handleResetProject,
@@ -290,7 +287,8 @@ export function ProjectDashboardScreen({
                                     handleConfigure={handleConfigure}
                                     handleOpenDevConsole={handleOpenDevConsole}
                                     handleEditProject={handleEditProject}
-                                    handleExportProject={openExport}
+                                    handleExportProject={handover.openExport}
+                                    handleSaveDemoPackage={handover.openDemoPackage}
                                     handleChangeDemoSource={openChangeSource}
                                     handleResetProject={handleResetProject}
                                     handleDeleteProject={handleDeleteProject}
@@ -318,9 +316,10 @@ export function ProjectDashboardScreen({
             ) : null}
 
             {/* Export — mounted only while open, like Change source. */}
-            {exportOpen ? (
-                <ExportModal isOpen isEds={isEdsStable} onExportSetup={handleExportProject} onClose={() => setExportOpen(false)} />
+            {handover.exportOpen ? (
+                <ExportModal isOpen isEds={isEdsStable} onSaveDemoPackage={handover.saveDemoPackageFromExport} onClose={handover.closeExport} />
             ) : null}
+            {handover.demoPackageOpen ? <DemoPackageModal isOpen onClose={handover.closeDemoPackage} /> : null}
 
             {/* Capability catalog — reached from the "View AI Capabilities" link,
                 NOT the health badge. Two sections (skills + MCP servers) plus a

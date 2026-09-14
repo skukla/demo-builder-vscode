@@ -41,6 +41,8 @@ export interface FoundStageProps {
     mode?: AddDemoMode;
     /** Change mode: the project's kind, which the found demo must match. */
     currentKind?: StorefrontKind;
+    /** The zip door is creating the repository; the probe follows. */
+    importing?: boolean;
 }
 
 /** What is missing, from what the probe found, in a sentence. */
@@ -94,7 +96,11 @@ export function FoundStage({
     onUpdateRememberedChange,
     mode = 'add',
     currentKind,
+    importing = false,
 }: FoundStageProps): React.ReactElement {
+    if (importing) {
+        return <LoadingDisplay size="L" message={COPY.importing} helperText={COPY.importingFor} />;
+    }
     if (probe.status === 'idle' || probe.status === 'loading') {
         // The three-row contract: the step, the thing it is reading, what to expect.
         const repo = draft.source ? `${draft.source.owner}/${draft.source.repo}` : undefined;

@@ -6,9 +6,11 @@
  * @module features/project-creation/ui/components/add-demo/LinkStage
  */
 
+import { Button, Checkbox } from '@adobe/react-spectrum';
 import React from 'react';
 import { ChoiceCard } from '../ChoiceCard';
 import { COPY, type AddDemoDraft, type AddDemoMode } from './addDemoFlow';
+import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
 import { GitHubLinkField } from '@/core/ui/components/forms/GitHubLinkField';
 import { addedDemoId } from '@/features/components/services/storefrontResolver';
 import type { AddedDemo } from '@/types/projectFile';
@@ -20,6 +22,34 @@ export interface LinkStageProps {
     /** Pick a demo already remembered: selects its card and closes. */
     onPickRemembered: (demo: AddedDemo) => void;
     mode?: AddDemoMode;
+    /** The zip door (add mode only): absent in change mode, where a zip makes no sense. */
+    zip?: {
+        onImport: () => void;
+        importing: boolean;
+        error?: string;
+        makePublic: boolean;
+        onMakePublicChange: (on: boolean) => void;
+    };
+}
+
+function ZipDoor({ zip }: { zip: NonNullable<LinkStageProps['zip']> }): React.ReactElement {
+    return (
+        <div className="add-demo-zip" data-testid="add-demo-zip">
+            <p className="intflow-section-label">{COPY.zipLead}</p>
+            <p className="add-demo-note">{COPY.zipNote}</p>
+            <Checkbox isSelected={zip.makePublic} onChange={zip.onMakePublicChange} isDisabled={zip.importing} data-testid="zip-public">
+                {COPY.zipPublic}
+            </Checkbox>
+            <Button variant="secondary" onPress={zip.onImport} isDisabled={zip.importing}>
+                {COPY.zipButton}
+            </Button>
+            {zip.error ? (
+                <InlineNotice tone="warning" title={COPY.zipFailed} testId="zip-error">
+                    {zip.error}
+                </InlineNotice>
+            ) : null}
+        </div>
+    );
 }
 
 /**
@@ -34,6 +64,7 @@ export function LinkStage({
     onSourceChange,
     onPickRemembered,
     mode = 'add',
+    zip,
 }: LinkStageProps): React.ReactElement {
     return (
         <div className="add-demo-stage">
@@ -54,6 +85,7 @@ export function LinkStage({
                 source={source}
                 onSourceChange={onSourceChange}
             />
+            {mode === 'add' && zip ? <ZipDoor zip={zip} /> : null}
             {addedDemos.length > 0 ? (
                 <div className="add-demo-remembered">
                     <p className="intflow-section-label">{COPY.remembered}</p>

@@ -75,7 +75,7 @@ describe('WelcomeStep — forgetting an added demo', () => {
             screen.getByLabelText('More actions for Isle5 by Jen').click();
         });
         await act(async () => {
-            screen.getByRole('menuitem', { name: 'Forget' }).click();
+            screen.getByRole('menuitem', { name: 'Remove' }).click();
         });
 
         expect(request).toHaveBeenCalledWith('forget-added-demo', {
@@ -98,7 +98,7 @@ describe('WelcomeStep — forgetting an added demo', () => {
             screen.getByLabelText('More actions for Isle5 by Jen').click();
         });
         await act(async () => {
-            screen.getByRole('menuitem', { name: 'Forget' }).click();
+            screen.getByRole('menuitem', { name: 'Remove' }).click();
         });
         expect(updateState).not.toHaveBeenCalled();
 
@@ -107,7 +107,7 @@ describe('WelcomeStep — forgetting an added demo', () => {
             screen.getByLabelText('More actions for Isle5 by Jen').click();
         });
         await act(async () => {
-            screen.getByRole('menuitem', { name: 'Forget' }).click();
+            screen.getByRole('menuitem', { name: 'Remove' }).click();
         });
         expect(updateState).toHaveBeenCalledWith({ selectedPackage: undefined, demo: undefined });
     });

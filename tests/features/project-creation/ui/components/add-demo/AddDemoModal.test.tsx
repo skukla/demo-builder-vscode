@@ -3,7 +3,7 @@
  * the found panel and its conditional controls, the refusals, the commits.
  */
 
-import { act, screen } from '@testing-library/react';
+import { act, fireEvent, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import {
     JEN,
@@ -35,6 +35,24 @@ describe('AddDemoModal', () => {
         expect(screen.getByText('Demos you have added')).toBeInTheDocument();
         await click(/Isle5 by Jen/);
         expect(props.onPickRemembered).toHaveBeenCalledWith(JEN);
+    });
+
+    it('offers the zip door in add mode only, and asks the host for a private repository unless the box is ticked', async () => {
+        const change = renderModal({ mode: 'change', currentKind: 'eds' });
+        expect(screen.queryByTestId('add-demo-zip')).not.toBeInTheDocument();
+        change.unmount();
+
+        renderModal();
+        expect(screen.getByTestId('add-demo-zip')).toHaveTextContent('Or add from a zip file');
+        mockRequest.mockResolvedValueOnce({ success: true, result: { cancelled: true } });
+        await click('Choose a zip file…');
+        expect(mockRequest).toHaveBeenLastCalledWith('import-storefront-zip', { isPrivate: true });
+
+        fireEvent.click(screen.getByTestId('zip-public').querySelector('input') as HTMLInputElement);
+        mockRequest.mockResolvedValueOnce({ success: false, error: 'This zip is not an Edge Delivery storefront: it has no head.html.' });
+        await click('Choose a zip file…');
+        expect(mockRequest).toHaveBeenLastCalledWith('import-storefront-zip', { isPrivate: false });
+        expect(screen.getByTestId('zip-error')).toHaveTextContent('it has no head.html');
     });
 
     it('says when a link is already added, whatever its case', () => {

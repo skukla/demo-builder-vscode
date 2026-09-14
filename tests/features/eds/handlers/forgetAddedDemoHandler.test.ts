@@ -58,21 +58,21 @@ beforeEach(() => {
 
 describe('handleForgetAddedDemo', () => {
     it('confirms with the count of projects on this computer built on the demo, then forgets', async () => {
-        warn.mockResolvedValueOnce('Forget');
+        warn.mockResolvedValueOnce('Remove');
 
         const result = await handleForgetAddedDemo(ctx(2), REQUEST);
 
         expect(warn).toHaveBeenCalledWith(
-            'Forget "Isle5 by Jen"? It leaves the Add a demo list.',
+            'Remove "Isle5 by Jen" from your Welcome step?',
             { modal: true, detail: '2 projects on this computer were built on it and will keep working.' },
-            'Forget',
+            'Remove',
         );
         expect(forgetAddedDemo).toHaveBeenCalledWith(JEN.source);
         expect(result).toEqual({ success: true, result: { forgotten: true } });
     });
 
     it('says when no project was built on it, and never offers a delete for a repository that is not the SC\'s', async () => {
-        warn.mockResolvedValueOnce('Forget');
+        warn.mockResolvedValueOnce('Remove');
 
         await handleForgetAddedDemo(ctx(0), REQUEST);
 
@@ -80,7 +80,7 @@ describe('handleForgetAddedDemo', () => {
             modal: true,
             detail: 'No project on this computer was built on it.',
         });
-        expect(warn.mock.calls[0].slice(2)).toEqual(['Forget']);
+        expect(warn.mock.calls[0].slice(2)).toEqual(['Remove']);
     });
 
     it('does nothing when the confirmation is dismissed', async () => {
@@ -93,21 +93,21 @@ describe('handleForgetAddedDemo', () => {
     });
 
     it("offers to delete the SC's own copy, names what that costs, and deletes only after a second confirmation", async () => {
-        warn.mockResolvedValueOnce('Forget and delete my copy').mockResolvedValueOnce('Delete repository');
+        warn.mockResolvedValueOnce('Remove and delete my copy').mockResolvedValueOnce('Delete repository');
 
         const result = await handleForgetAddedDemo(ctx(), { name: OWN.name, source: OWN.source });
 
         expect(warn).toHaveBeenNthCalledWith(
             1,
-            'Forget "Isle5 by Jen"? It leaves the Add a demo list.',
+            'Remove "Isle5 by Jen" from your Welcome step?',
             {
                 modal: true,
                 detail:
                     '1 project on this computer was built on it and will keep working. ' +
                     'Deleting your copy (steve/isle5-demo) would leave them without reset and updates until they are pointed at another source.',
             },
-            'Forget',
-            'Forget and delete my copy',
+            'Remove',
+            'Remove and delete my copy',
         );
         expect(warn).toHaveBeenNthCalledWith(
             2,
@@ -121,7 +121,7 @@ describe('handleForgetAddedDemo', () => {
     });
 
     it('forgets but keeps the copy when the second confirmation is dismissed', async () => {
-        warn.mockResolvedValueOnce('Forget and delete my copy').mockResolvedValueOnce(undefined);
+        warn.mockResolvedValueOnce('Remove and delete my copy').mockResolvedValueOnce(undefined);
 
         const result = await handleForgetAddedDemo(ctx(), { name: OWN.name, source: OWN.source });
 
@@ -130,7 +130,7 @@ describe('handleForgetAddedDemo', () => {
     });
 
     it('reports a delete GitHub refused without undoing the forget', async () => {
-        warn.mockResolvedValueOnce('Forget and delete my copy').mockResolvedValueOnce('Delete repository');
+        warn.mockResolvedValueOnce('Remove and delete my copy').mockResolvedValueOnce('Delete repository');
         deleteRepository.mockRejectedValueOnce(new Error('403'));
 
         const result = await handleForgetAddedDemo(ctx(), { name: OWN.name, source: OWN.source });
@@ -149,5 +149,30 @@ describe('handleForgetAddedDemo', () => {
         const bad = await handleForgetAddedDemo(ctx(), { name: 'x', source: { owner: 'jen', repo: '../x' } });
         expect(bad.success).toBe(false);
         expect(warn).not.toHaveBeenCalled();
+    });
+
+    it("never offers to delete a repository that is one of this computer's own storefronts, and says whose it is", async () => {
+        const context = ctx();
+        const projects = await (context.stateManager.getAllProjects as jest.Mock)();
+        const own = createMockProject({
+            name: 'bodea',
+            path: '/bodea',
+            selectedStack: 'eds-accs',
+            componentInstances: {
+                'eds-storefront': { id: 'eds-storefront', name: 'EDS Storefront', type: 'frontend', status: 'ready', metadata: { githubRepo: 'steve/isle5-demo', daLiveOrg: 'steve' } },
+            },
+        });
+        (context.stateManager.getAllProjects as jest.Mock).mockResolvedValue([...projects, { name: 'bodea', path: '/bodea', lastModified: new Date(0) }]);
+        const load = context.stateManager.loadProjectFromPath as jest.Mock;
+        const before = load.getMockImplementation();
+        load.mockImplementation(async (p: string) => (p === '/bodea' ? own : before?.(p)));
+        warn.mockResolvedValueOnce('Remove');
+
+        const result = await handleForgetAddedDemo(context, { name: OWN.name, source: OWN.source });
+
+        expect(warn.mock.calls[0][1]).toEqual({ modal: true, detail: 'steve/isle5-demo is the storefront of your project "bodea"; the card goes, the project and its repository stay.' });
+        expect(warn.mock.calls[0].slice(2)).toEqual(['Remove']);
+        expect(deleteRepository).not.toHaveBeenCalled();
+        expect(result).toEqual({ success: true, result: { forgotten: true } });
     });
 });

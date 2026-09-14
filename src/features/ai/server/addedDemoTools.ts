@@ -4,7 +4,8 @@
  * - `add_shared_demo` — the dialog's "Add demo" without the dialog: read the
  *   repository, build the same row, keep a copy when asked (a fork into the
  *   SC's own account, so a real cloud write: gated by `confirm:true` exactly
- *   when it would fork), remember it.
+ *   when it would fork), remember it. With `zipPath` (step 10) the zip first
+ *   becomes a repository in the SC's account, gated the same way.
  * - `forget_added_demo` — take a demo off the Add a demo list, and with
  *   `deleteCopy` also delete the SC's own copy of its code. The human door
  *   confirms in two modals; here the gate is `confirm:true`, and the refusal
@@ -26,13 +27,16 @@ import type { McpToolServer } from './mcpToolServer';
 import { addedDemoId } from '@/features/components/services/storefrontResolver';
 import { handleAddSharedDemo } from '@/features/eds/handlers/addSharedDemoHandler';
 import { handleChangeDemoSource } from '@/features/eds/handlers/changeDemoSourceHandler';
+import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import {
     countProjectsBuiltOn,
     forgetDemo,
     isOwnCopy,
     projectsSentence,
 } from '@/features/eds/handlers/forgetAddedDemoHandler';
+import { handleImportStorefrontZip, refusalFor } from '@/features/eds/handlers/importStorefrontZipHandler';
 import { handleProbeSharedDemo } from '@/features/eds/handlers/probeSharedDemoHandler';
+import { readStorefrontZip, suggestRepoName } from '@/features/eds/services/storefront/zipStorefrontImport';
 import { addedDemoKey, readAddedDemos } from '@/features/project-creation/services/addedDemoSettings';
 import { buildAddedDemo, INITIAL_DRAFT } from '@/features/project-creation/ui/components/add-demo/addDemoFlow';
 import type { HandlerContext } from '@/types/handlers';
@@ -56,6 +60,50 @@ const LINK_SHAPE = {
 };
 
 type LinkArgs = { owner?: string; repo?: string; link?: string; name?: string };
+type ZipArgs = { zipPath?: string; repoName?: string; isPrivate?: boolean; confirm?: boolean };
+
+/**
+ * The zip door for the agent: read the zip the way the handler will, refuse
+ * what is not a storefront, and gate the repository creation behind
+ * `confirm:true` with the refusal naming the repository it would create.
+ * Answers the created repository's owner/repo, or the answer to return as is.
+ */
+async function repositoryFromZip(
+    ctx: HandlerContext,
+    args: ZipArgs & { zipPath: string },
+): Promise<{ owner: string; repo: string; fileCount: number; dropped: number } | { answer: Record<string, unknown> }> {
+    let unpacked;
+    try {
+        unpacked = readStorefrontZip(args.zipPath);
+    } catch (error) {
+        return { answer: { error: `The zip file could not be read: ${(error as Error).message}` } };
+    }
+    const refusal = await refusalFor(unpacked.files, ctx.logger);
+    if (refusal) return { answer: { error: refusal } };
+    const repoName = args.repoName?.trim() || suggestRepoName(unpacked.rootName, 'storefront');
+    if (args.confirm !== true) {
+        const login = (await getGitHubServices(ctx.context.secrets).tokenService.validateToken()).user?.login;
+        const account = login ? `your GitHub account (${login})` : 'your GitHub account';
+        return {
+            answer: {
+                error:
+                    `add_shared_demo would create the ${args.isPrivate === false ? 'public' : 'private'} repository ${repoName} in ${account} ` +
+                    `from ${args.zipPath} (${unpacked.files.size} files; ${unpacked.dropped} entries a repository would not keep are left out) and add the demo from it. ` +
+                    'Call again with confirm:true to create it, or give repoName to name it differently.',
+                repoName,
+                fileCount: unpacked.files.size,
+                dropped: unpacked.dropped,
+                wouldCreate: repoName,
+            },
+        };
+    }
+    const imported = await handleImportStorefrontZip(ctx, { zipPath: args.zipPath, repoName, isPrivate: args.isPrivate ?? true });
+    const result = imported.result as { owner?: string; repo?: string; fileCount?: number; dropped?: number } | undefined;
+    if (!imported.success || !result?.owner || !result.repo) {
+        return { answer: { error: imported.error ?? 'The zip could not be turned into a repository.' } };
+    }
+    return { owner: result.owner, repo: result.repo, fileCount: result.fileCount ?? 0, dropped: result.dropped ?? 0 };
+}
 
 /**
  * Read the repository the way the dialog does and build the row it would
@@ -112,25 +160,38 @@ export function registerAddedDemoTools(server: McpToolServer, ctxFactory: () => 
             needsAuth: ['github'],
             annotations: { readOnlyHint: false, destructiveHint: false },
             description:
-                "Add a colleague's demo (or one of your own) to the Add a demo list from its GitHub link or site address, so create_project can build on it. keepCopy (default true) forks the repository into your own GitHub account first, so the demo keeps working if the original changes; that fork needs confirm:true. Use probe_shared_demo first to see what the demo is.",
+                "Add a colleague's demo (or one of your own) to the Add a demo list from its GitHub link or site address, so create_project can build on it. keepCopy (default true) forks the repository into your own GitHub account first, so the demo keeps working if the original changes; that fork needs confirm:true. Use probe_shared_demo first to see what the demo is. With zipPath instead of a link, a storefront that arrived as a zip file first becomes a repository in your own account (private unless isPrivate:false; named after the zip unless repoName is given), which also needs confirm:true.",
             inputSchema: {
                 ...LINK_SHAPE,
                 keepCopy: z
                     .boolean()
                     .optional()
                     .describe('Fork the repository into your own account and read from the fork (default true; skipped for your own repository)'),
-                confirm: z.boolean().optional().describe('Must be true when a fork will be made'),
+                zipPath: z.string().optional().describe('Instead of a link: a zip file of the storefront on this computer'),
+                repoName: z.string().optional().describe('With zipPath: the repository to create; defaults to the zip\'s folder name'),
+                isPrivate: z.boolean().optional().describe('With zipPath: whether the created repository is private (default true)'),
+                confirm: z.boolean().optional().describe('Must be true when a fork will be made, or when a repository is created from a zip'),
             },
         },
-        async (args: LinkArgs & { keepCopy?: boolean; confirm?: boolean }) => {
+        async (args: LinkArgs & ZipArgs & { keepCopy?: boolean }) => {
             const ctx = ctxFactory();
             const github = await requireGitHub(ctx);
             if (github) return asText(github);
 
-            const row = await readDemoRow(ctx, args);
+            let fromZip: { fileCount: number; dropped: number } | undefined;
+            let where: LinkArgs = args;
+            if (args.zipPath) {
+                const created = await repositoryFromZip(ctx, { ...args, zipPath: args.zipPath });
+                if ('answer' in created) return asText(created.answer);
+                where = { owner: created.owner, repo: created.repo, name: args.name };
+                fromZip = { fileCount: created.fileCount, dropped: created.dropped };
+            }
+
+            const row = await readDemoRow(ctx, where);
             if ('error' in row) return asText(row.error);
             const { demo, read, warnings } = row;
-            const keepCopy = (args.keepCopy ?? true) && !read.viewer?.ownsRepo && !read.viewer?.existingFork;
+            // A repository created from a zip is the SC's own already; nothing to copy.
+            const keepCopy = !fromZip && (args.keepCopy ?? true) && !read.viewer?.ownsRepo && !read.viewer?.existingFork;
             if (keepCopy && args.confirm !== true) {
                 const account = read.viewer?.login ? `your GitHub account (${read.viewer.login})` : 'your GitHub account';
                 return asText({
@@ -147,7 +208,7 @@ export function registerAddedDemoTools(server: McpToolServer, ctxFactory: () => 
             // the one that exists.
             const added = await handleAddSharedDemo(ctx, {
                 demo,
-                keepCopy: (args.keepCopy ?? true) && !read.viewer?.ownsRepo,
+                keepCopy: !fromZip && (args.keepCopy ?? true) && !read.viewer?.ownsRepo,
             });
             if (!added.success || !added.result) return asText({ error: added.error });
             return asText({
@@ -157,6 +218,7 @@ export function registerAddedDemoTools(server: McpToolServer, ctxFactory: () => 
                 source: added.result.demo.source,
                 storefrontKind: added.result.demo.storefrontKind,
                 ...(added.result.forkedTo ? { forkedTo: added.result.forkedTo } : {}),
+                ...(fromZip ? { createdFromZip: `${where.owner}/${where.repo}`, ...fromZip } : {}),
                 warnings,
                 hint: 'create_project takes the id above as its package; list_demo_packages lists it beside the shipped ones.',
             });

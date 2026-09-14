@@ -1,124 +1,104 @@
 /**
- * The Export dialog: the setup-file part for every project, the storefront part
- * (a demo package) for Edge Delivery projects. The storefront part reads once on
- * open, prefills from the project, lists the checks, and commits at Save and
- * Remove only.
+ * The Export dialog: how it travels (link or file) and what goes (the parts).
+ * The link form needs the storefront to be a demo package and points at that
+ * door when it is not; the file form writes one bundle of the ticked parts.
  */
 
 import { fireEvent, screen } from '@testing-library/react';
-import {
-    answer,
-    click,
-    LINK,
-    mockRequest,
-    nameInput,
-    PREVIEW,
-    REMOVED,
-    renderExport,
-    resetExportMocks,
-    SAVED,
-    templateBox,
-} from './ExportModal.testUtils';
+import { answer, chooseFile, click, LINK, mockRequest, partBox, PREVIEW, renderExport, resetExportMocks } from './ExportModal.testUtils';
 
 describe('ExportModal', () => {
     beforeEach(resetExportMocks);
 
-    describe('the setup-file part', () => {
-        it('is offered to every project and hands the save to the host', async () => {
-            const { props } = await renderExport(undefined, { isEds: false });
-            expect(screen.getByTestId('export-setup')).toHaveTextContent('A colleague imports it to build a project with the same setup.');
-            expect(screen.queryByTestId('export-storefront')).not.toBeInTheDocument();
-            expect(mockRequest).not.toHaveBeenCalled();
+    it('opens on the link form with the two ways to hand over and the parts, built ones and not-yet ones', async () => {
+        await renderExport();
+        expect(screen.getByRole('heading', { name: 'Export' })).toBeInTheDocument();
+        expect(screen.getByTestId('export-form')).toHaveTextContent('Send a link');
+        expect(screen.getByTestId('export-form')).toHaveTextContent('Send a file');
+        const parts = screen.getByTestId('export-link-form');
+        expect(parts).toHaveTextContent('Setup');
+        expect(parts).toHaveTextContent('Travels as a file.');
+        expect(parts).toHaveTextContent('Datapack');
+        expect(parts).toHaveTextContent('Not yet.');
+    });
 
-            await click('Save setup file…');
-            expect(props.onExportSetup).toHaveBeenCalledTimes(1);
+    describe('the link form', () => {
+        it('shows the link when the storefront is a demo package', async () => {
+            await renderExport(answer({ ...PREVIEW, saved: true }));
+            expect(mockRequest).toHaveBeenCalledWith('getDemoPackagePreview');
+            expect(screen.getByTestId('export-link')).toHaveTextContent(LINK);
+            expect(screen.queryByTestId('export-not-package')).not.toBeInTheDocument();
         });
 
-        it('closes from the Close button', async () => {
+        it('points at Save as demo package when it is not one, without saving anything itself', async () => {
             const { props } = await renderExport();
-            await click('Close');
-            expect(props.onClose).toHaveBeenCalled();
+            expect(screen.getByTestId('export-not-package')).toHaveTextContent("Your storefront isn't a demo package yet");
+            await click('Save as demo package…');
+            expect(props.onSaveDemoPackage).toHaveBeenCalledTimes(1);
+            expect(mockRequest).toHaveBeenCalledTimes(1);
+        });
+
+        it('says a headless project has no storefront and never asks the host', async () => {
+            await renderExport(undefined, { isEds: false });
+            expect(screen.getByTestId('export-link-form')).toHaveTextContent('This project has no storefront of its own.');
+            expect(mockRequest).not.toHaveBeenCalled();
+        });
+
+        it("shows the storefront read's failure", async () => {
+            await renderExport({ success: false, error: 'Sign in to GitHub first.' });
+            expect(screen.getByTestId('export-link-failed')).toHaveTextContent('Sign in to GitHub first.');
         });
     });
 
-    describe('the storefront part', () => {
-        it('reads the preview on open, says what becomes of the storefront, prefills the name, and lists the checks with the republish hint', async () => {
+    describe('the file form', () => {
+        it('ticks setup and storefront by default, saves one bundle through the host, and reports what and where', async () => {
             await renderExport();
+            await chooseFile();
+            expect(partBox('part-setup').checked).toBe(true);
+            expect(partBox('part-storefront').checked).toBe(true);
+            mockRequest.mockResolvedValueOnce(answer({ path: '/Users/steve/bodea-demo-bundle.zip', fileCount: 813, bytes: 1_000, parts: ['setup', 'storefront'] }));
 
-            expect(mockRequest).toHaveBeenCalledWith('getDemoPackagePreview');
-            expect(screen.getByTestId('export-storefront')).toHaveTextContent('Puts this storefront on your Welcome step as a card.');
-            expect(nameInput().value).toBe('Bodea');
-            expect(screen.getByTestId('package-check-repository')).toHaveTextContent('steve/kukla-bodea is public.');
-            expect(screen.getByTestId('package-check-index')).toHaveTextContent('Republish, then save again.');
-            expect(templateBox().checked).toBe(false);
-            expect(screen.queryByRole('button', { name: 'Remove demo package' })).not.toBeInTheDocument();
-            expect(screen.queryByTestId('package-link')).not.toBeInTheDocument();
+            await click('Save file…');
+
+            expect(mockRequest).toHaveBeenLastCalledWith('exportDemoBundle', { setup: true, storefront: true });
+            expect(screen.getByTestId('export-saved')).toHaveTextContent('Saved setup and storefront (813 files) to /Users/steve/bodea-demo-bundle.zip');
         });
 
-        it('shows the refusal when the storefront cannot become a demo package', async () => {
-            await renderExport({ success: false, error: 'Only an Edge Delivery project can become a demo package from here.' });
-            expect(screen.getByText("This storefront can't become a demo package")).toBeInTheDocument();
-            expect(screen.getByText(/Only an Edge Delivery project/)).toBeInTheDocument();
-            expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument();
-        });
-
-        it('sends the edited name, the description and the template choice at Save, then shows the link', async () => {
+        it('sends only the ticked parts, refuses none, and leaves the storefront off for a headless project', async () => {
             await renderExport();
-            fireEvent.change(nameInput(), { target: { value: ' Bodea by Steve ' } });
-            fireEvent.click(templateBox());
-            mockRequest.mockResolvedValueOnce(answer({ ...SAVED, templateFlagSet: true }));
+            await chooseFile();
+            fireEvent.click(partBox('part-storefront'));
+            mockRequest.mockResolvedValueOnce(answer({ path: '/p/x.json', fileCount: 1, parts: ['setup'] }));
+            await click('Save file…');
+            expect(mockRequest).toHaveBeenLastCalledWith('exportDemoBundle', { setup: true, storefront: false });
 
-            await click('Save');
-
-            expect(mockRequest).toHaveBeenLastCalledWith('saveDemoPackage', {
-                name: 'Bodea by Steve',
-                description: 'Bodea-branded B2B demo',
-                markTemplate: true,
-            });
-            expect(screen.getByTestId('package-link')).toHaveTextContent("Saved. It's on your Welcome step now.");
-            expect(screen.getByTestId('package-link')).toHaveTextContent(LINK);
-            expect(screen.getByRole('button', { name: 'Remove demo package' })).toBeInTheDocument();
-            expect(screen.getByRole('button', { name: 'Update' })).toBeInTheDocument();
+            fireEvent.click(partBox('part-setup'));
+            expect(screen.getByRole('button', { name: 'Save file…' })).toBeDisabled();
+            expect(screen.getByTestId('export-file-form')).toHaveTextContent('Tick at least one part.');
         });
 
-        it('disables Save while the name is empty', async () => {
+        it('starts with the storefront off and disabled for a headless project, and shows a failure', async () => {
+            await renderExport(undefined, { isEds: false });
+            await chooseFile();
+            expect(partBox('part-storefront').checked).toBe(false);
+            expect(partBox('part-storefront').disabled).toBe(true);
+            mockRequest.mockResolvedValueOnce({ success: false, error: 'Failed to download archive: HTTP 404' });
+            await click('Save file…');
+            expect(screen.getByTestId('export-error')).toHaveTextContent('HTTP 404');
+        });
+
+        it('says nothing when the save dialog is dismissed', async () => {
             await renderExport();
-            fireEvent.change(nameInput(), { target: { value: '   ' } });
-            expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+            await chooseFile();
+            mockRequest.mockResolvedValueOnce(answer({ cancelled: true }));
+            await click('Save file…');
+            expect(screen.queryByTestId('export-saved')).not.toBeInTheDocument();
         });
+    });
 
-        it('says when the file in the repository was not ours and was left alone, and that the card is saved anyway', async () => {
-            await renderExport();
-            mockRequest.mockResolvedValueOnce(
-                answer({ ...SAVED, file: 'skipped', fileReason: 'demo.demo-builder.json is already there and was not written by Demo Builder, or was edited since.' }),
-            );
-            await click('Save');
-            expect(screen.getByTestId('package-skipped')).toHaveTextContent('Card saved; the file in your repository was left alone');
-            expect(screen.getByTestId('package-skipped')).toHaveTextContent('was not written by Demo Builder');
-            expect(screen.queryByTestId('package-link')).not.toBeInTheDocument();
-        });
-
-        it('offers Remove for a saved package (or a card already on the list) and reports what it undid', async () => {
-            await renderExport(answer({ ...PREVIEW, saved: false, onList: true, templateFlagSet: true }));
-            expect(screen.getByTestId('package-link')).toHaveTextContent(LINK);
-            expect(templateBox().checked).toBe(true);
-            mockRequest.mockResolvedValueOnce(answer(REMOVED));
-
-            await click('Remove demo package');
-
-            expect(mockRequest).toHaveBeenLastCalledWith('removeDemoPackage');
-            expect(screen.getByTestId('package-removed')).toHaveTextContent('The card is off your Welcome step and the file is out of your repository.');
-            expect(screen.queryByRole('button', { name: 'Remove demo package' })).not.toBeInTheDocument();
-            expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument();
-            expect(templateBox().checked).toBe(false);
-        });
-
-        it('shows a failed commit as a notice and keeps the form', async () => {
-            await renderExport();
-            mockRequest.mockResolvedValueOnce({ success: false, error: 'GitHub refused the write.' });
-            await click('Save');
-            expect(screen.getByTestId('package-error')).toHaveTextContent('GitHub refused the write.');
-            expect(nameInput().value).toBe('Bodea');
-        });
+    it('closes from the Close button', async () => {
+        const { props } = await renderExport();
+        await click('Close');
+        expect(props.onClose).toHaveBeenCalled();
     });
 });

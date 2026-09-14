@@ -29,6 +29,7 @@ import { handleCheckDaLiveAuth, handleClearDaLiveAuth, handleOpenDaLiveLogin, ha
 import { handleCheckGitHubAuth, handleCreateGitHubRepo, handleGetGitHubRepos, handleGitHubChangeAccount, handleGitHubOAuth } from '@/features/eds/handlers/edsGitHubHandlers';
 import { handleDiscoverStoreStructure } from '@/features/eds/handlers/edsHandlers';
 import { handleForgetAddedDemo } from '@/features/eds/handlers/forgetAddedDemoHandler';
+import { handleImportStorefrontZip } from '@/features/eds/handlers/importStorefrontZipHandler';
 import { handleProbeSharedDemo } from '@/features/eds/handlers/probeSharedDemoHandler';
 import { handleCancelStorefrontSetup, handleStartStorefrontSetup } from '@/features/eds/handlers/storefrontSetup/storefrontSetupHandlers';
 import { meshHandlers } from '@/features/mesh/handlers/meshHandlers';
@@ -108,6 +109,8 @@ export const projectCreationHandlers = defineHandlers({
     // Reads a colleague's repository before "Add a demo" offers it (step 04's dialog).
     'probe-shared-demo': handleProbeSharedDemo,
     'add-shared-demo': handleAddSharedDemo,
+    // The dialog's second way in: a zip becomes a repository in the SC's account.
+    'import-storefront-zip': handleImportStorefrontZip,
     // Takes a demo off the list; confirms host-side, naming the projects built on it.
     'forget-added-demo': handleForgetAddedDemo,
     // The dialog's change mode commits here; the wizard never opens that mode,

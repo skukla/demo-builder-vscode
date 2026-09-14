@@ -17,6 +17,44 @@
         border-top: 1px solid var(--spectrum-global-color-gray-300);
     }
 
+    .export-parts {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .export-part {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        font-size: 13px;
+        line-height: 1.4;
+    }
+
+    .export-part-off {
+        color: var(--spectrum-global-color-gray-600);
+    }
+
+    .export-part-name {
+        font-weight: 600;
+    }
+
+    .export-part-note {
+        font-size: 12px;
+        line-height: 1.4;
+        color: var(--spectrum-global-color-gray-700);
+    }
+
+    .export-file-form {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
     .export-section-text {
         margin: 0;
         font-size: 13px;

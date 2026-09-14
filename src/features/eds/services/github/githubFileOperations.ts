@@ -434,6 +434,23 @@ export class GitHubFileOperations {
      * @param treeEntries - Array of tree entries to create
      * @returns The SHA of the created tree
      */
+    /**
+     * Create a blob from base64 bytes, for a binary file a tree entry cannot carry
+     * inline (fonts and images in a storefront pushed from a zip).
+     *
+     * @returns The blob sha, for a tree entry's `sha`
+     */
+    async createBlob(owner: string, repo: string, base64Content: string): Promise<string> {
+        const octokit = await this.ensureAuthenticated();
+        const response = await octokit.request('POST /repos/{owner}/{repo}/git/blobs', {
+            owner,
+            repo,
+            content: base64Content,
+            encoding: 'base64',
+        });
+        return response.data.sha;
+    }
+
     async createTree(
         owner: string,
         repo: string,
@@ -640,11 +657,14 @@ export class GitHubFileOperations {
      * @param ref - Git ref (branch/tag/commit) - default: 'main'
      * @returns Map of path -> content
      */
-    private async downloadRepoContents(
-        owner: string,
-        repo: string,
-        ref = 'main',
-    ): Promise<Map<string, string>> {
+    /**
+     * The repository's archive at `ref` as GitHub serves it: a zip with one root
+     * folder. Shared by the template reset (which reads it) and "Storefront as a
+     * zip file" (which hands it to the SC with the description file added).
+     *
+     * @returns The zip's bytes
+     */
+    async downloadRepoArchive(owner: string, repo: string, ref = 'main'): Promise<Buffer> {
         const token = await this.tokenService.getToken();
         if (!token) {
             throw new Error(ERROR_MESSAGES.NOT_AUTHENTICATED);
@@ -665,11 +685,19 @@ export class GitHubFileOperations {
             throw new Error(`Failed to download archive: HTTP ${response.status}`);
         }
 
-        const arrayBuffer = await response.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
+        const buffer = Buffer.from(await response.arrayBuffer());
         this.logger.debug(
             `[GitHub] Downloaded ${(buffer.length / 1024 / 1024).toFixed(2)} MB archive`,
         );
+        return buffer;
+    }
+
+    private async downloadRepoContents(
+        owner: string,
+        repo: string,
+        ref = 'main',
+    ): Promise<Map<string, string>> {
+        const buffer = await this.downloadRepoArchive(owner, repo, ref);
 
         // Extract files from zipball
         const zip = new AdmZip(buffer);

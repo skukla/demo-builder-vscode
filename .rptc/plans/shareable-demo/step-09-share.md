@@ -103,6 +103,18 @@ since an agent picks parts by tool. Every sentence in the dialog was tightened t
 (the walkthrough the owner asked for is in the session; the copy lives in `PACKAGE_COPY` and
 `EXPORT_COPY`).
 
+**Two verbs, two doors (owner, 2026-09-13, later the same day).** The owner drew the line
+that settled the naming for good: saving a package is about the SC (a new card on their own
+Welcome step, from a demo they built), exporting is about someone else (handing over an
+artifact). "Save as demo package" went back to its own More row and its own dialog
+(`DemoPackageModal`); Export became two questions, how it travels (a link or a file) and
+what goes (the parts), with the storefront-by-link part depending on the package existing
+and pointing at the Save door when it does not. The file form writes one bundle
+(`demoBundle.ts`, `exportDemoBundleHandler.ts`, `export_demo_bundle`), which the zip door
+reads. The dashboard's old direct settings export (`exportProject`) is gone: the file form
+with Setup alone is that path. The Welcome card's Remove is always visible and never offers
+to delete a repository that is one of the SC's own storefronts.
+
 **Not built, by decision.** "Publish it now?" for a missing datapack waits on [[DI-3]]. The
 "Make it public?" offer for a private custom app is a sentence, not a button, for now: the
 check names the repository and says colleagues need access. The open question below stays

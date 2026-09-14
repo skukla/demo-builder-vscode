@@ -34,6 +34,32 @@ export interface ProbeSharedDemoRequest {
     link?: string;
 }
 
+/**
+ * "Add a storefront from a zip file" (step 10): the host picks the file when no
+ * path is given, unpacks it, creates a repository in the SC's own account and
+ * pushes the files; the dialog then continues as for a link.
+ */
+export interface ImportStorefrontZipRequest {
+    /** Absent from the webview: the host opens its file picker. */
+    zipPath?: string;
+    /** Defaults to the zip's root folder name. */
+    repoName?: string;
+    /** Private by default; the dialog's tick box makes it public. */
+    isPrivate?: boolean;
+}
+
+export interface ImportStorefrontZipResult {
+    /** The picker was dismissed; nothing was created. */
+    cancelled?: boolean;
+    owner?: string;
+    repo?: string;
+    fullName?: string;
+    /** How many files were pushed, and how many entries the zip held that a repository would not. */
+    fileCount?: number;
+    dropped?: number;
+    isPrivate?: boolean;
+}
+
 /** Which of the storefront kinds a repository holds, or that it holds none. */
 export type SharedDemoKind = StorefrontKind | 'not-a-storefront';
 
@@ -183,6 +209,29 @@ export interface SaveDemoPackageResult {
     onList: true;
     templateFlagSet: boolean;
     checks: DemoPackageCheck[];
+}
+
+/**
+ * Export, "Send a file": one bundle with the ticked parts (owner, 2026-09-13).
+ * Saved where the SC says (the host's save dialog), or at `path` inside the
+ * project directory when an agent asks. Setup alone is the plain settings file
+ * the projects list imports today; anything with the storefront is a bundle.
+ */
+export interface ExportDemoBundleRequest {
+    path?: string;
+    /** The setup part (default true). */
+    setup?: boolean;
+    /** The storefront part (default true; Edge Delivery projects only). */
+    storefront?: boolean;
+}
+
+export interface ExportDemoBundleResult {
+    /** The save dialog was dismissed; nothing was written. */
+    cancelled?: boolean;
+    path?: string;
+    fileCount?: number;
+    bytes?: number;
+    parts?: Array<'setup' | 'storefront'>;
 }
 
 export interface RemoveDemoPackageResult {

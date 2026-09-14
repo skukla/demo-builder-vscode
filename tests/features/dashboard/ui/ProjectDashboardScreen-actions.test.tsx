@@ -11,10 +11,8 @@ jest.mock('@/features/dashboard/ui/components/export/ExportModal', () => ({
     // The real dialog renders the core Modal, whose Spectrum pieces this suite's
     // partial Spectrum mock does not carry (same reason the Add a demo dialog is
     // stubbed in the demo-source suite). Its own suite renders it real.
-    ExportModal: ({ isEds, onExportSetup, onClose }: any) => (
+    ExportModal: ({ onClose }: any) => (
         <div role="dialog" aria-label="Export">
-            <button onClick={onExportSetup}>Save setup file…</button>
-            {isEds ? <div data-testid="export-storefront" /> : null}
             <button onClick={onClose}>Close</button>
         </div>
     ),
@@ -173,15 +171,13 @@ describe('ProjectDashboardScreen - Action Buttons', () => {
             expect(ctx.mockPostMessage).toHaveBeenCalledWith('editProject');
         });
 
-        it('opens the Export dialog when Export clicked, and sends exportProject from its setup-file button', async () => {
+        it('opens the Export dialog when Export clicked, and posts nothing by itself', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             renderDashboard();
 
             await user.click(screen.getByText('Export'));
+            expect(screen.getByRole('dialog', { name: 'Export' })).toBeInTheDocument();
             expect(ctx.mockPostMessage).not.toHaveBeenCalledWith('exportProject');
-
-            await user.click(screen.getByRole('button', { name: 'Save setup file…' }));
-            expect(ctx.mockPostMessage).toHaveBeenCalledWith('exportProject');
         });
 
         it('should send resetProject message when Reset clicked', async () => {

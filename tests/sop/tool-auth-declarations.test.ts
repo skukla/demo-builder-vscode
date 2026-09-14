@@ -51,13 +51,14 @@ const EXPECTED: Record<string, number> = {
     // same day for probe_shared_demo and add_shared_demo (step 07).
     // 14 -> 17 on 2026-09-13: get_demo_package_preview, save_demo_package and
     // remove_demo_package (step 09) read and write the SC's own storefront repository.
-    github: 17,
+    // 17 -> 18 on 2026-09-13: export_demo_bundle reads the SC's own repository archive.
+    github: 18,
     commerce: 2,
     none: 45,
 };
 
 /**
- * 116 tools, and the counts above sum to 120 provider slots — a difference of FOUR,
+ * 117 tools, and the counts above sum to 121 provider slots — a difference of FOUR,
  * which is exactly the four tools the original commit says need two sign-ins each
  * (check_github_app, create_project, republish, sync_content). That arithmetic is the
  * cross-check: the derivation below reproduces both numbers from the source without
@@ -67,7 +68,7 @@ const EXPECTED: Record<string, number> = {
  * files. That counts text, not declarations, and was roughly double. The CONTROL below
  * caught it — which is the argument for having one.)
  */
-const EXPECTED_TOOLS = 116;
+const EXPECTED_TOOLS = 117;
 
 interface Declaration {
     name: string;
