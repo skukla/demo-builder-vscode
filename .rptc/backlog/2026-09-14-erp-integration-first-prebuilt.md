@@ -52,3 +52,4 @@ the flyout, the agent tools · 06 live acceptance on Bodea and docs.
 ## Shipped so far
 
 - 2026-09-14  docs(rptc): plan the ERP integration, the first pre-built catalog entry (`2b3490a65`)
+- 2026-09-14  docs(rptc): record the ERP integration build and what its deploys taught (`c5ec66682`)
