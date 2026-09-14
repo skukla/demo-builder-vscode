@@ -14,6 +14,10 @@ jest.mock('@/core/ui/utils/vscode-api', () => ({
     webviewClient: { request: (...args: unknown[]) => mockRequest(...args) },
 }));
 
+/** The clipboard the Copy link button writes to; jsdom has none. */
+export const mockWriteText = jest.fn();
+Object.defineProperty(navigator, 'clipboard', { value: { writeText: (...a: unknown[]) => mockWriteText(...a) }, configurable: true });
+
 // The SUT binds below the mocks on purpose (webview-test-authoring §3).
 import { ExportModal, type ExportModalProps } from '@/features/dashboard/ui/components/export/ExportModal';
 import type { DemoPackagePreview } from '@/types/webviewRequests';
@@ -35,15 +39,23 @@ export function answer<D>(data: D): { success: true; data: D } {
 /** The link form reads the storefront preview on open for an Edge Delivery project. */
 export async function renderExport(preview: unknown = answer(PREVIEW), overrides: Partial<ExportModalProps> = {}) {
     if (overrides.isEds !== false) mockRequest.mockResolvedValueOnce(preview);
-    const props: ExportModalProps = { isOpen: true, isEds: true, onClose: jest.fn(), onSaveDemoPackage: jest.fn(), ...overrides };
+    const props: ExportModalProps = { isOpen: true, isEds: true, onClose: jest.fn(), ...overrides };
     const view = render(<ExportModal {...props} />);
     await settle();
     return { ...view, props };
 }
 
+/** Render with the storefront read left unanswered, so the loading state stays up. */
+export function renderExportPending(): void {
+    mockRequest.mockReturnValueOnce(new Promise(() => undefined));
+    render(<ExportModal isOpen isEds onClose={jest.fn()} />);
+}
+
 export function resetExportMocks(): void {
     jest.clearAllMocks();
     mockRequest.mockReset();
+    mockWriteText.mockReset();
+    mockWriteText.mockResolvedValue(undefined);
 }
 
 export function button(name: string | RegExp): HTMLElement {

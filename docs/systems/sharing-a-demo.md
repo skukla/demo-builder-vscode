@@ -192,22 +192,23 @@ This is about you. Handing the demo to someone else is Export.
 
 ## Export
 
-**More → Export** hands this demo to someone else. It asks two things: **how** it travels,
-and **what** goes.
+**More → Export** hands this demo to someone else. It asks **how** it travels first.
 
 - **Send a link**, when the colleague can reach your GitHub and the shared services. Keeps
-  the history, and they get your later changes. Sending the storefront by link needs it to
-  be a demo package, because a colleague's "Add a demo" reads the description file the
-  package carries; if it is not one yet, Export says so and opens Save as demo package for
-  you. Once it is, Export shows the link to send. Your setup travels only as a file.
-- **Send a file**, when they can't. One zip, `<project>-demo-bundle.zip`, with the parts you
-  tick: **Setup** (your Commerce, Adobe, GitHub and DA.live settings, never a credential) and
-  **Storefront** (the repository's code with the demo's description file inside). A colleague
-  adds the storefront with "Or add from a zip file", which reads the bundle. Setup alone
-  writes the plain settings file the projects list imports today.
+  the history, and they get your later changes. The form is the link and **Copy link**. A
+  link carries nothing itself, so the first Copy also writes the demo's name and description
+  into your repository (the description file above, prefilled from the project), and the
+  form says so in one line; that is what puts your name on the colleague's card instead of
+  the repository's. A storefront that already carries the file is only copied. Nothing has
+  to be saved first. Your setup travels only as a file.
+- **Send a file**, when they can't. One zip, `<project>-demo-bundle.zip`. **What to include**
+  lists the two parts you can tick: **Setup** (your Commerce, Adobe, GitHub and DA.live
+  settings, never a credential) and **Storefront** (the repository's code with the demo's
+  description file inside). A colleague adds the storefront with "Or add from a zip file",
+  which reads the bundle. Setup alone writes the plain settings file the projects list
+  imports today.
 
-Parts not built yet (datapack, content, integrations) are listed greyed, so the shape of
-what is coming is visible.
+Parts that do not exist yet are not listed. When one is built, it is added to the file form.
 
 **Receiving a file.** A colleague has two doors, and both read a bundle as well as a bare
 storefront zip. On the projects list, **Import** takes the bundle: the storefront becomes a

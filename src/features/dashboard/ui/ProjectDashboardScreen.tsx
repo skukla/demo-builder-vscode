@@ -317,7 +317,7 @@ export function ProjectDashboardScreen({
 
             {/* Export — mounted only while open, like Change source. */}
             {handover.exportOpen ? (
-                <ExportModal isOpen isEds={isEdsStable} onSaveDemoPackage={handover.saveDemoPackageFromExport} onClose={handover.closeExport} />
+                <ExportModal isOpen isEds={isEdsStable} onClose={handover.closeExport} />
             ) : null}
             {handover.demoPackageOpen ? <DemoPackageModal isOpen onClose={handover.closeDemoPackage} /> : null}
 

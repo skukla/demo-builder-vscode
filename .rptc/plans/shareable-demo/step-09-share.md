@@ -131,6 +131,15 @@ open.
   for a project with a package record. Found while answering "what if the repo already
   exists": the reset replaced the tree and the file was silently gone while the project
   still recorded a package.
+- Export: the "What goes" list is gone. The link form is the link and Copy link. The owner
+  asked why being a package was a prerequisite for the link; it was not one: the probe reads a
+  storefront with no description file (`sharedDemoProbe`, absent-tolerant). Then: "get rid of
+  the scary-looking warning and requirement". Copy link now writes the description itself the
+  first time (`saveDemoPackage`, the prefilled draft) and copies; one calm line says so. The
+  Export → Save hand-off (`saveDemoPackageFromExport`, `onSaveDemoPackage`) is gone. The
+  dialog reads the storefront before showing anything, in the house spinner.
+  The file form's list is "What to include" with the two parts that exist; the greyed
+  "Not yet" rows for datapack, content and integrations are gone. A dialog is not a roadmap.
 - The template tick box is gone, with `markTemplate`, `templateFlagSet` and
   `templateFlagUnset`. It served only the by-hand "Use this template" path, and a copy made
   from a template has no upstream, so "Jen has updated this demo" could never work for it.

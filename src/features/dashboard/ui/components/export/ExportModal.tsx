@@ -1,11 +1,15 @@
 /**
- * ExportModal — hand this demo to someone else (owner, 2026-09-13). Two
- * questions, not one list: HOW it travels (a link, when the colleague can reach
- * your GitHub and the shared services; a file, when they cannot) and WHAT
- * leaves (the parts). Parts not built yet are shown greyed so the shape is
- * visible. Sending the storefront by link needs it to be a demo package, which
- * is the SC's own act in its own door ("Save as demo package"); Export points
- * there rather than saving silently.
+ * ExportModal — hand this demo to someone else (owner, 2026-09-13). One
+ * question first: HOW it travels (a link, when the colleague can reach your
+ * GitHub and the shared services; a file, when they cannot). The link form is
+ * the link and a Copy button, nothing else. A link carries nothing itself, so
+ * the demo's name and description have to be IN the repository for a
+ * colleague's card to show them; Copy link writes them there (through the same
+ * handler as Save as demo package, with the prefilled draft) the first time,
+ * then copies. No warning, no prerequisite, no second dialog (owner,
+ * 2026-09-14: "saving as a demo package should not be required for an export").
+ * The file form asks what to include: the two parts that exist. Parts not built
+ * are not shown; a dialog is not a roadmap.
  *
  * @module features/dashboard/ui/components/export/ExportModal
  */
@@ -14,11 +18,18 @@ import { Button, Checkbox, DialogContainer } from '@adobe/react-spectrum';
 import React, { useEffect, useState } from 'react';
 import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
-import { CopyableText } from '@/core/ui/components/ui/CopyableText';
+import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { Modal } from '@/core/ui/components/ui/Modal';
+import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
 import { ChoiceCard } from '@/features/project-creation/ui/components/ChoiceCard';
-import type { DemoPackagePreview, ExportDemoBundleRequest, ExportDemoBundleResult } from '@/types/webviewRequests';
+import type {
+    DemoPackagePreview,
+    ExportDemoBundleRequest,
+    ExportDemoBundleResult,
+    SaveDemoPackageRequest,
+    SaveDemoPackageResult,
+} from '@/types/webviewRequests';
 
 export type ExportForm = 'link' | 'file';
 
@@ -29,23 +40,22 @@ export const EXPORT_COPY = {
     linkWhy: 'For a colleague who can reach your GitHub. Keeps the history, and they get your later changes.',
     file: 'Send a file',
     fileWhy: "For a colleague who can't. One zip with the parts you tick. No history, no later changes.",
-    what: 'What goes',
+    whatFile: 'What to include',
     setup: 'Setup',
     setupWhat: 'Your Commerce, Adobe, GitHub and DA.live settings. Never a credential.',
-    setupNoLink: 'Travels as a file.',
     storefront: 'Storefront',
-    storefrontWhat: "The storefront's code and content site, with the demo's description.",
+    storefrontWhat: "The storefront's code and content site.",
     storefrontHeadless: 'This project has no storefront of its own.',
-    notYet: 'Not yet.',
-    datapack: 'Datapack',
-    content: 'Content',
-    integrations: 'Integrations',
+    linkHeadless: 'This project has no storefront of its own. Send a file instead.',
     looking: 'Checking the storefront',
-    isPackage: 'Your storefront is a demo package. Send this link:',
-    linkHow: 'Colleagues paste it into "Add a demo", or hand it to their agent.',
-    notPackage: "Your storefront isn't a demo package yet",
-    notPackageWhy: 'A colleague\'s "Add a demo" reads the description file a demo package carries. Save it as one, then the link works.',
-    savePackage: 'Save as demo package…',
+    lookingFor: 'Reading the repository and the published pages.',
+    isPackage: 'Send this link:',
+    linkHow: 'Colleagues paste it into "Add a demo". They get your storefront\'s code and content, and your later changes.',
+    linkWrites: "Copying also writes the demo's name and description into your repository, so that is what their card shows.",
+    copyLink: 'Copy link',
+    copied: 'Copied',
+    preparing: 'Preparing…',
+    copyFailed: "Couldn't prepare the link",
     saveFile: 'Save file…',
     saving: 'Saving…',
     nothingTicked: 'Tick at least one part.',
@@ -64,8 +74,6 @@ export interface ExportModalProps {
     onClose: () => void;
     /** Edge Delivery project: the storefront part applies. */
     isEds: boolean;
-    /** Opens "Save as demo package" (the link form's missing prerequisite). */
-    onSaveDemoPackage: () => void;
 }
 
 function FormChoice({ form, onChange }: { form: ExportForm; onChange: (form: ExportForm) => void }): React.ReactElement {
@@ -80,20 +88,23 @@ function FormChoice({ form, onChange }: { form: ExportForm; onChange: (form: Exp
     );
 }
 
-function GreyedPart({ name, note }: { name: string; note: string }): React.ReactElement {
-    return (
-        <li className="export-part export-part-off">
-            <span className="export-part-name">{name}</span>
-            <span className="export-part-note">{note}</span>
-        </li>
-    );
-}
+/** What the dialog knows about the storefront: read once on open, before anything else shows. */
+type StorefrontState =
+    | { status: 'loading' }
+    | { status: 'none' }
+    | { status: 'failed'; error: string }
+    | { status: 'ready'; preview: DemoPackagePreview };
 
-type LinkState = { status: 'loading' } | { status: 'failed'; error: string } | { status: 'ready'; preview: DemoPackagePreview };
-
-function StorefrontByLink({ onSaveDemoPackage }: { onSaveDemoPackage: () => void }): React.ReactElement {
-    const [state, setState] = useState<LinkState>({ status: 'loading' });
+/**
+ * The one read the dialog makes. A headless project has no storefront to read,
+ * so it is ready at once; an Edge Delivery project shows the house spinner
+ * until the answer is in (owner, 2026-09-14: a dialog that needs to check
+ * something shows the spinner first, then its UX).
+ */
+function useStorefrontState(isEds: boolean): StorefrontState {
+    const [state, setState] = useState<StorefrontState>(isEds ? { status: 'loading' } : { status: 'none' });
     useEffect(() => {
+        if (!isEds) return undefined;
         let cancelled = false;
         webviewClient
             .request<Answer<DemoPackagePreview>>('getDemoPackagePreview')
@@ -108,51 +119,83 @@ function StorefrontByLink({ onSaveDemoPackage }: { onSaveDemoPackage: () => void
         return () => {
             cancelled = true;
         };
-    }, []);
-    if (state.status === 'loading') return <LoadingDisplay size="S" message={EXPORT_COPY.looking} />;
-    if (state.status === 'failed') {
-        return (
+    }, [isEds]);
+    return state;
+}
+
+/**
+ * The link, and the one act on it. Copy writes the description file first when
+ * the storefront does not carry one yet, so the colleague's card reads the
+ * demo's name rather than the repository's; a storefront that already has it
+ * is only copied.
+ */
+function LinkCopy({ preview }: { preview: DemoPackagePreview }): React.ReactElement {
+    const [saved, setSaved] = useState(preview.saved);
+    const [busy, setBusy] = useState(false);
+    const [copied, setCopied] = useState(false);
+    const [error, setError] = useState<string | undefined>();
+    const copy = async (): Promise<void> => {
+        setBusy(true);
+        setError(undefined);
+        try {
+            if (!saved) {
+                const request: SaveDemoPackageRequest = { name: preview.draft.name, description: preview.draft.description };
+                const answer = await webviewClient.request<Answer<SaveDemoPackageResult>>('saveDemoPackage', request);
+                if (!answer.success || !answer.data) {
+                    setError(answer.error ?? EXPORT_COPY.copyFailed);
+                    return;
+                }
+                setSaved(true);
+            }
+            await navigator.clipboard.writeText(preview.link);
+            setCopied(true);
+            setTimeout(() => setCopied(false), FRONTEND_TIMEOUTS.LOADING_MIN_DISPLAY);
+        } catch (failure) {
+            setError((failure as Error).message);
+        } finally {
+            setBusy(false);
+        }
+    };
+    const label = busy ? EXPORT_COPY.preparing : copied ? EXPORT_COPY.copied : EXPORT_COPY.copyLink;
+    return (
+        <div className="export-link" data-testid="export-link">
+            <span className="export-part-name">{EXPORT_COPY.isPackage}</span>
+            <div className="export-link-row">
+                <code className="export-link-text">{preview.link}</code>
+                <Button variant="accent" onPress={() => void copy()} isDisabled={busy} data-testid="export-copy-link">
+                    {label}
+                </Button>
+            </div>
+            <span className="export-part-note">
+                {EXPORT_COPY.linkHow}
+                {saved ? '' : ` ${EXPORT_COPY.linkWrites}`}
+            </span>
+            {error ? (
+                <InlineNotice tone="warning" title={EXPORT_COPY.copyFailed} testId="export-copy-failed">
+                    {error}
+                </InlineNotice>
+            ) : null}
+        </div>
+    );
+}
+
+function LinkForm({ state }: { state: StorefrontState }): React.ReactElement {
+    let body: React.ReactElement;
+    if (state.status === 'ready') {
+        body = <LinkCopy preview={state.preview} />;
+    } else if (state.status === 'failed') {
+        body = (
             <InlineNotice tone="warning" title={EXPORT_COPY.storefront} testId="export-link-failed">
                 {state.error}
             </InlineNotice>
         );
-    }
-    if (state.preview.saved) {
-        return (
-            <InlineNotice tone="info" title={EXPORT_COPY.isPackage} hint={EXPORT_COPY.linkHow} testId="export-link">
-                <CopyableText>{state.preview.link}</CopyableText>
-            </InlineNotice>
-        );
+    } else {
+        body = <p className="export-section-text">{EXPORT_COPY.linkHeadless}</p>;
     }
     return (
-        <InlineNotice
-            tone="warning"
-            title={EXPORT_COPY.notPackage}
-            testId="export-not-package"
-            action={
-                <Button variant="secondary" onPress={onSaveDemoPackage}>
-                    {EXPORT_COPY.savePackage}
-                </Button>
-            }
-        >
-            {EXPORT_COPY.notPackageWhy}
-        </InlineNotice>
-    );
-}
-
-function LinkForm({ isEds, onSaveDemoPackage }: Pick<ExportModalProps, 'isEds' | 'onSaveDemoPackage'>): React.ReactElement {
-    return (
-        <ul className="export-parts" data-testid="export-link-form">
-            <GreyedPart name={EXPORT_COPY.setup} note={EXPORT_COPY.setupNoLink} />
-            <li className="export-part">
-                <span className="export-part-name">{EXPORT_COPY.storefront}</span>
-                <span className="export-part-note">{EXPORT_COPY.storefrontWhat}</span>
-                {isEds ? <StorefrontByLink onSaveDemoPackage={onSaveDemoPackage} /> : <span className="export-part-note">{EXPORT_COPY.storefrontHeadless}</span>}
-            </li>
-            <GreyedPart name={EXPORT_COPY.datapack} note={EXPORT_COPY.notYet} />
-            <GreyedPart name={EXPORT_COPY.content} note={EXPORT_COPY.notYet} />
-            <GreyedPart name={EXPORT_COPY.integrations} note={EXPORT_COPY.notYet} />
-        </ul>
+        <div className="export-link-form" data-testid="export-link-form">
+            {body}
+        </div>
     );
 }
 
@@ -185,6 +228,7 @@ function FileForm({ isEds }: Pick<ExportModalProps, 'isEds'>): React.ReactElemen
     const nothing = !setup && !storefront;
     return (
         <div className="export-file-form" data-testid="export-file-form">
+            <p className="intflow-section-label">{EXPORT_COPY.whatFile}</p>
             <ul className="export-parts">
                 <li className="export-part">
                     <Checkbox isSelected={setup} onChange={setSetup} data-testid="part-setup">
@@ -198,9 +242,6 @@ function FileForm({ isEds }: Pick<ExportModalProps, 'isEds'>): React.ReactElemen
                     </Checkbox>
                     <span className="export-part-note">{isEds ? EXPORT_COPY.storefrontWhat : EXPORT_COPY.storefrontHeadless}</span>
                 </li>
-                <GreyedPart name={EXPORT_COPY.datapack} note={EXPORT_COPY.notYet} />
-                <GreyedPart name={EXPORT_COPY.content} note={EXPORT_COPY.notYet} />
-                <GreyedPart name={EXPORT_COPY.integrations} note={EXPORT_COPY.notYet} />
             </ul>
             <Button variant="accent" onPress={save} isDisabled={busy || nothing}>
                 {busy ? EXPORT_COPY.saving : EXPORT_COPY.saveFile}
@@ -220,15 +261,21 @@ function FileForm({ isEds }: Pick<ExportModalProps, 'isEds'>): React.ReactElemen
     );
 }
 
-function Journey({ isEds, onSaveDemoPackage, onClose }: Omit<ExportModalProps, 'isOpen'>): React.ReactElement {
+function Journey({ isEds, onClose }: Omit<ExportModalProps, 'isOpen'>): React.ReactElement {
     const [form, setForm] = useState<ExportForm>('link');
+    const storefront = useStorefrontState(isEds);
     return (
         <Modal title={EXPORT_COPY.title} size="L" fitContent onClose={onClose} closeLabel="Close">
-            <div className="intflow-stage-body export-body">
-                <FormChoice form={form} onChange={setForm} />
-                <p className="intflow-section-label">{EXPORT_COPY.what}</p>
-                {form === 'link' ? <LinkForm isEds={isEds} onSaveDemoPackage={onSaveDemoPackage} /> : <FileForm isEds={isEds} />}
-            </div>
+            {storefront.status === 'loading' ? (
+                <CenteredFeedbackContainer height="280px">
+                    <LoadingDisplay size="L" message={EXPORT_COPY.looking} helperText={EXPORT_COPY.lookingFor} />
+                </CenteredFeedbackContainer>
+            ) : (
+                <div className="intflow-stage-body export-body">
+                    <FormChoice form={form} onChange={setForm} />
+                    {form === 'link' ? <LinkForm state={storefront} /> : <FileForm isEds={isEds} />}
+                </div>
+            )}
         </Modal>
     );
 }

@@ -34,10 +34,6 @@
         line-height: 1.4;
     }
 
-    .export-part-off {
-        color: var(--spectrum-global-color-gray-600);
-    }
-
     .export-part-name {
         font-weight: 600;
     }
@@ -53,6 +49,39 @@
         flex-direction: column;
         align-items: flex-start;
         gap: 12px;
+    }
+
+    .export-link-form {
+        align-self: stretch;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .export-link {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+        font-size: 13px;
+        line-height: 1.4;
+    }
+
+    .export-link-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        max-width: 100%;
+    }
+
+    .export-link-text {
+        font-family: var(--vscode-editor-font-family, monospace);
+        font-size: 13px;
+        padding: 4px 8px;
+        border-radius: 4px;
+        background-color: var(--spectrum-global-color-gray-100);
+        overflow-wrap: anywhere;
     }
 
     .export-section-text {

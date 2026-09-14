@@ -1,46 +1,89 @@
 /**
- * The Export dialog: how it travels (link or file) and what goes (the parts).
- * The link form needs the storefront to be a demo package and points at that
- * door when it is not; the file form writes one bundle of the ticked parts.
+ * The Export dialog: how it travels (link or file). The link form IS the link
+ * and a Copy button. A link carries nothing, so Copy writes the demo's name and
+ * description into the repository the first time (the same handler as Save as
+ * demo package, prefilled) and then copies; a storefront that already carries
+ * them is only copied. No warning, no prerequisite (owner, 2026-09-14). The file
+ * form asks what to include and writes one bundle of the ticked parts.
  */
 
 import { fireEvent, screen } from '@testing-library/react';
-import { answer, chooseFile, click, LINK, mockRequest, partBox, PREVIEW, renderExport, resetExportMocks } from './ExportModal.testUtils';
+import { answer, chooseFile, click, LINK, mockRequest, mockWriteText, partBox, PREVIEW, renderExport, renderExportPending, resetExportMocks } from './ExportModal.testUtils';
 
 describe('ExportModal', () => {
     beforeEach(resetExportMocks);
 
-    it('opens on the link form with the two ways to hand over and the parts, built ones and not-yet ones', async () => {
+    it('opens on the link form with the two ways to hand over, and no parts list', async () => {
         await renderExport();
         expect(screen.getByRole('heading', { name: 'Export' })).toBeInTheDocument();
         expect(screen.getByTestId('export-form')).toHaveTextContent('Send a link');
         expect(screen.getByTestId('export-form')).toHaveTextContent('Send a file');
-        const parts = screen.getByTestId('export-link-form');
-        expect(parts).toHaveTextContent('Setup');
-        expect(parts).toHaveTextContent('Travels as a file.');
-        expect(parts).toHaveTextContent('Datapack');
-        expect(parts).toHaveTextContent('Not yet.');
+        expect(screen.queryByText('What goes')).not.toBeInTheDocument();
+        expect(screen.queryByText('What to include')).not.toBeInTheDocument();
+        expect(screen.queryByText('Not yet.')).not.toBeInTheDocument();
+    });
+
+    it('while the storefront is being read, the spinner is the whole body: no choice cards, no forms', async () => {
+        // Owner, 2026-09-14: a dialog that has to check something shows the
+        // house spinner first, then its UX — the same shape as Save as demo package.
+        renderExportPending();
+        expect(screen.getByText('Checking the storefront')).toBeInTheDocument();
+        expect(screen.queryByTestId('export-form')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('export-link-form')).not.toBeInTheDocument();
+    });
+
+    it('a headless project has nothing to read and opens straight on the choice', async () => {
+        await renderExport(undefined, { isEds: false });
+        expect(mockRequest).not.toHaveBeenCalled();
+        expect(screen.getByTestId('export-form')).toBeInTheDocument();
     });
 
     describe('the link form', () => {
-        it('shows the link when the storefront is a demo package', async () => {
+        it('a storefront that already carries its description: Copy link only copies', async () => {
             await renderExport(answer({ ...PREVIEW, saved: true }));
             expect(mockRequest).toHaveBeenCalledWith('getDemoPackagePreview');
-            expect(screen.getByTestId('export-link')).toHaveTextContent(LINK);
-            expect(screen.queryByTestId('export-not-package')).not.toBeInTheDocument();
+            const link = screen.getByTestId('export-link');
+            expect(link).toHaveTextContent(LINK);
+            expect(link).not.toHaveTextContent(/writes the demo's name/);
+            expect(screen.queryByText(/demo package/)).not.toBeInTheDocument();
+
+            await click('Copy link');
+
+            expect(mockWriteText).toHaveBeenCalledWith(LINK);
+            expect(mockRequest).toHaveBeenCalledTimes(1);
+            expect(screen.getByRole('button', { name: 'Copied' })).toBeInTheDocument();
         });
 
-        it('points at Save as demo package when it is not one, without saving anything itself', async () => {
-            const { props } = await renderExport();
-            expect(screen.getByTestId('export-not-package')).toHaveTextContent("Your storefront isn't a demo package yet");
-            await click('Save as demo package…');
-            expect(props.onSaveDemoPackage).toHaveBeenCalledTimes(1);
-            expect(mockRequest).toHaveBeenCalledTimes(1);
+        it('a storefront without one: the link shows with no warning, and Copy link writes the prefilled description first, then copies', async () => {
+            await renderExport();
+            const link = screen.getByTestId('export-link');
+            expect(link).toHaveTextContent(LINK);
+            expect(link).toHaveTextContent("Copying also writes the demo's name and description into your repository");
+            expect(screen.queryByText(/Not a demo package|Save as demo package/)).not.toBeInTheDocument();
+            expect(screen.getByTestId('export-link-form')).not.toHaveTextContent(/Setup|Datapack|Content|Integrations/);
+            mockRequest.mockResolvedValueOnce(answer({ link: LINK, file: 'written', onList: true, checks: PREVIEW.checks }));
+
+            await click('Copy link');
+
+            expect(mockRequest).toHaveBeenLastCalledWith('saveDemoPackage', { name: 'Bodea', description: 'Bodea-branded B2B demo' });
+            expect(mockWriteText).toHaveBeenCalledWith(LINK);
+            expect(link).not.toHaveTextContent(/writes the demo's name/);
+        });
+
+        it('a description write that fails copies nothing and says so', async () => {
+            await renderExport();
+            mockRequest.mockResolvedValueOnce({ success: false, error: 'GitHub refused the write.' });
+
+            await click('Copy link');
+
+            expect(mockWriteText).not.toHaveBeenCalled();
+            expect(screen.getByTestId('export-copy-failed')).toHaveTextContent('GitHub refused the write.');
+            expect(screen.getByRole('button', { name: 'Copy link' })).toBeInTheDocument();
         });
 
         it('says a headless project has no storefront and never asks the host', async () => {
             await renderExport(undefined, { isEds: false });
-            expect(screen.getByTestId('export-link-form')).toHaveTextContent('This project has no storefront of its own.');
+            expect(screen.getByTestId('export-link-form')).toHaveTextContent('This project has no storefront of its own. Send a file instead.');
             expect(mockRequest).not.toHaveBeenCalled();
         });
 
@@ -51,9 +94,11 @@ describe('ExportModal', () => {
     });
 
     describe('the file form', () => {
-        it('ticks setup and storefront by default, saves one bundle through the host, and reports what and where', async () => {
+        it('ticks setup and storefront by default, lists only the parts that exist, saves one bundle through the host, and reports what and where', async () => {
             await renderExport();
             await chooseFile();
+            expect(screen.getByText('What to include')).toBeInTheDocument();
+            expect(screen.getByTestId('export-file-form')).not.toHaveTextContent(/Datapack|Not yet/);
             expect(partBox('part-setup').checked).toBe(true);
             expect(partBox('part-storefront').checked).toBe(true);
             mockRequest.mockResolvedValueOnce(answer({ path: '/Users/steve/bodea-demo-bundle.zip', fileCount: 813, bytes: 1_000, parts: ['setup', 'storefront'] }));

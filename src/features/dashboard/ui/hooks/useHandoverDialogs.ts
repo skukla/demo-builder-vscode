@@ -1,8 +1,8 @@
 /**
  * The two hand-over dialogs' open state (owner, 2026-09-13): Export hands the
- * demo to someone else; "Save as demo package" is the SC's own act. They touch
- * in one place: Export's link form opens the Save dialog when the storefront is
- * not a package yet, closing itself as it does.
+ * demo to someone else; "Save as demo package" is the SC's own act. They do not
+ * open each other: Export's link form writes the description itself on Copy
+ * (owner, 2026-09-14).
  *
  * @module features/dashboard/ui/hooks/useHandoverDialogs
  */
@@ -17,8 +17,6 @@ export interface HandoverDialogs {
     /** Absent for a headless project: it has no storefront of its own to save. */
     openDemoPackage?: () => void;
     closeDemoPackage: () => void;
-    /** From Export's link form: close Export, open Save as demo package. */
-    saveDemoPackageFromExport: () => void;
 }
 
 /**
@@ -34,10 +32,6 @@ export function useHandoverDialogs(isEds: boolean): HandoverDialogs {
     const closeExport = useCallback(() => setExportOpen(false), []);
     const openPackage = useCallback(() => setDemoPackageOpen(true), []);
     const closeDemoPackage = useCallback(() => setDemoPackageOpen(false), []);
-    const saveDemoPackageFromExport = useCallback(() => {
-        setExportOpen(false);
-        setDemoPackageOpen(true);
-    }, []);
     return {
         exportOpen,
         demoPackageOpen,
@@ -45,6 +39,5 @@ export function useHandoverDialogs(isEds: boolean): HandoverDialogs {
         closeExport,
         openDemoPackage: isEds ? openPackage : undefined,
         closeDemoPackage,
-        saveDemoPackageFromExport,
     };
 }
