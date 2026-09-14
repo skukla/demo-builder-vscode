@@ -76,3 +76,5 @@ The handbook count went 115 → 118. It went UP because the record got more accu
   proofs, so it is not rediscovered
 - 2026-09-11  Ratchet, handbook correction, three new conventions with proofs
   (`b6948a16b`)
+- 2026-09-11  docs(handoff): record the duplication gap and the correction (`719f8e33a`)
+- 2026-09-11  chore(backlog): PL-57 — the component-extraction convention is enforced by nothing (`d6156aedd`)

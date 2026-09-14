@@ -35,3 +35,7 @@ with `resetTemplateOnConflict:true`. Nothing falls back silently anywhere.
 
 `src/features/updates/services/templateSyncService.ts`; the apply path in
 `updateApplyService.ts` / `updateExecutor.ts`; the picker copy in `updateTypes.ts`.
+
+## Shipped so far
+
+- 2026-09-14  fix(updates): a template merge that conflicts stops instead of resetting (`52d7df149`)
