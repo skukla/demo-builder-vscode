@@ -108,6 +108,18 @@ repository archive GitHub serves (`downloadRepoArchive`, now public on the file 
 it, the settings export's rule), and the Export dialog's third section "Storefront as a zip
 file" and the `export_storefront_zip` tool call it. Dashboard map 45 → 46, tools 116 → 117.
 
+**The import lane (owner, 2026-09-13, "Do it").** A bundle's setup part is read now, not
+ignored. `readStorefrontZip` parses `setup.demo-builder.json` through the settings
+serializer; `createRepositoryFromZip`, `cardFromZip` and `setupForCard` (the setup made the
+colleague's own: the card the storefront became, the sender's repository and site names
+dropped) are shared by two doors. The projects list's Import takes `.zip` as well as `.json`
+(`pickImportFile` / `importSettingsFromUri` / `importDemoBundle`): repository, card, then the
+wizard pre-filled. The dialog's zip door answers the setup and offers "Start a project with
+it" (`use-bundle-setup`: the wizard cannot take settings while open, so it is closed and
+reopened the way Import opens it). The agent's add answers `setupIncluded` and where to use
+it. Still open from [[PL-56d]]: re-proving the sign-ins the setup names, and telling the SC
+what was applied.
+
 ## Done when
 
 A zip of an Edge Delivery storefront becomes a demo on the Welcome grid through the dialog

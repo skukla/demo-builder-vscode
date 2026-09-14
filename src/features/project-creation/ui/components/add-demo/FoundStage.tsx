@@ -9,7 +9,7 @@
  * @module features/project-creation/ui/components/add-demo/FoundStage
  */
 
-import { Checkbox, Switch, TextField } from '@adobe/react-spectrum';
+import { Button, Checkbox, Switch, TextField } from '@adobe/react-spectrum';
 import React from 'react';
 import {
     COPY,
@@ -43,6 +43,8 @@ export interface FoundStageProps {
     currentKind?: StorefrontKind;
     /** The zip door is creating the repository; the probe follows. */
     importing?: boolean;
+    /** The zip was a bundle with setup: offer to start a project from it, on this card. */
+    bundle?: { onStart: () => void; busy: boolean };
 }
 
 /** What is missing, from what the probe found, in a sentence. */
@@ -97,6 +99,7 @@ export function FoundStage({
     mode = 'add',
     currentKind,
     importing = false,
+    bundle,
 }: FoundStageProps): React.ReactElement {
     if (importing) {
         return <LoadingDisplay size="L" message={COPY.importing} helperText={COPY.importingFor} />;
@@ -198,6 +201,20 @@ export function FoundStage({
                 >
                     {COPY.change.updateRemembered}
                 </Checkbox>
+            ) : null}
+            {bundle ? (
+                <InlineNotice
+                    tone="info"
+                    title={COPY.bundleSetup}
+                    testId="bundle-setup"
+                    action={
+                        <Button variant="accent" onPress={bundle.onStart} isDisabled={bundle.busy}>
+                            {COPY.bundleStart}
+                        </Button>
+                    }
+                >
+                    {COPY.bundleSetupWhy}
+                </InlineNotice>
             ) : null}
             {addError ? (
                 <InlineNotice title={mode === 'change' ? 'Not changed' : 'Not added'} testId="add-error">

@@ -69,6 +69,9 @@ export const COPY = {
     importing: 'Creating your repository from the zip…',
     importingFor: 'Unpacking the files and pushing them to your GitHub account. A large storefront can take a minute.',
     zipFailed: "We couldn't add this zip",
+    bundleSetup: 'This bundle also carries setup',
+    bundleSetupWhy: 'Commerce, Adobe, GitHub and DA.live settings from whoever sent it. Start a project from them, on this card.',
+    bundleStart: 'Start a project with it',
     add: 'Add demo',
     /** The dashboard's "Change source" door: the same dialog, a different commit. */
     change: {

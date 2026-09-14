@@ -12,10 +12,17 @@
  */
 
 import AdmZip from 'adm-zip';
-import { BUNDLE_STOREFRONT_DIR } from '../demoPackage/demoBundle';
+import { BUNDLE_SETUP_FILE, BUNDLE_STOREFRONT_DIR } from '../demoPackage/demoBundle';
+import type { GitHubRepoOperations } from '../github/githubRepoOperations';
+import { pushFiles, type TreePushOps } from '../github/githubTreePush';
 import { CANONICAL_STOREFRONT_FILES, classifyRepoForStorefront, type RepoReadiness } from './repoStorefrontReadiness';
+import { readSharedDemoDescription } from '@/core/state/projectFileReader';
 import { normalizeRepositoryName } from '@/core/validation/normalizers';
+import { addedDemoId } from '@/features/components/services/storefrontResolver';
+import { parseSettingsFile } from '@/features/projects-dashboard/services/settingsSerializer';
 import type { Logger } from '@/types/logger';
+import { SHARED_DEMO_FILE_NAME, type AddedDemo } from '@/types/projectFile';
+import type { SettingsFile } from '@/types/settingsFile';
 
 /** Dropped whatever the zip's own ignore file says: never part of a storefront's code. */
 const ALWAYS_DROPPED = ['.git/', 'node_modules/', '.npm-cache/', '.DS_Store', '.env'];
@@ -27,6 +34,10 @@ export interface ZipStorefront {
     rootName?: string;
     /** How many entries were dropped as ignored or never-committed. */
     dropped: number;
+    /** A demo bundle's setup part, when the zip is one and the file is valid. */
+    setup?: SettingsFile;
+    /** Why a setup file that was there could not be read. */
+    setupError?: string;
 }
 
 /**
@@ -95,7 +106,16 @@ export function readStorefrontZip(zipPath: string): ZipStorefront {
         }
         files.set(path, entry.getData());
     }
-    return { files: storefrontOfBundle(files), rootName, dropped };
+    const setup = setupOfBundle(files);
+    return { files: storefrontOfBundle(files), rootName, dropped, ...setup };
+}
+
+/** The bundle's setup part, parsed and validated, or why it could not be. */
+function setupOfBundle(files: Map<string, Buffer>): Pick<ZipStorefront, 'setup' | 'setupError'> {
+    const bytes = files.get(BUNDLE_SETUP_FILE);
+    if (!bytes) return {};
+    const parsed = parseSettingsFile(bytes.toString('utf-8'));
+    return parsed.success ? { setup: parsed.settings } : { setupError: parsed.error };
 }
 
 /**
@@ -136,6 +156,75 @@ export async function classifyZipStorefront(files: Map<string, Buffer>, logger: 
 export function suggestRepoName(rootName: string | undefined, fallback: string): string {
     const base = (rootName ?? fallback).replace(/\.zip$/i, '').replace(/-demo-bundle$/i, '').replace(/-(main|master)$/i, '');
     return normalizeRepositoryName(base) || normalizeRepositoryName(fallback);
+}
+
+export interface CreatedRepository {
+    owner: string;
+    repo: string;
+    fullName: string;
+    defaultBranch: string;
+    fileCount: number;
+}
+
+export interface CreateRepositoryDeps {
+    repoOps: Pick<GitHubRepoOperations, 'createEmptyRepository' | 'waitForContent' | 'setTemplateFlag'>;
+    fileOps: TreePushOps;
+    logger: Logger;
+}
+
+const COMMIT_MESSAGE = 'Add storefront from a zip file';
+
+/**
+ * The unpacked storefront becomes a repository in the SC's own account (D28):
+ * created private unless asked otherwise, the files pushed as one commit, the
+ * repository flagged a template. Shared by the dialog's zip door and the
+ * projects list's bundle import.
+ *
+ * @param deps - GitHub operations and a logger
+ * @param files - Repository-relative path → bytes
+ * @param opts - The repository's name and visibility
+ * @returns The repository, as created
+ */
+export async function createRepositoryFromZip(
+    deps: CreateRepositoryDeps,
+    files: Map<string, Buffer>,
+    opts: { repoName: string; isPrivate: boolean },
+): Promise<CreatedRepository> {
+    deps.logger.info(`[Zip] Creating ${opts.repoName} (${opts.isPrivate ? 'private' : 'public'}): ${files.size} files`);
+    const repository = await deps.repoOps.createEmptyRepository(opts.repoName, opts.isPrivate);
+    const [owner, repo] = repository.fullName.split('/');
+    await deps.repoOps.waitForContent(owner, repo);
+    const pushed = await pushFiles(deps.fileOps, owner, repo, files, COMMIT_MESSAGE, deps.logger);
+    await deps.repoOps.setTemplateFlag(owner, repo, true);
+    deps.logger.info(`[Zip] ${repository.fullName}: ${pushed.fileCount} files pushed, marked as a template`);
+    return { owner, repo, fullName: repository.fullName, defaultBranch: repository.defaultBranch || 'main', fileCount: pushed.fileCount };
+}
+
+/**
+ * The card for the Welcome step, from the description file the zip carried,
+ * pointed at the repository just created. Absent when the zip had no valid
+ * description file; the caller probes the repository instead.
+ */
+export function cardFromZip(files: Map<string, Buffer>, created: CreatedRepository): AddedDemo | undefined {
+    const bytes = files.get(SHARED_DEMO_FILE_NAME);
+    if (!bytes) return undefined;
+    const read = readSharedDemoDescription(bytes.toString('utf-8'));
+    if (!read.ok) return undefined;
+    return {
+        ...read.description,
+        source: { owner: created.owner, repo: created.repo, branch: created.defaultBranch },
+        storefrontKind: 'eds',
+    };
+}
+
+/**
+ * A bundle's setup, made the colleague's own: the wizard starts on the card the
+ * bundle's storefront became, and the sender's repository and site names are
+ * dropped (the colleague names theirs in the wizard).
+ */
+export function setupForCard(setup: SettingsFile, card: AddedDemo): SettingsFile {
+    const { edsConfig: _sendersStorefront, ...rest } = setup;
+    return { ...rest, demo: card, selectedPackage: addedDemoId(card) };
 }
 
 /** Bytes that cannot travel as inline text in a tree entry go through a blob. */

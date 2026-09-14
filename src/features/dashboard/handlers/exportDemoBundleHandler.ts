@@ -39,11 +39,10 @@ function bundleBaseName(project: Project): string {
 /** Where the bundle goes: the given path inside the project directory, or the project's own folder. */
 function resolveTarget(project: Project, providedPath: string | undefined): string {
     const name = defaultBundleName(bundleBaseName(project));
-    let candidate = providedPath
-        ? path.isAbsolute(providedPath)
-            ? providedPath
-            : path.join(project.path, providedPath)
-        : path.join(project.path, name);
+    let candidate = path.join(project.path, name);
+    if (providedPath) {
+        candidate = path.isAbsolute(providedPath) ? providedPath : path.join(project.path, providedPath);
+    }
     try {
         if (fs.statSync(candidate).isDirectory()) candidate = path.join(candidate, name);
     } catch {

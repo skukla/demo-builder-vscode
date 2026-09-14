@@ -348,7 +348,7 @@ describe('add_shared_demo from a zip file', () => {
         const res = await s.call('add_shared_demo', { zipPath: '/tmp/summit-main.zip' });
 
         expect(res.error).toContain('would create the private repository summit in your GitHub account (steve) from /tmp/summit-main.zip (1 files; 4 entries');
-        expect(res).toMatchObject({ repoName: 'summit', fileCount: 1, dropped: 4, wouldCreate: 'summit' });
+        expect(res).toMatchObject({ repoName: 'summit', fileCount: 1, dropped: 4, wouldCreate: 'summit', setupIncluded: false });
         expect(mockImport).not.toHaveBeenCalled();
         expect(mockAdd).not.toHaveBeenCalled();
     });
@@ -372,6 +372,15 @@ describe('add_shared_demo from a zip file', () => {
         expect(mockImport).toHaveBeenCalledWith(ctx, { zipPath: '/tmp/summit-main.zip', repoName: 'summit-demo', isPrivate: false });
         expect(mockProbe).toHaveBeenCalledWith(ctx, { owner: 'steve', repo: 'summit', link: undefined });
         expect(mockAdd).toHaveBeenCalledWith(ctx, { demo: expect.objectContaining({ source: { owner: 'steve', repo: 'summit', branch: 'main' } }), keepCopy: false });
-        expect(res).toMatchObject({ added: true, createdFromZip: 'steve/summit', fileCount: 1, dropped: 4 });
+        expect(res).toMatchObject({ added: true, createdFromZip: 'steve/summit', fileCount: 1, dropped: 4, setupIncluded: false });
+        expect(res.setupHint).toBeUndefined();
+    });
+
+    it('says when the bundle also carries setup, and where to use it', async () => {
+        mockReadZip.mockReturnValue({ files: new Map([['head.html', Buffer.from('x')]]), rootName: 'bodea-demo-bundle', dropped: 0, setup: { version: 1 } });
+        const s = fakeServer();
+        registerAddedDemoTools(s, () => ctx);
+        const res = await s.call('add_shared_demo', { zipPath: '/tmp/bodea-demo-bundle.zip', confirm: true });
+        expect(res).toMatchObject({ setupIncluded: true, setupHint: expect.stringContaining('Import the bundle from the projects list') });
     });
 });

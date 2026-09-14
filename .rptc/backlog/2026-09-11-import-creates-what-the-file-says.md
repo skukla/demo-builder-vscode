@@ -54,3 +54,11 @@ backend rather than per project. File it when this item ships.
 An end-to-end test that imports a captured v2 file and asserts the CREATION WIRE
 (`ProjectConfigSource`), not wizard state: integrations, mesh, custom sources, picks,
 datapack all present. Nothing covers this today.
+
+## Progress 2026-09-13
+
+The bundle half landed with the Export two-forms work: the projects list's Import and the
+wizard's zip door both read a demo bundle's setup and open the wizard pre-filled on the card
+the storefront became (`setupForCard` drops the sender's repository and site names). What
+remains here is the rest of the ask: re-prove the sign-ins the setup names before anything
+continues, and tell the SC what was applied and what was not.

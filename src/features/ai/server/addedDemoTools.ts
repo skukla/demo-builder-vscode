@@ -71,7 +71,7 @@ type ZipArgs = { zipPath?: string; repoName?: string; isPrivate?: boolean; confi
 async function repositoryFromZip(
     ctx: HandlerContext,
     args: ZipArgs & { zipPath: string },
-): Promise<{ owner: string; repo: string; fileCount: number; dropped: number } | { answer: Record<string, unknown> }> {
+): Promise<{ owner: string; repo: string; fileCount: number; dropped: number; setupIncluded: boolean } | { answer: Record<string, unknown> }> {
     let unpacked;
     try {
         unpacked = readStorefrontZip(args.zipPath);
@@ -93,6 +93,7 @@ async function repositoryFromZip(
                 repoName,
                 fileCount: unpacked.files.size,
                 dropped: unpacked.dropped,
+                setupIncluded: Boolean(unpacked.setup),
                 wouldCreate: repoName,
             },
         };
@@ -102,7 +103,10 @@ async function repositoryFromZip(
     if (!imported.success || !result?.owner || !result.repo) {
         return { answer: { error: imported.error ?? 'The zip could not be turned into a repository.' } };
     }
-    return { owner: result.owner, repo: result.repo, fileCount: result.fileCount ?? 0, dropped: result.dropped ?? 0 };
+    // Spread over lines: the complex-expression scan reads two `??` on one line as a nested ternary.
+    const fileCount = result.fileCount ?? 0;
+    const dropped = result.dropped ?? 0;
+    return { owner: result.owner, repo: result.repo, fileCount, dropped, setupIncluded: Boolean(unpacked.setup) };
 }
 
 /**
@@ -178,13 +182,13 @@ export function registerAddedDemoTools(server: McpToolServer, ctxFactory: () => 
             const github = await requireGitHub(ctx);
             if (github) return asText(github);
 
-            let fromZip: { fileCount: number; dropped: number } | undefined;
+            let fromZip: { fileCount: number; dropped: number; setupIncluded: boolean } | undefined;
             let where: LinkArgs = args;
             if (args.zipPath) {
                 const created = await repositoryFromZip(ctx, { ...args, zipPath: args.zipPath });
                 if ('answer' in created) return asText(created.answer);
                 where = { owner: created.owner, repo: created.repo, name: args.name };
-                fromZip = { fileCount: created.fileCount, dropped: created.dropped };
+                fromZip = { fileCount: created.fileCount, dropped: created.dropped, setupIncluded: created.setupIncluded };
             }
 
             const row = await readDemoRow(ctx, where);
@@ -219,6 +223,9 @@ export function registerAddedDemoTools(server: McpToolServer, ctxFactory: () => 
                 storefrontKind: added.result.demo.storefrontKind,
                 ...(added.result.forkedTo ? { forkedTo: added.result.forkedTo } : {}),
                 ...(fromZip ? { createdFromZip: `${where.owner}/${where.repo}`, ...fromZip } : {}),
+                ...(fromZip?.setupIncluded
+                    ? { setupHint: 'The bundle also carries setup. Import the bundle from the projects list (Import) to start a project pre-filled with it.' }
+                    : {}),
                 warnings,
                 hint: 'create_project takes the id above as its package; list_demo_packages lists it beside the shipped ones.',
             });

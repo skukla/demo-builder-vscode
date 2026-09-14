@@ -22,6 +22,7 @@ import {
 import { webviewClient } from '@/core/ui/utils/vscode-api';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { AddedDemo, StorefrontKind } from '@/types/projectFile';
+import type { SettingsFile } from '@/types/settingsFile';
 import type {
     AddSharedDemoRequest,
     AddSharedDemoResult,
@@ -31,6 +32,7 @@ import type {
     ImportStorefrontZipResult,
     ProbeSharedDemoRequest,
     SharedDemoProbeResult,
+    UseBundleSetupRequest,
 } from '@/types/webviewRequests';
 
 /** A handler's answer: branch on `success` before reading anything else (webview-command-handler). */
@@ -87,6 +89,10 @@ export interface UseAddDemoFlowReturn {
     zipError?: string;
     makePublic: boolean;
     setMakePublic: (on: boolean) => void;
+    /** The setup a bundle carried, when the zip was one. */
+    bundleSetup?: SettingsFile;
+    /** Add the demo, then reopen the wizard pre-filled from the bundle's setup. */
+    startFromBundle: () => void;
 }
 
 const PROBE_FAILED = "We couldn't look at this demo. Check the link and try again.";
@@ -110,6 +116,7 @@ export function useAddDemoFlow(args: UseAddDemoFlowArgs): UseAddDemoFlowReturn {
     const [importing, setImporting] = useState(false);
     const [zipError, setZipError] = useState<string | undefined>(undefined);
     const [makePublic, setMakePublic] = useState(false);
+    const [bundleSetup, setBundleSetup] = useState<SettingsFile | undefined>(undefined);
 
     const result = probe.status === 'done' ? probe.result : undefined;
     const shippedName =
@@ -160,8 +167,9 @@ export function useAddDemoFlow(args: UseAddDemoFlowArgs): UseAddDemoFlowReturn {
                 setZipError(answer.error ?? IMPORT_FAILED);
                 return;
             }
-            const { cancelled, owner, repo } = answer.result;
+            const { cancelled, owner, repo, setup } = answer.result;
             if (cancelled || !owner || !repo) return;
+            setBundleSetup(setup);
             const source = { owner, repo };
             setDraft((d) => ({ ...d, source }));
             await probeSource(source);
@@ -172,9 +180,9 @@ export function useAddDemoFlow(args: UseAddDemoFlowArgs): UseAddDemoFlowReturn {
         }
     }, [makePublic, probeSource]);
 
-    /** The one host call of the found stage: add remembers, change repoints the project. */
-    const commit = useCallback(async (): Promise<void> => {
-        if (!isBuildable(result)) return;
+    /** The one host call of the found stage: add remembers, change repoints the project. Answers the row. */
+    const commit = useCallback(async (): Promise<AddedDemo | undefined> => {
+        if (!isBuildable(result)) return undefined;
         const keepCopy = draft.keepCopy && !result.viewer?.ownsRepo;
         const demo = buildAddedDemo(result, draft);
         const failed = mode === 'change' ? CHANGE_FAILED : ADD_FAILED;
@@ -194,16 +202,26 @@ export function useAddDemoFlow(args: UseAddDemoFlowArgs): UseAddDemoFlowReturn {
                       } satisfies AddSharedDemoRequest);
             if (!answer.success || !answer.result) {
                 setAddError(answer.error ?? failed);
-                return;
+                return undefined;
             }
             onDemoAdded(answer.result.demo);
             onClose();
+            return answer.result.demo;
         } catch (error) {
             setAddError((error as Error).message || failed);
+            return undefined;
         } finally {
             setAdding(false);
         }
     }, [result, draft, mode, onDemoAdded, onClose]);
+
+    /** Add the demo, then hand the bundle's setup and the row to the host, which reopens the wizard. */
+    const startFromBundle = useCallback(async (): Promise<void> => {
+        if (!bundleSetup) return;
+        const added = await commit();
+        if (!added) return;
+        await webviewClient.request<Answer<unknown>>('use-bundle-setup', { setup: bundleSetup, demo: added } satisfies UseBundleSetupRequest);
+    }, [bundleSetup, commit]);
 
     // Change mode never takes a shipped template (nothing to read a row from)
     // and only a demo of the project's own kind.
@@ -271,5 +289,7 @@ export function useAddDemoFlow(args: UseAddDemoFlowArgs): UseAddDemoFlowReturn {
         zipError,
         makePublic,
         setMakePublic,
+        bundleSetup,
+        startFromBundle: () => void startFromBundle(),
     };
 }

@@ -10,16 +10,25 @@
  * @module features/eds/handlers/importStorefrontZipHandler
  */
 
+import * as path from 'path';
 import * as vscode from 'vscode';
-import { pushFiles } from '../services/github/githubTreePush';
-import { classifyZipStorefront, readStorefrontZip, suggestRepoName } from '../services/storefront/zipStorefrontImport';
+import {
+    cardFromZip,
+    classifyZipStorefront,
+    createRepositoryFromZip,
+    readStorefrontZip,
+    setupForCard,
+    suggestRepoName,
+} from '../services/storefront/zipStorefrontImport';
 import { getGitHubServices } from './edsHelpers';
+import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { getRepositoryNameError } from '@/core/validation/normalizers';
+import { rememberAddedDemo } from '@/features/project-creation/services/addedDemoSettings';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
-import type { ImportStorefrontZipRequest, ImportStorefrontZipResult } from '@/types/webviewRequests';
+import type { ImportStorefrontZipRequest, ImportStorefrontZipResult, UseBundleSetupRequest } from '@/types/webviewRequests';
 
 const PICKER_TITLE = 'Add a storefront from a zip file';
-const COMMIT_MESSAGE = 'Add storefront from a zip file';
+const WIZARD_PANEL = 'demoBuilderWizard';
 
 async function pickZip(): Promise<string | undefined> {
     const picked = await vscode.window.showOpenDialog({
@@ -76,26 +85,102 @@ export async function handleImportStorefrontZip(
 
     const { repoOperations, fileOperations } = getGitHubServices(context.context.secrets);
     try {
-        context.logger.info(`[Zip] Creating ${repoName} (${isPrivate ? 'private' : 'public'}) from ${zipPath}: ${unpacked.files.size} files, ${unpacked.dropped} dropped`);
-        const repository = await repoOperations.createEmptyRepository(repoName, isPrivate);
-        const [owner, repo] = repository.fullName.split('/');
-        await repoOperations.waitForContent(owner, repo);
-        const pushed = await pushFiles(fileOperations, owner, repo, unpacked.files, COMMIT_MESSAGE, context.logger);
-        await repoOperations.setTemplateFlag(owner, repo, true);
-        context.logger.info(`[Zip] ${repository.fullName}: ${pushed.fileCount} files pushed, marked as a template`);
+        context.logger.info(`[Zip] ${zipPath}: ${unpacked.files.size} files, ${unpacked.dropped} dropped${unpacked.setup ? ', setup included' : ''}`);
+        const created = await createRepositoryFromZip(
+            { repoOps: repoOperations, fileOps: fileOperations, logger: context.logger },
+            unpacked.files,
+            { repoName, isPrivate },
+        );
+        if (unpacked.setupError) context.logger.warn(`[Zip] the bundle's setup file was not usable: ${unpacked.setupError}`);
         return {
             success: true,
             result: {
-                owner,
-                repo,
-                fullName: repository.fullName,
-                fileCount: pushed.fileCount,
+                owner: created.owner,
+                repo: created.repo,
+                fullName: created.fullName,
+                fileCount: created.fileCount,
                 dropped: unpacked.dropped,
                 isPrivate,
+                ...(unpacked.setup ? { setup: unpacked.setup } : {}),
             } satisfies ImportStorefrontZipResult,
         };
     } catch (error) {
         context.logger.error(`[Zip] Import failed: ${(error as Error).message}`);
         return { success: false, error: (error as Error).message };
     }
+}
+
+/**
+ * Handle 'use-bundle-setup': start a project from the setup a bundle carried,
+ * on the card its storefront became. The wizard cannot take settings while it
+ * is open, so it is closed and reopened the way the projects list's Import
+ * opens it.
+ *
+ * @param context - Handler context
+ * @param request - The bundle's setup and the remembered card
+ * @returns `{ success }`
+ */
+export async function handleUseBundleSetup(context: HandlerContext, request?: UseBundleSetupRequest): Promise<HandlerResponse> {
+    if (!request?.setup || !request.demo) return { success: false, error: "The bundle's setup and the demo it belongs to are required" };
+    const importedSettings = setupForCard(request.setup, request.demo);
+    context.logger.info(`[Zip] Starting a project from the bundle's setup on ${request.demo.source.owner}/${request.demo.source.repo}`);
+    BaseWebviewCommand.disposePanel(WIZARD_PANEL);
+    await vscode.commands.executeCommand('demoBuilder.createProject', { importedSettings, sourceDescription: 'the demo bundle' });
+    return { success: true };
+}
+
+/**
+ * The projects list's Import, handed a demo bundle: the storefront part becomes
+ * a repository in the SC's account and a card on their Welcome step; the setup
+ * part, when present, opens the wizard pre-filled on that card. A bundle with
+ * setup alone opens the wizard from the setup, as a settings file would.
+ *
+ * @param context - Handler context
+ * @param zipPath - The bundle on disk
+ * @returns `{ success, data }` in the shape the projects list reads
+ */
+export async function importDemoBundle(context: HandlerContext, zipPath: string): Promise<HandlerResponse> {
+    let unpacked;
+    try {
+        unpacked = readStorefrontZip(zipPath);
+    } catch (error) {
+        return { success: true, data: { success: false, error: `The file could not be read: ${(error as Error).message}` } };
+    }
+    if (unpacked.setupError) {
+        return { success: true, data: { success: false, error: `The bundle's setup file could not be read: ${unpacked.setupError}` } };
+    }
+    const hasStorefront = !(await refusalFor(unpacked.files, context.logger));
+    if (!hasStorefront && !unpacked.setup) {
+        return { success: true, data: { success: false, error: 'This zip is neither a demo bundle nor an Edge Delivery storefront.' } };
+    }
+
+    let settings = unpacked.setup;
+    try {
+        if (hasStorefront) {
+            const { repoOperations, fileOperations } = getGitHubServices(context.context.secrets);
+            const created = await createRepositoryFromZip(
+                { repoOps: repoOperations, fileOps: fileOperations, logger: context.logger },
+                unpacked.files,
+                { repoName: suggestRepoName(unpacked.rootName, 'storefront'), isPrivate: true },
+            );
+            const card = cardFromZip(unpacked.files, created) ?? {
+                kind: 'demo',
+                version: 1,
+                name: created.repo,
+                source: { owner: created.owner, repo: created.repo, branch: created.defaultBranch },
+                storefrontKind: 'eds',
+            };
+            await rememberAddedDemo(card);
+            context.logger.info(`[Zip] Bundle: ${created.fullName} created and "${card.name}" added to the Welcome step`);
+            if (settings) settings = setupForCard(settings, card);
+            else void vscode.window.showInformationMessage(`"${card.name}" is on your Welcome step now.`);
+        }
+    } catch (error) {
+        context.logger.error(`[Zip] Bundle import failed: ${(error as Error).message}`);
+        return { success: true, data: { success: false, error: (error as Error).message } };
+    }
+
+    const sourceDescription = path.basename(zipPath);
+    await vscode.commands.executeCommand('demoBuilder.createProject', settings ? { importedSettings: settings, sourceDescription } : undefined);
+    return { success: true, data: { success: true, ...(settings ? { settings } : {}), sourceDescription } };
 }

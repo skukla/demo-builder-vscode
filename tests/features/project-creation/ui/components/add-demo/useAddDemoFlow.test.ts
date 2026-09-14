@@ -103,6 +103,24 @@ describe('useAddDemoFlow', () => {
         expect(hook.result.current.importing).toBe(false);
     });
 
+    it("keeps a bundle's setup, and Start a project adds the demo then hands setup and row to the host", async () => {
+        const { hook, onDemoAdded } = setup();
+        const SETUP = { version: 1, exportedAt: 'x', source: {}, includesSecrets: false, selections: {}, configs: {} };
+        mockRequest.mockResolvedValueOnce({ success: true, result: { owner: 'steve', repo: 'summit', setup: SETUP } });
+        mockRequest.mockResolvedValueOnce({ success: true, result: { ...READ, fullName: 'steve/summit', viewer: { login: 'steve', ownsRepo: true } } });
+        await act(async () => hook.result.current.importZip());
+        expect(hook.result.current.bundleSetup).toEqual(SETUP);
+
+        const remembered = { kind: 'demo', version: 1, name: 'Summit', source: { owner: 'steve', repo: 'summit', branch: 'main' }, storefrontKind: 'eds' };
+        mockRequest.mockResolvedValueOnce({ success: true, result: { demo: remembered } });
+        mockRequest.mockResolvedValueOnce({ success: true });
+        await act(async () => hook.result.current.startFromBundle());
+
+        expect(mockRequest).toHaveBeenNthCalledWith(3, 'add-shared-demo', expect.objectContaining({ keepCopy: false }));
+        expect(mockRequest).toHaveBeenNthCalledWith(4, 'use-bundle-setup', { setup: SETUP, demo: remembered });
+        expect(onDemoAdded).toHaveBeenCalledWith(remembered);
+    });
+
     it('stays on the link stage when the picker is dismissed, and shows the refusal when the zip is not a storefront', async () => {
         const { hook } = setup();
         mockRequest.mockResolvedValueOnce({ success: true, result: { cancelled: true } });

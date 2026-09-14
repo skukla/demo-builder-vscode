@@ -71,7 +71,7 @@ import {
 } from '@/features/dashboard/handlers/consoleApiHandlers';
 import { handleAddSharedDemo } from '@/features/eds/handlers/addSharedDemoHandler';
 import { handleChangeDemoSource } from '@/features/eds/handlers/changeDemoSourceHandler';
-import { handleImportStorefrontZip } from '@/features/eds/handlers/importStorefrontZipHandler';
+import { handleImportStorefrontZip, handleUseBundleSetup } from '@/features/eds/handlers/importStorefrontZipHandler';
 import { handleProbeSharedDemo } from '@/features/eds/handlers/probeSharedDemoHandler';
 import {
     MessageHandler,
@@ -319,4 +319,5 @@ export const dashboardHandlers = defineHandlers({
     'add-shared-demo': handleAddSharedDemo,
     // Same reason: the dialog's zip door is a message it can send.
     'import-storefront-zip': handleImportStorefrontZip,
+    'use-bundle-setup': handleUseBundleSetup,
 });

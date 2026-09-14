@@ -57,7 +57,9 @@ every touch point an end user has. One More-menu row, one dialog. Refined the sa
   requires it to be a package, and Export points at the Save door rather than saving on
   the SC's behalf. Sending by file has no such dependency.
 - **The receiving side mirrors it.** "Add a demo" takes a link, a storefront zip, or a
-  bundle (its `storefront/` folder). Setup from a bundle is [[PL-56d]]'s import work.
+  bundle (its `storefront/` folder); the projects list's Import takes a bundle too, and
+  both open the wizard pre-filled from the bundle's setup, on the card the storefront became
+  (built 2026-09-13). Re-proving the sign-ins the setup names stays with [[PL-56d]].
 - **Remove on the card.** An SC removes a card they added from the Welcome step itself; the
   affordance is always visible, and it never offers to delete a repository that is one of
   their projects' storefronts.

@@ -132,14 +132,14 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'exportProjectSettings')).toBe(true);
         });
 
-        it('should have exactly 45 handlers', () => {
+        it('should have exactly 46 handlers', () => {
             // Given: dashboardHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(dashboardHandlers) as Array<
                 keyof typeof dashboardHandlers
             >;
 
-            // Then: exactly 45, derived in the map's own declaration order so a
+            // Then: exactly 46, derived in the map's own declaration order so a
             // reader can check it against the source top to bottom.
             //
             // NOTE: the previous derivation did not add up — it said "9
@@ -170,14 +170,15 @@ describe('dashboardHandlers', () => {
             //                      republishContent
             //   1  reset           resetProject
             //   1  destination     setProjectDestination
-            //   4  demo source     probe-shared-demo (the Add a demo dialog's
+            //   5  demo source     probe-shared-demo (the Add a demo dialog's
             //                      read, shared with the wizard),
             //                      change-demo-source (point a project built on
             //                      an added demo at another copy of it),
             //                      add-shared-demo (the dialog's other commit;
             //                      the dashboard never opens that mode, but a
-            //                      message the dialog can send is answered), and
-            //                      import-storefront-zip (the dialog's zip door,
+            //                      message the dialog can send is answered),
+            //                      import-storefront-zip and use-bundle-setup
+            //                      (the dialog's zip door and the bundle's setup,
             //                      registered for the same reason)
             //   4  export parts    getDemoPackagePreview (the Export dialog's
             //                      storefront part: draft, checks, link),
@@ -187,7 +188,7 @@ describe('dashboardHandlers', () => {
             //                      back only what we did), and exportDemoBundle
             //                      (Export's "Send a file": one bundle of the ticked parts)
             //  ==
-            //  45
+            //  46
             //
             // Retired, so they are absent by design: verifyAppBuilderComponent
             // (2026-08-03); the 4 singular App Builder actions (addApp,
@@ -205,7 +206,7 @@ describe('dashboardHandlers', () => {
             // the integrations surface's Eventing section — workspace-scoped
             // I/O event providers/registrations, same service as the MCP
             // event tools.
-            expect(types).toHaveLength(45);
+            expect(types).toHaveLength(46);
         });
 
         it('should have handlers as functions', () => {

@@ -23,6 +23,7 @@ import {
     getEwCanvasBranch,
     resolveProjectAuthoringExperience,
 } from '@/features/eds/handlers/edsHelpers';
+import { importDemoBundle } from '@/features/eds/handlers/importStorefrontZipHandler';
 import { determineMeshStatus } from '@/features/mesh/services/meshStatusResolver';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import { deleteProject } from '@/features/projects-dashboard/services/projectDeletionService';
@@ -31,7 +32,8 @@ import { extractSettingsFromProject } from '@/features/projects-dashboard/servic
 import {
     copySettingsFromProject,
     exportProjectSettings,
-    importSettingsFromFile,
+    importSettingsFromUri,
+    pickImportFile,
 } from '@/features/projects-dashboard/services/settingsTransferService';
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
@@ -354,7 +356,12 @@ export const handleSetViewModeOverride: MessageHandler<{ viewMode: 'cards' | 'ro
 export const handleImportFromFile: MessageHandler = async (
     context: HandlerContext,
 ): Promise<HandlerResponse> => {
-    return importSettingsFromFile(context);
+    const picked = await pickImportFile(context);
+    if (!picked) return { success: true, data: { success: false, error: 'cancelled' } };
+    // A demo bundle (Export's "Send a file") or the plain settings file.
+    return picked.fsPath.toLowerCase().endsWith('.zip')
+        ? importDemoBundle(context, picked.fsPath)
+        : importSettingsFromUri(context, picked);
 };
 
 /**

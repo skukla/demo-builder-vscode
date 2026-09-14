@@ -22,7 +22,9 @@ import {
     handleStopDemo,
     mockCopySettingsFromProject,
     mockExportProjectSettings,
-    mockImportSettingsFromFile,
+    mockImportDemoBundle,
+    mockImportSettingsFromUri,
+    mockPickImportFile,
 } from './dashboardHandlers-actions.testUtils';
 import { createProjectsDashboardContext, createProjectsDashboardProject } from '../testUtils';
 
@@ -117,14 +119,21 @@ describe('handleSetViewModeOverride', () => {
 });
 
 describe('settings transfer delegation', () => {
-    it('handleImportFromFile hands the context straight to importSettingsFromFile', async () => {
+    it('handleImportFromFile picks a file, then reads a settings file or a demo bundle by its extension', async () => {
         const context = createProjectsDashboardContext([]);
-        mockImportSettingsFromFile.mockResolvedValue({ success: true, data: { imported: 1 } });
+        mockPickImportFile.mockResolvedValueOnce(undefined);
+        expect(await handleImportFromFile(context)).toEqual({ success: true, data: { success: false, error: 'cancelled' } });
 
-        const result = await handleImportFromFile(context);
+        mockPickImportFile.mockResolvedValueOnce({ fsPath: '/x/settings.demo-builder.json' });
+        mockImportSettingsFromUri.mockResolvedValue({ success: true, data: { imported: 1 } });
+        expect(await handleImportFromFile(context)).toEqual({ success: true, data: { imported: 1 } });
+        expect(mockImportSettingsFromUri).toHaveBeenCalledWith(context, { fsPath: '/x/settings.demo-builder.json' });
+        expect(mockImportDemoBundle).not.toHaveBeenCalled();
 
-        expect(mockImportSettingsFromFile).toHaveBeenCalledWith(context);
-        expect(result).toEqual({ success: true, data: { imported: 1 } });
+        mockPickImportFile.mockResolvedValueOnce({ fsPath: '/x/bodea-demo-bundle.ZIP' });
+        mockImportDemoBundle.mockResolvedValue({ success: true, data: { success: true } });
+        expect(await handleImportFromFile(context)).toEqual({ success: true, data: { success: true } });
+        expect(mockImportDemoBundle).toHaveBeenCalledWith(context, '/x/bodea-demo-bundle.ZIP');
     });
 
     it('handleCopyFromExisting hands the context straight to copySettingsFromProject', async () => {

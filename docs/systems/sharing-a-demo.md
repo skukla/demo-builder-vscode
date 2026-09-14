@@ -203,6 +203,15 @@ and **what** goes.
 Parts not built yet (datapack, content, integrations) are listed greyed, so the shape of
 what is coming is visible.
 
+**Receiving a file.** A colleague has two doors, and both read a bundle as well as a bare
+storefront zip. On the projects list, **Import** takes the bundle: the storefront becomes a
+repository in their account and a card on their Welcome step, and the setup part opens the
+wizard pre-filled on that card, with your repository and site names dropped so they name
+theirs. Inside the wizard, "Or add from a zip file" does the same for the storefront and,
+when the bundle carries setup, offers **Start a project with it**, which adds the card and
+reopens the wizard pre-filled. The setup never carries a credential; the colleague signs in
+to their own accounts as the wizard asks.
+
 ## Headless demos
 
 A Next.js demo adds the same way; its pages live in the app, so there is no content site
@@ -217,7 +226,9 @@ a demo from a link, `add_shared_demo` adds it, `create_project` takes an added d
 a link, `change_demo_source` repoints a project, and `forget_added_demo` takes a demo off
 the list. The demos an SC has added live in the `demoBuilder.demos.added` setting.
 `add_shared_demo` also takes `zipPath` for a storefront that arrived as a zip file or a demo
-bundle: the repository it creates in the SC's account needs `confirm:true`, like a fork.
+bundle: the repository it creates in the SC's account needs `confirm:true`, like a fork. When
+the bundle carries setup, the answer says so and points at the projects list's Import, which
+is the door that opens the wizard pre-filled.
 
 Saving has the same doors as the dialog: `get_demo_package_preview` reads what a project
 built from the card would get, `save_demo_package` writes the file, puts the card on the

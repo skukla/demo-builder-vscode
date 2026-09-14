@@ -19,6 +19,7 @@ import type { CommerceStoreStructure } from './commerceStore';
 import type { ComponentConfigs, EnvVarDefinition, ServiceDefinition } from './components';
 import type { DaLiveContentSource } from './demoPackages';
 import type { AddedDemo, SharedDemoDescription, StorefrontKind } from './projectFile';
+import type { SettingsFile } from './settingsFile';
 import type { GitHubRepoItem } from './webview';
 import type { GitHubUser } from './webviewPayloads';
 
@@ -58,6 +59,14 @@ export interface ImportStorefrontZipResult {
     fileCount?: number;
     dropped?: number;
     isPrivate?: boolean;
+    /** A demo bundle's setup part, when the zip carried one; the dialog offers to start from it. */
+    setup?: SettingsFile;
+}
+
+/** Start a project from a bundle's setup, on the card its storefront became. */
+export interface UseBundleSetupRequest {
+    setup: SettingsFile;
+    demo: AddedDemo;
 }
 
 /** Which of the storefront kinds a repository holds, or that it holds none. */

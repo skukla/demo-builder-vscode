@@ -73,6 +73,7 @@ function Journey(props: Omit<AddDemoModalProps, 'isOpen'>): React.ReactElement {
                         mode={mode}
                         currentKind={props.currentKind}
                         importing={flow.importing}
+                        bundle={flow.bundleSetup && mode === 'add' ? { onStart: flow.startFromBundle, busy: flow.adding } : undefined}
                     />
                 )}
             </div>
