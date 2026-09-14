@@ -26,7 +26,10 @@ import { AdobeMcpUpdateChecker } from '@/features/updates/services/adobeMcpUpdat
 import { applyAdobeMcpUpdate } from '@/features/updates/services/adobeMcpUpdateCore';
 import { ComponentUpdater } from '@/features/updates/services/componentUpdater';
 import { ForkSyncService } from '@/features/updates/services/forkSyncService';
-import { TemplateSyncService } from '@/features/updates/services/templateSyncService';
+import {
+    TemplateSyncService,
+    type TemplateSyncResult,
+} from '@/features/updates/services/templateSyncService';
 import { TemplateUpdateChecker } from '@/features/updates/services/templateUpdateChecker';
 import {
     applyBlockLibraryUpdateResolved,
@@ -123,10 +126,32 @@ async function applyForkSync(
     return result;
 }
 
+/**
+ * What a headless template update does when the merge stops on conflicts.
+ * `stop` (the default) reports the files and changes nothing; `reset` replaces
+ * them with the template's version — only when the caller asked for exactly that.
+ */
+export type TemplateConflictPolicy = 'stop' | 'reset';
+
+export interface ApplyUpdatesOptions {
+    templateConflicts?: TemplateConflictPolicy;
+}
+
+async function syncTemplateHeadless(
+    svc: TemplateSyncService,
+    project: Project,
+    policy: TemplateConflictPolicy,
+): Promise<TemplateSyncResult> {
+    const merged = await svc.syncWithTemplate(project, { strategy: 'merge' });
+    if (merged.success || !merged.conflicts?.length || policy !== 'reset') return merged;
+    return svc.syncWithTemplate(project, { strategy: 'reset' });
+}
+
 async function applyTemplate(
     items: UpdateSelections['template'],
     ctx: UpdateContext,
     onProgress?: OnProgress,
+    policy: TemplateConflictPolicy = 'stop',
 ): Promise<{ result: CategoryResult; succeededPaths: Set<string> }> {
     const result = emptyResult();
     const succeededPaths = new Set<string>();
@@ -135,14 +160,12 @@ async function applyTemplate(
     for (const { project } of items) {
         onProgress?.(`Syncing template for ${project.name}...`);
         try {
-            const r = await svc.syncWithTemplate(project, { strategy: 'merge' });
+            const r = await syncTemplateHeadless(svc, project, policy);
             if (r.success) {
                 await svc.updateLastSyncedCommit(project, r.syncedCommit, ctx.stateManager);
                 succeededPaths.add(project.path);
                 result.successCount++;
-                ctx.logger.info(
-                    `[Updates] Template synced for ${project.name} (${r.strategy}${r.fallbackOccurred ? ', fallback' : ''})`,
-                );
+                ctx.logger.info(`[Updates] Template synced for ${project.name} (${r.strategy})`);
             } else {
                 throw new Error(r.error || 'Unknown error');
             }
@@ -313,12 +336,14 @@ export async function applyUpdatesHeadless(
     selections: UpdateSelections,
     ctx: UpdateContext,
     onProgress?: OnProgress,
+    options: ApplyUpdatesOptions = {},
 ): Promise<ApplyUpdatesResult> {
     const forkSync = await applyForkSync(selections.forkSync, ctx, onProgress);
     const { result: template, succeededPaths } = await applyTemplate(
         selections.template,
         ctx,
         onProgress,
+        options.templateConflicts,
     );
     const component = await applyComponents(selections.component, ctx, onProgress);
     const adobeMcp = await applyAdobeMcp(selections.adobeMcp, ctx, onProgress);

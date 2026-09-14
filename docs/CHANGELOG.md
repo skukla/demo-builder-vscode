@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **A template update no longer overwrites your edits when the merge conflicts.** Updating a storefront from its template used to fall back to a full reset whenever the merge hit a conflict, replacing exactly the files you had changed and telling you afterwards. It now stops, names the conflicting files, and leaves the storefront untouched. Check Updates offers "Reset to template" as a separate choice in that dialog; the `apply_updates` agent tool resets only when called with `resetTemplateOnConflict:true`.
+
 ## [1.0.0-beta.146] - 2026-09-10
 
 The styling layer is the headline: the CSS reset and every design token had not been

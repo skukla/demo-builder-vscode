@@ -208,22 +208,22 @@ describe('merge strategy — the exact git conversation', () => {
         expect(gitCalls()).not.toContainEqual(expect.stringMatching(/merge --abort|read-tree/));
     });
 
-    it('on conflicts: aborts the merge, restores the backups, then runs the reset conversation', async () => {
+    it('on conflicts: aborts the merge and stops — the abort is the last git command', async () => {
         answer(/diff-filter=U/, 'blocks/hero/hero.js\n');
 
         const result = await service().syncWithTemplate(edsProject(), { strategy: 'merge' });
 
         expect(mockExecute.mock.calls.slice(5)).toEqual([
             ['git merge --abort', opts(REPO_DIR, TIMEOUTS.QUICK)],
-            ...RESET_STEPS.filter(([cmd]) => !/git commit/.test(String(cmd))),
         ]);
         expect(result).toEqual({
-            success: true,
-            strategy: 'reset',
+            success: false,
+            strategy: 'merge',
             syncedCommit: '',
             conflicts: ['blocks/hero/hero.js'],
-            fallbackOccurred: true,
+            error: 'Merge conflicts in 1 file (blocks/hero/hero.js); the template update was not applied.',
         });
+        expect(mockRm).toHaveBeenCalledWith(TEMP_DIR, { recursive: true, force: true });
     });
 
     it('a failed commit is reported and never pushed', async () => {

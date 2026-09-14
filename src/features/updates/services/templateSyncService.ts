@@ -3,8 +3,10 @@
  *
  * Applies upstream template updates to an EDS storefront project.
  * Supports two strategies:
- * - merge: Attempts git merge, preserving local customizations
- * - reset: Full reset to template (loses customizations)
+ * - merge: git merge of the template, keeping the SC's own edits. A conflict
+ *   STOPS the update and names the files; it is never resolved by resetting.
+ * - reset: Full reset to template (replaces the SC's edits). Only ever run when
+ *   the caller asked for it explicitly.
  *
  * Key files (fstab.yaml, config.json) are preserved regardless of strategy.
  */
@@ -38,16 +40,26 @@ export interface TemplateSyncOptions {
 export interface TemplateSyncResult {
     /** Whether sync completed successfully */
     success: boolean;
-    /** Strategy that was actually used (may differ from requested if fallback occurred) */
+    /** Strategy that ran */
     strategy: 'merge' | 'reset';
     /** Commit SHA after sync */
     syncedCommit: string;
-    /** Files with merge conflicts (if any) */
+    /**
+     * Files where the template's changes collide with the SC's own edits. Set
+     * only on a merge that STOPPED: the merge is aborted, nothing is pushed,
+     * `success` is false and `error` names the files. The caller decides what
+     * happens next — a reset is a separate, explicit request, never a fallback.
+     */
     conflicts?: string[];
     /** Error message if sync failed */
     error?: string;
-    /** Whether fallback to reset occurred due to conflicts */
-    fallbackOccurred?: boolean;
+}
+
+/** The error text a conflicted merge carries, so every surface says the same thing. */
+function describeTemplateConflicts(conflicts: string[]): string {
+    const noun = conflicts.length === 1 ? 'file' : 'files';
+    return `Merge conflicts in ${conflicts.length} ${noun} (${conflicts.join(', ')}); `
+        + 'the template update was not applied.';
 }
 
 /**
@@ -152,9 +164,11 @@ export class TemplateSyncService {
     }
 
     /**
-     * Smart merge from template preserving customizations
+     * Merge the template into the SC's repo, keeping the preserved files.
      *
-     * Attempts git merge, falls back to reset if conflicts detected.
+     * A conflict means the SC edited the same region the template changed. The
+     * merge is aborted and reported with the file list; it is never turned into
+     * a reset here (a user's own edits are never overwritten — CLAUDE.md, rule 2).
      */
     private async mergeFromTemplate(
         repoOwner: string,
@@ -226,28 +240,20 @@ export class TemplateSyncService {
             const conflicts = conflictResult.stdout.trim().split('\n').filter(Boolean);
 
             if (conflicts.length > 0) {
-                // Conflicts detected - abort merge and fall back to reset
-                this.logger.warn(`[TemplateSync] Merge conflicts detected in ${conflicts.length} files, falling back to reset`);
+                // The SC's repo stays exactly as it was: abort, push nothing.
+                this.logger.warn(
+                    `[TemplateSync] Merge conflicts in ${conflicts.length} file(s); stopping without pushing`,
+                );
                 await this.commandManager.execute(`git merge --abort`, {
                     cwd: repoDir, timeout: TIMEOUTS.QUICK, shell: DEFAULT_SHELL,
                 });
 
-                // Restore backups before reset
-                await this.restorePreservedFiles(repoDir, backups);
-
-                // Perform reset
-                const resetResult = await this.performReset(
-                    repoDir,
-                    templateOwner,
-                    templateRepo,
-                    preserveFiles,
-                    backups,
-                );
-
                 return {
-                    ...resetResult,
+                    success: false,
+                    strategy: 'merge',
+                    syncedCommit: '',
                     conflicts,
-                    fallbackOccurred: true,
+                    error: describeTemplateConflicts(conflicts),
                 };
             }
 
@@ -400,7 +406,7 @@ export class TemplateSyncService {
     }
 
     /**
-     * Perform the actual reset operation (shared by merge fallback and reset strategy)
+     * Perform the actual reset operation
      */
     private async performReset(
         repoDir: string,

@@ -138,31 +138,49 @@ describe('CRITERION 3 — conflicts surface rather than resolving silently', () 
         expect(result.conflicts).toEqual(['blocks/hero/hero.js', 'styles/styles.css']);
     });
 
-    it('THE BEHAVIOUR WORTH KNOWING: a conflicted merge becomes a RESET', async () => {
-        // A user picks "merge" to KEEP their local work. On conflict the service
-        // aborts the merge and resets to the template instead — which discards
-        // exactly what they were trying to keep. It is flagged after the fact,
-        // never asked about beforehand.
-        //
-        // Pinned rather than judged: changing it is a product decision, and this
-        // test is what makes the current behaviour visible to whoever makes it.
+    it('a conflicted merge STOPS: aborts, pushes nothing, and fails with the file list', async () => {
+        // A user picks "merge" to KEEP their local work. A conflict is exactly
+        // the case where they edited the region the template changed, so the
+        // service backs out and leaves the decision to them. Until 2026-09-14
+        // this path reset the repo instead and flagged it after the fact
+        // (backlog EDS-14) — which discarded precisely what they were keeping.
         withConflicts();
 
         const result = await service().syncWithTemplate(edsProject(), { strategy: 'merge' });
 
-        expect(result.fallbackOccurred).toBe(true);
+        expect(result).toEqual({
+            success: false,
+            strategy: 'merge',
+            syncedCommit: '',
+            conflicts: ['blocks/hero/hero.js', 'styles/styles.css'],
+            error: 'Merge conflicts in 2 files (blocks/hero/hero.js, styles/styles.css); the template update was not applied.',
+        });
         expect(gitCalls().some((c) => /merge --abort/.test(c))).toBe(true);
+        expect(gitCalls().some((c) => /read-tree/.test(c))).toBe(false);
+        expect(pushed()).toBe(false);
     });
 
-    it('the preserved files still survive the fallback reset', async () => {
-        // The one guarantee that must hold even when the strategy changes
-        // underneath the user.
+    it('a conflicted merge writes nothing back into the checkout', async () => {
+        // Nothing to restore: the abort returns the tree to where the backups
+        // were taken, and a reset that would need them never runs.
         withConflicts();
 
         await service().syncWithTemplate(edsProject(), { strategy: 'merge' });
 
-        const written = mockWriteFile.mock.calls.map((c) => String(c[0]));
-        expect(written.some((p) => p.endsWith('fstab.yaml'))).toBe(true);
-        expect(written.some((p) => p.endsWith('config.json'))).toBe(true);
+        expect(mockWriteFile).not.toHaveBeenCalled();
+    });
+
+    it('a single conflicted file is worded in the singular', async () => {
+        mockExecute.mockImplementation(async (cmd: string) =>
+            /diff --name-only --diff-filter=U/.test(cmd)
+                ? { code: 0, stdout: 'blocks/hero/hero.js\n', stderr: '' }
+                : { code: 0, stdout: '', stderr: '' }
+        );
+
+        const result = await service().syncWithTemplate(edsProject(), { strategy: 'merge' });
+
+        expect(result.error).toBe(
+            'Merge conflicts in 1 file (blocks/hero/hero.js); the template update was not applied.',
+        );
     });
 });
