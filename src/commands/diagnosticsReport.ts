@@ -426,7 +426,7 @@ function configServiceLines(probe: ConfigServiceProbeResult): string[] {
 
     // Who can grant. "Ask an admin" is unactionable without a name, and the
     // roster's own refusal is the more useful answer when it comes: it means
-    // nobody is visible to ask, so the Code Sync setup flow is the only path.
+    // nobody is visible to ask, which leaves the Code Sync installer or Adobe.
     // Never print an empty list \u2014 that reads as "this org has no admins", a
     // different and much scarier claim than "you cannot see them".
     // MASKED — this report is written to be pasted into tickets. Full addresses

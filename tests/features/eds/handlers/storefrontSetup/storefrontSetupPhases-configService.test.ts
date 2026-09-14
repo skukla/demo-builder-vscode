@@ -412,15 +412,12 @@ describe('registerConfigurationService - overlay registration failure is surface
         expect(mockSurfaceOverlayFailure).toHaveBeenCalled();
     });
 
-    it.each([
-        [403, true],
-        [500, false],
-    ])(
+    it.each([[403], [500]])(
         'a 409 then an update failing with %i selects the message for THAT status',
-        async (updateStatus, expectsAuthMessage) => {
+        async (updateStatus) => {
             // The rule this pins already caused one bug: reporting the handled 409
             // instead of the update's own status made a 500 print the
-            // "not authorized" message and a Code Sync deep link.
+            // "not authorized" message.
             const config = { ...createEdsConfig(), byomOverlayUrl: 'https://byom.example.com' };
             mockRegisterSite.mockResolvedValue({ success: false, statusCode: 409, error: 'Conflict' });
             mockUpdateSiteConfig.mockResolvedValue({
@@ -437,16 +434,12 @@ describe('registerConfigurationService - overlay registration failure is surface
             SERVICES
         );
 
-            // `expect.any(String)` is a MATCHER, not an assertion — but the rule sees
-            // an `expect` call inside a conditional and cannot tell. Building the
-            // matcher first, then choosing it, keeps the meaning and drops the shape.
-            const anyString = expect.any(String);
-            const expectedAuthMessage = expectsAuthMessage ? anyString : undefined;
+            // The status is what picks the message inside the surfacing call, and it
+            // is the only thing that does: no setup link travels beside it any more.
             expect(mockSurfaceOverlayFailure).toHaveBeenCalledWith(
                 expect.anything(),
                 expect.anything(),
                 updateStatus,
-                expectedAuthMessage
             );
         },
     );

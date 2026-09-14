@@ -222,9 +222,25 @@ export function registerSiteTools(server: McpToolServer, ctxFactory: () => Handl
             // Say what remains rather than reporting a bare success. A registration
             // that has not been republished changes nothing a visitor can see, and
             // an agent that stopped here would report the storefront fixed.
+            //
+            // A refusal is a handoff: only a person who holds the role can grant it,
+            // and Manage Site Access is where the user finds out who that is.
             return asText({
                 ...result,
                 ...(result.status === 'repaired' && { nextStep: 'republish' }),
+                ...(result.status === 'not_authorized' &&
+                    needsUser({
+                        reason: 'approval',
+                        what: 'Get the admin role on this site configuration',
+                        where: { command: 'demoBuilder.manageSiteAccess' },
+                        tellUser:
+                            "Your Adobe account holds no admin role on this site's " +
+                            'configuration, so the repair was refused. Run "Demo Builder: ' +
+                            'Manage Site Access": it names anyone who can add you, and when ' +
+                            'nobody is visible it opens the AEM Code Sync app on GitHub. Once ' +
+                            'you hold the role, the repair can be retried.',
+                        resumeWith: 'get_site_access',
+                    })),
             });
         },
     );

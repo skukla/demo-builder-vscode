@@ -31,29 +31,3 @@ export function maskEmail(email: string): string {
     return `${local[0]}****${local[local.length - 1]}${domain}`;
 }
 
-/**
- * Mask the address in a `?user=` query parameter inside free text.
- *
- * Needed because {@link maskEmail} and any email-shaped regex look for a literal
- * `@`, and `URL.searchParams.set` percent-encodes it — `user=owner%40adobe.com`.
- * The Code Sync setup URL carries the signed-in address that way, and that URL is
- * embedded in a message written to `logger.error` and into a PDP caveat logged at
- * `info`; both are buffered into the debug export users paste into tickets.
- *
- * Only the `user` value is touched. The `org`, `site` and `url` parameters are
- * what make the link land on the right setup page, so masking them would break
- * the remedy the message exists to give.
- */
-export function redactUrlUserParam(text: string): string {
-    return text.replace(/([?&]user=)([^&\s]*)/gi, (_match, prefix: string, value: string) => {
-        if (!value) return `${prefix}${value}`;
-        let decoded = value;
-        try {
-            decoded = decodeURIComponent(value);
-        } catch {
-            // A malformed escape sequence: mask the raw value rather than throw.
-        }
-        return `${prefix}${maskEmail(decoded)}`;
-    });
-}
-

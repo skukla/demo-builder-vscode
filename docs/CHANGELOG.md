@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **"No admin role on this site" no longer sends people to a page that cannot help.** The 403 message, Manage Site Access and Repair Site Configuration all pointed at AEM's setup page, which only works when AEM Code Sync opens it during a GitHub App install. Opened from Demo Builder it could not load the site or add anyone. Manage Site Access now names the org admins who can add you, otherwise opens the Code Sync app on GitHub, and says who to ask if access still does not arrive. An agent whose repair is refused now gets a hand-off to Manage Site Access instead of the dead link.
+
 ## [1.0.0-beta.146] - 2026-09-10
 
 The styling layer is the headline: the CSS reset and every design token had not been
