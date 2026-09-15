@@ -11,7 +11,7 @@
 import { probeSharedDemo } from '../services/storefront/sharedDemoProbe';
 import { adoptExistingGitHubSession } from './edsGitHubHandlers';
 import { getGitHubServices } from './edsHelpers';
-import { assertGitHubName, parseStorefrontLink } from '@/core/utils/githubUrlParser';
+import { gitHubSourceProblem, parseStorefrontLink } from '@/core/utils/githubUrlParser';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 import type { ProbeSharedDemoRequest, SharedDemoProbeResult } from '@/types/webviewRequests';
 
@@ -48,12 +48,8 @@ export async function handleProbeSharedDemo(
                 : 'owner and repo are required',
         };
     }
-    try {
-        assertGitHubName(owner, 'owner');
-        assertGitHubName(repo, 'repo');
-    } catch (error) {
-        return { success: false, error: (error as Error).message };
-    }
+    const nameProblem = gitHubSourceProblem(owner, repo);
+    if (nameProblem) return { success: false, error: nameProblem };
 
     const { fileOperations, repoOperations, tokenService } = getGitHubServices(context.context.secrets);
     if (!(await tokenService.getToken()) && !(await adoptExistingGitHubSession(tokenService))) {

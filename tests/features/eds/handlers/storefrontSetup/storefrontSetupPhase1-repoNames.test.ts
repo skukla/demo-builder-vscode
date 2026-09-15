@@ -59,7 +59,13 @@ function makeServices(createdFullName = 'skukla/brand-new') {
                 fullName: createdFullName,
             }),
             waitForContent: jest.fn().mockResolvedValue(undefined),
-            resetToTemplate: jest.fn().mockResolvedValue(undefined),
+        },
+        templateSync: {
+            resetRepository: jest.fn().mockResolvedValue({
+                success: true,
+                strategy: 'reset',
+                syncedCommit: 'abc1234',
+            }),
         },
         githubAppService: {
             getInstallUrl: jest.fn().mockReturnValue('https://github.com/apps/aem-code-sync'),
@@ -237,7 +243,7 @@ describe('the reset path', () => {
         );
 
         expect(mockPin).toHaveBeenCalledTimes(1);
-        expect(services.githubRepoOps.resetToTemplate).not.toHaveBeenCalled();
+        expect(services.templateSync.resetRepository).not.toHaveBeenCalled();
     });
 
     it('uses the plain template reset for a storefront with no patch source', async () => {
@@ -247,14 +253,26 @@ describe('the reset path', () => {
             config({ repoMode: 'existing', existingRepo: 'acme/store', resetToTemplate: true }),
         );
 
-        expect(services.githubRepoOps.resetToTemplate).toHaveBeenCalledWith(
-            'acme',
-            'store',
-            TEMPLATE.owner,
-            TEMPLATE.repo,
-            'main',
-            'chore: reset to template',
-        );
+        expect(services.templateSync.resetRepository).toHaveBeenCalledWith({
+            repoOwner: 'acme',
+            repoName: 'store',
+            templateOwner: TEMPLATE.owner,
+            templateRepo: TEMPLATE.repo,
+        });
+    });
+
+    it('stops with the reset\'s own message when the reset fails', async () => {
+        const services = makeServices();
+        (services.templateSync.resetRepository as jest.Mock).mockResolvedValue({
+            success: false,
+            strategy: 'reset',
+            syncedCommit: '',
+            error: 'Could not push the update to GitHub. See Debug Logs for details.',
+        });
+
+        await expect(
+            run(config({ repoMode: 'existing', existingRepo: 'acme/store', resetToTemplate: true }), services),
+        ).rejects.toThrow('Could not push the update to GitHub. See Debug Logs for details.');
     });
 });
 

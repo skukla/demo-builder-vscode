@@ -82,6 +82,7 @@ export function createMockAuthenticationService(
         getWorkspacesSdkOnly: jest.fn().mockResolvedValue([]),
         createProject: jest.fn().mockResolvedValue(undefined),
         createWorkspace: jest.fn().mockResolvedValue(undefined),
+        deleteWorkspace: jest.fn().mockResolvedValue(undefined),
         deleteConsoleProject: jest.fn().mockResolvedValue(undefined),
         renameRemoteProject: jest.fn().mockResolvedValue(undefined),
 

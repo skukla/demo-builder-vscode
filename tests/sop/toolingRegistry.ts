@@ -357,6 +357,14 @@ const NPM_CHECKS: readonly Instrument[] = [
         runs: 'npm run validate:tsc-blindspots',
     },
     {
+        id: 'validate:source-duplication',
+        kind: 'npm-script',
+        cadence: 'per-push',
+        resultKind: 'gate',
+        what: "copy-paste in src/ may not GROW: a shrink-only pin on jscpd's clone-pair count. The periodic code-duplication-scan reads the same number and proposes fixes; this one stops a new copy landing between release cuts. Source duplication had no automatic check of any kind until 2026-09-11 — the existing clone ledger scans tests, and the reuse-first hook fires only on WRITE of a file that does not exist yet, which is not how a third copy arrives",
+        runs: 'npm run validate:source-duplication',
+    },
+    {
         id: 'validate:test-file-sizes',
         kind: 'npm-script',
         cadence: 'per-push',
@@ -373,6 +381,14 @@ const NPM_CHECKS: readonly Instrument[] = [
         runs: 'npm run validate:css-baseline',
         unwiredReason:
             'runs from .githooks/pre-push, not from `npm run gate`. Gate is the inner-loop command, where mid-edit is exactly when no capture exists yet; and CI runs the same checks with no browser and no reports/visual-baseline, so there it would fail every time and be switched off',
+    },
+    {
+        id: 'validate:convention-proofs',
+        kind: 'npm-script',
+        cadence: 'periodic',
+        resultKind: 'gate',
+        what: "whether a convention's named enforcer would actually go RED if the rule were broken - it plants a real violation in a throwaway worktree and requires the enforcer to reject it. The handbook's 'all enforced' claim is otherwise verified only as far as the cited path RESOLVES; hook rules have carried .proof.sh for this since August and test-enforced conventions carried nothing",
+        runs: 'npm run validate:convention-proofs',
     },
     {
         id: 'validate:jest-config',

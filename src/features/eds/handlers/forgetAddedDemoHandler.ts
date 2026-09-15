@@ -20,7 +20,7 @@
 
 import * as vscode from 'vscode';
 import { getGitHubServices } from './edsHelpers';
-import { assertGitHubName } from '@/core/utils/githubUrlParser';
+import { gitHubSourceProblem } from '@/core/utils/githubUrlParser';
 import { ZIP_COMMIT_MESSAGE } from '@/features/eds/services/storefront/zipImportCommit';
 import {
     addedDemoKey,
@@ -153,12 +153,8 @@ export async function handleForgetAddedDemo(
         return { success: false, error: 'A demo name and source are required' };
     }
     const { name, source } = data;
-    try {
-        assertGitHubName(source.owner, 'owner');
-        assertGitHubName(source.repo, 'repo');
-    } catch (error) {
-        return { success: false, error: (error as Error).message };
-    }
+    const nameProblem = gitHubSourceProblem(source.owner, source.repo);
+    if (nameProblem) return { success: false, error: nameProblem };
 
     const repo = `${source.owner}/${source.repo}`;
     // A repository that IS one of this computer's storefronts (a demo package

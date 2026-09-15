@@ -68,7 +68,6 @@ function makeServices() {
                 fullName: 'skukla/brand-new',
             }),
             waitForContent: jest.fn().mockResolvedValue(undefined),
-            resetToTemplate: jest.fn().mockResolvedValue(undefined),
         },
         githubAppService: {
             getInstallUrl: jest.fn().mockReturnValue('https://github.com/apps/aem-code-sync'),

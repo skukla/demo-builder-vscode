@@ -12,11 +12,7 @@
 import { z } from 'zod';
 import { asRawText, asText } from './mcpToolResult';
 import type { AuthProvider, McpToolServer } from './mcpToolServer';
-import {
-    payloadOfEvent,
-    withCapturedProgress,
-    type CapturedEvent,
-} from './progressCapture';
+import { payloadOfEvent, withCapturedProgress, type CapturedEvent } from './progressCapture';
 import { dispatchHandler } from '@/core/handlers/dispatchHandler';
 import type { HandlerContext, HandlerMap, HandlerResponse } from '@/types/handlers';
 
@@ -144,8 +140,12 @@ export interface ToolDescriptor {
  */
 export function defaultShape(res: HandlerResponse): string {
     if (!res.success) {
-        const { success: _ok, error, code, ...extra } = res as HandlerResponse &
-            Record<string, unknown>;
+        const {
+            success: _ok,
+            error,
+            code,
+            ...extra
+        } = res as HandlerResponse & Record<string, unknown>;
         if (Object.keys(extra).length > 0) {
             return JSON.stringify({ error, ...(code ? { code } : {}), ...extra });
         }
@@ -154,7 +154,8 @@ export function defaultShape(res: HandlerResponse): string {
     }
     const { success: _success, ...rest } = res as HandlerResponse & Record<string, unknown>;
     const keys = Object.keys(rest);
-    const payload = keys.length === 1 && keys[0] === 'data' ? (rest as { data: unknown }).data : rest;
+    const payload =
+        keys.length === 1 && keys[0] === 'data' ? (rest as { data: unknown }).data : rest;
     return JSON.stringify(payload);
 }
 
@@ -171,7 +172,7 @@ const confirmField = z
  * @param descriptors Tool rows to register.
  * @param ctxFactory  Builds a headless HandlerContext for each invocation.
  */
- 
+
 /**
  * Dispatch one descriptor's handler, capturing its pushed payload when the row
  * asks for it.
@@ -254,20 +255,38 @@ export function registerDescriptorTools(
             },
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             async (args: any) => {
-            if (d.confirm && args?.confirm !== true) {
-                return asRawText(`${d.tool} requires confirm:true to proceed.`);
-            }
-            // After the confirm gate, before any dispatch: a preflight answer means
-            // the handler must not run at all. Order is deliberate — a destructive
-            // row still refuses an unconfirmed call first, so adding a preflight can
-            // never widen what a tool will do without confirmation.
-            const early = d.preflight?.(args ?? {});
-            if (early) {
-                return asText(early);
-            }
-            const res = await runHandler(d, ctxFactory, args ?? {});
-            // `shape` returns a STRING (already stringified), so raw — not asText.
-            return asRawText(shape(res, args ?? {}));
-        });
+                if (d.confirm && args?.confirm !== true) {
+                    // A tool execution error, not merely prose: MCP names "input
+                    // validation errors" as exactly this kind, and the correction is
+                    // mechanical — call again with confirm: true. Marking it is what
+                    // lets a client hand it back for self-correction. The TEXT is
+                    // unchanged; only the envelope now says it failed.
+                    return asRawText(`${d.tool} requires confirm:true to proceed.`, {
+                        isError: true,
+                    });
+                }
+                // After the confirm gate, before any dispatch: a preflight answer means
+                // the handler must not run at all. Order is deliberate — a destructive
+                // row still refuses an unconfirmed call first, so adding a preflight can
+                // never widen what a tool will do without confirmation.
+                const early = d.preflight?.(args ?? {});
+                if (early) {
+                    return asText(early);
+                }
+                const res = await runHandler(d, ctxFactory, args ?? {});
+                // `shape` returns a STRING (already stringified), so raw — not asText.
+                // The failure is declared HERE rather than inferred downstream:
+                // `asRawText` is handed text, so `res` is the last thing that still
+                // knows whether the call succeeded. Only the TOP-LEVEL `success`
+                // counts — cancellation is `{ success: true, data: { success: false
+                // } }`, a handler that ran correctly reporting that the user backed
+                // out, and marking that as a tool failure would tell an agent to
+                // retry something a person just declined.
+                return asRawText(
+                    shape(res, args ?? {}),
+                    res.success === false ? { isError: true } : undefined,
+                );
+            },
+        );
     }
 }

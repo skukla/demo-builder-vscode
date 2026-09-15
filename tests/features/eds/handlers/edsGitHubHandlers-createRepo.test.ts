@@ -17,6 +17,11 @@ const repoOperations = { waitForContent: jest.fn().mockResolvedValue(true) };
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     getGitHubServices: () => ({ repoOperations }),
 }));
+// The handler builds the shared template reset, which runs git through the executor.
+jest.mock('@/core/di/serviceLocator', () => ({
+    ServiceLocator: { getCommandExecutor: () => ({ execute: jest.fn() }) },
+}));
+const services = { repoOps: repoOperations, templateSync: expect.objectContaining({ resetRepository: expect.any(Function) }) };
 const mockCreate = createRepoFromSource as jest.Mock;
 
 function ctx() {
@@ -41,7 +46,7 @@ describe('handleCreateGitHubRepo', () => {
             fromAddedDemo: true,
         });
         expect(mockCreate).toHaveBeenCalledWith(
-            repoOperations,
+            services,
             { newRepoName: 'new-demo', isPrivate: false, fromAddedDemo: true },
             'jen',
             'isle5-demo',
@@ -56,6 +61,6 @@ describe('handleCreateGitHubRepo', () => {
 
     it('takes the plain template path for a shipped brand', async () => {
         await handleCreateGitHubRepo(ctx(), { repoName: 'new-demo', templateOwner: 'adobe-commerce', templateRepo: 'boilerplate-b2b-template' });
-        expect(mockCreate).toHaveBeenCalledWith(repoOperations, expect.objectContaining({ fromAddedDemo: false }), 'adobe-commerce', 'boilerplate-b2b-template', expect.anything());
+        expect(mockCreate).toHaveBeenCalledWith(services, expect.objectContaining({ fromAddedDemo: false }), 'adobe-commerce', 'boilerplate-b2b-template', expect.anything());
     });
 });

@@ -35,9 +35,9 @@ import {
     isExpired,
     type CacheEntry,
 } from '@/core/cache/cacheUtils';
-import { isTimeout } from '@/core/errors';
 import { withTimeout } from '@/core/utils/promiseUtils';
 import { CACHE_TTL, TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { isTimeoutError } from '@/core/utils/timeoutError';
 import type { McpInventoryEntry, McpToolEntry } from '@/types/ai';
 import { parseJSON } from '@/types/typeGuards';
 
@@ -265,13 +265,13 @@ function buildFailureEntry(
     const message = stderrTail
         ? `${baseMessage}\nstderr (tail):\n${stderrTail}`
         : baseMessage;
-    const status: 'timeout' | 'error' = isTimeout(err) ? 'timeout' : 'error';
+    const status: 'timeout' | 'error' = isTimeoutError(err) ? 'timeout' : 'error';
     return { id, status, error: message };
 }
 
 /** One-line summary of the failure cause. No stderr — that's appended separately. */
 function describeError(err: unknown): string {
-    if (isTimeout(err)) return `Exceeded ${MCP_INSPECT_TIMEOUT_MS}ms budget`;
+    if (isTimeoutError(err)) return `Exceeded ${MCP_INSPECT_TIMEOUT_MS}ms budget`;
     if (err instanceof Error) return err.message;
     return String(err);
 }

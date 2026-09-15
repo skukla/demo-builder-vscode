@@ -19,6 +19,7 @@ import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import { detectB2bReadiness } from '@/features/eds/services/b2bReadinessDetection';
 import { extractConfigParamsFromConfigs } from '@/features/eds/services/configGenerator';
 import { syncConfigToRemote } from '@/features/eds/services/configSyncService';
+import { resolveTemplateCommitSha } from '@/features/eds/services/templateCommitResolver';
 import { ensureEdsContent } from '@/features/project-creation/services/edsContentSetup';
 import type { HandlerContext } from '@/types/handlers';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
@@ -68,11 +69,16 @@ export async function populateEdsMetadata(
     // packages this reads the patches-repo LKG; for legacy/forked packages
     // it falls through to template HEAD. The lkgSource — when set — is
     // persisted alongside so the update checker can compare against the
-    // same LKG file the create flow consulted.
-    // An added demo's code may live on a branch other than main; the update
-    // check and the baseline commit both read that branch.
+    // same LKG file the create flow consulted. Reset records through the
+    // same resolver, so a reset storefront and a fresh one agree. An added demo's
+    // code may live on a branch other than main; the update check and the
+    // baseline commit both read that branch.
     const templateBranch = typedConfig.demo?.source.branch;
-    const lastSyncedCommit = await fetchTemplateCommitSha(context, typedConfig.edsConfig, templateBranch);
+    const lastSyncedCommit = await resolveTemplateCommitSha(
+        { ...typedConfig.edsConfig, ...(templateBranch ? { templateBranch } : {}) },
+        getGitHubServices(context.context.secrets).fileOperations,
+        context.logger,
+    );
 
     const templateOwner = typedConfig.edsConfig.templateOwner;
     const templateRepo = typedConfig.edsConfig.templateRepo;
@@ -104,68 +110,6 @@ export async function populateEdsMetadata(
     context.logger.debug(
         `[Project Creation] Populated EDS metadata for ${COMPONENT_IDS.EDS_STOREFRONT}: githubRepo=${edsInstance.metadata?.githubRepo}`,
     );
-}
-
-/**
- * Fetch the canonical commit SHA to record as `lastSyncedCommit`.
- *
- * Thin-layer storefronts (package has `codePatchSource` configured per
- * ADR-006): read the verified canonical SHA from the patches repo's
- * `last-known-good` file (D2 — Chromium LKGR / Nix git-revision convention).
- * If unreachable, fall back to template HEAD with a warn line (D1
- * proceed-and-warn).
- *
- * Forked storefronts (no `codePatchSource`): unchanged — fetch the template
- * repo's `main` HEAD as `lastSyncedCommit`. Mixed fleets coexist during
- * migration.
- */
-async function fetchTemplateCommitSha(
-    context: HandlerContext,
-    edsConfig: NonNullable<ProjectCreationConfig['edsConfig']>,
-    templateBranch = 'main',
-): Promise<string | undefined> {
-    const { templateOwner, templateRepo, codePatchSource } = edsConfig;
-    if (!templateOwner || !templateRepo) return undefined;
-
-    // Thin-layer path: read LKG from patches repo. Fall back to template
-    // HEAD on LKG fetch failure (warn already logged inside readLkgSha).
-    if (codePatchSource) {
-        const { readLkgSha } = await import('@/features/eds/services/patches/lkgReader');
-        const lkg = await readLkgSha(
-            {
-                owner: codePatchSource.owner,
-                repo: codePatchSource.repo,
-                lkgFile: codePatchSource.lkgFile,
-            },
-            context.logger,
-        );
-        if (lkg) {
-            context.logger.debug(
-                `[Project Creation] Recorded LKG SHA: ${lkg.substring(0, 7)} (from ${codePatchSource.owner}/${codePatchSource.repo})`,
-            );
-            return lkg;
-        }
-        context.logger.warn(
-            `[Project Creation] LKG unreachable for ${codePatchSource.owner}/${codePatchSource.repo} — falling back to template HEAD`,
-        );
-    }
-
-    try {
-        // Both from the cache; the two dynamic imports went with them.
-        const { fileOperations: githubFileOps } = getGitHubServices(context.context.secrets);
-        const sha =
-            (await githubFileOps.getLatestCommitSha(templateOwner, templateRepo, templateBranch)) ??
-            undefined;
-        context.logger.debug(
-            `[Project Creation] Fetched template commit SHA: ${sha?.substring(0, 7)}`,
-        );
-        return sha;
-    } catch (error) {
-        context.logger.warn(
-            `[Project Creation] Could not fetch template commit SHA: ${(error as Error).message}`,
-        );
-        return undefined;
-    }
 }
 
 /**

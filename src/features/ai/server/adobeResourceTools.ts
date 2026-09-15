@@ -173,6 +173,66 @@ export function registerAdobeResourceTools(
     );
 
     server.registerTool(
+        'delete_adobe_workspace',
+        {
+            needsAuth: ['adobe'],
+            annotations: { readOnlyHint: false, destructiveHint: true },
+            description:
+                'Delete a workspace from the SELECTED Adobe project (select_org and select_project first). Requires confirm:true and confirmName equal to the workspace name.',
+            inputSchema: {
+                workspaceId: z.string().describe('Workspace id from list_adobe_workspaces'),
+                workspaceName: z
+                    .string()
+                    .describe('Workspace name — echoed back as confirmName'),
+                confirm: z.boolean().optional().describe('Must be true to proceed'),
+                confirmName: z
+                    .string()
+                    .optional()
+                    .describe('Must equal workspaceName exactly — guards this deletion'),
+            },
+        },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        async (args: any) => {
+            const workspaceId = String(args?.workspaceId ?? '').trim();
+            const workspaceName = String(args?.workspaceName ?? '').trim();
+            if (!workspaceId || !workspaceName) {
+                return asText({ error: 'workspaceId and workspaceName are required' });
+            }
+
+            // The same name-echo gate as delete_adobe_project. A workspace carries its
+            // own credentials and Runtime namespace, so deleting the wrong one costs an
+            // SC a redeploy, not just a row.
+            if (args?.confirm !== true || args?.confirmName !== workspaceName) {
+                return asText({
+                    error:
+                        `delete_adobe_workspace permanently deletes "${workspaceName}" and its credentials. ` +
+                        `To proceed, call again with confirm:true and confirmName:"${workspaceName}".`,
+                    irreversible: true,
+                });
+            }
+
+            const target = requireProject();
+            if ('error' in target) return asText(target);
+
+            const mgr = await authedManager(ctxFactory());
+            if (!mgr) return asText(NEEDS_ADOBE);
+
+            const result = await mgr.deleteWorkspace(workspaceId, {
+                orgId: target.orgId,
+                projectId: target.projectId,
+            });
+
+            // Adobe refuses to delete the Production workspace. That arrives as an SDK
+            // error rather than something checkable up front, so it reaches the agent as
+            // the reason it actually is instead of a guess made here.
+            if (isConsoleOpFailure(result)) {
+                return asText({ deleted: false, error: result.error });
+            }
+            return asText({ deleted: true, workspaceId, projectId: target.projectId });
+        },
+    );
+
+    server.registerTool(
         'delete_adobe_project',
         {
             needsAuth: ['adobe'],

@@ -17,7 +17,7 @@ import type { Logger } from '@/types/logger';
 // Host constant shared from helixApiClient — one definition (2026-08-22 spine sweep).
 
 /** GitHub App installation URL - direct to GitHub's app installation flow */
-const GITHUB_APP_INSTALL_URL = 'https://github.com/apps/aem-code-sync/installations/select_target';
+export const GITHUB_APP_INSTALL_URL = 'https://github.com/apps/aem-code-sync/installations/select_target';
 
 /**
  * Describe a GitHub credential by its type prefix, never its value.

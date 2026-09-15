@@ -1,4 +1,4 @@
-import { parseGitHubUrl, parseStorefrontLink } from '@/core/utils/githubUrlParser';
+import { gitHubSourceProblem, parseGitHubUrl, parseStorefrontLink } from '@/core/utils/githubUrlParser';
 
 describe('parseGitHubUrl', () => {
     describe('valid URLs', () => {
@@ -93,5 +93,19 @@ describe('parseStorefrontLink', () => {
         expect(parseStorefrontLink('https://--repo--owner.aem.live')).toBeNull();
         expect(parseStorefrontLink('not a link')).toBeNull();
         expect(parseStorefrontLink(undefined)).toBeNull();
+    });
+});
+
+describe('gitHubSourceProblem', () => {
+    it('answers nothing for a usable owner and repo', () => {
+        expect(gitHubSourceProblem('jen', 'isle5-demo.v2')).toBeUndefined();
+    });
+
+    it('names the owner when the owner is unusable, before looking at the repo', () => {
+        expect(gitHubSourceProblem('jen smith', '..')).toBe('Invalid GitHub owner: "jen smith"');
+    });
+
+    it('names the repo when only the repo is unusable', () => {
+        expect(gitHubSourceProblem('jen', '..')).toBe('Invalid GitHub repo: ".."');
     });
 });

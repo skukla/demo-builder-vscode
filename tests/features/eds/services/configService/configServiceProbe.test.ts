@@ -260,7 +260,10 @@ describe('probeConfigService — org roster leg', () => {
 
         expect(result.orgAdmins?.status).toBe('not_authorized');
         expect(result.verdict).toMatch(/No org admin is visible/i);
-        expect(result.verdict).toContain('tools.aem.live/bot/setup');
+        // Not the AEM setup page: without the Code Sync bot's one-time key it
+        // cannot read the config or add a user (reproduced 2026-09-14).
+        expect(result.verdict).not.toContain('tools.aem.live');
+        expect(result.verdict).toContain('AEM Code Sync');
     });
 });
 

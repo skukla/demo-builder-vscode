@@ -15,14 +15,32 @@ The full rule, including why cancellation is a *success* carrying a failure, is 
 
 ## Typed errors, for code that must branch
 
-`src/core/errors/index.ts` defines the hierarchy — `AppError` and the six domain errors
-under it: `TimeoutError`, `NetworkError`, `AuthError`, `ValidationError`,
-`PrerequisiteError`, `MeshError`. Use a type when something downstream must
-*distinguish* failures; use a message when it only has to show one.
+Use a type when something downstream must *distinguish* failures; use a message when it
+only has to show one. `ErrorCode` is the programmatic companion — 201 uses across 47
+files — and is what lets a UI offer "Sign in" for an auth failure and "Retry" for a
+network one without matching on message text.
 
-`ErrorCode` is the programmatic companion, and is read in ~50 places. It is what lets
-a UI offer "Sign in" for an auth failure and "Retry" for a network one without
-matching on message text.
+**A domain error class lives with the domain that throws it.** That is where the
+practice actually is, measured 2026-09-10 across all 21 error classes in `src/`:
+
+| | thrown | caught |
+|---|---|---|
+| `DaLiveAuthError` (`features/eds/services/types.ts`) | 8 | 11 |
+| `DataInstallerApiError` (`features/data-installer/…`) | 9 | 4 |
+| `ToolManagerError` (`features/eds/services/types.ts`) | 9 | 1 |
+| `IoEventsApiError`, `HelixApiError`, `PushRejectedError`, … | 2–5 each | 1–6 each |
+
+`src/core/errors/index.ts` is the **legacy central hierarchy**, and this section used to
+describe it as the place errors live. It is not. It held `AppError` plus six domain
+errors and accounted for **four throws in the entire codebase** against 354 plain
+`throw new Error(...)`. Three of the six — `ValidationError`, `PrerequisiteError`,
+`MeshError` — had never been thrown or caught anywhere, and were deleted on 2026-09-10;
+this document had listed all three as part of the hierarchy, which is how a doc
+describing another module goes wrong without anything failing.
+
+What remains is what earns its place: `AppError` as a base worth catching, plus
+`TimeoutError`, `NetworkError` and `AuthError`. The module may only shrink — a new
+domain error goes beside the code that throws it.
 
 ## Three formatters, one per provider
 

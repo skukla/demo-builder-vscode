@@ -7,7 +7,7 @@
  * @module features/eds/handlers/addSharedDemoHandler
  */
 
-import { assertGitHubName } from '@/core/utils/githubUrlParser';
+import { gitHubSourceProblem } from '@/core/utils/githubUrlParser';
 import { isAddedDemo, rememberAddedDemo } from '@/features/project-creation/services/addedDemoSettings';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 import type { AddSharedDemoRequest, AddSharedDemoResult } from '@/types/webviewRequests';
@@ -23,12 +23,8 @@ export async function handleAddSharedDemo(
     if (!isAddedDemo(demo)) {
         return { success: false, error: 'A demo row with a source is required' };
     }
-    try {
-        assertGitHubName(demo.source.owner, 'owner');
-        assertGitHubName(demo.source.repo, 'repo');
-    } catch (error) {
-        return { success: false, error: (error as Error).message };
-    }
+    const nameProblem = gitHubSourceProblem(demo.source.owner, demo.source.repo);
+    if (nameProblem) return { success: false, error: nameProblem };
 
     await rememberAddedDemo(demo);
     context.logger.info(`[SharedDemo] Remembered ${demo.source.owner}/${demo.source.repo}`);

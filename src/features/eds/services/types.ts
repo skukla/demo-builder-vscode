@@ -137,6 +137,13 @@ export interface OAuthCallbackParams {
  */
 export const GITHUB_SCOPES = ['repo', 'user', 'read:org', 'delete_repo', 'workflow'] as const;
 
+/** One email on the signed-in GitHub account, as `GET /user/emails` answers it. */
+export interface GitHubAccountEmail {
+    email: string;
+    primary: boolean;
+    verified: boolean;
+}
+
 /**
  * GitHub API error with status
  */
@@ -619,16 +626,16 @@ export interface EdsMetadata {
     templateOwner?: string;
     /** Template repository name for update checks */
     templateRepo?: string;
-    /** Commit SHA when project was created or last synced with template.
+    /** Commit SHA when project was created, last reset, or last synced with template.
      *
      *  For thin-layer storefronts (ADR-006), this is the verified canonical
-     *  Last-Known-Good (LKG) SHA read from the patches repo at create time —
+     *  Last-Known-Good (LKG) SHA read from the patches repo at create or reset time —
      *  NOT the template repo's `main` HEAD. `templateUpdateChecker` compares
      *  against the current LKG (read from `lkgSource`), so a storefront is
      *  up-to-date when it matches LKG even if canonical `main` is ahead. */
     lastSyncedCommit?: string;
     /** When set, the storefront is "thin-layer": `lastSyncedCommit` was read
-     *  from this patches repo's `last-known-good` file at create time, and the
+     *  from this patches repo's `last-known-good` file at create or reset time, and the
      *  update checker fetches the current LKG from the same source to compare.
      *  Absent for forked storefronts (legacy / non-thin-layer packages). */
     lkgSource?: {

@@ -10,7 +10,7 @@ jest.mock('@/features/eds/services/patches/loadBearingPatches', () => ({
     addedDemoCaveats: jest.fn(),
 }));
 
-import { buildParams, installDefaults, runReset } from './edsResetRepoHelper.testUtils';
+import { buildParams, installDefaults, mockGetLatestCommitSha, runReset } from './edsResetRepoHelper.testUtils';
 import { addedDemoCaveats } from '@/features/eds/services/patches/loadBearingPatches';
 import { makeAddedDemo } from '../../../../helpers/demoPackageFixtures';
 import { createMockProject } from '../../../../helpers/projectFake';
@@ -43,6 +43,17 @@ describe('resetRepoToTemplate — an added demo', () => {
         const { resetMock } = await runReset(addedDemoParams('demo-2026'));
 
         expect(resetMock).toHaveBeenCalledWith('jen', 'isle5-demo', 'me', 'shop', expect.any(Map), 'demo-2026');
+    });
+
+    it("pins to the head of the demo's own branch, and records that commit", async () => {
+        const sha = 'abcdef0123456789abcdef0123456789abcdef01';
+        mockGetLatestCommitSha.mockResolvedValue(sha);
+
+        const { resetMock, result } = await runReset(addedDemoParams('demo-2026'));
+
+        expect(mockGetLatestCommitSha).toHaveBeenCalledWith('jen', 'isle5-demo', 'demo-2026');
+        expect(resetMock).toHaveBeenCalledWith('jen', 'isle5-demo', 'me', 'shop', expect.any(Map), sha);
+        expect(result.templateCommitSha).toBe(sha);
     });
 
     it('resets to main when the row names no branch', async () => {
