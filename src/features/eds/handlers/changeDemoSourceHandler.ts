@@ -28,8 +28,20 @@ const KIND_LABEL: Record<StorefrontKind, string> = { eds: 'an Edge Delivery', he
 
 export const NOT_AN_ADDED_DEMO = "This project wasn't built on an added demo, so there is no source to change.";
 
-/** The instance metadata the update check reads: owner, repo, and the branch when the row names one. */
+/**
+ * Where reset and the update check read the source from. An Edge Delivery
+ * project keeps it in the storefront instance's metadata (owner, repo, and the
+ * branch when the row names one). A headless project keeps it on its frontend
+ * instance: `repoUrl` and `branch`, which reset re-clones from
+ * (`projectResetService`) and the update check resolves (`updateManager`), in
+ * the shape creation wrote (`storefrontFromAddedDemo`).
+ */
 function repointInstanceMetadata(project: Project, row: AddedDemo): void {
+    for (const instance of Object.values(project.componentInstances ?? {})) {
+        if (instance.type !== 'frontend' || instance.id === COMPONENT_IDS.EDS_STOREFRONT || !instance.repoUrl) continue;
+        instance.repoUrl = `https://github.com/${row.source.owner}/${row.source.repo}`;
+        instance.branch = row.source.branch ?? 'main';
+    }
     const eds = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
     if (!eds?.metadata) return;
     const { templateBranch: _dropped, ...rest } = eds.metadata;

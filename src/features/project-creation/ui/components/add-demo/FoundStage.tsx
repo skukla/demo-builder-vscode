@@ -14,7 +14,6 @@ import React from 'react';
 import { SummaryRowItem } from '../BuildYourProjectSummary';
 import {
     COPY,
-    defaultDemoName,
     foundRows,
     isBuildable,
     kindMatches,
@@ -138,14 +137,12 @@ export function FoundStage({
             <TextField
                 label={COPY.nameLabel}
                 value={draft.name}
-                placeholder={defaultDemoName(result)}
                 onChange={onNameChange}
                 width="100%"
             />
             <TextArea
                 label={COPY.descriptionLabel}
                 value={draft.description}
-                placeholder={result.description?.description}
                 onChange={onDescriptionChange}
                 width="100%"
                 data-testid="demo-description"

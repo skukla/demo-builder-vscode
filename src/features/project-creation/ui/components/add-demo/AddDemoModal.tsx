@@ -41,7 +41,6 @@ function Body({ flow, mode, ...props }: BodyProps): React.ReactElement {
                     size="L"
                     message={flow.importStep?.message ?? COPY.importing}
                     subMessage={flow.importStep?.detail}
-                    helperText={COPY.importingFor}
                 />
             </CenteredFeedbackContainer>
         );

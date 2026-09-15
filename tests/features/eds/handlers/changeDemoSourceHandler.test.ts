@@ -84,6 +84,22 @@ describe('handleChangeDemoSource', () => {
         expect(renameAddedDemoSource).not.toHaveBeenCalled();
     });
 
+    it("points a headless project's frontend at the new repository, which is what its reset re-clones and its update check reads", async () => {
+        const bob = makeAddedDemo({ storefrontKind: 'headless', source: { owner: 'bob', repo: 'next-shop', branch: 'main' } });
+        const moved = makeAddedDemo({ storefrontKind: 'headless', source: { owner: 'bob', repo: 'next-shop-2026', branch: 'demo' } });
+        const p = createMockProject({
+            name: 'h',
+            demo: bob,
+            componentInstances: {
+                headless: { id: 'headless', name: 'Headless Storefront', type: 'frontend', status: 'ready', repoUrl: 'https://github.com/bob/next-shop', branch: 'main' },
+            },
+        });
+
+        await handleChangeDemoSource(ctx(p), { demo: moved, updateDemoPackage: false });
+
+        expect(p.componentInstances?.headless).toMatchObject({ repoUrl: 'https://github.com/bob/next-shop-2026', branch: 'demo' });
+    });
+
     it('drops a recorded branch when the new source names none', async () => {
         const p = project();
         const unbranched = makeAddedDemo({ source: { owner: 'steve', repo: 'isle5-copy' } });

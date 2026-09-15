@@ -241,7 +241,8 @@ async function createHeadless(ctx: HandlerContext, args: CreateArgs, pkg: DemoPa
         created: true,
         name: args.projectName,
         path: path.join(projectsDir(), args.projectName),
-        hint: 'Operate on it by name with the project tools (list_blocks, update_project_config, sync_storefront, …).',
+        // Not the block tools or sync_storefront: both need an Edge Delivery storefront.
+        hint: 'Operate on it by name with the project tools (get_project_status, start_demo, update_project_config, …).',
     });
 }
 

@@ -80,6 +80,9 @@ describe('create_project — an added demo by id', () => {
         expect(res.created).toBe(true);
         expect(storefrontSetup).not.toHaveBeenCalled();
         expect(capturedWizardState()).toMatchObject({ selectedPackage: 'added:bob/next-shop', demo: BOB });
+        // The hint names only tools that work on a headless project: the block tools and
+        // sync_storefront refuse one with no Edge Delivery storefront (projectSecurity.ts).
+        expect(res.hint).not.toMatch(/list_blocks|sync_storefront/);
     });
 
     it('refuses a stack of the other kind, naming the stacks the demo has', async () => {

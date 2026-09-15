@@ -34,7 +34,7 @@ export interface AddDemoDraft {
     source?: { owner: string; repo: string };
     /** The typed name; '' means the default. */
     name: string;
-    /** The typed description; '' means the description file's, or none. */
+    /** The description, filled in from the description file when there is one; '' means the file's, or none. */
     description: string;
     /** The B2B switch, asked only when the probe could not tell. */
     b2bOn: boolean;
@@ -72,7 +72,6 @@ export const COPY = {
     zipPublic: 'Make the repository public',
     zipButton: 'Choose a zip file',
     importing: 'Creating your repository from the zip',
-    importingFor: 'Unpacking the files and pushing them to your GitHub account. A large storefront can take a minute.',
     zipFailed: "We couldn't add this zip",
     useExisting: 'Add it from that repository',
     bundleSetup: 'This bundle also carries setup',

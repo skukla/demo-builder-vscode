@@ -12,6 +12,7 @@ import { useCallback, useEffect, useState } from 'react';
 import {
     buildAddedDemo,
     continueLabel as continueLabelFor,
+    defaultDemoName,
     INITIAL_DRAFT,
     isBuildable,
     kindMatches,
@@ -180,6 +181,12 @@ export function useAddDemoFlow(args: UseAddDemoFlowArgs): UseAddDemoFlowReturn {
                 return;
             }
             setProbe({ status: 'done', result: answer.result });
+            // The name and description the card would get, filled in so they read as
+            // editable; grey placeholders looked read-only (owner, 2026-09-15).
+            const read = answer.result;
+            if (read.outcome === 'read') {
+                setDraft((d) => ({ ...d, name: defaultDemoName(read), description: read.description?.description ?? '' }));
+            }
         } catch (error) {
             setProbe({ status: 'failed', error: (error as Error).message || PROBE_FAILED });
         }

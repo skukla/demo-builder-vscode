@@ -107,6 +107,10 @@ describe('AddDemoModal', () => {
         await probeWith({ success: true, result: READ });
 
         expect(screen.getByText('Package details')).toBeInTheDocument();
+        // The name is filled in, not a grey placeholder that reads as read-only (owner, 2026-09-15).
+        const name = screen.getByLabelText('Demo name', { selector: 'input' }) as HTMLInputElement;
+        expect(name.value).toBe('Isle5 Demo');
+        expect(name).not.toHaveAttribute('placeholder');
         expect(screen.getByTestId('found-Type')).toHaveTextContent('Edge Delivery');
         expect(screen.getByTestId('found-Pages')).toHaveTextContent('12 published');
         // One row per level, labelled on the left like every other row (owner, 2026-09-14).
@@ -131,6 +135,18 @@ describe('AddDemoModal', () => {
         expect(mockRequest.mock.calls.at(-1)?.[1].demo).not.toHaveProperty('createdFromZip');
         expect(props.onDemoAdded).toHaveBeenCalledWith(JEN);
         expect(props.onClose).toHaveBeenCalled();
+    });
+
+    it("fills the description in from the demo's own file, as editable text, not a grey placeholder", async () => {
+        renderModal();
+        await probeWith({
+            success: true,
+            result: { ...READ, description: { kind: 'demo', version: 1, name: 'Isle5', description: 'Luxury B2C demo from the file' } },
+        });
+
+        const description = screen.getByLabelText('Description', { selector: 'textarea' }) as HTMLTextAreaElement;
+        expect(description.value).toBe('Luxury B2C demo from the file');
+        expect(description).not.toHaveAttribute('placeholder');
     });
 
     it('asks about company features only when the probe could not tell', async () => {
@@ -249,6 +265,8 @@ describe('AddDemoModal — while reading', () => {
         await click('Choose a zip file');
 
         expect(screen.getByText('Creating your repository from the zip')).toBeInTheDocument();
+        // The step and its detail say enough; no sentence under them (owner, 2026-09-15).
+        expect(screen.queryByText(/Unpacking the files/)).not.toBeInTheDocument();
         expect(screen.queryByTestId('add-demo-way-zip')).not.toBeInTheDocument();
 
         // The host names each step as it runs (owner, 2026-09-14: more granular reporting).
