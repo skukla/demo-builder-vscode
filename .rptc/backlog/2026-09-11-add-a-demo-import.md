@@ -85,3 +85,4 @@ unchanged from there: the Storefront area shows the frontend piece as fixed by t
 - 2026-09-14  fix(add-demo): a zip import that outlasts 30 seconds, and says what it is doing (`ae3689398`)
 - 2026-09-15  feat(add-demo)!: no copy of an added demo; Remove deletes only a zip's repository (`171db9442`)
 - 2026-09-15  fix(add-demo): Change source reaches a headless project; the dialog's name and description read as editable (`b4136c7ac`)
+- 2026-09-15  fix(add-demo): Edit shows the repository in a read-only field; a taken zip name is a warning (`191dc85b5`)
