@@ -5269,7 +5269,7 @@
             "anchors": [
                 "} catch (err) {"
             ],
-            "line": 140,
+            "line": 142,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying this catch body changes nothing a test can observe. The contract is that ensureHomeAiContext never throws, and that is the catch itself, not its body; the body's only statement is a process.stderr.write. With the body gone the function still swallows the failure and still resolves undefined, and every file it did manage to write is still written. The only difference is whether a warning line reaches stderr, which is wording, and the tests already pin the never-throws half in 'never throws when a write fails'.",
@@ -5282,7 +5282,7 @@
             "anchors": [
                 "} catch (err) {"
             ],
-            "line": 182,
+            "line": 184,
             "mutants": 1,
             "category": "block",
             "reason": "Same shape as the ensureHomeAiContext catch: the body is an ENOENT early return plus one process.stderr.write, so emptying it leaves refreshHomeAgentsMd resolving undefined on every failure exactly as it does now. No file is written either way and no value is returned either way, so the only observable difference is whether a warning line reaches stderr. The never-throws contract is pinned by two tests already.",
