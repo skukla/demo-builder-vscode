@@ -27,6 +27,7 @@
  * @module features/app-builder/services/appBuilderComponentMigration
  */
 
+import { entriesThatNeedApis } from './apiSubscriber';
 import {
     deployAppBuilderComponent,
     type AppBuilderComponentRunnerDeps,
@@ -117,7 +118,7 @@ export async function moveAppBuilderComponentsToDestination(
     // the union it is given, and this is the first reconcile against the NEW
     // workspace. Skip it and every moved component deploys into a workspace
     // subscribed to nothing it needs.
-    await deps.subscribeRequiredApis(deps.catalog, project);
+    await deps.subscribeRequiredApis(entriesThatNeedApis(deps.catalog, project), project);
 
     const moved: string[] = [];
     for (const id of ids) {

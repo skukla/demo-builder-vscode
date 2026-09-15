@@ -165,8 +165,10 @@ describe('addAppBuilderComponent (mesh)', () => {
         expect(entry?.providesEnvVars?.MESH_ENDPOINT).toBe('https://mesh/graphql');
     });
 
-    it('subscribes the UNION of all catalog appBuilderComponents (not just the one being added)', async () => {
-        const project = createProject();
+    it('subscribes what the project has as well as what is being added, so nothing it has is dropped', async () => {
+        const project = createProject({
+            appBuilderComponents: { [INTEGRATION_ENTRY.id]: { kind: 'integration', status: 'deployed', source: INTEGRATION_ENTRY.source } },
+        });
         const deps = createDeps();
 
         await addAppBuilderComponent(project, MESH_ENTRY, deps);
@@ -176,6 +178,16 @@ describe('addAppBuilderComponent (mesh)', () => {
         expect(subscribedAppBuilderComponents).toEqual(
             expect.arrayContaining([MESH_ENTRY, INTEGRATION_ENTRY])
         );
+    });
+
+    it("leaves out a catalog integration the project does not have (its APIs are not this project's)", async () => {
+        const project = createProject();
+        const deps = createDeps();
+
+        await addAppBuilderComponent(project, MESH_ENTRY, deps);
+
+        const subscribed = deps.subscribeRequiredApis.mock.calls[0][0] as AppBuilderComponentCatalogEntry[];
+        expect(subscribed.map((e) => e.id)).not.toContain(INTEGRATION_ENTRY.id);
     });
 });
 

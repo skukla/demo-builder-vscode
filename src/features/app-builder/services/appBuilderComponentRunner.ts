@@ -30,6 +30,7 @@
  * defaults wire the real functions; unit tests mock them.
  */
 
+import { entriesThatNeedApis } from './apiSubscriber';
 import { recordDeployOutcome, type DeployOutcome } from './appBuilderDeployOutcome';
 import { detectAppLayout, listDeclaredPackageNames, type AppConfigLayout } from './appConfigPackages';
 import { deriveProvidedValues, resolveDeployInputs, resolveDisplayName } from './deployInputs';
@@ -669,7 +670,7 @@ export async function addAppBuilderComponent(
         // The subscribe's org-services fetch alone measured 43.5s cold — the
         // longest silent stretch in the chain (owner audit, 2026-08-27).
         deps.onProgress?.('Subscribing Adobe APIs…');
-        await deps.subscribeRequiredApis(deps.catalog, project);
+        await deps.subscribeRequiredApis(entriesThatNeedApis(deps.catalog, project, [entry]), project);
 
         const installed = await cloneAndInstall(project, entry, deps);
         if ('error' in installed) {
@@ -798,7 +799,7 @@ export async function deployAppBuilderComponent(
         // no-op PUT of the same union.
         if (entry.lifecycle === 'app-management') {
             deps.onProgress?.('Subscribing Adobe APIs…');
-            await deps.subscribeRequiredApis(deps.catalog, project);
+            await deps.subscribeRequiredApis(entriesThatNeedApis(deps.catalog, project), project);
         }
 
         // Transient in-flight marker (see addAppBuilderComponent): without it

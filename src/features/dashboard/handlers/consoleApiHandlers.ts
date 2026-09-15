@@ -32,6 +32,7 @@ import { deriveAllowedDomain } from '@/features/app-builder/services/allowedDoma
 import { fetchApiAccessRows } from '@/features/app-builder/services/apiAccessRows';
 import {
     computeRequiredApis,
+    entriesThatNeedApis,
     subscribeRequiredApis,
     type SubscribedApi,
 } from '@/features/app-builder/services/apiSubscriber';
@@ -50,12 +51,16 @@ import { toError } from '@/types/typeGuards';
 /** Adobe sdk codes are alphanumeric (e.g. GraphQLServiceSDK); tolerate _ and -. */
 const SDK_CODE_RE = /^[A-Za-z0-9_-]+$/;
 
-/** The project's axis-filtered catalog — the same list every reconcile uses. */
+/**
+ * The entries whose APIs this project subscribes — the same scope every reconcile
+ * uses: the stack's meshes and the integrations the project has.
+ */
 function resolveProjectCatalog(project: Project): AppBuilderComponentCatalogEntry[] {
-    return getAvailableAppBuilderComponents(
+    const catalog = getAvailableAppBuilderComponents(
         project.componentSelections?.backend ?? '',
         project.componentSelections?.frontend ?? '',
     );
+    return entriesThatNeedApis(catalog, project);
 }
 
 /**

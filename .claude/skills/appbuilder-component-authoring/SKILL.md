@@ -47,12 +47,19 @@ what prevents double-deploys. Custom-URL entries synthesize via
 
 ## The subscription contract (load-bearing)
 
-- `subscribeRequiredApis` (`apiSubscriber.ts`) reconciles the **UNION** of catalog
-  `requiredApis` + baseline (`AdobeIOManagementAPISDK`) + `Project.additionalConsoleApis`
+- `subscribeRequiredApis` (`apiSubscriber.ts`) reconciles the **UNION** of the scoped
+  catalog's `requiredApis` + baseline (`AdobeIOManagementAPISDK`) + `Project.additionalConsoleApis`
   and **PUTs the full list** — the endpoint may replace, so anything omitted from ONE
   reconcile is silently stripped. If you add a new source of subscribed APIs, it must be
   persisted and unioned at EVERY call site: the runner deps wrapper
   (`appBuilderComponentRunnerDeps.ts`) and `ensureMeshApiSubscribed`.
+- **The catalog passed in is SCOPED, never the whole stack-filtered list**:
+  `entriesThatNeedApis(catalog, project, adding)` keeps the stack's meshes, the
+  integrations and systems the project HAS, and the entries being added. Owner,
+  2026-09-15: an integration's APIs belong to projects that have it — the stack-wide list
+  subscribed the ERP's database API on every Commerce project that added anything. Every
+  subscribe call site (runner add + redeploy, migration, `consoleApiHandlers`) goes
+  through it; a new one must too, or it either over-subscribes or drops what the project has.
 - `additionalConsoleApis` has TWO writers with different verification points:
   the `add_console_apis` MCP handler (`consoleApiHandlers.ts`) writes **only after a
   successful subscribe**; the wizard writes it PRE-subscribe (per-integration

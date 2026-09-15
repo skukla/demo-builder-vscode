@@ -31,6 +31,8 @@ jest.mock('@/features/dashboard/handlers/appBuilderComponentHandlers', () => ({
 jest.mock('@/features/app-builder/services/apiSubscriber', () => ({
     computeRequiredApis: jest.requireActual('@/features/app-builder/services/apiSubscriber')
         .computeRequiredApis,
+    entriesThatNeedApis: jest.requireActual('@/features/app-builder/services/apiSubscriber')
+        .entriesThatNeedApis,
     subscribeRequiredApis: jest.fn().mockResolvedValue([
         { code: 'AdobeIOManagementAPISDK', name: 'I/O Management API' },
         { code: 'FireflyAPISDK', name: 'Firefly Services' },
@@ -106,6 +108,18 @@ describe('handleListConsoleApis', () => {
         expect(data.apis.find((a) => a.code === 'FireflyAPISDK')?.managed).toBe(false);
         expect(data.apis.find((a) => a.code === 'GraphQLServiceSDK')?.managed).toBe(false);
         expect(data.added).toEqual(['FireflyAPISDK']);
+    });
+
+    it("does not lock an API that belongs to an integration the project does not have", async () => {
+        (getAvailableAppBuilderComponents as jest.Mock).mockReturnValueOnce([
+            { id: 'erp-integration', name: 'ERP', description: '', kind: 'integration', requiredApis: ['FireflyAPISDK'], source: { owner: 'o', repo: 'r', branch: 'main' } },
+        ]);
+        const context = makeContext(makeProject());
+
+        const result = await handleListConsoleApis(context, undefined);
+
+        const data = result.data as { apis: Array<{ code: string; managed: boolean }> };
+        expect(data.apis.find((a) => a.code === 'FireflyAPISDK')?.managed).not.toBe(true);
     });
 
     it('fails without a project', async () => {

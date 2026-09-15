@@ -75,6 +75,32 @@ beforeEach(() => {
     );
 });
 
+describe("the pair's APIs are subscribed for this project only", () => {
+    const UNRELATED: AppBuilderComponentCatalogEntry = {
+        id: 'other-integration',
+        name: 'Other',
+        description: 'an integration this project does not have',
+        kind: 'integration',
+        requiredApis: ['OtherSDK'],
+        source: { owner: 'skukla', repo: 'other', branch: 'main' },
+    };
+
+    it('subscribes the ERP, then the ERP and its integration, and never an integration the project lacks', async () => {
+        const project = createProject();
+        const deps = createDeps({
+            deployApp: deployByPath(),
+            catalog: [{ ...SYSTEM, requiredApis: ['AppBuilderDataServicesSDK'] }, INTEGRATION, UNRELATED],
+        });
+
+        await addAppBuilderComponent(project, INTEGRATION, deps);
+
+        const scopes = (deps.subscribeRequiredApis as jest.Mock).mock.calls.map(([entries]) =>
+            (entries as AppBuilderComponentCatalogEntry[]).map((e) => e.id),
+        );
+        expect(scopes).toEqual([['demo-erp'], ['demo-erp', 'erp-integration']]);
+    });
+});
+
 describe('adding the integration adds its system first', () => {
     it('deploys the ERP, then the integration, in that order', async () => {
         const project = createProject();

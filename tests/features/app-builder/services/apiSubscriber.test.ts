@@ -18,6 +18,7 @@ import { BASELINE_API } from '@/core/constants';
 import {
     computeRequiredApis,
     resolveServiceInfos,
+    entriesThatNeedApis,
     partitionByPlatform,
     subscribeRequiredApis,
     type ServiceInfo,
@@ -62,6 +63,37 @@ const SERVICES_FOR_ORG = [
 ];
 
 describe('apiSubscriber', () => {
+    describe('entriesThatNeedApis (whose APIs a project subscribes)', () => {
+        // Owner, 2026-09-15: an integration's APIs belong to projects that have it.
+        // The stack-wide catalog subscribed every compatible integration's APIs on
+        // any add, so a project without the ERP got its database API too.
+        const shell: AppBuilderComponentCatalogEntry = { ...integrationAppBuilderComponent(['ShellSDK']), id: 'shell' };
+        const erp = integrationAppBuilderComponent(['AppBuilderDataServicesSDK']);
+        const catalog = [meshAppBuilderComponent(), shell, erp];
+
+        it('keeps the stack meshes and the integrations the project has; drops the rest', () => {
+            const project = { appBuilderComponents: { shell: { kind: 'integration' } } };
+
+            expect(entriesThatNeedApis(catalog, project).map((e) => e.id)).toEqual(['mesh', 'shell']);
+        });
+
+        it('adds the entry being added, before the project records it', () => {
+            expect(entriesThatNeedApis(catalog, {}, [erp]).map((e) => e.id)).toEqual(['mesh', 'erp']);
+        });
+
+        it('carries an entry being added that the catalog does not list, such as a custom integration', () => {
+            const custom = { ...integrationAppBuilderComponent(['CustomSDK']), id: 'custom-1' };
+
+            expect(entriesThatNeedApis(catalog, {}, [custom]).map((e) => e.id)).toEqual(['mesh', 'custom-1']);
+        });
+
+        it("so a project without the ERP never asks for the ERP's database API", () => {
+            const project = { appBuilderComponents: { shell: { kind: 'integration' } } };
+
+            expect(computeRequiredApis(entriesThatNeedApis(catalog, project))).not.toContain('AppBuilderDataServicesSDK');
+        });
+    });
+
     describe('computeRequiredApis (union + baseline)', () => {
         it('should union every appBuilderComponent requiredApis plus the baseline', () => {
             const result = computeRequiredApis([

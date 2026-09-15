@@ -129,6 +129,35 @@ export function computeRequiredApis(
 }
 
 /**
+ * The catalog entries whose `requiredApis` this project's subscription carries:
+ * the stack's API Mesh entries (unchanged), every integration or system the project
+ * already has, and the entries being added before the project records them.
+ *
+ * Scoped because an integration's APIs belong to the projects that have it (owner,
+ * 2026-09-15). Every compatible integration used to count, so any add subscribed the
+ * ERP's database API on a project with no ERP. Safe to narrow: each reconcile still
+ * names everything the project has, and the subscribe skips its update when the
+ * credential already carries every code.
+ *
+ * @param catalog - the project's stack-filtered catalog
+ * @param project - what the project has, keyed by component id
+ * @param adding - entries mid-add, included even when the catalog does not list them
+ */
+export function entriesThatNeedApis(
+    catalog: AppBuilderComponentCatalogEntry[],
+    project: { appBuilderComponents?: Record<string, unknown> },
+    adding: AppBuilderComponentCatalogEntry[] = [],
+): AppBuilderComponentCatalogEntry[] {
+    const has = new Set(Object.keys(project.appBuilderComponents ?? {}));
+    const addingIds = new Set(adding.map((entry) => entry.id));
+    const kept = catalog.filter(
+        (entry) => entry.kind === 'mesh' || has.has(entry.id) || addingIds.has(entry.id),
+    );
+    const keptIds = new Set(kept.map((entry) => entry.id));
+    return [...kept, ...adding.filter((entry) => !keptIds.has(entry.id))];
+}
+
+/**
  * Services whose org-catalog row declares NO platformList but are KNOWN to
  * subscribe onto OAuth S2S credentials. The live catalog declares platforms
  * for only 25 of 98 services (measured 2026-08-27), and `partitionByPlatform`
