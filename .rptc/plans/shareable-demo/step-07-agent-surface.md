@@ -166,7 +166,9 @@ specific to a colleague's demo; the Starter and BuildRight templates carry diffe
 (`sync-from-upstream.yml`, `deploy-pages.yml`). Not fixed in this program. The candidate
 fix is for repository creation to leave `.github/workflows/` out of the copy (or disable
 Actions on the new repository through the API), which is a product decision: those
-workflows are the template author's, and some SCs may want them.
+workflows are the template author's, and some SCs may want them. **Decided and fixed
+2026-09-15 (owner):** Actions is turned off on every repository Demo Builder creates, inside
+`createFromTemplate` and `createEmptyRepository`; the workflow files are kept.
 
 **Two more colleague storefronts, read live (owner-requested, 2026-09-13; owner away, so
 reads and the copy-free add only).** `sayurihanki/aistore`, by repository link and by site

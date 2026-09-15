@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **A new storefront repository no longer mails a failed "Build workflow run" for every push.** A storefront carries its author's GitHub workflows, and setup and reset push a commit per file, so each push ran them in the new repository and each run failed. Demo Builder now turns GitHub Actions off on every repository it creates, before pushing anything; the workflow files stay, and the SC can turn Actions back on in the repository's settings. Repositories created before this keep Actions on.
+
 ### Changed
 - **The "Custom (B2B + B2C)" demo is now "Starter (B2B + B2C)".** Same boilerplate, same B2B features; the old name read as build-it-yourself beside the coming "Add a demo" card. Existing projects built on it keep working.
 

@@ -134,7 +134,7 @@ export class GitHubRepoOperations {
                 },
             );
 
-            return {
+            const created = {
                 id: response.data.id,
                 name: response.data.name,
                 fullName: response.data.full_name,
@@ -142,6 +142,8 @@ export class GitHubRepoOperations {
                 cloneUrl: response.data.clone_url,
                 defaultBranch: response.data.default_branch,
             };
+            await this.turnOffActions(created.fullName);
+            return created;
         } catch (error) {
             const apiError = error as GitHubApiError & {
                 errors?: Array<{ message: string }>;
@@ -173,11 +175,12 @@ export class GitHubRepoOperations {
     ): Promise<GitHubRepo> {
         const octokit = await this.ensureAuthenticated();
         const body = { name: newRepoName, private: isPrivate, auto_init: true };
+        let created: GitHubRepo;
         try {
             const response = targetOwner
                 ? await octokit.request('POST /orgs/{org}/repos', { org: targetOwner, ...body })
                 : await octokit.request('POST /user/repos', body);
-            return toGitHubRepo(response.data);
+            created = toGitHubRepo(response.data);
         } catch (error) {
             const apiError = error as GitHubApiError & { errors?: Array<{ message: string }> };
             if (apiError.status === 422 && apiError.errors?.some((e) => e.message.includes('already exists'))) {
@@ -187,9 +190,34 @@ export class GitHubRepoOperations {
                 // GitHub answers 404 for an org the user cannot create in; a personal
                 // account is never an org, so fall back to the user's own namespace.
                 const response = await octokit.request('POST /user/repos', body);
-                return toGitHubRepo(response.data);
+                created = toGitHubRepo(response.data);
+            } else {
+                throw error;
             }
-            throw error;
+        }
+        await this.turnOffActions(created.fullName);
+        return created;
+    }
+
+    /**
+     * Turn GitHub Actions off on a repository Demo Builder just created, before
+     * anything is pushed to it (owner, 2026-09-15). A storefront carries its
+     * author's workflows, and setup and reset push a commit per file, so they ran
+     * over and over and mailed the SC a failure each time (18 in one test). The
+     * workflow files stay; the SC can turn Actions back on in the repository's
+     * settings. Best effort: a refusal is logged and never fails the creation.
+     */
+    private async turnOffActions(fullName: string): Promise<void> {
+        const [owner, repo] = fullName.split('/');
+        try {
+            const octokit = await this.ensureAuthenticated();
+            await octokit.request('PUT /repos/{owner}/{repo}/actions/permissions', { owner, repo, enabled: false });
+            this.logger.debug(`[GitHub] Turned off GitHub Actions on ${fullName}`);
+        } catch (error) {
+            this.logger.warn(
+                `[GitHub] Could not turn off GitHub Actions on ${fullName}: ${(error as Error).message}. ` +
+                    'Its workflows will run on every push; turn Actions off in the repository settings.',
+            );
         }
     }
 
