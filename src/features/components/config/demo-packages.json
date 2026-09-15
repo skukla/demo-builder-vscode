@@ -223,7 +223,7 @@
           "source": {
             "type": "git",
             "url": "https://github.com/skukla/citisignal-nextjs",
-            "branch": "master",
+            "branch": "main",
             "gitOptions": {
               "shallow": false
             }
