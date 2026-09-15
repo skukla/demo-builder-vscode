@@ -457,7 +457,12 @@ async function main() {
     if (buildWebviews) {
         tasks.push(runWebviewBuild());
     }
-    const contexts = (await Promise.all(tasks)).filter(Boolean);
+    // `flat()`: the webview build answers TWO contexts (plain and layered) as one
+    // array. Without it the watcher met that array where it expected a context,
+    // `ctx` was undefined, and every rebuild after startup failed partway: the
+    // extension rebuilt and the webviews never did, so a reloaded window kept
+    // showing stale UI (broken 2026-09-09 to 2026-09-15).
+    const contexts = (await Promise.all(tasks)).flat().filter(Boolean);
 
     const info = writeBuildInfo();
     if (info) {
