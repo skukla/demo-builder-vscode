@@ -60,3 +60,5 @@ the flyout, the agent tools · 06 live acceptance on Bodea and docs.
 - 2026-09-14  feat(app-builder): the ERP pair in the catalog — a system kind, bound to its integration (`f4c20c83d`)
 - 2026-09-15  fix(app-builder): an app whose actions ask for the project credentials deploys (`b24918ad4`)
 - 2026-09-15  Merge develop into feature/erp-integration (`a99be82a5`)
+- 2026-09-15  fix(app-builder): a project subscribes only the APIs of what it has (`6e3d4b5b7`)
+- 2026-09-15  chore(backlog): record the commits that reached AB-9 and PL-55 (`92ec7ecb3`)
