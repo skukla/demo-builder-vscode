@@ -162,6 +162,47 @@ describe('ManageSiteAccessCommand — no admin role', () => {
         );
     });
 
+    it("explains a GitHub primary email that is not the Adobe identity, opens AEM's User Admin tool, and polls", async () => {
+        // Reported 2026-09-15 (kmanns): Code Sync gave the role to his personal GitHub email.
+        const explanation = 'AEM Code Sync gives the admin role to the primary email of the GitHub account that installed it.';
+        mockListSiteAccess.mockResolvedValue({
+            ...REFUSED,
+            identityMismatch: { githubPrimaryEmail: 'khalil@example.com', adobeEmail: 'sc@adobe.example', explanation },
+        });
+        showWarning.mockResolvedValueOnce('Open AEM User Admin');
+
+        await command().execute();
+
+        expect(showWarning.mock.calls[0]).toStrictEqual([
+            `You hold no admin role on ${REFUSED.site}. ${explanation}`,
+            'Open AEM User Admin',
+            'Close',
+        ]);
+        expect(mockOpenUrl).toHaveBeenCalledWith('https://tools.aem.live/tools/user-admin/index.html');
+        expect(mockWait).toHaveBeenCalled();
+        const last = showWarning.mock.calls[showWarning.mock.calls.length - 1][0] as string;
+        expect(last).toBe(
+            "Still refused. Once sc@adobe.example is added as an admin in AEM's User Admin tool, " +
+                'run Manage Site Access again.',
+        );
+    });
+
+    it('adds the readable org admins to the email explanation rather than replacing it', async () => {
+        mockListSiteAccess.mockResolvedValue({
+            ...REFUSED,
+            orgAdmins: ['admin@example.test'],
+            identityMismatch: { githubPrimaryEmail: 'khalil@example.com', adobeEmail: 'sc@adobe.example', explanation: 'Explained.' },
+        });
+        showWarning.mockResolvedValueOnce('Close');
+
+        await command().execute();
+
+        expect(showWarning.mock.calls[0][0]).toBe(
+            `You hold no admin role on ${REFUSED.site}. Explained. An org admin can also add you: admin@example.test.`,
+        );
+        expect(mockOpenUrl).not.toHaveBeenCalled();
+    });
+
     it('names the org admins, and offers only them, when the roster is readable', async () => {
         mockListSiteAccess.mockResolvedValue({ ...REFUSED, orgAdmins: ['admin@example.test'] });
         showWarning.mockResolvedValueOnce('Close');

@@ -45,6 +45,26 @@ back to the setup page with a key. Testing it is a cloud write on a sacrificial
 repo and needs the owner's go-ahead. If it does not, the GitHub button in Manage
 Site Access is also a dead end and should be removed.
 
+## A cause Demo Builder can detect (2026-09-15)
+
+Khalil's GitHub account uses his personal email as its primary email. Code Sync
+most likely gave the admin role to that email, while Demo Builder signs in to
+Adobe as his Adobe email, so the site refuses it. Evidence and the untested parts
+are in `.rptc/research/site-admin-identity-mismatch/research.md`.
+
+On a refusal, `listSiteAccess` now reads the GitHub account's emails
+(`GET /user/emails`, covered by the `user` scope Demo Builder already asks for)
+and compares the primary one with the Adobe email. When they differ, Manage Site
+Access says so, names both emails, and offers AEM's User Admin tool, where the
+GitHub email's owner can add the Adobe email as an org admin. It then polls for
+the grant. `get_site_access` returns the same `identityMismatch`, so an agent sees
+it too.
+
+Unverified: that the role really sits on the GitHub primary email, and that
+signing in to AEM with a Google or Microsoft account on that email is accepted.
+Changing the GitHub primary email now will likely not move a role that was already
+given out.
+
 ## Shipped so far
 
 - 2026-09-14  fix(eds): stop sending no-role users to a setup page that cannot grant (`bba76c2a5`)

@@ -13,6 +13,7 @@
 import { Octokit } from '@octokit/core';
 import * as vscode from 'vscode';
 import {
+    type GitHubAccountEmail,
     type GitHubToken,
     type GitHubTokenValidation,
     type GitHubUser,
@@ -134,6 +135,32 @@ export class GitHubTokenService {
             }
 
             return { valid: false };
+        }
+    }
+
+    /**
+     * The emails on the signed-in GitHub account, with which is primary.
+     *
+     * Manage Site Access compares the primary email with the Adobe identity:
+     * AEM Code Sync gives a site's admin role to the installing account's primary
+     * email, so a mismatch explains a site that refuses its own owner. Returns
+     * `[]` on any failure, so the check says nothing rather than guessing.
+     *
+     * Requires `user:email`, which the `user` scope in `GITHUB_SCOPES` includes.
+     */
+    async getUserEmails(): Promise<GitHubAccountEmail[]> {
+        const token = await this.getToken();
+        if (!token) return [];
+        try {
+            const octokit = this.createAuthenticatedOctokit(token.token);
+            const response = await octokit.request('GET /user/emails', { per_page: 100 });
+            return response.data.map((entry: GitHubAccountEmail) => ({
+                email: entry.email,
+                primary: entry.primary,
+                verified: entry.verified,
+            }));
+        } catch {
+            return [];
         }
     }
 

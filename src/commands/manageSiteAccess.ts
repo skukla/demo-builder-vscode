@@ -50,6 +50,10 @@ import { getEdsRepoParts } from '@/types/typeGuards';
 /** The button that opens the AEM Code Sync app on GitHub. */
 const OPEN_CODE_SYNC_APP = 'Open Code Sync App';
 
+/** The button that opens AEM's User Admin tool, and where it goes. */
+const OPEN_USER_ADMIN = 'Open AEM User Admin';
+const AEM_USER_ADMIN_URL = 'https://tools.aem.live/tools/user-admin/index.html';
+
 /** QuickPick rows carry their action so the handler does not re-parse labels. */
 interface AccessAction extends vscode.QuickPickItem {
     action: 'add' | 'remove' | 'noop';
@@ -133,6 +137,10 @@ export class ManageSiteAccessCommand extends BaseCommand {
         }
 
         const admins = listing.orgAdmins ?? [];
+        if (listing.identityMismatch) {
+            await this.reportIdentityMismatch(project, listing, admins);
+            return;
+        }
         if (admins.length > 0) {
             // A named admin is the route known to work, so it is the only one
             // offered. The GitHub button here opened a page with no instructions
@@ -156,11 +164,49 @@ export class ManageSiteAccessCommand extends BaseCommand {
         if (choice !== OPEN_CODE_SYNC_APP) return;
 
         await openUrl(GITHUB_APP_INSTALL_URL);
-        await this.pollForAccess(site);
+        await this.pollForAccess(
+            site,
+            'Still refused. If GitHub did not open AEM\'s setup page, that route is closed for ' +
+                'this site. The role belongs to the GitHub user who installed AEM Code Sync ' +
+                'for it: ask them to add you, or ask Adobe to.',
+        );
+    }
+
+    /**
+     * The refusal has a known cause: Code Sync gave the role to the GitHub
+     * account's primary email, and Demo Builder signs in to Adobe as another one
+     * (2026-09-15, kmanns). The explanation names both, so the user knows which
+     * account to sign in to AEM's User Admin tool with. Readable org admins are
+     * still named, and then they are the only route offered.
+     */
+    private async reportIdentityMismatch(
+        project: Project,
+        listing: SiteAccessListing,
+        admins: string[],
+    ): Promise<void> {
+        const mismatch = listing.identityMismatch;
+        if (!mismatch) return;
+        const intro = `You hold no admin role on ${listing.site}. ${mismatch.explanation}`;
+        if (admins.length > 0) {
+            await vscode.window.showWarningMessage(
+                `${intro} An org admin can also add you: ${admins.join(', ')}.`,
+                'Close',
+            );
+            return;
+        }
+        const choice = await vscode.window.showWarningMessage(intro, OPEN_USER_ADMIN, 'Close');
+        if (choice !== OPEN_USER_ADMIN) return;
+
+        await openUrl(AEM_USER_ADMIN_URL);
+        await this.pollForAccess(
+            siteRef(project),
+            `Still refused. Once ${mismatch.adobeEmail} is added as an admin in AEM's User Admin ` +
+                'tool, run Manage Site Access again.',
+        );
     }
 
     /** Wait for the grant to land, reporting the truth either way. */
-    private async pollForAccess(site: ConfigSiteRef): Promise<void> {
+    private async pollForAccess(site: ConfigSiteRef, stillRefused: string): Promise<void> {
         // RETURNED, not assigned into an outer `let`: control-flow analysis
         // cannot see a closure assignment, so an outer variable stays narrowed to
         // its initialiser and the comparison below reads as unreachable.
@@ -195,11 +241,7 @@ export class ManageSiteAccessCommand extends BaseCommand {
             }
             return;
         }
-        await this.showWarning(
-            'Still refused. If GitHub did not open AEM\'s setup page, that route is closed for ' +
-                'this site. The role belongs to the GitHub user who installed AEM Code Sync ' +
-                'for it: ask them to add you, or ask Adobe to.',
-        );
+        await this.showWarning(stillRefused);
     }
 
     /** Current admins as rows, plus the add action. */

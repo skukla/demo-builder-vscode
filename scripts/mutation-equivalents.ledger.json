@@ -7582,7 +7582,7 @@
             "anchors": [
                 "this.logger.warn('[GitHub] Failed to parse stored token');"
             ],
-            "line": 68,
+            "line": 69,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying the catch block leaves the function returning undefined implicitly, which is what the explicit return already produces. A caller cannot tell the two apart; only the warn line differs.",
@@ -7595,7 +7595,7 @@
             "anchors": [
                 "if (!token) {"
             ],
-            "line": 106,
+            "line": 107,
             "mutants": 2,
             "category": "branch",
             "reason": "Without the no-token guard, validateToken evaluates token.token, throws a TypeError while building the Octokit argument, and the catch returns { valid: false } \u2014 the same object the guard returns, with the same 401-only clearToken decision skipped either way (an undefined status is not 401). No collaborator is called differently: the throw happens while evaluating the argument, so createAuthenticatedOctokit never runs in either version.",
@@ -7608,7 +7608,7 @@
             "anchors": [
                 "if (!token) {"
             ],
-            "line": 153,
+            "line": 180,
             "mutants": 2,
             "category": "branch",
             "reason": "Same shape as the validateToken guard: without it, token.token throws inside the try and the bare catch returns [], which is exactly what the guard returns. The graceful-degradation contract (the namespace picker falls back to personal-account-only) holds either way, so no assertion on the return value or on Octokit can separate them.",
