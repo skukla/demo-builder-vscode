@@ -107,9 +107,9 @@
             "source": "PL-22 batch MUT-01, checkUpdates focus run"
         },
         {
-            "module": "src/features/updates/services/templateSyncService.ts",
+            "module": "src/features/updates/services/preservedFiles.ts",
             "anchors": [
-                "this.logger.debug(`[TemplateSync] File ${filePath} not found, skipping backup`);"
+                "logger.debug(`[TemplateSync] File ${filePath} not found, skipping backup`);"
             ],
             "mutants": 1,
             "category": "block",
@@ -6028,18 +6028,6 @@
             "category": "other",
             "reason": "safeCommand exists to redact the token before the clone command is written to the trace log; it is passed to logger.trace on the following line and to nothing else. The command git actually runs is cloneCommand, which is built before this line and is unaffected. Widening or narrowing the redaction regex therefore changes only what a log line shows, and the only assertion that could catch it is one on the logger arguments.",
             "decision": "none \u2014 redaction feeds logger.trace, not the executed command",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-03"
-        },
-        {
-            "module": "src/features/eds/services/github/githubRepoOperations.ts",
-            "anchors": [
-                "} catch (cleanupError) {"
-            ],
-            "mutants": 1,
-            "category": "block",
-            "reason": "This catch sits in the finally block of resetToTemplate and its entire body is a logger.warn. Emptying it keeps the swallow \u2014 the catch still stops a failed fs.rm from replacing the real result or error \u2014 so the operation behaves identically whether the body runs or not. The test that the reset still resolves when cleanup rejects passes under both, because what it proves is the catch existing, not what the body does.",
-            "decision": "none \u2014 the catch body is a single warn; the swallow itself is already tested",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-03"
         },

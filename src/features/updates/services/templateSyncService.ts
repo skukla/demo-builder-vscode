@@ -35,10 +35,15 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import { injectTokenIntoUrl } from '@/features/eds/services/github/githubHelpers';
 import {
+    backupPreservedFiles,
+    restorePreservedFiles,
+} from '@/features/updates/services/preservedFiles';
+import {
     applyTemplateChangeSince,
     readTemplateHead,
     type GitStep,
 } from '@/features/updates/services/templateMergeBase';
+import { TemplateSyncStepError } from '@/features/updates/services/templateSyncStepError';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 
@@ -70,7 +75,7 @@ export interface TemplateSyncResult {
 }
 
 /** Which repositories one sync moves between. */
-interface SyncTarget {
+export interface TemplateSyncTarget {
     repoOwner: string;
     repoName: string;
     templateOwner: string;
@@ -97,7 +102,7 @@ const NO_RECORDED_VERSION = 'This storefront has no recorded template version to
 /** A full or abbreviated commit SHA — the only shape a recorded version may take. */
 const COMMIT_SHA = /^[0-9a-f]{7,40}$/i;
 
-function notInTemplateHistory(base: string, target: SyncTarget): string {
+function notInTemplateHistory(base: string, target: TemplateSyncTarget): string {
     return `The storefront's recorded template version (${base.substring(0, 7)}) is not in `
         + `${target.templateOwner}/${target.templateRepo}'s history; reset it to its template `
         + 'once so updates have a new starting point.';
@@ -105,6 +110,17 @@ function notInTemplateHistory(base: string, target: SyncTarget): string {
 
 function failure(strategy: 'merge' | 'reset', error: string): TemplateSyncResult {
     return { success: false, strategy, syncedCommit: '', error };
+}
+
+/**
+ * What the SC reads when a step throws. A failed step says which step; anything
+ * else gets an honest generic. git's output is logged, never returned.
+ */
+function describeStepFailure(error: unknown): string {
+    const sentence = error instanceof TemplateSyncStepError
+        ? error.message
+        : 'The template update could not finish.';
+    return `${sentence} See Debug Logs for details.`;
 }
 
 /**
@@ -168,13 +184,11 @@ export class TemplateSyncService {
             return failure(options.strategy, `Invalid githubRepo format: ${githubRepo}`);
         }
 
-        const target: SyncTarget = { repoOwner, repoName, templateOwner, templateRepo };
+        const target: TemplateSyncTarget = { repoOwner, repoName, templateOwner, templateRepo };
         const preserveFiles = [...DEFAULT_PRESERVE_FILES, ...(options.preserveFiles ?? [])];
 
         if (options.strategy === 'reset') {
-            return this.withCheckout('reset', target, preserveFiles, (checkout) =>
-                this.performReset(checkout),
-            );
+            return this.resetRepository(target, preserveFiles);
         }
 
         // The base of the merge. Thin-layer storefronts (ADR-006) record their
@@ -186,6 +200,20 @@ export class TemplateSyncService {
         }
         return this.withCheckout('merge', target, preserveFiles, (checkout) =>
             this.mergeFromBase(checkout, target, base, preserveFiles),
+        );
+    }
+
+    /**
+     * Replace a repository's content with its template's, keeping `preserveFiles`,
+     * and force-push. Needs no project: storefront setup calls it for an existing
+     * repository the SC chose to reset, and `syncWithTemplate` for a project's reset.
+     */
+    async resetRepository(
+        target: TemplateSyncTarget,
+        preserveFiles: string[] = [],
+    ): Promise<TemplateSyncResult> {
+        return this.withCheckout('reset', target, preserveFiles, (checkout) =>
+            this.performReset(checkout),
         );
     }
 
@@ -201,7 +229,7 @@ export class TemplateSyncService {
      */
     private async withCheckout(
         strategy: 'merge' | 'reset',
-        target: SyncTarget,
+        target: TemplateSyncTarget,
         preserveFiles: string[],
         work: (checkout: Checkout) => Promise<TemplateSyncResult>,
     ): Promise<TemplateSyncResult> {
@@ -225,24 +253,31 @@ export class TemplateSyncService {
             const clone = `git clone --depth ${depth} --branch main "${userRepoUrl}" repo`;
             const cloneResult = await this.git(tempDir, clone, TIMEOUTS.LONG);
             if (cloneResult.code !== 0) {
-                throw new Error(`Failed to clone user repo: ${cloneResult.stderr}`);
+                throw new TemplateSyncStepError(
+                    `Could not clone ${repoOwner}/${repoName} from GitHub.`, cloneResult.stderr,
+                );
             }
 
             const repoDir = path.join(tempDir, 'repo');
-            const backups = await this.backupPreservedFiles(repoDir, preserveFiles);
+            const backups = await backupPreservedFiles(repoDir, preserveFiles, this.logger);
 
             this.logger.debug(`[TemplateSync] Fetching template repo...`);
             const templateUrl = `https://github.com/${templateOwner}/${templateRepo}.git`;
             await this.git(repoDir, `git remote add template "${templateUrl}"`, TIMEOUTS.QUICK);
             const fetchResult = await this.git(repoDir, `git fetch template main`, TIMEOUTS.LONG);
             if (fetchResult.code !== 0) {
-                throw new Error(`Failed to fetch template: ${fetchResult.stderr}`);
+                throw new TemplateSyncStepError(
+                    `Could not fetch the template ${templateOwner}/${templateRepo} from GitHub.`,
+                    fetchResult.stderr,
+                );
             }
 
             return await work({ tempDir, repoDir, backups });
         } catch (error) {
-            this.logger.error(`[TemplateSync] ${strategy === 'merge' ? 'Merge' : 'Reset'} failed`, error as Error);
-            return failure(strategy, (error as Error).message);
+            const gitOutput = error instanceof TemplateSyncStepError ? `: ${error.gitOutput.trim()}` : '';
+            const label = strategy === 'merge' ? 'Merge' : 'Reset';
+            this.logger.error(`[TemplateSync] ${label} failed${gitOutput}`, error as Error);
+            return failure(strategy, describeStepFailure(error));
         } finally {
             try {
                 await fs.rm(tempDir, { recursive: true, force: true });
@@ -262,7 +297,7 @@ export class TemplateSyncService {
      */
     private async mergeFromBase(
         checkout: Checkout,
-        target: SyncTarget,
+        target: TemplateSyncTarget,
         base: string,
         preserveFiles: string[],
     ): Promise<TemplateSyncResult> {
@@ -289,7 +324,7 @@ export class TemplateSyncService {
                 return { success: true, strategy: 'merge', syncedCommit: outcome.templateHead };
         }
 
-        await this.restorePreservedFiles(repoDir, checkout.backups);
+        await restorePreservedFiles(repoDir, checkout.backups, this.logger);
         await this.commitAndPush(repoDir, 'chore: sync with template', 'git push origin main');
 
         this.logger.info(`[TemplateSync] Merge completed successfully`);
@@ -307,10 +342,10 @@ export class TemplateSyncService {
             repoDir, `git read-tree --reset -u template/main`, TIMEOUTS.NORMAL,
         );
         if (readTreeResult.code !== 0) {
-            throw new Error(`Failed to read template tree: ${readTreeResult.stderr}`);
+            throw new TemplateSyncStepError("Could not read the template's files.", readTreeResult.stderr);
         }
 
-        await this.restorePreservedFiles(repoDir, backups);
+        await restorePreservedFiles(repoDir, backups, this.logger);
         // Force: a reset may rewrite history.
         await this.commitAndPush(
             repoDir, 'chore: sync with template (reset)', 'git push origin main --force',
@@ -328,7 +363,7 @@ export class TemplateSyncService {
     ): Promise<void> {
         const staged = await this.git(repoDir, `git add -A`, TIMEOUTS.QUICK);
         if (staged.code !== 0) {
-            throw new Error(`Failed to stage changes: ${staged.stderr}`);
+            throw new TemplateSyncStepError("Could not stage the template's changes.", staged.stderr);
         }
 
         const statusResult = await this.git(repoDir, `git status --porcelain`, TIMEOUTS.QUICK);
@@ -336,54 +371,16 @@ export class TemplateSyncService {
             const commit = `git commit -m "${message}"`;
             const commitResult = await this.git(repoDir, commit, TIMEOUTS.QUICK);
             if (commitResult.code !== 0) {
-                throw new Error(`Failed to commit: ${commitResult.stderr}`);
+                throw new TemplateSyncStepError(
+                    "Could not commit the template's changes.", commitResult.stderr,
+                );
             }
         }
 
         this.logger.debug(`[TemplateSync] Pushing to origin...`);
         const pushResult = await this.git(repoDir, pushCommand, TIMEOUTS.LONG);
         if (pushResult.code !== 0) {
-            throw new Error(`Failed to push: ${pushResult.stderr}`);
-        }
-    }
-
-    /** Backup preserved files before sync */
-    private async backupPreservedFiles(
-        repoDir: string,
-        preserveFiles: string[],
-    ): Promise<Map<string, string>> {
-        const backups = new Map<string, string>();
-
-        for (const filePath of preserveFiles) {
-            const fullPath = path.join(repoDir, filePath);
-            try {
-                const content = await fs.readFile(fullPath, 'utf-8');
-                backups.set(filePath, content);
-                this.logger.debug(`[TemplateSync] Backed up ${filePath}`);
-            } catch {
-                // File doesn't exist - that's okay, skip it
-                this.logger.debug(`[TemplateSync] File ${filePath} not found, skipping backup`);
-            }
-        }
-
-        return backups;
-    }
-
-    /** Restore preserved files after sync */
-    private async restorePreservedFiles(
-        repoDir: string,
-        backups: Map<string, string>,
-    ): Promise<void> {
-        for (const [filePath, content] of backups) {
-            const fullPath = path.join(repoDir, filePath);
-            try {
-                // Ensure directory exists
-                await fs.mkdir(path.dirname(fullPath), { recursive: true });
-                await fs.writeFile(fullPath, content, 'utf-8');
-                this.logger.debug(`[TemplateSync] Restored ${filePath}`);
-            } catch (error) {
-                this.logger.warn(`[TemplateSync] Failed to restore ${filePath}: ${(error as Error).message}`);
-            }
+            throw new TemplateSyncStepError('Could not push the update to GitHub.', pushResult.stderr);
         }
     }
 

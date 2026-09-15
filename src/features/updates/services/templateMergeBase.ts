@@ -17,6 +17,7 @@
 
 import type { CommandResult } from '@/core/shell/types';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { TemplateSyncStepError } from '@/features/updates/services/templateSyncStepError';
 
 /** Run one git command in the temp clone with the given timeout. */
 export type GitStep = (command: string, timeout: number) => Promise<CommandResult>;
@@ -51,7 +52,7 @@ export async function readTemplateHead(git: GitStep): Promise<string> {
     const head = await git(`git rev-parse template/main`, TIMEOUTS.QUICK);
     const sha = head.stdout.trim();
     if (head.code !== 0 || !sha) {
-        throw new Error(`Failed to read the template's latest commit: ${head.stderr}`);
+        throw new TemplateSyncStepError("Could not read the template's latest commit.", head.stderr);
     }
     return sha;
 }
@@ -89,7 +90,7 @@ async function writePatch(
     const listChanged = `git diff-tree -r --name-only ${range} -- ${pathspec}`;
     const changed = await git(listChanged, TIMEOUTS.NORMAL);
     if (changed.code !== 0) {
-        throw new Error(`Failed to compare template versions: ${changed.stderr}`);
+        throw new TemplateSyncStepError("Could not compare the template's versions.", changed.stderr);
     }
     if (!changed.stdout.trim()) return false;
 
@@ -99,7 +100,7 @@ async function writePatch(
         TIMEOUTS.NORMAL,
     );
     if (diff.code !== 0) {
-        throw new Error(`Failed to write the template's change: ${diff.stderr}`);
+        throw new TemplateSyncStepError("Could not prepare the template's change.", diff.stderr);
     }
     return true;
 }

@@ -14,6 +14,7 @@ import type { GitHubAppService } from '../../services/github/githubAppService';
 import type { GitHubFileOperations } from '../../services/github/githubFileOperations';
 import type { GitHubRepoOperations } from '../../services/github/githubRepoOperations';
 import type { HelixService } from '../../services/helix/helixService';
+import type { TemplateSyncService } from '@/features/updates/services/templateSyncService';
 
 /**
  * Result of storefront setup phase execution
@@ -49,6 +50,8 @@ export type SetupGitHubAppService = Pick<GitHubAppService, 'getInstallUrl' | 'is
 
 export interface SetupServices {
     githubRepoOps: GitHubRepoOperations;
+    /** Resets an existing repository to its template — the same reset Check for Updates runs. */
+    templateSync: Pick<TemplateSyncService, 'resetRepository'>;
     githubFileOps: GitHubFileOperations;
     githubAppService: SetupGitHubAppService;
     daLiveContentOps: DaLiveContentOperations;

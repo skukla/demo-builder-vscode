@@ -48,12 +48,19 @@ const LEDGER = loadLedger('user-facing-errors.ledger.json');
  * both use — rather than on any assignment of `.message`, because the rule is about
  * what crosses the boundary, not about reading a message at all. Logging the raw text
  * is not merely allowed, it is where the raw text is supposed to go.
+ *
+ * The last pattern is the same failure one step removed: a caught message handed to a
+ * helper that builds the result, `return failure(strategy, (error as Error).message)`.
+ * The `error:` field is then inside the helper, where no line mentions the caught
+ * error, and the first four patterns cannot see it. That exact shape hid a raw git
+ * message in the template update for a release (found 2026-09-15).
  */
 const PATTERNS: RegExp[] = [
     /error:\s*\(?\s*(?:e|err|error)\s+as\s+Error\s*\)?\.message/,
     /error:\s*(?:e|err|error)\s+instanceof\s+Error\s*\?\s*(?:e|err|error)\.message/,
     /error:\s*(?:extractErrorMessage|toError)\((?:e|err|error)\)/,
     /error:\s*\w*[Aa]ppError\.userMessage/,
+    /\breturn\s+(?!new\s)[\w.]+\([^;]*(?:\(\s*(?:e|err|error)\s+as\s+Error\s*\)|\b(?:e|err|error))\.message/,
 ];
 
 function sourceFiles(): string[] {
@@ -87,6 +94,8 @@ describe("a failure a person reads is translated, never the library's own words"
         expect(hits('return { success: false, error: (error as Error).message };')).toBe(true);
         expect(hits('error: err instanceof Error ? err.message : String(err),')).toBe(true);
         expect(hits('error: appError.userMessage,')).toBe(true);
+        expect(hits('return failure(strategy, (error as Error).message);')).toBe(true);
+        expect(hits('return failure(strategy, describeStepFailure(error));')).toBe(false);
         // The raw text SHOULD reach the logs. That is not a violation.
         expect(hits("context.logger.error('Failed:', (error as Error).message);")).toBe(false);
         // A translated failure is the whole point of the rule.
