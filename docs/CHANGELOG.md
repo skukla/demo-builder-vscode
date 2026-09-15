@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **The CitiSignal headless storefront builds from its `main` branch.** Its source repository now uses `main` like every other storefront source; `master` stays in place at the same commit, so earlier versions of the extension keep working until it is removed.
+
 ### Fixed
 - **A template update no longer overwrites your edits when the merge conflicts.** Updating a storefront from its template used to fall back to a full reset whenever the merge hit a conflict, replacing exactly the files you had changed and telling you afterwards. It now stops, names the conflicting files, and leaves the storefront untouched. Check Updates offers "Reset to template" as a separate choice in that dialog; the `apply_updates` agent tool resets only when called with `resetTemplateOnConflict:true`. Updates also work now for storefronts whose repository does not share history with its template, such as one GitHub generated from the template: the update used to report success, change nothing, and offer itself again forever. It now applies what the template changed since the version the storefront last recorded. A storefront with no recorded version is asked to reset to its template once, so updates have a starting point.
 - **"Check for Updates" no longer offers a reset storefront updates it already has.** A reset rebuilt the repository from a newer revision of the template but kept the commit recorded at creation, so the update check compared against a commit the repository no longer matched. Reset now records the exact template commit it rebuilt from — the verified last-known-good for thin-layer storefronts, the template's latest commit otherwise — and a failed reset leaves the record alone. Storefronts reset before this keep the old record until their next reset.
