@@ -38,6 +38,11 @@ jest.mock('fs/promises', () => ({
 
 export const TEMP_DIR = '/tmp/sync-xyz';
 export const REPO_DIR = `${TEMP_DIR}/repo`;
+export const PATCH_FILE = `${TEMP_DIR}/template.patch`;
+/** The template version the storefront recorded at its last create, reset or sync. */
+export const BASE_SHA = 'aaa1111';
+/** The template's latest commit, as `git rev-parse template/main` reports it. */
+export const TEMPLATE_HEAD = 'bbb2222';
 
 /** An EDS project with the metadata the service reads. */
 export function edsProject(metadataOverrides: Record<string, unknown> = {}): Project {
@@ -54,6 +59,7 @@ export function edsProject(metadataOverrides: Record<string, unknown> = {}): Pro
                     githubRepo: 'skukla/demo-storefront',
                     templateOwner: 'adobe',
                     templateRepo: 'aem-boilerplate-commerce',
+                    lastSyncedCommit: BASE_SHA,
                     ...metadataOverrides,
                 },
             },
@@ -69,27 +75,50 @@ export function service(logger = createMockLogger()): TemplateSyncService {
     );
 }
 
+/**
+ * What git says when every step goes well: the template has moved on from the
+ * recorded version, and its change touches one file that is not preserved.
+ * Every other step succeeds silently.
+ */
+export function happyGit(cmd: string): { code: number; stdout: string; stderr: string } {
+    if (/^git rev-parse template\/main$/.test(cmd)) {
+        return { code: 0, stdout: `${TEMPLATE_HEAD}\n`, stderr: '' };
+    }
+    if (/^git diff-tree -r --name-only /.test(cmd)) {
+        return { code: 0, stdout: 'blocks/hero/hero.js\n', stderr: '' };
+    }
+    return { code: 0, stdout: '', stderr: '' };
+}
+
 /** Every git call succeeds unless a test says otherwise. */
 export function allGitSucceeds(): void {
-    mockExecute.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
+    mockExecute.mockImplementation(async (cmd: string) => happyGit(cmd));
 }
 
 /** Make every command matching `pattern` fail; everything else succeeds. */
-export function failOn(pattern: RegExp): void {
+export function failOn(pattern: RegExp, stderr = 'boom'): void {
     mockExecute.mockImplementation(async (cmd: string) =>
-        pattern.test(cmd)
-            ? { code: 1, stdout: '', stderr: 'boom' }
-            : { code: 0, stdout: '', stderr: '' },
+        pattern.test(cmd) ? { code: 1, stdout: '', stderr } : happyGit(cmd),
     );
 }
 
-/** Answer one command's stdout; everything else succeeds silently. */
+/** Answer one command's stdout; everything else succeeds as `happyGit` says. */
 export function answer(pattern: RegExp, stdout: string): void {
-    mockExecute.mockImplementation(async (cmd: string) => ({
-        code: 0,
-        stdout: pattern.test(cmd) ? stdout : '',
-        stderr: '',
-    }));
+    mockExecute.mockImplementation(async (cmd: string) =>
+        pattern.test(cmd) ? { code: 0, stdout, stderr: '' } : happyGit(cmd),
+    );
+}
+
+/**
+ * The 3-way apply stops, and the unmerged-file probe answers `probeStdout`
+ * (with `probeCode`). Everything else succeeds as `happyGit` says.
+ */
+export function applyStops(probeStdout: string, stderr = 'error: patch failed', probeCode = 0): void {
+    mockExecute.mockImplementation(async (cmd: string) => {
+        if (/^git apply /.test(cmd)) return { code: 1, stdout: '', stderr };
+        if (/diff-filter=U/.test(cmd)) return { code: probeCode, stdout: probeStdout, stderr: '' };
+        return happyGit(cmd);
+    });
 }
 
 /** Which git commands actually ran, in order. */

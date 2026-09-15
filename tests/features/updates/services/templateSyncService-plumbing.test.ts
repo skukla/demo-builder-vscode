@@ -9,12 +9,17 @@
  */
 
 import {
+    BASE_SHA,
+    PATCH_FILE,
     REPO_DIR,
+    TEMPLATE_HEAD,
     TEMP_DIR,
     answer,
+    applyStops,
     edsProject,
     failOn,
     gitCalls,
+    happyGit,
     mockExecute,
     mockGetToken,
     mockMkdir,
@@ -35,18 +40,25 @@ const opts = (cwd: string, timeout: number) => ({ cwd, timeout, shell: DEFAULT_S
 const TEMPLATE_URL = 'https://github.com/adobe/aem-boilerplate-commerce.git';
 const MISSING = 'Missing required metadata: githubRepo, templateOwner, or templateRepo';
 const NO_EDS = 'No EDS metadata found in project';
+/** The base..head range and the pathspec that leaves the default preserved files out. */
+const RANGE_AND_SPEC = `${BASE_SHA} ${TEMPLATE_HEAD} -- . ":(exclude)fstab.yaml" ":(exclude)config.json"`;
 
 /** The steps both strategies share once the user repo is on disk. */
 const FETCH_STEPS = [
     [`git remote add template "${TEMPLATE_URL}"`, opts(REPO_DIR, TIMEOUTS.QUICK)],
     ['git fetch template main', opts(REPO_DIR, TIMEOUTS.LONG)],
 ];
+/** The merge checks the recorded version is a commit on the template's main. */
+const BASE_CHECK_STEPS = [
+    [`git cat-file -e "${BASE_SHA}^{commit}"`, opts(REPO_DIR, TIMEOUTS.QUICK)],
+    [`git merge-base --is-ancestor ${BASE_SHA} template/main`, opts(REPO_DIR, TIMEOUTS.NORMAL)],
+];
 const RESET_STEPS = [
+    ['git rev-parse template/main', opts(REPO_DIR, TIMEOUTS.QUICK)],
     ['git read-tree --reset -u template/main', opts(REPO_DIR, TIMEOUTS.NORMAL)],
     ['git add -A', opts(REPO_DIR, TIMEOUTS.QUICK)],
     ['git status --porcelain', opts(REPO_DIR, TIMEOUTS.QUICK)],
     ['git commit -m "chore: sync with template (reset)"', opts(REPO_DIR, TIMEOUTS.QUICK)],
-    ['git rev-parse HEAD', opts(REPO_DIR, TIMEOUTS.QUICK)],
     ['git push origin main --force', opts(REPO_DIR, TIMEOUTS.LONG)],
 ];
 
@@ -59,13 +71,9 @@ function edsWithoutMetadata() {
     });
 }
 
-/** git answers: a dirty status and a known HEAD, everything else silent success. */
-function dirtyTreeAtHead(sha: string): void {
-    mockExecute.mockImplementation(async (cmd: string) => ({
-        code: 0,
-        stdout: /git rev-parse/.test(cmd) ? `${sha}\n` : /git status/.test(cmd) ? 'M x\n' : '',
-        stderr: '',
-    }));
+/** git answers: a dirty status, everything else as a successful sync. */
+function dirtyTree(): void {
+    answer(/git status/, 'M x\n');
 }
 
 /** git answers: a dirty status, and the commit step failing. */
@@ -73,7 +81,7 @@ function commitFails(stderr: string): void {
     mockExecute.mockImplementation(async (cmd: string) => {
         if (/git status/.test(cmd)) return { code: 0, stdout: 'M x\n', stderr: '' };
         if (/git commit/.test(cmd)) return { code: 1, stdout: '', stderr };
-        return { code: 0, stdout: '', stderr: '' };
+        return happyGit(cmd);
     });
 }
 
@@ -171,23 +179,61 @@ describe('before touching git', () => {
 });
 
 describe('merge strategy — the exact git conversation', () => {
-    it('clones 50 deep with the token in the URL, merges without committing, commits and pushes', async () => {
-        dirtyTreeAtHead('abc123');
+    it('clones 50 deep, checks the recorded version, applies the change 3-way, commits and pushes', async () => {
+        dirtyTree();
 
         const result = await service().syncWithTemplate(edsProject(), { strategy: 'merge' });
 
         expectClone(mockExecute.mock.calls[0], 50);
         expect(mockExecute.mock.calls.slice(1)).toEqual([
             ...FETCH_STEPS,
-            ['git merge template/main --no-commit --no-ff', opts(REPO_DIR, TIMEOUTS.NORMAL)],
-            ['git diff --name-only --diff-filter=U', opts(REPO_DIR, TIMEOUTS.QUICK)],
+            ...BASE_CHECK_STEPS,
+            ['git rev-parse template/main', opts(REPO_DIR, TIMEOUTS.QUICK)],
+            [`git diff-tree -r --name-only ${RANGE_AND_SPEC}`, opts(REPO_DIR, TIMEOUTS.NORMAL)],
+            [
+                `git diff-tree -r -p --binary --full-index --output="${PATCH_FILE}" ${RANGE_AND_SPEC}`,
+                opts(REPO_DIR, TIMEOUTS.NORMAL),
+            ],
+            [`git apply --3way --index "${PATCH_FILE}"`, opts(REPO_DIR, TIMEOUTS.NORMAL)],
             ['git add -A', opts(REPO_DIR, TIMEOUTS.QUICK)],
             ['git status --porcelain', opts(REPO_DIR, TIMEOUTS.QUICK)],
             ['git commit -m "chore: sync with template"', opts(REPO_DIR, TIMEOUTS.QUICK)],
-            ['git rev-parse HEAD', opts(REPO_DIR, TIMEOUTS.QUICK)],
             ['git push origin main', opts(REPO_DIR, TIMEOUTS.LONG)],
         ]);
-        expect(result).toEqual({ success: true, strategy: 'merge', syncedCommit: 'abc123' });
+        // The TEMPLATE's commit, not the storefront's head: that is what the update
+        // checker compares the record against.
+        expect(result).toEqual({ success: true, strategy: 'merge', syncedCommit: TEMPLATE_HEAD });
+    });
+
+    it('leaves the extra preserved files out of the template change too', async () => {
+        await service().syncWithTemplate(edsProject(), { strategy: 'merge', preserveFiles: ['custom.txt'] });
+
+        expect(gitCalls()).toContainEqual(
+            expect.stringMatching(/^git diff-tree -r --name-only .* ":\(exclude\)config.json" ":\(exclude\)custom.txt"$/),
+        );
+    });
+
+    it.each([
+        ['reading the template head', /rev-parse template/, "Failed to read the template's latest commit: boom"],
+        ['listing the change', /diff-tree -r --name-only/, 'Failed to compare template versions: boom'],
+        ['writing the patch', /--output=/, "Failed to write the template's change: boom"],
+        ['staging', /git add -A/, 'Failed to stage changes: boom'],
+    ])('a failure %s is reported and never pushed', async (_step, pattern, error) => {
+        failOn(pattern);
+
+        const result = await service().syncWithTemplate(edsProject(), { strategy: 'merge' });
+
+        expect(result).toEqual({ success: false, strategy: 'merge', syncedCommit: '', error });
+        expect(pushed()).toBe(false);
+    });
+
+    it('a template head that reads back empty is a failure, not an empty record', async () => {
+        answer(/rev-parse template/, '\n');
+
+        const result = await service().syncWithTemplate(edsProject(), { strategy: 'merge' });
+
+        expect(result).toMatchObject({ success: false, error: "Failed to read the template's latest commit: " });
+        expect(pushed()).toBe(false);
     });
 
     it('does not commit when the working tree is clean — whitespace-only status included', async () => {
@@ -199,31 +245,70 @@ describe('merge strategy — the exact git conversation', () => {
         expect(pushed()).toBe(true);
     });
 
-    it('treats whitespace-only output from the conflict probe as no conflicts', async () => {
-        answer(/diff-filter=U/, ' \n');
+    it.each([
+        [
+            "git's first error line",
+            "Applied patch to 'x' cleanly.\nerror: A.txt: does not exist in index\n",
+            'A.txt: does not exist in index',
+        ],
+        ['a fatal line', 'fatal: corrupt patch at line 9\n', 'corrupt patch at line 9'],
+        ['the first line when none is marked', 'something odd\nmore\n', 'something odd'],
+        ['a stand-in when git says nothing', '', 'git gave no reason'],
+    ])('an apply that fails without conflicts reports %s and restores nothing', async (_label, stderr, reason) => {
+        // Whitespace-only probe output is no conflicts at all.
+        applyStops(' \n', stderr);
 
         const result = await service().syncWithTemplate(edsProject(), { strategy: 'merge' });
 
-        expect(result).toMatchObject({ success: true, strategy: 'merge' });
-        expect(gitCalls()).not.toContainEqual(expect.stringMatching(/merge --abort|read-tree/));
+        expect(result).toEqual({
+            success: false,
+            strategy: 'merge',
+            syncedCommit: '',
+            error: `The template update could not be applied: ${reason}.`,
+        });
+        expect(gitCalls()).not.toContainEqual(expect.stringMatching(/reset --hard|read-tree/));
+        expect(pushed()).toBe(false);
     });
 
-    it('on conflicts: aborts the merge, restores the backups, then runs the reset conversation', async () => {
-        answer(/diff-filter=U/, 'blocks/hero/hero.js\n');
+    it('an unmerged-file probe that itself fails is not read as a list of conflicts', async () => {
+        applyStops('blocks/hero/hero.js\n', 'error: patch failed', 128);
 
         const result = await service().syncWithTemplate(edsProject(), { strategy: 'merge' });
 
-        expect(mockExecute.mock.calls.slice(5)).toEqual([
-            ['git merge --abort', opts(REPO_DIR, TIMEOUTS.QUICK)],
-            ...RESET_STEPS.filter(([cmd]) => !/git commit/.test(String(cmd))),
+        expect(result.conflicts).toBeUndefined();
+        expect(result.error).toBe('The template update could not be applied: patch failed.');
+    });
+
+    it('on conflicts: restores the clone and stops — the restore is the last git command', async () => {
+        applyStops('blocks/hero/hero.js\n');
+
+        const result = await service().syncWithTemplate(edsProject(), { strategy: 'merge' });
+
+        expect(mockExecute.mock.calls.slice(-2)).toEqual([
+            ['git diff --name-only --diff-filter=U', opts(REPO_DIR, TIMEOUTS.QUICK)],
+            ['git reset --hard HEAD', opts(REPO_DIR, TIMEOUTS.QUICK)],
         ]);
         expect(result).toEqual({
-            success: true,
-            strategy: 'reset',
+            success: false,
+            strategy: 'merge',
             syncedCommit: '',
             conflicts: ['blocks/hero/hero.js'],
-            fallbackOccurred: true,
+            error: 'Merge conflicts in 1 file (blocks/hero/hero.js); the template update was not applied.',
         });
+        expect(mockRm).toHaveBeenCalledWith(TEMP_DIR, { recursive: true, force: true });
+    });
+
+    it('on conflicts, a restore that fails still reports the conflicts and pushes nothing', async () => {
+        mockExecute.mockImplementation(async (cmd: string) => {
+            if (/^git apply |reset --hard/.test(cmd)) return { code: 1, stdout: '', stderr: 'locked' };
+            if (/diff-filter=U/.test(cmd)) return { code: 0, stdout: 'a.js\n', stderr: '' };
+            return happyGit(cmd);
+        });
+
+        const result = await service().syncWithTemplate(edsProject(), { strategy: 'merge' });
+
+        expect(result.conflicts).toEqual(['a.js']);
+        expect(pushed()).toBe(false);
     });
 
     it('a failed commit is reported and never pushed', async () => {
@@ -242,14 +327,14 @@ describe('merge strategy — the exact git conversation', () => {
 });
 
 describe('reset strategy — the exact git conversation', () => {
-    it('clones 1 deep, reads the template tree over the checkout, commits and force-pushes', async () => {
-        dirtyTreeAtHead('def456');
+    it('clones 1 deep, reads the template tree over the checkout, force-pushes, records the template commit', async () => {
+        dirtyTree();
 
         const result = await service().syncWithTemplate(edsProject(), { strategy: 'reset' });
 
         expectClone(mockExecute.mock.calls[0], 1);
         expect(mockExecute.mock.calls.slice(1)).toEqual([...FETCH_STEPS, ...RESET_STEPS]);
-        expect(result).toEqual({ success: true, strategy: 'reset', syncedCommit: 'def456' });
+        expect(result).toEqual({ success: true, strategy: 'reset', syncedCommit: TEMPLATE_HEAD });
     });
 
     it('does not commit when the tree already matches the template', async () => {
