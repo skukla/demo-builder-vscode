@@ -348,6 +348,30 @@ function buildGitSyncCommand(storefrontPath: string, nodePath: string): string {
 }
 
 /**
+ * The home hook's own-storefront guard (step 6 of {@link buildHomeGitSyncCommand}).
+ *
+ * `PROJ` is the first directory under the root on the way to `$TOP`: the project.
+ * The Node one-liner reads that project's `.demo-builder.json` and prints the
+ * resolved path of its Edge Delivery storefront, or nothing. Like the extractor,
+ * the script holds no single quotes, so it sits in one single-quoted `-e`
+ * argument; the manifest path arrives as `process.argv[1]`.
+ */
+function buildOwnStorefrontGuard(quotedRoot: string, nodePath: string): string {
+    const script =
+        `try{` +
+        `var fs=require("fs");` +
+        `var m=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));` +
+        `var i=m&&m.componentInstances&&m.componentInstances["${COMPONENT_IDS.EDS_STOREFRONT}"];` +
+        `if(i&&typeof i.path==="string")process.stdout.write(fs.realpathSync(i.path))` +
+        `}catch(e){}`;
+    return (
+        `PROJ="\${TOP#${quotedRoot}/}"; PROJ=${quotedRoot}/"\${PROJ%%/*}"; ` +
+        `SF=$("${nodePath}" -e '${script}' "$PROJ/.demo-builder.json"); ` +
+        `[ -n "$SF" ] && [ "$SF" = "$TOP" ] || exit 0; `
+    );
+}
+
+/**
  * Build the project-aware PostToolUse git-sync command for the SINGLE home Chat
  * (rooted at the Demo Builder projects root). Auto-commits/pushes a storefront
  * edit made anywhere under `<root>/<project>/...` — the home analogue of the
@@ -370,9 +394,17 @@ function buildGitSyncCommand(storefrontPath: string, nodePath: string): string {
  *      requires a subpath, so the root itself (and files written directly under
  *      it, e.g. `.claude/`) never trigger a commit.
  *   5. REMOTE guard: `git remote get-url origin || exit 0` — only repos that
- *      have an `origin` remote (i.e. the storefront repos Helix watches). Never
- *      commit+push a random non-remote repo a user happens to have under root.
- *   6. Commit + push the resolved repo top.
+ *      have an `origin` remote. Never commit+push a random non-remote repo a user
+ *      happens to have under root.
+ *   6. OWN-STOREFRONT guard: the repo top must be the path the enclosing
+ *      project's manifest records for its Edge Delivery storefront, read with
+ *      the same Node binary and compared after resolving symlinks (git answers
+ *      `--show-toplevel` resolved). An origin alone proves nothing: a headless
+ *      storefront, a mesh or an App Builder app is a clone whose origin is its
+ *      SOURCE, a shared repository, and without this guard an agent's edit there
+ *      was committed and pushed to that source with no confirmation (found
+ *      2026-09-15). No manifest, or no storefront in it, means no push.
+ *   7. Commit + push the resolved repo top.
  *
  * The root is double-quoted everywhere it is interpolated. The metachar guard
  * already rejects quotes, so quoting is purely to preserve spaces in the path.
@@ -394,6 +426,7 @@ export function buildHomeGitSyncCommand(projectsRoot: string, nodePath: string):
         `TOP=$(git -C "$(dirname "$TOOL_FILE")" rev-parse --show-toplevel 2>/dev/null) || exit 0; ` +
         `case "$TOP" in ${quotedRoot}/*) ;; *) exit 0 ;; esac; ` +
         `git -C "$TOP" remote get-url origin >/dev/null 2>&1 || exit 0; ` +
+        buildOwnStorefrontGuard(quotedRoot, nodePath) +
         `git -C "$TOP" add -A && ` +
         `git -C "$TOP" commit -m "${GIT_SYNC_SIGNATURE}" && ` +
         `git -C "$TOP" push`

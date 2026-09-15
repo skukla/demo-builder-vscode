@@ -8,19 +8,6 @@
 
 import type { AppBuilderComponentState, Project } from '@/types/base';
 
-const mockProgressTitles: string[] = [];
-jest.mock('vscode', () => {
-    const vscode = jest.requireActual('../../../__mocks__/vscode') as { window: Record<string, unknown> };
-    vscode.window.withProgress = async (
-        options: { title: string },
-        task: (p: { report: (value: { message?: string }) => void }) => unknown,
-    ) => {
-        mockProgressTitles.push(options.title);
-        return task({ report: () => undefined });
-    };
-    return vscode;
-});
-
 const mockResolveAppManagementAuth = jest.fn();
 jest.mock('@/features/project-creation/services/appBuilderComponentRunnerDeps', () => ({
     buildDefaultRunnerDeps: jest.fn(),
@@ -81,8 +68,9 @@ jest.mock('@/features/dashboard/commands/showDashboard', () => ({
     },
 }));
 
-import { handleGetErpStatus, handleResetErpRecords } from '@/features/dashboard/handlers/erpIntegrationHandlers';
 import { setupMocks } from './dashboardHandlers.testUtils';
+import * as vscode from 'vscode';
+import { handleGetErpStatus, handleResetErpRecords } from '@/features/dashboard/handlers/erpIntegrationHandlers';
 import { ErrorCode } from '@/types/errorCodes';
 
 const INT_URLS = {
@@ -119,7 +107,6 @@ const LIVE = { app: { id: 'erp', version: '1' }, erp: { reachable: true, ok: tru
 
 beforeEach(() => {
     jest.clearAllMocks();
-    mockProgressTitles.length = 0;
     mockResolveAppManagementAuth.mockResolvedValue({ accessToken: 'fake-test-pw-not-a-secret', imsOrgId: 'ABC@AdobeOrg' });
     mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: true });
     mockDetectProjectOrgMismatch.mockResolvedValue({ reachable: true });
@@ -180,7 +167,10 @@ describe('handleResetErpRecords', () => {
         const result = await handleResetErpRecords(mockContext, { id: 'erp-integration' });
 
         expect(mockEnsureAdobeIOAuth).toHaveBeenCalledTimes(1);
-        expect(mockProgressTitles).toEqual(['Resetting Nordwind records']);
+        const titles = (vscode.window.withProgress as jest.Mock).mock.calls.map(
+            ([options]: [{ title: string }]) => options.title,
+        );
+        expect(titles).toEqual(['Resetting Nordwind records']);
         expect(mockReset).toHaveBeenCalledTimes(1);
         expect(result).toEqual({
             success: true,

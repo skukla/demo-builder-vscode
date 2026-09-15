@@ -188,18 +188,22 @@ describe('repair_site_configuration', () => {
         expect(out.nextStep).toBe('republish');
     });
 
-    it('does not claim a next step when the repair did not land', async () => {
+    it('hands a refusal to the user instead of claiming a next step', async () => {
         mockRepairSiteConfigForProject.mockResolvedValue({
             status: 'not_authorized',
             verified: false,
             site: 'acme/store',
-            setupUrl: 'https://example.test/setup',
         });
 
-        const out = await harness().call('repair_site_configuration', { confirm: true });
+        const out = (await harness().call('repair_site_configuration', { confirm: true })) as {
+            nextStep?: string;
+            needsUser: { reason: string; where: { command: string }; resumeWith: string };
+        };
 
         expect(out.nextStep).toBeUndefined();
-        expect(out.setupUrl).toBe('https://example.test/setup');
+        expect(out.needsUser.reason).toBe('approval');
+        expect(out.needsUser.where.command).toBe('demoBuilder.manageSiteAccess');
+        expect(out.needsUser.resumeWith).toBe('get_site_access');
     });
 
     it('carries lostGrants through — nothing in the app can restore them', async () => {

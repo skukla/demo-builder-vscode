@@ -277,6 +277,14 @@ export class AdobeEntityFetcher {
         return this.projectOps.createWorkspace(title, description, target);
     }
 
+    /** Delete a workspace — the reversal of {@link createWorkspace}. */
+    async deleteWorkspace(
+        workspaceId: string,
+        target?: { orgId?: string; projectId?: string },
+    ): Promise<{ deleted: true } | ConsoleOpFailure> {
+        return this.projectOps.deleteWorkspace(workspaceId, target);
+    }
+
     /** Delete a Console project (SDK errors propagate) — see {@link AdobeConsoleProjectOps}. */
     async deleteConsoleProject(orgId: string, projectId: string): Promise<void> {
         return this.projectOps.deleteConsoleProject(orgId, projectId);

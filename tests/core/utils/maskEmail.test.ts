@@ -11,7 +11,7 @@
  * team from telling who is meant, which is the whole reason the names are there.
  */
 
-import { maskEmail, redactUrlUserParam } from '@/core/utils/maskEmail';
+import { maskEmail } from '@/core/utils/maskEmail';
 
 describe('maskEmail', () => {
     it('keeps an address recognisable without publishing it', () => {
@@ -70,65 +70,5 @@ describe('masking free text (the shape configServiceAccess applies)', () => {
         const masked = maskEmailsIn(`${padding}averylongname@x.test`).slice(0, 300);
 
         expect(masked).not.toContain('averylongname');
-    });
-});
-
-/**
- * The Code Sync setup URL carries the user's address in `?user=`.
- *
- * `buildCodeSyncSetupUrl` builds it with `URL.searchParams.set`, which
- * PERCENT-ENCODES the `@` — so `user=kukla%40adobe.com`. An email regex looking
- * for a literal `@` sails straight past it, which is why the generic masking
- * already in place did not catch this one.
- *
- * It matters because that URL is embedded in `BYOM_OVERLAY_NOT_AUTHORIZED_MESSAGE`,
- * which is written to `logger.error` and again into a PDP caveat logged at `info`
- * — both buffered into the debug export users paste into tickets.
- */
-describe('redactUrlUserParam', () => {
-    const setupUrl = (email: string): string => {
-        const u = new URL('https://tools.aem.live/bot/setup');
-        u.searchParams.set('user', email);
-        u.searchParams.set('site', 'demo-builder-test');
-        u.searchParams.set('org', 'skukla');
-        return u.toString();
-    };
-
-    it('masks a PERCENT-ENCODED address, which an email regex cannot see', () => {
-        const out = redactUrlUserParam(`Open this: ${setupUrl('owner@adobe.com')}`);
-
-        expect(out).not.toContain('owner%40adobe.com');
-        expect(out).not.toContain('owner@adobe.com');
-        expect(out).toContain('o****r');
-    });
-
-    it('masks an unencoded address too', () => {
-        const out = redactUrlUserParam('see ?user=owner@adobe.com&site=x');
-
-        expect(out).not.toContain('owner@adobe.com');
-    });
-
-    it('leaves the rest of the URL usable', () => {
-        // The org and site are what make the link land on the right page; masking
-        // them would break the remedy this message exists to give.
-        const out = redactUrlUserParam(setupUrl('owner@adobe.com'));
-
-        expect(out).toContain('site=demo-builder-test');
-        expect(out).toContain('org=skukla');
-        expect(out).toContain('tools.aem.live/bot/setup');
-    });
-
-    it('leaves text with no user param untouched', () => {
-        const text = 'Reset the storefront and try again.';
-
-        expect(redactUrlUserParam(text)).toBe(text);
-    });
-
-    it('leaves an EMPTY user param exactly as it found it', () => {
-        // There is no address to hide, so the text must come back byte for byte.
-        // Without the empty guard the replacement runs anyway and writes '****'
-        // into a parameter that never carried an address — a link that now reads
-        // as though someone's identity had been redacted out of it.
-        expect(redactUrlUserParam('?user=&site=x')).toBe('?user=&site=x');
     });
 });

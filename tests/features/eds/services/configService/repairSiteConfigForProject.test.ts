@@ -82,7 +82,7 @@ describe('repairSiteConfigForProject', () => {
     });
 
     it('returns what the headless service returned, unchanged', async () => {
-        const result = { status: 'not_authorized', verified: false, setupUrl: 'https://x' };
+        const result = { status: 'not_authorized', verified: false };
         mockRepairSiteConfig.mockResolvedValue(result);
         await expect(repairSiteConfigForProject(project, context, logger, persistFn)).resolves.toBe(
             result

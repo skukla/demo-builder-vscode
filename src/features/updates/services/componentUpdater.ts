@@ -1,9 +1,10 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { flattenArchiveRoot } from './archiveRoot';
 import { mergeEnvContent, parseEnvFile } from './envMerge';
 import { isMeshComponentId } from '@/core/constants';
-import { toAppError, isTimeout, isNetwork } from '@/core/errors';
+import { classifyTransience, extractErrorMessage } from '@/core/errors';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -199,16 +200,16 @@ export class ComponentUpdater {
    * Uses typed error detection for common failure types and provides helpful context
    */
     private formatUpdateError(error: Error): string {
-        const appError = toAppError(error);
+        const transience = classifyTransience(error);
         const message = error.message.toLowerCase();
 
         // Network/offline errors - use typed error detection
-        if (isNetwork(appError)) {
+        if (transience.kind === 'network') {
             return 'Update failed: No internet connection. Please check your network and try again.';
         }
 
         // Timeout errors - use typed error detection
-        if (isTimeout(appError)) {
+        if (transience.kind === 'timeout') {
             return 'Update failed: Download timed out. Please try again with a better connection.';
         }
 
@@ -228,8 +229,16 @@ export class ComponentUpdater {
             return 'Update failed: Downloaded component is incomplete or corrupted. Please try again.';
         }
 
-        // Generic fallback with user message from typed error
-        return `Update failed and was rolled back: ${appError.userMessage}`;
+        // The message is THIS EXTENSION'S OWN, not a library's, which is why it is
+        // passed through rather than replaced by a generic. Everything reaching here
+        // was thrown by our code with a deliberate sentence -- "Build failed (exit 1):
+        // tsc: 3 errors", "Security check failed: not a GitHub host". Convention 1 bans
+        // handing over the LIBRARY's words; these are already the translation.
+        //
+        // Replacing it with a generic was tried on 2026-09-11 and six tests caught it
+        // immediately: the rule is about whose words they are, not which field they
+        // arrived in.
+        return `Update failed and was rolled back: ${extractErrorMessage(error)}`;
     }
 
     /**
@@ -422,11 +431,11 @@ export class ComponentUpdater {
             // - downloadUrl is validated by validateGitHubDownloadURL() before this point
             // - All paths are controlled by the extension (no user-supplied paths)
             //
-            // GitHub archives have a root folder (e.g., "skukla-commerce-mesh-abc123/")
-            // We need to: 1) extract, 2) move contents up, 3) remove the root folder
-            // Uses rm -rf (not rmdir) because hidden files like .github/ may remain after mv
+            // Unzip only. The archive's root folder ("skukla-commerce-mesh-abc123/") is
+            // flattened in Node below: the shell glob that did it deleted every folder
+            // of the component and every dotfile (found 2026-09-15, see archiveRoot.ts).
             const extractResult = await this.commandManager.execute(
-                `unzip -q "${tempZip}" -d "${targetPath}" && mv "${targetPath}"/*/* "${targetPath}"/ && rm -rf "${targetPath}"/*/`,
+                `unzip -q "${tempZip}" -d "${targetPath}"`,
                 {
                     shell: DEFAULT_SHELL,    // CRITICAL FIX: Required for command chaining (&&) and glob expansion (*/*)
                     timeout: TIMEOUTS.NORMAL,
@@ -440,6 +449,7 @@ export class ComponentUpdater {
                 );
             }
 
+            await flattenArchiveRoot(targetPath);
             this.logger.debug(`[Updates] Extracted to ${targetPath}`);
         } finally {
             // Cleanup temp zip

@@ -6,7 +6,7 @@
  * way, and a context without a step logger not being a reason to throw.
  */
 
-import { TimeoutError } from '@/core/errors';
+import { TimeoutError } from '@/core/utils/timeoutError';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { handlePrerequisiteCheckError } from '@/features/prerequisites/handlers/shared';
 import type { PrerequisiteDefinition } from '@/features/prerequisites/services/PrerequisitesManager';

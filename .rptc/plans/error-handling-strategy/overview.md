@@ -263,20 +263,21 @@ here requires touching the 345 throws or the 664 catches.
 
 ---
 
-## What I need from you
+## Decided (owner, 2026-09-11)
 
-1. **Is "never show an SC a library's own words" the rule?** Everything else follows
-   from it. If you would rather ship the raw message than a vaguer honest one, D
-   collapses and A is the only alternative worth discussing.
-2. **Do the four central classes go?** They are barely used; retiring them is the
-   "no soft deprecation" answer, but it is your call whether the hierarchy has a future.
-3. **ADR-023 — yes?**
-4. **`isError` on the agent surface — fix now or file it?** It is a small, mechanical
-   change at one chokepoint (the descriptor registrar and `mcpToolResult`), it is
-   spec-conformance rather than taste, and it is independent of questions 1–3. My
-   recommendation is to do it regardless of what you decide about the rest.
+Every open question in this proposal now has an answer. Recorded here rather than left
+in a conversation, because a decision nobody can find is a decision that gets re-taken.
 
-Nothing here has been implemented. This is a proposal.
+| | Decision |
+|---|---|
+| **1. Translate, never the library's own words** | **YES**, landing behind a shrink-only ledger. The ~53 existing sites are pinned as known debt and the count may only fall. A rule that arrives as 53 build failures is a rule people switch off. |
+| **2. The four central classes** | **RETIRE the classes, KEEP the shape.** The four fields — code, the sentence a person reads, the technical detail, whether Retry is honest — survive as a plain type built at the handler boundary. The classes do not: a generic `AuthError` in `core/` fills its user-facing sentence from `getErrorTitle(code)` and cannot name which provider failed. Specific errors live with the domain that throws them, the way `DaLiveAuthError` already does — thrown in 6 files, caught in 10. |
+| **3. Split the classifier** | **YES.** `toAppError()` keeps matching message text for the retry question, where a wrong guess costs one retry, and stops returning anything displayable. Today any error whose text contains "unauthorized" tells a person to sign in — including when the real cause is a missing permission, where signing in changes nothing. All 19 callers only use the retry half. |
+| **4. `isError` on the agent surface** | **DONE** before this was asked — shipped 2026-09-11. |
+| **5. ADR-023** | **YES**, write it. |
+
+Sequencing follows from 2 depending on 3: the classifier is what still constructs
+`TimeoutError`, so it splits first and the classes go after.
 
 ## Sources
 

@@ -67,8 +67,8 @@ export interface ConfigServiceProbeResult {
      * into a name.
      *
      * Its own refusal is a finding, not a gap: a roster you cannot read means no
-     * admin is visible to ask, which is what makes the Code Sync setup flow the
-     * only remaining path (observed on `leahrayard`, 2026-08-14).
+     * admin is visible to ask, which leaves the GitHub user who installed Code
+     * Sync, or Adobe (observed on `leahrayard`, 2026-08-14).
      */
     orgAdmins?: { status: 'ok' | 'not_authorized' | 'failed'; emails?: string[] };
     /**
@@ -188,9 +188,12 @@ function interpret(result: ConfigServiceProbeResult): string {
                 const more = emails.length > 3 ? ` (+${emails.length - 3} more)` : '';
                 return `${base}Ask an org admin to add you under Site users: ${named}${more}.`;
             }
+            // Not the AEM setup page: it cannot read or grant anything without the
+            // one-time key the Code Sync bot adds during a GitHub App install.
             return (
-                `${base}No org admin is visible either — open tools.aem.live/bot/setup for ` +
-                'this site and add your email under Site users, then re-run this probe.'
+                `${base}No org admin is visible either. Run Demo Builder: Manage Site Access, ` +
+                'which opens the AEM Code Sync app on GitHub; failing that, the GitHub user ' +
+                'who installed it, or Adobe, has to add you.'
             );
         }
         return (

@@ -151,6 +151,69 @@ describe('template sync', () => {
         expect(mockUpdateLastSyncedCommit).not.toHaveBeenCalled();
     });
 
+    describe('merge conflicts', () => {
+        const CONFLICTED = {
+            success: false,
+            strategy: 'merge',
+            syncedCommit: '',
+            conflicts: ['blocks/hero/hero.js'],
+            error: 'Merge conflicts in 1 file (blocks/hero/hero.js); the template update was not applied.',
+        };
+
+        it('by default STOP: reported as a failure naming the file, no reset, no commit recorded', async () => {
+            mockSyncWithTemplate.mockResolvedValue(CONFLICTED);
+            const project = edsProject();
+
+            const res = await applyUpdatesHeadless(
+                { ...emptySelections(), template: [{ project }] },
+                makeCtx()
+            );
+
+            expect(mockSyncWithTemplate.mock.calls).toEqual([[project, { strategy: 'merge' }]]);
+            expect(mockUpdateLastSyncedCommit).not.toHaveBeenCalled();
+            expect(res.template).toEqual({
+                successCount: 0,
+                failCount: 1,
+                errors: [`demo: ${CONFLICTED.error}`],
+            });
+        });
+
+        it("with templateConflicts 'reset': runs the reset strategy as a second call", async () => {
+            mockSyncWithTemplate
+                .mockResolvedValueOnce(CONFLICTED)
+                .mockResolvedValueOnce({ success: true, strategy: 'reset', syncedCommit: 'r1' });
+            const project = edsProject();
+
+            const res = await applyUpdatesHeadless(
+                { ...emptySelections(), template: [{ project }] },
+                makeCtx(),
+                undefined,
+                { templateConflicts: 'reset' }
+            );
+
+            expect(mockSyncWithTemplate.mock.calls).toEqual([
+                [project, { strategy: 'merge' }],
+                [project, { strategy: 'reset' }],
+            ]);
+            expect(mockUpdateLastSyncedCommit).toHaveBeenCalledWith(project, 'r1', expect.anything());
+            expect(res.template).toEqual({ successCount: 1, failCount: 0, errors: [] });
+        });
+
+        it("'reset' never runs a reset for a merge that failed WITHOUT conflicts", async () => {
+            mockSyncWithTemplate.mockResolvedValue({ success: false, strategy: 'merge', error: 'clone failed' });
+
+            const res = await applyUpdatesHeadless(
+                { ...emptySelections(), template: [{ project: edsProject() }] },
+                makeCtx(),
+                undefined,
+                { templateConflicts: 'reset' }
+            );
+
+            expect(mockSyncWithTemplate).toHaveBeenCalledTimes(1);
+            expect(res.template.errors).toEqual(['demo: clone failed']);
+        });
+    });
+
     it('a thrown error is recorded sanitized to its first line', async () => {
         mockSyncWithTemplate.mockRejectedValue(new Error('git exploded\nat stack'));
 

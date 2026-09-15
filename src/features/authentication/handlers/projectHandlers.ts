@@ -9,10 +9,11 @@
  */
 
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import { toAppError, isTimeout } from '@/core/errors';
+import { classifyTransience } from '@/core/errors';
 import { getMeshNodeVersion } from '@/core/utils/meshConfig';
 import { withTimeout } from '@/core/utils/promiseUtils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { isTimeoutError } from '@/core/utils/timeoutError';
 import { validateProjectId } from '@/core/validation/validators/AdobeResourceValidator';
 import {
     ensureOrgContext,
@@ -168,7 +169,8 @@ export async function handleGetProjects(
         }
         const projects = await withTimeout(projectsPromise, {
             timeoutMs: TIMEOUTS.NORMAL,
-            timeoutMessage: 'Request timed out. Please check your connection and try again.',
+            // A NOUN PHRASE: TimeoutError composes "<operation> took too long...".
+            timeoutMessage: 'Loading your Adobe projects',
         });
         // Stamp ownership (deletable) so the webview only offers delete on
         // projects the current token user created (fail closed on unknowns).
@@ -176,22 +178,26 @@ export async function handleGetProjects(
         await context.sendMessage('get-projects', stamped);
         return { success: true, data: stamped };
     } catch (error) {
-        const appError = toAppError(error);
+        // Code from the guess, sentence from an error we wrote — see workspaceHandlers.
+        const code =
+            classifyTransience(error).kind === 'timeout' ? ErrorCode.TIMEOUT : ErrorCode.UNKNOWN;
         const originalMessage = error instanceof Error ? error.message : '';
+        // These two ARE this extension's own words, thrown by the org guard and the
+        // auth layer, which is why they are passed through rather than replaced.
         const hasActionableMessage =
             originalMessage.includes('organization') || originalMessage.includes('AUTH_EXPIRED');
-        const errorMessage = isTimeout(appError)
-            ? appError.userMessage
+        const errorMessage = isTimeoutError(error)
+            ? error.userMessage
             : hasActionableMessage
               ? originalMessage.replace('AUTH_EXPIRED: ', '')
               : 'Failed to load projects. Please try again.';
 
-        context.logger.error('Failed to get projects:', appError);
+        context.logger.error('Failed to get projects:', error);
         await context.sendMessage('get-projects', {
             error: errorMessage,
-            code: appError.code,
+            code,
         });
-        return { success: false, error: errorMessage, code: appError.code };
+        return { success: false, error: errorMessage, code };
     }
 }
 

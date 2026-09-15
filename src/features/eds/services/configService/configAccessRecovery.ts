@@ -30,7 +30,7 @@ import {
     ensureSiteAdmin,
     probeConfigWriteAccess,
     readOrgAdmins,
-    type CodeSyncSetupParams,
+    type ConfigSiteRef,
     type ConfigWriteAccess,
 } from './configServiceAccess';
 import { maskEmail } from '@/core/utils/maskEmail';
@@ -39,7 +39,7 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 
 /**
- * How long to keep asking after the user says they finished the setup flow.
+ * How long to keep asking after the user goes to get the role granted.
  *
  * Same RATIONALE as `CONFIG_SERVICE_PROPAGATION_DELAYS_MS` — the role propagates
  * across Adobe identity systems in a documented 30–90s window, so checking once
@@ -72,7 +72,7 @@ const ACCESS_POLL_DELAYS_MS: readonly number[] = [
  */
 export async function logConfigAccessState(
     tokenProvider: TokenProvider,
-    site: Pick<CodeSyncSetupParams, 'owner' | 'repo'>,
+    site: ConfigSiteRef,
     logger: Logger,
 ): Promise<ConfigWriteAccess> {
     const access = await probeConfigWriteAccess(tokenProvider, site.owner, site.repo, logger);
@@ -103,7 +103,7 @@ export async function logConfigAccessState(
 /**
  * Poll the oracle until the site's configuration becomes readable.
  *
- * Call after the user completes the setup flow. `unknown` is treated as
+ * Call after sending the user to get the role. `unknown` is treated as
  * not-yet-granted and keeps waiting — only a real 200 ends this as `granted`.
  *
  * @param onAttempt - fires before each wait so a long poll is not silent
@@ -111,7 +111,7 @@ export async function logConfigAccessState(
  */
 export async function waitForConfigAccess(
     tokenProvider: TokenProvider,
-    site: Pick<CodeSyncSetupParams, 'owner' | 'repo'>,
+    site: ConfigSiteRef,
     logger: Logger,
     onAttempt?: (attempt: number, total: number) => void | Promise<void>,
 ): Promise<ConfigWriteAccess> {
@@ -143,7 +143,7 @@ export async function waitForConfigAccess(
     // and it is not. Saying so is the whole point of polling rather than assuming.
     logger.warn(
         `[ConfigAccess] ${site.owner}/${site.repo}: still refused after ${total} checks — ` +
-            'the setup flow did not mint an admin role for this identity',
+            'no admin role was granted to this identity',
     );
     return 'refused';
 }
@@ -168,7 +168,7 @@ export async function waitForConfigAccess(
  */
 export async function announceConfigAccess(
     tokenProvider: TokenProvider,
-    site: Pick<CodeSyncSetupParams, 'owner' | 'repo'>,
+    site: ConfigSiteRef,
     logger: Logger,
     announce: (message: string) => Promise<void>,
 ): Promise<ConfigWriteAccess> {
@@ -215,7 +215,7 @@ export async function announceConfigAccess(
  */
 export async function pinSiteAdmin(
     tokenProvider: TokenProvider,
-    site: Pick<CodeSyncSetupParams, 'owner' | 'repo'>,
+    site: ConfigSiteRef,
     email: string | undefined,
     logger: Logger,
 ): Promise<void> {

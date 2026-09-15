@@ -32,6 +32,8 @@ function zipEntry(entryName: string, content?: string) {
         entryName,
         isDirectory: content === undefined,
         getData: () => Buffer.from(content ?? '', 'utf-8'),
+        // adm-zip's header carries the stored unix mode; 0 = none stored (a plain file).
+        header: { attr: 0 },
     };
 }
 

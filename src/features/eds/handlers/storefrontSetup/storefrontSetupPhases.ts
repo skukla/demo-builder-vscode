@@ -40,6 +40,7 @@ import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getBlockLibraryContentSource } from '@/features/components/services/blockLibraryLoader';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import { projectTargetsStorefront } from '@/features/eds/services/catalogPrewarmService';
+import { TemplateSyncService } from '@/features/updates/services/templateSyncService';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
 import type {
@@ -65,6 +66,11 @@ function createSetupServices(context: HandlerContext): SetupServices {
             githubTokenService,
             ServiceLocator.getCommandExecutor(),
             context.logger,
+        ),
+        templateSync: new TemplateSyncService(
+            context.context.secrets,
+            context.logger,
+            ServiceLocator.getCommandExecutor(),
         ),
         githubFileOps: new GitHubFileOperations(githubTokenService, context.logger),
         githubAppService: new GitHubAppService(

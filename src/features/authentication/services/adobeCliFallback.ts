@@ -14,11 +14,10 @@
  * @module features/authentication/services/adobeCliFallback
  */
 
-import { AuthError } from '@/core/errors';
+import { AdobeOrgMismatchError } from './authenticationErrors';
 import { getLogger } from '@/core/logging/debugLogger';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { formatDuration } from '@/core/utils/timeFormatting';
-import { ErrorCode } from '@/types/errorCodes';
 import { parseJSON } from '@/types/typeGuards';
 
 /** The slice of the fetcher config the CLI fallback consults. */
@@ -163,15 +162,7 @@ export class AdobeCliFallback {
                 // Typed, in-app-recoverable error. NO terminal instruction — the UI
                 // routes ORG_MISMATCH through ensureOrgContext + a forced sign-in
                 // recovery, and agents treat it as non-retryable.
-                throw new AuthError(
-                    ErrorCode.ORG_MISMATCH,
-                    'Adobe CLI is targeting a different organization than this operation needs.',
-                    {
-                        userMessage:
-                            'This operation needs a different Adobe organization. ' +
-                            'Select the correct organization to continue.',
-                    },
-                );
+                throw new AdobeOrgMismatchError();
             }
         }
 

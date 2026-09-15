@@ -1,11 +1,10 @@
 /**
  * The stubs both `githubRepoOperations-*` suites install.
  *
- * `GitHubRepoOperations` news up its own Octokit through the plugin factory, reaches
- * `fs/promises` and `os.tmpdir()` for its scratch directory, and dynamically imports
- * `PollingService`. None of those can be handed in, so a suite has no way to reach
- * past them other than a module mock — and the two suites would otherwise write the
- * same five mocks twice and drift apart on the sixth edit.
+ * `GitHubRepoOperations` news up its own Octokit through the plugin factory and
+ * dynamically imports `PollingService`. Neither can be handed in, so a suite has no
+ * way to reach past them other than a module mock — and the two suites would
+ * otherwise write the same mocks twice and drift apart on the next edit.
  *
  * The CONSTRUCTOR is exported alongside the request mock on purpose: whether a second
  * call reuses one client is invisible from the requests alone, so the caching and
@@ -35,14 +34,6 @@ jest.mock('@/core/shell/pollingService', () => ({
     PollingService: jest.fn().mockImplementation(() => ({
         pollUntilCondition: (...args: unknown[]) => mockPollUntilCondition(...args),
     })),
-}));
-
-export const mockMkdtemp = jest.fn();
-export const mockRm = jest.fn();
-
-jest.mock('fs/promises', () => ({
-    mkdtemp: (...args: unknown[]) => mockMkdtemp(...args),
-    rm: (...args: unknown[]) => mockRm(...args),
 }));
 
 // Below the mocks on purpose. `jest.mock` hoists above the imports of the module it

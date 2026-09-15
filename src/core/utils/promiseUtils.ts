@@ -2,11 +2,22 @@
  * Promise utilities for timeout and cancellation handling
  */
 
-import { TimeoutError, toAppError, isTimeout } from '@/core/errors';
+import { TimeoutError } from './timeoutError';
+import { classifyTransience, extractErrorMessage } from '@/core/errors';
 import { ErrorCode } from '@/types/errorCodes';
 
 export interface TimeoutOptions {
     timeoutMs: number;
+    /**
+     * The OPERATION that timed out, as a noun phrase — "SDK org services fetch".
+     *
+     * It is composed into a sentence (`<operation> took too long. Please try again.`),
+     * so a caller passing a whole sentence gets a mangled one. Two did, and both were
+     * shown to an SC: "Request timed out. Please check your connection and try again.
+     * took too long. Please try again." Found 2026-09-11 while retiring the central
+     * error hierarchy. The name says `message` for history; what it means is the
+     * operation's name.
+     */
     timeoutMessage?: string;
     signal?: AbortSignal;
 }
@@ -34,7 +45,7 @@ export interface WithTimeoutResult<T> {
  *     longRunningOperation(),
  *     { 
  *       timeoutMs: 30000,
- *       timeoutMessage: 'Operation timed out',
+ *       timeoutMessage: 'the long-running operation',
  *       signal: controller.signal
  *     }
  *   );
@@ -49,8 +60,8 @@ export async function withTimeout<T>(
 ): Promise<T> {
     const { timeoutMs, timeoutMessage, signal } = options;
 
-    // Create timeout promise - use TimeoutError for typed detection
-    // Note: TimeoutError generates its own userMessage, but callers can provide custom via timeoutMessage
+    // Create timeout promise - use TimeoutError for typed detection.
+    // `timeoutMessage` names the OPERATION; TimeoutError composes the sentence.
     // Track the timer so it can be cleared once the race settles — otherwise a fast-resolving
     // `promise` leaves the timeout pending for the full timeoutMs, leaking a timer that keeps
     // the event loop alive (and trips Jest's "failed to exit gracefully" teardown warning).
@@ -140,7 +151,6 @@ export async function tryWithTimeout<T>(
             cancelled: false,
         };
     } catch (error) {
-        const appError = toAppError(error);
 
         // Use typed error detection instead of string matching.
         //
@@ -150,14 +160,14 @@ export async function tryWithTimeout<T>(
         // CANCELLED-coded error by handing back an AppError it was given, and
         // such an error is itself an Error carrying the same code — so the
         // second half was already true whenever the first was.
-        const timedOut = isTimeout(appError);
+        const timedOut = classifyTransience(error).kind === 'timeout';
         const cancelled = error instanceof Error &&
             (error as Error & { code?: string }).code === ErrorCode.CANCELLED;
 
         return {
             timedOut,
             cancelled,
-            error: error instanceof Error ? error : new Error(appError.userMessage),
+            error: error instanceof Error ? error : new Error(extractErrorMessage(error)),
         };
     }
 }

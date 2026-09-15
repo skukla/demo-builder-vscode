@@ -433,6 +433,63 @@ export class AdobeConsoleProjectOps {
     }
 
     /**
+     * Delete a workspace from the selected project.
+     *
+     * THE REVERSAL OF `createWorkspace`, and it is shaped like it deliberately: same
+     * target resolution, same "never throws, returns a failure the caller can show"
+     * contract. `deleteConsoleProject` below throws instead, because its caller is a
+     * multi-step teardown that maps SDK errors itself; this one answers a single tool
+     * call.
+     *
+     * Adobe refuses to delete the Production workspace, and that refusal arrives as an
+     * SDK error rather than as anything this can check first — so it is surfaced rather
+     * than pre-empted with a guess about which names are protected.
+     */
+    async deleteWorkspace(
+        workspaceId: string,
+        target?: { orgId?: string; projectId?: string },
+    ): Promise<{ deleted: true } | ConsoleOpFailure> {
+        if (!workspaceId) {
+            return { error: 'A workspace id is required.' };
+        }
+
+        try {
+            await this.ensureSDKReady();
+
+            // Explicit target wins over the cache — same reason as createWorkspace: an
+            // agent's selection lives in `adobeTargetStore`, which never reaches this cache.
+            const orgId = target?.orgId ?? this.cacheManager.getCachedOrganization()?.id;
+            const projectId = target?.projectId ?? this.cacheManager.getCachedProject()?.id;
+            if (!orgId || !projectId) {
+                return { error: 'No organization or project selected.' };
+            }
+
+            if (!this.sdkClient.isInitialized()) {
+                return { error: 'Console SDK is not available — sign in to Adobe first.' };
+            }
+
+            const client = this.sdkClient.getClient() as {
+                deleteWorkspace: (
+                    orgId: string,
+                    projectId: string,
+                    workspaceId: string
+                ) => Promise<unknown>;
+            };
+
+            this.debugLogger.info(
+                `[Entity Fetcher] Deleting workspace ${workspaceId} from project ${projectId}`,
+            );
+            await client.deleteWorkspace(orgId, projectId, workspaceId);
+            this.debugLogger.info('[Entity Fetcher] Workspace deleted successfully');
+            return { deleted: true };
+        } catch (error) {
+            const message = (error as Error).message || '';
+            this.debugLogger.error('[Entity Fetcher] Failed to delete workspace', error as Error);
+            return { error: message || 'Console rejected the delete with no error message.' };
+        }
+    }
+
+    /**
      * Delete an Adobe Console project. SDK errors propagate UNCHANGED — the
      * teardown caller maps them (notably the 409 ERR_MSG_PROJECT_DELETE_FORBIDDEN
      * thrown while event providers are still attached to the project).

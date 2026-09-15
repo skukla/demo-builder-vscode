@@ -365,10 +365,16 @@ describe('a domain error lives with the domain that throws it', () => {
         // So the rule is not "use the central errors" — that would be a policy against
         // 354 counter-examples. It is that the central module is legacy and may only
         // shrink; a new domain error goes next to its domain, where the used ones live.
+        // IT REACHED ZERO on 2026-09-11, and that broke this check's own control.
+        // The control asserted `count > 0` to prove the file was still being read — a
+        // control that depends on a real violation, which stops working the day the
+        // corpus is clean. The same thing happened twice on 2026-08-31 to two other
+        // checks here. So the control now proves the module is READ, by naming what
+        // replaced the hierarchy, and the count is pinned at zero like any other
+        // ratchet: it may not grow back.
         const errorsModule = src.get('src/core/errors/index.ts') as string;
+        expect(errorsModule).toContain('export interface FailureShape');
         const count = (errorsModule.match(/^export class \w+/gm) ?? []).length;
-        // A zero would mean the file moved and this stopped measuring anything.
-        expect(count).toBeGreaterThan(0);
         expectCeiling(LEDGER, 'coreErrorClasses', count);
     });
 });
