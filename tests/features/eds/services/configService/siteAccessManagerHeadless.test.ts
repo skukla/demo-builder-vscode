@@ -7,8 +7,11 @@
  * config read flipping is (that lesson is the whole reason this feature exists).
  */
 
+const mockAdobeEmail = jest.fn();
+const mockGitHubEmails = jest.fn();
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
-    getDaLiveAuthService: jest.fn(() => ({ getUserEmail: jest.fn() })),
+    getDaLiveAuthService: jest.fn(() => ({ getUserEmail: () => mockAdobeEmail() })),
+    getGitHubServices: jest.fn(() => ({ tokenService: { getUserEmails: () => mockGitHubEmails() } })),
 }));
 
 jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
@@ -98,6 +101,35 @@ describe('listSiteAccess', () => {
 
         expect(result.status).toBe('not_authorized');
         expect(result.canManage).toBe(false);
+    });
+
+    it('explains a refusal when the GitHub primary email is not the Adobe identity (the Code Sync admin)', async () => {
+        mockProbe.mockResolvedValue('refused');
+        mockAdobeEmail.mockResolvedValue('sc@adobe.example');
+        mockGitHubEmails.mockResolvedValue([
+            { email: 'khalil@example.com', primary: true, verified: true },
+            { email: 'sc@adobe.example', primary: false, verified: true },
+        ]);
+
+        const result = await listSiteAccess(project, context, logger);
+
+        expect(result.identityMismatch).toEqual({
+            githubPrimaryEmail: 'khalil@example.com',
+            adobeEmail: 'sc@adobe.example',
+            explanation: expect.stringContaining('Your GitHub primary email is khalil@example.com'),
+        });
+    });
+
+    it('adds no explanation when the emails agree, or when either cannot be read', async () => {
+        mockProbe.mockResolvedValue('refused');
+        mockAdobeEmail.mockResolvedValue('sc@adobe.example');
+        mockGitHubEmails.mockResolvedValue([{ email: 'sc@adobe.example', primary: true, verified: true }]);
+        expect((await listSiteAccess(project, context, logger)).identityMismatch).toBeUndefined();
+
+        mockGitHubEmails.mockRejectedValue(new Error('network'));
+        const failed = await listSiteAccess(project, context, logger);
+        expect(failed.status).toBe('not_authorized');
+        expect(failed.identityMismatch).toBeUndefined();
     });
 
     it('fails cleanly for a project with no EDS storefront repo', async () => {
