@@ -357,7 +357,7 @@ describe('buildHomeGitSyncCommand', () => {
         expect(command).toContain(`case "$TOP" in "${HOME_ROOT}"/*) ;; *) exit 0 ;; esac`);
     });
 
-    it('applies the origin-remote guard so only storefront repos are committed', () => {
+    it('applies the origin-remote guard (the own-storefront guard is proved by running it, in homeGitSyncHook.test.ts)', () => {
         const command = buildHomeGitSyncCommand(HOME_ROOT, NODE_PATH);
         expect(command).toContain('git -C "$TOP" remote get-url origin >/dev/null 2>&1 || exit 0');
     });

@@ -16,10 +16,10 @@ import type { GitHubFileOperations } from '../github/githubFileOperations';
 import { generateInspectorTreeEntries, installInspectorTagging } from '../inspectorHelpers';
 import { applyCanonicalCodePatches } from '../patches/codePatchPipelineHelpers';
 import type { CodePatchResult } from '../patches/codePatchRegistry';
-import { readLkgSha } from '../patches/lkgReader';
 import { installSmart404Handler } from '../pdp/pdp404HandlerPublisher';
 import { addPlaceholderStubOverrides } from '../placeholderStubs';
 import { installQuickEdit } from '../quickEditPublisher';
+import { resolveTemplateCommitSha } from '../templateCommitResolver';
 import type { GitHubTreeInput } from '../types';
 import { type EdsResetParams } from './edsResetParams';
 import {
@@ -222,7 +222,7 @@ async function reinstallBlockLibraries(
 /**
  * Step 1: Reset repository to template using bulk Git Tree operations.
  * Builds file overrides (fstab.yaml, config.json, placeholders) and pushes a single commit.
- * @returns Number of files reset and optional block collection IDs.
+ * @returns Number of files reset, optional block collection IDs, and the template commit reset onto.
  */
 export async function resetRepoToTemplate(
     params: EdsResetParams,
@@ -234,6 +234,8 @@ export async function resetRepoToTemplate(
     blockCollectionIds?: string[];
     libraryContentSources: Array<{ org: string; site: string }>;
     canonicalCodePatchResults?: CodePatchResult[];
+    /** The template commit the repository now matches; absent when it could not be resolved. */
+    templateCommitSha?: string;
 }> {
     const {
         repoOwner,
@@ -277,31 +279,28 @@ export async function resetRepoToTemplate(
     // content the moment a brand authors sheets (content-over-code).
     addPlaceholderStubOverrides(fileOverrides);
 
-    // Determine the template ref to reset against. Thin-layer storefronts
-    // (codePatchSource configured) pin to the verified canonical LKG SHA;
-    // legacy / forked packages continue to use `main` HEAD. LKG fetch
-    // failure falls back to `main` with a warn (ADR-006 D1 proceed-and-warn)
-    // so a transient patches-repo outage doesn't block reset entirely.
-    let templateRef = 'main';
-    if (codePatchSource) {
-        const lkg = await readLkgSha(
-            {
-                owner: codePatchSource.owner,
-                repo: codePatchSource.repo,
-                lkgFile: codePatchSource.lkgFile,
-            },
-            context.logger,
+    // Determine the template revision to reset onto — the same commit project
+    // creation records: the verified LKG for thin-layer storefronts, otherwise the
+    // template's `main` head (see resolveTemplateCommitSha for the LKG fallback).
+    //
+    // The download is PINNED to the resolved SHA, even for a branch reset, and that
+    // SHA is what the caller records as `lastSyncedCommit`. Recording a head fetched
+    // separately from the download could name a commit the repository does not match
+    // if `main` moved in between; pinning makes the record exactly what was written.
+    // When no SHA can be resolved the reset still proceeds from `main` (ADR-006 D1
+    // proceed-and-warn) and returns no commit, so the old record is left alone.
+    const templateCommitSha = await resolveTemplateCommitSha(
+        { templateOwner, templateRepo, codePatchSource },
+        githubFileOps,
+        context.logger,
+    );
+    const templateRef = templateCommitSha ?? 'main';
+    if (templateCommitSha) {
+        context.logger.info(`[EdsReset] Pinning reset to ${templateCommitSha.substring(0, 7)}`);
+    } else {
+        context.logger.warn(
+            '[EdsReset] Template commit unresolved — resetting from main; synced commit not updated',
         );
-        if (lkg) {
-            templateRef = lkg;
-            context.logger.info(
-                `[EdsReset] Pinning reset to LKG ${lkg.substring(0, 7)} (from ${codePatchSource.owner}/${codePatchSource.repo})`,
-            );
-        } else {
-            context.logger.warn(
-                `[EdsReset] LKG unreachable for ${codePatchSource.owner}/${codePatchSource.repo} — falling back to template main HEAD`,
-            );
-        }
     }
 
     // Canonical-phase code patches: apply BEFORE the bulk reset so patched
@@ -385,5 +384,6 @@ export async function resetRepoToTemplate(
         blockCollectionIds,
         libraryContentSources,
         canonicalCodePatchResults,
+        templateCommitSha,
     };
 }
