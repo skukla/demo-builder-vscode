@@ -54,9 +54,11 @@ let callOrder: string[];
 function makeServices(): SetupServices {
     return {
         githubFileOps: {},
-        githubRepoOps: {
-            resetToTemplate: jest.fn().mockImplementation(async () => {
+        githubRepoOps: {},
+        templateSync: {
+            resetRepository: jest.fn().mockImplementation(async () => {
                 callOrder.push('resetToTemplate');
+                return { success: true, strategy: 'reset', syncedCommit: 'abc1234' };
             }),
         },
         githubAppService: {
@@ -173,7 +175,7 @@ describe('a repo the user chose to PRESERVE is gated before any write', () => {
 
         const result = await runPhase1(services, NO_RESET);
 
-        expect(services.githubRepoOps.resetToTemplate).not.toHaveBeenCalled();
+        expect(services.templateSync.resetRepository).not.toHaveBeenCalled();
         expect(mockPin).not.toHaveBeenCalled();
         expect(result).toMatchObject({ success: false, awaitingGitHubApp: true });
     });
@@ -184,7 +186,7 @@ describe('a repo the user chose to PRESERVE is gated before any write', () => {
 
         const result = await runPhase1(services, NO_RESET);
 
-        expect(services.githubRepoOps.resetToTemplate).not.toHaveBeenCalled();
+        expect(services.templateSync.resetRepository).not.toHaveBeenCalled();
         expect(mockPin).not.toHaveBeenCalled();
         expect(result?.success).toBe(false);
     });
@@ -197,7 +199,7 @@ describe('both paths, once the answer is good', () => {
         const result = await runPhase1(services);
 
         expect(result).toBeNull();
-        expect(services.githubRepoOps.resetToTemplate).toHaveBeenCalled();
+        expect(services.templateSync.resetRepository).toHaveBeenCalled();
     });
 
     it('leaves the new-repo branch ungated here (it has no repo to protect yet)', async () => {

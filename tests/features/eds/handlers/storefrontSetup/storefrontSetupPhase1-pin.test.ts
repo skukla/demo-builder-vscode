@@ -43,7 +43,6 @@ function makeServices(): SetupServices {
         githubRepoOps: {
             createFromTemplate: jest.fn(),
             waitForContent: jest.fn(),
-            resetToTemplate: jest.fn(),
         },
     } as unknown as SetupServices;
 }

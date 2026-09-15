@@ -293,15 +293,16 @@ async function executePhaseExistingRepo(
                 patchReport,
             );
         } else {
-            // Legacy/forked flow: simple resetToTemplate against template main.
-            await services.githubRepoOps.resetToTemplate(
-                repoInfo.repoOwner,
-                repoInfo.repoName,
+            // Legacy/forked flow: the template's main, through the same reset as
+            // Check for Updates. Nothing is preserved: setup rewrites fstab.yaml and
+            // config.json for this project afterwards.
+            const reset = await services.templateSync.resetRepository({
+                repoOwner: repoInfo.repoOwner,
+                repoName: repoInfo.repoName,
                 templateOwner,
                 templateRepo,
-                'main',
-                'chore: reset to template',
-            );
+            });
+            if (!reset.success) throw new Error(reset.error);
         }
         logger.info('[Storefront Setup] Repository reset to template');
 
