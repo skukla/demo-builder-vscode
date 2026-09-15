@@ -291,6 +291,27 @@ real project file was read). Added-demo projects also carry `project.demo` (`pro
 | `getEdsRepoParts` / `getEdsGithubRepo` | build new sibling | a stack-neutral "own storefront repo" accessor |
 | Home auto-sync hook | extend | must not push to a source (finding 4) |
 
+## Owner decisions (2026-09-15)
+
+Answers to the design questions above. These supersede the recommendations where they differ.
+
+| # | Question | Decision |
+|---|---|---|
+| 1 | Where the repository step lives | Reuse the Edge Delivery wizard flow for headless as far as possible: the same Storefront area and repository step; the repository is created during Create Project, after Review |
+| 2 | Private or public | Public |
+| 3 | Update model | One workflow for both storefront kinds: synthesize and consolidate, not two parallel paths. Updates, Sync, reset and deletion follow the Edge Delivery paths |
+| 4 | Reset with uncommitted local edits | As Edge Delivery does, with the recommendation: say so, offer "Sync first" or "Discard and reset", never discard silently |
+| 5 | Existing headless projects (revised 2026-09-15, plan Q4) | Nothing special: the next headless project the SC builds has a repository. A headless project created before this feature keeps running as today; Reset, Sync and Save as demo package on it do not act and say "This project was created before headless projects had a GitHub repository. Create a new project to use this." Edit keeps working without creating a repository. Reset never creates a repository. Few if any SCs use headless projects today |
+| 6 | Namespace | Personal account, as Edge Delivery |
+| 7 | Where the running storefront reads from | Local disk only; the repository is backup and sharing (the owner's framing) |
+
+With decision 5, the shallow-clone caveat in question 5 does not arise: no existing clone is ever
+pushed to a new repository.
+
+The plan's own questions (Q1-Q8) were answered the same day; the answers and what they changed are
+in `.rptc/plans/headless-storefront-repository/overview.md` ("Owner decisions" and "Decision
+history").
+
 ## (b) Design questions for the owner
 
 1. **Where the repository step lives in the wizard.** Recommended: a small Storefront area for

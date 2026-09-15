@@ -5,7 +5,7 @@ area: eds
 parent: EDS-13
 needs: []
 value: med
-status: backlog
+status: planned
 ---
 
 # A headless project keeps its code in a repository of the SC's own, as Edge Delivery does
@@ -72,3 +72,25 @@ Mirror Edge Delivery:
 - Save as demo package for headless projects (drop `EDS_ONLY`), and the dashboard notice's
   second button for them.
 - [[EDS-13b]]'s share for headless, which [[EDS-13e]] was filed for.
+
+## Decisions (owner, 2026-09-15)
+
+Research: `.rptc/research/headless-storefront-repository/research.md` (decisions table there).
+Plan: `.rptc/plans/headless-storefront-repository/`.
+
+- Reuse the Edge Delivery wizard flow; the repository is created during Create Project.
+- Public; the SC's personal account.
+- One workflow for both storefront kinds: updates, Sync, reset and deletion consolidate onto the
+  Edge Delivery paths rather than running beside them.
+- Reset warns about unsaved local edits ("Sync first" or "Discard and reset"), only when there
+  is something to lose; Edge Delivery reset does the same and refreshes the local clone, and
+  Edit asks before it re-clones.
+- Existing headless projects (revised): nothing special. One created before this feature keeps
+  running; Reset, Sync and Save as demo package on it say "This project was created before
+  headless projects had a GitHub repository. Create a new project to use this." Reset never
+  creates a repository.
+- A headless SC can pick an existing repository, with "Reset to <demo>", as Edge Delivery allows.
+- A failed Create Project keeps the repository it made; a retry reuses it.
+- `reset_eds_project` becomes `reset_project`; headless reset stops re-cloning the mesh and apps.
+- Binary files, the recorded reset commit and conflict-safe template updates shipped on develop
+  (2026-09-15), so updates are no longer blocked.
