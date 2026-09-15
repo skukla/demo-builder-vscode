@@ -69,3 +69,4 @@ given out.
 
 - 2026-09-14  fix(eds): stop sending no-role users to a setup page that cannot grant (`bba76c2a5`)
 - 2026-09-14  Next step handed to Khalil (kmanns installed Code Sync himself): on hardie, re-save the Code Sync installation on GitHub (no-op Save, else remove and re-add the repo) and report whether GitHub opens tools.aem.live/bot/setup with #token=. If it does, note who is already under Site users, add his Adobe email, run Manage Site Access then Repair Site Configuration, and add those steps to the Manage Site Access message. If it does not, remove the GitHub button and point to Adobe. His answer replaces the sacrificial-repo test.
+- 2026-09-15  feat(eds): explain a refusal caused by the GitHub primary email (`069c05647`)
