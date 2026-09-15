@@ -47,6 +47,13 @@ jest.mock('@/features/app-builder/services/runtimeCredentials', () => ({
     }),
 }));
 
+// Whether the app's config asks Adobe for the project's credentials. Off by
+// default; the suite below turns it on.
+const mockDeclaresIms = jest.fn().mockResolvedValue(false);
+jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
+    declaresIncludeImsCredentials: (...args: unknown[]) => mockDeclaresIms(...args),
+}));
+
 const DEPLOY_CMD = 'aio app deploy';
 const GET_URL_CMD = 'aio app get-url --json';
 
@@ -625,5 +632,77 @@ describe('extension layout: workspace config import', () => {
         const result = await deployAppComponent('/app', cm, logger, { layout: 'extension' });
 
         expect(result.error).toBe('Could not import workspace configuration: exit code 9');
+    });
+});
+
+describe('deployAppComponent — an app that asks for the project credentials', () => {
+    // Found 2026-09-14 on Bodea: the demo ERP's actions carry `include-ims-credentials`,
+    // aio then requires the four IMS_OAUTH_S2S values, and the deploy failed with
+    // "Credentials for the project are incomplete".
+    const IMS_ENV = {
+        IMS_OAUTH_S2S_CLIENT_ID: 's2s-client',
+        IMS_OAUTH_S2S_CLIENT_SECRET: 'fake-test-pw-not-a-secret-1',
+        IMS_OAUTH_S2S_ORG_ID: 'ABC123@AdobeOrg',
+        IMS_OAUTH_S2S_SCOPES: '["AdobeID"]',
+    };
+    const { fetchRuntimeCredentials } = jest.requireMock('@/features/app-builder/services/runtimeCredentials') as {
+        fetchRuntimeCredentials: jest.Mock;
+    };
+    let cm: ReturnType<typeof createMockCommandManager>;
+    let logger: ReturnType<typeof createMockLogger>;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        cm = createMockCommandManager();
+        logger = createMockLogger();
+        mockFs.access.mockRejectedValue(new Error('ENOENT'));
+        cm.execute.mockResolvedValue(ok());
+        fetchRuntimeCredentials.mockResolvedValue({
+            namespace: 'test-namespace',
+            auth: 'fake-test-pw-not-a-secret',
+            imsOAuthS2SEnv: IMS_ENV,
+        });
+    });
+
+    const deployEnv = () =>
+        (cm.execute.mock.calls.find((args: unknown[]) => args[0] === DEPLOY_CMD)?.[1] as { env?: Record<string, string> })?.env;
+
+    it('passes the four values to the deploy when the app asks', async () => {
+        mockDeclaresIms.mockResolvedValue(true);
+
+        await deployAppComponent('/erp', cm, logger);
+
+        expect(mockDeclaresIms).toHaveBeenCalledWith('/erp');
+        expect(deployEnv()).toStrictEqual({
+            ...IMS_ENV,
+            AIO_RUNTIME_NAMESPACE: 'test-namespace',
+            AIO_RUNTIME_AUTH: 'fake-test-pw-not-a-secret',
+        });
+    });
+
+    it('keeps them out of the deploy of an app that does not ask', async () => {
+        mockDeclaresIms.mockResolvedValue(false);
+
+        await deployAppComponent('/app', cm, logger);
+
+        expect(deployEnv()).toStrictEqual({
+            AIO_RUNTIME_NAMESPACE: 'test-namespace',
+            AIO_RUNTIME_AUTH: 'fake-test-pw-not-a-secret',
+        });
+    });
+
+    it('refuses before deploying when the app asks and the workspace has no S2S credential', async () => {
+        mockDeclaresIms.mockResolvedValue(true);
+        fetchRuntimeCredentials.mockResolvedValue({ namespace: 'test-namespace', auth: 'fake-test-pw-not-a-secret' });
+
+        const result = await deployAppComponent('/erp', cm, logger);
+
+        expect(result).toStrictEqual({
+            success: false,
+            error:
+                "This app's actions ask Adobe for the project's credentials, but the workspace has no " +
+                'OAuth server-to-server credential. Add the app again so Demo Builder can create one.',
+        });
+        expect(deployEnv()).toBeUndefined();
     });
 });

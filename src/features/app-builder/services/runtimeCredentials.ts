@@ -36,6 +36,12 @@ import { parseJSON, toError } from '@/types/typeGuards';
 export interface RuntimeCredentials {
     namespace: string;
     auth: string;
+    /**
+     * The workspace's OAuth server-to-server credential as the four
+     * `IMS_OAUTH_S2S_*` values `aio app use` writes; absent when the workspace has
+     * none. Carries a live client secret: per-invocation env only, never logged.
+     */
+    imsOAuthS2SEnv?: Record<string, string>;
 }
 
 /** One Runtime namespace entry as the workspace-download JSON reports it. */
@@ -58,17 +64,51 @@ const RUNTIME_PROVISION_FAILED_MESSAGE =
 /** How many times to re-check for the namespace after provisioning (it can lag). */
 const RUNTIME_PROVISION_ATTEMPTS = 3;
 
+/** One workspace credential as the download reports it (only what we read). */
+interface WorkspaceCredential {
+    integration_type?: string;
+    oauth_server_to_server?: {
+        client_id?: string;
+        client_secrets?: string[];
+        scopes?: string[];
+    };
+}
+
 /** Shape of the workspace-download JSON we consume (defensively partial). */
 interface WorkspaceJson {
     project?: {
+        org?: { ims_org_id?: string };
         workspace?: {
             name?: string;
             details?: {
                 runtime?: {
                     namespaces?: Array<{ name?: string; auth?: string }>;
                 };
+                credentials?: WorkspaceCredential[];
             };
         };
+    };
+}
+
+/**
+ * The workspace S2S credential as `IMS_OAUTH_S2S_*` env, mapped exactly as
+ * `aio app use` maps it (aio-cli-plugin-app 14.8 `getOAuthS2SCredential` and
+ * `importConsoleConfig`, read 2026-09-15): client_id, the FIRST client secret, the
+ * project's IMS org id, and the scopes as a JSON string.
+ */
+function imsOAuthS2SEnvOf(config: WorkspaceJson | undefined): Record<string, string> | undefined {
+    const credential = config?.project?.workspace?.details?.credentials?.find(
+        (c) => c.integration_type === 'oauth_server_to_server',
+    )?.oauth_server_to_server;
+    const clientId = credential?.client_id;
+    const clientSecret = credential?.client_secrets?.[0];
+    const orgId = config?.project?.org?.ims_org_id;
+    if (!clientId || !clientSecret || !orgId) return undefined;
+    return {
+        IMS_OAUTH_S2S_CLIENT_ID: clientId,
+        IMS_OAUTH_S2S_CLIENT_SECRET: clientSecret,
+        IMS_OAUTH_S2S_ORG_ID: orgId,
+        IMS_OAUTH_S2S_SCOPES: JSON.stringify(credential?.scopes ?? []),
     };
 }
 
@@ -92,12 +132,14 @@ export async function fetchRuntimeCredentials(
     nodeVersion: string,
 ): Promise<RuntimeCredentials> {
     try {
-        const ns = await downloadRuntimeNamespace(commandManager, nodeVersion);
+        const config = await downloadWorkspaceConfig(commandManager, nodeVersion);
+        const ns = firstNamespaceOf(config);
         if (!ns?.name || !ns?.auth) {
             throw new Error(NO_RUNTIME_MESSAGE);
         }
         logger.debug(`[App Builder] Runtime namespace resolved: ${ns.name}`);
-        return { namespace: ns.name, auth: ns.auth };
+        const imsOAuthS2SEnv = imsOAuthS2SEnvOf(config);
+        return { namespace: ns.name, auth: ns.auth, ...(imsOAuthS2SEnv ? { imsOAuthS2SEnv } : {}) };
     } catch (error) {
         throw new Error(`Runtime credential fetch failed: ${toError(error).message}`);
     }
@@ -117,7 +159,7 @@ export async function workspaceHasRuntime(
     commandManager: CommandExecutor,
     nodeVersion: string,
 ): Promise<boolean> {
-    const ns = await downloadRuntimeNamespace(commandManager, nodeVersion);
+    const ns = firstNamespaceOf(await downloadWorkspaceConfig(commandManager, nodeVersion));
     return Boolean(ns?.name);
 }
 
@@ -160,18 +202,22 @@ export async function ensureWorkspaceRuntime(
     throw new Error(RUNTIME_PROVISION_FAILED_MESSAGE);
 }
 
+/** The workspace's first Runtime namespace, or undefined when it has none. */
+function firstNamespaceOf(config: WorkspaceJson | undefined): RuntimeNamespace | undefined {
+    return config?.project?.workspace?.details?.runtime?.namespaces?.[0];
+}
+
 /**
- * Download the targeted workspace's config and return its first Runtime namespace
- * (or undefined when the workspace has none). Shared by {@link fetchRuntimeCredentials}
+ * Download the targeted workspace's config. Shared by {@link fetchRuntimeCredentials}
  * (per-deploy credential fetch) and {@link workspaceHasRuntime} (the presence check
  * backing {@link ensureWorkspaceRuntime}'s provision-if-missing path). The downloaded
- * file holds the namespace auth key, so it lands in a 0700 temp dir and is deleted
- * in `finally`.
+ * file holds the namespace auth key and the credential's secret, so it lands in a
+ * 0700 temp dir and is deleted in `finally`.
  */
-async function downloadRuntimeNamespace(
+async function downloadWorkspaceConfig(
     commandManager: CommandExecutor,
     nodeVersion: string,
-): Promise<RuntimeNamespace | undefined> {
+): Promise<WorkspaceJson | undefined> {
     const scratchDir = await fsPromises.mkdtemp(path.join(os.tmpdir(), 'db-ws-'));
     const filePath = path.join(scratchDir, `ws-${crypto.randomBytes(6).toString('hex')}.json`);
 
@@ -191,8 +237,7 @@ async function downloadRuntimeNamespace(
         }
 
         const raw = await fsPromises.readFile(filePath, 'utf-8');
-        const parsed = parseJSON<WorkspaceJson>(raw);
-        return parsed?.project?.workspace?.details?.runtime?.namespaces?.[0];
+        return parseJSON<WorkspaceJson>(raw) ?? undefined;
     } finally {
         // The file holds the namespace auth key — always remove it.
         await fsPromises.rm(scratchDir, { recursive: true, force: true }).catch(() => {

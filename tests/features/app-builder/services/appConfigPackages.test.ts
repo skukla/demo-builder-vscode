@@ -11,6 +11,7 @@ import { promises as fsPromises } from 'fs';
 import * as yaml from 'yaml';
 import {
     applyIsolatedPackages,
+    declaresIncludeImsCredentials,
     detectAppLayout,
     isolatePackages,
     listDeclaredPackageNames,
@@ -326,5 +327,52 @@ describe('listDeclaredPackageNames — configs that name nothing attributable', 
             .mockResolvedValueOnce(':\n  - [not valid');
 
         await expect(listDeclaredPackageNames('/app')).resolves.toEqual(['ok']);
+    });
+});
+
+describe('declaresIncludeImsCredentials', () => {
+    /** The demo ERP's shape (skukla/demo-erp app.config.yaml, read 2026-09-15). */
+    const ERP_CONFIG = yaml.stringify({
+        application: {
+            runtimeManifest: {
+                database: { 'auto-provision': true, region: 'amer' },
+                packages: {
+                    'demo-erp': {
+                        actions: {
+                            health: { function: 'actions/health/index.js', annotations: { 'include-ims-credentials': true } },
+                        },
+                    },
+                },
+            },
+        },
+    });
+
+    it('is true when an action of a standalone app asks for the credentials', async () => {
+        mockRead.mockResolvedValueOnce(ERP_CONFIG);
+
+        expect(await declaresIncludeImsCredentials('/c')).toBe(true);
+        expect(mockRead).toHaveBeenCalledWith('/c/app.config.yaml', 'utf-8');
+    });
+
+    it('follows an extension include to the file that declares it', async () => {
+        mockRead.mockImplementation(async (file: string) =>
+            file === '/c/app.config.yaml'
+                ? yaml.stringify({ extensions: { 'commerce/backend-ui/1': { $include: 'src/ext.config.yaml' } } })
+                : yaml.stringify({ runtimeManifest: { packages: { p: { actions: { a: { annotations: { 'include-ims-credentials': true } } } } } } }),
+        );
+
+        expect(await declaresIncludeImsCredentials('/c')).toBe(true);
+        expect(mockRead).toHaveBeenCalledWith('/c/src/ext.config.yaml', 'utf-8');
+    });
+
+    it('is false when no action asks, when it is set false, and when there is no config', async () => {
+        mockRead.mockResolvedValueOnce(config({ p: { actions: { a: { annotations: { 'require-adobe-auth': true } } } } }));
+        expect(await declaresIncludeImsCredentials('/c')).toBe(false);
+
+        mockRead.mockResolvedValueOnce(config({ p: { actions: { a: { annotations: { 'include-ims-credentials': false } } } } }));
+        expect(await declaresIncludeImsCredentials('/c')).toBe(false);
+
+        mockRead.mockRejectedValueOnce(new Error('ENOENT'));
+        expect(await declaresIncludeImsCredentials('/c')).toBe(false);
     });
 });

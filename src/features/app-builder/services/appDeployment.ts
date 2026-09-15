@@ -22,6 +22,7 @@ import * as crypto from 'crypto';
 import { promises as fsPromises } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { declaresIncludeImsCredentials } from './appConfigPackages';
 import { extractAioErrorDetail, fetchRuntimeCredentials } from './runtimeCredentials';
 import type { AppDeploymentResult } from './types';
 import { buildComponent } from '@/core/shell/buildComponent';
@@ -139,6 +140,11 @@ async function importWorkspaceConfig(
         await fsPromises.rm(path.join(componentPath, '.env'), { force: true });
     }
 }
+
+/** An app asks for the project credentials, and the workspace has none to give. */
+const NO_S2S_CREDENTIAL_MESSAGE =
+    "This app's actions ask Adobe for the project's credentials, but the workspace has no " +
+    'OAuth server-to-server credential. Add the app again so Demo Builder can create one.';
 
 /** Per-deploy options for {@link deployAppComponent}. */
 export interface DeployAppOptions {
@@ -292,10 +298,18 @@ async function deployAppComponentOnce(
         // env, so only the two vars are passed; the auth value is never logged).
         onProgress?.('Deploying custom integration...', 'Resolving Runtime credentials');
         const runtimeCreds = await fetchRuntimeCredentials(commandManager, logger, node);
+        // An action with `include-ims-credentials` makes aio require the workspace's
+        // S2S credential as IMS_OAUTH_S2S_* — what `aio app use` would have written to
+        // the .env this pipeline never keeps. Only an app that asks is handed the secret.
+        const asksForIms = await declaresIncludeImsCredentials(componentPath);
+        if (asksForIms && !runtimeCreds.imsOAuthS2SEnv) {
+            throw new Error(NO_S2S_CREDENTIAL_MESSAGE);
+        }
         const runtimeEnv = {
             // Caller-supplied extra env FIRST so the Runtime pair, which this
             // function owns, can never be overridden by it.
             ...(opts.extraEnv ?? {}),
+            ...(asksForIms ? runtimeCreds.imsOAuthS2SEnv : {}),
             AIO_RUNTIME_NAMESPACE: runtimeCreds.namespace,
             AIO_RUNTIME_AUTH: runtimeCreds.auth,
         };

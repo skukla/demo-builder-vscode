@@ -75,6 +75,15 @@ targeted workspace's JSON and injects `AIO_RUNTIME_NAMESPACE`/`AIO_RUNTIME_AUTH`
 per-invocation — reuse it for any new `aio app` command. Also: oclif writes spinner
 frames to STDERR; use `extractAioErrorDetail` or the surfaced error is a spinner line.
 
+An action annotated `include-ims-credentials: true` (every App Builder Database app —
+the demo ERP) makes `aio app deploy` refuse without the workspace S2S credential as
+`IMS_OAUTH_S2S_CLIENT_ID|CLIENT_SECRET|ORG_ID|SCOPES`, which `aio app use` would have
+written to the `.env` this pipeline deletes. `appDeployment` passes them, from the same
+workspace download, only to an app whose config declares the annotation
+(`declaresIncludeImsCredentials`). The database's scopes come from subscribing
+`AppBuilderDataServicesSDK`, so such an entry lists it in `requiredApis`. The 2026-09-14
+Bodea add failed on exactly this: "Credentials for the project are incomplete".
+
 ## The guard chain
 
 Every mutation runs `runGuards` (`appBuilderComponentHandlers.ts`, exported):

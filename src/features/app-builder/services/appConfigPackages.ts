@@ -182,3 +182,44 @@ export async function listDeclaredPackageNames(componentPath: string): Promise<s
     }
     return [...names];
 }
+
+/** The annotation that makes `aio app deploy` require the four IMS_OAUTH_S2S values. */
+const INCLUDE_IMS_CREDENTIALS = 'include-ims-credentials';
+
+/** Whether a parsed config value declares the annotation as true, anywhere inside it. */
+function asksForImsCredentials(value: unknown): boolean {
+    if (Array.isArray(value)) return value.some(asksForImsCredentials);
+    if (!value || typeof value !== 'object') return false;
+    return Object.entries(value).some(
+        ([key, inner]) => (key === INCLUDE_IMS_CREDENTIALS && inner === true) || asksForImsCredentials(inner),
+    );
+}
+
+/** Parse a YAML file, or `undefined` when it is missing or unparseable. */
+async function readYaml(file: string): Promise<unknown> {
+    try {
+        return yaml.parse(await fsPromises.readFile(file, 'utf-8'));
+    } catch {
+        return undefined;
+    }
+}
+
+/**
+ * Whether any action of the app carries `include-ims-credentials: true`.
+ *
+ * With it, `aio app deploy` refuses to run unless the workspace's OAuth
+ * server-to-server credential is in the environment as `IMS_OAUTH_S2S_*`
+ * (aio-lib-runtime `getIncludeIMSCredentialsAnnotationInputs`, read 2026-09-15).
+ * App Builder Database apps need it; the demo ERP is one. Reads `app.config.yaml`
+ * and each extension's `$include`d file; a missing or unreadable file declares nothing.
+ */
+export async function declaresIncludeImsCredentials(componentPath: string): Promise<boolean> {
+    const doc = (await readYaml(appConfigPath(componentPath))) as AppConfigDoc | undefined;
+    if (asksForImsCredentials(doc?.application)) return true;
+    for (const entry of Object.values(doc?.extensions ?? {})) {
+        const include = (entry as { $include?: unknown } | undefined)?.$include;
+        if (typeof include !== 'string') continue;
+        if (asksForImsCredentials(await readYaml(path.join(componentPath, include)))) return true;
+    }
+    return false;
+}

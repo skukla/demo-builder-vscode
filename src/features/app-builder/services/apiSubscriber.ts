@@ -148,6 +148,10 @@ const KNOWN_S2S_SERVICES: ReadonlySet<string> = new Set([
     // OAuth S2S credentials.
     'CloudIntegrationSDK',
     'commerceeventing',
+    // App Builder Data Services — the database's token needs the adobeio.abdata
+    // scopes this subscription grants. The ERP spike subscribed it onto the S2S
+    // credential and the database answered (2026-09-14).
+    'AppBuilderDataServicesSDK',
 ]);
 
 /** Resolve API names → ServiceInfo via the org service list. Throws on unknown. */

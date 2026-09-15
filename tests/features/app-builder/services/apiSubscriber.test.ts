@@ -143,6 +143,17 @@ describe('apiSubscriber', () => {
             expect(mgmtInfo.platformList).toEqual(['oauth_server_to_server']);
         });
 
+        it('App Builder Data Services subscribes onto the S2S credential when the catalog is silent', () => {
+            // The ERP's database needs its token to carry the adobeio.abdata scopes, which
+            // come from this subscription. The spike subscribed it onto the S2S credential
+            // and the database answered (2026-09-14).
+            const [dataServices] = resolveServiceInfos(
+                ['AppBuilderDataServicesSDK'],
+                [{ code: 'AppBuilderDataServicesSDK', name: 'App Builder Data Services', platformList: null as unknown as string[] }],
+            );
+            expect(dataServices.platformList).toEqual(['oauth_server_to_server']);
+        });
+
         it('the S2S override fills catalog SILENCE only — a DECLARED platform wins', () => {
             // The override exists because the live catalog declares platforms for
             // only 25 of 98 services. A row that DOES declare one is authoritative:

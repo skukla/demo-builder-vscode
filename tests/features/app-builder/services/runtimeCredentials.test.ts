@@ -49,6 +49,35 @@ const WORKSPACE_JSON = JSON.stringify({
     },
 });
 
+/**
+ * A workspace with an OAuth server-to-server credential, in the download's shape.
+ * The mapping it is tested against is `aio app use`'s own (aio-cli-plugin-app 14.8,
+ * `getOAuthS2SCredential` + `importConsoleConfig`, read 2026-09-15): client_id, the
+ * FIRST secret, the project's IMS org id, and the scopes as a JSON string.
+ */
+const WORKSPACE_WITH_S2S = JSON.stringify({
+    project: {
+        org: { ims_org_id: 'ABC123@AdobeOrg' },
+        workspace: {
+            name: 'Stage',
+            details: {
+                runtime: { namespaces: [{ name: '12345-myproject-stage', auth: 'fake-test-pw-not-a-secret' }] },
+                credentials: [
+                    { integration_type: 'apikey', api_key: { client_id: 'not-this-one' } },
+                    {
+                        integration_type: 'oauth_server_to_server',
+                        oauth_server_to_server: {
+                            client_id: 's2s-client',
+                            client_secrets: ['fake-test-pw-not-a-secret-1', 'fake-test-pw-not-a-secret-2'],
+                            scopes: ['AdobeID', 'adobeio.abdata.read'],
+                        },
+                    },
+                ],
+            },
+        },
+    },
+});
+
 describe('fetchRuntimeCredentials', () => {
     beforeEach(() => {
         jest.clearAllMocks();
@@ -71,6 +100,31 @@ describe('fetchRuntimeCredentials', () => {
             namespace: '12345-myproject-stage',
             auth: 'fake-test-pw-not-a-secret',
         });
+    });
+
+    it("carries the workspace S2S credential as the four IMS_OAUTH_S2S values aio app use writes", async () => {
+        executeMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
+        (fsPromises.readFile as jest.Mock).mockResolvedValue(WORKSPACE_WITH_S2S);
+
+        const creds = await fetchRuntimeCredentials(commandManager, logger, 'auto');
+
+        expect(creds.imsOAuthS2SEnv).toStrictEqual({
+            IMS_OAUTH_S2S_CLIENT_ID: 's2s-client',
+            IMS_OAUTH_S2S_CLIENT_SECRET: 'fake-test-pw-not-a-secret-1',
+            IMS_OAUTH_S2S_ORG_ID: 'ABC123@AdobeOrg',
+            IMS_OAUTH_S2S_SCOPES: '["AdobeID","adobeio.abdata.read"]',
+        });
+        const logged = JSON.stringify((logger.debug as jest.Mock).mock.calls);
+        expect(logged).not.toContain('fake-test-pw-not-a-secret-1');
+    });
+
+    it('carries no IMS values when the workspace has no S2S credential', async () => {
+        executeMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
+        (fsPromises.readFile as jest.Mock).mockResolvedValue(WORKSPACE_JSON);
+
+        const creds = await fetchRuntimeCredentials(commandManager, logger, 'auto');
+
+        expect(creds.imsOAuthS2SEnv).toBeUndefined();
     });
 
     it('never logs the auth value', async () => {

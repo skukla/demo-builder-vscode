@@ -44,6 +44,9 @@
       "kind": "system",
       "boundTo": "erp-integration",
       "nodeVersion": "24",
+      "requiredApis": [
+        "AppBuilderDataServicesSDK"
+      ],
       "compatibleBackends": [
         "adobe-commerce-paas",
         "adobe-commerce-accs"

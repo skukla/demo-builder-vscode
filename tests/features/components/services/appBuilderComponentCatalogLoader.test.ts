@@ -20,6 +20,7 @@ import {
     entryFitsProjectAxes,
     isBlankSource,
 } from '@/features/components/services/appBuilderComponentCatalogLoader';
+import { computeRequiredApis } from '@/features/app-builder/services/apiSubscriber';
 
 const CONFIG_DIR = path.join(__dirname, '../../../../src/features/components/config');
 
@@ -655,5 +656,14 @@ describe('the bound pair — the ERP comes with the ERP integration (decision 2)
         expect(getAvailableAppBuilderComponents('adobe-commerce-accs', 'eds-storefront').map((e) => e.id)).toEqual(
             expect.arrayContaining(['demo-erp', 'erp-integration']),
         );
+    });
+
+    it("declares the database's API, so the subscribe before its deploy grants the credential its scopes", () => {
+        // The spike's finding (plan step 01, 2026-09-14) that did not reach the catalog:
+        // without it the ERP's database token lacks adobeio.abdata.* scopes.
+        expect(getAppBuilderComponentEntry('demo-erp')?.requiredApis).toEqual(['AppBuilderDataServicesSDK']);
+        expect(
+            computeRequiredApis(getAvailableAppBuilderComponents('adobe-commerce-accs', 'eds-storefront')),
+        ).toContain('AppBuilderDataServicesSDK');
     });
 });
