@@ -8,6 +8,8 @@
  */
 
 import {
+    REPO_RESULT,
+    mockExecuteEdsPipeline,
     mockPublishConfig,
     mockRedeployApiMesh,
     mockResetRepoToTemplate,
@@ -18,8 +20,9 @@ import {
 
 import { PAAS_GRAPHQL_ENDPOINT } from '@/core/config/envVarKeys';
 import { GitHubAppNotInstalledError } from '@/features/eds/services/types';
-import { meshDeps } from './edsResetService.testUtils';
-import { createMockProject } from '../../../../helpers/projectFake';
+import type { Project } from '@/types/base';
+import { createResetContext, meshDeps } from './edsResetService.testUtils';
+import { createMockProject, edsStorefrontInstance } from '../../../../helpers/projectFake';
 
 jest.setTimeout(5000);
 
@@ -204,5 +207,86 @@ describe('executeEdsReset - error mapping', () => {
         const { result } = await runReset();
 
         expect(result).toStrictEqual({ success: false, error: 'tree API 500' });
+    });
+});
+
+describe('executeEdsReset - the synced commit record', () => {
+    // What "Check for Updates" compares against. Reset replaces the repository with
+    // a revision of the template, so the record has to move with it.
+    const RECORDED_SHA = '1111111111111111111111111111111111111111';
+    const RESET_SHA = '2222222222222222222222222222222222222222';
+    const STOREFRONT_METADATA = {
+        templateOwner: 'template-owner',
+        templateRepo: 'template-repo',
+        lastSyncedCommit: RECORDED_SHA,
+    };
+
+    function storefrontProject(): Project {
+        return createMockProject({
+            selectedPackage: 'citisignal',
+            selectedStack: 'eds-paas',
+            componentInstances: {
+                'eds-storefront': { ...edsStorefrontInstance(), metadata: { ...STOREFRONT_METADATA } },
+            },
+        });
+    }
+
+    function storefrontMetadata(project: Project): Record<string, unknown> | undefined {
+        return project.componentInstances?.['eds-storefront']?.metadata;
+    }
+
+    /** A context whose save captures the storefront record AS SAVED, not as it ends up. */
+    function contextCapturingSaves(): { context: ReturnType<typeof createResetContext>; saved: unknown[] } {
+        const context = createResetContext();
+        const saved: unknown[] = [];
+        (context.stateManager.saveProject as jest.Mock).mockImplementation(async (p: Project) => {
+            saved.push({ ...storefrontMetadata(p) });
+        });
+        return { context, saved };
+    }
+
+    it('saves the commit the repository was reset onto, keeping the rest of the record', async () => {
+        mockResetRepoToTemplate.mockResolvedValue({ ...REPO_RESULT, templateCommitSha: RESET_SHA });
+        const { context, saved } = contextCapturingSaves();
+
+        const { result } = await runReset({ project: storefrontProject() }, context);
+
+        expect(result.success).toBe(true);
+        expect(saved).toStrictEqual([{ ...STOREFRONT_METADATA, lastSyncedCommit: RESET_SHA }]);
+    });
+
+    it('leaves the recorded commit alone when the reset fails after the repository step', async () => {
+        mockResetRepoToTemplate.mockResolvedValue({ ...REPO_RESULT, templateCommitSha: RESET_SHA });
+        mockExecuteEdsPipeline.mockResolvedValue({ success: false, error: 'content copy failed' });
+        const project = storefrontProject();
+
+        const { result } = await runReset({ project });
+
+        expect(result.success).toBe(false);
+        expect(storefrontMetadata(project)).toStrictEqual(STOREFRONT_METADATA);
+    });
+
+    it('leaves the recorded commit alone when the reset could not tell which commit it used', async () => {
+        mockResetRepoToTemplate.mockResolvedValue({ ...REPO_RESULT, templateCommitSha: undefined });
+        const { context, saved } = contextCapturingSaves();
+
+        const { result } = await runReset({ project: storefrontProject() }, context);
+
+        expect(result.success).toBe(true);
+        expect(saved).toStrictEqual([STOREFRONT_METADATA]);
+    });
+
+    it('does not invent a storefront record for a project that has none', async () => {
+        mockResetRepoToTemplate.mockResolvedValue({ ...REPO_RESULT, templateCommitSha: RESET_SHA });
+        const project = createMockProject({
+            selectedPackage: 'citisignal',
+            selectedStack: 'eds-paas',
+            componentInstances: {},
+        });
+
+        const { result } = await runReset({ project });
+
+        expect(result.success).toBe(true);
+        expect(project.componentInstances).toStrictEqual({});
     });
 });

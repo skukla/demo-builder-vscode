@@ -104,6 +104,13 @@ export const INSPECTOR_ENTRY: GitHubTreeInput = {
 };
 export const RESET_RESULT = { fileCount: 20, commitSha: 'abc1234567' };
 
+/**
+ * The template head the reset resolves before downloading. Null by default — the
+ * answer for a template branch that does not exist — so a suite that does not care
+ * sees the reset fall back to `main`, as it did before the head was resolved.
+ */
+export const mockGetLatestCommitSha = jest.fn<Promise<string | null>, [string, string, string?]>();
+
 /** Re-arm every mock with the answers a plain reset sees: no libraries, nothing extra. */
 export function installDefaults(): void {
     // The jest config sets resetMocks at the top level, which does not reach `projects`,
@@ -132,6 +139,7 @@ export function installDefaults(): void {
     mocks.getBlockLibrarySource.mockReturnValue(undefined);
     mocks.getBlockLibraryContentSource.mockReturnValue(undefined);
     mocks.getBlockLibraryName.mockReturnValue('');
+    mockGetLatestCommitSha.mockResolvedValue(null);
 }
 
 export function buildParams(overrides: Partial<EdsResetParams> = {}): EdsResetParams {
@@ -153,8 +161,11 @@ export async function runReset(
     context: HandlerContext = createMockHandlerContext({ logger: createMockLogger() }),
 ) {
     const resetMock = jest.fn().mockResolvedValue(RESET_RESULT);
-    // The one call the reset makes; the class holds private Octokit state.
-    const githubFileOps = { resetRepoToTemplate: resetMock } as unknown as GitHubFileOperations;
+    // The two calls the reset makes; the class holds private Octokit state.
+    const githubFileOps = {
+        resetRepoToTemplate: resetMock,
+        getLatestCommitSha: mockGetLatestCommitSha,
+    } as unknown as GitHubFileOperations;
     const report = jest.fn<void, [number, string]>();
     const result = await resetRepoToTemplate(params, context, githubFileOps, report);
     const overrides = resetMock.mock.calls[0]?.[4] as Map<string, string> | undefined;
