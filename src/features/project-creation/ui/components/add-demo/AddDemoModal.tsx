@@ -55,11 +55,13 @@ function Body({ flow, mode, ...props }: BodyProps): React.ReactElement {
     }
     if (flow.zipError) {
         // The house error view, as the probe's refusals use; Back returns to the form.
+        // A name the account already uses is a choice, not a failure: warning words
+        // and icon, with the way forward (owner, 2026-09-15).
         return (
             <div data-testid="zip-error">
                 <StatusDisplay
-                    variant="error"
-                    title={COPY.zipFailed}
+                    variant={flow.zipConflict ? 'warning' : 'error'}
+                    title={flow.zipConflict ? COPY.zipNameTaken : COPY.zipFailed}
                     message={flow.zipError}
                     height="auto"
                     actions={flow.zipConflict ? [{ label: COPY.useExisting, variant: 'accent', onPress: flow.useExistingRepo }] : undefined}

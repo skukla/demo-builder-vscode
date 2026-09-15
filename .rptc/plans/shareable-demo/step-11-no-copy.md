@@ -280,9 +280,9 @@ New cases (failing first):
   repository is the one its zip door created, and Back clears that.
 - `forgetDemo`'s third argument and result field are `deleteRepository` /
   `deletedRepository`.
-- Added after the plan (owner, 2026-09-15): the Edit dialog shows the card's repository as
-  a read-only Code row (one shared `SummaryRowItem`, also used by the Add dialog and the
-  Build summary); Change Demo Source's box reads "Also update the <name> demo package", is
+- Added after the plan (owner, 2026-09-15): the Edit dialog shows the card's repository in a
+  plain read-only "GitHub repository" field (first built as a summary row; the owner asked
+  for a simple input); Change Demo Source's box reads "Also update the <name> demo package", is
   ticked, and shows only when the Welcome step has that demo package (the dashboard payload
   carries `demoPackageName`), and it never adds one; the dashboard notice names the demo
   package, not the repository's GitHub owner, has its own title when only the pages are out
