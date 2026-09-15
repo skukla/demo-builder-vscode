@@ -20,6 +20,9 @@ jest.mock('@/core/validation/fieldValidation');
 jest.mock('@/core/validation/normalizers');
 jest.mock('@/core/validation/validators/NodeVersionValidator');
 jest.mock('fs/promises');
+// The archive flatten works on the real filesystem, which these suites mock; it is
+// proved against a real unzip in archiveRoot.test.ts.
+jest.mock('@/features/updates/services/archiveRoot');
 jest.mock('@/features/components/services/ComponentRegistryManager', () => ({
     ComponentRegistryManager: jest.fn().mockImplementation(() => ({
         getComponentById: jest.fn().mockResolvedValue({
@@ -44,6 +47,7 @@ import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockProject } from '../../../helpers/projectFake';
 
 export { ComponentUpdater } from '@/features/updates/services/componentUpdater';
+export { flattenArchiveRoot } from '@/features/updates/services/archiveRoot';
 
 export {
     CommandExecutor,

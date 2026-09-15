@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **The home Chat no longer pushes agent edits into a shared repository.** Its automatic commit-and-push ran in any git clone under the projects folder that had a remote. A headless storefront, an API Mesh or an App Builder app is a clone of its source, so an agent's edit there was committed and pushed to that source (`skukla/citisignal-nextjs`, or a colleague's repository) with no confirmation, wherever the SC had write access. It now pushes only a project's own Edge Delivery storefront repository, as its manifest records it. The fix reaches existing installs the next time the extension starts.
+- **Updating a component no longer deletes most of its files.** Unpacking a release moved the files out of the archive's wrapper folder and then deleted every folder, not only the wrapper, along with every dotfile. A headless storefront or API Mesh kept `package.json` and lost `app/`, `src/` and `.gitignore`, and the update still reported success.
+
 ## [1.0.0-beta.146] - 2026-09-10
 
 The styling layer is the headline: the CSS reset and every design token had not been

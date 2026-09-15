@@ -1,6 +1,7 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { flattenArchiveRoot } from './archiveRoot';
 import { mergeEnvContent, parseEnvFile } from './envMerge';
 import { isMeshComponentId } from '@/core/constants';
 import { toAppError, isTimeout, isNetwork } from '@/core/errors';
@@ -422,11 +423,11 @@ export class ComponentUpdater {
             // - downloadUrl is validated by validateGitHubDownloadURL() before this point
             // - All paths are controlled by the extension (no user-supplied paths)
             //
-            // GitHub archives have a root folder (e.g., "skukla-commerce-mesh-abc123/")
-            // We need to: 1) extract, 2) move contents up, 3) remove the root folder
-            // Uses rm -rf (not rmdir) because hidden files like .github/ may remain after mv
+            // Unzip only. The archive's root folder ("skukla-commerce-mesh-abc123/") is
+            // flattened in Node below: the shell glob that did it deleted every folder
+            // of the component and every dotfile (found 2026-09-15, see archiveRoot.ts).
             const extractResult = await this.commandManager.execute(
-                `unzip -q "${tempZip}" -d "${targetPath}" && mv "${targetPath}"/*/* "${targetPath}"/ && rm -rf "${targetPath}"/*/`,
+                `unzip -q "${tempZip}" -d "${targetPath}"`,
                 {
                     shell: DEFAULT_SHELL,    // CRITICAL FIX: Required for command chaining (&&) and glob expansion (*/*)
                     timeout: TIMEOUTS.NORMAL,
@@ -440,6 +441,7 @@ export class ComponentUpdater {
                 );
             }
 
+            await flattenArchiveRoot(targetPath);
             this.logger.debug(`[Updates] Extracted to ${targetPath}`);
         } finally {
             // Cleanup temp zip
