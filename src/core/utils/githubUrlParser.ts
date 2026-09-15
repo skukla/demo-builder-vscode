@@ -67,6 +67,20 @@ export function assertGitHubName(value: string, label: string): void {
     }
 }
 
+/**
+ * Why an owner/repo pair is not a usable GitHub source, or undefined when it is.
+ * The answer is this module's own sentence, so a handler can return it as is.
+ */
+export function gitHubSourceProblem(owner: string, repo: string): string | undefined {
+    try {
+        assertGitHubName(owner, 'owner');
+        assertGitHubName(repo, 'repo');
+        return undefined;
+    } catch (error) {
+        return (error as Error).message;
+    }
+}
+
 /** Refuse a git ref outside the safe charset. */
 export function assertGitRef(value: string): void {
     if (!GIT_REF.test(value) || value.includes('..')) {

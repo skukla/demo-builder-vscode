@@ -15,6 +15,7 @@ import type { Project } from '@/types/base';
 import {
     CommandExecutor,
     ComponentUpdater,
+    flattenArchiveRoot,
     fs,
     setupUpdater,
 } from './componentUpdater.testUtils';
@@ -302,17 +303,16 @@ describe('ComponentUpdater - Core Workflow', () => {
             );
         });
 
-        it('should clean up GitHub archive root folder after extraction', async () => {
+        it('flattens the GitHub archive root folder in Node after unzipping, with no shell glob', async () => {
             const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
             const newVersion = '1.0.0';
 
             await updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion);
 
-            // Verify extraction command uses rm -rf for cleanup (handles hidden files)
-            expect(mockExecutor.execute).toHaveBeenCalledWith(
-                expect.stringMatching(/unzip.*&&.*mv.*&&.*rm -rf/),
-                expect.any(Object)
-            );
+            // The glob that did this deleted the component's folders; archiveRoot.test.ts
+            // runs the real unzip and the real flatten.
+            expect(mockExecutor.execute).not.toHaveBeenCalledWith(expect.stringMatching(/mv |rm -rf/), expect.any(Object));
+            expect(flattenArchiveRoot).toHaveBeenCalledWith(mockProject.componentInstances?.['test-component']?.path);
         });
 
         it('should throw on extraction failure (non-zero exit code)', async () => {

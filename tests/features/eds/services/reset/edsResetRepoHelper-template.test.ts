@@ -12,6 +12,7 @@ import {
     RESET_RESULT,
     buildParams,
     installDefaults,
+    mockGetLatestCommitSha,
     mocks,
     runReset,
 } from './edsResetRepoHelper.testUtils';
@@ -26,6 +27,7 @@ const PATCH_SOURCE: CodePatchSource = {
     lkgFile: 'families/isle5/last-known-good',
 };
 const LKG_SHA = 'abcdef0123456789abcdef0123456789abcdef01';
+const HEAD_SHA = '0123456789abcdef0123456789abcdef01234567';
 const PATCH_RESULT: CodePatchResult = { patchId: 'p1', target: 'head.html', applied: true };
 const SMART_404_WARNING =
     '⚠️ Smart-404 handler not installed — product pages may not recover on first visit';
@@ -140,6 +142,45 @@ describe('resetRepoToTemplate — the bulk template reset', () => {
 
         expect(mocks.readLkgSha).not.toHaveBeenCalled();
         expect(resetMock.mock.calls[0][5]).toBe('main');
+    });
+
+    it('returns the LKG it pinned to as the commit the repository now matches', async () => {
+        mocks.readLkgSha.mockResolvedValue(LKG_SHA);
+
+        const { result, resetMock } = await runReset(buildParams({ codePatchSource: PATCH_SOURCE }));
+
+        expect(result.templateCommitSha).toBe(LKG_SHA);
+        expect(resetMock.mock.calls[0][5]).toBe(result.templateCommitSha);
+        expect(mockGetLatestCommitSha).not.toHaveBeenCalled();
+    });
+
+    it('pins a storefront without a code patch source to the template head it resolved, and returns it', async () => {
+        mockGetLatestCommitSha.mockResolvedValue(HEAD_SHA);
+
+        const { result, resetMock } = await runReset(buildParams());
+
+        expect(mockGetLatestCommitSha).toHaveBeenCalledWith('tpl-owner', 'tpl-repo', 'main');
+        expect(resetMock.mock.calls[0][5]).toBe(HEAD_SHA);
+        expect(result.templateCommitSha).toBe(HEAD_SHA);
+    });
+
+    it('pins to the template head when the LKG is unreachable, and returns that head', async () => {
+        mocks.readLkgSha.mockResolvedValue(undefined);
+        mockGetLatestCommitSha.mockResolvedValue(HEAD_SHA);
+
+        const { result, resetMock } = await runReset(buildParams({ codePatchSource: PATCH_SOURCE }));
+
+        expect(resetMock.mock.calls[0][5]).toBe(HEAD_SHA);
+        expect(result.templateCommitSha).toBe(HEAD_SHA);
+    });
+
+    it('resets onto main and returns no commit when the template head cannot be fetched', async () => {
+        mockGetLatestCommitSha.mockRejectedValue(new Error('network down'));
+
+        const { result, resetMock } = await runReset(buildParams());
+
+        expect(resetMock.mock.calls[0][5]).toBe('main');
+        expect(result.templateCommitSha).toBeUndefined();
     });
 
     it('applies canonical code patches into the override map before the bulk reset', async () => {

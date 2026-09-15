@@ -30,8 +30,7 @@ import {
 } from '@/features/eds/services/storefront/storefrontRepublishService';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { isEdsProject } from '@/types/typeGuards';
-import { ErrorCode } from '@/types/errorCodes';
-import { AuthError } from '@/core/errors';
+import { AdobeOrgMismatchError } from '@/features/authentication/services/authenticationErrors';
 import { expectWithinCeiling } from './responseCeilings';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
@@ -196,7 +195,7 @@ describe('republish', () => {
     });
 
     it('maps an ORG_MISMATCH error to a typed non-retryable result', async () => {
-        republishMock.mockRejectedValueOnce(new AuthError(ErrorCode.ORG_MISMATCH, 'wrong org'));
+        republishMock.mockRejectedValueOnce(new AdobeOrgMismatchError());
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
         const res = await s.call('republish', { confirm: true });
@@ -333,7 +332,7 @@ describe('sync_content', () => {
 
     it('maps an ORG_MISMATCH error to a typed non-retryable result', async () => {
         republishContentMock.mockRejectedValueOnce(
-            new AuthError(ErrorCode.ORG_MISMATCH, 'wrong org')
+            new AdobeOrgMismatchError()
         );
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);

@@ -57,7 +57,6 @@ jest.mock('@/features/eds/services/github/githubRepoOperations', () => ({
     GitHubRepoOperations: jest.fn().mockImplementation(() => ({
         createFromTemplate: mockCreateFromTemplate,
         waitForContent: jest.fn(),
-        resetToTemplate: jest.fn(),
     })),
 }));
 

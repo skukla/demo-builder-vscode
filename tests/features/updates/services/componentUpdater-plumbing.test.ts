@@ -97,7 +97,7 @@ describe('ComponentUpdater — plumbing', () => {
             expect(fs.mkdir).toHaveBeenCalledWith(COMPONENT, { recursive: true });
             expect(h.executor.execute).toHaveBeenNthCalledWith(
                 1,
-                `unzip -q "${TEMP_ZIP}" -d "${COMPONENT}" && mv "${COMPONENT}"/*/* "${COMPONENT}"/ && rm -rf "${COMPONENT}"/*/`,
+                `unzip -q "${TEMP_ZIP}" -d "${COMPONENT}"`,
                 { shell: DEFAULT_SHELL, timeout: TIMEOUTS.NORMAL, enhancePath: true }
             );
             expect(fs.unlink).toHaveBeenCalledWith(TEMP_ZIP);

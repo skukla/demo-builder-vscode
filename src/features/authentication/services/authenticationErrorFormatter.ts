@@ -29,8 +29,30 @@
  * ```
  */
 
-import { toAppError } from '@/core/errors';
+import { classifyTransience, extractErrorMessage, type FailureShape } from '@/core/errors';
 import { ErrorCode, getErrorTitle, getErrorCategory } from '@/types/errorCodes';
+
+/**
+ * The ErrorCode an auth failure carries, from what the failure looks like.
+ *
+ * Deliberately local to this formatter. A SHARED version of this is what was just
+ * retired: a generic classifier cannot know which provider produced a string, and its
+ * guess was reaching people as advice. Here the provider IS known.
+ */
+function codeForAuthFailure(error: unknown): ErrorCode {
+    const explicit = (error as { code?: ErrorCode } | undefined)?.code;
+    if (explicit && Object.values(ErrorCode).includes(explicit)) return explicit;
+    switch (classifyTransience(error).kind) {
+        case 'timeout':
+            return ErrorCode.TIMEOUT;
+        case 'network':
+            return ErrorCode.NETWORK;
+        case 'auth':
+            return ErrorCode.AUTH_REQUIRED;
+        default:
+            return ErrorCode.UNKNOWN;
+    }
+}
 
 export class AuthenticationErrorFormatter {
     /**
@@ -54,13 +76,24 @@ export class AuthenticationErrorFormatter {
         technical: string;
         code: ErrorCode;
     } {
-        // Convert to typed AppError for consistent handling
-        const appError = toAppError(error);
         const err = error as { message?: string; stack?: string };
-        const errorMessage = appError.message;
+        const errorMessage = extractErrorMessage(error);
+        // A domain error that carries its OWN user-facing sentence has already done the
+        // translating, and it knew what happened. Honour it. This is what taking the
+        // SHAPE forward instead of the class hierarchy buys: anything implementing
+        // FailureShape takes part, without inheriting from anything.
+        const authored = (error as Partial<FailureShape> | null)?.userMessage;
+        // An EMPTY message must not render as an empty sentence. The retired AppError
+        // fell back to the code's title for this, and a blank line where an explanation
+        // belongs is worse than a vague one.
+        const fallback = errorMessage || getErrorTitle(codeForAuthFailure(error));
 
-        // Use error code for categorization (no string matching!)
-        const code = appError.code;
+        // A PER-PROVIDER FORMATTER, which is the one place classifying by message text
+        // earns its keep: this knows it is looking at Adobe IMS and Console failures and
+        // turns them into something an SC can act on. The comment here used to say
+        // "no string matching!" while calling `toAppError`, which matched strings --
+        // the classification simply happened one module away.
+        const code = codeForAuthFailure(error);
         const category = getErrorCategory(code);
 
         let title: string;
@@ -77,7 +110,7 @@ export class AuthenticationErrorFormatter {
                     message = 'No internet connection. Please check your network and try again.';
                 } else {
                     title = getErrorTitle(code);
-                    message = appError.userMessage;
+                    message = authored ?? fallback;
                 }
                 break;
 
@@ -87,9 +120,8 @@ export class AuthenticationErrorFormatter {
                 break;
 
             default:
-                // Use the AppError's built-in user message
                 title = getErrorTitle(code);
-                message = appError.userMessage;
+                message = authored ?? fallback;
         }
 
         const technical = `Operation: ${context.operation}\nCode: ${code}\nError: ${errorMessage}\nStack: ${err?.stack || 'N/A'}`;

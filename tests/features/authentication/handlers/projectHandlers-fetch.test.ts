@@ -242,7 +242,11 @@ describe('projectHandlers - Fetch', () => {
 
             expect(withTimeout).toHaveBeenCalledWith(expect.any(Promise), {
                 timeoutMs: 30000,
-                timeoutMessage: expect.stringMatching(/timed out/i),
+                // A NOUN PHRASE, not a sentence. TimeoutError composes
+                // "<operation> took too long...", so a sentence here produced
+                // "Request timed out. Please check your connection and try again. took
+                // too long. Please try again." -- shown to an SC until 2026-09-11.
+                timeoutMessage: 'Loading your Adobe projects',
             });
         });
 

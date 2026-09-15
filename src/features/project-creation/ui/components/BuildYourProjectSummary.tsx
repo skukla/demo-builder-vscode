@@ -50,9 +50,8 @@ export interface BuildYourProjectSummaryProps {
 const ARCHITECTURE_PENDING = 'Architecture pending';
 
 /**
- * A single summary row. Shared by this column, the Add a demo package dialog's
- * "Package details" and the Edit dialog's read-only Code row, so the three draw
- * one row the same way.
+ * A single summary row. Shared by this column and the Add a demo package
+ * dialog's "Package details", so both draw one row the same way.
  *
  * @param row - the label, value and done flag
  * @param showDone - draw the ✓ for a done row; off where the rows are a report, not progress

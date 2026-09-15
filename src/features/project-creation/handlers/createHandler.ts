@@ -12,7 +12,7 @@ import * as vscode from 'vscode';
 import { executeProjectCreation } from './executor';
 import { OVERALL_TIMEOUT_MS } from './shared';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import { toAppError, isTimeout } from '@/core/errors';
+import { classifyTransience, extractErrorMessage } from '@/core/errors';
 import { MESH_DELETE_COMMAND } from '@/core/shell/meshDeleteCommand';
 import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell/orgContextEnv';
 import { getMeshNodeVersion } from '@/core/utils/meshConfig';
@@ -253,13 +253,18 @@ async function reportCreationError(
         return;
     }
 
-    // Determine error type using typed errors
-    const appError = toAppError(error);
-    const errorMessage = appError.userMessage;
-    const isCancelled =
-        appError.code === ErrorCode.CANCELLED ||
-        (appError.cause?.message?.includes('cancelled by user') ?? false);
-    const isTimeoutError = isTimeout(appError);
+    // Read off the RAW error. The central hierarchy this used to go through added a
+    // guessed code and a userMessage that was the same string anyway on the default
+    // path -- `AppError.from` set userMessage to the message it was handed.
+    const errorMessage = extractErrorMessage(error);
+    // THE ERROR ITSELF, not its cause. The retired `AppError.from` WRAPPED the original
+    // and set `cause` to it, so `appError.cause.message` was the original's message.
+    // Reading `error.cause` after the wrapper is gone looks equivalent and is not — it
+    // reaches one level too far and cancellation stopped being detected. Two tests said
+    // so immediately.
+    const cancelledCode = (error as { code?: string } | undefined)?.code === ErrorCode.CANCELLED;
+    const isCancelled = cancelledCode || extractErrorMessage(error).includes('cancelled by user');
+    const timedOut = classifyTransience(error).kind === 'timeout';
 
     const terminal: CreationProgressPayload = {
         currentOperation: isCancelled ? 'Cancelled' : 'Failed',
@@ -276,7 +281,7 @@ async function reportCreationError(
     if (!isCancelled) {
         const failed: CreationFailedPayload = {
             error: errorMessage,
-            isTimeout: isTimeoutError,
+            isTimeout: timedOut,
             elapsed: elapsedStr,
         };
         await context.sendMessage('creationFailed', failed);

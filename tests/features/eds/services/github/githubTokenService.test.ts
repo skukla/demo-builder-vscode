@@ -330,6 +330,33 @@ describe('GitHub Token Service', () => {
         });
     });
 
+    describe('getUserEmails', () => {
+        it("answers the account's emails with which is primary and verified, and nothing on any failure", async () => {
+            const service = new GitHubTokenService(mockSecretStorage);
+            mockSecretStorage.get.mockResolvedValue(JSON.stringify({ token: 'xxx' }));
+            const mockRequest = jest.fn().mockResolvedValueOnce({
+                data: [
+                    { email: 'khalil@example.com', primary: true, verified: true, visibility: 'private' },
+                    { email: 'sc@adobe.example', primary: false, verified: true, visibility: null },
+                ],
+            });
+            const { Octokit } = await import('@octokit/core');
+            (Octokit as unknown as jest.Mock).mockImplementation(() => ({ request: mockRequest }));
+
+            await expect(service.getUserEmails()).resolves.toEqual([
+                { email: 'khalil@example.com', primary: true, verified: true },
+                { email: 'sc@adobe.example', primary: false, verified: true },
+            ]);
+            expect(mockRequest).toHaveBeenCalledWith('GET /user/emails', expect.objectContaining({ per_page: 100 }));
+
+            mockRequest.mockRejectedValueOnce(new Error('Resource not accessible by integration'));
+            await expect(service.getUserEmails()).resolves.toStrictEqual([]);
+
+            mockSecretStorage.get.mockResolvedValue(undefined);
+            await expect(service.getUserEmails()).resolves.toStrictEqual([]);
+        });
+    });
+
     describe('getUserOrgs', () => {
         it('returns the list of org logins for the authenticated user', async () => {
             // Given: stored token, /user/orgs returns three orgs

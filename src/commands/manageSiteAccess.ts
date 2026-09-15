@@ -30,12 +30,10 @@ import { maskEmail } from '@/core/utils/maskEmail';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getDaLiveAuthService } from '@/features/eds/handlers/edsHelpers';
 import { waitForConfigAccess } from '@/features/eds/services/configService/configAccessRecovery';
-import {
-    buildCodeSyncSetupUrl,
-    type CodeSyncSetupParams,
-    type ConfigWriteAccess,
+import type {
+    ConfigSiteRef,
+    ConfigWriteAccess,
 } from '@/features/eds/services/configService/configServiceAccess';
-import { buildContentSourceUrl } from '@/features/eds/services/configService/configurationService';
 import {
     addSiteAdmin,
     listSiteAccess,
@@ -45,8 +43,16 @@ import {
     type SiteAccessMutation,
 } from '@/features/eds/services/configService/siteAccessManagerHeadless';
 import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
+import { GITHUB_APP_INSTALL_URL } from '@/features/eds/services/github/githubAppService';
 import type { Project } from '@/types/base';
-import { getEdsDaLiveTarget, getEdsRepoParts } from '@/types/typeGuards';
+import { getEdsRepoParts } from '@/types/typeGuards';
+
+/** The button that opens the AEM Code Sync app on GitHub. */
+const OPEN_CODE_SYNC_APP = 'Open Code Sync App';
+
+/** The button that opens AEM's User Admin tool, and where it goes. */
+const OPEN_USER_ADMIN = 'Open AEM User Admin';
+const AEM_USER_ADMIN_URL = 'https://tools.aem.live/tools/user-admin/index.html';
 
 /** QuickPick rows carry their action so the handler does not re-parse labels. */
 interface AccessAction extends vscode.QuickPickItem {
@@ -94,16 +100,20 @@ export class ManageSiteAccessCommand extends BaseCommand {
     }
 
     /**
-     * Explain a refusal AND offer the one recovery available to a user who holds
-     * no role — rather than showing an inert menu.
+     * Explain a refusal AND offer what is left to a user who holds no role —
+     * rather than showing an inert menu.
      *
-     * The recovery is the AEM Code Sync setup flow, which writes with the bot's
-     * authority instead of the user's. It is deliberately paired with a poll:
-     * whether that flow re-mints a role for an org that already exists is
-     * unverified, and cannot be tested from an account that already holds one.
-     * So the command waits for the config read to actually flip 403 → 200 and
-     * says "still refused" when it does not, rather than declaring success and
-     * handing back a storefront that still cannot serve a product page.
+     * Named admins come first: one of them adding you is the route that is known
+     * to work. The Code Sync app on GitHub is the other, and it is deliberately
+     * paired with a poll. The AEM setup page can only grant a role when the Code
+     * Sync bot opens it with a one-time key during a GitHub App install; whether
+     * saving an EXISTING installation's repository access does that is unverified.
+     * So the command waits for the config read to flip 403 → 200 and says "still
+     * refused" when it does not, naming who can still help.
+     *
+     * This command used to open `tools.aem.live/bot/setup` with the site in the
+     * query string. Without the key that page cannot read the config or add a
+     * user, so it never granted anything (reproduced 2026-09-14, kmanns/wire).
      *
      * Note this is NOT the wizard's Code Sync step. That one proves the GitHub
      * App is installed — a different fact, and one that can be true while this
@@ -127,31 +137,76 @@ export class ManageSiteAccessCommand extends BaseCommand {
         }
 
         const admins = listing.orgAdmins ?? [];
-        const detail =
-            admins.length > 0
-                ? `These org admins can grant it: ${admins.join(', ')}.`
-                : 'No org admin is visible to ask, so the AEM setup flow is the way in.';
+        if (listing.identityMismatch) {
+            await this.reportIdentityMismatch(project, listing, admins);
+            return;
+        }
+        if (admins.length > 0) {
+            // A named admin is the route known to work, so it is the only one
+            // offered. The GitHub button here opened a page with no instructions
+            // beside it and then polled for two minutes.
+            await vscode.window.showWarningMessage(
+                `You hold no admin role on ${listing.site}. Ask one of these org admins to ` +
+                    `add you: ${admins.join(', ')}.`,
+                'Close',
+            );
+            return;
+        }
 
+        const site = siteRef(project);
         const choice = await vscode.window.showWarningMessage(
-            `You hold no admin role on ${listing.site}. ${detail}`,
-            'Open AEM setup',
+            `You hold no admin role on ${listing.site}, and nobody who can grant it is visible. ` +
+                `On GitHub, configure the AEM Code Sync app and save its access to ${site.repo}. ` +
+                'If GitHub then opens AEM\'s setup page, add your Adobe email under "Site users".',
+            OPEN_CODE_SYNC_APP,
             'Close',
         );
-        if (choice !== 'Open AEM setup') return;
+        if (choice !== OPEN_CODE_SYNC_APP) return;
 
-        // Built directly rather than re-probing: `listSiteAccess`
-        // already established the refusal, so re-probing would only add a round
-        // trip AND a failure mode — a transport blip made that probe return
-        // `indeterminate`, which reported "could not build the setup link" for a
-        // link that is a pure string build and cannot fail.
-        await openUrl(buildCodeSyncSetupUrl(await this.buildSetupParams(project)));
-        await this.pollForAccess(project);
+        await openUrl(GITHUB_APP_INSTALL_URL);
+        await this.pollForAccess(
+            site,
+            'Still refused. If GitHub did not open AEM\'s setup page, that route is closed for ' +
+                'this site. The role belongs to the GitHub user who installed AEM Code Sync ' +
+                'for it: ask them to add you, or ask Adobe to.',
+        );
+    }
+
+    /**
+     * The refusal has a known cause: Code Sync gave the role to the GitHub
+     * account's primary email, and Demo Builder signs in to Adobe as another one
+     * (2026-09-15, kmanns). The explanation names both, so the user knows which
+     * account to sign in to AEM's User Admin tool with. Readable org admins are
+     * still named, and then they are the only route offered.
+     */
+    private async reportIdentityMismatch(
+        project: Project,
+        listing: SiteAccessListing,
+        admins: string[],
+    ): Promise<void> {
+        const mismatch = listing.identityMismatch;
+        if (!mismatch) return;
+        const intro = `You hold no admin role on ${listing.site}. ${mismatch.explanation}`;
+        if (admins.length > 0) {
+            await vscode.window.showWarningMessage(
+                `${intro} An org admin can also add you: ${admins.join(', ')}.`,
+                'Close',
+            );
+            return;
+        }
+        const choice = await vscode.window.showWarningMessage(intro, OPEN_USER_ADMIN, 'Close');
+        if (choice !== OPEN_USER_ADMIN) return;
+
+        await openUrl(AEM_USER_ADMIN_URL);
+        await this.pollForAccess(
+            siteRef(project),
+            `Still refused. Once ${mismatch.adobeEmail} is added as an admin in AEM's User Admin ` +
+                'tool, run Manage Site Access again.',
+        );
     }
 
     /** Wait for the grant to land, reporting the truth either way. */
-    private async pollForAccess(project: Project): Promise<void> {
-        const params = await this.buildSetupParams(project);
-
+    private async pollForAccess(site: ConfigSiteRef, stillRefused: string): Promise<void> {
         // RETURNED, not assigned into an outer `let`: control-flow analysis
         // cannot see a closure assignment, so an outer variable stays narrowed to
         // its initialiser and the comparison below reads as unreachable.
@@ -162,7 +217,7 @@ export class ManageSiteAccessCommand extends BaseCommand {
             (progress) =>
                 waitForConfigAccess(
                     createDaLiveServiceTokenProvider(getDaLiveAuthService(this.context)),
-                    { owner: params.owner, repo: params.repo },
+                    site,
                     this.logger,
                     (attempt, total) =>
                         progress.report({ message: `Checking access (${attempt}/${total})` }),
@@ -186,24 +241,7 @@ export class ManageSiteAccessCommand extends BaseCommand {
             }
             return;
         }
-        await this.showWarning(
-            'Still refused after the setup flow. Adding your email under "Site users" in that ' +
-                'page is what grants the role — if you completed it and this persists, an ' +
-                'existing admin has to grant it instead.',
-        );
-    }
-
-    /** The four values the Code Sync setup flow reads from its query string. */
-    private async buildSetupParams(project: Project): Promise<CodeSyncSetupParams> {
-        // Guarded: an unguarded split built a setup URL with `org=undefined`.
-        const { owner = '', repo = '' } = getEdsRepoParts(project) ?? {};
-        const daLive = getEdsDaLiveTarget(project);
-        return {
-            owner,
-            repo,
-            contentSourceUrl: buildContentSourceUrl(daLive?.org ?? owner, daLive?.site ?? repo),
-            userEmail: (await getDaLiveAuthService(this.context).getUserEmail()) ?? undefined,
-        };
+        await this.showWarning(stillRefused);
     }
 
     /** Current admins as rows, plus the add action. */
@@ -332,4 +370,11 @@ export class ManageSiteAccessCommand extends BaseCommand {
         // address. Replacing `showSuccessMessage` to mask the log dropped this.
         vscode.window.setStatusBarMessage(`✅ ${successMessage}`, TIMEOUTS.STATUS_BAR_SUCCESS);
     }
+}
+
+/** The owner/repo the Configuration Service keys this project's site by. */
+function siteRef(project: Project): ConfigSiteRef {
+    // Guarded: an unguarded split once built a request for `org=undefined`.
+    const { owner = '', repo = '' } = getEdsRepoParts(project) ?? {};
+    return { owner, repo };
 }

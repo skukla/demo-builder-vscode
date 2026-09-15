@@ -87,6 +87,11 @@ describe('AddDemoModal', () => {
         });
         await click('Choose a zip file');
         expect(screen.getByTestId('zip-error')).toHaveTextContent('already has a repository named citisignal-b2b-summit');
+        // A choice, not a failure (owner, 2026-09-15): warning icon and words, not error.
+        expect(screen.getByTestId('zip-error')).toHaveTextContent('A repository with this name already exists');
+        expect(screen.getByTestId('zip-error')).not.toHaveTextContent("We couldn't add this zip");
+        expect(screen.getByTestId('zip-error').innerHTML).toContain('text-orange-600');
+        expect(screen.getByTestId('zip-error').innerHTML).not.toContain('text-red-600');
 
         mockRequest.mockResolvedValueOnce({ success: true, result: { ...READ, fullName: 'steve/citisignal-b2b-summit' } });
         await click('Add it from that repository');

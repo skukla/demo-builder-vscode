@@ -14,6 +14,7 @@ import type { GitHubRepo } from '../../services/types';
 import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
 import { checkGitHubAppForExistingRepo } from './storefrontSetupPhaseHelpers';
 import type { RepoInfo, SetupServices, StorefrontSetupResult } from './storefrontSetupTypes';
+import type { TemplateSyncService } from '@/features/updates/services/templateSyncService';
 import type { HandlerContext } from '@/types/handlers';
 import type { StorefrontSetupProgressPayload } from '@/types/webviewPayloads';
 
@@ -300,15 +301,16 @@ async function executePhaseExistingRepo(
                 patchReport,
             );
         } else {
-            // Legacy/forked flow: simple resetToTemplate against template main.
-            await services.githubRepoOps.resetToTemplate(
-                repoInfo.repoOwner,
-                repoInfo.repoName,
+            // Legacy/forked flow: the template's main, through the same reset as
+            // Check for Updates. Nothing is preserved: setup rewrites fstab.yaml and
+            // config.json for this project afterwards.
+            const reset = await services.templateSync.resetRepository({
+                repoOwner: repoInfo.repoOwner,
+                repoName: repoInfo.repoName,
                 templateOwner,
                 templateRepo,
-                'main',
-                'chore: reset to template',
-            );
+            });
+            if (!reset.success) throw new Error(reset.error);
         }
         logger.info('[Storefront Setup] Repository reset to template');
 
@@ -352,11 +354,14 @@ export interface NewRepoRequest {
     fromAddedDemo: boolean;
 }
 
+/** What creating a repository from its source calls: GitHub, and the shared template reset. */
+export interface NewRepoServices {
+    repoOps: Pick<GitHubRepoOperations, 'createFromTemplate' | 'createEmptyRepository' | 'getRepository'>;
+    templateSync: Pick<TemplateSyncService, 'resetRepository'>;
+}
+
 export async function createRepoFromSource(
-    repoOps: Pick<
-        GitHubRepoOperations,
-        'createFromTemplate' | 'createEmptyRepository' | 'resetToTemplate' | 'getRepository'
-    >,
+    { repoOps, templateSync }: NewRepoServices,
     request: NewRepoRequest,
     templateOwner: string,
     templateRepo: string,
@@ -376,15 +381,19 @@ export async function createRepoFromSource(
     );
     const created = await repoOps.createEmptyRepository(newRepoName, isPrivate, namespace);
     const [owner, name] = created.fullName.split('/');
-    await repoOps.resetToTemplate(
-        owner,
-        name,
-        templateOwner,
-        templateRepo,
-        created.defaultBranch,
+    const reset = await templateSync.resetRepository(
+        {
+            repoOwner: owner,
+            repoName: name,
+            templateOwner,
+            templateRepo,
+            repoBranch: created.defaultBranch,
+            templateBranch: source.defaultBranch,
+        },
+        [],
         'chore: start from the demo',
-        source.defaultBranch,
     );
+    if (!reset.success) throw new Error(reset.error);
     return created;
 }
 
@@ -419,7 +428,7 @@ async function executePhaseNewRepo(
     // the authenticated user" — defensive against any state that escapes
     // the picker (e.g., direct invocation paths).
     const repo = await createRepoFromSource(
-        services.githubRepoOps,
+        { repoOps: services.githubRepoOps, templateSync: services.templateSync },
         {
             newRepoName: repoInfo.repoName,
             isPrivate: edsConfig.isPrivate ?? false,

@@ -53,6 +53,8 @@ import {
     type ExtractParamsResult,
 } from './edsResetParams';
 import { resetRepoToTemplate } from './edsResetRepoHelper';
+import { COMPONENT_IDS } from '@/core/constants';
+import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
 
@@ -258,6 +260,22 @@ async function runContentPipeline(
 }
 
 /**
+ * Record the template commit the repository was reset onto as the storefront's
+ * `lastSyncedCommit` — the commit "Check for Updates" compares against. Called only
+ * once the reset's own work has succeeded; the save that persists it is the one the
+ * reset already makes. An unresolved commit leaves the old record in place rather
+ * than writing `undefined` over it.
+ */
+function recordSyncedCommit(project: Project, commitSha: string | undefined, logger: Logger): void {
+    const metadata = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.metadata;
+    if (!commitSha || !metadata) {
+        logger.warn('[EdsReset] Synced template commit not recorded — update checks may be stale');
+        return;
+    }
+    metadata.lastSyncedCommit = commitSha;
+}
+
+/**
  * Final steps: optional CDN verification, optional mesh redeploy, and state persistence.
  */
 async function finalizeReset(
@@ -446,6 +464,7 @@ export async function executeEdsReset(
             context,
             report,
         );
+        recordSyncedCommit(params.project, repoResetResult.templateCommitSha, context.logger);
 
         // Steps 11-12: CDN verification + optional mesh redeploy + state persistence
         return await finalizeReset(

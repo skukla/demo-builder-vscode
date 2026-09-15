@@ -20,7 +20,8 @@
 
 import * as vscode from 'vscode';
 import { getGitHubServices } from './edsHelpers';
-import { assertGitHubName } from '@/core/utils/githubUrlParser';
+import { gitHubSourceProblem } from '@/core/utils/githubUrlParser';
+import { ZIP_COMMIT_MESSAGE } from '@/features/eds/services/storefront/zipImportCommit';
 import {
     addedDemoKey,
     forgetAddedDemo,
@@ -78,24 +79,31 @@ export async function projectWithStorefront(
 
 /**
  * Whether Remove may offer to delete the card's repository. All must hold,
- * cheapest first: the remembered card (read from settings, not from the
- * request) says the extension made it from a zip; the signed-in GitHub account
- * owns it; and GitHub still has it. Callers also refuse a repository that is a
- * project's own storefront ({@link projectWithStorefront}). Anything unreadable
- * answers false, the safe direction.
+ * cheapest first: the card is remembered (read from settings, not from the
+ * request); the signed-in GitHub account owns the repository; GitHub still has
+ * it; and either the card records that the extension made it from a zip, or the
+ * repository's latest commit is the zip import's own. Callers also refuse a
+ * repository that is a project's own storefront ({@link projectWithStorefront}).
+ * Anything unreadable answers false, the safe direction.
  */
 export async function isDeletableZipRepository(
     context: Pick<HandlerContext, 'context' | 'logger'>,
     source: ForgetAddedDemoRequest['source'],
 ): Promise<boolean> {
     const key = addedDemoKey({ source });
-    if (readAddedDemos().find((row) => addedDemoKey(row) === key)?.createdFromZip !== true) return false;
-    const { tokenService, repoOperations } = getGitHubServices(context.context.secrets);
+    const card = readAddedDemos().find((row) => addedDemoKey(row) === key);
+    if (!card) return false;
+    const { tokenService, repoOperations, fileOperations } = getGitHubServices(context.context.secrets);
     const login = (await tokenService.validateToken()).user?.login;
     if (login?.toLowerCase() !== source.owner.toLowerCase()) return false;
     try {
-        await repoOperations.getRepository(source.owner, source.repo);
-        return true;
+        const repository = await repoOperations.getRepository(source.owner, source.repo);
+        if (card.createdFromZip === true) return true;
+        // The proof check (owner, 2026-09-15): a card added with "Add it from that
+        // repository" records no zip origin. Its repository still counts when its
+        // latest commit is the one a zip import pushes, so nothing changed it since.
+        const message = await fileOperations.getLatestCommitMessage(source.owner, source.repo, repository.defaultBranch);
+        return message?.trim() === ZIP_COMMIT_MESSAGE;
     } catch (error) {
         context.logger.debug(`[SharedDemo] ${source.owner}/${source.repo} is not offered for deletion: ${(error as Error).message}`);
         return false;
@@ -145,12 +153,8 @@ export async function handleForgetAddedDemo(
         return { success: false, error: 'A demo name and source are required' };
     }
     const { name, source } = data;
-    try {
-        assertGitHubName(source.owner, 'owner');
-        assertGitHubName(source.repo, 'repo');
-    } catch (error) {
-        return { success: false, error: (error as Error).message };
-    }
+    const nameProblem = gitHubSourceProblem(source.owner, source.repo);
+    if (nameProblem) return { success: false, error: nameProblem };
 
     const repo = `${source.owner}/${source.repo}`;
     // A repository that IS one of this computer's storefronts (a demo package

@@ -20,7 +20,7 @@ import {
     toDependencyData,
     withEnvVarKeys,
 } from '../services/componentTransforms';
-import { toAppError } from '@/core/errors';
+import { extractErrorMessage } from '@/core/errors';
 import { componentRegistryFrom } from '@/features/components/services/componentRegistryAccess';
 import {
     ComponentRegistryManager,
@@ -30,6 +30,7 @@ import {
     ComponentSelection,
     type ComponentConfigs as ComponentConfigsData,
 } from '@/types/components';
+import { ErrorCode } from '@/types/errorCodes';
 import { HandlerContext, MessageHandler } from '@/types/handlers';
 import { getEntryCount } from '@/types/typeGuards';
 import type { ComponentsDataPayload, GetComponentsDataResponse } from '@/types/webviewRequests';
@@ -121,12 +122,15 @@ export const handleLoadComponents: MessageHandler = async (context: HandlerConte
             data: componentsData,
         };
     } catch (error) {
-        const appError = toAppError(error);
-        context.logger.error('Failed to load components:', appError);
+        context.logger.error('Failed to load components:', error);
         return {
             success: false,
-            error: appError.userMessage,
-            code: appError.code,
+            error: extractErrorMessage(error),
+            // DELIBERATE, not inferred from the message text. Nothing consumes a
+            // code from these handlers -- checked 2026-09-11, the only consumers of
+            // TIMEOUT/NETWORK codes are on the auth surface -- so guessing one from
+            // words in the error bought nothing and claimed knowledge we lack.
+            code: ErrorCode.UNKNOWN,
             message: 'Failed to load components',
         };
     }
@@ -170,12 +174,15 @@ export const handleGetComponentsData: MessageHandler = async (context: HandlerCo
             data: componentsData,
         } satisfies GetComponentsDataResponse;
     } catch (error) {
-        const appError = toAppError(error);
-        context.logger.error('Failed to load component configurations:', appError);
+        context.logger.error('Failed to load component configurations:', error);
         return {
             success: false,
-            error: appError.userMessage,
-            code: appError.code,
+            error: extractErrorMessage(error),
+            // DELIBERATE, not inferred from the message text. Nothing consumes a
+            // code from these handlers -- checked 2026-09-11, the only consumers of
+            // TIMEOUT/NETWORK codes are on the auth surface -- so guessing one from
+            // words in the error bought nothing and claimed knowledge we lack.
+            code: ErrorCode.UNKNOWN,
             message: 'Failed to load component configurations',
         };
     }
@@ -208,12 +215,15 @@ export const handleCheckCompatibility: MessageHandler = async (
             data: { compatible },
         };
     } catch (error) {
-        const appError = toAppError(error);
-        context.logger.error('Failed to check compatibility:', appError);
+        context.logger.error('Failed to check compatibility:', error);
         return {
             success: false,
-            error: appError.userMessage,
-            code: appError.code,
+            error: extractErrorMessage(error),
+            // DELIBERATE, not inferred from the message text. Nothing consumes a
+            // code from these handlers -- checked 2026-09-11, the only consumers of
+            // TIMEOUT/NETWORK codes are on the auth surface -- so guessing one from
+            // words in the error bought nothing and claimed knowledge we lack.
+            code: ErrorCode.UNKNOWN,
             message: 'Failed to check compatibility',
         };
     }
@@ -251,12 +261,15 @@ export const handleLoadDependencies: MessageHandler = async (
             data: { dependencies },
         };
     } catch (error) {
-        const appError = toAppError(error);
-        context.logger.error('Failed to load dependencies:', appError);
+        context.logger.error('Failed to load dependencies:', error);
         return {
             success: false,
-            error: appError.userMessage,
-            code: appError.code,
+            error: extractErrorMessage(error),
+            // DELIBERATE, not inferred from the message text. Nothing consumes a
+            // code from these handlers -- checked 2026-09-11, the only consumers of
+            // TIMEOUT/NETWORK codes are on the auth surface -- so guessing one from
+            // words in the error bought nothing and claimed knowledge we lack.
+            code: ErrorCode.UNKNOWN,
             message: 'Failed to load dependencies',
         };
     }
@@ -298,12 +311,15 @@ export const handleLoadPreset: MessageHandler = async (
             },
         };
     } catch (error) {
-        const appError = toAppError(error);
-        context.logger.error('Failed to load preset:', appError);
+        context.logger.error('Failed to load preset:', error);
         return {
             success: false,
-            error: appError.userMessage,
-            code: appError.code,
+            error: extractErrorMessage(error),
+            // DELIBERATE, not inferred from the message text. Nothing consumes a
+            // code from these handlers -- checked 2026-09-11, the only consumers of
+            // TIMEOUT/NETWORK codes are on the auth surface -- so guessing one from
+            // words in the error bought nothing and claimed knowledge we lack.
+            code: ErrorCode.UNKNOWN,
             message: 'Failed to load preset',
         };
     }
@@ -350,12 +366,15 @@ export const handleValidateSelection: MessageHandler = async (
             data: validation,
         };
     } catch (error) {
-        const appError = toAppError(error);
-        context.logger.error('Failed to validate selection:', appError);
+        context.logger.error('Failed to validate selection:', error);
         return {
             success: false,
-            error: appError.userMessage,
-            code: appError.code,
+            error: extractErrorMessage(error),
+            // DELIBERATE, not inferred from the message text. Nothing consumes a
+            // code from these handlers -- checked 2026-09-11, the only consumers of
+            // TIMEOUT/NETWORK codes are on the auth surface -- so guessing one from
+            // words in the error bought nothing and claimed knowledge we lack.
+            code: ErrorCode.UNKNOWN,
             message: 'Failed to validate selection',
         };
     }

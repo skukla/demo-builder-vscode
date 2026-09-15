@@ -280,14 +280,19 @@ New cases (failing first):
   repository is the one its zip door created, and Back clears that.
 - `forgetDemo`'s third argument and result field are `deleteRepository` /
   `deletedRepository`.
-- Added after the plan (owner, 2026-09-15): the Edit dialog shows the card's repository as
-  a read-only Code row (one shared `SummaryRowItem`, also used by the Add dialog and the
-  Build summary); Change Demo Source's box reads "Also update the <name> demo package", is
+- Added after the plan (owner, 2026-09-15): the Edit dialog shows the card's repository in a
+  plain read-only "GitHub repository" field (first built as a summary row; the owner asked
+  for a simple input); Change Demo Source's box reads "Also update the <name> demo package", is
   ticked, and shows only when the Welcome step has that demo package (the dashboard payload
   carries `demoPackageName`), and it never adds one; the dashboard notice names the demo
   package, not the repository's GitHub owner, has its own title when only the pages are out
   of reach, and on an Edge Delivery project offers "Save as demo package" beside Change
   source when the repository is.
+- Proof check (owner, 2026-09-15): a card added with "Add it from that repository" (a zip
+  import's name was taken) records no zip origin. Remove still offers the delete when the
+  repository is the SC's own, still there, and its latest commit is the zip import's
+  (`ZIP_COMMIT_MESSAGE`, `zipImportCommit.ts`), read with
+  `GitHubFileOperations.getLatestCommitMessage`.
 
 ## Order
 

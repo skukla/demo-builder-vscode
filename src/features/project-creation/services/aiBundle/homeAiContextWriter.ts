@@ -20,8 +20,9 @@
  * - `.claude/settings.json` carries a PROJECT-AWARE PostToolUse git-sync hook:
  *   the root is not a single storefront, so the hook resolves the edited file's
  *   enclosing git repo at runtime and auto-commits/pushes only when that repo
- *   is UNDER the projects root and has an `origin` remote (the home analogue of
- *   the per-storefront hook). `sync_storefront` remains available for explicit
+ *   is the enclosing project's own Edge Delivery storefront, as its manifest
+ *   records it (the home analogue of the per-storefront hook; never a headless
+ *   clone, mesh or app, whose origin is a shared source). `sync_storefront` remains available for explicit
  *   pushes.
  *
  * Contract: IDEMPOTENT (safe to call on every activation — generated files are
@@ -58,7 +59,7 @@ const CLAUDE_MD_POINTER = 'see @AGENTS.md\n';
  * - `<root>/.mcp.json` and `<root>/.claude/mcp.json` — the demo-builder proxy
  *   entry on the ROOT socket.
  * - `<root>/.claude/settings.json` — project-aware git-sync hook (auto-commits/
- *   pushes storefront edits, scoped to repos under the root with an origin remote).
+ *   pushes storefront edits, scoped to each project's own Edge Delivery storefront).
  * - `<root>/AGENTS.md` plus `<root>/CLAUDE.md` and `<root>/.claude/CLAUDE.md`
  *   `see @AGENTS.md` pointers.
  * - `<root>/.claude/skills/<name>/SKILL.md` — ALL Demo Builder skills (the one
@@ -96,7 +97,8 @@ export async function ensureHomeAiContext(
             fsPromises.writeFile(path.join(claudeDir, 'mcp.json'), mcpJson, 'utf-8'),
             // Project-aware home git-sync hook: auto-commits/pushes storefront
             // edits made by the home Chat, scoped to repos UNDER the projects
-            // root that have an `origin` remote (see generateHomeClaudeSettings).
+            // root that are a project's own Edge Delivery storefront (see
+            // buildHomeGitSyncCommand).
             fsPromises.writeFile(
                 path.join(claudeDir, 'settings.json'),
                 JSON.stringify(generateHomeClaudeSettings(projectsRoot, resolvedNode), null, 2),

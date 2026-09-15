@@ -24,8 +24,7 @@ import {
     resetCloudResourceMocks,
     runWithAdobeTarget,
 } from './cloudResourceTools.testUtils';
-import { AuthError } from '@/core/errors';
-import { ErrorCode } from '@/types/errorCodes';
+import { AdobeOrgMismatchError } from '@/features/authentication/services/authenticationErrors';
 import { expectWithinCeiling } from './responseCeilings';
 
 beforeEach(() => {
@@ -314,7 +313,7 @@ describe('cloud-resource tools (DA.live)', () => {
 
         it('maps an ORG_MISMATCH error to a typed non-retryable result', async () => {
             mockListOrgSites.mockRejectedValueOnce(
-                new AuthError(ErrorCode.ORG_MISMATCH, 'wrong org')
+                new AdobeOrgMismatchError()
             );
             const s = fakeServer();
             registerCloudResourceTools(s, ctxFactory);
@@ -394,7 +393,7 @@ describe('cloud-resource tools (DA.live)', () => {
 
         it('maps an ORG_MISMATCH error to a typed non-retryable result', async () => {
             mockDeleteAllSiteContent.mockRejectedValueOnce(
-                new AuthError(ErrorCode.ORG_MISMATCH, 'wrong org')
+                new AdobeOrgMismatchError()
             );
             const s = fakeServer();
             registerCloudResourceTools(s, ctxFactory);

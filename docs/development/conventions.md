@@ -12,8 +12,8 @@ were wrong within an hour of being written. This one is derived from the
 handbook's own callouts and checked against the enforcers on disk in both
 directions, so it cannot.
 
-- **114** conventions, **114** enforced
-- **28** name the decision record behind them
+- **121** conventions, **121** enforced
+- **31** name the decision record behind them
 - **6** name a procedure — an SOP or a skill
 - **1** have all three layers
 
@@ -81,6 +81,8 @@ it means the rule rests on somebody noticing.
 | A handler translates and returns. It never renders. Enforced by `tests/sop/architecture-rules.test.ts` — no handler imports React. | [ADR](../architecture/adr/015-dependency-architecture.md) |  | `architecture-rules.test.ts` |
 | A handler answers by RETURNING its result — **Pattern B**. `sendMessage` is for progress pushes only, never for the answer itself. row 2 · Enforced by the `patternBSendMessageCeiling` ratchet in `tests/sop/architecture-rules.exemptions.json` — the count may not grow. |  |  | *named in prose* |
 | Message shapes come from a typed file, never written from memory into a string or a `.mjs`. enforced by `npm run typecheck:tests`. |  |  | *named in prose* |
+| A domain error class lives with the domain that throws it. `src/core/errors/` is the legacy central hierarchy and may only shrink. | [ADR](../architecture/adr/023-error-handling.md) |  | `architecture-rules.test.ts` |
+| A failure a PERSON reads is translated, never the library's own words. | [ADR](../architecture/adr/023-error-handling.md) |  | `user-facing-errors.test.ts` |
 
 ## 7. The user interface
 
@@ -98,7 +100,10 @@ it means the rule rests on somebody noticing.
 | A class used by shared components lives in a sheet every bundle that RENDERS it loads. | [ADR](../architecture/adr/018-css-architecture.md) |  | `stylesheet-bundles.test.ts` |
 | A stylesheet lives where its OWNER lives, and there are three owners: a feature, a shared component, or the base layer. | [ADR](../architecture/adr/017-webview-architecture.md) |  | `stylesheet-bundles.test.ts` |
 | No inline styles. |  |  | `inline-styles.test.ts` |
-| Markup repeated in three or more places becomes a component. |  |  | `component-extraction.test.ts` |
+| Copy-paste in `src/` may not grow. The clone count is a shrink-only pin, and a fall must be banked. |  |  | `component-extraction.test.ts` |
+| An abstract class has at least two implementations. |  |  | `component-extraction.test.ts` |
+| No higher-order components — no `withX`, no `createXComponent`. |  |  | `component-extraction.test.ts` |
+| A component generic over `<T>` earns it with size and real reuse. |  |  | `component-extraction.test.ts` |
 | A `HandlerContext` is built by a factory — `createPanelHandlerContext` or `createHeadlessHandlerContext` — never assembled as an object literal at the surface. |  |  | `handler-context-from-factory.test.ts` |
 | Modals are hosted in one place, not mounted wherever they are opened. |  |  | `modal-hosting.test.ts` |
 | A CSS class used in a bundle is styled by that bundle. |  |  | `stylesheet-bundles.test.ts` |
@@ -133,6 +138,8 @@ it means the rule rests on somebody noticing.
 |---|---|---|---|
 | Every capability has a human surface. MCP tools are additional. Enforced by measurement — `.claude/skills/ai-coverage-scan` reports the gap at release cuts. | [ADR](../architecture/adr/012-diagnostic-surfaces.md) | [procedure](../../.claude/skills/ai-coverage-scan/SKILL.md) | *named in prose* |
 | A tool response is built by `mcpToolResult.ts`'s `asText`/`asRawText`, never by hand. Enforced by `tests/features/ai/server/responseEnvelope.test.ts`, which checks descriptor rows at runtime and every registrar module at the source, in both halves of the server. |  |  | `responseEnvelope.test.ts` |
+| A capability that CREATES something names the capability that undoes it, or states why none can exist. Both go in `tests/sop/reversibility.ledger.json`. |  |  | `reversibility-ledger.test.ts` |
+| A tool that fails says so — the result carries `isError: true`. Never a successful result whose text happens to report a failure. | [ADR](../architecture/adr/023-error-handling.md) |  | `toolFailureEnvelope.test.ts` |
 | A tool requires an explicit `confirm: true` when its effect is hard to walk back: it DELETES something, or it PUSHES to a live site. Merely mutating is deliberately not the bar — deploys, lifecycle and config writes stay ungated, because they are reversible and gating them would make the agent surface useless for routine work. Three irreversible tools go further and require the resource's name echoed back. |  |  | `tool-catalog-gating.test.ts` |
 | A tool needing credentials pre-flights and returns a structured `needsAuth` handoff rather than erroring, so the agent can drive sign-in and retry. Every tool DECLARES which sign-ins it needs, or `false` for none. |  |  | *named in prose* |
 

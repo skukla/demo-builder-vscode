@@ -10,7 +10,7 @@
  * @module features/eds/handlers/editAddedDemoHandler
  */
 
-import { assertGitHubName } from '@/core/utils/githubUrlParser';
+import { gitHubSourceProblem } from '@/core/utils/githubUrlParser';
 import { editAddedDemo } from '@/features/project-creation/services/addedDemoSettings';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 import type { EditAddedDemoRequest, EditAddedDemoResult } from '@/types/webviewRequests';
@@ -44,12 +44,8 @@ export async function handleEditAddedDemo(
     }
     const { source, name, description } = data;
     if (!name.trim()) return { success: false, error: 'A demo package needs a name.' };
-    try {
-        assertGitHubName(source.owner, 'owner');
-        assertGitHubName(source.repo, 'repo');
-    } catch (error) {
-        return { success: false, error: (error as Error).message };
-    }
+    const nameProblem = gitHubSourceProblem(source.owner, source.repo);
+    if (nameProblem) return { success: false, error: nameProblem };
 
     const demo = await editAddedDemo({ owner: source.owner, repo: source.repo }, { name, description });
     if (!demo) return { success: false, error: notOnWelcomeStep(source) };

@@ -22,10 +22,17 @@ import type {
     GitHubTreeEntry,
     GitHubTreeInput,
 } from '../types';
+import { archiveFileMode, isBinary } from './archiveFile';
 import { createAuthenticatedOctokit } from './githubHelpers';
 import type { GitHubTokenService } from './githubTokenService';
 import { getLogger } from '@/core/logging/debugLogger';
 import type { Logger } from '@/types/logger';
+
+/** One file read out of a repository archive: its exact bytes and the mode its tree entry takes. */
+interface ArchivedFile {
+    data: Buffer;
+    mode: GitHubTreeInput['mode'];
+}
 
 /** Error messages for file operations */
 const ERROR_MESSAGES = {
@@ -302,6 +309,21 @@ export class GitHubFileOperations {
                 return [];
             }
 
+            throw error;
+        }
+    }
+
+    /**
+     * The message of a branch's latest commit, or null when the branch or repository
+     * does not exist. Remove uses it to recognise a repository a zip import made.
+     */
+    async getLatestCommitMessage(owner: string, repo: string, branch = 'main'): Promise<string | null> {
+        const octokit = await this.ensureAuthenticated();
+        try {
+            const response = await octokit.request('GET /repos/{owner}/{repo}/branches/{branch}', { owner, repo, branch });
+            return response.data.commit.commit.message;
+        } catch (error) {
+            if ((error as GitHubApiError).status === 404) return null;
             throw error;
         }
     }
@@ -646,18 +668,6 @@ export class GitHubFileOperations {
     }
 
     /**
-     * Download repository as a zipball and extract all file contents
-     *
-     * This is much more efficient than fetching individual blobs:
-     * - Single HTTP request regardless of file count
-     * - Avoids GitHub API rate limits
-     *
-     * @param owner - Repository owner
-     * @param repo - Repository name
-     * @param ref - Git ref (branch/tag/commit) - default: 'main'
-     * @returns Map of path -> content
-     */
-    /**
      * The repository's archive at `ref` as GitHub serves it: a zip with one root
      * folder. Shared by the template reset (which reads it) and "Storefront as a
      * zip file" (which hands it to the SC with the description file added).
@@ -692,17 +702,29 @@ export class GitHubFileOperations {
         return buffer;
     }
 
+    /**
+     * Download repository as a zipball and extract all file contents
+     *
+     * This is much more efficient than fetching individual blobs:
+     * - Single HTTP request regardless of file count
+     * - Avoids GitHub API rate limits
+     *
+     * @param owner - Repository owner
+     * @param repo - Repository name
+     * @param ref - Git ref (branch/tag/commit) - default: 'main'
+     * @returns Map of path -> the file's bytes and its tree mode
+     */
     private async downloadRepoContents(
         owner: string,
         repo: string,
         ref = 'main',
-    ): Promise<Map<string, string>> {
+    ): Promise<Map<string, ArchivedFile>> {
         const buffer = await this.downloadRepoArchive(owner, repo, ref);
 
         // Extract files from zipball
         const zip = new AdmZip(buffer);
         const entries = zip.getEntries();
-        const contents = new Map<string, string>();
+        const contents = new Map<string, ArchivedFile>();
 
         // Zipball has a root folder like "owner-repo-sha/" - we need to strip it
         let rootPrefix = '';
@@ -726,7 +748,8 @@ export class GitHubFileOperations {
                 continue;
             }
 
-            contents.set(path, entry.getData().toString('utf-8'));
+            // Bytes, not a UTF-8 string: a decode corrupts binaries (see archiveFile.ts).
+            contents.set(path, { data: entry.getData(), mode: archiveFileMode(entry.header.attr) });
         }
 
         this.logger.info(`[GitHub] Extracted ${contents.size} files from archive`);
@@ -790,28 +813,37 @@ export class GitHubFileOperations {
             templateRef,
         );
 
-        // Step 3: Build tree entries with content
+        // Step 3: Build tree entries. Text travels inline; a binary file goes up as
+        // a blob of its exact bytes first, and each file keeps its archived mode.
         const treeEntries: GitHubTreeInput[] = [];
+        let binaryCount = 0;
 
-        for (const [path, content] of templateContents) {
+        for (const [path, file] of templateContents) {
             const override = fileOverrides.get(path);
             if (override !== undefined) {
                 // Use override content
                 treeEntries.push({
                     path,
-                    mode: '100644',
+                    mode: file.mode,
                     type: 'blob',
                     content: override,
                 });
+            } else if (file.mode !== '120000' && isBinary(file.data)) {
+                const sha = await this.createBlob(targetOwner, targetRepo, file.data.toString('base64'));
+                treeEntries.push({ path, mode: file.mode, type: 'blob', sha });
+                binaryCount += 1;
             } else {
-                // Use template content from archive
+                // Use template content from archive (a symlink's content is its target)
                 treeEntries.push({
                     path,
-                    mode: '100644',
+                    mode: file.mode,
                     type: 'blob',
-                    content,
+                    content: file.data.toString('utf-8'),
                 });
             }
+        }
+        if (binaryCount > 0) {
+            this.logger.debug(`[GitHub] Uploaded ${binaryCount} binary file(s) as blobs`);
         }
 
         // Add any override files that don't exist in template

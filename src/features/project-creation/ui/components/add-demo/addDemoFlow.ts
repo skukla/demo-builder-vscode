@@ -73,6 +73,7 @@ export const COPY = {
     zipButton: 'Choose a zip file',
     importing: 'Creating your repository from the zip',
     zipFailed: "We couldn't add this zip",
+    zipNameTaken: 'A repository with this name already exists',
     useExisting: 'Add it from that repository',
     bundleSetup: 'This bundle also carries setup',
     bundleSetupWhy: 'Commerce, Adobe, GitHub and DA.live settings from whoever sent it. Start a project from them, on this card.',

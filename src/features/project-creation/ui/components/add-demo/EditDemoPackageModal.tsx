@@ -4,7 +4,7 @@
  *
  * The same two fields Add a demo package asks for, in the core Modal, and one
  * host call on Save: `edit-added-demo`. Below them, where the card reads from,
- * read-only (owner, 2026-09-15): a different repository has to be read again
+ * in a plain read-only field (owner, 2026-09-15): a different repository has to be read again
  * for its kind, codes and pages, which is what Add a demo package does, so the
  * way to move a card is to remove it and add the new link. GitHub renames are
  * followed on their own. The card changes on the Welcome step
@@ -16,7 +16,6 @@
 
 import { DialogContainer, TextArea, TextField } from '@adobe/react-spectrum';
 import React, { useState } from 'react';
-import { SummaryRowItem } from '../BuildYourProjectSummary';
 import { COPY } from './addDemoFlow';
 import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
 import { Modal } from '@/core/ui/components/ui/Modal';
@@ -38,6 +37,8 @@ const EDIT_COPY = {
     saving: 'Saving',
     failed: "Couldn't save the changes",
     fallback: "We couldn't save the changes. Try again.",
+    repository: 'GitHub repository',
+    repositoryWhy: 'To use a different repository, remove this demo package and add it again.',
 } as const;
 
 function Journey({ demo, onClose, onSaved }: EditDemoPackageModalProps & { demo: AddedDemo }): React.ReactElement {
@@ -93,14 +94,13 @@ function Journey({ demo, onClose, onSaved }: EditDemoPackageModalProps & { demo:
             <div className="add-demo-stage">
                 <TextField label={COPY.nameLabel} value={name} onChange={setName} isRequired width="100%" />
                 <TextArea label={COPY.descriptionLabel} value={description} onChange={setDescription} width="100%" />
-                <div className="add-demo-found">
-                    <p className="intflow-section-label">{COPY.found}</p>
-                    <SummaryRowItem
-                        row={{ label: 'Code', value: `github.com/${demo.source.owner}/${demo.source.repo}` }}
-                        showDone={false}
-                        testId="found-Code"
-                    />
-                </div>
+                <TextField
+                    label={EDIT_COPY.repository}
+                    value={`https://github.com/${demo.source.owner}/${demo.source.repo}`}
+                    isReadOnly
+                    description={EDIT_COPY.repositoryWhy}
+                    width="100%"
+                />
                 {error ? (
                     <InlineNotice tone="warning" title={EDIT_COPY.failed} testId="edit-demo-error">
                         {error}

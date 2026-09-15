@@ -12,7 +12,6 @@
  */
 
 import {
-    buildCodeSyncSetupUrl,
     ensureSiteAdmin,
     revokeSiteAdmin,
     probeConfigWriteAccess,
@@ -234,39 +233,6 @@ describe('probeConfigWriteAccess — the oracle', () => {
             expect.any(String),
             expect.objectContaining({ method: 'GET' }),
         );
-    });
-});
-
-describe('buildCodeSyncSetupUrl', () => {
-    it('builds the observed setup deep link with every param the tool reads', () => {
-        // Observed verbatim 2026-08-14 on skukla/bodea-source. The tool reads
-        // org/site/url/user; omitting `url` drops the content source and the
-        // Content step lands empty.
-        const url = buildCodeSyncSetupUrl({
-            owner: 'leahrayard',
-            repo: 'leah-b2b-demo',
-            contentSourceUrl: 'https://content.da.live/leahrayard/leah-b2b-demo/',
-            userEmail: 'teammate@example.test',
-        });
-
-        const parsed = new URL(url);
-        expect(parsed.origin + parsed.pathname).toBe('https://tools.aem.live/bot/setup');
-        expect(parsed.searchParams.get('org')).toBe('leahrayard');
-        expect(parsed.searchParams.get('site')).toBe('leah-b2b-demo');
-        expect(parsed.searchParams.get('url')).toBe(
-            'https://content.da.live/leahrayard/leah-b2b-demo/',
-        );
-        expect(parsed.searchParams.get('user')).toBe('teammate@example.test');
-    });
-
-    it('omits an absent email rather than sending the string "undefined"', () => {
-        const url = buildCodeSyncSetupUrl({
-            owner: 'skukla',
-            repo: 'bodea-source',
-            contentSourceUrl: 'https://content.da.live/skukla/bodea-source/',
-        });
-
-        expect(new URL(url).searchParams.get('user')).toBe('');
     });
 });
 

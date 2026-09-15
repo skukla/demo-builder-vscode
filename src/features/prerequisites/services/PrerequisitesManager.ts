@@ -10,7 +10,7 @@ import type {
     PrerequisiteStatus,
 } from './types';
 import { ConfigurationLoader } from '@/core/config/ConfigurationLoader';
-import { isTimeout, toAppError } from '@/core/errors';
+import { classifyTransience } from '@/core/errors';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { formatDuration } from '@/core/utils/timeFormatting';
@@ -333,7 +333,8 @@ export class PrerequisitesManager {
         const errorMessage = toError(error).message;
         const errorObj = error as NodeJS.ErrnoException & { killed?: boolean; signal?: string };
         const isTimeoutErr =
-            isTimeout(toAppError(error)) || (errorObj.killed && errorObj.signal === 'SIGTERM');
+            classifyTransience(error).kind === 'timeout' ||
+            (errorObj.killed && errorObj.signal === 'SIGTERM');
 
         if (isTimeoutErr) {
             this.logger.warn(

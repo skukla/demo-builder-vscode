@@ -17,6 +17,8 @@ import { GitHubTokenService } from '../services/github/githubTokenService';
 import { GITHUB_SCOPES } from '../services/types';
 import { getGitHubServices } from './edsHelpers';
 import { createRepoFromSource } from './storefrontSetup/storefrontSetupPhase1';
+import { ServiceLocator } from '@/core/di/serviceLocator';
+import { TemplateSyncService } from '@/features/updates/services/templateSyncService';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 import type { GitHubAuthStatusPayload, GitHubOAuthErrorPayload } from '@/types/webviewPayloads';
 
@@ -410,8 +412,13 @@ export async function handleCreateGitHubRepo(
 
         // Create repository from template — or, for an added demo whose source
         // is not a template, an empty repository reset onto the source.
+        const templateSync = new TemplateSyncService(
+            context.context.secrets,
+            context.logger,
+            ServiceLocator.getCommandExecutor(),
+        );
         const repo = await createRepoFromSource(
-            repoOperations,
+            { repoOps: repoOperations, templateSync },
             { newRepoName: repoName, isPrivate: isPrivate ?? false, fromAddedDemo: Boolean(fromAddedDemo) },
             templateOwner,
             templateRepo,

@@ -19,9 +19,14 @@ import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 const deleteRepository = jest.fn();
 const getRepository = jest.fn();
+const getLatestCommitMessage = jest.fn();
 const validateToken = jest.fn();
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
-    getGitHubServices: () => ({ tokenService: { validateToken }, repoOperations: { deleteRepository, getRepository } }),
+    getGitHubServices: () => ({
+        tokenService: { validateToken },
+        repoOperations: { deleteRepository, getRepository },
+        fileOperations: { getLatestCommitMessage },
+    }),
 }));
 
 let mockRemembered: RememberedDemo[] = [];
@@ -62,7 +67,8 @@ function ctx(projectsBuiltOnJen = 0) {
 beforeEach(() => {
     jest.clearAllMocks();
     validateToken.mockResolvedValue({ valid: true, user: { login: 'steve' } });
-    getRepository.mockResolvedValue({ fullName: 'steve/isle5-demo' });
+    getRepository.mockResolvedValue({ fullName: 'steve/isle5-demo', defaultBranch: 'main' });
+    getLatestCommitMessage.mockResolvedValue('Update README');
     deleteRepository.mockResolvedValue(undefined);
     mockRemembered = [JEN, ZIP];
 });
@@ -140,8 +146,22 @@ describe('handleForgetAddedDemo', () => {
         expect(result).toEqual({ success: true, result: { forgotten: true, deletedRepository: false } });
     });
 
+    it("offers the delete for a card added from a repository an earlier zip import left behind: the SC's own, its latest commit Demo Builder's upload", async () => {
+        // "Add it from that repository" records no zip origin, because nothing at that
+        // moment proves Demo Builder made it (owner, 2026-09-15: the proof check).
+        mockRemembered = [OWN];
+        getLatestCommitMessage.mockResolvedValue('Add storefront from a zip file');
+        warn.mockResolvedValueOnce('Remove and delete the repository').mockResolvedValueOnce('Delete repository');
+
+        const result = await handleForgetAddedDemo(ctx(), ZIP_REQUEST);
+
+        expect(getLatestCommitMessage).toHaveBeenCalledWith('steve', 'isle5-demo', 'main');
+        expect(warn.mock.calls[0].slice(2)).toEqual(['Remove', 'Remove and delete the repository']);
+        expect(result).toEqual({ success: true, result: { forgotten: true, deletedRepository: true } });
+    });
+
     it.each([
-        ['the card was not made from a zip, even though the repository is the SC\'s own', () => { mockRemembered = [OWN]; }],
+        ['the card was not made from a zip and the repository\'s latest commit is not Demo Builder\'s upload', () => { mockRemembered = [OWN]; }],
         ['the repository is already gone', () => { getRepository.mockRejectedValue(new Error('Repository not found')); }],
         ['someone else is signed in to GitHub', () => { validateToken.mockResolvedValue({ valid: true, user: { login: 'jen' } }); }],
         ['nobody is signed in to GitHub', () => { validateToken.mockResolvedValue({ valid: false }); }],

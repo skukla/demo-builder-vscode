@@ -227,6 +227,10 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
         bytes: 1_000,
         why: 'created workspace id + name and the project it landed in',
     },
+    delete_adobe_workspace: {
+        bytes: 1_000,
+        why: 'a delete verdict plus the two ids, or the reason Console refused',
+    },
     delete_adobe_project: {
         bytes: 4_000,
         why: 'a delete verdict; on failure the FAILED teardown steps ride along, bounded by the step count',

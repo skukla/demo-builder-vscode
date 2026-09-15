@@ -54,12 +54,20 @@ export function registerApplyUpdatesTool(
             needsAuth: ['github'],
             annotations: { readOnlyHint: false, destructiveHint: false },
             description:
-                'Check and (with confirm:true) apply available updates for the current project — fork sync, template, components, Adobe MCP, block libraries, inspector SDK. Without confirm, reports what is available.',
+                'Check and (with confirm:true) apply available updates for the current project — fork sync, template, components, Adobe MCP, block libraries, inspector SDK. Without confirm, reports what is available. A template update that conflicts with the user\'s edits stops and names the files; it is applied over them only with resetTemplateOnConflict:true.',
             inputSchema: {
                 confirm: z
                     .boolean()
                     .optional()
                     .describe('Set true to apply; omit to only report what is available'),
+                resetTemplateOnConflict: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        'A template update that conflicts with the user\'s own edits stops and names the files. '
+                            + 'Set true ONLY when the user has explicitly chosen to replace those files with the '
+                            + 'template\'s version; their edits to them are discarded.',
+                    ),
             },
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -114,6 +122,7 @@ export function registerApplyUpdatesTool(
                     phases.push(m);
                     reportPhase(m);
                 },
+                { templateConflicts: args?.resetTemplateOnConflict === true ? 'reset' : 'stop' },
             );
 
             return asText({

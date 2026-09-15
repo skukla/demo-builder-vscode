@@ -16,6 +16,7 @@ import { BUNDLE_SETUP_FILE, BUNDLE_STOREFRONT_DIR } from '../demoPackage/demoBun
 import type { GitHubRepoOperations } from '../github/githubRepoOperations';
 import { pushFiles, type TreePushOps } from '../github/githubTreePush';
 import { CANONICAL_STOREFRONT_FILES, classifyRepoForStorefront, type RepoReadiness } from './repoStorefrontReadiness';
+import { ZIP_COMMIT_MESSAGE } from './zipImportCommit';
 import { readSharedDemoDescription } from '@/core/state/projectFileReader';
 import { normalizeRepositoryName } from '@/core/validation/normalizers';
 import { addedDemoId } from '@/features/components/services/storefrontResolver';
@@ -176,7 +177,7 @@ export interface CreateRepositoryDeps {
 
 const count = (n: number): string => n.toLocaleString('en-US');
 
-const COMMIT_MESSAGE = 'Add storefront from a zip file';
+
 
 /**
  * The unpacked storefront becomes a repository in the SC's own account (D28):
@@ -200,7 +201,7 @@ export async function createRepositoryFromZip(
     const repository = await deps.repoOps.createEmptyRepository(opts.repoName, opts.isPrivate);
     const [owner, repo] = repository.fullName.split('/');
     await deps.repoOps.waitForContent(owner, repo);
-    const pushed = await pushFiles(deps.fileOps, owner, repo, files, COMMIT_MESSAGE, deps.logger, (p) =>
+    const pushed = await pushFiles(deps.fileOps, owner, repo, files, ZIP_COMMIT_MESSAGE, deps.logger, (p) =>
         deps.onProgress?.(p.kind === 'binary' ? 'Uploading binary files' : 'Pushing files', `${count(p.done)} of ${count(p.total)}`),
     );
     deps.onProgress?.('Finishing up', 'Marking it as a template');

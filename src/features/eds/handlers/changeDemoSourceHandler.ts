@@ -12,7 +12,7 @@
  */
 
 import { COMPONENT_IDS } from '@/core/constants';
-import { assertGitHubName } from '@/core/utils/githubUrlParser';
+import { gitHubSourceProblem } from '@/core/utils/githubUrlParser';
 import { projectRowOf } from '@/features/components/services/storefrontResolver';
 import {
     isAddedDemo,
@@ -64,12 +64,8 @@ export async function handleChangeDemoSource(
     if (!isAddedDemo(demo)) {
         return { success: false, error: 'A demo row with a source is required' };
     }
-    try {
-        assertGitHubName(demo.source.owner, 'owner');
-        assertGitHubName(demo.source.repo, 'repo');
-    } catch (error) {
-        return { success: false, error: (error as Error).message };
-    }
+    const nameProblem = gitHubSourceProblem(demo.source.owner, demo.source.repo);
+    if (nameProblem) return { success: false, error: nameProblem };
 
     const project = await context.stateManager.getCurrentProject();
     if (!project?.demo) {
