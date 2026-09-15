@@ -32,7 +32,6 @@
 import { extractRepublishParams } from '../storefront/storefrontRepublishService';
 import { DaLiveAuthError } from '../types';
 import { pinSiteAdmin } from './configAccessRecovery';
-import { buildCodeSyncSetupUrl } from './configServiceAccess';
 import { buildSiteConfigParams, type ConfigurationService } from './configurationService';
 import { registerSiteConfig } from './siteConfigRegistrar';
 import type { Project } from '@/types/base';
@@ -54,8 +53,6 @@ export interface RepairSiteConfigResult {
     site?: string;
     /** The overlay this run intended to register, absent when BYOM is off. */
     overlayUrl?: string;
-    /** On `not_authorized`: the Code Sync setup deep link for THIS site. */
-    setupUrl?: string;
     /**
      * Masked addresses whose grants were lost when the update could not hand them
      * back. Present only in that case — and it needs saying out loud, because
@@ -145,14 +142,6 @@ export async function repairSiteConfig(
             org: repoOwner,
             site: repoName,
             overlayUrl,
-            ...(refused && {
-                setupUrl: buildCodeSyncSetupUrl({
-                    owner: repoOwner,
-                    repo: repoName,
-                    contentSourceUrl: siteParams.contentSourceUrl,
-                    userEmail,
-                }),
-            }),
             // C: prefer the service's own words. The capture-refusal message
             // ("could not read the current site administrators…") never reached
             // anyone while this synthesized over it.

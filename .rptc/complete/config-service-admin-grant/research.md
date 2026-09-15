@@ -123,7 +123,11 @@ admin@example.test = org admin):
   and if org-level, whether `POST config/{org}.json` with an appended user works
   the same way (do NOT test mutations on a live shared org).
 - Does a Code Sync re-install re-mint the org roster entry for an OLD repo (the
-  load-bearing assumption in the shipped 403 message)?
+  load-bearing assumption in the shipped 403 message)? **Narrowed 2026-09-14:** the
+  setup page authenticates only with a one-time key from the install callback, so
+  the question is whether saving an existing installation's repo access triggers
+  that callback. The tokenless deep link was proven useless and removed (see the
+  overview's correction).
 - What the 403 on the access write itself looks like for an unauthorized caller,
   so the grant leg can classify its own failure.
 

@@ -135,6 +135,13 @@ export interface OAuthCallbackParams {
  */
 export const GITHUB_SCOPES = ['repo', 'user', 'read:org', 'delete_repo', 'workflow'] as const;
 
+/** One email on the signed-in GitHub account, as `GET /user/emails` answers it. */
+export interface GitHubAccountEmail {
+    email: string;
+    primary: boolean;
+    verified: boolean;
+}
+
 /**
  * GitHub API error with status
  */

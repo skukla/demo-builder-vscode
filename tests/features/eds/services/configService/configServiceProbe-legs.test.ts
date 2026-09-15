@@ -164,9 +164,9 @@ describe('probeConfigService — legs', () => {
 
             expect(result.orgAdmins).toEqual({ status: 'ok', emails: [] });
             expect(result.verdict).toBe(
-                `${CREDENTIAL_VALID_BASE}No org admin is visible either — open ` +
-                    'tools.aem.live/bot/setup for this site and add your email under Site users, ' +
-                    'then re-run this probe.',
+                `${CREDENTIAL_VALID_BASE}No org admin is visible either. Run Demo Builder: ` +
+                    'Manage Site Access, which opens the AEM Code Sync app on GitHub; failing ' +
+                    'that, the GitHub user who installed it, or Adobe, has to add you.',
             );
         });
 

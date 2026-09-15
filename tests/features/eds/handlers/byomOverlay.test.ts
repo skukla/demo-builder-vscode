@@ -479,11 +479,13 @@ describe('surfaceOverlayRegistrationFailure', () => {
         );
         expect(BYOM_OVERLAY_NOT_AUTHORIZED_MESSAGE).not.toContain('Reset the storefront');
         expect(BYOM_OVERLAY_NOT_AUTHORIZED_MESSAGE).toContain('AEM Code Sync');
-        // The actionable half: a self-serve role grant the user can perform today
-        // (verified 2026-08-14 — POST config/{org}/sites/{site}/access/admin.json,
-        // which is what this tool's "Site users" step writes).
-        expect(BYOM_OVERLAY_NOT_AUTHORIZED_MESSAGE).toContain('tools.aem.live/bot/setup');
-        expect(BYOM_OVERLAY_NOT_AUTHORIZED_MESSAGE).toContain('Site users');
+        // The AEM setup page is NOT a remedy anyone can reach from a link. It
+        // authenticates only with a one-time key that the Code Sync bot puts in
+        // the URL during a GitHub App install; opened any other way it cannot read
+        // the config or add a user (reproduced 2026-09-14 for kmanns/wire: "We
+        // couldn't load your configuration for editing"). Naming it sent people
+        // to a page that could never grant the role.
+        expect(BYOM_OVERLAY_NOT_AUTHORIZED_MESSAGE).not.toContain('tools.aem.live');
         // Both halves of the route, named exactly as the palette shows them.
         expect(BYOM_OVERLAY_NOT_AUTHORIZED_MESSAGE).toContain('Manage Site Access');
         expect(BYOM_OVERLAY_NOT_AUTHORIZED_MESSAGE).toContain('Repair Site Configuration');
@@ -515,27 +517,6 @@ describe('surfaceOverlayRegistrationFailure', () => {
         expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
     });
 
-    it('REDACTS the signed-in address from the log, but not from the toast', () => {
-        // The setup link carries `?user=<address>`, percent-encoded by
-        // URL.searchParams — which is why the email-shaped masking elsewhere
-        // missed it. logger.error is buffered into the debug export users paste
-        // into tickets; the toast is transient and needs a working link.
-        const logger = createLogger();
-        const showWarning = jest.fn();
-        const setupUrl =
-            'https://tools.aem.live/bot/setup?user=owner%40adobe.com&site=demo&org=skukla';
-
-        surfaceOverlayRegistrationFailure(logger, showWarning, 403, setupUrl);
-
-        const logged = (logger.error as jest.Mock).mock.calls[0][0] as string;
-        expect(logged).not.toContain('owner%40adobe.com');
-        expect(logged).not.toContain('owner@adobe.com');
-        expect(logged).toContain('site=demo'); // the rest of the link survives
-
-        const toasted = showWarning.mock.calls[0][0] as string;
-        expect(toasted).toContain('owner%40adobe.com');
-    });
-
     it('offers NO actions on a non-403 failure', () => {
         // Offering a repair that will fail the same way is worse than offering
         // nothing: only a 403 has an in-app route.
@@ -550,28 +531,6 @@ describe('surfaceOverlayRegistrationFailure', () => {
 describe('byomRegistrationFailureMessage', () => {
     it('selects the not-authorized message for 403', () => {
         expect(byomRegistrationFailureMessage(403)).toBe(BYOM_OVERLAY_NOT_AUTHORIZED_MESSAGE);
-    });
-
-    it('appends the site-specific setup link when one was resolved', () => {
-        // A generic "go to the setup tool" makes the user find their own site in
-        // it; the deep link lands on it. The URL is built from data the pipeline
-        // already holds (owner/repo/content source/email).
-        const url =
-            'https://tools.aem.live/bot/setup?user=leah%40adobe.com&site=leah-b2b-demo' +
-            '&url=https%3A%2F%2Fcontent.da.live%2Fleahrayard%2Fleah-b2b-demo%2F&org=leahrayard';
-
-        const message = byomRegistrationFailureMessage(403, url);
-
-        expect(message).toContain(url);
-        expect(message).toContain(BYOM_OVERLAY_NOT_AUTHORIZED_MESSAGE);
-    });
-
-    it('does not append a link to the generic (non-403) message', () => {
-        // The link is the remedy for an authorization refusal specifically.
-        // Attaching it to every failure teaches users to ignore it.
-        const message = byomRegistrationFailureMessage(500, 'https://tools.aem.live/bot/setup?x=1');
-
-        expect(message).toBe(BYOM_OVERLAY_REGISTRATION_FAILED_MESSAGE);
     });
 
     it('keeps the generic message for other/unknown failures', () => {
