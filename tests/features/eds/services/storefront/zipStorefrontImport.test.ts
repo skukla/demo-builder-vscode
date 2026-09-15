@@ -155,7 +155,15 @@ describe('createRepositoryFromZip, cardFromZip and setupForCard', () => {
         };
         const files = new Map([['head.html', Buffer.from('<meta>')], ['scripts/scripts.js', Buffer.from('x')]]);
 
-        const created = await createRepositoryFromZip({ repoOps, fileOps, logger }, files, { repoName: 'summit', isPrivate: true });
+        const onProgress = jest.fn();
+        const created = await createRepositoryFromZip({ repoOps, fileOps, logger, onProgress }, files, { repoName: 'summit', isPrivate: true });
+
+        // Each step the dialog's spinner names, in order (owner, 2026-09-14).
+        expect(onProgress.mock.calls).toStrictEqual([
+            ['Creating the repository', 'summit · 2 files'],
+            ['Pushing files', '2 of 2'],
+            ['Finishing up', 'Marking it as a template'],
+        ]);
 
         expect(repoOps.createEmptyRepository).toHaveBeenCalledWith('summit', true);
         expect(repoOps.waitForContent).toHaveBeenCalledWith('steve', 'summit');

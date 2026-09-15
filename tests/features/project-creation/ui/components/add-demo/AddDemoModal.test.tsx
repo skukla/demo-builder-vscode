@@ -17,6 +17,7 @@ import {
     resetModalMocks,
     typeLink,
     chooseWay,
+    pushed,
 } from './AddDemoModal.testUtils';
 
 describe('AddDemoModal', () => {
@@ -42,7 +43,7 @@ describe('AddDemoModal', () => {
         expect(screen.queryByText(/Isle5 by Jen/)).not.toBeInTheDocument();
     });
 
-    it('offers the zip way in add mode only; picked, the footer opens the picker with the visibility the box says', async () => {
+    it('offers the zip way in add mode only; picked, the footer opens the picker, public unless the box is cleared', async () => {
         const change = renderModal({ mode: 'change', currentKind: 'eds' });
         expect(screen.queryByTestId('add-demo-way-zip')).not.toBeInTheDocument();
         expect(linkInput()).toBeInTheDocument();
@@ -54,18 +55,44 @@ describe('AddDemoModal', () => {
         expect(screen.getByTestId('zip-public')).toHaveTextContent('Make the repository public');
         expect(screen.queryByRole('button', { name: 'Continue' })).not.toBeInTheDocument();
 
+        // Public by default (owner, 2026-09-14).
+        expect((screen.getByTestId('zip-public').querySelector('input') as HTMLInputElement).checked).toBe(true);
         mockRequest.mockResolvedValueOnce({ success: true, result: { cancelled: true } });
-        await click('Choose a zip file…');
-        expect(mockRequest).toHaveBeenLastCalledWith('import-storefront-zip', { isPrivate: true });
+        await click('Choose a zip file');
+        expect(mockRequest).toHaveBeenLastCalledWith('import-storefront-zip', { isPrivate: false });
 
         fireEvent.click(screen.getByTestId('zip-public').querySelector('input') as HTMLInputElement);
         mockRequest.mockResolvedValueOnce({ success: false, error: 'This zip is not an Edge Delivery storefront: it has no head.html.' });
-        await click('Choose a zip file…');
-        expect(mockRequest).toHaveBeenLastCalledWith('import-storefront-zip', { isPrivate: false });
+        await click('Choose a zip file');
+        expect(mockRequest).toHaveBeenLastCalledWith('import-storefront-zip', { isPrivate: true });
+        // The house error view replaces the form (owner, 2026-09-14), and Back returns to it.
+        expect(screen.getByTestId('zip-error')).toHaveTextContent("We couldn't add this zip");
         expect(screen.getByTestId('zip-error')).toHaveTextContent('it has no head.html');
+        expect(screen.queryByTestId('zip-public')).not.toBeInTheDocument();
+        await click('Back');
+        expect(screen.getByTestId('zip-public')).toBeInTheDocument();
 
         await chooseWay('link');
         expect(linkInput()).toBeInTheDocument();
+    });
+
+    it('offers to add the demo from a repository the account already has by that name', async () => {
+        renderModal();
+        await chooseWay('zip');
+        mockRequest.mockResolvedValueOnce({
+            success: false,
+            code: 'REPO_EXISTS',
+            error: 'Your GitHub account already has a repository named citisignal-b2b-summit.',
+            existing: { owner: 'steve', repo: 'citisignal-b2b-summit' },
+        });
+        await click('Choose a zip file');
+        expect(screen.getByTestId('zip-error')).toHaveTextContent('already has a repository named citisignal-b2b-summit');
+
+        mockRequest.mockResolvedValueOnce({ success: true, result: { ...READ, fullName: 'steve/citisignal-b2b-summit' } });
+        await click('Add it from that repository');
+
+        expect(mockRequest).toHaveBeenLastCalledWith('probe-shared-demo', { owner: 'steve', repo: 'citisignal-b2b-summit' });
+        expect(screen.getByText('Package details')).toBeInTheDocument();
     });
 
     it('says when a link is already added, whatever its case', () => {
@@ -168,8 +195,13 @@ describe('AddDemoModal', () => {
         await probeWith({ success: true, result: READ });
         mockRequest.mockResolvedValueOnce({ success: false, error: "We couldn't make your own copy of this demo." });
         await click('Add demo package');
+        expect(screen.getByTestId('add-error')).toHaveTextContent('Not added');
         expect(screen.getByTestId('add-error')).toHaveTextContent(/own copy/);
         expect(props.onClose).not.toHaveBeenCalled();
+        // The error view replaces the form; Back returns to it, still filled in.
+        expect(screen.queryByTestId('demo-description')).not.toBeInTheDocument();
+        await click('Back');
+        expect(screen.getByTestId('demo-description')).toBeInTheDocument();
     });
 
     it("takes a demo's site address and probes the repository it names", async () => {
@@ -197,7 +229,7 @@ describe('AddDemoModal — while reading', () => {
         typeLink('https://github.com/jen/isle5-demo');
         await click('Continue');
 
-        expect(screen.getByText('Reading the storefront…')).toBeInTheDocument();
+        expect(screen.getByText('Reading the storefront')).toBeInTheDocument();
         expect(screen.getByText('jen/isle5-demo')).toBeInTheDocument();
         expect(screen.getByText(/what kind of storefront it is, its store codes/)).toBeInTheDocument();
 
@@ -216,7 +248,7 @@ describe('AddDemoModal — while reading', () => {
         mockRequest.mockImplementationOnce(() => new Promise((resolve) => { release = resolve; }));
         await click('Add demo package');
 
-        expect(screen.getByText('Adding the demo package…')).toBeInTheDocument();
+        expect(screen.getByText('Adding the demo package')).toBeInTheDocument();
         expect(screen.getByText('Making your own copy of the code in your GitHub account.')).toBeInTheDocument();
         expect(screen.queryByTestId('demo-description')).not.toBeInTheDocument();
 
@@ -232,10 +264,17 @@ describe('AddDemoModal — while reading', () => {
         mockRequest.mockImplementationOnce(() => new Promise((resolve) => { release = resolve; }));
         renderModal();
         await chooseWay('zip');
-        await click('Choose a zip file…');
+        await click('Choose a zip file');
 
-        expect(screen.getByText('Creating your repository from the zip…')).toBeInTheDocument();
+        expect(screen.getByText('Creating your repository from the zip')).toBeInTheDocument();
         expect(screen.queryByTestId('add-demo-way-zip')).not.toBeInTheDocument();
+
+        // The host names each step as it runs (owner, 2026-09-14: more granular reporting).
+        await act(async () => {
+            pushed.get('storefront-zip-progress')?.({ message: 'Pushing files', detail: '1,264 of 3,475' });
+        });
+        expect(screen.getByText('Pushing files')).toBeInTheDocument();
+        expect(screen.getByText('1,264 of 3,475')).toBeInTheDocument();
 
         await act(async () => {
             release({ success: true, result: { cancelled: true } });

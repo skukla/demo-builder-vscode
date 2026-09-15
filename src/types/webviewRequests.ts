@@ -45,7 +45,7 @@ export interface ImportStorefrontZipRequest {
     zipPath?: string;
     /** Defaults to the zip's root folder name. */
     repoName?: string;
-    /** Private by default; the dialog's tick box makes it public. */
+    /** Public by default; clearing the dialog's tick box makes it private. */
     isPrivate?: boolean;
 }
 

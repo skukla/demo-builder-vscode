@@ -14,6 +14,7 @@ import { FoundStage } from './FoundStage';
 import { LinkStage } from './LinkStage';
 import { useAddDemoFlow, type UseAddDemoFlowArgs } from './useAddDemoFlow';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import type { AddedDemo } from '@/types/projectFile';
@@ -43,7 +44,12 @@ function Body({ flow, mode, ...props }: BodyProps): React.ReactElement {
         // starts from the first stage and can take a minute.
         return (
             <CenteredFeedbackContainer height="280px">
-                <LoadingDisplay size="L" message={COPY.importing} helperText={COPY.importingFor} />
+                <LoadingDisplay
+                    size="L"
+                    message={flow.importStep?.message ?? COPY.importing}
+                    subMessage={flow.importStep?.detail}
+                    helperText={COPY.importingFor}
+                />
             </CenteredFeedbackContainer>
         );
     }
@@ -60,6 +66,20 @@ function Body({ flow, mode, ...props }: BodyProps): React.ReactElement {
             </CenteredFeedbackContainer>
         );
     }
+    if (flow.zipError) {
+        // The house error view, as the probe's refusals use; Back returns to the form.
+        return (
+            <div data-testid="zip-error">
+                <StatusDisplay
+                    variant="error"
+                    title={COPY.zipFailed}
+                    message={flow.zipError}
+                    height="auto"
+                    actions={flow.zipConflict ? [{ label: COPY.useExisting, variant: 'accent', onPress: flow.useExistingRepo }] : undefined}
+                />
+            </div>
+        );
+    }
     if (flow.stage === 'link') {
         return (
             <LinkStage
@@ -70,7 +90,6 @@ function Body({ flow, mode, ...props }: BodyProps): React.ReactElement {
                 zip={{
                     way: flow.way,
                     onWayChange: flow.setWay,
-                    error: flow.zipError,
                     makePublic: flow.makePublic,
                     onMakePublicChange: flow.setMakePublic,
                 }}

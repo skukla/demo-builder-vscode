@@ -16,7 +16,6 @@ import { Checkbox } from '@adobe/react-spectrum';
 import React from 'react';
 import { ChoiceCard } from '../ChoiceCard';
 import { COPY, type AddDemoDraft, type AddDemoMode, type AddDemoWay } from './addDemoFlow';
-import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
 import { GitHubLinkField } from '@/core/ui/components/forms/GitHubLinkField';
 import type { AddedDemo } from '@/types/projectFile';
 
@@ -30,7 +29,6 @@ export interface LinkStageProps {
     zip?: {
         way: AddDemoWay;
         onWayChange: (way: AddDemoWay) => void;
-        error?: string;
         makePublic: boolean;
         onMakePublicChange: (on: boolean) => void;
     };
@@ -50,16 +48,9 @@ function WayChoice({ way, onWayChange }: Pick<NonNullable<LinkStageProps['zip']>
 
 function ZipForm({ zip }: { zip: NonNullable<LinkStageProps['zip']> }): React.ReactElement {
     return (
-        <>
-            <Checkbox isSelected={zip.makePublic} onChange={zip.onMakePublicChange} data-testid="zip-public">
-                {COPY.zipPublic}
-            </Checkbox>
-            {zip.error ? (
-                <InlineNotice tone="warning" title={COPY.zipFailed} testId="zip-error">
-                    {zip.error}
-                </InlineNotice>
-            ) : null}
-        </>
+        <Checkbox isSelected={zip.makePublic} onChange={zip.onMakePublicChange} data-testid="zip-public">
+            {COPY.zipPublic}
+        </Checkbox>
     );
 }
 

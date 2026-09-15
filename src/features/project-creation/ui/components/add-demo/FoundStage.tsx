@@ -113,6 +113,14 @@ export function FoundStage({
             <StatusDisplay variant="error" title={COPY.notADemo} message={probe.error} height="auto" />
         );
     }
+    if (addError) {
+        // The house error view; Back returns to the form, still filled in.
+        return (
+            <div data-testid="add-error">
+                <StatusDisplay variant="error" title={mode === 'change' ? 'Not changed' : 'Not added'} message={addError} height="auto" />
+            </div>
+        );
+    }
     const { result } = probe;
     if (result.outcome === 'unreadable') {
         return <StatusDisplay variant="error" title={COPY.notADemo} message={result.reason} height="auto" />;
@@ -220,11 +228,7 @@ export function FoundStage({
                     {COPY.bundleSetupWhy}
                 </InlineNotice>
             ) : null}
-            {addError ? (
-                <InlineNotice title={mode === 'change' ? 'Not changed' : 'Not added'} testId="add-error">
-                    {addError}
-                </InlineNotice>
-            ) : null}
+
         </div>
     );
 }

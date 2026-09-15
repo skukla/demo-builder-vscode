@@ -352,7 +352,7 @@ describe('add_shared_demo from a zip file', () => {
 
         const res = await s.call('add_shared_demo', { zipPath: '/tmp/summit-main.zip' });
 
-        expect(res.error).toContain('would create the private repository summit in your GitHub account (steve) from /tmp/summit-main.zip (1 files; 4 entries');
+        expect(res.error).toContain('would create the public repository summit in your GitHub account (steve) from /tmp/summit-main.zip (1 files; 4 entries');
         expect(res).toMatchObject({ repoName: 'summit', fileCount: 1, dropped: 4, wouldCreate: 'summit', setupIncluded: false });
         expect(mockImport).not.toHaveBeenCalled();
         expect(mockAdd).not.toHaveBeenCalled();
@@ -372,7 +372,7 @@ describe('add_shared_demo from a zip file', () => {
         const s = fakeServer();
         registerAddedDemoTools(s, () => ctx);
 
-        const res = await s.call('add_shared_demo', { zipPath: '/tmp/summit-main.zip', repoName: 'summit-demo', isPrivate: false, confirm: true });
+        const res = await s.call('add_shared_demo', { zipPath: '/tmp/summit-main.zip', repoName: 'summit-demo', confirm: true });
 
         expect(mockImport).toHaveBeenCalledWith(ctx, { zipPath: '/tmp/summit-main.zip', repoName: 'summit-demo', isPrivate: false });
         expect(mockProbe).toHaveBeenCalledWith(ctx, { owner: 'steve', repo: 'summit', link: undefined });

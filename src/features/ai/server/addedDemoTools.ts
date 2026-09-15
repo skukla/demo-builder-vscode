@@ -95,7 +95,7 @@ async function repositoryFromZip(
         return {
             answer: {
                 error:
-                    `add_shared_demo would create the ${args.isPrivate === false ? 'public' : 'private'} repository ${repoName} in ${account} ` +
+                    `add_shared_demo would create the ${args.isPrivate === true ? 'private' : 'public'} repository ${repoName} in ${account} ` +
                     `from ${args.zipPath} (${unpacked.files.size} files; ${unpacked.dropped} entries a repository would not keep are left out) and add the demo from it. ` +
                     'Call again with confirm:true to create it, or give repoName to name it differently.',
                 repoName,
@@ -106,7 +106,7 @@ async function repositoryFromZip(
             },
         };
     }
-    const imported = await handleImportStorefrontZip(ctx, { zipPath: args.zipPath, repoName, isPrivate: args.isPrivate ?? true });
+    const imported = await handleImportStorefrontZip(ctx, { zipPath: args.zipPath, repoName, isPrivate: args.isPrivate ?? false });
     const result = imported.result as { owner?: string; repo?: string; fileCount?: number; dropped?: number } | undefined;
     if (!imported.success || !result?.owner || !result.repo) {
         return { answer: { error: imported.error ?? 'The zip could not be turned into a repository.' } };
@@ -181,7 +181,7 @@ export function registerAddedDemoTools(server: McpToolServer, ctxFactory: () => 
                     .describe('Fork the repository into your own account and read from the fork (default true; skipped for your own repository)'),
                 zipPath: z.string().optional().describe('Instead of a link: a zip file of the storefront on this computer'),
                 repoName: z.string().optional().describe('With zipPath: the repository to create; defaults to the zip\'s folder name'),
-                isPrivate: z.boolean().optional().describe('With zipPath: whether the created repository is private (default true)'),
+                isPrivate: z.boolean().optional().describe('With zipPath: whether the created repository is private (default false)'),
                 confirm: z.boolean().optional().describe('Must be true when a fork will be made, or when a repository is created from a zip'),
             },
         },

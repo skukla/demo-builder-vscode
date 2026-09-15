@@ -34,11 +34,11 @@ Send the link, not a zip. A zip loses the history and your later changes can nev
 the projects built on it.
 
 If a zip is what you were given anyway, the Add a demo package dialog asks **Where is the demo?** and
-offers **From a zip file** beside **From a link**. Pick it, then **Choose a zip file…**, and
+offers **From a zip file** beside **From a link**. Pick it, then **Choose a zip file**, and
 Demo Builder unpacks it, leaves out what a repository
 would not keep (`node_modules`, caches, whatever its `.gitignore` says), refuses it if it is
 not an Edge Delivery storefront, creates a repository in your own GitHub account named after
-the zip (private unless you tick the box), pushes the files as one commit, and adds the demo
+the zip (public unless you clear the box), pushes the files as one commit, and adds the demo
 from there. From then on it is your repository: reset and updates read from it, and Forget
 offers to delete it.
 

@@ -61,7 +61,7 @@ export interface DashboardInitialData {
     edsDaLiveUrl?: string;
     /** Initial EDS storefront status (for dynamic status display) */
     initialEdsStorefrontStatus?: Project['edsStorefrontStatusSummary'];
-    /** Whether the project has an Adobe org (drives the "Checking organization…" telegraph) */
+    /** Whether the project has an Adobe org (drives the "Checking organization" telegraph) */
     hasAdobeContext: boolean;
     /**
      * Whether the Data Installer is switched on AND pointed at an API. Decided
@@ -540,6 +540,15 @@ export interface BlockLibraryDefaultsUpdatedPayload {
 /** `customBlockLibraryDefaultsUpdated` — the custom block-library setting changed. */
 export interface CustomBlockLibraryDefaultsUpdatedPayload {
     customBlockLibraryDefaults: CustomBlockLibrary[];
+}
+
+/**
+ * `storefront-zip-progress` — the step a zip import is on, for the Add a demo
+ * package dialog's spinner: the step, and a detail such as a running file count.
+ */
+export interface StorefrontZipProgressPayload {
+    message: string;
+    detail?: string;
 }
 
 /** `addedDemosUpdated` — the remembered-demos setting changed. */

@@ -9,7 +9,7 @@ import { makeDemoPackage } from '../../../../../helpers/demoPackageFixtures';
 
 const mockRequest = jest.fn();
 jest.mock('@/core/ui/utils/vscode-api', () => ({
-    webviewClient: { request: (...args: unknown[]) => mockRequest(...args) },
+    webviewClient: { request: (...args: unknown[]) => mockRequest(...args), onMessage: () => () => undefined },
 }));
 
 const READ: SharedDemoRead = {
@@ -67,7 +67,7 @@ describe('useAddDemoFlow', () => {
         act(() => hook.result.current.setWay('zip'));
 
         expect(hook.result.current.canContinue).toBe(true);
-        expect(hook.result.current.continueLabel).toBe('Choose a zip file…');
+        expect(hook.result.current.continueLabel).toBe('Choose a zip file');
         expect(mockRequest).not.toHaveBeenCalled();
     });
 
@@ -113,10 +113,11 @@ describe('useAddDemoFlow', () => {
         mockRequest.mockResolvedValueOnce({ success: true, result: { owner: 'steve', repo: 'summit', fullName: 'steve/summit', fileCount: 3, dropped: 1, isPrivate: false } });
         mockRequest.mockResolvedValueOnce({ success: true, result: READ });
 
-        act(() => hook.result.current.setMakePublic(true));
+        expect(hook.result.current.makePublic).toBe(true);
+        act(() => hook.result.current.setMakePublic(false));
         await continueWithZip(hook);
 
-        expect(mockRequest).toHaveBeenNthCalledWith(1, 'import-storefront-zip', { isPrivate: false });
+        expect(mockRequest).toHaveBeenNthCalledWith(1, 'import-storefront-zip', { isPrivate: true });
         expect(mockRequest).toHaveBeenNthCalledWith(2, 'probe-shared-demo', { owner: 'steve', repo: 'summit' });
         expect(hook.result.current.stage).toBe('found');
         expect(hook.result.current.draft.source).toEqual({ owner: 'steve', repo: 'summit' });

@@ -10,8 +10,16 @@ import { settle } from '../../../../../helpers/reactSettle';
 import '@testing-library/jest-dom';
 
 export const mockRequest = jest.fn();
+/** Handlers the dialog subscribed to, by message type, so a test can push to them. */
+export const pushed = new Map<string, (data: unknown) => void>();
 jest.mock('@/core/ui/utils/vscode-api', () => ({
-    webviewClient: { request: (...args: unknown[]) => mockRequest(...args) },
+    webviewClient: {
+        request: (...args: unknown[]) => mockRequest(...args),
+        onMessage: (type: string, handler: (data: unknown) => void) => {
+            pushed.set(type, handler);
+            return () => pushed.delete(type);
+        },
+    },
 }));
 
 // The SUT binds below the mocks on purpose (webview-test-authoring §3).

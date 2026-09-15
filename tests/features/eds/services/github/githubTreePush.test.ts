@@ -47,6 +47,22 @@ describe('pushFiles', () => {
         expect(result).toEqual({ commitSha: 'commit-9', fileCount: 2 });
     });
 
+    it('reports each binary upload and each batch of files as it goes', async () => {
+        const o = ops();
+        const files = new Map<string, Buffer>([
+            ['head.html', Buffer.from('<meta>')],
+            ['fonts/a.woff2', PNG],
+        ]);
+        const progress = jest.fn();
+
+        await pushFiles(o, 'steve', 'summit', files, 'm', logger, progress);
+
+        expect(progress.mock.calls).toStrictEqual([
+            [{ kind: 'binary', done: 1, total: 1 }],
+            [{ kind: 'files', done: 2, total: 2 }],
+        ]);
+    });
+
     it('refuses an empty set before touching the repository', async () => {
         const o = ops();
         await expect(pushFiles(o, 'steve', 'summit', new Map(), 'm', logger)).rejects.toThrow(/Nothing to push/);

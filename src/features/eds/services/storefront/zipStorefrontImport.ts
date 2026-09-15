@@ -170,13 +170,17 @@ export interface CreateRepositoryDeps {
     repoOps: Pick<GitHubRepoOperations, 'createEmptyRepository' | 'waitForContent' | 'setTemplateFlag'>;
     fileOps: TreePushOps;
     logger: Logger;
+    /** Each step, for a person watching: the step's name and a detail such as a file count. */
+    onProgress?: (message: string, detail?: string) => void;
 }
+
+const count = (n: number): string => n.toLocaleString('en-US');
 
 const COMMIT_MESSAGE = 'Add storefront from a zip file';
 
 /**
  * The unpacked storefront becomes a repository in the SC's own account (D28):
- * created private unless asked otherwise, the files pushed as one commit, the
+ * created public unless asked otherwise, the files pushed as one commit, the
  * repository flagged a template. Shared by the dialog's zip door and the
  * projects list's bundle import.
  *
@@ -188,13 +192,18 @@ const COMMIT_MESSAGE = 'Add storefront from a zip file';
 export async function createRepositoryFromZip(
     deps: CreateRepositoryDeps,
     files: Map<string, Buffer>,
-    opts: { repoName: string; isPrivate: boolean },
+    opts: { repoName: string; isPrivate: boolean; leftOut?: number },
 ): Promise<CreatedRepository> {
     deps.logger.info(`[Zip] Creating ${opts.repoName} (${opts.isPrivate ? 'private' : 'public'}): ${files.size} files`);
+    const leftOut = opts.leftOut ? ` · ${count(opts.leftOut)} left out` : '';
+    deps.onProgress?.('Creating the repository', `${opts.repoName} · ${count(files.size)} files${leftOut}`);
     const repository = await deps.repoOps.createEmptyRepository(opts.repoName, opts.isPrivate);
     const [owner, repo] = repository.fullName.split('/');
     await deps.repoOps.waitForContent(owner, repo);
-    const pushed = await pushFiles(deps.fileOps, owner, repo, files, COMMIT_MESSAGE, deps.logger);
+    const pushed = await pushFiles(deps.fileOps, owner, repo, files, COMMIT_MESSAGE, deps.logger, (p) =>
+        deps.onProgress?.(p.kind === 'binary' ? 'Uploading binary files' : 'Pushing files', `${count(p.done)} of ${count(p.total)}`),
+    );
+    deps.onProgress?.('Finishing up', 'Marking it as a template');
     await deps.repoOps.setTemplateFlag(owner, repo, true);
     deps.logger.info(`[Zip] ${repository.fullName}: ${pushed.fileCount} files pushed, marked as a template`);
     return { owner, repo, fullName: repository.fullName, defaultBranch: repository.defaultBranch || 'main', fileCount: pushed.fileCount };

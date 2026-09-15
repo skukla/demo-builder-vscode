@@ -25,6 +25,7 @@ import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { getRepositoryNameError } from '@/core/validation/normalizers';
 import { rememberAddedDemo } from '@/features/project-creation/services/addedDemoSettings';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
+import type { StorefrontZipProgressPayload } from '@/types/webviewPayloads';
 import type { ImportStorefrontZipRequest, ImportStorefrontZipResult, UseBundleSetupRequest } from '@/types/webviewRequests';
 
 const PICKER_TITLE = 'Add a storefront from a zip file';
@@ -68,6 +69,12 @@ export async function handleImportStorefrontZip(
 ): Promise<HandlerResponse> {
     const zipPath = request?.zipPath ?? (await pickZip());
     if (!zipPath) return { success: true, result: { cancelled: true } satisfies ImportStorefrontZipResult };
+    // Each step goes to the dialog's spinner as it starts (owner, 2026-09-14): a
+    // large storefront takes half a minute or more, and one static line read as stuck.
+    const report = (message: string, detail?: string): void => {
+        void context.sendMessage('storefront-zip-progress', { message, ...(detail ? { detail } : {}) } satisfies StorefrontZipProgressPayload);
+    };
+    report('Reading the zip', path.basename(zipPath));
 
     let unpacked;
     try {
@@ -81,15 +88,16 @@ export async function handleImportStorefrontZip(
     const repoName = request?.repoName?.trim() || suggestRepoName(unpacked.rootName, 'storefront');
     const nameError = getRepositoryNameError(repoName);
     if (nameError) return { success: false, error: nameError };
-    const isPrivate = request?.isPrivate ?? true;
+    // Public unless asked otherwise (owner, 2026-09-14): a demo package is for sharing.
+    const isPrivate = request?.isPrivate ?? false;
 
     const { repoOperations, fileOperations } = getGitHubServices(context.context.secrets);
     try {
         context.logger.info(`[Zip] ${zipPath}: ${unpacked.files.size} files, ${unpacked.dropped} dropped${unpacked.setup ? ', setup included' : ''}`);
         const created = await createRepositoryFromZip(
-            { repoOps: repoOperations, fileOps: fileOperations, logger: context.logger },
+            { repoOps: repoOperations, fileOps: fileOperations, logger: context.logger, onProgress: report },
             unpacked.files,
-            { repoName, isPrivate },
+            { repoName, isPrivate, leftOut: unpacked.dropped },
         );
         if (unpacked.setupError) context.logger.warn(`[Zip] the bundle's setup file was not usable: ${unpacked.setupError}`);
         return {
@@ -106,8 +114,30 @@ export async function handleImportStorefrontZip(
         };
     } catch (error) {
         context.logger.error(`[Zip] Import failed: ${(error as Error).message}`);
-        return { success: false, error: (error as Error).message };
+        return refusalForCreate(context, repoName, (error as Error).message);
     }
+}
+
+/**
+ * What the dialog says when GitHub will not create the repository.
+ *
+ * The raw error is GitHub's JSON and a docs link (measured 2026-09-14); a person
+ * reads one sentence. A name the account already uses is named, with where it
+ * is, so the dialog can offer to add the demo from it: that is exactly the
+ * repository an earlier import that timed out in the dialog left behind.
+ */
+async function refusalForCreate(context: HandlerContext, repoName: string, raw: string): Promise<HandlerResponse> {
+    if (/name already exists/i.test(raw)) {
+        const login = (await getGitHubServices(context.context.secrets).tokenService.validateToken()).user?.login;
+        return {
+            success: false,
+            code: 'REPO_EXISTS',
+            error: `Your GitHub account already has a repository named ${repoName}.`,
+            ...(login ? { existing: { owner: login, repo: repoName } } : {}),
+        };
+    }
+    const said = /"message"\s*:\s*"([^"]+)"/.exec(raw)?.[1] ?? raw.replace(/\s+-\s+https?:\/\/\S+$/, '');
+    return { success: false, error: `GitHub didn't create ${repoName}: ${said.replace(/\.$/, '')}.` };
 }
 
 /**
@@ -161,7 +191,7 @@ export async function importDemoBundle(context: HandlerContext, zipPath: string)
             const created = await createRepositoryFromZip(
                 { repoOps: repoOperations, fileOps: fileOperations, logger: context.logger },
                 unpacked.files,
-                { repoName: suggestRepoName(unpacked.rootName, 'storefront'), isPrivate: true },
+                { repoName: suggestRepoName(unpacked.rootName, 'storefront'), isPrivate: false },
             );
             const card = cardFromZip(unpacked.files, created) ?? {
                 kind: 'demo',

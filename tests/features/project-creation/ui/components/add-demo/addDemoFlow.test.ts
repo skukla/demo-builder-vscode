@@ -165,7 +165,7 @@ describe('buildAddedDemo', () => {
 describe('continueLabel', () => {
     it('is Continue on the link stage, Use <name> for a shipped template, Add demo otherwise', () => {
         expect(continueLabel('link', undefined, undefined)).toBe('Continue');
-        expect(continueLabel('link', undefined, undefined, 'add', 'zip')).toBe('Choose a zip file…');
+        expect(continueLabel('link', undefined, undefined, 'add', 'zip')).toBe('Choose a zip file');
         expect(
             continueLabel('found', { outcome: 'shipped', shippedPackageId: 'starter', fullName: 'a/b' }, 'Starter (B2B + B2C)'),
         ).toBe('Use Starter (B2B + B2C)');

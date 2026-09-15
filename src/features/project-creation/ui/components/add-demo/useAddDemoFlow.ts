@@ -8,7 +8,7 @@
  * @module features/project-creation/ui/components/add-demo/useAddDemoFlow
  */
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
     buildAddedDemo,
     continueLabel as continueLabelFor,
@@ -24,6 +24,7 @@ import { webviewClient } from '@/core/ui/utils/vscode-api';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { AddedDemo, StorefrontKind } from '@/types/projectFile';
 import type { SettingsFile } from '@/types/settingsFile';
+import type { StorefrontZipProgressPayload } from '@/types/webviewPayloads';
 import type {
     AddSharedDemoRequest,
     AddSharedDemoResult,
@@ -43,6 +44,8 @@ interface Answer<R> {
     result?: R;
     /** The probe's refusal when no GitHub session can be found. */
     needsAuth?: string;
+    /** The zip import's refusal when the account already has a repository by that name. */
+    existing?: { owner: string; repo: string };
 }
 
 export type ProbeState =
@@ -90,7 +93,13 @@ export interface UseAddDemoFlowReturn {
     setUpdateRemembered: (update: boolean) => void;
     /** The zip is becoming a repository: the host is picking, unpacking and pushing. */
     importing: boolean;
+    /** The step the import is on, as the host last reported it. */
+    importStep?: StorefrontZipProgressPayload;
     zipError?: string;
+    /** The repository the zip's name is already taken by, when that is why it failed. */
+    zipConflict?: { owner: string; repo: string };
+    /** Add the demo from that existing repository instead. */
+    useExistingRepo: () => void;
     makePublic: boolean;
     setMakePublic: (on: boolean) => void;
     /** The setup a bundle carried, when the zip was one. */
@@ -120,7 +129,19 @@ export function useAddDemoFlow(args: UseAddDemoFlowArgs): UseAddDemoFlowReturn {
     const [addError, setAddError] = useState<string | undefined>(undefined);
     const [importing, setImporting] = useState(false);
     const [zipError, setZipError] = useState<string | undefined>(undefined);
-    const [makePublic, setMakePublic] = useState(false);
+    const [importStep, setImportStep] = useState<StorefrontZipProgressPayload | undefined>(undefined);
+
+    // Listen for the host's step reports only while an import runs; a new import starts blank.
+    useEffect(() => {
+        if (!importing) {
+            setImportStep(undefined);
+            return undefined;
+        }
+        return webviewClient.onMessage('storefront-zip-progress', (data) => setImportStep(data as StorefrontZipProgressPayload));
+    }, [importing]);
+    const [zipConflict, setZipConflict] = useState<{ owner: string; repo: string } | undefined>(undefined);
+    // Public by default (owner, 2026-09-14): a demo package is for sharing.
+    const [makePublic, setMakePublic] = useState(true);
     const [bundleSetup, setBundleSetup] = useState<SettingsFile | undefined>(undefined);
 
     const result = probe.status === 'done' ? probe.result : undefined;
@@ -164,12 +185,14 @@ export function useAddDemoFlow(args: UseAddDemoFlowArgs): UseAddDemoFlowReturn {
     const importZip = useCallback(async (): Promise<void> => {
         setImporting(true);
         setZipError(undefined);
+        setZipConflict(undefined);
         try {
             const answer = await webviewClient.request<Answer<ImportStorefrontZipResult>>('import-storefront-zip', {
                 isPrivate: !makePublic,
             } satisfies ImportStorefrontZipRequest);
             if (!answer.success || !answer.result) {
                 setZipError(answer.error ?? IMPORT_FAILED);
+                setZipConflict(answer.existing);
                 return;
             }
             const { cancelled, owner, repo, setup } = answer.result;
@@ -238,8 +261,8 @@ export function useAddDemoFlow(args: UseAddDemoFlowArgs): UseAddDemoFlowReturn {
     const zipWay = mode === 'add' && way === 'zip';
     const canContinue =
         stage === 'link'
-            ? !importing && (zipWay || draft.source !== undefined)
-            : !adding && !importing && ((mode === 'add' && result?.outcome === 'shipped') || buildable);
+            ? !importing && !zipError && (zipWay || draft.source !== undefined)
+            : !adding && !importing && !addError && ((mode === 'add' && result?.outcome === 'shipped') || buildable);
 
     const onContinue = useCallback((): void => {
         if (!canContinue) return;
@@ -256,11 +279,29 @@ export function useAddDemoFlow(args: UseAddDemoFlowArgs): UseAddDemoFlowReturn {
     }, [canContinue, stage, zipWay, importZip, runProbe, result, onUseShipped, onClose, commit]);
 
     const onBack = useCallback((): void => {
+        // From an error view, Back returns to the form the error came from.
+        if (zipError) {
+            setZipError(undefined);
+            setZipConflict(undefined);
+            return;
+        }
+        if (addError) {
+            setAddError(undefined);
+            return;
+        }
         if (stage !== 'found' || adding) return;
         setStage('link');
         setProbe({ status: 'idle' });
-        setAddError(undefined);
-    }, [stage, adding]);
+    }, [zipError, addError, stage, adding]);
+
+    const useExistingRepo = useCallback((): void => {
+        if (!zipConflict) return;
+        const source = zipConflict;
+        setZipError(undefined);
+        setZipConflict(undefined);
+        setDraft((d) => ({ ...d, source }));
+        void probeSource(source);
+    }, [zipConflict, probeSource]);
 
     const setSource = useCallback((source: AddDemoDraft['source']): void => {
         setDraft((d) => ({ ...d, source }));
@@ -290,7 +331,7 @@ export function useAddDemoFlow(args: UseAddDemoFlowArgs): UseAddDemoFlowReturn {
         adding,
         addError,
         canContinue,
-        canGoBack: stage === 'found' && !adding,
+        canGoBack: Boolean(zipError) || (stage === 'found' && !adding),
         continueLabel: continueLabelFor(stage, result, shippedName, mode, way),
         onContinue,
         onBack,
@@ -301,7 +342,10 @@ export function useAddDemoFlow(args: UseAddDemoFlowArgs): UseAddDemoFlowReturn {
         setKeepCopy,
         setUpdateRemembered,
         importing,
+        importStep,
         zipError,
+        zipConflict,
+        useExistingRepo,
         makePublic,
         setMakePublic,
         bundleSetup,

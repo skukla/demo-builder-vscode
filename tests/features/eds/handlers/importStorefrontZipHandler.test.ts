@@ -45,6 +45,7 @@ const SETUP: SettingsFile = {
     edsConfig: { githubOwner: 'sender' },
 };
 
+const tokenService = { validateToken: jest.fn() };
 const repoOperations = {
     createEmptyRepository: jest.fn(),
     waitForContent: jest.fn().mockResolvedValue(true),
@@ -67,7 +68,8 @@ function ctx() {
 
 beforeEach(() => {
     jest.clearAllMocks();
-    mockServices.mockReturnValue({ repoOperations, fileOperations });
+    mockServices.mockReturnValue({ repoOperations, fileOperations, tokenService });
+    tokenService.validateToken.mockResolvedValue({ valid: true, user: { login: 'steve' } });
     mockRead.mockReturnValue({ files: STOREFRONT, rootName: 'citisignal-b2b-summit-main', dropped: 7 });
     repoOperations.createEmptyRepository.mockResolvedValue({ fullName: 'steve/citisignal-b2b-summit', name: 'citisignal-b2b-summit', defaultBranch: 'main' });
     mockExecute.mockResolvedValue(undefined);
@@ -83,24 +85,64 @@ describe('handleImportStorefrontZip', () => {
         expect(repoOperations.createEmptyRepository).not.toHaveBeenCalled();
     });
 
-    it('creates a private repository named after the zip in the SC\'s own account, pushes, flags it a template, and answers owner/repo', async () => {
+    it('creates a public repository named after the zip in the SC\'s own account, pushes, flags it a template, and answers owner/repo', async () => {
         const result = await handleImportStorefrontZip(ctx(), { zipPath: '/tmp/summit.zip' });
 
         expect(mockOpen).not.toHaveBeenCalled();
-        expect(repoOperations.createEmptyRepository).toHaveBeenCalledWith('citisignal-b2b-summit', true);
+        expect(repoOperations.createEmptyRepository).toHaveBeenCalledWith('citisignal-b2b-summit', false);
         expect(repoOperations.waitForContent).toHaveBeenCalledWith('steve', 'citisignal-b2b-summit');
-        expect(mockPush).toHaveBeenCalledWith(fileOperations, 'steve', 'citisignal-b2b-summit', STOREFRONT, 'Add storefront from a zip file', expect.anything());
+        expect(mockPush).toHaveBeenCalledWith(fileOperations, 'steve', 'citisignal-b2b-summit', STOREFRONT, 'Add storefront from a zip file', expect.anything(), expect.any(Function));
         expect(repoOperations.setTemplateFlag).toHaveBeenCalledWith('steve', 'citisignal-b2b-summit', true);
         expect(result).toEqual({
             success: true,
-            result: { owner: 'steve', repo: 'citisignal-b2b-summit', fullName: 'steve/citisignal-b2b-summit', fileCount: 3, dropped: 7, isPrivate: true },
+            result: { owner: 'steve', repo: 'citisignal-b2b-summit', fullName: 'steve/citisignal-b2b-summit', fileCount: 3, dropped: 7, isPrivate: false },
         });
     });
 
-    it('takes a name and public visibility when asked', async () => {
+    it('says plainly when the account already has a repository by that name, and names it so the dialog can offer it', async () => {
+        // Measured 2026-09-14: GitHub answers a 422 whose message the dialog showed raw, JSON and docs link included.
+        repoOperations.createEmptyRepository.mockRejectedValue(
+            new Error('Repository creation failed.: {"resource":"Repository","code":"custom","field":"name","message":"name already exists on this account"} - https://docs.github.com/rest/repos/repos#create-a-repository-for-the-authenticated-user'),
+        );
+
+        const result = await handleImportStorefrontZip(ctx(), { zipPath: '/tmp/summit.zip' });
+
+        expect(result).toStrictEqual({
+            success: false,
+            code: 'REPO_EXISTS',
+            error: 'Your GitHub account already has a repository named citisignal-b2b-summit.',
+            existing: { owner: 'steve', repo: 'citisignal-b2b-summit' },
+        });
+        expect(mockPush).not.toHaveBeenCalled();
+    });
+
+    it('turns any other GitHub refusal into one sentence, without the JSON or the docs link', async () => {
+        repoOperations.createEmptyRepository.mockRejectedValue(
+            new Error('Repository creation failed.: {"message":"Repository creation failed: quota reached"} - https://docs.github.com/rest'),
+        );
+
+        const result = await handleImportStorefrontZip(ctx(), { zipPath: '/tmp/summit.zip' });
+
+        expect(result).toStrictEqual({
+            success: false,
+            error: "GitHub didn't create citisignal-b2b-summit: Repository creation failed: quota reached.",
+        });
+    });
+
+    it("tells the dialog each step as it runs, on the 'storefront-zip-progress' channel", async () => {
+        const context = ctx();
+
+        await handleImportStorefrontZip(context, { zipPath: '/tmp/summit.zip' });
+
+        const steps = (context.sendMessage as jest.Mock).mock.calls.filter(([type]) => type === 'storefront-zip-progress').map(([, payload]) => payload);
+        expect(steps[0]).toStrictEqual({ message: 'Reading the zip', detail: 'summit.zip' });
+        expect(steps[1]).toStrictEqual({ message: 'Creating the repository', detail: 'citisignal-b2b-summit · 3 files · 7 left out' });
+    });
+
+    it('takes a name and private visibility when asked', async () => {
         repoOperations.createEmptyRepository.mockResolvedValue({ fullName: 'steve/summit-demo', name: 'summit-demo' });
-        await handleImportStorefrontZip(ctx(), { zipPath: '/tmp/summit.zip', repoName: 'summit-demo', isPrivate: false });
-        expect(repoOperations.createEmptyRepository).toHaveBeenCalledWith('summit-demo', false);
+        await handleImportStorefrontZip(ctx(), { zipPath: '/tmp/summit.zip', repoName: 'summit-demo', isPrivate: true });
+        expect(repoOperations.createEmptyRepository).toHaveBeenCalledWith('summit-demo', true);
     });
 
     it('refuses a zip that is not a storefront, naming what is missing, before creating anything', async () => {
@@ -121,12 +163,6 @@ describe('handleImportStorefrontZip', () => {
         const bad = await handleImportStorefrontZip(ctx(), { zipPath: '/tmp/x.zip', repoName: '-bad name!' });
         expect(bad.success).toBe(false);
         expect(bad.error).toMatch(/Repository name/);
-    });
-
-    it("passes GitHub's refusal through (a name already taken)", async () => {
-        repoOperations.createEmptyRepository.mockRejectedValue(new Error('Repository name already exists'));
-        expect(await handleImportStorefrontZip(ctx(), { zipPath: '/tmp/summit.zip' })).toEqual({ success: false, error: 'Repository name already exists' });
-        expect(mockPush).not.toHaveBeenCalled();
     });
 
     it("passes a bundle's setup back so the dialog can offer to start from it", async () => {
@@ -167,7 +203,7 @@ describe('importDemoBundle', () => {
 
         const result = await importDemoBundle(ctx(), '/x/bodea-demo-bundle.zip');
 
-        expect(repoOperations.createEmptyRepository).toHaveBeenCalledWith('bodea', true);
+        expect(repoOperations.createEmptyRepository).toHaveBeenCalledWith('bodea', false);
         const card = { kind: 'demo', version: 1, name: 'Bodea', source: { owner: 'steve', repo: 'bodea', branch: 'main' }, storefrontKind: 'eds' };
         expect(mockRemember).toHaveBeenCalledWith(card);
         expect(mockExecute).toHaveBeenCalledWith('demoBuilder.createProject', {
