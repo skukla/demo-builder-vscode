@@ -18,6 +18,7 @@
  */
 
 import {
+    applyStops,
     edsProject,
     failOn,
     gitCalls,
@@ -104,6 +105,36 @@ describe('CRITERION 2 — a failed git step never pushes', () => {
         expect(result.success).toBe(false);
     });
 
+    it('does not push when the recorded version is not a template commit', async () => {
+        // The old merge recorded the storefront's OWN head. Diffing from it would
+        // replay the whole template over the SC's edits, so it is refused outright.
+        failOn(/merge-base --is-ancestor/);
+
+        const result = await service().syncWithTemplate(edsProject(), { strategy: 'merge' });
+
+        expect(pushed()).toBe(false);
+        expect(result.success).toBe(false);
+    });
+
+    it('does not push when the 3-way apply fails for a reason other than conflicts', async () => {
+        applyStops('');
+
+        const result = await service().syncWithTemplate(edsProject(), { strategy: 'merge' });
+
+        expect(pushed()).toBe(false);
+        expect(result.success).toBe(false);
+    });
+
+    it('a merge with no recorded version never reaches git', async () => {
+        const result = await service().syncWithTemplate(
+            edsProject({ lastSyncedCommit: undefined }),
+            { strategy: 'merge' },
+        );
+
+        expect(mockExecute).not.toHaveBeenCalled();
+        expect(result.success).toBe(false);
+    });
+
     it('reports failure when the push itself fails', async () => {
         // The one case where a push IS attempted — the result must not claim
         // success, or the caller records a sync that never landed.
@@ -116,13 +147,9 @@ describe('CRITERION 2 — a failed git step never pushes', () => {
 });
 
 describe('CRITERION 3 — conflicts surface rather than resolving silently', () => {
-    /** Make the conflict probe report two conflicted files. */
+    /** The 3-way apply stops, leaving two files unmerged. */
     function withConflicts() {
-        mockExecute.mockImplementation(async (cmd: string) =>
-            /diff --name-only --diff-filter=U/.test(cmd)
-                ? { code: 0, stdout: 'blocks/hero/hero.js\nstyles/styles.css\n', stderr: '' }
-                : { code: 0, stdout: '', stderr: '' }
-        );
+        applyStops('blocks/hero/hero.js\nstyles/styles.css\n');
     }
 
     it('CONTROL: with no conflicts the result carries none', async () => {
@@ -138,7 +165,7 @@ describe('CRITERION 3 — conflicts surface rather than resolving silently', () 
         expect(result.conflicts).toEqual(['blocks/hero/hero.js', 'styles/styles.css']);
     });
 
-    it('a conflicted merge STOPS: aborts, pushes nothing, and fails with the file list', async () => {
+    it('a conflicted merge STOPS: restores the clone, pushes nothing, and fails with the file list', async () => {
         // A user picks "merge" to KEEP their local work. A conflict is exactly
         // the case where they edited the region the template changed, so the
         // service backs out and leaves the decision to them. Until 2026-09-14
@@ -155,14 +182,14 @@ describe('CRITERION 3 — conflicts surface rather than resolving silently', () 
             conflicts: ['blocks/hero/hero.js', 'styles/styles.css'],
             error: 'Merge conflicts in 2 files (blocks/hero/hero.js, styles/styles.css); the template update was not applied.',
         });
-        expect(gitCalls().some((c) => /merge --abort/.test(c))).toBe(true);
+        expect(gitCalls().some((c) => /reset --hard HEAD/.test(c))).toBe(true);
         expect(gitCalls().some((c) => /read-tree/.test(c))).toBe(false);
         expect(pushed()).toBe(false);
     });
 
     it('a conflicted merge writes nothing back into the checkout', async () => {
-        // Nothing to restore: the abort returns the tree to where the backups
-        // were taken, and a reset that would need them never runs.
+        // Nothing to restore: `reset --hard HEAD` returns the clone to where the
+        // backups were taken, and a template reset that would need them never runs.
         withConflicts();
 
         await service().syncWithTemplate(edsProject(), { strategy: 'merge' });
@@ -171,11 +198,7 @@ describe('CRITERION 3 — conflicts surface rather than resolving silently', () 
     });
 
     it('a single conflicted file is worded in the singular', async () => {
-        mockExecute.mockImplementation(async (cmd: string) =>
-            /diff --name-only --diff-filter=U/.test(cmd)
-                ? { code: 0, stdout: 'blocks/hero/hero.js\n', stderr: '' }
-                : { code: 0, stdout: '', stderr: '' }
-        );
+        applyStops('blocks/hero/hero.js\n');
 
         const result = await service().syncWithTemplate(edsProject(), { strategy: 'merge' });
 
