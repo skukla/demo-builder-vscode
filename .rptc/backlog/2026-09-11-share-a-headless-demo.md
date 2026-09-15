@@ -5,7 +5,8 @@ area: eds
 parent: EDS-13
 needs: [EDS-13b]
 value: low
-status: backlog
+status: superseded
+superseded-by: EDS-13g
 ---
 
 # Share a headless demo

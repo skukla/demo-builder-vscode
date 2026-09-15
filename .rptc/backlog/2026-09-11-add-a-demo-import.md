@@ -83,3 +83,4 @@ unchanged from there: the Storefront area shows the frontend piece as fixed by t
 - 2026-09-14  refactor(integrations): the mesh flyout's Commerce scope lines are one component (`0d548a497`)
 - 2026-09-14  fix(add-demo): the spinner stays up while a dialog closes after a successful commit (`2b804909f`)
 - 2026-09-14  fix(add-demo): a zip import that outlasts 30 seconds, and says what it is doing (`ae3689398`)
+- 2026-09-15  feat(add-demo)!: no copy of an added demo; Remove deletes only a zip's repository (`171db9442`)
