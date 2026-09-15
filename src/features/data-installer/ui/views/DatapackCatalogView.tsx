@@ -233,7 +233,7 @@ export function DatapackCatalogView(): React.JSX.Element {
         return (
             <View height="100vh">
                 <Flex justifyContent="center" alignItems="center" height="100%">
-                    <LoadingDisplay size="L" message="Loading datapacks..." />
+                    <LoadingDisplay size="L" message="Loading datapacks" />
                 </Flex>
             </View>
         );
@@ -254,7 +254,7 @@ export function DatapackCatalogView(): React.JSX.Element {
                     <SearchHeader
                         searchQuery={query}
                         onSearchQueryChange={setQuery}
-                        searchPlaceholder="Filter datapacks..."
+                        searchPlaceholder="Filter datapacks"
                         searchThreshold={SEARCH_THRESHOLD}
                         totalCount={groups.length}
                         filteredCount={filtered.length}

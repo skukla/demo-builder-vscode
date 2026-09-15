@@ -65,6 +65,6 @@ export function useElapsedStage(active: boolean, stages: ElapsedStage[]): string
  * bigger ones. Do not add a mechanism here without a measurement behind it.
  */
 export const ORG_SERVICES_LOADING_STAGES: ElapsedStage[] = [
-    { afterMs: 4000, message: "Waiting on Adobe's API catalog service…" },
+    { afterMs: 4000, message: "Waiting on Adobe's API catalog service" },
     { afterMs: 15000, message: 'Still waiting — Adobe can take up to a minute to respond.' },
 ];

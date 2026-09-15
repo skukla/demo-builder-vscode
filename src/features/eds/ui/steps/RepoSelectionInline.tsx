@@ -557,13 +557,13 @@ export function RepoSelectionInline({
                             selectedId={selectedRepo?.id}
                             onSelect={selectItem}
                             labels={{
-                                loadingMessage: 'Loading your repositories...',
+                                loadingMessage: 'Loading your repositories',
                                 loadingSubMessage: 'Fetching repositories with write access',
                                 errorTitle: 'Error Loading Repositories',
                                 emptyTitle: 'No Repositories Found',
                                 emptyMessage:
                                     'No repositories found with write access. Create a new repository to get started.',
-                                searchPlaceholder: 'Type to filter repositories...',
+                                searchPlaceholder: 'Type to filter repositories',
                                 itemNoun: 'repository',
                                 itemNounPlural: 'repositories',
                                 ariaLabel: 'GitHub Repositories',

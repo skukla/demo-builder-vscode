@@ -26,21 +26,21 @@ function edsProject(over: Parameters<typeof createProjectsDashboardProject>[0] =
 
 describe('the transitional statuses each keep their own words', () => {
     it('says a non-EDS project is resetting', () => {
-        expect(getStatusText('resetting')).toBe('Resetting...');
+        expect(getStatusText('resetting')).toBe('Resetting');
     });
 
     it('says a non-EDS project is republishing', () => {
-        expect(getStatusText('republishing')).toBe('Republishing...');
+        expect(getStatusText('republishing')).toBe('Republishing');
     });
 
     it('warns while an EDS project is resetting, rather than calling it published', () => {
         expect(getStatusVariant('resetting', true)).toBe('warning');
-        expect(getStatusText('resetting', undefined, true)).toBe('Resetting...');
+        expect(getStatusText('resetting', undefined, true)).toBe('Resetting');
     });
 
     it('warns while an EDS project is republishing', () => {
         expect(getStatusVariant('republishing', true)).toBe('warning');
-        expect(getStatusText('republishing', undefined, true)).toBe('Republishing...');
+        expect(getStatusText('republishing', undefined, true)).toBe('Republishing');
     });
 });
 

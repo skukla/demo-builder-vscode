@@ -50,5 +50,5 @@ export function progressLabel(toolName: string, simulated = false): string | und
     // happened. The marker is the whole difference.
     return simulated
         ? `${SERVER_DISPLAY_NAME} · ${phrase} (simulated — nothing changed)`
-        : `${SERVER_DISPLAY_NAME} · ${phrase}…`;
+        : `${SERVER_DISPLAY_NAME} · ${phrase}`;
 }

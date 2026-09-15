@@ -246,7 +246,7 @@ export function AiSkillsList({
         return (
             <Flex gap="size-100" alignItems="center" data-testid="ai-skills-loading">
                 <Spinner size="S" aria-label="Checking" />
-                <Text UNSAFE_className="text-gray-700">Checking the project's skills…</Text>
+                <Text UNSAFE_className="text-gray-700">Checking the project's skills</Text>
             </Flex>
         );
     }

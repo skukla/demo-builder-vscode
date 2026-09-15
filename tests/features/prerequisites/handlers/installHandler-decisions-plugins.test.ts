@@ -268,7 +268,7 @@ describe('the plugin loop itself', () => {
         expect((context.sendMessage as jest.Mock).mock.calls
             .filter(([t]) => t === 'prerequisite-status')
             .map(([, p]) => (p as { message?: string }).message),
-        ).toContain('Installing API Mesh Plugin for Node 18...');
+        ).toContain('Installing API Mesh Plugin for Node 18');
     });
 
     it('carries on to the next command when one plugin command fails', async () => {

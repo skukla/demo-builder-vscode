@@ -503,7 +503,7 @@ async function dispatchDeploy(
         try {
             // Step in the FIRST arg, matching the deploy tails' convention — the
             // caller renders arg 1 as the current step.
-            deps.onProgress?.('Generating mesh configuration...');
+            deps.onProgress?.('Generating mesh configuration');
             await deps.writeComponentEnv(project, entry.id, componentPath);
         } catch (error) {
             // Deploying anyway is the ENOENT this step exists to prevent, so fail
@@ -549,7 +549,7 @@ async function dispatchDeploy(
     // installer cannot authenticate — the first live install proved it).
     let extraEnv: Record<string, string> | undefined;
     if (entry.lifecycle === 'app-management' && deps.resolveAppManagementEnv) {
-        deps.onProgress?.('Resolving Commerce IMS credentials...');
+        deps.onProgress?.('Resolving Commerce IMS credentials');
         try {
             extraEnv = await deps.resolveAppManagementEnv(project);
         } catch (error) {
@@ -600,7 +600,7 @@ export async function addAppBuilderComponent(
         if (entry.nodeVersion) {
             // Visible, not silent: a first-time fnm install takes ~30s and the
             // progress channel is the surface every add path already has.
-            deps.onProgress?.(`Preparing Node ${entry.nodeVersion} (one-time install)...`);
+            deps.onProgress?.(`Preparing Node ${entry.nodeVersion} (one-time install)`);
             const nodeError = await deps.ensureNodeVersion?.(entry.nodeVersion);
             if (nodeError) {
                 return { success: false, error: nodeError };
@@ -609,7 +609,7 @@ export async function addAppBuilderComponent(
 
         // The subscribe's org-services fetch alone measured 43.5s cold — the
         // longest silent stretch in the chain (owner audit, 2026-08-27).
-        deps.onProgress?.('Subscribing Adobe APIs…');
+        deps.onProgress?.('Subscribing Adobe APIs');
         await deps.subscribeRequiredApis(deps.catalog, project);
 
         const installed = await cloneAndInstall(project, entry, deps);
@@ -724,7 +724,7 @@ export async function deployAppBuilderComponent(
 
     try {
         if (entry.nodeVersion) {
-            deps.onProgress?.(`Preparing Node ${entry.nodeVersion} (one-time install)...`);
+            deps.onProgress?.(`Preparing Node ${entry.nodeVersion} (one-time install)`);
             const nodeError = await deps.ensureNodeVersion?.(entry.nodeVersion);
             if (nodeError) {
                 return { success: false, error: nodeError };
@@ -738,7 +738,7 @@ export async function deployAppBuilderComponent(
         // adobeio_api). Idempotent reconcile — a subscribed credential is a
         // no-op PUT of the same union.
         if (entry.lifecycle === 'app-management') {
-            deps.onProgress?.('Subscribing Adobe APIs…');
+            deps.onProgress?.('Subscribing Adobe APIs');
             await deps.subscribeRequiredApis(deps.catalog, project);
         }
 

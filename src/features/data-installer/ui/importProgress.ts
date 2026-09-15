@@ -70,11 +70,11 @@ export function progressLabel(
 
     if (current) {
         // "Removing", not "Resetting": the button that starts this says
-        // "Remove data…", and a project RESET now restores the pack — so
+        // "Remove data", and a project RESET now restores the pack — so
         // "Resetting" here named the one thing this is not. The `reset`
         // operation ID stays; it is the wire, not the wording.
         const verb = operation === 'reset' ? 'Removing' : 'Importing';
-        return `${verb} ${dataTypeLabel(current)}… ${count}`;
+        return `${verb} ${dataTypeLabel(current)} · ${count}`;
     }
     if (done === 0) {
         return undefined;

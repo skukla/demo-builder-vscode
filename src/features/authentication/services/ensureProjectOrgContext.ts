@@ -95,7 +95,7 @@ export async function ensureProjectOrgContext(options: {
     await vscode.window.withProgress(
         {
             location: vscode.ProgressLocation.Notification,
-            title: 'Opening browser to switch organization…',
+            title: 'Opening browser to switch organization',
             cancellable: false,
         },
         () => authManager.loginAndRestoreProjectContext(

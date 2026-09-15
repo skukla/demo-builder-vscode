@@ -151,7 +151,7 @@ export async function handleGetProjects(
         if (currentOrg) {
             await context.sendMessage('project-loading-status', {
                 isLoading: true,
-                message: 'Loading your Adobe projects...',
+                message: 'Loading your Adobe projects',
                 subMessage: `Fetching from organization: ${currentOrg.name || 'your organization'}`,
             });
         }

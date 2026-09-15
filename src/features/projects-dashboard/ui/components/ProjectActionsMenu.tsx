@@ -229,7 +229,7 @@ export function ProjectActionsMenu({
         // exists, per-integration actions belong there and this is the route —
         // the projects list otherwise has none (project → dashboard → Integrations).
         if (onOpenIntegrations && hasIntegrations(project)) {
-            manage.push({ key: 'openIntegrations', label: 'Integrations…', icon: 'apiAccess' });
+            manage.push({ key: 'openIntegrations', label: 'Integrations', icon: 'apiAccess' });
         }
         if (onPinToggle) {
             manage.push({

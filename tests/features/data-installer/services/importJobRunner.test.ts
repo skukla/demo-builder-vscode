@@ -129,7 +129,7 @@ describe('watchImportJob', () => {
      * It builds a partial per-type map on EVERY poll — `classify` depends on
      * that, since the map must cover the requested types before the job counts
      * as terminal — but it returned once, at the end. So the modal showed a bare
-     * "Importing…" for the whole run, sometimes minutes. This callback is the
+     * "Importing" for the whole run, sometimes minutes. This callback is the
      * only new thing needed: the push and the render hang off it.
      */
     describe('progress reporting', () => {

@@ -12,7 +12,7 @@ were wrong within an hour of being written. This one is derived from the
 handbook's own callouts and checked against the enforcers on disk in both
 directions, so it cannot.
 
-- **113** conventions, **113** enforced
+- **114** conventions, **114** enforced
 - **28** name the decision record behind them
 - **6** name a procedure — an SOP or a skill
 - **1** have all three layers
@@ -125,6 +125,7 @@ it means the rule rests on somebody noticing.
 | Utility classes live in the overrides layer, not scattered through component sheets. | [ADR](../architecture/adr/018-css-architecture.md) |  | `inline-styles.test.ts` |
 | Styling reaches Spectrum through `UNSAFE_className` and the `cn()` helper, not through style objects. |  |  | `inline-styles.test.ts` |
 | Class names are not assembled dynamically beyond a small ceiling. |  |  | `dynamicClassSiteCeiling` ledger |
+| Text never ends in an ellipsis. A progress message says what is happening — "Saving the demo package", not "Saving the demo package…" — and a button that opens a picker says what it opens. |  |  | `no-trailing-ellipsis.test.ts` |
 
 ## 8. Agents are a second door, never the only one
 

@@ -223,7 +223,7 @@ export function ConnectStoreStepContent({
             <CenteredFeedbackContainer>
                 <LoadingDisplay
                     size="L"
-                    message="Loading component configurations..."
+                    message="Loading component configurations"
                     helperText="This should only take a moment"
                 />
             </CenteredFeedbackContainer>
@@ -275,7 +275,7 @@ export function ConnectStoreStepContent({
             <CenteredFeedbackContainer>
                 <LoadingDisplay
                     size="L"
-                    message="Detecting store structure..."
+                    message="Detecting store structure"
                     helperText="This may take up to 30 seconds"
                 />
             </CenteredFeedbackContainer>

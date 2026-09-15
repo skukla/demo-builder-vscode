@@ -62,7 +62,7 @@ describe('useAuthStatus - core', () => {
                 })
             );
 
-            expect(result.current.authStatus).toBe('Checking Adobe authentication...');
+            expect(result.current.authStatus).toBe('Checking Adobe authentication');
             expect(result.current.authSubMessage).toBe('');
             expect(result.current.authTimeout).toBe(false);
             expect(result.current.showLoadingSpinner).toBe(false);
@@ -159,7 +159,7 @@ describe('useAuthStatus - core', () => {
                 result.current.checkAuthentication();
             });
 
-            expect(result.current.authStatus).toBe('Checking Adobe authentication...');
+            expect(result.current.authStatus).toBe('Checking Adobe authentication');
         });
     });
 

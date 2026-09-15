@@ -97,7 +97,7 @@ async function applyForkSync(
     if (items.length === 0) return result;
     const svc = new ForkSyncService(ctx.secrets, ctx.logger);
     for (const item of items) {
-        onProgress?.(`Syncing fork ${item.owner}/${item.repo}...`);
+        onProgress?.(`Syncing fork ${item.owner}/${item.repo}`);
         try {
             const r = await svc.syncFork(item.owner, item.repo, item.branch);
             if (r.success) {
@@ -133,7 +133,7 @@ async function applyTemplate(
     if (items.length === 0) return { result, succeededPaths };
     const svc = new TemplateSyncService(ctx.secrets, ctx.logger, ctx.commandManager);
     for (const { project } of items) {
-        onProgress?.(`Syncing template for ${project.name}...`);
+        onProgress?.(`Syncing template for ${project.name}`);
         try {
             const r = await svc.syncWithTemplate(project, { strategy: 'merge' });
             if (r.success) {
@@ -175,7 +175,7 @@ async function applyComponents(
     for (const { project, items: updates } of byProject.values()) {
         for (const update of updates) {
             if (!update.downloadUrl) continue;
-            onProgress?.(`Updating ${update.componentId} in ${project.name}...`);
+            onProgress?.(`Updating ${update.componentId} in ${project.name}`);
             try {
                 await updater.updateComponent(
                     project,
@@ -216,7 +216,7 @@ async function applyAdobeMcp(
     // in the STOREFRONT dir — a silent no-op that re-offered the same update
     // forever. The shared core is what makes that drift impossible now.)
     for (const { project, packageName, latestVersion } of items) {
-        onProgress?.(`Updating ${packageName} → ${latestVersion} in ${project.name}...`);
+        onProgress?.(`Updating ${packageName} → ${latestVersion} in ${project.name}`);
         try {
             await applyAdobeMcpUpdate(project, packageName, latestVersion, ctx);
             result.successCount++;
@@ -255,7 +255,7 @@ async function applyAddons(
             );
             continue;
         }
-        onProgress?.(`Updating block library ${item.library.name}...`);
+        onProgress?.(`Updating block library ${item.library.name}`);
         try {
             await applyBlockLibraryUpdateResolved(item, effectiveBehavior, ctx);
             // 'ask' always resolves to 'disabled' above, so the setting alone says
@@ -276,7 +276,7 @@ async function applyAddons(
     }
 
     for (const item of inspector) {
-        onProgress?.(`Updating Inspector SDK in ${item.project.name}...`);
+        onProgress?.(`Updating Inspector SDK in ${item.project.name}`);
         try {
             await updateCommitShaWithRollback(
                 item.project.installedInspectorSdk,

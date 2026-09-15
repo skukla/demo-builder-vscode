@@ -485,7 +485,7 @@ export async function resetEdsProjectWithUI(options: EdsResetWithUIOptions): Pro
                 context.logger.info(`${logPrefix} Resetting EDS project: ${repoFullName}`);
 
                 // Pre-flight auth checks
-                progress.report({ message: 'Checking authentication…' });
+                progress.report({ message: 'Checking authentication' });
                 const daLiveResult = await checkDaLiveAuth(
                     context,
                     project,
@@ -504,7 +504,7 @@ export async function resetEdsProjectWithUI(options: EdsResetWithUIOptions): Pro
                 // reset never runs against the wrong org; the gate aborts with a
                 // "Switch IMS Org" prompt, mirroring DeployMeshCommand.
                 if (project.adobe?.organization) {
-                    progress.report({ message: 'Checking Adobe I/O authentication…' });
+                    progress.report({ message: 'Checking Adobe I/O authentication' });
                     const adobeResult = await checkAdobeAuth(
                         project,
                         context,
@@ -514,7 +514,7 @@ export async function resetEdsProjectWithUI(options: EdsResetWithUIOptions): Pro
                     );
                     if (adobeResult) return adobeResult;
 
-                    progress.report({ message: 'Checking Adobe organization…' });
+                    progress.report({ message: 'Checking Adobe organization' });
                     const orgResult = await checkOrgContext(
                         project,
                         context,
@@ -525,7 +525,7 @@ export async function resetEdsProjectWithUI(options: EdsResetWithUIOptions): Pro
                     if (orgResult) return orgResult;
                 }
 
-                progress.report({ message: 'Checking GitHub App…' });
+                progress.report({ message: 'Checking GitHub App' });
                 const appResult = await checkGitHubAppInstallation(
                     vscode,
                     context,
@@ -719,7 +719,7 @@ async function removeProjectSampleData(
     progress: { report: (value: { message: string }) => void },
 ): Promise<void> {
     try {
-        progress.report({ message: 'Removing datapack…' });
+        progress.report({ message: 'Removing datapack' });
 
         const { removeSampleData } = await import(
             '@/features/data-installer/services/sampleDataInstall'

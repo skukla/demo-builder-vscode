@@ -123,7 +123,7 @@ export async function handleCancelStorefrontSetup(
         try {
             await context.sendMessage('storefront-setup-progress', {
                 phase: 'cancelling',
-                message: 'Cleaning up resources...',
+                message: 'Cleaning up resources',
                 progress: 0,
             } satisfies StorefrontSetupProgressPayload);
 

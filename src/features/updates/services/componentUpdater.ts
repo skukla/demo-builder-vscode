@@ -151,7 +151,7 @@ export class ComponentUpdater {
                     this.logger.debug('[Updates] Rollback successful - component restored to previous state');
           
                     // Reinstall node_modules (not included in snapshot)
-                    this.logger.debug('[Updates] Reinstalling dependencies after rollback...');
+                    this.logger.debug('[Updates] Reinstalling dependencies after rollback');
                     
                     // Try to get node version from registry, but don't fail if we can't
                     // During rollback, we just want to get dependencies installed
@@ -293,7 +293,7 @@ export class ComponentUpdater {
         try {
             // 1. Install dependencies (always after zipball extraction, unless skipped)
             if (!skipNpmInstall) {
-                this.logger.debug(`[Updates] Installing dependencies for ${componentId}...`);
+                this.logger.debug(`[Updates] Installing dependencies for ${componentId}`);
                 const installResult = await this.commandManager.execute('npm install --no-fund', {
                     cwd: componentPath,
                     timeout: TIMEOUTS.VERY_LONG,

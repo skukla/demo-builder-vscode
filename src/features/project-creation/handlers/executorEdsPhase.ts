@@ -186,7 +186,7 @@ export async function syncEdsConfigToRemote(
         return;
     }
 
-    progressTracker('Syncing Config', 92, 'Pushing config.json to GitHub...');
+    progressTracker('Syncing Config', 92, 'Pushing config.json to GitHub');
 
     const repoUrl = typedConfig.edsConfig?.repoUrl;
     if (!repoUrl) {

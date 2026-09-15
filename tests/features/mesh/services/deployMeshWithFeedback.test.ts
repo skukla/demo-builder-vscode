@@ -74,7 +74,7 @@ describe('progress register', () => {
         const { report } = stubWithProgress();
         mockDeployMeshHeadless.mockImplementation(
             async ({ onProgress }: { onProgress?: (m: string, s?: string) => void }) => {
-                onProgress?.('Reading mesh configuration...');
+                onProgress?.('Reading mesh configuration');
                 return { success: true };
             }
         );
@@ -82,7 +82,7 @@ describe('progress register', () => {
         await deployMeshWithFeedback(deps());
 
         expect(report).toHaveBeenCalledWith(
-            expect.objectContaining({ message: 'Reading mesh configuration...' })
+            expect.objectContaining({ message: 'Reading mesh configuration' })
         );
     });
 
@@ -101,8 +101,8 @@ describe('progress register', () => {
         stubWithProgress();
         mockDeployMeshHeadless.mockImplementation(
             async ({ onProgress }: { onProgress?: (m: string, s?: string) => void }) => {
-                onProgress?.('Reading mesh configuration...');
-                onProgress?.('Deploying...', 'Validating configuration');
+                onProgress?.('Reading mesh configuration');
+                onProgress?.('Deploying', 'Validating configuration');
                 return { success: true };
             }
         );
@@ -118,7 +118,7 @@ describe('progress register', () => {
         stubWithProgress();
         mockDeployMeshHeadless.mockImplementation(
             async ({ onProgress }: { onProgress?: (m: string, s?: string) => void }) => {
-                onProgress?.('Reading mesh configuration...');
+                onProgress?.('Reading mesh configuration');
                 return { success: true };
             }
         );
@@ -142,7 +142,7 @@ describe('progress register', () => {
             }: {
                 onStatus?: (s: string, m?: string, e?: string) => Promise<void> | void;
             }) => {
-                await onStatus?.('deploying', 'Starting deployment...');
+                await onStatus?.('deploying', 'Starting deployment');
                 return { success: true };
             }
         );

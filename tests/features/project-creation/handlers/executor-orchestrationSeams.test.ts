@@ -168,7 +168,7 @@ describe('executeProjectCreation — the progress it reports', () => {
         expect(sendMessage).toHaveBeenCalledWith('creationProgress', {
             currentOperation: 'Setting Up Project',
             progress: 10,
-            message: 'Creating project directory structure...',
+            message: 'Creating project directory structure',
             logs: [],
             meshPhase: undefined,
         });

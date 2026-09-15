@@ -211,7 +211,7 @@ export function StorefrontSetupStep({
 }: StorefrontSetupStepProps): React.ReactElement {
     const [setupState, setSetupState] = useState<StorefrontSetupState>({
         phase: 'idle',
-        message: 'Starting storefront setup...',
+        message: 'Starting storefront setup',
         progress: 0,
         partialState: {
             repoCreated: false,
@@ -338,7 +338,7 @@ export function StorefrontSetupStep({
     const handleRetry = useCallback(() => {
         setSetupState({
             phase: 'idle',
-            message: 'Retrying storefront setup...',
+            message: 'Retrying storefront setup',
             progress: 0,
             partialState: {
                 repoCreated: false,

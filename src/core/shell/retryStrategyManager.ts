@@ -186,7 +186,7 @@ export class RetryStrategyManager {
                         strategy.maxDelay,
                     );
 
-                    this.logger.debug(`[Retry Strategy] Retrying in ${delay}ms...`);
+                    this.logger.debug(`[Retry Strategy] Retrying in ${delay}ms`);
                     await sleep(delay);
                 } else {
                     this.logger.warn(`[Retry Strategy] All ${strategy.maxAttempts} attempts exhausted`);

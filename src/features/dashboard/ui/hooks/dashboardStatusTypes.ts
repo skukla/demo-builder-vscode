@@ -68,8 +68,8 @@ export interface AiReadyState {
         | 'Ready'
         | 'Setup incomplete'
         | 'Broken'
-        | 'Updating AI configuration…'
-        | 'Regenerating AI files…'
+        | 'Updating AI configuration'
+        | 'Regenerating AI files'
         | 'AI tooling missing';
 }
 

@@ -38,7 +38,7 @@ describe('BrandGallery — the Add a demo package card', () => {
 
     it('steps aside while the grid is being filtered', () => {
         renderGallery({ onAddDemo: jest.fn() });
-        fireEvent.change(screen.getByPlaceholderText('Filter packages...'), { target: { value: 'Other' } });
+        fireEvent.change(screen.getByPlaceholderText('Filter packages'), { target: { value: 'Other' } });
         expect(addCard()).not.toBeInTheDocument();
     });
 });

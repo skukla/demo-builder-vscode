@@ -178,7 +178,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     logger = getLogger();
     const version = context.extension.packageJSON.version || '1.0.0';
-    logger.debug(`[Extension] Adobe Demo Builder v${version} starting...`);
+    logger.debug(`[Extension] Adobe Demo Builder v${version} starting`);
 
     // Third-party tooling opt-out: the ONE code point for the gate lives in
     // aiToolingGate (pure); the setting is injected here so every seam —
@@ -593,7 +593,7 @@ export function deactivate() {
     // assigned once activation has got past its first few statements. Unguarded,
     // this line threw before any of the guarded ones could run — so the whole
     // defensive shape below it was unreachable in exactly the case it exists for.
-    logger?.info('Adobe Demo Builder extension is deactivating...');
+    logger?.info('Adobe Demo Builder extension is deactivating');
 
     // Clean up resources
     autoUpdater?.dispose();

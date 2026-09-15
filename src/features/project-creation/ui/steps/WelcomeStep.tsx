@@ -282,7 +282,7 @@ export function WelcomeStep({
         <div className="brand-section">
             <TextField
                 label="Project Name"
-                placeholder="Enter project name..."
+                placeholder="Enter project name"
                 value={state.projectTitle ?? state.projectName ?? ''}
                 onChange={(value) =>
                     updateState({ projectTitle: value, projectName: normalizeProjectName(value) })

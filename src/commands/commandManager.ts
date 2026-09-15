@@ -153,7 +153,7 @@ export class CommandManager {
                 }
 
                 // Stop the current demo
-                this.logger.debug('[LoadProject] Stopping current demo before switching...');
+                this.logger.debug('[LoadProject] Stopping current demo before switching');
                 await vscode.commands.executeCommand('demoBuilder.stopDemo');
             }
 
@@ -386,7 +386,7 @@ export class CommandManager {
             const ok = await vscode.window.withProgress(
                 {
                     location: vscode.ProgressLocation.Notification,
-                    title: 'Signing in to Adobe…',
+                    title: 'Signing in to Adobe',
                 },
                 () => auth.login(force),
             );

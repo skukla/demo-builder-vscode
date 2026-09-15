@@ -148,7 +148,7 @@ async function tryRecoverMeshIdImpl(
     commandManager: CommandExecutor,
     logger: Logger,
 ): Promise<string | null> {
-    logger.debug('[Mesh Verifier] Attempting to recover missing mesh ID from Adobe I/O...');
+    logger.debug('[Mesh Verifier] Attempting to recover missing mesh ID from Adobe I/O');
 
     const meshInfo = await fetchMeshInfoFromAdobeIOImpl(commandManager, logger);
 

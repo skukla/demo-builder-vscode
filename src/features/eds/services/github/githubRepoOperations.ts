@@ -314,7 +314,7 @@ export class GitHubRepoOperations {
      * @returns True if repository has content within timeout
      */
     async waitForContent(owner: string, repo: string, abortSignal?: AbortSignal): Promise<boolean> {
-        this.logger.debug(`[GitHub] Waiting for repository ${owner}/${repo} to have content...`);
+        this.logger.debug(`[GitHub] Waiting for repository ${owner}/${repo} to have content`);
 
         const { PollingService } = await import('@/core/shell/pollingService');
         const pollingService = new PollingService();
@@ -614,7 +614,7 @@ export class GitHubRepoOperations {
 
         try {
             // Step 1: Clone user's repo (shallow clone for speed)
-            this.logger.debug(`[GitHub] Cloning user repo...`);
+            this.logger.debug(`[GitHub] Cloning user repo`);
             const userRepoUrl = injectTokenIntoUrl(`https://github.com/${owner}/${repo}.git`, token.token);
             const cloneResult = await this.commandManager.execute(
                 `git clone --depth 1 --branch ${branch} "${userRepoUrl}" repo`,
@@ -627,7 +627,7 @@ export class GitHubRepoOperations {
             const repoDir = path.join(tempDir, 'repo');
 
             // Step 2: Add template as remote and fetch
-            this.logger.debug(`[GitHub] Fetching template repo...`);
+            this.logger.debug(`[GitHub] Fetching template repo`);
             const templateUrl = `https://github.com/${templateOwner}/${templateRepo}.git`;
             await this.commandManager.execute(`git remote add template "${templateUrl}"`, {
                 cwd: repoDir, timeout: TIMEOUTS.QUICK, shell: DEFAULT_SHELL,
@@ -641,7 +641,7 @@ export class GitHubRepoOperations {
             }
 
             // Step 3: Reset to template's content (keeps our history, replaces content)
-            this.logger.debug(`[GitHub] Resetting to template content...`);
+            this.logger.debug(`[GitHub] Resetting to template content`);
 
             // Get template's tree and create a commit with it on our branch
             // Using read-tree to replace our working tree with template's content
@@ -654,7 +654,7 @@ export class GitHubRepoOperations {
             }
 
             // Step 4: Commit the changes
-            this.logger.debug(`[GitHub] Creating reset commit...`);
+            this.logger.debug(`[GitHub] Creating reset commit`);
             await this.commandManager.execute(`git add -A`, {
                 cwd: repoDir, timeout: TIMEOUTS.QUICK, shell: DEFAULT_SHELL,
             });
@@ -690,7 +690,7 @@ export class GitHubRepoOperations {
             }
 
             // Step 5: Push to origin
-            this.logger.debug(`[GitHub] Pushing to origin...`);
+            this.logger.debug(`[GitHub] Pushing to origin`);
             const pushResult = await this.commandManager.execute(`git push origin ${branch} --force`, {
                 cwd: repoDir, timeout: TIMEOUTS.LONG, shell: DEFAULT_SHELL,
             });

@@ -149,7 +149,7 @@ export function createAgentConsentGate(
         // window, this await was a silent indefinite hang — the tool's args line
         // was the last log anywhere, and the hang site took a live bisection to
         // find (AI-5, 2026-08-27).
-        logger.info(`[MCP] ${toolName} awaiting the user consent dialog in the VS Code window…`);
+        logger.info(`[MCP] ${toolName} awaiting the user consent dialog in the VS Code window`);
         // The dialog cannot be closed programmatically, so an unanswered one
         // resolves as a timeout refusal rather than blocking the agent forever.
         // A click that comes after the timer fires grants nothing — the call

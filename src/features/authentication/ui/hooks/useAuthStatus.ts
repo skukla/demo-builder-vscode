@@ -62,7 +62,7 @@ export function useAuthStatus({
             log.debug('Skipping auth check - switching org or already checking');
             return;
         }
-        setAuthStatus('Checking Adobe authentication...');
+        setAuthStatus('Checking Adobe authentication');
         updateState({
             adobeAuth: { ...state.adobeAuth, isChecking: true },
         });

@@ -54,10 +54,10 @@ export const EXPORT_COPY = {
     linkWrites: "Copying also writes the demo's name and description into your repository, so that is what their card shows.",
     copyLink: 'Copy link',
     copied: 'Copied',
-    preparing: 'Preparing…',
+    preparing: 'Preparing',
     copyFailed: "Couldn't prepare the link",
-    saveFile: 'Save file…',
-    saving: 'Saving…',
+    saveFile: 'Save file',
+    saving: 'Saving',
     nothingTicked: 'Tick at least one part.',
     fileFailed: "Couldn't save the file",
 } as const;

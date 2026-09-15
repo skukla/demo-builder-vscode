@@ -130,7 +130,7 @@ describe('executePhaseGitHubRepo — Step 4b pin coverage', () => {
             expect(mockPinRepoToLkg).not.toHaveBeenCalled();
         });
 
-        it('emits the "Pinning to verified canonical state..." progress message', async () => {
+        it('emits the "Pinning to verified canonical state" progress message', async () => {
             // Locks down the UX signal — without this message users see no
             // hint that a pin is happening; failures look like silent stalls.
             const ctx = makeContext();
@@ -159,7 +159,7 @@ describe('executePhaseGitHubRepo — Step 4b pin coverage', () => {
             const pinMessage = sendMessage.mock.calls.find(
                 ([type, payload]) =>
                     type === 'storefront-setup-progress' &&
-                    payload?.message === 'Pinning to verified canonical state...'
+                    payload?.message === 'Pinning to verified canonical state'
             );
             expect(pinMessage).toBeDefined();
             expect(pinMessage?.[1]).toMatchObject({ progress: 12 });

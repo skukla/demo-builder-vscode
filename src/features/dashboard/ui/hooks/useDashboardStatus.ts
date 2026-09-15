@@ -327,7 +327,7 @@ export function useDashboardStatus(
     const imsOrgDisplay = useMemo((): StatusDisplay | null => {
         switch (orgCheckState) {
             case 'checking':
-                return { color: 'blue', text: 'Checking…' };
+                return { color: 'blue', text: 'Checking' };
             case 'ok':
                 return { color: 'green', text: orgCurrentName || 'Connected' };
             case 'mismatch':
@@ -364,19 +364,19 @@ export function useDashboardStatus(
 
         switch (status) {
             case 'starting':
-                return { color: 'blue', text: 'Starting...' };
+                return { color: 'blue', text: 'Starting' };
             case 'running':
                 if (frontendConfigChanged) {
                     return { color: 'yellow', text: 'Restart needed', remedy: 'restart' };
                 }
                 return { color: 'green', text: `Running on port ${port}` };
             case 'stopping':
-                return { color: 'yellow', text: 'Stopping...' };
+                return { color: 'yellow', text: 'Stopping' };
             case 'stopped':
             case 'ready':
                 return { color: 'gray', text: 'Stopped' };
             case 'configuring':
-                return { color: 'blue', text: 'Configuring...' };
+                return { color: 'blue', text: 'Configuring' };
             case 'error':
                 return { color: 'red', text: 'Error' };
             default:
@@ -400,9 +400,9 @@ export function useDashboardStatus(
 
         if (!effectiveMeshStatus) {
             // If we know hasMesh, use it
-            if (hasMesh) return { color: 'blue', text: 'Loading status...' };
+            if (hasMesh) return { color: 'blue', text: 'Loading status' };
             // If projectStatus hasn't loaded yet, show loading (avoids flash)
-            if (!projectStatus) return { color: 'blue', text: 'Loading status...' };
+            if (!projectStatus) return { color: 'blue', text: 'Loading status' };
             // projectStatus loaded and no mesh - hide the section
             return null;
         }
@@ -410,11 +410,11 @@ export function useDashboardStatus(
         // Transient dashboard-only states (not persisted)
         switch (effectiveMeshStatus) {
             case 'checking':
-                return { color: 'blue', text: 'Checking status...' };
+                return { color: 'blue', text: 'Checking status' };
             case 'needs-auth':
                 return { color: 'yellow', text: 'Session expired' };
             case 'deploying':
-                return { color: 'blue', text: meshMessage || 'Deploying...' };
+                return { color: 'blue', text: meshMessage || 'Deploying' };
         }
 
         // Persisted statuses — the shared vocabulary. The 'config-changed' →

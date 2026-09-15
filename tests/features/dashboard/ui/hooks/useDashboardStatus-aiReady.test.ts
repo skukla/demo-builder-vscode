@@ -54,25 +54,25 @@ describe('useDashboardStatus — AI Ready Badge State', () => {
     it('telegraphs the mcp-health self-heal on the AI badge (warning → ok)', () => {
         const { result } = renderHook(() => useDashboardStatus());
 
-        // mcp-health drift → visible "Updating AI configuration…" (overrides verify).
+        // mcp-health drift → visible "Updating AI configuration" (overrides verify).
         act(() => {
             mocks.state.orgHandler?.({
                 checkId: 'mcp-health',
                 status: 'warning',
-                message: 'Updating AI configuration…',
+                message: 'Updating AI configuration',
             });
         });
         expect(result.current.aiReady).toEqual({
             label: 'AI',
             color: 'blue',
-            text: 'Updating AI configuration…',
+            text: 'Updating AI configuration',
         });
 
         // Heal resolved → badge falls back to the verify-driven state.
         act(() => {
             mocks.state.orgHandler?.({ checkId: 'mcp-health', status: 'ok' });
         });
-        expect(result.current.aiReady.text).not.toBe('Updating AI configuration…');
+        expect(result.current.aiReady.text).not.toBe('Updating AI configuration');
     });
 
     it('flips the AI badge to yellow "AI tooling missing" when the freshness check warns (composition axis)', () => {
@@ -141,7 +141,7 @@ describe('useDashboardStatus — AI Ready Badge State', () => {
         expect(result.current.aiReady).toEqual({
             label: 'AI',
             color: 'blue',
-            text: 'Regenerating AI files…',
+            text: 'Regenerating AI files',
         });
 
         // … and on success the stale flag clears WITHOUT waiting for the on-open
@@ -421,7 +421,7 @@ describe('useDashboardStatus — AI Ready Badge State', () => {
 
         expect(result.current.aiRegenError).toBe('request timed out');
         expect(result.current.aiBusy).toBe(false);
-        expect(result.current.aiReady.text).not.toBe('Regenerating AI files…');
+        expect(result.current.aiReady.text).not.toBe('Regenerating AI files');
         // Existing semantics preserved: a rejected request never reached the
         // re-verify, and still doesn't.
         const types = mocks.mockRequest.mock.calls.map((c) => c[0]);

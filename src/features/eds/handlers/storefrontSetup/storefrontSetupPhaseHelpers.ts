@@ -39,7 +39,7 @@ export async function checkGitHubAppForExistingRepo(
 
     await context.sendMessage('storefront-setup-progress', {
         phase: 'storefront-code',
-        message: 'Verifying GitHub App installation...',
+        message: 'Verifying GitHub App installation',
         progress: 28,
     } satisfies StorefrontSetupProgressPayload);
 

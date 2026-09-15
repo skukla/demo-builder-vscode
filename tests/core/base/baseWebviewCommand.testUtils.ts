@@ -189,7 +189,7 @@ export class TestWebviewCommand extends BaseWebviewCommand {
     }
 
     protected getLoadingMessage(): string {
-        return 'Loading...';
+        return 'Loading';
     }
 
     protected override getLoadingHeader() {

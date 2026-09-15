@@ -446,13 +446,13 @@ describe('handleDeleteAdobeProject', () => {
                 task({ report })
             );
             mockTeardown.mockImplementation(async (_deps, _target, onProgress) => {
-                onProgress?.({ step: 1, totalSteps: 4, message: 'Finding workspaces…' });
+                onProgress?.({ step: 1, totalSteps: 4, message: 'Finding workspaces' });
                 return DELETED_RESULT;
             });
 
             await handleDeleteAdobeProject(mockContext, PAYLOAD);
 
-            expect(report).toHaveBeenCalledWith({ message: 'Step 1/4: Finding workspaces…' });
+            expect(report).toHaveBeenCalledWith({ message: 'Step 1/4: Finding workspaces' });
         });
 
         it('shows an info toast with deleted registration/provider counts', async () => {

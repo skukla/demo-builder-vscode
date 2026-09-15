@@ -195,7 +195,7 @@ export function SampleDataStep({ state, updateState }: BaseStepProps): React.JSX
                 <CenteredFeedbackContainer>
                     <LoadingDisplay
                         size="L"
-                        message="Loading datapacks..."
+                        message="Loading datapacks"
                         helperText="This should only take a moment"
                     />
                 </CenteredFeedbackContainer>
@@ -203,7 +203,7 @@ export function SampleDataStep({ state, updateState }: BaseStepProps): React.JSX
                 <>
                     <SearchField
                         aria-label="Filter datapacks"
-                        placeholder="Filter datapacks..."
+                        placeholder="Filter datapacks"
                         value={query}
                         onChange={setQuery}
                         width="100%"

@@ -354,8 +354,8 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand<WizardInitia
 
     protected getLoadingMessage(): string {
         return this.editProject
-            ? 'Loading Project Editor...'
-            : 'Loading Project Creation Wizard...';
+            ? 'Loading Project Editor'
+            : 'Loading Project Creation Wizard';
     }
 
     /**

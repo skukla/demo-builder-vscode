@@ -86,7 +86,7 @@ async function promptAndSignIn(
     // headless call silently (consent modal, teardown, now this). Unanswered
     // resolves into the existing cancelled path; a late "Sign In" click grants
     // nothing, matching the consent gate's semantics.
-    logger.info(`${logPrefix} awaiting the sign-in prompt in the VS Code window…`);
+    logger.info(`${logPrefix} awaiting the sign-in prompt in the VS Code window`);
     let timedOut = false;
     const selection = await Promise.race([
         vscode.window.showWarningMessage(warningMessage, 'Sign In', 'Cancel'),

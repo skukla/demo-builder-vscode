@@ -91,14 +91,14 @@ export function deriveAiReadyState(inputs: AiBadgeInputs): AiReadyState {
     // install) — telegraph it, or the "Regenerate AI files" click reads as a
     // dead link. Highest precedence: it IS the current activity.
     if (aiRegenerating) {
-        return { label: 'AI', color: 'blue', text: 'Regenerating AI files…' };
+        return { label: 'AI', color: 'blue', text: 'Regenerating AI files' };
     }
     // The mcp-health check is visibly self-healing stale MCP paths — telegraph
     // it on the badge (P2) so the work isn't silent. Overrides the verify state
     // until the heal resolves (ok → verify-driven badge; error → falls back to
     // the verify badge whose "Regenerate AI files" action is the retry).
     if (mcpHealing) {
-        return { label: 'AI', color: 'blue', text: 'Updating AI configuration…' };
+        return { label: 'AI', color: 'blue', text: 'Updating AI configuration' };
     }
     if (!verifyResult) {
         // Verify failed — surface as 'Setup incomplete' rather than leaving

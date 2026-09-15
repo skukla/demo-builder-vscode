@@ -421,7 +421,7 @@ export async function handleCreateGitHubRepo(
         context.logger.debug(`[EDS] Repository created: ${repo.fullName}`);
 
         // Wait for template content to be populated
-        context.logger.debug('[EDS] Waiting for repository content...');
+        context.logger.debug('[EDS] Waiting for repository content');
         await repoOperations.waitForContent(repo.fullName.split('/')[0], repo.name);
 
         context.logger.info(`[EDS] Repository ready: ${repo.htmlUrl}`);

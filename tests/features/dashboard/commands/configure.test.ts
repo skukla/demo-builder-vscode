@@ -221,7 +221,7 @@ describe('esbuild Bundle Loading', () => {
 
         it('should return correct loading message', () => {
             const loadingMessage = internals(command).getLoadingMessage();
-            expect(loadingMessage).toBe('Loading project configuration...');
+            expect(loadingMessage).toBe('Loading project configuration');
         });
     });
 

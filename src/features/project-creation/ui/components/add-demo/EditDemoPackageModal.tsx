@@ -30,7 +30,7 @@ export interface EditDemoPackageModalProps {
 const EDIT_COPY = {
     title: 'Edit demo package',
     save: 'Save',
-    saving: 'Saving…',
+    saving: 'Saving',
     failed: "Couldn't save the changes",
     fallback: "We couldn't save the changes. Try again.",
 } as const;

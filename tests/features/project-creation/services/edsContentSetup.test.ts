@@ -448,7 +448,7 @@ describe('ensureEdsContent — the calls it makes', () => {
             reportProgress({ message: 'Copying /products/index', processed: 3, total: 9 });
 
             expect(onProgress).toHaveBeenCalledWith(
-                'Setting up storefront content...',
+                'Setting up storefront content',
                 'Copying /products/index'
             );
         });
@@ -461,7 +461,7 @@ describe('ensureEdsContent — the calls it makes', () => {
             reportProgress({ processed: 3, total: 9 });
 
             expect(onProgress).toHaveBeenCalledWith(
-                'Setting up storefront content...',
+                'Setting up storefront content',
                 'Copying content (3/9)'
             );
         });

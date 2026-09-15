@@ -23,7 +23,7 @@ export interface VerificationMessage {
  * Default messages for each status type
  */
 const DEFAULT_MESSAGES: Record<string, VerificationMessage> = {
-    checking: { text: 'Verifying...', type: 'info' },
+    checking: { text: 'Verifying', type: 'info' },
     success: { text: 'Verified', type: 'success' },
     warning: { text: 'Warning', type: 'warning' },
     error: { text: 'Verification failed', type: 'error' },

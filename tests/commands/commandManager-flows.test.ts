@@ -217,7 +217,7 @@ describe('signInAdobe', () => {
 
         expect((vscode.window.withProgress as jest.Mock).mock.calls[0][0]).toEqual({
             location: vscode.ProgressLocation.Notification,
-            title: 'Signing in to Adobe…',
+            title: 'Signing in to Adobe',
         });
     });
 

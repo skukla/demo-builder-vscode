@@ -9102,7 +9102,7 @@
         {
             "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
             "anchors": [
-                "progress.report({ message: 'Unpublishing CDN content\u2026' });"
+                "progress.report({ message: 'Unpublishing CDN content' });"
             ],
             "mutants": 1,
             "category": "other",
@@ -9114,7 +9114,7 @@
         {
             "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
             "anchors": [
-                "progress.report({ message: 'Deleting DA.live site\u2026' });"
+                "progress.report({ message: 'Deleting DA.live site' });"
             ],
             "mutants": 1,
             "category": "other",
@@ -9126,7 +9126,7 @@
         {
             "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
             "anchors": [
-                "progress.report({ message: 'Deleting DA.live site content\u2026' });"
+                "progress.report({ message: 'Deleting DA.live site content' });"
             ],
             "mutants": 1,
             "category": "other",
@@ -9138,7 +9138,7 @@
         {
             "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
             "anchors": [
-                "progress.report({ message: 'Deleting GitHub repository\u2026' });"
+                "progress.report({ message: 'Deleting GitHub repository' });"
             ],
             "mutants": 1,
             "category": "other",

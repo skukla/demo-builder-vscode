@@ -159,7 +159,7 @@ describe('performTemplateUpdates', () => {
 
             expect(syncWithTemplate).toHaveBeenCalledTimes(1);
             expect(syncWithTemplate).toHaveBeenCalledWith(idle, { strategy: 'merge' });
-            expect(report).toHaveBeenCalledWith({ message: 'b…', increment: 100 });
+            expect(report).toHaveBeenCalledWith({ message: 'b', increment: 100 });
             expect(result).toEqual(new Set(['/p/b']));
         });
     });
@@ -197,8 +197,8 @@ describe('performTemplateUpdates', () => {
 
             await performTemplateUpdates([makeItem(a), makeItem(b)], ctx);
 
-            expect(report).toHaveBeenNthCalledWith(1, { message: 'a…', increment: 50 });
-            expect(report).toHaveBeenNthCalledWith(2, { message: 'b…', increment: 50 });
+            expect(report).toHaveBeenNthCalledWith(1, { message: 'a', increment: 50 });
+            expect(report).toHaveBeenNthCalledWith(2, { message: 'b', increment: 50 });
         });
 
         it('on success records the synced commit through the state manager', async () => {

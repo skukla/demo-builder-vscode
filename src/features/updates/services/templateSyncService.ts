@@ -182,7 +182,7 @@ export class TemplateSyncService {
 
         try {
             // Step 1: Clone user's repo
-            this.logger.debug(`[TemplateSync] Cloning user repo...`);
+            this.logger.debug(`[TemplateSync] Cloning user repo`);
             const userRepoUrl = injectTokenIntoUrl(`https://github.com/${repoOwner}/${repoName}.git`, token.token);
             const cloneResult = await this.commandManager.execute(
                 `git clone --depth 50 --branch main "${userRepoUrl}" repo`,
@@ -198,7 +198,7 @@ export class TemplateSyncService {
             const backups = await this.backupPreservedFiles(repoDir, preserveFiles);
 
             // Step 3: Add template as remote and fetch
-            this.logger.debug(`[TemplateSync] Fetching template repo...`);
+            this.logger.debug(`[TemplateSync] Fetching template repo`);
             const templateUrl = `https://github.com/${templateOwner}/${templateRepo}.git`;
             await this.commandManager.execute(`git remote add template "${templateUrl}"`, {
                 cwd: repoDir, timeout: TIMEOUTS.QUICK, shell: DEFAULT_SHELL,
@@ -212,7 +212,7 @@ export class TemplateSyncService {
             }
 
             // Step 4: Try merge (without commit)
-            this.logger.debug(`[TemplateSync] Attempting merge...`);
+            this.logger.debug(`[TemplateSync] Attempting merge`);
             await this.commandManager.execute(
                 `git merge template/main --no-commit --no-ff`,
                 { cwd: repoDir, timeout: TIMEOUTS.NORMAL, shell: DEFAULT_SHELL },
@@ -281,7 +281,7 @@ export class TemplateSyncService {
             const syncedCommit = shaResult.stdout.trim();
 
             // Step 7: Push to origin
-            this.logger.debug(`[TemplateSync] Pushing to origin...`);
+            this.logger.debug(`[TemplateSync] Pushing to origin`);
             const pushResult = await this.commandManager.execute(`git push origin main`, {
                 cwd: repoDir, timeout: TIMEOUTS.LONG, shell: DEFAULT_SHELL,
             });
@@ -342,7 +342,7 @@ export class TemplateSyncService {
 
         try {
             // Step 1: Clone user's repo
-            this.logger.debug(`[TemplateSync] Cloning user repo...`);
+            this.logger.debug(`[TemplateSync] Cloning user repo`);
             const userRepoUrl = injectTokenIntoUrl(`https://github.com/${repoOwner}/${repoName}.git`, token.token);
             const cloneResult = await this.commandManager.execute(
                 `git clone --depth 1 --branch main "${userRepoUrl}" repo`,
@@ -358,7 +358,7 @@ export class TemplateSyncService {
             const backups = await this.backupPreservedFiles(repoDir, preserveFiles);
 
             // Step 3: Add template as remote and fetch
-            this.logger.debug(`[TemplateSync] Fetching template repo...`);
+            this.logger.debug(`[TemplateSync] Fetching template repo`);
             const templateUrl = `https://github.com/${templateOwner}/${templateRepo}.git`;
             await this.commandManager.execute(`git remote add template "${templateUrl}"`, {
                 cwd: repoDir, timeout: TIMEOUTS.QUICK, shell: DEFAULT_SHELL,
@@ -410,7 +410,7 @@ export class TemplateSyncService {
         backups: Map<string, string>,
     ): Promise<TemplateSyncResult> {
         // Reset to template's content
-        this.logger.debug(`[TemplateSync] Resetting to template content...`);
+        this.logger.debug(`[TemplateSync] Resetting to template content`);
         const readTreeResult = await this.commandManager.execute(
             `git read-tree --reset -u template/main`,
             { cwd: repoDir, timeout: TIMEOUTS.NORMAL, shell: DEFAULT_SHELL },
@@ -448,7 +448,7 @@ export class TemplateSyncService {
         const syncedCommit = shaResult.stdout.trim();
 
         // Push with force (reset may rewrite history)
-        this.logger.debug(`[TemplateSync] Pushing to origin...`);
+        this.logger.debug(`[TemplateSync] Pushing to origin`);
         const pushResult = await this.commandManager.execute(`git push origin main --force`, {
             cwd: repoDir, timeout: TIMEOUTS.LONG, shell: DEFAULT_SHELL,
         });

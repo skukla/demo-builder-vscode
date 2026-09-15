@@ -105,7 +105,7 @@ export async function pollGitHubAppInstallation(
             // next attempt may resolve it.
             if (result.undetermined && attempt < maxAttempts) {
                 setRecheckMessage(
-                    `Repository is still being registered... (attempt ${attempt + 1} of ${maxAttempts})`,
+                    `Repository is still being registered (attempt ${attempt + 1} of ${maxAttempts})`,
                 );
                 await sleep(retryDelayMs);
                 continue;
@@ -433,7 +433,7 @@ export function buildAppStatusFromResult(result: GitHubAppCheckResult): GitHubAp
  * The three-minute figure is read from the timeout above, not estimated.
  */
 export const CODE_SYNC_CHECK_STAGES: ElapsedStage[] = [
-    { afterMs: 6000, message: 'Still waiting on Adobe\u2026' },
+    { afterMs: 6000, message: 'Still waiting on Adobe' },
     {
         afterMs: 20000,
         message:
@@ -481,12 +481,12 @@ export function CodeSyncStatusView({
             <CenteredFeedbackContainer fill>
                 <LoadingDisplay
                     size="L"
-                    message="Checking AEM Code Sync..."
+                    message="Checking AEM Code Sync"
                     // A caller-supplied line is always more specific than an
                     // elapsed-time guess -- the retry loop's "attempt 2 of 5" must
                     // not be overwritten by it.
                     subMessage={
-                        recheckMessage || longWait || `Verifying ${owner}/${repo}...`
+                        recheckMessage || longWait || `Verifying ${owner}/${repo}`
                     }
                     helperText="This may take a minute after a fresh install"
                 />

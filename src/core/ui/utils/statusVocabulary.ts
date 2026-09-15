@@ -46,7 +46,7 @@ export interface StatusDisplayEntry {
 
 const STATUS_DISPLAY: Record<DisplayStatus, StatusDisplayEntry> = {
     'not-deployed': { label: 'Not deployed', severity: 'neutral' },
-    deploying: { label: 'Deploying…', severity: 'info' },
+    deploying: { label: 'Deploying', severity: 'info' },
     deployed: { label: 'Deployed', severity: 'success' },
     // "Update NEEDED", not "available". A stale deployment is not an offer — the
     // mesh is serving a store view the project no longer uses, and the storefront
@@ -61,7 +61,7 @@ const STATUS_DISPLAY: Record<DisplayStatus, StatusDisplayEntry> = {
     // verb a notification is showing) substitute it; these are the fallbacks, so
     // no state can ever render dotted-but-nameless.
     'needs-auth': { label: 'Session expired', severity: 'warning' },
-    checking: { label: 'Checking status...', severity: 'neutral' },
+    checking: { label: 'Checking status', severity: 'neutral' },
 };
 
 /**

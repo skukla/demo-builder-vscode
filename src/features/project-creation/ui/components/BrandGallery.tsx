@@ -256,7 +256,7 @@ export function BrandGallery({
             <SearchHeader
                 searchQuery={searchQuery}
                 onSearchQueryChange={setSearchQuery}
-                searchPlaceholder="Filter packages..."
+                searchPlaceholder="Filter packages"
                 searchThreshold={2}
                 totalCount={packages.length}
                 filteredCount={filteredPackages.length}

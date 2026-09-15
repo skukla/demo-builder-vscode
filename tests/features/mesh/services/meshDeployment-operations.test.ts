@@ -80,8 +80,8 @@ describe('MeshDeployment - Operations', () => {
                 onProgress
             );
 
-            expect(onProgress).toHaveBeenCalledWith('Reading mesh configuration...', '');
-            expect(onProgress).toHaveBeenCalledWith('Deploying API Mesh...', expect.any(String));
+            expect(onProgress).toHaveBeenCalledWith('Reading mesh configuration', '');
+            expect(onProgress).toHaveBeenCalledWith('Deploying API Mesh', expect.any(String));
         });
 
         it('should handle streaming output', async () => {
@@ -111,9 +111,9 @@ describe('MeshDeployment - Operations', () => {
                 onProgress
             );
 
-            expect(onProgress).toHaveBeenCalledWith('Deploying...', 'Validating configuration');
-            expect(onProgress).toHaveBeenCalledWith('Deploying...', 'Creating mesh infrastructure');
-            expect(onProgress).toHaveBeenCalledWith('Deploying...', 'Mesh created successfully');
+            expect(onProgress).toHaveBeenCalledWith('Deploying', 'Validating configuration');
+            expect(onProgress).toHaveBeenCalledWith('Deploying', 'Creating mesh infrastructure');
+            expect(onProgress).toHaveBeenCalledWith('Deploying', 'Mesh created successfully');
         });
 
         it('should use create command first (create-first approach)', async () => {

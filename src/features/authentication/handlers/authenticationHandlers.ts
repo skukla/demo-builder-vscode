@@ -142,8 +142,8 @@ export async function handleCheckAuth(context: HandlerContext): Promise<SimpleRe
     // Step 1: Initial check with user-friendly message
     await context.sendMessage('auth-status', {
         isChecking: true,
-        message: 'Checking authentication status...',
-        subMessage: 'Validating authorization token...',
+        message: 'Checking authentication status',
+        subMessage: 'Validating authorization token',
         // Don't set isAuthenticated here - leave it undefined while checking
     });
 
@@ -245,8 +245,8 @@ async function resolvePostLoginOrg(context: HandlerContext): Promise<PostLoginOr
     await context.authManager?.ensureSDKInitialized();
     await context.sendMessage('auth-status', {
         isChecking: true,
-        message: 'Signing in...',
-        subMessage: 'Loading organizations...',
+        message: 'Signing in',
+        subMessage: 'Loading organizations',
         isAuthenticated: true,
     });
 
@@ -276,8 +276,8 @@ async function autoSelectSingleOrg(
     context.logger.debug(`[Auth] Single organization available: ${org.name}, auto-selecting`);
     await context.sendMessage('auth-status', {
         isChecking: true,
-        message: 'Signing in...',
-        subMessage: 'Selecting organization...',
+        message: 'Signing in',
+        subMessage: 'Selecting organization',
         isAuthenticated: true,
     });
 
@@ -342,7 +342,7 @@ async function sendPostLoginStatus(
  * Initiates browser-based Adobe login flow. Uses constant message during loading
  * (only subMessage changes) to prevent LoadingDisplay flickering.
  */
-const AUTH_LOADING_MESSAGE = 'Signing in...';
+const AUTH_LOADING_MESSAGE = 'Signing in';
 
 /**
  * Handle successful login - resolve orgs and send status
@@ -394,8 +394,8 @@ async function handleAlreadyAuthenticated(context: HandlerContext): Promise<Simp
 
     await context.sendMessage('auth-status', {
         isChecking: true,
-        message: 'Verifying authentication...',
-        subMessage: 'Checking Adobe credentials...',
+        message: 'Verifying authentication',
+        subMessage: 'Checking Adobe credentials',
         isAuthenticated: true,
     });
 
@@ -431,7 +431,7 @@ async function trySkipLogin(
 ): Promise<SimpleResult | undefined> {
     if (force) return undefined;
 
-    context.logger.debug('[Auth] Checking for existing valid authentication (token-only)...');
+    context.logger.debug('[Auth] Checking for existing valid authentication (token-only)');
     const isAlreadyAuth = await context.authManager?.isAuthenticated();
     if (!isAlreadyAuth) return undefined;
 
@@ -447,14 +447,14 @@ async function executeBrowserLogin(
     authStartTime: number,
 ): Promise<SimpleResult> {
     context.logger.debug(
-        `[Auth] Starting Adobe authentication process${force ? ' (forced)' : ''} - opening browser...`,
+        `[Auth] Starting Adobe authentication process${force ? ' (forced)' : ''} - opening browser`,
     );
     context.logger.debug(`[Auth] Initiating browser-based login${force ? ' with force flag' : ''}`);
 
     await context.sendMessage('auth-status', {
         isChecking: true,
         message: AUTH_LOADING_MESSAGE,
-        subMessage: force ? 'Starting fresh login...' : 'Opening browser...',
+        subMessage: force ? 'Starting fresh login' : 'Opening browser',
         isAuthenticated: false,
     });
 

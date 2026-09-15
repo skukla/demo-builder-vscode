@@ -114,7 +114,7 @@ describe('Project Creation - Create Handler - Decisions', () => {
             expect(mockContext.sendMessage).toHaveBeenNthCalledWith(1, 'creationProgress', {
                 currentOperation: 'Initializing',
                 progress: 0,
-                message: 'Preparing to create your project...',
+                message: 'Preparing to create your project',
                 logs: [],
             });
         });

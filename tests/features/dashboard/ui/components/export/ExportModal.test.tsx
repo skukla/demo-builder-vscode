@@ -104,7 +104,7 @@ describe('ExportModal', () => {
             expect(partBox('part-storefront').checked).toBe(true);
             mockRequest.mockResolvedValueOnce(answer({ path: '/Users/steve/bodea-demo-bundle.zip', fileCount: 813, bytes: 1_000, parts: ['setup', 'storefront'] }));
 
-            await click('Save file…');
+            await click('Save file');
 
             expect(mockRequest).toHaveBeenLastCalledWith('exportDemoBundle', { setup: true, storefront: true });
             expect(screen.getByTestId('export-saved')).toHaveTextContent('Saved setup and storefront (813 files) to /Users/steve/bodea-demo-bundle.zip');
@@ -115,11 +115,11 @@ describe('ExportModal', () => {
             await chooseFile();
             fireEvent.click(partBox('part-storefront'));
             mockRequest.mockResolvedValueOnce(answer({ path: '/p/x.json', fileCount: 1, parts: ['setup'] }));
-            await click('Save file…');
+            await click('Save file');
             expect(mockRequest).toHaveBeenLastCalledWith('exportDemoBundle', { setup: true, storefront: false });
 
             fireEvent.click(partBox('part-setup'));
-            expect(screen.getByRole('button', { name: 'Save file…' })).toBeDisabled();
+            expect(screen.getByRole('button', { name: 'Save file' })).toBeDisabled();
             expect(screen.getByTestId('export-file-form')).toHaveTextContent('Tick at least one part.');
         });
 
@@ -129,7 +129,7 @@ describe('ExportModal', () => {
             expect(partBox('part-storefront').checked).toBe(false);
             expect(partBox('part-storefront').disabled).toBe(true);
             mockRequest.mockResolvedValueOnce({ success: false, error: 'Failed to download archive: HTTP 404' });
-            await click('Save file…');
+            await click('Save file');
             expect(screen.getByTestId('export-error')).toHaveTextContent('HTTP 404');
         });
 
@@ -137,7 +137,7 @@ describe('ExportModal', () => {
             await renderExport();
             await chooseFile();
             mockRequest.mockResolvedValueOnce(answer({ cancelled: true }));
-            await click('Save file…');
+            await click('Save file');
             expect(screen.queryByTestId('export-saved')).not.toBeInTheDocument();
         });
     });

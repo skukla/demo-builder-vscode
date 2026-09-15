@@ -48,7 +48,7 @@ describe('loadingHTML', () => {
             await advanceTime(100);
 
             // Now loading HTML should be set
-            expect(mockPanel.webview.html).toContain('Loading...');
+            expect(mockPanel.webview.html).toContain('Loading');
             expect(mockPanel.webview.html).toContain('spinner');
 
             // Advance past MIN_DISPLAY_TIME to complete
@@ -95,11 +95,11 @@ describe('loadingHTML', () => {
 
             // Advance past INIT_DELAY
             await advanceTime(100);
-            expect(mockPanel.webview.html).toContain('Loading...');
+            expect(mockPanel.webview.html).toContain('Loading');
 
             // Advance 1000ms - still should be loading (MIN_DISPLAY_TIME is 1500)
             await advanceTime(1000);
-            expect(mockPanel.webview.html).toContain('Loading...');
+            expect(mockPanel.webview.html).toContain('Loading');
 
             // Advance remaining 500ms to complete MIN_DISPLAY_TIME
             await advanceTime(500);
@@ -120,7 +120,7 @@ describe('loadingHTML', () => {
 
             // Advance past INIT_DELAY
             await advanceTime(100);
-            expect(mockPanel.webview.html).toContain('Loading...');
+            expect(mockPanel.webview.html).toContain('Loading');
 
             // Advance 2000ms for the "slow" content - should complete without extra delay
             await advanceTime(2000);
@@ -132,7 +132,7 @@ describe('loadingHTML', () => {
         it('should accept logger without throwing', async () => {
             const getContent = jest.fn().mockResolvedValue('<div>Content</div>');
 
-            const promise = setLoadingState(mockPanel, getContent, 'Loading...', mockLogger);
+            const promise = setLoadingState(mockPanel, getContent, 'Loading', mockLogger);
 
             await advanceTime(1700);
 
@@ -271,7 +271,7 @@ describe('loadingHTML', () => {
 
             // Advance past INIT_DELAY - now loading should appear
             await advanceTime(20);
-            expect(mockPanel.webview.html).toContain('Loading...');
+            expect(mockPanel.webview.html).toContain('Loading');
 
             // Complete
             await advanceTime(TIMEOUTS.UI.MIN_LOADING);
@@ -297,7 +297,7 @@ describe('loadingHTML', () => {
         it('should render a header title above the spinner when provided', async () => {
             const getContent = jest.fn().mockResolvedValue('<div>Content</div>');
 
-            const promise = setLoadingState(mockPanel, getContent, 'Loading...', mockLogger, {
+            const promise = setLoadingState(mockPanel, getContent, 'Loading', mockLogger, {
                 title: 'Configure Project',
             });
 
@@ -314,7 +314,7 @@ describe('loadingHTML', () => {
         it('should render the subtitle next to the title when provided', async () => {
             const getContent = jest.fn().mockResolvedValue('<div>Content</div>');
 
-            const promise = setLoadingState(mockPanel, getContent, 'Loading...', mockLogger, {
+            const promise = setLoadingState(mockPanel, getContent, 'Loading', mockLogger, {
                 title: 'Configure Project',
                 subtitle: 'b2b-tester',
             });
@@ -432,11 +432,11 @@ describe('loadingHTML', () => {
 
             // After INIT_DELAY, loading should be shown
             await advanceTime(100);
-            expect(mockPanel.webview.html).toContain('Loading...');
+            expect(mockPanel.webview.html).toContain('Loading');
 
             // At 1400ms (before MIN_DISPLAY_TIME of 1500), content should not be loaded yet
             await advanceTime(1300);
-            expect(mockPanel.webview.html).toContain('Loading...');
+            expect(mockPanel.webview.html).toContain('Loading');
 
             // After MIN_DISPLAY_TIME passes, content should be shown
             await advanceTime(200);
@@ -465,7 +465,7 @@ describe('loadingHTML', () => {
 
             // Past INIT_DELAY: the spinner is up and the clock starts here.
             await advanceTime(TIMEOUTS.WEBVIEW_INIT_DELAY);
-            expect(mockPanel.webview.html).toContain('Loading...');
+            expect(mockPanel.webview.html).toContain('Loading');
 
             // Burn exactly the minimum display time while content is still pending.
             await advanceTime(TIMEOUTS.UI.MIN_LOADING);
@@ -492,7 +492,7 @@ describe('loadingHTML', () => {
             // After INIT_DELAY + 2000ms (slow load), content should be ready
             // without additional MIN_DISPLAY_TIME wait (since 2000ms > 1500ms)
             await advanceTime(100);
-            expect(mockPanel.webview.html).toContain('Loading...');
+            expect(mockPanel.webview.html).toContain('Loading');
 
             // Advance past the slow load time
             await advanceTime(2000);

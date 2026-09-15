@@ -165,7 +165,7 @@ export class ManageSiteAccessCommand extends BaseCommand {
                     { owner: params.owner, repo: params.repo },
                     this.logger,
                     (attempt, total) =>
-                        progress.report({ message: `Checking access (${attempt}/${total})…` }),
+                        progress.report({ message: `Checking access (${attempt}/${total})` }),
                 ),
         );
 
@@ -209,7 +209,7 @@ export class ManageSiteAccessCommand extends BaseCommand {
     /** Current admins as rows, plus the add action. */
     private buildItems(listing: SiteAccessListing): AccessAction[] {
         const items: AccessAction[] = [
-            { label: '$(add) Add a configuration admin…', action: 'add' },
+            { label: '$(add) Add a configuration admin', action: 'add' },
         ];
 
         const siteAdmins = listing.siteAdmins ?? [];

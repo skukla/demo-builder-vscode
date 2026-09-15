@@ -63,7 +63,7 @@ describe('DemoPackageModal', () => {
 
         await click('Save');
 
-        expect(screen.getByText('Saving the demo package…')).toBeInTheDocument();
+        expect(screen.getByText('Saving the demo package')).toBeInTheDocument();
         expect(screen.queryByTestId('package-name')).not.toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument();
     });
@@ -113,7 +113,7 @@ describe('DemoPackageModal', () => {
             fireEvent.click(button('Remove demo package'));
         });
 
-        expect(screen.getByText('Removing the demo package…')).toBeInTheDocument();
+        expect(screen.getByText('Removing the demo package')).toBeInTheDocument();
         expect(screen.queryByTestId('package-name')).not.toBeInTheDocument();
     });
 

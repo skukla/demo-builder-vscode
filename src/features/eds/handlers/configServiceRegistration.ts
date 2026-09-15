@@ -55,7 +55,7 @@ export async function registerConfigurationService(
 
     await context.sendMessage('storefront-setup-progress', {
         phase: 'site-config',
-        message: 'Registering site with Configuration Service...',
+        message: 'Registering site with Configuration Service',
         subMessage: `${repoInfo.repoOwner}/${repoInfo.repoName}`,
         progress: 46,
     } satisfies StorefrontSetupProgressPayload);

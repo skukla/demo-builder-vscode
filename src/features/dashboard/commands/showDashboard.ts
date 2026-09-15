@@ -263,7 +263,7 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand<Dashboard
     }
 
     protected getLoadingMessage(): string {
-        return 'Loading Project Dashboard...';
+        return 'Loading Project Dashboard';
     }
 
     protected shouldReopenWelcomeOnDispose(): boolean {

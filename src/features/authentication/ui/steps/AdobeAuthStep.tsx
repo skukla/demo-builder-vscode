@@ -49,7 +49,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
             {/* Loading state */}
             {(showLoadingSpinner || adobeAuth.isAuthenticated === undefined) && !authTimeout && (
                 <AuthLoadingState
-                    message={authStatus || 'Connecting to Adobe services...'}
+                    message={authStatus || 'Connecting to Adobe services'}
                     subMessage={authSubMessage}
                     helperText="This could take up to 1 minute"
                 />

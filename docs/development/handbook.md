@@ -811,6 +811,16 @@ check says so and names the file.
 > Enforced by the `dynamicClassSiteCeiling` ledger in
 > `tests/sop/webview-architecture-rules.exemptions.json`.
 
+> **Convention.** Text never ends in an ellipsis. A progress message says what is
+> happening — "Saving the demo package", not "Saving the demo package…" — and a button
+> that opens a picker says what it opens.
+> *Why:* house style (owner, 2026-09-14). Before the rule, about 470 strings across 160
+> files ended in `...` or `…`, in two spellings, and new work kept copying them. An
+> ellipsis that carries meaning stays: one marking a value that was cut
+> (`${text.slice(0, 80)}…`), syntax between two values (`${base}...${head}`), and "and
+> so on" mid-sentence.
+> Enforced by `tests/sop/no-trailing-ellipsis.test.ts`.
+
 ## 8. Agents are a second door, never the only one
 
 **Position.** Agents call the same functions the buttons call. Every capability has a human
@@ -1487,11 +1497,11 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 25 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 51 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 52 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 113 conventions. 113 of them are enforced; 0 are not.**
+**This handbook states 114 conventions. 114 of them are enforced; 0 are not.**
 
 The last one to get there was "vendor CSS sits in the lowest cascade layer", and it was
 outstanding because it was **not yet true**: `@layer vendor` existed in no bundle, so a

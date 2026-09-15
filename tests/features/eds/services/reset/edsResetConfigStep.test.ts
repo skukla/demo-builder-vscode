@@ -231,7 +231,7 @@ describe('publishConfigAndRegisterSite — the failure nuances', () => {
         await expect(run({}, report)).resolves.toEqual({ configWritten: true });
         expect(mockRegisterSiteConfig).toHaveBeenCalled();
         // The SC is told the publish failed and that the reset carries on.
-        expect(report).toHaveBeenCalledWith(6, 'config.json publish failed, continuing...');
+        expect(report).toHaveBeenCalledWith(6, 'config.json publish failed, continuing');
         expect(report).not.toHaveBeenCalledWith(6, 'config.json published');
     });
 

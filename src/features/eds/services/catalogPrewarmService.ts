@@ -248,7 +248,7 @@ export async function prewarmCatalog(
         return makeSkipped('no commerce endpoint');
     }
 
-    onProgress?.({ operation: 'catalog-prewarm', message: 'Enumerating catalog...' });
+    onProgress?.({ operation: 'catalog-prewarm', message: 'Enumerating catalog' });
 
     let skuPaths: SkuPath[];
     try {

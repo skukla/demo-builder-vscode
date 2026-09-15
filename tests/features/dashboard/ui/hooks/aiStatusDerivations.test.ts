@@ -120,7 +120,7 @@ describe('deriveAiReadyState', () => {
                 mcpHealing: true,
                 aiRegenerating: true,
             })
-        ).toEqual({ label: 'AI', color: 'blue', text: 'Regenerating AI files…' });
+        ).toEqual({ label: 'AI', color: 'blue', text: 'Regenerating AI files' });
     });
 
     it('should let mcp healing override the verify-driven badge', () => {
@@ -130,7 +130,7 @@ describe('deriveAiReadyState', () => {
                 verifyResult: healthyVerify,
                 mcpHealing: true,
             })
-        ).toEqual({ label: 'AI', color: 'blue', text: 'Updating AI configuration…' });
+        ).toEqual({ label: 'AI', color: 'blue', text: 'Updating AI configuration' });
     });
 });
 

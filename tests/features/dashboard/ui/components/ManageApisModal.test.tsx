@@ -277,7 +277,7 @@ describe('ManageApisModal', () => {
             renderModal();
             await flush();
 
-            expect(screen.getByText('Loading Adobe APIs…')).toBeInTheDocument();
+            expect(screen.getByText('Loading Adobe APIs')).toBeInTheDocument();
             expect(screen.getByText('This can take up to a minute')).toBeInTheDocument();
         });
 

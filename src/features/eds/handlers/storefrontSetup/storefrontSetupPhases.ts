@@ -207,7 +207,7 @@ async function runConfigCodeSyncPhases(
                 );
                 await context.sendMessage('storefront-setup-progress', {
                     phase: 'code-sync',
-                    message: 'Resuming setup...',
+                    message: 'Resuming setup',
                     progress: 40,
                 } satisfies StorefrontSetupProgressPayload);
             },
@@ -314,7 +314,7 @@ async function runEdsPipelineWithRecovery(
                 logger.info('[Storefront Setup] DA.live re-authenticated, resuming pipeline');
                 await context.sendMessage('storefront-setup-progress', {
                     phase: 'content',
-                    message: 'Resuming content copy...',
+                    message: 'Resuming content copy',
                     progress: 50,
                 } satisfies StorefrontSetupProgressPayload);
             },

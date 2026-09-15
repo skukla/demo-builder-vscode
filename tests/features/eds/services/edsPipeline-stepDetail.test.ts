@@ -105,7 +105,7 @@ describe('executeEdsPipeline - step detail', () => {
 
             expect(progress[0]).toEqual({
                 operation: 'content-copy',
-                message: 'Populating DA.live content...',
+                message: 'Populating DA.live content',
                 subMessage: 'from src-org/src-site',
             });
         });
@@ -381,7 +381,7 @@ describe('executeEdsPipeline - step detail', () => {
 
             expect(progress).toContainEqual({
                 operation: 'block-library',
-                message: 'Configuring block library...',
+                message: 'Configuring block library',
             });
         });
 
@@ -471,8 +471,8 @@ describe('executeEdsPipeline - step detail', () => {
 
             expect(progress).toContainEqual({
                 operation: 'library-publish',
-                message: 'Publishing block library...',
-                subMessage: 'Publishing 2 library paths...',
+                message: 'Publishing block library',
+                subMessage: 'Publishing 2 library paths',
             });
         });
 
@@ -480,7 +480,7 @@ describe('executeEdsPipeline - step detail', () => {
             await executeEdsPipeline(withPaths(['/a']), services, onProgress);
 
             expect(find('library-publish', /^Publishing block/)?.subMessage).toBe(
-                'Publishing 1 library path...'
+                'Publishing 1 library path'
             );
         });
 
@@ -489,8 +489,8 @@ describe('executeEdsPipeline - step detail', () => {
 
             expect(progress).toContainEqual({
                 operation: 'library-publish',
-                message: 'Publishing block library...',
-                subMessage: 'Verifying the library previewed...',
+                message: 'Publishing block library',
+                subMessage: 'Verifying the library previewed',
             });
         });
 

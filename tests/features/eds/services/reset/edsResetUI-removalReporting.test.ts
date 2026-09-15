@@ -140,7 +140,7 @@ describe('the removal narration', () => {
 
         await run(context);
 
-        expect(report).toHaveBeenCalledWith({ message: 'Removing datapack…' });
+        expect(report).toHaveBeenCalledWith({ message: 'Removing datapack' });
         expect(mockedDeps).toHaveBeenCalledWith(
             context,
             expect.objectContaining({ name: 'test-project' }),

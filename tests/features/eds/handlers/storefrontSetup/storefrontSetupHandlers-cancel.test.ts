@@ -268,7 +268,7 @@ describe('handleCancelStorefrontSetup — what cleanup is asked to delete', () =
 
         expect(context.sendMessage).toHaveBeenCalledWith('storefront-setup-progress', {
             phase: 'cancelling',
-            message: 'Cleaning up resources...',
+            message: 'Cleaning up resources',
             progress: 0,
         });
     });

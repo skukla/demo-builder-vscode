@@ -260,7 +260,7 @@ async function runTargetedMeshDeploy(
     vscode: typeof import('vscode'),
     commandManager: CommandExecutor,
 ): Promise<{ redeployed: boolean; earlyReturn?: HandlerResponse }> {
-    progress.report({ message: 'Redeploying API Mesh…' });
+    progress.report({ message: 'Redeploying API Mesh' });
     context.logger.info(`${logPrefix} Redeploying mesh`);
 
     try {
@@ -315,7 +315,7 @@ export async function handleMeshRedeployment(
 
     if (!meshComponent?.path) return null;
 
-    progress.report({ message: 'Checking Adobe organization access…' });
+    progress.report({ message: 'Checking Adobe organization access' });
     const ready = await ensureAdobeContext(project, context, logPrefix, authService);
 
     if (!ready) {
@@ -403,7 +403,7 @@ export async function resetProjectWithUI(options: ResetWithUIOptions): Promise<H
                 context.logger.info(`${logPrefix} Resetting project: ${project.name}`);
 
                 // Step 1: Load component definitions from saved project state
-                progress.report({ message: 'Loading component definitions…' });
+                progress.report({ message: 'Loading component definitions' });
                 const { componentDefinitions, registry } =
                     await loadComponentDefinitionsFromProject(project, context);
 
@@ -419,7 +419,7 @@ export async function resetProjectWithUI(options: ResetWithUIOptions): Promise<H
                 );
 
                 // Step 2: Delete existing components directory
-                progress.report({ message: 'Removing existing components…' });
+                progress.report({ message: 'Removing existing components' });
                 const componentsDir = path.join(project.path, 'components');
 
                 try {
@@ -433,7 +433,7 @@ export async function resetProjectWithUI(options: ResetWithUIOptions): Promise<H
                 project.componentInstances = {};
 
                 // Step 3: Clone all components (reuse from orchestrator)
-                progress.report({ message: 'Downloading components…' });
+                progress.report({ message: 'Downloading components' });
                 const { cloneAllComponents, installAllComponents } = await import(
                     '@/features/project-creation/services/componentInstallationOrchestrator'
                 );
@@ -452,11 +452,11 @@ export async function resetProjectWithUI(options: ResetWithUIOptions): Promise<H
                 await cloneAllComponents(installContext);
 
                 // Step 4: Install npm dependencies (reuse from orchestrator)
-                progress.report({ message: 'Installing dependencies…' });
+                progress.report({ message: 'Installing dependencies' });
                 await installAllComponents(installContext);
 
                 // Step 5: Regenerate .env files from saved config
-                progress.report({ message: 'Regenerating configuration files…' });
+                progress.report({ message: 'Regenerating configuration files' });
                 const { regenerateProjectEnvFiles } = await import(
                     '@/features/project-creation/helpers/envFileGenerator'
                 );

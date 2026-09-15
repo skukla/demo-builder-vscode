@@ -44,7 +44,7 @@ export class ShowAiCommand extends BaseWebviewCommand<AiOverviewInitialData> {
     }
 
     protected getLoadingMessage(): string {
-        return 'Loading prompt library...';
+        return 'Loading prompt library';
     }
 
     public async execute(): Promise<void> {

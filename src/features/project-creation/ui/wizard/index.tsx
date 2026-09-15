@@ -90,7 +90,7 @@ root.render(
         }}
         loadingContent={
             <View padding="size-400">
-                <div>Initializing...</div>
+                <div>Initializing</div>
             </View>
         }
     >

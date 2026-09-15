@@ -299,9 +299,9 @@ describe('DestinationStage', () => {
         });
 
         it('phase running: shows the spinner instead of the field', () => {
-            setPhases({ phase: 'workspace', phaseMessage: 'Setting up workspace…' });
+            setPhases({ phase: 'workspace', phaseMessage: 'Setting up workspace' });
             renderStage('workspace');
-            expect(screen.getByText('Setting up workspace…')).toBeInTheDocument();
+            expect(screen.getByText('Setting up workspace')).toBeInTheDocument();
             expect(screen.queryByTestId('workspace-field')).not.toBeInTheDocument();
         });
 
@@ -381,9 +381,9 @@ describe('DestinationStage', () => {
         // phase today — but the spinner gate is what decides, and it must not depend
         // on a flag set a hundred lines away in the caller.
         it('the enabling phase shows the spinner, not the picker', () => {
-            setPhases({ phase: 'enabling', phaseMessage: 'Enabling API access…' });
+            setPhases({ phase: 'enabling', phaseMessage: 'Enabling API access' });
             renderStage('project');
-            expect(screen.getByText('Enabling API access…')).toBeInTheDocument();
+            expect(screen.getByText('Enabling API access')).toBeInTheDocument();
             expect(screen.queryByTestId('project-field')).not.toBeInTheDocument();
         });
 

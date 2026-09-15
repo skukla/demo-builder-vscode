@@ -177,7 +177,7 @@ export async function migrateStorefrontNameForProject(
     };
 
     await onProgress?.(
-        `Migrating ${candidate.daLiveOrg}/${candidate.daLiveSite} → ${candidate.repoName}...`,
+        `Migrating ${candidate.daLiveOrg}/${candidate.daLiveSite} → ${candidate.repoName}`,
     );
     const result = await migrateStorefrontNamingIfNeeded(
         ctx,
@@ -196,7 +196,7 @@ export async function migrateStorefrontNameForProject(
 
     await persist(candidate.project);
 
-    await onProgress?.('Re-minting the site publish key...');
+    await onProgress?.('Re-minting the site publish key');
     await registerPublishKey(
         tokenProvider,
         { owner: candidate.repoOwner, repo: candidate.repoName },

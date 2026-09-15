@@ -48,7 +48,7 @@ describe('start-datapack-import', () => {
     });
 
     /**
-     * The push that turns a bare "Importing…" into live progress.
+     * The push that turns a bare "Importing" into live progress.
      *
      * The runner already saw every poll; nothing forwarded them. These pin the
      * forwarding rather than the polling — the runner's own suite covers when
@@ -516,7 +516,7 @@ describe('reset-datapack', () => {
  *
  * It used to return silently if the guard refused, and warn to a log channel if
  * the runner threw. Either way the record stayed `outcome: 'watching'` forever and
- * the modal showed "Importing… this can take several minutes" indefinitely — a
+ * the modal showed "Importing this can take several minutes" indefinitely — a
  * failure invisible to the user AND to this suite, which is how a logger bug that
  * killed every watch survived five green gates.
  *

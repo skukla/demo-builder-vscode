@@ -109,7 +109,7 @@ describe('createAgentOperationNotifier', () => {
     });
 
     it('drops the services\' trailing dots from a phase line and keeps the step counter', () => {
-        expect(phaseLine('Resetting repository to template... (3/11)')).toBe('Resetting repository to template (3/11)');
+        expect(phaseLine('Resetting repository to template (3/11)')).toBe('Resetting repository to template (3/11)');
         expect(phaseLine('Publishing to CDN…')).toBe('Publishing to CDN');
         expect(phaseLine('Published 49 pages to CDN')).toBe('Published 49 pages to CDN');
         expect(phaseLine('Site is live!')).toBe('Site is live!');

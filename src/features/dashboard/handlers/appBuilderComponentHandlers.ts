@@ -86,7 +86,7 @@ export async function guardOrBlock(
     project: Project,
     report: (message: string) => void,
 ): Promise<GuardableResult | undefined> {
-    report('Checking requirements…');
+    report('Checking requirements');
     const guardError = await runGuards(context, project);
     if (!guardError) {
         return undefined;
@@ -110,7 +110,7 @@ export async function runGuards(
     // 9+ minutes (2026-08-27) and NOTHING here said which guard was holding it
     // — the same silent-multi-step shape as the teardown (AI-5). Each step
     // names itself BEFORE it runs so the last line in the log is the culprit.
-    context.logger.debug('[Guards] 1/3 auth check…');
+    context.logger.debug('[Guards] 1/3 auth check');
     const authResult = await ensureAdobeIOAuth({
         authManager,
         logger: context.logger,
@@ -127,7 +127,7 @@ export async function runGuards(
         return { error: 'Adobe sign-in required.', code: ErrorCode.AUTH_REQUIRED };
     }
 
-    context.logger.debug('[Guards] 2/3 org-mismatch check…');
+    context.logger.debug('[Guards] 2/3 org-mismatch check');
     const { detectProjectOrgMismatch } = await import(
         '@/features/authentication/services/detectProjectOrgMismatch'
     );
@@ -138,7 +138,7 @@ export async function runGuards(
         };
     }
 
-    context.logger.debug('[Guards] 3/3 developer-permission check…');
+    context.logger.debug('[Guards] 3/3 developer-permission check');
     const permission = await authManager.testDeveloperPermissions();
     if (!permission.hasPermissions) {
         return {
@@ -493,7 +493,7 @@ export const handleAddAppBuilderComponent: MessageHandler<
                 await context.stateManager.saveProject(project);
             }
 
-            report('Adding integration…');
+            report('Adding integration');
             // The deploy tails report every step; hand them the notification's
             // reporter so a slow add narrates itself instead of sitting on one
             // static title for the ~70s of subscribe + install + build + deploy.
@@ -663,7 +663,7 @@ export async function withComponentProgress<T extends GuardableResult>(
     run: (report: (message: string) => void) => Promise<T>,
 ): Promise<T> {
     const { title, id, label, noun, logger } = options;
-    logger.info(`${title} ${label}...`);
+    logger.info(`${title} ${label}`);
 
     // The register split (steps -> notification, card -> one static line) is
     // SHARED with the mesh path, which is a separate implementation of the same
@@ -718,7 +718,7 @@ async function deployById(
                 return refused;
             }
 
-            report('Deploying…');
+            report('Deploying');
             // Same reuse as the add path: the deploy tail narrates its own steps.
             const deps = buildDefaultRunnerDeps(
                 await buildRunnerDepsContext(context, project, {
@@ -782,7 +782,7 @@ export const handleRemoveAppBuilderComponent: MessageHandler<{ id?: string }> = 
 
             // Undeploy is a slow cloud op — telegraph it, or the grid sits frozen
             // while `aio app undeploy` runs with nothing on screen saying so.
-            report('Removing integration…');
+            report('Removing integration');
             const deps = buildDefaultRunnerDeps(await buildRunnerDepsContext(context, project, {
                     authManager: ServiceLocator.getAuthenticationService(),
                     commandManager: ServiceLocator.getCommandExecutor(),
