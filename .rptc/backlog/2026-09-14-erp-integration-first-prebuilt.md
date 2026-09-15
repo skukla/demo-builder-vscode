@@ -58,3 +58,5 @@ the flyout, the agent tools · 06 live acceptance on Bodea and docs.
 - 2026-09-14  feat(wizard): the ERP integration's card says what comes with it; docs for the pair (`68086fabb`)
 - 2026-09-14  feat(dashboard): the ERP rides its integration's card, with two verbs for people and agents (`edaf98784`)
 - 2026-09-14  feat(app-builder): the ERP pair in the catalog — a system kind, bound to its integration (`f4c20c83d`)
+- 2026-09-15  fix(app-builder): an app whose actions ask for the project credentials deploys (`b24918ad4`)
+- 2026-09-15  Merge develop into feature/erp-integration (`a99be82a5`)
