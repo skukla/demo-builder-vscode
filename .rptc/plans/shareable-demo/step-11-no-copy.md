@@ -288,6 +288,11 @@ New cases (failing first):
   package, not the repository's GitHub owner, has its own title when only the pages are out
   of reach, and on an Edge Delivery project offers "Save as demo package" beside Change
   source when the repository is.
+- Proof check (owner, 2026-09-15): a card added with "Add it from that repository" (a zip
+  import's name was taken) records no zip origin. Remove still offers the delete when the
+  repository is the SC's own, still there, and its latest commit is the zip import's
+  (`ZIP_COMMIT_MESSAGE`, `zipImportCommit.ts`), read with
+  `GitHubFileOperations.getLatestCommitMessage`.
 
 ## Order
 

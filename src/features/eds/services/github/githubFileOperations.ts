@@ -307,6 +307,21 @@ export class GitHubFileOperations {
     }
 
     /**
+     * The message of a branch's latest commit, or null when the branch or repository
+     * does not exist. Remove uses it to recognise a repository a zip import made.
+     */
+    async getLatestCommitMessage(owner: string, repo: string, branch = 'main'): Promise<string | null> {
+        const octokit = await this.ensureAuthenticated();
+        try {
+            const response = await octokit.request('GET /repos/{owner}/{repo}/branches/{branch}', { owner, repo, branch });
+            return response.data.commit.commit.message;
+        } catch (error) {
+            if ((error as GitHubApiError).status === 404) return null;
+            throw error;
+        }
+    }
+
+    /**
      * Get the latest commit SHA for a branch
      * @param owner - Repository owner
      * @param repo - Repository name
