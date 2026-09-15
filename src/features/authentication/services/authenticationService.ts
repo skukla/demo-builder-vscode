@@ -576,6 +576,23 @@ export class AuthenticationService {
         });
     }
 
+    /**
+     * Delete a workspace from the selected project — the reversal of createWorkspace.
+     *
+     * Returns `{ deleted: true }`, or a ConsoleOpFailure naming the real reason. Adobe
+     * refuses to delete the Production workspace; that refusal arrives as an SDK error
+     * and is surfaced rather than guessed at up front.
+     */
+    async deleteWorkspace(
+        workspaceId: string,
+        target?: { orgId?: string; projectId?: string },
+    ): Promise<{ deleted: true } | ConsoleOpFailure> {
+        return withTiming('deleteWorkspace', async () => {
+            const { fetcher } = await this.ensureEntities();
+            return fetcher.deleteWorkspace(workspaceId, target);
+        });
+    }
+
     // --- ApiSubscriberClient passthroughs (D2 Track A) -------------------------
     // The 5 subscriber methods the API-mesh subscribe path needs, forwarded to
     // the fetcher via the existing ensureEntities() seam.

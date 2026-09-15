@@ -8,7 +8,7 @@
         "The reversal need not share a verb stem. `deploy_mesh` is undone by `delete_mesh`, `publish_page` by `delete_page`. A naming rule was measured and REJECTED - it wrongly flags at least three - see PL-55's design section."
     ],
     "_measured": "2026-09-10: 109 tools across both registration forms, read via tests/sop/tool.testUtils.ts (`src/features/ai/server/*.ts`, `src/mcp-server.ts`, `src/mcp/*.ts`). 15 create-shaped. An earlier hand-rolled walk read only one directory and found 100 - the shared helper exists because that mistake has now been made twice.",
-    "openReasonCeiling": 4,
+    "openReasonCeiling": 3,
     "entries": [
         {
             "tool": "add_integration",
@@ -56,7 +56,7 @@
         },
         {
             "tool": "create_adobe_workspace",
-            "reason": "No delete_adobe_workspace, although delete_adobe_project exists. A real gap rather than an impossibility - the Console API supports deleting one. DECIDED 2026-09-11 (owner): BUILD IT. Tracked to closure; this row goes when the tool lands."
+            "reverses": "delete_adobe_workspace"
         },
         {
             "tool": "add_console_apis",

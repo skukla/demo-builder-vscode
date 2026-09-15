@@ -385,7 +385,30 @@ meant.
 > hierarchy. Deleted 2026-09-10; both typecheckers confirmed nothing referenced them.
 > Error SHAPE is ruled separately and already was — see the Pattern B convention above,
 > which is why this one is about where a type lives, not about how failure travels.
-> Enforced by the `coreErrorClasses` ratchet in `tests/sop/architecture-rules.test.ts`.
+> [ADR-023](../architecture/adr/023-error-handling.md) · Enforced by the `coreErrorClasses`
+> ratchet in `tests/sop/architecture-rules.test.ts`.
+
+> **Convention.** A failure a PERSON reads is translated, never the library's own words.
+> *Why:* the extension's job at a failure is to say what went wrong and what to do about
+> it, and `Request failed with status code 403` does neither — it names a transport
+> detail and leaves an SC to guess which permission, which account, which site.
+> Translated means a per-provider formatter (three exist), a domain error's own message,
+> or an honest generic — "Could not reach Adobe Console. See Debug Logs for details." —
+> which is less specific and never misleading. The raw text still goes to the Debug Logs,
+> where it is useful.
+>
+> **The rule is about WHOSE words reach the person, and that is not visible at the call
+> site.** `componentUpdater` passes its caught message straight through and is right to:
+> everything reaching it was thrown by this extension with a deliberate sentence, such as
+> "Build failed (exit 1): tsc: 3 errors". Substituting a generic there on 2026-09-11 made
+> the product worse and six tests said so within a minute. So the check detects the SHAPE
+> and a person decides which kind each site is when they retire it — a row leaving the
+> ledger is a claim that someone looked.
+>
+> 67 sites predate the rule and are ledgered; the list may only shrink, because a rule
+> arriving as 67 build failures is a rule people switch off.
+> [ADR-023](../architecture/adr/023-error-handling.md) · Enforced by
+> `tests/sop/user-facing-errors.test.ts` against a shrink-only ledger.
 
 ---
 
@@ -919,6 +942,7 @@ promising an agent that every response parses.
 > Enforced by `tests/features/ai/server/toolFailureEnvelope.test.ts`, which is not the
 > shape suite next to it: a response can be perfectly shaped and still lie about whether
 > it worked.
+> [ADR-023](../architecture/adr/023-error-handling.md) ·
 > [MCP spec, Tools](https://modelcontextprotocol.io/specification/2025-11-25/server/tools)
 
 > **Convention.** A tool requires an explicit `confirm: true` when its effect is hard to
@@ -1563,11 +1587,11 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 25 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 51 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 52 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 118 conventions. 118 of them are enforced; 0 are not.**
+**This handbook states 119 conventions. 119 of them are enforced; 0 are not.**
 
 The last one to get there was "vendor CSS sits in the lowest cascade layer", and it was
 outstanding because it was **not yet true**: `@layer vendor` existed in no bundle, so a

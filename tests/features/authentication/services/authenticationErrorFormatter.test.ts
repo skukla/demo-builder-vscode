@@ -8,7 +8,6 @@
  * - Uses consistent user-friendly messages from getErrorTitle()
  */
 
-import { AppError } from '@/core/errors';
 import { AuthenticationErrorFormatter } from '@/features/authentication/services/authenticationErrorFormatter';
 import { ErrorCode } from '@/types/errorCodes';
 
@@ -223,12 +222,17 @@ describe('AuthenticationErrorFormatter', () => {
             expect(result.technical).toContain('Code: TIMEOUT');
         });
 
-        it('passes a non-auth, non-general AppError through with its own user message', () => {
+        it('passes a non-auth, non-general domain error through with its own user message', () => {
             // A mesh-category error reaches the formatter's fallback branch: the
             // title comes from the code and the message is the error's own userMessage,
             // not the auth or network copy.
-            const error = new AppError('mesh deploy exited 1', ErrorCode.MESH_DEPLOY_FAILED, {
+            // A domain error carrying the FailureShape fields directly — which is what
+            // replaced the central AppError hierarchy. Nothing inherits; the formatter
+            // reads the shape.
+            const error = Object.assign(new Error('mesh deploy exited 1'), {
+                code: ErrorCode.MESH_DEPLOY_FAILED,
                 userMessage: 'The mesh could not be deployed. Check the deploy log.',
+                recoverable: false,
             });
 
             const result = AuthenticationErrorFormatter.formatError(error, { operation: 'DeployMesh' });

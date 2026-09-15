@@ -40,6 +40,7 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
+import { expectCeiling, type Ledger } from './architectureScan';
 import { toolDeclarations } from './tool.testUtils';
 
 const LEDGER = JSON.parse(readFileSync(join(__dirname, 'reversibility.ledger.json'), 'utf8')) as {
@@ -123,7 +124,14 @@ describe('a capability that creates something can be undone, or says why not', (
         // The debt, pinned. A `reason` is an honest record of a gap, not a resolution —
         // without a ceiling, "state why not" becomes the cheap path and the principle
         // erodes one well-written excuse at a time.
+        //
+        // `expectCeiling`, NOT `toBeLessThanOrEqual`. This was written one-sided on
+        // 2026-09-10 and that is not a ratchet: it permits the count to fall unnoticed
+        // and then climb back to the pin, which is exactly the "banking a regression as
+        // easily as an improvement" failure the shared helper exists to prevent. Caught
+        // on 2026-09-11 when closing the workspace gap dropped the count to 3 and the
+        // check stayed green at a pin of 4.
         const open = LEDGER.entries.filter((e) => !e.reverses).map((e) => e.tool);
-        expect(open.length).toBeLessThanOrEqual(LEDGER.openReasonCeiling);
+        expectCeiling(LEDGER as unknown as Ledger, 'openReasonCeiling', open.length);
     });
 });
