@@ -39,3 +39,4 @@ with `resetTemplateOnConflict:true`. Nothing falls back silently anywhere.
 ## Shipped so far
 
 - 2026-09-14  fix(updates): a template merge that conflicts stops instead of resetting (`52d7df149`)
+- 2026-09-15  fix(updates): a template update applies from the recorded version, not a git merge (`5d805a57a`)
