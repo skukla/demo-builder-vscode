@@ -26,9 +26,9 @@ import { handleChangeDemoSource } from '@/features/eds/handlers/changeDemoSource
 import { handleCheckRepoReadiness } from '@/features/eds/handlers/checkRepoReadinessHandler';
 import { handleCheckCredentialService } from '@/features/eds/handlers/credentialServiceHandler';
 import { handleCheckDaLiveAuth, handleClearDaLiveAuth, handleOpenDaLiveLogin, handleStoreDaLiveTokenWithOrg } from '@/features/eds/handlers/daLive/edsDaLiveHandlers';
+import { handleEditAddedDemo } from '@/features/eds/handlers/editAddedDemoHandler';
 import { handleCheckGitHubAuth, handleCreateGitHubRepo, handleGetGitHubRepos, handleGitHubChangeAccount, handleGitHubOAuth } from '@/features/eds/handlers/edsGitHubHandlers';
 import { handleDiscoverStoreStructure } from '@/features/eds/handlers/edsHandlers';
-import { handleEditAddedDemo } from '@/features/eds/handlers/editAddedDemoHandler';
 import { handleForgetAddedDemo } from '@/features/eds/handlers/forgetAddedDemoHandler';
 import { handleImportStorefrontZip, handleUseBundleSetup } from '@/features/eds/handlers/importStorefrontZipHandler';
 import { handleProbeSharedDemo } from '@/features/eds/handlers/probeSharedDemoHandler';
