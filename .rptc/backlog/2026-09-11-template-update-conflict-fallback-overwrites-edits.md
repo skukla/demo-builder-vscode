@@ -19,8 +19,9 @@ project's second principle says a user's own edits are never overwritten; a conf
 exactly the case where the SC HAS edited the region. The fallback turns the one situation
 that needs a human into the one situation that silently destroys their work.
 
-Forking shared demos (D16) routes more updates through this path, which is why it is filed
-now rather than left implicit.
+Shared demos (EDS-13a) route more updates through this path, which is why it is filed now
+rather than left implicit. (It was filed against forking them, D16, which was removed
+2026-09-14; added demos still update through the template merge.)
 
 ## What to decide
 

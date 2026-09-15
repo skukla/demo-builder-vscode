@@ -28,9 +28,7 @@ mainline) is newer than a storefront a colleague wants to add, what should we do
      must stop and name the files instead.
    - A repository GENERATED from the template (Jen's): there is no shared git history, so a
      merge is impossible and the only mechanical path is a reset onto the current
-     boilerplate, which throws away the colleague's customisations. Not offered. The SC's
-     own copy (the "keep my own copy" fork made at add time) inherits the same age, and the
-     same rule.
+     boilerplate, which throws away the colleague's customisations. Not offered.
 4. **Never refuse on age.** A floor exists only as a warning: below the oldest boilerplate
    our drop-in and configuration assumptions were verified on, the card says "This storefront
    is older than the versions Demo Builder is tested with; some demo features may not work."

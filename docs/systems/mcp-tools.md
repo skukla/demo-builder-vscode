@@ -45,10 +45,10 @@ server IS — transport, lifecycle, scoping, security — is in
 
 | Tool | | What it does |
 |---|---|---|
-| `add_shared_demo` | **confirm** | Add a colleague's demo (or one of your own) to your Welcome step from its GitHub link or site address, so create_project can build on it. keepCopy (default true) forks the repository into your own Git |
+| `add_shared_demo` | **confirm** | Add a colleague's demo (or one of your own) to your Welcome step from its GitHub link or site address, so create_project can build on it. Nothing is created on GitHub for a link. Use probe_shared_demo |
 | `change_demo_source` |  | Point the open project (built on an added demo) at another copy of that demo: a colleague's repository or your own fork. Same storefront kind only. Rewrites where reset and updates read from; the proj |
 | `edit_added_demo` |  | Rename an added demo package's card on the Welcome step, change its description, or both. Omitted fields stay as they are; an empty description takes it off the card. Projects built on the demo keep t |
-| `forget_added_demo` | **confirm** | Take a demo added from a link off your Welcome step; with deleteCopy:true also delete your own copy of its code from GitHub. Projects built on it are never touched. Requires confirm:true. |
+| `forget_added_demo` | **confirm** | Take an added demo off your Welcome step; with deleteRepository:true also delete the repository Demo Builder made from its zip file (only for a demo added from a zip). Projects built on it are never t |
 
 ## `src/features/ai/server/adobeResourceTools.ts`
 

@@ -8,14 +8,12 @@
  * @module features/eds/handlers/probeSharedDemoHandler
  */
 
-import type { GitHubRepoOperations } from '../services/github/githubRepoOperations';
-import type { GitHubTokenService } from '../services/github/githubTokenService';
 import { probeSharedDemo } from '../services/storefront/sharedDemoProbe';
 import { adoptExistingGitHubSession } from './edsGitHubHandlers';
 import { getGitHubServices } from './edsHelpers';
 import { assertGitHubName, parseStorefrontLink } from '@/core/utils/githubUrlParser';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
-import type { ProbeSharedDemoRequest, SharedDemoProbeResult, SharedDemoRead } from '@/types/webviewRequests';
+import type { ProbeSharedDemoRequest, SharedDemoProbeResult } from '@/types/webviewRequests';
 
 /** The refusal when no GitHub session can be found: the dialog and the agent both name the sign-in. */
 export const GITHUB_SIGN_IN_REQUIRED = 'Sign in to GitHub to read this demo.';
@@ -67,35 +65,5 @@ export async function handleProbeSharedDemo(
         repo,
         context.logger,
     );
-    if (result.outcome !== 'read') return { success: true, result };
-    const viewer = await describeViewer(tokenService, repoOperations, owner, repo, context.logger);
-    return { success: true, result: viewer ? { ...result, viewer } : result };
-}
-
-/**
- * Whether the repository is the viewer's own, and their existing fork of it if
- * any: the two facts the "keep my own copy" tick box is worded from. Best
- * effort; a viewer who cannot be identified simply gets the default wording.
- */
-async function describeViewer(
-    tokenService: Pick<GitHubTokenService, 'validateToken'>,
-    repoOps: Pick<GitHubRepoOperations, 'getRepository'>,
-    owner: string,
-    repo: string,
-    logger: HandlerContext['logger'],
-): Promise<SharedDemoRead['viewer'] | undefined> {
-    const validation = await tokenService.validateToken();
-    const login = validation.user?.login;
-    if (!login) return undefined;
-    const ownsRepo = login.toLowerCase() === owner.toLowerCase();
-    if (ownsRepo) return { login, ownsRepo };
-    try {
-        const own = await repoOps.getRepository(login, repo);
-        const parent = own.forkParent?.toLowerCase();
-        const existingFork = parent === `${owner}/${repo}`.toLowerCase() ? own.fullName : undefined;
-        return { login, ownsRepo, ...(existingFork ? { existingFork } : {}) };
-    } catch (error) {
-        logger.debug(`[SharedDemo] No fork of ${owner}/${repo} under ${login}: ${(error as Error).message}`);
-        return { login, ownsRepo };
-    }
+    return { success: true, result };
 }

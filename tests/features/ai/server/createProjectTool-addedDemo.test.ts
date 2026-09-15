@@ -65,6 +65,15 @@ describe('create_project — an added demo by id', () => {
         expect(executeProjectCreation).toHaveBeenCalled();
     });
 
+    it("leaves a zip card's record behind: neither payload's row carries it", async () => {
+        mockRead.mockReturnValue([{ ...JEN, createdFromZip: true }, BOB]);
+
+        await toolServer().call({ ...EDS, package: 'added:jen/isle5-demo' });
+
+        expect(storefrontSetup.mock.calls[0][1].demo).toStrictEqual(JEN);
+        expect(capturedWizardState()?.demo).toStrictEqual(JEN);
+    });
+
     it('takes a headless demo down the headless path with the row', async () => {
         const res = await toolServer().call({ projectName: 'p', package: 'added:bob/next-shop', stack: 'headless-paas', confirm: true });
 
@@ -96,39 +105,21 @@ describe('create_project — an added demo by id', () => {
 });
 
 describe('create_project — from a link', () => {
-    it('reads the link, adds the demo (a copy kept by default), then builds on the remembered row', async () => {
-        mockRow.mockResolvedValue({
-            demo: JEN,
-            read: { fullName: 'jen/isle5-demo', viewer: { login: 'steve', ownsRepo: false } },
-            warnings: [],
-        });
-        const kept = { ...JEN, source: { owner: 'steve', repo: 'isle5-demo', branch: 'main' } };
-        mockAdd.mockResolvedValue({ success: true, result: { demo: kept, forkedTo: 'steve/isle5-demo' } });
+    it('reads the link, adds the demo, then builds on the remembered row, which reads from the link', async () => {
+        mockRow.mockResolvedValue({ demo: JEN, read: { fullName: 'jen/isle5-demo' }, warnings: [] });
+        mockAdd.mockResolvedValue({ success: true, result: { demo: JEN } });
 
         const { package: _omitted, ...rest } = EDS;
         const res = await toolServer().call({ ...rest, link: 'https://main--isle5-demo--jen.aem.live' });
 
         expect(mockRow).toHaveBeenCalledWith(expect.anything(), { link: 'https://main--isle5-demo--jen.aem.live' });
-        expect(mockAdd).toHaveBeenCalledWith(expect.anything(), { demo: JEN, keepCopy: true });
+        expect(mockAdd).toHaveBeenCalledWith(expect.anything(), { demo: JEN });
         expect(res.created).toBe(true);
         expect(storefrontSetup.mock.calls[0][1]).toMatchObject({
-            selectedPackage: 'added:steve/isle5-demo',
-            demo: kept,
-            edsConfig: { templateOwner: 'steve', templateRepo: 'isle5-demo' },
+            selectedPackage: 'added:jen/isle5-demo',
+            demo: JEN,
+            edsConfig: { templateOwner: 'jen', templateRepo: 'isle5-demo' },
         });
-    });
-
-    it("keeps no copy when asked not to, and never for the SC's own repository", async () => {
-        mockRow.mockResolvedValue({ demo: JEN, read: { fullName: 'jen/isle5-demo', viewer: { login: 'jen', ownsRepo: true } }, warnings: [] });
-        mockAdd.mockResolvedValue({ success: true, result: { demo: JEN } });
-        const { package: _omitted, ...rest } = EDS;
-
-        await toolServer().call({ ...rest, link: 'https://github.com/jen/isle5-demo' });
-        expect(mockAdd).toHaveBeenLastCalledWith(expect.anything(), { demo: JEN, keepCopy: false });
-
-        mockRow.mockResolvedValue({ demo: JEN, read: { fullName: 'jen/isle5-demo', viewer: { login: 'steve', ownsRepo: false } }, warnings: [] });
-        await toolServer().call({ ...rest, link: 'https://github.com/jen/isle5-demo', keepCopy: false });
-        expect(mockAdd).toHaveBeenLastCalledWith(expect.anything(), { demo: JEN, keepCopy: false });
     });
 
     it('passes the probe refusal through and creates nothing', async () => {

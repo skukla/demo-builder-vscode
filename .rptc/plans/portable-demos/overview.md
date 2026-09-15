@@ -51,7 +51,7 @@ export, import and copy carry the whole project, on one versioned file.
 | D13 | ONE contract: the versioned project file; the storefront description is the slice that travels with a repo | program 01 |
 | D14 | Copy and Edit both stay, fed by that one complete file | PL-56 children |
 | D15 | Agent surface ships with each human surface | shareable-demo 07, 09; PL-56f |
-| D16 | Fork on add, ticked by default: the SC's fork is the demo's source; updates are "Pull Jen's changes"; Forget offers to delete the fork | shareable-demo 04–07 |
+| D16 | ~~Fork on add, ticked by default: the SC's fork is the demo's source; updates are "Pull Jen's changes"; Forget offers to delete the fork~~ **Reversed 2026-09-14 (D33):** no copy; an added demo reads from its link, as a shipped package does | shareable-demo 04–07, 11 |
 | D17 | Source gone (unforked): dashboard notice, reset refuses up front, rename self-heal, "Change source" repoints via the Add dialog; content gone: reset offers to keep current content | shareable-demo 06 |
 | D20 | A demo's blocks always arrive complete: they are code in the generated repo, the palette is generated from that code, and the example pages are copied from the demo's content site as library doc pages regardless of the page copy | shareable-demo 05 |
 | D21 | The Storefront area names the demo: a first summary row "Demo — Isle5 by Jen · Edge Delivery" and the existing-repo tick reads "Reset to Isle5 by Jen (replaces all content)"; same for shipped brands | shareable-demo 05 |
@@ -61,13 +61,14 @@ export, import and copy carry the whole project, on one versioned file.
 | D25 | Everything else can travel; stale sign-ins and Adobe context are re-proven through the EXISTING prompts (edit-mode seeding, "Switch IMS Org") before anything continues | PL-56a, 56d |
 | D26 | The description file (and a shipped catalog entry) may name the datapack the demo expects; the Sample Data step pre-selects it and says why; the SC can change it | program 01, shareable-demo 05 |
 | D27 | Share this demo is Edge Delivery only in v1; a headless project has no repo of the SC's own; headless Share is EDS-13e | shareable-demo 09 |
-| D28 | The fork lives in the SC's personal GitHub account only; no team-org forks in v1 | shareable-demo 04, 05, 06 |
+| D28 | The fork lives in the SC's personal GitHub account only; no team-org forks in v1. **Amended 2026-09-14 (D33):** there is no fork; a zip's repository is created in the personal account | shareable-demo 04, 05, 06, 10, 11 |
 | D29 | The description file (and a shipped catalog entry) may name integrations the demo depends on: catalog ids and custom-app links; the Integrations area starts with them added | program 01, shareable-demo 05 |
 | D30 | A link to one of our own templates (exact owner/repo, never a fork) is recognised and selects the shipped card | shareable-demo 03, 04 |
 | D31 | Data on import/add: the named datapack (name + version) is pre-selected in Sample Data, community packs shown when needed; the banner says to install it from the dashboard, or that it is not published and the owner must export it; no install runs during creation | shareable-demo 05; PL-56d |
 | D32 | Share and Export check reachability: a pack missing from the datapack service offers the owner's own stage-3 export; a private custom-app repository offers to make it public (a confirmed GitHub settings write); curation (the shared flag) is never touched. **The publish offer waits on the service being able to export rows** ([[DI-3]], spiked: not possible today); until then Share and Export WARN that the pack is unpublished | shareable-demo 09; PL-56c |
 | D19 | Updates: the existing updater applies unchanged (fork sync per template repo + per-project template merge, one picker); no new mechanism for shared demos | shareable-demo 06 |
-| D18 | Forget removes the card only; "Also delete my copy" is an unticked tick box naming the projects that still use the fork, confirmed again before the repo goes; project deletion never touches the fork | shareable-demo 04, 06 |
+| D18 | Forget removes the card only; "Also delete my copy" is an unticked tick box naming the projects that still use the fork, confirmed again before the repo goes; project deletion never touches the fork. **Amended 2026-09-14 (D33):** the delete is offered only for a repository the extension made from a zip, that still exists and is the SC's own | shareable-demo 04, 06, 11 |
+| D33 | No copy of an added demo (owner, 2026-09-14). A shipped package has none; a fork is deleted with a private original and cannot be restored while the original exists; the copy saved code but not pages. A demo nobody can take away is "Save as demo package" on a project. The card records `createdFromZip` so Remove can undo the one repository the extension does create | shareable-demo 10, 11 |
 
 ## Recommended design
 

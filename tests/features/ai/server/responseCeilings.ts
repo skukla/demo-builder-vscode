@@ -125,11 +125,11 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
     },
     add_shared_demo: {
         bytes: 1_500,
-        why: 'the id, name, source and kind of the remembered row plus the probe warnings, or the fork refusal',
+        why: 'the id, name, source and kind of the remembered row plus the probe warnings, or the zip confirm refusal',
     },
     forget_added_demo: {
         bytes: 1_000,
-        why: 'the demo name, its source, a project count and the outcome, or the confirm refusal naming the same',
+        why: 'the demo name, its source, a project count and the outcome, or the confirm or zip-repository refusal naming the same',
     },
     edit_added_demo: {
         bytes: 600,

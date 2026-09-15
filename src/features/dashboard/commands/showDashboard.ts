@@ -21,8 +21,10 @@ import {
     getEwCanvasBranch,
     resolveProjectAuthoringExperience,
 } from '@/features/eds/handlers/edsHelpers';
+import { addedDemoKey, readAddedDemos } from '@/features/project-creation/services/addedDemoSettings';
 import { ComponentInstance, Project, type AppBuilderComponentState } from '@/types/base';
 import { HandlerContext } from '@/types/handlers';
+import type { AddedDemo } from '@/types/projectFile';
 import type { Stack, StacksConfig } from '@/types/stacks';
 import {
     getComponentInstanceValues,
@@ -84,6 +86,13 @@ export function shouldAutoReopenProjectsList(
     // rel === '' is the projects root itself (the always-root home); a non-empty
     // rel is a project subdir. Both should reopen the list.
     return true;
+}
+
+/** The demo package on the Welcome step reading from the project's source, by its card name, when there is one. */
+function demoPackageNameFor(demo: AddedDemo): { demoPackageName?: string } {
+    const key = addedDemoKey(demo);
+    const card = readAddedDemos().find((row) => addedDemoKey(row) === key);
+    return card ? { demoPackageName: card.name } : {};
 }
 
 /**
@@ -205,6 +214,7 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand<Dashboard
                           name: project.demo.name,
                           source: project.demo.source,
                           storefrontKind: project.demo.storefrontKind,
+                          ...demoPackageNameFor(project.demo),
                       },
                   }
                 : {}),

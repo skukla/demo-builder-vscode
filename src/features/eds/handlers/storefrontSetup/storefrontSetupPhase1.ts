@@ -337,8 +337,8 @@ async function executePhaseExistingRepo(
 /**
  * Create the new repository from its source. A shipped brand's template is a
  * GitHub template, so `generate` is the whole story. An added demo's source
- * is whatever the colleague has: when GitHub flags it as a template (or it is
- * the SC's own copy, which the add flagged) `generate` still works; otherwise
+ * is whatever the colleague has: when GitHub flags it as a template (a zip
+ * import flags the repository it creates) `generate` still works; otherwise
  * an empty repository is created and reset onto the source, the same reset an
  * existing repo gets. Read live, not from the row, so a flag set after the add
  * is honoured and a removed one does not break the run.

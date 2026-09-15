@@ -128,7 +128,7 @@ describe('useAddDemoFlow', () => {
         const { hook, onDemoAdded } = setup();
         const SETUP = { version: 1, exportedAt: 'x', source: {}, includesSecrets: false, selections: {}, configs: {} };
         mockRequest.mockResolvedValueOnce({ success: true, result: { owner: 'steve', repo: 'summit', setup: SETUP } });
-        mockRequest.mockResolvedValueOnce({ success: true, result: { ...READ, fullName: 'steve/summit', viewer: { login: 'steve', ownsRepo: true } } });
+        mockRequest.mockResolvedValueOnce({ success: true, result: { ...READ, fullName: 'steve/summit' } });
         await continueWithZip(hook);
         expect(hook.result.current.bundleSetup).toEqual(SETUP);
 
@@ -137,7 +137,9 @@ describe('useAddDemoFlow', () => {
         mockRequest.mockResolvedValueOnce({ success: true });
         await act(async () => hook.result.current.startFromBundle());
 
-        expect(mockRequest).toHaveBeenNthCalledWith(3, 'add-shared-demo', expect.objectContaining({ keepCopy: false }));
+        expect(mockRequest).toHaveBeenNthCalledWith(3, 'add-shared-demo', {
+            demo: expect.objectContaining({ source: { owner: 'steve', repo: 'summit', branch: 'main' }, createdFromZip: true }),
+        });
         expect(mockRequest).toHaveBeenNthCalledWith(4, 'use-bundle-setup', { setup: SETUP, demo: remembered });
         expect(onDemoAdded).toHaveBeenCalledWith(remembered);
     });
@@ -156,11 +158,11 @@ describe('useAddDemoFlow', () => {
         expect(mockRequest).toHaveBeenCalledTimes(2);
     });
 
-    it('commits through add-shared-demo with the row and the copy choice, then reports and closes', async () => {
+    it('commits through add-shared-demo with the row, then reports and closes', async () => {
         const { hook, onDemoAdded, onClose } = setup();
         await walkToFound(hook, { success: true, result: READ });
-        const remembered = { kind: 'demo', name: 'Isle5 Demo', source: { owner: 'steve', repo: 'isle5-demo' } };
-        mockRequest.mockResolvedValueOnce({ success: true, result: { demo: remembered, forkedTo: 'steve/isle5-demo' } });
+        const remembered = { kind: 'demo', name: 'Isle5 Demo', source: { owner: 'jen', repo: 'isle5-demo' } };
+        mockRequest.mockResolvedValueOnce({ success: true, result: { demo: remembered } });
 
         await act(async () => {
             hook.result.current.onContinue();
@@ -168,8 +170,8 @@ describe('useAddDemoFlow', () => {
 
         expect(mockRequest).toHaveBeenLastCalledWith('add-shared-demo', {
             demo: expect.objectContaining({ name: 'Isle5 Demo', source: { owner: 'jen', repo: 'isle5-demo', branch: 'main' } }),
-            keepCopy: true,
         });
+        expect(mockRequest.mock.calls.at(-1)?.[1].demo).not.toHaveProperty('createdFromZip');
         expect(onDemoAdded).toHaveBeenCalledWith(remembered);
         expect(onClose).toHaveBeenCalled();
         // The spinner stays up after a successful add. Spectrum's DialogContainer
@@ -179,24 +181,34 @@ describe('useAddDemoFlow', () => {
         expect(hook.result.current.adding).toBe(true);
     });
 
-    it("asks for no copy of the SC's own repository, whatever the box says", async () => {
+    it('records the zip only for the repository the zip door created, not for one reached by Back and a link', async () => {
         const { hook } = setup();
-        await walkToFound(hook, { success: true, result: { ...READ, viewer: { login: 'jen', ownsRepo: true } } });
+        mockRequest.mockResolvedValueOnce({ success: true, result: { owner: 'jen', repo: 'isle5-demo' } });
+        mockRequest.mockResolvedValueOnce({ success: true, result: READ });
+        await continueWithZip(hook);
+        act(() => hook.result.current.onBack());
+        expect(hook.result.current.stage).toBe('link');
+
+        // The same repository, now reached by its link: nothing proves this add made it.
+        act(() => hook.result.current.setWay('link'));
+        await walkToFound(hook, { success: true, result: READ });
         mockRequest.mockResolvedValueOnce({ success: true, result: { demo: {} } });
         await act(async () => {
             hook.result.current.onContinue();
         });
-        expect(mockRequest).toHaveBeenLastCalledWith('add-shared-demo', expect.objectContaining({ keepCopy: false }));
+
+        expect(mockRequest.mock.calls.at(-1)?.[0]).toBe('add-shared-demo');
+        expect(mockRequest.mock.calls.at(-1)?.[1].demo).not.toHaveProperty('createdFromZip');
     });
 
     it('keeps the dialog open with the error when the add is refused', async () => {
         const { hook, onClose } = setup();
         await walkToFound(hook, { success: true, result: READ });
-        mockRequest.mockResolvedValueOnce({ success: false, error: "We couldn't make your own copy of this demo." });
+        mockRequest.mockResolvedValueOnce({ success: false, error: 'The settings could not be saved.' });
         await act(async () => {
             hook.result.current.onContinue();
         });
-        expect(hook.result.current.addError).toMatch(/own copy/);
+        expect(hook.result.current.addError).toMatch(/could not be saved/);
         expect(hook.result.current.adding).toBe(false);
         expect(onClose).not.toHaveBeenCalled();
     });

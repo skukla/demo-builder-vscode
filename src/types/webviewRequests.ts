@@ -18,7 +18,7 @@ import type { CustomBlockLibrary } from './blockLibraries';
 import type { CommerceStoreStructure } from './commerceStore';
 import type { ComponentConfigs, EnvVarDefinition, ServiceDefinition } from './components';
 import type { DaLiveContentSource } from './demoPackages';
-import type { AddedDemo, SharedDemoDescription, StorefrontKind } from './projectFile';
+import type { AddedDemo, RememberedDemo, SharedDemoDescription, StorefrontKind } from './projectFile';
 import type { SettingsFile } from './settingsFile';
 import type { GitHubRepoItem } from './webview';
 import type { GitHubUser } from './webviewPayloads';
@@ -95,8 +95,6 @@ export interface SharedDemoRead {
     defaultBranch: string;
     /** GitHub's template flag on the repository. */
     isTemplate: boolean;
-    /** The repository this one was forked from, when it is a fork. */
-    forkParent?: string;
     kind: SharedDemoKind;
     /** For `not-a-storefront`: the canonical files that were missing, or the reason nothing could be read. */
     missing?: string[];
@@ -115,37 +113,28 @@ export interface SharedDemoRead {
     overrides: string[];
     /** Things the SC should hear, in plain words. */
     warnings: string[];
-    /**
-     * What the handler knows about the signed-in GitHub user and this repository:
-     * whether it is their own (no copy to offer), and their existing fork of it
-     * when they already have one (the copy is already kept).
-     */
-    viewer?: { login: string; ownsRepo: boolean; existingFork?: string };
 }
 
 /**
- * `add-shared-demo` — the dialog's "Add demo" commit. The row as the dialog
- * built it from the probe; `keepCopy` asks for a fork into the SC's own
- * account first (the tick box is the visible confirmation of that cloud
- * write), and the returned row's `source` is then the fork.
+ * `add-shared-demo` — the dialog's "Add demo" commit: remember the row as the
+ * dialog built it from the probe. Nothing is created on GitHub (no copy since
+ * 2026-09-14, shareable-demo step 11).
  */
 export interface AddSharedDemoRequest {
-    demo: AddedDemo;
-    keepCopy: boolean;
+    demo: RememberedDemo;
 }
 
 export interface AddSharedDemoResult {
-    /** The remembered row; its `source` is the fork when one was kept. */
-    demo: AddedDemo;
-    /** Set when a fork was created (or found) for this add: its `owner/repo`. */
-    forkedTo?: string;
+    /** The remembered card. */
+    demo: RememberedDemo;
 }
 
 /**
  * `forget-added-demo` — take a demo off your Welcome step. The host asks
  * for confirmation itself (it knows how many projects on this computer were
- * built on the demo) and, when the source is the SC's own copy, offers to
- * delete that copy too (decided 2026-09-11: off by default, confirmed twice).
+ * built on the demo) and, when the remembered card's repository was made from
+ * a zip and is still the SC's own, offers to delete it too (off by default,
+ * confirmed twice).
  */
 export interface ForgetAddedDemoRequest {
     name: string;
@@ -155,8 +144,8 @@ export interface ForgetAddedDemoRequest {
 export interface ForgetAddedDemoResult {
     /** False when the SC cancelled at the confirmation. */
     forgotten: boolean;
-    /** Set when the SC's own copy was deleted from GitHub as well. */
-    deletedCopy?: boolean;
+    /** Set when the repository made from the zip was deleted from GitHub as well. */
+    deletedRepository?: boolean;
 }
 
 /**
@@ -178,14 +167,13 @@ export interface EditAddedDemoResult {
 /**
  * `change-demo-source` — point the current project at another copy of its
  * demo (the same storefront kind). Rewrites the project's row and the
- * instance metadata the update check reads; the remembered demo only when
- * asked. Touches neither the SC's repository nor their site, so pointing
+ * instance metadata the update check reads; the demo package on the Welcome
+ * step only when asked. Touches neither the SC's repository nor their site, so pointing
  * back undoes it (decided 2026-09-11).
  */
 export interface ChangeDemoSourceRequest {
     demo: AddedDemo;
-    keepCopy: boolean;
-    updateRemembered: boolean;
+    updateDemoPackage: boolean;
 }
 
 /**
@@ -261,11 +249,10 @@ export interface RemoveDemoPackageResult {
 }
 
 export interface ChangeDemoSourceResult {
-    /** The project's row now; its `source` is the fork when one was kept. */
+    /** The project's row now. */
     demo: AddedDemo;
     /** Where the project read from before, so the change can be pointed back. */
     previous: { owner: string; repo: string };
-    forkedTo?: string;
 }
 
 /**

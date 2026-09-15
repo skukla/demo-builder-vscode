@@ -87,7 +87,7 @@ describe('checkDemoSource', () => {
         expect(check).toEqual({
             reachable: false,
             contentReachable: false,
-            message: "jen's demo can't be reached. Reset and updates are unavailable until it is.",
+            message: "The Isle5 by Jen demo's repository can't be reached. Reset and updates are unavailable until it is.",
         });
         expect(okFetch).not.toHaveBeenCalled();
     });
@@ -135,7 +135,7 @@ describe('checkDemoSource', () => {
 
         expect(check.reachable).toBe(true);
         expect(check.contentReachable).toBe(false);
-        expect(check.contentMessage).toBe("jen's demo's pages can't be reached right now.");
+        expect(check.contentMessage).toBe("The Isle5 by Jen demo's pages can't be reached right now.");
     });
 
     it('reads the demo\'s own index path when the row states one', async () => {

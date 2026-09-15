@@ -899,7 +899,7 @@
     "expect": [
       "add_shared_demo"
     ],
-    "why": "Step 07 of the shareable-demo program (EDS-13a): the dialog's Add commit. The list lives in a user setting, so an agent without the tool writes settings.json by hand and skips the probe that decides the row's kind and codes. Tier 2: it writes a user setting (and forks when a copy is kept), so it runs only under --tier2.",
+    "why": "Step 07 of the shareable-demo program (EDS-13a): the dialog's Add commit. The list lives in a user setting, so an agent without the tool writes settings.json by hand and skips the probe that decides the row's kind and codes. Tier 2: it writes a user setting, so it runs only under --tier2.",
     "tier": 2
   },
   {

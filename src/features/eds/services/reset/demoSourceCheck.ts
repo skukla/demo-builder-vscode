@@ -41,8 +41,13 @@ export interface DemoSourceCheck {
 }
 
 /** "Jen's demo" for a demo named "Isle5 by Jen": the owner's login is the person. */
-function whose(project: Project): string {
-    return project.demo ? `${project.demo.source.owner}'s demo` : 'This demo';
+/**
+ * The demo, by its demo package name: always known, where the repository's
+ * GitHub owner is an account or an organization rather than the author's name
+ * (owner, 2026-09-15).
+ */
+function theDemo(project: Project): string {
+    return project.demo ? `The ${project.demo.name} demo` : 'This demo';
 }
 
 /**
@@ -61,7 +66,7 @@ export async function checkDemoSource(
 ): Promise<DemoSourceCheck> {
     const demo = project.demo;
     if (!demo) return { reachable: true, message: '', contentReachable: true };
-    const unreachable = `${whose(project)} can't be reached. Reset and updates are unavailable until it is.`;
+    const unreachable = `${theDemo(project)}'s repository can't be reached. Reset and updates are unavailable until it is.`;
 
     let renamedTo: string | undefined;
     try {
@@ -83,7 +88,7 @@ export async function checkDemoSource(
         contentReachable,
         ...(contentReachable
             ? {}
-            : { contentMessage: `${whose(project)}'s pages can't be reached right now.` }),
+            : { contentMessage: `${theDemo(project)}'s pages can't be reached right now.` }),
         ...(renamedTo ? { renamedTo } : {}),
     };
 }

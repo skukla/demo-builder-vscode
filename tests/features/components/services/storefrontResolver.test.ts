@@ -4,6 +4,7 @@
  */
 
 import {
+    projectRowOf,
     resolveStorefrontForProject,
 } from '@/features/components/services/storefrontResolver';
 import { ADDED_DEMO_ID_PREFIX } from '@/types/projectFile';
@@ -19,6 +20,17 @@ const catalog = [
         },
     }),
 ];
+
+describe('projectRowOf', () => {
+    it('leaves the zip record on the card: a project row never carries it', () => {
+        const card = makeAddedDemo();
+        expect(projectRowOf({ ...card, createdFromZip: true })).toStrictEqual(card);
+    });
+
+    it('answers nothing for no card', () => {
+        expect(projectRowOf(undefined)).toBeUndefined();
+    });
+});
 
 describe('resolveStorefrontForProject', () => {
     it('reads the catalog when the project has no row of its own', () => {

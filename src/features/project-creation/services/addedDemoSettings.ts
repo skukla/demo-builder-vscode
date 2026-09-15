@@ -12,7 +12,7 @@
 
 import * as vscode from 'vscode';
 import { readSharedDemoDescription } from '@/core/state/projectFileReader';
-import type { AddedDemo, StorefrontKind } from '@/types/projectFile';
+import type { AddedDemo, RememberedDemo, SharedDemoDescription, StorefrontKind } from '@/types/projectFile';
 
 /** The setting's key under `demoBuilder`. Cited by name in `SETTING_KEYS` and package.json. */
 export const ADDED_DEMOS_SETTING = 'demos.added';
@@ -30,9 +30,9 @@ export function addedDemoKey(demo: Pick<AddedDemo, 'source'>): string {
  * @param raw - The setting's value as VS Code hands it back
  * @returns The valid rows, in the setting's order
  */
-export function parseAddedDemoSettings(raw: unknown): AddedDemo[] {
+export function parseAddedDemoSettings(raw: unknown): RememberedDemo[] {
     if (!Array.isArray(raw)) return [];
-    const rows: AddedDemo[] = [];
+    const rows: RememberedDemo[] = [];
     for (const entry of raw) {
         const row = toAddedDemo(entry);
         if (row) rows.push(row);
@@ -41,7 +41,7 @@ export function parseAddedDemoSettings(raw: unknown): AddedDemo[] {
 }
 
 /** A row is a valid description plus a source and a storefront kind. */
-function toAddedDemo(entry: unknown): AddedDemo | undefined {
+function toAddedDemo(entry: unknown): RememberedDemo | undefined {
     if (typeof entry !== 'object' || entry === null) return undefined;
     const candidate = entry as { source?: unknown; storefrontKind?: unknown };
     const source = candidate.source as { owner?: unknown; repo?: unknown; branch?: unknown } | undefined;
@@ -51,19 +51,38 @@ function toAddedDemo(entry: unknown): AddedDemo | undefined {
     }
     const read = readSharedDemoDescription(JSON.stringify(entry));
     if (!read.ok) return undefined;
+    // The description reader keeps fields it does not know, so the zip record is
+    // taken off what it answers and put back only when it is exactly `true`.
+    const read_: SharedDemoDescription & { createdFromZip?: unknown } = read.description;
+    const { createdFromZip: _read, ...description } = read_;
     return {
-        ...read.description,
+        ...description,
         source: {
             owner: source.owner,
             repo: source.repo,
             ...(typeof source.branch === 'string' ? { branch: source.branch } : {}),
         },
         storefrontKind: candidate.storefrontKind as StorefrontKind,
+        ...((entry as { createdFromZip?: unknown }).createdFromZip === true ? { createdFromZip: true } : {}),
     };
 }
 
+/** A demo row with a source and a storefront kind, as the dialog builds it. */
+export function isAddedDemo(value: unknown): value is AddedDemo {
+    const demo = value as Partial<AddedDemo> | null;
+    return (
+        typeof demo === 'object' &&
+        demo !== null &&
+        demo.kind === 'demo' &&
+        typeof demo.name === 'string' &&
+        typeof demo.source?.owner === 'string' &&
+        typeof demo.source.repo === 'string' &&
+        (demo.storefrontKind === 'eds' || demo.storefrontKind === 'headless')
+    );
+}
+
 /** The remembered rows, from the user's settings. */
-export function readAddedDemos(): AddedDemo[] {
+export function readAddedDemos(): RememberedDemo[] {
     return parseAddedDemoSettings(
         vscode.workspace.getConfiguration('demoBuilder').get<unknown[]>(ADDED_DEMOS_SETTING, []),
     );
@@ -99,7 +118,7 @@ export async function renameAddedDemoSource(
  *
  * @returns The list as it is now remembered
  */
-export async function forgetAddedDemo(source: { owner: string; repo: string }): Promise<AddedDemo[]> {
+export async function forgetAddedDemo(source: { owner: string; repo: string }): Promise<RememberedDemo[]> {
     const key = addedDemoKey({ source });
     const next = readAddedDemos().filter((row) => addedDemoKey(row) !== key);
     await vscode.workspace
@@ -119,14 +138,14 @@ export async function forgetAddedDemo(source: { owner: string; repo: string }): 
 export async function editAddedDemo(
     source: { owner: string; repo: string },
     edit: { name: string; description: string },
-): Promise<AddedDemo | undefined> {
+): Promise<RememberedDemo | undefined> {
     const current = readAddedDemos();
     const key = addedDemoKey({ source });
     const index = current.findIndex((row) => addedDemoKey(row) === key);
     if (index < 0) return undefined;
     const { description: _previous, ...rest } = current[index];
     const description = edit.description.trim();
-    const edited: AddedDemo = { ...rest, name: edit.name.trim(), ...(description ? { description } : {}) };
+    const edited: RememberedDemo = { ...rest, name: edit.name.trim(), ...(description ? { description } : {}) };
     const next = current.map((row, i) => (i === index ? edited : row));
     await vscode.workspace
         .getConfiguration('demoBuilder')
@@ -141,7 +160,7 @@ export async function editAddedDemo(
  * @param demo - The row to remember
  * @returns The list as it is now remembered
  */
-export async function rememberAddedDemo(demo: AddedDemo): Promise<AddedDemo[]> {
+export async function rememberAddedDemo(demo: RememberedDemo): Promise<RememberedDemo[]> {
     const current = readAddedDemos();
     const key = addedDemoKey(demo);
     const index = current.findIndex((row) => addedDemoKey(row) === key);

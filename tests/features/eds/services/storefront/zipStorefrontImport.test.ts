@@ -172,7 +172,7 @@ describe('createRepositoryFromZip, cardFromZip and setupForCard', () => {
         expect(created).toEqual(CREATED);
     });
 
-    it('builds the card from the description file, pointed at the new repository, and none without one', () => {
+    it('builds the card from the description file, pointed at the new repository and recorded as made from the zip, and none without one', () => {
         const files = new Map([['demo.demo-builder.json', Buffer.from('{"kind":"demo","version":1,"name":"Bodea","configFlags":{"commerce-b2b-enabled":true}}')]]);
         expect(cardFromZip(files, CREATED)).toEqual({
             kind: 'demo',
@@ -181,6 +181,7 @@ describe('createRepositoryFromZip, cardFromZip and setupForCard', () => {
             configFlags: { 'commerce-b2b-enabled': true },
             source: { owner: 'steve', repo: 'summit', branch: 'main' },
             storefrontKind: 'eds',
+            createdFromZip: true,
         });
         expect(cardFromZip(new Map(), CREATED)).toBeUndefined();
         expect(cardFromZip(new Map([['demo.demo-builder.json', Buffer.from('nope')]]), CREATED)).toBeUndefined();

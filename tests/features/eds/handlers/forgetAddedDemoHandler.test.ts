@@ -1,11 +1,14 @@
 /**
  * forget-added-demo: confirm host-side naming the projects built on the demo,
- * remove the row, and delete the SC's own copy only when asked twice.
+ * remove the row, and delete the repository the extension made from a zip only
+ * when that is what the remembered card says, it still exists, it is the SC's
+ * own, and they confirm twice.
  */
 
 import * as vscode from 'vscode';
 import { handleForgetAddedDemo } from '@/features/eds/handlers/forgetAddedDemoHandler';
 import { forgetAddedDemo } from '@/features/project-creation/services/addedDemoSettings';
+import type { RememberedDemo } from '@/types/projectFile';
 import { makeAddedDemo } from '../../../helpers/demoPackageFixtures';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
@@ -15,18 +18,24 @@ import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 const deleteRepository = jest.fn();
+const getRepository = jest.fn();
 const validateToken = jest.fn();
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
-    getGitHubServices: () => ({ tokenService: { validateToken }, repoOperations: { deleteRepository } }),
+    getGitHubServices: () => ({ tokenService: { validateToken }, repoOperations: { deleteRepository, getRepository } }),
 }));
 
+let mockRemembered: RememberedDemo[] = [];
 jest.mock('@/features/project-creation/services/addedDemoSettings', () => ({
     ...jest.requireActual('@/features/project-creation/services/addedDemoSettings'),
     forgetAddedDemo: jest.fn(async () => []),
+    readAddedDemos: jest.fn(() => mockRemembered),
 }));
 
 const JEN = makeAddedDemo();
 const OWN = makeAddedDemo({ source: { owner: 'steve', repo: 'isle5-demo', branch: 'main' } });
+/** The same repository, remembered as made from a zip: the one card Remove offers to delete. */
+const ZIP: RememberedDemo = { ...OWN, createdFromZip: true };
+const ZIP_REQUEST = { name: ZIP.name, source: ZIP.source };
 const REQUEST = { name: JEN.name, source: JEN.source };
 const warn = vscode.window.showWarningMessage as jest.Mock;
 
@@ -53,7 +62,9 @@ function ctx(projectsBuiltOnJen = 0) {
 beforeEach(() => {
     jest.clearAllMocks();
     validateToken.mockResolvedValue({ valid: true, user: { login: 'steve' } });
+    getRepository.mockResolvedValue({ fullName: 'steve/isle5-demo' });
     deleteRepository.mockResolvedValue(undefined);
+    mockRemembered = [JEN, ZIP];
 });
 
 describe('handleForgetAddedDemo', () => {
@@ -92,10 +103,10 @@ describe('handleForgetAddedDemo', () => {
         expect(forgetAddedDemo).not.toHaveBeenCalled();
     });
 
-    it("offers to delete the SC's own copy, names what that costs, and deletes only after a second confirmation", async () => {
-        warn.mockResolvedValueOnce('Remove and delete my copy').mockResolvedValueOnce('Delete repository');
+    it('offers to delete the repository made from the zip, names what that costs, and deletes only after a second confirmation', async () => {
+        warn.mockResolvedValueOnce('Remove and delete the repository').mockResolvedValueOnce('Delete repository');
 
-        const result = await handleForgetAddedDemo(ctx(), { name: OWN.name, source: OWN.source });
+        const result = await handleForgetAddedDemo(ctx(), ZIP_REQUEST);
 
         expect(warn).toHaveBeenNthCalledWith(
             1,
@@ -104,10 +115,10 @@ describe('handleForgetAddedDemo', () => {
                 modal: true,
                 detail:
                     '1 project on this computer was built on it and will keep working. ' +
-                    'Deleting your copy (steve/isle5-demo) would leave them without reset and updates until they are pointed at another source.',
+                    'Deleting steve/isle5-demo, the repository made from its zip file, would leave them without reset and updates until they are pointed at another source.',
             },
             'Remove',
-            'Remove and delete my copy',
+            'Remove and delete the repository',
         );
         expect(warn).toHaveBeenNthCalledWith(
             2,
@@ -115,27 +126,43 @@ describe('handleForgetAddedDemo', () => {
             { modal: true },
             'Delete repository',
         );
-        expect(forgetAddedDemo).toHaveBeenCalledWith(OWN.source);
+        expect(forgetAddedDemo).toHaveBeenCalledWith(ZIP.source);
         expect(deleteRepository).toHaveBeenCalledWith('steve', 'isle5-demo');
-        expect(result).toEqual({ success: true, result: { forgotten: true, deletedCopy: true } });
+        expect(result).toEqual({ success: true, result: { forgotten: true, deletedRepository: true } });
     });
 
-    it('forgets but keeps the copy when the second confirmation is dismissed', async () => {
-        warn.mockResolvedValueOnce('Remove and delete my copy').mockResolvedValueOnce(undefined);
+    it('forgets but keeps the repository when the second confirmation is dismissed', async () => {
+        warn.mockResolvedValueOnce('Remove and delete the repository').mockResolvedValueOnce(undefined);
 
-        const result = await handleForgetAddedDemo(ctx(), { name: OWN.name, source: OWN.source });
+        const result = await handleForgetAddedDemo(ctx(), ZIP_REQUEST);
 
         expect(deleteRepository).not.toHaveBeenCalled();
-        expect(result).toEqual({ success: true, result: { forgotten: true, deletedCopy: false } });
+        expect(result).toEqual({ success: true, result: { forgotten: true, deletedRepository: false } });
+    });
+
+    it.each([
+        ['the card was not made from a zip, even though the repository is the SC\'s own', () => { mockRemembered = [OWN]; }],
+        ['the repository is already gone', () => { getRepository.mockRejectedValue(new Error('Repository not found')); }],
+        ['someone else is signed in to GitHub', () => { validateToken.mockResolvedValue({ valid: true, user: { login: 'jen' } }); }],
+        ['nobody is signed in to GitHub', () => { validateToken.mockResolvedValue({ valid: false }); }],
+    ])('offers only Remove when %s', async (_why, arrange) => {
+        arrange();
+        warn.mockResolvedValueOnce('Remove');
+
+        const result = await handleForgetAddedDemo(ctx(), ZIP_REQUEST);
+
+        expect(warn.mock.calls[0].slice(2)).toEqual(['Remove']);
+        expect(deleteRepository).not.toHaveBeenCalled();
+        expect(result).toEqual({ success: true, result: { forgotten: true } });
     });
 
     it('reports a delete GitHub refused without undoing the forget', async () => {
-        warn.mockResolvedValueOnce('Remove and delete my copy').mockResolvedValueOnce('Delete repository');
+        warn.mockResolvedValueOnce('Remove and delete the repository').mockResolvedValueOnce('Delete repository');
         deleteRepository.mockRejectedValueOnce(new Error('403'));
 
-        const result = await handleForgetAddedDemo(ctx(), { name: OWN.name, source: OWN.source });
+        const result = await handleForgetAddedDemo(ctx(), ZIP_REQUEST);
 
-        expect(result).toEqual({ success: true, result: { forgotten: true, deletedCopy: false } });
+        expect(result).toEqual({ success: true, result: { forgotten: true, deletedRepository: false } });
         expect(warn).toHaveBeenLastCalledWith(
             'The demo was forgotten, but steve/isle5-demo could not be deleted: 403',
         );
@@ -168,7 +195,7 @@ describe('handleForgetAddedDemo', () => {
         load.mockImplementation(async (p: string) => (p === '/bodea' ? own : before?.(p)));
         warn.mockResolvedValueOnce('Remove');
 
-        const result = await handleForgetAddedDemo(context, { name: OWN.name, source: OWN.source });
+        const result = await handleForgetAddedDemo(context, ZIP_REQUEST);
 
         expect(warn.mock.calls[0][1]).toEqual({ modal: true, detail: 'steve/isle5-demo is the storefront of your project "bodea"; the card goes, the project and its repository stay.' });
         expect(warn.mock.calls[0].slice(2)).toEqual(['Remove']);

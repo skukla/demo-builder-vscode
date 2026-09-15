@@ -249,9 +249,11 @@ export function ProjectDashboardScreen({
                                 onSwitchOrg={onSwitchOrg}
                             />
 
-                            {/* The added demo's source does not answer: the check's
-                                own sentence, with "Change source" as the way out. */}
-                            <DemoSourceNotice issue={demoSourceIssue} onChangeSource={openChangeSource} />
+                            <DemoSourceNotice
+                                issue={demoSourceIssue}
+                                onChangeSource={openChangeSource}
+                                onSaveDemoPackage={handover.openDemoPackage}
+                            />
                         </>
                     }
                     primary={
@@ -306,6 +308,7 @@ export function ProjectDashboardScreen({
                     isOpen
                     mode="change"
                     currentKind={demo.storefrontKind}
+                    demoPackageName={demo.demoPackageName}
                     packages={NO_PACKAGES}
                     addedDemos={NO_ADDED_DEMOS}
                     onUseShipped={noop}

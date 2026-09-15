@@ -88,13 +88,13 @@ describe('REQUEST_TIMEOUTS', () => {
     // The shareable-demo dialogs (2026-09-14). A zip import took 30.6s of host work
     // on a 3,475-file storefront, AFTER the file picker, so the dialog reported a
     // timeout while the repository was created; the retry then met "name already
-    // exists". Forks wait for GitHub, Remove waits on two confirmations, and Export
-    // waits on a save dialog and an archive download.
+    // exists". Reads wait for GitHub, Remove waits on two confirmations, and Export
+    // waits on a save dialog and an archive download. Adding a demo and changing a
+    // project's source only write settings and the project since the copy went
+    // (step 11), so they take the default budget.
     it.each([
         'import-storefront-zip',
         'exportDemoBundle',
-        'add-shared-demo',
-        'change-demo-source',
         'probe-shared-demo',
         'forget-added-demo',
         'getDemoPackagePreview',

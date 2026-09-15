@@ -1,6 +1,8 @@
 # Step 10 — Add a storefront from a zip file
 
 Item: [[EDS-13a]]. Decisions: D2, D4, D28. Depends on steps 04, 05 and 07. Asked for by the
+
+> **Removed 2026-09-14 (step 11, D33):** there is no copy. An added demo reads from its link; `keepCopy`, `createFork`, `keepOwnCopy` and the delete-my-copy choice are gone, and Remove offers a delete only for a repository made from a zip. The text below is the record of what was built before.
 owner on 2026-09-12, after a colleague's storefront arrived as a zip file "of all things".
 
 **Reuse:** section G and section H of `../portable-demos/reuse-map.md` for the dialog, the

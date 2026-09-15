@@ -8,7 +8,8 @@
 jest.mock('@/features/eds/handlers/forgetAddedDemoHandler', () => ({
     countProjectsBuiltOn: jest.fn(),
     forgetDemo: jest.fn(),
-    isOwnCopy: jest.fn(),
+    isDeletableZipRepository: jest.fn(),
+    projectWithStorefront: jest.fn(),
     projectsSentence: jest.requireActual('@/features/eds/handlers/forgetAddedDemoHandler').projectsSentence,
 }));
 jest.mock('@/features/eds/handlers/changeDemoSourceHandler', () => ({
@@ -44,11 +45,17 @@ import { registerAddedDemoTools } from '@/features/ai/server/addedDemoTools';
 import { requireGitHub } from '@/features/ai/server/edsToolGuards';
 import { handleAddSharedDemo } from '@/features/eds/handlers/addSharedDemoHandler';
 import { handleChangeDemoSource } from '@/features/eds/handlers/changeDemoSourceHandler';
-import { countProjectsBuiltOn, forgetDemo, isOwnCopy } from '@/features/eds/handlers/forgetAddedDemoHandler';
+import {
+    countProjectsBuiltOn,
+    forgetDemo,
+    isDeletableZipRepository,
+    projectWithStorefront,
+} from '@/features/eds/handlers/forgetAddedDemoHandler';
 import { handleImportStorefrontZip, refusalFor } from '@/features/eds/handlers/importStorefrontZipHandler';
 import { handleProbeSharedDemo } from '@/features/eds/handlers/probeSharedDemoHandler';
 import { readStorefrontZip } from '@/features/eds/services/storefront/zipStorefrontImport';
 import { editAddedDemo, readAddedDemos } from '@/features/project-creation/services/addedDemoSettings';
+import type { RememberedDemo } from '@/types/projectFile';
 import type { SharedDemoRead } from '@/types/webviewRequests';
 import { makeAddedDemo } from '../../../helpers/demoPackageFixtures';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
@@ -58,7 +65,8 @@ import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 const mockRequireGitHub = requireGitHub as jest.Mock;
 const mockRead = readAddedDemos as jest.Mock;
-const mockOwn = isOwnCopy as jest.Mock;
+const mockDeletable = isDeletableZipRepository as jest.Mock;
+const mockStorefrontOf = projectWithStorefront as jest.Mock;
 const mockCount = countProjectsBuiltOn as jest.Mock;
 const mockForget = forgetDemo as jest.Mock;
 const mockProbe = handleProbeSharedDemo as jest.Mock;
@@ -69,7 +77,7 @@ const mockRefusal = refusalFor as jest.Mock;
 const mockReadZip = readStorefrontZip as jest.Mock;
 
 const JEN = makeAddedDemo();
-const OWN = makeAddedDemo({ name: 'My copy', source: { owner: 'steve', repo: 'isle5-demo', branch: 'main' } });
+const OWN: RememberedDemo = { ...makeAddedDemo({ name: 'Summit', source: { owner: 'steve', repo: 'isle5-demo', branch: 'main' } }), createdFromZip: true };
 const READ: SharedDemoRead = {
     outcome: 'read',
     fullName: 'steve/isle5-copy',
@@ -81,7 +89,6 @@ const READ: SharedDemoRead = {
     b2b: 'unknown',
     overrides: [],
     warnings: ['No description file.'],
-    viewer: { login: 'steve', ownsRepo: true },
 };
 
 function fakeServer() {
@@ -107,7 +114,8 @@ beforeEach(() => {
     jest.clearAllMocks();
     mockRequireGitHub.mockResolvedValue(undefined);
     mockRead.mockReturnValue([JEN, OWN]);
-    mockOwn.mockImplementation(async (_c: unknown, source: { owner: string }) => source.owner === 'steve');
+    mockDeletable.mockImplementation(async (_c: unknown, source: { owner: string }) => source.owner === 'steve');
+    mockStorefrontOf.mockResolvedValue(undefined);
     mockCount.mockResolvedValue(2);
     mockForget.mockResolvedValue({ forgotten: true });
 });
@@ -121,7 +129,7 @@ describe('forget_added_demo', () => {
 
         expect(res).toMatchObject({ demo: 'Isle5 by Jen', projectsBuiltOn: 2, destructive: true });
         expect(res.error).toContain('2 projects on this computer were built on it');
-        expect(res.error).not.toContain('Deleting your copy');
+        expect(res.error).not.toContain('Deleting');
         expect(mockForget).not.toHaveBeenCalled();
     });
 
@@ -135,27 +143,40 @@ describe('forget_added_demo', () => {
         expect(res).toEqual({ demo: 'Isle5 by Jen', source: JEN.source, projectsBuiltOn: 2, forgotten: true });
     });
 
-    it("refuses deleteCopy for a repository that is not the SC's own", async () => {
+    it('refuses deleteRepository for a demo whose repository Demo Builder did not make from a zip, in one sentence', async () => {
         const s = fakeServer();
         registerAddedDemoTools(s, () => ctx);
 
-        const res = await s.call('forget_added_demo', { owner: 'jen', repo: 'isle5-demo', deleteCopy: true, confirm: true });
+        const res = await s.call('forget_added_demo', { owner: 'jen', repo: 'isle5-demo', deleteRepository: true, confirm: true });
 
-        expect(res.error).toContain('is not your copy');
+        expect(mockDeletable).toHaveBeenCalledWith(ctx, JEN.source);
+        expect(res.error).toContain('jen/isle5-demo was not made from a zip file by Demo Builder in your account');
         expect(mockForget).not.toHaveBeenCalled();
     });
 
-    it('names the cost of deleting the copy in the refusal, then deletes on confirm', async () => {
-        mockForget.mockResolvedValue({ forgotten: true, deletedCopy: true });
+    it("refuses deleteRepository for a zip's repository that is a project's own storefront, without asking GitHub", async () => {
+        mockStorefrontOf.mockResolvedValue('summit');
         const s = fakeServer();
         registerAddedDemoTools(s, () => ctx);
 
-        const refusal = await s.call('forget_added_demo', { owner: 'steve', repo: 'isle5-demo', deleteCopy: true });
-        expect(refusal.error).toContain('Deleting your copy (steve/isle5-demo) leaves them without reset and updates');
+        const res = await s.call('forget_added_demo', { owner: 'steve', repo: 'isle5-demo', deleteRepository: true, confirm: true });
 
-        const res = await s.call('forget_added_demo', { owner: 'steve', repo: 'isle5-demo', deleteCopy: true, confirm: true });
+        expect(res.error).toContain("a project's own storefront");
+        expect(mockDeletable).not.toHaveBeenCalled();
+        expect(mockForget).not.toHaveBeenCalled();
+    });
+
+    it('names the cost of deleting the zip\'s repository in the refusal, then deletes on confirm', async () => {
+        mockForget.mockResolvedValue({ forgotten: true, deletedRepository: true });
+        const s = fakeServer();
+        registerAddedDemoTools(s, () => ctx);
+
+        const refusal = await s.call('forget_added_demo', { owner: 'steve', repo: 'isle5-demo', deleteRepository: true });
+        expect(refusal.error).toContain('Deleting steve/isle5-demo leaves them without reset and updates');
+
+        const res = await s.call('forget_added_demo', { owner: 'steve', repo: 'isle5-demo', deleteRepository: true, confirm: true });
         expect(mockForget).toHaveBeenCalledWith(ctx, OWN.source, true);
-        expect(res).toMatchObject({ forgotten: true, deletedCopy: true });
+        expect(res).toMatchObject({ forgotten: true, deletedRepository: true });
     });
 
     it('answers an unknown repository and a missing GitHub sign-in without touching anything', async () => {
@@ -178,14 +199,14 @@ describe('change_demo_source', () => {
         mockChange.mockResolvedValue({
             success: true,
             result: {
-                demo: { ...OWN, source: { owner: 'steve', repo: 'isle5-copy', branch: 'main' } },
+                demo: { ...JEN, name: 'Mine', source: { owner: 'steve', repo: 'isle5-copy', branch: 'main' } },
                 previous: { owner: 'jen', repo: 'isle5-demo' },
             },
         });
         const s = fakeServer();
         registerAddedDemoTools(s, () => ctx);
 
-        const res = await s.call('change_demo_source', { owner: 'steve', repo: 'isle5-copy', keepCopy: true, updateRemembered: true, name: 'Mine' });
+        const res = await s.call('change_demo_source', { owner: 'steve', repo: 'isle5-copy', updateDemoPackage: true, name: 'Mine' });
 
         expect(mockProbe).toHaveBeenCalledWith(ctx, { owner: 'steve', repo: 'isle5-copy' });
         expect(mockChange).toHaveBeenCalledWith(ctx, {
@@ -195,13 +216,11 @@ describe('change_demo_source', () => {
                 storefrontKind: 'eds',
                 contentSource: { org: 'steve', site: 'isle5-copy', indexPath: '/full-index.json' },
             }),
-            // The SC's own repository: nothing to copy, whatever was asked.
-            keepCopy: false,
-            updateRemembered: true,
+            updateDemoPackage: true,
         });
         expect(res).toEqual({
             changed: true,
-            demo: 'My copy',
+            demo: 'Mine',
             source: { owner: 'steve', repo: 'isle5-copy', branch: 'main' },
             previous: { owner: 'jen', repo: 'isle5-demo' },
             warnings: [
@@ -259,67 +278,29 @@ describe('change_demo_source', () => {
 });
 
 describe('add_shared_demo', () => {
-    const NOT_MINE: SharedDemoRead = { ...READ, fullName: 'jen/isle5-demo', viewer: { login: 'steve', ownsRepo: false } };
+    const NOT_MINE: SharedDemoRead = { ...READ, fullName: 'jen/isle5-demo' };
 
     beforeEach(() => {
         mockAdd.mockResolvedValue({ success: true, result: { demo: JEN } });
     });
 
-    it('refuses without confirm when it would fork, naming the repository and the account', async () => {
+    it('adds from a link with no confirm and nothing created on GitHub, answering the id create_project takes', async () => {
         mockProbe.mockResolvedValue({ success: true, result: NOT_MINE });
+        mockAdd.mockResolvedValue({ success: true, result: { demo: JEN } });
         const s = fakeServer();
         registerAddedDemoTools(s, () => ctx);
 
-        const res = await s.call('add_shared_demo', { link: 'https://github.com/jen/isle5-demo' });
+        const res = await s.call('add_shared_demo', { link: 'https://github.com/jen/isle5-demo', description: 'Luxury B2C demo' });
 
         expect(mockProbe).toHaveBeenCalledWith(ctx, { owner: undefined, repo: undefined, link: 'https://github.com/jen/isle5-demo' });
-        expect(res.error).toContain('would fork jen/isle5-demo into your GitHub account (steve)');
         // No description file in the read: the name is the repository's, spelled for people.
-        expect(res).toMatchObject({ demo: 'Isle5 Demo', wouldFork: 'jen/isle5-demo' });
-        expect(mockAdd).not.toHaveBeenCalled();
-    });
-
-    it('forks and remembers on confirm, answering the id create_project takes', async () => {
-        mockProbe.mockResolvedValue({ success: true, result: NOT_MINE });
-        const kept = { ...JEN, source: { owner: 'steve', repo: 'isle5-demo', branch: 'main' } };
-        mockAdd.mockResolvedValue({ success: true, result: { demo: kept, forkedTo: 'steve/isle5-demo' } });
-        const s = fakeServer();
-        registerAddedDemoTools(s, () => ctx);
-
-        const res = await s.call('add_shared_demo', { owner: 'jen', repo: 'isle5-demo', confirm: true });
-
-        expect(mockAdd).toHaveBeenCalledWith(ctx, { demo: expect.objectContaining({ name: 'Isle5 Demo' }), keepCopy: true });
-        expect(res).toMatchObject({
-            added: true,
-            id: 'added:steve/isle5-demo',
-            source: { owner: 'steve', repo: 'isle5-demo', branch: 'main' },
-            forkedTo: 'steve/isle5-demo',
-            storefrontKind: 'eds',
-        });
-    });
-
-    it("needs no confirm when no fork is made: keepCopy false, the SC's own repository, or a fork that exists", async () => {
-        const s = fakeServer();
-        registerAddedDemoTools(s, () => ctx);
-
-        mockProbe.mockResolvedValueOnce({ success: true, result: NOT_MINE });
-        expect((await s.call('add_shared_demo', { owner: 'jen', repo: 'isle5-demo', keepCopy: false, description: 'Luxury B2C demo' })).added).toBe(true);
         // The agent can give the card a description, as the dialog's field does.
-        expect(mockAdd).toHaveBeenLastCalledWith(
-            ctx,
-            expect.objectContaining({ keepCopy: false, demo: expect.objectContaining({ description: 'Luxury B2C demo' }) }),
-        );
-
-        mockProbe.mockResolvedValueOnce({ success: true, result: READ });
-        expect((await s.call('add_shared_demo', { owner: 'steve', repo: 'isle5-copy' })).added).toBe(true);
-        expect(mockAdd).toHaveBeenLastCalledWith(ctx, expect.objectContaining({ keepCopy: false }));
-
-        mockProbe.mockResolvedValueOnce({
-            success: true,
-            result: { ...NOT_MINE, viewer: { login: 'steve', ownsRepo: false, existingFork: 'steve/isle5-demo' } },
+        expect(mockAdd).toHaveBeenCalledWith(ctx, {
+            demo: expect.objectContaining({ name: 'Isle5 Demo', description: 'Luxury B2C demo' }),
         });
-        expect((await s.call('add_shared_demo', { owner: 'jen', repo: 'isle5-demo' })).added).toBe(true);
-        expect(mockAdd).toHaveBeenLastCalledWith(ctx, expect.objectContaining({ keepCopy: true }));
+        expect(mockAdd.mock.calls[0][1].demo).not.toHaveProperty('createdFromZip');
+        expect(mockImport).not.toHaveBeenCalled();
+        expect(res).toMatchObject({ added: true, id: 'added:jen/isle5-demo', source: JEN.source, storefrontKind: 'eds' });
     });
 
     it('points a shipped template at its package id instead of adding it', async () => {
@@ -336,7 +317,7 @@ describe('add_shared_demo', () => {
 });
 
 describe('add_shared_demo from a zip file', () => {
-    const MINE: SharedDemoRead = { ...READ, fullName: 'steve/summit', viewer: { login: 'steve', ownsRepo: true } };
+    const MINE: SharedDemoRead = { ...READ, fullName: 'steve/summit' };
 
     beforeEach(() => {
         mockReadZip.mockReturnValue({ files: new Map([['head.html', Buffer.from('x')]]), rootName: 'summit-main', dropped: 4 });
@@ -368,7 +349,7 @@ describe('add_shared_demo from a zip file', () => {
         expect(mockImport).not.toHaveBeenCalled();
     });
 
-    it('creates the repository on confirm with the given name and visibility, probes it, and adds without a copy', async () => {
+    it('creates the repository on confirm with the given name and visibility, probes it, and adds the card recorded as made from the zip', async () => {
         const s = fakeServer();
         registerAddedDemoTools(s, () => ctx);
 
@@ -376,7 +357,9 @@ describe('add_shared_demo from a zip file', () => {
 
         expect(mockImport).toHaveBeenCalledWith(ctx, { zipPath: '/tmp/summit-main.zip', repoName: 'summit-demo', isPrivate: false });
         expect(mockProbe).toHaveBeenCalledWith(ctx, { owner: 'steve', repo: 'summit', link: undefined });
-        expect(mockAdd).toHaveBeenCalledWith(ctx, { demo: expect.objectContaining({ source: { owner: 'steve', repo: 'summit', branch: 'main' } }), keepCopy: false });
+        expect(mockAdd).toHaveBeenCalledWith(ctx, {
+            demo: expect.objectContaining({ source: { owner: 'steve', repo: 'summit', branch: 'main' }, createdFromZip: true }),
+        });
         expect(res).toMatchObject({ added: true, createdFromZip: 'steve/summit', fileCount: 1, dropped: 4, setupIncluded: false });
         expect(res.setupHint).toBeUndefined();
     });

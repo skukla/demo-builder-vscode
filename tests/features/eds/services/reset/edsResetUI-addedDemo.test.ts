@@ -53,13 +53,13 @@ const mockedReset = executeEdsReset as jest.MockedFunction<typeof executeEdsRese
 const mockedCheck = checkDemoSource as jest.MockedFunction<typeof checkDemoSource>;
 const meshDeps = createMeshDepsFake();
 const RESET = 'Reset Project';
-const UNREACHABLE = "jen's demo can't be reached. Reset and updates are unavailable until it is.";
+const UNREACHABLE = "The Isle5 by Jen demo's repository can't be reached. Reset and updates are unavailable until it is.";
 const REACHABLE: DemoSourceCheck = { reachable: true, message: '', contentReachable: true };
 const CONTENT_GONE: DemoSourceCheck = {
     reachable: true,
     message: '',
     contentReachable: false,
-    contentMessage: "jen's demo's pages can't be reached right now.",
+    contentMessage: "The Isle5 by Jen demo's pages can't be reached right now.",
 };
 
 function createProject(): Project {
@@ -151,7 +151,7 @@ describe('reset of a project built on an added demo — the source check', () =>
 
         expect(vscode.window.showWarningMessage).toHaveBeenNthCalledWith(
             1,
-            "jen's demo's pages can't be reached right now. You can reset the code and keep the content this site has now.",
+            "The Isle5 by Jen demo's pages can't be reached right now. You can reset the code and keep the content this site has now.",
             { modal: true },
             { title: 'Keep current content' },
         );

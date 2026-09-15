@@ -44,7 +44,6 @@ export const READ: SharedDemoRead = {
     b2bSource: 'config-json',
     overrides: [],
     warnings: [],
-    viewer: { login: 'steve', ownsRepo: false },
 };
 
 export function renderModal(overrides: Partial<AddDemoModalProps> = {}) {

@@ -204,13 +204,24 @@ describe('importDemoBundle', () => {
         const result = await importDemoBundle(ctx(), '/x/bodea-demo-bundle.zip');
 
         expect(repoOperations.createEmptyRepository).toHaveBeenCalledWith('bodea', false);
-        const card = { kind: 'demo', version: 1, name: 'Bodea', source: { owner: 'steve', repo: 'bodea', branch: 'main' }, storefrontKind: 'eds' };
+        const card = { kind: 'demo', version: 1, name: 'Bodea', source: { owner: 'steve', repo: 'bodea', branch: 'main' }, storefrontKind: 'eds', createdFromZip: true };
         expect(mockRemember).toHaveBeenCalledWith(card);
         expect(mockExecute).toHaveBeenCalledWith('demoBuilder.createProject', {
             importedSettings: expect.objectContaining({ demo: card, selectedPackage: 'added:steve/bodea' }),
             sourceDescription: expect.any(String),
         });
         expect(result).toMatchObject({ success: true, data: { success: true } });
+    });
+
+    it('with a storefront that carries no description, remembers a card named after the repository, recorded as made from the zip', async () => {
+        mockRead.mockReturnValue({ files: new Map(STOREFRONT), rootName: 'summit', dropped: 0 });
+        repoOperations.createEmptyRepository.mockResolvedValue({ fullName: 'steve/summit', name: 'summit', defaultBranch: 'main' });
+
+        await importDemoBundle(ctx(), '/x/summit.zip');
+
+        expect(mockRemember).toHaveBeenCalledWith({
+            kind: 'demo', version: 1, name: 'summit', source: { owner: 'steve', repo: 'summit', branch: 'main' }, storefrontKind: 'eds', createdFromZip: true,
+        });
     });
 
     it('with setup alone opens the wizard from the setup as a settings file would; with neither, refuses in words', async () => {

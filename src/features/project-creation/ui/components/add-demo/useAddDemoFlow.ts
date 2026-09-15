@@ -2,7 +2,7 @@
  * useAddDemoFlow — the "Add a demo package" dialog's state: the draft, the probe, the
  * add commit. Backend calls happen at the two commitment points only
  * (`docs/patterns/selection-pattern.md`): Continue off the link stage probes;
- * "Add demo" keeps a copy when asked and remembers the row. Typing and
+ * "Add demo" remembers the row. Typing and
  * ticking never talk to the host.
  *
  * @module features/project-creation/ui/components/add-demo/useAddDemoFlow
@@ -22,7 +22,7 @@ import {
 } from './addDemoFlow';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
 import type { DemoPackage } from '@/types/demoPackages';
-import type { AddedDemo, StorefrontKind } from '@/types/projectFile';
+import type { AddedDemo, RememberedDemo, StorefrontKind } from '@/types/projectFile';
 import type { SettingsFile } from '@/types/settingsFile';
 import type { StorefrontZipProgressPayload } from '@/types/webviewPayloads';
 import type {
@@ -69,6 +69,12 @@ export interface UseAddDemoFlowArgs {
     mode?: AddDemoMode;
     /** Change mode: the project's storefront kind, which the new source must match. */
     currentKind?: StorefrontKind;
+    /**
+     * Change mode: the name of the demo package on the Welcome step that reads from
+     * this project's source. Present only when there is one; the update box is
+     * shown, ticked and named only then.
+     */
+    demoPackageName?: string;
 }
 
 export interface UseAddDemoFlowReturn {
@@ -89,8 +95,7 @@ export interface UseAddDemoFlowReturn {
     setName: (name: string) => void;
     setDescription: (description: string) => void;
     setB2bOn: (on: boolean) => void;
-    setKeepCopy: (keep: boolean) => void;
-    setUpdateRemembered: (update: boolean) => void;
+    setUpdateDemoPackage: (update: boolean) => void;
     /** The zip is becoming a repository: the host is picking, unpacking and pushing. */
     importing: boolean;
     /** The step the import is on, as the host last reported it. */
@@ -123,7 +128,10 @@ export function useAddDemoFlow(args: UseAddDemoFlowArgs): UseAddDemoFlowReturn {
     const { packages, onUseShipped, onDemoAdded, onClose, mode = 'add', currentKind } = args;
     const [stage, setStage] = useState<AddDemoStage>('link');
     const [way, setWay] = useState<AddDemoWay>('link');
-    const [draft, setDraft] = useState<AddDemoDraft>(INITIAL_DRAFT);
+    const [draft, setDraft] = useState<AddDemoDraft>(() => ({
+        ...INITIAL_DRAFT,
+        updateDemoPackage: args.mode === 'change' && Boolean(args.demoPackageName),
+    }));
     const [probe, setProbe] = useState<ProbeState>({ status: 'idle' });
     const [adding, setAdding] = useState(false);
     const [addError, setAddError] = useState<string | undefined>(undefined);
@@ -143,6 +151,10 @@ export function useAddDemoFlow(args: UseAddDemoFlowArgs): UseAddDemoFlowReturn {
     // Public by default (owner, 2026-09-14): a demo package is for sharing.
     const [makePublic, setMakePublic] = useState(true);
     const [bundleSetup, setBundleSetup] = useState<SettingsFile | undefined>(undefined);
+    // The repository the zip door created, so the card records that the
+    // extension made it and Remove can offer to delete it. Nothing else sets it:
+    // "Add it from that repository" proves no such thing.
+    const [fromZip, setFromZip] = useState<string | undefined>(undefined);
 
     const result = probe.status === 'done' ? probe.result : undefined;
     const shippedName =
@@ -198,6 +210,7 @@ export function useAddDemoFlow(args: UseAddDemoFlowArgs): UseAddDemoFlowReturn {
             const { cancelled, owner, repo, setup } = answer.result;
             if (cancelled || !owner || !repo) return;
             setBundleSetup(setup);
+            setFromZip(`${owner}/${repo}`);
             const source = { owner, repo };
             setDraft((d) => ({ ...d, source }));
             await probeSource(source);
@@ -211,8 +224,10 @@ export function useAddDemoFlow(args: UseAddDemoFlowArgs): UseAddDemoFlowReturn {
     /** The one host call of the found stage: add remembers, change repoints the project. Answers the row. */
     const commit = useCallback(async (): Promise<AddedDemo | undefined> => {
         if (!isBuildable(result)) return undefined;
-        const keepCopy = draft.keepCopy && !result.viewer?.ownsRepo;
-        const demo = buildAddedDemo(result, draft);
+        const demo: RememberedDemo = {
+            ...buildAddedDemo(result, draft),
+            ...(mode === 'add' && fromZip === result.fullName ? { createdFromZip: true } : {}),
+        };
         const failed = mode === 'change' ? CHANGE_FAILED : ADD_FAILED;
         setAdding(true);
         setAddError(undefined);
@@ -221,12 +236,10 @@ export function useAddDemoFlow(args: UseAddDemoFlowArgs): UseAddDemoFlowReturn {
                 mode === 'change'
                     ? await webviewClient.request<Answer<ChangeDemoSourceResult>>('change-demo-source', {
                           demo,
-                          keepCopy,
-                          updateRemembered: draft.updateRemembered,
+                          updateDemoPackage: draft.updateDemoPackage,
                       } satisfies ChangeDemoSourceRequest)
                     : await webviewClient.request<Answer<AddSharedDemoResult>>('add-shared-demo', {
                           demo,
-                          keepCopy,
                       } satisfies AddSharedDemoRequest);
             if (!answer.success || !answer.result) {
                 setAddError(answer.error ?? failed);
@@ -244,7 +257,7 @@ export function useAddDemoFlow(args: UseAddDemoFlowArgs): UseAddDemoFlowReturn {
             setAdding(false);
             return undefined;
         }
-    }, [result, draft, mode, onDemoAdded, onClose]);
+    }, [result, draft, mode, fromZip, onDemoAdded, onClose]);
 
     /** Add the demo, then hand the bundle's setup and the row to the host, which reopens the wizard. */
     const startFromBundle = useCallback(async (): Promise<void> => {
@@ -292,6 +305,7 @@ export function useAddDemoFlow(args: UseAddDemoFlowArgs): UseAddDemoFlowReturn {
         if (stage !== 'found' || adding) return;
         setStage('link');
         setProbe({ status: 'idle' });
+        setFromZip(undefined);
     }, [zipError, addError, stage, adding]);
 
     const useExistingRepo = useCallback((): void => {
@@ -315,11 +329,8 @@ export function useAddDemoFlow(args: UseAddDemoFlowArgs): UseAddDemoFlowReturn {
     const setB2bOn = useCallback((b2bOn: boolean): void => {
         setDraft((d) => ({ ...d, b2bOn }));
     }, []);
-    const setKeepCopy = useCallback((keepCopy: boolean): void => {
-        setDraft((d) => ({ ...d, keepCopy }));
-    }, []);
-    const setUpdateRemembered = useCallback((updateRemembered: boolean): void => {
-        setDraft((d) => ({ ...d, updateRemembered }));
+    const setUpdateDemoPackage = useCallback((updateDemoPackage: boolean): void => {
+        setDraft((d) => ({ ...d, updateDemoPackage }));
     }, []);
 
     return {
@@ -339,8 +350,7 @@ export function useAddDemoFlow(args: UseAddDemoFlowArgs): UseAddDemoFlowReturn {
         setName,
         setDescription,
         setB2bOn,
-        setKeepCopy,
-        setUpdateRemembered,
+        setUpdateDemoPackage,
         importing,
         importStep,
         zipError,

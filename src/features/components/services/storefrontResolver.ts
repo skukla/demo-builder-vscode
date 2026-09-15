@@ -27,7 +27,7 @@ import demoPackagesConfig from '../config/demo-packages.json';
 import stacksConfig from '../config/stacks.json';
 import type { Project } from '@/types/base';
 import type { DemoPackage, DemoPackagesConfig, Storefront } from '@/types/demoPackages';
-import { ADDED_DEMO_ID_PREFIX, type AddedDemo } from '@/types/projectFile';
+import { ADDED_DEMO_ID_PREFIX, type AddedDemo, type RememberedDemo } from '@/types/projectFile';
 import type { Stack } from '@/types/stacks';
 
 /** The three fields a lookup reads — a wizard state or a payload can satisfy it, not only a `Project`. */
@@ -77,6 +77,19 @@ export function resolveStorefrontForProject(
 /** The id a project on an added demo carries: prefixed, so it can never collide with a shipped id. */
 export function addedDemoId(demo: Pick<AddedDemo, 'source'>): string {
     return `${ADDED_DEMO_ID_PREFIX}${demo.source.owner}/${demo.source.repo}`;
+}
+
+/**
+ * The row a project stores for the card it was built on (D2). The card's zip
+ * record stays on the card: it says who made the repository, which is a fact
+ * about this SC's Welcome step, not about the project or anyone it is shared with.
+ */
+export function projectRowOf(demo: RememberedDemo): AddedDemo;
+export function projectRowOf(demo: RememberedDemo | undefined): AddedDemo | undefined;
+export function projectRowOf(demo: RememberedDemo | undefined): AddedDemo | undefined {
+    if (!demo) return undefined;
+    const { createdFromZip: _card, ...row } = demo;
+    return row;
 }
 
 /** Is this package id an added demo's (the prefix no shipped package can carry)? */

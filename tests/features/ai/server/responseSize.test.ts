@@ -130,7 +130,6 @@ const PAYLOADS: Record<string, HandlerResponse> = {
             },
             overrides: ['storeCodes', 'name'],
             warnings: Array.from({ length: 4 }, (_, i) => `Warning number ${i}: ${'w'.repeat(80)}`),
-            viewer: { login: 'steve', ownsRepo: false, existingFork: 'steve/isle5-demo' },
         },
     },
     list_ai_prompts: {

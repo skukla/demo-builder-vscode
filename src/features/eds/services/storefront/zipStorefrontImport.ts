@@ -21,7 +21,7 @@ import { normalizeRepositoryName } from '@/core/validation/normalizers';
 import { addedDemoId } from '@/features/components/services/storefrontResolver';
 import { parseSettingsFile } from '@/features/projects-dashboard/services/settingsSerializer';
 import type { Logger } from '@/types/logger';
-import { SHARED_DEMO_FILE_NAME, type AddedDemo } from '@/types/projectFile';
+import { SHARED_DEMO_FILE_NAME, type AddedDemo, type RememberedDemo } from '@/types/projectFile';
 import type { SettingsFile } from '@/types/settingsFile';
 
 /** Dropped whatever the zip's own ignore file says: never part of a storefront's code. */
@@ -211,10 +211,11 @@ export async function createRepositoryFromZip(
 
 /**
  * The card for the Welcome step, from the description file the zip carried,
- * pointed at the repository just created. Absent when the zip had no valid
+ * pointed at the repository just created and recorded as made from the zip, so
+ * Remove can offer to delete it. Absent when the zip had no valid
  * description file; the caller probes the repository instead.
  */
-export function cardFromZip(files: Map<string, Buffer>, created: CreatedRepository): AddedDemo | undefined {
+export function cardFromZip(files: Map<string, Buffer>, created: CreatedRepository): RememberedDemo | undefined {
     const bytes = files.get(SHARED_DEMO_FILE_NAME);
     if (!bytes) return undefined;
     const read = readSharedDemoDescription(bytes.toString('utf-8'));
@@ -223,6 +224,7 @@ export function cardFromZip(files: Map<string, Buffer>, created: CreatedReposito
         ...read.description,
         source: { owner: created.owner, repo: created.repo, branch: created.defaultBranch },
         storefrontKind: 'eds',
+        createdFromZip: true,
     };
 }
 

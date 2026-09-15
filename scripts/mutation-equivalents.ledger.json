@@ -3396,7 +3396,7 @@
             "anchors": [
                 "): void {"
             ],
-            "line": 477,
+            "line": 478,
             "mutants": 2,
             "category": "block",
             "reason": "This row covers the body-deletion mutant on BOTH validation helpers \u2014 validateStackPackageConfig at line 476 and validateStackLookup at line 511 \u2014 because their signature lines are textually identical and cannot be anchored apart. Each function returns void and does nothing but write to console.warn and console.log, so emptying either body changes nothing a caller or a test can observe, and the only way to notice would be to assert log output.",
@@ -8719,7 +8719,7 @@
             "anchors": [
                 "const panel = BaseWebviewCommand.getActivePanel('demoBuilder.projectDashboard');"
             ],
-            "line": 307,
+            "line": 317,
             "mutants": 1,
             "category": "branch",
             "reason": "Same shape as the Configure command's copy: forcing the following 'if (panel)' true calls dispose() on undefined, and the TypeError lands in the try/catch already there for the already-disposed case. Both paths end as a no-op. The false variant is killed by the test that asserts an open panel is disposed.",
@@ -10879,7 +10879,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 156,
+            "line": 157,
             "mutants": 1,
             "category": "block",
             "reason": "Stryker empties the catch, so a throwing validateToken leaves githubOk unassigned instead of false. Both readings are falsy at the 'if (!githubOk)' below, so the tool returns the same needsAuth:'github' handoff and calls the same collaborators either way. The only difference is the variable's binding, which nothing observes; a test asserting it would have to reach inside the function.",
@@ -10892,7 +10892,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 171,
+            "line": 172,
             "mutants": 1,
             "category": "block",
             "reason": "Stryker empties the catch, so a throwing isAuthenticated leaves daLiveOk unassigned instead of false. Both readings are falsy at the 'if (!daLiveOk)' below, so the tool returns the same needsAuth:'dalive' handoff and calls the same collaborators either way. The only difference is the variable's binding, which nothing observes; a test asserting it would have to reach inside the function.",
@@ -12219,7 +12219,7 @@
             "anchors": [
                 "if (this.config.enableLogging) {"
             ],
-            "line": 216,
+            "line": 214,
             "mutants": 3,
             "category": "block+branch",
             "reason": "The whole body of this guard is a logger call, so flipping the condition changes only whether a debug or warning line prints. Killing it would mean asserting a logger call's arguments, which pins wording rather than behaviour and is what the burn-down rules forbid. Nothing a caller or the webview receives moves, because the work it narrates happens outside the block. Here, the message is pushed onto the queue on the line after this block either way. Emptying the guarded block is the same argument from the other side: the body holds nothing the surrounding code does not already do, so removing it removes the log line and no behaviour.",
@@ -12232,7 +12232,7 @@
             "anchors": [
                 "if (this.config.enableLogging) {"
             ],
-            "line": 391,
+            "line": 389,
             "mutants": 3,
             "category": "block+branch",
             "reason": "The whole body of this guard is a logger call, so flipping the condition changes only whether a debug or warning line prints. Killing it would mean asserting a logger call's arguments, which pins wording rather than behaviour and is what the burn-down rules forbid. Nothing a caller or the webview receives moves, because the work it narrates happens outside the block. Here, it sits inside the timeout hint's catch, which is documented fire-and-forget, and the handler runs next regardless. Emptying the guarded block is the same argument from the other side: the body holds nothing the surrounding code does not already do, so removing it removes the log line and no behaviour.",
@@ -12245,7 +12245,7 @@
             "anchors": [
                 "if (this.config.enableLogging) {"
             ],
-            "line": 476,
+            "line": 474,
             "mutants": 3,
             "category": "block+branch",
             "reason": "The whole body of this guard is a logger call, so flipping the condition changes only whether a debug or warning line prints. Killing it would mean asserting a logger call's arguments, which pins wording rather than behaviour and is what the burn-down rules forbid. Nothing a caller or the webview receives moves, because the work it narrates happens outside the block. Here, the sleep and the recursive send that perform the retry are outside the block. Emptying the guarded block is the same argument from the other side: the body holds nothing the surrounding code does not already do, so removing it removes the log line and no behaviour.",
@@ -12258,7 +12258,7 @@
             "anchors": [
                 "if (this.config.enableLogging) {"
             ],
-            "line": 502,
+            "line": 500,
             "mutants": 3,
             "category": "block+branch",
             "reason": "The whole body of this guard is a logger call, so flipping the condition changes only whether a debug or warning line prints. Killing it would mean asserting a logger call's arguments, which pins wording rather than behaviour and is what the burn-down rules forbid. Nothing a caller or the webview receives moves, because the work it narrates happens outside the block. Here, it sits in sendRawMessage's catch immediately before an unconditional rethrow, so the caller sees the identical error. Emptying the guarded block is the same argument from the other side: the body holds nothing the surrounding code does not already do, so removing it removes the log line and no behaviour.",
@@ -12271,7 +12271,7 @@
             "anchors": [
                 "if (this.config.enableLogging && this.messageQueue.length > 0) {"
             ],
-            "line": 513,
+            "line": 511,
             "mutants": 7,
             "category": "block+branch",
             "reason": "Every survivor on this line changes only whether one debug line prints \u2014 the block holds a single logger.debug and nothing else. The flush itself happens on the three lines below, outside the guard, so the queued messages are copied, the queue cleared and each message sent whichever way the condition goes. Separating the versions would need an assertion on the logger's arguments. Emptying the guarded block is the same argument from the other side: the body holds nothing the surrounding code does not already do, so removing it removes the log line and no behaviour.",
@@ -12284,7 +12284,7 @@
             "anchors": [
                 "enableLogging: config.enableLogging !== false,"
             ],
-            "line": 155,
+            "line": 153,
             "mutants": 4,
             "category": "branch",
             "reason": "This field is read in exactly five places, and every one of them is a guard whose entire body is a logger call. So whatever value the mutation gives it, the only thing that changes is whether some debug or warning lines print \u2014 no message on the wire, no promise and no piece of manager state depends on it. Each of those five guards is itself recorded here for the same reason.",
@@ -12297,7 +12297,7 @@
             "anchors": [
                 "this.messageQueue = [];"
             ],
-            "line": 333,
+            "line": 331,
             "mutants": 1,
             "category": "other",
             "reason": "Nothing reads the queue after dispose. The only reader is flushMessageQueue, which runs once from the handshake completion handler, and that handler was registered with once() and deleted itself when it ran \u2014 a disposed manager cannot handshake again. Seeding the array rather than emptying it therefore leaves a value no code path can observe.",
@@ -12310,7 +12310,7 @@
             "anchors": [
                 "this.messageQueue = [];"
             ],
-            "line": 518,
+            "line": 516,
             "mutants": 1,
             "category": "other",
             "reason": "This assignment is what makes the flush non-repeating, but nothing flushes twice: flushMessageQueue is called only from the handshake completion handler, which once() deletes as it fires. So the array left behind here is read by nothing, and seeding it rather than emptying it cannot change a message sent or a piece of state observed.",
@@ -12323,7 +12323,7 @@
             "anchors": [
                 "}).catch((hintError) => {"
             ],
-            "line": 389,
+            "line": 387,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying this catch body leaves the catch itself in place, so the timeout hint's failure is still swallowed and the handler still runs next \u2014 which is the documented contract, the hint is explicitly fire-and-forget so it cannot block. The only thing inside the body is a guarded logger.warn, so the sole difference is whether a warning prints, and pinning that would mean asserting a logger call's arguments.",

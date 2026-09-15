@@ -5,6 +5,7 @@
 import { isMeshComponentId } from '@/core/constants';
 import { clearCompletedFrom } from '@/core/ui/utils/stepCompletion';
 import { getStackById } from '@/features/components/services/demoPackageLoader';
+import { projectRowOf } from '@/features/components/services/storefrontResolver';
 import { pickStorefrontDerived } from '@/features/project-creation/ui/steps/edsConfigFromStorefront';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage, GitSource } from '@/types/demoPackages';
@@ -668,7 +669,7 @@ export function buildProjectConfig(
         importedMeshEndpoint,
         selectedPackage: wizardState.selectedPackage,
         // The row travels with the project (D2); absent for a shipped brand.
-        demo: wizardState.demo,
+        demo: projectRowOf(wizardState.demo),
         selectedStack: wizardState.selectedStack,
         // Recorded for the dashboard to install later — never imported here.
         datapack: wizardState.datapack,

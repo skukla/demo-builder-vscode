@@ -33,6 +33,11 @@ describe('buildProjectConfig — the added demo row', () => {
         expect(buildProjectConfig({ ...REVIEW_BASE, demo } as WizardState).demo).toEqual(demo);
         expect(buildProjectConfig({ ...REVIEW_BASE } as WizardState).demo).toBeUndefined();
     });
+
+    it('leaves the card\'s zip record behind: the project row never carries it', () => {
+        const demo = { kind: 'demo' as const, version: 1, name: 'Maddie', source: { owner: 'steve', repo: 'maddie' }, storefrontKind: 'eds' as const };
+        expect(buildProjectConfig({ ...REVIEW_BASE, demo: { ...demo, createdFromZip: true } } as WizardState).demo).toStrictEqual(demo);
+    });
 });
 
 describe('wizardHelpers - state & config', () => {

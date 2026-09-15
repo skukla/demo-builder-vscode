@@ -121,7 +121,6 @@ export async function probeSharedDemo(
         fullName: repository.fullName,
         defaultBranch: repository.defaultBranch,
         isTemplate: repository.isTemplate ?? false,
-        ...(repository.forkParent ? { forkParent: repository.forkParent } : {}),
         kind: 'not-a-storefront',
         contentPublished: { indexFound: false },
         b2b: 'unknown',

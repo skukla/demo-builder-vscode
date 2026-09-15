@@ -49,11 +49,27 @@ export interface BuildYourProjectSummaryProps {
 /** Placeholder shown when no architecture has been chosen yet. */
 const ARCHITECTURE_PENDING = 'Architecture pending';
 
-/** A single summary row. */
-function Row({ row }: { row: SummaryRow }) {
-    const isDone = Boolean(row.done && row.value);
+/**
+ * A single summary row. Shared by this column, the Add a demo package dialog's
+ * "Package details" and the Edit dialog's read-only Code row, so the three draw
+ * one row the same way.
+ *
+ * @param row - the label, value and done flag
+ * @param showDone - draw the ✓ for a done row; off where the rows are a report, not progress
+ * @param testId - an id for the row, when a caller's tests read it
+ */
+export function SummaryRowItem({
+    row,
+    showDone = true,
+    testId,
+}: {
+    row: SummaryRow;
+    showDone?: boolean;
+    testId?: string;
+}): React.ReactElement {
+    const isDone = showDone && Boolean(row.done && row.value);
     return (
-        <div className={cn('sum-row', isDone && 'done')}>
+        <div className={cn('sum-row', isDone && 'done')} data-testid={testId}>
             <span className="sum-rowlabel">
                 {isDone && (
                     <CheckmarkCircle
@@ -93,7 +109,7 @@ export function BuildYourProjectSummary({
                 <React.Fragment key={group.heading}>
                     <div className="sum-group-h">{group.heading}</div>
                     {group.rows.map((row) => (
-                        <Row key={row.label} row={row} />
+                        <SummaryRowItem key={row.label} row={row} />
                     ))}
                 </React.Fragment>
             ))}

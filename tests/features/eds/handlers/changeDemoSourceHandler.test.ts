@@ -1,7 +1,7 @@
 /**
  * change-demo-source: the project's row and the instance metadata move
- * together; the remembered demo only when asked; the same kind only; a copy
- * kept first when asked. Nothing else is touched.
+ * together; the remembered demo only when asked; the same kind only. Nothing
+ * else is touched.
  */
 
 import { COMPONENT_IDS } from '@/core/constants';
@@ -22,13 +22,8 @@ import { createMockProject, edsStorefrontInstance } from '../../../helpers/proje
 import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
-const createFork = jest.fn();
-const setTemplateFlag = jest.fn();
-const validateToken = jest.fn();
-jest.mock('@/features/eds/handlers/edsHelpers', () => ({
-    getGitHubServices: () => ({ tokenService: { validateToken }, repoOperations: { createFork, setTemplateFlag } }),
-}));
 jest.mock('@/features/project-creation/services/addedDemoSettings', () => ({
+    ...jest.requireActual('@/features/project-creation/services/addedDemoSettings'),
     rememberAddedDemo: jest.fn(async (demo: unknown) => [demo]),
     renameAddedDemoSource: jest.fn(async () => true),
 }));
@@ -64,7 +59,6 @@ function ctx(current: Project | null) {
 
 beforeEach(() => {
     jest.clearAllMocks();
-    validateToken.mockResolvedValue({ valid: true, user: { login: 'steve' } });
 });
 
 describe('handleChangeDemoSource', () => {
@@ -72,7 +66,7 @@ describe('handleChangeDemoSource', () => {
         const p = project();
         const context = ctx(p);
 
-        const result = await handleChangeDemoSource(context, { demo: NEW, keepCopy: false, updateRemembered: false });
+        const result = await handleChangeDemoSource(context, { demo: NEW, updateDemoPackage: false });
 
         expect(result).toEqual({
             success: true,
@@ -94,36 +88,42 @@ describe('handleChangeDemoSource', () => {
         const p = project();
         const unbranched = makeAddedDemo({ source: { owner: 'steve', repo: 'isle5-copy' } });
 
-        await handleChangeDemoSource(ctx(p), { demo: unbranched, keepCopy: false, updateRemembered: false });
+        await handleChangeDemoSource(ctx(p), { demo: unbranched, updateDemoPackage: false });
 
         const metadata = p.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.metadata ?? {};
         expect('templateBranch' in metadata).toBe(false);
     });
 
-    it('moves the remembered demo too, only when asked', async () => {
-        await handleChangeDemoSource(ctx(project()), { demo: NEW, keepCopy: false, updateRemembered: true });
+    it('updates the demo package on the Welcome step too, only when asked', async () => {
+        await handleChangeDemoSource(ctx(project()), { demo: NEW, updateDemoPackage: true });
 
         expect(renameAddedDemoSource).toHaveBeenCalledWith({ owner: 'jen', repo: 'isle5-demo' }, NEW.source);
         expect(rememberAddedDemo).toHaveBeenCalledWith(NEW);
     });
 
-    it('keeps a copy first when asked, and points the project at the copy', async () => {
-        createFork.mockResolvedValue({ fullName: 'steve/isle5-demo', defaultBranch: 'main' });
+    it('adds no demo package when there is none on the Welcome step to update', async () => {
+        (renameAddedDemoSource as jest.Mock).mockResolvedValueOnce(false);
+
+        await handleChangeDemoSource(ctx(project()), { demo: NEW, updateDemoPackage: true });
+
+        expect(rememberAddedDemo).not.toHaveBeenCalled();
+    });
+
+    it("never gives the project a card's zip record", async () => {
         const p = project();
-        const jensAgain = makeAddedDemo({ source: { owner: 'jen', repo: 'isle5-demo', branch: 'main' } });
 
-        const result = await handleChangeDemoSource(ctx(p), { demo: jensAgain, keepCopy: true, updateRemembered: false });
+        const result = await handleChangeDemoSource(ctx(p), { demo: { ...NEW, createdFromZip: true }, updateDemoPackage: true });
 
-        expect(createFork).toHaveBeenCalledWith('jen', 'isle5-demo');
-        expect(p.demo?.source).toEqual({ owner: 'steve', repo: 'isle5-demo', branch: 'main' });
-        expect(result.result?.forkedTo).toBe('steve/isle5-demo');
+        expect(p.demo).toStrictEqual(NEW);
+        expect(result.result?.demo).toStrictEqual(NEW);
+        expect(rememberAddedDemo).toHaveBeenCalledWith(NEW);
     });
 
     it('refuses a demo of the other kind, naming what this project is built on', async () => {
         const p = project();
         const headless = makeAddedDemo({ storefrontKind: 'headless', source: { owner: 'bob', repo: 'next-shop' } });
 
-        const result = await handleChangeDemoSource(ctx(p), { demo: headless, keepCopy: false, updateRemembered: false });
+        const result = await handleChangeDemoSource(ctx(p), { demo: headless, updateDemoPackage: false });
 
         expect(result).toEqual({
             success: false,
@@ -133,12 +133,12 @@ describe('handleChangeDemoSource', () => {
     });
 
     it('refuses when there is no open project or it was not built on an added demo', async () => {
-        expect(await handleChangeDemoSource(ctx(null), { demo: NEW, keepCopy: false, updateRemembered: false })).toEqual({
+        expect(await handleChangeDemoSource(ctx(null), { demo: NEW, updateDemoPackage: false })).toEqual({
             success: false,
             error: NOT_AN_ADDED_DEMO,
         });
         expect(
-            await handleChangeDemoSource(ctx(project({ demo: undefined })), { demo: NEW, keepCopy: false, updateRemembered: false }),
+            await handleChangeDemoSource(ctx(project({ demo: undefined })), { demo: NEW, updateDemoPackage: false }),
         ).toEqual({ success: false, error: NOT_AN_ADDED_DEMO });
     });
 

@@ -20,8 +20,14 @@ jest.mock('@/features/project-creation/ui/components/add-demo/AddDemoModal', () 
     ),
 }));
 
+jest.mock('@/features/dashboard/ui/components/demo-package/DemoPackageModal', () => ({
+    DemoPackageModal: () => <div role="dialog" aria-label="Save as demo package" />,
+}));
+
 const DEMO = { name: 'Isle5 by Jen', source: { owner: 'jen', repo: 'isle5-demo' }, storefrontKind: 'eds' as const };
-const UNREACHABLE = "jen's demo can't be reached. Reset and updates are unavailable until it is.";
+const PAGES = "The Isle5 by Jen demo's pages can't be reached right now.";
+const GUIDANCE = "If it moved, change the source. If it's gone for good, save this project as your own demo package.";
+const UNREACHABLE = "The Isle5 by Jen demo's repository can't be reached. Reset and updates are unavailable until it is.";
 
 describe('ProjectDashboardScreen - added demo source', () => {
     let ctx: TestContext;
@@ -49,6 +55,43 @@ describe('ProjectDashboardScreen - added demo source', () => {
         expect(banner).toHaveTextContent("This demo's source can't be reached");
         expect(banner).toHaveTextContent(UNREACHABLE);
         expect(screen.getByRole('button', { name: 'Change source' })).toBeInTheDocument();
+    });
+
+    it('offers Save as demo package beside Change source on an Edge Delivery project, and says which fits when', async () => {
+        renderDashboard({ demo: DEMO, isEds: true });
+        emitWarning();
+
+        const banner = await screen.findByTestId('demo-source-banner');
+        expect(banner).toHaveTextContent(GUIDANCE);
+        expect(screen.getByRole('button', { name: 'Change source' })).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: 'Save as demo package' }));
+        expect(screen.getByRole('dialog', { name: 'Save as demo package' })).toBeInTheDocument();
+    });
+
+    it('offers only Change source on a headless project, which cannot be saved as a demo package', async () => {
+        renderDashboard({ demo: { ...DEMO, storefrontKind: 'headless' as const } });
+        emitWarning();
+
+        const banner = await screen.findByTestId('demo-source-banner');
+        expect(banner).not.toHaveTextContent(GUIDANCE);
+        expect(screen.getByRole('button', { name: 'Change source' })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Save as demo package' })).not.toBeInTheDocument();
+    });
+
+    it('names the pages, not the source, when only the pages are out of reach, and offers no Save', async () => {
+        renderDashboard({ demo: DEMO, isEds: true });
+        ctx.triggerMessage('checkResult', {
+            checkId: 'demo-source',
+            status: 'warning',
+            message: PAGES,
+            data: { demoName: 'Isle5 by Jen', unreachable: false, contentUnreachable: true },
+        });
+
+        const banner = await screen.findByTestId('demo-source-banner');
+        expect(banner).toHaveTextContent("This demo's pages can't be reached");
+        expect(banner).not.toHaveTextContent("This demo's source can't be reached");
+        expect(banner).toHaveTextContent(PAGES);
+        expect(screen.queryByRole('button', { name: 'Save as demo package' })).not.toBeInTheDocument();
     });
 
     it('clears the notice when the check comes back ok', async () => {

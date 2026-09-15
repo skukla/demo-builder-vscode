@@ -54,7 +54,7 @@ Deleting things
 
 Replacing or wiping
 - `reset_eds_project` · `reset_datapack` · `migrate_storefront_name`
-- `forget_added_demo` (with `deleteCopy` it deletes a repository)
+- `forget_added_demo` (with `deleteRepository` it deletes the repository made from a zip)
 - `remove_demo_package` (takes the description file colleagues add the demo from out of the repository)
 
 Reaching other people

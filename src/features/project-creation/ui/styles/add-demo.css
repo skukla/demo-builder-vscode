@@ -29,8 +29,7 @@
         color: var(--spectrum-global-color-gray-700);
     }
 
-    .add-demo-b2b,
-    .add-demo-keep-copy {
+    .add-demo-b2b {
         display: flex;
         flex-direction: column;
         gap: 2px;

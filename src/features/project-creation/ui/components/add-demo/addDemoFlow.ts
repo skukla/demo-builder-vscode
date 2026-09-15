@@ -38,10 +38,11 @@ export interface AddDemoDraft {
     description: string;
     /** The B2B switch, asked only when the probe could not tell. */
     b2bOn: boolean;
-    /** Keep my own copy: on by default (decided 2026-09-11). */
-    keepCopy: boolean;
-    /** Change mode only: also move the remembered demo to the new source. Off by default. */
-    updateRemembered: boolean;
+    /**
+     * Change mode only: also point the demo package on the Welcome step at the new
+     * source. On when there is one to update (owner, 2026-09-15), off otherwise.
+     */
+    updateDemoPackage: boolean;
 }
 
 export const COPY = {
@@ -67,7 +68,6 @@ export const COPY = {
     b2bSwitch: 'Uses company (B2B) features',
     b2bWhy: "We couldn't tell whether this demo uses company accounts, quotes and purchase orders.",
     b2bIfWrong: 'If it does and this stays off, company users will see an empty account menu.',
-    keepCopy: 'Keep my own copy of the code',
     /** The second way in (step 10): a storefront that arrived as a zip file. */
     zipPublic: 'Make the repository public',
     zipButton: 'Choose a zip file',
@@ -80,20 +80,23 @@ export const COPY = {
     bundleStart: 'Start a project with it',
     add: 'Add demo package',
     adding: 'Adding the demo package',
-    addingCopy: 'Making your own copy of the code in your GitHub account.',
     /** The dashboard's "Change source" door: the same dialog, a different commit. */
     change: {
         title: 'Change the demo source',
-        lead: "Point this project at another copy of its demo: a colleague's link, your own copy, or the demo's site address. Only where reset and updates read from changes; the project's code and pages stay as they are.",
+        lead: "Point this project at another copy of its demo: a colleague's link or the demo's site address. Only where reset and updates read from changes; the project's code and pages stay as they are.",
         commit: 'Change source',
         changing: 'Changing the source',
-        updateRemembered: 'Also update the remembered demo',
         shipped: "A project can't be pointed at a demo we ship. Use the demo's own repository.",
         wrongKindTitle: 'This demo is a different kind of storefront',
     },
 } as const;
 
-export const INITIAL_DRAFT: AddDemoDraft = { name: '', description: '', b2bOn: false, keepCopy: true, updateRemembered: false };
+export const INITIAL_DRAFT: AddDemoDraft = { name: '', description: '', b2bOn: false, updateDemoPackage: false };
+
+/** Change mode's box, naming the demo package it updates (owner, 2026-09-15: short, and by name). */
+export function updateDemoPackageLabel(name: string): string {
+    return `Also update the ${name} demo package`;
+}
 
 /** The one rule of change mode: an Edge Delivery project takes an Edge Delivery demo, a headless one a headless demo. */
 export function wrongKindMessage(currentKind: StorefrontKind): string {

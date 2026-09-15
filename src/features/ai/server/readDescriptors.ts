@@ -335,8 +335,7 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
         readOnly: true,
         description:
             "Read a colleague's demo before adding it: what kind of storefront it is (Edge Delivery or headless), " +
-            'its store codes, whether its pages are published, its company (B2B) posture, and whether you ' +
-            'already own it or a fork of it. Takes owner+repo, or a GitHub link / demo site address as link. ' +
+            'its store codes, whether its pages are published, and its company (B2B) posture. Takes owner+repo, or a GitHub link / demo site address as link. ' +
             'Reads only; add_shared_demo adds it.',
         map: dashboardHandlers,
         type: 'probe-shared-demo',

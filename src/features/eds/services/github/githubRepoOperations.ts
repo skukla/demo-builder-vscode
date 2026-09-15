@@ -64,7 +64,6 @@ interface RepoResponseData {
     clone_url: string;
     default_branch: string;
     is_template?: boolean;
-    parent?: { full_name: string } | null;
 }
 
 /** One reading of the repository response, shared by every method that fetches it. */
@@ -78,7 +77,6 @@ function toGitHubRepo(data: RepoResponseData): GitHubRepo {
         defaultBranch: data.default_branch,
         isTemplate: data.is_template ?? false,
         isPrivate: data.private,
-        ...(data.parent?.full_name ? { forkParent: data.parent.full_name } : {}),
     };
 }
 
@@ -197,8 +195,7 @@ export class GitHubRepoOperations {
 
     /**
      * Mark a repository we own as a GitHub template, so `generate` works from
-     * it. Used on the SC's own copy of an added demo (we own the fork), and by
-     * Share.
+     * it. Used on the repository a zip import creates.
      */
     async setTemplateFlag(owner: string, repo: string, isTemplate = true): Promise<void> {
         const octokit = await this.ensureAuthenticated();
@@ -208,32 +205,6 @@ export class GitHubRepoOperations {
             is_template: isTemplate,
         });
         this.logger.debug(`[GitHub] Repository ${owner}/${repo} template flag set to ${isTemplate}`);
-    }
-
-    /**
-     * Fork `owner/repo` into the authenticated user's account: the one call
-     * "keep my own copy of this demo" makes. GitHub answers with the user's
-     * existing fork when they already have one, which is what makes the add
-     * idempotent; the fork itself is created asynchronously.
-     *
-     * @returns The fork (the existing one when the user already had it)
-     */
-    async createFork(owner: string, repo: string): Promise<GitHubRepo> {
-        const octokit = await this.ensureAuthenticated();
-        try {
-            const response = await octokit.request('POST /repos/{owner}/{repo}/forks', {
-                owner,
-                repo,
-                default_branch_only: false,
-            });
-            this.logger.info(`[GitHub:Fork] ${owner}/${repo} → ${response.data.full_name}`);
-            return { ...toGitHubRepo(response.data), forkParent: `${owner}/${repo}` };
-        } catch (error) {
-            const apiError = error as GitHubApiError;
-            if (apiError.status === 404) throw new Error('Repository not found');
-            if (apiError.status === 403) throw new Error('Access denied to this repository');
-            throw error;
-        }
     }
 
     /**

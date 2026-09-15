@@ -73,8 +73,11 @@ export interface DashboardInitialData {
     /**
      * The added demo this project was built on, when it was: enough for the
      * "Change source" door (same storefront kind only) and the notice's words.
+     * `demoPackageName` is the name of the demo package on the SC's Welcome step
+     * that reads from the same repository, when there is one: Change source offers
+     * to update it.
      */
-    demo?: Pick<AddedDemo, 'name' | 'source' | 'storefrontKind'>;
+    demo?: Pick<AddedDemo, 'name' | 'source' | 'storefrontKind'> & { demoPackageName?: string };
 }
 
 /**

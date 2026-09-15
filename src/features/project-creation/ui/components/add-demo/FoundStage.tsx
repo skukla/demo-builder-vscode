@@ -1,7 +1,7 @@
 /**
  * FoundStage — the dialog's second stage: "Reading the storefront…" while the
  * probe runs, then the found panel (name, what we found, the B2B switch only
- * when nothing said, the keep-a-copy tick box), or the refusal.
+ * when nothing said), or the refusal.
  *
  * Feedback views are the house ones (`LoadingDisplay`, `StatusDisplay`,
  * `InlineNotice`); the rows are the Build step's summary rows.
@@ -11,12 +11,14 @@
 
 import { Button, Checkbox, Switch, TextArea, TextField } from '@adobe/react-spectrum';
 import React from 'react';
+import { SummaryRowItem } from '../BuildYourProjectSummary';
 import {
     COPY,
     defaultDemoName,
     foundRows,
     isBuildable,
     kindMatches,
+    updateDemoPackageLabel,
     wrongKindMessage,
     type AddDemoDraft,
     type AddDemoMode,
@@ -37,11 +39,12 @@ export interface FoundStageProps {
     onNameChange: (name: string) => void;
     onDescriptionChange: (description: string) => void;
     onB2bChange: (on: boolean) => void;
-    onKeepCopyChange: (keep: boolean) => void;
-    onUpdateRememberedChange?: (update: boolean) => void;
+    onUpdateDemoPackageChange?: (update: boolean) => void;
     mode?: AddDemoMode;
     /** Change mode: the project's kind, which the found demo must match. */
     currentKind?: StorefrontKind;
+    /** Change mode: the demo package on the Welcome step to offer updating; no box without one. */
+    demoPackageName?: string;
     /** The zip was a bundle with setup: offer to start a project from it, on this card. */
     bundle?: { onStart: () => void; busy: boolean };
 }
@@ -52,32 +55,6 @@ function refusalDetails(read: SharedDemoRead): string[] {
         return [`It is missing ${read.missing.join(', ')}.`, ...read.warnings];
     }
     return read.warnings;
-}
-
-function KeepCopyBox({
-    read,
-    draft,
-    onKeepCopyChange,
-}: Pick<FoundStageProps, 'draft' | 'onKeepCopyChange'> & { read: SharedDemoRead }): React.ReactElement | null {
-    const viewer = read.viewer;
-    // The SC's own repository is the source; nothing to copy.
-    if (viewer?.ownsRepo) return null;
-    if (viewer?.existingFork) {
-        return (
-            <Checkbox isSelected isDisabled data-testid="keep-copy">
-                {`You already have a copy at ${viewer.existingFork}. It will be used.`}
-            </Checkbox>
-        );
-    }
-    const account = viewer?.login ? `your GitHub account, ${viewer.login}` : 'your GitHub account';
-    return (
-        <div className="add-demo-keep-copy">
-            <Checkbox isSelected={draft.keepCopy} onChange={onKeepCopyChange} data-testid="keep-copy">
-                {COPY.keepCopy}
-            </Checkbox>
-            <p className="add-demo-note">{`Saved to ${account}. Your projects keep working if the original changes.`}</p>
-        </div>
-    );
 }
 
 /**
@@ -94,10 +71,10 @@ export function FoundStage({
     onNameChange,
     onDescriptionChange,
     onB2bChange,
-    onKeepCopyChange,
-    onUpdateRememberedChange,
+    onUpdateDemoPackageChange,
     mode = 'add',
     currentKind,
+    demoPackageName,
     bundle,
 }: FoundStageProps): React.ReactElement {
     if (probe.status === 'idle' || probe.status === 'loading') {
@@ -176,16 +153,7 @@ export function FoundStage({
             <div className="add-demo-found">
                 <p className="intflow-section-label">{COPY.found}</p>
                 {foundRows(result).map((row) => (
-                    <div key={row.label} className="sum-row" data-testid={`found-${row.label}`}>
-                        <span className="sum-rowlabel">
-                            <span className="sum-label">{row.label}</span>
-                        </span>
-                        {row.value ? (
-                            <span className="sum-value">{row.value}</span>
-                        ) : (
-                            <span className="sum-value empty">Not set</span>
-                        )}
-                    </div>
+                    <SummaryRowItem key={row.label} row={row} showDone={false} testId={`found-${row.label}`} />
                 ))}
             </div>
             {result.warnings.length > 0 ? (
@@ -204,14 +172,13 @@ export function FoundStage({
                     <p className="add-demo-note">{COPY.b2bIfWrong}</p>
                 </div>
             ) : null}
-            <KeepCopyBox read={result} draft={draft} onKeepCopyChange={onKeepCopyChange} />
-            {mode === 'change' ? (
+            {mode === 'change' && demoPackageName ? (
                 <Checkbox
-                    isSelected={draft.updateRemembered}
-                    onChange={onUpdateRememberedChange}
-                    data-testid="update-remembered"
+                    isSelected={draft.updateDemoPackage}
+                    onChange={onUpdateDemoPackageChange}
+                    data-testid="update-demo-package"
                 >
-                    {COPY.change.updateRemembered}
+                    {updateDemoPackageLabel(demoPackageName)}
                 </Checkbox>
             ) : null}
             {bundle ? (

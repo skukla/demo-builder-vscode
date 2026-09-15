@@ -107,6 +107,20 @@ export interface AddedDemo extends SharedDemoDescription {
 }
 
 /**
+ * A Welcome card as the `demoBuilder.demos.added` setting remembers it: the row
+ * plus what is true of this SC's card only. A project stores the row, never
+ * this (`projectRowOf`), so these fields stay out of the manifest and the
+ * project file.
+ */
+export interface RememberedDemo extends AddedDemo {
+    /**
+     * Set when the extension created `source` from a zip file: the only card
+     * whose repository Remove offers to delete.
+     */
+    createdFromZip?: true;
+}
+
+/**
  * What a project travels in. Everything the manifest persists that is not
  * machine-local (the contract step's table), and never a credential.
  */

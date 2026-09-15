@@ -6,7 +6,7 @@
 |---|---|---|---|
 | Boilerplate name + version | `package.json` at the repository's default branch (raw read, the probe already fetches files) | the zip's `package.json` | the template's `package.json` at the pinned commit |
 | `template_repository` | GitHub repository record (`getRepository` gains the field beside `is_template`, `parent`) | — | — (we are the template) |
-| Fork parent | already read (`forkParent`) | — | — |
+| Fork parent | GitHub repository record (`getRepository` gains `parent` beside `is_template`; `forkParent` was removed with the copy, shareable-demo step 11) | — | — |
 | Which canonical, if any | match `template_repository`/parent/`builtWith.template` against the shipped storefronts' `templateOwner/Repo` and the ledgers' `canonical` | package name only | known |
 
 ## Where it lands

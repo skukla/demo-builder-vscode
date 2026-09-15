@@ -199,6 +199,7 @@ export async function importDemoBundle(context: HandlerContext, zipPath: string)
                 name: created.repo,
                 source: { owner: created.owner, repo: created.repo, branch: created.defaultBranch },
                 storefrontKind: 'eds',
+                createdFromZip: true,
             };
             await rememberAddedDemo(card);
             context.logger.info(`[Zip] Bundle: ${created.fullName} created and "${card.name}" added to the Welcome step`);

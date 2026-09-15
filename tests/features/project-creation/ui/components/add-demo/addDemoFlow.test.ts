@@ -11,6 +11,7 @@ import {
     INITIAL_DRAFT,
     isBuildable,
     kindMatches,
+    updateDemoPackageLabel,
     wrongKindMessage,
 } from '@/features/project-creation/ui/components/add-demo/addDemoFlow';
 import type { SharedDemoRead } from '@/types/webviewRequests';
@@ -189,7 +190,11 @@ describe('change mode', () => {
         expect(wrongKindMessage('headless')).toBe('This project is built on a headless demo; pick a demo of the same kind.');
     });
 
-    it('starts with the update-remembered box off', () => {
-        expect(INITIAL_DRAFT.updateRemembered).toBe(false);
+    it('starts with the update-demo-package box off', () => {
+        expect(INITIAL_DRAFT.updateDemoPackage).toBe(false);
+    });
+
+    it('names the demo package the box updates, by its name (owner, 2026-09-15)', () => {
+        expect(updateDemoPackageLabel('Bodea')).toBe('Also update the Bodea demo package');
     });
 });

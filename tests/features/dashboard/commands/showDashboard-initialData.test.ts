@@ -20,6 +20,7 @@ import { createMockExtensionContext } from '../../../helpers/extensionContextFak
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockProject } from '../../../helpers/projectFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { readAddedDemos } from '@/features/project-creation/services/addedDemoSettings';
 import { makeAddedDemo } from '../../../helpers/demoPackageFixtures';
 
 jest.mock('@/features/components/services/demoPackageLoader', () => ({
@@ -32,6 +33,10 @@ jest.mock('@/core/config/ConfigurationLoader', () => ({
 }));
 jest.mock('@/features/data-installer/services/dataInstallerConfig', () => ({
     isDataInstallerConfigured: jest.fn(() => true),
+}));
+jest.mock('@/features/project-creation/services/addedDemoSettings', () => ({
+    ...jest.requireActual('@/features/project-creation/services/addedDemoSettings'),
+    readAddedDemos: jest.fn(() => []),
 }));
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     getEwCanvasBranch: jest.fn(() => ''),
@@ -70,6 +75,15 @@ describe('ProjectDashboardWebviewCommand - getInitialData - the added demo', () 
         });
 
         expect('demo' in (await initialData(createMockProject()))).toBe(false);
+    });
+
+    it("names the demo package on the Welcome step that reads from the same repository, by the card's own name, so Change source can offer to update it", async () => {
+        const demo = makeAddedDemo({ source: { owner: 'jen', repo: 'isle5-demo', branch: 'main' } });
+        (readAddedDemos as jest.Mock).mockReturnValue([{ ...demo, name: 'Isle5 (renamed on the card)', source: { owner: 'Jen', repo: 'ISLE5-demo' } }]);
+
+        const data = await initialData(createMockProject({ demo }));
+
+        expect(data.demo?.demoPackageName).toBe('Isle5 (renamed on the card)');
     });
 });
 

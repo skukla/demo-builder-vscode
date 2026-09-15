@@ -147,6 +147,10 @@ describe('WelcomeStep — editing an added demo', () => {
         const description = screen.getByLabelText('Description', { selector: 'textarea' }) as HTMLTextAreaElement;
         expect(name.value).toBe('Isle5 by Jen');
         expect(description.value).toBe('Old words');
+        // Where the card reads from, shown and not editable: a new repository is
+        // re-added through Add a demo package, which reads it (owner, 2026-09-15).
+        expect(screen.getByTestId('found-Code')).toHaveTextContent('github.com/jen/isle5-demo');
+        expect(screen.getByTestId('found-Code').querySelector('input')).toBeNull();
 
         fireEvent.change(name, { target: { value: 'Isle5 luxury' } });
         fireEvent.change(description, { target: { value: 'New words' } });

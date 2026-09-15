@@ -25,9 +25,8 @@ at this demo…" while the extension reads the repository, then stage 2: an edit
 prefilled from the repository, a short read-only table "What we found in this demo"
 (storefront kind, published pages, store codes), and, only when the extension could not
 tell, a switch "Uses company (B2B) features", off, with two lines: why we are asking and
-what happens if it stays off wrongly. Below the table, a tick box, on by default: "Keep my own copy of this demo's code, so it
-still works if the original changes", naming the account or team org it goes to (the
-repo step's namespace picker). Back and "Add demo". Adding creates the fork when ticked,
+what happens if it stays off wrongly. (A "Keep my own copy" tick box that forked the demo
+was here until 2026-09-14; removed by step 11.) Back and "Add demo". Adding
 closes the dialog; the new
 card is selected; the plus card moves to the end; the link is remembered in the SC's VS Code
 settings for next time.
@@ -44,17 +43,16 @@ copy automatically when a published index exists (a note says the site starts em
 not); the demo's blocks, palette and example pages arrive regardless. Integrations: the mesh toggle
 is shown.
 
-**After creation.** Reset goes back to the demo's source (the SC's fork when they kept a
-copy, else the colleague's `main`) and re-copies their content; for a forked demo the
-update check says "Jen has updated this demo: N changes. Pull them in?" and one click
-merges them;
-for an unforked demo the update check compares to the colleague's `main` instead.
+**After creation.** Reset goes back to the demo's source (the colleague's `main`; the fork
+option was removed 2026-09-14, step 11) and re-copies their content; the update check
+compares to the colleague's `main`. A demo whose repository is itself a fork still gets the
+existing fork sync.
 Configure opens with the demo card present; republish keeps the B2B flags. Caveats from the dry check of our five load-bearing
 patches read in SC words ("Product deep links may 404 on this storefront").
 
-**When the original disappears.** A forked demo does not notice. An unforked one shows a
-notice on the project, reset refuses up front with the same sentence, renames are followed
-silently, and "Change source" points the project at a new link or a fork made now. When
+**When the original disappears.** The project shows a notice, reset refuses up front with
+the same sentence, renames are followed silently, and "Change source" points the project at
+a new link. Projects already built keep their own repository and pages. When
 the content site is gone, reset offers to keep the current content.
 
 **What the SC never sees.** GitHub API calls, `fstab.yaml`, `config.json`, the template
@@ -93,6 +91,7 @@ thing each step below is built from and how. It supersedes the shorter table in 
 | 08 | Write the how-to for sharing a demo | contract | EDS-13c |
 | 09 | Export → Storefront as demo package (was Share this demo; rehomed under Export 2026-09-13) | contract, 08 | EDS-13b |
 | 10 | Add a storefront from a zip file | 04, 05, 07 | EDS-13a |
+| 11 | Remove "Keep my own copy"; a zip's repository is the only one Remove can delete (`step-11-no-copy.md`) | 04, 06, 07, 10 | EDS-13a |
 
 Step 01 is the representative vertical slice: if the eleven sites fight the resolver, the
 design is revised before step 03.
@@ -228,6 +227,18 @@ was rejected and why. Detail in the research sections named.
   the same list; the check re-runs on every reset; nothing persists on the dashboard.
   Rejected: per-patch lines (five lines, no extra meaning), today's toast (written for us), a
   persistent dashboard notice (nags about something the SC cannot fix), create-only.
+
+- **2026-09-14 · No copy (step 11, D33).** Testing with Jen's AI Store: the SC deleted the
+  fork the card read from, and every later create failed with "Repository not found". Talked
+  through remembering the original, labels, a warning in "Manage GitHub Repositories", and a
+  plain copy with rebuilt updates; each added surface. Settled instead on what was already
+  true: shipped packages have no copy (Isle5 reads from a colleague's personal account); a
+  private fork is deleted with its original and a deleted fork cannot be restored while the
+  original exists; the copy saved code but the card still read the colleague's pages; and
+  "Save as demo package" already makes a demo that nobody can take away. The zip door keeps
+  its repository (the code has nowhere else to live), and the card records that the
+  extension made it, so Remove offers the delete for that repository only. Rejected: keeping
+  the copy as a fork, a plain copy, label or warn, re-copy on demand.
 
 ## Review findings (2026-09-11, a full re-read of every plan file)
 

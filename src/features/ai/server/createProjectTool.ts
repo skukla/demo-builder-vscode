@@ -45,6 +45,7 @@ import {
     getAutoSelectedOptionalDependencies,
     getResolvedMeshRequirement,
 } from '@/features/components/services/demoPackageLoader';
+import { projectRowOf } from '@/features/components/services/storefrontResolver';
 import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { executeProjectCreation } from '@/features/project-creation/handlers/executor';
@@ -419,10 +420,6 @@ export function registerCreateProjectTool(server: McpToolServer, ctxFactory: () 
                     .string()
                     .optional()
                     .describe("A colleague's demo: a GitHub link or its site address. Added to your list first, then built on. Omit when passing package."),
-                keepCopy: z
-                    .boolean()
-                    .optional()
-                    .describe('With link: fork the demo into your own GitHub account first (default true)'),
                 stack: z.string().describe('Architecture stack id (from list_stacks)'),
                 repoName: z
                     .string()
@@ -466,7 +463,6 @@ export function registerCreateProjectTool(server: McpToolServer, ctxFactory: () 
                 pkgId,
                 stackId,
                 link,
-                keepCopy: args?.keepCopy,
             });
             if ('error' in resolved) return asText(resolved.error);
             const { pkg, storefront, packages, demo } = resolved;
@@ -474,7 +470,8 @@ export function registerCreateProjectTool(server: McpToolServer, ctxFactory: () 
                 projectName,
                 pkgId: pkg.id,
                 stackId,
-                demo,
+                // A project row never carries the card's zip record.
+                demo: projectRowOf(demo),
                 repoName: args.repoName ? String(args.repoName) : undefined,
                 githubOwner: args.githubOwner ? String(args.githubOwner) : undefined,
                 daLiveOrg: args.daLiveOrg ? String(args.daLiveOrg) : undefined,

@@ -1,7 +1,7 @@
 /**
  * The package `create_project` builds on: a shipped one by id, an added demo by
  * its `added:owner/repo` id (from list_demo_packages), or a colleague's link
- * probed and added inline (the dialog's own path, the copy kept when asked).
+ * probed and added inline (the dialog's own path).
  * An added demo's package is derived from its row for the chosen stack, so
  * every downstream read (mesh requirement, storefront, config) sees one
  * catalog. Its own module so the tool stays under the file limit.
@@ -39,7 +39,6 @@ export interface ResolvePackageArgs {
     pkgId: string;
     stackId: string;
     link?: string;
-    keepCopy?: boolean;
 }
 
 /** Every id a creation may name: the shipped packages and the remembered demos. */
@@ -56,10 +55,7 @@ async function demoFor(
     if (args.link) {
         const row = await readDemoRow(ctx, { link: args.link });
         if ('error' in row) return row;
-        const added = await handleAddSharedDemo(ctx, {
-            demo: row.demo,
-            keepCopy: (args.keepCopy ?? true) && !row.read.viewer?.ownsRepo,
-        });
+        const added = await handleAddSharedDemo(ctx, { demo: row.demo });
         if (!added.success || !added.result) return { error: { error: added.error } };
         return added.result.demo;
     }

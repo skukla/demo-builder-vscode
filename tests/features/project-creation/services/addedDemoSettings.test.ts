@@ -9,6 +9,7 @@ import {
     addedDemoKey,
     editAddedDemo,
     forgetAddedDemo,
+    isAddedDemo,
     parseAddedDemoSettings,
     readAddedDemos,
     rememberAddedDemo,
@@ -42,6 +43,22 @@ describe('parseAddedDemoSettings', () => {
         expect(row.source).toEqual({ owner: 'jen', repo: 'isle5-demo', branch: 'demo' });
         const [row2] = parseAddedDemoSettings([{ ...JEN, source: { ...JEN.source, branch: 7 } }]);
         expect(row2.source).toEqual({ owner: 'jen', repo: 'isle5-demo' });
+    });
+
+    it('keeps the record that the extension made the repository from a zip, and only when it is true', () => {
+        const [zip] = parseAddedDemoSettings([{ ...JEN, createdFromZip: true }]);
+        expect(zip.createdFromZip).toBe(true);
+        const [other] = parseAddedDemoSettings([{ ...JEN, createdFromZip: 'yes' }]);
+        expect(other).not.toHaveProperty('createdFromZip');
+    });
+});
+
+describe('isAddedDemo', () => {
+    it('accepts a row with a kind, a name, a source and a storefront kind, and nothing less', () => {
+        expect(isAddedDemo(JEN)).toBe(true);
+        expect(isAddedDemo({ ...JEN, storefrontKind: 'weird' })).toBe(false);
+        expect(isAddedDemo({ ...JEN, source: { owner: 'jen' } })).toBe(false);
+        expect(isAddedDemo(null)).toBe(false);
     });
 });
 
@@ -103,6 +120,20 @@ describe('renameAddedDemoSource', () => {
         );
     });
 
+    it('keeps the zip record on a followed rename', async () => {
+        (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
+            get: jest.fn((key: string, fallback: unknown) =>
+                key === ADDED_DEMOS_SETTING ? [{ ...JEN, createdFromZip: true }] : fallback,
+            ),
+            update,
+        });
+        await renameAddedDemoSource(JEN.source, { owner: 'jen', repo: 'isle5-2026' });
+
+        expect(update.mock.calls[0][1]).toEqual([
+            { ...JEN, createdFromZip: true, source: { owner: 'jen', repo: 'isle5-2026' } },
+        ]);
+    });
+
     it('writes nothing when the demo is not remembered', async () => {
         const moved = await renameAddedDemoSource({ owner: 'nobody', repo: 'x' }, { owner: 'nobody', repo: 'y' });
 
@@ -148,6 +179,18 @@ describe('editAddedDemo', () => {
         const expected = { ...DESCRIBED, name: 'Isle5 luxury', description: 'New words' };
         expect(edited).toStrictEqual(expected);
         expect(update).toHaveBeenCalledWith(ADDED_DEMOS_SETTING, [expected, BOB], vscode.ConfigurationTarget.Global);
+    });
+
+    it('keeps the zip record through an edit', async () => {
+        (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
+            get: jest.fn((key: string, fallback: unknown) =>
+                key === ADDED_DEMOS_SETTING ? [{ ...JEN, createdFromZip: true }] : fallback,
+            ),
+            update,
+        });
+        const edited = await editAddedDemo(JEN.source, { name: 'Isle5', description: '' });
+
+        expect(edited?.createdFromZip).toBe(true);
     });
 
     it('takes a blank description off the row rather than storing an empty one', async () => {

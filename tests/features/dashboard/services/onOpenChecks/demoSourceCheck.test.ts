@@ -17,7 +17,7 @@ import { createMockLogger } from '../../../../helpers/loggerFake';
 import { createMockProject } from '../../../../helpers/projectFake';
 
 const mockCheck = checkDemoSource as jest.MockedFunction<typeof checkDemoSource>;
-const UNREACHABLE = "jen's demo can't be reached. Reset and updates are unavailable until it is.";
+const UNREACHABLE = "The Isle5 by Jen demo's repository can't be reached. Reset and updates are unavailable until it is.";
 
 function ctx(withDemo: boolean): OnOpenCheckContext {
     return {
@@ -90,14 +90,14 @@ it("warns with the content site's own line when only the pages are gone", async 
         reachable: true,
         message: '',
         contentReachable: false,
-        contentMessage: "jen's demo's pages can't be reached right now.",
+        contentMessage: "The Isle5 by Jen demo's pages can't be reached right now.",
     });
 
     const outcome = await build().run(ctx(true));
 
     expect(outcome).toMatchObject({
         status: 'warning',
-        message: "jen's demo's pages can't be reached right now.",
+        message: "The Isle5 by Jen demo's pages can't be reached right now.",
         data: { unreachable: false, contentUnreachable: true },
     });
 });

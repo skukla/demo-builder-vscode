@@ -143,7 +143,7 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     forget_added_demo: {
         action: 'Forget an added demo',
         consequence:
-            'Takes it off your Welcome step. With deleteCopy, also deletes your copy of the code; projects built on it then lose reset and updates.',
+            'Takes it off your Welcome step. With deleteRepository, also deletes the repository made from its zip file; projects built on it then lose reset and updates.',
         target: ['owner', 'repo'],
         sessionGrant: false,
     },

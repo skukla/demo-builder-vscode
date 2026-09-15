@@ -11,11 +11,11 @@
  * @module features/eds/handlers/changeDemoSourceHandler
  */
 
-import { getGitHubServices } from './edsHelpers';
 import { COMPONENT_IDS } from '@/core/constants';
 import { assertGitHubName } from '@/core/utils/githubUrlParser';
-import { isAddedDemo, keepOwnCopy } from '@/features/eds/services/sharedDemoCopy';
+import { projectRowOf } from '@/features/components/services/storefrontResolver';
 import {
+    isAddedDemo,
     rememberAddedDemo,
     renameAddedDemoSource,
 } from '@/features/project-creation/services/addedDemoSettings';
@@ -42,13 +42,13 @@ function repointInstanceMetadata(project: Project, row: AddedDemo): void {
 }
 
 /**
- * Validate, keep a copy when asked, rewrite the row and the metadata, save.
+ * Validate, rewrite the row and the metadata, save.
  */
 export async function handleChangeDemoSource(
     context: HandlerContext,
     data: unknown,
 ): Promise<HandlerResponse & { result?: ChangeDemoSourceResult }> {
-    const { demo, keepCopy, updateRemembered } = (data ?? {}) as Partial<ChangeDemoSourceRequest>;
+    const { demo, updateDemoPackage } = (data ?? {}) as Partial<ChangeDemoSourceRequest>;
     if (!isAddedDemo(demo)) {
         return { success: false, error: 'A demo row with a source is required' };
     }
@@ -70,25 +70,20 @@ export async function handleChangeDemoSource(
         };
     }
 
-    let row: AddedDemo = demo;
-    let forkedTo: string | undefined;
-    if (keepCopy) {
-        const copy = await keepOwnCopy(demo, getGitHubServices(context.context.secrets), context.logger);
-        if ('error' in copy) return { success: false, error: copy.error };
-        row = copy.row;
-        forkedTo = copy.forkedTo;
-    }
-
+    // A project row never carries a card's zip record, and a new source is not
+    // the repository any zip made.
+    const row = projectRowOf(demo);
     const previous = { owner: project.demo.source.owner, repo: project.demo.source.repo };
     project.demo = row;
     repointInstanceMetadata(project, row);
     await context.stateManager.saveProject(project);
-    if (updateRemembered) {
-        await renameAddedDemoSource(previous, row.source);
+    // Update only: with no demo package on the Welcome step for the old source,
+    // nothing is added (owner, 2026-09-15).
+    if (updateDemoPackage && (await renameAddedDemoSource(previous, row.source))) {
         await rememberAddedDemo(row);
     }
     context.logger.info(
         `[SharedDemo] ${project.name} now reads its demo from ${row.source.owner}/${row.source.repo} (was ${previous.owner}/${previous.repo})`,
     );
-    return { success: true, result: { demo: row, previous, ...(forkedTo ? { forkedTo } : {}) } };
+    return { success: true, result: { demo: row, previous } };
 }

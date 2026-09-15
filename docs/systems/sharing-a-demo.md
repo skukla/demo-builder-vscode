@@ -130,27 +130,33 @@ Into every project built from your demo, Demo Builder writes what makes it that 
 inspector tagging and the quick-edit hooks. Your files are the starting point; those are the
 ones the project owns afterwards.
 
-## Copies, forks, and history
+## Where a colleague's projects read from
 
-When an SC adds your demo, "Keep my own copy of this demo's code" is ticked by default. That
-forks your repository into their GitHub account, marks the fork as a template, and reads
-everything from the fork from then on: projects are created from it, reset goes back to it,
-and the update check offers to pull your changes into it. Forgetting the demo can delete
-the fork.
+When an SC adds your demo, their card reads from your repository and your content site, the
+same way a demo package Demo Builder ships reads from its own. Nothing is copied into their
+GitHub account. Each project they build gets its own repository and its own pages at
+creation, so a project already built keeps working whatever happens to yours. Reset and
+updates go back to your repository.
 
-A fork carries your full history. **Do not share a repository whose history ever held a
-secret.** Rewriting history does not reach forks already made.
+**Keeping a demo nobody can take away.** An SC who wants to keep building on your demo even
+if you remove it builds one project from it and uses **More → Save as demo package** on that
+project. The card that makes reads that project's own repository and pages, so it needs
+nothing of yours.
+
+Your repository's history is readable by anyone who can read the repository. **Do not share a
+repository whose history ever held a secret.**
 
 ## After you change your demo
 
-- **Your later changes** reach a colleague's fork through the update check, which offers to
-  pull them; a project reset then picks them up. A colleague who kept no copy resets straight
-  to your default branch.
+- **Your later changes** reach a colleague's projects through the update check, and a
+  project reset goes straight to your default branch.
 - **If you rename the repository,** GitHub answers the old name with the new one, and each
   project follows the rename the next time it resets or opens.
 - **If you delete it,** projects built on it keep working. Their reset refuses with one
-  sentence, their dashboard says the demo can't be reached, and "Change source" lets them
-  point at another copy of the same kind, a fork included.
+  sentence, and their dashboard says the demo's repository can't be reached. "Change
+  source" points a project at another copy of the same kind, for a demo that moved; on an
+  Edge Delivery project "Save as demo package" keeps it as the SC's own, for one that is
+  gone.
 
 ## The words
 
@@ -166,9 +172,9 @@ projects from it. The dialog opens with the name and description prefilled from 
 demo the project was built on (the project's own title for a Starter build); edit them,
 then **Save**. Two things happen: the description file is written into your own storefront
 repository from what the project already holds, and the card is added to your Welcome step.
-Nothing else about the repository changes: it is not marked as a GitHub template,
-because Add a demo package forks it, and a copy made from a template would lose "pull in their
-changes" (a template copy has no link back to the original).
+Nothing else about the repository changes: it is not marked as a GitHub template. A
+project created from the card still works, because creation copies a repository that is not a
+template into a new empty one.
 
 Above the button, "What colleagues get" says, one line each, what a project built from the
 card will start with: whether colleagues can open the storefront's code (a private repository
@@ -234,7 +240,7 @@ a demo from a link, `add_shared_demo` adds it, `create_project` takes an added d
 a link, `change_demo_source` repoints a project, `edit_added_demo` renames a card and changes
 its description, and `forget_added_demo` takes a demo off the list. The demos an SC has added live in the `demoBuilder.demos.added` setting.
 `add_shared_demo` also takes `zipPath` for a storefront that arrived as a zip file or a demo
-bundle: the repository it creates in the SC's account needs `confirm:true`, like a fork. When
+bundle: the repository it creates in the SC's account needs `confirm:true`. When
 the bundle carries setup, the answer says so and points at the projects list's Import, which
 is the door that opens the wizard pre-filled.
 

@@ -1,5 +1,7 @@
 # Reuse map — every feature in the program, and what it is built from
 
+> **2026-09-14 (shareable-demo step 11, D33):** the fork rows (tick box, `createFork`, fork-deletion confirm, "the fork is a cloud write") describe a feature since removed. `setTemplateFlag` stays, used by the zip import only.
+
 Owner's gate, 2026-09-11: before development, every feature in [[EDS-13]] maps to the
 existing code it reuses and how. Every path below was read this session; nothing is from
 memory. "How" is one of: **use as is** (call it), **add to it** (a parameter or a branch, no new

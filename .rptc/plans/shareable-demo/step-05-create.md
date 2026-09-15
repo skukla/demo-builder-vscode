@@ -58,6 +58,8 @@ code patches run as a dry check whose misses become caveats.
 
 - The wire carries the whole slice once (close the two half-lists as part of this step:
   one list, one place, a field-set test pinning it).
+> **Removed 2026-09-14 (step 11, D33):** there is no copy. An added demo reads from its link; `keepCopy`, `createFork`, `keepOwnCopy` and the delete-my-copy choice are gone, and Remove offers a delete only for a repository made from a zip. The text below is the record of what was built before.
+
 - The demo's SOURCE is the SC's fork when they kept a copy (created at add time via GitHub's
   fork call, which the extension does not use anywhere yet; the fork-status half exists in
   `forkSyncService.ts`), else the colleague's repo. We own the fork, so we can set its

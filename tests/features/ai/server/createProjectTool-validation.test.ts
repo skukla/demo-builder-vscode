@@ -136,7 +136,7 @@ describe('create_project — registered schema', () => {
         expect(def().description.length).toBeGreaterThan(0);
     });
 
-    it('accepts the ids (package or link), the four EDS options, keepCopy and confirm', () => {
+    it('accepts the ids (package or link), the four EDS options and confirm', () => {
         const schema = schemaOf(def());
 
         expect(Object.keys(schema.shape).sort()).toEqual([
@@ -145,7 +145,6 @@ describe('create_project — registered schema', () => {
             'daLiveOrg',
             'daLiveSite',
             'githubOwner',
-            'keepCopy',
             'link',
             'package',
             'projectName',

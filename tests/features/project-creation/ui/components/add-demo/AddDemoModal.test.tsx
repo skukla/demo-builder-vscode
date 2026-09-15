@@ -102,7 +102,7 @@ describe('AddDemoModal', () => {
         expect(button('Continue')).toHaveAttribute('aria-disabled', 'true');
     });
 
-    it('shows what it found, with the copy box on and naming the account, then adds', async () => {
+    it('shows what it found, with no copy offered, then adds', async () => {
         const { props } = renderModal();
         await probeWith({ success: true, result: READ });
 
@@ -115,10 +115,8 @@ describe('AddDemoModal', () => {
         expect(screen.getByTestId('found-Store view')).toHaveTextContent('isle5_us');
         expect(screen.getByTestId('found-Company (B2B) features')).toHaveTextContent('On');
         expect(screen.queryByTestId('b2b-switch')).not.toBeInTheDocument();
-        const keep = screen.getByTestId('keep-copy').querySelector('input') as HTMLInputElement;
-        expect(keep.checked).toBe(true);
-        expect(screen.getByTestId('keep-copy')).toHaveTextContent('Keep my own copy of the code');
-        expect(screen.getByText('Saved to your GitHub account, steve. Your projects keep working if the original changes.')).toBeInTheDocument();
+        // The copy was removed 2026-09-14 (step 11): the card reads from the link.
+        expect(screen.queryByText(/own copy/)).not.toBeInTheDocument();
 
         // A description the card carries (owner, 2026-09-14: an added card had none).
         const description = screen.getByTestId('demo-description');
@@ -127,10 +125,10 @@ describe('AddDemoModal', () => {
         mockRequest.mockResolvedValueOnce({ success: true, result: { demo: JEN } });
         await click('Add demo package');
 
-        expect(mockRequest).toHaveBeenLastCalledWith(
-            'add-shared-demo',
-            expect.objectContaining({ keepCopy: true, demo: expect.objectContaining({ description: 'Luxury B2C demo' }) }),
-        );
+        expect(mockRequest).toHaveBeenLastCalledWith('add-shared-demo', {
+            demo: expect.objectContaining({ description: 'Luxury B2C demo', source: { owner: 'jen', repo: 'isle5-demo', branch: 'main' } }),
+        });
+        expect(mockRequest.mock.calls.at(-1)?.[1].demo).not.toHaveProperty('createdFromZip');
         expect(props.onDemoAdded).toHaveBeenCalledWith(JEN);
         expect(props.onClose).toHaveBeenCalled();
     });
@@ -141,20 +139,6 @@ describe('AddDemoModal', () => {
         expect(screen.getByTestId('b2b-switch')).toBeInTheDocument();
         expect(screen.getByText(/We couldn't tell whether this demo uses company accounts/)).toBeInTheDocument();
         expect(screen.queryByTestId('found-Company (B2B) features')).not.toBeInTheDocument();
-    });
-
-    it("hides the copy box for the SC's own repository and marks an existing fork as already kept", async () => {
-        const { unmount } = renderModal();
-        await probeWith({ success: true, result: { ...READ, viewer: { login: 'jen', ownsRepo: true } } });
-        expect(screen.queryByTestId('keep-copy')).not.toBeInTheDocument();
-        unmount();
-
-        renderModal();
-        await probeWith({
-            success: true,
-            result: { ...READ, viewer: { login: 'steve', ownsRepo: false, existingFork: 'steve/isle5-demo' } },
-        });
-        expect(screen.getByTestId('keep-copy')).toHaveTextContent('You already have a copy at steve/isle5-demo. It will be used.');
     });
 
     it('refuses a repository that is not a demo, naming what is missing', async () => {
@@ -193,10 +177,10 @@ describe('AddDemoModal', () => {
     it('shows the add failure inside the dialog and stays open', async () => {
         const { props } = renderModal();
         await probeWith({ success: true, result: READ });
-        mockRequest.mockResolvedValueOnce({ success: false, error: "We couldn't make your own copy of this demo." });
+        mockRequest.mockResolvedValueOnce({ success: false, error: 'The settings could not be saved.' });
         await click('Add demo package');
         expect(screen.getByTestId('add-error')).toHaveTextContent('Not added');
-        expect(screen.getByTestId('add-error')).toHaveTextContent(/own copy/);
+        expect(screen.getByTestId('add-error')).toHaveTextContent(/settings could not be saved/);
         expect(props.onClose).not.toHaveBeenCalled();
         // The error view replaces the form; Back returns to it, still filled in.
         expect(screen.queryByTestId('demo-description')).not.toBeInTheDocument();
@@ -239,9 +223,8 @@ describe('AddDemoModal — while reading', () => {
         });
     });
 
-    it('shows the add is under way, naming the copy it makes, instead of a frozen form', async () => {
-        // Owner, 2026-09-14: pressing Add showed nothing for a second while the
-        // host forked the repository.
+    it('shows the add is under way instead of a frozen form', async () => {
+        // Owner, 2026-09-14: pressing Add showed nothing while the host worked.
         renderModal();
         await probeWith({ success: true, result: READ });
         let release: (value: unknown) => void = () => {};
@@ -249,7 +232,6 @@ describe('AddDemoModal — while reading', () => {
         await click('Add demo package');
 
         expect(screen.getByText('Adding the demo package')).toBeInTheDocument();
-        expect(screen.getByText('Making your own copy of the code in your GitHub account.')).toBeInTheDocument();
         expect(screen.queryByTestId('demo-description')).not.toBeInTheDocument();
 
         await act(async () => {

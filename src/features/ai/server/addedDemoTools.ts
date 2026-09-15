@@ -2,15 +2,14 @@
  * The agent's doors for a demo added from a colleague's link (steps 06–07, D15):
  *
  * - `add_shared_demo` — the dialog's "Add demo" without the dialog: read the
- *   repository, build the same row, keep a copy when asked (a fork into the
- *   SC's own account, so a real cloud write: gated by `confirm:true` exactly
- *   when it would fork), remember it. With `zipPath` (step 10) the zip first
- *   becomes a repository in the SC's account, gated the same way.
+ *   repository, build the same row, remember it. Nothing is created on GitHub
+ *   for a link. With `zipPath` (step 10) the zip first becomes a repository in
+ *   the SC's account, a real cloud write gated by `confirm:true`.
  * - `forget_added_demo` — take a demo off your Welcome step, and with
- *   `deleteCopy` also delete the SC's own copy of its code. The human door
- *   confirms in two modals; here the gate is `confirm:true`, and the refusal
- *   names the demo, how many projects on this computer were built on it, and
- *   what a delete would cost them.
+ *   `deleteRepository` also delete the repository the extension made from its
+ *   zip (step 11). The human door confirms in two modals; here the gate is
+ *   `confirm:true`, and the refusal names the demo, how many projects on this
+ *   computer were built on it, and what a delete would cost them.
  * - `edit_added_demo` — rename an added demo package's card and change its
  *   description, on the handler the Welcome step's Edit uses. No confirm:
  *   settings only, and editing again undoes it.
@@ -35,8 +34,9 @@ import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import {
     countProjectsBuiltOn,
     forgetDemo,
-    isOwnCopy,
+    isDeletableZipRepository,
     projectsSentence,
+    projectWithStorefront,
 } from '@/features/eds/handlers/forgetAddedDemoHandler';
 import { handleImportStorefrontZip, refusalFor } from '@/features/eds/handlers/importStorefrontZipHandler';
 import { handleProbeSharedDemo } from '@/features/eds/handlers/probeSharedDemoHandler';
@@ -44,7 +44,7 @@ import { readStorefrontZip, suggestRepoName } from '@/features/eds/services/stor
 import { addedDemoKey, readAddedDemos } from '@/features/project-creation/services/addedDemoSettings';
 import { buildAddedDemo, INITIAL_DRAFT } from '@/features/project-creation/ui/components/add-demo/addDemoFlow';
 import type { HandlerContext } from '@/types/handlers';
-import type { AddedDemo } from '@/types/projectFile';
+import type { AddedDemo, RememberedDemo } from '@/types/projectFile';
 import type { SharedDemoRead } from '@/types/webviewRequests';
 
 const SOURCE_SHAPE = {
@@ -117,6 +117,12 @@ async function repositoryFromZip(
     return { owner: result.owner, repo: result.repo, fileCount, dropped, setupIncluded: Boolean(unpacked.setup) };
 }
 
+/** The human door's rule for offering the delete: a zip's repository, still the SC's own, and no project's storefront. */
+async function deletableRepository(ctx: HandlerContext, source: { owner: string; repo: string }): Promise<boolean> {
+    if (await projectWithStorefront(ctx, source)) return false;
+    return isDeletableZipRepository(ctx, source);
+}
+
 /**
  * Read the repository the way the dialog does and build the row it would
  * commit; the B2B question the dialog asks is not asked here (unknown reads
@@ -172,20 +178,16 @@ export function registerAddedDemoTools(server: McpToolServer, ctxFactory: () => 
             needsAuth: ['github'],
             annotations: { readOnlyHint: false, destructiveHint: false },
             description:
-                "Add a colleague's demo (or one of your own) to your Welcome step from its GitHub link or site address, so create_project can build on it. keepCopy (default true) forks the repository into your own GitHub account first, so the demo keeps working if the original changes; that fork needs confirm:true. Use probe_shared_demo first to see what the demo is. With zipPath instead of a link, a storefront that arrived as a zip file first becomes a repository in your own account (private unless isPrivate:false; named after the zip unless repoName is given), which also needs confirm:true.",
+                "Add a colleague's demo (or one of your own) to your Welcome step from its GitHub link or site address, so create_project can build on it. Nothing is created on GitHub for a link. Use probe_shared_demo first to see what the demo is. With zipPath instead of a link, a storefront that arrived as a zip file first becomes a repository in your own account (private unless isPrivate:false; named after the zip unless repoName is given), which needs confirm:true.",
             inputSchema: {
                 ...LINK_SHAPE,
-                keepCopy: z
-                    .boolean()
-                    .optional()
-                    .describe('Fork the repository into your own account and read from the fork (default true; skipped for your own repository)'),
                 zipPath: z.string().optional().describe('Instead of a link: a zip file of the storefront on this computer'),
                 repoName: z.string().optional().describe('With zipPath: the repository to create; defaults to the zip\'s folder name'),
                 isPrivate: z.boolean().optional().describe('With zipPath: whether the created repository is private (default false)'),
-                confirm: z.boolean().optional().describe('Must be true when a fork will be made, or when a repository is created from a zip'),
+                confirm: z.boolean().optional().describe('Must be true when a repository is created from a zip'),
             },
         },
-        async (args: LinkArgs & ZipArgs & { keepCopy?: boolean }) => {
+        async (args: LinkArgs & ZipArgs) => {
             const ctx = ctxFactory();
             const github = await requireGitHub(ctx);
             if (github) return asText(github);
@@ -201,27 +203,10 @@ export function registerAddedDemoTools(server: McpToolServer, ctxFactory: () => 
 
             const row = await readDemoRow(ctx, where);
             if ('error' in row) return asText(row.error);
-            const { demo, read, warnings } = row;
-            // A repository created from a zip is the SC's own already; nothing to copy.
-            const keepCopy = !fromZip && (args.keepCopy ?? true) && !read.viewer?.ownsRepo && !read.viewer?.existingFork;
-            if (keepCopy && args.confirm !== true) {
-                const account = read.viewer?.login ? `your GitHub account (${read.viewer.login})` : 'your GitHub account';
-                return asText({
-                    error:
-                        `add_shared_demo would fork ${read.fullName} into ${account} and read from the fork. ` +
-                        'Call again with confirm:true to make the fork, or keepCopy:false to add the demo without one.',
-                    demo: demo.name,
-                    source: demo.source,
-                    wouldFork: read.fullName,
-                });
-            }
-            // An existing fork is the copy already (the dialog says so); the add
-            // handler reads from it by asking for a fork, which GitHub answers with
-            // the one that exists.
-            const added = await handleAddSharedDemo(ctx, {
-                demo,
-                keepCopy: !fromZip && (args.keepCopy ?? true) && !read.viewer?.ownsRepo,
-            });
+            const { warnings } = row;
+            // The card records that the extension made the repository, so Remove can offer to delete it.
+            const demo: RememberedDemo = fromZip ? { ...row.demo, createdFromZip: true } : row.demo;
+            const added = await handleAddSharedDemo(ctx, { demo });
             if (!added.success || !added.result) return asText({ error: added.error });
             return asText({
                 added: true,
@@ -229,7 +214,6 @@ export function registerAddedDemoTools(server: McpToolServer, ctxFactory: () => 
                 demo: added.result.demo.name,
                 source: added.result.demo.source,
                 storefrontKind: added.result.demo.storefrontKind,
-                ...(added.result.forkedTo ? { forkedTo: added.result.forkedTo } : {}),
                 ...(fromZip ? { createdFromZip: `${where.owner}/${where.repo}`, ...fromZip } : {}),
                 ...(fromZip?.setupIncluded
                     ? { setupHint: 'The bundle also carries setup. Import the bundle from the projects list (Import) to start a project pre-filled with it.' }
@@ -246,36 +230,36 @@ export function registerAddedDemoTools(server: McpToolServer, ctxFactory: () => 
             needsAuth: ['github'],
             annotations: { readOnlyHint: false, destructiveHint: true },
             description:
-                'Take a demo added from a link off your Welcome step; with deleteCopy:true also delete your own copy of its code from GitHub. Projects built on it are never touched. Requires confirm:true.',
+                'Take an added demo off your Welcome step; with deleteRepository:true also delete the repository Demo Builder made from its zip file (only for a demo added from a zip). Projects built on it are never touched. Requires confirm:true.',
             inputSchema: {
                 ...SOURCE_SHAPE,
-                deleteCopy: z
+                deleteRepository: z
                     .boolean()
                     .optional()
-                    .describe('Also delete your own copy of the code from GitHub (only when the repository is yours)'),
+                    .describe('Also delete the repository made from the zip file (only for a demo added from a zip)'),
                 confirm: z.boolean().optional().describe('Must be true — the list entry is removed'),
             },
         },
-        async (args: { owner: string; repo: string; deleteCopy?: boolean; confirm?: boolean }) => {
+        async (args: { owner: string; repo: string; deleteRepository?: boolean; confirm?: boolean }) => {
             const ctx = ctxFactory();
             const source = { owner: args.owner, repo: args.repo };
             const demo = readAddedDemos().find((row) => addedDemoKey(row) === addedDemoKey({ source }));
             if (!demo) {
-                return asText({ error: `No added demo at ${args.owner}/${args.repo}. list_demo_packages shows what is remembered.` });
+                return asText({ error: `No added demo at ${args.owner}/${args.repo}. list_demo_packages lists the demo packages on your Welcome step.` });
             }
             const github = await requireGitHub(ctx);
             if (github) return asText(github);
 
-            const ownCopy = await isOwnCopy(ctx, demo.source);
-            if (args.deleteCopy && !ownCopy) {
+            const repo = `${demo.source.owner}/${demo.source.repo}`;
+            if (args.deleteRepository && !(await deletableRepository(ctx, demo.source))) {
                 return asText({
-                    error: `${demo.source.owner}/${demo.source.repo} is not your copy, so it cannot be deleted from here. Call again without deleteCopy to forget the demo only.`,
+                    error: `${repo} was not made from a zip file by Demo Builder in your account, or it is gone or a project's own storefront, so Remove does not delete it. Call again without deleteRepository to forget the demo only.`,
                 });
             }
             const projectsBuiltOn = await countProjectsBuiltOn(ctx, demo.source);
             if (args.confirm !== true) {
-                const cost = args.deleteCopy
-                    ? ` Deleting your copy (${demo.source.owner}/${demo.source.repo}) leaves them without reset and updates until they are pointed at another source.`
+                const cost = args.deleteRepository
+                    ? ` Deleting ${repo} leaves them without reset and updates until they are pointed at another source.`
                     : '';
                 return asText({
                     error:
@@ -287,7 +271,7 @@ export function registerAddedDemoTools(server: McpToolServer, ctxFactory: () => 
                     destructive: true,
                 });
             }
-            const result = await forgetDemo(ctx, demo.source, Boolean(args.deleteCopy));
+            const result = await forgetDemo(ctx, demo.source, Boolean(args.deleteRepository));
             return asText({ demo: demo.name, source: demo.source, projectsBuiltOn, ...result });
         },
     );
@@ -334,11 +318,10 @@ export function registerAddedDemoTools(server: McpToolServer, ctxFactory: () => 
                 "Point the open project (built on an added demo) at another copy of that demo: a colleague's repository or your own fork. Same storefront kind only. Rewrites where reset and updates read from; the project's code and pages stay as they are. Pointing back undoes it.",
             inputSchema: {
                 ...LINK_SHAPE,
-                keepCopy: z.boolean().optional().describe('Fork the repository into your own account first and read from the fork'),
-                updateRemembered: z.boolean().optional().describe('Also move the remembered demo on your Welcome step to the new source'),
+                updateDemoPackage: z.boolean().optional().describe('Also point the demo package on your Welcome step at the new source, when there is one for the old source'),
             },
         },
-        async (args: LinkArgs & { keepCopy?: boolean; updateRemembered?: boolean }) => {
+        async (args: LinkArgs & { updateDemoPackage?: boolean }) => {
             const ctx = ctxFactory();
             const github = await requireGitHub(ctx);
             if (github) return asText(github);
@@ -348,11 +331,10 @@ export function registerAddedDemoTools(server: McpToolServer, ctxFactory: () => 
             const current = await ctx.stateManager.getCurrentProject();
             const row = await readDemoRow(ctx, { ...args, name: args.name ?? current?.demo?.name });
             if ('error' in row) return asText(row.error);
-            const { demo, read, warnings } = row;
+            const { demo, warnings } = row;
             const changed = await handleChangeDemoSource(ctx, {
                 demo,
-                keepCopy: Boolean(args.keepCopy) && !read.viewer?.ownsRepo,
-                updateRemembered: Boolean(args.updateRemembered),
+                updateDemoPackage: Boolean(args.updateDemoPackage),
             });
             if (!changed.success || !changed.result) return asText({ error: changed.error });
             return asText({
@@ -360,7 +342,6 @@ export function registerAddedDemoTools(server: McpToolServer, ctxFactory: () => 
                 demo: changed.result.demo.name,
                 source: changed.result.demo.source,
                 previous: changed.result.previous,
-                ...(changed.result.forkedTo ? { forkedTo: changed.result.forkedTo } : {}),
                 warnings,
             });
         },

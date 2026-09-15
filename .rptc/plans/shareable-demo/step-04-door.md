@@ -42,6 +42,8 @@ we found"; Spectrum `Switch`.
 
 ## The fork tick box (decided 2026-09-11)
 
+> **Removed 2026-09-14 (step 11, D33):** there is no copy. An added demo reads from its link; `keepCopy`, `createFork`, `keepOwnCopy` and the delete-my-copy choice are gone, and Remove offers a delete only for a repository made from a zip. The text below is the record of what was built before.
+
 Stage 2 carries a tick box, on by default: keep my own copy of this demo's code, naming
 the SC's own GitHub account (D28: personal account only; no namespace picker here, so the
 row in the reuse map that lifted the picker's option builder is not needed by this step).

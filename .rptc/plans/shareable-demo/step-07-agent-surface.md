@@ -2,6 +2,8 @@
 
 Item: [[EDS-13a]]. Decision: D15. Depends on steps 03 and 05. Rules: `mcp-tool-authoring`.
 
+> **Removed 2026-09-14 (step 11, D33):** there is no copy. An added demo reads from its link; `keepCopy`, `createFork`, `keepOwnCopy` and the delete-my-copy choice are gone, and Remove offers a delete only for a repository made from a zip. The text below is the record of what was built before.
+
 **Reuse:** section H of `../portable-demos/reuse-map.md` lists every existing thing this step is built from and how (use as is / add to it / make it shared / build new). A new file, hook, shape or word not in that section names the row it replaces and why.
 
 ## Tools
