@@ -56,3 +56,5 @@ Two things break rather than degrade:
 - 2026-09-16  docs(rptc): Copilot-first research, and the plan to serve both agents (`1da98b00c`)
 - 2026-09-16  feat(ai): global MCP registration serves every agent that keeps a config file (`0e174aaad`)
 - 2026-09-16  chore(backlog): record the first three steps on AI-9 (`2650ce28d`)
+- 2026-09-16  fix(ai): the readiness checks look where the SC's agent looks (`2a266927c`)
+- 2026-09-16  chore(backlog): record step 04 on AI-9 (`8480f5837`)
