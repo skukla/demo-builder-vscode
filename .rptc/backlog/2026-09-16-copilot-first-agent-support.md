@@ -54,3 +54,5 @@ Two things break rather than degrade:
 - 2026-09-16  refactor(ai): the generated bundle stops naming one agent (`5e1c551be`)
 - 2026-09-16  fix(ai): a guard hook decides for itself instead of trusting its matcher (`4a1c25119`)
 - 2026-09-16  docs(rptc): Copilot-first research, and the plan to serve both agents (`1da98b00c`)
+- 2026-09-16  feat(ai): global MCP registration serves every agent that keeps a config file (`0e174aaad`)
+- 2026-09-16  chore(backlog): record the first three steps on AI-9 (`2650ce28d`)
