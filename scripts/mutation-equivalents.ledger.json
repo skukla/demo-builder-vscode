@@ -16297,7 +16297,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 85,
+            "line": 91,
             "mutants": 1,
             "category": "block",
             "reason": "The only statement is return null, and the sole caller reads the result through userConfig?.mcpServers?.[id]. Falling off the end returns undefined instead, which that optional chain treats identically, so an absent, unreadable or malformed ~/.claude.json produces the same not-drifted answer either way. Verified by planting against the three user-scope quiet-path tests.",

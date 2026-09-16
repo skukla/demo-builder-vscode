@@ -29,3 +29,21 @@ Copilot, whose setup is fine, would be told it is not.
   not ready under `claude-code`, with the reason naming the missing file.
 - The drift detector still catches a stale entry in whichever file it checked.
 - Live: the AI Ready badge on a Copilot-only machine.
+
+## Built (2026-09-16)
+
+- verifyAiSetup checks the MCP config every agent reads (.mcp.json), falling back to the
+  .claude/ duplicate for a project generated before the primary moved, and reports whichever
+  file it read.
+- detectMcpDrift reads every agent's user-level config, not only Claude Code's.
+- The config-path list lives in the engine seam, shared by the writer, the post-update repair
+  and the drift check.
+- Tests: a Copilot user config carrying a stale entry is reported; a project with only the
+  .claude/ duplicate still verifies and names that file.
+
+## Still to do in this step
+
+- The skill inspector, the MCP health check, the capabilities modal and the Diagnostics report
+  still read Claude's paths; the Claude-only surfaces (claude.ai connector detection, the
+  ~/.claude footprint) are not engine-gated yet. They need the resolved engine at runtime, which
+  arrives with the launch step.

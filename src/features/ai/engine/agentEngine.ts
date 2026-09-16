@@ -14,6 +14,9 @@
  * @module features/ai/engine/agentEngine
  */
 
+import * as os from 'os';
+import * as path from 'path';
+
 /** The engines Demo Builder can serve. `auto` resolves to one of the others. */
 export type AgentEngine = 'claude-code' | 'copilot-cli' | 'copilot-vscode';
 
@@ -60,6 +63,23 @@ const DESCRIPTORS: Record<AgentEngine, AgentEngineDescriptor> = {
         launch: { kind: 'vscode-chat' },
     },
 };
+
+/** The engines that keep a user-level MCP config file, in the order they are written. */
+export const FILE_BACKED_ENGINES: AgentEngine[] = ['claude-code', 'copilot-cli'];
+
+/**
+ * The user-level MCP config paths for the given engines, absolute.
+ *
+ * One list, so the writer, the post-update repair and the drift check cannot
+ * disagree about which files exist. An engine that keeps no such file is skipped.
+ */
+export function globalMcpConfigPaths(engines: AgentEngine[] = FILE_BACKED_ENGINES): string[] {
+    const home = os.homedir();
+    return engines
+        .map((engine) => describeEngine(engine).globalMcpConfigPath)
+        .filter((relative): relative is string => relative !== undefined)
+        .map((relative) => path.join(home, relative));
+}
 
 /** The descriptor for a resolved engine. */
 export function describeEngine(engine: AgentEngine): AgentEngineDescriptor {

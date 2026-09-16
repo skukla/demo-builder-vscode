@@ -108,6 +108,34 @@ describe('user scope — the entry nothing has ever looked at', () => {
         expect(result.missing.join()).toContain('beta.111');
     });
 
+    it("reports drift when Copilot's user config points at a version that is gone", async () => {
+        // A colleague on Copilot keeps the same entry in ~/.copilot/mcp-config.json.
+        // It goes stale for exactly the same reason — the entry pins this build's
+        // versioned dist path — and reading only Claude's file told them all was well
+        // (AI-9 step 09).
+        await fsPromises.mkdir(path.join(home, '.copilot'), { recursive: true });
+        await fsPromises.writeFile(
+            path.join(home, '.copilot/mcp-config.json'),
+            JSON.stringify({
+                mcpServers: {
+                    'demo-builder': {
+                        command: 'node',
+                        args: [path.join(STALE_DIST, 'mcp-proxy.js')],
+                    },
+                },
+            }),
+            'utf-8',
+        );
+        const real = path.join(project, 'mcp-proxy.js');
+        await fsPromises.writeFile(real, '', 'utf-8');
+        await writeProjectMcp([real]);
+
+        const result = await detectMcpDrift(project);
+
+        expect(result.drifted).toBe(true);
+        expect(result.missing.join()).toContain('beta.111');
+    });
+
     it('reports drift for a retired entry point even at the CURRENT version', async () => {
         // `mcp-server.js` is the retired standalone process; esbuild builds only
         // mcp-proxy.js. An entry naming it is wrong even if the FILE is there.

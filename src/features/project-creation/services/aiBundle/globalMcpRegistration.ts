@@ -20,22 +20,13 @@
  */
 
 import * as fsPromises from 'fs/promises';
-import * as os from 'os';
 import * as path from 'path';
 import { resolveNodePath } from './mcpConfigWriter';
-import { describeEngine, type AgentEngine } from '@/features/ai/engine/agentEngine';
-
-/** The engines that keep a user-level MCP config file, in the order they are written. */
-const FILE_BACKED_ENGINES: AgentEngine[] = ['claude-code', 'copilot-cli'];
-
-/** The user-level config paths for the given engines; an engine without one is skipped. */
-function configPathsFor(engines: AgentEngine[]): string[] {
-    const home = os.homedir();
-    return engines
-        .map((engine) => describeEngine(engine).globalMcpConfigPath)
-        .filter((relative): relative is string => relative !== undefined)
-        .map((relative) => path.join(home, relative));
-}
+import {
+    FILE_BACKED_ENGINES,
+    globalMcpConfigPaths,
+    type AgentEngine,
+} from '@/features/ai/engine/agentEngine';
 
 /**
  * Read-merge-write `mcpServers['demo-builder']` into one agent's user config.
@@ -106,7 +97,7 @@ export async function registerGlobalMcp(
     };
 
     const written: string[] = [];
-    for (const configPath of configPathsFor(engines)) {
+    for (const configPath of globalMcpConfigPaths(engines)) {
         await upsertServerEntry(configPath, entry);
         written.push(configPath);
     }
@@ -155,7 +146,7 @@ export async function refreshGlobalMcpIfPresent(
     // Every agent that keeps a user-level config can hold a stale entry, and an
     // extension update invalidates all of them at once.
     let repaired = false;
-    for (const configPath of configPathsFor(FILE_BACKED_ENGINES)) {
+    for (const configPath of globalMcpConfigPaths(FILE_BACKED_ENGINES)) {
         if (await refreshOneConfig(configPath, extensionDistPath, nodePath)) {
             repaired = true;
         }

@@ -113,12 +113,12 @@ describe('verifyAiSetup', () => {
         });
     });
 
-    describe('.claude/mcp.json check', () => {
+    describe('the MCP config check (the file every agent reads)', () => {
         it('returns ok when mcp.json exists and contains valid JSON with mcpServers', async () => {
             setupAllOk();
             const result = await verifyAiSetup(PROJECT_PATH, EXT_DIST_PATH);
 
-            const check = findCheck(result.checks, '.claude/mcp.json');
+            const check = findCheck(result.checks, '.mcp.json');
             expect(check?.status).toBe('ok');
         });
 
@@ -133,8 +133,28 @@ describe('verifyAiSetup', () => {
 
             const result = await verifyAiSetup(PROJECT_PATH, EXT_DIST_PATH);
 
-            const check = findCheck(result.checks, '.claude/mcp.json');
+            const check = findCheck(result.checks, '.mcp.json');
             expect(check?.status).toBe('warning');
+        });
+
+        it('falls back to the .claude/ duplicate, and says which file it read', async () => {
+            // A project generated before .mcp.json became the primary, and never
+            // regenerated, is still set up — the agent reads the duplicate. What must
+            // not happen is telling that SC they are not ready (AI-9 step 09).
+            setupAllOk();
+            (fsPromises.readFile as jest.Mock).mockImplementation((filePath: string) => {
+                if (filePath.endsWith(path.join('.claude', 'mcp.json')))
+                    return Promise.resolve(JSON.stringify({ mcpServers: { 'demo-builder': {} } }));
+                if (filePath.endsWith('mcp.json')) return Promise.reject(new Error('ENOENT'));
+                if (filePath.endsWith('AGENTS.md'))
+                    return Promise.resolve('# Demo Builder Project');
+                return Promise.reject(new Error('unexpected'));
+            });
+
+            const result = await verifyAiSetup(PROJECT_PATH, EXT_DIST_PATH);
+
+            expect(findCheck(result.checks, '.mcp.json')).toBeUndefined();
+            expect(findCheck(result.checks, path.join('.claude', 'mcp.json'))?.status).toBe('ok');
         });
 
         it('returns error when mcp.json contains invalid JSON', async () => {
@@ -148,7 +168,7 @@ describe('verifyAiSetup', () => {
 
             const result = await verifyAiSetup(PROJECT_PATH, EXT_DIST_PATH);
 
-            const check = findCheck(result.checks, '.claude/mcp.json');
+            const check = findCheck(result.checks, '.mcp.json');
             expect(check?.status).toBe('error');
             expect(check?.message).toMatch(/invalid json/i);
         });
@@ -165,7 +185,7 @@ describe('verifyAiSetup', () => {
 
             const result = await verifyAiSetup(PROJECT_PATH, EXT_DIST_PATH);
 
-            const check = findCheck(result.checks, '.claude/mcp.json');
+            const check = findCheck(result.checks, '.mcp.json');
             expect(check?.status).toBe('warning');
             expect(check?.message).toMatch(/mcpServers/i);
         });
@@ -336,7 +356,7 @@ describe('verifyAiSetup', () => {
 
             const names = result.checks.map((c) => c.name);
             expect(names).toContain('AGENTS.md');
-            expect(names).toContain('.claude/mcp.json');
+            expect(names).toContain('.mcp.json');
             expect(names).toContain('mcp-binary');
             expect(names).toContain('skill-files');
         });

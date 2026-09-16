@@ -4,7 +4,8 @@
  * Verifies that a project's AI context files are present and valid:
  * - AGENTS.md: exists and non-empty (the real AI context file; `CLAUDE.md`
  *   and `.claude/CLAUDE.md` are one-line pointers to it)
- * - .claude/mcp.json: exists, valid JSON, has mcpServers key
+ * - the MCP config every agent reads (.mcp.json, or the .claude/ duplicate):
+ *   exists, valid JSON, has mcpServers key
  * - mcp-binary: dist/mcp-proxy.js present at extension dist path (the stdio↔socket
  *   forwarder clients spawn; the standalone dist/mcp-server.js is retired)
  * - skill-files: at least one .md in .claude/skills/
@@ -192,35 +193,50 @@ async function checkAgentsMd(projectPath: string): Promise<AiCheckResult> {
     }
 }
 
+/**
+ * The MCP config an agent actually reads, in the order they are tried.
+ *
+ * `.mcp.json` is the one every agent reads — Claude Code, Copilot CLI, VS Code's
+ * Agent Host, and VS Code itself since 1.137 (verified in its workspace discovery
+ * source). `.claude/mcp.json` is the duplicate we also write; it is still checked,
+ * so a project generated before this and never regenerated still verifies, but the
+ * check REPORTS whichever file it read, so "AI Ready" means the file the SC's agent
+ * will open (AI-9 step 09).
+ */
+const MCP_CONFIG_CANDIDATES = ['.mcp.json', path.join('.claude', 'mcp.json')];
+
 async function checkMcpConfig(projectPath: string): Promise<AiCheckResult> {
-    const filePath = path.join(projectPath, '.claude', 'mcp.json');
-    let raw: string;
-    try {
-        raw = await fsPromises.readFile(filePath, 'utf-8');
-    } catch {
-        return {
-            name: '.claude/mcp.json',
-            status: 'warning',
-            message: 'Missing — run Regenerate to fix',
-        };
+    for (const relative of MCP_CONFIG_CANDIDATES) {
+        let raw: string;
+        try {
+            raw = await fsPromises.readFile(path.join(projectPath, relative), 'utf-8');
+        } catch {
+            continue;
+        }
+
+        const parsed = parseJSON<{ mcpServers?: unknown }>(raw);
+        if (parsed === null) {
+            return {
+                name: relative,
+                status: 'error',
+                message: 'Invalid JSON — run Regenerate to fix',
+            };
+        }
+        if (!parsed.mcpServers) {
+            return {
+                name: relative,
+                status: 'warning',
+                message: 'Missing mcpServers key — run Regenerate to fix',
+            };
+        }
+        return { name: relative, status: 'ok' };
     }
 
-    const parsed = parseJSON<{ mcpServers?: unknown }>(raw);
-    if (parsed === null) {
-        return {
-            name: '.claude/mcp.json',
-            status: 'error',
-            message: 'Invalid JSON — run Regenerate to fix',
-        };
-    }
-    if (!parsed.mcpServers) {
-        return {
-            name: '.claude/mcp.json',
-            status: 'warning',
-            message: 'Missing mcpServers key — run Regenerate to fix',
-        };
-    }
-    return { name: '.claude/mcp.json', status: 'ok' };
+    return {
+        name: MCP_CONFIG_CANDIDATES[0],
+        status: 'warning',
+        message: 'Missing — run Regenerate to fix',
+    };
 }
 
 async function checkMcpBinary(extensionDistPath: string): Promise<AiCheckResult> {
