@@ -224,7 +224,7 @@ each item's own file; what has already landed against an item is in its
 | `AI-7` | question | [Unattended teardown consent — how does a commissioned journey get to zero?](2026-08-28-unattended-teardown-consent.md) | — | med | shipped |
 | `AI-8` | question | [Audit our context files against what the research actually says](2026-08-29-context-file-audit-against-evidence.md) | — | high | backlog |
 
-### eds  (14)
+### eds  (15)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -241,6 +241,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-12` | fix | [Resetting the same EDS project does less from the dashboard than from the projects list](2026-09-02-two-reset-doors-differ.md) | — | med | built |
 | `EDS-14` | fix | [Template update falls back to a full reset on conflict, overwriting the SC's own edits](2026-09-11-template-update-conflict-fallback-overwrites-edits.md) | — | med | active |
 | `EDS-16` | fix | [The "no admin role" remedy sent people to a page that cannot grant anything](2026-09-14-site-access-remedy-dead-link.md) | _Khalil re-saving his Code Sync installation on hardie to show whether GitHub reopens the AEM setup page with a key_ | high | gated |
+| `EDS-17` | feature | [A storefront can live in an organization's repository, not only the SC's own](2026-09-16-storefront-in-an-org-repository.md) | — | high | backlog |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | backlog |
 
 ### app-builder  (13)
@@ -482,7 +483,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-56` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — backlog
 
-*82 item(s) sit outside the A–G chain.*
+*83 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 
