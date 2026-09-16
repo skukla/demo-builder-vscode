@@ -180,15 +180,18 @@ export interface OrgServiceInfo {
     platformList?: string[];
     domainMandatory?: boolean;
     /**
-     * Product profiles the service offers. Used for the subscribe payload
-     * (`licenseConfigs: null` for the free path). NOT a reliable "requires a
-     * profile" signal — the accurate signal is `enabled: false` +
-     * `disabledReasons` containing `USER_MISSING_PRODUCT_PROFILES` (see
-     * `apiAccessCatalog.ts`).
+     * Product profiles and roles, as the catalog nests them (`properties`, not the
+     * row itself — read from the live catalog 2026-09-16). A server-to-server
+     * subscription to a service that offers profiles must name one:
+     * `ACCS-REST-API` answered "requires selection of a product" without it.
+     * NOT a reliable "requires a profile" signal on its own — the accurate one is
+     * `enabled: false` + `disabledReasons` containing
+     * `USER_MISSING_PRODUCT_PROFILES` (see `apiAccessCatalog.ts`).
      */
-    licenseConfigs?: unknown[];
-    /** Roles the service exposes; present alongside licenseConfigs for profile-bound services. */
-    roles?: unknown[];
+    properties?: {
+        licenseConfigs?: ServiceLicenseConfig[] | null;
+        roles?: unknown[] | null;
+    } | null;
     /**
      * Whether the service is currently usable by this org+user. `getServicesForOrg`
      * returns the whole entitled catalog (~90 rows) with disabled duplicates and
@@ -197,6 +200,13 @@ export interface OrgServiceInfo {
     enabled?: boolean;
     /** True when Adobe must approve access first — the "Requires Adobe review" badge. */
     requiresApproval?: boolean;
+    /**
+     * True when the service subscribes ONLY onto an OAuth server-to-server
+     * credential. Set on rows whose `platformList` names web-app types or nothing
+     * (`ACCS-REST-API`, `AppBuilderDataServicesSDK`), so it is the signal that
+     * `platformList` alone misses.
+     */
+    oauthServerToServerOnly?: boolean;
     /** Reason codes when `enabled` is false (e.g. `USER_MISSING_PRODUCT_PROFILES`, `DEPRECATED`). */
     disabledReasons?: string[];
     /**
@@ -205,6 +215,13 @@ export interface OrgServiceInfo {
      * picker's "All available" product sub-headers.
      */
     cloudGrouping?: CloudGrouping;
+}
+
+/** One product profile a service offers (`properties.licenseConfigs[]`). */
+export interface ServiceLicenseConfig {
+    id: string;
+    productId: string;
+    name?: string;
 }
 
 /** Input to `createAdobeIdCredential` (apiKey path). `domain` mandatory for API Mesh. */

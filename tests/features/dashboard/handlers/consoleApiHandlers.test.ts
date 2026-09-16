@@ -33,10 +33,14 @@ jest.mock('@/features/app-builder/services/apiSubscriber', () => ({
         .computeRequiredApis,
     entriesThatNeedApis: jest.requireActual('@/features/app-builder/services/apiSubscriber')
         .entriesThatNeedApis,
-    subscribeRequiredApis: jest.fn().mockResolvedValue([
-        { code: 'AdobeIOManagementAPISDK', name: 'I/O Management API' },
-        { code: 'FireflyAPISDK', name: 'Firefly Services' },
-    ]),
+    // Answers the way the real one does when every code lands: the baseline plus
+    // each requested extra. A case where a code does NOT land says so itself.
+    subscribeRequiredApis: jest.fn(
+        async (_catalog: unknown, _target: unknown, _client: unknown, _domain: unknown, extras: string[] = []) => [
+            { code: 'AdobeIOManagementAPISDK', name: 'I/O Management API' },
+            ...extras.map((code) => ({ code })),
+        ],
+    ),
 }));
 jest.mock('@/features/app-builder/services/apiSubscriberClientAdapter', () => ({
     createApiSubscriberClient: jest.fn(() => ({
@@ -232,6 +236,25 @@ describe('handleAddConsoleApis', () => {
         expect(context.logger.info).not.toHaveBeenCalled();
     });
 
+    it('a code Adobe did not subscribe is neither reported as added nor kept', async () => {
+        // The subscribe answers with what a PUT actually took. Before 2026-09-16 the
+        // handler logged "Added ACCS-REST-API" and persisted it while Adobe had not
+        // subscribed it.
+        (subscribeRequiredApis as jest.Mock).mockResolvedValueOnce([
+            { code: 'AdobeIOManagementAPISDK', name: 'I/O Management API' },
+            { code: 'ExistingSDK' },
+        ]);
+        const project = makeProject({ additionalConsoleApis: ['ExistingSDK'] });
+        const context = makeContext(project);
+
+        const result = await handleAddConsoleApis(context, { apis: ['SilentSDK'] });
+
+        expect(result.success).toBe(false);
+        expect(result.error).toMatch(/did not subscribe SilentSDK/);
+        expect(resolveDesiredApis(project)).toEqual(['ExistingSDK']);
+        expect(context.logger.info).not.toHaveBeenCalled();
+    });
+
     it('aborts on a guard failure before subscribing', async () => {
         (runGuards as jest.Mock).mockResolvedValueOnce(
             'Developer or System Admin role required for App Builder.'
@@ -282,7 +305,7 @@ describe('handleSetConsoleApis', () => {
         // extras), so it contains a code the request never mentioned. Asserting on
         // THAT code is what proves the line reports the outcome rather than
         // echoing the input.
-        subscribeRequiredApis.mockResolvedValue([
+        subscribeRequiredApis.mockResolvedValueOnce([
             { code: 'NewSDK', name: 'New Thing' },
             { code: 'BaselineSDK', name: 'Always On' },
         ]);
@@ -296,23 +319,20 @@ describe('handleSetConsoleApis', () => {
         expect(context.logger.warn).not.toHaveBeenCalled();
     });
 
-    it('WARNS when a requested API is absent from what was actually subscribed', async () => {
+    it('FAILS, naming it, when a requested API is absent from what was actually subscribed', async () => {
         // The silent-skip path: a service matching neither platform reaches no
-        // subscribe endpoint, so subscribeRequiredApis now omits it from its
-        // result. Success alone must not imply every request landed.
-        const { subscribeRequiredApis } = jest.requireMock(
-            '@/features/app-builder/services/apiSubscriber'
-        );
-        subscribeRequiredApis.mockResolvedValue([{ code: 'KeptSDK', name: 'Kept' }]);
+        // subscribe endpoint, so subscribeRequiredApis omits it from its result.
+        // Success must not be reported, and the absent code must not be kept.
+        (subscribeRequiredApis as jest.Mock).mockResolvedValueOnce([{ code: 'KeptSDK', name: 'Kept' }]);
         const project = makeProject({});
         const context = makeContext(project);
 
         const result = await handleSetConsoleApis(context, { apis: ['KeptSDK', 'GhostSDK'] });
 
-        expect(result.success).toBe(true);
-        const warned = (context.logger.warn as jest.Mock).mock.calls.flat().join(' ');
-        expect(warned).toContain('GhostSDK');
-        expect(warned).not.toContain('KeptSDK');
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('GhostSDK');
+        expect(result.error).not.toContain('KeptSDK');
+        expect(resolveDesiredApis(project)).toEqual(['KeptSDK']);
     });
 
     it('accepts an EMPTY list (remove all extras)', async () => {

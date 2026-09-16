@@ -15,10 +15,11 @@
  * - **Subscribe the UNION, never just the new code.** The subscribe endpoint is
  *   a PUT that REPLACES the list — one code alone unsubscribes everything else
  *   on the shared credential (the App Builder full-union rule).
- * - **Direct S2S subscribe, not the axis-filtered path.** `ACCS-REST-API`
- *   carries `oauthServerToServerOnly: true` but a `platformList` of web-app
- *   types, and the subscribe axis filter reads only `platformList` — so
- *   `add_console_apis` silently drops the one service that is S2S-only.
+ * - **Direct S2S subscribe.** `ACCS-REST-API` carries `oauthServerToServerOnly:
+ *   true` but a `platformList` of web-app types. The shared subscriber
+ *   (`apiSubscriber.ts`) read only `platformList` and dropped it until
+ *   2026-09-16; it now honours the flag, so this direct path could move onto
+ *   it.
  * - **The secret exists only in the returned value.** The injected logger gets
  *   step names; ids and secrets never reach it.
  *

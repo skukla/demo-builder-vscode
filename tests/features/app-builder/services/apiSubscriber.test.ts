@@ -205,6 +205,92 @@ describe('apiSubscriber', () => {
             expect(mystery.platformList).toStrictEqual([]);
         });
 
+        describe('a service Adobe marks server-to-server only (ACCS-REST-API)', () => {
+            // The two rows the org catalog returned for this code on 2026-09-16, as
+            // read: a user-login row listed FIRST, then the server-to-server row.
+            // Picking the first and reading only platformList dropped the service
+            // from every subscribe, and Commerce refused the credential (401).
+            const ACCS_ROWS = [
+                {
+                    code: 'ACCS-REST-API',
+                    name: 'Adobe Commerce as a Cloud Service',
+                    platformList: ['SinglePageApp', 'NativeApp', 'WebApp'],
+                    oauthServerToServerOnly: true,
+                },
+                {
+                    code: 'ACCS-REST-API',
+                    name: 'Adobe Commerce as a Cloud Service',
+                    platformList: null as unknown as string[],
+                    oauthServerToServerOnly: true,
+                    properties: { licenseConfigs: [{ id: '880', productId: 'P0', name: 'Default - Cloud Manager' }] },
+                },
+            ];
+
+            it('resolves onto the server-to-server credential', () => {
+                const [accs] = resolveServiceInfos(['ACCS-REST-API'], ACCS_ROWS);
+                expect(partitionByPlatform([accs])).toEqual({ apiKey: [], oauthS2S: [accs], unmatched: [] });
+            });
+
+            it('is subscribed, not silently skipped, and reported as taken', async () => {
+                const client = {
+                    getServicesForOrg: jest.fn().mockResolvedValue([...SERVICES_FOR_ORG, ...ACCS_ROWS]),
+                    getSubscribedServiceCodes: jest.fn().mockResolvedValue([]),
+                    ensureOAuthCredentialId: jest.fn().mockResolvedValue('s2s-int-id'),
+                    createAdobeIdCredential: jest.fn().mockResolvedValue('apikey-int-id'),
+                    subscribeOAuthServerToServerIntegrationToServices: jest.fn().mockResolvedValue(undefined),
+                    subscribeAdobeIdIntegrationToServices: jest.fn().mockResolvedValue(undefined),
+                } as unknown as jest.Mocked<ApiSubscriberClient>;
+                const target: OrgTarget = { orgId: 'org1', projectId: 'proj1', workspaceId: 'ws1' };
+
+                const result = await subscribeRequiredApis([], target, client, undefined, ['ACCS-REST-API']);
+
+                const [, , sent] = (client.subscribeOAuthServerToServerIntegrationToServices as jest.Mock).mock.calls[0];
+                // Adobe refuses this service without a product ("requires selection of
+                // a product", 2026-09-16); the org's one profile is named, as the aio
+                // CLI names it.
+                expect(sent).toContainEqual({
+                    sdkCode: 'ACCS-REST-API',
+                    licenseConfigs: [{ op: 'add', id: '880', productId: 'P0' }],
+                    roles: null,
+                });
+                expect(result.map((api) => api.code)).toContain('ACCS-REST-API');
+            });
+
+            it('with several profiles to choose from, nothing is sent and the profiles are named', async () => {
+                const several = {
+                    ...ACCS_ROWS[1],
+                    properties: {
+                        licenseConfigs: [
+                            { id: '1', productId: 'P', name: 'Tenant A' },
+                            { id: '2', productId: 'P', name: 'Tenant B' },
+                        ],
+                    },
+                };
+                const client = {
+                    getServicesForOrg: jest.fn().mockResolvedValue([...SERVICES_FOR_ORG, several]),
+                    getSubscribedServiceCodes: jest.fn().mockResolvedValue([]),
+                    ensureOAuthCredentialId: jest.fn().mockResolvedValue('s2s-int-id'),
+                    createAdobeIdCredential: jest.fn().mockResolvedValue('apikey-int-id'),
+                    subscribeOAuthServerToServerIntegrationToServices: jest.fn().mockResolvedValue(undefined),
+                    subscribeAdobeIdIntegrationToServices: jest.fn().mockResolvedValue(undefined),
+                } as unknown as jest.Mocked<ApiSubscriberClient>;
+                const target: OrgTarget = { orgId: 'org1', projectId: 'proj1', workspaceId: 'ws1' };
+
+                await expect(subscribeRequiredApis([], target, client, undefined, ['ACCS-REST-API'])).rejects.toThrow(
+                    /needs a product profile and this org offers 2 \(Tenant A, Tenant B\)/,
+                );
+                expect(client.subscribeOAuthServerToServerIntegrationToServices).not.toHaveBeenCalled();
+            });
+
+            it('a row that is not server-to-server only keeps its declared platforms', () => {
+                const [spa] = resolveServiceInfos(
+                    ['AdobeCommerceWithAdobeID'],
+                    [{ code: 'AdobeCommerceWithAdobeID', platformList: ['SinglePageApp'], oauthServerToServerOnly: false }],
+                );
+                expect(spa.platformList).toStrictEqual(['SinglePageApp']);
+            });
+        });
+
         it('should carry the org service display name through', () => {
             const [meshInfo] = resolveServiceInfos([MESH], SERVICES_FOR_ORG);
             expect(meshInfo.name).toBe('API Mesh');

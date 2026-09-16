@@ -169,7 +169,11 @@ async function reconcileExtras(
     project: Project,
     desiredExtras: string[],
     componentId?: string,
-): Promise<{ success: boolean; error?: string; data?: { subscribed?: SubscribedApi[] } }> {
+): Promise<{
+    success: boolean;
+    error?: string;
+    data?: { subscribed?: SubscribedApi[]; notSubscribed?: string[] };
+}> {
     // Per-integration edit: `desiredExtras` is THIS component's list, not the union.
     // The subscribe still has to send the union, or dropping a code here would
     // unsubscribe it out from under every other integration that holds it — the one
@@ -209,8 +213,31 @@ async function reconcileExtras(
         // when the dashboard Add flow began recording them. The flat
         // additionalConsoleApis write was retired with step 07 (2026-08-23);
         // the keyed map is the one written form.
-        project.componentApiPicks = nextPicks ?? applyDesiredApis(project, desiredExtras);
+        // A requested code the subscribe did not take (no platform this spine can
+        // reach) is neither kept nor reported as added: the tool used to log
+        // "Added ACCS-REST-API" and persist it while Adobe had not subscribed it.
+        const taken = new Set(subscribed.map((api) => api.code));
+        const notSubscribed = desiredExtras.filter((code) => !taken.has(code));
+        const keep = (codes: string[]) => codes.filter((code) => taken.has(code));
+        const picks = nextPicks
+            ? Object.fromEntries(
+                  Object.entries(nextPicks)
+                      .map(([owner, codes]) => [owner, keep(codes)] as const)
+                      .filter(([, codes]) => codes.length > 0),
+              )
+            : applyDesiredApis(project, keep(desiredExtras));
+        project.componentApiPicks = picks;
         await context.stateManager.saveProject(project);
+        if (notSubscribed.length > 0) {
+            return {
+                success: false,
+                error:
+                    `Adobe did not subscribe ${notSubscribed.join(', ')}: the service offers no ` +
+                    'credential type Demo Builder manages. Add it in the Adobe Developer Console ' +
+                    '(Project → Workspace → Add API).',
+                data: { subscribed, notSubscribed },
+            };
+        }
         return { success: true, data: { subscribed } };
     } catch (err) {
         return {
@@ -295,18 +322,6 @@ export const handleSetConsoleApis: MessageHandler<{ apis?: string[]; componentId
                 `(${desired.join(', ') || 'none'}); subscribed ${confirmedCodes.length}: ` +
                 `${confirmedCodes.join(', ') || 'none'}`,
         );
-
-        // A requested code missing from the confirmed set means a subscribe
-        // silently skipped it — today that happens when a service lists neither
-        // platform, so no PUT covers it. Success is still correct for everything
-        // else; this is the part that must not pass unremarked.
-        const missing = desired.filter((code) => !confirmedCodes.includes(code));
-        if (missing.length > 0) {
-            context.logger.warn(
-                `[Console APIs] Requested but NOT subscribed: ${missing.join(', ')} — ` +
-                    'the service matched no subscribe platform for this org.',
-            );
-        }
     }
     return result;
 };
