@@ -470,12 +470,29 @@ export const IllustratedMessage: React.FC<any> = ({ children, ...props }) => (
     </div>
 );
 
-// Link mock
-export const Link: React.FC<any> = ({ children, onPress, ...props }) => (
-    <a data-testid="spectrum-link" onClick={onPress} {...filterSpectrumProps(props)}>
-        {children}
-    </a>
-);
+/**
+ * Link mock — WITH the real component's one-child rule.
+ *
+ * Spectrum's Link renders `React.Children.only(children)` when it is given no
+ * `href`, so `<Link>Open {name}</Link>` (a string AND an expression) throws at
+ * render. On 2026-09-16 that crash blanked the whole integrations surface in a
+ * live window while every suite stayed green, because this mock accepted any
+ * children. A mock that is laxer than the thing it stands in for cannot fail
+ * for the reason production fails.
+ */
+export const Link: React.FC<any> = ({ children, onPress, ...props }) => {
+    // The real component's order: a plain string is wrapped in a span, anything
+    // else must be exactly one element (aio's Link, read from the shipped bundle
+    // 2026-09-16). Checking `only` first would reject every string label.
+    if (props.href === undefined && typeof children !== 'string') {
+        React.Children.only(children);
+    }
+    return (
+        <a data-testid="spectrum-link" onClick={onPress} {...filterSpectrumProps(props)}>
+            {children}
+        </a>
+    );
+};
 
 // SearchField mock
 export const SearchField: React.FC<any> = ({ value, onChange, autoFocus, ...props }) => (

@@ -54,8 +54,14 @@ export function SystemSection({ model, onAction }: SystemSectionProps): React.Re
             </PanelRow>
             {system.url && (
                 <PanelRow label="Screen">
+                    {/* ONE child: Spectrum's Link without an href calls
+                        React.Children.only, and `Open {name}` is two children — a
+                        string and an expression. That threw at render and took the
+                        whole integrations surface down to a blank panel
+                        (2026-09-16); the suites never saw it because they mock
+                        @adobe/react-spectrum. */}
                     <Link isQuiet onPress={() => onAction(model, 'open-system')}>
-                        Open {system.name}
+                        {`Open ${system.name}`}
                     </Link>
                 </PanelRow>
             )}
