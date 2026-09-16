@@ -4886,7 +4886,7 @@
             "anchors": [
                 "const hooks = Array.isArray(entry?.hooks) ? entry.hooks : [];"
             ],
-            "line": 85,
+            "line": 109,
             "mutants": 1,
             "category": "other",
             "reason": "Stryker replaces the empty fallback array with ['Stryker was here']. The array is only reached when the entry's hooks field is not an array, and the very next call is .some(h => typeof h?.command === 'string' && h.command.includes(SIGNATURE)). A bare string element has no .command, so the predicate is false for the injected element exactly as it is vacuously false for the empty array. Both produce false, so no input can separate them. (isAioGuardHook)",
@@ -4899,7 +4899,7 @@
             "anchors": [
                 "const hooks = Array.isArray(entry?.hooks) ? entry.hooks : [];"
             ],
-            "line": 140,
+            "line": 164,
             "mutants": 1,
             "category": "other",
             "reason": "Stryker replaces the empty fallback array with ['Stryker was here']. The array is only reached when the entry's hooks field is not an array, and the very next call is .some(h => typeof h?.command === 'string' && h.command.includes(SIGNATURE)). A bare string element has no .command, so the predicate is false for the injected element exactly as it is vacuously false for the empty array. Both produce false, so no input can separate them. (isGitSyncHook)",
@@ -5256,7 +5256,7 @@
             "anchors": [
                 "} catch (err) {"
             ],
-            "line": 142,
+            "line": 143,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying this catch body changes nothing a test can observe. The contract is that ensureHomeAiContext never throws, and that is the catch itself, not its body; the body's only statement is a process.stderr.write. With the body gone the function still swallows the failure and still resolves undefined, and every file it did manage to write is still written. The only difference is whether a warning line reaches stderr, which is wording, and the tests already pin the never-throws half in 'never throws when a write fails'.",
@@ -5269,7 +5269,7 @@
             "anchors": [
                 "} catch (err) {"
             ],
-            "line": 184,
+            "line": 185,
             "mutants": 1,
             "category": "block",
             "reason": "Same shape as the ensureHomeAiContext catch: the body is an ENOENT early return plus one process.stderr.write, so emptying it leaves refreshHomeAgentsMd resolving undefined on every failure exactly as it does now. No file is written either way and no value is returned either way, so the only observable difference is whether a warning line reaches stderr. The never-throws contract is pinned by two tests already.",

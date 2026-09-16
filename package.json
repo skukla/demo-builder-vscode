@@ -377,16 +377,25 @@
                     "demoBuilder.ai.engine": {
                         "type": "string",
                         "enum": [
-                            "claude-code"
+                            "auto",
+                            "claude-code",
+                            "copilot-cli",
+                            "copilot-vscode"
                         ],
                         "enumItemLabels": [
-                            "Claude Code"
+                            "Detect automatically",
+                            "Claude Code",
+                            "Copilot CLI",
+                            "Copilot in VS Code"
                         ],
                         "enumDescriptions": [
-                            "Anthropic's Claude Code (CLI)."
+                            "Use whichever agent is installed, preferring Copilot.",
+                            "Anthropic's Claude Code (CLI).",
+                            "GitHub Copilot in the terminal (the `copilot` CLI).",
+                            "GitHub Copilot Chat inside VS Code."
                         ],
-                        "default": "claude-code",
-                        "description": "Which AI tool Demo Builder launches. Currently only Claude Code is supported; reserved for future engines (e.g. Codex)."
+                        "default": "auto",
+                        "description": "Which AI agent Demo Builder serves: where it writes MCP config, which hook format it installs, and what the Chat button opens."
                     },
                     "demoBuilder.ai.requireAgentConsent": {
                         "type": "boolean",
