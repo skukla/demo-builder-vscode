@@ -9,8 +9,8 @@ Adobe's Commerce integration starter kit. The design record is
 ## What the SC gets
 
 - **An ERP that appears to be the master.** Products, business partners (Commerce
-  companies), contract prices and sales orders, on a React Spectrum screen hosted in the
-  project's App Builder workspace. Every record is transient: reset wipes them and mirrors
+  companies), contract prices and sales orders, on the ERP's own React Spectrum screen.
+  Demo Builder opens it in a private browser window. Every record is transient: reset wipes them and mirrors
   the Commerce instance again. Commerce is the master the SC prepares in; the ERP adapts.
 - **Data flowing both ways.** An order placed on the storefront gets an ERP order number;
   marking it shipped, invoiced or cancelled in the ERP reaches the Commerce order. A price
@@ -28,6 +28,7 @@ Adobe's Commerce integration starter kit. The design record is
 | Repository | `skukla/demo-erp` | `skukla/commerce-erp-integration` |
 | Provides / consumes | provides `ERP_BASE_URL` | consumes `ERP_BASE_URL`; both take `ERP_DISPLAY_NAME` (default "Acme ERP") |
 | Commerce install | none | yes, the starter kit's, after the deploy |
+| Screen | its own, served by its `screen` action, opened with a key | the Commerce Admin page, on the workspace's static site |
 
 They are a **unit**. Adding the integration adds and deploys the ERP first, then the
 integration, into the project's one App Builder workspace. Removing the integration
@@ -45,12 +46,30 @@ blocks and ERP order numbers the ERP wrote into Commerce) and **Redeploy ERP**. 
 integration's **Open Commerce Admin** opens the Admin UI SDK screen. Remove on the card names
 both.
 
+## Why the ERP's screen is served by an action
+
+Both apps deploy into the same Runtime namespace, and a namespace has one static site.
+`aio app deploy` empties that site before uploading (`aio-lib-web` `deploy-web.js`), so two
+apps with web pages delete each other's. The integration keeps the static site, because
+Commerce Admin loads its page from there. The ERP serves its page, script and stylesheet
+from its `screen` web action instead, one file per response (Runtime returns at most 1 MB
+per result).
+
+That action has no Adobe sign-in. Its data calls need a key that Demo Builder generates on
+the ERP's first deploy (catalog `screen.keyEnvVar`, `ERP_SCREEN_KEY`), keeps in VS Code's
+secret storage, passes in the ERP's deploy env, and deletes when the pair is removed. **Open
+ERP** adds the key to the link in the extension (`systemScreen.ts`), so it never reaches a
+webview, a log, the project file or an agent. An ERP deployed before the screen existed
+answers "Redeploy it to add one."
+
 The ERP's name is an input on the tile ("ERP name", default Acme ERP), editable in Configure
 Project; it names the ERP's row and the ERP calls itself that.
 
 ## For agents
 
 `get_erp_status` reads the ERP's health as the integration sees it plus both rows.
+`open_erp_screen` (confirm-gated, like `open_url`) opens the ERP's screen; it answers the
+address and never the key.
 `reset_erp_records` (confirm-gated, with a consent dialog) runs the reset. The existing
 `add_integration`, `deploy_integration`, `redeploy_integration` and `remove_integration`
 cover the pair by id; `remove_integration` on the ERP alone is refused.

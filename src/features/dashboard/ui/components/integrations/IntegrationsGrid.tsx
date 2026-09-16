@@ -157,9 +157,9 @@ export function IntegrationsGrid({
             // The bound system's verbs (the ERP): its screen, its reset (confirmed,
             // through the integration), its own redeploy by its own id.
             if (action === 'open-system') {
-                if (model.system?.url) {
-                    webviewClient.postMessage('openLiveSite', { url: model.system.url });
-                }
+                // By the integration's id: the extension finds its ERP and adds the
+                // screen key, which never reaches this webview.
+                webviewClient.postMessage('openErpScreen', { id: model.id });
                 return;
             }
             if (action === 'reset-system') {

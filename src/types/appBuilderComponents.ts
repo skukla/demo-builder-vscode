@@ -95,6 +95,17 @@ export interface AppBuilderComponentCatalogEntry {
      * "Acme ERP", or whatever the SC typed). Absent = the entry's `name`.
      */
     nameFromEnvVar?: string;
+    /**
+     * A screen this component serves from one of its own web actions, opened by
+     * a link that carries a key Demo Builder generates (the ERP; see
+     * `systemScreen.ts` for why it cannot use the static site).
+     */
+    screen?: {
+        /** The web action that serves the page, e.g. "screen". */
+        action: string;
+        /** The deploy-time input that carries the key, e.g. "ERP_SCREEN_KEY". */
+        keyEnvVar: string;
+    };
     /** Pre-built source repo (owner/repo/branch). */
     source: AddonSource;
     /** Backend ids this appBuilderComponent fits (omitted/empty = any backend). */

@@ -85,6 +85,8 @@ describe('ACTION_DESCRIPTORS', () => {
             // this row stretches is that a confirm gate is about SURPRISE as much
             // as about loss.
             'install_prerequisite',
+            // Opens a browser window — gated for the same surprise reason as open_url.
+            'open_erp_screen',
             'refresh_block_library',
             'remove_integration',
             // Wipes the ERP and undoes what it wrote into Commerce companies

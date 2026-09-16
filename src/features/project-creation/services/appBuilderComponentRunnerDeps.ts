@@ -30,6 +30,7 @@ import { uninstallAppManagementApp } from '@/features/app-builder/services/appMa
 import { deployAppComponentIsolated } from '@/features/app-builder/services/deployAppIsolated';
 import { subscriberTarget } from '@/features/app-builder/services/ensureMeshApiSubscribed';
 import { buildS2SDeployEnv } from '@/features/app-builder/services/s2sDeployEnv';
+import { ensureScreenKeyEnv, forgetScreenKey } from '@/features/app-builder/services/systemScreen';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { ComponentManager } from '@/features/components/services/componentManager';
@@ -185,6 +186,8 @@ export function buildDefaultRunnerDeps(
         // the workspace S2S credential's full identity (ensured + read via the
         // Console SDK), mapped by s2sDeployEnv. The secret rides the
         // per-invocation env only.
+        resolveScreenEnv: (project, entry) => ensureScreenKeyEnv(ctx.secrets, project.path, entry),
+        forgetScreenKey: (project, entry) => forgetScreenKey(ctx.secrets, project.path, entry),
         resolveAppManagementEnv: async (project) => {
             const adobe = project.adobe;
             if (!adobe?.organization || !adobe.projectId || !adobe.workspace) {

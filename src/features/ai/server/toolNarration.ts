@@ -171,6 +171,7 @@ export const TOOL_NARRATION: Record<string, string> = {
     // The ERP integration's pair (plan step 05).
     get_erp_status: 'Reading the ERP status',
     reset_erp_records: 'Resetting the ERP records',
+    open_erp_screen: "Opening the ERP's screen",
     get_agent_trace: 'Reading the agent activity record',
 
     // ── Storefront and content ──────────────────────────────────────────

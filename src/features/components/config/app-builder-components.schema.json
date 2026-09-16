@@ -149,6 +149,27 @@
         "nameFromEnvVar": {
           "type": "string",
           "description": "The env var whose value names this component's row (the ERP's display name). Omitted = the entry's name."
+        },
+        "screen": {
+          "type": "object",
+          "required": [
+            "action",
+            "keyEnvVar"
+          ],
+          "additionalProperties": false,
+          "description": "A screen served by one of the component's own web actions, opened by a link carrying a key Demo Builder generates.",
+          "properties": {
+            "action": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]*$",
+              "description": "The web action that serves the page."
+            },
+            "keyEnvVar": {
+              "type": "string",
+              "pattern": "^[A-Z][A-Z0-9_]*$",
+              "description": "The deploy-time input that carries the key."
+            }
+          }
         }
       }
     },

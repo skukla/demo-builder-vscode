@@ -70,6 +70,7 @@ import {
 } from '@/features/dashboard/handlers/consoleApiHandlers';
 import {
     handleGetErpStatus,
+    handleOpenErpScreen,
     handleResetErpRecords,
 } from '@/features/dashboard/handlers/erpIntegrationHandlers';
 import {
@@ -273,6 +274,7 @@ export const dashboardHandlers = defineHandlers({
     // integration sees it, and the reset that re-mirrors Commerce into it.
     getErpStatus: handleGetErpStatus,
     resetErpRecords: handleResetErpRecords,
+    openErpScreen: handleOpenErpScreen,
 
     // Console API access (runtime API subscription — list_console_apis / add_console_apis)
     listConsoleApis: handleListConsoleApis,

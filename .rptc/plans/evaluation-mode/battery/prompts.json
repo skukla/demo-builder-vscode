@@ -54,7 +54,7 @@
         "expect": [
             "list_content"
         ],
-        "why": "Never called. Pairs with `published` \u2014 both are content reads."
+        "why": "Never called. Pairs with `published` — both are content reads."
     },
     {
         "id": "datapacks",
@@ -94,7 +94,7 @@
             "demo-builder",
             "playwright"
         ],
-        "why": "CROSS-SERVER, and a GOOD diagnostic prompt but a BAD dropins test \u2014 it was written as one and measured seven runs of nothing. The agent answers it completely with the catalog (demo-builder) and the rendered page (playwright), so dropins is never NEEDED and its absence proves nothing. Kept for what it does measure: whether the agent composes demo-builder and playwright, which it does."
+        "why": "CROSS-SERVER, and a GOOD diagnostic prompt but a BAD dropins test — it was written as one and measured seven runs of nothing. The agent answers it completely with the catalog (demo-builder) and the rendered page (playwright), so dropins is never NEEDED and its absence proves nothing. Kept for what it does measure: whether the agent composes demo-builder and playwright, which it does."
     },
     {
         "id": "cross-pdp-slots",
@@ -105,7 +105,7 @@
         "expectServers": [
             "dropins"
         ],
-        "why": "The dropins test, narrowed so ONLY dropins can answer. Slot names live in the storefront's TypeScript definitions; `list_slots` reads them. There is no demo-builder tool for it and no amount of browsing reveals a slot that renders nothing. Going to the shell here IS a failure, not a shortcut \u2014 which is what `cross-no-products` could never establish."
+        "why": "The dropins test, narrowed so ONLY dropins can answer. Slot names live in the storefront's TypeScript definitions; `list_slots` reads them. There is no demo-builder tool for it and no amount of browsing reveals a slot that renders nothing. Going to the shell here IS a failure, not a shortcut — which is what `cross-no-products` could never establish."
     },
     {
         "id": "orientation",
@@ -114,7 +114,7 @@
             "get_current_project",
             "get_project_status"
         ],
-        "why": "Pins the 2026-08-27 payload merge. Before it, this question COST TWO CALLS and the corpus showed 83% of get_current_project's calls chaining into a second read. The merge made the two doors share one answer, so EITHER counts \u2014 the first live runs answered both halves in one get_project_status call and scored MISS under the single-tool expect. One call in the route is the fix working; a second orientation read is the regression."
+        "why": "Pins the 2026-08-27 payload merge. Before it, this question COST TWO CALLS and the corpus showed 83% of get_current_project's calls chaining into a second read. The merge made the two doors share one answer, so EITHER counts — the first live runs answered both halves in one get_project_status call and scored MISS under the single-tool expect. One call in the route is the fix working; a second orientation read is the regression."
     },
     {
         "id": "active-project",
@@ -190,7 +190,7 @@
     },
     {
         "id": "verify-setup",
-        "prompt": "Is my project's AI setup healthy \u2014 context files, MCP config, skills?",
+        "prompt": "Is my project's AI setup healthy — context files, MCP config, skills?",
         "expect": [
             "verify_ai_setup"
         ],
@@ -302,7 +302,7 @@
     },
     {
         "id": "prereqs",
-        "prompt": "Do I have all the tools installed that my project's stack needs \u2014 Node, aio CLI, plugins?",
+        "prompt": "Do I have all the tools installed that my project's stack needs — Node, aio CLI, plugins?",
         "expect": [
             "check_prerequisites"
         ],
@@ -374,7 +374,7 @@
     },
     {
         "id": "skill-diagnose",
-        "prompt": "Something is wrong with my demo \u2014 the storefront renders but every product page is empty. Use your diagnose-demo skill to work out where to look first, and tell me the first check it prescribes.",
+        "prompt": "Something is wrong with my demo — the storefront renders but every product page is empty. Use your diagnose-demo skill to work out where to look first, and tell me the first check it prescribes.",
         "expect": [],
         "expectSkill": [
             "diagnose-demo"
@@ -384,7 +384,7 @@
     },
     {
         "id": "skill-datapack",
-        "prompt": "I want to load sample data into this project. Follow your import-datapack skill and tell me the exact call sequence it prescribes and the traps it warns about \u2014 do not actually import anything.",
+        "prompt": "I want to load sample data into this project. Follow your import-datapack skill and tell me the exact call sequence it prescribes and the traps it warns about — do not actually import anything.",
         "expect": [],
         "expectSkill": [
             "import-datapack"
@@ -400,11 +400,11 @@
             "aem-block-developer"
         ],
         "cwd": "project",
-        "why": "AI-1q skills half \u2014 an Adobe-bundle skill that ALREADY ships in the registrable directory layout, so unlike the demo-builder set this one can invoke today. The positive control for the skill scorer."
+        "why": "AI-1q skills half — an Adobe-bundle skill that ALREADY ships in the registrable directory layout, so unlike the demo-builder set this one can invoke today. The positive control for the skill scorer."
     },
     {
         "id": "diagnose-via-debug-logs",
-        "prompt": "The last operation I ran failed with a vague error. Read the extension's own debug logs and tell me what actually went wrong \u2014 filter for errors rather than dumping everything.",
+        "prompt": "The last operation I ran failed with a vague error. Read the extension's own debug logs and tell me what actually went wrong — filter for errors rather than dumping everything.",
         "expect": [
             "read_debug_logs"
         ],
@@ -418,11 +418,11 @@
             "get_integration_install_status"
         ],
         "cwd": "project",
-        "why": "AB-5 (2026-08-27): the persisted installation record and the app's live step tree existed with NO reader \u2014 answering this took a hand-scripted GET three times in one session. The prompt is that exact question."
+        "why": "AB-5 (2026-08-27): the persisted installation record and the app's live step tree existed with NO reader — answering this took a hand-scripted GET three times in one session. The prompt is that exact question."
     },
     {
         "id": "integration-install-retry",
-        "prompt": "The starter kit app's Commerce install failed earlier but the deploy itself was fine. Re-run just the install \u2014 don't redeploy the whole app.",
+        "prompt": "The starter kit app's Commerce install failed earlier but the deploy itself was fine. Re-run just the install — don't redeploy the whole app.",
         "expect": [
             "install_integration"
         ],
@@ -431,16 +431,16 @@
     },
     {
         "id": "skill-add-component-home",
-        "prompt": "I want to add a new component to one of my demo projects and wire up its credentials. Use your add-component skill and tell me the exact steps and MCP calls it prescribes \u2014 don't change anything yet.",
+        "prompt": "I want to add a new component to one of my demo projects and wire up its credentials. Use your add-component skill and tell me the exact steps and MCP calls it prescribes — don't change anything yet.",
         "expect": [],
         "expectSkill": [
             "add-component"
         ],
-        "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug \u2014 so per-scope verification is real, not redundant."
+        "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug — so per-scope verification is real, not redundant."
     },
     {
         "id": "skill-add-component-project",
-        "prompt": "I want to add a new component to one of my demo projects and wire up its credentials. Use your add-component skill and tell me the exact steps and MCP calls it prescribes \u2014 don't change anything yet.",
+        "prompt": "I want to add a new component to one of my demo projects and wire up its credentials. Use your add-component skill and tell me the exact steps and MCP calls it prescribes — don't change anything yet.",
         "expect": [],
         "expectSkill": [
             "add-component"
@@ -455,7 +455,7 @@
         "expectSkill": [
             "sync-changes"
         ],
-        "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug \u2014 so per-scope verification is real, not redundant."
+        "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug — so per-scope verification is real, not redundant."
     },
     {
         "id": "skill-sync-changes-project",
@@ -469,16 +469,16 @@
     },
     {
         "id": "skill-update-credentials-home",
-        "prompt": "I need to rotate the Commerce API keys on a project. Follow your update-credentials skill and walk me through the procedure it prescribes \u2014 do not modify anything.",
+        "prompt": "I need to rotate the Commerce API keys on a project. Follow your update-credentials skill and walk me through the procedure it prescribes — do not modify anything.",
         "expect": [],
         "expectSkill": [
             "update-credentials"
         ],
-        "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug \u2014 so per-scope verification is real, not redundant."
+        "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug — so per-scope verification is real, not redundant."
     },
     {
         "id": "skill-update-credentials-project",
-        "prompt": "I need to rotate the Commerce API keys on a project. Follow your update-credentials skill and walk me through the procedure it prescribes \u2014 do not modify anything.",
+        "prompt": "I need to rotate the Commerce API keys on a project. Follow your update-credentials skill and walk me through the procedure it prescribes — do not modify anything.",
         "expect": [],
         "expectSkill": [
             "update-credentials"
@@ -488,16 +488,16 @@
     },
     {
         "id": "skill-create-eds-project-home",
-        "prompt": "If I asked you to scaffold a brand-new Edge Delivery demo project from chat without the wizard, what would happen? Use your create-eds-project skill and describe the flow and inputs it prescribes \u2014 do not actually create anything.",
+        "prompt": "If I asked you to scaffold a brand-new Edge Delivery demo project from chat without the wizard, what would happen? Use your create-eds-project skill and describe the flow and inputs it prescribes — do not actually create anything.",
         "expect": [],
         "expectSkill": [
             "create-eds-project"
         ],
-        "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug \u2014 so per-scope verification is real, not redundant."
+        "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug — so per-scope verification is real, not redundant."
     },
     {
         "id": "skill-create-eds-project-project",
-        "prompt": "If I asked you to scaffold a brand-new Edge Delivery demo project from chat without the wizard, what would happen? Use your create-eds-project skill and describe the flow and inputs it prescribes \u2014 do not actually create anything.",
+        "prompt": "If I asked you to scaffold a brand-new Edge Delivery demo project from chat without the wizard, what would happen? Use your create-eds-project skill and describe the flow and inputs it prescribes — do not actually create anything.",
         "expect": [],
         "expectSkill": [
             "create-eds-project"
@@ -507,34 +507,34 @@
     },
     {
         "id": "skill-diagnose-demo-home",
-        "prompt": "Something is wrong with one of my demos \u2014 pages render but product data is missing. Use your diagnose-demo skill to tell me where it says to look first.",
+        "prompt": "Something is wrong with one of my demos — pages render but product data is missing. Use your diagnose-demo skill to tell me where it says to look first.",
         "expect": [],
         "expectSkill": [
             "diagnose-demo"
         ],
-        "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug \u2014 so per-scope verification is real, not redundant."
+        "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug — so per-scope verification is real, not redundant."
     },
     {
         "id": "skill-import-datapack-home",
-        "prompt": "I want to load sample data into a project. Follow your import-datapack skill and tell me the call sequence and the traps it warns about \u2014 do not import anything.",
+        "prompt": "I want to load sample data into a project. Follow your import-datapack skill and tell me the call sequence and the traps it warns about — do not import anything.",
         "expect": [],
         "expectSkill": [
             "import-datapack"
         ],
-        "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug \u2014 so per-scope verification is real, not redundant."
+        "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug — so per-scope verification is real, not redundant."
     },
     {
         "id": "skill-scrape-reference-site-home",
-        "prompt": "I want a demo whose blocks visually match a reference website I have permission to scrape. Use your scrape-reference-site skill and explain how it routes between the two scraping approaches \u2014 planning only.",
+        "prompt": "I want a demo whose blocks visually match a reference website I have permission to scrape. Use your scrape-reference-site skill and explain how it routes between the two scraping approaches — planning only.",
         "expect": [],
         "expectSkill": [
             "scrape-reference-site"
         ],
-        "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug \u2014 so per-scope verification is real, not redundant."
+        "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug — so per-scope verification is real, not redundant."
     },
     {
         "id": "skill-scrape-reference-site-project",
-        "prompt": "I want a demo whose blocks visually match a reference website I have permission to scrape. Use your scrape-reference-site skill and explain how it routes between the two scraping approaches \u2014 planning only.",
+        "prompt": "I want a demo whose blocks visually match a reference website I have permission to scrape. Use your scrape-reference-site skill and explain how it routes between the two scraping approaches — planning only.",
         "expect": [],
         "expectSkill": [
             "scrape-reference-site"
@@ -544,16 +544,16 @@
     },
     {
         "id": "skill-connect-authenticated-site-home",
-        "prompt": "The reference site I want to scrape is behind a login. Use your connect-authenticated-site skill and describe how the one-time session capture works \u2014 do not start it.",
+        "prompt": "The reference site I want to scrape is behind a login. Use your connect-authenticated-site skill and describe how the one-time session capture works — do not start it.",
         "expect": [],
         "expectSkill": [
             "connect-authenticated-site"
         ],
-        "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug \u2014 so per-scope verification is real, not redundant."
+        "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug — so per-scope verification is real, not redundant."
     },
     {
         "id": "skill-connect-authenticated-site-project",
-        "prompt": "The reference site I want to scrape is behind a login. Use your connect-authenticated-site skill and describe how the one-time session capture works \u2014 do not start it.",
+        "prompt": "The reference site I want to scrape is behind a login. Use your connect-authenticated-site skill and describe how the one-time session capture works — do not start it.",
         "expect": [],
         "expectSkill": [
             "connect-authenticated-site"
@@ -568,7 +568,7 @@
         "expectSkill": [
             "commerce-block-mapper"
         ],
-        "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug \u2014 so per-scope verification is real, not redundant."
+        "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug — so per-scope verification is real, not redundant."
     },
     {
         "id": "skill-commerce-block-mapper-project",
@@ -582,16 +582,16 @@
     },
     {
         "id": "skill-demo-data-injector-home",
-        "prompt": "My scraped pages contain the real customer's product names and prices. Use your demo-data-injector skill and describe how it replaces that with demo-safe data \u2014 no changes yet.",
+        "prompt": "My scraped pages contain the real customer's product names and prices. Use your demo-data-injector skill and describe how it replaces that with demo-safe data — no changes yet.",
         "expect": [],
         "expectSkill": [
             "demo-data-injector"
         ],
-        "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug \u2014 so per-scope verification is real, not redundant."
+        "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug — so per-scope verification is real, not redundant."
     },
     {
         "id": "skill-demo-data-injector-project",
-        "prompt": "My scraped pages contain the real customer's product names and prices. Use your demo-data-injector skill and describe how it replaces that with demo-safe data \u2014 no changes yet.",
+        "prompt": "My scraped pages contain the real customer's product names and prices. Use your demo-data-injector skill and describe how it replaces that with demo-safe data — no changes yet.",
         "expect": [],
         "expectSkill": [
             "demo-data-injector"
@@ -606,7 +606,7 @@
         "expectSkill": [
             "header-nav-footer"
         ],
-        "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug \u2014 so per-scope verification is real, not redundant."
+        "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug — so per-scope verification is real, not redundant."
     },
     {
         "id": "skill-header-nav-footer-project",
@@ -625,7 +625,7 @@
         "expectSkill": [
             "refine-visual-match"
         ],
-        "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug \u2014 so per-scope verification is real, not redundant."
+        "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug — so per-scope verification is real, not redundant."
     },
     {
         "id": "skill-refine-visual-match-project",
@@ -639,16 +639,16 @@
     },
     {
         "id": "skill-register-custom-block-home",
-        "prompt": "I've written a new custom block's source files. Use your register-custom-block skill and tell me exactly how it registers the block with the authoring library \u2014 do not register anything.",
+        "prompt": "I've written a new custom block's source files. Use your register-custom-block skill and tell me exactly how it registers the block with the authoring library — do not register anything.",
         "expect": [],
         "expectSkill": [
             "register-custom-block"
         ],
-        "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug \u2014 so per-scope verification is real, not redundant."
+        "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug — so per-scope verification is real, not redundant."
     },
     {
         "id": "skill-register-custom-block-project",
-        "prompt": "I've written a new custom block's source files. Use your register-custom-block skill and tell me exactly how it registers the block with the authoring library \u2014 do not register anything.",
+        "prompt": "I've written a new custom block's source files. Use your register-custom-block skill and tell me exactly how it registers the block with the authoring library — do not register anything.",
         "expect": [],
         "expectSkill": [
             "register-custom-block"
@@ -658,16 +658,16 @@
     },
     {
         "id": "skill-remove-custom-block-home",
-        "prompt": "An old custom block should no longer be draggable by authors. Use your remove-custom-block skill and describe the removal procedure it prescribes \u2014 without executing it.",
+        "prompt": "An old custom block should no longer be draggable by authors. Use your remove-custom-block skill and describe the removal procedure it prescribes — without executing it.",
         "expect": [],
         "expectSkill": [
             "remove-custom-block"
         ],
-        "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug \u2014 so per-scope verification is real, not redundant."
+        "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug — so per-scope verification is real, not redundant."
     },
     {
         "id": "skill-remove-custom-block-project",
-        "prompt": "An old custom block should no longer be draggable by authors. Use your remove-custom-block skill and describe the removal procedure it prescribes \u2014 without executing it.",
+        "prompt": "An old custom block should no longer be draggable by authors. Use your remove-custom-block skill and describe the removal procedure it prescribes — without executing it.",
         "expect": [],
         "expectSkill": [
             "remove-custom-block"
@@ -717,7 +717,7 @@
     },
     {
         "id": "skill-aem-tester-project",
-        "prompt": "Using your aem-tester skill, describe how you would verify a storefront block change in the browser \u2014 planning only, do not run anything.",
+        "prompt": "Using your aem-tester skill, describe how you would verify a storefront block change in the browser — planning only, do not run anything.",
         "expect": [],
         "expectSkill": [
             "aem-tester"
@@ -727,7 +727,7 @@
     },
     {
         "id": "t2-update-config",
-        "prompt": "In my battery-scratch project, set FAKE_KEY to updated-fake-value in the .env file. Use the extension's config tool \u2014 do not edit the file directly.",
+        "prompt": "In my battery-scratch project, set FAKE_KEY to updated-fake-value in the .env file. Use the extension's config tool — do not edit the file directly.",
         "expect": [
             "update_project_config"
         ],
@@ -749,7 +749,7 @@
         "expect": [
             "save_ai_prompt"
         ],
-        "why": "AI-1q tier 2 (scratch-project writes, tier2-design.md): runnable ONLY under --tier2, where the harness has flipped the current project to battery-scratch and the write allowlist is extended. Wave 2: writes the CURRENT project's manifest \u2014 which the harness guarantees is scratch. The prompt pins pinned:false so the owner's global prompts are untouched.",
+        "why": "AI-1q tier 2 (scratch-project writes, tier2-design.md): runnable ONLY under --tier2, where the harness has flipped the current project to battery-scratch and the write allowlist is extended. Wave 2: writes the CURRENT project's manifest — which the harness guarantees is scratch. The prompt pins pinned:false so the owner's global prompts are untouched.",
         "tier": 2
     },
     {
@@ -759,7 +759,7 @@
             "export_project_settings"
         ],
         "cwd": "project",
-        "why": "AI-1q tier 2 (scratch-project writes, tier2-design.md): runnable ONLY under --tier2, where the harness has flipped the current project to battery-scratch and the write allowlist is extended. Wave 2: THE secrets-finding tool \u2014 safe precisely because current=scratch and every fixture value is fake-test-pw-not-a-secret. cwd:project puts the session where a producer's would sit; the tool still acts on the CURRENT project (scratch).",
+        "why": "AI-1q tier 2 (scratch-project writes, tier2-design.md): runnable ONLY under --tier2, where the harness has flipped the current project to battery-scratch and the write allowlist is extended. Wave 2: THE secrets-finding tool — safe precisely because current=scratch and every fixture value is fake-test-pw-not-a-secret. cwd:project puts the session where a producer's would sit; the tool still acts on the CURRENT project (scratch).",
         "tier": 2
     },
     {
@@ -774,11 +774,11 @@
     {
         "id": "t2-configure",
         "tier": 2,
-        "prompt": "Set the ACCS_GRAPHQL_ENDPOINT for this project's Commerce backend to https://fake.example.test/graphql. Use the configuration tool \u2014 do not edit files by hand.",
+        "prompt": "Set the ACCS_GRAPHQL_ENDPOINT for this project's Commerce backend to https://fake.example.test/graphql. Use the configuration tool — do not edit files by hand.",
         "expect": [
             "configure_project"
         ],
-        "why": "AI-1q tier 2 wave 3 (closeout loop): runnable only under --tier2 against the scratch project. Writes componentConfigs on the current project (scratch); never deploys \u2014 its handler marks the mesh stale and stops."
+        "why": "AI-1q tier 2 wave 3 (closeout loop): runnable only under --tier2 against the scratch project. Writes componentConfigs on the current project (scratch); never deploys — its handler marks the mesh stale and stops."
     },
     {
         "id": "t2-regenerate-ai",
@@ -800,11 +800,11 @@
     },
     {
         "id": "agent-trace",
-        "prompt": "Earlier today another agent session did some work through the Demo Builder tools. I need to see exactly what it did \u2014 the actual record of its tool calls, not a guess.",
+        "prompt": "Earlier today another agent session did some work through the Demo Builder tools. I need to see exactly what it did — the actual record of its tool calls, not a guess.",
         "expect": [
             "get_agent_trace"
         ],
-        "why": "AI-2c: the activity record's agent-facing read, framed as its REAL use case \u2014 reviewing work the CURRENT session did not do, which cannot be answered from self-knowledge. The first draft asked 'what have you done?' and the agent answered from its own fresh-session priors with ZERO calls (recorded miss, 2026-08-28) \u2014 a finding about ask-shapes as much as about the tool."
+        "why": "AI-2c: the activity record's agent-facing read, framed as its REAL use case — reviewing work the CURRENT session did not do, which cannot be answered from self-knowledge. The first draft asked 'what have you done?' and the agent answered from its own fresh-session priors with ZERO calls (recorded miss, 2026-08-28) — a finding about ask-shapes as much as about the tool."
     },
     {
         "id": "journey-catalog-format",
@@ -838,7 +838,7 @@
         "expect": [
             "list_graphql_queries"
         ],
-        "why": "Verbatim class of the ERP journey's schema question. ADJUDICATED 2026-08-28: at project cwd, with AGENTS.md naming list_graphql_queries explicitly, the agent still answered by grepping scripts/__dropins__ \u2014 CORRECTLY, file+line, 4-5 calls, twice. Per rule 5 (grade outcomes not paths) NATIVE-FILES is an ACCEPTED outcome here: the vendored source is version-exact ground truth. A future miss+NATIVE-FILES on this prompt is fine; a WRONG answer or >8 calls is not. The dropins server wins on asks the local source cannot answer (cross-version diffs, event flows) \u2014 cross-design-tokens is that measurement and hits 2/2.",
+        "why": "Verbatim class of the ERP journey's schema question. ADJUDICATED 2026-08-28: at project cwd, with AGENTS.md naming list_graphql_queries explicitly, the agent still answered by grepping scripts/__dropins__ — CORRECTLY, file+line, 4-5 calls, twice. Per rule 5 (grade outcomes not paths) NATIVE-FILES is an ACCEPTED outcome here: the vendored source is version-exact ground truth. A future miss+NATIVE-FILES on this prompt is fine; a WRONG answer or >8 calls is not. The dropins server wins on asks the local source cannot answer (cross-version diffs, event flows) — cross-design-tokens is that measurement and hits 2/2.",
         "cwd": "project"
     },
     {
@@ -875,6 +875,15 @@
         ],
         "cwd": "project",
         "why": "Plan step 05: the reset is the one destructive verb on the pair (it wipes the ERP and undoes its Commerce writes), gated by confirm and the alert copy."
+    },
+    {
+        "id": "erp-screen",
+        "prompt": "Open my ERP's screen so I can look at its products.",
+        "expect": [
+            "open_erp_screen"
+        ],
+        "cwd": "project",
+        "why": "2026-09-16: the ERP serves its own screen from an action, opened with a key only the extension holds, so the agent has to use the tool rather than hand the user a URL."
     },
     {
         "id": "delete-workspace",

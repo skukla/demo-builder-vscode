@@ -1,5 +1,5 @@
 /**
- * The ERP integration's two verbs on the dashboard (plan step 05, decision 6):
+ * The ERP integration's verbs on the dashboard (plan step 05, decision 6):
  *
  * - `getErpStatus` — the ERP's health as its integration sees it, plus the
  *   persisted rows of both halves of the pair. Read-only, headless-safe: no
@@ -8,6 +8,9 @@
  *   Commerce writes, wipe the ERP, mirror Commerce as it stands (decisions 8
  *   and 11). Guards → progress → the call. Commerce orders keep nothing of the
  *   ERP's after it; the ERP's order numbers continue where they were.
+ * - `openErpScreen` — open the ERP's own screen in a private browser window,
+ *   with the key it was deployed with (`systemScreen.ts`). The key is added
+ *   here, in the extension, and never reaches a webview, a log or an answer.
  *
  * Both address the INTEGRATION's id (the card the SC sees); the bound system
  * is resolved from the catalog. Split from `appBuilderComponentHandlers.ts`
@@ -24,12 +27,15 @@ import {
 } from './appBuilderComponentHandlers';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getAppBuilderComponent } from '@/core/state/appBuilderComponentState';
+import { openInIncognito } from '@/core/utils/browserUtils';
+import { validateURL } from '@/core/validation/URLValidator';
 import type { AppManagementAuth } from '@/features/app-builder/services/appManagementClient';
 import {
     ErpIntegrationClient,
     deriveErpActionUrl,
     type ErpResetReport,
 } from '@/features/app-builder/services/erpIntegrationClient';
+import { deriveScreenUrl, readScreenKey, screenLink } from '@/features/app-builder/services/systemScreen';
 import { getBoundSystem } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { resolveAppManagementAuth } from '@/features/project-creation/services/appBuilderComponentRunnerDeps';
 import type { AppBuilderComponentState, Project } from '@/types/base';
@@ -136,6 +142,42 @@ export const handleResetErpRecords: MessageHandler<{ id?: string }> = async (con
         return { success: false, error: result.error };
     }
     return { success: true, data: { id: call.id, erp: shapeErpRow(call.erp), report: result.report } };
+};
+
+/**
+ * Handle 'openErpScreen' — open the ERP bound to an integration at its own
+ * screen. Answers with the screen's address WITHOUT the key.
+ */
+export const handleOpenErpScreen: MessageHandler<{ id?: string }> = async (context, payload): Promise<HandlerResponse> => {
+    const target = await resolveComponentTarget(context, payload?.id);
+    if (!target.ok) return target.error;
+    const { id, project } = target;
+    const systemEntry = getBoundSystem(id);
+    const erp = systemEntry ? getAppBuilderComponent(project, systemEntry.id) : undefined;
+    if (!systemEntry || !erp) {
+        return { success: false, error: `"${id}" has no ERP in this project.`, code: ErrorCode.INVALID_OPERATION };
+    }
+    const name = erp.name ?? systemEntry.name;
+    const screenUrl = deriveScreenUrl(systemEntry, erp.deployedUrls);
+    if (!screenUrl) {
+        const error = `${name} has no screen deployed. Redeploy it to add one.`;
+        return { success: false, error, code: ErrorCode.INVALID_OPERATION };
+    }
+    const key = await readScreenKey(context.context.secrets, project.path, systemEntry);
+    if (!key) {
+        const error = `${name} was deployed without a screen key from this machine. Redeploy it to open its screen.`;
+        return { success: false, error, code: ErrorCode.INVALID_OPERATION };
+    }
+    const link = screenLink(screenUrl, key);
+    try {
+        validateURL(link);
+    } catch {
+        return { success: false, error: `${name}'s screen address is not a valid URL.`, code: ErrorCode.CONFIG_INVALID };
+    }
+    // A private window: the key is in the address, and a private window keeps no history.
+    const privateWindow = await openInIncognito(link);
+    context.logger.debug(`[ERP] Opened ${systemEntry.id}'s screen (private window: ${privateWindow})`);
+    return { success: true, data: { id, erp: systemEntry.id, screenUrl } };
 };
 
 function errorText(error: unknown): string {

@@ -366,6 +366,9 @@ describe('rows with no output safety net are classified', () => {
         // shapes the STUB cannot see.
         'get_erp_status',
         'reset_erp_records',
+        // `handleOpenErpScreen` returns `{id, erp, screenUrl}` — fixed shape,
+        // and never the key.
+        'open_erp_screen',
     ];
 
     it('the set matches exactly — a new row must be classified before it ships', async () => {
@@ -474,6 +477,8 @@ describe('the ceiling table tracks the tool surface', () => {
         // counts). Neither scales with the project or the instance.
         'get_erp_status',
         'reset_erp_records',
+        // Three strings: the integration id, the ERP id and the screen address.
+        'open_erp_screen',
     ]);
 
     it('records a ceiling for every DESCRIPTOR tool that is not deliberately exempt', () => {

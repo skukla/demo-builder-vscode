@@ -188,7 +188,10 @@ describe('dashboardHandlers', () => {
             // the integrations surface's Eventing section — workspace-scoped
             // I/O event providers/registrations, same service as the MCP
             // event tools.
-            expect(types).toHaveLength(40);
+            //
+            // openErpScreen (40 → 41, 2026-09-16): opens the ERP's own screen with
+            // the key only the extension holds.
+            expect(types).toHaveLength(41);
         });
 
         it('should have handlers as functions', () => {

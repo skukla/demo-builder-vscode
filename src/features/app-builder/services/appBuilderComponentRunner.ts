@@ -35,6 +35,7 @@ import { recordDeployOutcome, type DeployOutcome } from './appBuilderDeployOutco
 import { detectAppLayout, listDeclaredPackageNames, type AppConfigLayout } from './appConfigPackages';
 import { deriveProvidedValues, resolveDeployInputs, resolveDisplayName } from './deployInputs';
 import { deriveOwPackage } from './owPackageName';
+import { deriveScreenUrl } from './systemScreen';
 import type { AppDeploymentResult } from './types';
 import { isMeshComponentId } from '@/core/constants';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
@@ -212,6 +213,14 @@ export interface AppBuilderComponentRunnerDeps {
      * mesh/standalone paths and bare unit tests never need it.
      */
     resolveAppManagementEnv?: (project: Project) => Promise<Record<string, string> | undefined>;
+    /**
+     * The deploy env carrying an entry's screen key (`systemScreen.ts`), generated
+     * the first time. Returns `{}` for an entry with no screen. Carries a live
+     * secret, so it goes into the per-invocation env and nowhere else.
+     */
+    resolveScreenEnv?: (project: Project, entry: AppBuilderComponentCatalogEntry) => Promise<Record<string, string>>;
+    /** Delete an entry's screen key when the component is removed. */
+    forgetScreenKey?: (project: Project, entry: AppBuilderComponentCatalogEntry) => Promise<void>;
     /**
      * Install + associate an app-management lifecycle app after its deploy
      * (appManagementInstaller). Deploy stays green when this fails — the app is
@@ -453,7 +462,9 @@ function integrationOutcome(
         status: 'deployed',
         ...identityOf(entry),
         name: displayName,
-        url: data?.url,
+        // A component with its own screen is opened at that screen, not at
+        // whichever action happened to be listed first.
+        url: deriveScreenUrl(entry, data?.deployedUrls) ?? data?.url,
         deployedUrls: data?.deployedUrls,
         lastDeployed: new Date().toISOString(),
         providesEnvVars: deriveProvidedValues(entry, data?.deployedUrls),
@@ -566,6 +577,9 @@ async function dispatchDeploy(
     // credentials below do. Catalog app repos ship no `.env` by design.
     const inputs = resolveDeployInputs(project, entry);
     let extraEnv: Record<string, string> = { ...inputs };
+    if (deps.resolveScreenEnv) {
+        extraEnv = { ...extraEnv, ...(await deps.resolveScreenEnv(project, entry)) };
+    }
     // App Management apps authenticate their actions with the workspace S2S
     // credential, taken as deploy-time env inputs. Resolved here — the one
     // kind-dispatched seam — so add and redeploy cannot drift on it. A resolve
@@ -1168,6 +1182,12 @@ export async function removeAppBuilderComponent(
         project.componentConfigs = cleared.componentConfigs;
     }
     await deps.saveProject(cleared);
+    // The screen key goes with the component: nothing reads it again, and a
+    // secret left in SecretStorage is one nobody owns.
+    const removedEntry = deps.catalog.find((entry) => entry.id === id);
+    if (removedEntry && deps.forgetScreenKey) {
+        await deps.forgetScreenKey(project, removedEntry);
+    }
     // The inverse of the add, and it has always been broken the same way:
     // remove the last App Builder component and its skills stayed forever.
     await refreshBundleQuietly(cleared, deps, 'remove');

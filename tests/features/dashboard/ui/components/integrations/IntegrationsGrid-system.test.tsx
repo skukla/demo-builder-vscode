@@ -46,9 +46,7 @@ describe('IntegrationsGrid — the ERP verbs', () => {
 
         await user.click(within(panel).getByRole('button', { name: /^open erp$/i }));
 
-        expect(getClient().postMessage).toHaveBeenCalledWith('openLiveSite', {
-            url: 'https://ns.adobeio-static.net/index.html',
-        });
+        expect(getClient().postMessage).toHaveBeenCalledWith('openErpScreen', { id: 'erp-integration' });
     });
 
     it("the flyout's second section names the ERP and its screen link opens it", async () => {
@@ -59,9 +57,7 @@ describe('IntegrationsGrid — the ERP verbs', () => {
         expect(within(panel).getByTestId('system-section')).toHaveTextContent('Nordwind');
         await user.click(within(panel).getByRole('link', { name: 'Open Nordwind' }));
 
-        expect(getClient().postMessage).toHaveBeenCalledWith('openLiveSite', {
-            url: 'https://ns.adobeio-static.net/index.html',
-        });
+        expect(getClient().postMessage).toHaveBeenCalledWith('openErpScreen', { id: 'erp-integration' });
     });
 
     it("Redeploy ERP posts the ERP's OWN id", async () => {

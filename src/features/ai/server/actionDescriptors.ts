@@ -318,6 +318,23 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         },
     },
     {
+        tool: 'open_erp_screen',
+        needsAuth: false,
+        // NOT read-only: it opens a browser window, same as open_url.
+        readOnly: false,
+        description:
+            "Open the ERP's own screen (products, partners, pricing, orders, events) in a private " +
+            'browser window, for the ERP that comes with an ERP integration. The key the screen ' +
+            'needs is added by the extension and never returned. Takes the integration id. ' +
+            'Requires confirm:true — it takes over the screen; ask the user first.',
+        map: dashboardHandlers,
+        type: 'openErpScreen',
+        confirm: true,
+        inputSchema: {
+            id: z.string().describe('The ERP integration id (from get_project)'),
+        },
+    },
+    {
         tool: 'stop_demo',
         needsAuth: false,
         readOnly: false,

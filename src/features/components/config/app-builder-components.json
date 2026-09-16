@@ -67,7 +67,11 @@
         "repo": "demo-erp",
         "branch": "main"
       },
-      "nameFromEnvVar": "ERP_DISPLAY_NAME"
+      "nameFromEnvVar": "ERP_DISPLAY_NAME",
+      "screen": {
+        "action": "screen",
+        "keyEnvVar": "ERP_SCREEN_KEY"
+      }
     },
     {
       "id": "erp-integration",

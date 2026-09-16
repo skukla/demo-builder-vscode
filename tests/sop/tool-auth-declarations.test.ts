@@ -45,7 +45,7 @@ const EXPECTED: Record<string, number> = {
     dalive: 19,
     github: 10,
     commerce: 2,
-    none: 46,
+    none: 47,
 };
 
 /**
@@ -59,7 +59,7 @@ const EXPECTED: Record<string, number> = {
  * files. That counts text, not declarations, and was roughly double. The CONTROL below
  * caught it — which is the argument for having one.)
  */
-const EXPECTED_TOOLS = 112;
+const EXPECTED_TOOLS = 113;
 
 interface Declaration {
     name: string;
