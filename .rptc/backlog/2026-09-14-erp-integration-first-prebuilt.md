@@ -66,3 +66,4 @@ the flyout, the agent tools · 06 live acceptance on Bodea and docs.
 - 2026-09-16  fix(app-builder): an extension app's URLs come from its own config, so its Commerce install runs (`dd504124e`)
 - 2026-09-16  fix(dashboard): the ERP flyout no longer blanks the integrations surface (`09f724928`)
 - 2026-09-15  chore(backlog): record the scoping commit on AB-9 (`412c04544`)
+- 2026-09-16  test(app-builder): the declared-actions tests join their subject's suite; the ERP doc gains Sync records (`72b7c92fe`)
