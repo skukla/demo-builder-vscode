@@ -4,7 +4,7 @@ kind: feature
 area: ai
 needs: []
 value: high
-status: planned
+status: active
 ---
 
 # Demo Builder works with GitHub Copilot, and with Claude Code while it lasts
@@ -47,3 +47,10 @@ Two things break rather than degrade:
 ## Plan
 
 `.rptc/plans/copilot-first-agent-support/` — ten steps, hook safety first.
+
+## Shipped so far
+
+- 2026-09-16  feat(ai): one place names the agent (`90e62df19`)
+- 2026-09-16  refactor(ai): the generated bundle stops naming one agent (`5e1c551be`)
+- 2026-09-16  fix(ai): a guard hook decides for itself instead of trusting its matcher (`4a1c25119`)
+- 2026-09-16  docs(rptc): Copilot-first research, and the plan to serve both agents (`1da98b00c`)
