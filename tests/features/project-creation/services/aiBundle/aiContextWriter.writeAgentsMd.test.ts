@@ -342,18 +342,35 @@ describe('aiContextWriter', () => {
                 expect(result).toContain('Edge Delivery \\+ PaaS');
             });
 
-            it('includes Try asking Claude section for EDS projects', () => {
+            it('includes the Try asking section for EDS projects', () => {
                 const project = makeEdsProject();
                 const result = generateAgentsMd(project, STACKS);
 
-                expect(result).toContain('Try asking Claude');
+                expect(result).toContain('## Try asking');
             });
 
-            it('includes Try asking Claude section for headless projects', () => {
+            it('includes the Try asking section for headless projects', () => {
                 const project = makeHeadlessProject();
                 const result = generateAgentsMd(project, STACKS);
 
-                expect(result).toContain('Try asking Claude');
+                expect(result).toContain('## Try asking');
+            });
+
+            /**
+             * The bundle is read by whichever agent the SC uses — Claude Code, Copilot in
+             * VS Code, Copilot CLI. Instructions that name one of them are either wrong
+             * for the others or, worse, name a mechanism that does not exist there:
+             * `ToolSearch` is Claude Code's, and `mcp__server__tool` is how Claude names
+             * an MCP tool while Copilot writes `server-tool` (AI-9 step 02).
+             */
+            it('names no agent, and no agent-specific mechanism', () => {
+                for (const project of [makeEdsProject(), makeHeadlessProject()]) {
+                    const result = generateAgentsMd(project, STACKS);
+
+                    expect(result).not.toMatch(/\bClaude\b/);
+                    expect(result).not.toContain('ToolSearch');
+                    expect(result).not.toContain('mcp__');
+                }
             });
 
             it('includes the Adding Adobe API Access section for App Builder-adjacent projects', () => {

@@ -42,7 +42,7 @@
           },
           "command": {
             "type": "string",
-            "description": "Command Claude Code runs to start the MCP server."
+            "description": "Command the agent runs to start the MCP server."
           },
           "args": {
             "type": "array",

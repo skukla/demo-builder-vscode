@@ -1,7 +1,7 @@
 /**
  * AI Context Writer
  *
- * Generates the AGENTS.md project context file for AI agents (Claude Code, Cursor,
+ * Generates the AGENTS.md project context file for AI agents (Copilot, Claude Code, Cursor,
  * Codex, Copilot). Written into each project directory at creation time to give AI
  * agents full project context. Two CLAUDE.md pointer files (root + .claude/) defer
  * to AGENTS.md via Claude Code's `@AGENTS.md` import syntax.
@@ -26,7 +26,7 @@ import {
     buildPdpRouting,
     buildReportingStyle,
     buildStorefront,
-    buildTryAskingClaude,
+    buildTryAsking,
     buildToolServers,
 } from './agentsMdSections';
 import type { GeneratedFileWriter } from './generatedFileWriter';
@@ -72,7 +72,7 @@ export function generateAgentsMd(project: Project, stacksConfig: Stack[]): strin
     sections.push(buildAppBuilderIntegrations(project));
     sections.push(buildConsoleApiAccess(project));
     sections.push(buildToolServers(project));
-    sections.push(buildTryAskingClaude(project));
+    sections.push(buildTryAsking(project));
     sections.push(buildDocumentationRouting());
     sections.push(buildReportingStyle());
     sections.push(buildNotesForAgents(project));

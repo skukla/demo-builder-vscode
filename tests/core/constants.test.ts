@@ -125,7 +125,7 @@ describe('AI_CONTEXT_VERSION', () => {
     // since carried it, so an agent following the skill got "command not found".
     // The bump is what delivers the correction to projects that already have it.
     it('is 32 (the mesh deploy command in sync-changes is api-mesh, not api:mesh)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(32);
+        expect(AI_CONTEXT_VERSION).toBe(33);
     });
 });
 

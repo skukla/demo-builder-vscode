@@ -235,7 +235,12 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // exactly one file in the repo: this shipped template. An agent following it got
 // "command not found" in every project generated since. Found by reading every
 // document; the fix only reaches existing projects because of this bump.
-export const AI_CONTEXT_VERSION = 32;
+// v33 (2026-09-16): the bundle stops naming one agent. "Try asking Claude" became
+// "Try asking", and the paragraph telling the agent to reach for `ToolSearch` with an
+// `mcp__server__` prefix went: that is Claude Code's mechanism and Copilot spells an MCP
+// tool `server-tool`, so the instruction was wrong for the agent colleagues must now use
+// (AI-9 step 02). Existing projects only get the neutral text because of this bump.
+export const AI_CONTEXT_VERSION = 33;
 
 /**
  * Component IDs for standardized component instance access
