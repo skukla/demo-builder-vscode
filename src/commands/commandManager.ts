@@ -1,4 +1,5 @@
 import * as fsPromises from 'fs/promises';
+import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { ConfigureCommand } from './configure';
@@ -421,19 +422,21 @@ export class CommandManager {
             }
         });
 
-        // Global MCP registration (~/.claude.json) — explicit opt-in. The entry
-        // points at the proxy with no pinned socket, so it discovers a running
-        // extension window from any cwd (global ops like create_project work
-        // without an open project). Per-project .mcp.json remains the default.
+        // Global MCP registration — explicit opt-in. The entry points at the proxy
+        // with no pinned socket, so it discovers a running extension window from any
+        // cwd (global ops like create_project work without an open project). It is
+        // written for every agent that keeps a user-level config, because a machine
+        // can have both. Per-project .mcp.json remains the default.
         this.registerCommand('demoBuilder.registerGlobalMcp', async () => {
             try {
-                const configPath = await registerGlobalMcp(
+                const written = await registerGlobalMcp(
                     path.join(this.context.extensionPath, 'dist'),
                 );
-                this.logger.info(`[MCP] global registration written to ${configPath}`);
+                this.logger.info(`[MCP] global registration written to ${written.join(', ')}`);
+                const files = written.map((file) => file.replace(os.homedir(), '~')).join(' and ');
                 void vscode.window.showInformationMessage(
-                    'Demo Builder MCP registered globally in ~/.claude.json. ' +
-                        'Claude Code can now reach a running Demo Builder window from any directory.',
+                    `Demo Builder MCP registered globally in ${files}. ` +
+                        'Your agent can now reach a running Demo Builder window from any directory.',
                 );
             } catch (error) {
                 this.logger.error('[MCP] global registration failed', error as Error);

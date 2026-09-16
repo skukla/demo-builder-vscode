@@ -23,23 +23,31 @@ import * as fsPromises from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import { resolveNodePath } from './mcpConfigWriter';
+import { describeEngine, type AgentEngine } from '@/features/ai/engine/agentEngine';
+
+/** The engines that keep a user-level MCP config file, in the order they are written. */
+const FILE_BACKED_ENGINES: AgentEngine[] = ['claude-code', 'copilot-cli'];
+
+/** The user-level config paths for the given engines; an engine without one is skipped. */
+function configPathsFor(engines: AgentEngine[]): string[] {
+    const home = os.homedir();
+    return engines
+        .map((engine) => describeEngine(engine).globalMcpConfigPath)
+        .filter((relative): relative is string => relative !== undefined)
+        .map((relative) => path.join(home, relative));
+}
 
 /**
- * Register (or refresh) the global `demo-builder` MCP entry.
+ * Read-merge-write `mcpServers['demo-builder']` into one agent's user config.
  *
- * @param extensionDistPath Absolute path to the extension's `dist/` directory.
- * @param nodePath Node binary for the entry; resolved via `resolveNodePath`
- *                 when omitted (tests inject it to stay hermetic).
- * @returns The path of the config file written (for user-facing messaging).
- * @throws When `~/.claude.json` exists but is malformed — never overwrite a
- *         valid-but-unreadable user-curated config.
+ * The file belongs to the user and to their agent: everything else in it is
+ * preserved, and a file that exists but cannot be parsed is REFUSED rather than
+ * replaced with something valid-looking.
  */
-export async function registerGlobalMcp(
-    extensionDistPath: string,
-    nodePath?: string,
-): Promise<string> {
-    const configPath = path.join(os.homedir(), '.claude.json');
-
+async function upsertServerEntry(
+    configPath: string,
+    entry: Record<string, unknown>,
+): Promise<void> {
     let config: Record<string, unknown> = {};
     try {
         const raw = await fsPromises.readFile(configPath, 'utf-8');
@@ -47,7 +55,7 @@ export async function registerGlobalMcp(
             config = JSON.parse(raw) as Record<string, unknown>;
         } catch (err) {
             throw new Error(
-                `~/.claude.json is malformed — refusing to overwrite valid-but-unreadable ` +
+                `${configPath} is malformed — refusing to overwrite valid-but-unreadable ` +
                     `user config: ${err instanceof Error ? err.message : String(err)}`,
             );
         }
@@ -61,17 +69,48 @@ export async function registerGlobalMcp(
     if (!config.mcpServers || typeof config.mcpServers !== 'object') {
         config.mcpServers = {};
     }
+    (config.mcpServers as Record<string, unknown>)['demo-builder'] = entry;
 
+    // Copilot keeps its config in `~/.copilot/`, which may not exist yet.
+    await fsPromises.mkdir(path.dirname(configPath), { recursive: true });
+    await fsPromises.writeFile(configPath, JSON.stringify(config, null, 2), 'utf-8');
+}
+
+/**
+ * Register (or refresh) the global `demo-builder` MCP entry.
+ *
+ * Written for EVERY engine named that keeps a user-level config, because a machine
+ * can have both agents and "make the tools reachable" does not mean "from one of
+ * them". An engine with no such file (Copilot in VS Code, which takes its servers
+ * from the workspace file and from extensions) is skipped.
+ *
+ * @param extensionDistPath Absolute path to the extension's `dist/` directory.
+ * @param nodePath Node binary for the entry; resolved via `resolveNodePath`
+ *                 when omitted (tests inject it to stay hermetic).
+ * @param engines Which engines to register for; defaults to every file-backed one.
+ * @returns The paths written, in order (for user-facing messaging).
+ * @throws When a config file exists but is malformed — never overwrite a
+ *         valid-but-unreadable user-curated config.
+ */
+export async function registerGlobalMcp(
+    extensionDistPath: string,
+    nodePath?: string,
+    engines: AgentEngine[] = FILE_BACKED_ENGINES,
+): Promise<string[]> {
     const resolvedNode = nodePath ?? (await resolveNodePath());
     // Deliberately NO env: an explicit DEMO_BUILDER_MCP_SOCKET would pin the
     // global entry to one workspace; omitting it enables per-launch discovery.
-    (config.mcpServers as Record<string, unknown>)['demo-builder'] = {
+    const entry = {
         command: resolvedNode,
         args: [path.join(extensionDistPath, 'mcp-proxy.js')],
     };
 
-    await fsPromises.writeFile(configPath, JSON.stringify(config, null, 2), 'utf-8');
-    return configPath;
+    const written: string[] = [];
+    for (const configPath of configPathsFor(engines)) {
+        await upsertServerEntry(configPath, entry);
+        written.push(configPath);
+    }
+    return written;
 }
 
 /**
@@ -113,8 +152,23 @@ export async function refreshGlobalMcpIfPresent(
     extensionDistPath: string,
     nodePath?: string,
 ): Promise<boolean> {
-    const configPath = path.join(os.homedir(), '.claude.json');
+    // Every agent that keeps a user-level config can hold a stale entry, and an
+    // extension update invalidates all of them at once.
+    let repaired = false;
+    for (const configPath of configPathsFor(FILE_BACKED_ENGINES)) {
+        if (await refreshOneConfig(configPath, extensionDistPath, nodePath)) {
+            repaired = true;
+        }
+    }
+    return repaired;
+}
 
+/** The staleness check for one agent's config; see {@link refreshGlobalMcpIfPresent}. */
+async function refreshOneConfig(
+    configPath: string,
+    extensionDistPath: string,
+    nodePath?: string,
+): Promise<boolean> {
     let config: Record<string, unknown>;
     try {
         config = JSON.parse(await fsPromises.readFile(configPath, 'utf-8')) as Record<
@@ -135,7 +189,7 @@ export async function refreshGlobalMcpIfPresent(
     const expected = path.join(extensionDistPath, 'mcp-proxy.js');
     const argsCurrent = entry.args?.length === 1 && entry.args[0] === expected;
     if (!argsCurrent) {
-        await registerGlobalMcp(extensionDistPath, nodePath);
+        await repairEntry(configPath, extensionDistPath, nodePath);
         return true;
     }
 
@@ -147,10 +201,23 @@ export async function refreshGlobalMcpIfPresent(
         try {
             await fsPromises.access(command);
         } catch {
-            await registerGlobalMcp(extensionDistPath, nodePath);
+            await repairEntry(configPath, extensionDistPath, nodePath);
             return true;
         }
     }
 
     return false;
+}
+
+/** Rewrite one config's entry for this build (the repair half of the refresh). */
+async function repairEntry(
+    configPath: string,
+    extensionDistPath: string,
+    nodePath?: string,
+): Promise<void> {
+    const resolvedNode = nodePath ?? (await resolveNodePath());
+    await upsertServerEntry(configPath, {
+        command: resolvedNode,
+        args: [path.join(extensionDistPath, 'mcp-proxy.js')],
+    });
 }

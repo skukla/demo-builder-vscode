@@ -9,7 +9,7 @@
  *   navigate          — the sidebar's internal router
  *   signInAdobe       — the already-signed-in re-login offer
  *   signInDaLive      — success, failure, and the cancel that must stay silent
- *   registerGlobalMcp — a write to ~/.claude.json, and what it says when it fails
+ *   registerGlobalMcp — a write to each agent's user config, and what it says when it fails
  *   openComponent     — four guards over a component's local files
  */
 
@@ -301,14 +301,21 @@ describe('signInDaLive', () => {
 // =============================================================================
 
 describe('registerGlobalMcp', () => {
-    it('registers against the extension’s dist directory and confirms', async () => {
+    it('registers against the extension’s dist directory and names the files it wrote', async () => {
         const h = harness();
+        const os = require('os') as { homedir: () => string };
+        mockRegisterGlobalMcp.mockResolvedValue([
+            `${os.homedir()}/.claude.json`,
+            `${os.homedir()}/.copilot/mcp-config.json`,
+        ]);
 
         await h.handlerFor('demoBuilder.registerGlobalMcp')();
 
         expect(mockRegisterGlobalMcp).toHaveBeenCalledWith('/test/extension/path/dist');
+        // Both agents, by the paths an SC would recognise — and no agent named, since
+        // whichever one they use is the one that just became reachable.
         expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
-            expect.stringContaining('~/.claude.json')
+            expect.stringContaining('~/.claude.json and ~/.copilot/mcp-config.json')
         );
     });
 

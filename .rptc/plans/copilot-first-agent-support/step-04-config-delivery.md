@@ -36,3 +36,25 @@ step 03, and the readers listed above.
 - Idempotent: a second activation does not duplicate entries in either file (the existing
   upsert tests cover the Claude half).
 - Live: `copilot` in a generated project lists the demo-builder tools.
+
+## Built (2026-09-16)
+
+- registerGlobalMcp(dist, node?, engines?) writes the demo-builder entry to every named engine's
+  user config — ~/.claude.json and ~/.copilot/mcp-config.json, both under mcpServers — creating
+  ~/.copilot/ when absent, and returns the paths written.
+- The read-merge-write is one helper, so the "preserve everything else, refuse a malformed file"
+  guarantee covers both files.
+- refreshGlobalMcpIfPresent checks every agent's config after an extension update.
+- The command's confirmation names the files rather than promising Claude Code.
+- Tests: both files written with the same entry, the directory created, a Copilot user's other
+  servers preserved, a malformed Copilot config refused untouched, an engine with no user config
+  writing nothing, and a stale Copilot entry repaired.
+
+## Still open in this step
+
+- The duplicate project config under .claude/ — no Copilot surface reads it, and its only readers
+  are our own inspectors. Decide keep-or-delete when step 09 moves those readers; deleting it is a
+  bundle change, so it rides an AI_CONTEXT_VERSION bump.
+- A .vscode/mcp.json is deliberately NOT written. VS Code 1.137 already discovers the workspace
+  .mcp.json (verified in its source), so a third copy would be a third thing to keep in step.
+  Revisit only if the live run in step 05 shows the trust prompt is a problem.
