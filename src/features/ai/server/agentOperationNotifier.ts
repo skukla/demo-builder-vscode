@@ -225,8 +225,11 @@ export function createAgentOperationNotifier(
                     // "Agent:" and nothing more — the old "Demo Builder — agent:"
                     // prefix plus the phase message wrapped every card onto two
                     // lines (owner feedback, 2026-08-27). The source is already
-                    // on the card ("Source: Adobe Demo Builder").
-                    title: `Agent: ${label(toolName)}…`,
+                    // on the card ("Source: Adobe Demo Builder"). No trailing
+                    // ellipsis: VS Code renders `title: message`, and the phase
+                    // messages carry their own, so one here read "…: Subscribing
+                    // Adobe APIs…" (owner, 2026-09-16).
+                    title: `Agent: ${label(toolName)}`,
                     cancellable: false,
                 },
                 async (progress) => {

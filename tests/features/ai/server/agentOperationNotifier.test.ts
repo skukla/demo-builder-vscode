@@ -90,6 +90,17 @@ describe('createAgentOperationNotifier', () => {
         expect(mockShowWarningMessage).not.toHaveBeenCalled();
     });
 
+    it('ends the title without an ellipsis, since VS Code appends ": <phase>" to it', async () => {
+        const notifier = createAgentOperationNotifier(logger);
+
+        await notifier('sync_storefront', async () => ({ ok: true }));
+
+        expect(mockWithProgress).toHaveBeenCalledWith(
+            expect.objectContaining({ title: 'Agent: Pushing the storefront code to GitHub' }),
+            expect.any(Function)
+        );
+    });
+
     it('lands a failure as a warning toast and rethrows', async () => {
         const notifier = createAgentOperationNotifier(logger);
 
