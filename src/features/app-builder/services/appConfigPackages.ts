@@ -223,3 +223,66 @@ export async function declaresIncludeImsCredentials(componentPath: string): Prom
     }
     return false;
 }
+
+/** One Runtime action an app declares: its package, its name, and whether it is a web action. */
+export interface DeclaredAction {
+    packageName: string;
+    actionName: string;
+    web: boolean;
+}
+
+/** `web: yes` parses as the STRING "yes" under YAML 1.2, so the flag is read by value. */
+function isWebAction(def: unknown): boolean {
+    if (!def || typeof def !== 'object') return false;
+    const { web, 'web-export': webExport } = def as { web?: unknown; 'web-export'?: unknown };
+    const flag = web ?? webExport;
+    if (flag === true) return true;
+    return typeof flag === 'string' && ['yes', 'true', 'raw'].includes(flag.toLowerCase());
+}
+
+/** A package's actions map, following one `$include` relative to the file that holds it. */
+async function actionsOf(pkg: unknown, baseDir: string): Promise<Record<string, unknown>> {
+    const actions = (pkg as { actions?: unknown } | undefined)?.actions;
+    if (!actions || typeof actions !== 'object') return {};
+    const include = (actions as { $include?: unknown }).$include;
+    if (typeof include !== 'string') return actions as Record<string, unknown>;
+    const included = await readYaml(path.join(baseDir, include));
+    return included && typeof included === 'object' ? (included as Record<string, unknown>) : {};
+}
+
+/** Every action under a packages map, resolved against `baseDir`. */
+async function actionsIn(packages: RuntimePackages | undefined, baseDir: string): Promise<DeclaredAction[]> {
+    const out: DeclaredAction[] = [];
+    for (const [packageName, pkg] of Object.entries(packages ?? {})) {
+        for (const [actionName, def] of Object.entries(await actionsOf(pkg, baseDir))) {
+            out.push({ packageName, actionName, web: isWebAction(def) });
+        }
+    }
+    return out;
+}
+
+/**
+ * Every Runtime action the app declares, in both layouts.
+ *
+ * This is how the deployed URLs of an EXTENSION-layout app are found: `aio app get-url`
+ * cannot read that layout (exit 2, "reading 'packages'"), and `aio app deploy` prints
+ * only the static SPA URL for it — measured on a real redeploy, 2026-09-16. The config
+ * is also what scopes the answer to THIS app, where a namespace listing would include
+ * every other app deployed beside it.
+ *
+ * An include's own `$include`s resolve against the directory of the file that names
+ * them, which is the aio convention (`./actions/x/actions.config.yaml` sits beside
+ * the ext.config.yaml, not at the repository root). Unreadable files declare nothing.
+ */
+export async function listDeclaredActions(componentPath: string): Promise<DeclaredAction[]> {
+    const doc = (await readYaml(appConfigPath(componentPath))) as AppConfigDoc | undefined;
+    const found = await actionsIn(doc?.application?.runtimeManifest?.packages, componentPath);
+    for (const entry of Object.values(doc?.extensions ?? {})) {
+        const include = (entry as { $include?: unknown } | undefined)?.$include;
+        if (typeof include !== 'string') continue;
+        const file = path.join(componentPath, include);
+        const ext = (await readYaml(file)) as { runtimeManifest?: { packages?: RuntimePackages } } | undefined;
+        found.push(...(await actionsIn(ext?.runtimeManifest?.packages, path.dirname(file))));
+    }
+    return found;
+}

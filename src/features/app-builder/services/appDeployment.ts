@@ -22,7 +22,8 @@ import * as crypto from 'crypto';
 import { promises as fsPromises } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { declaresIncludeImsCredentials } from './appConfigPackages';
+import { declaresIncludeImsCredentials, listDeclaredActions } from './appConfigPackages';
+import { urlPayload, urlsForDeclaredActions } from './deployedUrls';
 import { extractAioErrorDetail, fetchRuntimeCredentials } from './runtimeCredentials';
 import type { AppDeploymentResult } from './types';
 import { buildComponent } from '@/core/shell/buildComponent';
@@ -81,12 +82,7 @@ function flattenUrls(value: unknown, prefix = ''): Record<string, string> {
  * Never throws: an unparseable or unexpected shape yields empty url/deployedUrls.
  */
 function parseGetUrlOutput(stdout: string | undefined): AppDeploymentResult['data'] {
-    const parsed = parseJSON<Record<string, unknown>>(stdout ?? '');
-    const deployedUrls = flattenUrls(parsed);
-    // Prefer a "web" URL as primary; otherwise fall back to the first URL.
-    const webKey = Object.keys(deployedUrls).find((k) => k.startsWith('web/'));
-    const url = webKey ? deployedUrls[webKey] : (Object.values(deployedUrls)[0] ?? '');
-    return { url, deployedUrls };
+    return urlPayload(flattenUrls(parseJSON<Record<string, unknown>>(stdout ?? '')));
 }
 
 /**
@@ -337,6 +333,21 @@ async function deployAppComponentOnce(
             throw new Error(`App deployment failed: ${detail}`);
         }
 
+        // The URLs the app's own config declares, in the namespace it just deployed
+        // to. No process, and the only source that works for an extension-layout app;
+        // `get-url` runs only when the config names no actions.
+        const fromConfig = urlsForDeclaredActions(
+            runtimeCreds.namespace,
+            await listDeclaredActions(componentPath),
+        );
+        if (Object.keys(fromConfig).length > 0) {
+            logger.info(
+                `[App Builder] ${Object.keys(fromConfig).length} deployed URL(s) derived from the app config`,
+            );
+            return { success: true, data: urlPayload(fromConfig) };
+        }
+        logger.debug('[App Builder] the app config declares no actions; falling back to get-url');
+
         onProgress?.('Resolving app URL...', '');
 
         const urlResult = await commandManager.execute('aio app get-url --json', {
@@ -354,7 +365,11 @@ async function deployAppComponentOnce(
             return { success: true, data: { url: '', deployedUrls: {} } };
         }
 
-        return { success: true, data: parseGetUrlOutput(urlResult.stdout) };
+        const fromGetUrl = parseGetUrlOutput(urlResult.stdout);
+        logger.info(
+            `[App Builder] ${Object.keys(fromGetUrl?.deployedUrls ?? {}).length} deployed URL(s) read from get-url`,
+        );
+        return { success: true, data: fromGetUrl };
     } catch (error) {
         logger.error('[App Builder] Deployment failed', error as Error);
         return { success: false, error: toError(error).message };

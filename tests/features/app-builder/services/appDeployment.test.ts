@@ -52,6 +52,9 @@ jest.mock('@/features/app-builder/services/runtimeCredentials', () => ({
 const mockDeclaresIms = jest.fn().mockResolvedValue(false);
 jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
     declaresIncludeImsCredentials: (...args: unknown[]) => mockDeclaresIms(...args),
+    // No declared actions, so these suites exercise the get-url path the config
+    // derivation falls back to (see appDeployment-urlSources.test.ts).
+    listDeclaredActions: () => Promise.resolve([]),
 }));
 
 const DEPLOY_CMD = 'aio app deploy';

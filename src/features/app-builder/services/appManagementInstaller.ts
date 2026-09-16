@@ -10,10 +10,10 @@
  * hands-back to Commerce Admin when the call path fails.
  *
  * Input derivations (each measured, not assumed):
- * - Base URL: the `app-management` package's web-action URLs from
- *   `aio app get-url --json` (already persisted as `deployedUrls`), cut at the
- *   package segment — confirmed live 2026-08-27 (GET answered 401 at the
- *   predicted base).
+ * - Base URL: the `app-management` package's web-action URLs in the persisted
+ *   `deployedUrls` (derived from the app's config at deploy time — see
+ *   `deployedUrls.ts`), cut at the package segment — confirmed live 2026-08-27
+ *   (GET answered 401 at the predicted base).
  * - Commerce target: backend id → flavor (`adobe-commerce-accs` → `saas`,
  *   `adobe-commerce-paas` → `paas`); base URL = the backend's GraphQL endpoint
  *   with its trailing `/graphql` removed (the kit's own lib appends
@@ -81,7 +81,7 @@ export interface AppManagementInstallDeps {
  * The App Management API base from the deployed action URLs: any URL containing
  * the reserved `app-management` package segment, cut just after it.
  *
- * @param deployedUrls - the per-action URL map `aio app get-url --json` yielded
+ * @param deployedUrls - the app's persisted per-action URL map
  * @returns the base URL, or undefined when no app-management action deployed
  */
 export function deriveAppManagementBaseUrl(
