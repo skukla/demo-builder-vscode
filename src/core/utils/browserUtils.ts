@@ -4,14 +4,14 @@
  * Helpers for opening URLs in the system browser from the extension host.
  */
 
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import * as fsPromises from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import { promisify } from 'util';
 import * as vscode from 'vscode';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 /**
  * Open a URL in incognito mode (Chrome on macOS)
@@ -22,7 +22,9 @@ const execAsync = promisify(exec);
 export async function openInIncognito(url: string): Promise<boolean> {
     if (process.platform === 'darwin') {
         try {
-            await execAsync(`open -na "Google Chrome" --args --incognito "${url}"`);
+            // Arguments, never a shell string: a URL is data. Inside a quoted shell
+            // string, `$(…)` in a stored URL would run as a command.
+            await execFileAsync('open', ['-na', 'Google Chrome', '--args', '--incognito', url]);
             return true;
         } catch {
             // Chrome not available, fall back

@@ -801,7 +801,10 @@ export const handleOpenAdminPanel: MessageHandler<{ projectPath: string }> = asy
         return { success: false, error: 'Invalid URL', code: ErrorCode.CONFIG_INVALID };
     }
 
-    await vscode.env.openExternal(vscode.Uri.parse(url));
+    // A private window, like the live site: Commerce Admin rejects a request whose
+    // adobe.com cookies have grown too large ("400 Request Header Or Cookie Too
+    // Large"), and a normal profile collects them.
+    await openInIncognito(url);
     return { success: true };
 };
 

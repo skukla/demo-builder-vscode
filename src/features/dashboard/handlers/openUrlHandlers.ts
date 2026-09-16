@@ -162,7 +162,10 @@ export const handleOpenAdminPanel: MessageHandler = async (context) => {
 
     // No URL in the log — the stored value is user-supplied and may embed credentials.
     context.logger.debug('[Dashboard] Opening admin panel');
-    await vscode.env.openExternal(vscode.Uri.parse(url));
+    // A private window, like the live site: Commerce Admin rejects a request whose
+    // adobe.com cookies have grown too large ("400 Request Header Or Cookie Too
+    // Large"), and a normal profile collects them.
+    await openInIncognito(url);
 
     return { success: true };
 };

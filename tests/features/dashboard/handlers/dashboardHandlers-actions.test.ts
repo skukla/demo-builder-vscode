@@ -8,6 +8,11 @@
  */
 
 import './dashboardValidatorMocks';
+
+const mockOpenInIncognito = jest.fn().mockResolvedValue(true);
+jest.mock('@/core/utils/browserUtils', () => ({
+    openInIncognito: (...args: unknown[]) => mockOpenInIncognito(...args),
+}));
 import * as vscode from 'vscode';
 import {
     handleConfigure,
@@ -249,8 +254,9 @@ describe('Dashboard Action Handlers', () => {
             const result = await handleOpenAdminPanel(mockContext);
 
             expect(result).toEqual({ success: true });
-            expect(mockUriParse).toHaveBeenCalledWith(adminUrl);
-            expect(mockOpenExternal).toHaveBeenCalled();
+            // A private window: a normal profile's adobe.com cookies overflow the
+            // Admin's header limit.
+            expect(mockOpenInIncognito).toHaveBeenCalledWith(adminUrl);
         });
 
         it('should return an error and not open the browser when the URL is invalid', async () => {
@@ -266,7 +272,7 @@ describe('Dashboard Action Handlers', () => {
                 error: 'Invalid URL',
                 code: ErrorCode.CONFIG_INVALID,
             });
-            expect(mockOpenExternal).not.toHaveBeenCalled();
+            expect(mockOpenInIncognito).not.toHaveBeenCalled();
             expect(mockContext.logger.error).toHaveBeenCalled();
         });
 
