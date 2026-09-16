@@ -76,3 +76,7 @@ Where the settings live is the open design question:
   Builder with a key) should share any navigation. They are separate apps.
 
 Filed 2026-09-16.
+
+## Shipped so far
+
+- 2026-09-16  docs(backlog): AB-10 — an ERP section in Commerce Admin for the integration's settings (`969cd57df`)

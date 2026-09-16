@@ -62,3 +62,7 @@ the flyout, the agent tools · 06 live acceptance on Bodea and docs.
 - 2026-09-15  Merge develop into feature/erp-integration (`a99be82a5`)
 - 2026-09-15  fix(app-builder): a project subscribes only the APIs of what it has (`6e3d4b5b7`)
 - 2026-09-15  chore(backlog): record the commits that reached AB-9 and PL-55 (`92ec7ecb3`)
+- 2026-09-16  feat(app-builder): Open ERP opens the ERP's own screen, with a key only the extension holds (`09fd7af68`)
+- 2026-09-16  fix(app-builder): an extension app's URLs come from its own config, so its Commerce install runs (`dd504124e`)
+- 2026-09-16  fix(dashboard): the ERP flyout no longer blanks the integrations surface (`09f724928`)
+- 2026-09-15  chore(backlog): record the scoping commit on AB-9 (`412c04544`)
