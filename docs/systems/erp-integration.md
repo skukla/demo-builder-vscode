@@ -46,6 +46,16 @@ blocks and ERP order numbers the ERP wrote into Commerce) and **Redeploy ERP**. 
 integration's **Open Commerce Admin** opens the Admin UI SDK screen. Remove on the card names
 both.
 
+## Filling the ERP
+
+**Sync records** copies Commerce's products and companies into the ERP. It is on the
+ERP's own Settings page (kept off the Dashboard a prospect sees) and on the integration's
+Commerce Admin page, beside Reset. Both call the integration's
+`erp/mirror?background=true`, which starts the non-web worker `erp/mirror-job` and answers
+202 at once, because a web request is cut off after one minute. The pages then watch the
+ERP's last-import time, which only a full import moves (the integration's every-minute
+partner refresh does not). **Reset ERP records** still mirrors inline after its wipe.
+
 ## Why the ERP's screen is served by an action
 
 Both apps deploy into the same Runtime namespace, and a namespace has one static site.
