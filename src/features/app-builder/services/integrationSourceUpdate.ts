@@ -34,8 +34,24 @@ export interface SourceUpdateResult {
  */
 const SAFE_BRANCH = /^[A-Za-z0-9._/][A-Za-z0-9._/-]*$/;
 
-/** Files the tooling rewrites by itself (see the module note). */
-const TOOLING_OWNED = [/^package-lock\.json$/, /(^|\/)\.generated\//, /(^|\/)ext\.config\.yaml$/];
+/**
+ * Files the tooling rewrites by itself (see the module note), so a change to one
+ * is ours and not the SC's.
+ *
+ * `app.config.yaml` joined them on 2026-09-17, found on a live update: the
+ * deploy path isolates a standalone app's Runtime packages by rewriting that
+ * file (`appConfigPackages`), which re-serialises the YAML and drops its
+ * comments. Every ERP clone therefore carries a modified `app.config.yaml` the
+ * moment it is deployed, and the next update would refuse with "The integration
+ * folder has changes of its own (app.config.yaml)" — our own edit, blamed on the
+ * SC, on a file the SC has no reason to touch.
+ */
+const TOOLING_OWNED = [
+    /^package-lock\.json$/,
+    /(^|\/)\.generated\//,
+    /(^|\/)ext\.config\.yaml$/,
+    /(^|\/)app\.config\.yaml$/,
+];
 
 const MAX_NAMED_FILES = 5;
 const SHORT_SHA = 7;

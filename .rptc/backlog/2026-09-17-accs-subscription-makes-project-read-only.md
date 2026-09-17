@@ -23,6 +23,14 @@ credential or anything else.
   all `Default - <Commerce tenant id>`, including Bodea's own tenant.
 - The owner's role in the org is Developer. Adobe's Console FAQ: a project is read-only
   for a user who lacks developer access to any product profile its credentials use.
+- **It blocks the extension's own work, not just Console housekeeping.** Updating the ERP
+  integration on Bodea failed on 2026-09-17 at the step that reads the workspace
+  credential's secrets, before any deploy: `403 [CoreConsoleAPISDK:ERROR_GET_INTEGRATION_SECRETS]
+  … "The user … doesn't have the matching licenses for this application"`. The update had
+  already fast-forwarded the clone, nothing was deployed, and the card offers Update again —
+  so it resumes once the access is granted. Deploy, redeploy, add and remove read the same
+  credential, so they are blocked the same way; nothing in the extension says so in plain
+  words yet (see "What the fix needs").
 
 ## Cause
 

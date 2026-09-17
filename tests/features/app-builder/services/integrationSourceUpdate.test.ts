@@ -73,6 +73,9 @@ function buildFixture(): Fixture {
     write(fx.upstream, 'package-lock.json', '{"lock":1}\n');
     write(fx.upstream, 'src/commerce-extensibility-1/.generated/app.commerce.manifest.json', '{"v":"0.1.0"}\n');
     write(fx.upstream, 'src/commerce-extensibility-1/ext.config.yaml', 'hooks: {}\n');
+    // A standalone app's root config; the deploy path rewrites it to isolate the
+    // app's Runtime packages, so every deployed ERP clone carries a changed one.
+    write(fx.upstream, 'app.config.yaml', 'application:\n  web: no-static-site\n');
     git(fx, fx.upstream, 'add', '-A');
     git(fx, fx.upstream, 'commit', '-q', '-m', 'first');
     git(fx, fx.upstream, 'remote', 'add', 'origin', fx.origin);
@@ -159,6 +162,10 @@ describe('fastForwardClone', () => {
         write(fx.clone, 'package-lock.json', '{"lock":"npm rewrote this"}\n');
         write(fx.clone, 'src/commerce-extensibility-1/.generated/app.commerce.manifest.json', '{"v":"regenerated"}\n');
         write(fx.clone, 'src/commerce-extensibility-1/ext.config.yaml', 'hooks: {regenerated: true}\n');
+        // What `appConfigPackages` leaves behind: the same YAML re-serialised,
+        // comments gone. Found on a live update of the Bodea ERP (2026-09-17),
+        // where it refused as "changes of its own" — our edit, blamed on the SC.
+        write(fx.clone, 'app.config.yaml', 'application:\n  web: no-static-site\n  # comments dropped\n');
 
         const result = await fastForwardClone(fx.clone, 'main', realGit(fx));
 
