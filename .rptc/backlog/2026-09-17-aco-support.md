@@ -69,3 +69,7 @@ waits on it, and `EDS-1` (multisite) specifies ACO catalog views per locale.
 5. Integrations that write catalog data (the ERP's prices, `AB-14`) told whether the
    project uses ACO.
 6. Reversal for everything above, and the dead code either wired or deleted.
+
+## Shipped so far
+
+- 2026-09-17  docs(backlog): PL-60 finishes ACO support; AB-14 asks where ERP prices go on an ACO storefront (`599c3d9de`)
