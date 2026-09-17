@@ -85,7 +85,47 @@ workspace named `zz-erp-spike` in Bodea's Adobe project, and are undone at the e
 7. **Remove everything:** undeploy, remove event registrations, delete `zz-erp-spike`, and
    confirm the workspace, its Runtime namespace and its registrations are gone.
 
+## Findings
+
+### Steps 1 and 2, local (2026-09-17)
+
+Run in a scratch copy of `commerce-erp-integration` at `7804f3e` (no `.env`, no `.git`;
+its installed packages shared), with `metadata.id` changed to
+`process.env.ERP_INTEGRATION_APP_ID ?? "commerce-erp-integration"`, lib-app 2.0.0, Node 24.
+The real repository was not touched.
+
+- **The id can vary per build.** `ERP_INTEGRATION_APP_ID=erp-integration-spike` with the
+  `pre-app-build` hook wrote `"id": "erp-integration-spike"` into
+  `.generated/app.commerce.manifest.json`, and nothing else changed. The running actions
+  read that manifest (`.generated/app.commerce.config.js` imports it), so the id is fixed
+  at build time: an environment variable on the deploy is enough.
+- **Everything Commerce-facing is named from it** (read in lib-app's `dist/cjs`):
+  - webhooks: batch and hook names get an id prefix (`buildWebhookIdPrefix`), and install,
+    upgrade and removal only touch webhooks carrying that prefix (`isWebhookOwnedByApp`);
+  - event names: `<id>.<event>`, with the id's hyphens turned to underscores
+    (`getNamespacedEvent`, `utils` line 117);
+  - event provider instance ids: `<id>-<provider>-<workspace id>` (`generateInstanceId`,
+    `utils` line 59; the older `<id>-<provider>` form is marked deprecated).
+  So two copies with different ids should not collide on one Commerce by name. That is
+  what step 6 would confirm live.
+- **The id cannot change on an installed app.** The installer refuses an upgrade whose id
+  differs from the installed one ("The application ID (metadata.id) cannot be changed during
+  an upgrade"). Demo Builder would choose a copy's id at its first install and keep it on
+  the project's record for every later deploy.
+- **Id rules:** letters, digits and hyphens; at most 100 characters.
+- **Not named from the id:** the Admin menu id (`adminUi.menu.id`, `erp_integration`, a
+  literal in `app.commerce.config.ts`). It can be varied the same way; whether Commerce
+  requires it to be unique across apps is not known from the code. The business settings
+  live in the workspace's own state (lib-config), so separate workspaces keep them apart
+  (inferred, not checked live).
+- **What this does not settle:** two copies both answering the same Commerce webhook (say,
+  two ERPs pricing one cart) is a routing question for AB-16, not a naming one.
+
 ## Done when
 
 The three open points each have a recorded answer with its evidence, and AB-15 and AB-16
 are rewritten around the answer (or left as they are, with the reason).
+
+## Shipped so far
+
+- 2026-09-17  docs(backlog): AB-17 asks whether each system and integration gets its own workspace (`f4a0db91f`)
