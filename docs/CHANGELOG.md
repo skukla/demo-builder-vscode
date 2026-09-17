@@ -47,6 +47,7 @@ referenced. Both are fixed, and the whole cascade is now declared and enforced.
 - **Prerequisite and component lookups are cached per session**, not rebuilt on every message.
 
 ### Added
+- **"Sign in to GitHub" in the command palette.** GitHub sign-in is VS Code's, and Demo Builder adopted it silently, so the only way to fix a stale one was the project wizard's Storefront step. Now `Demo Builder: Sign in to GitHub` signs in from anywhere: it says who you are already signed in as and offers to sign in again, and when the stored token is one GitHub no longer accepts it goes straight to a fresh sign-in. Adobe and DA.live already had theirs.
 - **Eventing.** I/O Events provider lifecycle — create, list and delete, scoped to the project — with a new Eventing section on the dashboard.
 - **App Builder removal verifies the Runtime namespace** afterwards, so a removal that left code deployed is reported rather than claimed as success.
 - **Adobe org-services fetch retries once** on a fast failure.

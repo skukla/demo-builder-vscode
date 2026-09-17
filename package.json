@@ -151,6 +151,11 @@
                 "command": "demoBuilder.signInDaLive",
                 "title": "Sign in to DA.live",
                 "category": "Demo Builder"
+            },
+            {
+                "command": "demoBuilder.signInGitHub",
+                "title": "Sign in to GitHub",
+                "category": "Demo Builder"
             }
         ],
         "configuration": [

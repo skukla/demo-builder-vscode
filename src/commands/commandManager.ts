@@ -421,6 +421,45 @@ export class CommandManager {
             }
         });
 
+        // Sign in to GitHub. GitHub auth is VS Code's, adopted silently when a
+        // GitHub operation runs, so the only doors were the wizard's Storefront
+        // step and that adoption — and neither helps when the stored token has
+        // gone stale (2026-09-17: a colleague's public demo refused to import
+        // because the token behind the window had expired). Same shape as
+        // signInAdobe: state first, then an explicit "Sign in again" rather
+        // than silently re-running a sign-in that would change nothing.
+        this.registerCommand('demoBuilder.signInGitHub', async () => {
+            const { getGitHubServices } = await import('@/features/eds/handlers/edsHelpers');
+            const { signInToGitHub } = await import('@/features/eds/handlers/edsGitHubHandlers');
+            const { tokenService } = getGitHubServices(this.context.secrets);
+            // Reading must not delete the credential it reports on.
+            const current = await tokenService.validateToken({ clearInvalid: false });
+            let force = false;
+            if (current.valid) {
+                const pick = await vscode.window.showInformationMessage(
+                    `Already signed in to GitHub${current.user?.login ? ` as ${current.user.login}` : ''}.`,
+                    'Sign in again',
+                    'Cancel',
+                );
+                if (pick !== 'Sign in again') return;
+                force = true;
+            }
+            const outcome = await vscode.window.withProgress(
+                { location: vscode.ProgressLocation.Notification, title: 'Signing in to GitHub' },
+                () => signInToGitHub(tokenService, this.logger, { force }),
+            );
+            if ('login' in outcome) {
+                vscode.window.setStatusBarMessage(`$(check) Signed in to GitHub as ${outcome.login}`, 5000);
+                return;
+            }
+            // A cancel is the SC's own choice; only a failure is worth a warning.
+            if (!outcome.cancelled) {
+                void vscode.window.showWarningMessage(
+                    `GitHub sign-in did not complete: ${outcome.error}. Check the Debug Logs output channel.`,
+                );
+            }
+        });
+
         // Global MCP registration (~/.claude.json) — explicit opt-in. The entry
         // points at the proxy with no pinned socket, so it discovers a running
         // extension window from any cwd (global ops like create_project work

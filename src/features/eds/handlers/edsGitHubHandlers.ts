@@ -20,6 +20,7 @@ import { createRepoFromSource } from './storefrontSetup/storefrontSetupPhase1';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { TemplateSyncService } from '@/features/updates/services/templateSyncService';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
+import type { Logger } from '@/types/logger';
 import type { GitHubAuthStatusPayload, GitHubOAuthErrorPayload } from '@/types/webviewPayloads';
 
 // ==========================================================
@@ -106,84 +107,89 @@ export async function handleCheckGitHubAuth(
 }
 
 /**
- * Initiate GitHub OAuth flow
+ * Sign in to GitHub through VS Code's provider, recovering from a session that
+ * VS Code still caches but GitHub no longer accepts.
  *
- * Uses VS Code's built-in GitHub authentication provider for a seamless experience.
- * The token is stored in GitHubTokenService for subsequent API calls.
+ * ONE sign-in path, called by the webview handler below and by the
+ * "Sign in to GitHub" palette command. A second copy would drift, and the
+ * drifting one would be whichever nobody watched.
+ *
+ * @param tokenService - stores the token every GitHub call then uses
+ * @param logger - receives each step
+ * @param options - `force` skips straight to a fresh browser sign-in
+ * @returns the GitHub login, or why there is none
+ */
+export async function signInToGitHub(
+    tokenService: GitHubTokenService,
+    logger: Logger,
+    options: { force?: boolean } = {},
+): Promise<{ login: string } | { error: string; cancelled?: boolean }> {
+    const reauth = 'Your previous GitHub authorization is no longer valid. Re-authorize Demo Builder to continue.';
+    let session = options.force
+        ? await acquireGitHubSession(tokenService, { forceNew: true, reauthDetail: reauth })
+        : await acquireGitHubSession(tokenService, { forceNew: false });
+    if (!session) {
+        logger.debug('[EDS] GitHub auth cancelled by user');
+        return { error: 'Authentication cancelled', cancelled: true };
+    }
+    logger.debug('[EDS] GitHub session obtained for:', session.account.label);
+
+    if (!options.force) {
+        // The common failure here isn't a real auth problem — it's VS Code
+        // returning a stale cached session for a token revoked since (the OAuth
+        // app cleared in GitHub Settings, a password reset, an org de-authorizing
+        // it). `forceNewSession` invalidates the cache and mints a working token.
+        const validation = await tokenService.validateToken();
+        if (!validation.valid) {
+            logger.warn(
+                '[EDS] Initial GitHub token failed validation — likely stale cached VS Code session; forcing fresh OAuth',
+            );
+            // `validateToken` clears the stored token on 401 as a side effect.
+            // Explicit here too: a future refactor of it must not break the
+            // precondition that the store is empty before the re-auth writes.
+            await tokenService.clearToken();
+            session = await acquireGitHubSession(tokenService, { forceNew: true, reauthDetail: reauth });
+            if (!session) {
+                logger.debug('[EDS] GitHub re-authorization cancelled by user');
+                return { error: 'Re-authorization cancelled', cancelled: true };
+            }
+            logger.info('[EDS] GitHub re-authorization succeeded for:', session.account.label);
+        }
+    }
+
+    // session.account.label is the GitHub login. Do NOT re-validate after a
+    // forced re-auth — the token was just minted; a transient 401 here would
+    // falsely flag a working session as broken and re-prompt indefinitely.
+    return { login: session.account.label };
+}
+
+/**
+ * Handle GitHub OAuth authentication for the wizard.
+ *
+ * Signs in through `signInToGitHub`, then pushes the identity and the org
+ * memberships the namespace picker needs.
  *
  * @param context - Handler context with logging and messaging
  * @returns Success with user info or error
  */
-export async function handleGitHubOAuth(
-    context: HandlerContext,
-): Promise<HandlerResponse> {
+export async function handleGitHubOAuth(context: HandlerContext): Promise<HandlerResponse> {
     try {
         context.logger.debug('[EDS] Starting GitHub OAuth via VS Code authentication');
         const { tokenService } = getGitHubServices(context.context.secrets);
-
-        // First attempt: let VS Code return its cached session if one exists,
-        // or prompt fresh auth via createIfNone. This is the fast path for
-        // the common case.
-        let session = await acquireGitHubSession(tokenService, { forceNew: false });
-        if (!session) {
-            context.logger.debug('[EDS] GitHub auth cancelled by user');
+        const outcome = await signInToGitHub(tokenService, context.logger);
+        if ('error' in outcome) {
             await context.sendMessage('github-oauth-error', {
-                error: 'Authentication cancelled',
+                error: outcome.error,
             } satisfies GitHubOAuthErrorPayload);
-            return { success: false, error: 'Authentication cancelled' };
-        }
-        context.logger.debug('[EDS] GitHub session obtained for:', session.account.label);
-
-        // Sanity-check the token. The common failure here isn't a real auth
-        // problem — it's VS Code returning a stale cached session for a
-        // token that's been revoked since (user cleared the OAuth app in
-        // GitHub Settings, password reset, OAuth app de-authorized at the
-        // org level, etc.). In that case, `forceNewSession` invalidates the
-        // cache and prompts a fresh browser-side OAuth flow that mints a
-        // working token. See the `validateToken` side-effect note below.
-        const validation = await tokenService.validateToken();
-        if (!validation.valid) {
-            context.logger.warn(
-                '[EDS] Initial GitHub token failed validation — likely stale cached VS Code session; forcing fresh OAuth',
-            );
-
-            // `validateToken` clears the stored token on 401 as a side effect.
-            // Defensive explicit clear here as well: future refactors of
-            // `validateToken` mustn't break the precondition that our store is
-            // empty before the forced re-auth writes a new token.
-            await tokenService.clearToken();
-
-            session = await acquireGitHubSession(tokenService, {
-                forceNew: true,
-                reauthDetail: 'Your previous GitHub authorization is no longer valid. Re-authorize Demo Builder to continue.',
-            });
-            if (!session) {
-                context.logger.debug('[EDS] GitHub re-authorization cancelled by user');
-                await context.sendMessage('github-oauth-error', {
-                    error: 'Re-authorization cancelled',
-                } satisfies GitHubOAuthErrorPayload);
-                return { success: false, error: 'Re-authorization cancelled' };
-            }
-            context.logger.info('[EDS] GitHub re-authorization succeeded for:', session.account.label);
+            return { success: false, error: outcome.error };
         }
 
-        // session.account.label is the GitHub login. Do NOT re-validate after a
-        // forced re-auth — the token was just minted; a transient 401 here
-        // would falsely flag a working session as broken and re-prompt
-        // indefinitely. Trust VS Code's session as the source of truth for the
-        // user identity; richer profile fields are fetched lazily by
-        // downstream code that needs them.
-        const user = {
-            login: session.account.label,
-            email: null,
-            name: null,
-            avatarUrl: null,
-        };
+        // Richer profile fields are fetched lazily by downstream code that needs them.
+        const user = { login: outcome.login, email: null, name: null, avatarUrl: null };
 
-        // Fetch the user's GitHub org memberships for the wizard's namespace
-        // picker. read:org is already in GITHUB_SCOPES, so no extra auth
-        // prompt fires. Failures degrade to "personal account only" — see
-        // githubTokenService.getUserOrgs for the contract.
+        // The user's GitHub org memberships, for the wizard's namespace picker.
+        // read:org is already in GITHUB_SCOPES, so no extra prompt fires;
+        // failures degrade to "personal account only" (getUserOrgs' contract).
         const orgs = await tokenService.getUserOrgs();
         context.logger.debug(
             `[EDS] GitHub OAuth completed for user: ${user.login}, orgs: ${orgs.join(', ') || '(none)'}`,
