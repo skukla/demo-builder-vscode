@@ -3,7 +3,7 @@ id: AB-17
 kind: question
 area: app-builder
 parent: AB-9
-needs: []
+needs: [AB-18]
 value: high
 status: open
 ---
@@ -207,13 +207,48 @@ What this means for the design:
 - The ERP was undeployed (`aio app undeploy`): the `zzerpspike` namespace lists no
   packages and no triggers, and its `health` address answers 404.
 - **The workspace could not be deleted.** `aio-lib-console` `deleteWorkspace` answered
-  `400 "Read-only project cannot be deleted"`. AB-2's 2026-08-27 spike deleted a workspace
-  the same way in another project, so this project refuses it; why (Bodea's project was
-  created from a template, perhaps) is not known. **A workspace per integration is only
-  reversible if Demo Builder can delete the workspace**, so this has to be settled first:
-  which projects allow it, and whether projects Demo Builder creates do. The empty
-  `zzerpspike` workspace (a credential with five APIs, no code, no providers) is still in
-  Bodea's project, waiting for the owner.
+  `400 "Read-only project cannot be deleted"`. **A workspace per integration is only
+  reversible if Demo Builder can delete the workspace**, so this has to be settled first.
+  The empty `zzerpspike` workspace (a credential with five APIs, no code, no providers) is
+  still in Bodea's project.
+
+### Why the delete fails (investigated 2026-09-17, cause not yet confirmed)
+
+- **Same project, different day.** AB-2's 2026-08-27 delete that worked
+  (`KitSpikeJ0re`, HTTP 200) was in this same project (`4566206088345738527`, read from
+  that session's script). So the project became read-only after that.
+- A workspace `ErpSpikeq3e9`, created 2026-09-14 for the ERP database spike and described
+  "Deleted by the agent", is also still in the project. Whether that session tried to
+  delete it was not found (its transcript is not in this project's logs).
+- **The Console labels the project "Read Only"** in the project list (the label gives no
+  reason; the project overview did not load). The project record is an App Builder project
+  (`type: jaeger`) created by the owner's user, so not auto-generated. Whether anything in
+  it was ever submitted for review was not checked.
+- **The owner's role in the org is Developer**, not System Administrator (the Console's
+  org switcher shows "Developer | Adobe Demo System").
+- **Confirmed by the Console (owner, same day):** the project overview says "This project
+  is read only due to missing developer permissions" and lists **38 product profiles** the
+  owner is not a developer on, all named `Default - <Commerce tenant id>`, including Bodea's
+  own tenant (`Default - UoGYsHrcxMyeoVd2zUktZi`). The Stage workspace shows the same.
+- **Likely source, not yet confirmed:** `17759e61f` (2026-09-16) made the ERP integration's
+  credential subscribe to `ACCS-REST-API` with the one product entry the org catalog
+  offered (`{ op: 'add', id, productId }`). Stage was last modified that day. A product
+  entry that stands for every tenant's default profile would attach all 38. The workspace
+  download does not list profiles and the API page in the Console did not load, so an org
+  admin's view of the Stage credential is what confirms it.
+- **What the sources say makes a project read-only** (Adobe's Developer Console FAQ; the
+  internal sources consulted agree): a Developer-role user who lacks developer access to
+  any product profile used by the project's credentials; a published App Builder app; a
+  prerelease API the user has lost access to; an auto-generated project. Only the first
+  fits: since 2026-08-27 the Stage credential has been subscribed to more services
+  (Commerce REST, Commerce eventing, App Builder Data Services), and its token carries 129
+  product contexts. Which profile the owner lacks is visible only to an org admin.
+- **What it means for the extension.** SCs are usually Developers in shared demo orgs like
+  this one. If a project turns read-only for them as soon as one of its credentials uses a
+  profile they are not a developer on, workspace teardown (and any other project edit)
+  fails for them too. Settling this needs an org admin's view of the project and the
+  owner's developer access, or a repeat of create-subscribe-delete in an org where the
+  owner is System Administrator.
 - The downloaded workspace configs, the scratch copies and the helper scripts were deleted
   from the session scratchpad.
 
