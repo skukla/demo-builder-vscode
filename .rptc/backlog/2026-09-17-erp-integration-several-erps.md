@@ -3,7 +3,7 @@ id: AB-16
 kind: feature
 area: app-builder
 parent: AB-9
-needs: []
+needs: [AB-17]
 value: med
 status: backlog
 ---
@@ -46,6 +46,12 @@ looks.
    removing the integration removes all of its ERPs.
 5. **Cards:** the integration's Uses row lists every ERP (the stored link is already a list,
    `.rptc/plans/erp-linked-tiles/overview.md`).
+
+## Waiting on AB-17
+
+Whether each ERP (and each integration) gets its own Adobe workspace. If it does, item 1
+above comes free (no renaming inside one workspace), and "one integration per ERP" may
+become possible too.
 
 ## Owner decisions before planning
 

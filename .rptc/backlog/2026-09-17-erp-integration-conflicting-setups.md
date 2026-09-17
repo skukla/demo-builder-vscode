@@ -44,6 +44,9 @@ admit.
 Making the setups coexist (per-project names for packages, collections, webhooks and
 subscriptions) is a larger change; do it only when a demo needs it.
 
+AB-17 asks whether systems get their own workspaces; if so, the first case goes away and a
+per-copy app id could make the second a fix rather than a refusal.
+
 ## Done when
 
 Both setups are refused before deploy with a message naming the other project, with tests,
