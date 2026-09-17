@@ -100,3 +100,4 @@ shared storefront is one of its parts. The decision of record, with the parts ta
 - 2026-09-11  chore(backlog): log the program's first commit on EDS-13 (`92b75ccfc`)
 - 2026-09-17  fix(eds): read a colleague's PUBLIC demo without a credential, and say what really failed (`10a3562ba`)
 - 2026-09-15  Merge develop into feature/colleague-storefront (`c53ccefed`)
+- 2026-09-17  feat(commands): Sign in to GitHub from the command palette (`9ea0ce23a`)
