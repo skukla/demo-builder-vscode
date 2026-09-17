@@ -230,12 +230,9 @@ What this means for the design:
   is read only due to missing developer permissions" and lists **38 product profiles** the
   owner is not a developer on, all named `Default - <Commerce tenant id>`, including Bodea's
   own tenant (`Default - UoGYsHrcxMyeoVd2zUktZi`). The Stage workspace shows the same.
-- **Likely source, not yet confirmed:** `17759e61f` (2026-09-16) made the ERP integration's
-  credential subscribe to `ACCS-REST-API` with the one product entry the org catalog
-  offered (`{ op: 'add', id, productId }`). Stage was last modified that day. A product
-  entry that stands for every tenant's default profile would attach all 38. The workspace
-  download does not list profiles and the API page in the Console did not load, so an org
-  admin's view of the Stage credential is what confirms it.
+- **Not our subscription:** an earlier guess that `17759e61f` (the ERP integration's
+  `ACCS-REST-API` subscription) attached the 38 profiles was wrong; the owner confirmed it
+  had nothing to do with it. See AB-18 and PL-61.
 - **What the sources say makes a project read-only** (Adobe's Developer Console FAQ; the
   internal sources consulted agree): a Developer-role user who lacks developer access to
   any product profile used by the project's credentials; a published App Builder app; a

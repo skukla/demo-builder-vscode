@@ -268,7 +268,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-15` | fix | └ [Refuse an ERP integration that would collide with another project's](2026-09-17-erp-integration-conflicting-setups.md) | — | med | backlog |
 | `AB-16` | feature | └ [One integration, several ERPs](2026-09-17-erp-integration-several-erps.md) | AB-17 | med | backlog |
 | `AB-17` | question | └ [Should each system and integration get its own Adobe workspace?](2026-09-17-workspace-per-system.md) | AB-18 | high | open |
-| `AB-18` | fix | └ [The ERP integration's Commerce subscription can lock the SC out of their own project](2026-09-17-accs-subscription-makes-project-read-only.md) | — | high | backlog |
+| `AB-18` | fix | └ [A Commerce product profile the SC is not a developer on locks them out of their own project](2026-09-17-accs-subscription-makes-project-read-only.md) | — | high | backlog |
 | `PL-24` | feature | [Component updates cannot follow an environment-variable rename](2026-08-30-env-var-rename-migration.md) | — | med | backlog |
 
 ### data-installer  (2)
@@ -286,7 +286,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-36` | fix | [The third Node-version sort in installHandler is untested](2026-09-02-install-handler-target-version-sort.md) | — | med | backlog |
 | `PR-1` | epic | [Reframe prerequisites: extension-wide tools vs project-shape requirements (Path A)](2026-06-11-prereqs-architecture-reframe.md) | — | low | backlog |
 
-### platform  (55)
+### platform  (56)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -345,6 +345,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-52` | fix | [A hook-proof suite fails under full parallel load and refuses pushes](2026-09-08-hook-proof-suite-flakes-under-load.md) | — | med | shipped |
 | `PL-53` | question | [351 of the god file's 647 classes appear in no source string — 254 rules deleted](2026-09-09-god-file-classes-nothing-uses.md) | — | med | shipped |
 | `PL-60` | feature | [Finish Adobe Commerce Optimizer (ACO) support](2026-09-17-aco-support.md) | — | high | backlog |
+| `PL-61` | question | [What does a product profile per Commerce instance change for each SC?](2026-09-17-per-instance-commerce-profiles.md) | — | high | open |
 
 <!-- END GENERATED registry -->
 
@@ -493,7 +494,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-56` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — backlog
 
-*93 item(s) sit outside the A–G chain.*
+*94 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 
