@@ -220,3 +220,4 @@ has closed both, and a third deserves its own record. See [[PL-58]].
 - 2026-09-11  feat(sop): a failure a person reads is translated — convention + 67-site ledger (`5cef0b74d`)
 - 2026-09-11  refactor(errors): the retry guess can no longer become advice to a person (`502171cac`)
 - 2026-09-11  docs(errors): record the owner's eight decisions where they can be found (`f54632bc9`)
+- 2026-09-15  Merge fix/template-sync-error-text: a failed template reset or update says which step failed (`32740ff4f`)
