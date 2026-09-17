@@ -80,3 +80,5 @@ Filed 2026-09-16.
 ## Shipped so far
 
 - 2026-09-16  docs(backlog): AB-10 — an ERP section in Commerce Admin for the integration's settings (`969cd57df`)
+- 2026-09-17  docs(research): how Commerce webhooks and events reach an App Management app; orders move to events (`a106cabbc`)
+- 2026-09-17  docs(plans): the ERP integration's Commerce Admin page becomes its settings page (`01a9e1d30`)
