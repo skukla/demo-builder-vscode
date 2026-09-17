@@ -70,3 +70,4 @@ the flyout, the agent tools · 06 live acceptance on Bodea and docs.
 - 2026-09-16  fix(app-builder): the ERP integration's credential gets Adobe Commerce as a Cloud Service, and a skipped API is never reported as added (`17759e61f`)
 - 2026-09-17  docs(plans): systems get their own linked card; AB-15 and AB-16 for several ERPs (`b56aa29e2`)
 - 2026-09-17  fix(app-builder): removing the ERP integration undoes what it changed in Commerce (`5754b0c1d`)
+- 2026-09-17  feat(integrations): the ERP is a card of its own, and removal cleans up before it undeploys (`2365f948c`)

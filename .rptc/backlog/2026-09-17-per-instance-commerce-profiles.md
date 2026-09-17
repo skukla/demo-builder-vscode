@@ -65,3 +65,7 @@ with instance-aware profile selection fixes both.
   the backend URL) and checks the SC is a developer on it first (AB-18).
 - Explain a read-only project instead of failing teardown (AB-18).
 - Admin runbook for the shared service credentials, or per-instance credentials there.
+
+## Shipped so far
+
+- 2026-09-17  docs(backlog): PL-61, and what our subscription did not do (`bbb976fb7`)
