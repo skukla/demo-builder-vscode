@@ -892,5 +892,14 @@
             "delete_adobe_workspace"
         ],
         "why": "The reversal of create_adobe_workspace, added 2026-09-11 to close the last real gap in the reversibility ledger. The tool is confirm-gated and name-echoed, so an agent that REACHES it without both still gets a refusal -- what this judges is whether the tool is findable from a plain request at all, which is the question the battery exists to ask."
+    },
+    {
+        "id": "integration-reinstall",
+        "prompt": "I updated the ERP integration and Commerce says it cannot upgrade it in place. Reinstall it in Commerce so the new version applies.",
+        "expect": [
+            "reinstall_integration"
+        ],
+        "cwd": "project",
+        "why": "AB-13 step 4 (2026-09-17): the one state that needs uninstall-then-install. The prompt names the refusal so the agent reaches the reinstall rather than install_integration, which would answer the same refusal again."
     }
 ]

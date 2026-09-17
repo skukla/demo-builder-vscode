@@ -191,7 +191,10 @@ describe('dashboardHandlers', () => {
             //
             // openErpScreen (40 → 41, 2026-09-16): opens the ERP's own screen with
             // the key only the extension holds.
-            expect(types).toHaveLength(41);
+            //
+            // reinstallAppBuilderComponent (41 → 42, AB-13): uninstall then
+            // install, only for an app Commerce refused to upgrade in place.
+            expect(types).toHaveLength(42);
         });
 
         it('should have handlers as functions', () => {

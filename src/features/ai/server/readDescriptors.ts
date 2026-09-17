@@ -283,7 +283,8 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
             "Read an App Management integration's Commerce install state: the persisted " +
             'outcome plus the LIVE state from the app’s own install API (failed step names ' +
             'included). Use after deploy_integration to answer "did it install, and which step ' +
-            'failed" — a failed install is retried with install_integration, not a redeploy.',
+            'failed" — a failed install is retried with install_integration, not a redeploy; ' +
+            'a persisted needsReinstall (Commerce refused an in-place upgrade) needs reinstall_integration.',
         map: dashboardHandlers,
         type: 'getAppBuilderInstallStatus',
         inputSchema: {

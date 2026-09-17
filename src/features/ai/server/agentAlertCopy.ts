@@ -163,6 +163,14 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         target: ['datapackName', 'version'],
         sessionGrant: false,
     },
+    reinstall_integration: {
+        action: 'Reinstall an integration in Commerce',
+        consequence:
+            'Removes the integration from Commerce and installs it again; its saved settings may reset to their defaults.',
+        target: ['id'],
+        // The uninstall removes what the app set up in Commerce.
+        sessionGrant: false,
+    },
     remove_integration: {
         action: 'Remove an integration',
         consequence:

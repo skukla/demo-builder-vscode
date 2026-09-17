@@ -11,6 +11,8 @@
  * - `installAppBuilderComponent` — re-run the install/associate pass WITHOUT a
  *   redeploy; until this, the only retry for a failed install was a full
  *   deploy round.
+ * - `reinstallAppBuilderComponent` — uninstall then install, only for an app
+ *   Commerce refused to upgrade in place (AB-13).
  *
  * Split from `appBuilderComponentHandlers.ts` (899 lines) rather than grown
  * into it; the guard chain, target resolution, and progress telegraph are that
@@ -34,6 +36,9 @@ import {
     type StepStatus,
 } from '@/features/app-builder/services/appManagementClient';
 import { deriveAppManagementBaseUrl } from '@/features/app-builder/services/appManagementInstaller';
+import { reinstallAppManagementApp } from '@/features/app-builder/services/appManagementReinstall';
+import type { AppManagementInstallResult } from '@/features/app-builder/services/appManagementUpgrade';
+import type { AppBuilderComponentRunnerDeps } from '@/features/app-builder/services/appBuilderComponentRunner';
 import {
     buildCustomIntegrationEntry,
     getAppBuilderComponentEntry,
@@ -43,7 +48,7 @@ import {
     buildRunnerDepsContext,
     resolveAppManagementAuth,
 } from '@/features/project-creation/services/appBuilderComponentRunnerDeps';
-import type { AppBuilderComponentState } from '@/types/base';
+import type { AppBuilderComponentState, Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, HandlerResponse, MessageHandler } from '@/types/handlers';
 
@@ -149,17 +154,32 @@ export const handleGetAppBuilderInstallStatus: MessageHandler<{ id?: string }> =
     }
 };
 
+/** Everything an install-pass handler needs once the target checks pass. */
+interface InstallPass {
+    project: Project;
+    state: AppBuilderComponentState;
+    deps: AppBuilderComponentRunnerDeps;
+    report: (message: string) => void;
+    appVersion: string | undefined;
+}
+
+type InstallPassCheck = (id: string, state: AppBuilderComponentState) => string | undefined;
+
 /**
- * Handle 'installAppBuilderComponent' — re-run the Commerce install/associate
- * pass for a DEPLOYED app-management app, without redeploying it. Guards →
- * the same installer the deploy tail runs → persist the outcome where the
- * drawer and get_integration_install_status read it.
+ * The shared body of install and reinstall: resolve a DEPLOYED app-management
+ * integration, run the guards and build the runner deps under a progress
+ * notification, run `pass`, then persist its outcome where the drawer and
+ * get_integration_install_status read it.
  */
-export const handleInstallAppBuilderComponent: MessageHandler<{ id?: string }> = async (
+async function runInstallPass(
     context: HandlerContext,
-    payload,
-): Promise<HandlerResponse> => {
-    const target = await resolveComponentTarget(context, payload?.id);
+    requestedId: string | undefined,
+    title: string,
+    /** Resolves to the outcome, or to a reason string when the pass is not wired (nothing persisted). */
+    pass: (input: InstallPass) => Promise<AppManagementInstallResult | string>,
+    check?: InstallPassCheck,
+): Promise<HandlerResponse> {
+    const target = await resolveComponentTarget(context, requestedId);
     if (!target.ok) return target.error;
     const { id, project } = target;
 
@@ -171,30 +191,13 @@ export const handleInstallAppBuilderComponent: MessageHandler<{ id?: string }> =
             code: ErrorCode.PROJECT_NOT_FOUND,
         };
     }
-    if (resolveLifecycle(id, state) !== 'app-management') {
-        return {
-            success: false,
-            error: `"${id}" does not install into Commerce (only App Management apps do).`,
-            code: ErrorCode.INVALID_OPERATION,
-        };
-    }
-    if (state.status !== 'deployed') {
-        return {
-            success: false,
-            error: `"${id}" is not deployed yet — deploy it first (the deploy runs the install).`,
-            code: ErrorCode.INVALID_OPERATION,
-        };
+    const refusal = refuseInstallPass(id, state) ?? check?.(id, state);
+    if (refusal) {
+        return { success: false, error: refusal, code: ErrorCode.INVALID_OPERATION };
     }
 
-    const displayName = state.name ?? id;
     const result = await withComponentProgress(
-        {
-            title: 'Installing',
-            id,
-            label: displayName,
-            noun: 'Integration',
-            logger: context.logger,
-        },
+        { title, id, label: state.name ?? id, noun: 'Integration', logger: context.logger },
         async (report): Promise<GuardableResult & { detail?: string }> => {
             const refused = await guardOrBlock(context, project, report);
             if (refused) {
@@ -208,23 +211,19 @@ export const handleInstallAppBuilderComponent: MessageHandler<{ id?: string }> =
                 }),
                 (message, subMessage) => report(subMessage || message),
             );
-            // Always wired by buildDefaultRunnerDeps; the field is optional only
-            // for bare unit-test deps, so a guard beats asserting it away.
-            if (!deps.installAppManagement) {
-                return { success: false, error: 'The install pass is not available.' };
-            }
             const componentPath = project.componentInstances?.[id]?.path;
             const appVersion = componentPath ? await deps.readAppVersion?.(componentPath) : undefined;
-            const installed = await deps.installAppManagement(project, state.deployedUrls, report, {
-                appVersion,
-            });
+            const outcome = await pass({ project, state, deps, report, appVersion });
+            if (typeof outcome === 'string') {
+                return { success: false, error: outcome };
+            }
             // Same persistence the deploy tail's install pass writes — the
             // drawer and the status read serve THIS record.
-            recordInstallation(state, installed);
+            recordInstallation(state, outcome);
             await context.stateManager.saveProject(project);
-            return installed.status === 'failed'
-                ? { success: false, error: installed.detail, detail: installed.detail }
-                : { success: true, detail: installed.detail };
+            return outcome.status === 'failed'
+                ? { success: false, error: outcome.detail, detail: outcome.detail }
+                : { success: true, detail: outcome.detail };
         },
     );
 
@@ -233,4 +232,64 @@ export const handleInstallAppBuilderComponent: MessageHandler<{ id?: string }> =
     return result.success
         ? { success: true, installation: state.installation }
         : { success: false, error: result.error, code: result.code };
-};
+}
+
+/** Why an integration cannot take an install pass at all, if it cannot. */
+function refuseInstallPass(id: string, state: AppBuilderComponentState): string | undefined {
+    if (resolveLifecycle(id, state) !== 'app-management') {
+        return `"${id}" does not install into Commerce (only App Management apps do).`;
+    }
+    if (state.status !== 'deployed') {
+        return `"${id}" is not deployed yet — deploy it first (the deploy runs the install).`;
+    }
+    return undefined;
+}
+
+/**
+ * Handle 'installAppBuilderComponent' — re-run the Commerce install/associate
+ * pass for a DEPLOYED app-management app, without redeploying it. Guards →
+ * the same installer the deploy tail runs → persist the outcome where the
+ * drawer and get_integration_install_status read it.
+ */
+export const handleInstallAppBuilderComponent: MessageHandler<{ id?: string }> = async (
+    context: HandlerContext,
+    payload,
+): Promise<HandlerResponse> =>
+    runInstallPass(context, payload?.id, 'Installing', async ({ project, state, deps, report, appVersion }) => {
+        // Always wired by buildDefaultRunnerDeps; the field is optional only
+        // for bare unit-test deps, so a guard beats asserting it away.
+        if (!deps.installAppManagement) {
+            return 'The install pass is not available.';
+        }
+        return deps.installAppManagement(project, state.deployedUrls, report, { appVersion });
+    });
+
+/**
+ * Handle 'reinstallAppBuilderComponent' — uninstall the app from Commerce and
+ * install it again from the code already deployed. Destructive (the uninstall
+ * removes what the app set up in Commerce), so it is refused unless Commerce
+ * has refused an in-place upgrade: that record is the only state that needs it.
+ */
+export const handleReinstallAppBuilderComponent: MessageHandler<{ id?: string }> = async (
+    context: HandlerContext,
+    payload,
+): Promise<HandlerResponse> =>
+    runInstallPass(
+        context,
+        payload?.id,
+        'Reinstalling',
+        async ({ project, state, deps, report, appVersion }) => {
+            const { installAppManagement, uninstallAppManagement } = deps;
+            if (!installAppManagement || !uninstallAppManagement) {
+                return 'The reinstall is not available.';
+            }
+            return reinstallAppManagementApp({
+                uninstall: () => uninstallAppManagement(project, state.deployedUrls, report),
+                install: () => installAppManagement(project, state.deployedUrls, report, { appVersion }),
+            });
+        },
+        (id, state) =>
+            state.installation?.needsReinstall
+                ? undefined
+                : `"${id}" does not need a reinstall: Commerce has not refused an upgrade of it.`,
+    );

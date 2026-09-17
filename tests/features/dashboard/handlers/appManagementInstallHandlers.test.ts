@@ -35,10 +35,12 @@ jest.mock('vscode', () => {
 
 // ---- runner deps + auth resolver (all mocked) ------------------------------
 const mockInstallAppManagement = jest.fn();
+const mockUninstallAppManagement = jest.fn();
 // Declared with its arguments, not as a bare `jest.fn(() => ...)`: the second
 // one is the progress adapter, and a zero-arity signature makes it unreadable.
 const mockBuildDefaultRunnerDeps = jest.fn((..._args: unknown[]) => ({
     installAppManagement: mockInstallAppManagement,
+    uninstallAppManagement: mockUninstallAppManagement,
 }));
 const mockBuildRunnerDepsContext = jest.fn(async () => ({}));
 const mockResolveAppManagementAuth = jest.fn();
@@ -111,6 +113,7 @@ jest.mock('@/features/dashboard/commands/showDashboard', () => ({
 import {
     handleGetAppBuilderInstallStatus,
     handleInstallAppBuilderComponent,
+    handleReinstallAppBuilderComponent,
 } from '@/features/dashboard/handlers/appManagementInstallHandlers';
 import { setupMocks } from './dashboardHandlers.testUtils';
 import { ErrorCode } from '@/types/errorCodes';
@@ -155,6 +158,12 @@ beforeEach(() => {
     mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: true });
     mockDetectProjectOrgMismatch.mockResolvedValue({ reachable: true });
     mockInstallAppManagement.mockResolvedValue({ status: 'installed' });
+    mockUninstallAppManagement.mockResolvedValue({ status: 'uninstalled' });
+    // clearAllMocks keeps a mockReturnValue; the "not wired" tests set one.
+    mockBuildDefaultRunnerDeps.mockReturnValue({
+        installAppManagement: mockInstallAppManagement,
+        uninstallAppManagement: mockUninstallAppManagement,
+    });
     mockGetInstallationState.mockResolvedValue({
         id: 'i-1',
         status: 'succeeded',
@@ -525,5 +534,107 @@ describe('the install pass and what it hands its collaborators', () => {
         forward('Creating providers');
 
         expect(mockProgressSteps).toStrictEqual(['provider 2 of 3', 'Creating providers']);
+    });
+});
+
+describe('handleReinstallAppBuilderComponent', () => {
+    function refusedProject(): Partial<Project> {
+        return {
+            appBuilderComponents: {
+                'kit-app': {
+                    ...KIT_STATE,
+                    installation: {
+                        status: 'failed',
+                        detail: 'Commerce cannot upgrade the installed app in place.',
+                        at: '2026-09-17T00:00:00Z',
+                        needsReinstall: true,
+                    },
+                },
+            },
+        };
+    }
+
+    it('uninstalls, then installs the deployed version, and records the fresh install', async () => {
+        const { mockContext, mockProject } = setupMocks(refusedProject());
+        mockDeveloperPermissions();
+        const order: string[] = [];
+        mockUninstallAppManagement.mockImplementation(async () => {
+            order.push('uninstall');
+            return { status: 'uninstalled' };
+        });
+        mockInstallAppManagement.mockImplementation(async () => {
+            order.push('install');
+            return { status: 'installed', version: '0.2.0' };
+        });
+
+        const result = (await handleReinstallAppBuilderComponent(mockContext, {
+            id: 'kit-app',
+        })) as { success: boolean; installation: Record<string, unknown> };
+
+        expect(result.success).toBe(true);
+        expect(order).toEqual(['uninstall', 'install']);
+        expect(mockUninstallAppManagement).toHaveBeenCalledWith(mockProject, APP_URLS, expect.any(Function));
+        expect(mockInstallAppManagement).toHaveBeenCalledWith(mockProject, APP_URLS, expect.any(Function), {
+            appVersion: undefined,
+        });
+        expect(mockProgressTitles.some((title) => title.startsWith('Reinstalling'))).toBe(true);
+        const saved = (mockContext.stateManager.saveProject as jest.Mock).mock.calls.at(-1)![0];
+        expect(saved.appBuilderComponents['kit-app'].installation).toMatchObject({
+            status: 'installed',
+            version: '0.2.0',
+        });
+        expect(saved.appBuilderComponents['kit-app'].installation.needsReinstall).toBeUndefined();
+    });
+
+    it('refuses an app Commerce has not refused to upgrade, touching nothing', async () => {
+        const { mockContext } = setupMocks(kitProject());
+
+        const result = await handleReinstallAppBuilderComponent(mockContext, { id: 'kit-app' });
+
+        expect(result).toEqual({
+            success: false,
+            error: '"kit-app" does not need a reinstall: Commerce has not refused an upgrade of it.',
+            code: ErrorCode.INVALID_OPERATION,
+        });
+        expect(mockUninstallAppManagement).not.toHaveBeenCalled();
+        expect(mockInstallAppManagement).not.toHaveBeenCalled();
+    });
+
+    it('keeps asking for a reinstall when the uninstall fails', async () => {
+        const { mockContext } = setupMocks(refusedProject());
+        mockDeveloperPermissions();
+        mockUninstallAppManagement.mockResolvedValue({ status: 'failed', detail: 'HTTP 500' });
+
+        const result = await handleReinstallAppBuilderComponent(mockContext, { id: 'kit-app' });
+
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('nothing was reinstalled: HTTP 500');
+        expect(mockInstallAppManagement).not.toHaveBeenCalled();
+        const saved = (mockContext.stateManager.saveProject as jest.Mock).mock.calls.at(-1)![0];
+        expect(saved.appBuilderComponents['kit-app'].installation.needsReinstall).toBe(true);
+    });
+
+    it('a failed guard blocks before anything is uninstalled', async () => {
+        const { mockContext } = setupMocks(refusedProject());
+        mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: false });
+
+        const result = await handleReinstallAppBuilderComponent(mockContext, { id: 'kit-app' });
+
+        expect(result.code).toBe(ErrorCode.AUTH_REQUIRED);
+        expect(mockUninstallAppManagement).not.toHaveBeenCalled();
+    });
+
+    it('refuses when the uninstall is not wired, persisting nothing', async () => {
+        const { mockContext } = setupMocks(refusedProject());
+        mockDeveloperPermissions();
+        mockBuildDefaultRunnerDeps.mockReturnValue({
+            installAppManagement: mockInstallAppManagement,
+        } as unknown as ReturnType<typeof mockBuildDefaultRunnerDeps>);
+
+        const result = await handleReinstallAppBuilderComponent(mockContext, { id: 'kit-app' });
+
+        expect(result).toMatchObject({ success: false, error: 'The reinstall is not available.' });
+        expect(mockContext.stateManager.saveProject).not.toHaveBeenCalled();
+        expect(mockInstallAppManagement).not.toHaveBeenCalled();
     });
 });

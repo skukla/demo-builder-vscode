@@ -167,6 +167,7 @@ export const TOOL_NARRATION: Record<string, string> = {
 
     // ── I/O Events lifecycle (AB-6) ─────────────────────────────────────
     install_integration: 'Installing the app into Commerce',
+    reinstall_integration: 'Reinstalling the app in Commerce',
     get_integration_install_status: 'Reading the Commerce install state',
     // The ERP integration's pair (plan step 05).
     get_erp_status: 'Reading the ERP status',

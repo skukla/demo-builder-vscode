@@ -55,8 +55,10 @@ the order-event change is already in (0.2.0).
    answers instead of discarding it: installed; upgraded from X to Y (with the plan's counts);
    already current; or refused. The dashboard and the agent tool say which, in plain words.
 3. **A refused upgrade offers a reinstall.** When the app answers that it cannot be upgraded
-   safely, Demo Builder offers uninstall (with the deployed, old version) then install (with the
-   new one), after the SC confirms. Uninstall runs before the new code is deployed.
+   safely, Demo Builder offers uninstall then install, after the SC confirms. Both run on the new
+   code already deployed: lib-app 2.x uninstalls from the configuration it recorded at install,
+   so no second deploy is needed. The confirm opens by itself when an update ends in the refusal;
+   until the reinstall is done the card's menu offers it, and nowhere else (owner, 2026-09-17).
 4. **The installed version is recorded** on the project's integration state, beside the install
    outcome, so "update available" and "installed" can be compared without asking the app.
 5. **Update available is shown** on the integration card when the branch head (or the latest
@@ -76,7 +78,10 @@ Association in App Management is not required by any of this: the benefit is Ado
    records the installed version. Tests with fakes captured from the 2.0.0 OpenAPI shapes.
 3. **Demo Builder fetches newer code on Update**, with the local-changes refusal and the version
    read. Tests against a temp git repo (strip `GIT_*` in the test env).
-4. **Refused upgrade → confirmed reinstall.** Tests for the order: uninstall before deploy.
+4. **Refused upgrade → confirmed reinstall.** Tests for the order: uninstall before install;
+   no install after a failed uninstall. Built: `appManagementReinstall.ts`,
+   `reinstallAppBuilderComponent`, the grid's self-opening confirm, `reinstall_integration`
+   (confirm-gated, refused unless `needsReinstall`).
 5. **Update available on the card**, and the surfaces and docs.
 6. **Bodea, live.** Update and redeploy the ERP integration: the order webhook is gone from
    `GET /V1/webhooks/list`, the order event is subscribed, the cart webhooks show optional on

@@ -131,7 +131,7 @@ const INTEGRATION_STATUSES: readonly string[] = [
 function buildMenuActions(
     status: IntegrationStatus,
     url: string | undefined,
-    installFailed = false,
+    installation: IntegrationCardModel['installation'],
     system?: BoundSystemModel,
 ): CardAction[] {
     if (status === 'deploying' || system?.status === 'deploying') return [];
@@ -143,8 +143,11 @@ function buildMenuActions(
     const redeploy: CardAction[] = status === 'deployed' ? ['redeploy'] : [];
     // A deployed app whose Commerce install failed is dormant, and until AB-5
     // the ONLY retry was a full redeploy round. The install verb leads for the
-    // same reason the status verb does: it is what the card needs.
-    const install: CardAction[] = status === 'deployed' && installFailed ? ['install'] : [];
+    // same reason the status verb does: it is what the card needs. A refused
+    // upgrade needs the reinstall instead, and only then is it offered: it
+    // removes what the app set up in Commerce.
+    const install: CardAction[] =
+        status === 'deployed' && installation?.failed ? [installation.needsReinstall ? 'reinstall' : 'install'] : [];
     // The bound system's verbs sit after the integration's own: its screen, its
     // reset (only with both halves deployed — the reset runs THROUGH the
     // integration), its redeploy.
@@ -263,6 +266,11 @@ function resolvePrimaryUrl(entry: IdentifiedAppBuilderComponent): string | undef
  * moved to the deployed version — both ARE installed, and rendering either as
  * anything else would read as a problem.
  */
+function installationLabel(record: NonNullable<IdentifiedAppBuilderComponent['installation']>): string {
+    if (record.needsReinstall) return 'Needs reinstall';
+    return record.status === 'failed' ? 'Not installed' : 'Installed';
+}
+
 function deriveInstallation(
     entry: IdentifiedAppBuilderComponent,
 ): IntegrationCardModel['installation'] {
@@ -270,10 +278,11 @@ function deriveInstallation(
     if (!record) return undefined;
     const failed = record.status === 'failed';
     return {
-        label: failed ? 'Not installed' : 'Installed',
+        label: installationLabel(record),
         detail: record.detail,
         at: formatLastDeployed(record.at),
         failed,
+        ...(record.needsReinstall ? { needsReinstall: true } : {}),
     };
 }
 
@@ -397,7 +406,7 @@ export function deriveIntegrationCard(
         apis: facet.apis,
         lastDeployed: formatLastDeployed(entry.lastDeployed),
         installation,
-        menuActions: buildMenuActions(ownStatus, primaryUrl, installation?.failed, system),
+        menuActions: buildMenuActions(ownStatus, primaryUrl, installation, system),
         canRename: entry.kind === 'integration' && !facet.isCatalog,
         ...(system ? { system } : {}),
     };

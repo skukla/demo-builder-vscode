@@ -62,6 +62,7 @@ import {
 import {
     handleGetAppBuilderInstallStatus,
     handleInstallAppBuilderComponent,
+    handleReinstallAppBuilderComponent,
 } from '@/features/dashboard/handlers/appManagementInstallHandlers';
 import {
     handleAddConsoleApis,
@@ -269,6 +270,7 @@ export const dashboardHandlers = defineHandlers({
     // App Management install state (AB-5): the live status read and the
     // install-without-redeploy retry.
     installAppBuilderComponent: handleInstallAppBuilderComponent,
+    reinstallAppBuilderComponent: handleReinstallAppBuilderComponent,
     getAppBuilderInstallStatus: handleGetAppBuilderInstallStatus,
     // The ERP integration's two verbs (plan step 05): the ERP's health as the
     // integration sees it, and the reset that re-mirrors Commerce into it.

@@ -286,6 +286,23 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         },
     },
     {
+        tool: 'reinstall_integration',
+        needsAuth: ['adobe'],
+        readOnly: false,
+        description:
+            'Uninstall a DEPLOYED App Management integration from Commerce and install it again ' +
+            'from the code already deployed. Only for when get_integration_install_status shows ' +
+            'needsReinstall (Commerce refused to upgrade it in place); refused otherwise. ' +
+            'DESTRUCTIVE: what the app set up in Commerce is removed first, and its saved ' +
+            'settings may reset. Confirm with the user first.',
+        map: dashboardHandlers,
+        type: 'reinstallAppBuilderComponent',
+        confirm: true,
+        inputSchema: {
+            id: z.string().describe('The integration id to reinstall (from get_project)'),
+        },
+    },
+    {
         tool: 'remove_integration',
         needsAuth: ['adobe'],
         readOnly: false,

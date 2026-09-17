@@ -6,19 +6,17 @@
  * fired straight away; this dialog adds the missing confirm so a cloud
  * teardown is never one stray click away (research B-6).
  *
- * Controlled + presentational: the
- * DialogContainer is the always-mounted modal host; the confirm Modal renders
- * only while `isOpen`. It does NOT post — its consumer (the integrations grid,
- * which hosts ONE instance) wires `onConfirm` to post
- * `removeAppBuilderComponent {id}`, so the cancel path is a pure no-op (no
- * teardown).
+ * Controlled + presentational, through {@link ConfirmActionDialog}. It does
+ * NOT post — its consumer (the integrations grid, which hosts ONE instance)
+ * wires `onConfirm` to post `removeAppBuilderComponent {id}`, so the cancel
+ * path is a pure no-op (no teardown).
  *
  * @module features/dashboard/ui/components/AppBuilderComponentRemoveDialog
  */
 
-import { DialogContainer, Flex, Text } from '@adobe/react-spectrum';
+import { Text } from '@adobe/react-spectrum';
 import React from 'react';
-import { Modal } from '@/core/ui/components/ui/Modal';
+import { ConfirmActionDialog } from './ConfirmActionDialog';
 
 export interface AppBuilderComponentRemoveDialogProps {
     /** Whether the confirm dialog is shown. */
@@ -51,25 +49,18 @@ export function AppBuilderComponentRemoveDialog({
     onClose,
 }: AppBuilderComponentRemoveDialogProps): React.ReactElement {
     return (
-        <DialogContainer onDismiss={onClose}>
-            {isOpen && (
-                <Modal
-                    title="Remove App Builder component"
-                    size="S"
-                    onClose={onClose}
-                    actionButtons={[
-                        { label: 'Remove', variant: 'negative', onPress: onConfirm },
-                    ]}
-                >
-                    <Flex direction="column" gap="size-150">
-                        <Text>
-                            Remove <strong>{appBuilderComponentId}</strong>? This permanently undeploys it
-                            from the cloud (a destructive teardown) and cannot be undone.
-                        </Text>
-                        {consequence && <Text>{consequence}</Text>}
-                    </Flex>
-                </Modal>
-            )}
-        </DialogContainer>
+        <ConfirmActionDialog
+            isOpen={isOpen}
+            title="Remove App Builder component"
+            actionLabel="Remove"
+            onConfirm={onConfirm}
+            onClose={onClose}
+        >
+            <Text>
+                Remove <strong>{appBuilderComponentId}</strong>? This permanently undeploys it
+                from the cloud (a destructive teardown) and cannot be undone.
+            </Text>
+            {consequence && <Text>{consequence}</Text>}
+        </ConfirmActionDialog>
     );
 }

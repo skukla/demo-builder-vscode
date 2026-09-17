@@ -88,6 +88,8 @@ describe('ACTION_DESCRIPTORS', () => {
             // Opens a browser window — gated for the same surprise reason as open_url.
             'open_erp_screen',
             'refresh_block_library',
+            // Uninstalls from Commerce first; its settings may reset (AB-13).
+            'reinstall_integration',
             'remove_integration',
             // Wipes the ERP and undoes what it wrote into Commerce companies
             // (plan step 05, 2026-09-14).

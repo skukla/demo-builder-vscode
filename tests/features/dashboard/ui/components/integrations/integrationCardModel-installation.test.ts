@@ -83,6 +83,45 @@ describe('deriveIntegrationCard — installation facet', () => {
         expect(model.menuActions).toContain('redeploy');
     });
 
+    it('a refused upgrade: Needs reinstall, and Reinstall replaces Install', () => {
+        const model = deriveIntegrationCard(
+            integration({
+                status: 'deployed',
+                installation: {
+                    status: 'failed',
+                    detail: 'Commerce cannot upgrade the installed app in place.',
+                    needsReinstall: true,
+                },
+            })
+        );
+
+        expect(model.installation).toMatchObject({
+            label: 'Needs reinstall',
+            failed: true,
+            needsReinstall: true,
+        });
+        expect(model.menuActions[0]).toBe('reinstall');
+        expect(model.menuActions).not.toContain('install');
+    });
+
+    it('Reinstall is offered only while it is needed', () => {
+        const states = [
+            { status: 'installed' as const },
+            { status: 'upgraded' as const, version: '0.2.0' },
+            { status: 'failed' as const, detail: 'hands-back line' },
+        ];
+
+        for (const installation of states) {
+            const model = deriveIntegrationCard(integration({ status: 'deployed', installation }));
+            expect(model.menuActions).not.toContain('reinstall');
+            expect(model.installation?.needsReinstall).toBeUndefined();
+        }
+        const deploying = deriveIntegrationCard(
+            integration({ status: 'deploying', installation: { status: 'failed', needsReinstall: true } })
+        );
+        expect(deploying.menuActions).not.toContain('reinstall');
+    });
+
     it('no install action while deploying or on an errored card — the deploy re-runs the install itself', () => {
         const failedInstall = { status: 'failed' as const };
 

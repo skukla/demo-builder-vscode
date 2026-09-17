@@ -29,6 +29,8 @@ export type CardAction =
     | 'update'
     | 'retry'
     | 'install'
+    // Uninstall then install; offered only when Commerce refused an upgrade.
+    | 'reinstall'
     | 'open-admin'
     | 'manage-apis'
     | 'remove'
@@ -99,7 +101,8 @@ export interface IntegrationCardModel {
      * The App Management install outcome (lifecycle 'app-management' apps
      * only) — the persisted `appBuilderComponents[id].installation` record,
      * display-ready. `failed` also drives the drawer's "Install into
-     * Commerce" retry action. Absent on every other card, so no row renders.
+     * Commerce" retry action, or "Reinstall in Commerce" when
+     * `needsReinstall`. Absent on every other card, so no row renders.
      */
     installation?: {
         /** Display label: 'Installed' or 'Not installed'. */
@@ -109,6 +112,8 @@ export interface IntegrationCardModel {
         /** Preformatted locale display string of the attempt. */
         at?: string;
         failed: boolean;
+        /** Commerce refused an in-place upgrade; only a reinstall applies the new version. */
+        needsReinstall?: boolean;
     };
     /**
      * The Commerce scope the mesh is DEPLOYED against, in display order.
