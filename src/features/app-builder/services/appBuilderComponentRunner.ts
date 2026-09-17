@@ -35,6 +35,7 @@ import { recordDeployOutcome, type DeployOutcome } from './appBuilderDeployOutco
 import { detectAppLayout, listDeclaredPackageNames, type AppConfigLayout } from './appConfigPackages';
 import type { AppManagementInstallOptions, AppManagementInstallResult } from './appManagementUpgrade';
 import { deriveProvidedValues, resolveDeployInputs, resolveDisplayName } from './deployInputs';
+import type { SourceUpdateResult } from './integrationSourceUpdate';
 import { deriveOwPackage } from './owPackageName';
 import { deriveScreenUrl } from './systemScreen';
 import type { AppDeploymentResult } from './types';
@@ -61,6 +62,8 @@ import { toError } from '@/types/typeGuards';
 export interface RunnerResult {
     success: boolean;
     error?: string;
+    /** Plain-words line on what an update did (update only). */
+    detail?: string;
     /** Post-undeploy Runtime verification (remove only) — see AB-7. */
     runtimeCleanup?: RuntimeCleanupSummary;
 }
@@ -237,6 +240,13 @@ export interface AppBuilderComponentRunnerDeps {
     ) => Promise<AppManagementInstallResult>;
     /** The version an app's manifest declares (appManifestVersion); optional for bare tests. */
     readAppVersion?: (componentPath: string) => Promise<string | undefined>;
+    /** Fast-forward a clone to its branch (integrationSourceUpdate); update only. */
+    fetchComponentSource?: (componentPath: string, branch: string) => Promise<SourceUpdateResult>;
+    /** npm install (and build) in an existing clone; update only. */
+    installComponentDependencies?: (
+        componentPath: string,
+        definition: TransformedComponentDefinition,
+    ) => Promise<{ success: boolean; error?: string }>;
     /**
      * Uninstall an app-management lifecycle app from Commerce BEFORE its remove
      * tears the actions down (appManagementUninstaller). `aio app undeploy`
@@ -858,6 +868,54 @@ export async function deployAppBuilderComponent(
         deps.logger.error('[AppBuilderComponent Runner] deploy failed', error as Error);
         return { success: false, error: toError(error).message };
     }
+}
+
+/**
+ * Update an integration: bring its clone up to its branch on GitHub, install
+ * the new version's dependencies, then redeploy (whose install pass upgrades
+ * the app in Commerce). Refuses when the clone holds the SC's own changes.
+ *
+ * An already-current clone is still redeployed when the version installed in
+ * Commerce differs from the one in the clone (code pulled by other means).
+ */
+export async function updateAppBuilderComponent(
+    project: Project,
+    id: string,
+    deps: AppBuilderComponentRunnerDeps,
+): Promise<RunnerResult> {
+    const existing = project.appBuilderComponents?.[id];
+    const componentPath = project.componentInstances?.[id]?.path;
+    if (!existing || !componentPath) {
+        return { success: false, error: `AppBuilderComponent "${id}" not found.` };
+    }
+    if (!deps.fetchComponentSource || !deps.installComponentDependencies) {
+        return { success: false, error: 'Updating integrations is not available here.' };
+    }
+    const entry = deps.catalog.find((c) => c.id === id) ?? entryFromState(id, existing);
+
+    deps.onProgress?.('Fetching the latest version from GitHub…');
+    const fetched = await deps.fetchComponentSource(componentPath, existing.source.branch ?? 'main');
+    if (fetched.status === 'refused' || fetched.status === 'failed') {
+        return { success: false, error: fetched.detail };
+    }
+    if (fetched.status === 'current') {
+        const onDisk = await deps.readAppVersion?.(componentPath);
+        const installed = existing.installation?.version;
+        if (!onDisk || onDisk === installed) {
+            return { success: true, detail: fetched.detail };
+        }
+    } else {
+        deps.onProgress?.("Installing the new version's dependencies…");
+        const dependencies = await deps.installComponentDependencies(componentPath, buildDefinition(entry));
+        if (!dependencies.success) {
+            return {
+                success: false,
+                error: `${fetched.detail} Its dependencies did not install: ${dependencies.error ?? 'no reason given'}`,
+            };
+        }
+    }
+    const deployed = await deployAppBuilderComponent(project, id, deps);
+    return deployed.success ? { ...deployed, detail: fetched.detail } : deployed;
 }
 
 /**

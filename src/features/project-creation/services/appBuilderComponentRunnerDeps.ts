@@ -14,9 +14,11 @@
 
 import * as vscode from 'vscode';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
+import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { ensureFnmNodeVersion } from '@/core/shell/ensureNodeVersion';
 import type { CachedOrgRef } from '@/core/shell/orgContextEnv';
 import { resolveDesiredApis } from '@/core/state/componentApiPicks';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { deriveAllowedDomain } from '@/features/app-builder/services/allowedDomain';
 import {
     subscribeRequiredApis,
@@ -30,6 +32,7 @@ import { uninstallAppManagementApp } from '@/features/app-builder/services/appMa
 import { readAppManifestVersion } from '@/features/app-builder/services/appManifestVersion';
 import { deployAppComponentIsolated } from '@/features/app-builder/services/deployAppIsolated';
 import { subscriberTarget } from '@/features/app-builder/services/ensureMeshApiSubscribed';
+import { fastForwardClone } from '@/features/app-builder/services/integrationSourceUpdate';
 import { buildS2SDeployEnv } from '@/features/app-builder/services/s2sDeployEnv';
 import { ensureScreenKeyEnv, forgetScreenKey } from '@/features/app-builder/services/systemScreen';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
@@ -176,6 +179,19 @@ export function buildDefaultRunnerDeps(
                 since: options?.since,
             }),
         readAppVersion: readAppManifestVersion,
+        // Update: fast-forward the clone, then the same dependency install the
+        // add path runs (ComponentManager, with the entry's Node version).
+        fetchComponentSource: (componentPath, branch) =>
+            fastForwardClone(componentPath, branch, (command, cwd) =>
+                ctx.commandManager.execute(command, {
+                    cwd,
+                    enhancePath: true,
+                    shell: DEFAULT_SHELL,
+                    timeout: TIMEOUTS.LONG,
+                }),
+            ),
+        installComponentDependencies: (componentPath, definition) =>
+            ctx.componentManager.installNpmDependencies(componentPath, definition),
         // The inverse, ahead of an integration remove: the app's own uninstall
         // API takes down what its installer created, while the API still
         // exists to call. Best-effort — the runner logs a failure and removes
