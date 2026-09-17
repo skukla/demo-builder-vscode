@@ -35,17 +35,19 @@ import {
 } from '@/core/config/envVarKeys';
 import type { IdentifiedAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import type {
-    BoundSystemModel,
     CardAction,
     CardStatus,
     CommerceScopePart,
     IntegrationCardModel,
+    LinkedCard,
 } from '@/core/ui/components/integrations/integrationCardModel.types';
 import { getStatusDisplay, severityToDot } from '@/core/ui/utils/statusVocabulary';
 import {
+    getAppBuilderComponentCatalog,
     getAppBuilderComponentEntry,
     isBlankSource,
 } from '@/features/components/services/appBuilderComponentCatalogLoader';
+import { systemsUsedBy } from '@/features/components/services/appBuilderComponentLinks';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState } from '@/types/base';
 import type { CommerceStoreStructure } from '@/types/commerceStore';
@@ -61,11 +63,11 @@ import type { CommerceStoreStructure } from '@/types/commerceStore';
  * project is built.
  */
 export type {
-    BoundSystemModel,
     CardAction,
     CardStatus,
     CommerceScopePart,
     IntegrationCardModel,
+    LinkedCard,
 } from '@/core/ui/components/integrations/integrationCardModel.types';
 
 /**
@@ -115,7 +117,7 @@ const INTEGRATION_STATUSES: readonly string[] = [
 ];
 
 /**
- * The card's kebab items.
+ * The integration card's kebab items.
  *
  * Open leads when the integration has a URL — it is the most common thing to do
  * with a healthy one, just not urgent enough for the card face. Nothing is
@@ -126,15 +128,15 @@ const INTEGRATION_STATUSES: readonly string[] = [
  *
  * @param status - the card's normalized status
  * @param url - the integration's primary URL, when it has one
+ * @param installation - the Commerce install record, when the app has one
  * @returns the menu actions, in display order
  */
 function buildMenuActions(
     status: IntegrationStatus,
     url: string | undefined,
     installation: IntegrationCardModel['installation'],
-    system?: BoundSystemModel,
 ): CardAction[] {
-    if (status === 'deploying' || system?.status === 'deploying') return [];
+    if (status === 'deploying') return [];
     // The status verb leads: on a card that needs something, that something is the
     // first thing in the menu. Redeploy only where there is a deployment to redo —
     // 'deploy'/'retry'/'update' already cover the other states, and offering both
@@ -148,29 +150,34 @@ function buildMenuActions(
     // removes what the app set up in Commerce.
     const install: CardAction[] =
         status === 'deployed' && installation?.failed ? [installation.needsReinstall ? 'reinstall' : 'install'] : [];
-    // The bound system's verbs sit after the integration's own: its screen, its
-    // reset (only with both halves deployed — the reset runs THROUGH the
-    // integration), its redeploy.
-    const systemVerbs: CardAction[] = system
-        ? [
-              ...(system.url ? (['open-system'] as CardAction[]) : []),
-              ...(status === 'deployed' && system.status === 'deployed' ? (['reset-system'] as CardAction[]) : []),
-              ...(system.status === 'deployed' || system.status === 'error' ? (['redeploy-system'] as CardAction[]) : []),
-          ]
-        : [];
     return [
         ...(verb ? [verb] : []),
         ...install,
         ...(url ? (['open'] as CardAction[]) : []),
         ...redeploy,
-        ...systemVerbs,
         'manage-apis',
         'remove',
     ];
 }
 
-/** Worse first: the order the pair's face status is picked in. */
-const STATUS_SEVERITY: IntegrationStatus[] = ['error', 'stale', 'deploying', 'not-deployed', 'deployed'];
+/**
+ * A system card's kebab items: its screen, its reset (only while it and the
+ * integration that runs the reset are both deployed), its redeploy, its removal
+ * (which takes its integration too). No Manage APIs: a system's APIs are part
+ * of the project's set, not its own choice.
+ */
+function buildSystemMenuActions(status: IntegrationStatus, url: string | undefined, usedBy: LinkedCard | undefined): CardAction[] {
+    if (status === 'deploying' || usedBy?.status === 'deploying') return [];
+    const verb = statusVerb(status);
+    const resettable = status === 'deployed' && usedBy?.status === 'deployed';
+    return [
+        ...(verb ? [verb] : []),
+        ...(url ? (['open'] as CardAction[]) : []),
+        ...(resettable ? (['reset-records'] as CardAction[]) : []),
+        ...(status === 'deployed' ? (['redeploy'] as CardAction[]) : []),
+        'remove',
+    ];
+}
 
 /**
  * A deployed component with newer code recorded (`updateAvailable`, from the
@@ -185,65 +192,41 @@ export function withUpdateStatus(status: string, entry: Pick<IdentifiedAppBuilde
     return status === 'deployed' && entry.updateAvailable ? 'stale' : status;
 }
 
-/**
- * The bound system's part of the card, from its persisted row (with its own
- * live override), or undefined when the integration stands alone.
- */
-function deriveBoundSystem(
-    system: IdentifiedAppBuilderComponent | undefined,
-    override: RowStatusOverride | undefined,
-): BoundSystemModel | undefined {
-    if (!system) return undefined;
-    const status = normalizeIntegrationStatus(withUpdateStatus(override?.status ?? system.status, system));
-    const shared = getStatusDisplay(status);
-    const liveStep = status === 'deploying' ? override?.message : undefined;
+/** A card as the cards linked to it name it. */
+function toLinkedCard(model: IntegrationCardModel): LinkedCard {
     return {
-        id: system.id,
-        name: override?.name ?? system.name ?? system.id,
-        status,
-        statusLabel: liveStep ?? shared?.label ?? '',
-        dotVariant: severityToDot(shared?.severity ?? 'neutral'),
-        message: status === 'error' ? (override?.message ?? system.error) : undefined,
-        url: resolvePrimaryUrl(system),
-        lastDeployed: formatLastDeployed(system.lastDeployed),
+        id: model.id,
+        name: model.name,
+        status: model.status,
+        statusLabel: model.statusLabel,
+        dotVariant: model.dotVariant,
     };
 }
 
-/** The pair's face status: the worse of the two (error > stale > deploying > not-deployed > deployed). */
-function worstOf(a: IntegrationStatus, b: CardStatus | undefined): IntegrationStatus {
-    if (!b) return a;
-    const other = normalizeIntegrationStatus(b);
-    return STATUS_SEVERITY.indexOf(a) <= STATUS_SEVERITY.indexOf(other) ? a : other;
-}
-
-/**
- * What the card FACE shows for an integration and its bound system together.
- *
- * The status is the pair's worst: an integration whose ERP failed is not
- * "Deployed" to the SC, and a healthy face over a broken half is the one lie
- * the tile must not tell (plan step 05). While the SYSTEM is the one deploying
- * (the ERP deploys first), its step is the label; when the worse status is the
- * system's, the message names which half is wrong.
- */
-function pairFace(
-    ownStatus: IntegrationStatus,
-    system: BoundSystemModel | undefined,
-    override: RowStatusOverride | undefined,
+/** What every card face shows for a component: status, label, dot and message. */
+function deriveFace(
     entry: IdentifiedAppBuilderComponent,
-): { status: IntegrationStatus; statusLabel: string; message?: string } {
-    const status = worstOf(ownStatus, system?.status);
-    const staticLabel = getStatusDisplay(status)?.label ?? '';
-    const systemStep =
-        system?.status === 'deploying' && ownStatus !== 'deploying' ? system.statusLabel : undefined;
-    const liveStep = status === 'deploying' ? (override?.message ?? systemStep) : undefined;
-    const systemNote =
-        system && status !== ownStatus && status !== 'deploying'
-            ? `${system.name}: ${system.statusLabel}`
-            : undefined;
+    override: RowStatusOverride | undefined,
+): { status: IntegrationStatus; statusLabel: string; dotVariant: IntegrationCardModel['dotVariant']; message?: string } {
+    const status = normalizeIntegrationStatus(withUpdateStatus(override?.status ?? entry.status, entry));
+    const shared = getStatusDisplay(status);
+    // While deploying, the live step IS the label — because the card FACE renders
+    // `statusLabel` and nothing else (IntegrationCard.tsx). Putting the step on
+    // `message` alone left the face stuck on a constant "Deploying…" and sent the
+    // detail to a drawer that is closed during a deploy. The mesh card does the
+    // same for its transient states, so the two kinds agree — and since 2026-08-04
+    // they agree on the SETTLED states by construction too, both reading their
+    // label and severity from the one shared table.
+    //
+    // Only while DEPLOYING. A failure reason is a full CLI sentence and would
+    // blow out an 11px uppercase card face, so an error keeps the terse label and
+    // leaves its reason for the drawer.
+    const liveStep = status === 'deploying' ? override?.message : undefined;
     return {
         status,
-        statusLabel: liveStep ?? staticLabel,
-        message: resolveCardMessage(ownStatus, liveStep, override, entry) ?? systemNote,
+        statusLabel: liveStep ?? shared?.label ?? '',
+        dotVariant: severityToDot(shared?.severity ?? 'neutral'),
+        message: resolveCardMessage(status, liveStep, override, entry),
     };
 }
 
@@ -378,53 +361,97 @@ function resolveCardMessage(
  * Derive an integration entry's card model, applying its live override
  * (status/name/message win over the persisted entry; a name-less override
  * keeps the persisted name — the hook's merge already preserved rename labels).
+ *
+ * @param entry - the persisted integration
+ * @param override - its live row push
+ * @param systems - the system cards it uses, for its "Uses" row
+ * @returns the card model
  */
 export function deriveIntegrationCard(
     entry: IdentifiedAppBuilderComponent,
     override?: RowStatusOverride,
-    boundSystem?: { component: IdentifiedAppBuilderComponent; override?: RowStatusOverride },
+    systems: LinkedCard[] = [],
 ): IntegrationCardModel {
-    const system = deriveBoundSystem(boundSystem?.component, boundSystem?.override);
-    const ownStatus = normalizeIntegrationStatus(withUpdateStatus(override?.status ?? entry.status, entry));
-    const face = pairFace(ownStatus, system, override, entry);
-    const { status } = face;
+    const face = deriveFace(entry, override);
     const facet = deriveKindFacet(entry);
     const primaryUrl = resolvePrimaryUrl(entry);
-    const dotVariant = severityToDot(getStatusDisplay(status)?.severity ?? 'neutral');
-
-    // While deploying, the live step IS the label — because the card FACE renders
-    // `statusLabel` and nothing else (IntegrationCard.tsx). Putting the step on
-    // `message` alone left the face stuck on a constant "Deploying…" and sent the
-    // detail to a drawer that is closed during a deploy. The mesh card does the
-    // same for its transient states, so the two kinds agree — and since 2026-08-04
-    // they agree on the SETTLED states by construction too, both reading their
-    // label and severity from the one shared table.
-    //
-    // Only while DEPLOYING. A failure reason is a full CLI sentence and would
-    // blow out an 11px uppercase card face, so an error keeps the terse label and
-    // leaves its reason for the drawer.
     const installation = deriveInstallation(entry);
 
-    return {
+    return withRemovalStopped(entry, {
         id: entry.id,
         isMesh: false,
         name: override?.name ?? entry.name ?? entry.id,
         kindLabel: facet.kindLabel,
         sourceLine: facet.sourceLine,
         sourceIsAi: facet.sourceIsAi,
-        status,
-        statusLabel: face.statusLabel,
-        dotVariant,
-        message: face.message,
+        ...face,
         url: primaryUrl,
         urlLabel: 'App URL',
         deployedUrls: entry.deployedUrls,
         apis: facet.apis,
         lastDeployed: formatLastDeployed(entry.lastDeployed),
         installation,
-        menuActions: buildMenuActions(ownStatus, primaryUrl, installation, system),
+        menuActions: buildMenuActions(face.status, primaryUrl, installation),
         canRename: entry.kind === 'integration' && !facet.isCatalog,
-        ...(system ? { system } : {}),
+        ...(systems.length > 0 ? { linked: { label: 'Uses' as const, cards: systems } } : {}),
+    });
+}
+
+/**
+ * Derive a system's card (the ERP an integration uses): its own status, its
+ * type as a badge, its screen as the URL, and the integration it belongs to.
+ *
+ * @param entry - the persisted system
+ * @param override - its live row push
+ * @param usedBy - the integration card it belongs to, when that is in the project
+ * @param catalog - where its type is declared
+ * @returns the card model
+ */
+export function deriveSystemCard(
+    entry: IdentifiedAppBuilderComponent,
+    override?: RowStatusOverride,
+    usedBy?: LinkedCard,
+    catalog?: readonly AppBuilderComponentCatalogEntry[],
+): IntegrationCardModel {
+    const face = deriveFace(entry, override);
+    const catalogEntry = catalog?.find((e) => e.id === entry.id) ?? getAppBuilderComponentEntry(entry.id);
+    const type = catalogEntry?.systemType ?? 'System';
+    const screenUrl = resolvePrimaryUrl(entry);
+
+    return withRemovalStopped(entry, {
+        id: entry.id,
+        isMesh: false,
+        isSystem: true,
+        typeBadge: type,
+        name: override?.name ?? entry.name ?? entry.id,
+        kindLabel: type,
+        sourceLine: formatSourceLine(entry.source),
+        sourceIsAi: false,
+        ...face,
+        url: screenUrl,
+        urlLabel: 'Screen',
+        deployedUrls: entry.deployedUrls,
+        lastDeployed: formatLastDeployed(entry.lastDeployed),
+        menuActions: buildSystemMenuActions(face.status, screenUrl, usedBy),
+        canRename: false,
+        ...(usedBy ? { linked: { label: 'Used by' as const, cards: [usedBy] } } : {}),
+    });
+}
+
+/**
+ * A removal that stopped on a clean-up that did not finish: the face says so,
+ * the drawer says why, and the menu offers to go ahead. While a deploy or a
+ * retried removal runs, the live status shows instead.
+ */
+function withRemovalStopped(entry: IdentifiedAppBuilderComponent, card: IntegrationCardModel): IntegrationCardModel {
+    if (!entry.removalStopped || card.status === 'deploying') return card;
+    return {
+        ...card,
+        removalStopped: entry.removalStopped,
+        statusLabel: 'Removal stopped',
+        dotVariant: 'warning',
+        message: entry.removalStopped,
+        menuActions: [...card.menuActions, 'remove-anyway'],
     };
 }
 
@@ -604,75 +631,80 @@ export function deriveMeshCard(
 function synthesizePendingCard(
     id: string,
     override: RowStatusOverride,
-    catalog?: AppBuilderComponentCatalogEntry[],
+    catalog?: readonly AppBuilderComponentCatalogEntry[],
 ): IntegrationCardModel {
     const entry = catalog?.find((e) => e.id === id) ?? getAppBuilderComponentEntry(id);
     const synthetic: IdentifiedAppBuilderComponent = {
         id,
-        kind: 'integration',
+        kind: entry?.kind === 'system' ? 'system' : 'integration',
         status: 'not-deployed',
         name: entry?.name,
         source: entry?.source ?? { owner: '', repo: '' },
     };
-    return { ...deriveIntegrationCard(synthetic, override), canRename: false };
+    const card =
+        synthetic.kind === 'system'
+            ? deriveSystemCard(synthetic, override, undefined, catalog)
+            : deriveIntegrationCard(synthetic, override);
+    return { ...card, canRename: false };
 }
 
 /**
- * Assemble the grid's integration cards: one per `kind:'integration'` entry
- * (each with its OWN override), plus a synthesized pending card per
+ * Assemble the grid's integration and system cards: each integration followed
+ * by the systems it uses (the stored link, `appBuilderComponentLinks`), then any
+ * system no present integration uses, then a synthesized pending card per
  * unknown-id 'deploying' override. Terminal-status orphan overrides are
  * ignored — a removed card must not resurrect from its last push.
  */
 export function buildIntegrationCards(
     components: IdentifiedAppBuilderComponent[],
     overrides: Record<string, RowStatusOverride>,
-    catalog?: AppBuilderComponentCatalogEntry[],
+    catalog?: readonly AppBuilderComponentCatalogEntry[],
     meshCardComponentId?: string,
 ): IntegrationCardModel[] {
-    const integrations = components.filter((component) => component.kind === 'integration');
-    // A SYSTEM (the ERP) never becomes a card: it rides its integration's card
-    // as a second section. The pairing is the catalog's `boundTo`, read off the
-    // system row's own entry (the caller's catalog first, the bundled one else).
-    const entryOf = (id: string): AppBuilderComponentCatalogEntry | undefined =>
-        catalog?.find((e) => e.id === id) ?? getAppBuilderComponentEntry(id);
-    const systemFor = (integrationId: string): IdentifiedAppBuilderComponent | undefined =>
-        components.find(
-            (component) => component.kind === 'system' && entryOf(component.id)?.boundTo === integrationId,
-        );
-    const cards = integrations.map((component) => {
-        const system = systemFor(component.id);
-        return deriveIntegrationCard(
-            component,
-            overrides[component.id],
-            system ? { component: system, override: overrides[system.id] } : undefined,
-        );
-    });
+    // An EMPTY catalog means the caller has not loaded one yet, not that there
+    // are no pairs: the bundled catalog is what the per-entry lookups already
+    // fall back to, so the links agree with the badges either way.
+    const links = catalog?.length ? catalog : getAppBuilderComponentCatalog();
+    const project = { appBuilderComponents: Object.fromEntries(components.map(({ id, ...state }) => [id, state])) };
+    const byId = new Map(components.map((component) => [component.id, component]));
+    const placed = new Set<string>();
+    const cards: IntegrationCardModel[] = [];
 
-    // Ids already on screen. `integrations` deliberately omits the mesh, so
-    // WITHOUT the caller naming its mesh card's component id the mesh's own row
-    // status reads as an unknown-id push and synthesizes a duplicate — which is
-    // what put "API Mesh — MESH DEPLOYED" beside "EDS ACCS API Mesh — REMOVING
-    // MESH" during a removal (2026-08-04, live).
+    for (const integration of components.filter((component) => component.kind === 'integration')) {
+        const systemIds = systemsUsedBy(project, integration.id, links);
+        // The integration's own card, known before its systems' cards name it.
+        const own = deriveIntegrationCard(integration, overrides[integration.id]);
+        const systems = systemIds.flatMap((systemId) => {
+            const system = byId.get(systemId);
+            return system ? [deriveSystemCard(system, overrides[systemId], toLinkedCard(own), links)] : [];
+        });
+        cards.push(deriveIntegrationCard(integration, overrides[integration.id], systems.map(toLinkedCard)), ...systems);
+        placed.add(integration.id);
+        for (const system of systems) placed.add(system.id);
+    }
+    for (const system of components.filter((component) => component.kind === 'system' && !placed.has(component.id))) {
+        cards.push(deriveSystemCard(system, overrides[system.id], undefined, links));
+        placed.add(system.id);
+    }
+
+    // Ids already on screen. `components` includes the mesh's record, but the
+    // mesh card is derived elsewhere: WITHOUT the caller naming its mesh card's
+    // component id the mesh's own row status reads as an unknown-id push and
+    // synthesizes a duplicate — which is what put "API Mesh — MESH DEPLOYED"
+    // beside "EDS ACCS API Mesh — REMOVING MESH" during a removal (2026-08-04,
+    // live).
     //
     // The caller passes it only when a mesh card is actually rendered. During an
     // ADD there is no mesh yet and so no derived card, and then the synthesized
     // card is the only feedback the operation has — suppressing it by kind
     // instead would trade a duplicate for silence.
-    //
-    // Every system in the project is covered too: its row status rides its
-    // integration's card, so an ERP's own 'deploying' push must never
-    // synthesize an ERP card beside the pair.
-    const covered = new Set(integrations.map((component) => component.id));
-    for (const component of components) {
-        if (component.kind === 'system') covered.add(component.id);
-    }
     if (meshCardComponentId) {
-        covered.add(meshCardComponentId);
+        placed.add(meshCardComponentId);
     }
 
     for (const [id, override] of Object.entries(overrides)) {
-        if (!covered.has(id) && override.status === 'deploying') {
-            cards.push(synthesizePendingCard(id, override, catalog));
+        if (!placed.has(id) && override.status === 'deploying') {
+            cards.push(synthesizePendingCard(id, override, links));
         }
     }
 

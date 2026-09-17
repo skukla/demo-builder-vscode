@@ -156,6 +156,29 @@
     color: var(--spectrum-global-color-red-600);
 }
 
+/* A system card's type ("ERP") beside its name; never squeezed by a long name. */
+.integration-card-badge {
+    flex: 0 0 auto;
+}
+
+/* The linked card's name, on the status line so a linked card is no taller than
+   the rest. Pushed to the line's end; the name truncates, the icon does not. */
+.integration-card-link {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    margin-left: auto;
+    color: var(--spectrum-global-color-gray-600);
+    font-size: 11px;
+}
+
+.integration-card-link-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 /* One line, not two.
 
    `.integration-panel-row` ends with a border-bottom, guarded by a

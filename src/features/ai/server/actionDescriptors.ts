@@ -343,13 +343,21 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
             'Remove one App Builder integration by its id. DESTRUCTIVE: undeploys it remotely ' +
             '(aio app undeploy / api-mesh:delete), deletes its local files, and republishes the ' +
             'storefront without it. The ERP integration first undoes what it wrote into Commerce ' +
-            'and takes its ERP with it; data.warning says what could not be undone. ' +
+            'and takes its ERP with it; removing the ERP removes its integration the same way. ' +
+            'Before undeploying it runs the clean-ups only the deployed code can do (the Commerce ' +
+            "undo and uninstall, the ERP's records); if one fails NOTHING is removed and the " +
+            'error code is COMPONENT_REMOVAL_STOPPED, with the reasons. Retry, or pass force:true ' +
+            'only after the user chose to remove anyway; data.warning then says what stays behind. ' +
             'Confirm the id with the user first.',
         map: dashboardHandlers,
         type: 'removeAppBuilderComponent',
         confirm: true,
         inputSchema: {
             id: z.string().describe('The integration id to remove (from get_project)'),
+            force: z
+                .boolean()
+                .optional()
+                .describe('Remove even though a clean-up did not finish. Only when the user chose to.'),
         },
     },
     {

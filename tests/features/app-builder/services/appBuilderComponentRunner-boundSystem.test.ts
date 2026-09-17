@@ -4,8 +4,8 @@
  * The ERP integration comes with its ERP, a `kind: 'system'` entry bound to it.
  * Adding the integration adds and deploys the system FIRST (so the provider
  * check passes and the ERP's base URL is there to inject); removing the
- * integration removes the system AFTER it; the system is never removed alone
- * while its integration is present. Every assertion reads an argument a
+ * integration removes the system AFTER it; removing the system removes its
+ * integration the same way, whichever card asked. Every assertion reads an argument a
  * collaborator was handed or the state the runner persisted.
  */
 
@@ -275,18 +275,23 @@ describe('removing the pair', () => {
         expect(deps.detachFromCommerce).toHaveBeenCalledWith(project, INT_URLS, expect.any(Function));
     });
 
-    it('removes the pair even when the undo fails, and says so', async () => {
-        const project = pairedProject();
+    it('a failed undo stops the pair with nothing removed; removing anyway removes both and says so', async () => {
         const failed = { status: 'failed' as const, detail: "The ERP's changes in Commerce were not undone: offline" };
         const deps = createDeps({
             catalog: [SYSTEM, INTEGRATION],
             detachFromCommerce: jest.fn(async () => failed),
         });
 
-        const result = await removeAppBuilderComponent(project, 'erp-integration', deps);
+        const stopped = pairedProject();
+        const refused = await removeAppBuilderComponent(stopped, 'erp-integration', deps);
+        expect(refused).toMatchObject({ success: false, code: 'COMPONENT_REMOVAL_STOPPED' });
+        expect(Object.keys(stopped.appBuilderComponents ?? {})).toEqual(['demo-erp', 'erp-integration']);
 
+        const forced = pairedProject();
+        const result = await removeAppBuilderComponent(forced, 'erp-integration', deps, { force: true });
         expect(result).toMatchObject({ success: true, commerceDetach: failed });
-        expect(project.appBuilderComponents).toStrictEqual({});
+        expect(result).not.toHaveProperty('warnings');
+        expect(forced.appBuilderComponents).toStrictEqual({});
     });
 
     it('carries nothing when the component has no detach to run', async () => {
@@ -301,18 +306,18 @@ describe('removing the pair', () => {
         expect(result).not.toHaveProperty('commerceDetach');
     });
 
-    it('the ERP alone is refused while its integration is present, and nothing is undeployed', async () => {
+    it('removing the ERP removes its integration first, then the ERP: the same order as from the integration', async () => {
         const project = pairedProject();
         const deps = createDeps({ catalog: [SYSTEM, INTEGRATION] });
 
         const result = await removeAppBuilderComponent(project, 'demo-erp', deps);
 
-        expect(result).toEqual({
-            success: false,
-            error: '"Acme ERP" comes with "ERP integration". Remove the integration instead — its Acme ERP goes with it.',
-        });
-        expect(deps.commandManager.execute).not.toHaveBeenCalled();
-        expect(Object.keys(project.appBuilderComponents ?? {})).toEqual(['demo-erp', 'erp-integration']);
+        expect(result.success).toBe(true);
+        const undeploys = deps.commandManager.execute.mock.calls
+            .filter((call) => String(call[0]) === 'aio app undeploy')
+            .map((call) => (call[1] as { cwd?: string }).cwd);
+        expect(undeploys).toEqual(['/proj/components/erp-integration', '/proj/components/demo-erp']);
+        expect(project.appBuilderComponents).toStrictEqual({});
     });
 
     it('an ERP whose integration is already gone can be removed on its own', async () => {

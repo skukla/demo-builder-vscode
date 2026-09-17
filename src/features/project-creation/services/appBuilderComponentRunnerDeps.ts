@@ -39,6 +39,7 @@ import {
     type GitRunner,
 } from '@/features/app-builder/services/integrationSourceUpdate';
 import { buildS2SDeployEnv } from '@/features/app-builder/services/s2sDeployEnv';
+import { wipeSystemRecords } from '@/features/app-builder/services/systemRecordsWipe';
 import { ensureScreenKeyEnv, forgetScreenKey } from '@/features/app-builder/services/systemScreen';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
@@ -193,29 +194,34 @@ export function buildDefaultRunnerDeps(
         checkComponentSource: (componentPath, branch) => checkCloneForUpdate(componentPath, branch, gitIn),
         installComponentDependencies: (componentPath, definition) =>
             ctx.componentManager.installNpmDependencies(componentPath, definition),
-        // The inverse, ahead of an integration remove: the app's own uninstall
-        // API takes down what its installer created, while the API still
-        // exists to call. Best-effort — the runner logs a failure and removes
-        // anyway.
-        // Before the uninstall: the ERP integration's undo of its Commerce writes
-        // lives in one of the actions the undeploy deletes.
+        // The clean-ups ahead of a remove, each living in code the undeploy
+        // deletes. A failure stops the removal unless the SC removes anyway
+        // (appBuilderComponentTeardown). First the ERP integration's undo of its
+        // Commerce writes:
         detachFromCommerce: (project, deployedUrls, detachProgress) =>
             detachErpWrites(deployedUrls, {
                 getAuth: () => resolveAppManagementAuth(project, ctx.authManager),
                 onProgress: detachProgress,
             }),
+        // then the app's own uninstall API, which takes down what its installer created:
         uninstallAppManagement: (project, deployedUrls, uninstallProgress) =>
             uninstallAppManagementApp(project, deployedUrls, {
                 getAuth: () => resolveAppManagementAuth(project, ctx.authManager),
                 logger: ctx.logger,
                 onProgress: uninstallProgress,
             }),
+        // and a system's records, deleted while its wipe action still exists.
+        wipeSystemRecords: (project, entry, deployedUrls, name) =>
+            wipeSystemRecords(entry, deployedUrls, name, {
+                getAuth: () => resolveAppManagementAuth(project, ctx.authManager),
+                onProgress,
+            }),
+        resolveScreenEnv: (project, entry) => ensureScreenKeyEnv(ctx.secrets, project.path, entry),
+        forgetScreenKey: (project, entry) => forgetScreenKey(ctx.secrets, project.path, entry),
         // The AIO_COMMERCE_AUTH_IMS_* deploy env for app-management entries:
         // the workspace S2S credential's full identity (ensured + read via the
         // Console SDK), mapped by s2sDeployEnv. The secret rides the
         // per-invocation env only.
-        resolveScreenEnv: (project, entry) => ensureScreenKeyEnv(ctx.secrets, project.path, entry),
-        forgetScreenKey: (project, entry) => forgetScreenKey(ctx.secrets, project.path, entry),
         resolveAppManagementEnv: async (project) => {
             const adobe = project.adobe;
             if (!adobe?.organization || !adobe.projectId || !adobe.workspace) {

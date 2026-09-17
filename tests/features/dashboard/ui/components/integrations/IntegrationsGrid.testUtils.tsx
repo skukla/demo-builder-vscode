@@ -68,6 +68,12 @@ jest.mock('@adobe/react-spectrum', () => ({
         />
     ),
     DialogContainer: ({ children }: any) => <div data-testid="dialog-container">{children}</div>,
+    Badge: ({ children }: any) => <span data-testid="type-badge">{children}</span>,
+}));
+
+jest.mock('@spectrum-icons/workflow/Link', () => ({
+    __esModule: true,
+    default: () => <span data-testid="icon-link" />,
 }));
 
 jest.mock('@spectrum-icons/workflow/More', () => ({

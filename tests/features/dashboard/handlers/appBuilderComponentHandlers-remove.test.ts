@@ -30,11 +30,13 @@
 import {
     handleRemoveAppBuilderComponent,
     mockRemoveAppBuilderComponent,
+    mockSendAppBuilderComponentsSnapshot,
     mockTestDeveloperPermissions,
     resetHandlerMocks,
     setupMocks,
 } from './appBuilderComponentHandlers.testUtils';
 import * as vscode from 'vscode';
+import { ErrorCode } from '@/types/errorCodes';
 
 // The family's shared reset. Dropped on the first attempt at this split, which is
 // the playbook's own first rule — extract the shared setup FIRST — and it showed up
@@ -54,8 +56,34 @@ describe('handleRemoveAppBuilderComponent', () => {
         expect(mockRemoveAppBuilderComponent).toHaveBeenCalledWith(
             mockProject,
             'erp-sync',
-            expect.anything()
+            expect.anything(),
+            { force: false },
         );
+    });
+
+    it('passes Remove anyway on only for a literal true', async () => {
+        const { mockContext } = setupMocks();
+        mockTestDeveloperPermissions(true);
+
+        await handleRemoveAppBuilderComponent(mockContext, { id: 'erp-sync', force: true });
+        await handleRemoveAppBuilderComponent(mockContext, { id: 'erp-sync', force: 'yes' as unknown as boolean });
+
+        expect(mockRemoveAppBuilderComponent.mock.calls.map((call) => call[3])).toEqual([
+            { force: true },
+            { force: false },
+        ]);
+    });
+
+    it('a stopped removal hands back its code and refreshes the cards so they offer Remove anyway', async () => {
+        const { mockContext } = setupMocks();
+        mockTestDeveloperPermissions(true);
+        const stopped = { success: false, error: 'Nothing was removed. …', code: ErrorCode.COMPONENT_REMOVAL_STOPPED };
+        mockRemoveAppBuilderComponent.mockResolvedValue(stopped);
+
+        const result = await handleRemoveAppBuilderComponent(mockContext, { id: 'erp-sync' });
+
+        expect(result).toEqual(stopped);
+        expect(mockSendAppBuilderComponentsSnapshot).toHaveBeenCalledTimes(1);
     });
 
     /**
@@ -172,7 +200,7 @@ describe('handleRemoveAppBuilderComponent', () => {
 
         const result = await handleRemoveAppBuilderComponent(mockContext, { id: 'erp-sync' });
 
-        expect(result.success).toBe(false);
-        expect(result.error).toBe('undeploy failed');
+        expect(result).toEqual({ success: false, error: 'undeploy failed' });
+        expect(mockSendAppBuilderComponentsSnapshot).not.toHaveBeenCalled();
     });
 });

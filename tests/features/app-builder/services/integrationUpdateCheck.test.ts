@@ -5,10 +5,8 @@
  */
 
 import type { UpdateCheckResult } from '@/features/app-builder/services/integrationSourceUpdate';
-import {
-    checkIntegrationUpdates,
-    clearUpdateAvailable,
-} from '@/features/app-builder/services/integrationUpdateCheck';
+import { clearUpdateAvailable } from '@/core/state/appBuilderComponentState';
+import { checkIntegrationUpdates } from '@/features/app-builder/services/integrationUpdateCheck';
 import type { AppBuilderComponentState, Project } from '@/types/base';
 import { createMockProject } from '../../../helpers/projectFake';
 

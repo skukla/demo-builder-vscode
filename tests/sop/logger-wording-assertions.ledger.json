@@ -21,7 +21,7 @@
         "tests/core/vscode/envFileWatcherService.test.ts": 1,
         "tests/features/ai/server/agentOperationNotifier.test.ts": 1,
         "tests/features/ai/server/siteTools.test.ts": 1,
-        "tests/features/app-builder/services/appBuilderComponentRunner-remove.test.ts": 2,
+        "tests/features/app-builder/services/appBuilderComponentRunner-remove.test.ts": 1,
         "tests/features/authentication/handlers/authenticationHandlers-authenticate-edge-cases.test.ts": 2,
         "tests/features/authentication/handlers/authenticationHandlers-authenticate-errors.test.ts": 3,
         "tests/features/authentication/handlers/authenticationHandlers-authenticate-new-auth.test.ts": 3,

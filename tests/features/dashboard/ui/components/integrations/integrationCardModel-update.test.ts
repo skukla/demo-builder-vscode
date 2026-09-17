@@ -1,12 +1,12 @@
 /**
  * integrationCardModel — a recorded update (AB-13, step 5). A deployed
  * integration whose newer code the integrations screen found reads as
- * "Update needed", with Update leading its menu; so does a pair whose ERP has
- * one.
+ * "Update needed", with Update leading its menu; so does a system card.
  */
 
 import {
     deriveIntegrationCard,
+    deriveSystemCard,
     integration,
     type IdentifiedAppBuilderComponent,
 } from './integrationCardModel.testUtils';
@@ -59,14 +59,12 @@ describe('deriveIntegrationCard with a recorded update', () => {
         expect(card.menuActions).toStrictEqual([]);
     });
 
-    it('a pair whose ERP has an update reads Update needed and names the ERP', () => {
-        const card = deriveIntegrationCard(integration({ id: 'erp-integration' }), undefined, {
-            component: erp({ updateAvailable: UPDATE }),
-        });
+    it('a system with an update reads Update needed on its own card, Update first', () => {
+        const card = deriveSystemCard(erp({ updateAvailable: UPDATE }));
 
         expect(card.status).toBe('stale');
-        expect(card.system?.status).toBe('stale');
-        expect(card.message).toBe('Nordwind: Update needed');
+        expect(card.statusLabel).toBe('Update needed');
+        expect(card.menuActions[0]).toBe('update');
     });
 
     it('a card with no recorded update is unchanged', () => {

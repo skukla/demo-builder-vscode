@@ -5,19 +5,16 @@
 
 import type { AppBuilderComponentState, Project } from '@/types/base';
 
+const mockErpEntry = {
+    id: 'demo-erp',
+    name: 'ERP',
+    kind: 'system',
+    boundTo: 'erp-integration',
+    screen: { action: 'screen', keyEnvVar: 'ERP_SCREEN_KEY' },
+};
 jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => ({
-    getBoundSystem: jest.fn((id: string) =>
-        id === 'erp-integration'
-            ? {
-                  id: 'demo-erp',
-                  name: 'ERP',
-                  kind: 'system',
-                  boundTo: 'erp-integration',
-                  screen: { action: 'screen', keyEnvVar: 'ERP_SCREEN_KEY' },
-              }
-            : undefined,
-    ),
-    getAppBuilderComponentEntry: jest.fn(),
+    getAppBuilderComponentCatalog: jest.fn(() => [mockErpEntry]),
+    getAppBuilderComponentEntry: jest.fn((id: string) => (id === 'demo-erp' ? mockErpEntry : undefined)),
     buildCustomIntegrationEntry: jest.fn(),
     entryFitsProjectAxes: jest.fn().mockReturnValue(true),
 }));

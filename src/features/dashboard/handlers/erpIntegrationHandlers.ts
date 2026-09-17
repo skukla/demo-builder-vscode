@@ -36,7 +36,11 @@ import {
     type ErpResetReport,
 } from '@/features/app-builder/services/erpIntegrationClient';
 import { deriveScreenUrl, readScreenKey, screenLink } from '@/features/app-builder/services/systemScreen';
-import { getBoundSystem } from '@/features/components/services/appBuilderComponentCatalogLoader';
+import {
+    getAppBuilderComponentCatalog,
+    getAppBuilderComponentEntry,
+} from '@/features/components/services/appBuilderComponentCatalogLoader';
+import { systemsUsedBy } from '@/features/components/services/appBuilderComponentLinks';
 import { resolveAppManagementAuth } from '@/features/project-creation/services/appBuilderComponentRunnerDeps';
 import type { AppBuilderComponentState, Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
@@ -78,9 +82,14 @@ async function openErpCall(
     if (!auth) {
         return { error: { success: false, error: `Adobe sign-in required to ${needsAuthFor}.`, code: ErrorCode.AUTH_REQUIRED } };
     }
-    const systemEntry = getBoundSystem(id);
-    const erpState = systemEntry ? getAppBuilderComponent(project, systemEntry.id) : undefined;
-    return { id, project, integration, auth, erp: systemEntry && erpState ? { id: systemEntry.id, ...erpState } : undefined };
+    const erpId = erpOf(project, id);
+    const erpState = erpId ? getAppBuilderComponent(project, erpId) : undefined;
+    return { id, project, integration, auth, erp: erpId && erpState ? { id: erpId, ...erpState } : undefined };
+}
+
+/** The ERP this integration uses in the project (the first, while there is one per integration). */
+function erpOf(project: Project, integrationId: string): string | undefined {
+    return systemsUsedBy(project, integrationId, getAppBuilderComponentCatalog())[0];
 }
 
 /** The ERP row as an agent or the flyout reads it: name, status, its screen's URL. */
@@ -152,8 +161,9 @@ export const handleOpenErpScreen: MessageHandler<{ id?: string }> = async (conte
     const target = await resolveComponentTarget(context, payload?.id);
     if (!target.ok) return target.error;
     const { id, project } = target;
-    const systemEntry = getBoundSystem(id);
-    const erp = systemEntry ? getAppBuilderComponent(project, systemEntry.id) : undefined;
+    const erpId = erpOf(project, id);
+    const erp = erpId ? getAppBuilderComponent(project, erpId) : undefined;
+    const systemEntry = erpId ? getAppBuilderComponentEntry(erpId) : undefined;
     if (!systemEntry || !erp) {
         return { success: false, error: `"${id}" has no ERP in this project.`, code: ErrorCode.INVALID_OPERATION };
     }

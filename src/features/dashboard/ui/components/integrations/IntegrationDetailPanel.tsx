@@ -28,8 +28,8 @@ import { ActionButton, Link } from '@adobe/react-spectrum';
 import Close from '@spectrum-icons/workflow/Close';
 import React from 'react';
 import type { CardAction, IntegrationCardModel } from './integrationCardModel';
+import { LinkedSection } from './LinkedSection';
 import { PanelRow } from './PanelRow';
-import { SystemSection } from './SystemSection';
 import { InlineRenameField } from '@/core/ui/components/forms/InlineRenameField';
 import { IntegrationActionsMenu } from '@/core/ui/components/integrations/IntegrationActionsMenu';
 import { CopyableText } from '@/core/ui/components/ui/CopyableText';
@@ -42,6 +42,8 @@ export interface IntegrationDetailPanelProps {
     model: IntegrationCardModel | undefined;
     /** ✕ / scrim / Esc → the grid clears its selection. */
     onClose: () => void;
+    /** A linked card's name → the grid selects that card instead. */
+    onOpenLinked: (id: string) => void;
     /** Bar buttons and the URL link → the grid's single handleAction switch. */
     onAction: (model: IntegrationCardModel, action: CardAction) => void;
     /** Rename commit: resolve null on success, an error string for inline display. */
@@ -79,6 +81,7 @@ function selectEndpoints(
 function PanelContent({
     model,
     onClose,
+    onOpenLinked,
     onAction,
     onRename,
     destinationLabel,
@@ -121,6 +124,7 @@ function PanelContent({
             </div>
 
             <div className="db-drawer-body">
+                <LinkedSection model={model} onOpenLinked={onOpenLinked} />
                 <PanelRow label="Status">
                     {/* Same treatment as the card's status line — 6px dot, 6px gap,
                         11px uppercase label. The flyout is the card's detail view, so
@@ -211,8 +215,10 @@ function PanelContent({
                         </PanelRow>
                     ) : (
                         <PanelRow label={model.urlLabel}>
+                            {/* A system's screen URL lacks the key the extension
+                                adds, so it reads as an action, not an address. */}
                             <Link isQuiet onPress={() => onAction(model, 'open')}>
-                                {model.url}
+                                {model.isSystem ? `Open ${model.name}` : model.url}
                             </Link>
                         </PanelRow>
                     ))}
@@ -267,7 +273,6 @@ function PanelContent({
                 {model.lastDeployed && (
                     <PanelRow label="Last deploy">{model.lastDeployed}</PanelRow>
                 )}
-                <SystemSection model={model} onAction={onAction} />
                 {/* LAST, deliberately. Every row above is fixed-size — one apiece —
                     while this group grows with the app's web actions and is the only
                     thing here without a bound. Above the metadata it strands Last

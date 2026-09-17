@@ -58,6 +58,7 @@ function renderPanel(model: IntegrationCardModel | undefined): {
         <IntegrationDetailPanel
             model={model}
             onClose={jest.fn()}
+            onOpenLinked={jest.fn()}
             onAction={onAction}
             onRename={jest.fn(() => Promise.resolve(null))}
         />

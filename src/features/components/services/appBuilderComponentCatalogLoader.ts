@@ -135,31 +135,14 @@ export function isSeedIntegration(entry: AppBuilderComponentCatalogEntry): boole
 }
 
 /**
- * The SYSTEM bound to an integration — the ERP that comes with the ERP
- * integration — or undefined when the integration stands alone. A system is
- * never offered or removed on its own; every door that adds or removes an
- * integration asks this first (decision 2, 2026-09-14).
+ * Every catalog entry, for code that asks a project which system an
+ * integration uses (`appBuilderComponentLinks`): a project saved before links
+ * were stored is paired through the entries' `boundTo`.
  *
- * @param integrationId - a catalog integration id
- * @returns the bound `kind: 'system'` entry, if any
+ * @returns the bundled catalog's entries
  */
-export function getBoundSystem(integrationId: string): AppBuilderComponentCatalogEntry | undefined {
-    return config.appBuilderComponents.find(
-        (entry) => entry.kind === 'system' && entry.boundTo === integrationId,
-    );
-}
-
-/**
- * The integration a system belongs to, or undefined for anything that is not a
- * bound system.
- *
- * @param systemId - a catalog id
- * @returns the consumer entry named by the system's `boundTo`
- */
-export function getBoundConsumer(systemId: string): AppBuilderComponentCatalogEntry | undefined {
-    const system = getAppBuilderComponentEntry(systemId);
-    if (!system || system.kind !== 'system' || !system.boundTo) return undefined;
-    return getAppBuilderComponentEntry(system.boundTo);
+export function getAppBuilderComponentCatalog(): readonly AppBuilderComponentCatalogEntry[] {
+    return config.appBuilderComponents;
 }
 
 /**

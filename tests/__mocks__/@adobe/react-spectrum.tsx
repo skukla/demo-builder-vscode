@@ -494,6 +494,13 @@ export const Link: React.FC<any> = ({ children, onPress, ...props }) => {
     );
 };
 
+// Badge mock — a type label on a card face (the system card's "ERP").
+export const Badge: React.FC<any> = ({ children, variant, ...props }) => (
+    <span data-testid="spectrum-badge" data-variant={variant} {...filterSpectrumProps(props)}>
+        {children}
+    </span>
+);
+
 // SearchField mock
 export const SearchField: React.FC<any> = ({ value, onChange, autoFocus, ...props }) => (
     <input

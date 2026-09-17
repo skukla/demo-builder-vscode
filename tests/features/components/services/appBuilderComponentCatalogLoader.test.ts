@@ -14,8 +14,7 @@ import {
     isSeedIntegration,
     getAvailableAppBuilderComponents,
     getAppBuilderComponentEntry,
-    getBoundConsumer,
-    getBoundSystem,
+    getAppBuilderComponentCatalog,
     buildCustomIntegrationEntry,
     entryFitsProjectAxes,
     isBlankSource,
@@ -635,15 +634,9 @@ describe('isPrebuiltIntegration — what belongs in the Pre-built gallery', () =
 });
 
 describe('the bound pair — the ERP comes with the ERP integration (decision 2)', () => {
-    it('resolves the system from its integration and the integration from its system', () => {
-        expect(getBoundSystem('erp-integration')?.id).toBe('demo-erp');
-        expect(getBoundConsumer('demo-erp')?.id).toBe('erp-integration');
-    });
-
-    it('answers nothing for an integration that stands alone, or for an id that is not a system', () => {
-        expect(getBoundSystem('app-builder-shell')).toBeUndefined();
-        expect(getBoundConsumer('erp-integration')).toBeUndefined();
-        expect(getBoundConsumer('nope')).toBeUndefined();
+    it('declares the ERP as the system the ERP integration brings, and no other system', () => {
+        const systems = getAppBuilderComponentCatalog().filter((entry) => entry.kind === 'system');
+        expect(systems.map((entry) => [entry.id, entry.boundTo])).toEqual([['demo-erp', 'erp-integration']]);
     });
 
     it('the ERP provides what the integration consumes, and both fit only a Commerce backend', () => {

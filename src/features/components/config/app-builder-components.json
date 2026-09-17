@@ -43,6 +43,7 @@
       "description": "A stand-in ERP the integration talks to: products, business partners, contract prices and sales orders, every record resettable, with its own screen. Comes with the ERP integration and goes with it.",
       "kind": "system",
       "boundTo": "erp-integration",
+      "systemType": "ERP",
       "nodeVersion": "24",
       "requiredApis": [
         "AppBuilderDataServicesSDK"
@@ -71,6 +72,10 @@
       "screen": {
         "action": "screen",
         "keyEnvVar": "ERP_SCREEN_KEY"
+      },
+      "wipe": {
+        "action": "admin",
+        "path": "wipe"
       }
     },
     {

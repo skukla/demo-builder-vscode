@@ -22,6 +22,12 @@
  * than the mesh, so no two cards in a grid shared a baseline. A host that wants
  * it on the face puts it in `subline`.
  *
+ * A linked card (an integration and the system it uses) adds two things: a
+ * neutral type badge beside a system's name ("ERP" — the SC's own name does not
+ * say what the thing is), and the other card's name after the status, behind a
+ * link icon. On the SAME line as the status, so a linked card is no taller than
+ * any other and the grid keeps one baseline.
+ *
  * The mesh peer card is visually IDENTICAL to an integration card — it is a
  * peer, identified by its name rather than chrome. Its behavioural asymmetry
  * (routing, actions, no rename) lives in the producer's derivation, never here.
@@ -29,6 +35,8 @@
  * @module core/ui/components/integrations/IntegrationCard
  */
 
+import { Badge } from '@adobe/react-spectrum';
+import LinkIcon from '@spectrum-icons/workflow/Link';
 import React, { useCallback } from 'react';
 import { IntegrationActionsMenu } from './IntegrationActionsMenu';
 import type { CardAction, IntegrationCardModel } from './integrationCardModel.types';
@@ -63,6 +71,19 @@ export interface IntegrationCardProps {
      * hinge on a string never being empty, which nothing guarantees.
      */
     subline?: React.ReactNode;
+}
+
+/** The other card's name behind a link icon, or nothing for a card alone. */
+function LinkedLine({ model }: { model: IntegrationCardModel }): React.ReactElement | null {
+    const cards = model.linked?.cards ?? [];
+    if (cards.length === 0) return null;
+    const names = cards.map((card) => card.name).join(', ');
+    return (
+        <span className="integration-card-link" title={`${model.linked?.label} ${names}`}>
+            <LinkIcon size="XS" aria-label={model.linked?.label} />
+            <span className="integration-card-link-name">{names}</span>
+        </span>
+    );
 }
 
 /**
@@ -118,6 +139,11 @@ export function IntegrationCard({
                 ) : (
                     <div className="integration-card-name">{model.name}</div>
                 )}
+                {model.typeBadge && (
+                    <Badge variant="neutral" UNSAFE_className="integration-card-badge">
+                        {model.typeBadge}
+                    </Badge>
+                )}
                 {/* CardActionsMenu contains its own clicks — no wrapper needed. */}
                 <IntegrationActionsMenu
                     model={model}
@@ -147,6 +173,7 @@ export function IntegrationCard({
                     >
                         {model.statusLabel}
                     </span>
+                    <LinkedLine model={model} />
                 </div>
             )}
         </div>

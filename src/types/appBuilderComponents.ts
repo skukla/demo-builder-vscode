@@ -84,12 +84,17 @@ export interface AppBuilderComponentCatalogEntry {
      */
     seed?: boolean;
     /**
-     * For `kind: 'system'` only: the id of the integration this system belongs
-     * to. The two are a UNIT — adding the integration adds and deploys the
-     * system first, removing the integration removes the system after it, and
-     * the system alone is never offered or removed on its own (decision 2).
+     * For `kind: 'system'` only: the id of the integration that brings this
+     * system. Adding the integration adds and deploys the system first; in a
+     * project the two are linked (`appBuilderComponentLinks`), and removing
+     * either removes both (decision 2). The system is never offered alone.
      */
     boundTo?: string;
+    /**
+     * kind 'system' only: what kind of system it is ("ERP"), shown as the badge
+     * on its card. The SC names the system; the type says what it is.
+     */
+    systemType?: string;
     /**
      * The env var whose value NAMES this component's row (the ERP's row reads
      * "Acme ERP", or whatever the SC typed). Absent = the entry's `name`.
@@ -105,6 +110,19 @@ export interface AppBuilderComponentCatalogEntry {
         action: string;
         /** The deploy-time input that carries the key, e.g. "ERP_SCREEN_KEY". */
         keyEnvVar: string;
+    };
+    /**
+     * kind 'system' only: the call that deletes the system's records (the ERP's
+     * `POST admin/wipe`). Removal makes it before the undeploy, while the action
+     * still exists: an undeploy removes code, not the workspace database, so
+     * without it a removed system's records stay there with nothing left to
+     * reach them.
+     */
+    wipe?: {
+        /** The web action, e.g. "admin". */
+        action: string;
+        /** The path under it that wipes, POSTed with no body, e.g. "wipe". */
+        path: string;
     };
     /** Pre-built source repo (owner/repo/branch). */
     source: AddonSource;

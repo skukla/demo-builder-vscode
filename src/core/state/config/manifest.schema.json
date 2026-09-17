@@ -738,6 +738,21 @@
           ],
           "description": "Newer code is available: the source branch on GitHub has commits the clone lacks, or the clone's app version differs from the one installed in Commerce. Set by the integrations screen's check, removed by a successful update (integrationUpdateCheck)."
         },
+        "systems": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The systems this integration uses (their `appBuilderComponents` ids), written when the pair is added. Read through `appBuilderComponentLinks`."
+        },
+        "usedBy": {
+          "type": "string",
+          "description": "The integration this system belongs to (its `appBuilderComponents` id)."
+        },
+        "removalStopped": {
+          "type": "string",
+          "description": "Why the last removal stopped before undeploying, in plain words: a clean-up only the deployed code can do did not finish. The card offers Remove anyway. Gone with the record when a removal finishes."
+        },
         "envVars": {
           "type": "object",
           "additionalProperties": {

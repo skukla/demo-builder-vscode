@@ -85,6 +85,15 @@ describe('recordDeployOutcome — failure reason', () => {
 
         expect(p.appBuilderComponents?.mesh.error).toBe('the real reason');
     });
+
+    it("drops a stopped removal's reason: a deploy makes it stale", () => {
+        const p = project();
+        p.appBuilderComponents!.mesh.removalStopped = 'Nothing was removed.';
+
+        recordDeployOutcome(p, 'mesh', 'mesh', { status: 'deployed' });
+
+        expect(p.appBuilderComponents?.mesh).not.toHaveProperty('removalStopped');
+    });
 });
 
 // ---------------------------------------------------------------------------

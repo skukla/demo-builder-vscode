@@ -6,8 +6,8 @@
  * plus every non-face action in the slide-in detail drawer.
  *
  * The grid owns exactly one instance each of the drawer, the add modal, the
- * remove, reset and reinstall confirms, and the Manage-APIs modal (no per-card dialogs, no
- * cross-card state leak), and ONE `handleAction` switch — the single place a
+ * remove, reset, reinstall and remove-anyway confirms, and the Manage-APIs modal
+ * (no per-card dialogs, no cross-card state leak), and ONE `handleAction` switch — the single place a
  * card model turns into an id-scoped message or a mesh callback:
  *   - mesh card    → onDeployMesh / onReAuthenticate (never keyed messages)
  *   - integration  → deploy/redeploy {id}, or the
@@ -21,15 +21,14 @@
  * @module features/dashboard/ui/components/integrations/IntegrationsGrid
  */
 
-import { Text } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { AppBuilderComponentRemoveDialog } from '../AppBuilderComponentRemoveDialog';
-import { ConfirmActionDialog } from '../ConfirmActionDialog';
 import { ErpResetDialog } from '../ErpResetDialog';
 import { ManageApisModal } from '../ManageApisModal';
+import { FlaggedCardDialogs, needsReinstall, removalStopped } from './FlaggedCardDialogs';
 import { type CardAction, type IntegrationCardModel } from './integrationCardModel';
 import { IntegrationDetailPanel } from './IntegrationDetailPanel';
-import { useReinstallPrompt } from './useReinstallPrompt';
+import { useFlaggedCardDialog } from './useFlaggedCardDialog';
 import { IntegrationCard } from '@/core/ui/components/integrations/IntegrationCard';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 
@@ -68,6 +67,42 @@ const KEYED_MESSAGES: Partial<Record<CardAction, string>> = {
 };
 
 /**
+ * A system card's verbs that differ from an integration's: its screen and its
+ * reset both go through the integration that uses it — the extension holds the
+ * screen key and runs the reset. Everything else (redeploy, update, remove) is
+ * the ordinary keyed path with the system's own id.
+ *
+ * @returns whether the action was handled here
+ */
+function handleSystemAction(
+    model: IntegrationCardModel,
+    action: CardAction,
+    confirmReset: (pending: { id: string; erpName: string }) => void,
+): boolean {
+    const integrationId = model.linked?.cards[0]?.id;
+    if (action === 'open') {
+        if (integrationId) webviewClient.postMessage('openErpScreen', { id: integrationId });
+        return true;
+    }
+    if (action === 'reset-records') {
+        if (integrationId) confirmReset({ id: integrationId, erpName: model.name });
+        return true;
+    }
+    return false;
+}
+
+/**
+ * What removing a linked card also removes: the other card, and the system's
+ * records, which removal deletes before the undeploy.
+ */
+function linkedRemovalConsequence(target: IntegrationCardModel): string {
+    const names = (target.linked?.cards ?? []).map((card) => card.name).join(' and ');
+    return target.isSystem
+        ? `Removes ${target.name}, its records, and ${names}, the integration that uses it.`
+        : `Removes the integration and ${names} too, with ${names}'s records.`;
+}
+
+/**
  * Commit an in-drawer rename. Mirrors the InlineRenameField contract
  * (null = success, string = inline error); the payload `name` makes the
  * handler skip its input box and round-trip validation errors.
@@ -102,9 +137,12 @@ export function IntegrationsGrid({
     // The ERP reset awaiting confirmation: the INTEGRATION's id (the reset runs
     // through it) and the ERP's name (what the dialog says).
     const [pendingReset, setPendingReset] = useState<{ id: string; erpName: string } | null>(null);
-    // The reinstall awaiting confirmation: it removes what the app set up in
-    // Commerce before installing again.
-    const [pendingReinstall, setPendingReinstall] = useState<{ id: string; name: string } | null>(null);
+    // Confirms that open by themselves when a card gains their flag, and from
+    // the card's menu: an upgrade Commerce refused, a removal that stopped.
+    const reinstall = useFlaggedCardDialog(cards, needsReinstall);
+    const removeAnyway = useFlaggedCardDialog(cards, removalStopped);
+    const { open: openReinstall } = reinstall;
+    const { open: openRemoveAnyway } = removeAnyway;
 
     // Looked up fresh each render: the open drawer tracks live pushes, and a
     // card that left the map closes it.
@@ -131,6 +169,9 @@ export function IntegrationsGrid({
 
     const handleAction = useCallback(
         (model: IntegrationCardModel, action: CardAction): void => {
+            if (model.isSystem && handleSystemAction(model, action, setPendingReset)) {
+                return;
+            }
             if (action === 'open') {
                 if (model.url) {
                     webviewClient.postMessage('openLiveSite', { url: model.url });
@@ -160,28 +201,12 @@ export function IntegrationsGrid({
                 setManageApis({ id: model.componentId ?? model.id, name: model.name });
                 return;
             }
-            // The bound system's verbs (the ERP): its screen, its reset (confirmed,
-            // through the integration), its own redeploy by its own id.
-            if (action === 'open-system') {
-                // By the integration's id: the extension finds its ERP and adds the
-                // screen key, which never reaches this webview.
-                webviewClient.postMessage('openErpScreen', { id: model.id });
-                return;
-            }
-            if (action === 'reset-system') {
-                if (model.system) {
-                    setPendingReset({ id: model.id, erpName: model.system.name });
-                }
-                return;
-            }
             if (action === 'reinstall') {
-                setPendingReinstall({ id: model.id, name: model.name });
+                openReinstall(model);
                 return;
             }
-            if (action === 'redeploy-system') {
-                if (model.system) {
-                    webviewClient.postMessage('redeployAppBuilderComponent', { id: model.system.id });
-                }
+            if (action === 'remove-anyway') {
+                openRemoveAnyway(model);
                 return;
             }
             const message = KEYED_MESSAGES[action];
@@ -189,7 +214,7 @@ export function IntegrationsGrid({
                 webviewClient.postMessage(message, { id: model.id });
             }
         },
-        [handleMeshAction],
+        [handleMeshAction, openReinstall, openRemoveAnyway],
     );
 
     // The mesh's teardown reaches past itself: removeAppBuilderComponent
@@ -201,12 +226,8 @@ export function IntegrationsGrid({
         if (target?.isMesh) {
             return 'Your storefront loses its API Mesh endpoint until you deploy a new mesh.';
         }
-        // The pair is a unit (decision 2): removing the integration removes its
-        // ERP. Its records outlive the undeploy in the workspace's database.
-        if (target?.system) {
-            return `Removes the integration and its ${target.system.name} too. The ERP's records stay in the workspace's database until a new ERP replaces them.`;
-        }
-        return undefined;
+        // A linked pair goes together (decision 2), whichever card asked.
+        return target?.linked ? linkedRemovalConsequence(target) : undefined;
     }, [cards, pendingRemoveId]);
 
     const closeResetDialog = useCallback((): void => setPendingReset(null), []);
@@ -216,22 +237,6 @@ export function IntegrationsGrid({
         }
         setPendingReset(null);
     }, [pendingReset]);
-
-    // An update Commerce refused to apply opens the confirm by itself; the
-    // card's menu keeps offering it if the SC closes it.
-    const promptReinstall = useCallback(
-        (card: IntegrationCardModel): void => setPendingReinstall({ id: card.id, name: card.name }),
-        [],
-    );
-    useReinstallPrompt(cards, promptReinstall);
-
-    const closeReinstallDialog = useCallback((): void => setPendingReinstall(null), []);
-    const confirmReinstall = useCallback((): void => {
-        if (pendingReinstall) {
-            webviewClient.postMessage('reinstallAppBuilderComponent', { id: pendingReinstall.id });
-        }
-        setPendingReinstall(null);
-    }, [pendingReinstall]);
 
     const closeRemoveDialog = useCallback((): void => setPendingRemoveId(null), []);
     const confirmRemove = useCallback((): void => {
@@ -264,6 +269,7 @@ export function IntegrationsGrid({
             <IntegrationDetailPanel
                 model={selected}
                 onClose={() => setSelectedId(null)}
+                onOpenLinked={setSelectedId}
                 onAction={handleAction}
                 onRename={requestRename}
                 destinationLabel={destinationLabel}
@@ -291,22 +297,7 @@ export function IntegrationsGrid({
                 onClose={closeResetDialog}
             />
 
-            <ConfirmActionDialog
-                isOpen={pendingReinstall !== null}
-                title="Reinstall in Commerce"
-                actionLabel="Reinstall"
-                onConfirm={confirmReinstall}
-                onClose={closeReinstallDialog}
-            >
-                <Text>
-                    Commerce would not upgrade <strong>{pendingReinstall?.name}</strong> in place. Reinstalling
-                    removes it from Commerce, then installs the version already deployed.
-                </Text>
-                <Text>
-                    Its webhooks and event subscriptions are set up again. Its saved settings may be reset
-                    to their defaults.
-                </Text>
-            </ConfirmActionDialog>
+            <FlaggedCardDialogs reinstall={reinstall} removeAnyway={removeAnyway} />
         </div>
     );
 }

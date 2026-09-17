@@ -36,15 +36,17 @@ export type CardAction =
     | 'remove'
     | 'sign-in'
     | 'open'
-    // The bound system's verbs (the ERP that comes with the ERP integration;
-    // plan step 05): its own screen, its reset, its redeploy.
-    | 'open-system'
-    | 'reset-system'
-    | 'redeploy-system';
+    // A system card's reset of its records (the ERP's; it runs through the
+    // integration that uses it).
+    | 'reset-records'
+    // After a removal stopped on a clean-up that did not finish: go ahead.
+    | 'remove-anyway';
 
 /** Everything a card face, drawer body, and drawer action bar render. */
 export interface IntegrationCardModel {
     id: string;
+    /** Why the last removal stopped, when it did; the card offers Remove anyway. */
+    removalStopped?: string;
     isMesh: boolean;
     name: string;
     kindLabel: string;
@@ -69,7 +71,7 @@ export interface IntegrationCardModel {
     dotVariant: StatusDotVariant;
     message?: string;
     url?: string;
-    urlLabel: 'Endpoint' | 'App URL';
+    urlLabel: 'Endpoint' | 'App URL' | 'Screen';
     deployedUrls?: Record<string, string>;
     apis?: string[];
     /** Preformatted locale display string (already display-ready). */
@@ -125,29 +127,27 @@ export interface IntegrationCardModel {
      */
     commerceScope?: CommerceScopePart[];
     /**
-     * The SYSTEM bound to this integration — the ERP that comes with the ERP
-     * integration (`kind: 'system'`, catalog `boundTo`). A system never has a
-     * card of its own: its status, its screen's URL and its verbs ride the
-     * integration's card and flyout as a second section. Absent on every card
-     * whose integration stands alone.
+     * A SYSTEM card (the ERP an integration uses), not an integration. Its
+     * `url` is its screen, opened through the extension because the link needs a
+     * key the webview never holds.
      */
-    system?: BoundSystemModel;
+    isSystem?: boolean;
+    /** What kind of system it is ("ERP"), shown as a badge. System cards only. */
+    typeBadge?: string;
+    /**
+     * The cards this one is linked to: the systems an integration uses ("Uses")
+     * or the integration a system belongs to ("Used by"). Absent when none.
+     */
+    linked?: { label: 'Uses' | 'Used by'; cards: LinkedCard[] };
 }
 
-/** The bound system's part of a card: what the flyout's second section renders. */
-export interface BoundSystemModel {
-    /** The keyed `appBuilderComponents` id the system's own verbs address. */
+/** A card this one is linked to, as the face and the flyout name it. */
+export interface LinkedCard {
     id: string;
     name: string;
-    status: CardStatus;
     statusLabel: string;
     dotVariant: StatusDotVariant;
-    /** The failure reason, when the system is in error. */
-    message?: string;
-    /** The system's own screen (its hosted page), when deployed. */
-    url?: string;
-    /** Preformatted locale display string. */
-    lastDeployed?: string;
+    status: CardStatus;
 }
 
 /** One sub-labelled line of the Commerce scope row. */

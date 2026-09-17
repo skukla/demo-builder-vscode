@@ -74,6 +74,17 @@ export function formatDestination(destination?: {
 /** The card fields a search query matches against. */
 const CARD_SEARCH_FIELDS = ['name', 'kindLabel', 'sourceLine'] as const;
 
+/** "2 integrations", or "1 integration · 1 system" once a system is on screen. */
+function countCards(cards: IntegrationCardModel[]): string {
+    const count = (n: number, noun: string) => `${n} ${noun}${n === 1 ? '' : 's'}`;
+    const systems = cards.filter((card) => card.isSystem).length;
+    const integrations = cards.length - systems;
+    // The mesh counts as an integration, as it always has on this screen.
+    return systems === 0
+        ? count(integrations, 'integration')
+        : `${count(integrations, 'integration')} · ${count(systems, 'system')}`;
+}
+
 /**
  * Filter cards by a search query.
  *
@@ -251,6 +262,7 @@ export function IntegrationsScreen({
                                 totalCount={cards.length}
                                 filteredCount={visibleCards.length}
                                 itemNoun="integration"
+                                countText={countCards(cards)}
                                 onRefresh={handleRefresh}
                                 refreshAriaLabel="Refresh integrations"
                                 hasLoadedOnce

@@ -31,24 +31,38 @@
  */
 
 import { entriesThatNeedApis } from './apiSubscriber';
+import {
+    cleanUpBeforeUndeploy,
+    leftBehind,
+    mergeCleanup,
+    removalStopped,
+    teardownRemote,
+    verifyRuntimeTeardown,
+    type CleanupOutcome,
+    type RuntimeCleanupSummary,
+    type TeardownDeps,
+    type TeardownTarget,
+} from './appBuilderComponentTeardown';
 import { recordDeployOutcome, type DeployOutcome } from './appBuilderDeployOutcome';
 import { detectAppLayout, listDeclaredPackageNames, type AppConfigLayout } from './appConfigPackages';
 import type { AppManagementInstallOptions, AppManagementInstallResult } from './appManagementUpgrade';
 import { deriveProvidedValues, resolveDeployInputs, resolveDisplayName } from './deployInputs';
 import type { CommerceDetachResult } from './erpDetach';
 import type { SourceUpdateResult, UpdateCheckResult } from './integrationSourceUpdate';
-import { clearUpdateAvailable } from './integrationUpdateCheck';
 import { deriveOwPackage } from './owPackageName';
 import { deriveScreenUrl } from './systemScreen';
 import type { AppDeploymentResult } from './types';
 import { isMeshComponentId } from '@/core/constants';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
-import { MESH_DELETE_COMMAND } from '@/core/shell/meshDeleteCommand';
 import { buildOrgTargetFromProjectAdobe, withOrgContext, type CachedOrgRef } from '@/core/shell/orgContextEnv';
-import { getProvidedEnvVars, recordInstallation } from '@/core/state/appBuilderComponentState';
+import { clearUpdateAvailable, getProvidedEnvVars, recordInstallation } from '@/core/state/appBuilderComponentState';
 import { reconcileComponentSelections } from '@/core/state/componentSelectionReconcile';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { buildCustomIntegrationEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
+import {
+    integrationUsing,
+    linkBroughtSystem,
+    systemsUsedBy,
+} from '@/features/components/services/appBuilderComponentLinks';
 import type {
     ComponentInstallOptions,
     ComponentInstallResult,
@@ -57,6 +71,7 @@ import type { MeshDeploymentResult } from '@/features/mesh/services/types';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { Project , AppBuilderComponentState } from '@/types/base';
 import type { TransformedComponentDefinition } from '@/types/components';
+import type { ErrorCode } from '@/types/errorCodes';
 import type { Logger } from '@/types/logger';
 import { toError } from '@/types/typeGuards';
 
@@ -64,30 +79,23 @@ import { toError } from '@/types/typeGuards';
 export interface RunnerResult {
     success: boolean;
     error?: string;
+    /** COMPONENT_REMOVAL_STOPPED: a removal stopped before undeploying (remove only). */
+    code?: ErrorCode;
     /** Plain-words line on what an update did (update only). */
     detail?: string;
     /** Post-undeploy Runtime verification (remove only) — see AB-7. */
     runtimeCleanup?: RuntimeCleanupSummary;
     /** What removal undid of the ERP integration's Commerce writes (remove only). */
     commerceDetach?: CommerceDetachResult;
+    /**
+     * What a removal could not finish, in plain words for the SC (remove only):
+     * a Commerce uninstall that failed, a system that was not removed with its
+     * integration. The removal itself stands.
+     */
+    warnings?: string[];
 }
 
-/**
- * What the post-undeploy verification found and did (AB-7). `aio app undeploy`
- * exits 0 while leaving deployed packages behind — measured live 2026-08-28:
- * a full remove "succeeded" in 5.4s with the whole app still serving, and a
- * kit removal left 12 packages. So removal VERIFIES: it lists the namespace
- * and deletes leftovers it can attribute to this integration by name.
- */
-export interface RuntimeCleanupSummary {
-    /** False when the namespace could not be listed — said, never silent. */
-    verified: boolean;
-    /** Leftover packages found after undeploy and deleted. */
-    deleted: string[];
-    /** Leftovers whose delete failed — these are STILL RUNNING. */
-    failed: string[];
-    note?: string;
-}
+export type { RuntimeCleanupSummary };
 
 /** Storefront republish input (mirrors the eds RepublishParams the runner needs). */
 interface RepublishInput {
@@ -122,7 +130,7 @@ export interface ComponentInstaller {
     removeComponent(project: Project, componentId: string, deleteFiles?: boolean): Promise<void>;
 }
 
-export interface AppBuilderComponentRunnerDeps {
+export interface AppBuilderComponentRunnerDeps extends TeardownDeps {
     componentManager: ComponentInstaller;
     commandManager: CommandExecutor;
     logger: Logger;
@@ -253,30 +261,6 @@ export interface AppBuilderComponentRunnerDeps {
         componentPath: string,
         definition: TransformedComponentDefinition,
     ) => Promise<{ success: boolean; error?: string }>;
-    /**
-     * Uninstall an app-management lifecycle app from Commerce BEFORE its remove
-     * tears the actions down (appManagementUninstaller). `aio app undeploy`
-     * removes only the actions — the app's installer created I/O Events
-     * registrations, binding packages, and Commerce-side eventing config that
-     * only the app's own uninstall API removes, and once the actions are gone
-     * that API is gone with them. Best-effort: a failure logs and the remove
-     * proceeds. Optional: mesh paths and bare unit tests never need it.
-     */
-    /**
-     * Undo the ERP integration's writes onto Commerce (erpDetach) BEFORE its
-     * uninstall and undeploy take the action away. Skipped for every component
-     * that deploys no `erp/detach`. Optional: bare unit tests never need it.
-     */
-    detachFromCommerce?: (
-        project: Project,
-        deployedUrls: Record<string, string> | undefined,
-        onProgress?: (message: string) => void,
-    ) => Promise<CommerceDetachResult>;
-    uninstallAppManagement?: (
-        project: Project,
-        deployedUrls: Record<string, string> | undefined,
-        onProgress?: (message: string) => void
-    ) => Promise<{ status: 'uninstalled' | 'skipped' | 'failed'; detail?: string }>;
     /** Union-reconcile API subscriber (step 07). */
     subscribeRequiredApis: (
         appBuilderComponents: AppBuilderComponentCatalogEntry[],
@@ -760,10 +744,13 @@ export async function addAppBuilderComponent(
 
         if (!deployed.ok) {
             await persistOutcome(project, entry, errorOutcome(entry, deployed.error), deps);
+            // A failed add links too: its removal must still take the system with it.
+            if (linkBroughtSystem(project, entry.id, deps.catalog)) await deps.saveProject(project);
             return { success: false, error: deployed.error };
         }
 
         await persistOutcome(project, entry, deployed.outcome, deps);
+        if (linkBroughtSystem(project, entry.id, deps.catalog)) await deps.saveProject(project);
         await installIfAppManagement(project, entry, deps, { componentPath: installed.path, since });
         await republishIfProvided(project, deps);
         return { success: true };
@@ -980,148 +967,6 @@ function entryFromState(
 }
 
 /**
- * The pre-remove uninstall pass for `lifecycle: 'app-management'` apps.
- *
- * Resolves the entry the same way redeploy does (catalog first, then persisted
- * state through source recognition) so a seeded kit instance under a custom id
- * still identifies as app-management. No-op for every other entry, and when
- * the caller wired no uninstaller. Never throws.
- */
-async function uninstallIfAppManagement(
-    project: Project,
-    id: string,
-    state: AppBuilderComponentState,
-    deps: AppBuilderComponentRunnerDeps,
-): Promise<void> {
-    if (!deps.uninstallAppManagement || state.kind !== 'integration') {
-        return;
-    }
-    const entry = deps.catalog.find((c) => c.id === id) ?? entryFromState(id, state);
-    if (entry.lifecycle !== 'app-management') {
-        return;
-    }
-    try {
-        const result = await deps.uninstallAppManagement(project, state.deployedUrls, (message) =>
-            deps.onProgress?.(message),
-        );
-        if (result.status === 'failed') {
-            deps.logger.warn(
-                `[AppBuilderComponent Runner] ${id} Commerce uninstall did not finish: ${result.detail}`,
-            );
-        }
-    } catch (error) {
-        deps.logger.warn(
-            `[AppBuilderComponent Runner] Commerce uninstall warning: ${toError(error).message}`,
-        );
-    }
-}
-
-/** Tear down the remote artifact for an App Builder component, by kind, under org-context. */
-/**
- * Tear down a component's REMOTE artifacts, leaving the local clone and the keyed
- * state alone.
- *
- * Module-private again: it was briefly exported for the destination migration,
- * which no longer tears anything down — a move deploys to the new destination and
- * leaves the old one serving, because undeploy is the only irreversible step and
- * nobody asked for cleanup. `removeAppBuilderComponent` is the only caller.
- */
-async function teardownRemote(
-    project: Project,
-    id: string,
-    state: AppBuilderComponentState,
-    deps: AppBuilderComponentRunnerDeps,
-): Promise<void> {
-    const componentPath = project.componentInstances?.[id]?.path;
-    const command = state.kind === 'mesh' ? MESH_DELETE_COMMAND : 'aio app undeploy';
-    await withOrgContext(targetFor(project, deps), () =>
-        deps.commandManager.execute(command, {
-            cwd: componentPath,
-            useNodeVersion: 'auto',
-            enhancePath: true,
-            streaming: true,
-            shell: true,
-            timeout: TIMEOUTS.LONG,
-        }),
-    );
-}
-
-/**
- * Package names safe to interpolate into an `aio runtime package` command.
- * Declared names come from config FILES; a name outside the Adobe id charset
- * is never deleted (and never quoted into a shell line).
- */
-const RUNTIME_PACKAGE_NAME = /^[A-Za-z0-9@._-]+$/;
-
-/**
- * Verify the undeploy actually cleared the namespace, and delete what it left
- * (AB-7). Attribution is exact and conservative: only packages the app itself
- * names — its declared config packages plus the derived isolation package —
- * are candidates; anything else in the namespace is not ours to touch.
- * Best-effort like the rest of teardown, but never SILENT: the summary lands
- * on the result, and an unverifiable namespace says so.
- */
-async function verifyRuntimeTeardown(
-    project: Project,
-    id: string,
-    expectedPackages: string[],
-    deps: AppBuilderComponentRunnerDeps,
-): Promise<RuntimeCleanupSummary> {
-    const expected = [...new Set([...expectedPackages, deriveOwPackage(id)])].filter((name) =>
-        RUNTIME_PACKAGE_NAME.test(name),
-    );
-    let present: string[];
-    try {
-        const listed = await withOrgContext(targetFor(project, deps), () =>
-            deps.commandManager.execute('aio runtime package list --json', {
-                useNodeVersion: 'auto',
-                enhancePath: true,
-                shell: true,
-                timeout: TIMEOUTS.LONG,
-            }),
-        );
-        const parsed = JSON.parse(listed.stdout || '[]') as Array<{ name?: string }>;
-        present = parsed.map((p) => p.name ?? '').filter(Boolean);
-    } catch (error) {
-        return {
-            verified: false,
-            deleted: [],
-            failed: [],
-            note: `Could not list the Runtime namespace to verify the undeploy: ${toError(error).message}`,
-        };
-    }
-
-    const leftovers = expected.filter((name) => present.includes(name));
-    const deleted: string[] = [];
-    const failed: string[] = [];
-    for (const name of leftovers) {
-        try {
-            await withOrgContext(targetFor(project, deps), () =>
-                deps.commandManager.execute(`aio runtime package delete ${name} --recursive`, {
-                    useNodeVersion: 'auto',
-                    enhancePath: true,
-                    shell: true,
-                    timeout: TIMEOUTS.LONG,
-                }),
-            );
-            deleted.push(name);
-        } catch (error) {
-            deps.logger.warn(
-                `[AppBuilderComponent Runner] leftover package "${name}" delete failed: ${toError(error).message}`,
-            );
-            failed.push(name);
-        }
-    }
-    if (leftovers.length > 0) {
-        deps.logger.warn(
-            `[AppBuilderComponent Runner] undeploy left ${leftovers.length} package(s) running ` +
-                `(${leftovers.join(', ')}); deleted ${deleted.length}, failed ${failed.length}`,
-        );
-    }
-    return { verified: true, deleted, failed };
-}
-
-/**
  * The project's selections with every mesh dependency dropped.
  *
  * Keyed by the LEGACY component ids (`eds-accs-mesh` and friends), which is what
@@ -1178,27 +1023,39 @@ export async function removeAppBuilderComponent(
     project: Project,
     id: string,
     deps: AppBuilderComponentRunnerDeps,
+    options: RemoveOptions = {},
 ): Promise<RunnerResult> {
     const state = project.appBuilderComponents?.[id];
     if (!state) {
         return { success: false, error: `AppBuilderComponent "${id}" not found.` };
     }
 
-    const refused = refuseBoundSystemAlone(project, id, state, deps.catalog);
-    if (refused) return refused;
+    // A linked system goes with its integration, whichever card asked (decision
+    // 2): remove the integration, which takes its systems after it. Once the
+    // integration's record is gone the link no longer resolves, so this cannot loop.
+    const consumerId = integrationUsing(project, id, deps.catalog);
+    if (consumerId) {
+        return removeAppBuilderComponent(project, consumerId, deps, options);
+    }
+    // Read before the record goes: afterwards nothing says which systems it used.
+    const systems = state.kind === 'integration' ? systemsUsedBy(project, id, deps.catalog) : [];
 
     // The storefront config reads ONE provided var; a component providing only
     // to other components (the ERP) earns no republish on its way out.
     const provided = Boolean(state.providesEnvVars && STOREFRONT_PROVIDED_VAR in state.providesEnvVars);
 
-    // BEFORE the undeploy, while the app's own API still exists to call: the
-    // uninstall pass removes what the installer created (event registrations,
-    // binding packages, Commerce-side eventing config, the association) —
-    // `aio app undeploy` removes only the actions and leaves all of that behind
-    // (AB-4; residue measured live 2026-08-27). Best-effort like the teardown:
-    // an uninstall failure must never block the remove the user asked for.
-    const commerceDetach = await detachIfErpIntegration(project, id, state, deps);
-    await uninstallIfAppManagement(project, id, state, deps);
+    // BEFORE the undeploy, while the code that does it still exists: the
+    // integration's Commerce undo and uninstall (AB-4; `aio app undeploy` removes
+    // only the actions, residue measured live 2026-08-27), and the records of the
+    // systems that go with it. A step that fails stops the removal here, with
+    // nothing undeployed, unless the SC chose to remove anyway.
+    const cleanup = options.cleanedUp ? NOTHING_UNFINISHED : await cleanUpPair(project, id, state, systems, deps);
+    if (cleanup.unfinished.length > 0 && !options.force) {
+        const stopped = removalStopped(cleanup.unfinished);
+        state.removalStopped = stopped.error;
+        await deps.saveProject(project);
+        return stopped;
+    }
 
     // The declared package inventory is read BEFORE the undeploy and the local
     // delete — afterwards the config files it attributes by are gone.
@@ -1209,7 +1066,7 @@ export async function removeAppBuilderComponent(
     }
 
     try {
-        await teardownRemote(project, id, state, deps);
+        await teardownRemote(targetFor(project, deps), componentPath, state.kind, deps);
     } catch (error) {
         deps.logger.warn(
             `[AppBuilderComponent Runner] remote teardown warning: ${toError(error).message}`,
@@ -1220,11 +1077,91 @@ export async function removeAppBuilderComponent(
     // (AB-7, measured live). Meshes verify via their own status flow.
     const runtimeCleanup =
         state.kind !== 'mesh'
-            ? await verifyRuntimeTeardown(project, id, declaredPackages, deps)
+            ? await verifyRuntimeTeardown(targetFor(project, deps), id, declaredPackages, deps)
             : undefined;
 
-    await deps.componentManager.removeComponent(project, id, true);
+    // A missing instance (a folder removed by hand, a half-finished add) must not
+    // stop the state cleanup below: the remote side is already gone (gap 4).
+    await deps.componentManager.removeComponent(project, id, true).catch((error: unknown) => {
+        deps.logger.warn(`[AppBuilderComponent Runner] ${id} local removal skipped: ${toError(error).message}`);
+    });
 
+    const cleared = withoutComponent(project, id, state);
+    await deps.saveProject(cleared);
+    // The screen key goes with the component: nothing reads it again, and a
+    // secret left in SecretStorage is one nobody owns.
+    const removedEntry = deps.catalog.find((entry) => entry.id === id);
+    if (removedEntry && deps.forgetScreenKey) {
+        await deps.forgetScreenKey(project, removedEntry);
+    }
+    // The inverse of the add, and it has always been broken the same way:
+    // remove the last App Builder component and its skills stayed forever.
+    await refreshBundleQuietly(cleared, deps, 'remove');
+
+    if (provided) {
+        await deps.republishStorefront({
+            project: cleared,
+            secrets: deps.secrets,
+            logger: deps.logger,
+        });
+    }
+
+    const after = await removeBoundSystemsAfter(cleared, project, id, systems, deps, options);
+    return removalResult(mergeCleanup(runtimeCleanup, after.runtimeCleanup), cleanup.commerceDetach, [
+        ...leftBehind(cleanup),
+        ...after.warnings,
+    ]);
+}
+
+/** How a removal treats a clean-up that did not finish. */
+export interface RemoveOptions {
+    /** Remove anyway: report what did not finish instead of stopping. */
+    force?: boolean;
+    /** The pair's removal already ran this system's clean-up (internal). */
+    cleanedUp?: boolean;
+}
+
+const NOTHING_UNFINISHED: CleanupOutcome = { unfinished: [] };
+
+/** The catalog entry behind a record: the catalog's, else one read off the record. */
+function entryFor(id: string, state: AppBuilderComponentState, deps: AppBuilderComponentRunnerDeps) {
+    return deps.catalog.find((c) => c.id === id) ?? entryFromState(id, state);
+}
+
+/**
+ * The clean-up for a component and the systems removed with it, all before any
+ * undeploy, so a failure in either stops the pair with nothing removed.
+ */
+async function cleanUpPair(
+    project: Project,
+    id: string,
+    state: AppBuilderComponentState,
+    systems: string[],
+    deps: AppBuilderComponentRunnerDeps,
+): Promise<CleanupOutcome> {
+    const targets: TeardownTarget[] = [{ project, id, state, entry: entryFor(id, state, deps) }];
+    for (const systemId of systems) {
+        const system = project.appBuilderComponents?.[systemId];
+        if (system) targets.push({ project, id: systemId, state: system, entry: entryFor(systemId, system, deps) });
+    }
+    const [own, ...rest] = await sequence(targets, (target) => cleanUpBeforeUndeploy(target, deps));
+    return { ...own, unfinished: [...own.unfinished, ...rest.flatMap((r) => r.unfinished)] };
+}
+
+/** Run `fn` over `items` one at a time, in order. */
+async function sequence<T, R>(items: T[], fn: (item: T) => Promise<R>): Promise<R[]> {
+    const results: R[] = [];
+    for (const item of items) results.push(await fn(item));
+    return results;
+}
+
+/**
+ * The project without one component: its record, its selection, its API picks
+ * and its env-value copies. The caller's reference is synced too.
+ */
+function withoutComponent(project: Project, id: string, state: AppBuilderComponentState): Project & {
+    appBuilderComponents: NonNullable<Project['appBuilderComponents']>;
+} {
     const cleared = {
         ...project,
         appBuilderComponents: { ...(project.appBuilderComponents ?? {}) },
@@ -1283,122 +1220,61 @@ export async function removeAppBuilderComponent(
     if (cleared.componentConfigs) {
         project.componentConfigs = cleared.componentConfigs;
     }
-    await deps.saveProject(cleared);
-    // The screen key goes with the component: nothing reads it again, and a
-    // secret left in SecretStorage is one nobody owns.
-    const removedEntry = deps.catalog.find((entry) => entry.id === id);
-    if (removedEntry && deps.forgetScreenKey) {
-        await deps.forgetScreenKey(project, removedEntry);
-    }
-    // The inverse of the add, and it has always been broken the same way:
-    // remove the last App Builder component and its skills stayed forever.
-    await refreshBundleQuietly(cleared, deps, 'remove');
+    return cleared;
+}
 
-    if (provided) {
-        await deps.republishStorefront({
-            project: cleared,
-            secrets: deps.secrets,
-            logger: deps.logger,
-        });
-    }
-
-    await removeBoundSystemAfter(cleared, project, id, deps);
-
+/** A finished removal's result, carrying only what it has to say. */
+function removalResult(
+    runtimeCleanup: RuntimeCleanupSummary | undefined,
+    commerceDetach: CommerceDetachResult | undefined,
+    candidates: (string | undefined)[],
+): RunnerResult {
+    const warnings = candidates.filter((w): w is string => Boolean(w));
     return {
         success: true,
         ...(runtimeCleanup ? { runtimeCleanup } : {}),
         ...(commerceDetach ? { commerceDetach } : {}),
+        ...(warnings.length > 0 ? { warnings } : {}),
     };
 }
 
 /**
- * Before anything is torn down: undo what the ERP integration wrote onto
- * Commerce. Best-effort like the uninstall; a failure is logged and handed back
- * so the SC is told what stays in Commerce. Undefined when nothing applied.
- */
-async function detachIfErpIntegration(
-    project: Project,
-    id: string,
-    state: AppBuilderComponentState,
-    deps: AppBuilderComponentRunnerDeps,
-): Promise<CommerceDetachResult | undefined> {
-    if (!deps.detachFromCommerce || state.kind !== 'integration') {
-        return undefined;
-    }
-    const result = await deps.detachFromCommerce(project, state.deployedUrls, (message) =>
-        deps.onProgress?.(message),
-    );
-    if (result.status === 'skipped') {
-        return undefined;
-    }
-    if (result.status === 'failed') {
-        deps.logger.warn(`[AppBuilderComponent Runner] ${id} Commerce detach did not finish: ${result.detail}`);
-    }
-    return result;
-}
-
-/**
- * A system is never removed on its own while its integration is here: the pair
- * is a unit, and the integration's own remove takes the system with it.
- */
-function refuseBoundSystemAlone(
-    project: Project,
-    id: string,
-    state: AppBuilderComponentState,
-    catalog: AppBuilderComponentCatalogEntry[],
-): RunnerResult | undefined {
-    const consumer = boundConsumerInProject(project, id, catalog);
-    if (!consumer) return undefined;
-    return {
-        success: false,
-        error:
-            `"${state.name ?? id}" comes with "${consumer.name}". Remove the integration ` +
-            `instead — its ${state.name ?? 'system'} goes with it.`,
-    };
-}
-
-/**
- * The integration is gone; its bound system goes after it (decision 2). The
+ * The integration is gone; the systems it used go after it (decision 2). A
  * system's records survive in the workspace's database — an undeploy removes
- * actions, not data — which the confirmation dialog says. Best-effort: a
- * failure is logged, the integration's own removal already stands.
+ * actions, not data — and come back if it is added again, which the
+ * confirmation dialog says. The integration's own removal already stands, so a
+ * system that fails is reported, not thrown; its cleanup and warnings are
+ * handed back with the integration's (gap 3).
  */
-async function removeBoundSystemAfter(
+async function removeBoundSystemsAfter(
     cleared: Project,
     caller: Project,
     integrationId: string,
+    systems: string[],
     deps: AppBuilderComponentRunnerDeps,
-): Promise<void> {
-    const system = boundSystemInProject(cleared, integrationId, deps.catalog);
-    if (!system) return;
-    deps.onProgress?.(`Removing ${cleared.appBuilderComponents?.[system.id]?.name ?? system.name}…`);
-    const result = await removeAppBuilderComponent(cleared, system.id, deps);
-    if (!result.success) {
-        deps.logger.warn(
-            `[AppBuilderComponent Runner] ${system.id} was not removed with ${integrationId}: ${result.error}`,
-        );
+    options: RemoveOptions,
+): Promise<{ warnings: string[]; runtimeCleanup?: RuntimeCleanupSummary }> {
+    const warnings: string[] = [];
+    let runtimeCleanup: RuntimeCleanupSummary | undefined;
+    for (const systemId of systems) {
+        const name = cleared.appBuilderComponents?.[systemId]?.name ?? systemId;
+        if (!cleared.appBuilderComponents?.[systemId]) continue;
+        deps.onProgress?.(`Removing ${name}…`);
+        // A throw's own words go to the log; the SC reads a sentence of ours.
+        const result = await removeAppBuilderComponent(cleared, systemId, deps, { ...options, cleanedUp: true }).catch((error: unknown): RunnerResult => {
+            deps.logger.warn(`[AppBuilderComponent Runner] ${systemId} removal threw: ${toError(error).message}`);
+            return { success: false, error: 'it stopped partway, and the Debug Logs say why' };
+        });
+        if (!result.success) {
+            deps.logger.warn(
+                `[AppBuilderComponent Runner] ${systemId} was not removed with ${integrationId}: ${result.error}`,
+            );
+            warnings.push(`${name} was not removed: ${result.error}. Remove it from its card.`);
+        }
+        warnings.push(...(result.warnings ?? []));
+        runtimeCleanup = mergeCleanup(runtimeCleanup, result.runtimeCleanup);
     }
-    // The caller's reference follows the second removal too.
+    // The caller's reference follows the later removals too.
     caller.appBuilderComponents = cleared.appBuilderComponents;
-}
-
-/** The integration in the PROJECT that a system id is bound to, if both are present. */
-function boundConsumerInProject(
-    project: Project,
-    systemId: string,
-    catalog: AppBuilderComponentCatalogEntry[],
-): AppBuilderComponentCatalogEntry | undefined {
-    const system = catalog.find((entry) => entry.id === systemId && entry.kind === 'system');
-    if (!system?.boundTo || !project.appBuilderComponents?.[system.boundTo]) return undefined;
-    return catalog.find((entry) => entry.id === system.boundTo);
-}
-
-/** The system in the PROJECT bound to an integration id, if present. */
-function boundSystemInProject(
-    project: Project,
-    integrationId: string,
-    catalog: AppBuilderComponentCatalogEntry[],
-): AppBuilderComponentCatalogEntry | undefined {
-    const system = catalog.find((entry) => entry.kind === 'system' && entry.boundTo === integrationId);
-    return system && project.appBuilderComponents?.[system.id] ? system : undefined;
+    return { warnings, runtimeCleanup };
 }

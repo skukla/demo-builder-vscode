@@ -41,6 +41,11 @@ export interface InstallationOutcome {
  * card, the drawer and `get_integration_install_status` read it. The deploy
  * tail and the install tool both write it.
  */
+/** Forget a recorded update (`updateAvailable`), after the update that applied it. */
+export function clearUpdateAvailable(state: AppBuilderComponentState): void {
+    delete state.updateAvailable;
+}
+
 export function recordInstallation(
     state: AppBuilderComponentState,
     outcome: InstallationOutcome,

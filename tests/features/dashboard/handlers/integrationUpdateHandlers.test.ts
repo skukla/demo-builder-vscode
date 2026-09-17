@@ -35,9 +35,9 @@ jest.mock('@/features/app-builder/services/appBuilderComponentRunner', () => ({
     updateAppBuilderComponent: (...a: unknown[]) => mockUpdate(...a),
 }));
 
-const mockGetBoundSystem = jest.fn();
+const mockCatalog = jest.fn();
 jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => ({
-    getBoundSystem: (...a: unknown[]) => mockGetBoundSystem(...a),
+    getAppBuilderComponentCatalog: () => mockCatalog(),
     getAppBuilderComponentEntry: jest.fn(),
     buildCustomIntegrationEntry: jest.fn(),
     entryFitsProjectAxes: jest.fn().mockReturnValue(true),
@@ -115,7 +115,7 @@ function setup(overrides: Partial<Project>) {
 beforeEach(() => {
     jest.clearAllMocks();
     mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: true });
-    mockGetBoundSystem.mockReturnValue({ id: 'demo-erp', kind: 'system', boundTo: 'erp-integration' });
+    mockCatalog.mockReturnValue([{ id: 'demo-erp', kind: 'system', boundTo: 'erp-integration' }]);
     mockCheckComponentSource.mockResolvedValue({ status: 'current' });
     mockReadAppVersion.mockResolvedValue(undefined);
     mockUpdate.mockResolvedValue({ success: true, detail: 'Updated the integration from a to b.' });
@@ -196,6 +196,20 @@ describe('handleUpdateAppBuilderComponent', () => {
         await handleUpdateAppBuilderComponent(mockContext, { id: 'erp-integration' });
 
         expect(mockUpdate.mock.calls.map((call) => call[1])).toEqual(['demo-erp', 'erp-integration']);
+    });
+
+    it('follows the stored link, not the catalog, to the system it updates first', async () => {
+        const { mockContext } = setup({
+            appBuilderComponents: {
+                'erp-integration': deployed({ systems: ['erp-b'] }),
+                'erp-b': deployed({ kind: 'system', usedBy: 'erp-integration', updateAvailable: { commit: 'b', checkedAt: 'x' } }),
+                'demo-erp': deployed({ kind: 'system', updateAvailable: { commit: 'a', checkedAt: 'x' } }),
+            },
+        });
+
+        await handleUpdateAppBuilderComponent(mockContext, { id: 'erp-integration' });
+
+        expect(mockUpdate.mock.calls.map((call) => call[1])).toEqual(['erp-b', 'erp-integration']);
     });
 
     it('leaves the integration alone when the ERP update fails', async () => {

@@ -30,7 +30,8 @@ import {
     type AppBuilderComponentRunnerDeps,
 } from '@/features/app-builder/services/appBuilderComponentRunner';
 import { checkIntegrationUpdates } from '@/features/app-builder/services/integrationUpdateCheck';
-import { getBoundSystem } from '@/features/components/services/appBuilderComponentCatalogLoader';
+import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
+import { systemsUsedBy } from '@/features/components/services/appBuilderComponentLinks';
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, HandlerResponse, MessageHandler } from '@/types/handlers';
@@ -61,10 +62,11 @@ export const handleCheckIntegrationUpdates: MessageHandler = async (context): Pr
     return { success: true, data: { updates: checked.reports } };
 };
 
-/** The bound system to update first: one this project has, with an update recorded. */
-function systemToUpdate(project: Project, id: string): string | undefined {
-    const system = getBoundSystem(id);
-    return system && getAppBuilderComponent(project, system.id)?.updateAvailable ? system.id : undefined;
+/** The systems to update first: the ones this integration uses that have an update recorded. */
+function systemsToUpdate(project: Project, id: string): string[] {
+    return systemsUsedBy(project, id, getAppBuilderComponentCatalog()).filter(
+        (systemId) => getAppBuilderComponent(project, systemId)?.updateAvailable,
+    );
 }
 
 /** Update one component, telegraphing its row. */
@@ -91,8 +93,7 @@ async function updatePair(
         return refused;
     }
     const deps = await runnerDeps(context, project, report);
-    const systemId = systemToUpdate(project, id);
-    if (systemId) {
+    for (const systemId of systemsToUpdate(project, id)) {
         const system = await updateOne(project, systemId, deps);
         if (!system.success) {
             return {

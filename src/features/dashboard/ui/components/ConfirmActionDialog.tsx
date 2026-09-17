@@ -4,7 +4,7 @@
  * container stays mounted; the Modal renders only while `isOpen`. It does not
  * post: the consumer wires `onConfirm`, so cancelling is a pure no-op.
  *
- * Shared by Remove, Reset ERP records and Reinstall in Commerce. Kept in the
+ * Shared by Remove, Reset ERP records, Reinstall in Commerce and Remove anyway. Kept in the
  * dashboard feature because nothing else confirms this way.
  *
  * @module features/dashboard/ui/components/ConfirmActionDialog

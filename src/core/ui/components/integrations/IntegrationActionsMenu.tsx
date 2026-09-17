@@ -48,11 +48,9 @@ const MENU_ROWS: Partial<Record<CardAction, { label: string; icon: string }>> = 
     redeploy: { label: 'Redeploy', icon: 'redeploy' },
     'manage-apis': { label: 'Manage APIs', icon: 'apiAccess' },
     remove: { label: 'Remove', icon: 'delete' },
-    // The bound system's verbs (the ERP). Labelled generically here; the flyout's
-    // own section names the system.
-    'open-system': { label: 'Open ERP', icon: 'globe' },
-    'reset-system': { label: 'Reset ERP records', icon: 'reset' },
-    'redeploy-system': { label: 'Redeploy ERP', icon: 'redeploy' },
+    'remove-anyway': { label: 'Remove anyway', icon: 'delete' },
+    // A system card's own verb.
+    'reset-records': { label: 'Reset records', icon: 'reset' },
 };
 
 export interface IntegrationActionsMenuProps {

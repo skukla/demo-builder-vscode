@@ -38,6 +38,23 @@ const FAKE_CATALOG: Record<string, AppBuilderComponentCatalogEntry> = {
         kind: 'integration',
         source: { owner: 'adobe', repo: 'no-apis-entry', branch: 'main' },
     },
+    // A pair, so the bundled-catalog fallback has something to find.
+    'erp-integration': {
+        id: 'erp-integration',
+        name: 'ERP integration',
+        description: 'the integration',
+        kind: 'integration',
+        source: { owner: 'skukla', repo: 'commerce-erp-integration', branch: 'main' },
+    },
+    'demo-erp': {
+        id: 'demo-erp',
+        name: 'ERP',
+        description: 'the ERP it uses',
+        kind: 'system',
+        boundTo: 'erp-integration',
+        systemType: 'ERP',
+        source: { owner: 'skukla', repo: 'demo-erp', branch: 'main' },
+    },
     'app-builder-shell': {
         id: 'app-builder-shell',
         name: 'Custom Integration',
@@ -50,6 +67,7 @@ const FAKE_CATALOG: Record<string, AppBuilderComponentCatalogEntry> = {
 
 jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => ({
     getAppBuilderComponentEntry: jest.fn((id: string) => FAKE_CATALOG[id]),
+    getAppBuilderComponentCatalog: jest.fn(() => Object.values(FAKE_CATALOG)),
     isBlankSource: jest.fn(
         (source: { owner: string; repo: string }) =>
             source.owner === 'skukla' && source.repo === 'app-builder-shell',
@@ -103,6 +121,7 @@ function meshEntry(over: Partial<AppBuilderComponentState> = {}): AppBuilderComp
 
 export {
     deriveIntegrationCard,
+    deriveSystemCard,
     deriveMeshCard,
     buildIntegrationCards,
 } from '@/features/dashboard/ui/components/integrations/integrationCardModel';

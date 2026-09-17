@@ -87,3 +87,50 @@ describe('IntegrationsGrid — reinstall', () => {
         expect(getClient().postMessage).not.toHaveBeenCalledWith('reinstallAppBuilderComponent', expect.anything());
     });
 });
+
+function stoppedCard(reason?: string): IntegrationCardModel {
+    const card = { ...erpCard(false), componentId: 'erp-integration-key' };
+    return reason
+        ? { ...card, removalStopped: reason, statusLabel: 'Removal stopped', menuActions: ['redeploy', 'remove', 'remove-anyway'] }
+        : card;
+}
+
+const REASON = 'Nothing was removed. ERP integration could not be uninstalled from Commerce (timed out).';
+const removeAnywayDialog = () => screen.queryByRole('dialog', { name: /removal stopped/i });
+
+describe('IntegrationsGrid — remove anyway', () => {
+    it('opens the confirm by itself when a removal stops, with its reason', () => {
+        const { setCards } = renderCards([stoppedCard()]);
+
+        act(() => setCards([stoppedCard(REASON)]));
+
+        expect(removeAnywayDialog()).toHaveTextContent(REASON);
+        expect(getClient().postMessage).not.toHaveBeenCalled();
+    });
+
+    it('confirming removes with force, by the component id', async () => {
+        const user = setupUser();
+        const { setCards } = renderCards([stoppedCard()]);
+        act(() => setCards([stoppedCard(REASON)]));
+
+        await user.click(within(removeAnywayDialog()!).getByRole('button', { name: /^remove anyway$/i }));
+
+        expect(getClient().postMessage).toHaveBeenCalledWith('removeAppBuilderComponent', {
+            id: 'erp-integration-key',
+            force: true,
+        });
+    });
+
+    it('the menu opens it for a stop that predates the screen; closing posts nothing', async () => {
+        const user = setupUser();
+        renderCards([stoppedCard(REASON)]);
+        expect(removeAnywayDialog()).toBeNull();
+        const panel = await openPanel(user, 'ERP integration', 'Removal stopped');
+
+        await user.click(within(panel).getByRole('button', { name: /^remove anyway$/i }));
+        await user.click(within(removeAnywayDialog()!).getByRole('button', { name: /^close$/i }));
+
+        expect(removeAnywayDialog()).toBeNull();
+        expect(getClient().postMessage).not.toHaveBeenCalled();
+    });
+});

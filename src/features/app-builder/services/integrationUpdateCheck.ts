@@ -15,6 +15,7 @@
  */
 
 import type { UpdateCheckResult } from './integrationSourceUpdate';
+import { clearUpdateAvailable } from '@/core/state/appBuilderComponentState';
 import type { AppBuilderComponentState, Project } from '@/types/base';
 
 export interface UpdateCheckDeps {
@@ -97,7 +98,7 @@ function setUpdateAvailable(state: AppBuilderComponentState, value: UpdateAvaila
     if (value) {
         state.updateAvailable = value;
     } else {
-        delete state.updateAvailable;
+        clearUpdateAvailable(state);
     }
 }
 
@@ -116,9 +117,4 @@ export async function checkIntegrationUpdates(
         reports: results.map((result) => result.report),
         changed: results.some((result) => result.changed),
     };
-}
-
-/** Forget a recorded update, after the update that applied it. */
-export function clearUpdateAvailable(state: AppBuilderComponentState): void {
-    setUpdateAvailable(state, undefined);
 }

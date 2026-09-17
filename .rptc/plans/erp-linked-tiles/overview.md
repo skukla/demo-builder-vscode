@@ -88,12 +88,13 @@ the same workspace; the ERP stays a `kind: 'system'` component.
 4. **Removal: the cascade, and the gaps the spike found.** `refuseBoundSystemAlone`
    becomes "remove the consumer first"; runner and handler tests for both entry points; the
    MCP description and alert copy. In the same step, the removal defects below.
-5. **Summary tile** counts systems; tests.
+5. **Summary tile** counts systems; tests. Done 2026-09-17, with the surface's own count line naming the kinds (owner: "one integration one system").
 6. **Docs**: `erp-integration.md` (On the dashboard), the plan's decision ledger (a new row
    superseding decision 6), changelog, mcp-tools regen.
 
 Each step keeps the gate green. Visual check with the webview baseline instrument on the
-integrations surface (resting and interaction states), since the card grid changes.
+integrations surface (resting and interaction states), since the card grid changes. Done
+2026-09-17 — see "Left to decide while building".
 
 ## Settled with the owner (2026-09-17)
 
@@ -104,10 +105,14 @@ integrations surface (resting and interaction states), since the card grid chang
 
 ## Left to decide while building
 
-- The link line is a second quiet line on the face; today every card has exactly one, so
-  linked cards would be a line taller than the rest. Either give every card the second line's
-  height or put the link beside the status. Decide with the visual baseline instrument, on
-  the real grid.
+- The link line: built BESIDE the status, and MEASURED 2026-09-17 with the visual baseline
+  instrument on the real Bodea pair at 420, 900 and 1280: both cards 128px tall (the same as
+  the single card before), one 17px status line, the link on the status row, not clipped and
+  not overflowing. The resting capture over all eight surfaces at two themes and three widths
+  is byte-identical everywhere except the integrations grid (53 -> 67 elements, the second
+  card). Interaction states: 4 responsive elements before, 7 after, so the new link and card
+  respond to hover and focus; a cell-by-cell interaction diff is not meaningful across an
+  element-count change, and the instrument says so itself.
 
 ## Removal and multiple ERPs: what the code-only spike found (2026-09-17)
 
@@ -122,17 +127,19 @@ these gaps:
    comment said Demo Builder ran it before removal; nothing did (checked by hand), and the
    undeploy then deleted it. Removal now calls it first (`erpDetach.ts`), carries its
    counts on the result, and warns when part of it could not be undone.
-2. **A failed Commerce uninstall is only logged.** The undeploy that follows deletes the
-   uninstall API, so the webhooks and subscriptions stay and the SC is not told. Fix: say so
-   in the result, and consider stopping before the undeploy.
-3. **The ERP's cleanup summary is discarded**, and a failed ERP removal is only logged, so
-   the result can say "removed" with ERP code still deployed.
-4. **A missing component instance throws after the undeploy** (`removeComponent`), leaving
-   the state uncleared and the ERP not removed (checked by hand: it throws, uncaught there).
-5. **A re-add brings the old ERP records back:** nothing wipes the ERP's database on add or
-   remove, though the flyout says the records stay "until a new ERP replaces them" (and
-   `erp-integration.md` said "a re-add starts with a reset"; corrected). Fix: reset on
-   re-add, or say plainly that they return.
+2. **A failed Commerce uninstall is only logged. Reported 2026-09-17.** The undeploy that
+   follows deletes the uninstall API, so the webhooks and subscriptions stay. The result now
+   says so. Owner call, same day: a failed clean-up (Commerce undo, uninstall, ERP wipe)
+   now STOPS the removal with nothing undeployed, and the card offers Remove anyway
+   (`force`), which reports what stays behind.
+3. **The ERP's cleanup summary is discarded. Fixed 2026-09-17.** The ERP's Runtime summary
+   is merged into the integration's, and an ERP that fails or throws is named in `warnings`.
+4. **A missing component instance throws after the undeploy. Fixed 2026-09-17.** The local
+   removal's failure is logged and the state is cleared anyway.
+5. **A re-add brings the old ERP records back. Fixed 2026-09-17.** Removal deletes the
+   ERP's records first, through the ERP's existing `POST admin/wipe` (catalog `wipe`),
+   while that action still exists. Not run live: the call carries the SC's sign-in, as the
+   integration's actions do, and the ERP's actions are protected the same way.
 6. Not checked: whether `aio app undeploy` removes the triggers (`erp-refresh-timer`,
    `events-retry-timer`); the runtime check lists packages only. Also left: business-config
    values and the integration's company ledger (expires after 365 days); App Management's

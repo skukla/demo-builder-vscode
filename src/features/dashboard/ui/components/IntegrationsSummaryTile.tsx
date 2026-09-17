@@ -85,6 +85,20 @@ function worstRank(statuses: string[]): SeverityRank | undefined {
     return SEVERITY.find((entry) => statuses.includes(entry.status));
 }
 
+/** A removal that stopped reads amber on its card; below a failure, it outranks the rest. */
+const REMOVAL_STOPPED = { variant: 'warning' as const, label: 'Removal stopped' };
+
+/** The dot's colour and words: the worst status, or a stopped removal above anything but a failure. */
+function worstFace(
+    statuses: string[],
+    anyRemovalStopped: boolean,
+): { variant: StatusDotVariant; label: string } | undefined {
+    const worst = worstRank(statuses);
+    if (anyRemovalStopped && worst?.status !== 'error') return REMOVAL_STOPPED;
+    const label = getStatusDisplay(worst?.status)?.label;
+    return worst && label ? { variant: worst.variant, label } : undefined;
+}
+
 export function IntegrationsSummaryTile({
     hasAdobeContext,
     appBuilderComponents,
@@ -95,10 +109,11 @@ export function IntegrationsSummaryTile({
         return null;
     }
 
-    // Integrations only — a `kind: 'mesh'` entry in the keyed map is the mesh's
-    // persisted record, not an integration; the mesh counts via `hasMesh`.
+    // Integrations and the systems they use, each a card on the surface. A
+    // `kind: 'mesh'` entry in the keyed map is the mesh's persisted record, not
+    // a card of its own; the mesh counts via `hasMesh`.
     const integrations = Object.values(appBuilderComponents ?? {}).filter(
-        (entry) => entry.kind === 'integration',
+        (entry) => entry.kind === 'integration' || entry.kind === 'system',
     );
     // The mesh folds in through the SAME mapping the mesh card uses, so the dot
     // can never disagree with the card the surface shows. An in-flight
@@ -119,8 +134,10 @@ export function IntegrationsSummaryTile({
     //
     // Wording comes from the SHARED vocabulary, so the tooltip cannot disagree
     // with the card the integrations surface shows for the same state.
-    const worst = worstRank(reportable);
-    const worstLabel = getStatusDisplay(worst?.status)?.label;
+    const worst = worstFace(
+        reportable,
+        integrations.some((entry) => entry.removalStopped),
+    );
 
     return (
         <DashboardTile
@@ -131,10 +148,10 @@ export function IntegrationsSummaryTile({
             className="integrations-tile"
             tooltip="View and manage this project's integrations"
             status={
-                worst && worstLabel
+                worst
                     ? {
                           variant: worst.variant,
-                          tooltip: worstLabel,
+                          tooltip: worst.label,
                           testId: 'integrations-tile-dot',
                       }
                     : undefined

@@ -99,15 +99,17 @@ describe('spine choke-points', () => {
         expect(hits.filter((f) => !spine.includes(f))).toStrictEqual([]);
     });
 
-    it('app-builder UNDEPLOY: the aio app undeploy primitive lives only in the runner', () => {
+    it('app-builder UNDEPLOY: the aio app undeploy primitive lives only in the teardown module', () => {
         // Audited 2026-08-22: one invocation site — the remove flow's
         // kind-dispatched command (integration → app undeploy, mesh →
         // api-mesh:delete). Doors: dashboard remove + MCP remove_component,
         // both through removeAppBuilderComponent. actionDescriptors mentions
         // the command inside a tool DESCRIPTION string (starts with a paren,
         // so the exact-quoted-literal pattern below does not match it).
+        // Moved 2026-09-17 with the removal clean-ups into the teardown module;
+        // `teardownRemote` there is still called only by removeAppBuilderComponent.
         const primitive = /'aio app undeploy'|`aio app undeploy`|"aio app undeploy"/;
-        const spine = ['features/app-builder/services/appBuilderComponentRunner.ts'];
+        const spine = ['features/app-builder/services/appBuilderComponentTeardown.ts'];
 
         const hits = filesTouchingPrimitive(primitive);
 

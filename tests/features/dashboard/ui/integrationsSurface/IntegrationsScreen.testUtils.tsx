@@ -63,8 +63,10 @@ jest.mock('@/core/ui/components/navigation/SearchHeader', () => ({
         onRefresh,
         searchThreshold,
         countTrailing,
+        countText,
     }: any) => (
         <div data-testid="search-header">
+            <span data-testid="count-text">{countText}</span>
             <span data-testid="total-count">{totalCount}</span>
             <span data-testid="filtered-count">{filteredCount}</span>
             {totalCount > (searchThreshold ?? 5) && (

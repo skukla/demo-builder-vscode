@@ -87,6 +87,7 @@ function renderPanel(
         <IntegrationDetailPanel
             model={model}
             onClose={onClose}
+            onOpenLinked={jest.fn()}
             onAction={onAction}
             onRename={onRename}
             {...extra}

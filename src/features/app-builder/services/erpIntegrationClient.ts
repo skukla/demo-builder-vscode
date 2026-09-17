@@ -108,29 +108,56 @@ export class ErpIntegrationClient {
         if (!url) {
             throw new Error(`This integration deployed no erp/${action} action.`);
         }
-        const response = await this.fetchImpl(url, {
-            method,
-            headers: {
-                Authorization: `Bearer ${this.auth.accessToken}`,
-                'x-gw-ims-org-id': this.auth.imsOrgId,
-                Accept: 'application/json',
-            },
-        });
-        const text = await response.text();
-        let body: unknown = {};
-        try {
-            body = text ? JSON.parse(text) : {};
-        } catch {
-            body = { error: text };
+        const answer = await callWithIms(url, method, this.auth, this.fetchImpl);
+        if (!answer.ok) {
+            throw new ErpIntegrationApiError(action, answer.status, answer.detail);
         }
-        if (!response.ok) {
-            const detail =
-                (body as { error?: string; errorMessage?: string }).error ??
-                (body as { errorMessage?: string }).errorMessage ??
-                text ??
-                'no detail';
-            throw new ErpIntegrationApiError(action, response.status, detail);
-        }
-        return body;
+        return answer.body;
     }
+}
+
+/** What a signed-in call to a web action answered. */
+export interface ImsCallAnswer {
+    ok: boolean;
+    status: number;
+    /** The parsed JSON body, or `{ error: text }` when it was not JSON. */
+    body: unknown;
+    /** The action's own message on a failure, else the raw text. */
+    detail: string;
+}
+
+/**
+ * Call a `require-adobe-auth` web action with the signed-in IMS identity.
+ * Shared by the integration's actions and the ERP's own (`systemRecordsWipe`).
+ *
+ * @param url - the deployed action URL
+ * @param method - GET or POST
+ * @param auth - the bearer token and org
+ * @param fetchImpl - fetch, injectable for tests
+ * @returns the answer; never throws on an HTTP failure
+ */
+export async function callWithIms(
+    url: string,
+    method: 'GET' | 'POST',
+    auth: AppManagementAuth,
+    fetchImpl: typeof fetch,
+): Promise<ImsCallAnswer> {
+    const response = await fetchImpl(url, {
+        method,
+        headers: {
+            Authorization: `Bearer ${auth.accessToken}`,
+            'x-gw-ims-org-id': auth.imsOrgId,
+            Accept: 'application/json',
+        },
+    });
+    const text = await response.text();
+    let body: unknown = {};
+    try {
+        body = text ? JSON.parse(text) : {};
+    } catch {
+        body = { error: text };
+    }
+    const fields = body as { error?: string; errorMessage?: string };
+    const detail = fields.error ?? fields.errorMessage ?? (text || 'no detail');
+    return { ok: response.ok, status: response.status, body, detail };
 }

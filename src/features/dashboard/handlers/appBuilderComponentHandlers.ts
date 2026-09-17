@@ -607,6 +607,8 @@ export type GuardableResult = {
     runtimeCleanup?: RuntimeCleanupSummary;
     /** Set by `removeAppBuilderComponent` for the ERP integration: its Commerce writes undone. */
     commerceDetach?: CommerceDetachResult;
+    /** Set by `removeAppBuilderComponent`: what it could not finish, in plain words. */
+    warnings?: string[];
 };
 
 /** What the card calls a component: its kind, title-cased for the status line. */
@@ -767,7 +769,7 @@ export const handleDeployAppBuilderComponent: MessageHandler<{
 export const handleRedeployAppBuilderComponent = handleDeployAppBuilderComponent;
 
 /** Handle 'removeAppBuilderComponent' — guards → D1 removeAppBuilderComponent {id} (confirm is UI-side). */
-export const handleRemoveAppBuilderComponent: MessageHandler<{ id?: string }> = async (
+export const handleRemoveAppBuilderComponent: MessageHandler<{ id?: string; force?: boolean }> = async (
     context,
     payload,
 ) => {
@@ -797,11 +799,18 @@ export const handleRemoveAppBuilderComponent: MessageHandler<{ id?: string }> = 
                     authManager: ServiceLocator.getAuthenticationService(),
                     commandManager: ServiceLocator.getCommandExecutor(),
                 }));
-            return removeAppBuilderComponent(project, id, deps);
+            // `force` is the SC's "Remove anyway": only a literal true counts.
+            return removeAppBuilderComponent(project, id, deps, { force: payload?.force === true });
         },
     );
     if (!result.success) {
-        return { success: false, error: result.error };
+        if (result.code !== ErrorCode.COMPONENT_REMOVAL_STOPPED) {
+            return { success: false, error: result.error };
+        }
+        // The stop is saved on the record; the card shows it and offers Remove
+        // anyway once the snapshot arrives. The code tells an agent the same.
+        await postComponentsSnapshot(context);
+        return { success: false, error: result.error, code: result.code };
     }
     // The entry left the persisted map — without a snapshot the card lingers.
     await postComponentsSnapshot(context);
@@ -816,9 +825,11 @@ export const handleRemoveAppBuilderComponent: MessageHandler<{ id?: string }> = 
     // cleanup is now said out loud instead of swallowed.
     const cleanup = result.runtimeCleanup;
     const commerceDetach = result.commerceDetach;
-    const warnings = [runtimeWarning(displayName, cleanup), detachWarning(displayName, commerceDetach)].filter(
-        (warning): warning is string => Boolean(warning),
-    );
+    const warnings = [
+        runtimeWarning(displayName, cleanup),
+        detachWarning(displayName, commerceDetach),
+        ...(result.warnings ?? []),
+    ].filter((warning): warning is string => Boolean(warning));
     const data = {
         ...(cleanup ? { runtimeCleanup: cleanup } : {}),
         ...(commerceDetach ? { commerceDetach } : {}),

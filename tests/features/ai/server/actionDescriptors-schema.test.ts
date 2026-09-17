@@ -74,7 +74,7 @@ const INPUT_KEYS: Record<string, string[]> = {
     reinstall_integration: ['id'],
     update_integration: ['id'],
     check_integration_updates: [],
-    remove_integration: ['id'],
+    remove_integration: ['force', 'id'],
     reset_erp_records: ['id'],
     open_erp_screen: ['id'],
     stop_demo: [],

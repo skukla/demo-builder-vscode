@@ -30,9 +30,7 @@ jest.mock('@/features/app-builder/services/erpIntegrationClient', () => ({
 }));
 
 jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => ({
-    getBoundSystem: jest.fn((id: string) =>
-        id === 'erp-integration' ? { id: 'demo-erp', kind: 'system', boundTo: 'erp-integration' } : undefined,
-    ),
+    getAppBuilderComponentCatalog: jest.fn(() => [{ id: 'demo-erp', kind: 'system', boundTo: 'erp-integration' }]),
     getAppBuilderComponentEntry: jest.fn(),
     buildCustomIntegrationEntry: jest.fn(),
     entryFitsProjectAxes: jest.fn().mockReturnValue(true),

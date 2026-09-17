@@ -310,6 +310,19 @@ export interface AppBuilderComponentState {
         /** ISO date string of the check. */
         checkedAt: string;
     };
+    /**
+     * The systems this integration uses (their `appBuilderComponents` ids), written
+     * when the pair is added. Read through `appBuilderComponentLinks`.
+     */
+    systems?: string[];
+    /** The integration this system belongs to (its `appBuilderComponents` id). */
+    usedBy?: string;
+    /**
+     * Why the last removal stopped before undeploying, in plain words: a clean-up
+     * only the deployed code can do did not finish. The card offers Remove anyway.
+     * Gone with the record when a removal finishes.
+     */
+    removalStopped?: string;
     // Mesh-kind runtime fields (ADR-011 D3 Step 06). These previously lived
     // only on the singular `meshState` (same values, so no new data exposure);
     // the keyed entry is their durable home so Step 07 can retire `meshState`.

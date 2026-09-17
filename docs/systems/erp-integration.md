@@ -34,21 +34,40 @@ They are a **unit**. Adding the integration adds and deploys the ERP first, then
 integration, into the project's one App Builder workspace. Removing the integration first
 calls its `erp/detach`, which undoes the company credit limits, company blocks and ERP order
 numbers it wrote into Commerce (Commerce keeps the order notes; it cannot delete them); then
-it uninstalls the integration from Commerce, undeploys it, and undeploys the ERP. An undo
-that does not finish is reported beside the removal, which still goes ahead. The ERP is
-never offered or removed on its own; asking to remove it alone is refused in words. The
-ERP's records outlive an undeploy in the workspace's database, and nothing wipes them on a
-re-add today: a re-added ERP shows its old records until it is reset.
+it uninstalls the integration from Commerce and deletes the ERP's records (the ERP's
+`POST admin/wipe`, declared as `wipe` in the catalog; its order-number counters and settings
+stay). Only then does it undeploy the integration and the ERP. Removing the ERP does the
+same: it removes the integration, which takes the ERP with it. The ERP is never offered on
+its own.
+
+Those three clean-ups live in code the undeploy deletes, so if any of them fails, **nothing
+is removed**: the removal stops, the reason is saved on the component (`removalStopped`),
+and the card reads **Removal stopped** and opens a confirm. Remove again retries; **Remove
+anyway** (`remove_integration` with `force: true`) undeploys regardless and reports what
+stays behind: the changes in Commerce, the webhooks and event subscriptions, or the ERP's
+records, which would then come back on a re-add. A Runtime package either undeploy left, an
+ERP that failed after its integration was removed, and a missing local folder are reported
+beside a removal that goes ahead.
+
+The link between the two is stored on the project (`systems` on the integration, `usedBy`
+on the ERP), so removal and the cards follow it rather than the catalog. A project saved
+before links were stored reads the catalog pairing until its next add.
 
 ## On the dashboard
 
-The integration's card carries the ERP: the card's status is the worse of the two, and
-its flyout has a second section under the ERP's name with its status, its screen and its
-last deploy. The kebab offers, after the integration's own verbs, **Open ERP**, **Reset ERP
-records** (confirmed: it wipes the ERP, mirrors Commerce again, and undoes the credit limits,
-blocks and ERP order numbers the ERP wrote into Commerce) and **Redeploy ERP**. The
-integration's **Open Commerce Admin** opens the Admin UI SDK screen. Remove on the card names
-both.
+The pair is two cards, the ERP's right after the integration's. Each shows its own
+status and the other's name behind a link icon; the ERP's card carries an **ERP** badge,
+from the catalog's `systemType`, beside the name the SC gave it. Each flyout has a row
+(**Uses** on the integration, **Used by** on the ERP) whose name opens the other card.
+
+The ERP's kebab offers **Open** (its screen), **Reset records** (confirmed: it wipes the
+ERP, mirrors Commerce again, and undoes the credit limits, blocks and ERP order numbers the
+ERP wrote into Commerce; offered only while both cards are deployed), **Redeploy** and
+**Remove**. The integration keeps its own verbs; its **Open Commerce Admin** opens the Admin
+UI SDK screen. Remove on either card names both. The screen's count names the kinds once a system is
+there ("1 integration · 1 system"). The dashboard's Integrations tile counts the ERP's card
+too: its dot shows the worst status across both, and turns amber for a removal that
+stopped.
 
 ## Updating the pair
 
@@ -101,7 +120,8 @@ Project; it names the ERP's row and the ERP calls itself that.
 address and never the key.
 `reset_erp_records` (confirm-gated, with a consent dialog) runs the reset. The existing
 `add_integration`, `deploy_integration`, `redeploy_integration` and `remove_integration`
-cover the pair by id; `remove_integration` on the ERP alone is refused.
+cover the pair by id; `remove_integration` on either one removes both, and stops with the
+error code `COMPONENT_REMOVAL_STOPPED` when a clean-up fails (`force: true` goes ahead).
 `check_integration_updates` records which apps have newer code, `update_integration`
 updates the pair (the ERP first), and `reinstall_integration` (confirm-gated) is refused
 unless Commerce refused an upgrade.

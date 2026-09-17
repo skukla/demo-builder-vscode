@@ -85,6 +85,13 @@ export interface SearchHeaderProps {
     action?: React.ReactNode;
 
     /**
+     * Replaces the built count line, for a list holding more than one kind of
+     * thing ("1 integration · 1 system"). Ignored while filtering, where
+     * "Showing N of M" is the answer whatever the kinds are.
+     */
+    countText?: string;
+
+    /**
      * Content for the END of the count row.
      *
      * That row is space-between: count left, action buttons right when there is
@@ -262,7 +269,9 @@ export function SearchHeader(props: SearchHeaderProps) {
             {showCount && (
                 <Flex justifyContent="space-between" alignItems="center" marginBottom="size-200">
                     <Text UNSAFE_className="text-sm text-gray-600">
-                        {buildCountText(isFiltering, filteredCount, totalCount, displayNoun)}
+                        {!isFiltering && props.countText
+                            ? props.countText
+                            : buildCountText(isFiltering, filteredCount, totalCount, displayNoun)}
                     </Text>
                     {!showSearch && ActionButtons}
                     {countTrailing}

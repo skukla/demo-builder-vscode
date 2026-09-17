@@ -159,6 +159,38 @@ describe('IntegrationsSummaryTile', () => {
         expect(screen.getByTestId('integrations-tile-dot')).toHaveAttribute('data-variant', 'warning');
     });
 
+    it("reports a system's health too: the ERP is a card of its own", () => {
+        render(
+            <IntegrationsSummaryTile
+                hasAdobeContext
+                appBuilderComponents={{
+                    'erp-integration': { ...DEPLOYED },
+                    'demo-erp': { ...DEPLOYED, kind: 'system', status: 'error' },
+                }}
+            />
+        );
+
+        expect(screen.getByTestId('integrations-tile-dot')).toHaveAttribute('data-variant', 'error');
+    });
+
+    it('reads a stopped removal as amber, with its words, below a failure only', () => {
+        const stopped = { ...DEPLOYED, kind: 'system' as const, removalStopped: 'Nothing was removed.' };
+        const { rerender } = render(
+            <IntegrationsSummaryTile hasAdobeContext appBuilderComponents={{ a: { ...DEPLOYED }, b: stopped }} />
+        );
+
+        expect(screen.getByTestId('integrations-tile-dot')).toHaveAttribute('data-variant', 'warning');
+        expect(screen.getByRole('tooltip')).toHaveTextContent('Removal stopped');
+
+        rerender(
+            <IntegrationsSummaryTile
+                hasAdobeContext
+                appBuilderComponents={{ a: { ...DEPLOYED, status: 'error' }, b: stopped }}
+            />
+        );
+        expect(screen.getByTestId('integrations-tile-dot')).toHaveAttribute('data-variant', 'error');
+    });
+
     describe('mesh health folds into the same dot', () => {
         // Without this the mesh could be broken and the dashboard would look
         // healthy — the regression the tile exists to prevent, since the mesh
