@@ -74,12 +74,13 @@ jest.mock('@/features/dashboard/commands/showDashboard', () => ({
     },
 }));
 
-// Below the mocks on purpose: they hoist above these imports.
+// Below the mocks on purpose: they hoist above these imports. The shared wall
+// comes before the subject, or the subject binds to the real modules first.
+import { setupMocks } from './dashboardHandlers.testUtils';
 import {
     handleCheckIntegrationUpdates,
     handleUpdateAppBuilderComponent,
 } from '@/features/dashboard/handlers/integrationUpdateHandlers';
-import { setupMocks } from './dashboardHandlers.testUtils';
 import { ErrorCode } from '@/types/errorCodes';
 
 const SOURCE = { owner: 'skukla', repo: 'commerce-erp-integration', branch: 'main' };

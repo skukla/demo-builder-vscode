@@ -30,3 +30,4 @@ Filed 2026-09-17.
 - 2026-09-17  feat(app-builder): an App Management install says what it did — installed, upgraded, already current or refused — and records the version (`f72c4a9b7`)
 - 2026-09-17  feat(app-builder): updating an integration fetches its newer code, installs it and redeploys, keeping the SC's edits (`73cfc8204`)
 - 2026-09-17  feat(app-builder): an integration Commerce will not upgrade in place can be reinstalled, only then (`100cac2c0`)
+- 2026-09-17  feat(app-builder): Update fetches an integration's newer code, and the card says when there is some (`e3bebf76a`)
