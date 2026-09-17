@@ -107,15 +107,39 @@ export interface InstallationState {
     error?: unknown;
 }
 
-/** POST /installation result: an upgrade planned now, or work queued. */
+/**
+ * POST /installation result. `@adobe/aio-commerce-lib-app` 2.x answers an
+ * install with 202 and an `id`; an upgrade with 202 when it started (the app's
+ * `metadata.upgradeMode` is `auto`) or 200 when it was only planned (`manual`),
+ * both with a `plan` and no id (read from the 2.0.0 OpenAPI, 2026-09-17).
+ */
 export interface ReconcileResult {
     operation: 'install' | 'upgrade';
     message: string;
-    /** Present on a 202 (queued); the id to poll getInstallationState with. */
+    /** Present on a queued install; the id to poll getInstallationState with. */
     id?: string;
-    /** Present on a 200 upgrade: the planned changes (opaque here). */
+    /** Present on an upgrade: the planned changes (opaque here). */
     plan?: Record<string, unknown>;
+    /** True when the work started (HTTP 202); false when it was only planned (200). */
+    accepted: boolean;
 }
+
+/**
+ * The latest install/upgrade/uninstall attempt (lib-app 2.x), read with the
+ * post-deploy invocation header. A succeeded attempt names the version it
+ * reached; a failed one says where it stopped.
+ */
+export interface LifecycleAttempt {
+    id: string;
+    operation: 'install' | 'upgrade' | 'uninstall';
+    status: 'pending' | 'in-progress' | 'succeeded' | 'failed';
+    startedAt: string;
+    result?: { appVersion: string; snapshotId: string };
+    failure?: { key: string; message?: string };
+}
+
+/** The header lib-app 2.x reads to answer with the latest attempt. */
+export const INVOCATION_SOURCE_HEADER = 'x-aio-commerce-installation-invocation-source';
 
 /** POST /installation/validation 200 body (summary counts spec-required). */
 export interface ValidationOutcome {
@@ -219,7 +243,29 @@ export class AppManagementClient {
      */
     async reconcileInstallation(body: ReconcileInstallationRequest): Promise<ReconcileResult> {
         const response = await this.request('POST', '/installation', body);
-        return (await this.parseJson(response, 'Reconcile installation')) as ReconcileResult;
+        const parsed = (await this.parseJson(response, 'Reconcile installation')) as Omit<
+            ReconcileResult,
+            'accepted'
+        >;
+        return { ...parsed, accepted: response.status === 202 };
+    }
+
+    /**
+     * The latest lifecycle attempt (lib-app 2.x), or undefined when there is
+     * none or the app predates attempts: a 1.x app ignores the header and
+     * answers its installation state, which carries no `operation`.
+     */
+    async getLatestLifecycleAttempt(): Promise<LifecycleAttempt | undefined> {
+        const response = await this.request('GET', '/installation', undefined, {
+            [INVOCATION_SOURCE_HEADER]: 'post-app-deploy',
+        });
+        if (response.status === 204) {
+            return undefined;
+        }
+        const body = (await this.parseJson(response, 'Get upgrade state')) as Partial<LifecycleAttempt>;
+        return typeof body?.operation === 'string' && typeof body.status === 'string'
+            ? (body as LifecycleAttempt)
+            : undefined;
     }
 
     /** Pre-validate an installation request without executing it. */
@@ -280,8 +326,9 @@ export class AppManagementClient {
     // Internals
     // ------------------------------------------------------
 
-    private buildHeaders(hasBody: boolean): Record<string, string> {
+    private buildHeaders(hasBody: boolean, extra: Record<string, string> = {}): Record<string, string> {
         const headers: Record<string, string> = {
+            ...extra,
             Authorization: `Bearer ${this.auth.accessToken}`,
             'x-gw-ims-org-id': this.auth.imsOrgId,
             Accept: 'application/json',
@@ -297,10 +344,11 @@ export class AppManagementClient {
         method: 'GET' | 'POST' | 'DELETE',
         path: string,
         body?: unknown,
+        extraHeaders?: Record<string, string>,
     ): Promise<Response> {
         return this.fetchImpl(`${this.baseUrl}${path}`, {
             method,
-            headers: this.buildHeaders(body !== undefined),
+            headers: this.buildHeaders(body !== undefined, extraHeaders),
             body: body === undefined ? undefined : JSON.stringify(body),
             signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
         });

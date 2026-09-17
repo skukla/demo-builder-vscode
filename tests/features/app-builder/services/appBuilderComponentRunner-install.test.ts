@@ -171,9 +171,35 @@ describe('install-after-deploy wiring', () => {
         const result = await addAppBuilderComponent(project, KIT_ENTRY, deps);
 
         expect(result.success).toBe(true);
-        expect(installAppManagement).toHaveBeenCalledWith(project, KIT_URLS, expect.any(Function));
+        expect(installAppManagement).toHaveBeenCalledWith(project, KIT_URLS, expect.any(Function), {
+            appVersion: undefined,
+            since: expect.any(String),
+        });
         expect(project.appBuilderComponents?.[KIT_ENTRY.id]?.installation).toMatchObject({
             status: 'installed',
+        });
+    });
+
+    it('add: the manifest version read from the clone goes to the install pass and onto the record', async () => {
+        const { deps, installAppManagement } = kitDeps();
+        installAppManagement.mockResolvedValue({
+            status: 'installed',
+            version: '0.2.0',
+            detail: 'Installed in Commerce at version 0.2.0.',
+        });
+        const readAppVersion = jest.fn().mockResolvedValue('0.2.0');
+        const project = createProject();
+        const before = Date.now();
+
+        await addAppBuilderComponent(project, KIT_ENTRY, { ...deps, readAppVersion });
+
+        const [, , , options] = installAppManagement.mock.calls[0];
+        expect(options.appVersion).toBe('0.2.0');
+        expect(Date.parse(options.since)).toBeGreaterThanOrEqual(before - 1);
+        expect(project.appBuilderComponents?.[KIT_ENTRY.id]?.installation).toMatchObject({
+            status: 'installed',
+            version: '0.2.0',
+            detail: 'Installed in Commerce at version 0.2.0.',
         });
     });
 

@@ -27,7 +27,7 @@ import {
     type GuardableResult,
 } from './appBuilderComponentHandlers';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import { getAppBuilderComponent } from '@/core/state/appBuilderComponentState';
+import { getAppBuilderComponent, recordInstallation } from '@/core/state/appBuilderComponentState';
 import {
     AppManagementClient,
     type InstallationState,
@@ -213,14 +213,14 @@ export const handleInstallAppBuilderComponent: MessageHandler<{ id?: string }> =
             if (!deps.installAppManagement) {
                 return { success: false, error: 'The install pass is not available.' };
             }
-            const installed = await deps.installAppManagement(project, state.deployedUrls, report);
+            const componentPath = project.componentInstances?.[id]?.path;
+            const appVersion = componentPath ? await deps.readAppVersion?.(componentPath) : undefined;
+            const installed = await deps.installAppManagement(project, state.deployedUrls, report, {
+                appVersion,
+            });
             // Same persistence the deploy tail's install pass writes — the
             // drawer and the status read serve THIS record.
-            state.installation = {
-                status: installed.status,
-                detail: installed.detail,
-                at: new Date().toISOString(),
-            };
+            recordInstallation(state, installed);
             await context.stateManager.saveProject(project);
             return installed.status === 'failed'
                 ? { success: false, error: installed.detail, detail: installed.detail }

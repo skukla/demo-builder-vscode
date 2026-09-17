@@ -190,6 +190,59 @@ describe('appManagementClient', () => {
         });
     });
 
+    describe('getLatestLifecycleAttempt', () => {
+        const ATTEMPT = {
+            id: 'att-1',
+            operation: 'upgrade',
+            status: 'succeeded',
+            progress: { name: 'root', id: 'r', path: [], meta: {}, status: 'succeeded', children: [] },
+            startedAt: '2026-09-17T12:01:00.000Z',
+            executionDeadline: '2026-09-17T12:06:00.000Z',
+            data: null,
+            result: { appVersion: '0.2.0', snapshotId: 's2' },
+        };
+
+        it('GETs the installation with the post-deploy source header and answers the attempt', async () => {
+            mockFetch.mockResolvedValue(jsonResponse(200, ATTEMPT));
+
+            const result = await makeClient(mockFetch).getLatestLifecycleAttempt();
+
+            expect(mockFetch).toHaveBeenCalledWith(
+                `${BASE_URL}/installation`,
+                expect.objectContaining({
+                    method: 'GET',
+                    headers: {
+                        'x-aio-commerce-installation-invocation-source': 'post-app-deploy',
+                        ...EXPECTED_GET_HEADERS,
+                    },
+                })
+            );
+            expect(result).toEqual(ATTEMPT);
+        });
+
+        it('answers undefined when there is no attempt (204)', async () => {
+            mockFetch.mockResolvedValue(noContentResponse());
+
+            await expect(makeClient(mockFetch).getLatestLifecycleAttempt()).resolves.toBeUndefined();
+        });
+
+        it('answers undefined for a 1.x app, which ignores the header and returns its install state', async () => {
+            mockFetch.mockResolvedValue(
+                jsonResponse(200, { id: 'inst-1', status: 'succeeded', startedAt: '2026-08-27T10:00:00Z' })
+            );
+
+            await expect(makeClient(mockFetch).getLatestLifecycleAttempt()).resolves.toBeUndefined();
+        });
+
+        it('throws a sanitized error for a failed read', async () => {
+            mockFetch.mockResolvedValue(jsonResponse(500, { error: 'boom' }));
+
+            await expect(makeClient(mockFetch).getLatestLifecycleAttempt()).rejects.toThrow(
+                'Get upgrade state failed (HTTP 500)'
+            );
+        });
+    });
+
     describe('reconcileInstallation', () => {
         it('POSTs the request body verbatim with Content-Type', async () => {
             mockFetch.mockResolvedValue(
@@ -222,6 +275,22 @@ describe('appManagementClient', () => {
 
             expect(result.operation).toBe('install');
             expect(result.id).toBe('inst-1');
+            expect(result.accepted).toBe(true);
+        });
+
+        it('marks a 202 upgrade as started (lib-app 2.x, upgradeMode auto)', async () => {
+            mockFetch.mockResolvedValue(
+                jsonResponse(202, { message: 'Upgrade started', operation: 'upgrade', plan: {} })
+            );
+
+            const result = await makeClient(mockFetch).reconcileInstallation(RECONCILE_REQUEST);
+
+            expect(result).toEqual({
+                message: 'Upgrade started',
+                operation: 'upgrade',
+                plan: {},
+                accepted: true,
+            });
         });
 
         it('returns the 200 upgrade plan', async () => {
@@ -238,6 +307,7 @@ describe('appManagementClient', () => {
 
             expect(result.operation).toBe('upgrade');
             expect(result.plan).toEqual({ events: {} });
+            expect(result.accepted).toBe(false);
         });
 
         it('throws a 409 no-op with the closed-enum reason attached', async () => {

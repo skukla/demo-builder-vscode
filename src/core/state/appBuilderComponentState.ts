@@ -28,6 +28,33 @@ export function getAppBuilderComponent(
     return project.appBuilderComponents?.[id];
 }
 
+/** An install pass's outcome, as `recordInstallation` stores it. */
+export interface InstallationOutcome {
+    status: NonNullable<AppBuilderComponentState['installation']>['status'];
+    detail?: string;
+    version?: string;
+    needsReinstall?: boolean;
+}
+
+/**
+ * Store an App Management install pass's outcome on the component, where the
+ * card, the drawer and `get_integration_install_status` read it. The deploy
+ * tail and the install tool both write it.
+ */
+export function recordInstallation(
+    state: AppBuilderComponentState,
+    outcome: InstallationOutcome,
+    at: string = new Date().toISOString(),
+): void {
+    state.installation = {
+        status: outcome.status,
+        detail: outcome.detail,
+        at,
+        ...(outcome.version ? { version: outcome.version } : {}),
+        ...(outcome.needsReinstall ? { needsReinstall: true } : {}),
+    };
+}
+
 // The legacy `meshState`/`appState` synthesis functions lived here until PL-1
 // phase 2: the loader has folded legacy manifests into the keyed map on every
 // load since ADR-011 D3, so every in-memory Project carries keyed state and

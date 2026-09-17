@@ -259,8 +259,9 @@ function resolvePrimaryUrl(entry: IdentifiedAppBuilderComponent): string | undef
 
 /**
  * The persisted App Management install record, display-ready. 'skipped' means
- * the app's installer found everything already current — that IS installed,
- * and rendering it as anything else would read as a problem.
+ * the app's installer found everything already current and 'upgraded' that it
+ * moved to the deployed version — both ARE installed, and rendering either as
+ * anything else would read as a problem.
  */
 function deriveInstallation(
     entry: IdentifiedAppBuilderComponent,

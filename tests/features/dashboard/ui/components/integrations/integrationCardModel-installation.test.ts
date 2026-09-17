@@ -45,6 +45,26 @@ describe('deriveIntegrationCard — installation facet', () => {
         });
     });
 
+    it('upgraded IS installed — the installer moved the app to the deployed version', () => {
+        const model = deriveIntegrationCard(
+            integration({
+                status: 'deployed',
+                installation: {
+                    status: 'upgraded',
+                    detail: 'Upgraded in Commerce to version 0.2.0.',
+                    version: '0.2.0',
+                },
+            })
+        );
+
+        expect(model.installation).toMatchObject({
+            label: 'Installed',
+            detail: 'Upgraded in Commerce to version 0.2.0.',
+            failed: false,
+        });
+        expect(model.menuActions).not.toContain('install');
+    });
+
     it('failed on a deployed card: Not installed + the install action AFTER the status verb slot', () => {
         const model = deriveIntegrationCard(
             integration({

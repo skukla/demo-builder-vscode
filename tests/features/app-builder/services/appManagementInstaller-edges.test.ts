@@ -288,11 +288,11 @@ describe('installAppManagementApp — the poll budget', () => {
         expect(wait).toHaveBeenCalledWith(5000);
     });
 
-    it('answers a synchronous 200 without polling at all', async () => {
+    it('answers a synchronous install answer without polling at all', async () => {
         const client = makeInstallerClient({
             reconcileInstallation: jest
                 .fn()
-                .mockResolvedValue({ operation: 'upgrade', message: 'plan applied' }),
+                .mockResolvedValue({ operation: 'install', message: 'installed', accepted: false }),
         });
 
         const result = await installAppManagementApp(
@@ -301,7 +301,7 @@ describe('installAppManagementApp — the poll budget', () => {
             makeInstallerDeps(client)
         );
 
-        expect(result).toEqual({ status: 'installed', detail: 'plan applied' });
+        expect(result).toEqual({ status: 'installed', detail: 'installed', version: undefined });
         expect(client.getInstallationState).not.toHaveBeenCalled();
     });
 });

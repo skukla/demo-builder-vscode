@@ -33,6 +33,7 @@
 import { entriesThatNeedApis } from './apiSubscriber';
 import { recordDeployOutcome, type DeployOutcome } from './appBuilderDeployOutcome';
 import { detectAppLayout, listDeclaredPackageNames, type AppConfigLayout } from './appConfigPackages';
+import type { AppManagementInstallOptions, AppManagementInstallResult } from './appManagementUpgrade';
 import { deriveProvidedValues, resolveDeployInputs, resolveDisplayName } from './deployInputs';
 import { deriveOwPackage } from './owPackageName';
 import { deriveScreenUrl } from './systemScreen';
@@ -41,7 +42,7 @@ import { isMeshComponentId } from '@/core/constants';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { MESH_DELETE_COMMAND } from '@/core/shell/meshDeleteCommand';
 import { buildOrgTargetFromProjectAdobe, withOrgContext, type CachedOrgRef } from '@/core/shell/orgContextEnv';
-import { getProvidedEnvVars } from '@/core/state/appBuilderComponentState';
+import { getProvidedEnvVars, recordInstallation } from '@/core/state/appBuilderComponentState';
 import { reconcileComponentSelections } from '@/core/state/componentSelectionReconcile';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { buildCustomIntegrationEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
@@ -231,8 +232,11 @@ export interface AppBuilderComponentRunnerDeps {
     installAppManagement?: (
         project: Project,
         deployedUrls: Record<string, string> | undefined,
-        onProgress?: (message: string) => void
-    ) => Promise<{ status: 'installed' | 'skipped' | 'failed'; detail?: string }>;
+        onProgress?: (message: string) => void,
+        options?: AppManagementInstallOptions,
+    ) => Promise<AppManagementInstallResult>;
+    /** The version an app's manifest declares (appManifestVersion); optional for bare tests. */
+    readAppVersion?: (componentPath: string) => Promise<string | undefined>;
     /**
      * Uninstall an app-management lifecycle app from Commerce BEFORE its remove
      * tears the actions down (appManagementUninstaller). `aio app undeploy`
@@ -723,6 +727,7 @@ export async function addAppBuilderComponent(
         };
         await deps.saveProject(project);
 
+        const since = new Date().toISOString();
         const deployed = await withOrgContext(targetFor(project, deps), () =>
             dispatchDeploy(project, entry, installed.path, deps),
         );
@@ -733,7 +738,7 @@ export async function addAppBuilderComponent(
         }
 
         await persistOutcome(project, entry, deployed.outcome, deps);
-        await installIfAppManagement(project, entry, deps);
+        await installIfAppManagement(project, entry, deps, { componentPath: installed.path, since });
         await republishIfProvided(project, deps);
         return { success: true };
     } catch (error) {
@@ -755,21 +760,28 @@ async function installIfAppManagement(
     project: Project,
     entry: AppBuilderComponentCatalogEntry,
     deps: AppBuilderComponentRunnerDeps,
+    deploy: { componentPath: string; since: string },
 ): Promise<void> {
     if (entry.lifecycle !== 'app-management' || !deps.installAppManagement) {
         return;
     }
     const state = project.appBuilderComponents?.[entry.id];
-    const result = await deps.installAppManagement(project, state?.deployedUrls, (message) =>
-        deps.onProgress?.(message),
+    const options: AppManagementInstallOptions = {
+        appVersion: await deps.readAppVersion?.(deploy.componentPath),
+        since: deploy.since,
+    };
+    const result = await deps.installAppManagement(
+        project,
+        state?.deployedUrls,
+        (message) => deps.onProgress?.(message),
+        options,
     );
     if (state) {
-        state.installation = {
-            status: result.status,
-            detail: result.detail,
-            at: new Date().toISOString(),
-        };
+        recordInstallation(state, result);
         await deps.saveProject(project);
+    }
+    if (result.status === 'upgraded' && result.detail) {
+        deps.onProgress?.(result.detail);
     }
     if (result.status === 'failed') {
         deps.logger.warn(
@@ -823,6 +835,7 @@ export async function deployAppBuilderComponent(
         existing.error = undefined;
         await deps.saveProject(project);
 
+        const since = new Date().toISOString();
         const deployed = await withOrgContext(targetFor(project, deps), () =>
             dispatchDeploy(project, entry, componentPath, deps),
         );
@@ -838,7 +851,7 @@ export async function deployAppBuilderComponent(
         }
         recordDeployOutcome(project, entry.kind, id, deployed.outcome);
         await deps.saveProject(project);
-        await installIfAppManagement(project, entry, deps);
+        await installIfAppManagement(project, entry, deps, { componentPath, since });
         await republishIfProvided(project, deps);
         return { success: true };
     } catch (error) {

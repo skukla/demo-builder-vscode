@@ -35,6 +35,16 @@ import {
     type InstallationState,
     type ReconcileResult,
 } from './appManagementClient';
+import {
+    followUpgrade,
+    installedOutcome,
+    isRunningUpgrade,
+    isUpgradeRefusal,
+    plannedOnly,
+    REFUSED_UPGRADE,
+    settleNoOp,
+    type AppManagementInstallResult,
+} from './appManagementUpgrade';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getBackendCommerceContract } from '@/features/components/services/backendCommerce';
@@ -57,14 +67,8 @@ export const APP_MANAGEMENT_HANDS_BACK =
 /** The subset of {@link AppManagementClient} the installer drives (test seam). */
 export type InstallerClient = Pick<
     AppManagementClient,
-    'getInstallationState' | 'reconcileInstallation' | 'setAssociation'
+    'getInstallationState' | 'getLatestLifecycleAttempt' | 'reconcileInstallation' | 'setAssociation'
 >;
-
-export interface AppManagementInstallResult {
-    status: 'installed' | 'skipped' | 'failed';
-    /** Human line — the no-op reason on skip, the hands-back on failure. */
-    detail?: string;
-}
 
 export interface AppManagementInstallDeps {
     /** Resolve IMS auth for the app's org; undefined = cannot authenticate. */
@@ -75,6 +79,10 @@ export interface AppManagementInstallDeps {
     clientFactory?: (baseUrl: string, auth: AppManagementAuth) => InstallerClient;
     /** Poll pacing (tests inject an instant resolver). */
     wait?: (ms: number) => Promise<void>;
+    /** The app version being installed (its manifest's `metadata.version`), when known. */
+    appVersion?: string;
+    /** When the deploy this pass follows started (ISO); an upgrade since then is this deploy's. */
+    since?: string;
 }
 
 /**
@@ -266,9 +274,14 @@ async function settleReconcile(
     deps: AppManagementInstallDeps,
     budget: PollBudget,
 ): Promise<AppManagementInstallResult | 'retry'> {
+    if (reconciled.operation === 'upgrade') {
+        return reconciled.accepted
+            ? followUpgrade(client, deps.onProgress, deps.wait)
+            : plannedOnly(deps.appVersion);
+    }
     // A 202 queued the work: poll until it lands. A 200 answered synchronously.
     if (!reconciled.id) {
-        return { status: 'installed', detail: reconciled.message };
+        return installedOutcome(deps.appVersion, reconciled.message);
     }
     const finalState = await pollInstallation(client, deps, budget);
     if (!finalState) {
@@ -286,7 +299,7 @@ async function settleReconcile(
             detail: `The app's installer reported a failure. ${APP_MANAGEMENT_HANDS_BACK}`,
         };
     }
-    return { status: 'installed' };
+    return installedOutcome(deps.appVersion);
 }
 
 /**
@@ -340,6 +353,13 @@ export async function installAppManagementApp(
             commerceEnv: target.commerceEnv,
         });
 
+        // The deploy's post-deploy hook may already be upgrading the app; asking
+        // again while it runs fails, so follow it instead.
+        const running = await client.getLatestLifecycleAttempt().catch(() => undefined);
+        if (isRunningUpgrade(running)) {
+            return await followUpgrade(client, deps.onProgress, deps.wait);
+        }
+
         // Reconcile is idempotent desired-state, and the app's installer races
         // itself on registration creation (the 409 signature) — so a retryable
         // failure re-runs the SAME reconcile until it converges or the rounds
@@ -366,7 +386,10 @@ export async function installAppManagementApp(
         return fail('The install kept hitting a transient conflict.');
     } catch (error) {
         if (isBenignNoOp(error)) {
-            return { status: 'skipped', detail: 'Already installed and current.' };
+            return settleNoOp(client, deps.appVersion, deps.since);
+        }
+        if (isUpgradeRefusal(error)) {
+            return REFUSED_UPGRADE;
         }
         const message = error instanceof Error ? error.message : String(error);
         deps.logger.warn(`[AppManagement] install failed: ${message}`);

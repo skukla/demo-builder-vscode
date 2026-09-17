@@ -278,7 +278,8 @@ describe('handleInstallAppBuilderComponent', () => {
         expect(mockInstallAppManagement).toHaveBeenCalledWith(
             mockProject,
             APP_URLS,
-            expect.any(Function)
+            expect.any(Function),
+            { appVersion: undefined }
         );
         // The persisted record is what the drawer and the status read serve.
         expect(result.installation.status).toBe('installed');

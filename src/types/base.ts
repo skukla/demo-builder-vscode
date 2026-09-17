@@ -287,10 +287,14 @@ export interface AppBuilderComponentState {
      * merely dormant until installed (Commerce Admin > Apps > App Management).
      */
     installation?: {
-        status: 'installed' | 'skipped' | 'failed';
+        status: 'installed' | 'upgraded' | 'skipped' | 'failed';
         detail?: string;
         /** ISO date string of the attempt. */
         at?: string;
+        /** The app version installed in Commerce (its manifest's `metadata.version`), when known. */
+        version?: string;
+        /** The installed app cannot be upgraded in place; a reinstall would apply the new version. */
+        needsReinstall?: boolean;
     };
     // Mesh-kind runtime fields (ADR-011 D3 Step 06). These previously lived
     // only on the singular `meshState` (same values, so no new data exposure);

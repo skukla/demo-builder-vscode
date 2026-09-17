@@ -27,6 +27,7 @@ import type { AppBuilderComponentRunnerDeps } from '@/features/app-builder/servi
 import type { AppManagementAuth } from '@/features/app-builder/services/appManagementClient';
 import { installAppManagementApp } from '@/features/app-builder/services/appManagementInstaller';
 import { uninstallAppManagementApp } from '@/features/app-builder/services/appManagementUninstaller';
+import { readAppManifestVersion } from '@/features/app-builder/services/appManifestVersion';
 import { deployAppComponentIsolated } from '@/features/app-builder/services/deployAppIsolated';
 import { subscriberTarget } from '@/features/app-builder/services/ensureMeshApiSubscribed';
 import { buildS2SDeployEnv } from '@/features/app-builder/services/s2sDeployEnv';
@@ -166,12 +167,15 @@ export function buildDefaultRunnerDeps(
         // Post-deploy install for app-management lifecycle apps (automatic with
         // hands-back — owner decision 2026-08-27). The runner records the
         // outcome; a failure never fails the deploy.
-        installAppManagement: (project, deployedUrls, installProgress) =>
+        installAppManagement: (project, deployedUrls, installProgress, options) =>
             installAppManagementApp(project, deployedUrls, {
                 getAuth: () => resolveAppManagementAuth(project, ctx.authManager),
                 logger: ctx.logger,
                 onProgress: installProgress,
+                appVersion: options?.appVersion,
+                since: options?.since,
             }),
+        readAppVersion: readAppManifestVersion,
         // The inverse, ahead of an integration remove: the app's own uninstall
         // API takes down what its installer created, while the API still
         // exists to call. Best-effort — the runner logs a failure and removes

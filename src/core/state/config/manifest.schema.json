@@ -691,6 +691,7 @@
               "type": "string",
               "enum": [
                 "installed",
+                "upgraded",
                 "skipped",
                 "failed"
               ]
@@ -701,6 +702,14 @@
             "at": {
               "type": "string",
               "description": "ISO date string of the attempt."
+            },
+            "version": {
+              "type": "string",
+              "description": "The app version installed in Commerce (its manifest's `metadata.version`), when known."
+            },
+            "needsReinstall": {
+              "type": "boolean",
+              "description": "The installed app cannot be upgraded in place; a reinstall would apply the new version."
             }
           },
           "required": [
