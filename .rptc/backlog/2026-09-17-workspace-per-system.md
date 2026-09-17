@@ -226,3 +226,4 @@ are rewritten around the answer (or left as they are, with the reason).
 
 - 2026-09-17  docs(backlog): AB-17 asks whether each system and integration gets its own workspace (`f4a0db91f`)
 - 2026-09-17  docs(backlog): AB-17 steps 1 and 2 — the integration app id can vary per deploy (`0a560b980`)
+- 2026-09-17  docs(backlog): AB-17 live spike — events cross workspaces, direct calls and workspace delete do not (`3e000b584`)
