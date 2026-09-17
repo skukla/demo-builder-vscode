@@ -32,7 +32,11 @@ import { uninstallAppManagementApp } from '@/features/app-builder/services/appMa
 import { readAppManifestVersion } from '@/features/app-builder/services/appManifestVersion';
 import { deployAppComponentIsolated } from '@/features/app-builder/services/deployAppIsolated';
 import { subscriberTarget } from '@/features/app-builder/services/ensureMeshApiSubscribed';
-import { fastForwardClone } from '@/features/app-builder/services/integrationSourceUpdate';
+import {
+    checkCloneForUpdate,
+    fastForwardClone,
+    type GitRunner,
+} from '@/features/app-builder/services/integrationSourceUpdate';
 import { buildS2SDeployEnv } from '@/features/app-builder/services/s2sDeployEnv';
 import { ensureScreenKeyEnv, forgetScreenKey } from '@/features/app-builder/services/systemScreen';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
@@ -124,6 +128,9 @@ export function buildDefaultRunnerDeps(
     onProgress?: (message: string, subMessage?: string) => void,
     confirmToolchainRefresh?: () => Promise<boolean>,
 ): AppBuilderComponentRunnerDeps {
+    // Git in an integration's clone, for update and its check.
+    const gitIn: GitRunner = (command, cwd) =>
+        ctx.commandManager.execute(command, { cwd, enhancePath: true, shell: DEFAULT_SHELL, timeout: TIMEOUTS.LONG });
     return {
         confirmToolchainRefresh: confirmToolchainRefresh ?? promptForToolchainRefresh,
         // Where the deploy tails' steps go. Callers with a progress notification
@@ -181,15 +188,8 @@ export function buildDefaultRunnerDeps(
         readAppVersion: readAppManifestVersion,
         // Update: fast-forward the clone, then the same dependency install the
         // add path runs (ComponentManager, with the entry's Node version).
-        fetchComponentSource: (componentPath, branch) =>
-            fastForwardClone(componentPath, branch, (command, cwd) =>
-                ctx.commandManager.execute(command, {
-                    cwd,
-                    enhancePath: true,
-                    shell: DEFAULT_SHELL,
-                    timeout: TIMEOUTS.LONG,
-                }),
-            ),
+        fetchComponentSource: (componentPath, branch) => fastForwardClone(componentPath, branch, gitIn),
+        checkComponentSource: (componentPath, branch) => checkCloneForUpdate(componentPath, branch, gitIn),
         installComponentDependencies: (componentPath, definition) =>
             ctx.componentManager.installNpmDependencies(componentPath, definition),
         // The inverse, ahead of an integration remove: the app's own uninstall

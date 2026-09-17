@@ -296,6 +296,20 @@ export interface AppBuilderComponentState {
         /** The installed app cannot be upgraded in place; a reinstall would apply the new version. */
         needsReinstall?: boolean;
     };
+    /**
+     * Newer code is available: the source branch on GitHub has commits the
+     * clone lacks, or the clone's app version differs from the one installed in
+     * Commerce. Set by the integrations screen's check, removed by a successful
+     * update (integrationUpdateCheck).
+     */
+    updateAvailable?: {
+        /** The branch head on GitHub, when the branch moved. */
+        commit?: string;
+        /** The version in the clone, when it differs from the installed one. */
+        version?: string;
+        /** ISO date string of the check. */
+        checkedAt: string;
+    };
     // Mesh-kind runtime fields (ADR-011 D3 Step 06). These previously lived
     // only on the singular `meshState` (same values, so no new data exposure);
     // the keyed entry is their durable home so Step 07 can retire `meshState`.

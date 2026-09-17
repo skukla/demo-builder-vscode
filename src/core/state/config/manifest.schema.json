@@ -717,6 +717,27 @@
           ],
           "description": "App Management install outcome (lifecycle 'app-management' apps only). Written after every deploy's automatic install/associate pass; `detail` carries the no-op reason on skip or the hands-back line on failure. A failed install does NOT mark the deploy failed — the app is deployed, merely dormant until installed (Commerce Admin > Apps > App Management)."
         },
+        "updateAvailable": {
+          "type": "object",
+          "properties": {
+            "commit": {
+              "type": "string",
+              "description": "The branch head on GitHub, when the branch moved."
+            },
+            "version": {
+              "type": "string",
+              "description": "The version in the clone, when it differs from the installed one."
+            },
+            "checkedAt": {
+              "type": "string",
+              "description": "ISO date string of the check."
+            }
+          },
+          "required": [
+            "checkedAt"
+          ],
+          "description": "Newer code is available: the source branch on GitHub has commits the clone lacks, or the clone's app version differs from the one installed in Commerce. Set by the integrations screen's check, removed by a successful update (integrationUpdateCheck)."
+        },
         "envVars": {
           "type": "object",
           "additionalProperties": {

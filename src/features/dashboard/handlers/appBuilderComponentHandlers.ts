@@ -236,7 +236,7 @@ export function userSuppliedEnvVars(entry: AppBuilderComponentCatalogEntry): Use
  * LAZY import: `dashboardHandlers` imports FROM this module, so a static import
  * would close a cycle.
  */
-async function refreshProjectStatus(context: HandlerContext): Promise<void> {
+export async function refreshProjectStatus(context: HandlerContext): Promise<void> {
     const { handleRequestStatus } = await import('@/features/dashboard/handlers/dashboardHandlers');
     await handleRequestStatus(context);
 }

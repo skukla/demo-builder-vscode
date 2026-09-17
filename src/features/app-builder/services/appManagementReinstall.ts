@@ -10,8 +10,8 @@
  * @module features/app-builder/services/appManagementReinstall
  */
 
-import type { AppManagementInstallResult } from './appManagementUpgrade';
 import type { AppManagementUninstallResult } from './appManagementUninstaller';
+import type { AppManagementInstallResult } from './appManagementUpgrade';
 
 export interface ReinstallDeps {
     uninstall: () => Promise<AppManagementUninstallResult>;

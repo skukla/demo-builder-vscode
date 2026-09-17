@@ -104,5 +104,6 @@ module.exports = {
         '**/tests/features/dashboard/ui/components/integrations/integrationCardModel-mesh.test.ts',
         '**/tests/features/dashboard/ui/components/integrations/integrationCardModel-vocabularyContract.test.ts',
         '**/tests/features/dashboard/ui/components/integrations/integrationCardModel-boundSystem.test.ts',
+        '**/tests/features/dashboard/ui/components/integrations/integrationCardModel-update.test.ts',
     ],
 };

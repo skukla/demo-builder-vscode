@@ -173,6 +173,19 @@ function buildMenuActions(
 const STATUS_SEVERITY: IntegrationStatus[] = ['error', 'stale', 'deploying', 'not-deployed', 'deployed'];
 
 /**
+ * A deployed component with newer code recorded (`updateAvailable`, from the
+ * integrations screen's check) reads as needing an update. Shared with the
+ * dashboard's Integrations tile so the dot and the card agree.
+ *
+ * @param status - the live or persisted status
+ * @param entry - the persisted component
+ * @returns 'stale' for a deployed component with an update, else `status`
+ */
+export function withUpdateStatus(status: string, entry: Pick<IdentifiedAppBuilderComponent, 'updateAvailable'>): string {
+    return status === 'deployed' && entry.updateAvailable ? 'stale' : status;
+}
+
+/**
  * The bound system's part of the card, from its persisted row (with its own
  * live override), or undefined when the integration stands alone.
  */
@@ -181,7 +194,7 @@ function deriveBoundSystem(
     override: RowStatusOverride | undefined,
 ): BoundSystemModel | undefined {
     if (!system) return undefined;
-    const status = normalizeIntegrationStatus(override?.status ?? system.status);
+    const status = normalizeIntegrationStatus(withUpdateStatus(override?.status ?? system.status, system));
     const shared = getStatusDisplay(status);
     const liveStep = status === 'deploying' ? override?.message : undefined;
     return {
@@ -355,6 +368,9 @@ function resolveCardMessage(
     if (override?.message) {
         return override.message;
     }
+    if (status === 'stale' && entry.updateAvailable) {
+        return 'A newer version is available. Update fetches it and deploys it.';
+    }
     return status === 'error' ? entry.error : undefined;
 }
 
@@ -369,7 +385,7 @@ export function deriveIntegrationCard(
     boundSystem?: { component: IdentifiedAppBuilderComponent; override?: RowStatusOverride },
 ): IntegrationCardModel {
     const system = deriveBoundSystem(boundSystem?.component, boundSystem?.override);
-    const ownStatus = normalizeIntegrationStatus(override?.status ?? entry.status);
+    const ownStatus = normalizeIntegrationStatus(withUpdateStatus(override?.status ?? entry.status, entry));
     const face = pairFace(ownStatus, system, override, entry);
     const { status } = face;
     const facet = deriveKindFacet(entry);

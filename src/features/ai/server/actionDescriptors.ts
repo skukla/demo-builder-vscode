@@ -255,7 +255,8 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         readOnly: false,
         description:
             'Redeploy one App Builder integration by its id (idempotent re-run of its deploy). ' +
-            'Same effect as deploy_integration; named for the "redeploy my integration" ask.',
+            'Same effect as deploy_integration; named for the "redeploy my integration" ask. ' +
+            'Deploys the folder as it is; to get newer code, use update_integration.',
         map: dashboardHandlers,
         type: 'redeployAppBuilderComponent',
         inputSchema: {
@@ -267,6 +268,38 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
                     'Consent to refresh the Adobe CLI and retry, when a previous attempt failed with an out-of-date-toolchain hint. CONFIRM WITH THE USER FIRST — this updates their global `@adobe/aio-cli` install. Never pass it pre-emptively.',
                 ),
         },
+    },
+    {
+        tool: 'update_integration',
+        needsAuth: ['adobe'],
+        readOnly: false,
+        description:
+            'Update one deployed integration to the newest code on its GitHub branch: fetch it ' +
+            '(fast-forward only), install its dependencies, redeploy, and upgrade the app in ' +
+            'Commerce. Updates its ERP first when the ERP has an update. Refuses, and names the ' +
+            'files, when the folder holds local edits. Use check_integration_updates to see which ' +
+            'integrations have an update.',
+        map: dashboardHandlers,
+        type: 'updateAppBuilderComponent',
+        // Not confirm-gated, matching redeploy_integration: it never overwrites
+        // the SC's edits (it refuses instead) and deploys the declared source.
+        inputSchema: {
+            id: z.string().describe('The integration id to update (from get_project)'),
+        },
+    },
+    {
+        tool: 'check_integration_updates',
+        needsAuth: false,
+        // Records the answer on the project (appBuilderComponents[id].updateAvailable),
+        // so it is not a pure read.
+        readOnly: false,
+        description:
+            'Check which deployed integrations (and their ERPs) have newer code on their GitHub ' +
+            'branch, or a version Commerce does not have installed. Records the answer where the ' +
+            'integration cards read it. Changes no files and deploys nothing.',
+        map: dashboardHandlers,
+        type: 'checkIntegrationUpdates',
+        inputSchema: {},
     },
     {
         tool: 'install_integration',

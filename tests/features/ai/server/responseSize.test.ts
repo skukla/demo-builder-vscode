@@ -363,6 +363,11 @@ describe('rows with no output safety net are classified', () => {
         // Same handler body as install_integration (runInstallPass), so the
         // same three-field record.
         'reinstall_integration',
+        // `handleUpdateAppBuilderComponent` returns `{success, detail}` (one
+        // sentence); `handleCheckIntegrationUpdates` returns `{data: {updates:
+        // [{id, available, detail?}]}}` (integrationUpdateHandlers.ts).
+        'update_integration',
+        'check_integration_updates',
         // The ERP pair (plan step 05), category 2, read before listing:
         // `handleGetErpStatus` returns `{id, integration, erp, live}` and
         // `handleResetErpRecords` returns `{id, erp, report}` — both fixed
@@ -476,6 +481,10 @@ describe('the ceiling table tracks the tool surface', () => {
         'get_integration_install_status',
         // Uninstall then install; answers the same install record.
         'reinstall_integration',
+        // One sentence; and one short row per integration, bounded by the
+        // project's integration count.
+        'update_integration',
+        'check_integration_updates',
         // The ERP pair. `get_erp_status` is the integration's own status
         // action (a health object, a base URL, one ledger count) beside two
         // persisted rows; `reset_erp_records` is the reset's report (four

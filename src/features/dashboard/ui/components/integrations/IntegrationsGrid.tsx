@@ -21,8 +21,8 @@
  * @module features/dashboard/ui/components/integrations/IntegrationsGrid
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Text } from '@adobe/react-spectrum';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { AppBuilderComponentRemoveDialog } from '../AppBuilderComponentRemoveDialog';
 import { ConfirmActionDialog } from '../ConfirmActionDialog';
 import { ErpResetDialog } from '../ErpResetDialog';
@@ -53,15 +53,15 @@ export interface IntegrationsGridProps {
 }
 
 /**
- * Integration actions that are plain id-scoped posts. Update still rides
- * Redeploy until it gets its own handler (AB-13 step 5); Retry rides Deploy —
- * the same mapping the retired rows used.
+ * Integration actions that are plain id-scoped posts. Retry rides Deploy;
+ * Update has its own message, which fetches the newer code before it
+ * redeploys (a redeploy alone deploys the folder as it is).
  */
 const KEYED_MESSAGES: Partial<Record<CardAction, string>> = {
     deploy: 'deployAppBuilderComponent',
     retry: 'deployAppBuilderComponent',
     redeploy: 'redeployAppBuilderComponent',
-    update: 'redeployAppBuilderComponent',
+    update: 'updateAppBuilderComponent',
     // Re-run the Commerce install pass WITHOUT a redeploy (AB-5) — until this,
     // the only retry for a failed install was a full deploy round.
     install: 'installAppBuilderComponent',

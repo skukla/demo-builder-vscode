@@ -20,7 +20,7 @@ import Data from '@spectrum-icons/workflow/Data';
 import React from 'react';
 import type { MeshStatus } from '../hooks/useDashboardStatus';
 import { DashboardTile } from './DashboardTile';
-import { toMeshCardStatus } from './integrations/integrationCardModel';
+import { toMeshCardStatus, withUpdateStatus } from './integrations/integrationCardModel';
 import { type StatusDotVariant } from '@/core/ui/components/ui/StatusDot';
 import { getStatusDisplay, type DisplayStatus } from '@/core/ui/utils/statusVocabulary';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
@@ -105,7 +105,7 @@ export function IntegrationsSummaryTile({
     // 'checking' mesh arrives here and simply ranks nowhere.
     const meshCardStatus = hasMesh ? toMeshCardStatus(meshStatus) : undefined;
     const reportable: string[] = [
-        ...integrations.map((entry) => entry.status),
+        ...integrations.map((entry) => withUpdateStatus(entry.status, entry)),
         ...(meshCardStatus ? [meshCardStatus] : []),
     ];
     // The dot reports HEALTH, so with nothing rankable there is no worst state

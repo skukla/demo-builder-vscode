@@ -20,7 +20,7 @@
  */
 
 import { Button, Flex, Text, View } from '@adobe/react-spectrum';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     buildIntegrationCards,
     deriveMeshCard,
@@ -116,6 +116,12 @@ export function IntegrationsScreen({
     // One modal instance, two journeys — `mode` selects the stage set, so a
     // second <AddIntegrationFlowAdapter> would just duplicate its state.
     const [destOpen, setDestOpen] = useState(false);
+
+    // Which integrations have newer code: asked once per visit. The answer
+    // arrives as a components snapshot when anything changed.
+    useEffect(() => {
+        webviewClient.postMessage('checkIntegrationUpdates');
+    }, []);
 
     const destinationLabel = formatDestination(destination);
     const catalog = appBuilderComponentCatalog ?? EMPTY_CATALOG;

@@ -16,6 +16,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import {
+    checkCloneForUpdate,
     fastForwardClone,
     type GitRunner,
 } from '@/features/app-builder/services/integrationSourceUpdate';
@@ -255,4 +256,72 @@ describe('fastForwardClone', () => {
         expect(result.status).toBe('failed');
         expect(result.detail).toMatch(/^Could not read the integration folder: /);
     }, REAL_GIT_TIMEOUT_MS);
+});
+
+describe('checkCloneForUpdate', () => {
+    let fx: Fixture;
+
+    beforeEach(() => {
+        fx = buildFixture();
+    });
+    afterEach(() => {
+        fs.rmSync(fx.root, { recursive: true, force: true });
+    });
+
+    it('says an update is available when the branch has moved, and moves nothing', async () => {
+        const head = git(fx, fx.clone, 'rev-parse', 'HEAD');
+        const to = publish(fx);
+
+        const result = await checkCloneForUpdate(fx.clone, 'main', realGit(fx));
+
+        expect(result).toEqual({ status: 'available', to });
+        expect(git(fx, fx.clone, 'rev-parse', 'HEAD')).toBe(head);
+        expect(fs.readFileSync(path.join(fx.clone, 'app.commerce.config.ts'), 'utf8')).toBe('version 0.1.0\n');
+    }, REAL_GIT_TIMEOUT_MS);
+
+    it('says current when the clone is at the branch head', async () => {
+        const head = git(fx, fx.clone, 'rev-parse', 'HEAD');
+
+        await expect(checkCloneForUpdate(fx.clone, 'main', realGit(fx))).resolves.toEqual({
+            status: 'current',
+            to: head,
+        });
+    }, REAL_GIT_TIMEOUT_MS);
+
+    it('says current for a clone with commits of its own, which an update would refuse', async () => {
+        write(fx.clone, 'local.txt', 'mine\n');
+        git(fx, fx.clone, 'add', '-A');
+        git(fx, fx.clone, 'commit', '-q', '-m', 'local');
+
+        const result = await checkCloneForUpdate(fx.clone, 'main', realGit(fx));
+
+        expect(result.status).toBe('current');
+    }, REAL_GIT_TIMEOUT_MS);
+
+    it('ignores edits in the folder: they do not decide whether the branch moved', async () => {
+        publish(fx);
+        write(fx.clone, 'app.commerce.config.ts', 'the SC changed this\n');
+
+        const result = await checkCloneForUpdate(fx.clone, 'main', realGit(fx));
+
+        expect(result.status).toBe('available');
+        expect(fs.readFileSync(path.join(fx.clone, 'app.commerce.config.ts'), 'utf8')).toBe('the SC changed this\n');
+    }, REAL_GIT_TIMEOUT_MS);
+
+    it("answers unknown with git's reason when the branch cannot be fetched", async () => {
+        const result = await checkCloneForUpdate(fx.clone, 'no-such-branch', realGit(fx));
+
+        expect(result.status).toBe('unknown');
+        expect(result.detail).toMatch(/^Could not fetch no-such-branch from GitHub: /);
+    }, REAL_GIT_TIMEOUT_MS);
+
+    it('refuses an unsafe branch name without running git', async () => {
+        const run = realGit(fx);
+
+        await expect(checkCloneForUpdate(fx.clone, '-bad', run)).resolves.toEqual({
+            status: 'unknown',
+            detail: 'The branch name "-bad" cannot be used.',
+        });
+        expect(run).not.toHaveBeenCalled();
+    });
 });

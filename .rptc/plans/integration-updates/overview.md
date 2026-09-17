@@ -82,7 +82,12 @@ Association in App Management is not required by any of this: the benefit is Ado
    no install after a failed uninstall. Built: `appManagementReinstall.ts`,
    `reinstallAppBuilderComponent`, the grid's self-opening confirm, `reinstall_integration`
    (confirm-gated, refused unless `needsReinstall`).
-5. **Update available on the card**, and the surfaces and docs.
+5. **Update available on the card**, and the surfaces and docs. Built: the integrations
+   screen runs `checkIntegrationUpdates` once per visit (a fetch in each deployed clone,
+   plus the folder's app version against the installed one), recorded as
+   `updateAvailable`; the card and the dashboard tile read it as "Update needed"; Update
+   posts `updateAppBuilderComponent` (the ERP first when it has an update); agents get
+   `update_integration` and `check_integration_updates`.
 6. **Bodea, live.** Update and redeploy the ERP integration: the order webhook is gone from
    `GET /V1/webhooks/list`, the order event is subscribed, the cart webhooks show optional on
    their edit pages; one test order reaches the ERP by the event and gets its number. If the

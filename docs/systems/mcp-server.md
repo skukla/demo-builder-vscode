@@ -380,7 +380,7 @@ checking whether something is gated, read the generated table rather than any pr
 
 Merely *mutating* is deliberately not the bar. Deploys (`deploy_mesh`,
 `add_integration`, `deploy_integration`, `redeploy_integration`,
-`install_integration`), lifecycle (`start_demo`,
+`update_integration`, `install_integration`), lifecycle (`start_demo`,
 `stop_demo`) and config writes (`update_project_config`, `rename_project`) change
 state and are ungated, because they are idempotent or trivially reversible and
 gating them would make the agent surface useless for the routine work it exists

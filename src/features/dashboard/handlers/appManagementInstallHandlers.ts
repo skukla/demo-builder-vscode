@@ -30,6 +30,7 @@ import {
 } from './appBuilderComponentHandlers';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getAppBuilderComponent, recordInstallation } from '@/core/state/appBuilderComponentState';
+import type { AppBuilderComponentRunnerDeps } from '@/features/app-builder/services/appBuilderComponentRunner';
 import {
     AppManagementClient,
     type InstallationState,
@@ -38,7 +39,6 @@ import {
 import { deriveAppManagementBaseUrl } from '@/features/app-builder/services/appManagementInstaller';
 import { reinstallAppManagementApp } from '@/features/app-builder/services/appManagementReinstall';
 import type { AppManagementInstallResult } from '@/features/app-builder/services/appManagementUpgrade';
-import type { AppBuilderComponentRunnerDeps } from '@/features/app-builder/services/appBuilderComponentRunner';
 import {
     buildCustomIntegrationEntry,
     getAppBuilderComponentEntry,
@@ -99,6 +99,35 @@ function shapeLiveState(state: InstallationState | undefined): Record<string, un
     };
 }
 
+type ComponentTarget =
+    | { ok: true; id: string; project: Project; state: AppBuilderComponentState }
+    | { ok: false; error: HandlerResponse };
+
+/**
+ * The requested component and its record, or the refusal: no id, no project,
+ * or no record that `accepts` (a typed PROJECT_NOT_FOUND naming the id).
+ */
+export async function resolveComponentRecord(
+    context: HandlerContext,
+    requestedId: string | undefined,
+    accepts: (state: AppBuilderComponentState) => boolean = () => true,
+): Promise<ComponentTarget> {
+    const target = await resolveComponentTarget(context, requestedId);
+    if (!target.ok) return target;
+    const state = getAppBuilderComponent(target.project, target.id);
+    if (!state || !accepts(state)) {
+        return {
+            ok: false,
+            error: {
+                success: false,
+                error: `Integration "${target.id}" not found.`,
+                code: ErrorCode.PROJECT_NOT_FOUND,
+            },
+        };
+    }
+    return { ...target, state };
+}
+
 /**
  * Handle 'getAppBuilderInstallStatus' — the persisted install record plus the
  * app's LIVE installation state (its own GET /installation). Read-only: no
@@ -109,18 +138,9 @@ export const handleGetAppBuilderInstallStatus: MessageHandler<{ id?: string }> =
     context,
     payload,
 ): Promise<HandlerResponse> => {
-    const target = await resolveComponentTarget(context, payload?.id);
+    const target = await resolveComponentRecord(context, payload?.id);
     if (!target.ok) return target.error;
-    const { id, project } = target;
-
-    const state = getAppBuilderComponent(project, id);
-    if (!state) {
-        return {
-            success: false,
-            error: `Integration "${id}" not found.`,
-            code: ErrorCode.PROJECT_NOT_FOUND,
-        };
-    }
+    const { id, project, state } = target;
     const baseUrl = deriveAppManagementBaseUrl(state.deployedUrls);
     if (!baseUrl) {
         return {
@@ -154,6 +174,25 @@ export const handleGetAppBuilderInstallStatus: MessageHandler<{ id?: string }> =
     }
 };
 
+/**
+ * The runner deps a dashboard handler hands the runner, with the runner's step
+ * text forwarded to `report`: the sub-step alone when there is one, because the
+ * notification title already names the operation.
+ */
+export async function handlerRunnerDeps(
+    context: HandlerContext,
+    project: Project,
+    report?: (message: string) => void,
+): Promise<AppBuilderComponentRunnerDeps> {
+    return buildDefaultRunnerDeps(
+        await buildRunnerDepsContext(context, project, {
+            authManager: ServiceLocator.getAuthenticationService(),
+            commandManager: ServiceLocator.getCommandExecutor(),
+        }),
+        report && ((message, subMessage) => report(subMessage || message)),
+    );
+}
+
 /** Everything an install-pass handler needs once the target checks pass. */
 interface InstallPass {
     project: Project;
@@ -179,18 +218,9 @@ async function runInstallPass(
     pass: (input: InstallPass) => Promise<AppManagementInstallResult | string>,
     check?: InstallPassCheck,
 ): Promise<HandlerResponse> {
-    const target = await resolveComponentTarget(context, requestedId);
+    const target = await resolveComponentRecord(context, requestedId, (record) => record.kind === 'integration');
     if (!target.ok) return target.error;
-    const { id, project } = target;
-
-    const state = getAppBuilderComponent(project, id);
-    if (!state || state.kind !== 'integration') {
-        return {
-            success: false,
-            error: `Integration "${id}" not found.`,
-            code: ErrorCode.PROJECT_NOT_FOUND,
-        };
-    }
+    const { id, project, state } = target;
     const refusal = refuseInstallPass(id, state) ?? check?.(id, state);
     if (refusal) {
         return { success: false, error: refusal, code: ErrorCode.INVALID_OPERATION };
@@ -204,13 +234,7 @@ async function runInstallPass(
                 return refused;
             }
 
-            const deps = buildDefaultRunnerDeps(
-                await buildRunnerDepsContext(context, project, {
-                    authManager: ServiceLocator.getAuthenticationService(),
-                    commandManager: ServiceLocator.getCommandExecutor(),
-                }),
-                (message, subMessage) => report(subMessage || message),
-            );
+            const deps = await handlerRunnerDeps(context, project, report);
             const componentPath = project.componentInstances?.[id]?.path;
             const appVersion = componentPath ? await deps.readAppVersion?.(componentPath) : undefined;
             const outcome = await pass({ project, state, deps, report, appVersion });

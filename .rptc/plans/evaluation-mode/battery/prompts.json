@@ -901,5 +901,23 @@
         ],
         "cwd": "project",
         "why": "AB-13 step 4 (2026-09-17): the one state that needs uninstall-then-install. The prompt names the refusal so the agent reaches the reinstall rather than install_integration, which would answer the same refusal again."
+    },
+    {
+        "id": "integration-update",
+        "prompt": "There's a newer version of my ERP integration on GitHub. Update it in this project.",
+        "expect": [
+            "update_integration"
+        ],
+        "cwd": "project",
+        "why": "AB-13 step 5 (2026-09-17): redeploy_integration deploys the folder as it is, so an agent that reaches for it would report success and change nothing. The prompt names newer code to see whether the agent finds the tool that fetches it."
+    },
+    {
+        "id": "integration-update-check",
+        "prompt": "Do any of my integrations have updates available?",
+        "expect": [
+            "check_integration_updates"
+        ],
+        "cwd": "project",
+        "why": "AB-13 step 5 (2026-09-17): whether an update exists is answered by a fetch from GitHub, which get_project cannot do; the prompt asks exactly that."
     }
 ]

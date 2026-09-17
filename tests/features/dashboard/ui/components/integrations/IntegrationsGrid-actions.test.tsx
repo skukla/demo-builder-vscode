@@ -120,20 +120,24 @@ describe('IntegrationsGrid actions', () => {
             });
         });
 
-        it('routes a stale card Update to redeployAppBuilderComponent', async () => {
+        it('routes a card with a recorded update to updateAppBuilderComponent, not a bare redeploy', async () => {
             const user = setupUser();
             renderGrid({
                 appBuilderComponents: {
-                    'custom-app': { ...DEPLOYED_INTEGRATION, status: 'stale' },
+                    'custom-app': {
+                        ...DEPLOYED_INTEGRATION,
+                        updateAvailable: { commit: 'abc123', checkedAt: '2026-09-17T00:00:00Z' },
+                    },
                 },
             });
 
             const tile = card('custom-app', 'Update needed');
             await user.click(within(tile).getByRole('button', { name: /^update$/i }));
 
-            expect(getClient().postMessage).toHaveBeenCalledWith('redeployAppBuilderComponent', {
+            expect(getClient().postMessage).toHaveBeenCalledWith('updateAppBuilderComponent', {
                 id: 'custom-app',
             });
+            expect(getClient().postMessage).not.toHaveBeenCalledWith('redeployAppBuilderComponent', expect.anything());
         });
 
         it('routes Install into Commerce to installAppBuilderComponent (AB-5)', async () => {

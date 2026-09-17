@@ -46,6 +46,21 @@ blocks and ERP order numbers the ERP wrote into Commerce) and **Redeploy ERP**. 
 integration's **Open Commerce Admin** opens the Admin UI SDK screen. Remove on the card names
 both.
 
+## Updating the pair
+
+Opening the integrations screen checks, in the background, whether either app has newer
+code: a `git fetch` of its branch in its folder, which moves nothing the SC can see, plus a
+comparison of the folder's app version with the one installed in Commerce. A card with an
+update reads **Update needed**, and **Update** leads its kebab. Update updates the ERP
+first when the ERP has one, then the integration: each folder is fast-forwarded (never
+re-cloned), its dependencies installed, and the app redeployed. The integration's redeploy
+upgrades it in Commerce. Update refuses, naming the files, when a folder holds the SC's own
+edits; **Redeploy** still deploys a folder as it is.
+
+When Commerce will not upgrade the integration in place, the screen opens a confirmation
+offering **Reinstall in Commerce**: uninstall, then install the version already deployed.
+The kebab keeps offering it until it has been done, and nowhere else.
+
 ## Filling the ERP
 
 **Sync records** copies Commerce's products and companies into the ERP. It is on the
@@ -83,6 +98,9 @@ address and never the key.
 `reset_erp_records` (confirm-gated, with a consent dialog) runs the reset. The existing
 `add_integration`, `deploy_integration`, `redeploy_integration` and `remove_integration`
 cover the pair by id; `remove_integration` on the ERP alone is refused.
+`check_integration_updates` records which apps have newer code, `update_integration`
+updates the pair (the ERP first), and `reinstall_integration` (confirm-gated) is refused
+unless Commerce refused an upgrade.
 
 ## The demo script (acceptance, step 06 of the plan)
 

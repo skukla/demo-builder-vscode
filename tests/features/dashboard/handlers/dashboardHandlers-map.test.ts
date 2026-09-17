@@ -194,7 +194,11 @@ describe('dashboardHandlers', () => {
             //
             // reinstallAppBuilderComponent (41 → 42, AB-13): uninstall then
             // install, only for an app Commerce refused to upgrade in place.
-            expect(types).toHaveLength(42);
+            //
+            // updateAppBuilderComponent + checkIntegrationUpdates (42 → 44,
+            // AB-13 step 5): Update fetches the newer code before it redeploys,
+            // and the integrations screen asks which integrations have any.
+            expect(types).toHaveLength(44);
         });
 
         it('should have handlers as functions', () => {

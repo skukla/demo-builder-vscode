@@ -141,6 +141,24 @@ describe('IntegrationsSummaryTile', () => {
         });
     });
 
+    it('reads a deployed integration with a recorded update as needing one, as its card does', () => {
+        render(
+            <IntegrationsSummaryTile
+                hasAdobeContext
+                appBuilderComponents={{
+                    'erp-integration': {
+                        kind: 'integration',
+                        status: 'deployed',
+                        source: { owner: 'skukla', repo: 'commerce-erp-integration' },
+                        updateAvailable: { commit: 'abc123', checkedAt: '2026-09-17T00:00:00Z' },
+                    },
+                }}
+            />
+        );
+
+        expect(screen.getByTestId('integrations-tile-dot')).toHaveAttribute('data-variant', 'warning');
+    });
+
     describe('mesh health folds into the same dot', () => {
         // Without this the mesh could be broken and the dashboard would look
         // healthy — the regression the tile exists to prevent, since the mesh

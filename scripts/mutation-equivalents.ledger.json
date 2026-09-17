@@ -9630,7 +9630,7 @@
             "anchors": [
                 "if (result.status === 'failed') {"
             ],
-            "line": 977,
+            "line": 994,
             "mutants": 4,
             "category": "branch",
             "reason": "The guarded body is a single deps.logger.warn call. The Commerce uninstall is best-effort: its outcome is neither surfaced on the RunnerResult nor persisted, and the removal proceeds identically whether the guard is taken, inverted or deleted. Every mutation here changes only which log line is written, which is wording rather than behaviour.",
@@ -9680,7 +9680,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 1182,
+            "line": 1199,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single deps.logger.warn. Emptying it leaves the catch itself in place, so a failing remote teardown is swallowed exactly as before and the removal continues to clear local state - which the remove-contracts suite asserts directly with a rejecting executor. Only the log line differs.",
@@ -9706,7 +9706,7 @@
             "anchors": [
                 "if (cleared.componentApiPicks) {"
             ],
-            "line": 1249,
+            "line": 1266,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this guard true assigns cleared.componentApiPicks onto the caller's project when it is undefined. cleared is spread from that same project, so an undefined value there means the caller's field was already undefined and the assignment writes back exactly what was there. The mutation is a no-op for every input on which the guard was false.",
@@ -9719,7 +9719,7 @@
             "anchors": [
                 "if (cleared.componentConfigs) {"
             ],
-            "line": 1252,
+            "line": 1269,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this guard true assigns cleared.componentConfigs onto the caller's project when it is undefined. cleared is spread from that same project, so an undefined value there means the caller's field was already undefined and the assignment writes back exactly what was there. The mutation is a no-op for every input on which the guard was false.",
@@ -12628,7 +12628,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 178,
+            "line": 184,
             "mutants": 1,
             "category": "other",
             "reason": "A useCallback dependency array of constants is compared element-wise with Object.is on every render, so a literal ['Stryker was here'] invalidates the memo exactly as often as [] does \u2014 never. The callback identity, and therefore everything downstream of it, is byte-for-byte the same either way. Verified by planting all eight at once: the five suites pass unchanged, and no assertion could distinguish them because there is nothing to distinguish.",
@@ -12641,7 +12641,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 182,
+            "line": 188,
             "mutants": 1,
             "category": "other",
             "reason": "A useCallback dependency array of constants is compared element-wise with Object.is on every render, so a literal ['Stryker was here'] invalidates the memo exactly as often as [] does \u2014 never. The callback identity, and therefore everything downstream of it, is byte-for-byte the same either way. Verified by planting all eight at once: the five suites pass unchanged, and no assertion could distinguish them because there is nothing to distinguish.",
@@ -12654,7 +12654,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 186,
+            "line": 192,
             "mutants": 1,
             "category": "other",
             "reason": "A useCallback dependency array of constants is compared element-wise with Object.is on every render, so a literal ['Stryker was here'] invalidates the memo exactly as often as [] does \u2014 never. The callback identity, and therefore everything downstream of it, is byte-for-byte the same either way. Verified by planting all eight at once: the five suites pass unchanged, and no assertion could distinguish them because there is nothing to distinguish.",
@@ -12667,7 +12667,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 190,
+            "line": 196,
             "mutants": 1,
             "category": "other",
             "reason": "A useCallback dependency array of constants is compared element-wise with Object.is on every render, so a literal ['Stryker was here'] invalidates the memo exactly as often as [] does \u2014 never. The callback identity, and therefore everything downstream of it, is byte-for-byte the same either way. Verified by planting all eight at once: the five suites pass unchanged, and no assertion could distinguish them because there is nothing to distinguish.",

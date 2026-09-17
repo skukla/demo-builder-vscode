@@ -57,6 +57,77 @@ function nameFiles(paths: string[]): string {
 
 const short = (sha: string): string => sha.slice(0, SHORT_SHA);
 
+/** A safe branch name, or the refusal. */
+function unsafeBranch(branch: string): string | undefined {
+    return SAFE_BRANCH.test(branch) && !branch.includes('..')
+        ? undefined
+        : `The branch name "${branch}" cannot be used.`;
+}
+
+type FetchedHeads = { from: string; to: string } | { failure: string };
+
+/**
+ * Fetch `branch` from origin and read both commits: the clone's HEAD and the
+ * fetched head. Fetching writes only git's object store and FETCH_HEAD; the
+ * working files and HEAD stay as they are.
+ */
+async function fetchHeads(componentPath: string, branch: string, run: GitRunner): Promise<FetchedHeads> {
+    const failure = (step: string, stderr: string): FetchedHeads => ({
+        failure: `Could not ${step}: ${stderr.trim() || 'git gave no reason'}.`,
+    });
+    const before = await run('git rev-parse HEAD', componentPath);
+    if (before.code !== 0) {
+        return failure('read the current version', before.stderr);
+    }
+    const fetched = await run(`git fetch origin ${branch}`, componentPath);
+    if (fetched.code !== 0) {
+        return failure(`fetch ${branch} from GitHub`, fetched.stderr);
+    }
+    const after = await run('git rev-parse FETCH_HEAD', componentPath);
+    if (after.code !== 0) {
+        return failure('read the fetched version', after.stderr);
+    }
+    return { from: before.stdout.trim(), to: after.stdout.trim() };
+}
+
+/** Whether the clone's HEAD is behind the fetched head (an ancestor of it). */
+async function isBehind(componentPath: string, run: GitRunner): Promise<boolean> {
+    const behind = await run('git merge-base --is-ancestor HEAD FETCH_HEAD', componentPath);
+    return behind.code === 0;
+}
+
+export interface UpdateCheckResult {
+    /** available: the branch has commits the clone does not; unknown: git could not tell. */
+    status: 'available' | 'current' | 'unknown';
+    detail?: string;
+    /** The branch head on GitHub, when known. */
+    to?: string;
+}
+
+/**
+ * Whether `branch` on GitHub has commits the clone at `componentPath` lacks.
+ * A clone with commits of its own is "current": updating it would be refused.
+ * Changes nothing the SC can see.
+ */
+export async function checkCloneForUpdate(
+    componentPath: string,
+    branch: string,
+    run: GitRunner,
+): Promise<UpdateCheckResult> {
+    const refusal = unsafeBranch(branch);
+    if (refusal) {
+        return { status: 'unknown', detail: refusal };
+    }
+    const heads = await fetchHeads(componentPath, branch, run);
+    if ('failure' in heads) {
+        return { status: 'unknown', detail: heads.failure };
+    }
+    if (heads.from === heads.to || !(await isBehind(componentPath, run))) {
+        return { status: 'current', to: heads.to };
+    }
+    return { status: 'available', to: heads.to };
+}
+
 /**
  * Fast-forward the clone at `componentPath` to `origin/<branch>`.
  *
@@ -68,8 +139,9 @@ export async function fastForwardClone(
     branch: string,
     run: GitRunner,
 ): Promise<SourceUpdateResult> {
-    if (!SAFE_BRANCH.test(branch) || branch.includes('..')) {
-        return { status: 'failed', detail: `The branch name "${branch}" cannot be used.` };
+    const refusal = unsafeBranch(branch);
+    if (refusal) {
+        return { status: 'failed', detail: refusal };
     }
     const failed = (step: string, stderr: string): SourceUpdateResult => ({
         status: 'failed',
@@ -97,20 +169,11 @@ export async function fastForwardClone(
         }
     }
 
-    const before = await run('git rev-parse HEAD', componentPath);
-    if (before.code !== 0) {
-        return failed('read the current version', before.stderr);
+    const heads = await fetchHeads(componentPath, branch, run);
+    if ('failure' in heads) {
+        return { status: 'failed', detail: heads.failure };
     }
-    const fetched = await run(`git fetch origin ${branch}`, componentPath);
-    if (fetched.code !== 0) {
-        return failed(`fetch ${branch} from GitHub`, fetched.stderr);
-    }
-    const after = await run('git rev-parse FETCH_HEAD', componentPath);
-    if (after.code !== 0) {
-        return failed('read the fetched version', after.stderr);
-    }
-    const from = before.stdout.trim();
-    const to = after.stdout.trim();
+    const { from, to } = heads;
     if (from === to) {
         return { status: 'current', detail: 'The integration is already up to date.', from, to };
     }
@@ -118,8 +181,9 @@ export async function fastForwardClone(
     // Only a clone that is behind the branch moves: a clone with commits of its
     // own (ahead, or diverged) keeps them. `merge --ff-only` alone would answer
     // success for a clone that is ahead.
-    const behind = await run('git merge-base --is-ancestor HEAD FETCH_HEAD', componentPath);
-    const merged = behind.code === 0 ? await run('git merge --ff-only FETCH_HEAD', componentPath) : behind;
+    const merged = (await isBehind(componentPath, run))
+        ? await run('git merge --ff-only FETCH_HEAD', componentPath)
+        : { code: 1 };
     if (merged.code !== 0) {
         return {
             status: 'refused',

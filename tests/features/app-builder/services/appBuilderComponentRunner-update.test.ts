@@ -45,6 +45,7 @@ function installedProject(installedVersion = '0.1.0'): Project {
                 status: 'deployed',
                 source: ENTRY.source,
                 installation: { status: 'installed', version: installedVersion },
+                updateAvailable: { commit: '7804f3e', checkedAt: '2026-09-17T00:00:00Z' },
             },
         },
         componentInstances: {
@@ -93,6 +94,14 @@ describe('updateAppBuilderComponent', () => {
             status: 'upgraded',
             version: '0.2.0',
         });
+        expect(project.appBuilderComponents?.[ENTRY.id]?.updateAvailable).toBeUndefined();
+        expect(deps.saveProject).toHaveBeenLastCalledWith(
+            expect.objectContaining({
+                appBuilderComponents: expect.objectContaining({
+                    [ENTRY.id]: expect.not.objectContaining({ updateAvailable: expect.anything() }),
+                }),
+            }),
+        );
     });
 
     it('installs dependencies before it deploys', async () => {
@@ -119,10 +128,12 @@ describe('updateAppBuilderComponent', () => {
             detail: 'The integration folder has changes of its own (a.js). Commit or undo them, then update again.',
         };
         const deps = updateDeps(refused);
+        const project = installedProject();
 
-        const result = await updateAppBuilderComponent(installedProject(), ENTRY.id, deps);
+        const result = await updateAppBuilderComponent(project, ENTRY.id, deps);
 
         expect(result).toEqual({ success: false, error: refused.detail });
+        expect(project.appBuilderComponents?.[ENTRY.id]?.updateAvailable).toBeDefined();
         expect(deps.installComponentDependencies).not.toHaveBeenCalled();
         expect(deps.deployApp).not.toHaveBeenCalled();
     });
@@ -156,9 +167,11 @@ describe('updateAppBuilderComponent', () => {
             { readAppVersion: jest.fn().mockResolvedValue('0.2.0') },
         );
 
-        const result = await updateAppBuilderComponent(installedProject('0.2.0'), ENTRY.id, deps);
+        const project = installedProject('0.2.0');
+        const result = await updateAppBuilderComponent(project, ENTRY.id, deps);
 
         expect(result).toEqual({ success: true, detail: 'The integration is already up to date.' });
+        expect(project.appBuilderComponents?.[ENTRY.id]?.updateAvailable).toBeUndefined();
         expect(deps.installComponentDependencies).not.toHaveBeenCalled();
         expect(deps.deployApp).not.toHaveBeenCalled();
     });
@@ -178,10 +191,12 @@ describe('updateAppBuilderComponent', () => {
             deployApp: jest.fn().mockResolvedValue({ success: false, error: 'aio app deploy failed' }),
         });
 
-        const result = await updateAppBuilderComponent(installedProject(), ENTRY.id, deps);
+        const project = installedProject();
+        const result = await updateAppBuilderComponent(project, ENTRY.id, deps);
 
         expect(result.success).toBe(false);
         expect(result.detail).toBeUndefined();
+        expect(project.appBuilderComponents?.[ENTRY.id]?.updateAvailable).toBeDefined();
     });
 
     it('fetches the default branch when the record names none', async () => {

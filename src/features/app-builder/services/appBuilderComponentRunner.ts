@@ -35,7 +35,8 @@ import { recordDeployOutcome, type DeployOutcome } from './appBuilderDeployOutco
 import { detectAppLayout, listDeclaredPackageNames, type AppConfigLayout } from './appConfigPackages';
 import type { AppManagementInstallOptions, AppManagementInstallResult } from './appManagementUpgrade';
 import { deriveProvidedValues, resolveDeployInputs, resolveDisplayName } from './deployInputs';
-import type { SourceUpdateResult } from './integrationSourceUpdate';
+import type { SourceUpdateResult, UpdateCheckResult } from './integrationSourceUpdate';
+import { clearUpdateAvailable } from './integrationUpdateCheck';
 import { deriveOwPackage } from './owPackageName';
 import { deriveScreenUrl } from './systemScreen';
 import type { AppDeploymentResult } from './types';
@@ -242,6 +243,8 @@ export interface AppBuilderComponentRunnerDeps {
     readAppVersion?: (componentPath: string) => Promise<string | undefined>;
     /** Fast-forward a clone to its branch (integrationSourceUpdate); update only. */
     fetchComponentSource?: (componentPath: string, branch: string) => Promise<SourceUpdateResult>;
+    /** Whether a clone's branch has newer commits (integrationSourceUpdate); update check only. */
+    checkComponentSource?: (componentPath: string, branch: string) => Promise<UpdateCheckResult>;
     /** npm install (and build) in an existing clone; update only. */
     installComponentDependencies?: (
         componentPath: string,
@@ -902,6 +905,7 @@ export async function updateAppBuilderComponent(
         const onDisk = await deps.readAppVersion?.(componentPath);
         const installed = existing.installation?.version;
         if (!onDisk || onDisk === installed) {
+            await forgetUpdate(project, id, deps);
             return { success: true, detail: fetched.detail };
         }
     } else {
@@ -915,7 +919,20 @@ export async function updateAppBuilderComponent(
         }
     }
     const deployed = await deployAppBuilderComponent(project, id, deps);
-    return deployed.success ? { ...deployed, detail: fetched.detail } : deployed;
+    if (!deployed.success) {
+        return deployed;
+    }
+    await forgetUpdate(project, id, deps);
+    return { ...deployed, detail: fetched.detail };
+}
+
+/** A finished update leaves nothing to offer; drop the recorded one. */
+async function forgetUpdate(project: Project, id: string, deps: AppBuilderComponentRunnerDeps): Promise<void> {
+    // Read afresh: the deploy may have replaced the record.
+    const state = project.appBuilderComponents?.[id];
+    if (!state?.updateAvailable) return;
+    clearUpdateAvailable(state);
+    await deps.saveProject(project);
 }
 
 /**

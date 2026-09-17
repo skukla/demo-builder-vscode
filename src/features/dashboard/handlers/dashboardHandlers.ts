@@ -75,6 +75,10 @@ import {
     handleResetErpRecords,
 } from '@/features/dashboard/handlers/erpIntegrationHandlers';
 import {
+    handleCheckIntegrationUpdates,
+    handleUpdateAppBuilderComponent,
+} from '@/features/dashboard/handlers/integrationUpdateHandlers';
+import {
     MessageHandler,
     defineHandlers,
     type HandlerContext,
@@ -271,6 +275,8 @@ export const dashboardHandlers = defineHandlers({
     // install-without-redeploy retry.
     installAppBuilderComponent: handleInstallAppBuilderComponent,
     reinstallAppBuilderComponent: handleReinstallAppBuilderComponent,
+    updateAppBuilderComponent: handleUpdateAppBuilderComponent,
+    checkIntegrationUpdates: handleCheckIntegrationUpdates,
     getAppBuilderInstallStatus: handleGetAppBuilderInstallStatus,
     // The ERP integration's two verbs (plan step 05): the ERP's health as the
     // integration sees it, and the reset that re-mirrors Commerce into it.
