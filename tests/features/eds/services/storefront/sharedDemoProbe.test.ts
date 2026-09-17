@@ -260,6 +260,51 @@ describe('probeSharedDemo', () => {
         expect(d.fetchImpl).toHaveBeenCalledWith('https://main--razer--sayurihanki.aem.live/', expect.objectContaining({ method: 'HEAD' }));
     });
 
+    it('says the SIGN-IN expired when GitHub rejects the credential, and never blames the repository', async () => {
+        // Found live 2026-09-17: a token GitHub no longer accepted produced
+        // "its repository couldn't be found", for a repository that is public.
+        const d = deps({ files: {} });
+        d.repoOps.getRepository = jest.fn(async () => {
+            throw Object.assign(new Error('Bad credentials'), { status: 401 });
+        });
+
+        const result = await probeSharedDemo(d, 'sayurihanki', 'aistore', logger);
+
+        expect(result).toEqual({
+            outcome: 'unreadable',
+            reason: 'Your GitHub sign-in is no longer valid. Sign in to GitHub again, then try this link.',
+        });
+    });
+
+    it('reads the repository PUBLICLY when the credential is what failed', async () => {
+        const d = deps(BODEA);
+        const signedIn = d.repoOps.getRepository;
+        d.repoOps.getRepository = jest.fn(async () => {
+            throw Object.assign(new Error('Bad credentials'), { status: 401 });
+        });
+        d.publicReaders = { repoOps: { getRepository: signedIn }, fileOps: d.fileOps };
+
+        const result = await probeSharedDemo(d, 'skukla', 'kukla-bodea', logger);
+
+        assertOutcome(result, 'read');
+        expect(result.fullName).toBe('skukla/kukla-bodea');
+        expect(d.publicReaders.repoOps.getRepository).toHaveBeenCalled();
+    });
+
+    it('says GitHub refused, not that the repository is missing, on a rate limit', async () => {
+        const d = deps({ files: {} });
+        d.repoOps.getRepository = jest.fn(async () => {
+            throw Object.assign(new Error('API rate limit exceeded'), { status: 403 });
+        });
+
+        const result = await probeSharedDemo(d, 'jen', 'isle5-demo', logger);
+
+        expect(result).toEqual({
+            outcome: 'unreadable',
+            reason: 'GitHub refused the read. Signing in to GitHub raises the limit it allows.',
+        });
+    });
+
     it('is unreadable when a canonical file cannot be read, rather than guessing', async () => {
         const flaky: FakeRepo = {
             repo: 'skukla/kukla-bodea',

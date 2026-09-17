@@ -26,6 +26,14 @@ export interface GitHubTokenValidation {
     valid: boolean;
     /** Authenticated user info (if valid) */
     user?: GitHubUser;
+    /**
+     * Why it is not valid: there was no token to check, or GitHub rejected the
+     * one there is. A reader that must not change anything (get_auth_status)
+     * needs the difference to say what the SC should do. Absent when the check
+     * itself failed (a 500, a dropped connection), which says nothing about the
+     * credential.
+     */
+    reason?: 'no-token' | 'rejected';
 }
 
 // GitHubUser moved to @/types/webviewPayloads — ONE declaration shared with

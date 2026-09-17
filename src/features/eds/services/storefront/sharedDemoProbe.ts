@@ -25,6 +25,7 @@ import { resolveContentIndex, type ResolvedContentIndex, type UnresolvedContentS
 import { parseFstabContentSource } from '../fstabGenerator';
 import type { GitHubFileOperations } from '../github/githubFileOperations';
 import type { GitHubRepoOperations } from '../github/githubRepoOperations';
+import type { PublicRepoReaders } from '../github/publicGitHubReads';
 import { CANONICAL_STOREFRONT_FILES, classifyRepoForStorefront } from './repoStorefrontReadiness';
 import { parseStorefrontConfigJson } from './servedStorefrontConfig';
 import { readSharedDemoDescription } from '@/core/state/projectFileReader';
@@ -52,6 +53,43 @@ const B2B_FLAG = 'commerce-b2b-enabled';
 
 const CANNOT_READ = "We couldn't find this repository, or you don't have access to it.";
 
+/** The sign-in is the problem, not the repository: a missing token, or one GitHub has stopped accepting. */
+export function isCredentialFailure(error: unknown): boolean {
+    const status = (error as { status?: number }).status;
+    if (status === 401) return true;
+    const message = (error as Error).message ?? '';
+    return /not authenticated|bad credentials|401/i.test(message);
+}
+
+/**
+ * The refusal, in the words of what actually failed.
+ *
+ * Every failure used to answer "couldn't be found, or you don't have access",
+ * so an expired sign-in read as a colleague's repository being private (found
+ * live 2026-09-17). Only a 404 says that now.
+ */
+async function unreadableReason(
+    error: unknown,
+    owner: string,
+    repo: string,
+    deps: SharedDemoProbeDeps,
+    logger: Logger,
+): Promise<string> {
+    const status = (error as { status?: number }).status;
+    const message = (error as Error).message ?? '';
+    if (isCredentialFailure(error)) {
+        return 'Your GitHub sign-in is no longer valid. Sign in to GitHub again, then try this link.';
+    }
+    if (status === 403 || /rate limit/i.test(message)) {
+        return 'GitHub refused the read. Signing in to GitHub raises the limit it allows.';
+    }
+    if (status === 404 || /not found/i.test(message)) {
+        return cannotReadReason(owner, repo, deps.fetchImpl ?? fetch, logger);
+    }
+    logger.warn(`[SharedDemo] Unexpected failure reading ${owner}/${repo}: ${message}`);
+    return `GitHub did not answer for ${owner}/${repo}: ${message}`;
+}
+
 /**
  * The refusal when the repository cannot be read. An SC who pasted a site address
  * can see the site in a browser and will not know which half is the problem, so
@@ -74,6 +112,12 @@ async function cannotReadReason(owner: string, repo: string, fetchImpl: typeof f
 export interface SharedDemoProbeDeps {
     fileOps: Pick<GitHubFileOperations, 'getFileContent'>;
     repoOps: Pick<GitHubRepoOperations, 'getRepository'>;
+    /**
+     * Credential-free readers for a PUBLIC repository, used when the signed-in
+     * read fails on the credential rather than on the repository. Absent in
+     * tests that are not about that path.
+     */
+    publicReaders?: PublicRepoReaders;
     /** Injected fetch for the published-index probe; defaults to the global. */
     fetchImpl?: typeof fetch;
     /** The shipped catalog, for recognising one of our own templates; defaults to the bundled one. */
@@ -101,20 +145,40 @@ export async function probeSharedDemo(
         return { outcome: 'shipped', shippedPackageId: shipped, fullName: `${owner}/${repo}` };
     }
 
+    // The readers can change under us: a credential failure on the first read
+    // falls back to the PUBLIC ones, and everything after it reads through
+    // whichever answered, so half the probe cannot end up on the other client.
+    let fileOps = deps.fileOps;
     let repository;
     try {
         repository = await deps.repoOps.getRepository(owner, repo);
     } catch (error) {
+        const credential = isCredentialFailure(error);
         logger.warn(`[SharedDemo] Could not read ${owner}/${repo}: ${(error as Error).message}`);
-        return { outcome: 'unreadable', reason: await cannotReadReason(owner, repo, deps.fetchImpl ?? fetch, logger) };
+        const publicReaders = credential ? deps.publicReaders : undefined;
+        if (publicReaders) {
+            logger.info(`[SharedDemo] Reading ${owner}/${repo} without a credential instead`);
+            try {
+                repository = await publicReaders.repoOps.getRepository(owner, repo);
+                fileOps = publicReaders.fileOps;
+            } catch (publicError) {
+                logger.warn(`[SharedDemo] Public read of ${owner}/${repo} failed: ${(publicError as Error).message}`);
+                return {
+                    outcome: 'unreadable',
+                    reason: await unreadableReason(publicError, owner, repo, deps, logger),
+                };
+            }
+        } else {
+            return { outcome: 'unreadable', reason: await unreadableReason(error, owner, repo, deps, logger) };
+        }
     }
 
-    const readiness = await classifyRepoForStorefront(deps.fileOps, owner, repo, logger);
+    const readiness = await classifyRepoForStorefront(fileOps, owner, repo, logger);
     if (readiness.kind === 'undetermined') {
         return { outcome: 'unreadable', reason: CANNOT_READ };
     }
 
-    const read = new RepoReader(deps.fileOps, owner, repo, logger);
+    const read = new RepoReader(fileOps, owner, repo, logger);
     const description = await read.description();
     const base: ProbeDraft = {
         outcome: 'read',

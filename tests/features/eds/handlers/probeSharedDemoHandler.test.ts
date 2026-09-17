@@ -53,20 +53,40 @@ describe('handleProbeSharedDemo', () => {
         repoOperations.getRepository.mockRejectedValue(new Error('Repository not found'));
     });
 
-    it("adopts the GitHub session VS Code holds when no token is stored, and refuses with a sign-in handoff when there is none", async () => {
+    it('adopts the GitHub session VS Code holds when no token is stored', async () => {
         tokenService.getToken.mockResolvedValue(undefined);
         adopt.mockResolvedValueOnce({ account: { label: 'steve' } });
         probe.mockResolvedValue(READ);
 
         const adopted = await handleProbeSharedDemo(ctx(), { owner: 'jen', repo: 'isle5-demo' });
+
         expect(adopt).toHaveBeenCalledWith(tokenService);
         expect(adopted.success).toBe(true);
-        expect(probe).toHaveBeenCalledTimes(1);
+        // The signed-in readers, with the public ones behind them for a token
+        // GitHub has stopped accepting.
+        expect(probe).toHaveBeenCalledWith(
+            expect.objectContaining({ fileOps: fileOperations, repoOps: repoOperations, publicReaders: expect.anything() }),
+            'jen',
+            'isle5-demo',
+            expect.anything(),
+        );
+    });
 
-        adopt.mockResolvedValueOnce(undefined);
-        const refused = await handleProbeSharedDemo(ctx(), { owner: 'jen', repo: 'isle5-demo' });
-        expect(refused).toEqual({ success: false, error: 'Sign in to GitHub to read this demo.', needsAuth: 'github' });
-        expect(probe).toHaveBeenCalledTimes(1);
+    it('reads PUBLICLY when there is no sign-in at all, rather than refusing', async () => {
+        // A public repository needs no credential and this probe only reads;
+        // refusing here is what stopped an SC importing a colleague's public
+        // storefront (2026-09-17).
+        tokenService.getToken.mockResolvedValue(undefined);
+        adopt.mockResolvedValue(undefined);
+        probe.mockResolvedValue(READ);
+
+        const result = await handleProbeSharedDemo(ctx(), { owner: 'jen', repo: 'isle5-demo' });
+
+        expect(result).toEqual({ success: true, result: READ });
+        const deps = probe.mock.calls.at(-1)![0] as Record<string, unknown>;
+        expect(deps.fileOps).not.toBe(fileOperations);
+        expect(deps.repoOps).not.toBe(repoOperations);
+        expect(deps.publicReaders).toBeUndefined();
     });
 
     it('answers the read as the probe gave it, with no other GitHub call', async () => {
@@ -86,7 +106,7 @@ describe('handleProbeSharedDemo', () => {
 
         expect(result).toEqual({ success: true, result: { outcome: 'unreadable', reason: 'nope' } });
         expect(probe).toHaveBeenCalledWith(
-            { fileOps: fileOperations, repoOps: repoOperations },
+            expect.objectContaining({ fileOps: fileOperations, repoOps: repoOperations }),
             'jen',
             'isle5-demo',
             expect.anything(),
