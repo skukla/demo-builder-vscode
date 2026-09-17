@@ -68,3 +68,5 @@ the flyout, the agent tools · 06 live acceptance on Bodea and docs.
 - 2026-09-15  chore(backlog): record the scoping commit on AB-9 (`412c04544`)
 - 2026-09-16  test(app-builder): the declared-actions tests join their subject's suite; the ERP doc gains Sync records (`72b7c92fe`)
 - 2026-09-16  fix(app-builder): the ERP integration's credential gets Adobe Commerce as a Cloud Service, and a skipped API is never reported as added (`17759e61f`)
+- 2026-09-17  docs(plans): systems get their own linked card; AB-15 and AB-16 for several ERPs (`b56aa29e2`)
+- 2026-09-17  fix(app-builder): removing the ERP integration undoes what it changed in Commerce (`5754b0c1d`)
