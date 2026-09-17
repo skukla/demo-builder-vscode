@@ -121,6 +121,102 @@ The real repository was not touched.
 - **What this does not settle:** two copies both answering the same Commerce webhook (say,
   two ERPs pricing one cart) is a routing question for AB-16, not a naming one.
 
+### Steps 3 to 5, live (2026-09-17, owner-approved)
+
+In Bodea's Adobe project (org 285361, `KuklaBodeaMesh5NgV`), with the aio CLI signed in.
+
+- **Step 3, create and subscribe.** `aio console workspace create` made `zzerpspike`
+  (a title may hold only letters, digits and spaces; hyphens and parentheses are
+  refused). `aio console workspace api add` for `AdobeIOManagementAPISDK` and
+  `AppBuilderDataServicesSDK` created the workspace's OAuth server-to-server credential
+  and attached both, with no manual step. The Runtime namespace
+  (`285361-kuklabodeamesh5ngv-zzerpspike`) came with the workspace.
+- **Step 4, deploy the ERP.** From a scratch copy of `demo-erp` at `bc1f60d`,
+  `aio app deploy --no-log-forwarding-update` built and deployed 18 actions and
+  auto-provisioned the database ("Database is deployed and ready for use in the 'amer'
+  region"), no manual step. With the workspace's own token, `health` answered 200 and an
+  `admin/import` of one partner wrote and read back.
+- **Step 5, calls between workspaces: refused.** A token minted from one workspace's
+  credential is rejected by the other workspace's `require-adobe-auth` actions, both ways,
+  before the action runs:
+  `401 [ERR1200] Technical account mismatch: expected '<this workspace's technical
+  account>', actual '<the caller's>' for workspace '<name>'`.
+  - Bodea's credential → spike ERP `health`: 401 (mismatch).
+  - Spike credential → Bodea's `ingestion/webhook` with `{"data":{}}`: 401 (mismatch).
+  - Controls: without a token, both 401; Bodea's credential → Bodea's webhook: 400 for the
+    missing fields, so the same call passes auth in its own workspace.
+  So two apps in different workspaces cannot call each other with their own S2S tokens.
+  Ways round it, none tried: authenticate app-to-app calls without `require-adobe-auth`
+  (a shared key, as the ERP screen does); give each app the other workspace's credential
+  (spreads a secret); or connect them through I/O Events rather than direct calls.
+  A signed-in person's token is not tied to a workspace (Demo Builder's App Management and
+  ERP calls use one), but apps have no person's token.
+- **Step 6, blocked at the Commerce subscription (replaced by the events check below).** The integration needs
+  `CloudIntegrationSDK`, `commerceeventing` and `ACCS-REST-API` on the spike credential.
+  The first two attached without a profile (through `aio-lib-console`
+  `subscribeOAuthServerToServerIntegrationToServices`, `licenseConfigs: null`, as
+  Demo Builder's subscriber does). `ACCS-REST-API` refused without a product profile
+  ("requires selection of a product"); the org offers 59 ("Default - …"), and none is named
+  for Bodea's tenant. Bodea's own credential reaches the tenant through product profile
+  group `1164475479` ("Steve Kukla ACCS - ACCS - SANDBOX - UoGYsHrcxMyeoVd2zUktZi", read
+  from its token's `projectedProductContext`). Adding that profile to the spike credential
+  grants a new technical account access to Bodea's Commerce, so it waits for the owner.
+  **For the product:** a workspace per integration means Demo Builder must choose the
+  Commerce tenant's product profile for each new credential; today's subscriber refuses
+  when the org offers more than one (`toServiceSubscriptionInfo`).
+
+### Events between workspaces (replaces step 6; owner-approved, 2026-09-17)
+
+The owner's direction: if this works, **every integration an SE adds gets its own
+workspace in the project's Adobe I/O project, and systems and integrations talk through
+events rather than direct calls**. Checked with the I/O Events API
+(`api.adobe.io/events/{org}/{project}/{workspace}/…`, request shapes read from
+`@adobe/aio-commerce-lib-events`):
+
+1. A custom provider (`3rd_party_custom_events`) and event code `zz.spike.ping` were
+   created in `zzerpspike` with its own credential: 201, 201.
+2. A **journal registration in Bodea's Stage workspace**, with Bodea's credential, on that
+   provider: 201. A workspace can subscribe to a provider that lives in another
+   workspace of the same org.
+3. One event published to the ingress (`eventsingress.adobe.io`, CloudEvents, `source`
+   `urn:uuid:<provider>`) with the spike credential: 200. (With
+   `Accept: application/hal+json` the ingress answers 406; it wants
+   `application/json`.)
+4. Bodea's journal held the event. **Delivery across workspaces works.**
+5. Control: the same publish with **Bodea's** credential, to the spike workspace's
+   provider, was also accepted and delivered. Any credential in the org with I/O Events
+   can publish to any of the org's custom providers, so a receiver cannot trust an event's
+   provider alone to know who sent it.
+6. The registration, event code and provider were deleted: 204 each.
+
+What this means for the design:
+
+- ERP → integration: the ERP publishes to its own provider; the integration's workspace
+  subscribes and gets the events delivered to its actions. No token crosses workspaces.
+- Integration → ERP: the same the other way ("order placed" out, "order number assigned"
+  back).
+- Still direct: reads Demo Builder makes with the signed-in person's token (status,
+  health), which is not tied to a workspace. The bulk mirror needs another route (events
+  in chunks, or data the ERP pulls), because events have size limits.
+- Events can arrive more than once and out of order; both sides must accept repeats, and
+  since any workspace in the org can publish to a provider, a shared secret or signature in
+  the payload is worth considering.
+
+### Step 7, cleanup (2026-09-17)
+
+- The ERP was undeployed (`aio app undeploy`): the `zzerpspike` namespace lists no
+  packages and no triggers, and its `health` address answers 404.
+- **The workspace could not be deleted.** `aio-lib-console` `deleteWorkspace` answered
+  `400 "Read-only project cannot be deleted"`. AB-2's 2026-08-27 spike deleted a workspace
+  the same way in another project, so this project refuses it; why (Bodea's project was
+  created from a template, perhaps) is not known. **A workspace per integration is only
+  reversible if Demo Builder can delete the workspace**, so this has to be settled first:
+  which projects allow it, and whether projects Demo Builder creates do. The empty
+  `zzerpspike` workspace (a credential with five APIs, no code, no providers) is still in
+  Bodea's project, waiting for the owner.
+- The downloaded workspace configs, the scratch copies and the helper scripts were deleted
+  from the session scratchpad.
+
 ## Done when
 
 The three open points each have a recorded answer with its evidence, and AB-15 and AB-16
