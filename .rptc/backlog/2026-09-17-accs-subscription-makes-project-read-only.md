@@ -56,3 +56,7 @@ is.
 - The owner is not a developer even on their own tenant's profile, yet Bodea's Commerce
   accepts the credential. Whether an SC can normally be made a developer on their tenant
   profile, and by whom, decides whether step 2 is a warning or a blocker.
+
+## Shipped so far
+
+- 2026-09-17  docs(backlog): AB-18 — the Commerce subscription can make an SC's project read-only (`2046ae5e6`)
