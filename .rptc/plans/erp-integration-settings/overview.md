@@ -19,15 +19,30 @@ Decided with the owner, 2026-09-17:
 3. **Layout:** like Live Search (Marketing ▸ SEO & Search): the grey Scope bar, quiet tabs
    (**Settings**, **Status & sync**), and a Settings tab of sections (bold heading, rule, one
    sentence, fields), with Save at the top end, disabled until something changes. Built with
-   React Spectrum v3, which Live Search uses (read from the live admin 2026-09-17), inside the
-   S2 shell `@adobe/aio-commerce-lib-admin-ui` requires.
+   **Spectrum 2** (`@react-spectrum/s2`), which Adobe recommends for Admin UI SDK pages
+   (the `commerce-app-admin-ui` skill in adobe/skills; the v2 extension-point samples), laid
+   out after Live Search. Live Search itself is React Spectrum v3 (read from the live admin
+   2026-09-17); the owner chose S2 with Live Search's layout on 2026-09-17.
 4. **Sales channels** (Commerce websites as SAP distribution channels) are a separate, later
    step: step 6.
 
 Why not Stores ▸ Configuration itself: that page is built from PHP modules' `system.xml`, and
 Adobe Commerce as a Cloud Service takes no custom PHP. The installed admin UI library
 (1.0.1) extends menus, pages, grid columns, mass actions and order-view buttons only. App
-Management's own form for `businessConfig` opens outside Commerce Admin.
+Management's own form for `businessConfig` is under Apps ▸ App Management (inside Commerce
+Admin per Adobe's docs), not in our page.
+
+## Association (read 2026-09-17, developer.adobe.com app-management docs)
+
+App Management keeps its own list of apps and their Commerce associations; associating is a
+UI step (Apps ▸ App Management ▸ Associate: choose Project and Workspace). The app's
+generated `association` action only stores the app's copy, and App Management calls it
+itself. No API, `aio` command or Console step to associate is documented. Unassociating
+"removes all configuration values for this instance" and clears the app's copy. On Bodea
+the owner associated by hand after install and later unassociated; a test order on
+2026-09-17 then reached none of the three webhooks although `GET /V1/webhooks/list` still
+listed them. Demo Builder's install therefore needs to hand the SC the Associate step and
+confirm it, rather than write the app's copy (a separate change, not in this plan's steps).
 
 ## The settings
 
@@ -71,19 +86,29 @@ an unset variable does not break the deploy. If it does, Demo Builder generates 
 - **`erp/settings` action** (new, web, `require-adobe-auth`): `GET ?scope=<id>` → scope
   tree + values with origins (syncs Commerce scopes first when the tree has none);
   `PATCH` → `setConfiguration`, `null` clears an override. The page talks only to `erp/*`.
-- **order-create:** skip when `orders_send` is off. On a failed or offline ERP answer, with
-  `orders_hold_offline` on, store the ERP order in State (`erp-held-order.<key>`) and answer
-  the fallback. The fallback message is corrected to say the order is held for the ERP.
-- **Held orders:** the minute timer's job also sends held orders; a sent order gets its ERP
-  number written with `POST orders` (`ext_order_id`), and leaves State. `erp/status` reports
-  the count; `erp/reset` clears them.
-- **item-prices / discounts:** skip when the setting is off.
+- **Orders go to the ERP by event, not by webhook** (owner, 2026-09-17, after
+  `.rptc/research/commerce-webhooks-and-events/research.md`): the event
+  `observer.sales_order_save_commit_after` (fields: id, increment_id, created_at, updated_at,
+  store_id, ext_order_id, customer_email, customer_group_id, base_grand_total,
+  base_currency_code, items[] lines) routes to `order-commerce/created`. It skips an order that
+  is not new or already has an ERP number, and one whose website has `orders_send` off. It
+  creates the ERP order, then writes the number back with `POST /V1/orders`
+  (`ext_order_id`) and an order comment. When the ERP is offline or fails: with
+  `orders_hold_offline` on it answers 5xx, so I/O Events retries (1, 2, 4, 8 minutes, then every
+  15 minutes, up to a day); off, it answers 4xx and logs. The ERP already refuses a duplicate
+  `commerceOrderId`, so a repeated delivery creates nothing twice.
+- **The order webhook is retired:** unsubscribed from Commerce first (uninstall only removes what
+  the current config lists), then removed from the config with its action. The shopper message
+  about orders "sent to the ERP separately" goes with it.
+- **item-prices / discounts:** skip when the setting is off; the store comes from
+  `quote.store_id`. Their subscriptions are removed and created again so the declared
+  `required: false` applies (an existing subscription is never updated).
 - **order/external/updated:** with `orders_status_on_confirm` on, the comment also sets
   status `processing` (the unused `orders.comment(..., status)` in `lib/commerce.js`).
-- **Page:** React Spectrum v3 (`@adobe/react-spectrum`) inside the lib's S2 shell: Scope
+- **Page:** Spectrum 2 (`@react-spectrum/s2`) inside the lib's shell: Scope
   picker (Default Config, then websites and store views from the synced tree), tabs,
   Settings sections with "Use Default" per field on a non-default scope, Save/Cancel;
-  Status & sync = today's health, held orders, Sync records, Take offline, Reset.
+  Status & sync = today's health, Sync records, Take offline, Reset.
   `index.css` shrinks to page layout.
 
 ### ERP (`demo-erp`)
@@ -103,19 +128,25 @@ Commits and deploys wait for the owner.
    configuration extension; `lib/settings.js`; `erp/settings` action. Tests: defaults on
    failure, cache, PATCH/clear. Live: deploy, sync scopes, read and write one value at a
    website, confirm inheritance, confirm the deploy with no encryption key.
-2. **Capture real webhook payloads.** Log the payload's key names (not values) in
-   order-create and item-prices for one live cart and order; confirm `store_id` (store view
-   id) is there. Remove the logging after.
-3. **Behaviour switches.** order-create send/hold, held-order sender on the timer, fallback
-   message, item-prices and discounts gates, status on confirm. Tests per switch, on and off.
-   Live: turn the ERP offline, place an order, see it held; turn it online, see it sent and
-   its ERP number on the Commerce order; confirm an order in the ERP, see Processing.
-4. **The page.** Spectrum v3 page, Scope picker, tabs, Settings form, Status & sync.
+2. **Read the real payloads without more orders.** Admin ▸ System ▸ Webhooks ▸ Webhooks List
+   (the cart hooks' default payload) and the event's field list; confirm
+   `sales_order_save_commit_after` is on the store's supported events list. Remove the temporary
+   payload logging from Bodea (a redeploy of the pushed code).
+3. **Orders by event, settings switches.** The order event and `order-commerce/created`
+   (new-order check, ERP-number guard, `orders_send`, write-back, 5xx/4xx by
+   `orders_hold_offline`); retire the order webhook (unsubscribe, then remove); cart hooks gated
+   and re-subscribed; status on confirm. Tests per switch, on and off, and for a repeated
+   delivery. Live: an order reaches the ERP and its number appears on the Commerce order; with
+   the ERP offline and hold on, the order arrives after the ERP is back; with send off for the
+   Bodea website, nothing is sent; confirming in the ERP marks it Processing.
+4. **The page.** Spectrum 2 page in Live Search's layout: Scope picker (Admin website
+   hidden: its codes collide with store codes in lib-config's storage), tabs, Settings form,
+   Status & sync.
    Local: render against a stand-in for `erp/settings` and `erp/status`. Live: open it in
    Commerce Admin next to Live Search and compare.
-5. **Docs and reversibility.** Reset clears held orders; settings survive a reset and are
-   listed in the erp-integration doc (what removing the integration leaves in the
-   namespace).
+5. **Docs and reversibility.** The erp-integration doc: settings survive a reset; unassociating
+   in App Management wipes them; uninstall before undeploy; how to see successful webhook and
+   event calls (Developer Console ▸ App Builder Logs).
 6. **Sales channels** (separate). The mirror reads each product's website ids and the
    websites; the ERP stores `channels` per product (contract change); the product grid gets
    a Sales channel filter (default All channels) and a Channels column; the product page a
@@ -125,9 +156,11 @@ Commits and deploys wait for the owner.
 
 - Settings reads add a Files read per call; the 60 s container cache and defaults-on-failure
   keep the one-second cart webhooks safe. Measure at step 1.
-- A replayed order's key: the before-place hook may have no `entity_id`; the held copy keys
-  on the quote id and is matched to the placed order by increment id when sent.
-- Writing `ext_order_id` with `POST orders` is used today but never checked live on this
-  platform; step 3 checks it.
-- React Spectrum v3 inside the S2 provider: two providers, two stylesheets; check the
-  bundle size and that the page's fonts and tokens come from v3 at step 4.
+- The write-back saves the order and fires the event again; the new-order check and the
+  ERP-number guard stop a loop. Step 3 checks it live.
+- A registration that keeps failing for a day is marked unstable, then disabled until
+  re-enabled by hand; an ERP left offline that long needs that step.
+- Whether `sales_order_save_commit_after` is on this store's supported events list is checked
+  at step 2.
+- S2 styles come from the `style` macro; confirm Parcel runs it in the production build at
+  step 4.

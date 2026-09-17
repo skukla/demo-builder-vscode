@@ -243,7 +243,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-16` | fix | [The "no admin role" remedy sent people to a page that cannot grant anything](2026-09-14-site-access-remedy-dead-link.md) | _Khalil re-saving his Code Sync installation on hardie to show whether GitHub reopens the AEM setup page with a key_ | high | gated |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | backlog |
 
-### app-builder  (15)
+### app-builder  (17)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -261,6 +261,8 @@ each item's own file; what has already landed against an item is in its
 | `AB-7` | fix | [remove_integration reports success while leaving deployed code running](2026-08-28-remove-integration-leaves-runtime-deployed.md) | — | high | built |
 | `AB-8` | question | [Where does event-provider management belong, and what does an SC do with it?](2026-09-09-event-provider-surface-design.md) | — | med | open |
 | `AB-10` | feature | └ [An "ERP" section in Commerce Admin where a business user configures the integration](2026-09-16-erp-settings-in-commerce-admin.md) | — | med | backlog |
+| `AB-11` | feature | └ [After install, hand the SC the App Management "Associate" step and confirm it](2026-09-17-app-management-associate-handoff.md) | — | med | backlog |
+| `AB-12` | feature | └ [Removing an integration leaves it "Associated" in App Management](2026-09-17-app-management-teardown-order.md) | — | low | backlog |
 | `PL-24` | feature | [Component updates cannot follow an environment-variable rename](2026-08-30-env-var-rename-migration.md) | — | med | backlog |
 
 ### data-installer  (2)
@@ -484,7 +486,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-56` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — backlog
 
-*84 item(s) sit outside the A–G chain.*
+*86 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 
