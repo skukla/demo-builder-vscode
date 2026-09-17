@@ -129,3 +129,4 @@ are rewritten around the answer (or left as they are, with the reason).
 ## Shipped so far
 
 - 2026-09-17  docs(backlog): AB-17 asks whether each system and integration gets its own workspace (`f4a0db91f`)
+- 2026-09-17  docs(backlog): AB-17 steps 1 and 2 — the integration app id can vary per deploy (`0a560b980`)
