@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-9
 needs: []
 value: high
-status: backlog
+status: active
 ---
 
 # An installed integration takes an update: new code, then Commerce brought to it
@@ -23,3 +23,8 @@ version, offers a confirmed reinstall when Commerce refuses to upgrade in place,
 an update is available. Bodea is the first live test.
 
 Filed 2026-09-17.
+
+## Shipped so far
+
+- 2026-09-17  docs(plans): updating an installed integration (AB-13); AB-11 narrowed to an optional note (`6639e5f7e`)
+- 2026-09-17  feat(app-builder): an App Management install says what it did — installed, upgraded, already current or refused — and records the version (`f72c4a9b7`)
