@@ -131,6 +131,37 @@ describe('handleRemoveAppBuilderComponent', () => {
         expect((result.data as { warning?: string }).warning).toBeUndefined();
     });
 
+    it("says so when the ERP integration's Commerce changes were not all undone", async () => {
+        const { mockContext } = setupMocks();
+        mockTestDeveloperPermissions(true);
+        const commerceDetach = {
+            status: 'failed' as const,
+            detail: "The ERP's changes in Commerce were not undone: offline",
+        };
+        mockRemoveAppBuilderComponent.mockResolvedValue({ success: true, commerceDetach });
+
+        const result = await handleRemoveAppBuilderComponent(mockContext, { id: 'erp-sync' });
+
+        expect(result.success).toBe(true);
+        const data = result.data as { warning?: string; commerceDetach?: unknown };
+        expect(data.warning).toContain('not everything it changed in Commerce was undone');
+        expect(data.warning).toContain('offline');
+        expect(data.commerceDetach).toEqual(commerceDetach);
+        expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(expect.stringContaining('offline'));
+    });
+
+    it('hands back a finished undo without a warning', async () => {
+        const { mockContext } = setupMocks();
+        mockTestDeveloperPermissions(true);
+        const commerceDetach = { status: 'detached' as const, detail: 'Undid 1 company change and cleared 0 ERP order numbers in Commerce.' };
+        mockRemoveAppBuilderComponent.mockResolvedValue({ success: true, commerceDetach });
+
+        const result = await handleRemoveAppBuilderComponent(mockContext, { id: 'erp-sync' });
+
+        expect(result).toEqual({ success: true, data: { commerceDetach } });
+        expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
+    });
+
     it('surfaces the runner error', async () => {
         const { mockContext } = setupMocks();
         mockTestDeveloperPermissions(true);

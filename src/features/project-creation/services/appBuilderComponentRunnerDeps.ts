@@ -32,6 +32,7 @@ import { uninstallAppManagementApp } from '@/features/app-builder/services/appMa
 import { readAppManifestVersion } from '@/features/app-builder/services/appManifestVersion';
 import { deployAppComponentIsolated } from '@/features/app-builder/services/deployAppIsolated';
 import { subscriberTarget } from '@/features/app-builder/services/ensureMeshApiSubscribed';
+import { detachErpWrites } from '@/features/app-builder/services/erpDetach';
 import {
     checkCloneForUpdate,
     fastForwardClone,
@@ -196,6 +197,13 @@ export function buildDefaultRunnerDeps(
         // API takes down what its installer created, while the API still
         // exists to call. Best-effort — the runner logs a failure and removes
         // anyway.
+        // Before the uninstall: the ERP integration's undo of its Commerce writes
+        // lives in one of the actions the undeploy deletes.
+        detachFromCommerce: (project, deployedUrls, detachProgress) =>
+            detachErpWrites(deployedUrls, {
+                getAuth: () => resolveAppManagementAuth(project, ctx.authManager),
+                onProgress: detachProgress,
+            }),
         uninstallAppManagement: (project, deployedUrls, uninstallProgress) =>
             uninstallAppManagementApp(project, deployedUrls, {
                 getAuth: () => resolveAppManagementAuth(project, ctx.authManager),

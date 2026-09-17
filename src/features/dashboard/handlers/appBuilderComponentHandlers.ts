@@ -39,6 +39,7 @@ import {
     removeAppBuilderComponent,
     type RuntimeCleanupSummary,
 } from '@/features/app-builder/services/appBuilderComponentRunner';
+import type { CommerceDetachResult } from '@/features/app-builder/services/erpDetach';
 import {
     buildCustomIntegrationEntry,
     entryFitsProjectAxes,
@@ -604,6 +605,8 @@ export type GuardableResult = {
      * bare success. A `failed` entry here means code is STILL DEPLOYED.
      */
     runtimeCleanup?: RuntimeCleanupSummary;
+    /** Set by `removeAppBuilderComponent` for the ERP integration: its Commerce writes undone. */
+    commerceDetach?: CommerceDetachResult;
 };
 
 /** What the card calls a component: its kind, title-cased for the status line. */
@@ -812,24 +815,49 @@ export const handleRemoveAppBuilderComponent: MessageHandler<{ id?: string }> = 
     // is clean — so this stays a success; what changes is that an incomplete
     // cleanup is now said out loud instead of swallowed.
     const cleanup = result.runtimeCleanup;
-    const stillRunning = cleanup?.failed ?? [];
-    if (cleanup && (stillRunning.length > 0 || !cleanup.verified)) {
-        const detail =
-            stillRunning.length > 0
-                ? `${stillRunning.length} package(s) are still deployed: ${stillRunning.join(', ')}`
-                : (cleanup.note ?? 'the Runtime namespace could not be listed');
-        const warning =
-            `${displayName} was removed, but its Runtime cleanup did not finish — ${detail}. ` +
-            `Check the namespace with \`aio runtime package list\` before reusing this project.`;
+    const commerceDetach = result.commerceDetach;
+    const warnings = [runtimeWarning(displayName, cleanup), detachWarning(displayName, commerceDetach)].filter(
+        (warning): warning is string => Boolean(warning),
+    );
+    const data = {
+        ...(cleanup ? { runtimeCleanup: cleanup } : {}),
+        ...(commerceDetach ? { commerceDetach } : {}),
+    };
+    if (warnings.length > 0) {
+        const warning = warnings.join(' ');
         // Both surfaces, deliberately: the toast is for the SC, and `data` carries
         // it to an agent, which cannot see a toast. HandlerResponse already has
         // `data?: unknown`, so this needs no change to the message contract.
         vscode.window.showWarningMessage(warning);
-        return { success: true, data: { runtimeCleanup: cleanup, warning } };
+        return { success: true, data: { ...data, warning } };
     }
 
-    return { success: true, data: cleanup ? { runtimeCleanup: cleanup } : undefined };
+    return { success: true, data: Object.keys(data).length > 0 ? data : undefined };
 };
+
+/** The unfinished Runtime cleanup, said out loud (AB-7), or undefined. */
+function runtimeWarning(displayName: string, cleanup: RuntimeCleanupSummary | undefined): string | undefined {
+    const stillRunning = cleanup?.failed ?? [];
+    if (!cleanup || (stillRunning.length === 0 && cleanup.verified)) {
+        return undefined;
+    }
+    const detail =
+        stillRunning.length > 0
+            ? `${stillRunning.length} package(s) are still deployed: ${stillRunning.join(', ')}`
+            : (cleanup.note ?? 'the Runtime namespace could not be listed');
+    return (
+        `${displayName} was removed, but its Runtime cleanup did not finish — ${detail}. ` +
+        `Check the namespace with \`aio runtime package list\` before reusing this project.`
+    );
+}
+
+/** What of the ERP integration's Commerce writes could not be undone, or undefined. */
+function detachWarning(displayName: string, detach: CommerceDetachResult | undefined): string | undefined {
+    if (detach?.status !== 'failed') {
+        return undefined;
+    }
+    return `${displayName} was removed, but not everything it changed in Commerce was undone. ${detach.detail ?? ''}`.trim();
+}
 
 /**
  * validateInput for the rename input box: reject empty/whitespace-only names

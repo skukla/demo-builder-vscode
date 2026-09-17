@@ -31,10 +31,14 @@ Adobe's Commerce integration starter kit. The design record is
 | Screen | its own, served by its `screen` action, opened with a key | the Commerce Admin page, on the workspace's static site |
 
 They are a **unit**. Adding the integration adds and deploys the ERP first, then the
-integration, into the project's one App Builder workspace. Removing the integration
-uninstalls it from Commerce, undeploys it, then undeploys the ERP. The ERP is never offered
-or removed on its own; asking to remove it alone is refused in words. The ERP's records
-outlive an undeploy in the workspace's database; a re-add starts with a reset.
+integration, into the project's one App Builder workspace. Removing the integration first
+calls its `erp/detach`, which undoes the company credit limits, company blocks and ERP order
+numbers it wrote into Commerce (Commerce keeps the order notes; it cannot delete them); then
+it uninstalls the integration from Commerce, undeploys it, and undeploys the ERP. An undo
+that does not finish is reported beside the removal, which still goes ahead. The ERP is
+never offered or removed on its own; asking to remove it alone is refused in words. The
+ERP's records outlive an undeploy in the workspace's database, and nothing wipes them on a
+re-add today: a re-added ERP shows its old records until it is reset.
 
 ## On the dashboard
 

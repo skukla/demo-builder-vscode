@@ -1,9 +1,10 @@
 /**
  * The ERP integration's own actions, as Demo Builder calls them: `erp/status`
- * (what the integration sees of its ERP) and `erp/reset` (undo the ledgered
- * Commerce writes, wipe the ERP, mirror Commerce again; decisions 8 and 11).
+ * (what the integration sees of its ERP), `erp/reset` (undo the ledgered
+ * Commerce writes, wipe the ERP, mirror Commerce again; decisions 8 and 11) and
+ * `erp/detach` (the undo alone, run before the integration is removed).
  *
- * Both are web actions with `require-adobe-auth`, so they take the same
+ * All are web actions with `require-adobe-auth`, so they take the same
  * bearer token and org header the App Management client sends. The URLs come
  * off the integration's persisted `deployedUrls`, never composed by hand: the
  * package name is the kit's fixed `erp`, and the action URL is whatever the
@@ -37,7 +38,13 @@ export interface ErpResetReport {
     error?: string;
 }
 
-export type ErpAction = 'status' | 'reset';
+/** What `erp/detach` answers: the company writes undone and the ERP order numbers cleared. */
+export interface ErpDetachReport {
+    reverted?: { reverted: number; failed: unknown[] };
+    orders?: { cleared: number; failed: unknown[] };
+}
+
+export type ErpAction = 'status' | 'reset' | 'detach';
 
 /**
  * The deployed URL of one `erp/<action>` web action, or undefined when the
@@ -89,6 +96,11 @@ export class ErpIntegrationClient {
     /** The whole reset; the action itself is idempotent and budgeted at five minutes. */
     async reset(): Promise<ErpResetReport> {
         return (await this.call('reset', 'POST')) as ErpResetReport;
+    }
+
+    /** Undo what the integration wrote onto Commerce, leaving the ERP as it is. */
+    async detach(): Promise<ErpDetachReport> {
+        return (await this.call('detach', 'POST')) as ErpDetachReport;
     }
 
     private async call(action: ErpAction, method: 'GET' | 'POST'): Promise<unknown> {

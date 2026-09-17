@@ -25,6 +25,7 @@ import {
     removeAppBuilderComponent,
 } from '@/features/app-builder/services/appBuilderComponentRunner';
 import { createDeps, createProject } from './appBuilderComponentRunner.testUtils';
+import { createSuccessResult } from '../../../helpers/commandResultFake';
 
 const SYSTEM: AppBuilderComponentCatalogEntry = {
     id: 'demo-erp',
@@ -244,6 +245,60 @@ describe('removing the pair', () => {
         expect(deps.componentManager.removeComponent).toHaveBeenCalledWith(expect.anything(), 'erp-integration', true);
         expect(deps.componentManager.removeComponent).toHaveBeenCalledWith(expect.anything(), 'demo-erp', true);
         expect(deps.republishStorefront).not.toHaveBeenCalled();
+    });
+
+    it("undoes the integration's Commerce writes before its uninstall and undeploy, once, and hands the result back", async () => {
+        const project = pairedProject();
+        const order: string[] = [];
+        const detached = { status: 'detached' as const, detail: 'Undid 2 company changes and cleared 1 ERP order number in Commerce.' };
+        const deps = createDeps({
+            catalog: [SYSTEM, INTEGRATION],
+            detachFromCommerce: jest.fn(async () => {
+                order.push('detach');
+                return detached;
+            }),
+            uninstallAppManagement: jest.fn(async () => {
+                order.push('uninstall');
+                return { status: 'uninstalled' as const };
+            }),
+        });
+        deps.commandManager.execute.mockImplementation(async (command: string) => {
+            if (command === 'aio app undeploy') order.push('undeploy');
+            return createSuccessResult();
+        });
+
+        const result = await removeAppBuilderComponent(project, 'erp-integration', deps);
+
+        expect(result).toMatchObject({ success: true, commerceDetach: detached });
+        expect(order.slice(0, 3)).toEqual(['detach', 'uninstall', 'undeploy']);
+        expect(deps.detachFromCommerce).toHaveBeenCalledTimes(1);
+        expect(deps.detachFromCommerce).toHaveBeenCalledWith(project, INT_URLS, expect.any(Function));
+    });
+
+    it('removes the pair even when the undo fails, and says so', async () => {
+        const project = pairedProject();
+        const failed = { status: 'failed' as const, detail: "The ERP's changes in Commerce were not undone: offline" };
+        const deps = createDeps({
+            catalog: [SYSTEM, INTEGRATION],
+            detachFromCommerce: jest.fn(async () => failed),
+        });
+
+        const result = await removeAppBuilderComponent(project, 'erp-integration', deps);
+
+        expect(result).toMatchObject({ success: true, commerceDetach: failed });
+        expect(project.appBuilderComponents).toStrictEqual({});
+    });
+
+    it('carries nothing when the component has no detach to run', async () => {
+        const project = pairedProject();
+        const deps = createDeps({
+            catalog: [SYSTEM, INTEGRATION],
+            detachFromCommerce: jest.fn(async () => ({ status: 'skipped' as const })),
+        });
+
+        const result = await removeAppBuilderComponent(project, 'erp-integration', deps);
+
+        expect(result).not.toHaveProperty('commerceDetach');
     });
 
     it('the ERP alone is refused while its integration is present, and nothing is undeployed', async () => {

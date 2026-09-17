@@ -342,7 +342,9 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         description:
             'Remove one App Builder integration by its id. DESTRUCTIVE: undeploys it remotely ' +
             '(aio app undeploy / api-mesh:delete), deletes its local files, and republishes the ' +
-            'storefront without it. Confirm the id with the user first.',
+            'storefront without it. The ERP integration first undoes what it wrote into Commerce ' +
+            'and takes its ERP with it; data.warning says what could not be undone. ' +
+            'Confirm the id with the user first.',
         map: dashboardHandlers,
         type: 'removeAppBuilderComponent',
         confirm: true,

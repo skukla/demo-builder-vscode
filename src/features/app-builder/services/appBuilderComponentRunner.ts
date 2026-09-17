@@ -35,6 +35,7 @@ import { recordDeployOutcome, type DeployOutcome } from './appBuilderDeployOutco
 import { detectAppLayout, listDeclaredPackageNames, type AppConfigLayout } from './appConfigPackages';
 import type { AppManagementInstallOptions, AppManagementInstallResult } from './appManagementUpgrade';
 import { deriveProvidedValues, resolveDeployInputs, resolveDisplayName } from './deployInputs';
+import type { CommerceDetachResult } from './erpDetach';
 import type { SourceUpdateResult, UpdateCheckResult } from './integrationSourceUpdate';
 import { clearUpdateAvailable } from './integrationUpdateCheck';
 import { deriveOwPackage } from './owPackageName';
@@ -67,6 +68,8 @@ export interface RunnerResult {
     detail?: string;
     /** Post-undeploy Runtime verification (remove only) — see AB-7. */
     runtimeCleanup?: RuntimeCleanupSummary;
+    /** What removal undid of the ERP integration's Commerce writes (remove only). */
+    commerceDetach?: CommerceDetachResult;
 }
 
 /**
@@ -259,6 +262,16 @@ export interface AppBuilderComponentRunnerDeps {
      * that API is gone with them. Best-effort: a failure logs and the remove
      * proceeds. Optional: mesh paths and bare unit tests never need it.
      */
+    /**
+     * Undo the ERP integration's writes onto Commerce (erpDetach) BEFORE its
+     * uninstall and undeploy take the action away. Skipped for every component
+     * that deploys no `erp/detach`. Optional: bare unit tests never need it.
+     */
+    detachFromCommerce?: (
+        project: Project,
+        deployedUrls: Record<string, string> | undefined,
+        onProgress?: (message: string) => void,
+    ) => Promise<CommerceDetachResult>;
     uninstallAppManagement?: (
         project: Project,
         deployedUrls: Record<string, string> | undefined,
@@ -1184,6 +1197,7 @@ export async function removeAppBuilderComponent(
     // `aio app undeploy` removes only the actions and leaves all of that behind
     // (AB-4; residue measured live 2026-08-27). Best-effort like the teardown:
     // an uninstall failure must never block the remove the user asked for.
+    const commerceDetach = await detachIfErpIntegration(project, id, state, deps);
     await uninstallIfAppManagement(project, id, state, deps);
 
     // The declared package inventory is read BEFORE the undeploy and the local
@@ -1290,7 +1304,37 @@ export async function removeAppBuilderComponent(
 
     await removeBoundSystemAfter(cleared, project, id, deps);
 
-    return { success: true, ...(runtimeCleanup ? { runtimeCleanup } : {}) };
+    return {
+        success: true,
+        ...(runtimeCleanup ? { runtimeCleanup } : {}),
+        ...(commerceDetach ? { commerceDetach } : {}),
+    };
+}
+
+/**
+ * Before anything is torn down: undo what the ERP integration wrote onto
+ * Commerce. Best-effort like the uninstall; a failure is logged and handed back
+ * so the SC is told what stays in Commerce. Undefined when nothing applied.
+ */
+async function detachIfErpIntegration(
+    project: Project,
+    id: string,
+    state: AppBuilderComponentState,
+    deps: AppBuilderComponentRunnerDeps,
+): Promise<CommerceDetachResult | undefined> {
+    if (!deps.detachFromCommerce || state.kind !== 'integration') {
+        return undefined;
+    }
+    const result = await deps.detachFromCommerce(project, state.deployedUrls, (message) =>
+        deps.onProgress?.(message),
+    );
+    if (result.status === 'skipped') {
+        return undefined;
+    }
+    if (result.status === 'failed') {
+        deps.logger.warn(`[AppBuilderComponent Runner] ${id} Commerce detach did not finish: ${result.detail}`);
+    }
+    return result;
 }
 
 /**
