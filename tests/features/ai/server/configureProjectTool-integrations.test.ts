@@ -6,23 +6,8 @@
  * an integration here: its fields are project configuration.
  */
 
-import { registerConfigureProjectTool } from '@/features/ai/server/configureProjectTool';
 import { createMockProject } from '../../../helpers/projectFake';
-import { createMockStateManager } from '../../../helpers/stateManagerFake';
-
-const getCurrentProject = jest.fn();
-const saveProject = jest.fn();
-const stateManager = createMockStateManager({ getCurrentProject, saveProject });
-
-function serve() {
-    const tools = new Map<string, (a: unknown) => Promise<{ content: Array<{ text: string }> }>>();
-    registerConfigureProjectTool(
-        { registerTool: (n: string, _d: unknown, h: never) => tools.set(n, h) },
-        stateManager,
-    );
-    return async (args: unknown) =>
-        JSON.parse((await tools.get('configure_project')!(args)).content[0].text);
-}
+import { getCurrentProject, saveProject, serve } from './configureProjectTool.testUtils';
 
 beforeEach(() => {
     jest.clearAllMocks();

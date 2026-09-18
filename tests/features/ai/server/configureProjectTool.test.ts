@@ -12,22 +12,9 @@
 
 import { registerConfigureProjectTool } from '@/features/ai/server/configureProjectTool';
 import type { Project } from '@/types/base';
-import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockProject } from '../../../helpers/projectFake';
+import { getCurrentProject, saveProject, serve, stateManager } from './configureProjectTool.testUtils';
 
-const getCurrentProject = jest.fn();
-const saveProject = jest.fn();
-const stateManager = createMockStateManager({ getCurrentProject, saveProject });
-
-function serve() {
-    const tools = new Map<string, (a: unknown) => Promise<{ content: Array<{ text: string }> }>>();
-    registerConfigureProjectTool(
-        { registerTool: (n: string, _d: unknown, h: never) => tools.set(n, h) },
-        stateManager,
-    );
-    return async (args: unknown) =>
-        JSON.parse((await tools.get('configure_project')!(args)).content[0].text);
-}
 
 /**
  * What the tool DECLARES at registration: its guard flags and its schema.
