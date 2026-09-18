@@ -38,12 +38,36 @@ pointed at a different question.
   which is a storefront component in a block library, not a custom drop-in (2026-09-17:
   drop-ins ship as one coordinated set and bolting one on blank-pages the site).
 
+## How the call happens
+
+A Commerce webhook, the same mechanism cart pricing already uses, with one setting
+different: `required: true`. Adobe's own documentation uses this exact example — check
+stock with an external system when a shopper adds to the cart, `required="true"`, a short
+timeout and a `fallbackErrorMessage` the shopper reads; if the external system says no,
+Commerce interrupts the action (developer.adobe.com/commerce/extensibility/webhooks, read
+2026-09-17). Our side is a Runtime action that asks the ERP and answers.
+
+Decided with it (plan decision 26): the ERP is never called from the browser or the mesh,
+and the answer reaches the shopper as Commerce data.
+
+## First step: three cheap checks
+
+1. The exact event name on Cloud Service. The Admin lists them under System > Webhooks, and
+   `GET /V1/webhooks/supportedList` answers the same; PaaS and SaaS differ, so read the list
+   rather than copying a name from a doc.
+2. Whether the payload carries what the ERP needs to answer — SKU, quantity, and the buyer's
+   company.
+3. What a shopper sees when a required webhook refuses during checkout: the wording, and
+   where it appears.
+
 ## Not established
 
-- Which Commerce extension point carries an availability answer at cart time, and whether
-  it can change a line's message rather than only block checkout. The totals collector
-  modifies prices; its equivalent for availability was not checked.
-- Whether a promise date can reach the storefront's order review without a mesh change.
+(The three checks above are the lookups. These need a decision.)
+
+- Where a promise date lands in Commerce so the storefront can read it — an order attribute,
+  a quote field, something else. The ERP's order number already has a home; this does not.
+- Whether the check runs on add-to-cart, as Adobe's example does, or once at checkout. The
+  first is chattier and reads better on stage; the second is one call per order.
 - The demo scene. The owner's framing is data flowing both ways with the ERP appearing to
   be the master; a promise date is that story's strongest moment, but the script for it has
   not been written.

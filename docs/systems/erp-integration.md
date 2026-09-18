@@ -69,6 +69,28 @@ there ("1 integration · 1 system"). The dashboard's Integrations tile counts th
 too: its dot shows the worst status across both, and turns amber for a removal that
 stopped.
 
+## Where the ERP's answers reach a shopper
+
+The ERP is an internal system. Only the integration calls it, server-side, with a token it
+mints per call from the workspace's own credential; nothing else — not the browser, not the
+API Mesh — has a way in, and none is added. Whatever the ERP decides is written into
+Commerce, and the storefront reads Commerce, the same for every channel.
+
+Live calls happen at DECISIONS, through Commerce webhooks. Cart pricing is the one built:
+the totals collector calls two of this integration's actions for contract prices and the
+discount ceiling. Both are optional (`required: false`), so an ERP that does not answer
+leaves Commerce's own prices in place and the shopper sees no error. Two more are designed
+and not built — availability and a credit check at order placement — and both are
+`required: true`, because an over-limit order let through is not survivable the way a
+missing discount is.
+
+Not done, on purpose: a live price on the product page (it would put the ERP in front of
+every product view, and a price that arrives by another route can disagree with what
+Commerce charges), the ERP behind the API Mesh (the mesh composes customer-facing services,
+and reaching the ERP from it needs a credential the ERP should not have), and custom
+storefront drop-ins (Adobe's guidance is to extend a drop-in with a component using the
+storefront's own tools; a drop-in from another release blank-pages the site).
+
 ## Updating the pair
 
 Opening the integrations screen checks, in the background, whether either app has newer
