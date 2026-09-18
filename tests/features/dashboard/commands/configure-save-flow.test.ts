@@ -16,7 +16,6 @@ import { ConfigureProjectWebviewCommand } from './configure.testUtils';
 import * as vscode from 'vscode';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { COMPONENT_IDS } from '@/core/constants';
-import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { reKeyProjectSecrets } from '@/features/components/services/commerceSecretMigration';
 import { handleRenameProject } from '@/features/projects-dashboard/handlers/dashboardHandlers';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
@@ -34,10 +33,6 @@ import { internals } from '../../../helpers/commandInternals';
 
 jest.mock('@/commands/handlerContextFactory', () => ({
     createPanelHandlerContext: jest.fn(() => ({ stub: 'handler-context' })),
-}));
-
-jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => ({
-    getAvailableAppBuilderComponents: jest.fn(() => []),
 }));
 
 jest.mock('@/features/projects-dashboard/handlers/dashboardHandlers', () => ({
@@ -215,31 +210,34 @@ describe('ConfigureProjectWebviewCommand - save spine', () => {
             );
         });
 
-        it('reads the App Builder catalog for the project own stack ids', async () => {
-            stateManager.getCurrentProject.mockResolvedValue(
-                edsProject('da-live-classic', {
-                    componentSelections: { backend: 'accs', frontend: 'eds-storefront' },
-                })
-            );
+        it("keeps an integration's stored settings, whatever an older Configure window sent back", async () => {
+            // An integration's settings are set on its tile (AB-21). Configure sends
+            // back every value it loaded, so a window opened before a Settings save
+            // must not restore the old name — nor revive a removed integration's.
+            const project = edsProject('da-live-classic', {
+                appBuilderComponents: {
+                    'erp-integration': { kind: 'integration', status: 'deployed', source: { owner: 'o', repo: 'r' } },
+                    'demo-erp': { kind: 'system', status: 'deployed', source: { owner: 'o', repo: 'e' } },
+                    'eds-commerce-mesh': { kind: 'mesh', status: 'deployed', source: { owner: 'o', repo: 'm' } },
+                },
+                componentConfigs: { 'erp-integration': { ERP_DISPLAY_NAME: 'Nordwind' } },
+            });
+            stateManager.getCurrentProject.mockResolvedValue(project);
 
-            await save(command).handleSaveConfiguration({ componentConfigs: {} });
+            await save(command).handleSaveConfiguration({
+                componentConfigs: {
+                    eds: { STORE_VIEW: 'main' },
+                    'erp-integration': { ERP_DISPLAY_NAME: 'Acme ERP' },
+                    'demo-erp': { ERP_DISPLAY_NAME: 'Old' },
+                    'eds-commerce-mesh': { MESH_X: 'edited here' },
+                },
+            });
 
-            // The catalog decides which keys count as secrets, so the wrong stack
-            // ids here mean a secret is written into the manifest in clear.
-            expect(getAvailableAppBuilderComponents).toHaveBeenCalledWith(
-                'accs',
-                'eds-storefront'
-            );
-        });
-
-        it('reads the catalog with empty ids when the project has no selections', async () => {
-            stateManager.getCurrentProject.mockResolvedValue(
-                edsProject('da-live-classic', { componentSelections: undefined })
-            );
-
-            await save(command).handleSaveConfiguration({ componentConfigs: {} });
-
-            expect(getAvailableAppBuilderComponents).toHaveBeenCalledWith('', '');
+            expect(project.componentConfigs).toEqual({
+                eds: { STORE_VIEW: 'main' },
+                'erp-integration': { ERP_DISPLAY_NAME: 'Nordwind' },
+                'eds-commerce-mesh': { MESH_X: 'edited here' },
+            });
         });
 
         it('hands the same configs to the storefront detector', async () => {

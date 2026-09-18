@@ -29,6 +29,7 @@ import PinOn from '@spectrum-icons/workflow/PinOn';
 import Play from '@spectrum-icons/workflow/Play';
 import Refresh from '@spectrum-icons/workflow/Refresh';
 import Revert from '@spectrum-icons/workflow/Revert';
+import Settings from '@spectrum-icons/workflow/Settings';
 import Stop from '@spectrum-icons/workflow/Stop';
 import UserAdmin from '@spectrum-icons/workflow/UserAdmin';
 import React from 'react';
@@ -54,6 +55,8 @@ const MENU_ICONS: Record<string, React.ReactElement> = {
     delete: <Delete size="S" />,
     /** API access/entitlements — a key reads as "what this is allowed to reach". */
     apiAccess: <Key size="S" />,
+    /** Values a person sets on a thing (an integration's Settings). */
+    settings: <Settings size="S" />,
     /** Try something out without it taking effect — the workbench's whole job. */
     measure: <Beaker size="S" />,
 };

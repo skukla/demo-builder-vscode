@@ -8258,7 +8258,7 @@
             "anchors": [
                 "const panel = BaseWebviewCommand.getActivePanel('demoBuilder.configureProject');"
             ],
-            "line": 93,
+            "line": 87,
             "mutants": 1,
             "category": "branch",
             "reason": "Stryker forces the following 'if (panel)' true. With no panel open the body then calls panel.dispose() on undefined, and the TypeError lands in the try/catch that already exists for the already-disposed case \u2014 so the mutant takes the same path to the same no-op. The false variant IS killed (a test asserts the open panel is disposed); only the always-true one is unobservable.",
@@ -8344,7 +8344,7 @@
             "anchors": [
                 "const value = getValueFromConfigs(field);"
             ],
-            "line": 124,
+            "line": 123,
             "mutants": 1,
             "category": "branch",
             "reason": "Stryker forces the following guard's second half ('value !== \"\"') true. getValueFromConfigs can never return an empty string: it returns findFieldValue's result, which skips empty values, or a foreign value guarded by the same non-empty test, or undefined. The half that CAN be false is the undefined check, and that one is killed.",
@@ -8377,24 +8377,11 @@
             "source": "PL-22 MUT-08"
         },
         {
-            "module": "src/features/dashboard/ui/configure/hooks/useConfigureFieldValues.ts",
-            "anchors": [
-                "[],"
-            ],
-            "line": 181,
-            "mutants": 1,
-            "category": "other",
-            "reason": "The empty useCallback dependency list of stageAppBuilderComponentValue. Stryker replaces it with a one-element array of its own constant string; React compares dependencies element-wise and that string equals itself on every render, so the callback stays memoised with the same identity \u2014 which is the only thing a dependency list decides.",
-            "decision": "none \u2014 the empty list says this callback closes over nothing",
-            "recorded": "2026-09-05",
-            "source": "PL-22 MUT-08"
-        },
-        {
             "module": "src/features/dashboard/handlers/appBuilderComponentHandlers.ts",
             "anchors": [
                 "if (result.success) {"
             ],
-            "line": 695,
+            "line": 680,
             "mutants": 7,
             "category": "branch",
             "reason": "The three-way tail of withComponentProgress writes one USER-log line per outcome and nothing else \u2014 no return value changes, no channel is pushed. Forcing any branch, or emptying any body, changes only which line prints, which is what the ratchet exists to refuse to reward. The outcome itself is asserted through the returned result and the row-status pushes.",
@@ -8419,7 +8406,7 @@
             "anchors": [
                 "success: false,"
             ],
-            "line": 481,
+            "line": 465,
             "mutants": 1,
             "category": "branch",
             "reason": "The Configure route's inner success flag never reaches a caller: the outer handler matches result.blocked first and returns its own { success: false, error }. Flipping it changes a value that is overwritten one frame later. Re-anchored 2026-09-10 (474 -> 475): unchanged code, shifted by the AB-7 cleanup-reporting block added to handleRemoveAppBuilderComponent.",
@@ -9667,7 +9654,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 1070,
+            "line": 1072,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single deps.logger.warn. Emptying it leaves the catch itself in place, so a failing remote teardown is swallowed exactly as before and the removal continues to clear local state - which the remove-contracts suite asserts directly with a rejecting executor. Only the log line differs.",
@@ -9693,7 +9680,7 @@
             "anchors": [
                 "if (cleared.componentApiPicks) {"
             ],
-            "line": 1217,
+            "line": 1219,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this guard true assigns cleared.componentApiPicks onto the caller's project when it is undefined. cleared is spread from that same project, so an undefined value there means the caller's field was already undefined and the assignment writes back exactly what was there. The mutation is a no-op for every input on which the guard was false.",
@@ -9706,7 +9693,7 @@
             "anchors": [
                 "if (cleared.componentConfigs) {"
             ],
-            "line": 1220,
+            "line": 1222,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this guard true assigns cleared.componentConfigs onto the caller's project when it is undefined. cleared is spread from that same project, so an undefined value there means the caller's field was already undefined and the assignment writes back exactly what was there. The mutation is a no-op for every input on which the guard was false.",
@@ -11754,7 +11741,7 @@
             "anchors": [
                 "if (this.config.enableLogging) {"
             ],
-            "line": 200,
+            "line": 204,
             "mutants": 3,
             "category": "block+branch",
             "reason": "The whole body of this guard is a logger call, so flipping the condition changes only whether a debug or warning line prints. Killing it would mean asserting a logger call's arguments, which pins wording rather than behaviour and is what the burn-down rules forbid. Nothing a caller or the webview receives moves, because the work it narrates happens outside the block. Here, the message is pushed onto the queue on the line after this block either way. Emptying the guarded block is the same argument from the other side: the body holds nothing the surrounding code does not already do, so removing it removes the log line and no behaviour.",
@@ -11767,7 +11754,7 @@
             "anchors": [
                 "if (this.config.enableLogging) {"
             ],
-            "line": 375,
+            "line": 379,
             "mutants": 3,
             "category": "block+branch",
             "reason": "The whole body of this guard is a logger call, so flipping the condition changes only whether a debug or warning line prints. Killing it would mean asserting a logger call's arguments, which pins wording rather than behaviour and is what the burn-down rules forbid. Nothing a caller or the webview receives moves, because the work it narrates happens outside the block. Here, it sits inside the timeout hint's catch, which is documented fire-and-forget, and the handler runs next regardless. Emptying the guarded block is the same argument from the other side: the body holds nothing the surrounding code does not already do, so removing it removes the log line and no behaviour.",
@@ -11780,7 +11767,7 @@
             "anchors": [
                 "if (this.config.enableLogging) {"
             ],
-            "line": 460,
+            "line": 464,
             "mutants": 3,
             "category": "block+branch",
             "reason": "The whole body of this guard is a logger call, so flipping the condition changes only whether a debug or warning line prints. Killing it would mean asserting a logger call's arguments, which pins wording rather than behaviour and is what the burn-down rules forbid. Nothing a caller or the webview receives moves, because the work it narrates happens outside the block. Here, the sleep and the recursive send that perform the retry are outside the block. Emptying the guarded block is the same argument from the other side: the body holds nothing the surrounding code does not already do, so removing it removes the log line and no behaviour.",
@@ -11793,7 +11780,7 @@
             "anchors": [
                 "if (this.config.enableLogging) {"
             ],
-            "line": 486,
+            "line": 490,
             "mutants": 3,
             "category": "block+branch",
             "reason": "The whole body of this guard is a logger call, so flipping the condition changes only whether a debug or warning line prints. Killing it would mean asserting a logger call's arguments, which pins wording rather than behaviour and is what the burn-down rules forbid. Nothing a caller or the webview receives moves, because the work it narrates happens outside the block. Here, it sits in sendRawMessage's catch immediately before an unconditional rethrow, so the caller sees the identical error. Emptying the guarded block is the same argument from the other side: the body holds nothing the surrounding code does not already do, so removing it removes the log line and no behaviour.",
@@ -11806,7 +11793,7 @@
             "anchors": [
                 "if (this.config.enableLogging && this.messageQueue.length > 0) {"
             ],
-            "line": 497,
+            "line": 501,
             "mutants": 7,
             "category": "block+branch",
             "reason": "Every survivor on this line changes only whether one debug line prints \u2014 the block holds a single logger.debug and nothing else. The flush itself happens on the three lines below, outside the guard, so the queued messages are copied, the queue cleared and each message sent whichever way the condition goes. Separating the versions would need an assertion on the logger's arguments. Emptying the guarded block is the same argument from the other side: the body holds nothing the surrounding code does not already do, so removing it removes the log line and no behaviour.",
@@ -11819,7 +11806,7 @@
             "anchors": [
                 "enableLogging: config.enableLogging !== false,"
             ],
-            "line": 139,
+            "line": 143,
             "mutants": 4,
             "category": "branch",
             "reason": "This field is read in exactly five places, and every one of them is a guard whose entire body is a logger call. So whatever value the mutation gives it, the only thing that changes is whether some debug or warning lines print \u2014 no message on the wire, no promise and no piece of manager state depends on it. Each of those five guards is itself recorded here for the same reason.",
@@ -11832,7 +11819,7 @@
             "anchors": [
                 "this.messageQueue = [];"
             ],
-            "line": 317,
+            "line": 321,
             "mutants": 1,
             "category": "other",
             "reason": "Nothing reads the queue after dispose. The only reader is flushMessageQueue, which runs once from the handshake completion handler, and that handler was registered with once() and deleted itself when it ran \u2014 a disposed manager cannot handshake again. Seeding the array rather than emptying it therefore leaves a value no code path can observe.",
@@ -11845,7 +11832,7 @@
             "anchors": [
                 "this.messageQueue = [];"
             ],
-            "line": 502,
+            "line": 506,
             "mutants": 1,
             "category": "other",
             "reason": "This assignment is what makes the flush non-repeating, but nothing flushes twice: flushMessageQueue is called only from the handshake completion handler, which once() deletes as it fires. So the array left behind here is read by nothing, and seeding it rather than emptying it cannot change a message sent or a piece of state observed.",
@@ -11858,7 +11845,7 @@
             "anchors": [
                 "}).catch((hintError) => {"
             ],
-            "line": 373,
+            "line": 377,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying this catch body leaves the catch itself in place, so the timeout hint's failure is still swallowed and the handler still runs next \u2014 which is the documented contract, the hint is explicitly fire-and-forget so it cannot block. The only thing inside the body is a guarded logger.warn, so the sole difference is whether a warning prints, and pinning that would mean asserting a logger call's arguments.",
@@ -12615,7 +12602,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 195,
+            "line": 196,
             "mutants": 1,
             "category": "other",
             "reason": "A useCallback dependency array of constants is compared element-wise with Object.is on every render, so a literal ['Stryker was here'] invalidates the memo exactly as often as [] does \u2014 never. The callback identity, and therefore everything downstream of it, is byte-for-byte the same either way. Verified by planting all eight at once: the five suites pass unchanged, and no assertion could distinguish them because there is nothing to distinguish.",
@@ -12628,7 +12615,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 199,
+            "line": 200,
             "mutants": 1,
             "category": "other",
             "reason": "A useCallback dependency array of constants is compared element-wise with Object.is on every render, so a literal ['Stryker was here'] invalidates the memo exactly as often as [] does \u2014 never. The callback identity, and therefore everything downstream of it, is byte-for-byte the same either way. Verified by planting all eight at once: the five suites pass unchanged, and no assertion could distinguish them because there is nothing to distinguish.",
@@ -12641,7 +12628,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 203,
+            "line": 204,
             "mutants": 1,
             "category": "other",
             "reason": "A useCallback dependency array of constants is compared element-wise with Object.is on every render, so a literal ['Stryker was here'] invalidates the memo exactly as often as [] does \u2014 never. The callback identity, and therefore everything downstream of it, is byte-for-byte the same either way. Verified by planting all eight at once: the five suites pass unchanged, and no assertion could distinguish them because there is nothing to distinguish.",
@@ -12654,7 +12641,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 207,
+            "line": 208,
             "mutants": 1,
             "category": "other",
             "reason": "A useCallback dependency array of constants is compared element-wise with Object.is on every render, so a literal ['Stryker was here'] invalidates the memo exactly as often as [] does \u2014 never. The callback identity, and therefore everything downstream of it, is byte-for-byte the same either way. Verified by planting all eight at once: the five suites pass unchanged, and no assertion could distinguish them because there is nothing to distinguish.",
@@ -12695,7 +12682,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 132,
+            "line": 124,
             "mutants": 1,
             "category": "other",
             "reason": "A useEffect/useCallback dependency array of constants is compared element-wise with Object.is on every render, so a literal ['Stryker was here'] invalidates the memo exactly as often as [] does \u2014 never. The subscription and the two handlers close over nothing, so identity is the only thing the array can affect and it does not move. Verified by planting all three at once: the sixteen configure suites pass unchanged.",
@@ -12708,7 +12695,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 152,
+            "line": 144,
             "mutants": 1,
             "category": "other",
             "reason": "A useEffect/useCallback dependency array of constants is compared element-wise with Object.is on every render, so a literal ['Stryker was here'] invalidates the memo exactly as often as [] does \u2014 never. The subscription and the two handlers close over nothing, so identity is the only thing the array can affect and it does not move. Verified by planting all three at once: the sixteen configure suites pass unchanged.",
@@ -12721,23 +12708,11 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 278,
+            "line": 263,
             "mutants": 1,
             "category": "other",
             "reason": "A useEffect/useCallback dependency array of constants is compared element-wise with Object.is on every render, so a literal ['Stryker was here'] invalidates the memo exactly as often as [] does \u2014 never. The subscription and the two handlers close over nothing, so identity is the only thing the array can affect and it does not move. Verified by planting all three at once: the sixteen configure suites pass unchanged.",
             "decision": "none \u2014 [] is the correct dependency list",
-            "recorded": "2026-09-06",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/features/dashboard/ui/configure/ConfigureScreen.tsx",
-            "anchors": [
-                "const EMPTY_CATALOG: AppBuilderComponentCatalogEntry[] = [];"
-            ],
-            "mutants": 1,
-            "category": "other",
-            "reason": "The default catalog reaches two places and neither can see a junk entry. buildAppBuilderComponentFieldGroups reads entry.envSchema, defaults it to [], finds no user or connected fields and skips the entry \u2014 so no section is built either way. ConfigureSectionBody filters the same list by entry.id against a real component id, which a placeholder string never matches. Verified by planting a one-element array: the rail is identical.",
-            "decision": "none \u2014 a shared empty default is what keeps the prop reference stable across renders",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-01"
         },

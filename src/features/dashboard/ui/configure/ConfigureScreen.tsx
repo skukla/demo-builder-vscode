@@ -19,7 +19,6 @@
 
 import { Form, Button, View } from '@adobe/react-spectrum';
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import { buildAppBuilderComponentFieldGroups } from './appBuilderComponentFieldModel';
 import { validateServiceGroups } from './configureFieldValidation';
 import { ConfigureSectionBody } from './ConfigureSectionBody';
 import { buildConfigureSections, toStepRailTabs } from './configureSections';
@@ -45,14 +44,11 @@ import { StoreConfigFieldRow } from '@/features/components/ui/components/StoreCo
 import { useAutoStoreDetect } from '@/features/components/ui/hooks/useAutoStoreDetect';
 import { useCredentialService } from '@/features/components/ui/hooks/useCredentialService';
 import { useStoreDiscovery } from '@/features/components/ui/hooks/useStoreDiscovery';
-import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AuthoringExperience } from '@/types/base';
 import { hasEntries } from '@/types/typeGuards';
 import type { DeploymentStatusPayload, ConfigureInitialData } from '@/types/webviewPayloads';
 
-/** Stable empty references for optional appBuilderComponent props (avoid hook churn). */
-const EMPTY_CATALOG: AppBuilderComponentCatalogEntry[] = [];
-const EMPTY_PROVIDED: Record<string, string> = {};
+/** Stable empty reference for an optional prop (avoid hook churn). */
 const EMPTY_SECRET_FLAGS: Record<string, Record<string, boolean>> = {};
 
 /**
@@ -77,9 +73,6 @@ export function ConfigureScreen({
     existingProjectNames = [],
     isEds = false,
     authoringExperience: initialAuthoringExperience,
-    appBuilderComponentCatalog = EMPTY_CATALOG,
-    providedEnvVars = EMPTY_PROVIDED,
-    appBuilderComponentSecretFlags = EMPTY_SECRET_FLAGS,
     componentSecretFlags = EMPTY_SECRET_FLAGS,
 }: ConfigureScreenProps) {
     const [authoringExperience, setAuthoringExperience] = useState<AuthoringExperience>(
@@ -118,7 +111,6 @@ export function ConfigureScreen({
         isFieldComplete,
         updateField,
         normalizeUrlField,
-        stageAppBuilderComponentValue,
     } = useConfigureFieldValues({ project, existingEnvValues });
 
     // Listen for deployment status updates from backend
@@ -193,12 +185,6 @@ export function ConfigureScreen({
         [validationErrors],
     );
 
-    // One App Builder render group per selected component that has visible fields.
-    const appBuilderGroups = useMemo(
-        () => buildAppBuilderComponentFieldGroups(appBuilderComponentCatalog, providedEnvVars),
-        [appBuilderComponentCatalog, providedEnvVars],
-    );
-
     // Validate project name — see projectNameError above; the rail reads it too.
     const sections = useMemo(
         () =>
@@ -206,11 +192,10 @@ export function ConfigureScreen({
                 serviceGroups,
                 isFieldComplete,
                 fieldHasError,
-                appBuilderGroups,
                 isEds,
                 isProjectNameValid: !projectNameError,
             }),
-        [serviceGroups, isFieldComplete, fieldHasError, appBuilderGroups, isEds, projectNameError],
+        [serviceGroups, isFieldComplete, fieldHasError, isEds, projectNameError],
     );
 
     // Sections come and go as components are configured, so the stored id can go stale;
@@ -374,11 +359,6 @@ export function ConfigureScreen({
                                 projectNameError={projectNameError}
                                 projectNameTouched={projectNameTouched}
                                 projectFolder={normalizeProjectName(projectName)}
-                                appBuilderComponentCatalog={appBuilderComponentCatalog}
-                                componentConfigs={componentConfigs}
-                                providedEnvVars={providedEnvVars}
-                                appBuilderComponentSecretFlags={appBuilderComponentSecretFlags}
-                                onAppBuilderValueChange={stageAppBuilderComponentValue}
                                 authoringExperience={authoringExperience}
                                 onAuthoringExperienceChange={setAuthoringExperience}
                             />

@@ -46,6 +46,7 @@ const MENU_ROWS: Partial<Record<CardAction, { label: string; icon: string }>> = 
     // The deliberate ones.
     open: { label: 'Open', icon: 'globe' },
     redeploy: { label: 'Redeploy', icon: 'redeploy' },
+    settings: { label: 'Settings', icon: 'settings' },
     'manage-apis': { label: 'Manage APIs', icon: 'apiAccess' },
     remove: { label: 'Remove', icon: 'delete' },
     'remove-anyway': { label: 'Remove anyway', icon: 'delete' },

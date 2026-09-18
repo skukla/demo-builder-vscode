@@ -14,7 +14,6 @@
 
 import { Text, Flex, Link, TextField, RadioGroup, Radio } from '@adobe/react-spectrum';
 import React from 'react';
-import { AppBuilderComponentFieldsSection } from './AppBuilderComponentFieldsSection';
 import { slicedSectionId, type ConfigureSection } from './configureSections';
 import type { ServiceGroup, UniqueField } from './configureTypes';
 import { ConfigSection } from '@/core/ui/components/forms/ConfigSection';
@@ -26,12 +25,7 @@ import {
     type ConnectStoreSection,
 } from '@/features/components/config/storeFieldHelpers';
 import { ServiceGroupList } from '@/features/components/ui/components/ServiceGroupList';
-import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AuthoringExperience } from '@/types/base';
-import type { ComponentConfigs } from '@/types/webview';
-
-/** The `appBuilderComponent-` prefix its section ids carry (see configureSections). */
-const APP_BUILDER_SECTION_PREFIX = 'appBuilderComponent-';
 
 export interface ConfigureSectionBodyProps {
     /** The section to draw. */
@@ -47,16 +41,6 @@ export interface ConfigureSectionBodyProps {
     projectNameTouched: boolean;
     /** The slug derived from the name, shown so the user can find it on disk. */
     projectFolder?: string;
-    /** Catalog entries for the project's selected appBuilderComponents. */
-    appBuilderComponentCatalog: AppBuilderComponentCatalogEntry[];
-    /** Current componentConfigs (App Builder text values live here). */
-    componentConfigs: ComponentConfigs;
-    /** Resolved provided env values (bucket-2 "connected" sources). */
-    providedEnvVars: Record<string, string>;
-    /** Per-appBuilderComponent "is set" flags for secret vars. */
-    appBuilderComponentSecretFlags: Record<string, Record<string, boolean>>;
-    /** Stage an App Builder value (text and secret share the staging path). */
-    onAppBuilderValueChange: (componentId: string, varName: string, value: string) => void;
     /**
      * Whether store discovery can run yet (connection fields filled).
      *
@@ -268,11 +252,6 @@ export function ConfigureSectionBody({
     projectNameError,
     projectNameTouched,
     projectFolder,
-    appBuilderComponentCatalog,
-    componentConfigs,
-    providedEnvVars,
-    appBuilderComponentSecretFlags,
-    onAppBuilderValueChange,
     storeStructureReady,
     authoringExperience,
     onAuthoringExperienceChange,
@@ -295,22 +274,6 @@ export function ConfigureSectionBody({
             <AuthoringBody
                 value={authoringExperience}
                 onChange={onAuthoringExperienceChange}
-            />
-        );
-    }
-
-    if (section.kind === 'appBuilderComponent') {
-        // The section id is the entry id with a prefix; narrowing the catalog to that one
-        // entry makes the (unchanged) group renderer draw exactly one group.
-        const entryId = section.id.slice(APP_BUILDER_SECTION_PREFIX.length);
-        return (
-            <AppBuilderComponentFieldsSection
-                catalog={appBuilderComponentCatalog.filter((entry) => entry.id === entryId)}
-                configs={componentConfigs}
-                provided={providedEnvVars}
-                secretFlags={appBuilderComponentSecretFlags}
-                onTextChange={onAppBuilderValueChange}
-                onSecretChange={onAppBuilderValueChange}
             />
         );
     }

@@ -73,6 +73,10 @@ const REQUEST_TIMEOUTS: Record<string, number> = {
     // and often succeeded — the 2026-07-31 failure above, in a different message.
     'check-github-app': TIMEOUTS.LONG, // 180s - may trigger a code sync and poll it
 
+    // An integration's Settings (AB-21): the save redeploys what uses the change,
+    // up to two app deploys in a row (the ERP, then its integration).
+    saveIntegrationSettings: TIMEOUTS.EXTENDED, // 600s - store, then up to two redeploys
+
     // Project deletion (EDS cleanup involves multiple external APIs)
     deleteProject: TIMEOUTS.LONG, // 180s - DA.live + GitHub + local cleanup
 

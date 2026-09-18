@@ -132,12 +132,19 @@ ERP** adds the key to the link in the extension (`systemScreen.ts`), so it never
 webview, a log, the project file or an agent. An ERP deployed before the screen existed
 answers "Redeploy it to add one."
 
-The ERP's name is an input on the tile ("ERP name", default Acme ERP), editable in Configure
-Project; it names the ERP's row and the ERP calls itself that.
+The ERP's name is a setting of the ERP integration ("ERP name", default Acme ERP). It is
+changed in the integration's **Settings** — the tile's menu, or the flyout's Settings row —
+and saving redeploys the ERP and then the integration, since a setting reaches an app only
+through its deploy. The ERP reads the integration's value, so the name is set in one place;
+it names the ERP's row and the ERP calls itself that. Configure Project holds project
+settings only (AB-21).
 
 ## For agents
 
 `get_erp_status` reads the ERP's health as the integration sees it plus both rows.
+`get_integration_settings` reads the integration's settings, and `set_integration_settings`
+changes a text setting (the ERP's name) and redeploys; a secret setting is entered on the
+tile, never passed to a tool.
 `open_erp_screen` (confirm-gated, like `open_url`) opens the ERP's screen; it answers the
 address and never the key.
 `reset_erp_records` (confirm-gated, with a consent dialog) runs the reset. The existing

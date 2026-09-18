@@ -123,6 +123,18 @@ jest.mock('@/features/dashboard/ui/components/ManageApisModal', () => ({
         ) : null,
 }));
 
+// The Settings modal has its own suite; a stub proves the grid opens ONE instance
+// for the acting card, with that card's settings, and closes it.
+jest.mock('@/features/dashboard/ui/components/IntegrationSettingsModal', () => ({
+    IntegrationSettingsModal: ({ target, onClose }: any) =>
+        target ? (
+            <div data-testid="settings-modal" data-component-id={target.id}>
+                settings: {target.name} ({target.settings.fields.map((f: any) => f.label).join(', ')})
+                <button onClick={onClose}>close-settings</button>
+            </div>
+        ) : null,
+}));
+
 // Deliberately below the jest.mock calls (the aiHandlers.testUtils precedent):
 // babel-plugin-jest-hoist lifts them above every import, so the component
 // module always loads against the mocks.

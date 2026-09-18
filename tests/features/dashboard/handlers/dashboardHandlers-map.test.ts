@@ -198,7 +198,11 @@ describe('dashboardHandlers', () => {
             // updateAppBuilderComponent + checkIntegrationUpdates (42 → 44,
             // AB-13 step 5): Update fetches the newer code before it redeploys,
             // and the integrations screen asks which integrations have any.
-            expect(types).toHaveLength(44);
+            //
+            // getIntegrationSettings + saveIntegrationSettings (44 → 46, AB-21): an
+            // integration's Settings — the read, and the save that stores the change
+            // and redeploys what uses it.
+            expect(types).toHaveLength(46);
         });
 
         it('should have handlers as functions', () => {

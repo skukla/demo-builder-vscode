@@ -2,10 +2,10 @@
  * Configure Section Model
  *
  * ONE ordered list of everything the Configure screen renders. Before this, sections
- * came from three unrelated sources — the service groups (`useServiceGroups`), two
- * hardcoded blocks in `ConfigureScreen` ("Project" and the EDS-only "Authoring"), and
- * one per App Builder catalog entry (`AppBuilderComponentFieldsSection`) — and only the
- * service groups reached the nav. The "Sections" sidebar was therefore not the list of
+ * came from unrelated sources — the service groups (`useServiceGroups`) and two
+ * hardcoded blocks in `ConfigureScreen` ("Project" and the EDS-only "Authoring") — and
+ * only the service groups reached the nav. (An integration's settings are not here:
+ * they live on its tile, AB-21.) The "Sections" sidebar was therefore not the list of
  * sections on screen. A rail has to show every section, so they had to become one list.
  *
  * Pure: no React, no DOM. The service groups arrive ALREADY filtered and sorted by
@@ -15,7 +15,6 @@
  * @module features/dashboard/ui/configure/configureSections
  */
 
-import type { AppBuilderComponentFieldGroup } from './appBuilderComponentFieldModel';
 import type { ServiceGroup, UniqueField } from './configureTypes';
 import type { StepTab } from '@/core/ui/components/navigation/StepRail';
 import {
@@ -24,12 +23,12 @@ import {
     type ConnectStoreSection,
 } from '@/features/components/config/storeFieldHelpers';
 
-/** Which of the four sources a section came from. Callers should not need to care. */
-export type ConfigureSectionKind = 'project' | 'serviceGroup' | 'appBuilderComponent' | 'authoring';
+/** Which of the three sources a section came from. Callers should not need to care. */
+export type ConfigureSectionKind = 'project' | 'serviceGroup' | 'authoring';
 
 /** One configurable section of the Configure screen, whatever its source. */
 export interface ConfigureSection {
-    /** The existing anchor id (`project-info`, `<group.id>`, `appBuilderComponent-<id>`, `authoring-experience`). */
+    /** The existing anchor id (`project-info`, `<group.id>`, `authoring-experience`). */
     id: string;
     /** Tab / heading label. */
     label: string;
@@ -57,8 +56,6 @@ export interface BuildConfigureSectionsInput {
     isFieldComplete: (field: UniqueField) => boolean;
     /** Whether a field currently carries a validation error (keys of `validationErrors`). */
     fieldHasError: (field: UniqueField) => boolean;
-    /** App Builder render groups from `buildAppBuilderComponentFieldGroups`. */
-    appBuilderGroups: AppBuilderComponentFieldGroup[];
     /** EDS project — gates the Authoring section. */
     isEds: boolean;
     /** The project name is set and passes validation. */
@@ -162,17 +159,15 @@ function toSlicedSection(
 /**
  * Build the ordered list of every section the Configure screen renders.
  *
- * Order matches the render order: Project → service groups → App Builder components →
- * Authoring.
+ * Order matches the render order: Project → service groups → Authoring.
  *
- * @param input - The four sources plus the two flags that gate them
+ * @param input - The sources plus the flags that gate them
  * @returns Ordered sections; always at least the Project section
  */
 export function buildConfigureSections({
     serviceGroups,
     isFieldComplete,
     fieldHasError,
-    appBuilderGroups,
     isEds,
     isProjectNameValid,
 }: BuildConfigureSectionsInput): ConfigureSection[] {
@@ -222,16 +217,6 @@ export function buildConfigureSections({
             continue;
         }
         sections.push(toServiceGroupSection(group, isFieldComplete, fieldHasError));
-    }
-
-    // App Builder inputs are not validated anywhere today — `canSave` walks the service
-    // groups only, so no App Builder field can block Save. Reporting these sections
-    // complete keeps the rail honest about what the app actually enforces; inventing a
-    // gate here would mark tabs incomplete that Save cheerfully ignores.
-    for (const group of appBuilderGroups) {
-        sections.push(
-            unvalidatedSection(`appBuilderComponent-${group.id}`, group.label, 'appBuilderComponent'),
-        );
     }
 
     // Authoring is a single radio that always carries a value, so it has no required

@@ -34,6 +34,8 @@ const NEEDS_AUTH: Record<string, AuthProvider[] | false> = {
     start_demo: false,
     add_integration: ['adobe'],
     rename_integration: false,
+    // Stores the change, then redeploys through the guarded deploy path.
+    set_integration_settings: ['adobe'],
     set_console_apis: ['adobe'],
     set_project_destination: ['adobe'],
     deploy_integration: ['adobe'],
@@ -66,6 +68,8 @@ const INPUT_KEYS: Record<string, string[]> = {
     start_demo: [],
     add_integration: ['apis', 'id', 'instanceId', 'name', 'refreshCli', 'source'],
     rename_integration: ['id', 'name'],
+    // No `secrets`: a secret must never be a tool argument (AB-21).
+    set_integration_settings: ['id', 'values'],
     set_console_apis: ['apis', 'componentId'],
     set_project_destination: ['project', 'workspace'],
     deploy_integration: ['id', 'refreshCli'],

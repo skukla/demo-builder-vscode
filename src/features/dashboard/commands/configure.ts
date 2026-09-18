@@ -1,11 +1,6 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import {
-    loadAppBuilderComponentSecretFlags,
-    persistAppBuilderComponentSecrets,
-    splitAppBuilderComponentSecrets,
-} from '../handlers/appBuilderComponentSecrets';
 import { configureHandlers } from '../handlers/configureHandlers';
 import { mergeEnvValuesFromSources } from './configureEnvLoader';
 import { ProjectDashboardWebviewCommand } from './showDashboard';
@@ -16,11 +11,10 @@ import { COMPONENT_IDS } from '@/core/constants';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell/orgContextEnv';
-import { getProvidedEnvVars } from '@/core/state/appBuilderComponentState';
 import { getBundleUri } from '@/core/utils/bundleUri';
 import { parseEnvFile } from '@/core/utils/envParser';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
-import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
+import { keepIntegrationSettings } from '@/features/app-builder/services/componentSettings';
 import {
     loadDeclaredSecretFlags,
     migrateDeclaredSecrets,
@@ -199,20 +193,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
         const theme =
             vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
 
-        // AppBuilderComponent bucket-3/bucket-2 surface: the catalog for the project's
-        // selection, the provided ("connected") values, and the "is set" flags
-        // for secrets (booleans only — secret VALUES never travel to the webview).
-        const appBuilderComponentCatalog = getAvailableAppBuilderComponents(
-            project.componentSelections?.backend ?? '',
-            project.componentSelections?.frontend ?? '',
-        );
-        const providedEnvVars = getProvidedEnvVars(project);
-        const appBuilderComponentSecretFlags = await loadAppBuilderComponentSecretFlags(
-            appBuilderComponentCatalog,
-            project.path,
-            this.context.secrets,
-        );
-        // The same signal for COMPONENT-declared secrets. The webview cannot read
+        // Whether each COMPONENT-declared secret is stored. The webview cannot read
         // the keychain, and two things there depend on knowing a value exists: the
         // store-discovery trigger, and the password field, which would otherwise
         // render empty and let a blank be saved over a good credential.
@@ -230,9 +211,6 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
             existingProjectNames,
             isEds: isEdsProject(project),
             authoringExperience: resolveProjectAuthoringExperience(project),
-            appBuilderComponentCatalog,
-            providedEnvVars,
-            appBuilderComponentSecretFlags,
             componentSecretFlags,
         };
     }
@@ -267,29 +245,10 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
             // Handle project rename if name changed (re-keys path-keyed secrets)
             project = await this.renameProjectIfRequested(project, data.newProjectName);
 
-            // SECRET SAFETY (repo is PUBLIC): split appBuilderComponent `type:'secret'`
-            // values out of componentConfigs → VS Code SecretStorage BEFORE any
-            // detection/persistence/.env work. The sanitized configs (no secrets)
-            // are what every downstream path sees; secrets never reach the
-            // manifest, the .env file, or the change-detectors.
-            const appBuilderComponentCatalog = getAvailableAppBuilderComponents(
-                project.componentSelections?.backend ?? '',
-                project.componentSelections?.frontend ?? '',
-            );
-            const split = splitAppBuilderComponentSecrets(
-                data.componentConfigs,
-                appBuilderComponentCatalog,
-            );
-            // Values are all strings here (the Configure payload is text/secret
-            // strings); the split only deletes secret keys, so the narrow local
-            // ComponentConfigs shape is preserved.
-            const appBuilderSanitized = split.sanitizedConfigs as ComponentConfigs;
-            await persistAppBuilderComponentSecrets(
-                split.secrets,
-                project.path,
-                this.context.secrets,
-                this.logger,
-            );
+            // An integration's settings are set on its tile (AB-21), not here. This
+            // screen sends back every value it loaded, so without this a window
+            // opened before a Settings save would put the old values back.
+            const withoutIntegrations = keepIntegrationSettings(data.componentConfigs, project);
 
             // Same guarantee for COMPONENT-declared secrets (`secret: true` in
             // components.json) — the Commerce credentials. Write-through with a
@@ -297,7 +256,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
             // SecretStorage is proven to hold it, so it is never in neither place
             // (`.rptc/complete/component-secret-routing/`, phase 2).
             const migration = await migrateDeclaredSecrets(
-                appBuilderSanitized,
+                withoutIntegrations,
                 project.path,
                 this.context.secrets,
                 (line) => this.logger.info(`[Configure] ${line}`),

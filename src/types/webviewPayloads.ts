@@ -13,7 +13,7 @@
  * @module types/webviewPayloads
  */
 
-import type { AppBuilderComponentCatalogEntry } from './appBuilderComponents';
+import type { AppBuilderComponentCatalogEntry, ComponentSettings } from './appBuilderComponents';
 import type {
     AppBuilderComponentState,
     AuthoringExperience,
@@ -131,8 +131,8 @@ export interface AiOverviewInitialData {
 /**
  * The Configure screen's registry slice: the categorized component buckets
  * (registry entries pass through untransformed) plus the keyed env-var
- * definitions. No `appBuilder` bucket — that mechanism was removed
- * (`c98e5125`); App Builder fields flow via `appBuilderComponentCatalog`.
+ * definitions. No App Builder settings: an integration's settings live on its
+ * tile on the Integrations surface (AB-21), not here.
  */
 export interface ConfigureComponentsData {
     frontends: TransformedComponentDefinition[];
@@ -158,12 +158,6 @@ export interface ConfigureInitialData {
     isEds: boolean;
     /** Resolved authoring experience seeding the radio (EDS only). */
     authoringExperience: AuthoringExperience;
-    /** Catalog entries for the project's selected appBuilderComponents (bucket-3 inputs). */
-    appBuilderComponentCatalog: AppBuilderComponentCatalogEntry[];
-    /** Resolved provided env values (bucket-2 "connected" sources). */
-    providedEnvVars: Record<string, string>;
-    /** Per-appBuilderComponent "is set" flags for secret vars (booleans only, no values). */
-    appBuilderComponentSecretFlags: Record<string, Record<string, boolean>>;
     /**
      * Component-declared secrets this project holds, booleans only.
      *
@@ -191,6 +185,11 @@ export interface IntegrationsInitialData {
     commerceStoreStructure?: CommerceStoreStructure;
     /** Stack-filtered catalog for the add-integration picker. */
     appBuilderComponentCatalog: AppBuilderComponentCatalogEntry[];
+    /**
+     * Each component's Settings, keyed by id: only components that have
+     * something to set. Secrets as "is set" only, never a value.
+     */
+    componentSettings: Record<string, ComponentSettings>;
     /** Adobe project/workspace TITLES — the shared deploy destination banner. */
     destination: DestinationTitles;
     /** Committed destination ID — the add flow reads presence as a boolean. */

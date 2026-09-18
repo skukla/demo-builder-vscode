@@ -60,20 +60,6 @@ describe('useConfigureFieldValues', () => {
             );
         });
 
-        it('leaves it untouched when an App Builder value is staged', () => {
-            const existing = { 'erp-integration': { ERP_HOST: 'original.test' } };
-            const { result } = render(existing);
-
-            act(() =>
-                result.current.stageAppBuilderComponentValue(
-                    'erp-integration',
-                    'ERP_HOST',
-                    'edited.test'
-                )
-            );
-
-            expect(existing['erp-integration'].ERP_HOST).toBe('original.test');
-        });
 
         it('replaces the per-component object rather than editing it (the mechanism)', () => {
             const existing = { headless: { ADOBE_COMMERCE_URL: 'https://original.test' } };
@@ -154,46 +140,6 @@ describe('useConfigureFieldValues', () => {
             expect(result.current.componentConfigs.headless.ADOBE_COMMERCE_URL).toBe(
                 'https://commerce.test'
             );
-        });
-    });
-
-    describe('staging an App Builder component value', () => {
-        it('adds the value under the component own id', () => {
-            const { result } = render();
-
-            act(() => result.current.stageAppBuilderComponentValue('erp', 'ERP_HOST', 'erp.test'));
-
-            expect(result.current.componentConfigs.erp).toEqual({ ERP_HOST: 'erp.test' });
-        });
-
-        it('KEEPS the values already staged for that component', () => {
-            const { result } = render({ erp: { ERP_HOST: 'erp.test' } });
-
-            act(() => result.current.stageAppBuilderComponentValue('erp', 'ERP_KEY', 'k'));
-
-            expect(result.current.componentConfigs.erp).toEqual({
-                ERP_HOST: 'erp.test',
-                ERP_KEY: 'k',
-            });
-        });
-
-        it('keeps every OTHER component untouched', () => {
-            const { result } = render({ headless: { ADOBE_COMMERCE_URL: 'https://a.test' } });
-
-            act(() => result.current.stageAppBuilderComponentValue('erp', 'ERP_KEY', 'k'));
-
-            expect(result.current.componentConfigs.headless).toEqual({
-                ADOBE_COMMERCE_URL: 'https://a.test',
-            });
-        });
-
-        it('is referentially stable, so a memoised field does not re-render on every keystroke', () => {
-            const { result, rerender } = render();
-            const before = result.current.stageAppBuilderComponentValue;
-
-            rerender({ existingEnvValues: undefined });
-
-            expect(result.current.stageAppBuilderComponentValue).toBe(before);
         });
     });
 

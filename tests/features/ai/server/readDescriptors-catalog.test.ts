@@ -70,6 +70,13 @@ const CATALOG: Row[] = [
         args: ['id'],
     },
     {
+        tool: 'get_integration_settings',
+        map: dashboardHandlers,
+        type: 'getIntegrationSettings',
+        needsAuth: false,
+        args: ['id'],
+    },
+    {
         tool: 'list_console_apis',
         map: dashboardHandlers,
         type: 'listConsoleApis',

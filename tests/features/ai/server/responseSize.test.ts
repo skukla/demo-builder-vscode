@@ -377,6 +377,12 @@ describe('rows with no output safety net are classified', () => {
         // `handleOpenErpScreen` returns `{id, erp, screenUrl}` — fixed shape,
         // and never the key.
         'open_erp_screen',
+        // An integration's Settings (AB-21), read before listing:
+        // `handleGetIntegrationSettings` returns `{id, settings: {fields, connected}}`
+        // and `saveIntegrationSettings` returns `{success, saved, settings}` —
+        // fixed shapes, and never a secret's value.
+        'get_integration_settings',
+        'set_integration_settings',
     ];
 
     it('the set matches exactly — a new row must be classified before it ships', async () => {
@@ -493,6 +499,10 @@ describe('the ceiling table tracks the tool surface', () => {
         'reset_erp_records',
         // Three strings: the integration id, the ERP id and the screen address.
         'open_erp_screen',
+        // One row per setting the catalog entry declares — a handful, bounded by
+        // the entry, not by the project or the instance.
+        'get_integration_settings',
+        'set_integration_settings',
     ]);
 
     it('records a ceiling for every DESCRIPTOR tool that is not deliberately exempt', () => {

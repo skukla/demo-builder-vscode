@@ -9413,18 +9413,6 @@
             "equivalent": 2,
             "openGaps": 0
         },
-        "src/features/dashboard/ui/configure/AppBuilderComponentFieldsSection.tsx": {
-            "score": 100,
-            "killed": 31,
-            "survived": 0,
-            "noCoverage": 0,
-            "timeout": 0,
-            "survivorCategories": {},
-            "uncoveredCategories": {},
-            "highValueSurvivors": 0,
-            "equivalent": 0,
-            "openGaps": 0
-        },
         "src/core/ui/components/feedback/SuccessStateDisplay.tsx": {
             "score": 100,
             "killed": 4,

@@ -116,6 +116,19 @@ function stillUnset(project: Project): string[] {
 }
 
 /**
+ * The ids in an `env` payload that name one of the project's integrations or
+ * systems. Their settings belong to the integration's tile (AB-21), and a change
+ * reaches the app only through a redeploy, which this tool does not do. The mesh
+ * is not one: its fields are project configuration.
+ */
+function integrationIdsIn(project: Project, env: Record<string, unknown>): string[] {
+    return Object.keys(env).filter((id) => {
+        const component = project.appBuilderComponents?.[id];
+        return component !== undefined && component.kind !== 'mesh';
+    });
+}
+
+/**
  * Apply the payload to `project` in place.
  *
  * Extracted from the tool body purely to keep it under the complexity ceiling;
@@ -171,6 +184,15 @@ function applyToProject(
     }
 
     if (input.env) {
+        const integrations = integrationIdsIn(project, input.env as Record<string, unknown>);
+        if (integrations.length > 0) {
+            return {
+                error:
+                    `${integrations.join(', ')} is an integration. Its settings are changed with ` +
+                    'set_integration_settings (text) or in its Settings on its tile (secrets), ' +
+                    'which also redeploy it; configure_project only sets project settings.',
+            };
+        }
         project.componentConfigs = project.componentConfigs ?? {};
         const envApplied: Record<string, string[]> = {};
         for (const [componentId, vars] of Object.entries(

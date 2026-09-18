@@ -6,9 +6,9 @@
  * the only such values were the App Management IMS credentials. Two more kinds
  * exist now, and both resolve here so add and redeploy cannot drift on them:
  *
- *   - the entry's own TEXT inputs, from Configure (`componentConfigs[id]`), else
- *     from the integration a system is bound to (the SC typed the ERP's name once,
- *     on the integration), else the schema's `default`;
+ *   - the entry's TEXT settings (`componentConfigs[id]`, set on the integration's
+ *     tile): a bound system takes its integration's value first (the SC names the
+ *     ERP once, on the integration), then its own, then the schema's `default`;
  *   - the values another component PROVIDES (`envSchema[].providedBy`), read off
  *     the persisted `providesEnvVars` of every component in the project.
  *
@@ -29,8 +29,10 @@ const MESH_ENDPOINT = 'MESH_ENDPOINT';
 const WEB_SEGMENT = '/api/v1/web/';
 
 /**
- * The value of one text input for an entry: Configure's value for this
- * component, else the bound integration's, else the schema default.
+ * The value of one text input for an entry. A system bound to an integration
+ * reads the integration's value first: a setting both apps use is set once, on
+ * the integration's tile (AB-21), and an older copy on the system must not win.
+ * Then the entry's own value, then the schema default.
  */
 function textInputValue(
     project: Project,
@@ -38,11 +40,10 @@ function textInputValue(
     name: string,
     fallback: string | undefined,
 ): string | undefined {
-    const own = project.componentConfigs?.[entry.id]?.[name];
-    if (typeof own === 'string' && own.trim().length > 0) return own;
-    if (entry.boundTo) {
-        const consumer = project.componentConfigs?.[entry.boundTo]?.[name];
-        if (typeof consumer === 'string' && consumer.trim().length > 0) return consumer;
+    const owners = entry.boundTo ? [entry.boundTo, entry.id] : [entry.id];
+    for (const owner of owners) {
+        const value = project.componentConfigs?.[owner]?.[name];
+        if (typeof value === 'string' && value.trim().length > 0) return value;
     }
     return fallback;
 }
@@ -55,7 +56,10 @@ function textInputValue(
  * deploy's; and a `providedBy` var whose provider is not deployed is caught by
  * `findMissingProvider` before this runs.
  *
- * @param project - the project (Configure values and provided values)
+ * Secret settings are not read here: they live in SecretStorage and join the
+ * deploy env through `resolveSecretInputs` (`componentSettingSecrets`).
+ *
+ * @param project - the project (settings and provided values)
  * @param entry - the entry being deployed
  * @returns name → value, only for names that resolved
  */

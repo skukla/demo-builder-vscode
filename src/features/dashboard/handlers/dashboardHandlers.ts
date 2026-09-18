@@ -65,6 +65,10 @@ import {
     handleReinstallAppBuilderComponent,
 } from '@/features/dashboard/handlers/appManagementInstallHandlers';
 import {
+    handleGetIntegrationSettings,
+    handleSaveIntegrationSettings,
+} from '@/features/dashboard/handlers/componentSettingsHandlers';
+import {
     handleAddConsoleApis,
     handleListConsoleApis,
     handleSetConsoleApis,
@@ -283,6 +287,10 @@ export const dashboardHandlers = defineHandlers({
     getErpStatus: handleGetErpStatus,
     resetErpRecords: handleResetErpRecords,
     openErpScreen: handleOpenErpScreen,
+    // An integration's Settings (AB-21): the read, and the save that stores then
+    // redeploys.
+    getIntegrationSettings: handleGetIntegrationSettings,
+    saveIntegrationSettings: handleSaveIntegrationSettings,
 
     // Console API access (runtime API subscription — list_console_apis / add_console_apis)
     listConsoleApis: handleListConsoleApis,

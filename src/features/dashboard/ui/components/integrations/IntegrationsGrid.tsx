@@ -6,7 +6,8 @@
  * plus every non-face action in the slide-in detail drawer.
  *
  * The grid owns exactly one instance each of the drawer, the add modal, the
- * remove, reset, reinstall and remove-anyway confirms, and the Manage-APIs modal
+ * remove, reset, reinstall and remove-anyway confirms, the Manage-APIs modal and
+ * the Settings modal
  * (no per-card dialogs, no cross-card state leak), and ONE `handleAction` switch — the single place a
  * card model turns into an id-scoped message or a mesh callback:
  *   - mesh card    → onDeployMesh / onReAuthenticate (never keyed messages)
@@ -24,13 +25,16 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { AppBuilderComponentRemoveDialog } from '../AppBuilderComponentRemoveDialog';
 import { ErpResetDialog } from '../ErpResetDialog';
+import { IntegrationSettingsModal } from '../IntegrationSettingsModal';
 import { ManageApisModal } from '../ManageApisModal';
 import { FlaggedCardDialogs, needsReinstall, removalStopped } from './FlaggedCardDialogs';
 import { type CardAction, type IntegrationCardModel } from './integrationCardModel';
 import { IntegrationDetailPanel } from './IntegrationDetailPanel';
 import { useFlaggedCardDialog } from './useFlaggedCardDialog';
+import { useIntegrationSettings } from './useIntegrationSettings';
 import { IntegrationCard } from '@/core/ui/components/integrations/IntegrationCard';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import type { ComponentSettings } from '@/types/appBuilderComponents';
 
 export interface IntegrationsGridProps {
     /**
@@ -49,7 +53,11 @@ export interface IntegrationsGridProps {
      * the detail panel. The page header names it once above the grid.
      */
     destinationLabel?: string;
+    /** Each component's Settings (AB-21), from the init payload. */
+    componentSettings?: Record<string, ComponentSettings>;
 }
+
+const NO_SETTINGS: Record<string, ComponentSettings> = {};
 
 /**
  * Integration actions that are plain id-scoped posts. Retry rides Deploy;
@@ -121,11 +129,14 @@ async function requestRename(id: string, name: string): Promise<string | null> {
 
 /** The integrations card grid + its hosted drawer, modals, and confirm dialog. */
 export function IntegrationsGrid({
-    cards,
+    cards: derivedCards,
     onDeployMesh,
     onReAuthenticate,
     destinationLabel,
+    componentSettings = NO_SETTINGS,
 }: IntegrationsGridProps): React.ReactElement {
+    const settings = useIntegrationSettings(derivedCards, componentSettings);
+    const { cards, open: openSettings } = settings;
     const [selectedId, setSelectedId] = useState<string | null>(null);
     // One dialog/modal instance for the whole grid; the pending id identifies
     // the card awaiting confirmation (no per-card dialog, no state leak).
@@ -197,6 +208,10 @@ export function IntegrationsGrid({
                 handleMeshAction(action);
                 return;
             }
+            if (action === 'settings') {
+                openSettings(model);
+                return;
+            }
             if (action === 'manage-apis') {
                 setManageApis({ id: model.componentId ?? model.id, name: model.name });
                 return;
@@ -214,7 +229,7 @@ export function IntegrationsGrid({
                 webviewClient.postMessage(message, { id: model.id });
             }
         },
-        [handleMeshAction, openReinstall, openRemoveAnyway],
+        [handleMeshAction, openReinstall, openRemoveAnyway, openSettings],
     );
 
     // The mesh's teardown reaches past itself: removeAppBuilderComponent
@@ -288,6 +303,12 @@ export function IntegrationsGrid({
                 componentId={manageApis?.id}
                 componentName={manageApis?.name ?? ''}
                 onClose={() => setManageApis(null)}
+            />
+
+            <IntegrationSettingsModal
+                target={settings.target}
+                onClose={settings.close}
+                onSaved={settings.saved}
             />
 
             <ErpResetDialog

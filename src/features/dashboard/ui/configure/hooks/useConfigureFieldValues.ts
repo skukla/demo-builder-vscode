@@ -52,7 +52,6 @@ export interface UseConfigureFieldValuesReturn {
     /** Trim a URL field's trailing slash on blur. */
     normalizeUrlField: (field: UniqueField) => void;
     /** Stage an App Builder component's value under its own component id. */
-    stageAppBuilderComponentValue: (componentId: string, varName: string, value: string) => void;
 }
 
 /**
@@ -167,20 +166,6 @@ export function useConfigureFieldValues({
         [touchedFields, backendId],
     );
 
-    // Stage an App Builder component's bucket-3 value under its own id. Text values flow
-    // through save-configuration → .env unchanged. Secret values ride the SAME payload
-    // transiently, but the backend (splitAppBuilderComponentSecrets) lifts them into
-    // SecretStorage and strips them before anything reaches the .env/manifest.
-    const stageAppBuilderComponentValue = useCallback(
-        (componentId: string, varName: string, value: string) => {
-            setComponentConfigs((prev) => ({
-                ...prev,
-                [componentId]: { ...(prev[componentId] ?? {}), [varName]: value },
-            }));
-        },
-        [],
-    );
-
     // Trim a URL's trailing slash on blur for visual feedback. The backend normalizes
     // again when it writes the .env, so this is cosmetic rather than load-bearing.
     const normalizeUrlField = useCallback(
@@ -210,6 +195,5 @@ export function useConfigureFieldValues({
         isFieldComplete,
         updateField,
         normalizeUrlField,
-        stageAppBuilderComponentValue,
     };
 }

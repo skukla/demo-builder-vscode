@@ -112,6 +112,7 @@ export function IntegrationsScreen({
     adobeWorkspaceId,
     adobeOrgId,
     commerceStoreStructure,
+    componentSettings,
 }: IntegrationsScreenProps): React.ReactElement {
     // No props: the four values read here depend on the status pushes alone.
     // `hasAdobeContext` reaches only the hook's org-check state, which this
@@ -330,6 +331,7 @@ export function IntegrationsScreen({
                         onDeployMesh={handleDeployMesh}
                         onReAuthenticate={handleReAuthenticate}
                         destinationLabel={destinationLabel}
+                        componentSettings={componentSettings}
                     />
                 )}
 

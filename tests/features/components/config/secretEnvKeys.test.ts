@@ -60,7 +60,7 @@ describe('SECRET_ENV_KEYS covers every credential in the catalog', () => {
 
     it('does not claim App Builder component secrets', () => {
         // Those are `type: 'secret'` in the appBuilder catalog and are routed to
-        // SecretStorage by splitAppBuilderComponentSecrets before anything reaches
+        // SecretStorage by the integration's Settings save, never through
         // componentConfigs. Listing them here would imply the export is what keeps
         // them safe, which would be the wrong mental model to leave behind.
         for (const key of SECRET_ENV_KEYS) {

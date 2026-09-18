@@ -307,6 +307,20 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
         },
     },
     {
+        tool: 'get_integration_settings',
+        needsAuth: false,
+        readOnly: true,
+        description:
+            "Read one integration's Settings: each setting's current value, whether each secret " +
+            'is stored (never its value), and the settings another app provides. Use before ' +
+            'set_integration_settings. An integration with nothing to set returns empty lists.',
+        map: dashboardHandlers,
+        type: 'getIntegrationSettings',
+        inputSchema: {
+            id: z.string().describe('The integration id (from get_project)'),
+        },
+    },
+    {
         tool: 'list_console_apis',
         needsAuth: ['adobe'],
         readOnly: true,

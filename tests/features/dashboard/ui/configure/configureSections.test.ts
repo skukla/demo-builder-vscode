@@ -26,7 +26,6 @@ import {
     PAAS_STORE_CODE,
     PAAS_WEBSITE_CODE,
 } from '@/core/config/envVarKeys';
-import type { AppBuilderComponentFieldGroup } from '@/features/dashboard/ui/configure/appBuilderComponentFieldModel';
 import type { ServiceGroup, UniqueField } from '@/features/dashboard/ui/configure/configureTypes';
 
 /** A UniqueField built from the real env-var definitions in the shared fixtures. */
@@ -62,14 +61,6 @@ const CATALOG_GROUP: ServiceGroup = {
     fields: [field('ADOBE_CATALOG_API_KEY', ['catalog-service'])],
 };
 
-const APP_BUILDER_GROUP: AppBuilderComponentFieldGroup = {
-    id: 'eds-commerce-mesh',
-    label: 'EDS Commerce Mesh',
-    textFields: [{ name: 'ERP_URL', type: 'text', label: 'ERP URL' }],
-    secretFields: [],
-    connectedFields: [],
-};
-
 /** Everything complete — the default for tests that are not about completeness. */
 const allComplete = () => true;
 /** Nothing invalid — the default for tests that are not about errors. */
@@ -79,20 +70,18 @@ const baseInput = {
     serviceGroups: [COMMERCE_GROUP, CATALOG_GROUP],
     isFieldComplete: allComplete,
     fieldHasError: noErrors,
-    appBuilderGroups: [APP_BUILDER_GROUP],
     isEds: true,
     isProjectNameValid: true,
 };
 
 describe('buildConfigureSections', () => {
     describe('order and kinds', () => {
-        it('returns Project → service groups → App Builder components → Authoring', () => {
+        it('returns Project → service groups → Authoring', () => {
             const sections = buildConfigureSections(baseInput);
             expect(sections.map((s) => s.kind)).toEqual([
                 'project',
                 'serviceGroup',
                 'serviceGroup',
-                'appBuilderComponent',
                 'authoring',
             ]);
         });
@@ -103,7 +92,6 @@ describe('buildConfigureSections', () => {
                 'project-info',
                 'adobe-commerce',
                 'catalog-service',
-                'appBuilderComponent-eds-commerce-mesh',
                 'authoring-experience',
             ]);
         });
@@ -114,7 +102,6 @@ describe('buildConfigureSections', () => {
                 'Project',
                 'Adobe Commerce',
                 'Catalog Service',
-                'EDS Commerce Mesh',
                 'Authoring',
             ]);
         });
@@ -135,31 +122,10 @@ describe('buildConfigureSections', () => {
         it('emits exactly one section per service group handed in, and no others', () => {
             const sections = buildConfigureSections({
                 ...baseInput,
-                appBuilderGroups: [],
                 isEds: false,
             });
             expect(sections.filter((s) => s.kind === 'serviceGroup')).toHaveLength(2);
             expect(sections).toHaveLength(3); // + Project
-        });
-
-        it('emits one section per App Builder field group', () => {
-            const second: AppBuilderComponentFieldGroup = {
-                ...APP_BUILDER_GROUP,
-                id: 'custom-app',
-                label: 'Custom App',
-            };
-            const sections = buildConfigureSections({
-                ...baseInput,
-                appBuilderGroups: [APP_BUILDER_GROUP, second],
-            });
-            expect(
-                sections.filter((s) => s.kind === 'appBuilderComponent').map((s) => s.id)
-            ).toEqual(['appBuilderComponent-eds-commerce-mesh', 'appBuilderComponent-custom-app']);
-        });
-
-        it('emits no App Builder sections when no component has visible fields', () => {
-            const sections = buildConfigureSections({ ...baseInput, appBuilderGroups: [] });
-            expect(sections.some((s) => s.kind === 'appBuilderComponent')).toBe(false);
         });
 
         it('includes Authoring only for EDS projects', () => {
@@ -173,7 +139,6 @@ describe('buildConfigureSections', () => {
             const sections = buildConfigureSections({
                 ...baseInput,
                 serviceGroups: [],
-                appBuilderGroups: [],
                 isEds: false,
             });
             expect(sections).toEqual([
@@ -254,14 +219,6 @@ describe('buildConfigureSections', () => {
             });
         });
 
-        it('reports App Builder sections complete — nothing gates Save on them today', () => {
-            const sections = buildConfigureSections({ ...baseInput, isFieldComplete: () => false });
-            expect(sections.find((s) => s.kind === 'appBuilderComponent')).toMatchObject({
-                requiredTotal: 0,
-                requiredComplete: 0,
-                isComplete: true,
-            });
-        });
     });
 
     describe('errors', () => {
@@ -360,7 +317,6 @@ describe('buildConfigureSections', () => {
             buildConfigureSections({
                 ...baseInput,
                 serviceGroups: [SCOPED_COMMERCE],
-                appBuilderGroups: [],
                 isEds: false,
             });
 
@@ -420,7 +376,6 @@ describe('buildConfigureSections', () => {
             const sections = buildConfigureSections({
                 ...baseInput,
                 serviceGroups: [accs],
-                appBuilderGroups: [],
                 isEds: false,
             });
 
@@ -461,7 +416,7 @@ describe('toStepRailTabs', () => {
     it('marks every section reachable — the active one current, the rest done', () => {
         const sections = buildConfigureSections(baseInput);
         const tabs = toStepRailTabs(sections, 'catalog-service');
-        expect(tabs.map((t) => t.status)).toEqual(['done', 'done', 'current', 'done', 'done']);
+        expect(tabs.map((t) => t.status)).toEqual(['done', 'done', 'current', 'done']);
     });
 
     it('carries each section id and label onto the tab', () => {

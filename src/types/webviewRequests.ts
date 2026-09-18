@@ -13,10 +13,12 @@
  * @module types/webviewRequests
  */
 
+import type { ComponentSettings } from './appBuilderComponents';
 import type { AdobeConfig } from './base';
 import type { CustomBlockLibrary } from './blockLibraries';
 import type { CommerceStoreStructure } from './commerceStore';
 import type { ComponentConfigs, EnvVarDefinition, ServiceDefinition } from './components';
+import type { ErrorCode } from './errorCodes';
 import type { GitHubRepoItem } from './webview';
 import type { GitHubUser } from './webviewPayloads';
 
@@ -391,6 +393,30 @@ export interface SetProjectDestinationRequestPayload {
     project?: DestinationRef;
     workspace?: DestinationRef;
 }
+
+/**
+ * `saveIntegrationSettings` — change an integration's Settings from its tile, then
+ * redeploy what uses them. Secrets travel here once, from the masked field to
+ * SecretStorage; they never come back.
+ */
+export interface SaveIntegrationSettingsRequestPayload {
+    id?: string;
+    /** Text settings to set, by var name. */
+    values?: Record<string, string>;
+    /** Secret settings to store, by var name. */
+    secrets?: Record<string, string>;
+}
+
+/** What `saveIntegrationSettings` answers. (A type, not an interface, so it is a HandlerResponse.) */
+export type SaveIntegrationSettingsResult = {
+    success: boolean;
+    error?: string;
+    code?: ErrorCode;
+    /** The change was stored (it may still have failed to redeploy). */
+    saved?: boolean;
+    /** The component's settings after the save. */
+    settings?: ComponentSettings;
+};
 
 /**
  * `addAppBuilderComponent` — add (and deploy) an App Builder integration on a

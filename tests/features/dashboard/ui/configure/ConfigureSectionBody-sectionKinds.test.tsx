@@ -18,7 +18,6 @@
 import { fireEvent, screen } from '@testing-library/react';
 import React from 'react';
 import '@testing-library/jest-dom';
-import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 
 jest.mock('@adobe/react-spectrum', () => ({
     TextField: ({ label, description, errorMessage }: any) => (
@@ -54,15 +53,6 @@ jest.mock('@/core/ui/utils/WebviewClient', () => ({
     webviewClient: { postMessage: (...a: unknown[]) => mockPostMessage(...a) },
 }));
 
-/** Records the props the App Builder section is handed — the narrowing is in them. */
-const appBuilderProps: Record<string, unknown>[] = [];
-jest.mock('@/features/dashboard/ui/configure/AppBuilderComponentFieldsSection', () => ({
-    AppBuilderComponentFieldsSection: (props: Record<string, unknown>) => {
-        appBuilderProps.push(props);
-        return <div data-testid="app-builder-fields" />;
-    },
-}));
-
 // Below the mocks deliberately: testUtils owns the component import, so every
 // mock above has to be registered before this line runs.
 import {
@@ -73,15 +63,11 @@ import {
     serviceGroupSection,
 } from './ConfigureSectionBody.testUtils';
 
-const entry = (id: string): AppBuilderComponentCatalogEntry =>
-    ({ id, name: id, description: id }) as AppBuilderComponentCatalogEntry;
-
 const PROJECT_SECTION = sectionOf('project', 'project-info', 'Project');
 const AUTHORING_SECTION = sectionOf('authoring', 'authoring-experience', 'Authoring');
 
 beforeEach(() => {
     jest.clearAllMocks();
-    appBuilderProps.length = 0;
 });
 
 describe('the Project section', () => {
@@ -168,52 +154,6 @@ describe('the Authoring section', () => {
         fireEvent.click(screen.getByRole('link'));
 
         expect(mockPostMessage).toHaveBeenCalledWith('open-eds-settings');
-    });
-});
-
-describe('an App Builder component section', () => {
-    /** The rail's id for a component tab is the entry id behind a fixed prefix. */
-    const componentSection = (entryId: string) =>
-        sectionOf('appBuilderComponent', `appBuilderComponent-${entryId}`, entryId);
-
-    it('hands the section its OWN entry and no other', () => {
-        renderSectionBody({
-            section: componentSection('citisignal-erp'),
-            appBuilderComponentCatalog: [entry('citisignal-erp'), entry('citisignal-crm')],
-        });
-
-        expect(screen.getByTestId('app-builder-fields')).toBeInTheDocument();
-        expect(appBuilderProps).toHaveLength(1);
-        expect(appBuilderProps[0].catalog).toStrictEqual([entry('citisignal-erp')]);
-    });
-
-    it('hands it the configs, provided values and secret flags it draws from', () => {
-        const onAppBuilderValueChange = jest.fn();
-        renderSectionBody({
-            section: componentSection('citisignal-erp'),
-            appBuilderComponentCatalog: [entry('citisignal-erp')],
-            componentConfigs: { 'citisignal-erp': { ERP_URL: 'https://erp.example.com' } },
-            providedEnvVars: { ERP_TOKEN: 'from-mesh' },
-            appBuilderComponentSecretFlags: { 'citisignal-erp': { ERP_TOKEN: true } },
-            onAppBuilderValueChange,
-        });
-
-        expect(appBuilderProps[0]).toMatchObject({
-            configs: { 'citisignal-erp': { ERP_URL: 'https://erp.example.com' } },
-            provided: { ERP_TOKEN: 'from-mesh' },
-            secretFlags: { 'citisignal-erp': { ERP_TOKEN: true } },
-            onTextChange: onAppBuilderValueChange,
-            onSecretChange: onAppBuilderValueChange,
-        });
-    });
-
-    it('narrows to nothing when the catalog no longer holds that entry', () => {
-        renderSectionBody({
-            section: componentSection('citisignal-erp'),
-            appBuilderComponentCatalog: [entry('citisignal-crm')],
-        });
-
-        expect(appBuilderProps[0].catalog).toStrictEqual([]);
     });
 });
 

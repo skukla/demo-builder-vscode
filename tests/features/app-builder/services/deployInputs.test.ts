@@ -68,6 +68,19 @@ describe('resolveDeployInputs', () => {
         expect(resolveDeployInputs(project, SYSTEM)).toEqual({ ERP_DISPLAY_NAME: 'Nordwind' });
     });
 
+    it("the integration's value wins over an old one set on the bound system", () => {
+        // Configure Project once edited each app's copy on its own tab, so the two could
+        // disagree. The setting now lives on the integration's tile only (AB-21), and a
+        // stale copy on the ERP must not keep the old name on its screen.
+        const project = createMockProject({
+            componentConfigs: {
+                'erp-integration': { ERP_DISPLAY_NAME: 'Nordwind' },
+                'demo-erp': { ERP_DISPLAY_NAME: 'Old name' },
+            },
+        });
+        expect(resolveDeployInputs(project, SYSTEM)).toEqual({ ERP_DISPLAY_NAME: 'Nordwind' });
+    });
+
     it('a provided var comes from the provider component that is already deployed; secrets never ride the env', () => {
         const project = createMockProject({
             appBuilderComponents: {

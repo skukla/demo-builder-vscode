@@ -236,7 +236,7 @@ describe('handleAddAppBuilderComponent', () => {
         );
     });
 
-    it('routes to Configure FIRST when the entry needs bucket-3 user inputs', async () => {
+    it('refuses an entry that needs values, deploys nothing and opens nothing', async () => {
         const { mockContext } = setupMocks();
         mockTestDeveloperPermissions(true);
         mockGetAppBuilderComponentEntry.mockReturnValue({
@@ -244,19 +244,21 @@ describe('handleAddAppBuilderComponent', () => {
             envSchema: [{ name: 'ERP_API_KEY', type: 'secret', label: 'ERP API Key' }],
         });
 
-        await handleAddAppBuilderComponent(mockContext, { id: 'erp-sync' });
+        const result = await handleAddAppBuilderComponent(mockContext, { id: 'erp-sync' });
 
-        // Routed to Configure, not silently deployed with a missing secret.
+        // Not deployed with a missing secret, and no panel: Configure Project no
+        // longer holds integration settings (AB-21); the add that asks for them
+        // is AB-22.
         const vscode = require('vscode');
-        expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.configureProject');
+        expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith('demoBuilder.configureProject');
         expect(mockAddAppBuilderComponent).not.toHaveBeenCalled();
+        expect(result).toMatchObject({ success: false });
+        expect(result.error).toMatch(/not supported yet\. Nothing was added\.$/);
     });
 
-    // This branch used to return `{success: true}` for opening a panel and adding
-    // NOTHING. Neither the grid, an agent, nor a human reading the transcript
-    // could tell that from a completed add. It is the defect the `needsUser`
-    // handoff convention was written against.
-    it('does NOT report success for the Configure route — nothing was added', async () => {
+    // Refusing must never read as success: neither the grid, an agent, nor a
+    // human reading the transcript could tell that from a completed add.
+    it('does NOT report success for an entry that needs values — nothing was added', async () => {
         const { mockContext } = setupMocks();
         mockTestDeveloperPermissions(true);
         mockGetAppBuilderComponentEntry.mockReturnValue({
@@ -274,7 +276,7 @@ describe('handleAddAppBuilderComponent', () => {
 
     // `blocked`, like a guard refusal: nothing ran, so the row must not be
     // painted red as though a deploy had failed.
-    it('does not post an error row status for the Configure route', async () => {
+    it('does not post an error row status for an entry that needs values', async () => {
         const { mockContext } = setupMocks();
         mockTestDeveloperPermissions(true);
         mockGetAppBuilderComponentEntry.mockReturnValue({

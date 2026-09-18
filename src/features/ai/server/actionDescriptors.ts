@@ -7,25 +7,15 @@
  */
 
 import { z } from 'zod';
-import { needsUser } from './handoff';
 import type { ToolDescriptor } from './toolDescriptors';
 import { aiHandlers } from '@/features/dashboard/handlers/aiHandlers';
-import {
-    resolveAddEntry,
-    userSuppliedEnvVars,
-} from '@/features/dashboard/handlers/appBuilderComponentHandlers';
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
 import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
 import { meshHandlers } from '@/features/mesh/handlers/meshHandlers';
 import { prerequisitesHandlers } from '@/features/prerequisites/handlers/prerequisitesHandlers';
 import { projectsListHandlers } from '@/features/projects-dashboard/handlers/projectsListHandlers';
 
-/**
- * The add payload, as `handleAddAppBuilderComponent` reads it.
- *
- * Shared by the tool's `inputSchema` and its preflight, so the schema cannot
- * describe one shape while the preflight resolves another.
- */
+/** The add payload, as `handleAddAppBuilderComponent` reads it. */
 const addIntegrationSchema = {
     id: z
         .string()
@@ -60,48 +50,6 @@ const addIntegrationSchema = {
         .describe('Adobe sdk codes to subscribe for THIS integration (from list_console_apis)'),
 };
 
-/**
- * Refuse a bucket-3 add BEFORE it dispatches, and say where the values go.
- *
- * `handleAddAppBuilderComponent` routes an entry whose `envSchema` declares
- * user-supplied vars to Configure rather than deploying with blanks — by running
- * `demoBuilder.configureProject`. Dispatched from an agent that would open a
- * panel in the user's editor for a call they did not make, and hand back nothing
- * they could act on. Answering here means the handler never runs.
- *
- * Resolution and classification come from the handler's own exports, so the two
- * paths cannot decide differently about the same payload.
- *
- * MEASURED 2026-08-17: no entry in the shipped catalog declares such a var, so
- * this returns `undefined` for every add available today. It is the guard that
- * has to exist before the first one is authored, not a live branch.
- */
-function addIntegrationPreflight(
-    args: Record<string, unknown>,
-): Record<string, unknown> | undefined {
-    const entry = resolveAddEntry(args as Parameters<typeof resolveAddEntry>[0]);
-    // An unknown id is the HANDLER's error to report; answering here would say
-    // "enter values" for a component that does not exist.
-    if (!entry) return undefined;
-
-    const { names, hasSecret } = userSuppliedEnvVars(entry);
-    if (names.length === 0) return undefined;
-
-    const label = entry.name ?? entry.id;
-    const listed = names.join(', ');
-    return needsUser({
-        reason: hasSecret ? 'secret-entry' : 'config-entry',
-        what: `Enter ${listed} for ${label} in Demo Builder`,
-        where: { command: 'demoBuilder.configureProject' },
-        tellUser:
-            `${label} needs ${listed}, which Demo Builder collects on its own form — ` +
-            `${hasSecret ? 'and a secret must not be sent through the agent. ' : ''}` +
-            'Open Configure Project, enter the values, then ask me to add it again. ' +
-            'Nothing has been added yet.',
-        resumeWith: 'get_component_requirements',
-    });
-}
-
 export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
     {
         tool: 'regenerate_ai_files',
@@ -135,7 +83,6 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         // Not confirm-gated, matching deploy_integration: an add is additive and
         // re-runnable (a failed add keeps its folder so the user can retry), and
         // remove_integration — which undeploys remotely — carries the gate instead.
-        preflight: addIntegrationPreflight,
     },
     {
         tool: 'rename_integration',
@@ -247,6 +194,26 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
                 .describe(
                     'Consent to refresh the Adobe CLI and retry, when a previous attempt failed with an out-of-date-toolchain hint. CONFIRM WITH THE USER FIRST — this updates their global `@adobe/aio-cli` install. Never pass it pre-emptively.',
                 ),
+        },
+    },
+    {
+        tool: 'set_integration_settings',
+        needsAuth: ['adobe'],
+        readOnly: false,
+        description:
+            "Change one integration's text Settings (from get_integration_settings), then " +
+            'redeploy it, and first its ERP when the ERP uses the same setting, because a ' +
+            'setting reaches an app only through its deploy. Takes minutes. Secret settings ' +
+            'cannot be set here: a secret must never be a tool argument, so ask the user to ' +
+            "enter it in the integration's Settings on its tile. Confirm the change with the " +
+            'user first.',
+        map: dashboardHandlers,
+        type: 'saveIntegrationSettings',
+        inputSchema: {
+            id: z.string().describe('The integration id (from get_project)'),
+            values: z
+                .record(z.string(), z.string())
+                .describe('Text settings to change, by name (from get_integration_settings)'),
         },
     },
     {

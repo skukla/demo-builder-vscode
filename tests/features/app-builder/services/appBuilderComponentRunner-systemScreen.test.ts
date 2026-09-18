@@ -21,7 +21,9 @@ import {
     deployAppBuilderComponent,
     removeAppBuilderComponent,
 } from '@/features/app-builder/services/appBuilderComponentRunner';
-import { ensureScreenKeyEnv, forgetScreenKey } from '@/features/app-builder/services/systemScreen';
+import { resolveSecretDeployEnv } from '@/features/app-builder/services/componentSettingSecrets';
+import { forgetScreenKey } from '@/features/app-builder/services/systemScreen';
+import { secretKey } from '@/features/app-builder/services/secretKey';
 import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
 import { createDeps, createProject } from './appBuilderComponentRunner.testUtils';
 
@@ -41,7 +43,10 @@ const INTEGRATION: AppBuilderComponentCatalogEntry = {
     description: 'the integration',
     kind: 'integration',
     layout: 'extension',
-    envSchema: [{ name: 'ERP_BASE_URL', type: 'text', label: 'ERP address', providedBy: 'demo-erp' }],
+    envSchema: [
+        { name: 'ERP_BASE_URL', type: 'text', label: 'ERP address', providedBy: 'demo-erp' },
+        { name: 'ERP_API_KEY', type: 'secret', label: 'ERP API key' },
+    ],
     source: { owner: 'skukla', repo: 'commerce-erp-integration', branch: 'main' },
 };
 
@@ -67,7 +72,7 @@ function wired() {
     const deps = createDeps({
         deployApp,
         catalog: [SYSTEM, INTEGRATION],
-        resolveScreenEnv: (project, entry) => ensureScreenKeyEnv(secrets, project.path, entry),
+        resolveSecretEnv: (project, entry) => resolveSecretDeployEnv(secrets, project.path, entry),
         forgetScreenKey: (project, entry) => forgetScreenKey(secrets, project.path, entry),
     });
     return { deps, deployApp, store };
@@ -90,6 +95,19 @@ describe('a component with its own screen', () => {
         expect(stored).toHaveLength(1);
         expect(erpCall[4].extraEnv).toEqual({ ERP_SCREEN_KEY: stored[0] });
         expect(integrationCall[4].extraEnv).not.toHaveProperty('ERP_SCREEN_KEY');
+    });
+
+    it("hands the integration's deploy its secret setting from SecretStorage, and never persists it", async () => {
+        const project = createProject();
+        const { deps, deployApp, store } = wired();
+        store.set(secretKey(project.path, 'erp-integration', 'ERP_API_KEY'), 'fake-test-pw-not-a-secret');
+
+        await addAppBuilderComponent(project, INTEGRATION, deps);
+
+        const [, integrationCall] = deployApp.mock.calls as unknown as DeployCall[];
+        expect(integrationCall[4].extraEnv).toMatchObject({ ERP_API_KEY: 'fake-test-pw-not-a-secret' });
+        const saved = JSON.stringify((deps.saveProject as jest.Mock).mock.calls);
+        expect(saved).not.toContain('fake-test-pw-not-a-secret');
     });
 
     it('records the screen as the ERP address, whatever the deploy listed first', async () => {

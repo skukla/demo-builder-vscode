@@ -266,7 +266,7 @@ describe('spine choke-points', () => {
         const spine = [
             'features/eds/services/helix/helixKeyStore.ts',
             'features/eds/services/github/githubTokenService.ts',
-            'features/dashboard/handlers/appBuilderComponentSecrets.ts',
+            'features/app-builder/services/componentSettingSecrets.ts',
             'features/components/services/commerceSecretMigration.ts',
         ];
 

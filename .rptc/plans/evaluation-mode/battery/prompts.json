@@ -886,6 +886,24 @@
         "why": "2026-09-16: the ERP serves its own screen from an action, opened with a key only the extension holds, so the agent has to use the tool rather than hand the user a URL."
     },
     {
+        "id": "integration-settings-read",
+        "prompt": "What is my ERP integration's ERP called, and which of its settings still need a value?",
+        "expect": [
+            "get_integration_settings"
+        ],
+        "cwd": "project",
+        "why": "AB-21 (2026-09-18): an integration's settings moved to its tile, so the agent reads them through the integration's own settings tool rather than configure_project or get_project."
+    },
+    {
+        "id": "integration-settings-set",
+        "prompt": "Rename the ERP behind my ERP integration to Nordwind so its screen shows the new name.",
+        "expect": [
+            "set_integration_settings"
+        ],
+        "cwd": "project",
+        "why": "AB-21: the ERP's name is a setting on the ERP integration, and it reaches the ERP only through a redeploy, which set_integration_settings runs; rename_integration would change only a label."
+    },
+    {
         "id": "delete-workspace",
         "prompt": "Delete the 'scratch' workspace from my Adobe project.",
         "expect": [

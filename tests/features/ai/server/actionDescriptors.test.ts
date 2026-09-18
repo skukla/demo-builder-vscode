@@ -7,7 +7,6 @@
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
 import { meshHandlers } from '@/features/mesh/handlers/meshHandlers';
 import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
-import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { projectsListHandlers } from '@/features/projects-dashboard/handlers/projectsListHandlers';
 import type { ToolDescriptor } from '@/features/ai/server/toolDescriptors';
 
@@ -246,52 +245,6 @@ describe('ACTION_DESCRIPTORS', () => {
             // Additive and re-runnable (a failed add keeps its folder for retry) —
             // NOT confirm-gated, same as deploy_integration.
             expect(d!.confirm).toBeUndefined();
-        });
-    });
-
-    /**
-     * The preflight against the REAL catalog.
-     *
-     * Its handoff content is asserted in actionDescriptors-preflight.test.ts, which
-     * mocks the loader — because MEASURED 2026-08-17, no entry in the shipped
-     * catalog declares a user-supplied env var: 5 ids across all 4 stacks
-     * (`headless-commerce-mesh`, `eds-commerce-mesh`, `eds-accs-mesh`,
-     * `app-builder-shell`) plus a custom GitHub source, all with empty
-     * `userText`/`userSecret`. So the bucket-3 branch cannot fire today.
-     *
-     * That is exactly why this test is here rather than being folded into the
-     * mocked one: it pins the CURRENT state, so the day someone authors a
-     * pre-built integration with an `ERP_API_KEY`-style var, it fails and points
-     * at the tool that now has a handoff to return.
-     */
-    describe('add_integration preflight — against the shipped catalog', () => {
-        const preflight = (args: Record<string, unknown>) =>
-            row('add_integration')!.preflight!(args);
-
-        it('dispatches every real catalog id — none needs user inputs today', () => {
-            const ids = getAvailableAppBuilderComponents('', '').map((e) => e.id);
-            // Control: an empty list would make the loop below vacuously true.
-            expect(ids.length).toBeGreaterThan(0);
-            for (const id of ids) {
-                expect(preflight({ id })).toBeUndefined();
-            }
-        });
-
-        it('dispatches an unknown id so the HANDLER reports it, not the preflight', () => {
-            // A preflight that swallowed unknown ids would answer "enter values"
-            // for a component that does not exist.
-            expect(preflight({ id: 'no-such-component' })).toBeUndefined();
-        });
-
-        it('resolves a custom GitHub source the same way an add payload does', () => {
-            // A custom source has no envSchema, so it dispatches — but it must
-            // RESOLVE without throwing, which is the half a catalog-only
-            // preflight would get wrong.
-            expect(preflight({ source: { owner: 'acme', repo: 'widget' } })).toBeUndefined();
-        });
-
-        it('dispatches an empty payload rather than throwing', () => {
-            expect(preflight({})).toBeUndefined();
         });
     });
 });

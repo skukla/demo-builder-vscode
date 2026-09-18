@@ -30,6 +30,7 @@ import type { AppManagementAuth } from '@/features/app-builder/services/appManag
 import { installAppManagementApp } from '@/features/app-builder/services/appManagementInstaller';
 import { uninstallAppManagementApp } from '@/features/app-builder/services/appManagementUninstaller';
 import { readAppManifestVersion } from '@/features/app-builder/services/appManifestVersion';
+import { resolveSecretDeployEnv } from '@/features/app-builder/services/componentSettingSecrets';
 import { deployAppComponentIsolated } from '@/features/app-builder/services/deployAppIsolated';
 import { subscriberTarget } from '@/features/app-builder/services/ensureMeshApiSubscribed';
 import { detachErpWrites } from '@/features/app-builder/services/erpDetach';
@@ -40,7 +41,7 @@ import {
 } from '@/features/app-builder/services/integrationSourceUpdate';
 import { buildS2SDeployEnv } from '@/features/app-builder/services/s2sDeployEnv';
 import { wipeSystemRecords } from '@/features/app-builder/services/systemRecordsWipe';
-import { ensureScreenKeyEnv, forgetScreenKey } from '@/features/app-builder/services/systemScreen';
+import { forgetScreenKey } from '@/features/app-builder/services/systemScreen';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { ComponentManager } from '@/features/components/services/componentManager';
@@ -216,7 +217,7 @@ export function buildDefaultRunnerDeps(
                 getAuth: () => resolveAppManagementAuth(project, ctx.authManager),
                 onProgress,
             }),
-        resolveScreenEnv: (project, entry) => ensureScreenKeyEnv(ctx.secrets, project.path, entry),
+        resolveSecretEnv: (project, entry) => resolveSecretDeployEnv(ctx.secrets, project.path, entry),
         forgetScreenKey: (project, entry) => forgetScreenKey(ctx.secrets, project.path, entry),
         // The AIO_COMMERCE_AUTH_IMS_* deploy env for app-management entries:
         // the workspace S2S credential's full identity (ensured + read via the

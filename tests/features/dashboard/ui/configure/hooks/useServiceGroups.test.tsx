@@ -165,9 +165,9 @@ describe('useServiceGroups', () => {
      * and sorted ABOVE the required field it derives from — so the field a user
      * reaches for first was the one the generator intends to compute.
      *
-     * The house already treats derived vars this way: the App Builder field model
-     * drops its `derivedFrom` bucket entirely rather than rendering it
-     * (`appBuilderComponentFieldModel.ts:40`). The wizard does not show this field
+     * The house already treats derived vars this way: an integration's Settings
+     * drop a `derivedFrom` var entirely rather than rendering it
+     * (`componentSettings.ts` `editableSettingsOf`). The wizard does not show this field
      * either. Configure was the outlier.
      */
     describe('useServiceGroups — derived fields', () => {

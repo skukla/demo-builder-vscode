@@ -21,6 +21,14 @@ silently if you don't know them. Learned the hard way shipping the blank shell
   `envSchema` var with a `default` never blocks the add. Text inputs and provided values
   reach the deploy through the process env (`resolveDeployInputs`), the same way the S2S
   credentials do — catalog repos ship no `.env`.
+  **Settings (AB-21).** A person-set `envSchema` var is an integration SETTING, edited in
+  the Settings modal on its tile (`componentSettings.ts`, `componentSettingsHandlers.ts`),
+  never on Configure Project. Text values live in `componentConfigs[id]`; secrets in
+  SecretStorage (`componentSettingSecrets.ts`), joining the deploy env via
+  `resolveSecretEnv`. A bound system reads its integration's value FIRST, so a var both
+  declare is set once, on the integration. Saving redeploys (`redeployOrder`), because a
+  setting reaches an app only through its deploy. Agents use `get_integration_settings` /
+  `set_integration_settings` (text only).
   **No runtime validation** — the loader (`appBuilderComponentCatalogLoader.ts`) is a plain
   cast; the schema is documentation plus one structural Jest test.
 - **Omitted axes match EVERYTHING.** `compatibleBackends`/`compatibleFrontends` left out

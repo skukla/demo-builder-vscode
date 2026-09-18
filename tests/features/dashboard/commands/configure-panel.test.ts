@@ -14,9 +14,7 @@ import * as vscode from 'vscode';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
-import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { loadDeclaredSecretFlags } from '@/features/components/services/commerceSecretMigration';
-import { loadAppBuilderComponentSecretFlags } from '@/features/dashboard/handlers/appBuilderComponentSecrets';
 import type { Logger } from '@/types/logger';
 import { internals } from '../../../helpers/commandInternals';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
@@ -25,17 +23,6 @@ import { createMockProject } from '../../../helpers/projectFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockWebviewPanel } from '../../../helpers/webviewPanelFake';
 
-jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => ({
-    getAvailableAppBuilderComponents: jest.fn(() => []),
-}));
-jest.mock('@/core/state/appBuilderComponentState', () => ({
-    getProvidedEnvVars: jest.fn(() => ({ MESH_ENDPOINT: 'https://mesh.test' })),
-}));
-jest.mock('@/features/dashboard/handlers/appBuilderComponentSecrets', () => ({
-    loadAppBuilderComponentSecretFlags: jest.fn(async () => ({ API_KEY: true })),
-    persistAppBuilderComponentSecrets: jest.fn(),
-    splitAppBuilderComponentSecrets: jest.fn(),
-}));
 jest.mock('@/features/components/services/commerceSecretMigration', () => ({
     loadDeclaredSecretFlags: jest.fn(async () => ({ COMMERCE_PASSWORD: true })),
     migrateDeclaredSecrets: jest.fn(),
@@ -258,26 +245,12 @@ describe('ConfigureProjectWebviewCommand - panel lifecycle and initial data', ()
             expect(data.theme).toBe('light');
         });
 
-        it('passes the project stack ids to the App Builder catalog', async () => {
-            stateManager.getCurrentProject.mockResolvedValue(
-                createMockProject({
-                    componentSelections: { backend: 'accs', frontend: 'eds-storefront' },
-                })
-            );
+        it("sends no integration settings: those live on each integration's tile (AB-21)", async () => {
+            const data = await internals(command).getInitialData<Record<string, unknown>>();
 
-            await internals(command).getInitialData();
-
-            expect(getAvailableAppBuilderComponents).toHaveBeenCalledWith('accs', 'eds-storefront');
-        });
-
-        it('sends empty stack ids — not undefined — when the project has no selections', async () => {
-            stateManager.getCurrentProject.mockResolvedValue(
-                createMockProject({ componentSelections: undefined })
-            );
-
-            await internals(command).getInitialData();
-
-            expect(getAvailableAppBuilderComponents).toHaveBeenCalledWith('', '');
+            expect(data).not.toHaveProperty('appBuilderComponentCatalog');
+            expect(data).not.toHaveProperty('appBuilderComponentSecretFlags');
+            expect(data).not.toHaveProperty('providedEnvVars');
         });
 
         it('asks for declared-secret flags for exactly the configured components', async () => {
@@ -326,15 +299,10 @@ describe('ConfigureProjectWebviewCommand - panel lifecycle and initial data', ()
 
         it('forwards the secret FLAGS (never the values) the webview needs', async () => {
             const data = await internals(command).getInitialData<{
-                appBuilderComponentSecretFlags: Record<string, boolean>;
                 componentSecretFlags: Record<string, boolean>;
-                providedEnvVars: Record<string, string>;
             }>();
 
-            expect(loadAppBuilderComponentSecretFlags).toHaveBeenCalled();
-            expect(data.appBuilderComponentSecretFlags).toEqual({ API_KEY: true });
             expect(data.componentSecretFlags).toEqual({ COMMERCE_PASSWORD: true });
-            expect(data.providedEnvVars).toEqual({ MESH_ENDPOINT: 'https://mesh.test' });
         });
 
         it('passes the registry component categories through untouched', async () => {

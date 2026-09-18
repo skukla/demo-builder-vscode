@@ -154,9 +154,7 @@ export async function runGuards(
 /**
  * Resolve the catalog entry from an add payload (catalog id OR custom source).
  *
- * Exported for the same reason as {@link userSuppliedEnvVars}: `add_integration`'s
- * preflight must resolve the payload EXACTLY as this handler will, or it decides
- * about a different component than the one that would be added.
+ * Exported so its tests can pin both doors (catalog id and custom source).
  */
 export function resolveAddEntry(payload: {
     id?: string;
@@ -195,18 +193,12 @@ export interface UserSuppliedEnvVars {
  * excluded — naming one would send the user hunting for a value another
  * component supplies.
  *
- * Exported because `add_integration`'s descriptor preflight
- * (`actionDescriptors.ts`) must reach the SAME verdict this handler does, one
- * step earlier. Two copies of that rule would be two things that must agree
- * while nothing makes them: the tool would dispatch, the handler would refuse,
- * and the panel the preflight exists to suppress would open anyway.
+ * Exported so its tests can pin the classification directly.
  */
 export function userSuppliedEnvVars(entry: AppBuilderComponentCatalogEntry): UserSuppliedEnvVars {
     const { userText, userSecret } = classifyEnvSchema(entry.envSchema ?? []);
     // A text var WITH a default needs nobody: the deploy uses the default and
-    // Configure lets the SC change it later (the ERP's display name). Stopping
-    // the add for it would send the user to Configure to confirm a value that
-    // is already there.
+    // the integration's Settings let the SC change it later (the ERP's name).
     const mustType = userText.filter((envVar) => envVar.default === undefined);
     return {
         names: [...mustType, ...userSecret].map((envVar) => envVar.name),
@@ -335,7 +327,7 @@ export async function postComponentsSnapshot(context: HandlerContext): Promise<v
 }
 
 /**
- * Handle 'addAppBuilderComponent' — guards → (bucket-3 → Configure) → assemble deps →
+ * Handle 'addAppBuilderComponent' — guards → (needs values → refuse) → assemble deps →
  * D1 addAppBuilderComponent. The FIRST live UI-driven full add.
  */
 /**
@@ -461,27 +453,20 @@ export const handleAddAppBuilderComponent: MessageHandler<
                 return refused;
             }
 
-            // Bucket-3 inputs → Configure FIRST (never silently deploy with missing inputs).
-            //
-            // This used to return `{success: true}` for opening a panel and adding
-            // NOTHING. The grid painted a component that was not there, and once
-            // the same handler became the `add_integration` tool an agent had no
-            // way to tell the route from a completed add — it is the defect the
-            // `needsUser` convention was written against (`ai/server/handoff.ts`).
-            //
-            // `blocked`, like a guard refusal: nothing ran and nothing persisted,
-            // so the caller must not take the failed-op path (error row + snapshot).
-            // The AGENT path never reaches here — `add_integration`'s preflight
-            // answers with the handoff before dispatching, so no panel opens for a
-            // call the user did not make.
+            // An entry with a setting nobody can default cannot deploy until someone
+            // types it, and adding one is not supported yet: the add that puts it on
+            // the grid undeployed and opens its Settings is AB-22. Refuse plainly
+            // rather than deploy with blanks. No shipped catalog entry declares such
+            // a setting. `blocked`, like a guard refusal: nothing ran and nothing
+            // persisted, so the caller must not take the failed-op path.
             const userVars = userSuppliedEnvVars(entry);
             if (userVars.names.length > 0) {
-                await vscode.commands.executeCommand('demoBuilder.configureProject');
                 return {
                     success: false,
                     error:
                         `"${entry.name ?? entry.id}" needs ${userVars.names.join(', ')} before it ` +
-                        'can be added. Enter the values in Configure Project, then add it again.',
+                        'can deploy, and adding an integration that needs values is not ' +
+                        'supported yet. Nothing was added.',
                     blocked: true,
                 };
             }

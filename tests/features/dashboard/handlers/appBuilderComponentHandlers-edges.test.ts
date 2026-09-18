@@ -214,7 +214,7 @@ describe('the same-source gate on extension-layout apps', () => {
     });
 });
 
-describe('the Configure route for bucket-3 inputs', () => {
+describe('an entry that needs values before it can deploy', () => {
     const NEEDS_INPUT = {
         ...ERP_ENTRY,
         envSchema: [{ name: 'ERP_API_KEY', type: 'secret', label: 'ERP API Key' }],

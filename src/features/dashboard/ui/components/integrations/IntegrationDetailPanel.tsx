@@ -180,6 +180,17 @@ function PanelContent({
                         </Link>
                     </PanelRow>
                 )}
+                {/* The integration's Settings, in one line, with the way to change
+                    them (AB-21). A menu item alone was not obvious (owner,
+                    2026-09-18); the same item is in the header's menu. */}
+                {model.settingsSummary !== undefined && (
+                    <PanelRow label="Settings">
+                        <span>{model.settingsSummary}</span>
+                        <Link isQuiet onPress={() => onAction(model, 'settings')}>
+                            Edit settings
+                        </Link>
+                    </PanelRow>
+                )}
                 {/* ONE row, not the former Kind + Source pair. They printed the same
                     fact in two registers — worst on the blank starter, where
                     "Custom · blank starter" sat directly above "Blank starter — build

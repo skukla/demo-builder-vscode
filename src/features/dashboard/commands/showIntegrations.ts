@@ -33,7 +33,9 @@ import { dispatchHandler, getRegisteredTypes } from '@/core/handlers/dispatchHan
 import { getBundleUri } from '@/core/utils/bundleUri';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
 import { asDisplayName, getProjectDisplayName } from '@/core/utils/projectDisplayName';
+import { loadProjectComponentSettings } from '@/features/app-builder/services/componentSettingSecrets';
 import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
+import { settingsCatalogOf } from '@/features/dashboard/handlers/componentSettingsHandlers';
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
 import { addIntegrationFlowHandlers } from '@/features/project-creation/handlers/addIntegrationFlowHandlers';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
@@ -80,7 +82,7 @@ export class ShowIntegrationsCommand extends BaseWebviewCommand<IntegrationsInit
 
     /**
      * Seeds the grid: the keyed component map, the stack-filtered catalog for the
-     * add picker, and the shared deploy destination (project + workspace TITLES,
+     * add picker, each integration's Settings, and the shared deploy destination (project + workspace TITLES,
      * which the manifest carries — the banner names where every integration in
      * this project deploys).
      */
@@ -93,13 +95,23 @@ export class ShowIntegrationsCommand extends BaseWebviewCommand<IntegrationsInit
         // `ProjectDisplayName`, so `project.name` here stops compiling at the
         // return statement.
         const projectName = project ? getProjectDisplayName(project) : asDisplayName('');
+        const catalog = this.resolveCatalog(project ?? null);
         return {
             theme,
             projectName,
             hasAdobeContext: Boolean(project?.adobe?.organization),
             appBuilderComponents: project?.appBuilderComponents,
             commerceStoreStructure: project?.commerceStoreStructure,
-            appBuilderComponentCatalog: this.resolveCatalog(project ?? null),
+            appBuilderComponentCatalog: catalog,
+            // Each integration's Settings (AB-21): values, and for secrets only
+            // whether one is stored.
+            componentSettings: project
+                ? await loadProjectComponentSettings(
+                      project,
+                      settingsCatalogOf(project),
+                      this.context.secrets,
+                  )
+                : {},
             destination: {
                 projectTitle: project?.adobe?.projectTitle,
                 workspaceTitle: project?.adobe?.workspaceTitle,

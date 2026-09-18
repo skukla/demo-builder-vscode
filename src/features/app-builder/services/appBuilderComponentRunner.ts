@@ -230,11 +230,12 @@ export interface AppBuilderComponentRunnerDeps extends TeardownDeps {
      */
     resolveAppManagementEnv?: (project: Project) => Promise<Record<string, string> | undefined>;
     /**
-     * The deploy env carrying an entry's screen key (`systemScreen.ts`), generated
-     * the first time. Returns `{}` for an entry with no screen. Carries a live
-     * secret, so it goes into the per-invocation env and nowhere else.
+     * The deploy env carrying an entry's secrets: its screen key (`systemScreen.ts`,
+     * generated the first time) and its secret settings from SecretStorage
+     * (`componentSettingSecrets.ts`). Returns `{}` for an entry with neither. Carries
+     * live secrets, so it goes into the per-invocation env and nowhere else.
      */
-    resolveScreenEnv?: (project: Project, entry: AppBuilderComponentCatalogEntry) => Promise<Record<string, string>>;
+    resolveSecretEnv?: (project: Project, entry: AppBuilderComponentCatalogEntry) => Promise<Record<string, string>>;
     /** Delete an entry's screen key when the component is removed. */
     forgetScreenKey?: (project: Project, entry: AppBuilderComponentCatalogEntry) => Promise<void>;
     /**
@@ -585,14 +586,14 @@ async function dispatchDeploy(
         };
     }
     const owPackage = deriveOwPackage(entry.id);
-    // The app's own inputs — Configure values, a bound integration's values, the
+    // The app's own inputs — its settings, a bound integration's values, the
     // schema defaults, and what other components provide (the ERP's base URL to
     // its integration) — ride the deploy's process env, the same way the
     // credentials below do. Catalog app repos ship no `.env` by design.
     const inputs = resolveDeployInputs(project, entry);
     let extraEnv: Record<string, string> = { ...inputs };
-    if (deps.resolveScreenEnv) {
-        extraEnv = { ...extraEnv, ...(await deps.resolveScreenEnv(project, entry)) };
+    if (deps.resolveSecretEnv) {
+        extraEnv = { ...extraEnv, ...(await deps.resolveSecretEnv(project, entry)) };
     }
     // App Management apps authenticate their actions with the workspace S2S
     // credential, taken as deploy-time env inputs. Resolved here — the one
@@ -936,7 +937,8 @@ async function forgetUpdate(project: Project, id: string, deps: AppBuilderCompon
 }
 
 /**
- * Reconstruct a catalog entry from persisted state (redeploy fallback).
+ * Reconstruct a catalog entry from persisted state (redeploy fallback). Also how an
+ * imported integration's Settings find its entry (`componentSettingsHandlers.ts`).
  *
  * Routed through {@link buildCustomIntegrationEntry} so a SEEDED instance —
  * a kit clone under a user-chosen id — recovers its capability fields
@@ -944,7 +946,7 @@ async function forgetUpdate(project: Project, id: string, deps: AppBuilderCompon
  * entry here lost them, and a redeploy of such an instance ran the standalone
  * path against an extension-layout app.
  */
-function entryFromState(
+export function entryFromState(
     id: string,
     state: AppBuilderComponentState,
 ): AppBuilderComponentCatalogEntry {

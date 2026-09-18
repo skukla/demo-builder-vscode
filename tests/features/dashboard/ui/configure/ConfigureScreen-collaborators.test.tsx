@@ -18,7 +18,6 @@ import { useFocusTrap } from '@/core/ui/hooks/useFocusTrap';
 import { ConfigureScreen } from '@/features/dashboard/ui/configure/ConfigureScreen';
 import { useCredentialService } from '@/features/components/ui/hooks/useCredentialService';
 import { ACCS_OAUTH_CLIENT_ID } from '@/core/config/envVarKeys';
-import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import { mockProject, mockComponentsData, railTabLabels } from './ConfigureScreen.testUtils';
 
 jest.mock('@/features/components/ui/hooks/useCredentialService', () => ({
@@ -133,38 +132,19 @@ describe('ConfigureScreen — the brokered credential service', () => {
     });
 });
 
-describe('ConfigureScreen — App Builder sections', () => {
-    const erpEntry: AppBuilderComponentCatalogEntry = {
-        id: 'erp-integration',
-        name: 'ERP Integration',
-        description: 'Test integration',
-        kind: 'integration',
-        source: { owner: 'acme', repo: 'erp', branch: 'main' },
-        envSchema: [{ name: 'ERP_HOST', type: 'text', label: 'ERP Host' }],
-    };
+describe('ConfigureScreen — integrations', () => {
+    it("gives an integration no rail tab: its settings live on its own tile (AB-21)", () => {
+        renderScreen({
+            project: {
+                ...mockProject,
+                appBuilderComponents: {
+                    'erp-integration': { kind: 'integration', status: 'deployed', name: 'ERP integration', source: { owner: 'acme', repo: 'erp' } },
+                },
+                componentConfigs: { 'erp-integration': { ERP_DISPLAY_NAME: 'Nordwind' } },
+            },
+        });
 
-    it('gives each catalog entry with visible fields its own rail tab', () => {
-        renderScreen({ appBuilderComponentCatalog: [erpEntry] });
-
-        expect(railTabLabels()).toContain('ERP Integration');
-    });
-
-    // Configure re-sends `init` without remounting React, so a catalog that
-    // arrives on a later render has to reach the rail.
-    it('picks up a catalog that arrives after the first render', () => {
-        const { rerender } = renderScreen();
-        expect(railTabLabels()).not.toContain('ERP Integration');
-
-        rerender(
-            <Provider theme={defaultTheme}>
-                <ConfigureScreen
-                    project={mockProject}
-                    componentsData={mockComponentsData}
-                    appBuilderComponentCatalog={[erpEntry]}
-                />
-            </Provider>
-        );
-
-        expect(railTabLabels()).toContain('ERP Integration');
+        expect(railTabLabels()).not.toContain('ERP integration');
+        expect(railTabLabels()).toContain('Project');
     });
 });

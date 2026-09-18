@@ -33,6 +33,8 @@ export type CardAction =
     | 'reinstall'
     | 'open-admin'
     | 'manage-apis'
+    // Opens the integration's Settings modal (AB-21); only on one that has settings.
+    | 'settings'
     | 'remove'
     | 'sign-in'
     | 'open'
@@ -45,6 +47,11 @@ export type CardAction =
 /** Everything a card face, drawer body, and drawer action bar render. */
 export interface IntegrationCardModel {
     id: string;
+    /**
+     * The flyout's Settings row: the current values in one line. Present only on
+     * a component that has settings (AB-21).
+     */
+    settingsSummary?: string;
     /** Why the last removal stopped, when it did; the card offers Remove anyway. */
     removalStopped?: string;
     isMesh: boolean;

@@ -10,13 +10,12 @@
  */
 
 import {
-    splitAppBuilderComponentSecrets,
     persistAppBuilderComponentSecrets,
     loadAppBuilderComponentSecretFlags,
-} from '@/features/dashboard/handlers/appBuilderComponentSecrets';
+    resolveSecretInputs,
+} from '@/features/app-builder/services/componentSettingSecrets';
 import { secretKey } from '@/features/app-builder/services/secretKey';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
-import type { ComponentConfigs } from '@/types/webview';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
 const FAKE_SECRET = 'fake-test-pw-not-a-secret';
@@ -66,57 +65,6 @@ function makeSecretStorage() {
         },
     };
 }
-
-describe('splitAppBuilderComponentSecrets', () => {
-    it('extracts secret-typed values out of componentConfigs', () => {
-        const configs: ComponentConfigs = {
-            'erp-integration': { ERP_HOST: 'erp.example.com', ERP_API_KEY: FAKE_SECRET },
-        };
-
-        const { sanitizedConfigs, secrets } = splitAppBuilderComponentSecrets(configs, [erpEntry]);
-
-        // The secret is captured for SecretStorage routing...
-        expect(secrets).toEqual([
-            {
-                appBuilderComponentId: 'erp-integration',
-                varName: 'ERP_API_KEY',
-                value: FAKE_SECRET,
-            },
-        ]);
-        // ...and is ABSENT from the sanitized configs (never .env / never manifest).
-        expect(sanitizedConfigs['erp-integration']).not.toHaveProperty('ERP_API_KEY');
-    });
-
-    it('leaves non-secret (text) values in componentConfigs unchanged', () => {
-        const configs: ComponentConfigs = {
-            'erp-integration': { ERP_HOST: 'erp.example.com', ERP_API_KEY: FAKE_SECRET },
-        };
-
-        const { sanitizedConfigs } = splitAppBuilderComponentSecrets(configs, [erpEntry]);
-
-        expect(sanitizedConfigs['erp-integration'].ERP_HOST).toBe('erp.example.com');
-    });
-
-    it('never serializes a secret value into the sanitized manifest JSON', () => {
-        const configs: ComponentConfigs = {
-            'erp-integration': { ERP_HOST: 'erp.example.com', ERP_API_KEY: FAKE_SECRET },
-        };
-
-        const { sanitizedConfigs } = splitAppBuilderComponentSecrets(configs, [erpEntry]);
-
-        expect(JSON.stringify(sanitizedConfigs)).not.toContain(FAKE_SECRET);
-    });
-
-    it('returns zero secrets for a seed mesh (no secret-typed vars)', () => {
-        const configs: ComponentConfigs = {
-            'commerce-paas-mesh': { COMMERCE_ENDPOINT: 'https://commerce.example.com' },
-        };
-
-        const { secrets } = splitAppBuilderComponentSecrets(configs, [meshEntry]);
-
-        expect(secrets).toStrictEqual([]);
-    });
-});
 
 describe('persistAppBuilderComponentSecrets', () => {
     it('routes each secret to SecretStorage under the deterministic key', async () => {
@@ -197,5 +145,40 @@ describe('loadAppBuilderComponentSecretFlags', () => {
         const flags = await loadAppBuilderComponentSecretFlags([meshEntry], 'proj-1', api);
 
         expect(flags['commerce-paas-mesh']).toBeUndefined();
+    });
+});
+
+describe('resolveSecretInputs — secrets reach the deploy', () => {
+    function storeOf(values: Record<string, string>) {
+        return { get: jest.fn(async (key: string) => values[key]) };
+    }
+
+    it("reads the entry's secrets from SecretStorage, and leaves unset ones out", async () => {
+        const store = storeOf({ [secretKey('/p', 'erp-integration', 'ERP_API_KEY')]: FAKE_SECRET });
+
+        expect(await resolveSecretInputs(erpEntry, '/p', store)).toEqual({ ERP_API_KEY: FAKE_SECRET });
+        expect(await resolveSecretInputs(erpEntry, '/other', store)).toStrictEqual({});
+    });
+
+    it("a bound system reads its integration's secret first", async () => {
+        const system: AppBuilderComponentCatalogEntry = {
+            ...erpEntry,
+            id: 'demo-erp',
+            kind: 'system',
+            boundTo: 'erp-integration',
+        };
+        const store = storeOf({
+            [secretKey('/p', 'erp-integration', 'ERP_API_KEY')]: FAKE_SECRET,
+            [secretKey('/p', 'demo-erp', 'ERP_API_KEY')]: 'fake-old-value-not-a-secret',
+        });
+
+        expect(await resolveSecretInputs(system, '/p', store)).toEqual({ ERP_API_KEY: FAKE_SECRET });
+    });
+
+    it('an entry with no secret settings reads nothing', async () => {
+        const store = storeOf({});
+
+        expect(await resolveSecretInputs(meshEntry, '/p', store)).toStrictEqual({});
+        expect(store.get).not.toHaveBeenCalled();
     });
 });

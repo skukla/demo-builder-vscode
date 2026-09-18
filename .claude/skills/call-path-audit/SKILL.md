@@ -75,7 +75,7 @@ multi-site; skip).
 | GitHub mutations | `octokit.request('POST/DELETE/PATCH/PUT …')` | 2 | clean split — githubRepoOperations (repo-level), githubFileOperations (content + bulk-reset tree/commit/ref). The four raw-fetch api.github.com users verified read-only | **PINNED** |
 | Demo lifecycle | `window.createTerminal` / kill primitives | 1 / 2 | ONE terminal factory (baseCommand.createTerminal); kills split by role — processCleanup (demo teardown) + commandExecutor (own child on timeout). No direct child_process.spawn anywhere | **PINNED** |
 | VS Code settings writes | `getConfiguration(...).update(` | 4 files | four single-sited actions (zoom, save-defaults, legacy cleanup, channel switch); verdict: no spine, pin guards the NEGATIVE — MCP/AI tool code never writes settings | **PINNED** |
-| Secret storage writes | `secret*.store/delete(` | 4 | four owner modules, one key family each (helixKeyStore, githubTokenService, appBuilderComponentSecrets, commerceSecretMigration — the data-installer routes through the migration) | **PINNED** |
+| Secret storage writes | `secret*.store/delete(` | 4 | four owner modules, one key family each (helixKeyStore, githubTokenService, componentSettingSecrets, commerceSecretMigration — the data-installer routes through the migration) | **PINNED** |
 | Dependency install | `npm install` | 6 | — | NOT A SPINE (different actions) |
 | Repo clone | `git clone` | ~5 real | — | NOT A SPINE (different actions) |
 

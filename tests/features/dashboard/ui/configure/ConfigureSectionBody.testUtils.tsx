@@ -91,11 +91,6 @@ export function renderSectionBody(overrides: Partial<ConfigureSectionBodyProps> 
             projectName="p"
             onProjectNameChange={jest.fn()}
             projectNameTouched={false}
-            appBuilderComponentCatalog={[]}
-            componentConfigs={{}}
-            providedEnvVars={{}}
-            appBuilderComponentSecretFlags={{}}
-            onAppBuilderValueChange={jest.fn()}
             authoringExperience="da-live-classic"
             onAuthoringExperienceChange={jest.fn()}
             storeStructureReady={true}

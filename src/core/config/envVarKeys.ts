@@ -116,8 +116,9 @@ export const BACKEND_OWNED_SCOPE_KEYS: readonly string[] = [
  * three API keys into a file stamped `includesSecrets: false`.
  *
  * App Builder component secrets are NOT here: their catalog marks them
- * `type: 'secret'` and `splitAppBuilderComponentSecrets` routes them to VS Code
- * SecretStorage, so they never reach `componentConfigs` in the first place.
+ * `type: 'secret'`, and an integration's Settings store them in VS Code
+ * SecretStorage (`componentSettingSecrets.ts`), so they never reach
+ * `componentConfigs` in the first place.
  *
  * A username is deliberately absent — it is half a credential, not a secret,
  * and the export stays useful for re-import with it present.

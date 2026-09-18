@@ -14,7 +14,11 @@ import type { AddonSource } from './demoPackages';
 export interface AppBuilderComponentEnvVar {
     /** Env-var name (e.g. "MESH_ENDPOINT", "ERP_API_KEY"). */
     name: string;
-    /** `secret` → masked input + SecretStorage; `text` → Configure UI → .env. */
+    /**
+     * `text` → the integration's Settings, stored in `componentConfigs[id]`;
+     * `secret` → a masked field, stored in SecretStorage. Both reach the app only
+     * through its deploy's process env.
+     */
     type: 'text' | 'secret';
     /** Human-readable label for the collection UI. */
     label: string;
@@ -25,9 +29,38 @@ export interface AppBuilderComponentEnvVar {
     /**
      * The value used when nobody typed one. A text var with a default is not
      * something the add door has to stop for: the app deploys with the default
-     * and Configure lets the SC change it later (the ERP's display name).
+     * and the integration's Settings let the SC change it later (the ERP's name).
      */
     default?: string;
+}
+
+/** One setting an SC can change, as the Settings modal shows it. */
+export interface ComponentSettingField {
+    name: string;
+    label: string;
+    type: 'text' | 'secret';
+    /** A text setting's current value (typed, else the default). Never set for a secret. */
+    value?: string;
+    /** A secret setting: whether one is stored. The value itself never leaves SecretStorage. */
+    isSet?: boolean;
+    /** No default: the app cannot deploy until someone fills it in. */
+    required: boolean;
+}
+
+/** A setting another component supplies, shown read-only ("ERP address, from ERP"). */
+export interface ComponentConnectedSetting {
+    name: string;
+    label: string;
+    /** The providing component's display name. */
+    from: string;
+    /** The provided value, once the provider is deployed. */
+    value?: string;
+}
+
+/** What one component's Settings modal shows. */
+export interface ComponentSettings {
+    fields: ComponentSettingField[];
+    connected: ComponentConnectedSetting[];
 }
 
 /** A pre-built appBuilderComponent catalog entry. */
