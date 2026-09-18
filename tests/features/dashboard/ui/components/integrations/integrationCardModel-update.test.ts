@@ -74,3 +74,31 @@ describe('deriveIntegrationCard with a recorded update', () => {
         expect(card.menuActions).not.toContain('update');
     });
 });
+
+describe('a failed card with a recorded update', () => {
+    // Owner, 2026-09-18: the integration read "Deploy failed" and offered only Retry,
+    // while Update sat on the ERP's card. Update fetches the new code and redeploys,
+    // so it does Retry's job too, and belongs on the card that failed.
+    it('an integration that failed offers Update in Retry\'s place, and keeps its error', () => {
+        const card = deriveIntegrationCard(
+            integration({ status: 'error', error: 'aio said no', updateAvailable: UPDATE }),
+        );
+
+        expect(card.status).toBe('error');
+        expect(card.message).toBe('aio said no');
+        expect(card.menuActions[0]).toBe('update');
+        expect(card.menuActions).not.toContain('retry');
+    });
+
+    it('a system that failed offers Update the same way', () => {
+        const card = deriveSystemCard(erp({ status: 'error', updateAvailable: UPDATE }));
+
+        expect(card.menuActions[0]).toBe('update');
+        expect(card.menuActions).not.toContain('retry');
+    });
+
+    it('control: a failed card with no update still offers Retry', () => {
+        expect(deriveIntegrationCard(integration({ status: 'error' })).menuActions[0]).toBe('retry');
+        expect(deriveSystemCard(erp({ status: 'error' })).menuActions[0]).toBe('retry');
+    });
+});

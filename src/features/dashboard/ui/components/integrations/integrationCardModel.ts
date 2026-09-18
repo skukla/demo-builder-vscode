@@ -79,11 +79,16 @@ export type {
  * needed a stopPropagation wrapper to survive its own container's click. Both card
  * kinds resolve through here, so neither can drift from the other.
  * See `.rptc/research/card-face-buttons-vs-kebab/research.md`.
+ *
+ * A failed card with newer code recorded asks for Update, not Retry: Update fetches
+ * the new code and redeploys, so it does Retry's job too, and offering Retry alone
+ * hid the update on the card that needed it (owner, 2026-09-18: "Deploy failed" on
+ * one tile and "Update" only on the other).
  */
-function statusVerb(status: CardStatus): CardAction | undefined {
+function statusVerb(status: CardStatus, hasUpdate = false): CardAction | undefined {
     if (status === 'not-deployed') return 'deploy';
     if (status === 'stale' || status === 'config-incomplete') return 'update';
-    if (status === 'error') return 'retry';
+    if (status === 'error') return hasUpdate ? 'update' : 'retry';
     if (status === 'needs-auth') return 'sign-in';
     return undefined;
 }
@@ -135,13 +140,14 @@ function buildMenuActions(
     status: IntegrationStatus,
     url: string | undefined,
     installation: IntegrationCardModel['installation'],
+    hasUpdate = false,
 ): CardAction[] {
     if (status === 'deploying') return [];
     // The status verb leads: on a card that needs something, that something is the
     // first thing in the menu. Redeploy only where there is a deployment to redo —
     // 'deploy'/'retry'/'update' already cover the other states, and offering both
     // would put two names for one intent in one menu.
-    const verb = statusVerb(status);
+    const verb = statusVerb(status, hasUpdate);
     const redeploy: CardAction[] = status === 'deployed' ? ['redeploy'] : [];
     // A deployed app whose Commerce install failed is dormant, and until AB-5
     // the ONLY retry was a full redeploy round. The install verb leads for the
@@ -166,9 +172,14 @@ function buildMenuActions(
  * (which takes its integration too). No Manage APIs: a system's APIs are part
  * of the project's set, not its own choice.
  */
-function buildSystemMenuActions(status: IntegrationStatus, url: string | undefined, usedBy: LinkedCard | undefined): CardAction[] {
+function buildSystemMenuActions(
+    status: IntegrationStatus,
+    url: string | undefined,
+    usedBy: LinkedCard | undefined,
+    hasUpdate = false,
+): CardAction[] {
     if (status === 'deploying' || usedBy?.status === 'deploying') return [];
-    const verb = statusVerb(status);
+    const verb = statusVerb(status, hasUpdate);
     const resettable = status === 'deployed' && usedBy?.status === 'deployed';
     return [
         ...(verb ? [verb] : []),
@@ -391,7 +402,7 @@ export function deriveIntegrationCard(
         apis: facet.apis,
         lastDeployed: formatLastDeployed(entry.lastDeployed),
         installation,
-        menuActions: buildMenuActions(face.status, primaryUrl, installation),
+        menuActions: buildMenuActions(face.status, primaryUrl, installation, Boolean(entry.updateAvailable)),
         canRename: entry.kind === 'integration' && !facet.isCatalog,
         ...(systems.length > 0 ? { linked: { label: 'Uses' as const, cards: systems } } : {}),
     });
@@ -432,7 +443,7 @@ export function deriveSystemCard(
         urlLabel: 'Screen',
         deployedUrls: entry.deployedUrls,
         lastDeployed: formatLastDeployed(entry.lastDeployed),
-        menuActions: buildSystemMenuActions(face.status, screenUrl, usedBy),
+        menuActions: buildSystemMenuActions(face.status, screenUrl, usedBy, Boolean(entry.updateAvailable)),
         canRename: false,
         ...(usedBy ? { linked: { label: 'Used by' as const, cards: [usedBy] } } : {}),
     });
