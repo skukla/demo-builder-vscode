@@ -22,7 +22,7 @@ import * as crypto from 'crypto';
 import { promises as fsPromises } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { extractAioErrorDetail, fetchRuntimeCredentials } from './runtimeCredentials';
+import { aioOutputTail, extractAioErrorDetail, fetchRuntimeCredentials } from './runtimeCredentials';
 import type { AppDeploymentResult } from './types';
 import { buildComponent } from '@/core/shell/buildComponent';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
@@ -302,7 +302,10 @@ async function deployAppComponentOnce(
 
         onProgress?.('Deploying custom integration...', 'Running aio app deploy');
 
-        const deployResult = await commandManager.execute('aio app deploy', {
+        // `--verbose` because the CLI prints its warnings — such as a database
+        // status check refused with a 403 — only in verbose mode, and without
+        // them a failure's cause never reaches the log (Bodea, 2026-09-18).
+        const deployResult = await commandManager.execute('aio app deploy --verbose', {
             cwd: componentPath,
             streaming: true,
             shell: true,
@@ -313,6 +316,10 @@ async function deployAppComponentOnce(
         });
 
         if (deployResult.code !== 0) {
+            const tail = aioOutputTail(deployResult.stdout, deployResult.stderr);
+            if (tail) {
+                logger.debug(`[App Builder] aio app deploy output, last lines:\n${tail}`);
+            }
             // oclif writes spinner frames to stderr — extract the real
             // `› Error:` line instead of surfacing "- Building actions...".
             const detail =
