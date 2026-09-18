@@ -11,6 +11,7 @@
 import * as fsPromises from 'fs/promises';
 import {
     ensureWorkspaceRuntime,
+    aioOutputTail,
     extractAioErrorDetail,
     fetchRuntimeCredentials,
     workspaceHasRuntime,
@@ -349,5 +350,56 @@ describe('extractAioErrorDetail', () => {
         const stderr = ' ›   Error: first thing  \n ›   Error: second thing ';
 
         expect(extractAioErrorDetail(stderr)).toBe('Error: first thing Error: second thing');
+    });
+});
+
+describe('extractAioErrorDetail — a wrapped error keeps its continuation', () => {
+    // Bodea, 2026-09-18: oclif wrapped the error over two › lines and only the first
+    // says "Error", so the message stopped at "Request f8339eb4… to" and lost the
+    // endpoint and the status code that said what failed.
+    it('keeps every › line of the block an error starts', () => {
+        const stderr =
+            "- Deploying database in the 'amer' region...\n" +
+            ' ›   Error: Request f8339eb4-bad0-41ea-a90a-67e23387392e to\n' +
+            ' ›   v1/db/provision/request failed with code 504: Gateway Timeout\n' +
+            '- trailing spinner';
+
+        expect(extractAioErrorDetail(stderr)).toBe(
+            'Error: Request f8339eb4-bad0-41ea-a90a-67e23387392e to v1/db/provision/request failed with code 504: Gateway Timeout',
+        );
+    });
+
+    it('does not pull a later, unmarked line into the error', () => {
+        const stderr = ' ›   Error: first thing\nsome unrelated output';
+
+        expect(extractAioErrorDetail(stderr)).toBe('Error: first thing');
+    });
+});
+
+describe('aioOutputTail', () => {
+    const ESC = String.fromCharCode(27);
+
+    it('keeps the warning a failure hides, drops spinner frames and colour, collapses repeats', () => {
+        const stdout = `${ESC}[33m⚠ Database status check failed: 403 Workspace authorization failed${ESC}[39m\n`;
+        const stderr = '-\n\\\n|\n- Deploying...\n- Deploying...\n ›   Error: Request x to v1/db/provision/request failed with code 504';
+
+        expect(aioOutputTail(stdout, stderr)).toBe(
+            '⚠ Database status check failed: 403 Workspace authorization failed\n' +
+                '- Deploying...\n' +
+                ' ›   Error: Request x to v1/db/provision/request failed with code 504',
+        );
+    });
+
+    it('masks token-shaped strings and keeps only the last lines', () => {
+        const token = 'a'.repeat(48);
+        const stdout = Array.from({ length: 80 }, (_, i) => `line ${i}`).join('\n') + `\nauth ${token}`;
+
+        const tail = aioOutputTail(stdout, '', 5).split('\n');
+
+        expect(tail).toStrictEqual(['line 76', 'line 77', 'line 78', 'line 79', 'auth <masked>']);
+    });
+
+    it('answers empty for no output', () => {
+        expect(aioOutputTail(undefined, undefined)).toBe('');
     });
 });

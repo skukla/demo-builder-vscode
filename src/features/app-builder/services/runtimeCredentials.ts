@@ -251,14 +251,58 @@ async function downloadWorkspaceConfig(
  * frames to stderr too, so a naive `stderr.trim()` surfaces "- Building
  * actions..." instead of the actual `› Error: ...` line — exactly what hid
  * the missing-namespace root cause in the create-flow logs.
+ *
+ * oclif wraps a long error over several `›` lines, and only the first says
+ * "Error". Keeping just the lines that mention an error cut Bodea's message to
+ * "Request f8339eb4… to", dropping the endpoint and the status code that said
+ * what failed (2026-09-18). The whole `›` block an error line sits in is kept.
  */
 export function extractAioErrorDetail(stderr: string | undefined): string {
     if (!stderr) return '';
-    const errorLines = stderr
-        .split('\n')
-        .map((line) => line.replace(/^\s*›\s*/, '').trim())
-        .filter((line) => /error/i.test(line));
-    // Every line is already trimmed and non-empty, so the join has no edge whitespace
-    // for a second trim to remove.
-    return errorLines.join(' ');
+    const lines = stderr.split('\n');
+    const kept: string[] = [];
+    let inBlock = false;
+    for (const line of lines) {
+        const marked = /^\s*›/.test(line);
+        const text = line.replace(/^\s*›\s*/, '').trim();
+        if (/error/i.test(text)) {
+            inBlock = marked;
+            kept.push(text);
+        } else if (inBlock && marked && text) {
+            kept.push(text);
+        } else {
+            inBlock = false;
+        }
+    }
+    return kept.join(' ');
+}
+
+/** Spinner frames and progress glyphs oclif redraws; noise in a log. */
+const SPINNER_LINE = /^[\s\-\\|/⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏✔✖ℹ⚠]*$/;
+/** A long token-shaped run: masked, since CLI output can echo keys. */
+const TOKEN_LIKE = /[A-Za-z0-9_-]{40,}/g;
+// eslint-disable-next-line no-control-regex
+const ANSI = /\u001b\[[0-9;]*m/g;
+
+/**
+ * The last lines of a CLI run's output, readable in a log: colour codes and
+ * spinner frames dropped, repeated lines collapsed, token-shaped strings masked.
+ * Written to the Debug Logs when a deploy fails, because the reason is usually
+ * a line the error message never carries (Bodea, 2026-09-18: the database status
+ * check's 403 was a warning in the output, not part of the error).
+ *
+ * @param stdout - the run's stdout
+ * @param stderr - the run's stderr
+ * @param maxLines - how many lines to keep from the end
+ * @returns the lines, joined; empty when there was no output
+ */
+export function aioOutputTail(stdout: string | undefined, stderr: string | undefined, maxLines = 60): string {
+    const lines = `${stdout ?? ''}\n${stderr ?? ''}`
+        .replace(ANSI, '')
+        .split(/\r?\n|\r/)
+        .map((line) => line.trimEnd())
+        .filter((line) => line.trim() && !SPINNER_LINE.test(line))
+        .filter((line, index, all) => line !== all[index - 1])
+        .map((line) => line.replace(TOKEN_LIKE, '<masked>'));
+    return lines.slice(-maxLines).join('\n');
 }

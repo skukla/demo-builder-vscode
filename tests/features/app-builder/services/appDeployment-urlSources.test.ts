@@ -15,6 +15,7 @@ jest.mock('@/core/utils/timeoutConfig', () => ({ TIMEOUTS: { LONG: 180000 } }));
 jest.mock('@/features/app-builder/services/runtimeCredentials', () => ({
     extractAioErrorDetail: jest.requireActual('@/features/app-builder/services/runtimeCredentials')
         .extractAioErrorDetail,
+    aioOutputTail: jest.requireActual('@/features/app-builder/services/runtimeCredentials').aioOutputTail,
     fetchRuntimeCredentials: jest.fn().mockResolvedValue({
         namespace: 'test-namespace',
         auth: 'fake-test-pw-not-a-secret',
