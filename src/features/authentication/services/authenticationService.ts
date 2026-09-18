@@ -644,6 +644,12 @@ export class AuthenticationService {
         );
     }
 
+    /** Every credential id in a workspace (read only). */
+    async listCredentialIds(orgId: string, projectId: string, workspaceId: string): Promise<string[]> {
+        const { fetcher } = await this.ensureEntities();
+        return fetcher.listCredentialIds(orgId, projectId, workspaceId);
+    }
+
     /** Ensure the shared S2S credential exists; returns its `id_integration`. */
     async ensureOAuthCredentialId(
         orgId: string,
