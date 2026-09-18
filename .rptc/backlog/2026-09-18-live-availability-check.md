@@ -47,3 +47,7 @@ pointed at a different question.
 - The demo scene. The owner's framing is data flowing both ways with the ERP appearing to
   be the master; a promise date is that story's strongest moment, but the script for it has
   not been written.
+
+## Shipped so far
+
+- 2026-09-17  docs(backlog): AB-19 and AB-20 — the two live ERP calls a real B2B integration makes (`43164d8db`)
