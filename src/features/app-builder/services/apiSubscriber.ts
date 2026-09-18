@@ -81,6 +81,12 @@ export interface ApiSubscriberClient {
     getServicesForOrg(orgId: string): Promise<OrgServiceInfo[]>;
     /** The sdk codes a credential is already subscribed to (skip-if-subscribed). */
     getSubscribedServiceCodes(orgId: string, idIntegration: string): Promise<string[]>;
+    /**
+     * Every credential id the workspace already has, read only. Optional: a
+     * client without it skips the already-subscribed shortcut and takes the full
+     * path, which is always correct, only slower.
+     */
+    listCredentialIds?(target: OrgTarget): Promise<string[]>;
     /** Ensure the shared S2S credential exists; return its `id_integration`. */
     ensureOAuthCredentialId(target: OrgTarget): Promise<string>;
     /** Create the apiKey credential; return its `id_integration`. */
@@ -220,24 +226,34 @@ async function emitProgress(
 }
 
 /**
- * True when the credential already carries every required sdk code — letting the
- * caller skip the slow subscribe PUT (~30s, sometimes minutes). Best-effort: an
- * unknown current set (`[]`) means "not sure", so we do NOT skip.
+ * True when the credential already carries every required sdk code AND none of
+ * the codes being removed — letting the caller skip the slow subscribe PUT (~30s,
+ * sometimes minutes). Best-effort: an unknown current set (`[]`) means "not
+ * sure", so we do NOT skip.
+ *
+ * The removal half: a removal happens only through the full-list PUT, which drops
+ * what the list omits. Skipping whenever every REQUIRED code was present meant a
+ * removal never reached Adobe, since after a removal every remaining code always
+ * is (found reading the code, 2026-09-18). A credential still holding a removed
+ * code gets the PUT; every other one keeps skipping, which also spares APIs added
+ * by hand in the Developer Console.
  */
 async function alreadySubscribed(
     services: ServiceInfo[],
     orgId: string,
     idIntegration: string,
     client: ApiSubscriberClient,
+    removing: ReadonlySet<string>,
 ): Promise<boolean> {
     const current = await client.getSubscribedServiceCodes(orgId, idIntegration);
-    return services.every((s) => current.includes(s.sdkCode));
+    return services.every((s) => current.includes(s.sdkCode)) && !current.some((code) => removing.has(code));
 }
 
 async function subscribeOAuthServices(
     services: ServiceInfo[],
     target: OrgTarget,
     client: ApiSubscriberClient,
+    removing: ReadonlySet<string>,
     onProgress?: SubscribeProgressListener,
 ): Promise<void> {
     if (services.length === 0) {
@@ -245,7 +261,7 @@ async function subscribeOAuthServices(
     }
     await emitProgress(services, false, onProgress);
     const idIntegration = await client.ensureOAuthCredentialId(target);
-    if (await alreadySubscribed(services, target.orgId, idIntegration, client)) {
+    if (await alreadySubscribed(services, target.orgId, idIntegration, client, removing)) {
         await emitProgress(services, true, onProgress);
         return;
     }
@@ -262,6 +278,7 @@ async function subscribeApiKeyServices(
     target: OrgTarget,
     client: ApiSubscriberClient,
     domain: string,
+    removing: ReadonlySet<string>,
     onProgress?: SubscribeProgressListener,
 ): Promise<void> {
     if (services.length === 0) {
@@ -284,7 +301,7 @@ async function subscribeApiKeyServices(
             domain,
         },
     );
-    if (await alreadySubscribed(services, target.orgId, idIntegration, client)) {
+    if (await alreadySubscribed(services, target.orgId, idIntegration, client, removing)) {
         await emitProgress(services, true, onProgress);
         return;
     }
@@ -297,12 +314,42 @@ async function subscribeApiKeyServices(
 }
 
 /**
+ * Whether the workspace's existing credentials, between them, already carry every
+ * required API. Read only, and a cheap pair of calls, where the full path first
+ * downloads the org's whole services catalog: slow in a large org, and measured
+ * timing out at 60s twice in a row on Bodea's redeploys (2026-09-18) while every
+ * API was already subscribed. Any doubt (no lister, no credentials, a failed
+ * call) answers false, and the full path runs. So does a removal: only the full
+ * path reaches the PUT that drops a code.
+ */
+async function coveredAlready(
+    required: string[],
+    target: OrgTarget,
+    client: ApiSubscriberClient,
+    removing: ReadonlySet<string>,
+): Promise<boolean> {
+    if (!client.listCredentialIds || removing.size > 0) return false;
+    try {
+        const ids = await client.listCredentialIds(target);
+        if (ids.length === 0) return false;
+        const lists = await Promise.all(ids.map((id) => client.getSubscribedServiceCodes(target.orgId, id)));
+        const have = new Set(lists.flat());
+        return required.every((code) => have.has(code));
+    } catch {
+        return false;
+    }
+}
+
+/**
  * Reconcile the UNION of all appBuilderComponents' `requiredApis` (+ baseline) onto the
  * shared project, branching each service by its platform. Idempotent: it always
  * subscribes the full union (not a delta). Mesh is included via the apiKey path.
  *
  * @returns the full resolved+ensured API set (union incl. the baseline), each
  *   with the org service's display name when known — for status UIs.
+ * @param removing - codes this reconcile takes away (Manage APIs unchecking one).
+ *   A credential still holding one is sent the full list even when nothing is
+ *   missing, because that PUT is the only way a removal reaches Adobe.
  */
 export async function subscribeRequiredApis(
     appBuilderComponents: AppBuilderComponentCatalogEntry[],
@@ -311,8 +358,16 @@ export async function subscribeRequiredApis(
     domain: string = DEFAULT_DOMAIN,
     extraApis: string[] = [],
     onProgress?: SubscribeProgressListener,
+    removing: string[] = [],
 ): Promise<SubscribedApi[]> {
     const requiredApis = computeRequiredApis(appBuilderComponents, extraApis);
+    const removed = new Set(removing.filter((code) => !requiredApis.includes(code)));
+    if (await coveredAlready(requiredApis, target, client, removed)) {
+        for (const code of requiredApis) {
+            await onProgress?.({ code, done: true });
+        }
+        return requiredApis.map((code) => ({ code }));
+    }
     const servicesForOrg = await client.getServicesForOrg(target.orgId);
     const services = resolveServiceInfos(requiredApis, servicesForOrg);
     const { apiKey, oauthS2S, unmatched } = partitionByPlatform(services);
@@ -323,8 +378,8 @@ export async function subscribeRequiredApis(
     // still awaits its own progress ticks, and Promise.all is awaited here — so
     // every tick is still delivered before this function (and the handler) returns.
     await Promise.all([
-        subscribeOAuthServices(oauthS2S, target, client, onProgress),
-        subscribeApiKeyServices(apiKey, target, client, domain, onProgress),
+        subscribeOAuthServices(oauthS2S, target, client, removed, onProgress),
+        subscribeApiKeyServices(apiKey, target, client, domain, removed, onProgress),
     ]);
 
     // Report only what a subscribe endpoint actually took. An unmatched service

@@ -224,7 +224,7 @@ each item's own file; what has already landed against an item is in its
 | `AI-7` | question | [Unattended teardown consent — how does a commissioned journey get to zero?](2026-08-28-unattended-teardown-consent.md) | — | med | shipped |
 | `AI-8` | question | [Audit our context files against what the research actually says](2026-08-29-context-file-audit-against-evidence.md) | — | high | backlog |
 
-### eds  (23)
+### eds  (24)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -239,7 +239,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-10` | feature | [Custom themes as savable entities](2026-08-28-custom-themes-as-savable-entities.md) | — | med | backlog |
 | `EDS-11` | fix | [RETRACTED — HelixService's optional credentials are not the hazard I described](2026-08-28-helix-auth-variance-unmodeled.md) | — | low | dropped |
 | `EDS-12` | fix | [Resetting the same EDS project does less from the dashboard than from the projects list](2026-09-02-two-reset-doors-differ.md) | — | med | built |
-| `EDS-13` | epic | [Portable demos: share storefronts, move whole projects](2026-09-11-colleague-built-storefront.md) | — | high | planned |
+| `EDS-13` | epic | [Portable demos: share storefronts, move whole projects](2026-09-11-colleague-built-storefront.md) | — | high | active |
 | `EDS-13a` | feature | └ ["Add a demo": build a project on a demo someone shared by link](2026-09-11-add-a-demo-import.md) | PL-56a | high | active |
 | `EDS-13b` | feature | └ ["Share this demo": turn an existing project into a demo others can add](2026-09-11-share-a-demo-export.md) | EDS-13c | med | active |
 | `EDS-13c` | chore | └ [The shareable-demo process, published: how to make a storefront addable](2026-09-11-shareable-demo-contract.md) | PL-56a | high | active |
@@ -250,6 +250,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-14` | fix | [Template update falls back to a full reset on conflict, overwriting the SC's own edits](2026-09-11-template-update-conflict-fallback-overwrites-edits.md) | — | med | active |
 | `EDS-15` | fix | ["Cleanup DA.live sites" builds its DA.live calls on the Adobe token DA.live refuses](2026-09-13-dalive-cleanup-command-token.md) | — | low | backlog |
 | `EDS-16` | fix | [The "no admin role" remedy sent people to a page that cannot grant anything](2026-09-14-site-access-remedy-dead-link.md) | _Khalil re-saving his Code Sync installation on hardie to show whether GitHub reopens the AEM setup page with a key_ | high | gated |
+| `EDS-17` | feature | [A storefront can live in an organization's repository, not only the SC's own](2026-09-16-storefront-in-an-org-repository.md) | — | high | backlog |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | backlog |
 
 ### app-builder  (13)
@@ -286,7 +287,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-36` | fix | [The third Node-version sort in installHandler is untested](2026-09-02-install-handler-target-version-sort.md) | — | med | backlog |
 | `PR-1` | epic | [Reframe prerequisites: extension-wide tools vs project-shape requirements (Path A)](2026-06-11-prereqs-architecture-reframe.md) | — | low | backlog |
 
-### platform  (62)
+### platform  (63)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -352,6 +353,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-56e` | fix | └ [Copy and Edit read the same complete file, so neither can drop what the other keeps](2026-09-11-copy-and-edit-on-one-file.md) | PL-56c, PL-56d | med | backlog |
 | `PL-56f` | feature | └ [Agent tools for import and copy](2026-09-11-portability-agent-tools.md) | PL-56d | med | backlog |
 | `PL-56g` | chore | └ [A feature page for moving projects](2026-09-11-portability-docs.md) | PL-56d | low | backlog |
+| `PL-59` | feature | [A long operation should say what it is doing, not just spin](2026-09-16-progress-surface-for-long-operations.md) | — | high | backlog |
 
 <!-- END GENERATED registry -->
 
@@ -500,7 +502,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — backlog
 
-*100 item(s) sit outside the A–G chain.*
+*102 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 
