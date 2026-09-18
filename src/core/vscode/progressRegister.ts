@@ -32,6 +32,7 @@
 
 import * as vscode from 'vscode';
 import { hasActivePhaseSinks, reportPhase } from '@/core/utils/agentPhaseChannel';
+import { formatDuration } from '@/core/utils/timeFormatting';
 
 /**
  * Build the card's in-flight line: verb + kind.
@@ -45,6 +46,37 @@ import { hasActivePhaseSinks, reportPhase } from '@/core/utils/agentPhaseChannel
  */
 export function cardInFlightLabel(verb: string, noun: string): string {
     return `${verb} ${noun}`;
+}
+
+/**
+ * A log of an operation's steps with how long each took: every step is written
+ * when it starts, and the step before it is closed with its duration. `finish`
+ * closes the last step and writes the total. The notification shows only the
+ * step in flight and is gone when it closes; this is what stays behind.
+ *
+ * @param write - where each line goes (a logger's debug, prefixed by the caller)
+ * @returns `step` for each reported step, `finish` once the operation ends
+ */
+export function timedSteps(write: (line: string) => void): { step: (message: string) => void; finish: () => void } {
+    const started = Date.now();
+    let current: { message: string; at: number } | undefined;
+    const close = (now: number): void => {
+        if (current) write(`${current.message} took ${formatDuration(now - current.at)}`);
+    };
+    return {
+        step: (message) => {
+            const now = Date.now();
+            close(now);
+            write(message);
+            current = { message, at: now };
+        },
+        finish: () => {
+            const now = Date.now();
+            close(now);
+            current = undefined;
+            write(`finished in ${formatDuration(now - started)}`);
+        },
+    };
 }
 
 export interface ProgressRegisterOptions {

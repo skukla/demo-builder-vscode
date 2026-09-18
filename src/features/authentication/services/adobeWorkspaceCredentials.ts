@@ -372,6 +372,24 @@ export class AdobeWorkspaceCredentials {
     }
 
     /**
+     * Every credential id the workspace has (`getCredentials`), any kind. Read
+     * only: it creates nothing, so a caller can ask what is already subscribed
+     * without provisioning a credential it may not need.
+     */
+    async listCredentialIds(orgId: string, projectId: string, workspaceId: string): Promise<string[]> {
+        await this.ensureSDKReady();
+        const client = this.sdkClient.getClient() as {
+            getCredentials: (
+                orgId: string,
+                projectId: string,
+                workspaceId: string
+            ) => Promise<SDKResponse<RawWorkspaceCredential[]>>;
+        };
+        const credentials = (await client.getCredentials(orgId, projectId, workspaceId))?.body ?? [];
+        return credentials.map((c) => c.id_integration).filter((id): id is string => Boolean(id));
+    }
+
+    /**
      * The workspace S2S credential's FULL identity for IMS server-to-server
      * auth — what an App Management app's actions need at deploy time
      * (`AIO_COMMERCE_AUTH_IMS_*` inputs). Ensures the credential exists, then

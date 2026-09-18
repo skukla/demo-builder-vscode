@@ -91,6 +91,7 @@ export function createMockAuthenticationService(
         createWorkspaceCredential: jest.fn().mockResolvedValue(undefined),
         createWorkspaceS2SCredentialFor: jest.fn().mockResolvedValue(undefined),
         ensureOAuthCredentialId: jest.fn().mockResolvedValue(undefined),
+        listCredentialIds: jest.fn().mockResolvedValue([]),
         getS2SDeployCredentials: jest.fn().mockResolvedValue(undefined),
         getWorkspaceCredential: jest.fn().mockResolvedValue(undefined),
         getWorkspaceS2SCredential: jest.fn().mockResolvedValue(undefined),
