@@ -41,13 +41,14 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
 jest.mock('@/features/app-builder/services/runtimeCredentials', () => ({
     extractAioErrorDetail: jest.requireActual('@/features/app-builder/services/runtimeCredentials')
         .extractAioErrorDetail,
+    aioOutputTail: jest.requireActual('@/features/app-builder/services/runtimeCredentials').aioOutputTail,
     fetchRuntimeCredentials: jest.fn().mockResolvedValue({
         namespace: 'test-namespace',
         auth: 'fake-test-pw-not-a-secret',
     }),
 }));
 
-const DEPLOY_CMD = 'aio app deploy';
+const DEPLOY_CMD = 'aio app deploy --verbose';
 const GET_URL_CMD = 'aio app get-url --json';
 
 /** A plausible `aio app get-url --json` payload (shape unverified — Step 7). */
@@ -181,6 +182,26 @@ describe('deployAppComponent', () => {
             expect(result.success).toBe(false);
             expect(result.error).toBeDefined();
             expect(result.error).toContain('deploy boom');
+        });
+
+        // Bodea, 2026-09-18: the reason a deploy failed was a warning in the CLI's
+        // output, never part of its error, and nothing wrote the output anywhere.
+        it("writes the CLI's output to the Debug Logs when the deploy fails", async () => {
+            cm.execute.mockResolvedValue({
+                code: 2,
+                stdout: 'Database status check failed: 403 Workspace authorization failed',
+                stderr: ' ›   Error: Request x to\n ›   v1/db/provision/request failed with code 504',
+                duration: 0,
+            });
+
+            const result = await deployAppComponent('/app', cm, logger);
+
+            const logged = (logger.debug as jest.Mock).mock.calls.map((call) => String(call[0])).join('\n');
+            expect(logged).toContain('aio app deploy output, last lines:');
+            expect(logged).toContain('Database status check failed: 403 Workspace authorization failed');
+            expect(result.error).toBe(
+                'App deployment failed: Error: Request x to v1/db/provision/request failed with code 504',
+            );
         });
 
         it('should NOT call get-url when deploy fails', async () => {
@@ -532,7 +553,7 @@ describe('extension layout: workspace config import', () => {
 
         expect(result.success).toBe(true);
         const commands = cm.execute.mock.calls.map((c: unknown[]) => c[0] as string);
-        expect(commands).toContain('aio app deploy');
+        expect(commands).toContain(DEPLOY_CMD);
     });
 
     it('removes the scratch directory AND the .env that `aio app use` writes', async () => {
@@ -580,7 +601,7 @@ describe('extension layout: workspace config import', () => {
         );
         const commands = cm.execute.mock.calls.map((c: unknown[]) => c[0] as string);
         expect(commands.some((c: string) => c.startsWith('aio app use'))).toBe(false);
-        expect(commands.some((c: string) => c === 'aio app deploy')).toBe(false);
+        expect(commands.some((c: string) => c === DEPLOY_CMD)).toBe(false);
     });
 
     it('names the exit code when a failed download printed nothing usable', async () => {
@@ -612,7 +633,7 @@ describe('extension layout: workspace config import', () => {
         expect(result.success).toBe(false);
         expect(result.error).toBe('Could not import workspace configuration: Error: not entitled');
         const commands = cm.execute.mock.calls.map((c: unknown[]) => c[0] as string);
-        expect(commands.some((c: string) => c === 'aio app deploy')).toBe(false);
+        expect(commands.some((c: string) => c === DEPLOY_CMD)).toBe(false);
     });
 
     it('names the exit code when a failed import printed nothing usable', async () => {
