@@ -35,3 +35,4 @@ Plan: `.rptc/plans/integration-settings-on-tile/overview.md`.
 ## Shipped so far
 
 - 2026-09-18  feat(integrations): an integration's settings live on its tile, not Configure Project (`807c5b704`)
+- 2026-09-18  test(ai): configure_project suites share one setup file (`fb9db3d75`)
