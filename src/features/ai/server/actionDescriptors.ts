@@ -241,17 +241,18 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: ['adobe'],
         readOnly: false,
         description:
-            'Update one deployed integration to the newest code on its GitHub branch: fetch it ' +
+            'Update an integration to the newest code on its GitHub branch: fetch it ' +
             '(fast-forward only), install its dependencies, redeploy, and upgrade the app in ' +
-            'Commerce. Updates its ERP first when the ERP has an update. Refuses, and names the ' +
-            'files, when the folder holds local edits. Use check_integration_updates to see which ' +
-            'integrations have an update.',
+            'Commerce. An integration and its ERP update as a pair from either id: each with ' +
+            'newer code is updated, the ERP first. Also works on one whose last deploy failed. ' +
+            'Refuses, and names the files, when the folder holds local edits. Use ' +
+            'check_integration_updates to see which integrations have an update.',
         map: dashboardHandlers,
         type: 'updateAppBuilderComponent',
         // Not confirm-gated, matching redeploy_integration: it never overwrites
         // the SC's edits (it refuses instead) and deploys the declared source.
         inputSchema: {
-            id: z.string().describe('The integration id to update (from get_project)'),
+            id: z.string().describe('The integration or ERP id to update (from get_project)'),
         },
     },
     {

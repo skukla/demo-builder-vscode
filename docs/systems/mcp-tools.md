@@ -45,7 +45,7 @@ server IS — transport, lifecycle, scoping, security — is in
 | `set_project_pinned` |  | Pin or unpin a project. Pinned projects sort first on the projects dashboard. |
 | `start_demo` |  | Start the current project's demo server |
 | `stop_demo` |  | Stop the current project's running demo server |
-| `update_integration` |  | Update one deployed integration to the newest code on its GitHub branch: fetch it |
+| `update_integration` |  | Update an integration to the newest code on its GitHub branch: fetch it |
 
 ## `src/features/ai/server/adobeResourceTools.ts`
 

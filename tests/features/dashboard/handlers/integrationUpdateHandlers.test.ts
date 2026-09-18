@@ -220,11 +220,50 @@ describe('handleUpdateAppBuilderComponent', () => {
 
         expect(result).toEqual({
             success: false,
-            error: 'The ERP did not update, so the integration was left as it is: npm ERR! ERESOLVE',
+            error: 'Nordwind did not update, so ERP integration was left as it is: npm ERR! ERESOLVE',
             code: undefined,
         });
         expect(mockUpdate).toHaveBeenCalledTimes(1);
         expect(mockSendStatus).toHaveBeenCalledWith('demo-erp', 'error', 'npm ERR! ERESOLVE', undefined);
+    });
+
+    // The pair updates as a unit from EITHER card (owner, 2026-09-18): its code
+    // changes together, and updating one half leaves a mismatch nothing warns about.
+    it("from the ERP's card: the ERP, then the integration when it has newer code too", async () => {
+        const { mockContext } = setup({
+            ...pairProject({ updateAvailable: { commit: 'abc', checkedAt: 'x' } }),
+            appBuilderComponents: {
+                'erp-integration': deployed({ updateAvailable: { commit: 'def', checkedAt: 'x' } }),
+                'demo-erp': deployed({ kind: 'system', name: 'Nordwind', updateAvailable: { commit: 'abc', checkedAt: 'x' } }),
+            },
+        });
+
+        await handleUpdateAppBuilderComponent(mockContext, { id: 'demo-erp' });
+
+        expect(mockUpdate.mock.calls.map((call) => call[1])).toEqual(['demo-erp', 'erp-integration']);
+    });
+
+    it("from the ERP's card: the ERP alone when the integration has nothing newer", async () => {
+        const { mockContext } = setup(pairProject({ updateAvailable: { commit: 'abc', checkedAt: 'x' } }));
+
+        await handleUpdateAppBuilderComponent(mockContext, { id: 'demo-erp' });
+
+        expect(mockUpdate.mock.calls.map((call) => call[1])).toEqual(['demo-erp']);
+    });
+
+    it('a card whose last deploy failed can update: Update does Retry\'s job too', async () => {
+        const { mockContext } = setup({
+            ...pairProject(),
+            appBuilderComponents: {
+                'erp-integration': deployed({ status: 'error', updateAvailable: { commit: 'def', checkedAt: 'x' } }),
+                'demo-erp': deployed({ kind: 'system', name: 'Nordwind', status: 'error' }),
+            },
+        });
+
+        const result = await handleUpdateAppBuilderComponent(mockContext, { id: 'erp-integration' });
+
+        expect(result.success).toBe(true);
+        expect(mockUpdate.mock.calls.map((call) => call[1])).toEqual(['erp-integration']);
     });
 
     it("passes the runner's refusal through, with the row in error", async () => {
@@ -255,7 +294,7 @@ describe('handleUpdateAppBuilderComponent', () => {
     it('refuses an undeployed integration, a mesh, an unknown id and a missing id', async () => {
         const { mockContext } = setup({
             appBuilderComponents: {
-                broken: deployed({ status: 'error' }),
+                broken: deployed({ status: 'not-deployed' }),
                 mesh: deployed({ kind: 'mesh' }),
             },
         });
