@@ -263,7 +263,24 @@ describe('handleUpdateAppBuilderComponent', () => {
         const result = await handleUpdateAppBuilderComponent(mockContext, { id: 'erp-integration' });
 
         expect(result.success).toBe(true);
-        expect(mockUpdate.mock.calls.map((call) => call[1])).toEqual(['erp-integration']);
+        expect(mockUpdate.mock.calls.map((call) => call[1])).toEqual(['demo-erp', 'erp-integration']);
+    });
+
+    it('redeploys the ERP first when its last deploy failed, even with nothing newer', async () => {
+        // Bodea, 2026-09-18: an earlier Update fetched the ERP's code and then
+        // failed to deploy. The ERP had no update left to record, so a pair update
+        // skipped it and left its card failed.
+        const { mockContext } = setup({
+            ...pairProject(),
+            appBuilderComponents: {
+                'erp-integration': deployed({ status: 'error', updateAvailable: { commit: 'def', checkedAt: 'x' } }),
+                'demo-erp': deployed({ kind: 'system', name: 'Nordwind', status: 'error' }),
+            },
+        });
+
+        await handleUpdateAppBuilderComponent(mockContext, { id: 'erp-integration' });
+
+        expect(mockUpdate.mock.calls.map((call) => call[1])).toEqual(['demo-erp', 'erp-integration']);
     });
 
     it('every card the click covers says so at once: the rest wait their turn', async () => {

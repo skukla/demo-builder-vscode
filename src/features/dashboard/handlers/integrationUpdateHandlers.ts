@@ -69,8 +69,11 @@ export const handleCheckIntegrationUpdates: MessageHandler = async (context): Pr
 
 /**
  * What an Update on this card updates, in order: the systems of its pair, then the
- * integration, each only when it has newer code recorded. The card asked for is
- * always included, so an update check that is out of date still fetches it.
+ * integration, each when it has newer code recorded OR its last deploy failed, so
+ * the pair ends deployed (2026-09-18: an ERP whose code an earlier failed Update
+ * had already fetched counted as current and was skipped, left failed). The card
+ * asked for is always included, so an update check that is out of date still
+ * fetches it.
  */
 function pairToUpdate(project: Project, id: string): string[] {
     const catalog = getAppBuilderComponentCatalog();
@@ -78,7 +81,12 @@ function pairToUpdate(project: Project, id: string): string[] {
         ? integrationUsing(project, id, catalog)
         : id;
     const members = integrationId ? [...systemsUsedBy(project, integrationId, catalog), integrationId] : [id];
-    return members.filter((member) => member === id || getAppBuilderComponent(project, member)?.updateAvailable);
+    return members.filter((member) => member === id || needsUpdate(project, member));
+}
+
+function needsUpdate(project: Project, id: string): boolean {
+    const state = getAppBuilderComponent(project, id);
+    return Boolean(state?.updateAvailable) || state?.status === 'error';
 }
 
 function nameOf(project: Project, id: string): string {
