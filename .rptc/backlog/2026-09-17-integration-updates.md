@@ -35,3 +35,4 @@ Filed 2026-09-17.
 - 2026-09-17  fix(updates): an update is no longer refused over a file the extension itself rewrote (`34e5f23dc`)
 - 2026-09-18  fix(integrations): a failed card with newer code offers Update, not Retry (`0b2357b3d`)
 - 2026-09-18  feat(integrations): an integration and its ERP update together, from either card (`6a4ba391b`)
+- 2026-09-18  fix(integrations): an update shows each card's own state, and redeploys what failed (`860123220`)
