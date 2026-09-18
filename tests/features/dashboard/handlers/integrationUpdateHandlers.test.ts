@@ -266,6 +266,35 @@ describe('handleUpdateAppBuilderComponent', () => {
         expect(mockUpdate.mock.calls.map((call) => call[1])).toEqual(['erp-integration']);
     });
 
+    it('every card the click covers says so at once: the rest wait their turn', async () => {
+        const { mockContext } = setup(pairProject({ updateAvailable: { commit: 'abc', checkedAt: 'x' } }));
+        const seen: unknown[][] = [];
+        mockSendStatus.mockImplementation((...args: unknown[]) => { seen.push(args.slice(0, 3)); });
+
+        await handleUpdateAppBuilderComponent(mockContext, { id: 'erp-integration' });
+
+        const waiting = seen.findIndex((call) => call[0] === 'erp-integration' && call[2] === 'Waiting to update');
+        const erpUpdating = seen.findIndex((call) => call[0] === 'demo-erp' && call[2] === 'Updating…');
+        const integrationUpdating = seen.findIndex((call) => call[0] === 'erp-integration' && call[2] === 'Updating…');
+        expect(waiting).toBeGreaterThanOrEqual(0);
+        expect(waiting).toBeLessThan(erpUpdating);
+        expect(erpUpdating).toBeLessThan(integrationUpdating);
+    });
+
+    it('a failed ERP update returns the waiting integration to its own status, saying why', async () => {
+        const { mockContext } = setup(pairProject({ updateAvailable: { commit: 'abc', checkedAt: 'x' } }));
+        mockUpdate.mockResolvedValueOnce({ success: false, error: 'npm ERR! ERESOLVE' });
+
+        await handleUpdateAppBuilderComponent(mockContext, { id: 'erp-integration' });
+
+        expect(mockSendStatus).toHaveBeenCalledWith(
+            'erp-integration',
+            'deployed',
+            'Left as it is: Nordwind did not update.',
+            undefined,
+        );
+    });
+
     it("passes the runner's refusal through, with the row in error", async () => {
         const { mockContext } = setup(pairProject());
         mockUpdate.mockResolvedValue({ success: false, error: 'The integration folder has changes of its own (a.js).' });

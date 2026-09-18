@@ -186,6 +186,37 @@ describe('updateAppBuilderComponent', () => {
         expect(deps.installComponentDependencies).not.toHaveBeenCalled();
     });
 
+    // 2026-09-18: an Update fetched the ERP's code and then failed to deploy, which
+    // left the clone current. The next Update found nothing new, answered success
+    // and deployed nothing, while the card was told "Deployed".
+    it('redeploys a current clone whose last deploy failed, installing its dependencies first', async () => {
+        const deps = updateDeps(
+            { status: 'current', detail: 'The integration is already up to date.' },
+            { readAppVersion: jest.fn().mockResolvedValue('0.2.0') },
+        );
+        const project = installedProject('0.2.0');
+        project.appBuilderComponents![ENTRY.id].status = 'error';
+
+        const result = await updateAppBuilderComponent(project, ENTRY.id, deps);
+
+        expect(result.success).toBe(true);
+        expect(deps.installComponentDependencies).toHaveBeenCalledTimes(1);
+        expect(deps.deployApp).toHaveBeenCalledTimes(1);
+        expect(project.appBuilderComponents?.[ENTRY.id]?.status).toBe('deployed');
+    });
+
+    it("a failed redeploy keeps the component's own name, not the catalog's", async () => {
+        const deps = updateDeps(UPDATED, {
+            deployApp: jest.fn().mockResolvedValue({ success: false, error: 'aio app deploy failed' }),
+        });
+        const project = installedProject();
+        project.appBuilderComponents![ENTRY.id].name = 'Acme ERP sync';
+
+        await updateAppBuilderComponent(project, ENTRY.id, deps);
+
+        expect(project.appBuilderComponents?.[ENTRY.id]).toMatchObject({ status: 'error', name: 'Acme ERP sync' });
+    });
+
     it('passes a failed redeploy through unchanged', async () => {
         const deps = updateDeps(UPDATED, {
             deployApp: jest.fn().mockResolvedValue({ success: false, error: 'aio app deploy failed' }),

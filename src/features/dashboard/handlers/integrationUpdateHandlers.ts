@@ -109,17 +109,32 @@ async function updatePair(
         return refused;
     }
     const deps = await runnerDeps(context, project, report);
+    // Every card the click covers says so at once: the first updates, the rest
+    // wait their turn (owner, 2026-09-18). The clicked card is not assumed to be
+    // the one running.
+    for (const waiting of order.slice(1)) {
+        await postRowStatus(waiting, 'deploying', 'Waiting to update');
+    }
     let last: UpdateResult = { success: true };
     for (const [index, memberId] of order.entries()) {
         last = await updateOne(project, memberId, deps);
         const rest = order.slice(index + 1);
         if (!last.success && rest.length > 0) {
+            await releaseWaiting(project, rest, nameOf(project, memberId));
             const left = rest.map((restId) => nameOf(project, restId)).join(' and ');
             const why = last.error ?? 'no reason given';
             return { success: false, error: `${nameOf(project, memberId)} did not update, so ${left} was left as it is: ${why}` };
         }
     }
     return last;
+}
+
+/** Cards that were waiting go back to their own status, saying why nothing happened. */
+async function releaseWaiting(project: Project, ids: string[], failedName: string): Promise<void> {
+    for (const id of ids) {
+        const status = getAppBuilderComponent(project, id)?.status ?? 'not-deployed';
+        await postRowStatus(id, status, `Left as it is: ${failedName} did not update.`);
+    }
 }
 
 /** A card can update when it is deployed, or when its last deploy failed. */

@@ -9654,7 +9654,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 1072,
+            "line": 1082,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single deps.logger.warn. Emptying it leaves the catch itself in place, so a failing remote teardown is swallowed exactly as before and the removal continues to clear local state - which the remove-contracts suite asserts directly with a rejecting executor. Only the log line differs.",
@@ -9680,7 +9680,7 @@
             "anchors": [
                 "if (cleared.componentApiPicks) {"
             ],
-            "line": 1219,
+            "line": 1229,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this guard true assigns cleared.componentApiPicks onto the caller's project when it is undefined. cleared is spread from that same project, so an undefined value there means the caller's field was already undefined and the assignment writes back exactly what was there. The mutation is a no-op for every input on which the guard was false.",
@@ -9693,7 +9693,7 @@
             "anchors": [
                 "if (cleared.componentConfigs) {"
             ],
-            "line": 1222,
+            "line": 1232,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this guard true assigns cleared.componentConfigs onto the caller's project when it is undefined. cleared is spread from that same project, so an undefined value there means the caller's field was already undefined and the assignment writes back exactly what was there. The mutation is a no-op for every input on which the guard was false.",

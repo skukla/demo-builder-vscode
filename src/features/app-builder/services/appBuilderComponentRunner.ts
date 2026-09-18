@@ -503,9 +503,13 @@ function identityOf(
  * failed add persisted `status:'error'` with nothing to explain it and no surface
  * could answer "why?" once the notification faded. `error` is the one field a
  * failed entry exists to carry.
+ *
+ * `name` is the component's own: the name it already has on a redeploy, the
+ * name its deploy would give it on an add. The catalog's name here renamed a
+ * failed "Acme ERP" to "ERP" (2026-09-18).
  */
-function errorOutcome(entry: AppBuilderComponentCatalogEntry, reason: string): DeployOutcome {
-    return { status: 'error', ...identityOf(entry), error: reason };
+function errorOutcome(entry: AppBuilderComponentCatalogEntry, reason: string, name: string): DeployOutcome {
+    return { status: 'error', ...identityOf(entry), name, error: reason };
 }
 
 /** Add-door rejection when the cloned repo's config layout ≠ the catalog entry's. */
@@ -744,7 +748,8 @@ export async function addAppBuilderComponent(
         );
 
         if (!deployed.ok) {
-            await persistOutcome(project, entry, errorOutcome(entry, deployed.error), deps);
+            const name = resolveDisplayName(entry, resolveDeployInputs(project, entry));
+            await persistOutcome(project, entry, errorOutcome(entry, deployed.error, name), deps);
             // A failed add links too: its removal must still take the system with it.
             if (linkBroughtSystem(project, entry.id, deps.catalog)) await deps.saveProject(project);
             return { success: false, error: deployed.error };
@@ -859,7 +864,8 @@ export async function deployAppBuilderComponent(
             // (measured live 2026-08-27: manifest said deploying while the
             // handler had already returned the build error). The add path has
             // always persisted its error outcome; this makes redeploy match.
-            recordDeployOutcome(project, entry.kind, id, errorOutcome(entry, deployed.error));
+            const name = existing.name ?? resolveDisplayName(entry, resolveDeployInputs(project, entry));
+            recordDeployOutcome(project, entry.kind, id, errorOutcome(entry, deployed.error, name));
             await deps.saveProject(project);
             return { success: false, error: deployed.error };
         }
@@ -902,7 +908,11 @@ export async function updateAppBuilderComponent(
     if (fetched.status === 'refused' || fetched.status === 'failed') {
         return { success: false, error: fetched.detail };
     }
-    if (fetched.status === 'current') {
+    // A component whose last deploy failed is redeployed even when its code is
+    // current: an earlier Update that fetched the code and then failed to deploy
+    // left it current, and the shortcut below answered "nothing to do" and left
+    // it failed (2026-09-18).
+    if (fetched.status === 'current' && existing.status !== 'error') {
         const onDisk = await deps.readAppVersion?.(componentPath);
         const installed = existing.installation?.version;
         if (!onDisk || onDisk === installed) {
