@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-9
 needs: []
 value: med
-status: backlog
+status: active
 ---
 
 # Ask the ERP live whether it can ship this, and when
@@ -75,3 +75,4 @@ and the answer reaches the shopper as Commerce data.
 ## Shipped so far
 
 - 2026-09-17  docs(backlog): AB-19 and AB-20 — the two live ERP calls a real B2B integration makes (`43164d8db`)
+- 2026-09-17  docs: how the ERP reaches a shopper, and where its live calls go (`64fc77a37`)
