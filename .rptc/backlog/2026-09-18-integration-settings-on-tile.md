@@ -31,3 +31,7 @@ Plan: `.rptc/plans/integration-settings-on-tile/overview.md`.
 - The `configure_project` agent tool writes any component's values with no check against the
   entry's settings, and does not refuse App Builder secret settings.
 - The ERP cards cannot be renamed in the drawer: rename refuses systems and catalog entries.
+
+## Shipped so far
+
+- 2026-09-18  feat(integrations): an integration's settings live on its tile, not Configure Project (`807c5b704`)

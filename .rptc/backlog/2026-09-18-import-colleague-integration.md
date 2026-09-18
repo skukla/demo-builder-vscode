@@ -53,3 +53,7 @@ From the research, with file:line there:
 - The request body of the generated `PATCH /config`.
 - How reliably a name rule spots secrets; the person must be able to correct it.
 - Whether colleagues' integrations depend on each other's values.
+
+## Shipped so far
+
+- 2026-09-18  docs(backlog): AB-22 — import a colleague's integration, with its research (`0c4abe22a`)
