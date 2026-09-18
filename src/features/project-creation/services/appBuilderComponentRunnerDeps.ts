@@ -18,6 +18,7 @@ import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { ensureFnmNodeVersion } from '@/core/shell/ensureNodeVersion';
 import type { CachedOrgRef } from '@/core/shell/orgContextEnv';
 import { resolveDesiredApis } from '@/core/state/componentApiPicks';
+import { formatDuration } from '@/core/utils/timeFormatting';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { deriveAllowedDomain } from '@/features/app-builder/services/allowedDomain';
 import {
@@ -239,7 +240,8 @@ export function buildDefaultRunnerDeps(
         },
         // The runner's dep contract is void — swallow the returned API list.
         subscribeRequiredApis: async (appBuilderComponents, project) => {
-            await subscribeRequiredApis(
+            const started = Date.now();
+            const apis = await subscribeRequiredApis(
                 appBuilderComponents,
                 subscriberTarget(project),
                 ctx.subscriberClient,
@@ -248,6 +250,12 @@ export function buildDefaultRunnerDeps(
                 // reconcile or the full-union PUT strips them. Unioned across
                 // every integration's picks — the flat field is legacy.
                 resolveDesiredApis(project),
+            );
+            // Which APIs, and how long: the step that stalled Bodea's redeploys
+            // left no trace of either (2026-09-18).
+            ctx.logger.debug(
+                `[APIs] ${apis.length} API(s) in place in ${formatDuration(Date.now() - started)}: ` +
+                    apis.map((api) => api.code).join(', '),
             );
         },
         republishStorefront: ({ project }) =>

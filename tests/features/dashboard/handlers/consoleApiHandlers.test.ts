@@ -209,7 +209,9 @@ describe('handleAddConsoleApis', () => {
             { orgId: 'org-1', projectId: 'p-1', workspaceId: 'w-1' },
             expect.anything(),
             'localhost:3000',
-            ['ExistingSDK', 'FireflyAPISDK']
+            ['ExistingSDK', 'FireflyAPISDK'],
+            undefined,
+            [],
         );
         // Step 07 retired the flat write; the keyed map carries the union.
         expect(resolveDesiredApis(project)).toEqual(['ExistingSDK', 'FireflyAPISDK']);
@@ -280,13 +282,17 @@ describe('handleSetConsoleApis', () => {
         const result = await handleSetConsoleApis(context, { apis: ['KeepSDK', 'NewSDK'] });
 
         expect(result.success).toBe(true);
-        // Reconcile PUT is the exact desired extras — DropSDK is gone (unsubscribed).
+        // Reconcile PUT is the exact desired extras, and DropSDK is named as being
+        // removed, so the credential holding it is sent the list even though
+        // nothing is missing: that PUT is the only way the removal reaches Adobe.
         expect(subscribeRequiredApis).toHaveBeenCalledWith(
             [],
             { orgId: 'org-1', projectId: 'p-1', workspaceId: 'w-1' },
             expect.anything(),
             'localhost:3000',
-            ['KeepSDK', 'NewSDK']
+            ['KeepSDK', 'NewSDK'],
+            undefined,
+            ['DropSDK'],
         );
         expect(resolveDesiredApis(project)).toEqual(['KeepSDK', 'NewSDK']);
         expect(context.stateManager.saveProject).toHaveBeenCalledWith(project);
@@ -347,7 +353,9 @@ describe('handleSetConsoleApis', () => {
             expect.anything(),
             expect.anything(),
             'localhost:3000',
-            []
+            [],
+            undefined,
+            ['DropSDK'],
         );
         expect(resolveDesiredApis(project)).toStrictEqual([]);
     });

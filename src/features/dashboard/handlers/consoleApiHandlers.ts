@@ -191,6 +191,9 @@ async function reconcileExtras(
         nextPicks = current;
         desiredExtras = [...new Set(Object.values(current).flat())];
     }
+    // What this edit takes away from the project's union. The subscribe must send
+    // those credentials the full list, or the removal never reaches Adobe.
+    const removing = resolveDesiredApis(project).filter((code) => !desiredExtras.includes(code));
     const authService = ServiceLocator.getAuthenticationService();
     const client = createApiSubscriberClient(authService);
     const orgTarget = buildOrgTargetFromProjectAdobe(
@@ -205,6 +208,8 @@ async function reconcileExtras(
                 client,
                 deriveAllowedDomain(project),
                 desiredExtras,
+                undefined,
+                removing,
             ),
         );
         // Reconciled, not replaced. This edits the UNION, and overwriting the map

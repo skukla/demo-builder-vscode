@@ -169,6 +169,11 @@ export class AdobeEntityFetcher {
         return this.credentials.createAdobeIdCredential(orgId, projectId, workspaceId, input);
     }
 
+    /** Every credential id in a workspace, read only — see {@link AdobeWorkspaceCredentials}. */
+    async listCredentialIds(orgId: string, projectId: string, workspaceId: string): Promise<string[]> {
+        return this.credentials.listCredentialIds(orgId, projectId, workspaceId);
+    }
+
     /** Ensure the shared S2S credential exists — see {@link AdobeWorkspaceCredentials}. */
     async ensureOAuthCredentialId(
         orgId: string,
