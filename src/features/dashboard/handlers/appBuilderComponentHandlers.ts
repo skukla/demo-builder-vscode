@@ -32,7 +32,7 @@ import {
     listAppBuilderComponents,
     setAppBuilderComponent,
 } from '@/core/state/appBuilderComponentState';
-import { cardInFlightLabel, withProgressRegister } from '@/core/vscode/progressRegister';
+import { cardInFlightLabel, timedSteps, withProgressRegister } from '@/core/vscode/progressRegister';
 import {
     addAppBuilderComponent,
     deployAppBuilderComponent,
@@ -664,6 +664,10 @@ export async function withComponentProgress<T extends GuardableResult>(
 ): Promise<T> {
     const { title, id, label, noun, logger } = options;
     logger.info(`${title} ${label}...`);
+    // Every step also reaches the Debug Logs with how long the step before it
+    // took. The notification shows only the step in flight and is gone when it
+    // closes, so an update that stalled left nothing to read (owner, 2026-09-18).
+    const steps = timedSteps((line) => logger.debug(`[${title} ${label}] ${line}`));
 
     // The register split (steps -> notification, card -> one static line) is
     // SHARED with the mesh path, which is a separate implementation of the same
@@ -677,8 +681,12 @@ export async function withComponentProgress<T extends GuardableResult>(
                 void postRowStatus(id, 'deploying', cardLabel);
             },
         },
-        run,
+        (report) => run((message) => {
+            steps.step(message);
+            report(message);
+        }),
     );
+    steps.finish();
 
     if (result.success) {
         logger.info(`${title} ${label} — done`);

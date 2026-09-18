@@ -12,7 +12,7 @@
 
 import * as vscode from 'vscode';
 import { withPhaseSinks } from '@/core/utils/agentPhaseChannel';
-import { cardInFlightLabel, withProgressRegister } from '@/core/vscode/progressRegister';
+import { cardInFlightLabel, timedSteps, withProgressRegister } from '@/core/vscode/progressRegister';
 
 /** Capture the reporter withProgress hands the task. */
 function stubWithProgress(): {
@@ -254,5 +254,45 @@ describe('withProgressRegister — operations with no card', () => {
         );
 
         expect(pushCardStatus).toHaveBeenCalledWith('Deploying Mesh…');
+    });
+});
+
+describe('timedSteps', () => {
+    // Owner, 2026-09-18: an update's steps reached only the notification, which
+    // is gone when it closes, so a stalled step left nothing in the Debug Logs.
+    beforeEach(() => {
+        jest.useFakeTimers();
+        jest.setSystemTime(new Date('2026-09-18T12:00:00Z'));
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    it('writes each step as it starts, closes the one before with its duration, and the total at the end', () => {
+        const lines: string[] = [];
+        const steps = timedSteps((line) => lines.push(line));
+
+        steps.step('Fetching the latest version');
+        jest.advanceTimersByTime(1200);
+        steps.step('Subscribing Adobe APIs');
+        jest.advanceTimersByTime(61000);
+        steps.finish();
+
+        expect(lines).toStrictEqual([
+            'Fetching the latest version',
+            'Fetching the latest version took 1.2s',
+            'Subscribing Adobe APIs',
+            'Subscribing Adobe APIs took 1m 1s',
+            'finished in 1m 2s',
+        ]);
+    });
+
+    it('an operation that reported no step still writes its total', () => {
+        const lines: string[] = [];
+
+        timedSteps((line) => lines.push(line)).finish();
+
+        expect(lines).toStrictEqual(['finished in 0ms']);
     });
 });
