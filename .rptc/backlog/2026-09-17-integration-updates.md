@@ -33,3 +33,4 @@ Filed 2026-09-17.
 - 2026-09-17  feat(app-builder): Update fetches an integration's newer code, and the card says when there is some (`e3bebf76a`)
 - 2026-09-17  test(app-builder): the update handler suite loads its shared mocks before the handler (`602ee0094`)
 - 2026-09-17  fix(updates): an update is no longer refused over a file the extension itself rewrote (`34e5f23dc`)
+- 2026-09-18  fix(integrations): a failed card with newer code offers Update, not Retry (`0b2357b3d`)
