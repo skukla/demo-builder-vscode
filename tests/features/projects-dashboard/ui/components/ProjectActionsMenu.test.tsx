@@ -508,12 +508,12 @@ describe('ProjectActionsMenu', () => {
         });
     });
 
-    describe('Integrations… action', () => {
+    describe('Integrations action', () => {
         // The projects list is the ONLY short route to the integrations surface
         // (project → dashboard → Integrations is the long way), and this item
         // replaced the per-integration "Redeploy <name>" entries that grew with N.
 
-        it('offers Integrations… when the project has integrations and the callback is wired', () => {
+        it('offers Integrations when the project has integrations and the callback is wired', () => {
             const project = withIntegrations();
             const onOpenIntegrations = jest.fn();
             renderWithProvider(
@@ -521,7 +521,7 @@ describe('ProjectActionsMenu', () => {
             );
             openMenu();
 
-            screen.getByText('Integrations…').click();
+            screen.getByText('Integrations').click();
 
             expect(onOpenIntegrations).toHaveBeenCalledWith(project);
         });
@@ -535,7 +535,7 @@ describe('ProjectActionsMenu', () => {
             );
             openMenu();
 
-            expect(screen.queryByText('Integrations…')).not.toBeInTheDocument();
+            expect(screen.queryByText('Integrations')).not.toBeInTheDocument();
         });
 
         it('omits it when the callback is absent, however many integrations exist', () => {
@@ -547,7 +547,7 @@ describe('ProjectActionsMenu', () => {
             );
             openMenu();
 
-            expect(screen.queryByText('Integrations…')).not.toBeInTheDocument();
+            expect(screen.queryByText('Integrations')).not.toBeInTheDocument();
         });
     });
 
