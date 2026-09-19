@@ -129,3 +129,36 @@ export class AuthenticationErrorFormatter {
         return { title, message, technical, code };
     }
 }
+
+/**
+ * A sentence an SC can act on for the two Adobe refusals that reach a deploy with no
+ * explanation of their own, or `undefined` when the text is neither.
+ *
+ * Both were read off real failures on 2026-09-17/18:
+ *
+ * - **Missing licence.** Console and Runtime answer `403 … doesn't have the matching
+ *   licenses` (template `ERR_MSG_OPERATION_NOT_ALLOWED`) when the signed-in person is
+ *   not a developer on every product profile the project's credential uses. The
+ *   project then also reads as read-only in Developer Console. Only an org admin can
+ *   change profile membership, so the sentence says who.
+ * - **Licence service down.** Console answers `504 Gateway Timeout` when its own call
+ *   to Adobe's licence service times out. Nothing the SC does fixes that; waiting does.
+ */
+export function explainAdobeAccessFailure(text: string): string | undefined {
+    if (/matching licenses|ERR_MSG_OPERATION_NOT_ALLOWED/i.test(text)) {
+        return (
+            'Adobe refused this because your login is not a developer on every product ' +
+            "profile this project's credential uses. An admin of this Adobe organization " +
+            'can fix it in Admin Console by adding you as a developer on those product ' +
+            'profiles. Details are in Debug Logs.'
+        );
+    }
+    const timedOut = /504/.test(text) && /Gateway Timeout|timed out/i.test(text);
+    if (timedOut && /CoreConsoleAPISDK|licenses/i.test(text)) {
+        return (
+            "Adobe's Developer Console did not answer in time. This is on Adobe's side — " +
+            'try again in a few minutes. Details are in Debug Logs.'
+        );
+    }
+    return undefined;
+}

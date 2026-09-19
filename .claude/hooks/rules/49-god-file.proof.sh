@@ -42,7 +42,7 @@ run() {
 }
 
 echo "=== over the limit for its kind ==="
-run "$ROOT/src/features/app-builder/services/appBuilderComponentRunner.ts"  "1121-line service (>400)"  god-file
+run "$ROOT/src/features/app-builder/services/appBuilderComponentRunner.ts"  "1135-line service (>400)"  god-file
 run "$ROOT/src/features/projects-dashboard/handlers/dashboardHandlers.ts"   "928-line handler (>500)"   god-file
 run "$ROOT/src/features/dashboard/ui/components/ActionGrid.tsx"             "660-line component (>350)" god-file
 
@@ -60,7 +60,7 @@ echo
 echo "=== the message must state the MEASUREMENT, not just scold ==="
 payload=$(P="$ROOT/src/features/app-builder/services/appBuilderComponentRunner.ts" S="god-msg-$RANDOM$$" python3 -c 'import json,os;print(json.dumps({"tool_name":"Edit","tool_input":{"file_path":os.environ["P"],"new_string":"x"},"session_id":os.environ["S"]}))')
 msg=$(printf '%s' "$payload" | bash .claude/hooks/router.sh 2>&1)
-if printf '%s' "$msg" | grep -q '1121 lines' && printf '%s' "$msg" | grep -q '400-line limit'; then
+if printf '%s' "$msg" | grep -q '1135 lines' && printf '%s' "$msg" | grep -q '400-line limit'; then
   printf '%-58s expect=%-20s got=%-20s %s\n' "names the real line count and the limit" measured measured OK
 else
   printf '%-58s expect=%-20s got=%-20s %s\n' "names the real line count and the limit" measured vague '*** WRONG ***'
