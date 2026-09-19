@@ -235,7 +235,7 @@ export const handleSelectProject: MessageHandler<{
             //
             // `surface` picks WHICH webview opens. Selection is otherwise
             // identical — path validation, load, set-current — so the project
-            // kebab's "Integrations…" rides this handler rather than forking it.
+            // kebab's "Integrations" rides this handler rather than forking it.
             await BaseWebviewCommand.startWebviewTransition();
             try {
                 await vscode.commands.executeCommand(
