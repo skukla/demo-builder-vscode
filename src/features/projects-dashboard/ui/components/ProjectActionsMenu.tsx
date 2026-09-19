@@ -7,7 +7,7 @@
  * Actions are grouped into labeled sections rather than a flat list:
  * - USE: open/run the demo (Start/Stop or Open in Browser, Author Content,
  *   Manage Commerce, Open AI).
- * - MANAGE: project-entry actions (Edit, Integrations…, Pin/Unpin, Reset, Export).
+ * - MANAGE: project-entry actions (Edit, Integrations, Pin/Unpin, Reset, Export).
  *   There is NO Rename item: renaming happens in place on the card name /
  *   dashboard title (InlineRenameField).
  *
