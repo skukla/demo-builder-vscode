@@ -43,3 +43,7 @@ Answers it could have:
 
 Whichever is chosen, PL-59 phase 2 gives the agent's delete the same stage names as the
 button's, so it can show its steps.
+
+## Shipped so far
+
+- 2026-09-19  docs(backlog): AI-9, should an agent's project delete also clean up the cloud (`6f8315213`)
