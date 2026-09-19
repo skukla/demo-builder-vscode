@@ -65,11 +65,11 @@ describe('Run in background', () => {
             expect.objectContaining({ title: TITLE, location: 15, cancellable: false }),
             expect.any(Function),
         );
-        // The step alone, one short line, as the operation's own notification shows.
-        expect(mockProgressReport).toHaveBeenCalledWith({ message: 'Running aio app deploy' });
+        // The stage alone: the short words. The step is the modal's long set.
+        expect(mockProgressReport).toHaveBeenCalledWith({ message: 'Deploying the app' });
     });
 
-    it('keeps narrating each stage the operation reaches, the stage when it has no step', async () => {
+    it('keeps narrating each stage the operation reaches', async () => {
         await runningInBackground();
 
         await pushComponentOperationProgress({ id: ID, state: 'running', stage: 'Installing into Commerce' });
