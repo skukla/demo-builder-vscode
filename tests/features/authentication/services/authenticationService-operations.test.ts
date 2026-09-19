@@ -47,9 +47,7 @@ describe('AuthenticationService - Login/Logout Operations', () => {
             logger: mockLogger,
             sdkClient: mockSDKClient,
         } = setupAuthServiceSuite({
-            AdobeSDKClient: AdobeSDKClient as unknown as jest.MockedClass<
-                typeof AdobeSDKClient
-            >,
+            AdobeSDKClient: AdobeSDKClient as unknown as jest.MockedClass<typeof AdobeSDKClient>,
             createEntityServices: createEntityServices as jest.Mock,
             getLogger: getLogger as jest.Mock,
         }));
@@ -146,6 +144,18 @@ describe('AuthenticationService - Login/Logout Operations', () => {
             expect(mockLogger.error).toHaveBeenCalled();
         });
 
+        // 2026-09-19: the screen's sign-in and the helper's ran at once, one browser
+        // tab each; the one the screen waited on was never finished.
+        it('runs ONE sign-in for two requests made while it is open', async () => {
+            const token = 'x'.repeat(150);
+            mockCommandExecutor.execute.mockResolvedValue(createSuccessResult(token));
+
+            const results = await Promise.all([authService.login(), authService.login()]);
+
+            expect(results).toEqual([true, true]);
+            expect(mockCommandExecutor.execute).toHaveBeenCalledTimes(1);
+        });
+
         it('should NOT retry when CLI succeeds with valid token', async () => {
             const token = 'x'.repeat(150);
             mockCommandExecutor.execute.mockResolvedValue(createSuccessResult(token));
@@ -233,7 +243,7 @@ describe('AuthenticationService - Login/Logout Operations', () => {
                     projectId: 'project123',
                     workspace: 'workspace123',
                 },
-                true,
+                true
             );
 
             // Then: the forced (-f) login command is used so a stale browser
@@ -374,7 +384,7 @@ describe('AuthenticationService - Login/Logout Operations', () => {
             expect(mockCommandExecutor.execute).toHaveBeenNthCalledWith(
                 2,
                 'aio auth login -f',
-                expect.objectContaining({ encoding: 'utf8' }),
+                expect.objectContaining({ encoding: 'utf8' })
             );
         });
 
