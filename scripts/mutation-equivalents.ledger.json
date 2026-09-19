@@ -9746,7 +9746,7 @@
             "anchors": [
                 "if (result.status === 'failed') {"
             ],
-            "line": 832,
+            "line": 846,
             "mutants": 4,
             "category": "branch",
             "reason": "The guarded body is a single deps.logger.warn call. The Commerce uninstall is best-effort: its outcome is neither surfaced on the RunnerResult nor persisted, and the removal proceeds identically whether the guard is taken, inverted or deleted. Every mutation here changes only which log line is written, which is wording rather than behaviour.",
@@ -9796,7 +9796,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 1034,
+            "line": 1048,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single deps.logger.warn. Emptying it leaves the catch itself in place, so a failing remote teardown is swallowed exactly as before and the removal continues to clear local state - which the remove-contracts suite asserts directly with a rejecting executor. Only the log line differs.",
@@ -9822,7 +9822,7 @@
             "anchors": [
                 "if (cleared.componentApiPicks) {"
             ],
-            "line": 1101,
+            "line": 1115,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this guard true assigns cleared.componentApiPicks onto the caller's project when it is undefined. cleared is spread from that same project, so an undefined value there means the caller's field was already undefined and the assignment writes back exactly what was there. The mutation is a no-op for every input on which the guard was false.",
@@ -9835,7 +9835,7 @@
             "anchors": [
                 "if (cleared.componentConfigs) {"
             ],
-            "line": 1104,
+            "line": 1118,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this guard true assigns cleared.componentConfigs onto the caller's project when it is undefined. cleared is spread from that same project, so an undefined value there means the caller's field was already undefined and the assignment writes back exactly what was there. The mutation is a no-op for every input on which the guard was false.",
