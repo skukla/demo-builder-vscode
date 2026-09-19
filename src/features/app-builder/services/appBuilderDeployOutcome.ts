@@ -68,7 +68,8 @@ export function resolveKeyedComponentId(
 }
 
 /**
- * Refresh a mesh entry's provided MESH_ENDPOINT with the freshly deployed one.
+ * What the entry provides after this deploy: the recorded values, with any the
+ * deploy freshly derived written over them, and a mesh's MESH_ENDPOINT refreshed.
  * Entries that don't provide env vars stay as they are — nothing is fabricated
  * (the catalog decides what a component provides, not the deploy path).
  */
@@ -76,9 +77,14 @@ function refreshProvidedEnvVars(
     existing: AppBuilderComponentState | undefined,
     outcome: DeployOutcome,
 ): Record<string, string> | undefined {
-    // The existing entry is authoritative on an update; on a CREATE there is none,
-    // so the outcome carries what the catalog says this component provides.
-    const provided = existing?.providesEnvVars ?? outcome.providesEnvVars;
+    // A value the deploy derived is the truth; the recorded one is kept only when
+    // the deploy derived nothing. Before, the recorded map always won, so after
+    // Bodea's ERP moved Adobe projects its ERP_BASE_URL kept naming the old
+    // namespace and the integration was deployed against it (2026-09-19).
+    const provided =
+        existing?.providesEnvVars && outcome.providesEnvVars
+            ? { ...existing.providesEnvVars, ...outcome.providesEnvVars }
+            : (existing?.providesEnvVars ?? outcome.providesEnvVars);
     if (!provided || outcome.endpoint === undefined || !('MESH_ENDPOINT' in provided)) {
         return provided;
     }

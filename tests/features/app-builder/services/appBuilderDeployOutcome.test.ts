@@ -405,6 +405,31 @@ describe('recordDeployOutcome — provided env vars', () => {
         });
     });
 
+    // Bodea, 2026-09-19: the ERP moved to another Adobe project and redeployed,
+    // but its recorded ERP_BASE_URL kept naming the OLD namespace — so the
+    // integration was deployed pointing at an ERP about to be deleted.
+    it('records the address a redeploy derived, replacing the old one', () => {
+        const p = createMockProject({
+            appBuilderComponents: {
+                erp: {
+                    kind: 'system',
+                    status: 'deployed',
+                    source: { owner: '', repo: '' },
+                    providesEnvVars: { ERP_BASE_URL: 'https://old-ns/api/v1/web/demo-erp' },
+                },
+            },
+        });
+
+        recordDeployOutcome(p, 'system', 'erp', {
+            status: 'deployed',
+            providesEnvVars: { ERP_BASE_URL: 'https://new-ns/api/v1/web/demo-erp' },
+        });
+
+        expect(p.appBuilderComponents?.erp.providesEnvVars).toStrictEqual({
+            ERP_BASE_URL: 'https://new-ns/api/v1/web/demo-erp',
+        });
+    });
+
     it('leaves an entry that provides nothing providing nothing', () => {
         const p = meshProviding(undefined);
 
