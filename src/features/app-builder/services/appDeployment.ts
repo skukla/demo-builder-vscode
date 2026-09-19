@@ -24,6 +24,8 @@ import * as os from 'os';
 import * as path from 'path';
 import { declaresIncludeImsCredentials, listDeclaredActions } from './appConfigPackages';
 import { urlPayload, urlsForDeclaredActions } from './deployedUrls';
+import { writeFailureLog } from './deployFailureLog';
+import { forgetDeployRecordOnNewTarget, rememberDeployTarget } from './deployRecord';
 import { aioOutputTail, extractAioErrorDetail, fetchRuntimeCredentials } from './runtimeCredentials';
 import type { AppDeploymentResult } from './types';
 import { buildComponent } from '@/core/shell/buildComponent';
@@ -171,6 +173,13 @@ export interface DeployAppOptions {
      * deploy time. May carry live secrets: per-invocation only, never logged.
      */
     extraEnv?: Record<string, string>;
+    /**
+     * Where the WHOLE `aio app deploy` output goes when the deploy fails, tokens
+     * masked. Debug Logs keep only the last lines, and on 2026-09-19 the cause of a
+     * failure (an app's package half-created in a new namespace) was in the part
+     * those lines cut off. An agent cannot read an output channel; it can read this.
+     */
+    failureLogFile?: string;
 }
 
 /**
@@ -311,6 +320,8 @@ async function deployAppComponentOnce(
         };
 
         onProgress?.('Deploying custom integration...', 'Running aio app deploy');
+        // The CLI skips actions its local record calls deployed — record of ANY namespace.
+        await forgetDeployRecordOnNewTarget(componentPath, runtimeCreds.namespace, logger);
 
         // `--verbose` because the CLI prints its warnings — such as a database
         // status check refused with a 403 — only in verbose mode, and without
@@ -330,6 +341,7 @@ async function deployAppComponentOnce(
             if (tail) {
                 logger.debug(`[App Builder] aio app deploy output, last lines:\n${tail}`);
             }
+            await writeFailureLog(opts.failureLogFile, deployResult, logger);
             // oclif writes spinner frames to stderr — extract the real
             // `› Error:` line instead of surfacing "- Building actions...".
             const detail =
@@ -339,6 +351,7 @@ async function deployAppComponentOnce(
                 `aio app deploy exited with code ${deployResult.code}`;
             throw new Error(`App deployment failed: ${detail}`);
         }
+        await rememberDeployTarget(componentPath, runtimeCreds.namespace, logger);
 
         // The URLs the app's own config declares, in the namespace it just deployed
         // to. No process, and the only source that works for an extension-layout app;
