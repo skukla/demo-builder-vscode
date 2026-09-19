@@ -454,14 +454,6 @@ function identityOf(
 }
 
 /**
- * A failed deploy's outcome — INCLUDING why it failed.
- *
- * The reason used to be returned to the caller and dropped from state, so a
- * failed add persisted `status:'error'` with nothing to explain it and no surface
- * could answer "why?" once the notification faded. `error` is the one field a
- * failed entry exists to carry.
- */
-/**
  * What the SC reads for a failure: Adobe's permission and outage refusals in plain words,
  * anything else as it was written. Adobe's own words still reach Debug Logs.
  */
@@ -472,6 +464,14 @@ function readableFailure(reason: string, logger: Logger): string {
     return plain;
 }
 
+/**
+ * A failed deploy's outcome — INCLUDING why it failed.
+ *
+ * The reason used to be returned to the caller and dropped from state, so a
+ * failed add persisted `status:'error'` with nothing to explain it and no surface
+ * could answer "why?" once the notification faded. `error` is the one field a
+ * failed entry exists to carry.
+ */
 function errorOutcome(entry: AppBuilderComponentCatalogEntry, reason: string): DeployOutcome {
     return { status: 'error', ...identityOf(entry), error: reason };
 }
