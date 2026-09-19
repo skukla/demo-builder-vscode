@@ -240,7 +240,7 @@ export function buildDefaultRunnerDeps(
             return buildS2SDeployEnv(credentials);
         },
         // The runner's dep contract is void — swallow the returned API list.
-        subscribeRequiredApis: async (appBuilderComponents, project) => {
+        subscribeRequiredApis: async (appBuilderComponents, project, onStep) => {
             const started = Date.now();
             const apis = await subscribeRequiredApis(
                 appBuilderComponents,
@@ -251,6 +251,9 @@ export function buildDefaultRunnerDeps(
                 // reconcile or the full-union PUT strips them. Unioned across
                 // every integration's picks — the flat field is legacy.
                 resolveDesiredApis(project),
+                undefined,
+                [],
+                { onStep, log: (message) => ctx.logger.debug(message) },
             );
             // Which APIs, and how long: the step that stalled Bodea's redeploys
             // left no trace of either (2026-09-18).

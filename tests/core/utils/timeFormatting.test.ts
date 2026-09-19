@@ -2,7 +2,7 @@
  * Tests for time formatting utilities
  */
 
-import { formatDuration, formatMinutes } from '@/core/utils/timeFormatting';
+import { formatDuration, formatElapsed, formatMinutes } from '@/core/utils/timeFormatting';
 
 describe('timeFormatting', () => {
     describe('formatDuration', () => {
@@ -75,6 +75,26 @@ describe('timeFormatting', () => {
 
             // From: "Token valid, expires in 939 minutes"
             expect(formatMinutes(939)).toBe('15h 39m');
+        });
+    });
+
+    // A clock a person is WATCHING, so whole seconds: a ticking tenth beside a
+    // spinner is noise, and the point is only to show the operation is alive.
+    describe('formatElapsed', () => {
+        it('counts whole seconds under a minute', () => {
+            expect(formatElapsed(0)).toBe('0s');
+            expect(formatElapsed(1400)).toBe('1s');
+            expect(formatElapsed(45000)).toBe('45s');
+        });
+
+        it('reads as minutes and padded seconds past a minute', () => {
+            expect(formatElapsed(60000)).toBe('1m 00s');
+            expect(formatElapsed(72000)).toBe('1m 12s');
+            expect(formatElapsed(605000)).toBe('10m 05s');
+        });
+
+        it('never counts backwards from a clock that jumped', () => {
+            expect(formatElapsed(-500)).toBe('0s');
         });
     });
 });

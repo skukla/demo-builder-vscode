@@ -74,6 +74,8 @@ export interface EnsureMeshApiSubscribedParams {
     logger: Logger;
     /** Per-API subscribe ticks, so a caller can telegraph progress live. */
     onProgress?: SubscribeProgressListener;
+    /** The subscribe's own short lines, for the screen's step row. */
+    onStep?: (step: string) => void;
 }
 
 /**
@@ -88,7 +90,7 @@ export interface EnsureMeshApiSubscribedParams {
 export async function ensureMeshApiSubscribed(
     params: EnsureMeshApiSubscribedParams,
 ): Promise<SubscribedApi[]> {
-    const { project, authService, logger, onProgress } = params;
+    const { project, authService, logger, onProgress, onStep } = params;
 
     const backendId = project.componentSelections?.backend ?? '';
     const frontendId = project.componentSelections?.frontend ?? '';
@@ -113,6 +115,8 @@ export async function ensureMeshApiSubscribed(
             deriveAllowedDomain(project),
             resolveDesiredApis(project),
             onProgress,
+            [],
+            { onStep, log: (message) => logger.debug(message) },
         ),
     );
     logger.info('[Mesh Subscribe] Required APIs subscribed');

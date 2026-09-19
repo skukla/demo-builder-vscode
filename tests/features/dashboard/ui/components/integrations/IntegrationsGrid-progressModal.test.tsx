@@ -82,6 +82,21 @@ describe('the progress modal', () => {
         expect(within(modal).getByText('Usually 1–2 minutes')).toBeInTheDocument();
     });
 
+    // The stage line can hold still for two minutes while Adobe works, and a modal
+    // that never changes reads as a hang (owner, 2026-09-19).
+    it('counts the seconds the stage has been running, beside the expectation', async () => {
+        const user = setupUser();
+        renderGrid({ appBuilderComponents: NOT_DEPLOYED });
+        const modal = await startDeploy(user);
+        push(RUNNING);
+
+        act(() => {
+            jest.advanceTimersByTime(12000);
+        });
+
+        expect(within(modal).getByText('Usually 1–2 minutes · 12s')).toBeInTheDocument();
+    });
+
     it("shows the pair count in the stage line", async () => {
         const user = setupUser();
         renderGrid({ appBuilderComponents: NOT_DEPLOYED });

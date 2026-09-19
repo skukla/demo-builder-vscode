@@ -112,7 +112,12 @@ describe('MeshDeployment - Progress Reporting', () => {
                 onProgress
             );
 
-            expect(onProgress).toHaveBeenCalledWith(OPERATION_STAGES.verifyingMesh.label, 'Checking deployment status');
+            // Each poll carries the seconds so far: Adobe says nothing else while
+            // it builds, so the count IS the movement (owner, 2026-09-19).
+            expect(onProgress).toHaveBeenCalledWith(
+                OPERATION_STAGES.verifyingMesh.label,
+                expect.stringMatching(/^Waiting for Adobe — \d+s$/),
+            );
         });
 
         it('should report completion', async () => {

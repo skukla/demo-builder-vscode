@@ -134,7 +134,12 @@ describe('S2S deploy-env wiring', () => {
 
         await deployAppBuilderComponent(project, KIT_ENTRY.id, deps);
 
-        expect(deps.subscribeRequiredApis).toHaveBeenCalledWith([KIT_ENTRY], project);
+        // The third argument is the step reporter the subscribe narrates through.
+        expect(deps.subscribeRequiredApis).toHaveBeenCalledWith(
+            [KIT_ENTRY],
+            project,
+            expect.any(Function),
+        );
     });
 
     it('redeploy: a deploy-only entry still skips the subscribe (adds own it)', async () => {

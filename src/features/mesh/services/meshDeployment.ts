@@ -8,6 +8,7 @@ import { buildComponent } from '@/core/shell/buildComponent';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { getMeshNodeVersion } from '@/core/utils/meshConfig';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { formatElapsed } from '@/core/utils/timeFormatting';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { MeshDeploymentResult } from '@/features/mesh/services/types';
 import type { Logger } from '@/types/logger';
@@ -227,8 +228,15 @@ export async function deployMeshComponent(
             // this function's own parameter — so the verifier receives it
             // rather than fetching a second one.
             commandManager,
-            onProgress: () => {
-                onProgress?.(OPERATION_STAGES.verifyingMesh.label, 'Checking deployment status');
+            // Every poll (~3s) moves the step line on. Adobe reports nothing else
+            // while it builds, so the count of seconds IS the movement — a line
+            // that never changes for two minutes reads as a hang (owner,
+            // 2026-09-19).
+            onProgress: (_attempt, _max, elapsedSeconds) => {
+                onProgress?.(
+                    OPERATION_STAGES.verifyingMesh.label,
+                    `Waiting for Adobe — ${formatElapsed(elapsedSeconds * 1000)}`,
+                );
             },
             logger: logger,
         });

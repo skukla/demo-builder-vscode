@@ -189,7 +189,14 @@ export async function deployMeshHeadless(
 
             // Bounded pre-deploy subscribe (API Mesh API + baseline) BEFORE deploying.
             onProgress?.(OPERATION_STAGES.subscribingApis.label);
-            await ensureMeshApiSubscribed({ project, authService: authManager, logger });
+            await ensureMeshApiSubscribed({
+                project,
+                authService: authManager,
+                logger,
+                // The subscribe's own short lines: it is the step most likely to
+                // sit still for a minute (2026-09-19 Bodea logs).
+                onStep: (step) => onProgress?.(OPERATION_STAGES.subscribingApis.label, step),
+            });
 
             // Create-or-update from REMOTE truth — the shared rule lives in
             // deployMeshCreateOrUpdate (one copy, was three). Untargeted this

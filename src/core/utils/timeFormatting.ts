@@ -75,3 +75,21 @@ export function formatMinutes(minutes: number): string {
         ? `${days}d ${remainingHours}h`
         : `${days}d`;
 }
+
+/**
+ * A running clock, for a wait a person is WATCHING: "8s", "45s", "1m 12s".
+ *
+ * Distinct from {@link formatDuration}, which is written for a log line after
+ * the fact and renders a decimal ("12.4s") — a tenth of a second ticking beside
+ * a spinner reads as noise, and the point of this one is only to prove the
+ * operation is still moving.
+ *
+ * @param ms Elapsed milliseconds
+ * @returns The elapsed time, whole seconds
+ */
+export function formatElapsed(ms: number): string {
+    const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+    if (totalSeconds < 60) return `${totalSeconds}s`;
+    const minutes = Math.floor(totalSeconds / 60);
+    return `${minutes}m ${String(totalSeconds % 60).padStart(2, '0')}s`;
+}

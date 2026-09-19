@@ -42,9 +42,9 @@ export const OPERATION_STAGES = {
         detail: 'The Node version this app runs on',
     },
     subscribingApis: {
-        label: 'Subscribing Adobe APIs',
+        label: 'Adding Adobe services',
         expectation: 'Usually under a minute',
-        detail: "The APIs on the workspace's credential",
+        detail: 'So the app can call them',
     },
     adding: {
         label: 'Preparing the app',

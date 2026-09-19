@@ -271,10 +271,15 @@ export interface AppBuilderComponentRunnerDeps extends TeardownDeps {
         componentPath: string,
         definition: TransformedComponentDefinition,
     ) => Promise<{ success: boolean; error?: string }>;
-    /** Union-reconcile API subscriber (step 07). */
+    /**
+     * Union-reconcile API subscriber (step 07). `onStep` carries its own short
+     * lines to the screen: this step can hold still for a minute and a stage name
+     * alone reads as frozen (owner, 2026-09-19).
+     */
     subscribeRequiredApis: (
         appBuilderComponents: AppBuilderComponentCatalogEntry[],
-        project: Project
+        project: Project,
+        onStep?: (step: string) => void
     ) => Promise<void>;
     /** Storefront config regen + republish (step 04 generalized providesEnvVars path). */
     republishStorefront: (input: RepublishInput) => Promise<{ success: boolean; error?: string }>;
@@ -721,7 +726,11 @@ async function addOne(
         // The subscribe's org-services fetch alone measured 43.5s cold — the
         // longest silent stretch in the chain (owner audit, 2026-08-27).
         deps.onProgress?.(OPERATION_STAGES.subscribingApis.label);
-        await deps.subscribeRequiredApis(entriesThatNeedApis(deps.catalog, project, [entry]), project);
+        await deps.subscribeRequiredApis(
+            entriesThatNeedApis(deps.catalog, project, [entry]),
+            project,
+            (step) => deps.onProgress?.(OPERATION_STAGES.subscribingApis.label, step),
+        );
 
         const installed = await cloneAndInstall(project, entry, deps);
         if ('error' in installed) {
@@ -881,7 +890,11 @@ export async function deployAppBuilderComponent(
         // no-op PUT of the same union.
         if (entry.lifecycle === 'app-management') {
             deps.onProgress?.(OPERATION_STAGES.subscribingApis.label);
-            await deps.subscribeRequiredApis(entriesThatNeedApis(deps.catalog, project), project);
+            await deps.subscribeRequiredApis(
+                entriesThatNeedApis(deps.catalog, project),
+                project,
+                (step) => deps.onProgress?.(OPERATION_STAGES.subscribingApis.label, step),
+            );
         }
 
         const since = new Date().toISOString();

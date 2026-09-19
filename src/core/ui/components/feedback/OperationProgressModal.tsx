@@ -26,6 +26,7 @@ import React, { useCallback, useEffect } from 'react';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { Modal } from '@/core/ui/components/ui/Modal';
+import { useElapsedClock } from '@/core/ui/hooks/useElapsedClock';
 import { useOperationProgress } from '@/core/ui/hooks/useOperationProgress';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { stageLine } from '@/core/utils/stageLine';
@@ -53,6 +54,16 @@ export interface OperationProgressModalProps {
     onClose: () => void;
 }
 
+/**
+ * Row 3: what to expect, and how long this stage has actually been running.
+ * Never empty — the row holds its height whether or not either is known, so the
+ * modal does not resize as stages come and go.
+ */
+function helperLine(expectation?: string, elapsed?: string): string {
+    const parts = [expectation, elapsed].filter(Boolean);
+    return parts.length > 0 ? parts.join(' · ') : '\u00A0';
+}
+
 /** The progress modal for one operation. */
 export function OperationProgressModal({
     operation,
@@ -65,6 +76,10 @@ export function OperationProgressModal({
         operation?.resume ?? false,
     );
     const failed = progress?.state === 'failed';
+    // Restarts on every new stage, so the clock times the stage in progress and
+    // not the whole run. It is the only thing that moves while a step waits on
+    // Adobe (owner, 2026-09-19: "I wasn't happy with the frequency of updates").
+    const elapsed = useElapsedClock(failed ? null : progress?.stage);
 
     useEffect(() => {
         if (progress?.state === 'succeeded') onClose();
@@ -121,7 +136,7 @@ export function OperationProgressModal({
                                 size="L"
                                 message={progress?.stage ? stageLine(progress.stage, progress.position) : 'Starting'}
                                 subMessage={progress?.step}
-                                helperText={progress?.expectation ?? '\u00A0'}
+                                helperText={helperLine(progress?.expectation, elapsed)}
                             />
                         )}
                     </div>
