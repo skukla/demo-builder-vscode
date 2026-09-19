@@ -28,6 +28,7 @@ import {
     withComponentProgress,
     type GuardableResult,
 } from './appBuilderComponentHandlers';
+import { narrateOutcomeToModal, progressSurfaceOf } from './componentOperationProgress';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getAppBuilderComponent, recordInstallation } from '@/core/state/appBuilderComponentState';
 import type { AppBuilderComponentRunnerDeps } from '@/features/app-builder/services/appBuilderComponentRunner';
@@ -39,6 +40,7 @@ import {
 import { deriveAppManagementBaseUrl } from '@/features/app-builder/services/appManagementInstaller';
 import { reinstallAppManagementApp } from '@/features/app-builder/services/appManagementReinstall';
 import type { AppManagementInstallResult } from '@/features/app-builder/services/appManagementUpgrade';
+import { OPERATION_STAGES } from '@/features/app-builder/services/operationStages';
 import {
     buildCustomIntegrationEntry,
     getAppBuilderComponentEntry,
@@ -182,14 +184,14 @@ export const handleGetAppBuilderInstallStatus: MessageHandler<{ id?: string }> =
 export async function handlerRunnerDeps(
     context: HandlerContext,
     project: Project,
-    report?: (message: string) => void,
+    report?: (message: string, subMessage?: string) => void,
 ): Promise<AppBuilderComponentRunnerDeps> {
     return buildDefaultRunnerDeps(
         await buildRunnerDepsContext(context, project, {
             authManager: ServiceLocator.getAuthenticationService(),
             commandManager: ServiceLocator.getCommandExecutor(),
         }),
-        report && ((message, subMessage) => report(subMessage || message)),
+        report && ((message, subMessage) => report(message, subMessage)),
     );
 }
 
@@ -204,6 +206,15 @@ interface InstallPass {
 
 type InstallPassCheck = (id: string, state: AppBuilderComponentState) => string | undefined;
 
+/** Which pass this is, and where its progress shows. */
+interface InstallPassOptions {
+    requestedId: string | undefined;
+    title: string;
+    /** `'modal'` when the SC started it from the integrations screen (PL-59). */
+    progress: 'modal' | undefined;
+    check?: InstallPassCheck;
+}
+
 /**
  * The shared body of install and reinstall: resolve a DEPLOYED app-management
  * integration, run the guards and build the runner deps under a progress
@@ -212,12 +223,11 @@ type InstallPassCheck = (id: string, state: AppBuilderComponentState) => string 
  */
 async function runInstallPass(
     context: HandlerContext,
-    requestedId: string | undefined,
-    title: string,
+    options: InstallPassOptions,
     /** Resolves to the outcome, or to a reason string when the pass is not wired (nothing persisted). */
     pass: (input: InstallPass) => Promise<AppManagementInstallResult | string>,
-    check?: InstallPassCheck,
 ): Promise<HandlerResponse> {
+    const { requestedId, title, progress, check } = options;
     const target = await resolveComponentRecord(context, requestedId, (record) => record.kind === 'integration');
     if (!target.ok) return target.error;
     const { id, project, state } = target;
@@ -227,9 +237,9 @@ async function runInstallPass(
     }
 
     const result = await withComponentProgress(
-        { title, id, label: state.name ?? id, noun: 'Integration', logger: context.logger },
+        { title, id, label: state.name ?? id, noun: 'Integration', logger: context.logger, progress },
         async (report): Promise<GuardableResult & { detail?: string }> => {
-            const refused = await guardOrBlock(context, project, report);
+            const refused = await guardOrBlock(context, project, report, progress);
             if (refused) {
                 return refused;
             }
@@ -237,7 +247,11 @@ async function runInstallPass(
             const deps = await handlerRunnerDeps(context, project, report);
             const componentPath = project.componentInstances?.[id]?.path;
             const appVersion = componentPath ? await deps.readAppVersion?.(componentPath) : undefined;
-            const outcome = await pass({ project, state, deps, report, appVersion });
+            // The installer's messages are the STEP under the install stage, as in the
+            // runner's own install pass — the stage keeps its expectation line.
+            const stepReport = (message: string): void =>
+                report(OPERATION_STAGES.installingIntoCommerce.label, message);
+            const outcome = await pass({ project, state, deps, report: stepReport, appVersion });
             if (typeof outcome === 'string') {
                 return { success: false, error: outcome };
             }
@@ -275,18 +289,26 @@ function refuseInstallPass(id: string, state: AppBuilderComponentState): string 
  * the same installer the deploy tail runs → persist the outcome where the
  * drawer and get_integration_install_status read it.
  */
-export const handleInstallAppBuilderComponent: MessageHandler<{ id?: string }> = async (
-    context: HandlerContext,
-    payload,
-): Promise<HandlerResponse> =>
-    runInstallPass(context, payload?.id, 'Installing', async ({ project, state, deps, report, appVersion }) => {
-        // Always wired by buildDefaultRunnerDeps; the field is optional only
-        // for bare unit-test deps, so a guard beats asserting it away.
-        if (!deps.installAppManagement) {
-            return 'The install pass is not available.';
-        }
-        return deps.installAppManagement(project, state.deployedUrls, report, { appVersion });
-    });
+export const handleInstallAppBuilderComponent: MessageHandler<{
+    id?: string;
+    /** `'modal'` when the SC started it from the integrations screen (PL-59). */
+    progress?: 'modal';
+}> = narrateOutcomeToModal(
+    (context, payload) =>
+        runInstallPass(
+            context,
+            { requestedId: payload?.id, title: 'Installing', progress: progressSurfaceOf(payload) },
+            async ({ project, state, deps, report, appVersion }) => {
+                // Always wired by buildDefaultRunnerDeps; the field is optional only
+                // for bare unit-test deps, so a guard beats asserting it away.
+                if (!deps.installAppManagement) {
+                    return 'The install pass is not available.';
+                }
+                return deps.installAppManagement(project, state.deployedUrls, report, { appVersion });
+            },
+        ),
+    (payload) => payload?.id,
+);
 
 /**
  * Handle 'reinstallAppBuilderComponent' — uninstall the app from Commerce and
@@ -300,8 +322,15 @@ export const handleReinstallAppBuilderComponent: MessageHandler<{ id?: string }>
 ): Promise<HandlerResponse> =>
     runInstallPass(
         context,
-        payload?.id,
-        'Reinstalling',
+        {
+            requestedId: payload?.id,
+            title: 'Reinstalling',
+            progress: undefined,
+            check: (id, state) =>
+                state.installation?.needsReinstall
+                    ? undefined
+                    : `"${id}" does not need a reinstall: Commerce has not refused an upgrade of it.`,
+        },
         async ({ project, state, deps, report, appVersion }) => {
             const { installAppManagement, uninstallAppManagement } = deps;
             if (!installAppManagement || !uninstallAppManagement) {
@@ -312,8 +341,4 @@ export const handleReinstallAppBuilderComponent: MessageHandler<{ id?: string }>
                 install: () => installAppManagement(project, state.deployedUrls, report, { appVersion }),
             });
         },
-        (id, state) =>
-            state.installation?.needsReinstall
-                ? undefined
-                : `"${id}" does not need a reinstall: Commerce has not refused an upgrade of it.`,
     );

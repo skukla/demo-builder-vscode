@@ -66,10 +66,12 @@ jest.mock('@/features/dashboard/handlers/dashboardHandlers', () => ({
 }));
 const mockSendStatus = jest.fn();
 const mockSendSnapshot = jest.fn();
+const mockSendOperationProgress = jest.fn();
 jest.mock('@/features/dashboard/commands/showDashboard', () => ({
     ProjectDashboardWebviewCommand: {
         sendAppBuilderComponentStatusUpdate: (...a: unknown[]) => mockSendStatus(...a),
         sendAppBuilderComponentsSnapshot: (...a: unknown[]) => mockSendSnapshot(...a),
+        sendComponentOperationProgress: (...a: unknown[]) => mockSendOperationProgress(...a),
         refreshStatus: jest.fn(),
     },
 }));
@@ -359,5 +361,37 @@ describe('handleUpdateAppBuilderComponent', () => {
             code: ErrorCode.CONFIG_INVALID,
         });
         expect(mockUpdate).not.toHaveBeenCalled();
+    });
+});
+
+// PL-59, adopted when develop merged in: an Update started on the integrations
+// screen narrates to its modal, like Deploy, Install and Remove.
+describe('handleUpdateAppBuilderComponent — started from the integrations screen', () => {
+    it('runs in the modal, ends there, and opens no notification', async () => {
+        const vscode = jest.requireMock('vscode') as { window: { withProgress: (...args: unknown[]) => unknown } };
+        const withProgress = jest.spyOn(vscode.window, 'withProgress');
+        const { mockContext } = setup(pairProject());
+
+        await handleUpdateAppBuilderComponent(mockContext, { id: 'erp-integration', progress: 'modal' });
+
+        expect(mockSendOperationProgress).toHaveBeenNthCalledWith(1, { id: 'erp-integration', state: 'running' });
+        expect(mockSendOperationProgress).toHaveBeenLastCalledWith(
+            expect.objectContaining({ id: 'erp-integration', state: 'succeeded' }),
+        );
+        expect(withProgress).not.toHaveBeenCalled();
+    });
+
+    it('ends the modal with the refusal when the card cannot update', async () => {
+        const { mockContext } = setup({
+            appBuilderComponents: { 'erp-integration': deployed({ status: 'not-deployed' }) },
+        });
+
+        await handleUpdateAppBuilderComponent(mockContext, { id: 'erp-integration', progress: 'modal' });
+
+        expect(mockSendOperationProgress).toHaveBeenLastCalledWith({
+            id: 'erp-integration',
+            state: 'failed',
+            error: '"erp-integration" is not deployed; deploy it instead of updating it.',
+        });
     });
 });

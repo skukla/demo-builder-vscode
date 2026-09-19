@@ -34,6 +34,7 @@ jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
 // =============================================================================
 
 import { addAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentRunner';
+import { OPERATION_STAGES } from '@/features/app-builder/services/operationStages';
 import {
     MESH_ENTRY,
     INTEGRATION_ENTRY,
@@ -394,7 +395,7 @@ describe('addAppBuilderComponent — the app-management install pass reports bac
 
         await addAppBuilderComponent(createProject(), APP_MGMT, deps);
 
-        expect(onProgress).toHaveBeenCalledWith('Associating with Commerce...');
+        expect(onProgress).toHaveBeenCalledWith(OPERATION_STAGES.installingIntoCommerce.label, 'Associating with Commerce...');
     });
 
     // The headless/MCP callers wire no onProgress at all; the installer still
@@ -432,7 +433,7 @@ describe('addAppBuilderComponent — the app-management install pass reports bac
         const result = await addAppBuilderComponent(createProject(), APP_MGMT, deps);
 
         expect(result.success).toBe(true);
-        expect(onProgress).toHaveBeenCalledWith('Commerce returned 401');
+        expect(onProgress).toHaveBeenCalledWith(OPERATION_STAGES.installingIntoCommerce.label, 'Commerce returned 401');
         expect(persistedEntry(deps, APP_MGMT.id)?.installation).toMatchObject({
             status: 'failed',
             detail: 'Commerce returned 401',
@@ -449,7 +450,10 @@ describe('addAppBuilderComponent — the app-management install pass reports bac
 
         await addAppBuilderComponent(createProject(), APP_MGMT, deps);
 
-        expect(onProgress).toHaveBeenCalledWith('Install into Commerce did not finish.');
+        expect(onProgress).toHaveBeenCalledWith(
+            OPERATION_STAGES.installingIntoCommerce.label,
+            'Install into Commerce did not finish.',
+        );
     });
 
     it('a SUCCESSFUL install never pushes the did-not-finish line', async () => {

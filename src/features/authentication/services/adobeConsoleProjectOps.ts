@@ -29,6 +29,10 @@ import type {
 } from './types';
 import { getLogger } from '@/core/logging/debugLogger';
 
+
+/** What renaming an Adobe project answers: done, or Adobe's reason for refusing. */
+export type RemoteRenameResult = { ok: true } | { ok: false; error: string };
+
 /**
  * Creates, renames, and deletes Console projects and workspaces.
  */
@@ -176,21 +180,21 @@ export class AdobeConsoleProjectOps {
      * `patch_console_organizations__orgId__projects__projectId_`), so
      * `{ title }` alone is the deliberate payload — the machine `name` (part
      * of the project's identity) and description are never touched by a
-     * rename. Org/project ids come from the demo's persisted `adobe` config,
-     * not from the SDK's ambient selection: a wrong-org token gets a 403 from
-     * the API, which is the org guard a best-effort cosmetic sync needs —
-     * callers get `false` and move on, never an exception.
+     * rename. Org/project ids come from the caller, never from the SDK's ambient
+     * selection: a wrong-org token gets a 403 from the API. Never throws — a
+     * refusal comes back with Adobe's own words, so an explicit rename can say why
+     * (translated for the SC by the caller) and a best-effort sync can just move on.
      *
-     * @param orgId - Organization id from `project.adobe.organization`
-     * @param projectId - Project id from `project.adobe.projectId`
+     * @param orgId - Organization id
+     * @param projectId - Project id
      * @param title - The new human-readable title
-     * @returns true when the remote title was updated; false on any refusal
+     * @returns `{ ok: true }` when the remote title was updated, else why not
      */
-    async renameRemoteProject(orgId: string, projectId: string, title: string): Promise<boolean> {
+    async renameRemoteProject(orgId: string, projectId: string, title: string): Promise<RemoteRenameResult> {
         try {
             if (!this.sdkClient.isInitialized()) {
                 this.debugLogger.debug('[Entity Fetcher] SDK not available for project rename');
-                return false;
+                return { ok: false, error: 'The Adobe Console SDK is not available.' };
             }
 
             const client = this.sdkClient.getClient() as {
@@ -205,12 +209,11 @@ export class AdobeConsoleProjectOps {
             this.debugLogger.info(
                 `[Entity Fetcher] Renamed remote project ${projectId} title to "${title}"`,
             );
-            return true;
+            return { ok: true };
         } catch (error) {
-            this.debugLogger.warn(
-                `[Entity Fetcher] Remote project rename refused: ${error instanceof Error ? error.message : String(error)}`,
-            );
-            return false;
+            const reason = error instanceof Error ? error.message : String(error);
+            this.debugLogger.warn(`[Entity Fetcher] Remote project rename refused: ${reason}`);
+            return { ok: false, error: reason };
         }
     }
 

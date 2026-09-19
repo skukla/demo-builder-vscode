@@ -1,4 +1,5 @@
 import * as path from 'path';
+import type { RemoteRenameResult } from './adobeConsoleProjectOps';
 import { isValidTokenResponse } from './authPredicates';
 import { withOrgContext, type OrgContextTarget } from './orgContextEnv';
 import { getLogger } from '@/core/logging/debugLogger';
@@ -530,7 +531,7 @@ export class AuthenticationService {
      * Sync a remote Adobe I/O project's title to a renamed demo (best-effort;
      * never throws past the fetcher — see `renameRemoteProject` there).
      */
-    async renameRemoteProject(orgId: string, projectId: string, title: string): Promise<boolean> {
+    async renameRemoteProject(orgId: string, projectId: string, title: string): Promise<RemoteRenameResult> {
         const { fetcher } = await this.ensureEntities();
         return fetcher.renameRemoteProject(orgId, projectId, title);
     }

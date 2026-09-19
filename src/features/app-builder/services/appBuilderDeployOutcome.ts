@@ -11,6 +11,10 @@
  * @module features/app-builder/services/appBuilderDeployOutcome
  */
 
+import { deriveProvidedValues } from './deployInputs';
+import { deriveScreenUrl } from './systemScreen';
+import type { AppDeploymentResult } from './types';
+import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentKind, AppBuilderComponentState, Project } from '@/types/base';
 
 /**
@@ -173,4 +177,38 @@ export function recordDeployOutcome(
         instance.status = outcome.status;
         instance.lastUpdated = new Date();
     }
+}
+
+/**
+ * Build the persisted state from a successful app deploy (integration or
+ * system). What the app PROVIDES to other components is read off its deployed
+ * URLs here (the ERP's web base becomes `ERP_BASE_URL`), and a row named from
+ * an input (`nameFromEnvVar`) takes that name.
+ */
+export function integrationOutcome(
+    entry: AppBuilderComponentCatalogEntry,
+    data: AppDeploymentResult['data'],
+    displayName: string,
+): DeployOutcome {
+    return {
+        status: 'deployed',
+        ...identityOf(entry),
+        name: displayName,
+        // A component with its own screen is opened at that screen, not at
+        // whichever action happened to be listed first.
+        url: deriveScreenUrl(entry, data?.deployedUrls) ?? data?.url,
+        deployedUrls: data?.deployedUrls,
+        lastDeployed: new Date().toISOString(),
+        providesEnvVars: deriveProvidedValues(entry, data?.deployedUrls),
+    };
+}
+
+/** The identity a CREATE must supply; an update inherits it from its entry. */
+export function identityOf(
+    entry: AppBuilderComponentCatalogEntry,
+): Pick<DeployOutcome, 'name' | 'source'> {
+    return {
+        name: entry.name,
+        source: { owner: entry.source.owner, repo: entry.source.repo, branch: entry.source.branch },
+    };
 }

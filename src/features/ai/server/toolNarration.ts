@@ -150,6 +150,7 @@ export const TOOL_NARRATION: Record<string, string> = {
     create_adobe_project: 'Creating the Adobe Console project',
     create_adobe_workspace: 'Creating the Adobe workspace',
     delete_adobe_project: 'Deleting the Adobe Console project',
+    rename_adobe_project: 'Renaming the Adobe Console project',
     delete_adobe_workspace: 'Deleting the Adobe workspace',
     add_console_apis: 'Adding Adobe API access',
     // Replaces the list EXACTLY — anything unlisted is removed.

@@ -7,12 +7,14 @@
  *
  * The grid owns exactly one instance each of the drawer, the add modal, the
  * remove, reset, reinstall and remove-anyway confirms, the Manage-APIs modal and
- * the Settings modal
- * (no per-card dialogs, no cross-card state leak), and ONE `handleAction` switch — the single place a
- * card model turns into an id-scoped message or a mesh callback:
+ * the Settings modal (no per-card dialogs, no cross-card state leak), and ONE
+ * `handleAction` switch — the single place a card model turns into an operation
+ * or a mesh callback. The operation progress modal is the SCREEN's, because it
+ * must also open for an Add on a screen with no grid yet:
  *   - mesh card    → onDeployMesh / onReAuthenticate (never keyed messages)
- *   - integration  → deploy/redeploy {id}, or the
- *                    hosted dialogs for remove / manage-apis
+ *   - integration  → an operation through the screen's `operations` (deploy,
+ *                    redeploy, update, install, and remove once confirmed), which
+ *                    opens the progress modal; or the Manage-APIs modal
  *   - open         → openLiveSite {url} (both card face and drawer link)
  *
  * Card models come from {@link buildIntegrationCards} / {@link deriveMeshCard}
@@ -23,6 +25,7 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import type { ComponentOperationControls } from '../../hooks/useComponentOperation';
 import { AppBuilderComponentRemoveDialog } from '../AppBuilderComponentRemoveDialog';
 import { ErpResetDialog } from '../ErpResetDialog';
 import { IntegrationSettingsModal } from '../IntegrationSettingsModal';
@@ -55,25 +58,16 @@ export interface IntegrationsGridProps {
     destinationLabel?: string;
     /** Each component's Settings (AB-21), from the init payload. */
     componentSettings?: Record<string, ComponentSettings>;
+    /**
+     * The screen's operation controls (PL-59). The screen owns them because its Add
+     * flow starts operations too, and both must open the same progress modal.
+     */
+    operations: ComponentOperationControls;
 }
 
 const NO_SETTINGS: Record<string, ComponentSettings> = {};
 
 /**
- * Integration actions that are plain id-scoped posts. Retry rides Deploy;
- * Update has its own message, which fetches the newer code before it
- * redeploys (a redeploy alone deploys the folder as it is).
- */
-const KEYED_MESSAGES: Partial<Record<CardAction, string>> = {
-    deploy: 'deployAppBuilderComponent',
-    retry: 'deployAppBuilderComponent',
-    redeploy: 'redeployAppBuilderComponent',
-    update: 'updateAppBuilderComponent',
-    // Re-run the Commerce install pass WITHOUT a redeploy (AB-5) — until this,
-    // the only retry for a failed install was a full deploy round.
-    install: 'installAppBuilderComponent',
-};
-
 /**
  * A system card's verbs that differ from an integration's: its screen and its
  * reset both go through the integration that uses it — the extension holds the
@@ -134,6 +128,7 @@ export function IntegrationsGrid({
     onReAuthenticate,
     destinationLabel,
     componentSettings = NO_SETTINGS,
+    operations,
 }: IntegrationsGridProps): React.ReactElement {
     const settings = useIntegrationSettings(derivedCards, componentSettings);
     const { cards, open: openSettings } = settings;
@@ -224,13 +219,25 @@ export function IntegrationsGrid({
                 openRemoveAnyway(model);
                 return;
             }
-            const message = KEYED_MESSAGES[action];
-            if (message) {
-                webviewClient.postMessage(message, { id: model.id });
-            }
+            operations.run(model.id, model.name, action);
         },
-        [handleMeshAction, openReinstall, openRemoveAnyway, openSettings],
+        [handleMeshAction, openReinstall, openRemoveAnyway, openSettings, operations],
     );
+
+    // A tile whose operation started here and is still running reopens its progress
+    // modal; any other tile opens its flyout.
+    const openCard = useCallback(
+        (id: string): void => {
+            // An operation is keyed by the COMPONENT id; the mesh card's own id is
+            // 'mesh', so the lookup goes through componentId.
+            const card = cards.find((candidate) => candidate.id === id);
+            const componentId = card?.componentId ?? id;
+            if (card?.status === 'deploying' && operations.reopen(componentId)) return;
+            setSelectedId(id);
+        },
+        [cards, operations],
+    );
+
 
     // The mesh's teardown reaches past itself: removeAppBuilderComponent
     // regenerates the storefront config WITHOUT the MESH_ENDPOINT it provided, so
@@ -256,10 +263,11 @@ export function IntegrationsGrid({
     const closeRemoveDialog = useCallback((): void => setPendingRemoveId(null), []);
     const confirmRemove = useCallback((): void => {
         if (pendingRemoveId) {
-            webviewClient.postMessage('removeAppBuilderComponent', { id: pendingRemoveId });
+            const target = cards.find((card) => (card.componentId ?? card.id) === pendingRemoveId);
+            operations.run(pendingRemoveId, target?.name ?? pendingRemoveId, 'remove');
         }
         setPendingRemoveId(null);
-    }, [pendingRemoveId]);
+    }, [cards, operations, pendingRemoveId]);
 
     return (
         // No section heading, count, or Add button here: the SCREEN's page header
@@ -274,7 +282,7 @@ export function IntegrationsGrid({
                     <IntegrationCard
                         key={model.id}
                         model={model}
-                        onOpen={setSelectedId}
+                        onOpen={openCard}
                         onAction={handleAction}
                         onRename={requestRename}
                     />

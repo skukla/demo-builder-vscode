@@ -153,7 +153,7 @@ jest.mock('@/features/dashboard/ui/integrationsSurface/AddIntegrationFlowAdapter
     // screen passes its own EMPTY_CATALOG when the prop is absent, and nothing
     // else on screen would show a wrong-sized catalog arriving here. The close
     // button is what lets a test drive `onClose`.
-    AddIntegrationFlowAdapter: ({ isOpen, mode, catalog, onClose }: any) =>
+    AddIntegrationFlowAdapter: ({ isOpen, mode, catalog, onClose, onAddStarted }: any) =>
         isOpen ? (
             <div
                 data-testid="add-modal"
@@ -161,6 +161,26 @@ jest.mock('@/features/dashboard/ui/integrationsSurface/AddIntegrationFlowAdapter
                 data-catalog-size={String(catalog?.length)}
             >
                 <button onClick={onClose}>close-modal</button>
+                {/* The adapter reports a sent add, then its flow closes (PL-59). */}
+                <button
+                    onClick={() => {
+                        onAddStarted?.('erp-sync', 'ERP Sync');
+                        onClose();
+                    }}
+                >
+                    send-add
+                </button>
+            </div>
+        ) : null,
+}));
+
+// The progress modal has its own suite (via the grid harness); a stub proves the
+// SCREEN hosts it and hands it the operation.
+jest.mock('@/features/dashboard/ui/components/integrations/ComponentOperationModal', () => ({
+    ComponentOperationModal: ({ operation }: any) =>
+        operation ? (
+            <div data-testid="operation-modal" data-id={operation.id}>
+                {operation.name}
             </div>
         ) : null,
 }));

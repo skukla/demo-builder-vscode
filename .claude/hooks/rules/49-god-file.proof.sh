@@ -42,7 +42,7 @@ run() {
 }
 
 echo "=== over the limit for its kind ==="
-run "$ROOT/src/features/app-builder/services/appBuilderComponentRunner.ts"  "1251-line service (>400)"  god-file
+run "$ROOT/src/features/app-builder/services/appBuilderComponentRunner.ts"  "the runner, a service over 400 lines"  god-file
 run "$ROOT/src/features/projects-dashboard/handlers/dashboardHandlers.ts"   "928-line handler (>500)"   god-file
 run "$ROOT/src/features/dashboard/ui/components/ActionGrid.tsx"             "660-line component (>350)" god-file
 

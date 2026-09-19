@@ -105,7 +105,10 @@ describe('IntegrationsGrid — the system card verbs', () => {
 
         await user.click(within(panel).getByRole('button', { name: /^redeploy$/i }));
 
-        expect(getClient().postMessage).toHaveBeenCalledWith('redeployAppBuilderComponent', { id: 'demo-erp' });
+        expect(getClient().postMessage).toHaveBeenCalledWith('redeployAppBuilderComponent', {
+            id: 'demo-erp',
+            progress: 'modal',
+        });
     });
 
     it('Reset records opens a confirm naming the ERP, and posts NOTHING until confirmed', async () => {

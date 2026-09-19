@@ -68,11 +68,18 @@ export interface AddIntegrationFlowAdapterProps {
      * header's `Change` needs; `'add'` is the full journey.
      */
     mode?: 'add' | 'destination';
+    /**
+     * An add was sent: open its progress modal (PL-59). The id and name are the
+     * ones the add handler gives the integration — a catalog id and its name, or
+     * for a custom repo the instance the SC named, else `owner-repo` and the repo
+     * (`buildCustomIntegrationEntry`).
+     */
+    onAddStarted?: (id: string, name: string) => void;
 }
 
-/** Post an add and close — the runner reports progress on the status channel. */
+/** Post an add whose steps narrate to the progress modal. */
 function postAdd(payload: AddAppBuilderComponentRequestPayload): void {
-    webviewClient.postMessage('addAppBuilderComponent', payload);
+    webviewClient.postMessage('addAppBuilderComponent', { ...payload, progress: 'modal' });
 }
 
 export function AddIntegrationFlowAdapter({
@@ -86,7 +93,14 @@ export function AddIntegrationFlowAdapter({
     adobeWorkspaceTitle,
     adobeOrgId,
     mode = 'add',
+    onAddStarted,
 }: AddIntegrationFlowAdapterProps): React.ReactElement {
+    // Read through a ref: the builder callbacks below are memoised once.
+    const onAddStartedRef = useRef(onAddStarted);
+    onAddStartedRef.current = onAddStarted;
+    const catalogRef = useRef(catalog);
+    catalogRef.current = catalog;
+
     // A REAL state store for the modal session, not a filter.
     //
     // The wizard components this modal hosts are state-BACKED, not just
@@ -218,6 +232,8 @@ export function AddIntegrationFlowAdapter({
             onAppBuilderComponentToggle: (id: string, selected: boolean): void => {
                 if (selected) {
                     postAdd({ id, apis: apiPicksRef.current[id] });
+                    const name = catalogRef.current.find((entry) => entry.id === id)?.name;
+                    onAddStartedRef.current?.(id, name ?? id);
                 }
             },
             onAddCustomAppBuilderComponent: (
@@ -237,6 +253,7 @@ export function AddIntegrationFlowAdapter({
                     ...(instance ? { name: instance.name, instanceId: instance.id } : {}),
                     apis: apiPicksRef.current[picksKey],
                 });
+                onAddStartedRef.current?.(picksKey, instance?.name ?? source.repo);
             },
         }),
         [],

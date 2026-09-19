@@ -43,14 +43,19 @@ import {
     type TeardownDeps,
     type TeardownTarget,
 } from './appBuilderComponentTeardown';
-import { recordDeployOutcome, type DeployOutcome } from './appBuilderDeployOutcome';
+import {
+    identityOf,
+    integrationOutcome,
+    recordDeployOutcome,
+    type DeployOutcome,
+} from './appBuilderDeployOutcome';
 import { detectAppLayout, listDeclaredPackageNames, type AppConfigLayout } from './appConfigPackages';
 import type { AppManagementInstallOptions, AppManagementInstallResult } from './appManagementUpgrade';
-import { deriveProvidedValues, resolveDeployInputs, resolveDisplayName } from './deployInputs';
+import { resolveDeployInputs, resolveDisplayName } from './deployInputs';
 import type { CommerceDetachResult } from './erpDetach';
 import type { SourceUpdateResult, UpdateCheckResult } from './integrationSourceUpdate';
+import { OPERATION_STAGES } from './operationStages';
 import { deriveOwPackage } from './owPackageName';
-import { deriveScreenUrl } from './systemScreen';
 import type { AppDeploymentResult } from './types';
 import { isMeshComponentId } from '@/core/constants';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
@@ -466,40 +471,6 @@ async function meshOutcome(
 }
 
 /**
- * Build the persisted state from a successful app deploy (integration or
- * system). What the app PROVIDES to other components is read off its deployed
- * URLs here (the ERP's web base becomes `ERP_BASE_URL`), and a row named from
- * an input (`nameFromEnvVar`) takes that name.
- */
-function integrationOutcome(
-    entry: AppBuilderComponentCatalogEntry,
-    data: AppDeploymentResult['data'],
-    displayName: string,
-): DeployOutcome {
-    return {
-        status: 'deployed',
-        ...identityOf(entry),
-        name: displayName,
-        // A component with its own screen is opened at that screen, not at
-        // whichever action happened to be listed first.
-        url: deriveScreenUrl(entry, data?.deployedUrls) ?? data?.url,
-        deployedUrls: data?.deployedUrls,
-        lastDeployed: new Date().toISOString(),
-        providesEnvVars: deriveProvidedValues(entry, data?.deployedUrls),
-    };
-}
-
-/** The identity a CREATE must supply; an update inherits it from its entry. */
-function identityOf(
-    entry: AppBuilderComponentCatalogEntry,
-): Pick<DeployOutcome, 'name' | 'source'> {
-    return {
-        name: entry.name,
-        source: { owner: entry.source.owner, repo: entry.source.repo, branch: entry.source.branch },
-    };
-}
-
-/**
  * What the SC reads for a failure: Adobe's permission and outage refusals in plain words,
  * anything else as it was written. Adobe's own words still reach Debug Logs.
  */
@@ -565,7 +536,7 @@ async function dispatchDeploy(
         try {
             // Step in the FIRST arg, matching the deploy tails' convention — the
             // caller renders arg 1 as the current step.
-            deps.onProgress?.('Generating mesh configuration...');
+            deps.onProgress?.(OPERATION_STAGES.generatingMeshConfig.label);
             await deps.writeComponentEnv(project, entry.id, componentPath);
         } catch (error) {
             // Deploying anyway is the ENOENT this step exists to prevent, so fail
@@ -619,7 +590,7 @@ async function dispatchDeploy(
     // failure fails the deploy: without these vars the app deploys BROKEN (its
     // installer cannot authenticate — the first live install proved it).
     if (entry.lifecycle === 'app-management' && deps.resolveAppManagementEnv) {
-        deps.onProgress?.('Resolving Commerce IMS credentials...');
+        deps.onProgress?.(OPERATION_STAGES.resolvingCommerceCredentials.label);
         try {
             extraEnv = { ...extraEnv, ...(await deps.resolveAppManagementEnv(project)) };
         } catch (error) {
@@ -674,7 +645,7 @@ async function addBoundSystemFirst(
     if (!system) return { success: true };
     const existing = project.appBuilderComponents?.[system.id];
     if (existing && existing.status !== 'error') return { success: true };
-    deps.onProgress?.(`Adding ${system.name} first…`);
+    deps.onProgress?.(OPERATION_STAGES.addingSystem.label, `Adding ${system.name}`);
     const result = await addAppBuilderComponent(project, system, deps);
     if (!result.success) {
         return {
@@ -711,7 +682,10 @@ export async function addAppBuilderComponent(
         if (entry.nodeVersion) {
             // Visible, not silent: a first-time fnm install takes ~30s and the
             // progress channel is the surface every add path already has.
-            deps.onProgress?.(`Preparing Node ${entry.nodeVersion} (one-time install)...`);
+            deps.onProgress?.(
+            OPERATION_STAGES.preparingNode.label,
+            `Installing Node ${entry.nodeVersion} (one-time install)`,
+        );
             const nodeError = await deps.ensureNodeVersion?.(entry.nodeVersion);
             if (nodeError) {
                 return { success: false, error: nodeError };
@@ -720,7 +694,7 @@ export async function addAppBuilderComponent(
 
         // The subscribe's org-services fetch alone measured 43.5s cold — the
         // longest silent stretch in the chain (owner audit, 2026-08-27).
-        deps.onProgress?.('Subscribing Adobe APIs…');
+        deps.onProgress?.(OPERATION_STAGES.subscribingApis.label);
         await deps.subscribeRequiredApis(entriesThatNeedApis(deps.catalog, project, [entry]), project);
 
         const installed = await cloneAndInstall(project, entry, deps);
@@ -808,10 +782,12 @@ async function installIfAppManagement(
         appVersion: await deps.readAppVersion?.(deploy.componentPath),
         since: deploy.since,
     };
+    // The installer's messages carry live detail (retry rounds), so they are the STEP
+    // under one install stage — the stage keeps its expectation line while they change.
     const result = await deps.installAppManagement(
         project,
         state?.deployedUrls,
-        (message) => deps.onProgress?.(message),
+        (message) => deps.onProgress?.(OPERATION_STAGES.installingIntoCommerce.label, message),
         options,
     );
     if (state) {
@@ -825,7 +801,10 @@ async function installIfAppManagement(
         deps.logger.warn(
             `[AppBuilderComponent Runner] ${entry.id} deployed but not installed: ${result.detail}`,
         );
-        deps.onProgress?.(result.detail ?? 'Install into Commerce did not finish.');
+        deps.onProgress?.(
+            OPERATION_STAGES.installingIntoCommerce.label,
+            result.detail ?? 'Install into Commerce did not finish.',
+        );
     }
 }
 
@@ -857,7 +836,10 @@ export async function deployAppBuilderComponent(
         await deps.saveProject(project);
 
         if (entry.nodeVersion) {
-            deps.onProgress?.(`Preparing Node ${entry.nodeVersion} (one-time install)...`);
+            deps.onProgress?.(
+            OPERATION_STAGES.preparingNode.label,
+            `Installing Node ${entry.nodeVersion} (one-time install)`,
+        );
             const nodeError = await deps.ensureNodeVersion?.(entry.nodeVersion);
             if (nodeError) {
                 // Thrown so the catch below records it — the marker is already saved.
@@ -872,7 +854,7 @@ export async function deployAppBuilderComponent(
         // adobeio_api). Idempotent reconcile — a subscribed credential is a
         // no-op PUT of the same union.
         if (entry.lifecycle === 'app-management') {
-            deps.onProgress?.('Subscribing Adobe APIs…');
+            deps.onProgress?.(OPERATION_STAGES.subscribingApis.label);
             await deps.subscribeRequiredApis(entriesThatNeedApis(deps.catalog, project), project);
         }
 
@@ -939,7 +921,7 @@ export async function updateAppBuilderComponent(
     }
     const entry = deps.catalog.find((c) => c.id === id) ?? entryFromState(id, existing);
 
-    deps.onProgress?.('Fetching the latest version from GitHub…');
+    deps.onProgress?.(OPERATION_STAGES.fetchingUpdate.label, 'From GitHub');
     const fetched = await deps.fetchComponentSource(componentPath, existing.source.branch ?? 'main');
     if (fetched.status === 'refused' || fetched.status === 'failed') {
         return { success: false, error: fetched.detail };
@@ -956,7 +938,7 @@ export async function updateAppBuilderComponent(
             return { success: true, detail: fetched.detail };
         }
     } else {
-        deps.onProgress?.("Installing the new version's dependencies…");
+        deps.onProgress?.(OPERATION_STAGES.installingUpdateDependencies.label);
         const dependencies = await deps.installComponentDependencies(componentPath, buildDefinition(entry));
         if (!dependencies.success) {
             return {
@@ -1307,7 +1289,7 @@ async function removeBoundSystemsAfter(
     for (const systemId of systems) {
         const name = cleared.appBuilderComponents?.[systemId]?.name ?? systemId;
         if (!cleared.appBuilderComponents?.[systemId]) continue;
-        deps.onProgress?.(`Removing ${name}…`);
+        deps.onProgress?.(OPERATION_STAGES.removing.label, `Removing ${name}`);
         // A throw's own words go to the log; the SC reads a sentence of ours.
         const result = await removeAppBuilderComponent(cleared, systemId, deps, { ...options, cleanedUp: true }).catch((error: unknown): RunnerResult => {
             deps.logger.warn(`[AppBuilderComponent Runner] ${systemId} removal threw: ${toError(error).message}`);

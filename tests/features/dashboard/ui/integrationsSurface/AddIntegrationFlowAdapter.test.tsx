@@ -297,8 +297,41 @@ describe('AddIntegrationFlowAdapter', () => {
             modalProps().builder.onAppBuilderComponentToggle('erp-sync', true);
 
             expect(mockPostMessage).toHaveBeenCalledWith('addAppBuilderComponent', {
+                progress: 'modal',
                 id: 'erp-sync',
             });
+        });
+
+        // PL-59: the screen opens the progress modal for the integration the add
+        // will create — named as the add handler will name it.
+        it('reports a catalog add with the entry id and its catalog name', () => {
+            const onAddStarted = jest.fn();
+            renderAdapter({ onAddStarted });
+
+            modalProps().builder.onAppBuilderComponentToggle('erp-sync', true);
+
+            expect(onAddStarted).toHaveBeenCalledWith('erp-sync', CATALOG[0].name);
+        });
+
+        it('reports an unnamed custom add as owner-repo, named for the repo', () => {
+            const onAddStarted = jest.fn();
+            renderAdapter({ onAddStarted });
+
+            modalProps().builder.onAddCustomAppBuilderComponent({ owner: 'acme', repo: 'custom-app' });
+
+            expect(onAddStarted).toHaveBeenCalledWith('acme-custom-app', 'custom-app');
+        });
+
+        it('reports a named instance by the id and name the SC gave it', () => {
+            const onAddStarted = jest.fn();
+            renderAdapter({ onAddStarted });
+
+            modalProps().builder.onAddCustomAppBuilderComponent(
+                { owner: 'skukla', repo: 'app-builder-shell' },
+                { id: 'firefly-gen', name: 'Firefly Gen' },
+            );
+
+            expect(onAddStarted).toHaveBeenCalledWith('firefly-gen', 'Firefly Gen');
         });
 
         it('a DESELECT posts nothing (there is no staged draft to un-stage here)', () => {
@@ -318,6 +351,7 @@ describe('AddIntegrationFlowAdapter', () => {
             });
 
             expect(mockPostMessage).toHaveBeenCalledWith('addAppBuilderComponent', {
+                progress: 'modal',
                 source: { owner: 'acme', repo: 'custom-app' },
             });
         });
@@ -335,6 +369,7 @@ describe('AddIntegrationFlowAdapter', () => {
             );
 
             expect(mockPostMessage).toHaveBeenCalledWith('addAppBuilderComponent', {
+                progress: 'modal',
                 source: { owner: 'skukla', repo: 'app-builder-shell' },
                 name: 'Firefly Gen',
                 instanceId: 'firefly-gen',
@@ -358,6 +393,7 @@ describe('AddIntegrationFlowAdapter', () => {
             modalProps().builder.onAppBuilderComponentToggle('erp-sync', true);
 
             expect(mockPostMessage).toHaveBeenCalledWith('addAppBuilderComponent', {
+                progress: 'modal',
                 id: 'erp-sync',
                 apis: ['AdobeIOEvents'],
             });
@@ -373,6 +409,7 @@ describe('AddIntegrationFlowAdapter', () => {
             modalProps().builder.onAppBuilderComponentToggle('erp-sync', true);
 
             expect(mockPostMessage).toHaveBeenCalledWith('addAppBuilderComponent', {
+                progress: 'modal',
                 id: 'erp-sync',
                 apis: ['AdobeIOEvents'],
             });
@@ -394,6 +431,7 @@ describe('AddIntegrationFlowAdapter', () => {
             );
 
             expect(mockPostMessage).toHaveBeenCalledWith('addAppBuilderComponent', {
+                progress: 'modal',
                 source: { owner: 'skukla', repo: 'app-builder-shell' },
                 name: 'Firefly Gen',
                 instanceId: 'firefly-gen',

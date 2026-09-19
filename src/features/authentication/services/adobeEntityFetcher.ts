@@ -23,7 +23,7 @@
  */
 
 import { AdobeCliFallback } from './adobeCliFallback';
-import { AdobeConsoleProjectOps } from './adobeConsoleProjectOps';
+import { AdobeConsoleProjectOps, type RemoteRenameResult } from './adobeConsoleProjectOps';
 import { AdobeEntityReads } from './adobeEntityReads';
 import { AdobeOrgServices } from './adobeOrgServices';
 import type { AdobeSDKClient } from './adobeSDKClient';
@@ -266,7 +266,7 @@ export class AdobeEntityFetcher {
     }
 
     /** Best-effort remote title sync — see {@link AdobeConsoleProjectOps}. */
-    async renameRemoteProject(orgId: string, projectId: string, title: string): Promise<boolean> {
+    async renameRemoteProject(orgId: string, projectId: string, title: string): Promise<RemoteRenameResult> {
         return this.projectOps.renameRemoteProject(orgId, projectId, title);
     }
 

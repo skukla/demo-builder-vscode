@@ -21,12 +21,14 @@
 
 import { Button, Flex, Text, View } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { ComponentOperationModal } from '../components/integrations/ComponentOperationModal';
 import {
     buildIntegrationCards,
     deriveMeshCard,
     type IntegrationCardModel,
 } from '../components/integrations/integrationCardModel';
 import { IntegrationsGrid } from '../components/integrations/IntegrationsGrid';
+import { useComponentOperation } from '../hooks/useComponentOperation';
 import { isMeshBusy, useDashboardStatus } from '../hooks/useDashboardStatus';
 import { useLiveAppBuilderComponents } from '../hooks/useLiveAppBuilderComponents';
 import { useLiveDestination } from '../hooks/useLiveDestination';
@@ -125,6 +127,7 @@ export function IntegrationsScreen({
     const overrides = useRowStatusOverrides();
     const [searchQuery, setSearchQuery] = useState('');
     const [addOpen, setAddOpen] = useState(false);
+    const operations = useComponentOperation();
     // One modal instance, two journeys — `mode` selects the stage set, so a
     // second <AddIntegrationFlowAdapter> would just duplicate its state.
     const [destOpen, setDestOpen] = useState(false);
@@ -332,6 +335,7 @@ export function IntegrationsScreen({
                         onReAuthenticate={handleReAuthenticate}
                         destinationLabel={destinationLabel}
                         componentSettings={componentSettings}
+                        operations={operations}
                     />
                 )}
 
@@ -368,6 +372,17 @@ export function IntegrationsScreen({
                     adobeProjectTitle={destination?.projectTitle}
                     adobeWorkspaceTitle={destination?.workspaceTitle}
                     adobeOrgId={adobeOrgId}
+                    onAddStarted={operations.started}
+                />
+
+                {/* The operation progress modal (PL-59). Here, not in the grid: the
+                    first Add happens on a screen with no grid. Keyed by component id,
+                    which the mesh card carries as componentId. */}
+                <ComponentOperationModal
+                    operation={operations.open}
+                    status={cards.find((c) => (c.componentId ?? c.id) === operations.open?.id)}
+                    onRetry={operations.retry}
+                    onClose={operations.close}
                 />
             </FullScreenSurface>
         </PageLayout>

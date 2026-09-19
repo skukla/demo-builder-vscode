@@ -84,7 +84,7 @@ export function createMockAuthenticationService(
         createWorkspace: jest.fn().mockResolvedValue(undefined),
         deleteWorkspace: jest.fn().mockResolvedValue(undefined),
         deleteConsoleProject: jest.fn().mockResolvedValue(undefined),
-        renameRemoteProject: jest.fn().mockResolvedValue(undefined),
+        renameRemoteProject: jest.fn().mockResolvedValue({ ok: true }),
 
         // --- credentials ---
         createAdobeIdCredential: jest.fn().mockResolvedValue(undefined),

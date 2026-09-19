@@ -127,6 +127,14 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         target: ['projectName'],
         sessionGrant: false,
     },
+    rename_adobe_project: {
+        action: 'Rename an Adobe project',
+        consequence:
+            'Changes the Adobe Developer Console project title for everyone who uses it. Rename it back to undo.',
+        // The names, not projectId: a person can check a title, not a 19-digit id.
+        target: ['projectName', 'title'],
+        sessionGrant: false,
+    },
     delete_adobe_workspace: {
         action: 'Delete an Adobe workspace',
         consequence:

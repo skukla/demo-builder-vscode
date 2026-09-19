@@ -26,6 +26,7 @@ import { declaresIncludeImsCredentials, listDeclaredActions } from './appConfigP
 import { urlPayload, urlsForDeclaredActions } from './deployedUrls';
 import { writeFailureLog } from './deployFailureLog';
 import { forgetDeployRecordOnNewTarget, rememberDeployTarget } from './deployRecord';
+import { OPERATION_STAGES } from './operationStages';
 import { aioOutputTail, extractAioErrorDetail, fetchRuntimeCredentials } from './runtimeCredentials';
 import type { AppDeploymentResult } from './types';
 import { buildComponent } from '@/core/shell/buildComponent';
@@ -262,7 +263,7 @@ export async function deployAppComponent(
         return { ...first, error: `${first.error}${TOOLCHAIN_REMEDY_HINT}` };
     }
 
-    opts.onProgress?.('Updating Adobe CLI...', 'npm install -g @adobe/aio-cli');
+    opts.onProgress?.(OPERATION_STAGES.updatingCli.label, 'npm install -g @adobe/aio-cli');
     const refreshed = await refreshGlobalAioCli(commandManager, logger);
     if (!refreshed.ok) {
         return {
@@ -284,7 +285,7 @@ async function deployAppComponentOnce(
     const node = resolveNodeVersion(opts.nodeVersion);
     try {
         if (opts.layout === 'extension') {
-            onProgress?.('Deploying custom integration...', 'Importing workspace configuration');
+            onProgress?.(OPERATION_STAGES.deployingApp.label, 'Importing workspace configuration');
             await importWorkspaceConfig(componentPath, commandManager, node, logger);
         }
 
@@ -301,7 +302,7 @@ async function deployAppComponentOnce(
         // or it dies with "missing Adobe I/O Runtime namespace". Fetch them
         // from the targeted workspace and inject per-invocation (execa merges
         // env, so only the two vars are passed; the auth value is never logged).
-        onProgress?.('Deploying custom integration...', 'Resolving Runtime credentials');
+        onProgress?.(OPERATION_STAGES.deployingApp.label, 'Resolving Runtime credentials');
         const runtimeCreds = await fetchRuntimeCredentials(commandManager, logger, node);
         // An action with `include-ims-credentials` makes aio require the workspace's
         // S2S credential as IMS_OAUTH_S2S_* — what `aio app use` would have written to
@@ -319,7 +320,7 @@ async function deployAppComponentOnce(
             AIO_RUNTIME_AUTH: runtimeCreds.auth,
         };
 
-        onProgress?.('Deploying custom integration...', 'Running aio app deploy');
+        onProgress?.(OPERATION_STAGES.deployingApp.label, 'Running aio app deploy');
         // The CLI skips actions its local record calls deployed — record of ANY namespace.
         await forgetDeployRecordOnNewTarget(componentPath, runtimeCreds.namespace, logger);
 
@@ -368,7 +369,7 @@ async function deployAppComponentOnce(
         }
         logger.debug('[App Builder] the app config declares no actions; falling back to get-url');
 
-        onProgress?.('Resolving app URL...', '');
+        onProgress?.(OPERATION_STAGES.resolvingAppUrl.label, '');
 
         const urlResult = await commandManager.execute('aio app get-url --json', {
             cwd: componentPath,

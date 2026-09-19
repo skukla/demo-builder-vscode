@@ -167,11 +167,12 @@ async function clearSelectionIfCurrent(
 }
 
 /**
- * Refresh the project list for the org (mirrors handleCreateAdobeProject;
- * best-effort). The push goes through the SAME deletable stamping as
- * get-projects so the webview's delete affordances stay ownership-accurate.
+ * Refresh the project list for the org after a change to it (mirrors
+ * handleCreateAdobeProject; best-effort). The push goes through the SAME deletable
+ * stamping as get-projects so the webview's delete affordances stay
+ * ownership-accurate. Shared with the rename handler.
  */
-async function refreshProjects(context: HandlerContext, orgId: string): Promise<void> {
+export async function refreshProjects(context: HandlerContext, orgId: string): Promise<void> {
     try {
         const projects = await context.authManager?.getProjects({ orgId });
         if (projects) {
@@ -181,7 +182,7 @@ async function refreshProjects(context: HandlerContext, orgId: string): Promise<
             );
         }
     } catch (refreshError) {
-        context.debugLogger.debug('[Project] Post-delete refresh failed:', refreshError);
+        context.debugLogger.debug('[Project] Project list refresh failed:', refreshError);
     }
 }
 

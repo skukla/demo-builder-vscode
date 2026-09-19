@@ -437,6 +437,8 @@ export interface AddAppBuilderComponentRequestPayload {
     name?: string;
     /** Collision-checked instance id for a named blank instance. */
     instanceId?: string;
+    /** `'modal'` when the SC started it from the integrations screen (PL-59). */
+    progress?: 'modal';
     /**
      * The free Adobe APIs the user picked in the flow's API stage.
      *
@@ -449,11 +451,9 @@ export interface AddAppBuilderComponentRequestPayload {
     apis?: string[];
 }
 
-
-
-
-
-
-
-
-
+/** `rename-adobe-project` — change an Adobe I/O project's title (never its name or id). */
+export interface RenameAdobeProjectRequestPayload {
+    orgId: string;
+    projectId: string;
+    title: string;
+}

@@ -904,6 +904,14 @@
         "why": "AB-21: the ERP's name is a setting on the ERP integration, and it reaches the ERP only through a redeploy, which set_integration_settings runs; rename_integration would change only a label."
     },
     {
+        "id": "rename-adobe-project",
+        "prompt": "Rename my Adobe project 'Kukla Test' to 'Kukla Bodea'.",
+        "expect": [
+            "rename_adobe_project"
+        ],
+        "why": "Added with the tool (2026-09-19): a demo moved onto another Adobe project needs that project renamed to match, and the only rename before this was a side effect of renaming a demo. Judges whether the tool is findable from a plain request."
+    },
+    {
         "id": "delete-workspace",
         "prompt": "Delete the 'scratch' workspace from my Adobe project.",
         "expect": [

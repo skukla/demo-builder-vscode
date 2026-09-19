@@ -47,26 +47,26 @@ describe('AdobeEntityFetcher.renameRemoteProject()', () => {
     });
 
     it('PATCHes only the title to the given org/project and reports success', async () => {
-        const ok = await fetcher.renameRemoteProject('org-1', 'proj-1', 'New Title');
+        const result = await fetcher.renameRemoteProject('org-1', 'proj-1', 'New Title');
 
-        expect(ok).toBe(true);
+        expect(result).toStrictEqual({ ok: true });
         expect(editProject).toHaveBeenCalledWith('org-1', 'proj-1', { title: 'New Title' });
     });
 
-    it('reports false without calling the API when the SDK is unavailable', async () => {
+    it('reports why without calling the API when the SDK is unavailable', async () => {
         (mockSDKClient.isInitialized as jest.Mock).mockReturnValue(false);
 
-        const ok = await fetcher.renameRemoteProject('org-1', 'proj-1', 'New Title');
+        const result = await fetcher.renameRemoteProject('org-1', 'proj-1', 'New Title');
 
-        expect(ok).toBe(false);
+        expect(result).toStrictEqual({ ok: false, error: 'The Adobe Console SDK is not available.' });
         expect(editProject).not.toHaveBeenCalled();
     });
 
-    it('never throws — an API refusal (e.g. wrong org, 403) reports false', async () => {
+    it("never throws — an API refusal (e.g. wrong org, 403) reports Adobe's own words", async () => {
         editProject.mockRejectedValue(new Error('403 Forbidden'));
 
-        const ok = await fetcher.renameRemoteProject('org-1', 'proj-1', 'New Title');
+        const result = await fetcher.renameRemoteProject('org-1', 'proj-1', 'New Title');
 
-        expect(ok).toBe(false);
+        expect(result).toStrictEqual({ ok: false, error: '403 Forbidden' });
     });
 });

@@ -32,9 +32,9 @@ import { LinkedSection } from './LinkedSection';
 import { PanelRow } from './PanelRow';
 import { InlineRenameField } from '@/core/ui/components/forms/InlineRenameField';
 import { IntegrationActionsMenu } from '@/core/ui/components/integrations/IntegrationActionsMenu';
+import { IntegrationStatusLabel } from '@/core/ui/components/integrations/IntegrationStatusLabel';
 import { CopyableText } from '@/core/ui/components/ui/CopyableText';
 import { Drawer } from '@/core/ui/components/ui/Drawer';
-import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import { cn } from '@/core/ui/utils/classNames';
 
 export interface IntegrationDetailPanelProps {
@@ -131,15 +131,7 @@ function PanelContent({
                         reading the status differently in each was the odd part. Both
                         share one CSS rule rather than repeating the four declarations. */}
                     <span className="integration-statusline">
-                        <StatusDot variant={model.dotVariant} size={6} />
-                        <span
-                            className={cn(
-                                'integration-card-status',
-                                model.status === 'error' && 'integration-card-status--error',
-                            )}
-                        >
-                            {model.statusLabel}
-                        </span>
+                        <IntegrationStatusLabel model={model} />
                     </span>
                     {model.message && (
                         <span className="integration-panel-status-message">{model.message}</span>

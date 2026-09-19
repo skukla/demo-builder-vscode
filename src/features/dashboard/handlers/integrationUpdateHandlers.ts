@@ -29,6 +29,7 @@ import {
     type GuardableResult,
 } from './appBuilderComponentHandlers';
 import { handlerRunnerDeps as runnerDeps, resolveComponentRecord } from './appManagementInstallHandlers';
+import { narrateOutcomeToModal, progressSurfaceOf } from './componentOperationProgress';
 import { getAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import {
     updateAppBuilderComponent,
@@ -105,14 +106,22 @@ async function updateOne(project: Project, id: string, deps: AppBuilderComponent
     return result;
 }
 
+/** Which members to update, in order, and where the progress shows. */
+interface UpdatePlan {
+    order: string[];
+    /** `'modal'` when the SC started it from the integrations screen (PL-59). */
+    progress: 'modal' | undefined;
+}
+
 /** Update each member in order; the first failure stops the rest and says what it left alone. */
 async function updatePair(
     context: HandlerContext,
     project: Project,
-    order: string[],
-    report: (message: string) => void,
+    plan: UpdatePlan,
+    report: (message: string, subMessage?: string) => void,
 ): Promise<UpdateResult> {
-    const refused = await guardOrBlock(context, project, report);
+    const { order, progress } = plan;
+    const refused = await guardOrBlock(context, project, report, progress);
     if (refused) {
         return refused;
     }
@@ -154,31 +163,35 @@ function canUpdate(status: string): boolean {
  * Handle 'updateAppBuilderComponent' — guards → the pair's members with newer
  * code, systems first: fetch, install dependencies, redeploy.
  */
-export const handleUpdateAppBuilderComponent: MessageHandler<{ id?: string }> = async (
-    context,
-    payload,
-): Promise<HandlerResponse> => {
-    const target = await resolveComponentRecord(context, payload?.id, (record) => record.kind !== 'mesh');
-    if (!target.ok) return target.error;
-    const { id, project, state } = target;
-    if (!canUpdate(state.status)) {
-        return {
-            success: false,
-            error: `"${id}" is not deployed; deploy it instead of updating it.`,
-            code: ErrorCode.INVALID_OPERATION,
-        };
-    }
+export const handleUpdateAppBuilderComponent: MessageHandler<{
+    id?: string;
+    /** `'modal'` when the SC started it from the integrations screen (PL-59). */
+    progress?: 'modal';
+}> = narrateOutcomeToModal(
+    async (context, payload): Promise<HandlerResponse> => {
+        const target = await resolveComponentRecord(context, payload?.id, (record) => record.kind !== 'mesh');
+        if (!target.ok) return target.error;
+        const { id, project, state } = target;
+        if (!canUpdate(state.status)) {
+            return {
+                success: false,
+                error: `"${id}" is not deployed; deploy it instead of updating it.`,
+                code: ErrorCode.INVALID_OPERATION,
+            };
+        }
 
-    const order = pairToUpdate(project, id);
-    const label = order.map((memberId) => nameOf(project, memberId)).join(' and ');
-    const result = await withComponentProgress(
-        { title: 'Updating', id, label, noun: 'Integration', logger: context.logger },
-        (report) => updatePair(context, project, order, report),
-    );
+        const plan: UpdatePlan = { order: pairToUpdate(project, id), progress: progressSurfaceOf(payload) };
+        const label = plan.order.map((memberId) => nameOf(project, memberId)).join(' and ');
+        const result = await withComponentProgress(
+            { title: 'Updating', id, label, noun: 'Integration', logger: context.logger, progress: plan.progress },
+            (report) => updatePair(context, project, plan, report),
+        );
 
-    await postComponentsSnapshot(context);
-    await refreshProjectStatus(context);
-    return result.success
-        ? { success: true, detail: result.detail }
-        : { success: false, error: result.error, code: result.code };
-};
+        await postComponentsSnapshot(context);
+        await refreshProjectStatus(context);
+        return result.success
+            ? { success: true, detail: result.detail }
+            : { success: false, error: result.error, code: result.code };
+    },
+    (payload) => payload?.id,
+);

@@ -41,7 +41,7 @@ const PROVIDERS = new Set(['adobe', 'dalive', 'github', 'commerce']);
  * some tool's declared sign-ins changed, which is a product decision, not a refactor.
  */
 const EXPECTED: Record<string, number> = {
-    adobe: 42,
+    adobe: 43,
     dalive: 19,
     github: 10,
     commerce: 2,
@@ -49,7 +49,7 @@ const EXPECTED: Record<string, number> = {
 };
 
 /**
- * 116 tools, and the counts above sum to 120 provider slots — a difference of FOUR,
+ * 117 tools, and the counts above sum to 121 provider slots — a difference of FOUR,
  * which is exactly the four tools the original commit says need two sign-ins each
  * (check_github_app, create_project, republish, sync_content). That arithmetic is the
  * cross-check: the derivation below reproduces both numbers from the source without
@@ -59,7 +59,7 @@ const EXPECTED: Record<string, number> = {
  * files. That counts text, not declarations, and was roughly double. The CONTROL below
  * caught it — which is the argument for having one.)
  */
-const EXPECTED_TOOLS = 118;
+const EXPECTED_TOOLS = 119;
 
 interface Declaration {
     name: string;

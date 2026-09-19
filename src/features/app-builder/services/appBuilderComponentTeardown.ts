@@ -16,6 +16,7 @@
  */
 
 import type { CommerceDetachResult } from './erpDetach';
+import { OPERATION_STAGES } from './operationStages';
 import { deriveOwPackage } from './owPackageName';
 import type { SystemWipeResult } from './systemRecordsWipe';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
@@ -49,7 +50,7 @@ export interface RuntimeCleanupSummary {
 export interface TeardownDeps {
     commandManager: CommandExecutor;
     logger: Logger;
-    onProgress?: (message: string) => void;
+    onProgress?: (message: string, subMessage?: string) => void;
     /**
      * Undo the ERP integration's writes onto Commerce (erpDetach) BEFORE its
      * uninstall and undeploy take the action away. Skipped for every component
@@ -138,7 +139,7 @@ async function uninstallIfAppManagement(
     }
     try {
         const result = await deps.uninstallAppManagement(project, state.deployedUrls, (message) =>
-            deps.onProgress?.(message),
+            deps.onProgress?.(OPERATION_STAGES.removingFromCommerce.label, message),
         );
         return result.status === 'failed' ? (result.detail ?? 'no reason given') : undefined;
     } catch (error) {

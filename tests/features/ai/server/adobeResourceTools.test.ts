@@ -22,6 +22,10 @@ jest.mock('@/features/authentication/services/consoleProjectTeardown', () => ({
 jest.mock('@/features/authentication/handlers/deleteAdobeProjectHandler', () => ({
     createTeardownDeps: jest.fn(() => ({})),
 }));
+const mockRenameHandler = jest.fn();
+jest.mock('@/features/authentication/handlers/renameAdobeProjectHandler', () => ({
+    handleRenameAdobeProject: (...a: unknown[]) => mockRenameHandler(...a),
+}));
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: { getAuthenticationService: jest.fn(() => ({})) },
 }));
@@ -421,5 +425,59 @@ describe('delete_adobe_project', () => {
         );
 
         expect(seen).toEqual(['Removing event providers (2/5)']);
+    });
+});
+
+describe('rename_adobe_project', () => {
+    const ARGS = { projectId: 'proj-9', projectName: 'Kukla Test', title: ' Kukla Bodea ' };
+
+    it('declares a non-destructive write behind Adobe sign-in', () => {
+        const d = descriptorFor('rename_adobe_project');
+
+        expect(d.needsAuth).toStrictEqual(['adobe']);
+        expect(d.annotations).toStrictEqual({ readOnlyHint: false, destructiveHint: false });
+    });
+
+    it("renames through the picker's handler, in the selected org, with a trimmed title", async () => {
+        mockRenameHandler.mockResolvedValue({ success: true });
+
+        const out = await serve()('rename_adobe_project', ARGS);
+
+        expect(mockRenameHandler).toHaveBeenCalledWith(expect.anything(), {
+            orgId: 'org-1',
+            projectId: 'proj-9',
+            title: 'Kukla Bodea',
+        });
+        expect(out).toStrictEqual({ renamed: true, projectId: 'proj-9', title: 'Kukla Bodea' });
+    });
+
+    it("answers the handler's refusal", async () => {
+        mockRenameHandler.mockResolvedValue({ success: false, error: 'Enter a name.' });
+
+        const out = await serve()('rename_adobe_project', ARGS);
+
+        expect(out).toStrictEqual({ renamed: false, error: 'Enter a name.' });
+    });
+
+    it('needs an org selected first', async () => {
+        mockGetAdobeTarget.mockReturnValue(undefined);
+
+        const out = await serve()('rename_adobe_project', ARGS);
+
+        expect(out.error).toContain('select_org');
+        expect(mockRenameHandler).not.toHaveBeenCalled();
+    });
+
+    it('asks for Adobe sign-in when signed out', async () => {
+        const out = await serve({ authed: false })('rename_adobe_project', ARGS);
+
+        expect(out.needsAuth).toBe('adobe');
+        expect(mockRenameHandler).not.toHaveBeenCalled();
+    });
+
+    it('refuses a call missing the id or the title', async () => {
+        expect(await serve()('rename_adobe_project', { projectId: 'p' })).toStrictEqual({
+            error: 'projectId and title are required',
+        });
     });
 });
