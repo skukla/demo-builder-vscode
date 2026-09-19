@@ -18,11 +18,11 @@ finding.
 
 | Rule | When | Surface | Why |
 |---|---|---|---|
-| **R1** | The SC starts it with a button on a webview, and it usually takes more than ~10 seconds | **The progress modal.** "Run in background" hands it to a notification with the same title | The SC is looking at that screen; the modal is the extension's accepted way to show detail (owner, 2026-09-18). The handover keeps the operation visible once they look away (owner, 2026-09-19: "the end user loses context") |
+| **R1** | The SC starts it with a button on a webview, and it usually takes more than 10 seconds | **The progress modal.** "Run in background" hands it to a notification with the same title | The SC is looking at that screen; the modal is the extension's accepted way to show detail (owner, 2026-09-18). The handover keeps the operation visible once they look away (owner, 2026-09-19: "the end user loses context") |
 | **R2** | Started from the command palette | **A notification**, same title and stage names as the modal would show | There is no screen to host a modal |
 | **R3** | Started by an agent (MCP tool) | **The agent notification only**, with the operation's stages as its steps | Nothing should pop up that the SC did not click. One notification: the operation must not open a second one of its own |
 | **R4** | Runs inside the wizard's own progress screen (project creation, storefront setup) | **That full-page display**, fed from the same stage list | The wizard step already is a dedicated progress screen; a modal on top of it would be a second one |
-| **R5** | A button whose operation is short (usually under ~10 seconds) | **The button's own busy state** | A modal that opens and closes in a few seconds is noise |
+| **R5** | A button whose operation is short (usually under 10 seconds) | **The button's own busy state** | A modal that opens and closes in a few seconds is noise |
 | **R6** | Any operation, when it ends | Success: the modal closes itself / the notification closes with a status-bar "— done". Failure: the modal stays, or a warning with the reason and "Open Debug Logs" | The end must be as visible as the start. `withProgress` is never used as a success message on a timer |
 
 ### Wording (applies to every surface)
@@ -71,7 +71,8 @@ finding.
 | 14 | Project creation / edit | Wizard | Full-page progress screen | Same screen, shared stage list and wording | R4 |
 | 14a | same | Agent `create_project` | Agent notification, no live steps | With live steps | R3 |
 | 15 | Storefront setup | Wizard | Full-page progress screen with per-phase durations | Same, shared stage list | R4 |
-| 16 | Start / stop / restart demo | Dashboard, projects-list | Notification "Starting demo" etc. | **Owner to decide**: R5 if they are usually short (the tile already shows starting/stopping); R1 if not. Measure first | R1/R5 |
+| 16 | Start / stop / restart demo | Dashboard, projects-list | Notification "Starting demo" etc. | **The button's busy state**; the tile already shows starting/stopping. Short (owner, 2026-09-19) | R5 |
+| 16b | same | Palette | Notification | Notification, new wording | R2 |
 | 16a | same | Agent | Agent notification **plus** the command's own notification | One notification: `BaseCommand.withProgress` learns to stand down under an agent, as `withProgressRegister` already does | R3 |
 | 17 | Create Adobe project / workspace | Wizard destination stage | In-stage progress rows | unchanged (already R4-shaped) | R4 |
 | 18 | Delete Adobe project | Project picker | Notification with `Step n/N:` | Notification, new count wording (the picker is inside a larger flow; a modal on top would stack) | R2 wording |
@@ -100,7 +101,7 @@ to the owner before the next.
 7. **Agent paths without steps** (rows 3a, 5b, 7b, 8b, 13a, 14a, 19).
 8. **Wizard screens** share the stage list and wording (rows 14, 15).
 9. **Palette notifications** follow the wording rules; the silent updates get one (rows 20, 21).
-10. Start/stop/restart once the owner has chosen (row 16).
+10. Start/stop/restart (row 16): the busy state on the button, and the palette wording.
 
 ## How this is validated
 
@@ -119,5 +120,9 @@ to the owner before the next.
 
 1. Row 5b: does `delete_project` from an agent skip the cloud cleanup the button does?
    If so, is that intended?
-2. Row 16: are start/stop/restart short enough to stay out of a modal?
-3. The ~10-second line between R1 and R5: is that the right threshold?
+
+## Decided
+
+- **Start, stop and restart demo are short** (row 16): no modal, the button's busy state
+  (owner, 2026-09-19).
+- **The line between R1 and R5 is 10 seconds** (owner, 2026-09-19).
