@@ -21,7 +21,10 @@
  */
 
 import * as vscode from 'vscode';
-import { handleGetComponentOperationProgress } from './componentOperationProgress';
+import {
+    handleBackgroundComponentOperation,
+    handleGetComponentOperationProgress,
+} from './componentOperationProgress';
 import { handleSetProjectDestination } from './destinationHandlers';
 import {
     handleSyncStorefront,
@@ -297,6 +300,8 @@ export const dashboardHandlers = defineHandlers({
     saveIntegrationSettings: handleSaveIntegrationSettings,
     // The latest progress of an operation the SC started here, for its modal (PL-59).
     getComponentOperationProgress: handleGetComponentOperationProgress,
+    // "Run in background": the operation carries on in a progress notification (PL-59).
+    backgroundComponentOperation: handleBackgroundComponentOperation,
 
     // Console API access (runtime API subscription — list_console_apis / add_console_apis)
     listConsoleApis: handleListConsoleApis,

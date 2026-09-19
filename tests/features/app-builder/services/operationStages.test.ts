@@ -8,6 +8,7 @@ import { join } from 'path';
 
 import {
     OPERATION_STAGES,
+    detailFor,
     expectationFor,
 } from '@/features/app-builder/services/operationStages';
 
@@ -29,10 +30,14 @@ const STAGE_REPORTERS = [
 const LITERAL_STAGE = /\b(?:onProgress\??\.?|report)\(\s*[`'"]/;
 
 describe('OPERATION_STAGES', () => {
-    it('gives every stage a label and an expectation', () => {
+    // The detail is row 2, shown when a report names no step of its own. A stage
+    // without one left that row blank, and the modal read as two lines with a gap
+    // (owner, 2026-09-19).
+    it('gives every stage a label, an expectation and a detail', () => {
         for (const stage of Object.values(OPERATION_STAGES)) {
             expect(stage.label.trim()).not.toBe('');
             expect(stage.expectation.trim()).not.toBe('');
+            expect(stage.detail.trim()).not.toBe('');
         }
     });
 
@@ -50,6 +55,16 @@ describe('expectationFor', () => {
 
     it('returns nothing for a stage the table does not name, rather than a guess', () => {
         expect(expectationFor('Doing something new…')).toBeUndefined();
+    });
+});
+
+describe('detailFor', () => {
+    it("returns a stage's detail from its label", () => {
+        expect(detailFor(OPERATION_STAGES.subscribingApis.label)).toBe(OPERATION_STAGES.subscribingApis.detail);
+    });
+
+    it('returns nothing for a stage the table does not name', () => {
+        expect(detailFor('Doing something new…')).toBeUndefined();
     });
 });
 

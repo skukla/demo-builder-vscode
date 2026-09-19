@@ -130,14 +130,14 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'exportProjectSettings')).toBe(true);
         });
 
-        it('should have exactly 48 handlers', () => {
+        it('should have exactly 49 handlers', () => {
             // Given: dashboardHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(dashboardHandlers) as Array<
                 keyof typeof dashboardHandlers
             >;
 
-            // Then: exactly 48 — the 40 below, then the additions noted after the
+            // Then: exactly 49 — the 41 below, then the additions noted after the
             // table — derived in the map's own declaration order so a
             // reader can check it against the source top to bottom.
             //
@@ -155,13 +155,15 @@ describe('dashboardHandlers', () => {
             //                      openIntegrations, showProjectDashboard,
             //                      openDataInstaller
             //   1  mesh            deployMesh
-            //   8  integrations    add/deploy/redeploy/remove/rename
+            //   9  integrations    add/deploy/redeploy/remove/rename
             //                      AppBuilderComponent, plus the AB-5 pair:
             //                      installAppBuilderComponent (re-run the
             //                      Commerce install without a redeploy) and
             //                      getAppBuilderInstallStatus (live install
             //                      state read), plus getComponentOperationProgress
             //                      (PL-59: the latest step for the progress modal)
+            //                      and backgroundComponentOperation ("Run in
+            //                      background" hands it to a notification)
             //   3  console APIs    listConsoleApis, addConsoleApis, setConsoleApis
             //   2  storefront      syncStorefront, refreshBlockLibrary
             //   2  auth            reAuthenticate, switchOrg
@@ -174,7 +176,7 @@ describe('dashboardHandlers', () => {
             //   1  destination     setProjectDestination
             //   2  ERP integration getErpStatus, resetErpRecords (plan step 05)
             //  ==
-            //  40
+            //  41
             //
             // Retired, so they are absent by design: verifyAppBuilderComponent
             // (2026-08-03); the 4 singular App Builder actions (addApp,
@@ -210,7 +212,10 @@ describe('dashboardHandlers', () => {
             // openDebugLogs + getComponentOperationProgress (46 → 48, PL-59, merged
             // from develop): the progress modal's two requests, already counted in
             // the table above.
-            expect(types).toHaveLength(48);
+            //
+            // backgroundComponentOperation (48 → 49, PL-59): "Run in background"
+            // hands the operation to a notification. Also counted in the table above.
+            expect(types).toHaveLength(49);
         });
 
         it('should have handlers as functions', () => {

@@ -30,10 +30,40 @@ const OPERATION_MESSAGES: Partial<Record<CardAction, string>> = {
     remove: 'removeAppBuilderComponent',
 };
 
+/**
+ * What each action is called while it runs, and in the sentence when it fails.
+ *
+ * The running form is the modal's title and, word for word, the title of the
+ * notification it hands over to on "Run in background" — the same "-ing" title the
+ * operation's own notification has always used ("Deploying ERP Sync",
+ * `withComponentProgress`). So moving to the background reads as the same thing
+ * carrying on.
+ */
+const VERBS: Partial<Record<CardAction, { running: string; base: string; suffix?: string }>> = {
+    deploy: { running: 'Deploying', base: 'deploy' },
+    retry: { running: 'Deploying', base: 'deploy' },
+    redeploy: { running: 'Redeploying', base: 'redeploy' },
+    update: { running: 'Updating', base: 'update' },
+    install: { running: 'Installing', base: 'install', suffix: ' into Commerce' },
+    remove: { running: 'Removing', base: 'remove' },
+};
+
+/** The running title and the failure title for an action on a named integration. */
+function titlesFor(action: CardAction, name: string): Pick<ComponentOperation, 'title' | 'failureTitle'> {
+    const verb = VERBS[action];
+    if (!verb) return { title: name, failureTitle: `${name} did not finish` };
+    const suffix = verb.suffix ?? '';
+    return { title: `${verb.running} ${name}${suffix}`, failureTitle: `Couldn't ${verb.base} ${name}${suffix}` };
+}
+
 export interface ComponentOperation {
     id: string;
     name: string;
     action: CardAction;
+    /** The modal's title, and the notification's when it runs in the background. */
+    title: string;
+    /** The failure view's title: "Couldn't redeploy ERP integration". */
+    failureTitle: string;
     /**
      * Which run this is. A new run of the same integration must start the modal
      * clean, not on the previous run's failure.
@@ -67,7 +97,8 @@ export function useComponentOperation(): ComponentOperationControls {
         const message = OPERATION_MESSAGES[action];
         if (!message) return false;
         webviewClient.postMessage(message, { id, progress: 'modal' });
-        setLast((previous) => ({ id, name, action, run: (previous?.run ?? 0) + 1, resume: false }));
+        const titles = titlesFor(action, name);
+        setLast((previous) => ({ id, name, action, ...titles, run: (previous?.run ?? 0) + 1, resume: false }));
         setIsOpen(true);
         return true;
     }, []);
@@ -79,6 +110,8 @@ export function useComponentOperation(): ComponentOperationControls {
             id,
             name,
             action: 'deploy',
+            title: `Adding ${name}`,
+            failureTitle: `Couldn't add ${name}`,
             run: (previous?.run ?? 0) + 1,
             resume: false,
         }));

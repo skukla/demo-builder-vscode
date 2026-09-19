@@ -73,7 +73,7 @@ gates read, and for the fields its JSX renders. Three different lists.
   (auth + org-mismatch) performs the auth check, whose `aio config get` spawns the whole
   `aio` CLI — seconds on a cold cache. A handler that guards first, then opens
   `withProgress`, shows the user nothing for those seconds and reads as laggy. Put EVERY
-  slow step inside the progress callback with `report('Checking requirements…')` as its
+  slow step inside the progress callback with `report(OPERATION_STAGES.checkingRequirements.label)` as its
   first line — the shape `deployMeshHeadless` uses. Reported twice (2026-07-31: "it's not
   as immediate as it should be… We've hit this before"), so it is pinned by an ordering
   test in `appBuilderComponentHandlers-drawer.test.ts`.

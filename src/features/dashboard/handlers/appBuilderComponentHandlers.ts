@@ -45,7 +45,7 @@ import {
     type RuntimeCleanupSummary,
 } from '@/features/app-builder/services/appBuilderComponentRunner';
 import type { CommerceDetachResult } from '@/features/app-builder/services/erpDetach';
-import { OPERATION_STAGES, expectationFor } from '@/features/app-builder/services/operationStages';
+import { OPERATION_STAGES, detailFor, expectationFor } from '@/features/app-builder/services/operationStages';
 import {
     buildCustomIntegrationEntry,
     entryFitsProjectAxes,
@@ -714,8 +714,9 @@ function kindNoun(kind: AppBuilderComponentKind | undefined): string {
  * check, whose `aio config get` spawn costs seconds on a cold cache — so a
  * handler that guards first shows nothing for those seconds and the notification
  * reads as laggy (reported 2026-07-31: "it's not as immediate as it should be").
- * Every slow step belongs inside `run`, with `report('Checking requirements…')`
- * as its first line — the same shape `deployMeshHeadless` uses.
+ * Every slow step belongs inside `run`, with
+ * `report(OPERATION_STAGES.checkingRequirements.label)` as its first line — the same
+ * shape `deployMeshHeadless` uses.
  *
  * **Started from the integrations screen, it narrates to a modal instead**
  * (`progress: 'modal'`, PL-59): each stage, its step and the stage's expectation line
@@ -772,7 +773,9 @@ export async function withComponentProgress<T extends GuardableResult>(
                     id,
                     state: 'running',
                     stage,
-                    step: step || undefined,
+                    // Row 2 is never blank: a stage that names no step shows its own
+                    // detail (owner, 2026-09-19: "I only see two lines").
+                    step: step || detailFor(stage),
                     expectation: expectationFor(stage),
                 });
             } else {

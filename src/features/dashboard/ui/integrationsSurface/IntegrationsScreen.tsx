@@ -380,7 +380,6 @@ export function IntegrationsScreen({
                     which the mesh card carries as componentId. */}
                 <ComponentOperationModal
                     operation={operations.open}
-                    status={cards.find((c) => (c.componentId ?? c.id) === operations.open?.id)}
                     onRetry={operations.retry}
                     onClose={operations.close}
                 />

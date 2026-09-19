@@ -921,7 +921,7 @@ export async function updateAppBuilderComponent(
     }
     const entry = deps.catalog.find((c) => c.id === id) ?? entryFromState(id, existing);
 
-    deps.onProgress?.(OPERATION_STAGES.fetchingUpdate.label, 'From GitHub');
+    deps.onProgress?.(OPERATION_STAGES.fetchingUpdate.label);
     const fetched = await deps.fetchComponentSource(componentPath, existing.source.branch ?? 'main');
     if (fetched.status === 'refused' || fetched.status === 'failed') {
         return { success: false, error: fetched.detail };
