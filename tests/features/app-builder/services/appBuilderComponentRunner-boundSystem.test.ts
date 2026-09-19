@@ -157,6 +157,43 @@ describe('adding the integration adds its system first', () => {
         expect(project.appBuilderComponents?.['demo-erp']?.name).toBe('Nordwind');
     });
 
+    // PL-59: the pair is two full deploys back to back, a total known before anything
+    // starts, so every report says which one it is on (owner, 2026-09-19).
+    it('says which of the two it is on: the ERP is 1 of 2, the integration 2 of 2', async () => {
+        const project = createProject();
+        const onProgress = jest.fn();
+        const deps = createDeps({ deployApp: deployByPath(), catalog: [SYSTEM, INTEGRATION], onProgress });
+
+        await addAppBuilderComponent(project, INTEGRATION, deps);
+
+        const positions = onProgress.mock.calls.map((call) => call[2]);
+        const firstForIntegration = positions.findIndex((p) => p?.index === 2);
+        expect(positions[0]).toEqual({ index: 1, total: 2 });
+        expect(firstForIntegration).toBeGreaterThan(0);
+        expect(positions.slice(0, firstForIntegration).every((p) => p?.index === 1)).toBe(true);
+        expect(positions.slice(firstForIntegration).every((p) => p?.index === 2 && p.total === 2)).toBe(true);
+    });
+
+    it('an add with no system to add first carries no count', async () => {
+        const project = createProject({
+            appBuilderComponents: {
+                'demo-erp': {
+                    kind: 'system',
+                    status: 'deployed',
+                    source: { owner: 'skukla', repo: 'demo-erp' },
+                    providesEnvVars: { ERP_BASE_URL: 'https://ns.adobeioruntime.net/api/v1/web/demo-erp' },
+                },
+            },
+        });
+        const onProgress = jest.fn();
+        const deps = createDeps({ deployApp: deployByPath(), catalog: [SYSTEM, INTEGRATION], onProgress });
+
+        await addAppBuilderComponent(project, INTEGRATION, deps);
+
+        expect(onProgress).toHaveBeenCalled();
+        expect(onProgress.mock.calls.every((call) => call[2] === undefined)).toBe(true);
+    });
+
     it('an ERP already in the project is not added again', async () => {
         const project = createProject({
             appBuilderComponents: {

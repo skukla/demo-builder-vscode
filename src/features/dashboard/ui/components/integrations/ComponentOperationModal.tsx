@@ -20,6 +20,7 @@ import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import { stageLine } from '@/core/utils/stageLine';
 
 export interface ComponentOperationModalProps {
     /** The operation being run, or `null` when the modal is closed. */
@@ -96,7 +97,7 @@ export function ComponentOperationModal({
                             // left-aligns and shrinks the text (ImportDatapackModal).
                             <LoadingDisplay
                                 size="L"
-                                message={progress?.stage ?? 'Starting'}
+                                message={progress?.stage ? stageLine(progress.stage, progress.position) : 'Starting'}
                                 subMessage={progress?.step}
                                 helperText={progress?.expectation ?? '\u00A0'}
                             />

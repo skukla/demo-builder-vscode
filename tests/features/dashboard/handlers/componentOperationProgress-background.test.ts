@@ -77,6 +77,19 @@ describe('Run in background', () => {
         expect(mockProgressReport).toHaveBeenLastCalledWith({ message: 'Installing into Commerce' });
     });
 
+    it('shows the pair count after the stage', async () => {
+        await runningInBackground();
+
+        await pushComponentOperationProgress({
+            id: ID,
+            state: 'running',
+            stage: 'Deploying the app',
+            position: { index: 2, total: 2 },
+        });
+
+        expect(mockProgressReport).toHaveBeenLastCalledWith({ message: 'Deploying the app (2 of 2)' });
+    });
+
     it('closes when the operation succeeds, saying so in the status bar', async () => {
         await runningInBackground();
 

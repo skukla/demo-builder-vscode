@@ -53,6 +53,7 @@ import {
 import type { AppBuilderComponentState, Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, HandlerResponse, MessageHandler } from '@/types/handlers';
+import type { OperationPosition } from '@/types/webviewPayloads';
 
 /**
  * The entry's lifecycle, resolved the way the runner resolves it: catalog row
@@ -184,14 +185,14 @@ export const handleGetAppBuilderInstallStatus: MessageHandler<{ id?: string }> =
 export async function handlerRunnerDeps(
     context: HandlerContext,
     project: Project,
-    report?: (message: string, subMessage?: string) => void,
+    report?: (message: string, subMessage?: string, position?: OperationPosition) => void,
 ): Promise<AppBuilderComponentRunnerDeps> {
     return buildDefaultRunnerDeps(
         await buildRunnerDepsContext(context, project, {
             authManager: ServiceLocator.getAuthenticationService(),
             commandManager: ServiceLocator.getCommandExecutor(),
         }),
-        report && ((message, subMessage) => report(message, subMessage)),
+        report && ((message, subMessage, position) => report(message, subMessage, position)),
     );
 }
 

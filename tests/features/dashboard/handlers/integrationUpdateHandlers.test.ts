@@ -364,6 +364,15 @@ describe('handleUpdateAppBuilderComponent', () => {
     });
 });
 
+/** The real builder hands its progress reporter on as the deps' `onProgress`; so does this. */
+function keepReporter(): void {
+    mockBuildDefaultRunnerDeps.mockImplementation((...args: unknown[]) => ({
+        checkComponentSource: mockCheckComponentSource,
+        readAppVersion: mockReadAppVersion,
+        onProgress: args[1],
+    }));
+}
+
 // PL-59, adopted when develop merged in: an Update started on the integrations
 // screen narrates to its modal, like Deploy, Install and Remove.
 describe('handleUpdateAppBuilderComponent — started from the integrations screen', () => {
@@ -379,6 +388,43 @@ describe('handleUpdateAppBuilderComponent — started from the integrations scre
             expect.objectContaining({ id: 'erp-integration', state: 'succeeded' }),
         );
         expect(withProgress).not.toHaveBeenCalled();
+    });
+
+    it('says which of the pair each update is on: the ERP 1 of 2, the integration 2 of 2', async () => {
+        keepReporter();
+        const { mockContext } = setup(pairProject({ updateAvailable: { commit: 'abc', checkedAt: 'x' } }));
+        mockUpdate.mockImplementation(async (_project, _id, deps: { onProgress?: (m: string) => void }) => {
+            deps.onProgress?.('Deploying the app');
+            return { success: true, detail: 'done' };
+        });
+
+        await handleUpdateAppBuilderComponent(mockContext, { id: 'erp-integration', progress: 'modal' });
+
+        const positions = mockSendOperationProgress.mock.calls
+            .map(([payload]) => payload)
+            .filter((payload) => payload.stage === 'Deploying the app')
+            .map((payload) => payload.position);
+        expect(positions).toEqual([
+            { index: 1, total: 2 },
+            { index: 2, total: 2 },
+        ]);
+    });
+
+    it('a single update carries no count', async () => {
+        keepReporter();
+        const { mockContext } = setup(pairProject());
+        mockUpdate.mockImplementation(async (_project, _id, deps: { onProgress?: (m: string) => void }) => {
+            deps.onProgress?.('Deploying the app');
+            return { success: true, detail: 'done' };
+        });
+
+        await handleUpdateAppBuilderComponent(mockContext, { id: 'erp-integration', progress: 'modal' });
+
+        const running = mockSendOperationProgress.mock.calls
+            .map(([payload]) => payload)
+            .filter((payload) => payload.stage === 'Deploying the app');
+        expect(running).toHaveLength(1);
+        expect(running[0].position).toBeUndefined();
     });
 
     it('ends the modal with the refusal when the card cannot update', async () => {

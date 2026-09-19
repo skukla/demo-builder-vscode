@@ -80,6 +80,7 @@ import type { TransformedComponentDefinition } from '@/types/components';
 import type { ErrorCode } from '@/types/errorCodes';
 import type { Logger } from '@/types/logger';
 import { toError } from '@/types/typeGuards';
+import type { OperationPosition } from '@/types/webviewPayloads';
 
 /** Outcome of an add/deploy/remove operation. */
 export interface RunnerResult {
@@ -165,7 +166,7 @@ export interface AppBuilderComponentRunnerDeps extends TeardownDeps {
      * showed one static title while the build and deploy ran silently. Optional
      * because the headless/MCP callers have nobody to tell.
      */
-    onProgress?: (message: string, subMessage?: string) => void;
+    onProgress?: (message: string, subMessage?: string, position?: OperationPosition) => void;
     /**
      * Write a component's `.env` from the REGISTRY contract, before its deploy.
      *
@@ -640,20 +641,36 @@ async function addBoundSystemFirst(
     project: Project,
     entry: AppBuilderComponentCatalogEntry,
     deps: AppBuilderComponentRunnerDeps,
-): Promise<RunnerResult> {
+): Promise<RunnerResult & { added?: boolean }> {
     const system = boundSystemOf(entry, deps.catalog);
     if (!system) return { success: true };
     const existing = project.appBuilderComponents?.[system.id];
     if (existing && existing.status !== 'error') return { success: true };
-    deps.onProgress?.(OPERATION_STAGES.addingSystem.label, `Adding ${system.name}`);
-    const result = await addAppBuilderComponent(project, system, deps);
+    const first = atPairPosition(deps, 1, 2);
+    first.onProgress?.(OPERATION_STAGES.addingSystem.label, `Adding ${system.name}`);
+    const result = await addAppBuilderComponent(project, system, first);
     if (!result.success) {
         return {
             success: false,
             error: `Could not add ${system.name}, which ${entry.name} needs: ${result.error}`,
         };
     }
-    return { success: true };
+    return { success: true, added: true };
+}
+
+/**
+ * The same deps, with every progress report saying which member of a pair it is
+ * on: "Deploying the app (1 of 2)" (PL-59). The deploy tails get the wrapped
+ * reporter too, so their steps carry the count without knowing about pairs.
+ */
+function atPairPosition(
+    deps: AppBuilderComponentRunnerDeps,
+    index: number,
+    total: number,
+): AppBuilderComponentRunnerDeps {
+    const report = deps.onProgress;
+    if (!report) return deps;
+    return { ...deps, onProgress: (message, subMessage) => report(message, subMessage, { index, total }) };
 }
 
 /**
@@ -668,8 +685,17 @@ export async function addAppBuilderComponent(
     deps: AppBuilderComponentRunnerDeps,
 ): Promise<RunnerResult> {
     const boundSystem = await addBoundSystemFirst(project, entry, deps);
-    if (!boundSystem.success) return boundSystem;
+    if (!boundSystem.success) return { success: false, error: boundSystem.error };
+    // After its system, the entry is the pair's second member.
+    return addOne(project, entry, boundSystem.added ? atPairPosition(deps, 2, 2) : deps);
+}
 
+/** Add ONE component, its bound system already in place. */
+async function addOne(
+    project: Project,
+    entry: AppBuilderComponentCatalogEntry,
+    deps: AppBuilderComponentRunnerDeps,
+): Promise<RunnerResult> {
     const missingProvider = findMissingProvider(project, entry);
     if (missingProvider) {
         return {

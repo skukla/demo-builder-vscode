@@ -13,6 +13,7 @@
  */
 
 import * as vscode from 'vscode';
+import { stageLine } from '@/core/utils/stageLine';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { ComponentOperationProgressPayload } from '@/types/webviewPayloads';
 
@@ -33,7 +34,7 @@ const notices = new Map<string, Notice>();
  * notification at a fixed width, so there is no room to buy.
  */
 function lineFor(payload: ComponentOperationProgressPayload): string | undefined {
-    return payload.stage;
+    return payload.stage && stageLine(payload.stage, payload.position);
 }
 
 /**

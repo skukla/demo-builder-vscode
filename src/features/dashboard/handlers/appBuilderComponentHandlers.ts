@@ -37,6 +37,7 @@ import {
     listAppBuilderComponents,
     setAppBuilderComponent,
 } from '@/core/state/appBuilderComponentState';
+import { stageLine } from '@/core/utils/stageLine';
 import { cardInFlightLabel, timedSteps, withProgressRegister } from '@/core/vscode/progressRegister';
 import {
     addAppBuilderComponent,
@@ -60,7 +61,7 @@ import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponen
 import type { Project , AppBuilderComponentKind } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import { MessageHandler, HandlerContext, HandlerResponse } from '@/types/handlers';
-import type { AppBuilderComponentRowStatus } from '@/types/webviewPayloads';
+import type { AppBuilderComponentRowStatus, OperationPosition } from '@/types/webviewPayloads';
 import type { AddAppBuilderComponentRequestPayload } from '@/types/webviewRequests';
 
 /**
@@ -523,7 +524,7 @@ function runAdd(
                     authManager: ServiceLocator.getAuthenticationService(),
                     commandManager: ServiceLocator.getCommandExecutor(),
                 }),
-                (message, subMessage) => report(message, subMessage),
+                (message, subMessage, position) => report(message, subMessage, position),
                 buildToolchainConsent(context, payload.refreshCli),
             );
             return addAppBuilderComponent(project, entry, deps);
@@ -739,7 +740,7 @@ export async function withComponentProgress<T extends GuardableResult>(
         /** `'modal'` when the SC started it from the integrations screen. */
         progress?: 'modal';
     },
-    run: (report: (stage: string, step?: string) => void) => Promise<T>,
+    run: (report: (stage: string, step?: string, position?: OperationPosition) => void) => Promise<T>,
 ): Promise<T> {
     const { title, id, label, noun, logger } = options;
     const inModal = options.progress === 'modal';
@@ -766,20 +767,21 @@ export async function withComponentProgress<T extends GuardableResult>(
         // alone when there is one ('Running aio app deploy', not both lines — owner
         // screenshot, 2026-08-27). The modal has room for both, and the stage's
         // expectation line under them.
-        (report) => run((stage, step) => {
-            steps.step(step || stage);
+        (report) => run((stage, step, position) => {
+            steps.step(stageLine(step || stage, position));
             if (inModal) {
                 void pushComponentOperationProgress({
                     id,
                     state: 'running',
                     stage,
+                    position,
                     // Row 2 is never blank: a stage that names no step shows its own
                     // detail (owner, 2026-09-19: "I only see two lines").
                     step: step || detailFor(stage),
                     expectation: expectationFor(stage),
                 });
             } else {
-                report(step || stage);
+                report(stageLine(step || stage, position));
             }
         }),
     );
@@ -843,7 +845,7 @@ async function deployById(
                 // the step line is the SUB-step alone when one exists — joining both
                 // produced two-line cards ('Deploying custom integration... Running
                 // aio app deploy'; owner screenshot, 2026-08-27).
-                (message, subMessage) => report(message, subMessage),
+                (message, subMessage, position) => report(message, subMessage, position),
                 buildToolchainConsent(context, refreshCli),
             );
             return deployAppBuilderComponent(project, id, deps);

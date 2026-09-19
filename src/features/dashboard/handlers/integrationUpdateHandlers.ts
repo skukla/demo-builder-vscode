@@ -41,6 +41,7 @@ import { integrationUsing, systemsUsedBy } from '@/features/components/services/
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, HandlerResponse, MessageHandler } from '@/types/handlers';
+import type { OperationPosition } from '@/types/webviewPayloads';
 
 type UpdateResult = GuardableResult & { detail?: string };
 
@@ -118,14 +119,13 @@ async function updatePair(
     context: HandlerContext,
     project: Project,
     plan: UpdatePlan,
-    report: (message: string, subMessage?: string) => void,
+    report: (message: string, subMessage?: string, position?: OperationPosition) => void,
 ): Promise<UpdateResult> {
     const { order, progress } = plan;
     const refused = await guardOrBlock(context, project, report, progress);
     if (refused) {
         return refused;
     }
-    const deps = await runnerDeps(context, project, report);
     // Every card the click covers says so at once: the first updates, the rest
     // wait their turn (owner, 2026-09-18). The clicked card is not assumed to be
     // the one running.
@@ -134,6 +134,9 @@ async function updatePair(
     }
     let last: UpdateResult = { success: true };
     for (const [index, memberId] of order.entries()) {
+        // A pair updates two things back to back: each one's reports say which.
+        const position = order.length > 1 ? { index: index + 1, total: order.length } : undefined;
+        const deps = await runnerDeps(context, project, (message, step) => report(message, step, position));
         last = await updateOne(project, memberId, deps);
         const rest = order.slice(index + 1);
         if (!last.success && rest.length > 0) {

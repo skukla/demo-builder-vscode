@@ -288,6 +288,16 @@ export interface AppBuilderComponentStatusUpdatePayload {
 }
 
 /**
+ * Which member of a pair an operation is on — the ERP and its integration deploy one
+ * after the other, a total known before anything starts. Shown after the stage:
+ * "Deploying the app (1 of 2)".
+ */
+export interface OperationPosition {
+    index: number;
+    total: number;
+}
+
+/**
  * `componentOperationProgress` — one integration operation's progress, for the modal
  * the SC opened by starting it (PL-59). `stage` is what is happening, `step` the detail
  * of the moment, `expectation` the stage's fixed "how long this usually takes" line.
@@ -297,6 +307,8 @@ export interface ComponentOperationProgressPayload {
     id: string;
     state: 'running' | 'succeeded' | 'failed';
     stage?: string;
+    /** Which member of a pair this is on, when the operation deploys two. */
+    position?: OperationPosition;
     step?: string;
     expectation?: string;
     error?: string;

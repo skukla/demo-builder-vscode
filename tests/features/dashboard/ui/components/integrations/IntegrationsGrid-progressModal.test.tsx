@@ -81,6 +81,16 @@ describe('the progress modal', () => {
         expect(within(modal).getByText('Usually 1–2 minutes')).toBeInTheDocument();
     });
 
+    it("shows the pair count in the stage line", async () => {
+        const user = setupUser();
+        renderGrid({ appBuilderComponents: NOT_DEPLOYED });
+        const modal = await startDeploy(user);
+
+        push({ ...RUNNING, position: { index: 1, total: 2 } });
+
+        expect(within(modal).getByText('Deploying the app (1 of 2)')).toBeInTheDocument();
+    });
+
     it('ignores progress for another integration', async () => {
         const user = setupUser();
         renderGrid({ appBuilderComponents: NOT_DEPLOYED });

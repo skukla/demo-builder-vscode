@@ -58,6 +58,7 @@ import type { Project } from '@/types/base';
 import type { ComponentRegistry } from '@/types/components';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
+import type { OperationPosition } from '@/types/webviewPayloads';
 
 /** Collaborators the factory needs from the host (extension) context. */
 export interface RunnerDepsContext {
@@ -129,7 +130,7 @@ export async function resolveAppManagementAuth(
 
 export function buildDefaultRunnerDeps(
     ctx: RunnerDepsContext,
-    onProgress?: (message: string, subMessage?: string) => void,
+    onProgress?: (message: string, subMessage?: string, position?: OperationPosition) => void,
     confirmToolchainRefresh?: () => Promise<boolean>,
 ): AppBuilderComponentRunnerDeps {
     // Git in an integration's clone, for update and its check.
