@@ -49,7 +49,7 @@ describe('OPERATION_STAGES', () => {
             .map((stage) => stage.label)
             .filter((label) => label.length > 25);
 
-        expect(long).toEqual([]);
+        expect(long).toStrictEqual([]);
     });
 
     it('never gives two stages the same label, so a lookup is unambiguous', () => {
