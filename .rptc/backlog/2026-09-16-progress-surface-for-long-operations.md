@@ -60,3 +60,7 @@ Whatever is chosen has to answer:
 `appBuilderComponentHandlers.ts` (the current `withProgress` for add/remove/redeploy),
 `StorefrontSetupStep.tsx` (the pattern to reuse), `progressRegister.ts`, and the webview
 surfaces that host the cards.
+
+## Shipped so far
+
+- 2026-09-16  docs(backlog): PL-59 — a long operation should say what it is doing (`66b95506c`)
