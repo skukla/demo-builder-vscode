@@ -45,7 +45,8 @@ const EXPECTED: Record<string, number> = {
     // build their DA.live operations on the DA.live session, the sign-in DA.live
     // accepts (the IMS token listed zero sites and was refused, measured live).
     // 35 -> 36 when develop added delete_adobe_workspace (merged 2026-09-15).
-    adobe: 36,
+    // 36 -> 37 when develop added rename_adobe_project (picked 2026-09-21).
+    adobe: 37,
     dalive: 21,
     // 10 -> 12 on 2026-09-12: forget_added_demo and change_demo_source (step 06
     // of the shareable-demo program) both read and write GitHub; 12 -> 14 the
@@ -61,7 +62,7 @@ const EXPECTED: Record<string, number> = {
 };
 
 /**
- * 119 tools, and the counts above sum to 123 provider slots — a difference of FOUR,
+ * 120 tools, and the counts above sum to 124 provider slots — a difference of FOUR,
  * which is exactly the four tools the original commit says need two sign-ins each
  * (check_github_app, create_project, republish, sync_content). That arithmetic is the
  * cross-check: the derivation below reproduces both numbers from the source without
@@ -71,7 +72,7 @@ const EXPECTED: Record<string, number> = {
  * files. That counts text, not declarations, and was roughly double. The CONTROL below
  * caught it — which is the argument for having one.)
  */
-const EXPECTED_TOOLS = 119;
+const EXPECTED_TOOLS = 120;
 
 interface Declaration {
     name: string;

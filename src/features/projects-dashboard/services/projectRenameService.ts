@@ -251,7 +251,7 @@ async function syncRemoteProjectTitle(
             adobe.projectId,
             newTitle,
         );
-        if (renamed) {
+        if (renamed.ok) {
             adobe.projectTitle = newTitle;
             await context.stateManager.saveProjectConfigOnly(project);
             context.logger.info(`[Rename] Remote Adobe I/O project title synced to "${newTitle}"`);

@@ -35,6 +35,7 @@ import type { McpToolServer } from './mcpToolServer';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { reportPhase } from '@/core/utils/agentPhaseChannel';
 import { createTeardownDeps } from '@/features/authentication/handlers/deleteAdobeProjectHandler';
+import { handleRenameAdobeProject } from '@/features/authentication/handlers/renameAdobeProjectHandler';
 import { teardownConsoleProject } from '@/features/authentication/services/consoleProjectTeardown';
 import { isConsoleOpFailure } from '@/features/authentication/services/types';
 import type { HandlerContext } from '@/types/handlers';
@@ -305,6 +306,44 @@ export function registerAdobeResourceTools(
                 project: projectName,
                 ...(failed.length ? { failedSteps: failed } : {}),
             });
+        },
+    );
+
+    server.registerTool(
+        'rename_adobe_project',
+        {
+            needsAuth: ['adobe'],
+            annotations: { readOnlyHint: false, destructiveHint: false },
+            description:
+                "Rename an Adobe Console project in the selected org — its title only, never its name or id. Reversible by renaming it back. Anyone using the project sees the new name.",
+            inputSchema: {
+                projectId: z.string().describe('Project id from list_adobe_projects'),
+                projectName: z.string().describe("The project's current title, shown in the consent dialog"),
+                title: z.string().describe('The new title (100 characters or fewer)'),
+            },
+        },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        async (args: any) => {
+            const projectId = String(args?.projectId ?? '').trim();
+            const title = String(args?.title ?? '').trim();
+            if (!projectId || !title) {
+                return asText({ error: 'projectId and title are required' });
+            }
+
+            const target = requireOrg();
+            if ('error' in target) return asText(target);
+
+            const ctx = ctxFactory();
+            if (!(await authedManager(ctx))) return asText(NEEDS_ADOBE);
+
+            // The picker's handler, so the button and the tool validate, gate on the
+            // org and word Adobe's refusal identically.
+            const result = await handleRenameAdobeProject(ctx, { orgId: target.orgId, projectId, title });
+            return asText(
+                result.success
+                    ? { renamed: true, projectId, title }
+                    : { renamed: false, error: result.error },
+            );
         },
     );
 }

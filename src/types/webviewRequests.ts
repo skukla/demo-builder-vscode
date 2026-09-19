@@ -669,11 +669,9 @@ export interface AddAppBuilderComponentRequestPayload {
     apis?: string[];
 }
 
-
-
-
-
-
-
-
-
+/** `rename-adobe-project` — change an Adobe I/O project's title (never its name or id). */
+export interface RenameAdobeProjectRequestPayload {
+    orgId: string;
+    projectId: string;
+    title: string;
+}
