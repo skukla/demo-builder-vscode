@@ -132,14 +132,14 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'exportProjectSettings')).toBe(true);
         });
 
-        it('should have exactly 46 handlers', () => {
+        it('should have exactly 48 handlers', () => {
             // Given: dashboardHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(dashboardHandlers) as Array<
                 keyof typeof dashboardHandlers
             >;
 
-            // Then: exactly 46, derived in the map's own declaration order so a
+            // Then: exactly 48, derived in the map's own declaration order so a
             // reader can check it against the source top to bottom.
             //
             // NOTE: the previous derivation did not add up — it said "9
@@ -148,18 +148,21 @@ describe('dashboardHandlers', () => {
             //
             //   1  init            requestStatus (no 'ready')
             //   3  lifecycle       startDemo, stopDemo, restartDemo
-            //  11  navigation      openBrowser, openLiveSite, openDaLive,
-            //                      openAdminPanel, configure, openDevConsole,
+            //  12  navigation      openBrowser, openLiveSite, openDaLive,
+            //                      openAdminPanel, configure, openDebugLogs
+            //                      (PL-59: the progress modal's failure state),
+            //                      openDevConsole,
             //                      getProjectUrls, navigateBack,
             //                      openIntegrations, showProjectDashboard,
             //                      openDataInstaller
             //   1  mesh            deployMesh
-            //   7  integrations    add/deploy/redeploy/remove/rename
+            //   8  integrations    add/deploy/redeploy/remove/rename
             //                      AppBuilderComponent, plus the AB-5 pair:
             //                      installAppBuilderComponent (re-run the
             //                      Commerce install without a redeploy) and
             //                      getAppBuilderInstallStatus (live install
-            //                      state read)
+            //                      state read), plus getComponentOperationProgress
+            //                      (PL-59: the latest step for the progress modal)
             //   3  console APIs    listConsoleApis, addConsoleApis, setConsoleApis
             //   2  storefront      syncStorefront, refreshBlockLibrary
             //   2  auth            reAuthenticate, switchOrg
@@ -188,7 +191,7 @@ describe('dashboardHandlers', () => {
             //                      back only what we did), and exportDemoBundle
             //                      (Export's "Send a file": one bundle of the ticked parts)
             //  ==
-            //  46
+            //  48
             //
             // Retired, so they are absent by design: verifyAppBuilderComponent
             // (2026-08-03); the 4 singular App Builder actions (addApp,
@@ -206,7 +209,7 @@ describe('dashboardHandlers', () => {
             // the integrations surface's Eventing section — workspace-scoped
             // I/O event providers/registrations, same service as the MCP
             // event tools.
-            expect(types).toHaveLength(46);
+            expect(types).toHaveLength(48);
         });
 
         it('should have handlers as functions', () => {

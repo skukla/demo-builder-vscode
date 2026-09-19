@@ -30,6 +30,7 @@ jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
 // =============================================================================
 
 import { removeAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentRunner';
+import { OPERATION_STAGES } from '@/features/app-builder/services/operationStages';
 import { MESH_DELETE_COMMAND } from '@/core/shell/meshDeleteCommand';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import {
@@ -360,7 +361,10 @@ describe('removeAppBuilderComponent — the Commerce uninstall pass', () => {
 
         await removeAppBuilderComponent(integrationProject(), APP_ID, deps);
 
-        expect(onProgress).toHaveBeenCalledWith('Removing the Commerce association...');
+        expect(onProgress).toHaveBeenCalledWith(
+            OPERATION_STAGES.removingFromCommerce.label,
+            'Removing the Commerce association...',
+        );
     });
 
     // Headless and MCP callers wire no onProgress at all. The uninstaller still

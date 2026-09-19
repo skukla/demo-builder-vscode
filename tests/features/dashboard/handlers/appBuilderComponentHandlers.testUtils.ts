@@ -78,6 +78,7 @@ jest.mock('@/features/authentication/services/detectProjectOrgMismatch', () => (
 export const mockSendAppBuilderComponentStatusUpdate = jest.fn();
 export const mockSendAppBuilderComponentsSnapshot = jest.fn();
 export const mockSendMeshStatusUpdate = jest.fn();
+export const mockSendComponentOperationProgress = jest.fn();
 export const mockSendProjectDestinationUpdate = jest.fn();
 /**
  * The status re-run after a set-changing op. Mocked because the real one is a
@@ -96,6 +97,8 @@ jest.mock('@/features/dashboard/commands/showDashboard', () => ({
         sendAppBuilderComponentsSnapshot: (...a: unknown[]) =>
             mockSendAppBuilderComponentsSnapshot(...a),
         sendMeshStatusUpdate: (...a: unknown[]) => mockSendMeshStatusUpdate(...a),
+        sendComponentOperationProgress: (...a: unknown[]) =>
+            mockSendComponentOperationProgress(...a),
         sendProjectDestinationUpdate: (...a: unknown[]) => mockSendProjectDestinationUpdate(...a),
         refreshStatus: jest.fn(),
     },

@@ -22,6 +22,15 @@ export const handleConfigure: MessageHandler = async () => {
 };
 
 /**
+ * Handle 'openDebugLogs' — show the Debug Logs channel, where an operation's full
+ * detail goes. The progress modal's failure state offers it (PL-59).
+ */
+export const handleOpenDebugLogs: MessageHandler = async () => {
+    await vscode.commands.executeCommand('demoBuilder.showDebugLogs');
+    return { success: true };
+};
+
+/**
  * The shared tab-replacement sequence: dispose the named panel (if open)
  * inside a webview transition — so its disposal callback doesn't fire and
  * re-open another surface — then dispatch the target command.

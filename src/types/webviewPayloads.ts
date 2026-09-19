@@ -299,6 +299,21 @@ export interface AppBuilderComponentStatusUpdatePayload {
     name?: string;
 }
 
+/**
+ * `componentOperationProgress` — one integration operation's progress, for the modal
+ * the SC opened by starting it (PL-59). `stage` is what is happening, `step` the detail
+ * of the moment, `expectation` the stage's fixed "how long this usually takes" line.
+ * A terminal `state` carries the reason on failure.
+ */
+export interface ComponentOperationProgressPayload {
+    id: string;
+    state: 'running' | 'succeeded' | 'failed';
+    stage?: string;
+    step?: string;
+    expectation?: string;
+    error?: string;
+}
+
 /** `appBuilderComponentsSnapshot` — the full fresh persisted map. */
 export interface AppBuilderComponentsSnapshotPayload {
     components: Record<string, AppBuilderComponentState>;

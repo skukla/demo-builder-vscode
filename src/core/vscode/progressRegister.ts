@@ -7,6 +7,10 @@
  *   - NOTIFICATION — a static title naming the operation and its object
  *     ("Deploying API Mesh"), plus each STEP as it happens.
  *   - CARD — the operation named once ("Deploying Mesh"), then held still.
+ *   - MODAL (PL-59) — an integration operation the SC started on the integrations
+ *     screen narrates there instead: its stage, the step under it, and how long the
+ *     stage usually takes. The notification then does not open (`inModal`), which
+ *     keeps the rule below; the card still gets its one line.
  *
  * Two rules fall out, and both are enforced here rather than remembered:
  * **no two surfaces narrate the same step**, and the card's line is the verb plus
@@ -100,6 +104,13 @@ export interface ProgressRegisterOptions {
      * are shared, which is precisely what this module exists to fix.
      */
     pushCardStatus?: (label: string) => void;
+    /**
+     * The operation's steps are shown in a modal the SC opened by starting it
+     * (PL-59), so no notification opens: two surfaces would narrate the same step.
+     * The card is still told, and `run`'s `report` does nothing — the caller sends
+     * its steps to the modal itself.
+     */
+    inModal?: boolean;
 }
 
 /**
@@ -118,7 +129,12 @@ export async function withProgressRegister<T>(
     options: ProgressRegisterOptions,
     run: (report: (message: string) => void) => Promise<T>,
 ): Promise<T> {
-    const { title, cardLabel, pushCardStatus } = options;
+    const { title, cardLabel, pushCardStatus, inModal } = options;
+
+    if (inModal) {
+        if (pushCardStatus) pushCardStatus(cardLabel ?? '');
+        return run(() => undefined);
+    }
 
     // AGENT calls already show a window notification (the agent-operation
     // notifier's), and every step reported here reaches it through the phase

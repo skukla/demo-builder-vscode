@@ -51,6 +51,7 @@ import {
     createDeps,
     createProject,
 } from './appBuilderComponentRunner.testUtils';
+import { OPERATION_STAGES } from '@/features/app-builder/services/operationStages';
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -410,8 +411,8 @@ describe('addAppBuilderComponent partial-failure', () => {
         // The env-file write reports its own step ahead of the tail's — it runs
         // before the deploy and is otherwise silent time.
         expect(seen).toEqual([
-            'Subscribing Adobe APIs',
-            'Generating mesh configuration',
+            OPERATION_STAGES.subscribingApis.label,
+            OPERATION_STAGES.generatingMeshConfig.label,
             'Reading mesh configuration',
             'Deploying',
         ]);
