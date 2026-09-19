@@ -1,3 +1,4 @@
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { deployMeshComponent } from '@/features/mesh/services/meshDeployment';
 import {
     mockFs,
@@ -80,8 +81,8 @@ describe('MeshDeployment - Operations', () => {
                 onProgress
             );
 
-            expect(onProgress).toHaveBeenCalledWith('Reading mesh configuration...', '');
-            expect(onProgress).toHaveBeenCalledWith('Deploying API Mesh...', expect.any(String));
+            expect(onProgress).toHaveBeenCalledWith(OPERATION_STAGES.readingMeshConfig.label);
+            expect(onProgress).toHaveBeenCalledWith(OPERATION_STAGES.deployingMesh.label, expect.any(String));
         });
 
         it('should handle streaming output', async () => {
@@ -111,9 +112,9 @@ describe('MeshDeployment - Operations', () => {
                 onProgress
             );
 
-            expect(onProgress).toHaveBeenCalledWith('Deploying...', 'Validating configuration');
-            expect(onProgress).toHaveBeenCalledWith('Deploying...', 'Creating mesh infrastructure');
-            expect(onProgress).toHaveBeenCalledWith('Deploying...', 'Mesh created successfully');
+            expect(onProgress).toHaveBeenCalledWith(OPERATION_STAGES.deployingMesh.label, 'Validating configuration');
+            expect(onProgress).toHaveBeenCalledWith(OPERATION_STAGES.deployingMesh.label, 'Creating mesh infrastructure');
+            expect(onProgress).toHaveBeenCalledWith(OPERATION_STAGES.deployingMesh.label, 'Mesh created');
         });
 
         it('should use create command first (create-first approach)', async () => {

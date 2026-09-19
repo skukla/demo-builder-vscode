@@ -32,6 +32,8 @@ jest.mock('@/features/mesh/services/deployMeshHeadless', () => ({
 
 import * as vscode from 'vscode';
 import { deployMeshWithFeedback } from '@/features/mesh/services/deployMeshWithFeedback';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { startModalRun } from '@/core/vscode/operationProgress';
 import type { DeployMeshWithFeedbackDeps } from '@/features/mesh/services/deployMeshWithFeedback';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockProject } from '../../../helpers/projectFake';
@@ -70,20 +72,20 @@ beforeEach(() => {
 });
 
 describe('progress register', () => {
-    it('sends the step detail to the notification', async () => {
+    // PL-59 phase 2: a notification shows the STAGE, the short set; the step is the
+    // progress modal's long set (owner, 2026-09-19).
+    it('sends the stage to the notification, never the step under it', async () => {
         const { report } = stubWithProgress();
         mockDeployMeshHeadless.mockImplementation(
             async ({ onProgress }: { onProgress?: (m: string, s?: string) => void }) => {
-                onProgress?.('Reading mesh configuration...');
+                onProgress?.(OPERATION_STAGES.deployingMesh.label, 'Validating configuration');
                 return { success: true };
             }
         );
 
         await deployMeshWithFeedback(deps());
 
-        expect(report).toHaveBeenCalledWith(
-            expect.objectContaining({ message: 'Reading mesh configuration...' })
-        );
+        expect(report).toHaveBeenCalledWith({ message: OPERATION_STAGES.deployingMesh.label });
     });
 
     it('keeps the operation name on the notification title', async () => {
@@ -203,5 +205,56 @@ describe('progress register', () => {
             'Done',
             'https://mesh/graphql'
         );
+    });
+});
+
+// PL-59 phase 2, slice 1: started from a button, the mesh deploy reports to the
+// screen's progress modal (rule R1) and opens no notification.
+describe('started from a button on a screen', () => {
+    const screen = jest.fn(async (_type: string, _payload?: unknown): Promise<void> => undefined);
+    const modal = (): Array<Record<string, unknown>> =>
+        screen.mock.calls.filter(([type]) => type === 'operationProgress').map(([, p]) => p as Record<string, unknown>);
+
+    beforeEach(() => {
+        startModalRun('eds-accs-mesh', screen);
+    });
+
+    it('reports each stage to the modal and opens no notification', async () => {
+        mockDeployMeshHeadless.mockImplementation(
+            async ({ onProgress }: { onProgress?: (m: string, s?: string) => void }) => {
+                onProgress?.(OPERATION_STAGES.deployingMesh.label, 'Validating configuration');
+                return { success: true };
+            }
+        );
+
+        await deployMeshWithFeedback(deps(), { progress: 'modal', operationId: 'eds-accs-mesh' });
+
+        expect(vscode.window.withProgress).not.toHaveBeenCalled();
+        expect(modal()).toContainEqual(
+            expect.objectContaining({ stage: OPERATION_STAGES.deployingMesh.label, step: 'Validating configuration' }),
+        );
+        expect(modal().at(-1)).toEqual({ id: 'eds-accs-mesh', state: 'succeeded' });
+    });
+
+    it('ends the modal with a reason a person can act on, not a tool instruction', async () => {
+        mockDeployMeshHeadless.mockResolvedValue({ success: false, blockedBy: 'no-mesh' });
+
+        const result = await deployMeshWithFeedback(deps(), { progress: 'modal', operationId: 'eds-accs-mesh' });
+
+        expect(result.error).toBe('This project does not have an API Mesh component.');
+        expect(modal().at(-1)).toEqual({
+            id: 'eds-accs-mesh',
+            state: 'failed',
+            error: 'This project does not have an API Mesh component.',
+        });
+    });
+
+    it('leaves the core\'s own error for callers that are not a modal (the agent words its own)', async () => {
+        stubWithProgress();
+        mockDeployMeshHeadless.mockResolvedValue({ success: false, blockedBy: 'no-mesh' });
+
+        const result = await deployMeshWithFeedback(deps());
+
+        expect(result.error).toBeUndefined();
     });
 });

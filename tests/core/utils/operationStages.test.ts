@@ -24,6 +24,8 @@ const STAGE_REPORTERS = [
     'src/features/app-builder/services/appDeployment.ts',
     'src/features/dashboard/handlers/appBuilderComponentHandlers.ts',
     'src/features/dashboard/handlers/appManagementInstallHandlers.ts',
+    'src/features/mesh/services/meshDeployment.ts',
+    'src/features/mesh/services/deployMeshHeadless.ts',
 ];
 
 /** A progress call whose FIRST argument is a string or template literal. */

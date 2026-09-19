@@ -153,11 +153,13 @@ export function IntegrationsGrid({
     // modal; any other tile opens its flyout.
     const openCard = useCallback(
         (id: string): void => {
-            // An operation is keyed by the COMPONENT id; the mesh card's own id is
-            // 'mesh', so the lookup goes through componentId.
+            // An integration's operation is keyed by the COMPONENT id, so the
+            // lookup goes through componentId. The MESH deploy is keyed by the
+            // card's own id ('mesh') — it is started before any component of that
+            // name has to exist (IntegrationsScreen's MESH_OPERATION).
             const card = cards.find((candidate) => candidate.id === id);
-            const componentId = card?.componentId ?? id;
-            if (card?.status === 'deploying' && operations.reopen(componentId)) return;
+            const operationId = card?.isMesh ? card.id : (card?.componentId ?? id);
+            if (card?.status === 'deploying' && operations.reopen(operationId)) return;
             setSelectedId(id);
         },
         [cards, operations],

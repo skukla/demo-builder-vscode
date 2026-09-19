@@ -58,7 +58,8 @@ function titlesFor(action: CardAction, name: string): Pick<ComponentOperation, '
 export interface ComponentOperation {
     id: string;
     name: string;
-    action: CardAction;
+    /** The message that starts it, re-sent on Retry. */
+    message: string;
     /** The modal's title, and the notification's when it runs in the background. */
     title: string;
     /** The failure view's title: "Couldn't redeploy ERP integration". */
@@ -77,6 +78,12 @@ export interface ComponentOperationControls {
     open: ComponentOperation | null;
     /** Start an operation and open its modal. `false` when the action is not one. */
     run: (id: string, name: string, action: CardAction) => boolean;
+    /**
+     * Start an operation the card-action tables do not cover — the mesh deploy,
+     * which has its own message and a title of its own rather than a verb and a
+     * component name.
+     */
+    start: (operation: Omit<ComponentOperation, 'run' | 'resume'>) => void;
     /** Open the modal for an add the Add flow has just sent. */
     started: (id: string, name: string) => void;
     /** Reopen the modal for the operation last started here. `false` for any other id. */
@@ -92,15 +99,21 @@ export function useComponentOperation(): ComponentOperationControls {
     const [last, setLast] = useState<ComponentOperation | null>(null);
     const [isOpen, setIsOpen] = useState(false);
 
-    const run = useCallback((id: string, name: string, action: CardAction): boolean => {
-        const message = OPERATION_MESSAGES[action];
-        if (!message) return false;
-        webviewClient.postMessage(message, { id, progress: 'modal' });
-        const titles = titlesFor(action, name);
-        setLast((previous) => ({ id, name, action, ...titles, run: (previous?.run ?? 0) + 1, resume: false }));
+    const start = useCallback((operation: Omit<ComponentOperation, 'run' | 'resume'>): void => {
+        webviewClient.postMessage(operation.message, { id: operation.id, progress: 'modal' });
+        setLast((previous) => ({ ...operation, run: (previous?.run ?? 0) + 1, resume: false }));
         setIsOpen(true);
-        return true;
     }, []);
+
+    const run = useCallback(
+        (id: string, name: string, action: CardAction): boolean => {
+            const message = OPERATION_MESSAGES[action];
+            if (!message) return false;
+            start({ id, name, message, ...titlesFor(action, name) });
+            return true;
+        },
+        [start],
+    );
 
     // A failed add persists the integration in an error state, so its Retry is a
     // deploy of what was added.
@@ -108,7 +121,7 @@ export function useComponentOperation(): ComponentOperationControls {
         setLast((previous) => ({
             id,
             name,
-            action: 'deploy',
+            message: 'deployAppBuilderComponent',
             title: `Adding ${name}`,
             failureTitle: `Couldn't add ${name}`,
             run: (previous?.run ?? 0) + 1,
@@ -128,13 +141,13 @@ export function useComponentOperation(): ComponentOperationControls {
     );
 
     const retry = useCallback((): void => {
-        if (last) run(last.id, last.name, last.action);
-    }, [last, run]);
+        if (last) start(last);
+    }, [last, start]);
 
     const close = useCallback((): void => setIsOpen(false), []);
 
     return useMemo(
-        () => ({ open: isOpen ? last : null, run, started, reopen, retry, close }),
-        [isOpen, last, run, started, reopen, retry, close],
+        () => ({ open: isOpen ? last : null, run, start, started, reopen, retry, close }),
+        [isOpen, last, run, start, started, reopen, retry, close],
     );
 }

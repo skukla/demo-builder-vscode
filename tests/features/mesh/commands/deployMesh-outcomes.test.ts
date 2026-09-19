@@ -17,6 +17,7 @@ import * as vscode from 'vscode';
 import { DeployMeshCommand } from './deployMesh.testUtils';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { deployMeshWithFeedback } from '@/features/mesh/services/deployMeshWithFeedback';
+import { meshDeployLock } from '@/features/mesh/services/meshDeployLock';
 import type { StateManager } from '@/types/state';
 import type { Logger } from '@/types/logger';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
@@ -92,8 +93,8 @@ describe('DeployMeshCommand — result mapping', () => {
 
     describe('before the core is called at all', () => {
         it('does nothing when a deploy is already running', async () => {
-            const lock = (DeployMeshCommand as unknown as { lock: { isLocked(): boolean } }).lock;
-            jest.spyOn(lock, 'isLocked').mockReturnValue(true);
+            // The lock is shared with the screen's modal path now (PL-59 phase 2).
+            jest.spyOn(meshDeployLock, 'isLocked').mockReturnValue(true);
 
             await command.execute();
 

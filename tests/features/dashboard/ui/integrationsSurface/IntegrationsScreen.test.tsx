@@ -306,7 +306,9 @@ describe('IntegrationsScreen', () => {
             expect(getClient().postMessage).toHaveBeenCalledWith('requestStatus');
         });
 
-        it('asks the extension to deploy the mesh when the grid says so', async () => {
+        // The mesh deploy takes the same road as an integration's (PL-59 slice 1):
+        // it asks for the modal, and the screen opens one for the mesh card's id.
+        it('deploys the mesh into the progress modal when the grid says so', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const handlers = captureHandlers();
             render(<IntegrationsScreen hasAdobeContext appBuilderComponents={{ a: DEPLOYED }} />);
@@ -314,7 +316,11 @@ describe('IntegrationsScreen', () => {
 
             await user.click(screen.getByRole('button', { name: 'grid-deploy-mesh' }));
 
-            expect(getClient().postMessage).toHaveBeenCalledWith('deployMesh');
+            expect(getClient().postMessage).toHaveBeenCalledWith('deployMesh', {
+                id: 'mesh',
+                progress: 'modal',
+            });
+            expect(screen.getByTestId('operation-modal')).toHaveAttribute('data-id', 'mesh');
         });
 
         it('asks the extension to re-authenticate when the grid says so', async () => {
