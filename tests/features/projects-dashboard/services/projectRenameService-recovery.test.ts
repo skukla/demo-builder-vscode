@@ -159,7 +159,7 @@ describe('remote Adobe I/O project title sync', () => {
     // selected, and a demo rename must never mutate shared infrastructure
     // named by someone else. Best-effort: a remote failure never fails the
     // local rename.
-    const remoteRename = jest.fn().mockResolvedValue(true);
+    const remoteRename = jest.fn().mockResolvedValue({ ok: true });
 
     function contextWithAuth(): HandlerContext {
         const ctx = renameHandlerContext();
@@ -183,7 +183,7 @@ describe('remote Adobe I/O project title sync', () => {
 
     beforeEach(() => {
         remoteRename.mockClear();
-        remoteRename.mockResolvedValue(true);
+        remoteRename.mockResolvedValue({ ok: true });
     });
 
     it('renames the remote project when its title matches the old demo title', async () => {
@@ -253,7 +253,7 @@ describe('remote Adobe I/O project title sync', () => {
     // way, but recording a remote title that was never applied would make the
     // next rename skip the sync as "already diverged".
     it('leaves the recorded remote title alone when the Console refuses', async () => {
-        remoteRename.mockResolvedValue(false);
+        remoteRename.mockResolvedValue({ ok: false, error: '403 Forbidden' });
         const project = adobeProject('Old Title');
 
         const result = await renameProjectCore(contextWithAuth(), project, 'New Title');

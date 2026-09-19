@@ -13,6 +13,11 @@
  *    new project,
  *  - surfaces the same "no projects found" messaging.
  *
+ * Each row's title is an inline rename field (`InlineRenameField`): its pencil turns
+ * the title into an editor, and saving requests `rename-adobe-project` — the Adobe
+ * project's TITLE only, never its name or id. A refusal stays inline under the
+ * field; a success arrives as the handler's refreshed `get-projects` push.
+ *
  * Each row also carries a quiet trash button that requests
  * `delete-adobe-project` (native confirm + teardown happen extension-side).
  * The row disables only once the handler confirms and signals
@@ -36,6 +41,7 @@
 import { ActionButton, Text } from '@adobe/react-spectrum';
 import Delete from '@spectrum-icons/workflow/Delete';
 import React, { useCallback, useEffect, useState } from 'react';
+import { InlineRenameField } from '@/core/ui/components/forms/InlineRenameField';
 import { SelectionStepContent } from '@/core/ui/components/selection/SelectionStepContent';
 import { useSelectionStep } from '@/core/ui/hooks/useSelectionStep';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
@@ -54,6 +60,9 @@ interface DeleteProjectResult {
 
 /** Fallback error when the handler returns a failure without a message. */
 const DELETE_FALLBACK_ERROR = 'Could not delete the project.';
+
+/** Fallback when the rename handler answers a failure with no message. */
+const RENAME_FALLBACK_ERROR = 'Could not rename the project.';
 
 // Stable reference for the "no delete in flight" case — an inline `[]` here
 // would create a new reference every render (infinite-loop gotcha).
@@ -156,12 +165,47 @@ export function AdobeProjectPicker({
     // `deletable` (ownership match against the token user; missing flag fails
     // closed → no affordance). During a delete the row is disabled via
     // `disabledIds` (no spinner/text here — the progress notification messages it).
+    // Resolve null on success (the refreshed list brings the new title) or the
+    // reason to show inline — `InlineRenameField`'s contract.
+    const handleRename = useCallback(
+        async (project: AdobeProject, title: string): Promise<string | null> => {
+            try {
+                const res = await webviewClient.request<{ success: boolean; error?: string }>(
+                    'rename-adobe-project',
+                    { orgId: state.adobeOrg?.id, projectId: project.id, title },
+                );
+                if (!res?.success) return res?.error ?? RENAME_FALLBACK_ERROR;
+                // The selected project carries its title into the destination line;
+                // same fields the row click writes.
+                if (state.adobeProject?.id === project.id) {
+                    updateState({
+                        adobeProject: {
+                            id: project.id,
+                            name: project.name,
+                            title: title.trim(),
+                            description: project.description,
+                            org_id: project.org_id,
+                        },
+                    });
+                }
+                return null;
+            } catch (e) {
+                return (e as Error).message || RENAME_FALLBACK_ERROR;
+            }
+        },
+        [state.adobeOrg?.id, state.adobeProject?.id, updateState],
+    );
+
     const renderProjectRow = useCallback(
         (item: AdobeProject): React.ReactNode => {
             const title = item.title || item.name;
             return (
                 <>
-                    <Text>{title}</Text>
+                    <InlineRenameField
+                        name={title}
+                        label={`New name for ${title}`}
+                        onRename={(next) => handleRename(item, next)}
+                    />
                     {item.deletable === true && (
                         <ActionButton
                             isQuiet
@@ -176,7 +220,7 @@ export function AdobeProjectPicker({
                 </>
             );
         },
-        [handleDelete],
+        [handleDelete, handleRename],
     );
 
     // "Switch IMS Org" = forced login. The handler verifies which org the token
