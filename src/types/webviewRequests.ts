@@ -655,6 +655,8 @@ export interface AddAppBuilderComponentRequestPayload {
     name?: string;
     /** Collision-checked instance id for a named blank instance. */
     instanceId?: string;
+    /** `'modal'` when the SC started it from the integrations screen (PL-59). */
+    progress?: 'modal';
     /**
      * The free Adobe APIs the user picked in the flow's API stage.
      *
