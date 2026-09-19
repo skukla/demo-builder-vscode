@@ -72,3 +72,4 @@ surfaces that host the cards.
 - 2026-09-19  Merge feature/operation-progress into feature/erp-integration: notifications show the short stage name (`beac5c902`)
 - 2026-09-19  test(integrations): assert the stage-length list is empty strictly (`2f3b46549`)
 - 2026-09-19  fix(integrations): a background notification shows the short stage name (`a937022df`)
+- 2026-09-19  feat(integrations): a pair's progress says which of the two it is on (`29e192e76`)
