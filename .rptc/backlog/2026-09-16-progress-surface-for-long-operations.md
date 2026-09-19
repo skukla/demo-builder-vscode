@@ -71,3 +71,4 @@ surfaces that host the cards.
 - 2026-09-19  test(integrations): assert the stage-length list is empty strictly (`2f3b46549`)
 - 2026-09-19  fix(integrations): a background notification shows the short stage name (`a937022df`)
 - 2026-09-19  docs(plan): record the owner's PL-59 decisions: start/stop are short, 10 seconds (`bb87529f3`)
+- 2026-09-19  docs(plan): an agent's project delete is local only by design; the cloud question moves out (`090a7efd8`)
