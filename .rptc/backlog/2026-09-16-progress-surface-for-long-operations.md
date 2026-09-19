@@ -68,3 +68,4 @@ surfaces that host the cards.
 - 2026-09-19  Merge feature/operation-progress: an integration operation shows its progress in a modal (`9e6e14e97`)
 - 2026-09-19  Merge develop into feature/erp-integration: the progress modal and Adobe project rename (`6ed8283e3`)
 - 2026-09-19  feat(integrations): the progress modal hands over to a notification and holds still (`7a91197b4`)
+- 2026-09-19  Merge feature/operation-progress into feature/erp-integration: the reviewed progress modal, to try on Bodea (`d25c65724`)
