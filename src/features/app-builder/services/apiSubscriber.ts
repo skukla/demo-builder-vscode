@@ -27,6 +27,7 @@ import {
     resolveServiceInfos,
     type ServiceInfo,
 } from './apiServiceResolution';
+import { credentialsAlreadyCover, type SubscribeObservers } from './credentialCoverage';
 import { alreadySubscribed, buildSubscriptionList, UNKNOWN_CURRENT } from './subscriptionList';
 import { BASELINE_API } from '@/core/constants';
 import type {
@@ -38,6 +39,7 @@ import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponen
 
 // Resolution moved to apiServiceResolution.ts; callers keep importing it from here.
 export { partitionByPlatform, resolveServiceInfos, type ServiceInfo };
+export type { SubscribeObservers };
 
 /** Default allowed-domain when a caller supplies none (matches setupInstructions). */
 const DEFAULT_DOMAIN = 'localhost:3000';
@@ -266,33 +268,6 @@ async function subscribeApiKeyServices(
 }
 
 /**
- * Whether the workspace's existing credentials, between them, already carry every
- * required API. Read only, and a cheap pair of calls, where the full path first
- * downloads the org's whole services catalog: slow in a large org, and measured
- * timing out at 60s twice in a row on Bodea's redeploys (2026-09-18) while every
- * API was already subscribed. Any doubt (no lister, no credentials, a failed
- * call) answers false, and the full path runs. So does a removal: only the full
- * path reaches the PUT that drops a code.
- */
-async function coveredAlready(
-    required: string[],
-    target: OrgTarget,
-    client: ApiSubscriberClient,
-    removing: ReadonlySet<string>,
-): Promise<boolean> {
-    if (!client.listCredentialIds || removing.size > 0) return false;
-    try {
-        const ids = await client.listCredentialIds(target);
-        if (ids.length === 0) return false;
-        const lists = await Promise.all(ids.map((id) => client.getSubscribedServiceCodes(target.orgId, id)));
-        const have = new Set(lists.flat());
-        return required.every((code) => have.has(code));
-    } catch {
-        return false;
-    }
-}
-
-/**
  * Reconcile the UNION of all appBuilderComponents' `requiredApis` (+ baseline) onto the
  * shared project, branching each service by its platform. Idempotent: it always
  * subscribes the full union (not a delta). Mesh is included via the apiKey path.
@@ -311,16 +286,38 @@ export async function subscribeRequiredApis(
     extraApis: string[] = [],
     onProgress?: SubscribeProgressListener,
     removing: string[] = [],
+    observe?: SubscribeObservers,
 ): Promise<SubscribedApi[]> {
     const requiredApis = computeRequiredApis(appBuilderComponents, extraApis);
     const removed = new Set(removing.filter((code) => !requiredApis.includes(code)));
-    if (await coveredAlready(requiredApis, target, client, removed)) {
+    observe?.onStep?.('Checking what Adobe already has');
+    // Started BEFORE the credential read, not after it: the full path always
+    // needs this catalog, and the read can spend its whole budget answering
+    // "something is missing". Run one after the other and the SC waits for the
+    // sum; run them together and only the slower one shows (2026-09-19 logs:
+    // 60s read + 32s catalog).
+    const catalog = client.getServicesForOrg(target.orgId);
+    // Parked so a rejection while the read is still running is not unhandled;
+    // awaiting it below still sees the rejection.
+    catalog.catch(() => undefined);
+
+    if (
+        await credentialsAlreadyCover({
+            required: requiredApis,
+            target,
+            client,
+            removing: removed,
+            observe,
+        })
+    ) {
+        observe?.onStep?.('Everything needed is already there');
         for (const code of requiredApis) {
             await onProgress?.({ code, done: true });
         }
         return requiredApis.map((code) => ({ code }));
     }
-    const servicesForOrg = await client.getServicesForOrg(target.orgId);
+    observe?.onStep?.('Reading the Adobe service list');
+    const servicesForOrg = await catalog;
     const services = resolveServiceInfos(requiredApis, servicesForOrg);
     const { apiKey, oauthS2S, unmatched } = partitionByPlatform(services);
 
@@ -329,6 +326,8 @@ export async function subscribeRequiredApis(
     // side); serial execution doubled the wall-clock on a fresh enable. Each group
     // still awaits its own progress ticks, and Promise.all is awaited here — so
     // every tick is still delivered before this function (and the handler) returns.
+    const sending = apiKey.length + oauthS2S.length;
+    observe?.onStep?.(`Adding ${sending} service${sending === 1 ? '' : 's'} to your workspace`);
     await Promise.all([
         subscribeOAuthServices(oauthS2S, target, client, removed, onProgress),
         subscribeApiKeyServices(apiKey, target, client, domain, removed, onProgress),

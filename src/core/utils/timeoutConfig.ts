@@ -148,6 +148,17 @@ export const TIMEOUTS = {
      *  new credential had to take the full subscribe path. */
     ORG_SERVICES_FETCH: 150000,
 
+    /** Deadline for the READ that asks whether a credential already holds every
+     *  API needed (`apiSubscriber.ts`, the shortcut past the full subscribe).
+     *  Short on purpose, and for the opposite reason to ORG_SERVICES_FETCH: this
+     *  call's only job is to SAVE time, so a slow answer is worth nothing. Three
+     *  of four Bodea deploys on 2026-09-19 had it 504 ("upstream request
+     *  timeout") after ~60s, and each paid that minute before taking the full
+     *  path anyway — the one that answered finished the whole step in 11.7s.
+     *  Giving up at 10s turns the bad case into 10s plus the full path, which is
+     *  always correct, only slower. */
+    CREDENTIAL_PROBE: 10000,
+
     /** Pause before the ONE retry of a fast-failed org-services fetch.
      *  Adobe's own error template for this endpoint says retry
      *  (ERR_MSG_RETRY_ON_INTERNAL_ERROR), and the 2026-08-28 incident measured

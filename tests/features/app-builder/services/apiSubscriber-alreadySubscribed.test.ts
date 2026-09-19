@@ -5,6 +5,11 @@
  * workspace's existing credentials what they already carry. On Bodea (2026-09-18)
  * that download timed out at 60s on two redeploys in a row while every API was
  * already subscribed. Any doubt falls through to the full path.
+ *
+ * The catalog download is no longer gated on the answer — it is started
+ * alongside the question, since the full path always needs it and the question
+ * can spend ten seconds saying "something is missing" (2026-09-19). So a covered
+ * run is proved by the SUBSCRIBES that did not happen, not by the read.
  */
 
 import { integrationAppBuilderComponent, meshAppBuilderComponent, MESH, MGMT, SERVICES_FOR_ORG } from './apiSubscriber.testUtils';
@@ -36,7 +41,7 @@ function client(codesById: Record<string, string[]>, overrides: Partial<ApiSubsc
 const entries = () => [meshAppBuilderComponent(), integrationAppBuilderComponent(ERP_APIS)];
 
 describe('subscribeRequiredApis — already subscribed', () => {
-    it('skips the catalog and every subscribe when the credentials already carry every API', async () => {
+    it('skips every subscribe when the credentials already carry every API', async () => {
         // The mesh API on the apiKey credential, the rest on the server-to-server one.
         const fake = client({ s2s: [MGMT, 'SomeOtherSDK'], apikey: [MESH] });
         const ticks: unknown[] = [];
@@ -45,7 +50,6 @@ describe('subscribeRequiredApis — already subscribed', () => {
             ticks.push(tick);
         });
 
-        expect(fake.getServicesForOrg).not.toHaveBeenCalled();
         expect(fake.ensureOAuthCredentialId).not.toHaveBeenCalled();
         expect(fake.createAdobeIdCredential).not.toHaveBeenCalled();
         expect(fake.subscribeOAuthServerToServerIntegrationToServices).not.toHaveBeenCalled();
@@ -126,7 +130,9 @@ describe('subscribeRequiredApis — a removal reaches Adobe', () => {
 
         await subscribeRequiredApis(entries(), TARGET, fake, undefined, [], undefined, ['SomeOtherSDK']);
 
-        expect(fake.getServicesForOrg).not.toHaveBeenCalled();
+        // The shortcut still applies, which is visible in the subscribes it saved.
+        expect(fake.subscribeOAuthServerToServerIntegrationToServices).not.toHaveBeenCalled();
+        expect(fake.subscribeAdobeIdIntegrationToServices).not.toHaveBeenCalled();
     });
 });
 
