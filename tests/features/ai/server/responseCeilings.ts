@@ -231,6 +231,10 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
         bytes: 1_000,
         why: 'a delete verdict plus the two ids, or the reason Console refused',
     },
+    rename_adobe_project: {
+        bytes: 1_000,
+        why: 'a rename verdict with the id and new title, or the reason Adobe refused',
+    },
     delete_adobe_project: {
         bytes: 4_000,
         why: 'a delete verdict; on failure the FAILED teardown steps ride along, bounded by the step count',

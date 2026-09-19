@@ -156,8 +156,10 @@ describe('AuthenticationService - ApiSubscriberClient passthroughs', () => {
     });
 
     it('should forward renameRemoteProject', async () => {
-        mockFetcher.renameRemoteProject = jest.fn().mockResolvedValue(true);
-        await expect(authService.renameRemoteProject('org', 'proj', 'New title')).resolves.toBe(true);
+        mockFetcher.renameRemoteProject = jest.fn().mockResolvedValue({ ok: true });
+        await expect(authService.renameRemoteProject('org', 'proj', 'New title')).resolves.toStrictEqual({
+            ok: true,
+        });
         expect(mockFetcher.renameRemoteProject).toHaveBeenCalledWith('org', 'proj', 'New title');
     });
 

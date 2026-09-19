@@ -58,7 +58,7 @@ Replacing or wiping
 - `remove_demo_package` (takes the description file colleagues add the demo from out of the repository)
 
 Reaching other people
-- `set_site_admin` · `republish` · `sync_content`
+- `set_site_admin` · `republish` · `sync_content` · `rename_adobe_project`
 - `start_datapack_import` · `start_datapack_export`
 
 ### Deliberately NOT on it

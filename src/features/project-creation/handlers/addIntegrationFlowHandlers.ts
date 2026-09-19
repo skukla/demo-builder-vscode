@@ -37,6 +37,7 @@ import { handleAuthenticate, handleCheckAuth } from '@/features/authentication/h
 import { handleDeleteAdobeProject } from '@/features/authentication/handlers/deleteAdobeProjectHandler';
 import { handleForcedOrgSwitch } from '@/features/authentication/handlers/orgSwitchHandler';
 import { handleCreateAdobeProject, handleGetProjects, handleSelectProject } from '@/features/authentication/handlers/projectHandlers';
+import { handleRenameAdobeProject } from '@/features/authentication/handlers/renameAdobeProjectHandler';
 import { handleCreateAdobeWorkspace, handleGetWorkspaces, handleSelectWorkspace } from '@/features/authentication/handlers/workspaceHandlers';
 import { meshHandlers } from '@/features/mesh/handlers/meshHandlers';
 import { ErrorCode } from '@/types/errorCodes';
@@ -141,6 +142,11 @@ export const addIntegrationFlowHandlers = defineHandlers({
     'delete-adobe-project': requireAdobeAuth(
         'delete-adobe-project',
         handleDeleteAdobeProject,
+    ),
+    // Title only, reversible by renaming back — so no ownership gate, unlike delete.
+    'rename-adobe-project': requireAdobeAuth(
+        'rename-adobe-project',
+        handleRenameAdobeProject,
     ),
     'get-workspaces': requireAdobeAuth('get-workspaces', handleGetWorkspaces),
     'select-workspace': requireAdobeAuth('select-workspace', handleSelectWorkspace),
