@@ -24,10 +24,15 @@ import {
     type SubscribeProgressListener,
 } from './apiSubscriber';
 import { createApiSubscriberClient } from './apiSubscriberClientAdapter';
+import { ACCS_GRAPHQL_ENDPOINT } from '@/core/config/envVarKeys';
 import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell/orgContextEnv';
 import { resolveDesiredApis } from '@/core/state/componentApiPicks';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
+import {
+    deriveAccsTenantId,
+    lookupComponentConfigValue,
+} from '@/features/components/services/envVarHelpers';
 import type { AdobeConfig, Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 
@@ -42,14 +47,24 @@ export interface MeshSubscribeTarget {
     componentInstances?: Project['componentInstances'];
     additionalConsoleApis?: Project['additionalConsoleApis'];
     componentApiPicks?: Project['componentApiPicks'];
+    /** Where the configured Commerce endpoint lives — the tenant picks a product profile. */
+    componentConfigs?: Project['componentConfigs'];
 }
 
-/** Build the {@link OrgTarget} the subscriber needs from the project's identity. */
+/**
+ * Build the {@link OrgTarget} the subscriber needs from the project's identity, with
+ * the configured Commerce tenant — which picks the product profile when a needed
+ * service (ACCS-REST-API) offers profiles. Every subscribe caller builds its target
+ * here, so the tenant cannot reach one caller and miss another.
+ */
 export function subscriberTarget(project: MeshSubscribeTarget): OrgTarget {
     return {
         orgId: project.adobe?.organization ?? '',
         projectId: project.adobe?.projectId ?? '',
         workspaceId: project.adobe?.workspace ?? '',
+        commerceTenant: deriveAccsTenantId(
+            lookupComponentConfigValue(project.componentConfigs ?? {}, ACCS_GRAPHQL_ENDPOINT),
+        ),
     };
 }
 

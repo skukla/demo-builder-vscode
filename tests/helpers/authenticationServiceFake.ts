@@ -99,6 +99,7 @@ export function createMockAuthenticationService(
         // --- services and permissions ---
         getServicesForOrg: jest.fn().mockResolvedValue([]),
         getSubscribedServiceCodes: jest.fn().mockResolvedValue([]),
+        getSubscribedServices: jest.fn().mockResolvedValue([]),
         subscribeAdobeIdIntegrationToServices: jest.fn().mockResolvedValue(undefined),
         subscribeOAuthServerToServerIntegrationToServices: jest.fn().mockResolvedValue(undefined),
         testDeveloperPermissions: jest.fn().mockResolvedValue(true),

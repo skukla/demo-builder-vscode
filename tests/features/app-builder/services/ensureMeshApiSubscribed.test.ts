@@ -87,6 +87,7 @@ function createAuthService(): jest.Mocked<AuthenticationService> {
         ensureOAuthCredentialId: jest.fn().mockResolvedValue('oauth-int'),
         // Default: nothing subscribed yet → the subscribe paths proceed.
         getSubscribedServiceCodes: jest.fn().mockResolvedValue([]),
+        getSubscribedServices: jest.fn().mockResolvedValue([]),
         getCachedOrganization: jest.fn().mockReturnValue(undefined),
     });
 }
@@ -278,7 +279,21 @@ describe('subscriberTarget', () => {
             orgId: 'org-1',
             projectId: 'proj-1',
             workspaceId: 'ws-1',
+            commerceTenant: undefined,
         });
+    });
+
+    it("carries the configured Commerce tenant, which picks a service's product profile", () => {
+        const project = {
+            ...createProject(),
+            componentConfigs: {
+                'eds-storefront': {
+                    ACCS_GRAPHQL_ENDPOINT: 'https://na1-sandbox.api.commerce.adobe.com/Tenant123abc/graphql',
+                },
+            },
+        };
+
+        expect(subscriberTarget(project).commerceTenant).toBe('Tenant123abc');
     });
 
     it('answers empty ids — never throws — for a target with no adobe block', () => {
@@ -289,6 +304,7 @@ describe('subscriberTarget', () => {
             orgId: '',
             projectId: '',
             workspaceId: '',
+            commerceTenant: undefined,
         });
     });
 });

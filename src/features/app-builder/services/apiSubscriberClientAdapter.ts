@@ -23,6 +23,9 @@ export function createApiSubscriberClient(service: AuthenticationService): ApiSu
         getSubscribedServiceCodes: (orgId, idIntegration) =>
             service.getSubscribedServiceCodes(orgId, idIntegration),
 
+        getSubscribedServices: (orgId, idIntegration) =>
+            service.getSubscribedServices(orgId, idIntegration),
+
         listCredentialIds: (target: OrgTarget) =>
             service.listCredentialIds(target.orgId, target.projectId, target.workspaceId),
 

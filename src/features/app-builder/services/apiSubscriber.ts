@@ -15,20 +15,24 @@
  *   `AdobeIOManagementAPISDK`; idempotent reconcile (PUT the full union — correct
  *   whether the endpoint replaces or merges). Mesh is NOT skipped.
  *
- * The credential id used to subscribe is `id_integration` (NOT `.id`). Free
- * services subscribe with `{ licenseConfigs:null, roles:null }`.
+ * The credential id used to subscribe is `id_integration` (NOT `.id`).
+ *
+ * The PUT REPLACES the credential's list, so it is built as a merge — what the
+ * credential already holds (profiles included) plus what is missing — never from
+ * the needed codes alone (`subscriptionList.ts`, 2026-09-19).
  */
 
 import {
     partitionByPlatform,
     resolveServiceInfos,
-    toServiceSubscriptionInfo,
     type ServiceInfo,
 } from './apiServiceResolution';
+import { alreadySubscribed, buildSubscriptionList, UNKNOWN_CURRENT } from './subscriptionList';
 import { BASELINE_API } from '@/core/constants';
 import type {
     OrgServiceInfo,
     ServiceSubscriptionInfo,
+    SubscribedService,
 } from '@/features/authentication/services/types';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 
@@ -71,6 +75,11 @@ export interface OrgTarget {
     orgId: string;
     projectId: string;
     workspaceId: string;
+    /**
+     * The project's configured Commerce tenant. Picks the product profile for a
+     * service that needs one (ACCS-REST-API); without it such a service is refused.
+     */
+    commerceTenant?: string;
 }
 
 /**
@@ -81,6 +90,11 @@ export interface ApiSubscriberClient {
     getServicesForOrg(orgId: string): Promise<OrgServiceInfo[]>;
     /** The sdk codes a credential is already subscribed to (skip-if-subscribed). */
     getSubscribedServiceCodes(orgId: string, idIntegration: string): Promise<string[]>;
+    /**
+     * Every service a credential holds, WITH its profiles — what a subscribe carries
+     * forward. `undefined` means unknown, and then nothing is sent.
+     */
+    getSubscribedServices(orgId: string, idIntegration: string): Promise<SubscribedService[] | undefined>;
     /**
      * Every credential id the workspace already has, read only. Optional: a
      * client without it skips the already-subscribed shortcut and takes the full
@@ -180,27 +194,23 @@ async function emitProgress(
 }
 
 /**
- * True when the credential already carries every required sdk code AND none of
- * the codes being removed — letting the caller skip the slow subscribe PUT (~30s,
- * sometimes minutes). Best-effort: an unknown current set (`[]`) means "not
- * sure", so we do NOT skip.
- *
- * The removal half: a removal happens only through the full-list PUT, which drops
- * what the list omits. Skipping whenever every REQUIRED code was present meant a
- * removal never reached Adobe, since after a removal every remaining code always
- * is (found reading the code, 2026-09-18). A credential still holding a removed
- * code gets the PUT; every other one keeps skipping, which also spares APIs added
- * by hand in the Developer Console.
+ * Send the credential its merged list, or nothing: read what it holds now, skip when
+ * nothing is missing or leaving, and refuse rather than PUT from an unknown list —
+ * the PUT REPLACES the credential's list (`subscriptionList.ts`). Shared by both
+ * credential paths.
  */
-async function alreadySubscribed(
+async function reconcileCredential(
     services: ServiceInfo[],
-    orgId: string,
     idIntegration: string,
+    target: OrgTarget,
     client: ApiSubscriberClient,
     removing: ReadonlySet<string>,
-): Promise<boolean> {
-    const current = await client.getSubscribedServiceCodes(orgId, idIntegration);
-    return services.every((s) => current.includes(s.sdkCode)) && !current.some((code) => removing.has(code));
+    put: (serviceInfo: ServiceSubscriptionInfo[]) => Promise<void>,
+): Promise<void> {
+    const current = await client.getSubscribedServices(target.orgId, idIntegration);
+    if (!current) throw new Error(UNKNOWN_CURRENT);
+    if (alreadySubscribed(services, current, removing)) return;
+    await put(buildSubscriptionList(services, current, removing, target.commerceTenant));
 }
 
 async function subscribeOAuthServices(
@@ -215,14 +225,8 @@ async function subscribeOAuthServices(
     }
     await emitProgress(services, false, onProgress);
     const idIntegration = await client.ensureOAuthCredentialId(target);
-    if (await alreadySubscribed(services, target.orgId, idIntegration, client, removing)) {
-        await emitProgress(services, true, onProgress);
-        return;
-    }
-    await client.subscribeOAuthServerToServerIntegrationToServices(
-        target.orgId,
-        idIntegration,
-        services.map(toServiceSubscriptionInfo),
+    await reconcileCredential(services, idIntegration, target, client, removing, (serviceInfo) =>
+        client.subscribeOAuthServerToServerIntegrationToServices(target.orgId, idIntegration, serviceInfo),
     );
     await emitProgress(services, true, onProgress);
 }
@@ -255,14 +259,8 @@ async function subscribeApiKeyServices(
             domain,
         },
     );
-    if (await alreadySubscribed(services, target.orgId, idIntegration, client, removing)) {
-        await emitProgress(services, true, onProgress);
-        return;
-    }
-    await client.subscribeAdobeIdIntegrationToServices(
-        target.orgId,
-        idIntegration,
-        services.map(toServiceSubscriptionInfo),
+    await reconcileCredential(services, idIntegration, target, client, removing, (serviceInfo) =>
+        client.subscribeAdobeIdIntegrationToServices(target.orgId, idIntegration, serviceInfo),
     );
     await emitProgress(services, true, onProgress);
 }

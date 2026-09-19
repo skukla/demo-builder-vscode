@@ -7,11 +7,7 @@
  */
 
 import { BASELINE_API } from '@/core/constants';
-import type {
-    OrgServiceInfo,
-    ServiceLicenseConfig,
-    ServiceSubscriptionInfo,
-} from '@/features/authentication/services/types';
+import type { OrgServiceInfo, ServiceLicenseConfig } from '@/features/authentication/services/types';
 
 /** A resolved service: its sdkCode plus the platform metadata that picks the path. */
 export interface ServiceInfo {
@@ -125,31 +121,4 @@ export function partitionByPlatform(services: ServiceInfo[]): {
             !s.platformList.includes('apiKey') && !s.platformList.includes('oauth_server_to_server'),
     );
     return { apiKey, oauthS2S, unmatched };
-}
-
-/**
- * The subscription entry for one service. A free service names no profile. One
- * that offers profiles must name one — Adobe refuses otherwise ("requires
- * selection of a product") — in the shape the aio CLI sends
- * (`aio-lib-console-project-installation` `configure-apis.js`). With exactly one
- * profile there is nothing to choose; with several, choosing is the SC's call.
- */
-export function toServiceSubscriptionInfo(service: ServiceInfo): ServiceSubscriptionInfo {
-    const profiles = service.licenseConfigs ?? [];
-    if (profiles.length === 0) {
-        return { sdkCode: service.sdkCode, licenseConfigs: null, roles: null };
-    }
-    if (profiles.length > 1) {
-        const names = profiles.map((profile) => profile.name ?? profile.id).join(', ');
-        throw new Error(
-            `${service.name ?? service.sdkCode} needs a product profile and this org offers ` +
-                `${profiles.length} (${names}).`,
-        );
-    }
-    const [profile] = profiles;
-    return {
-        sdkCode: service.sdkCode,
-        licenseConfigs: [{ op: 'add', id: profile.id, productId: profile.productId }],
-        roles: null,
-    };
 }

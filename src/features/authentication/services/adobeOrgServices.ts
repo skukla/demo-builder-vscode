@@ -12,7 +12,13 @@
  */
 
 import type { AdobeSDKClient } from './adobeSDKClient';
-import type { OrgServiceInfo, SDKResponse, ServiceSubscriptionInfo } from './types';
+import type {
+    OrgServiceInfo,
+    SDKResponse,
+    ServiceLicenseConfig,
+    ServiceSubscriptionInfo,
+    SubscribedService,
+} from './types';
 import { getLogger } from '@/core/logging/debugLogger';
 import { tryWithTimeout } from '@/core/utils/promiseUtils';
 import { SingleFlight } from '@/core/utils/singleFlight';
@@ -78,6 +84,11 @@ function assertSubscribeAccepted(response: SDKResponse<unknown> | undefined): vo
 /**
  * Reads the org service catalog and subscribes credentials to services.
  */
+/** Whether an SDK error is Adobe's 404 — the SDK carries the status only in its message. */
+function isNotFound(error: unknown): boolean {
+    return / 404 - Not Found/.test(error instanceof Error ? error.message : String(error));
+}
+
 export class AdobeOrgServices {
     private debugLogger = getLogger();
     /**
@@ -215,6 +226,59 @@ export class AdobeOrgServices {
         } catch (error) {
             this.debugLogger.debug('[Entity Fetcher] getSubscribedServiceCodes failed', error);
             return [];
+        }
+    }
+
+    /**
+     * Every service a credential is subscribed to, WITH the product profiles each
+     * holds — what a subscribe must carry forward, because Adobe's subscribe call
+     * REPLACES a credential's whole list (a deploy that sent only what it needed
+     * removed ACCS-REST-API and its profile from Kukla Bodea / Stage, 2026-09-19).
+     *
+     * `sdkList` from `getIntegration`, then `getSDKProperties` per service for its
+     * `licenseConfigs`. Never throws: ANY failed read answers `undefined` — unknown —
+     * because a subscribe built from a partial list is the removal this prevents.
+     *
+     * @param orgId - Adobe org id
+     * @param idIntegration - the credential's integration id
+     * @returns the subscribed services with their profiles, or `undefined` when unknown
+     */
+    async getSubscribedServices(
+        orgId: string,
+        idIntegration: string,
+    ): Promise<SubscribedService[] | undefined> {
+        try {
+            await this.ensureSDKReady();
+            const client = this.sdkClient.getClient() as {
+                getIntegration: (
+                    orgId: string,
+                    idIntegration: string,
+                ) => Promise<SDKResponse<{ sdkList?: string[] }>>;
+                getSDKProperties: (
+                    orgId: string,
+                    idIntegration: string,
+                    sdkCode: string,
+                ) => Promise<SDKResponse<{ licenseConfigs?: ServiceLicenseConfig[] | null }>>;
+            };
+            const codes = (await client.getIntegration(orgId, idIntegration))?.body?.sdkList ?? [];
+            return await Promise.all(
+                codes.map(async (sdkCode) => {
+                    // An API-key credential has no profile properties at all: Adobe
+                    // answers 404 for them (the API Mesh credential, measured live
+                    // 2026-09-19). That is "no profiles", not "unknown" — every other
+                    // failure still makes the whole answer unknown.
+                    const props = await client
+                        .getSDKProperties(orgId, idIntegration, sdkCode)
+                        .catch((error: unknown) => {
+                            if (isNotFound(error)) return undefined;
+                            throw error;
+                        });
+                    return { sdkCode, licenseConfigs: props?.body?.licenseConfigs ?? [] };
+                }),
+            );
+        } catch (error) {
+            this.debugLogger.debug('[Entity Fetcher] getSubscribedServices failed', error);
+            return undefined;
         }
     }
 

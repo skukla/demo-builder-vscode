@@ -15,6 +15,7 @@ export function makeService(initialized = true) {
     const client = {
         getServicesForOrg: jest.fn(),
         getIntegration: jest.fn(),
+        getSDKProperties: jest.fn(),
         subscribeAdobeIdIntegrationToServices: jest.fn(),
         subscribeOAuthServerToServerIntegrationToServices: jest.fn(),
     };

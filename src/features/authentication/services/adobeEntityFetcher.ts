@@ -38,6 +38,7 @@ import type {
     OrgServiceInfo,
     S2SDeployCredentials,
     ServiceSubscriptionInfo,
+    SubscribedService,
     WorkspaceCredential,
     WorkspaceS2SCredentialIds,
 } from './types';
@@ -220,6 +221,11 @@ export class AdobeEntityFetcher {
     /** A credential's current sdk codes — see {@link AdobeOrgServices}. */
     async getSubscribedServiceCodes(orgId: string, idIntegration: string): Promise<string[]> {
         return this.orgServices.getSubscribedServiceCodes(orgId, idIntegration);
+    }
+
+    /** Every service a credential holds, with its profiles — see `AdobeOrgServices`. */
+    async getSubscribedServices(orgId: string, idIntegration: string): Promise<SubscribedService[] | undefined> {
+        return this.orgServices.getSubscribedServices(orgId, idIntegration);
     }
 
     /** Subscribe an AdobeID credential — see {@link AdobeOrgServices}. */

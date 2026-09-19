@@ -217,11 +217,23 @@ export interface OrgServiceInfo {
     cloudGrouping?: CloudGrouping;
 }
 
-/** One product profile a service offers (`properties.licenseConfigs[]`). */
+/**
+ * One product profile — as the org catalog offers it (`properties.licenseConfigs[]`)
+ * and as a credential's `getSDKProperties` reports it. `description` carries the
+ * Commerce tenant id the profile is for; `name` is only "Default - <token>" (read
+ * live 2026-09-19).
+ */
 export interface ServiceLicenseConfig {
     id: string;
     productId: string;
     name?: string;
+    description?: string;
+}
+
+/** One service a credential is subscribed to, with the profiles it holds (none for a free service). */
+export interface SubscribedService {
+    sdkCode: string;
+    licenseConfigs: ServiceLicenseConfig[];
 }
 
 /** Input to `createAdobeIdCredential` (apiKey path). `domain` mandatory for API Mesh. */

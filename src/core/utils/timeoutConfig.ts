@@ -142,8 +142,11 @@ export const TIMEOUTS = {
      *  exceeding 10s on a real org. Bounding it at 10s turned a slow SUCCESS into
      *  a fast failure — worse for the user than the unbounded call it replaced.
      *  Generous enough that a slow-but-working endpoint still lands, while still
-     *  capping a genuine hang (the picker surfaces failures with a Retry). */
-    ORG_SERVICES_FETCH: 60000,
+     *  capping a genuine hang (the picker surfaces failures with a Retry).
+     *  Raised 60s → 150s on 2026-09-19: the call measured 43s, 52s, 63s, 92s and
+     *  131s across 2026-08-27 to 09-19, and at 60s it failed a Bodea move whose
+     *  new credential had to take the full subscribe path. */
+    ORG_SERVICES_FETCH: 150000,
 
     /** Pause before the ONE retry of a fast-failed org-services fetch.
      *  Adobe's own error template for this endpoint says retry

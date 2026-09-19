@@ -22,6 +22,9 @@ function client(codesById: Record<string, string[]>, overrides: Partial<ApiSubsc
         getServicesForOrg: jest.fn().mockResolvedValue(SERVICES_FOR_ORG),
         listCredentialIds: jest.fn().mockResolvedValue(Object.keys(codesById)),
         getSubscribedServiceCodes: jest.fn(async (_org: string, id: string) => codesById[id] ?? []),
+        getSubscribedServices: jest.fn(async (_org: string, id: string) =>
+            (codesById[id] ?? []).map((sdkCode) => ({ sdkCode, licenseConfigs: [] })),
+        ),
         ensureOAuthCredentialId: jest.fn().mockResolvedValue('s2s'),
         createAdobeIdCredential: jest.fn().mockResolvedValue('apikey'),
         subscribeOAuthServerToServerIntegrationToServices: jest.fn().mockResolvedValue(undefined),
@@ -124,5 +127,54 @@ describe('subscribeRequiredApis — a removal reaches Adobe', () => {
         await subscribeRequiredApis(entries(), TARGET, fake, undefined, [], undefined, ['SomeOtherSDK']);
 
         expect(fake.getServicesForOrg).not.toHaveBeenCalled();
+    });
+});
+
+/**
+ * The Bodea wipe, reproduced (2026-09-19): Kukla Bodea / Stage's credential held only
+ * ACCS-REST-API with its one Commerce profile; an ERP deploy needing four free
+ * services PUT just those, and Adobe's replace removed Commerce.
+ */
+describe('a subscribe keeps what the credential already has', () => {
+    const PROFILE = { id: 'p-bodea', productId: 'prod-accs', description: 'Tenant123abc' };
+
+    function wiped(current: Array<{ sdkCode: string; licenseConfigs: typeof PROFILE[] }> | undefined) {
+        return client(
+            {},
+            {
+                listCredentialIds: undefined,
+                getSubscribedServices: jest.fn().mockResolvedValue(current),
+                getServicesForOrg: jest.fn().mockResolvedValue([
+                    { code: MGMT, platformList: null as unknown as string[] },
+                    { code: 'CloudIntegrationSDK', platformList: null as unknown as string[] },
+                ]),
+            },
+        );
+    }
+
+    it('carries Commerce and its profile through a deploy that does not need it', async () => {
+        const fake = wiped([{ sdkCode: 'ACCS-REST-API', licenseConfigs: [PROFILE] }]);
+
+        await subscribeRequiredApis([integrationAppBuilderComponent(['CloudIntegrationSDK'])], TARGET, fake);
+
+        const [, , sent] = (fake.subscribeOAuthServerToServerIntegrationToServices as jest.Mock).mock.calls[0];
+        expect(sent).toStrictEqual([
+            {
+                sdkCode: 'ACCS-REST-API',
+                licenseConfigs: [{ op: 'add', id: 'p-bodea', productId: 'prod-accs' }],
+                roles: null,
+            },
+            { sdkCode: MGMT, licenseConfigs: null, roles: null },
+            { sdkCode: 'CloudIntegrationSDK', licenseConfigs: null, roles: null },
+        ]);
+    });
+
+    it("sends nothing when the credential's current list cannot be read", async () => {
+        const fake = wiped(undefined);
+
+        await expect(
+            subscribeRequiredApis([integrationAppBuilderComponent(['CloudIntegrationSDK'])], TARGET, fake),
+        ).rejects.toThrow("Couldn't read which APIs the credential already has");
+        expect(fake.subscribeOAuthServerToServerIntegrationToServices).not.toHaveBeenCalled();
     });
 });

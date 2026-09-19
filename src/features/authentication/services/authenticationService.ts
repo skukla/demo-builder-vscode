@@ -28,6 +28,7 @@ import type {
     AdobeIdCredentialInput,
     OrgServiceInfo,
     ServiceSubscriptionInfo,
+    SubscribedService,
 } from '@/features/authentication/services/types';
 import { clearSharedCredentialCache } from '@/features/data-installer/services/commerceCredentialBroker';
 import type { Logger } from '@/types/logger';
@@ -607,6 +608,12 @@ export class AuthenticationService {
     async getSubscribedServiceCodes(orgId: string, idIntegration: string): Promise<string[]> {
         const { fetcher } = await this.ensureEntities();
         return fetcher.getSubscribedServiceCodes(orgId, idIntegration);
+    }
+
+    /** Every service a credential holds, with its profiles; `undefined` when unknown. */
+    async getSubscribedServices(orgId: string, idIntegration: string): Promise<SubscribedService[] | undefined> {
+        const { fetcher } = await this.ensureEntities();
+        return fetcher.getSubscribedServices(orgId, idIntegration);
     }
 
     /** Create an apiKey/AdobeID credential; returns its `id_integration`. */

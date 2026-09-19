@@ -208,6 +208,7 @@ describe('apiSubscriber', () => {
                 const client = {
                     getServicesForOrg: jest.fn().mockResolvedValue([...SERVICES_FOR_ORG, ...ACCS_ROWS]),
                     getSubscribedServiceCodes: jest.fn().mockResolvedValue([]),
+                    getSubscribedServices: jest.fn().mockResolvedValue([]),
                     ensureOAuthCredentialId: jest.fn().mockResolvedValue('s2s-int-id'),
                     createAdobeIdCredential: jest.fn().mockResolvedValue('apikey-int-id'),
                     subscribeOAuthServerToServerIntegrationToServices: jest.fn().mockResolvedValue(undefined),
@@ -229,7 +230,7 @@ describe('apiSubscriber', () => {
                 expect(result.map((api) => api.code)).toContain('ACCS-REST-API');
             });
 
-            it('with several profiles to choose from, nothing is sent and the profiles are named', async () => {
+            it('with several profiles and no Commerce instance configured, nothing is sent', async () => {
                 const several = {
                     ...ACCS_ROWS[1],
                     properties: {
@@ -242,6 +243,7 @@ describe('apiSubscriber', () => {
                 const client = {
                     getServicesForOrg: jest.fn().mockResolvedValue([...SERVICES_FOR_ORG, several]),
                     getSubscribedServiceCodes: jest.fn().mockResolvedValue([]),
+                    getSubscribedServices: jest.fn().mockResolvedValue([]),
                     ensureOAuthCredentialId: jest.fn().mockResolvedValue('s2s-int-id'),
                     createAdobeIdCredential: jest.fn().mockResolvedValue('apikey-int-id'),
                     subscribeOAuthServerToServerIntegrationToServices: jest.fn().mockResolvedValue(undefined),
@@ -250,9 +252,24 @@ describe('apiSubscriber', () => {
                 const target: OrgTarget = { orgId: 'org1', projectId: 'proj1', workspaceId: 'ws1' };
 
                 await expect(subscribeRequiredApis([], target, client, undefined, ['ACCS-REST-API'])).rejects.toThrow(
-                    /needs a product profile and this org offers 2 \(Tenant A, Tenant B\)/,
+                    /no Commerce instance configured/,
                 );
                 expect(client.subscribeOAuthServerToServerIntegrationToServices).not.toHaveBeenCalled();
+
+                // With the project's instance known, its profile — and only it — is sent.
+                await subscribeRequiredApis(
+                    [],
+                    { ...target, commerceTenant: 'tenant b' },
+                    client,
+                    undefined,
+                    ['ACCS-REST-API'],
+                );
+                const [, , sent] = (client.subscribeOAuthServerToServerIntegrationToServices as jest.Mock).mock.calls[0];
+                expect(sent).toContainEqual({
+                    sdkCode: 'ACCS-REST-API',
+                    licenseConfigs: [{ op: 'add', id: '2', productId: 'P' }],
+                    roles: null,
+                });
             });
 
             it('a row that is not server-to-server only keeps its declared platforms', () => {
@@ -323,6 +340,14 @@ describe('apiSubscriber', () => {
                     .mockResolvedValue(undefined),
                 subscribeAdobeIdIntegrationToServices: jest.fn().mockResolvedValue(undefined),
             } as unknown as jest.Mocked<ApiSubscriberClient>;
+            // The current list WITH profiles follows the codes each test sets, so a
+            // test controlling the credential's state keeps controlling it.
+            client.getSubscribedServices = jest.fn(async (org: string, id: string) =>
+                (await client.getSubscribedServiceCodes(org, id)).map((sdkCode) => ({
+                    sdkCode,
+                    licenseConfigs: [],
+                })),
+            );
         });
 
         it('should subscribe the s2s baseline with id_integration and free-service shape', async () => {
