@@ -13,6 +13,7 @@
 
 import * as vscode from 'vscode';
 import { BaseCommand } from '@/core/base/baseCommand';
+import { withPhaseSinks } from '@/core/utils/agentPhaseChannel';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { createMockLogger } from '../../helpers/loggerFake';
@@ -96,6 +97,26 @@ describe('BaseCommand notification helpers', () => {
                 },
                 task
             );
+        });
+    });
+
+    // PL-59 row 16a: under an agent the agent's own notification already shows this
+    // operation, so a second one only stacks cards — start/stop_demo showed two.
+    describe('withProgress under an agent', () => {
+        it('opens no notification and hands each step to the agent', async () => {
+            const seen: string[] = [];
+
+            const value = await withPhaseSinks([(message) => seen.push(message)], () =>
+                command.runWithProgress('Starting demo', async (progress) => {
+                    progress.report({ message: 'Starting on port 3000' });
+                    progress.report({ increment: 10 });
+                    return 'done';
+                }),
+            );
+
+            expect(value).toBe('done');
+            expect(vscode.window.withProgress).not.toHaveBeenCalled();
+            expect(seen).toEqual(['Starting on port 3000']);
         });
     });
 

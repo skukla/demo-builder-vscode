@@ -25,35 +25,31 @@ jest.mock('vscode', () => ({
     ProgressLocation: { Notification: 15 },
 }));
 
-jest.mock('@/features/dashboard/commands/showDashboard', () => ({
-    ProjectDashboardWebviewCommand: { sendComponentOperationProgress: jest.fn() },
-}));
-
 import {
-    handleBackgroundComponentOperation,
-    handleGetComponentOperationProgress,
-    pushComponentOperationProgress,
-} from '@/features/dashboard/handlers/componentOperationProgress';
-import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+    handleBackgroundOperation,
+    handleGetOperationProgress,
+    pushOperationProgress,
+} from '@/core/vscode/operationProgress';
+import { createMockHandlerContext } from '../../helpers/handlerContextTestHelpers';
 
 const ID = 'erp-integration';
 const TITLE = 'Redeploying ERP integration';
 
 async function runningInBackground(): Promise<void> {
-    await pushComponentOperationProgress({
+    await pushOperationProgress({
         id: ID,
         state: 'running',
         stage: 'Deploying the app',
         step: 'Running aio app deploy',
     });
-    await handleBackgroundComponentOperation(createMockHandlerContext(), { id: ID, title: TITLE });
+    await handleBackgroundOperation(createMockHandlerContext(), { id: ID, title: TITLE });
 }
 
 beforeEach(async () => {
     jest.clearAllMocks();
     mockShowWarning.mockResolvedValue(undefined);
     // Leave nothing held between tests: end any run a test left open.
-    await pushComponentOperationProgress({ id: ID, state: 'succeeded' });
+    await pushOperationProgress({ id: ID, state: 'succeeded' });
     jest.clearAllMocks();
 });
 
@@ -72,7 +68,7 @@ describe('Run in background', () => {
     it('keeps narrating each stage the operation reaches', async () => {
         await runningInBackground();
 
-        await pushComponentOperationProgress({ id: ID, state: 'running', stage: 'Installing into Commerce' });
+        await pushOperationProgress({ id: ID, state: 'running', stage: 'Installing into Commerce' });
 
         expect(mockProgressReport).toHaveBeenLastCalledWith({ message: 'Installing into Commerce' });
     });
@@ -80,7 +76,7 @@ describe('Run in background', () => {
     it('shows the pair count after the stage', async () => {
         await runningInBackground();
 
-        await pushComponentOperationProgress({
+        await pushOperationProgress({
             id: ID,
             state: 'running',
             stage: 'Deploying the app',
@@ -93,7 +89,7 @@ describe('Run in background', () => {
     it('closes when the operation succeeds, saying so in the status bar', async () => {
         await runningInBackground();
 
-        await pushComponentOperationProgress({ id: ID, state: 'succeeded' });
+        await pushOperationProgress({ id: ID, state: 'succeeded' });
 
         await expect(mockProgressEnded).resolves.toBeUndefined();
         expect(mockStatusBar).toHaveBeenCalledWith(`$(check) ${TITLE} — done`, expect.any(Number));
@@ -104,7 +100,7 @@ describe('Run in background', () => {
         mockShowWarning.mockResolvedValue('Open Debug Logs');
         await runningInBackground();
 
-        await pushComponentOperationProgress({ id: ID, state: 'failed', error: 'Adobe refused this.' });
+        await pushOperationProgress({ id: ID, state: 'failed', error: 'Adobe refused this.' });
         await mockProgressEnded;
         await Promise.resolve();
 
@@ -118,21 +114,21 @@ describe('Run in background', () => {
     it('closes without a word when the SC takes it back into the modal', async () => {
         await runningInBackground();
 
-        await handleGetComponentOperationProgress(createMockHandlerContext(), { id: ID });
+        await handleGetOperationProgress(createMockHandlerContext(), { id: ID });
 
         await expect(mockProgressEnded).resolves.toBeUndefined();
-        await pushComponentOperationProgress({ id: ID, state: 'succeeded' });
+        await pushOperationProgress({ id: ID, state: 'succeeded' });
         expect(mockStatusBar).not.toHaveBeenCalled();
     });
 
     it('opens nothing for an operation that has already ended', async () => {
-        await handleBackgroundComponentOperation(createMockHandlerContext(), { id: ID, title: TITLE });
+        await handleBackgroundOperation(createMockHandlerContext(), { id: ID, title: TITLE });
 
         expect(mockWithProgress).not.toHaveBeenCalled();
     });
 
     it('refuses a request with no id or title', async () => {
-        const result = await handleBackgroundComponentOperation(createMockHandlerContext(), { id: ID });
+        const result = await handleBackgroundOperation(createMockHandlerContext(), { id: ID });
 
         expect(result).toMatchObject({ success: false, code: 'INVALID_OPERATION' });
         expect(mockWithProgress).not.toHaveBeenCalled();

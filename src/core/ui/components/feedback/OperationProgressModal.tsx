@@ -1,43 +1,65 @@
 /**
- * ComponentOperationModal — what an integration operation is doing, while it does it
- * (PL-59).
+ * OperationProgressModal — what a long operation is doing, while it does it (PL-59).
  *
- * Opened for an operation the SC started on the integrations screen, titled with the
- * action and the integration. It shows the stage, the step under it and how long the
- * stage usually takes (the Storefront setup step's `LoadingDisplay`, row for row), in
- * one fixed height. "Run in background" hands the operation to a VS Code progress
+ * THE progress modal for any operation an SC starts with a button on a screen (rule R1
+ * of `.rptc/plans/operation-progress/extension-wide.md`); a screen hosts this rather
+ * than building its own. Titled "-ing verb + object". It shows the stage, the step
+ * under it and how long the stage usually takes (the Storefront setup step's
+ * `LoadingDisplay`, row for row), in one fixed height. While the operation runs it
+ * ALWAYS offers "Run in background" (R8), which hands it to a VS Code progress
  * notification that keeps narrating it. A success closes it by itself. A failure
  * stays: the reason, Retry, and the Debug Logs where the full detail went.
  *
- * @module features/dashboard/ui/components/integrations/ComponentOperationModal
+ * Not `layout/CenteredFeedbackContainer`: that RESERVES a minimum height and lets
+ * taller content grow, and this modal must never change size (owner, 2026-09-19) —
+ * so its body is one fixed height that scrolls instead (`.modal-progress-body`).
+ *
+ * Its host must register `getOperationProgress`, `backgroundOperation` and
+ * `openDebugLogs` in the screen's handler map; the first two are shared from
+ * `core/vscode/operationProgress`.
+ *
+ * @module core/ui/components/feedback/OperationProgressModal
  */
 
 import { DialogContainer } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect } from 'react';
-import type { ComponentOperation } from '../../hooks/useComponentOperation';
-import { useComponentOperationProgress } from '../../hooks/useComponentOperationProgress';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { Modal } from '@/core/ui/components/ui/Modal';
+import { useOperationProgress } from '@/core/ui/hooks/useOperationProgress';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { stageLine } from '@/core/utils/stageLine';
 
-export interface ComponentOperationModalProps {
+/** The operation a progress modal shows: which one, and what it is called. */
+export interface ProgressModalOperation {
+    /** What the operation's progress is keyed by. */
+    id: string;
+    /** "-ing verb + object": the modal's title, and the notification's on handover. */
+    title: string;
+    /** The failure view's title: "Couldn't redeploy ERP integration". */
+    failureTitle: string;
+    /** Which run this is; a new run starts the modal clean. */
+    run: number;
+    /** Reopened mid-run: ask where it is now, since earlier pushes were missed. */
+    resume: boolean;
+}
+
+export interface OperationProgressModalProps {
     /** The operation being run, or `null` when the modal is closed. */
-    operation: Pick<ComponentOperation, 'id' | 'title' | 'failureTitle' | 'run' | 'resume'> | null;
+    operation: ProgressModalOperation | null;
     /** Run the same operation again. */
     onRetry: () => void;
     /** Close the modal; a running operation carries on. */
     onClose: () => void;
 }
 
-/** The progress modal for one integration operation. */
-export function ComponentOperationModal({
+/** The progress modal for one operation. */
+export function OperationProgressModal({
     operation,
     onRetry,
     onClose,
-}: ComponentOperationModalProps): React.ReactElement {
-    const progress = useComponentOperationProgress(
+}: OperationProgressModalProps): React.ReactElement {
+    const progress = useOperationProgress(
         operation?.id ?? null,
         operation?.run ?? 0,
         operation?.resume ?? false,
@@ -53,7 +75,7 @@ export function ComponentOperationModal({
     // has nothing left to narrate.
     const close = useCallback((): void => {
         if (operation && !failed) {
-            webviewClient.postMessage('backgroundComponentOperation', {
+            webviewClient.postMessage('backgroundOperation', {
                 id: operation.id,
                 title: operation.title,
             });
@@ -85,7 +107,7 @@ export function ComponentOperationModal({
                 >
                     {/* One fixed height for every state, so the modal never resizes as
                         stages come and go or it turns into a failure. */}
-                    <div className="integrations-operation-body">
+                    <div className="modal-progress-body">
                         {failed ? (
                             <StatusDisplay
                                 variant="error"

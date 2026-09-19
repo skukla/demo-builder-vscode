@@ -26,12 +26,12 @@ import { declaresIncludeImsCredentials, listDeclaredActions } from './appConfigP
 import { urlPayload, urlsForDeclaredActions } from './deployedUrls';
 import { writeFailureLog } from './deployFailureLog';
 import { forgetDeployRecordOnNewTarget, rememberDeployTarget } from './deployRecord';
-import { OPERATION_STAGES } from './operationStages';
 import { aioOutputTail, extractAioErrorDetail, fetchRuntimeCredentials } from './runtimeCredentials';
 import type { AppDeploymentResult } from './types';
 import { buildComponent } from '@/core/shell/buildComponent';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 import { parseJSON, toError } from '@/types/typeGuards';

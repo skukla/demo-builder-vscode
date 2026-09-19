@@ -78,7 +78,7 @@ jest.mock('@/features/authentication/services/detectProjectOrgMismatch', () => (
 export const mockSendAppBuilderComponentStatusUpdate = jest.fn();
 export const mockSendAppBuilderComponentsSnapshot = jest.fn();
 export const mockSendMeshStatusUpdate = jest.fn();
-export const mockSendComponentOperationProgress = jest.fn();
+export const mockSendOperationProgress = jest.fn();
 export const mockSendProjectDestinationUpdate = jest.fn();
 /**
  * The status re-run after a set-changing op. Mocked because the real one is a
@@ -97,8 +97,6 @@ jest.mock('@/features/dashboard/commands/showDashboard', () => ({
         sendAppBuilderComponentsSnapshot: (...a: unknown[]) =>
             mockSendAppBuilderComponentsSnapshot(...a),
         sendMeshStatusUpdate: (...a: unknown[]) => mockSendMeshStatusUpdate(...a),
-        sendComponentOperationProgress: (...a: unknown[]) =>
-            mockSendComponentOperationProgress(...a),
         sendProjectDestinationUpdate: (...a: unknown[]) => mockSendProjectDestinationUpdate(...a),
         refreshStatus: jest.fn(),
     },
@@ -158,6 +156,22 @@ export function mockTestDeveloperPermissions(hasPermissions: boolean, error?: st
 }
 
 /** Per-test mock reset + happy-path defaults — call from each spec's beforeEach. */
+/**
+ * The screen a modal-hosted operation reports to: progress goes back to the screen
+ * that started it (its request's `sendMessage`), so this stands in for that screen
+ * and records each progress payload it is sent.
+ */
+export const modalScreen = jest.fn(async (type: string, payload?: unknown): Promise<void> => {
+    if (type === 'operationProgress') mockSendOperationProgress(payload);
+});
+
+/** setupMocks, with the request coming from a screen that shows the modal. */
+export function setupModalMocks(...args: Parameters<typeof setupMocks>): ReturnType<typeof setupMocks> {
+    const mocks = setupMocks(...args);
+    mocks.mockContext.sendMessage = modalScreen;
+    return mocks;
+}
+
 export function resetHandlerMocks(): void {
     jest.clearAllMocks();
     mockAddAppBuilderComponent.mockResolvedValue({ success: true });

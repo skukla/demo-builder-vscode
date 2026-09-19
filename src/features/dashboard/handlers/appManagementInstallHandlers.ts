@@ -28,9 +28,10 @@ import {
     withComponentProgress,
     type GuardableResult,
 } from './appBuilderComponentHandlers';
-import { narrateOutcomeToModal, progressSurfaceOf } from './componentOperationProgress';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getAppBuilderComponent, recordInstallation } from '@/core/state/appBuilderComponentState';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operationProgress';
 import type { AppBuilderComponentRunnerDeps } from '@/features/app-builder/services/appBuilderComponentRunner';
 import {
     AppManagementClient,
@@ -40,7 +41,6 @@ import {
 import { deriveAppManagementBaseUrl } from '@/features/app-builder/services/appManagementInstaller';
 import { reinstallAppManagementApp } from '@/features/app-builder/services/appManagementReinstall';
 import type { AppManagementInstallResult } from '@/features/app-builder/services/appManagementUpgrade';
-import { OPERATION_STAGES } from '@/features/app-builder/services/operationStages';
 import {
     buildCustomIntegrationEntry,
     getAppBuilderComponentEntry,

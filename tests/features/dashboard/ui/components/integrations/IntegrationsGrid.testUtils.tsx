@@ -168,7 +168,7 @@ jest.mock('@/features/dashboard/ui/components/IntegrationSettingsModal', () => (
 // babel-plugin-jest-hoist lifts them above every import, so the component
 // module always loads against the mocks.
 import { IntegrationsGrid } from '@/features/dashboard/ui/components/integrations/IntegrationsGrid';
-import { ComponentOperationModal } from '@/features/dashboard/ui/components/integrations/ComponentOperationModal';
+import { OperationProgressModal } from '@/core/ui/components/feedback/OperationProgressModal';
 import { useComponentOperation } from '@/features/dashboard/ui/hooks/useComponentOperation';
 import {
     buildIntegrationCards,
@@ -312,7 +312,7 @@ function GridWithOperations({ cards, ...props }: GridProps & { cards: Integratio
     return (
         <>
             <IntegrationsGrid cards={cards} operations={operations} {...props} />
-            <ComponentOperationModal
+            <OperationProgressModal
                 operation={operations.open}
                 onRetry={operations.retry}
                 onClose={operations.close}

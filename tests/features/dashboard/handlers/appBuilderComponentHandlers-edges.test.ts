@@ -315,7 +315,9 @@ describe('the deploy path', () => {
         );
     });
 
-    it('shows the SUB-step alone in the notification when the runner supplies one', async () => {
+    // PL-59 phase 2 (owner, 2026-09-19): a notification shows the STAGE, the short
+    // set; the step is the modal's long set. It replaced "the sub-step alone" (2026-08-27).
+    it('shows the stage name in the notification, not the step', async () => {
         const { mockContext } = setupMocks({ appBuilderComponents: DEPLOYED });
         mockTestDeveloperPermissions(true);
         const report = jest.fn();
@@ -331,7 +333,7 @@ describe('the deploy path', () => {
         ) => void;
         reporter('Deploying custom integration…', 'Running aio app deploy');
 
-        expect(report).toHaveBeenCalledWith({ message: 'Running aio app deploy' });
+        expect(report).toHaveBeenCalledWith({ message: 'Deploying custom integration…' });
     });
 
     it('falls back to the top-level message when the runner supplies no sub-step', async () => {

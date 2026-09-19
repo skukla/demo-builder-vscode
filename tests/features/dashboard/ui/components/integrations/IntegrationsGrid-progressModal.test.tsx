@@ -16,12 +16,12 @@ import {
     resetGridMocks,
     setupUser,
 } from './IntegrationsGrid.testUtils';
-import type { ComponentOperationProgressPayload } from '@/types/webviewPayloads';
+import type { OperationProgressPayload } from '@/types/webviewPayloads';
 
 const NOT_DEPLOYED = { 'custom-app': { ...DEPLOYED_INTEGRATION, status: 'not-deployed' as const } };
 const DEPLOYING = { 'custom-app': { ...DEPLOYED_INTEGRATION, status: 'deploying' as const } };
 
-const RUNNING: ComponentOperationProgressPayload = {
+const RUNNING: OperationProgressPayload = {
     id: 'custom-app',
     state: 'running',
     stage: 'Deploying the app',
@@ -36,8 +36,8 @@ beforeEach(() => {
     pushes = captureMessageHandlers();
 });
 
-function push(payload: ComponentOperationProgressPayload): void {
-    act(() => pushes.get('componentOperationProgress')?.(payload));
+function push(payload: OperationProgressPayload): void {
+    act(() => pushes.get('operationProgress')?.(payload));
 }
 
 async function startDeploy(user: ReturnType<typeof setupUser>): Promise<HTMLElement> {
@@ -147,7 +147,7 @@ describe('the progress modal', () => {
         const modal = await startDeploy(user);
 
         expect(getClient().request).not.toHaveBeenCalledWith(
-            'getComponentOperationProgress',
+            'getOperationProgress',
             expect.anything(),
         );
 
@@ -155,7 +155,7 @@ describe('the progress modal', () => {
         setCards(cardsFor({ appBuilderComponents: DEPLOYING }));
         await user.click(card('custom-app', 'Deploying…'));
 
-        expect(getClient().request).toHaveBeenCalledWith('getComponentOperationProgress', {
+        expect(getClient().request).toHaveBeenCalledWith('getOperationProgress', {
             id: 'custom-app',
         });
     });
@@ -179,7 +179,7 @@ describe('the progress modal', () => {
 
         await user.click(within(modal).getByRole('button', { name: 'Run in background' }));
 
-        expect(getClient().postMessage).toHaveBeenCalledWith('backgroundComponentOperation', {
+        expect(getClient().postMessage).toHaveBeenCalledWith('backgroundOperation', {
             id: 'custom-app',
             title: 'Deploying custom-app',
         });
@@ -194,7 +194,7 @@ describe('the progress modal', () => {
         await user.click(within(modal).getByRole('button', { name: 'Close' }));
 
         expect(getClient().postMessage).not.toHaveBeenCalledWith(
-            'backgroundComponentOperation',
+            'backgroundOperation',
             expect.anything(),
         );
     });

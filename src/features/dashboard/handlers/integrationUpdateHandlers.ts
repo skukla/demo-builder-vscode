@@ -29,8 +29,8 @@ import {
     type GuardableResult,
 } from './appBuilderComponentHandlers';
 import { handlerRunnerDeps as runnerDeps, resolveComponentRecord } from './appManagementInstallHandlers';
-import { narrateOutcomeToModal, progressSurfaceOf } from './componentOperationProgress';
 import { getAppBuilderComponent } from '@/core/state/appBuilderComponentState';
+import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operationProgress';
 import {
     updateAppBuilderComponent,
     type AppBuilderComponentRunnerDeps,

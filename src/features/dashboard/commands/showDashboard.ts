@@ -35,7 +35,6 @@ import type {
     AppBuilderComponentStatusUpdatePayload,
     AppBuilderComponentsSnapshotPayload,
     AuthoringExperienceUpdatePayload,
-    ComponentOperationProgressPayload,
     DashboardInitialData,
     DestinationTitles,
     MeshStatusUpdatePayload,
@@ -381,19 +380,6 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand<Dashboard
         }
     }
 
-    /**
-     * Push one integration operation's progress to the modal the SC opened by
-     * starting it (PL-59). Same live-panel lookup as the row status, so it reaches
-     * whichever of the dashboard or the integrations surface is open.
-     */
-    public static async sendComponentOperationProgress(
-        payload: ComponentOperationProgressPayload,
-    ): Promise<void> {
-        const panel = ProjectDashboardWebviewCommand.getLiveProjectPanel();
-        if (panel) {
-            await panel.webview.postMessage({ type: 'componentOperationProgress', payload });
-        }
-    }
 
     /**
      * Public method to push the FULL fresh persisted `appBuilderComponents`

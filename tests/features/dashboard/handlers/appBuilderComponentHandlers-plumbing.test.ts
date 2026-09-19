@@ -321,7 +321,7 @@ describe('the sub-step reporter handed to the runner', () => {
         ) => void;
     }
 
-    it('shows the SUB-step alone when the runner supplies one', async () => {
+    it('shows the stage name in the notification, not the step', async () => {
         const { mockContext } = setupMocks();
         mockTestDeveloperPermissions(true);
         const report = jest.fn();
@@ -333,8 +333,9 @@ describe('the sub-step reporter handed to the runner', () => {
         await handleAddAppBuilderComponent(mockContext, { id: 'erp-sync' });
         reporterFromLastDepsCall()('Deploying custom integration…', 'Running aio app deploy');
 
-        // Joining both produced two-line cards (owner screenshot, 2026-08-27).
-        expect(report).toHaveBeenCalledWith({ message: 'Running aio app deploy' });
+        // The stage is the short set; the step is the modal's long set (PL-59 phase 2,
+        // owner 2026-09-19). Joining both produced two-line cards (2026-08-27).
+        expect(report).toHaveBeenCalledWith({ message: 'Deploying custom integration…' });
     });
 
     it('falls back to the top-level message when there is no sub-step', async () => {

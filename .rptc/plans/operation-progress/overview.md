@@ -1,5 +1,8 @@
 # PL-59 — integration operations show their progress in a modal
 
+> **Phase 2** — the same approach across the whole extension, with a routing table
+> saying which surface each operation reports to and why: `extension-wide.md`.
+
 ## Context
 
 Adding, updating, redeploying or removing an integration takes minutes. Today the SC gets one

@@ -54,7 +54,6 @@ import type { AppManagementInstallOptions, AppManagementInstallResult } from './
 import { resolveDeployInputs, resolveDisplayName } from './deployInputs';
 import type { CommerceDetachResult } from './erpDetach';
 import type { SourceUpdateResult, UpdateCheckResult } from './integrationSourceUpdate';
-import { OPERATION_STAGES } from './operationStages';
 import { deriveOwPackage } from './owPackageName';
 import type { AppDeploymentResult } from './types';
 import { isMeshComponentId } from '@/core/constants';
@@ -62,6 +61,7 @@ import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { buildOrgTargetFromProjectAdobe, withOrgContext, type CachedOrgRef } from '@/core/shell/orgContextEnv';
 import { clearUpdateAvailable, getProvidedEnvVars, recordInstallation } from '@/core/state/appBuilderComponentState';
 import { reconcileComponentSelections } from '@/core/state/componentSelectionReconcile';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { explainAdobeAccessFailure } from '@/features/authentication/services/authenticationErrorFormatter';
 import { buildCustomIntegrationEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import {

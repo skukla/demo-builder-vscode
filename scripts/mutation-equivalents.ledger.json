@@ -8306,7 +8306,7 @@
             "anchors": [
                 "const panel = BaseWebviewCommand.getActivePanel('demoBuilder.projectDashboard');"
             ],
-            "line": 300,
+            "line": 299,
             "mutants": 1,
             "category": "branch",
             "reason": "Same shape as the Configure command's copy: forcing the following 'if (panel)' true calls dispose() on undefined, and the TypeError lands in the try/catch already there for the already-disposed case. Both paths end as a no-op. The false variant is killed by the test that asserts an open panel is disposed.",
@@ -8368,7 +8368,7 @@
             "anchors": [
                 "if (result.success) {"
             ],
-            "line": 797,
+            "line": 772,
             "mutants": 7,
             "category": "branch",
             "reason": "The three-way tail of withComponentProgress writes one USER-log line per outcome and nothing else — no return value changes, no channel is pushed. Forcing any branch, or emptying any body, changes only which line prints, which is what the ratchet exists to refuse to reward. The outcome itself is asserted through the returned result and the row-status pushes.",
@@ -8393,7 +8393,7 @@
             "anchors": [
                 "success: false,"
             ],
-            "line": 507,
+            "line": 504,
             "mutants": 1,
             "category": "branch",
             "reason": "The Configure route's inner success flag never reaches a caller: the outer handler matches result.blocked first and returns its own { success: false, error }. Flipping it changes a value that is overwritten one frame later. Re-anchored 2026-09-10 (474 -> 475): unchanged code, shifted by the AB-7 cleanup-reporting block added to handleRemoveAppBuilderComponent.",

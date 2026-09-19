@@ -25,11 +25,6 @@
  */
 
 import * as vscode from 'vscode';
-import {
-    narrateOutcomeToModal,
-    progressSurfaceOf,
-    pushComponentOperationProgress,
-} from './componentOperationProgress';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import {
@@ -37,8 +32,11 @@ import {
     listAppBuilderComponents,
     setAppBuilderComponent,
 } from '@/core/state/appBuilderComponentState';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { stageLine } from '@/core/utils/stageLine';
-import { cardInFlightLabel, timedSteps, withProgressRegister } from '@/core/vscode/progressRegister';
+import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operationProgress';
+import { cardInFlightLabel, timedSteps } from '@/core/vscode/progressRegister';
+import { withOperationProgress } from '@/core/vscode/withOperationProgress';
 import {
     addAppBuilderComponent,
     deployAppBuilderComponent,
@@ -46,7 +44,6 @@ import {
     type RuntimeCleanupSummary,
 } from '@/features/app-builder/services/appBuilderComponentRunner';
 import type { CommerceDetachResult } from '@/features/app-builder/services/erpDetach';
-import { OPERATION_STAGES, detailFor, expectationFor } from '@/features/app-builder/services/operationStages';
 import {
     buildCustomIntegrationEntry,
     entryFitsProjectAxes,
@@ -750,49 +747,27 @@ export async function withComponentProgress<T extends GuardableResult>(
     // closes, so an update that stalled left nothing to read (owner, 2026-09-18).
     const steps = timedSteps((line) => logger.debug(`[${title} ${label}] ${line}`));
 
-    // The register split (steps -> notification, card -> one static line) is
-    // SHARED with the mesh path, which is a separate implementation of the same
-    // operation. It lived in both and was reversed in only one, so a mesh
-    // redeploy narrated the old way for a round of testing. It now lives once.
-    const result = await withProgressRegister(
+    // Where it reports is decided in one place for every operation (PL-59 phase 2):
+    // the modal when started from a button, else one notification whose message is
+    // the stage name, else the agent's notification — and while the modal narrates,
+    // nothing run inside the operation opens a notification of its own (R7).
+    const result = await withOperationProgress(
         {
+            id,
             title: `${title} ${label}`,
+            inModal,
             cardLabel: cardInFlightLabel(title, noun),
             pushCardStatus: (cardLabel) => {
                 void postRowStatus(id, 'deploying', cardLabel);
             },
-            inModal,
         },
-        // The notification's title already names the operation, so it shows the step
-        // alone when there is one ('Running aio app deploy', not both lines — owner
-        // screenshot, 2026-08-27). The modal has room for both, and the stage's
-        // expectation line under them.
-        (report) => run((stage, step, position) => {
-            steps.step(stageLine(step || stage, position));
-            if (inModal) {
-                void pushComponentOperationProgress({
-                    id,
-                    state: 'running',
-                    stage,
-                    position,
-                    // Row 2 is never blank: a stage that names no step shows its own
-                    // detail (owner, 2026-09-19: "I only see two lines").
-                    step: step || detailFor(stage),
-                    expectation: expectationFor(stage),
-                });
-            } else {
-                report(stageLine(step || stage, position));
-            }
-        }),
+        (report) =>
+            run((stage, step, position) => {
+                steps.step(stageLine(step || stage, position));
+                report(stage, step, position);
+            }),
     );
     steps.finish();
-    if (inModal) {
-        await pushComponentOperationProgress(
-            result.success
-                ? { id, state: 'succeeded' }
-                : { id, state: 'failed', error: result.error ?? 'The operation did not finish.' },
-        );
-    }
 
     if (result.success) {
         logger.info(`${title} ${label} — done`);

@@ -71,7 +71,6 @@ jest.mock('@/features/dashboard/commands/showDashboard', () => ({
     ProjectDashboardWebviewCommand: {
         sendAppBuilderComponentStatusUpdate: (...a: unknown[]) => mockSendStatus(...a),
         sendAppBuilderComponentsSnapshot: (...a: unknown[]) => mockSendSnapshot(...a),
-        sendComponentOperationProgress: (...a: unknown[]) => mockSendOperationProgress(...a),
         refreshStatus: jest.fn(),
     },
 }));
@@ -107,6 +106,10 @@ function pairProject(erp: Partial<AppBuilderComponentState> = {}): Partial<Proje
 /** setupMocks replaces the auth service; the guard's role check needs its answer back. */
 function setup(overrides: Partial<Project>) {
     const mocks = setupMocks(overrides);
+    // Progress goes back to the screen that started the operation: this records it.
+    mocks.mockContext.sendMessage = async (type: string, payload?: unknown): Promise<void> => {
+        if (type === 'operationProgress') mockSendOperationProgress(payload);
+    };
     const { ServiceLocator } = require('@/core/di/serviceLocator');
     ServiceLocator.getAuthenticationService().testDeveloperPermissions = jest
         .fn()

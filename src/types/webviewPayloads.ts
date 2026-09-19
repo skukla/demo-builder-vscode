@@ -303,7 +303,7 @@ export interface OperationPosition {
  * of the moment, `expectation` the stage's fixed "how long this usually takes" line.
  * A terminal `state` carries the reason on failure.
  */
-export interface ComponentOperationProgressPayload {
+export interface OperationProgressPayload {
     id: string;
     state: 'running' | 'succeeded' | 'failed';
     stage?: string;

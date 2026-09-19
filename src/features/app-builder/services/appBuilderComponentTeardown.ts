@@ -16,12 +16,12 @@
  */
 
 import type { CommerceDetachResult } from './erpDetach';
-import { OPERATION_STAGES } from './operationStages';
 import { deriveOwPackage } from './owPackageName';
 import type { SystemWipeResult } from './systemRecordsWipe';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { MESH_DELETE_COMMAND } from '@/core/shell/meshDeleteCommand';
 import { withOrgContext, type OrgContextTarget } from '@/core/shell/orgContextEnv';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState, Project } from '@/types/base';

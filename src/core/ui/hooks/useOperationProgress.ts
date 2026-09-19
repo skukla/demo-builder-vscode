@@ -1,45 +1,45 @@
 /**
- * useComponentOperationProgress Hook
+ * useOperationProgress Hook
  *
- * The live progress of one integration's operation, for the modal the SC opened by
- * starting it (PL-59). Follows the `componentOperationProgress` push for that id. A
+ * The live progress of one operation, for the modal the SC opened by starting it
+ * (PL-59). Follows the `operationProgress` push for that id. A
  * modal REOPENED mid-run also asks the extension where the run is now, since the pushes
  * before it were missed; a new run never asks, so it cannot pick up an earlier run's
  * failure.
  *
- * @module features/dashboard/ui/hooks/useComponentOperationProgress
+ * @module core/ui/hooks/useOperationProgress
  */
 
 import { useEffect, useState } from 'react';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
-import type { ComponentOperationProgressPayload } from '@/types/webviewPayloads';
+import type { OperationProgressPayload } from '@/types/webviewPayloads';
 
-/** What `getComponentOperationProgress` answers: the envelope, not the payload. */
+/** What `getOperationProgress` answers: the envelope, not the payload. */
 interface ProgressResponse {
     success: boolean;
-    data?: ComponentOperationProgressPayload | null;
+    data?: OperationProgressPayload | null;
 }
 
 /**
- * @param id - the integration whose operation to follow, or `null` for none
+ * @param id - the operation to follow, or `null` for none
  * @param run - which run of it; a new run starts from nothing
  * @param resume - true when reopened mid-run
  * @returns its latest progress, or `null` before any has arrived
  */
-export function useComponentOperationProgress(
+export function useOperationProgress(
     id: string | null,
     run: number,
     resume: boolean,
-): ComponentOperationProgressPayload | null {
-    const [progress, setProgress] = useState<ComponentOperationProgressPayload | null>(null);
+): OperationProgressPayload | null {
+    const [progress, setProgress] = useState<OperationProgressPayload | null>(null);
 
     useEffect(() => {
         setProgress(null);
         if (!id) return undefined;
         let active = true;
 
-        const unsubscribe = webviewClient.onMessage('componentOperationProgress', (data: unknown) => {
-            const payload = data as ComponentOperationProgressPayload | undefined;
+        const unsubscribe = webviewClient.onMessage('operationProgress', (data: unknown) => {
+            const payload = data as OperationProgressPayload | undefined;
             if (payload?.id === id) setProgress(payload);
         });
 
@@ -51,7 +51,7 @@ export function useComponentOperationProgress(
         }
 
         void webviewClient
-            .request<ProgressResponse>('getComponentOperationProgress', { id })
+            .request<ProgressResponse>('getOperationProgress', { id })
             .then((response) => {
                 // A push that already arrived is newer than this answer; keep it.
                 if (active && response?.success && response.data) {
