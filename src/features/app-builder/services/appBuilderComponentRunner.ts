@@ -41,6 +41,7 @@ import { buildOrgTargetFromProjectAdobe, withOrgContext, type CachedOrgRef } fro
 import { getProvidedEnvVars } from '@/core/state/appBuilderComponentState';
 import { reconcileComponentSelections } from '@/core/state/componentSelectionReconcile';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { explainAdobeAccessFailure } from '@/features/authentication/services/authenticationErrorFormatter';
 import { buildCustomIntegrationEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type {
     ComponentInstallOptions,
@@ -460,6 +461,17 @@ function identityOf(
  * could answer "why?" once the notification faded. `error` is the one field a
  * failed entry exists to carry.
  */
+/**
+ * What the SC reads for a failure: Adobe's permission and outage refusals in plain words,
+ * anything else as it was written. Adobe's own words still reach Debug Logs.
+ */
+function readableFailure(reason: string, logger: Logger): string {
+    const plain = explainAdobeAccessFailure(reason);
+    if (!plain) return reason;
+    logger.warn(`[AppBuilderComponent Runner] Adobe refused: ${reason}`);
+    return plain;
+}
+
 function errorOutcome(entry: AppBuilderComponentCatalogEntry, reason: string): DeployOutcome {
     return { status: 'error', ...identityOf(entry), error: reason };
 }
@@ -654,8 +666,9 @@ export async function addAppBuilderComponent(
         );
 
         if (!deployed.ok) {
-            await persistOutcome(project, entry, errorOutcome(entry, deployed.error), deps);
-            return { success: false, error: deployed.error };
+            const reason = readableFailure(deployed.error, deps.logger);
+            await persistOutcome(project, entry, errorOutcome(entry, reason), deps);
+            return { success: false, error: reason };
         }
 
         await persistOutcome(project, entry, deployed.outcome, deps);
@@ -664,7 +677,7 @@ export async function addAppBuilderComponent(
         return { success: true };
     } catch (error) {
         deps.logger.error('[AppBuilderComponent Runner] add failed', error as Error);
-        return { success: false, error: toError(error).message };
+        return { success: false, error: readableFailure(toError(error).message, deps.logger) };
     }
 }
 
@@ -758,9 +771,10 @@ export async function deployAppBuilderComponent(
             // (measured live 2026-08-27: manifest said deploying while the
             // handler had already returned the build error). The add path has
             // always persisted its error outcome; this makes redeploy match.
-            recordDeployOutcome(project, entry.kind, id, errorOutcome(entry, deployed.error));
+            const reason = readableFailure(deployed.error, deps.logger);
+            recordDeployOutcome(project, entry.kind, id, errorOutcome(entry, reason));
             await deps.saveProject(project);
-            return { success: false, error: deployed.error };
+            return { success: false, error: reason };
         }
         recordDeployOutcome(project, entry.kind, id, deployed.outcome);
         await deps.saveProject(project);
@@ -769,7 +783,7 @@ export async function deployAppBuilderComponent(
         return { success: true };
     } catch (error) {
         deps.logger.error('[AppBuilderComponent Runner] deploy failed', error as Error);
-        return { success: false, error: toError(error).message };
+        return { success: false, error: readableFailure(toError(error).message, deps.logger) };
     }
 }
 

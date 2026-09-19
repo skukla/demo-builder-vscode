@@ -326,6 +326,39 @@ describe('addAppBuilderComponent — a collaborator that throws', () => {
 });
 
 // =============================================================================
+// Adobe's refusals reach the SC in plain words; Adobe's own words reach Debug Logs
+// =============================================================================
+
+describe('addAppBuilderComponent — an Adobe permission refusal', () => {
+    const REFUSAL =
+        'App deployment failed: 403 - Forbidden ERR_MSG_OPERATION_NOT_ALLOWED ' +
+        "The user doesn't have the matching licenses for this application";
+
+    it('returns and records the plain sentence', async () => {
+        const project = createProject();
+        const deps = createDeps({
+            deployApp: jest.fn().mockResolvedValue({ success: false, error: REFUSAL }),
+        });
+
+        const result = await addAppBuilderComponent(project, INTEGRATION_ENTRY, deps);
+
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('not a developer on every product profile');
+        expect(project.appBuilderComponents?.[INTEGRATION_ENTRY.id]?.error).toBe(result.error);
+    });
+
+    it('translates a refusal that was thrown, too', async () => {
+        const deps = createDeps({
+            subscribeRequiredApis: jest.fn().mockRejectedValue(new Error(REFUSAL)),
+        });
+
+        const result = await addAppBuilderComponent(createProject(), MESH_ENTRY, deps);
+
+        expect(result.error).toContain('Admin Console');
+    });
+});
+
+// =============================================================================
 // installIfAppManagement — what the SC is told while it runs, and afterwards
 // =============================================================================
 
