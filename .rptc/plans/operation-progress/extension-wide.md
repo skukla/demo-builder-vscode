@@ -53,7 +53,7 @@ finding.
 | 4 | Reset headless project | Dashboard kebab; projects-list kebab | Notification "Resetting Project" + timed success | **Modal + handover** | R1, R6 |
 | 5 | Delete project (with cloud cleanup) | Dashboard kebab; projects-list kebab | Notification titled "Demo Builder" | **Modal + handover**, titled "Deleting {project}" | R1 |
 | 5a | same | Palette | Notification "Deleting project", no steps; separate implementation | Notification, same stages as 5 | R2 |
-| 5b | same | Agent `delete_project` | Agent notification, no steps; calls `deleteProjectFiles` — **verify first** whether it skips the cloud cleanup the button does | Same stages as 5; correctness question raised with the owner before any change | R3 |
+| 5b | same | Agent `delete_project` | Agent notification, no steps. **Local only by design**: `deleteProjectFiles` stops the demo and deletes the folder; the tool's description says it does not touch cloud resources, which the agent removes with `delete_github_repo` / `cleanup_dalive_site` (read 2026-09-19) | The steps it does run, with the button's stage names | R3 |
 | 6 | Republish content | Dashboard "Republish" | Notification `Republishing {name}` | **Modal + handover** | R1 |
 | 6a | same | Agent `sync_content` | Agent notification with phases | unchanged | R3 |
 | 7 | Sync storefront (commit + push) | Dashboard tile | Notification with steps + input box | **Modal + handover** (the commit-message input stays a VS Code prompt, before the modal opens) | R1 |
@@ -116,10 +116,14 @@ to the owner before the next.
 - This table is updated in the same commit as any change to a row, so it stays the
   thing to check against.
 
-## Open questions for the owner
+## Outside this plan, raised with the owner
 
-1. Row 5b: does `delete_project` from an agent skip the cloud cleanup the button does?
-   If so, is that intended?
+- **An agent's delete leaves the cloud side to the agent** (row 5b). A person's delete is
+  one action that also unpublishes the CDN content and removes the DA.live site and the
+  GitHub repo; an agent needs three tool calls and must remember two of them. No agent
+  tool for the CDN unpublish was found in a quick look (not a thorough search). Whether
+  an agent should get the one-call full delete is a reversibility question, not a
+  progress one.
 
 ## Decided
 
