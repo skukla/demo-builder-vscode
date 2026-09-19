@@ -80,3 +80,5 @@ surfaces that host the cards.
 - 2026-09-19  Merge feature/operation-progress into feature/erp-integration: the shared progress model (`a2724c134`)
 - 2026-09-19  feat(mesh): deploy the API Mesh into the progress modal (`7430ae428`)
 - 2026-09-19  Merge feature/operation-progress: the mesh deploy on the progress modal (`9b5a0d304`)
+- 2026-09-19  feat(progress): keep a long operation visibly moving (`35880ca7e`)
+- 2026-09-19  perf(app-builder): stop paying a minute for a question Adobe won't answer (`072095629`)
