@@ -15,6 +15,12 @@
  * @module features/dashboard/handlers/componentOperationProgress
  */
 
+import {
+    closeBackgroundNotice,
+    forwardToBackgroundNotice,
+    openBackgroundNotice,
+} from './operationBackgroundNotice';
+import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerResponse, MessageHandler } from '@/types/handlers';
 import { toError } from '@/types/typeGuards';
 import type { ComponentOperationProgressPayload } from '@/types/webviewPayloads';
@@ -34,6 +40,7 @@ export async function pushComponentOperationProgress(
     } else {
         latest.set(payload.id, payload);
     }
+    forwardToBackgroundNotice(payload);
     // Lazy, as postRowStatus is: keeps the webview-command class out of the
     // handler module's load graph.
     const { ProjectDashboardWebviewCommand } = await import(
@@ -48,7 +55,7 @@ export async function pushComponentOperationProgress(
  * The progress inside `withComponentProgress` covers the operation itself. It cannot
  * cover what a handler refuses BEFORE reaching it — an unknown id, an integration
  * already added, one not deployed yet — and a modal told nothing would sit on
- * "Starting…" forever. So a modal-hosted run is marked running here, before the
+ * "Starting" forever. So a modal-hosted run is marked running here, before the
  * handler does anything (which also replaces a previous run's failure, so a Retry
  * never shows the old reason), and when the handler returns or throws without having
  * sent an end, its own answer is sent as one.
@@ -99,12 +106,38 @@ export function progressSurfaceOf(payload?: { progress?: 'modal' }): 'modal' | u
 
 /**
  * Handle `getComponentOperationProgress` — the latest progress for one integration,
- * or `null` when nothing is running or failed for it.
+ * or `null` when nothing is running or failed for it. Only a REOPENED modal asks, so
+ * this is also where the modal takes the operation back from its notification.
  */
 export const handleGetComponentOperationProgress: MessageHandler<{ id?: string }> = async (
     _context,
     payload,
 ): Promise<HandlerResponse> => {
     const id = payload?.id;
+    if (id) closeBackgroundNotice(id);
     return { success: true, data: id ? latest.get(id) ?? null : null };
+};
+
+/** Longest title a background notice takes — the modal's own title, never prose. */
+const MAX_TITLE = 200;
+
+/**
+ * Handle `backgroundComponentOperation` — the SC chose "Run in background": carry the
+ * operation on in a progress notification (see operationBackgroundNotice). Nothing
+ * opens for an operation that has already ended.
+ */
+export const handleBackgroundComponentOperation: MessageHandler<{ id?: string; title?: string }> = async (
+    _context,
+    payload,
+): Promise<HandlerResponse> => {
+    const id = payload?.id;
+    const title = payload?.title?.trim();
+    if (!id || !title || title.length > MAX_TITLE) {
+        return { success: false, error: 'An operation id and title are required.', code: ErrorCode.INVALID_OPERATION };
+    }
+    const current = latest.get(id);
+    if (current?.state === 'running') {
+        openBackgroundNotice(title, current, () => latest.get(id)?.state === 'running');
+    }
+    return { success: true };
 };

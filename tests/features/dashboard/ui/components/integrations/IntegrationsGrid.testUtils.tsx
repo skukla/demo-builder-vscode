@@ -123,6 +123,17 @@ jest.mock('@/core/ui/components/ui/Modal', () => ({
     ),
 }));
 
+// The progress modal's failure view (PL-59): the shared status display has its own
+// suite, so a stand-in shows only what the modal hands it.
+jest.mock('@/core/ui/components/feedback/StatusDisplay', () => ({
+    StatusDisplay: ({ title, message }: any) => (
+        <div data-testid="status-display">
+            <strong>{title}</strong>
+            <p>{message}</p>
+        </div>
+    ),
+}));
+
 // The Manage-APIs modal has its own suite; a stub proves the GRID's
 // single-shared-instance wiring (open-for-id / close).
 jest.mock('@/features/dashboard/ui/components/ManageApisModal', () => ({
@@ -285,7 +296,6 @@ function GridWithOperations({ cards, ...props }: GridProps & { cards: Integratio
             <IntegrationsGrid cards={cards} operations={operations} {...props} />
             <ComponentOperationModal
                 operation={operations.open}
-                status={cards.find((c) => (c.componentId ?? c.id) === operations.open?.id)}
                 onRetry={operations.retry}
                 onClose={operations.close}
             />

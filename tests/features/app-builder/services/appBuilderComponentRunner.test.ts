@@ -411,7 +411,7 @@ describe('addAppBuilderComponent partial-failure', () => {
         // The env-file write reports its own step ahead of the tail's — it runs
         // before the deploy and is otherwise silent time.
         expect(seen).toEqual([
-            'Subscribing Adobe APIs…',
+            'Subscribing Adobe APIs',
             OPERATION_STAGES.generatingMeshConfig.label,
             'Reading mesh configuration...',
             'Deploying...',
@@ -443,7 +443,7 @@ describe('addAppBuilderComponent partial-failure', () => {
             },
         });
 
-        expect(seen).toEqual(['Subscribing Adobe APIs…', 'Building…']);
+        expect(seen).toEqual(['Subscribing Adobe APIs', 'Building…']);
     });
 
     // BEHAVIOUR CHANGE (2026-08-04 consolidation): a redeploy used to REPLACE the

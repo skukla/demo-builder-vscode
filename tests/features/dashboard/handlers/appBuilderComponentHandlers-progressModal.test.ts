@@ -60,6 +60,20 @@ describe('withComponentProgress — started from the integrations screen', () =>
         });
     });
 
+    it("fills the step line with the stage's own detail when the report names none", async () => {
+        await withComponentProgress(options('modal'), async (report) => {
+            report(OPERATION_STAGES.subscribingApis.label);
+            return { success: true };
+        });
+
+        expect(mockSendComponentOperationProgress).toHaveBeenCalledWith(
+            expect.objectContaining({
+                stage: OPERATION_STAGES.subscribingApis.label,
+                step: OPERATION_STAGES.subscribingApis.detail,
+            }),
+        );
+    });
+
     it('ends with succeeded, and opens no notification', async () => {
         await withComponentProgress(options('modal'), async () => ({ success: true }));
 
