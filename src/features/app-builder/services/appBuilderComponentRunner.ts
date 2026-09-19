@@ -32,6 +32,7 @@
 
 import { recordDeployOutcome, type DeployOutcome } from './appBuilderDeployOutcome';
 import { detectAppLayout, listDeclaredPackageNames, type AppConfigLayout } from './appConfigPackages';
+import { OPERATION_STAGES } from './operationStages';
 import { deriveOwPackage } from './owPackageName';
 import type { AppDeploymentResult } from './types';
 import { isMeshComponentId } from '@/core/constants';
@@ -515,7 +516,7 @@ async function dispatchDeploy(
         try {
             // Step in the FIRST arg, matching the deploy tails' convention — the
             // caller renders arg 1 as the current step.
-            deps.onProgress?.('Generating mesh configuration...');
+            deps.onProgress?.(OPERATION_STAGES.generatingMeshConfig.label);
             await deps.writeComponentEnv(project, entry.id, componentPath);
         } catch (error) {
             // Deploying anyway is the ENOENT this step exists to prevent, so fail
@@ -561,7 +562,7 @@ async function dispatchDeploy(
     // installer cannot authenticate — the first live install proved it).
     let extraEnv: Record<string, string> | undefined;
     if (entry.lifecycle === 'app-management' && deps.resolveAppManagementEnv) {
-        deps.onProgress?.('Resolving Commerce IMS credentials...');
+        deps.onProgress?.(OPERATION_STAGES.resolvingCommerceCredentials.label);
         try {
             extraEnv = await deps.resolveAppManagementEnv(project);
         } catch (error) {
@@ -612,7 +613,10 @@ export async function addAppBuilderComponent(
         if (entry.nodeVersion) {
             // Visible, not silent: a first-time fnm install takes ~30s and the
             // progress channel is the surface every add path already has.
-            deps.onProgress?.(`Preparing Node ${entry.nodeVersion} (one-time install)...`);
+            deps.onProgress?.(
+            OPERATION_STAGES.preparingNode.label,
+            `Installing Node ${entry.nodeVersion} (one-time install)`,
+        );
             const nodeError = await deps.ensureNodeVersion?.(entry.nodeVersion);
             if (nodeError) {
                 return { success: false, error: nodeError };
@@ -621,7 +625,7 @@ export async function addAppBuilderComponent(
 
         // The subscribe's org-services fetch alone measured 43.5s cold — the
         // longest silent stretch in the chain (owner audit, 2026-08-27).
-        deps.onProgress?.('Subscribing Adobe APIs…');
+        deps.onProgress?.(OPERATION_STAGES.subscribingApis.label);
         await deps.subscribeRequiredApis(deps.catalog, project);
 
         const installed = await cloneAndInstall(project, entry, deps);
@@ -699,8 +703,10 @@ async function installIfAppManagement(
         return;
     }
     const state = project.appBuilderComponents?.[entry.id];
+    // The installer's messages carry live detail (retry rounds), so they are the STEP
+    // under one install stage — the stage keeps its expectation line while they change.
     const result = await deps.installAppManagement(project, state?.deployedUrls, (message) =>
-        deps.onProgress?.(message),
+        deps.onProgress?.(OPERATION_STAGES.installingIntoCommerce.label, message),
     );
     if (state) {
         state.installation = {
@@ -714,7 +720,10 @@ async function installIfAppManagement(
         deps.logger.warn(
             `[AppBuilderComponent Runner] ${entry.id} deployed but not installed: ${result.detail}`,
         );
-        deps.onProgress?.(result.detail ?? 'Install into Commerce did not finish.');
+        deps.onProgress?.(
+            OPERATION_STAGES.installingIntoCommerce.label,
+            result.detail ?? 'Install into Commerce did not finish.',
+        );
     }
 }
 
@@ -737,7 +746,10 @@ export async function deployAppBuilderComponent(
 
     try {
         if (entry.nodeVersion) {
-            deps.onProgress?.(`Preparing Node ${entry.nodeVersion} (one-time install)...`);
+            deps.onProgress?.(
+            OPERATION_STAGES.preparingNode.label,
+            `Installing Node ${entry.nodeVersion} (one-time install)`,
+        );
             const nodeError = await deps.ensureNodeVersion?.(entry.nodeVersion);
             if (nodeError) {
                 return { success: false, error: nodeError };
@@ -751,7 +763,7 @@ export async function deployAppBuilderComponent(
         // adobeio_api). Idempotent reconcile — a subscribed credential is a
         // no-op PUT of the same union.
         if (entry.lifecycle === 'app-management') {
-            deps.onProgress?.('Subscribing Adobe APIs…');
+            deps.onProgress?.(OPERATION_STAGES.subscribingApis.label);
             await deps.subscribeRequiredApis(deps.catalog, project);
         }
 
@@ -841,7 +853,7 @@ async function uninstallIfAppManagement(
     }
     try {
         const result = await deps.uninstallAppManagement(project, state.deployedUrls, (message) =>
-            deps.onProgress?.(message),
+            deps.onProgress?.(OPERATION_STAGES.removingFromCommerce.label, message),
         );
         if (result.status === 'failed') {
             deps.logger.warn(

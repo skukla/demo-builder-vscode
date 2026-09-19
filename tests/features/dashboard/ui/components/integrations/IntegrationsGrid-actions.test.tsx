@@ -68,8 +68,13 @@ describe('IntegrationsGrid actions', () => {
             const tile = card('custom-app', 'Not deployed');
             await user.click(within(tile).getByRole('button', { name: /^deploy$/i }));
 
-            expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+            // The flyout stays shut. The progress modal opening is the point of
+            // the Deploy (PL-59), so the check names the flyout, not any dialog.
+            expect(
+                screen.queryByRole('dialog', { name: 'custom-app details' }),
+            ).not.toBeInTheDocument();
             expect(getClient().postMessage).toHaveBeenCalledWith('deployAppBuilderComponent', {
+                progress: 'modal',
                 id: 'custom-app',
             });
         });
@@ -88,6 +93,7 @@ describe('IntegrationsGrid actions', () => {
             await user.click(within(tile).getByRole('button', { name: /^deploy$/i }));
 
             expect(getClient().postMessage).toHaveBeenCalledWith('deployAppBuilderComponent', {
+                progress: 'modal',
                 id: 'custom-app',
             });
         });
@@ -100,6 +106,7 @@ describe('IntegrationsGrid actions', () => {
             await user.click(within(panel).getByRole('button', { name: /^redeploy$/i }));
 
             expect(getClient().postMessage).toHaveBeenCalledWith('redeployAppBuilderComponent', {
+                progress: 'modal',
                 id: 'custom-app',
             });
         });
@@ -116,6 +123,7 @@ describe('IntegrationsGrid actions', () => {
             await user.click(within(tile).getByRole('button', { name: /^retry$/i }));
 
             expect(getClient().postMessage).toHaveBeenCalledWith('deployAppBuilderComponent', {
+                progress: 'modal',
                 id: 'custom-app',
             });
         });
@@ -132,6 +140,7 @@ describe('IntegrationsGrid actions', () => {
             await user.click(within(tile).getByRole('button', { name: /^update$/i }));
 
             expect(getClient().postMessage).toHaveBeenCalledWith('redeployAppBuilderComponent', {
+                progress: 'modal',
                 id: 'custom-app',
             });
         });
@@ -153,6 +162,7 @@ describe('IntegrationsGrid actions', () => {
             );
 
             expect(getClient().postMessage).toHaveBeenCalledWith('installAppBuilderComponent', {
+                progress: 'modal',
                 id: 'custom-app',
             });
         });
@@ -239,6 +249,7 @@ describe('IntegrationsGrid actions', () => {
             await user.click(within(dialog).getByRole('button', { name: /^remove$/i }));
 
             expect(getClient().postMessage).toHaveBeenCalledWith('removeAppBuilderComponent', {
+                progress: 'modal',
                 id: 'eds-accs-mesh',
             });
             // THE landmine: handleMeshAction treats every verb as "deploy", so a
@@ -267,9 +278,11 @@ describe('IntegrationsGrid actions', () => {
             await user.click(within(dialog).getByRole('button', { name: /^remove$/i }));
 
             expect(getClient().postMessage).toHaveBeenCalledWith('removeAppBuilderComponent', {
+                progress: 'modal',
                 id: 'mesh',
             });
             expect(getClient().postMessage).not.toHaveBeenCalledWith('removeAppBuilderComponent', {
+                progress: 'modal',
                 id: 'commerce-eds-mesh',
             });
         });
@@ -358,6 +371,7 @@ describe('IntegrationsGrid actions', () => {
             await user.click(within(dialog).getByRole('button', { name: /^remove$/i }));
 
             expect(getClient().postMessage).toHaveBeenCalledWith('removeAppBuilderComponent', {
+                progress: 'modal',
                 id: 'custom-app',
             });
         });
