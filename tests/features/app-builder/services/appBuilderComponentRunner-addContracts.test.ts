@@ -468,3 +468,14 @@ describe('addAppBuilderComponent — the app-management install pass reports bac
         });
     });
 });
+
+describe('addAppBuilderComponent — where a failed deploy leaves its whole output', () => {
+    it("hands the deploy the project's own logs folder", async () => {
+        const deps = createDeps();
+
+        await addAppBuilderComponent(createProject(), INTEGRATION_ENTRY, deps);
+
+        const options = (deps.deployApp as jest.Mock).mock.calls[0][4];
+        expect(options.failureLogFile).toBe(`/proj/logs/${INTEGRATION_ENTRY.id}-deploy.log`);
+    });
+});

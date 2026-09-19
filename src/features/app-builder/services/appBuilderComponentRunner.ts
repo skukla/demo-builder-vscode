@@ -204,6 +204,8 @@ export interface AppBuilderComponentRunnerDeps extends TeardownDeps {
             layout?: 'standalone' | 'extension';
             confirmToolchainRefresh?: () => Promise<boolean>;
             extraEnv?: Record<string, string>;
+            /** Where the whole deploy output goes when it fails (see appDeployment). */
+            failureLogFile?: string;
         }
     ) => Promise<AppDeploymentResult>;
     /**
@@ -638,6 +640,10 @@ async function dispatchDeploy(
             layout: entry.layout,
             confirmToolchainRefresh: deps.confirmToolchainRefresh,
             extraEnv: Object.keys(extraEnv).length > 0 ? extraEnv : undefined,
+            // The project's own logs folder, made at creation — see deployFailureLog.
+            // A plain '/' join: Node accepts it on every platform, and a `path`
+            // import here would take this file past its 15-import coupling line.
+            failureLogFile: project.path ? `${project.path}/logs/${entry.id}-deploy.log` : undefined,
         },
     );
     return result.success
@@ -841,11 +847,21 @@ export async function deployAppBuilderComponent(
     const entry = deps.catalog.find((c) => c.id === id) ?? entryFromState(id, existing);
 
     try {
+        // Transient in-flight marker (see addAppBuilderComponent): without it
+        // the PREVIOUS outcome — often an error — reads as current for the
+        // whole run. Saved BEFORE the preparation steps: the API subscribe alone
+        // ran two minutes on Bodea (2026-09-19) under a tile still reading
+        // "Deploy failed".
+        existing.status = 'deploying';
+        existing.error = undefined;
+        await deps.saveProject(project);
+
         if (entry.nodeVersion) {
             deps.onProgress?.(`Preparing Node ${entry.nodeVersion} (one-time install)...`);
             const nodeError = await deps.ensureNodeVersion?.(entry.nodeVersion);
             if (nodeError) {
-                return { success: false, error: nodeError };
+                // Thrown so the catch below records it — the marker is already saved.
+                throw new Error(nodeError);
             }
         }
 
@@ -859,13 +875,6 @@ export async function deployAppBuilderComponent(
             deps.onProgress?.('Subscribing Adobe APIs…');
             await deps.subscribeRequiredApis(entriesThatNeedApis(deps.catalog, project), project);
         }
-
-        // Transient in-flight marker (see addAppBuilderComponent): without it
-        // the PREVIOUS outcome — often an error — reads as current for the
-        // whole run.
-        existing.status = 'deploying';
-        existing.error = undefined;
-        await deps.saveProject(project);
 
         const since = new Date().toISOString();
         const deployed = await withOrgContext(targetFor(project, deps), () =>
@@ -890,7 +899,20 @@ export async function deployAppBuilderComponent(
         return { success: true };
     } catch (error) {
         deps.logger.error('[AppBuilderComponent Runner] deploy failed', error as Error);
-        return { success: false, error: readableFailure(toError(error).message, deps.logger) };
+        const reason = readableFailure(toError(error).message, deps.logger);
+        // Record it, as the deploy-failure path above does. A failure before the
+        // deploy (the API subscribe, most often) left the tile on an OLDER run's
+        // error — Bodea's integration showed a two-day-old 403 over that day's
+        // "requires selection of a product" (2026-09-19). Best-effort: the save
+        // itself may be what failed, and the caller must still get this answer.
+        const name = existing.name ?? resolveDisplayName(entry, resolveDeployInputs(project, entry));
+        recordDeployOutcome(project, entry.kind, id, errorOutcome(entry, reason, name));
+        await deps.saveProject(project).catch((saveError: unknown) =>
+            deps.logger.warn(
+                `[AppBuilderComponent Runner] could not record ${id}'s failure: ${toError(saveError).message}`,
+            ),
+        );
+        return { success: false, error: reason };
     }
 }
 
