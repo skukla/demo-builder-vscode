@@ -170,6 +170,7 @@ jest.mock('@/features/dashboard/ui/components/IntegrationSettingsModal', () => (
 import { IntegrationsGrid } from '@/features/dashboard/ui/components/integrations/IntegrationsGrid';
 import { OperationProgressModal } from '@/core/ui/components/feedback/OperationProgressModal';
 import { useComponentOperation } from '@/features/dashboard/ui/hooks/useComponentOperation';
+import { MESH_OPERATION } from '@/features/dashboard/ui/integrationsSurface/IntegrationsScreen';
 import {
     buildIntegrationCards,
     deriveMeshCard,
@@ -307,11 +308,23 @@ type GridProps = Partial<React.ComponentProps<typeof IntegrationsGrid>>;
  * dispatch and modal the SC does. (The screen's own wiring, including an Add on an
  * empty screen, is pinned in IntegrationsScreen-operationModal.test.tsx.)
  */
-function GridWithOperations({ cards, ...props }: GridProps & { cards: IntegrationCardModel[] }) {
+function GridWithOperations({
+    cards,
+    meshToModal,
+    ...props
+}: GridProps & { cards: IntegrationCardModel[]; meshToModal?: boolean }) {
     const operations = useComponentOperation();
+    // The screen's own mesh wiring, through the screen's own constant: the deploy
+    // starts a real operation instead of a spy, so the grid's reopen has one to find.
+    const onDeployMesh = meshToModal ? () => operations.start(MESH_OPERATION) : props.onDeployMesh;
     return (
         <>
-            <IntegrationsGrid cards={cards} operations={operations} {...props} />
+            <IntegrationsGrid
+                cards={cards}
+                operations={operations}
+                {...props}
+                onDeployMesh={onDeployMesh}
+            />
             <OperationProgressModal
                 operation={operations.open}
                 onRetry={operations.retry}
@@ -321,11 +334,13 @@ function GridWithOperations({ cards, ...props }: GridProps & { cards: Integratio
     );
 }
 
-export function renderCards(cards: IntegrationCardModel[], props: GridProps = {}) {
+type RenderCardsProps = GridProps & { meshToModal?: boolean };
+
+export function renderCards(cards: IntegrationCardModel[], props: RenderCardsProps = {}) {
     const result = render(<GridWithOperations cards={cards} {...props} />);
     return {
         ...result,
-        setCards: (next: IntegrationCardModel[], nextProps: GridProps = props) =>
+        setCards: (next: IntegrationCardModel[], nextProps: RenderCardsProps = props) =>
             result.rerender(<GridWithOperations cards={next} {...nextProps} />),
     };
 }
@@ -333,9 +348,10 @@ export function renderCards(cards: IntegrationCardModel[], props: GridProps = {}
 export function renderGrid({
     onDeployMesh = jest.fn(),
     onReAuthenticate = jest.fn(),
+    meshToModal,
     ...options
-}: RenderOptions = {}) {
-    const result = renderCards(cardsFor(options), { onDeployMesh, onReAuthenticate });
+}: RenderOptions & { meshToModal?: boolean } = {}) {
+    const result = renderCards(cardsFor(options), { onDeployMesh, onReAuthenticate, meshToModal });
     return { ...result, onDeployMesh, onReAuthenticate };
 }
 

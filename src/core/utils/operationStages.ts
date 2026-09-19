@@ -91,6 +91,21 @@ export const OPERATION_STAGES = {
         expectation: 'Usually under a minute, longer if Commerce asks for a retry',
         detail: "Through Commerce's App Management",
     },
+    readingMeshConfig: {
+        label: 'Reading the mesh config',
+        expectation: 'Usually a few seconds',
+        detail: "The mesh's mesh.json",
+    },
+    deployingMesh: {
+        label: 'Deploying the mesh',
+        expectation: 'Usually 1–2 minutes',
+        detail: 'Running aio api-mesh',
+    },
+    verifyingMesh: {
+        label: 'Checking the mesh is live',
+        expectation: 'Up to a couple of minutes while Adobe finishes',
+        detail: 'Waiting for Adobe to report it deployed',
+    },
     removingFromCommerce: {
         label: 'Removing from Commerce',
         expectation: 'Usually under a minute, longer if Commerce asks for a retry',

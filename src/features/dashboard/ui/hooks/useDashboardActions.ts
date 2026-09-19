@@ -41,8 +41,6 @@ export interface UseDashboardActionsReturn {
      * settle delay) to the extension rather than firing stop then start here.
      */
     handleRestartDemo: () => void;
-    /** Deploy API Mesh */
-    handleDeployMesh: () => void;
     /** Sync storefront — git push + Helix preview/publish (EDS projects only) */
     handleSyncStorefront: () => void;
     /** Refresh DA.live block library from component-definition.json (EDS projects only) */
@@ -106,11 +104,6 @@ export function useDashboardActions({
     const handleRestartDemo = useCallback(() => {
         setIsTransitioning(true);
         webviewClient.postMessage('restartDemo');
-    }, [setIsTransitioning]);
-
-    const handleDeployMesh = useCallback(() => {
-        setIsTransitioning(true);
-        webviewClient.postMessage('deployMesh');
     }, [setIsTransitioning]);
 
     const handleSyncStorefront = useCallback(() => {
@@ -197,7 +190,6 @@ export function useDashboardActions({
         handleStartDemo,
         handleStopDemo,
         handleRestartDemo,
-        handleDeployMesh,
         handleSyncStorefront,
         handleRefreshBlockLibrary,
         handleOpenBrowser,

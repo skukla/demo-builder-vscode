@@ -27,7 +27,7 @@ import {
     type IntegrationCardModel,
 } from '../components/integrations/integrationCardModel';
 import { IntegrationsGrid } from '../components/integrations/IntegrationsGrid';
-import { useComponentOperation } from '../hooks/useComponentOperation';
+import { type ComponentOperation, useComponentOperation } from '../hooks/useComponentOperation';
 import { isMeshBusy, useDashboardStatus } from '../hooks/useDashboardStatus';
 import { useLiveAppBuilderComponents } from '../hooks/useLiveAppBuilderComponents';
 import { useLiveDestination } from '../hooks/useLiveDestination';
@@ -53,6 +53,23 @@ import type { IntegrationsInitialData } from '@/types/webviewPayloads';
 
 /** Module-level stable empty catalog — avoids a new array ref each render. */
 const EMPTY_CATALOG: AppBuilderComponentCatalogEntry[] = [];
+
+/**
+ * The mesh deploy as the progress modal knows it (PL-59 slice 1). Its own entry
+ * because the card-action tables key off an App Builder component id and a verb,
+ * and the mesh has neither: one message, one title.
+ *
+ * The id is the mesh CARD's id, which is also the extension's `MESH_OPERATION_ID`
+ * (`features/mesh/services/deployMeshWithFeedback.ts`) — so the pushes, the modal
+ * and reopening a running tile all name the same operation.
+ */
+export const MESH_OPERATION: Omit<ComponentOperation, 'run' | 'resume'> = {
+    id: 'mesh',
+    name: 'API Mesh',
+    message: 'deployMesh',
+    title: 'Deploying API Mesh',
+    failureTitle: "Couldn't deploy API Mesh",
+};
 
 /**
  * Init payload (`IntegrationsInitialData`), relaxed to Partial: the wire
@@ -198,9 +215,12 @@ export function IntegrationsScreen({
         webviewClient.postMessage('showProjectDashboard');
     }, []);
 
+    // The mesh deploy takes the same road as an integration's: the screen's
+    // progress modal, which hands over to a notification on "Run in background".
+    const startOperation = operations.start;
     const handleDeployMesh = useCallback((): void => {
-        webviewClient.postMessage('deployMesh');
-    }, []);
+        startOperation(MESH_OPERATION);
+    }, [startOperation]);
 
     const handleReAuthenticate = useCallback((): void => {
         webviewClient.postMessage('reAuthenticate');

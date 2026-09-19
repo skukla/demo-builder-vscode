@@ -12,6 +12,7 @@ import {
     cardsFor,
     DEPLOYED_INTEGRATION,
     getClient,
+    MESH_COMPONENT,
     renderGrid,
     resetGridMocks,
     setupUser,
@@ -230,5 +231,40 @@ describe('the progress modal', () => {
 
         expect(screen.queryByRole('dialog', { name: 'Deploying custom-app' })).not.toBeInTheDocument();
         expect(screen.getByRole('dialog', { name: 'custom-app details' })).toBeInTheDocument();
+    });
+});
+
+// The mesh deploy (PL-59 slice 1). It is keyed by the mesh CARD's id, not by a
+// component id — a first deploy happens before any mesh component exists — so
+// reopening a running mesh tile has to look the operation up by that id.
+describe('the mesh deploy', () => {
+    // With a mesh COMPONENT present, the card's componentId is that component's
+    // id while its own id stays 'mesh' — the pair the reopen has to tell apart.
+    const meshOptions = {
+        withMesh: true,
+        meshToModal: true,
+        appBuilderComponents: { 'eds-accs-mesh': { ...MESH_COMPONENT, status: 'not-deployed' as const } },
+        meshStatus: 'not-deployed' as const,
+        meshStatusText: 'Not deployed',
+    };
+
+    it('opens the modal titled for the mesh, and reopens it from the running tile', async () => {
+        const user = setupUser();
+        const { setCards } = renderGrid(meshOptions);
+
+        const tile = card('API Mesh', 'Not deployed');
+        await user.click(within(tile).getByRole('button', { name: /^deploy$/i }));
+
+        expect(getClient().postMessage).toHaveBeenCalledWith('deployMesh', {
+            id: 'mesh',
+            progress: 'modal',
+        });
+        const modal = screen.getByRole('dialog', { name: 'Deploying API Mesh' });
+        await user.click(within(modal).getByRole('button', { name: 'Run in background' }));
+
+        setCards(cardsFor({ ...meshOptions, meshStatus: 'deploying', meshStatusText: 'Deploying…' }));
+        await user.click(card('API Mesh', 'Deploying…'));
+
+        expect(screen.getByRole('dialog', { name: 'Deploying API Mesh' })).toBeInTheDocument();
     });
 });

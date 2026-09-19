@@ -20,6 +20,7 @@ import { updateMeshState } from './stalenessDetector';
 import type { SecretStorageLike } from '@/core/di/serviceLocator';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell/orgContextEnv';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { sanitizeErrorForLogging } from '@/core/validation/SensitiveDataRedactor';
 import { recordDeployOutcome } from '@/features/app-builder/services/appBuilderDeployOutcome';
 import { ensureMeshApiSubscribed } from '@/features/app-builder/services/ensureMeshApiSubscribed';
@@ -83,6 +84,7 @@ export async function deployMeshHeadless(
     const { authManager } = deps;
 
     await onStatus?.('deploying', 'Checking requirements...');
+    onProgress?.(OPERATION_STAGES.checkingRequirements.label);
 
     // PRE-FLIGHT: auth + correct org context (the shared gate). Passes silently
     // when already authed; only prompts when not (accepted headless behavior,
@@ -163,7 +165,7 @@ export async function deployMeshHeadless(
             // with its existing file, not stop working. Warn loudly instead.
             const meshComponentId = getMeshComponentId(project);
             if (meshComponentId) {
-                onProgress?.('Generating mesh configuration...');
+                onProgress?.(OPERATION_STAGES.generatingMeshConfig.label);
                 try {
                     const { regenerateComponentEnvFile } = await import(
                         '@/features/project-creation/helpers/envFileGenerator'
@@ -186,6 +188,7 @@ export async function deployMeshHeadless(
             }
 
             // Bounded pre-deploy subscribe (API Mesh API + baseline) BEFORE deploying.
+            onProgress?.(OPERATION_STAGES.subscribingApis.label);
             await ensureMeshApiSubscribed({ project, authService: authManager, logger });
 
             // Create-or-update from REMOTE truth — the shared rule lives in

@@ -94,7 +94,6 @@ describe('useDashboardActions', () => {
 
             expect(result.current.handleStartDemo).toBeDefined();
             expect(result.current.handleStopDemo).toBeDefined();
-            expect(result.current.handleDeployMesh).toBeDefined();
             expect(result.current.handleOpenBrowser).toBeDefined();
             expect(result.current.handleConfigure).toBeDefined();
             expect(result.current.handleOpenDevConsole).toBeDefined();
@@ -112,7 +111,6 @@ describe('useDashboardActions', () => {
 
             expect(typeof result.current.handleStartDemo).toBe('function');
             expect(typeof result.current.handleStopDemo).toBe('function');
-            expect(typeof result.current.handleDeployMesh).toBe('function');
             expect(typeof result.current.handleOpenBrowser).toBe('function');
             expect(typeof result.current.handleConfigure).toBe('function');
             expect(typeof result.current.handleOpenDevConsole).toBe('function');
@@ -183,19 +181,6 @@ describe('useDashboardActions', () => {
             });
 
             expect(mockSetIsOpeningBrowser).toHaveBeenCalledWith(false);
-        });
-    });
-
-    describe('Mesh Deploy Action', () => {
-        it('should set transitioning state and send deployMesh message', () => {
-            const { result } = renderActionsHook();
-
-            act(() => {
-                result.current.handleDeployMesh();
-            });
-
-            expect(mockSetIsTransitioning).toHaveBeenCalledWith(true);
-            expect(mockPostMessage).toHaveBeenCalledWith('deployMesh');
         });
     });
 
@@ -485,10 +470,9 @@ describe('useDashboardActions', () => {
                 result.current.handleStartDemo();
                 result.current.handleStopDemo();
                 result.current.handleRestartDemo();
-                result.current.handleDeployMesh();
             });
 
-            expect(secondSetter).toHaveBeenCalledTimes(4);
+            expect(secondSetter).toHaveBeenCalledTimes(3);
             expect(firstSetter).not.toHaveBeenCalled();
         });
 
@@ -550,7 +534,6 @@ describe('useDashboardActions', () => {
             // All handlers should be stable (same reference)
             expect(result.current.handleStartDemo).toBe(initialHandlers.handleStartDemo);
             expect(result.current.handleStopDemo).toBe(initialHandlers.handleStopDemo);
-            expect(result.current.handleDeployMesh).toBe(initialHandlers.handleDeployMesh);
             expect(result.current.handleConfigure).toBe(initialHandlers.handleConfigure);
             expect(result.current.handleOpenDevConsole).toBe(initialHandlers.handleOpenDevConsole);
             expect(result.current.handleDeleteProject).toBe(initialHandlers.handleDeleteProject);

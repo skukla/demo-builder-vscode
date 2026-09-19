@@ -56,6 +56,8 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import {
     handleBackgroundOperation,
     handleGetOperationProgress,
+    narrateOutcomeToModal,
+    progressSurfaceOf,
 } from '@/core/vscode/operationProgress';
 import {
     handleAddAppBuilderComponent,
@@ -78,6 +80,8 @@ import {
     handleListConsoleApis,
     handleSetConsoleApis,
 } from '@/features/dashboard/handlers/consoleApiHandlers';
+import { deployMeshFromScreen } from '@/features/mesh/handlers/deployHandler';
+import { MESH_OPERATION_ID } from '@/features/mesh/services/deployMeshWithFeedback';
 import {
     handleGetErpStatus,
     handleOpenErpScreen,
@@ -203,12 +207,20 @@ export const handleRestartDemo: MessageHandler = async (context) => {
 };
 
 /**
- * Handle 'deployMesh' message - Deploy API mesh
+ * Handle 'deployMesh' — deploy the API Mesh. From a button that hosts the progress
+ * modal (`progress: 'modal'`), it reports there and answers with the outcome (PL-59
+ * phase 2, rule R1); otherwise it runs the palette command, with its notification.
  */
-export const handleDeployMesh: MessageHandler = async () => {
-    await vscode.commands.executeCommand('demoBuilder.deployMesh');
-    return { success: true };
-};
+export const handleDeployMesh: MessageHandler<{ id?: string; progress?: 'modal' }> = narrateOutcomeToModal(
+    async (context, payload) => {
+        if (progressSurfaceOf(payload) !== 'modal') {
+            await vscode.commands.executeCommand('demoBuilder.deployMesh');
+            return { success: true };
+        }
+        return deployMeshFromScreen(context, payload?.id ?? MESH_OPERATION_ID);
+    },
+    (payload) => payload?.id ?? MESH_OPERATION_ID,
+);
 
 /**
  * Handle 'openDataInstaller' — open the Data Installer surface.

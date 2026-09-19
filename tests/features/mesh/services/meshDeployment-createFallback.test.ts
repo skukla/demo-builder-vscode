@@ -360,7 +360,7 @@ describe('MeshDeployment — update→create fallback (remote mesh vanished)', (
         expect(result.success).toBe(false);
     });
 
-    it('reports the fallback via progress so the user sees "creating instead"', async () => {
+    it('reports the fallback via progress so the SC sees it is creating one', async () => {
         routeCommands({
             update: { code: 2, stdout: '', stderr: NO_MESH_FOUND_STDERR },
             create: { code: 0, stdout: 'Successfully created mesh' },
@@ -376,6 +376,6 @@ describe('MeshDeployment — update→create fallback (remote mesh vanished)', (
         );
 
         const progressText = onProgress.mock.calls.flat().filter(Boolean).join(' ');
-        expect(progressText.toLowerCase()).toContain('creating instead');
+        expect(progressText.toLowerCase()).toContain('mesh not found, creating it');
     });
 });

@@ -14,11 +14,17 @@
  * what each does with the RESULT: toasts there, a tool response here.
  */
 
+import * as vscode from 'vscode';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import type { MeshDeployBlock } from '@/features/mesh/services/deployMeshHeadless';
-import { deployMeshWithFeedback } from '@/features/mesh/services/deployMeshWithFeedback';
+import {
+    deployMeshWithFeedback,
+    type DeployMeshWithFeedbackDeps,
+} from '@/features/mesh/services/deployMeshWithFeedback';
+import { meshDeployLock } from '@/features/mesh/services/meshDeployLock';
+import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
-import type { MessageHandler } from '@/types/handlers';
+import type { HandlerContext, HandlerResponse, MessageHandler } from '@/types/handlers';
 
 /** Actionable message per guard block (the tool has no UI to recover inline). */
 const BLOCK_MESSAGE: Record<MeshDeployBlock, string> = {
@@ -30,6 +36,19 @@ const BLOCK_MESSAGE: Record<MeshDeployBlock, string> = {
     'no-mesh': 'This project has no API Mesh component to deploy.',
 };
 
+/** The deploy's inputs, assembled once for both doors into it. */
+function meshDeps(context: HandlerContext, project: Project): DeployMeshWithFeedbackDeps {
+    return {
+        authManager: ServiceLocator.getAuthenticationService(),
+        secrets: ServiceLocator.getSecretStorage() ?? undefined,
+        commandManager: ServiceLocator.getCommandExecutor(),
+        project,
+        stateManager: context.stateManager,
+        logger: context.logger,
+        extensionPath: context.context.extensionPath,
+    };
+}
+
 /**
  * Handle 'deploy-api-mesh' — deploy (or redeploy) the current project's API Mesh.
  */
@@ -39,15 +58,7 @@ export const handleDeployApiMesh: MessageHandler = async (context) => {
         return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
     }
 
-    const result = await deployMeshWithFeedback({
-        authManager: ServiceLocator.getAuthenticationService(),
-        secrets: ServiceLocator.getSecretStorage() ?? undefined,
-        commandManager: ServiceLocator.getCommandExecutor(),
-        project,
-        stateManager: context.stateManager,
-        logger: context.logger,
-        extensionPath: context.context.extensionPath,
-    });
+    const result = await deployMeshWithFeedback(meshDeps(context, project));
 
     if (result.success) {
         return { success: true, data: { meshId: result.meshId, endpoint: result.endpoint } };
@@ -57,3 +68,34 @@ export const handleDeployApiMesh: MessageHandler = async (context) => {
     }
     return { success: false, error: result.error || 'Mesh deployment failed' };
 };
+
+/**
+ * Deploy the mesh from a button on a screen, reporting to that screen's progress modal
+ * (PL-59 phase 2, rule R1). Pattern B: it answers with the outcome; the modal is
+ * told as it goes. One deploy at a time, shared with the palette command.
+ *
+ * @param operationId - the id the screen named the operation by
+ */
+export async function deployMeshFromScreen(
+    context: HandlerContext,
+    operationId: string,
+): Promise<HandlerResponse> {
+    if (meshDeployLock.isLocked()) {
+        return { success: false, error: 'A mesh deploy is already running.' };
+    }
+    const project = await context.stateManager.getCurrentProject();
+    if (!project) {
+        return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
+    }
+    return meshDeployLock.run(async () => {
+        const result = await deployMeshWithFeedback(meshDeps(context, project), {
+            progress: 'modal',
+            operationId,
+        });
+        if (result.success) {
+            await vscode.commands.executeCommand('demoBuilder._internal.meshActionTaken');
+            return { success: true, data: { meshId: result.meshId, endpoint: result.endpoint } };
+        }
+        return { success: false, error: result.error };
+    });
+}

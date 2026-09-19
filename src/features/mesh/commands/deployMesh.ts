@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
+import { meshDeployLock } from '../services/meshDeployLock';
 import { BaseCommand } from '@/core/base/baseCommand';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import { ExecutionLock } from '@/core/utils/executionLock';
 import type { Logger } from '@/types/logger';
 import type { StateManager } from '@/types/state';
 
@@ -18,21 +18,18 @@ import type { StateManager } from '@/types/state';
  * spinner, so the two never narrate the same step at the same moment.
  */
 export class DeployMeshCommand extends BaseCommand {
-    /** Execution lock to prevent duplicate concurrent execution */
-    private static lock = new ExecutionLock('DeployMesh');
-
     constructor(context: vscode.ExtensionContext, stateManager: StateManager, logger: Logger) {
         super(context, stateManager, logger);
     }
 
     async execute(): Promise<void> {
         // Prevent duplicate concurrent execution
-        if (DeployMeshCommand.lock.isLocked()) {
+        if (meshDeployLock.isLocked()) {
             this.logger.debug('[Mesh Deployment] Already in progress');
             return;
         }
 
-        await DeployMeshCommand.lock.run(async () => {
+        await meshDeployLock.run(async () => {
             const { ProjectDashboardWebviewCommand } = await import(
                 '@/features/dashboard/commands/showDashboard'
             );
@@ -49,6 +46,7 @@ export class DeployMeshCommand extends BaseCommand {
                 const { deployMeshWithFeedback } = await import(
                     '../services/deployMeshWithFeedback'
                 );
+                const { meshFailureForPerson } = await import('../services/meshDeployWording');
 
                 // The notification + card bridges live in that wrapper, shared
                 // with the deploy_mesh MCP tool so an agent-triggered deploy looks
@@ -78,36 +76,19 @@ export class DeployMeshCommand extends BaseCommand {
                 if (result.blockedBy) {
                     await ProjectDashboardWebviewCommand.refreshStatus();
 
-                    if (result.blockedBy === 'auth' || result.blockedBy === 'org') {
-                        if (!result.cancelled) {
-                            vscode.window.showErrorMessage(
-                                result.blockedBy === 'org'
-                                    ? 'Still signed into the wrong Adobe organization. ' +
-                                          'Close any other Adobe browser tab, then try again.'
-                                    : 'Sign-in failed or was cancelled. Please try again.',
-                            );
-                        }
-                        return;
-                    }
+                    // One wording for a person, shared with the screen's progress modal.
+                    const reason = meshFailureForPerson(result);
                     if (result.blockedBy === 'no-mesh') {
-                        vscode.window.showWarningMessage(
-                            'This project does not have an API Mesh component.',
-                        );
-                        return;
+                        vscode.window.showWarningMessage(reason);
+                    } else if (!result.cancelled) {
+                        vscode.window.showErrorMessage(reason);
                     }
-                    // permission
-                    vscode.window.showErrorMessage(
-                        result.error ||
-                            'Your account lacks Developer or System Admin role for this organization. ' +
-                                'API Mesh deployment requires App Builder access. ' +
-                                'Contact your administrator to restore access.',
-                    );
                     return;
                 }
 
                 // Deploy failure: simple error with a View Logs jump.
                 const selection = await vscode.window.showErrorMessage(
-                    'Mesh deployment failed. Check logs for details.',
+                    meshFailureForPerson(result),
                     'View Logs',
                 );
                 if (selection === 'View Logs') {
