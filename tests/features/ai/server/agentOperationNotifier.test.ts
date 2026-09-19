@@ -50,6 +50,7 @@ import {
     createAgentConsentGate,
     createAgentOperationNotifier,
 } from '@/features/ai/server/agentOperationNotifier';
+import { asText } from '@/features/ai/server/mcpToolResult';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 import type { StateManager } from '@/types/state';
@@ -90,15 +91,54 @@ describe('createAgentOperationNotifier', () => {
         expect(mockShowWarningMessage).not.toHaveBeenCalled();
     });
 
-    it('ends the title without an ellipsis, since VS Code appends ": <phase>" to it', async () => {
+    // VS Code renders "title: phase", so a colon in the title made two
+    // (owner, 2026-09-19).
+    it('titles the card without a colon or ellipsis of its own', async () => {
         const notifier = createAgentOperationNotifier(logger);
 
         await notifier('sync_storefront', async () => ({ ok: true }));
 
         expect(mockWithProgress).toHaveBeenCalledWith(
-            expect.objectContaining({ title: 'Agent: Pushing the storefront code to GitHub' }),
+            expect.objectContaining({ title: 'Agent · Pushing the storefront code to GitHub' }),
             expect.any(Function)
         );
+    });
+
+    it('drops a trailing ellipsis from a phase — the spinner already says it is working', async () => {
+        const notifier = createAgentOperationNotifier(logger);
+
+        await notifier('redeploy_integration', async (report) => {
+            report('Subscribing Adobe APIs…');
+            report('Generating mesh configuration...');
+            return undefined;
+        });
+
+        expect(mockProgressReport.mock.calls).toEqual([
+            [{ message: 'Subscribing Adobe APIs' }],
+            [{ message: 'Generating mesh configuration' }],
+        ]);
+    });
+
+    it('says the call is waiting on the user, not done, when it hands back', async () => {
+        const notifier = createAgentOperationNotifier(logger);
+
+        await notifier('republish', async () => asText({ needsAuth: 'github', message: 'for the agent' }));
+
+        expect(mockShowWarningMessage).toHaveBeenCalledWith(
+            'Demo Builder — Republishing the storefront configuration is waiting on you: Sign in to GitHub.'
+        );
+        expect(mockSetStatusBarMessage).not.toHaveBeenCalled();
+    });
+
+    it('lands a failed ANSWER as a failure, as it does a throw', async () => {
+        const notifier = createAgentOperationNotifier(logger);
+
+        await notifier('republish', async () => asText({ success: false, error: 'CDN said no' }));
+
+        expect(mockShowWarningMessage).toHaveBeenCalledWith(
+            'Demo Builder — Republishing the storefront configuration failed: CDN said no'
+        );
+        expect(mockSetStatusBarMessage).not.toHaveBeenCalled();
     });
 
     it('lands a failure as a warning toast and rethrows', async () => {

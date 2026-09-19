@@ -16,7 +16,8 @@
  *   exactly like the dashboard button for the same work would.
  * - WHEN it ends: the OUTCOME lands in the window — a status-bar message on
  *   success (quiet; agent bursts must not stack toasts), a warning toast on
- *   failure. The agent's own report cannot be relied on to reach the user:
+ *   failure or when the call is waiting on the user (a sign-in hand-back,
+ *   read by `agentOutcome`). The agent's own report cannot be relied on to reach the user:
  *   a disconnected client or a closed chat swallows it, and both happened
  *   live the day this was built.
  *
@@ -28,6 +29,7 @@
 
 import * as vscode from 'vscode';
 import { alertCopyFor } from './agentAlertCopy';
+import { outcomeOf, type AgentOutcome } from './agentOutcome';
 import { buildConsentPrompt } from './consentText';
 import type { ConsentVerdict } from './inExtensionMcpServer';
 import { asRawText } from './mcpToolResult';
@@ -204,6 +206,29 @@ export function createAgentConsentGate(
     };
 }
 
+/** A phase's own "…" or "...": the notification's spinner already says it is working. */
+const TRAILING_ELLIPSIS = /\s*(…|\.\.\.)$/;
+
+/**
+ * Land a returned call's outcome in the window. Only a clean finish is quiet: a
+ * hand-back and a failed answer are both things the user must not miss, and
+ * both used to read as "— done" because neither throws (see `agentOutcome`).
+ */
+function landOutcome(toolName: string, outcome: AgentOutcome, logger: Logger): void {
+    if (outcome.kind === 'done') {
+        vscode.window.setStatusBarMessage(`$(check) ${label(toolName)} — done`, TIMEOUTS.STATUS_BAR_SUCCESS);
+        return;
+    }
+    if (outcome.kind === 'needsUser') {
+        void vscode.window.showWarningMessage(
+            `Demo Builder — ${label(toolName)} is waiting on you: ${outcome.text}.`,
+        );
+        return;
+    }
+    logger.warn(`[MCP] agent operation ${toolName} answered a failure: ${outcome.text}`);
+    void vscode.window.showWarningMessage(`Demo Builder — ${label(toolName)} failed: ${outcome.text}`);
+}
+
 /**
  * Build the notifier the extension passes to `InExtensionMcpServer`.
  *
@@ -222,14 +247,13 @@ export function createAgentOperationNotifier(
             vscode.window.withProgress(
                 {
                     location: vscode.ProgressLocation.Notification,
-                    // "Agent:" and nothing more — the old "Demo Builder — agent:"
+                    // "Agent" and nothing more — the old "Demo Builder — agent:"
                     // prefix plus the phase message wrapped every card onto two
                     // lines (owner feedback, 2026-08-27). The source is already
-                    // on the card ("Source: Adobe Demo Builder"). No trailing
-                    // ellipsis: VS Code renders `title: message`, and the phase
-                    // messages carry their own, so one here read "…: Subscribing
-                    // Adobe APIs…" (owner, 2026-09-16).
-                    title: `Agent: ${label(toolName)}`,
+                    // on the card ("Source: Adobe Demo Builder"). No colon and no
+                    // ellipsis: VS Code renders `title: message` itself, so either
+                    // one here doubled it (owner, 2026-09-16 and 2026-09-19).
+                    title: `Agent · ${label(toolName)}`,
                     cancellable: false,
                 },
                 async (progress) => {
@@ -238,11 +262,10 @@ export function createAgentOperationNotifier(
                         // phase strings reach this notification. Previously `run`
                         // took nothing, so the notification could only ever show
                         // the tool's title while the phases went nowhere.
-                        const result = await run((message) => progress.report({ message }));
-                        vscode.window.setStatusBarMessage(
-                            `$(check) ${label(toolName)} — done`,
-                            TIMEOUTS.STATUS_BAR_SUCCESS,
+                        const result = await run((message) =>
+                            progress.report({ message: message.replace(TRAILING_ELLIPSIS, '') }),
                         );
+                        landOutcome(toolName, outcomeOf(result), logger);
                         return result;
                     } catch (error) {
                         const message = error instanceof Error ? error.message : String(error);
