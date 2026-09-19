@@ -62,12 +62,12 @@ export const OPERATION_STAGES = {
         detail: 'Removing it from Adobe I/O Runtime',
     },
     generatingMeshConfig: {
-        label: 'Generating mesh configuration',
+        label: 'Building the mesh config',
         expectation: 'Usually a few seconds',
         detail: "From the project's Commerce settings",
     },
     resolvingCommerceCredentials: {
-        label: 'Resolving Commerce IMS credentials',
+        label: 'Getting Commerce access',
         expectation: 'Usually a few seconds',
         detail: "For the mesh's Commerce connection",
     },
@@ -92,7 +92,7 @@ export const OPERATION_STAGES = {
         detail: "Through Commerce's App Management",
     },
     removingFromCommerce: {
-        label: 'Removing the app from Commerce',
+        label: 'Removing from Commerce',
         expectation: 'Usually under a minute, longer if Commerce asks for a retry',
         detail: "Through Commerce's App Management",
     },

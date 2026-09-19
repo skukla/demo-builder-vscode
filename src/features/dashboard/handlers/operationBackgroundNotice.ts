@@ -25,14 +25,15 @@ interface Notice {
 const notices = new Map<string, Notice>();
 
 /**
- * The notification's line for a progress payload: the step alone, or the stage when
- * there is none. One short line, as the operation's own notification has always
- * shown — joining stage and step wrapped the card onto two lines (owner,
- * 2026-08-27; the rule is written on `withComponentProgress`). VS Code draws the
+ * The notification's line for a progress payload: the STAGE, never the step or
+ * detail. The stage is the short set of words, capped in `operationStages` so it
+ * fits after the title; the step and detail are the long set, written to sit under
+ * the stage in the modal. A notification showing a detail alone read as "The APIs
+ * on the workspace's credent…" (owner screenshot, 2026-09-19). VS Code draws the
  * notification at a fixed width, so there is no room to buy.
  */
 function lineFor(payload: ComponentOperationProgressPayload): string | undefined {
-    return payload.step ?? payload.stage;
+    return payload.stage;
 }
 
 /**

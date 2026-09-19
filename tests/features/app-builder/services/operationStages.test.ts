@@ -41,6 +41,17 @@ describe('OPERATION_STAGES', () => {
         }
     });
 
+    // The label is the SHORT set: it is all a background notification shows, after a
+    // title that already takes ~29 of the ~64 characters VS Code draws before cutting
+    // the line off (owner screenshot, 2026-09-19). The detail is the long set.
+    it('keeps every label to 25 characters, so a notification shows it whole', () => {
+        const long = Object.values(OPERATION_STAGES)
+            .map((stage) => stage.label)
+            .filter((label) => label.length > 25);
+
+        expect(long).toEqual([]);
+    });
+
     it('never gives two stages the same label, so a lookup is unambiguous', () => {
         const labels = Object.values(OPERATION_STAGES).map((stage) => stage.label);
 
