@@ -51,7 +51,7 @@ server IS — transport, lifecycle, scoping, security — is in
 
 | Tool | | What it does |
 |---|---|---|
-| `create_adobe_project` |  | Create an Adobe Developer Console project in the selected org (select_org first). Returns the project, or why it could not be created. |
+| `create_adobe_project` |  | Create an Adobe Developer Console project in the selected org (select_org first, unless the sign-in reaches only one org). Returns the project, or why it could not be created. |
 | `create_adobe_workspace` |  | Create a workspace in the SELECTED Adobe project (select_org and select_project first). |
 | `delete_adobe_project` | **confirm** | Permanently delete an Adobe Console project and everything in it (irreversible). Requires confirm:true and confirmName equal to the project name. |
 | `delete_adobe_workspace` | **confirm** | Delete a workspace from the SELECTED Adobe project (select_org and select_project first). Requires confirm:true and confirmName equal to the workspace name. |

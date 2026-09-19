@@ -9,8 +9,10 @@
  */
 
 const mockGetAdobeTarget = jest.fn();
+const mockSetAdobeTarget = jest.fn();
 jest.mock('@/features/ai/server/adobeTargetStore', () => ({
     getAdobeTarget: () => mockGetAdobeTarget(),
+    setAdobeTarget: (t: unknown) => mockSetAdobeTarget(t),
 }));
 
 const mockTeardown = jest.fn();
@@ -34,6 +36,10 @@ import { createMockAuthenticationService } from '../../../helpers/authentication
 const createProject = jest.fn();
 const createWorkspace = jest.fn();
 const isAuthenticated = jest.fn();
+/** Two orgs by default: with no selection, a tool must still ask which. */
+const getOrganizations = jest.fn();
+const ORG_ONE = { id: 'org-1', code: 'C1@AdobeOrg', name: 'Org One' };
+const ORG_TWO = { id: 'org-2', code: 'C2@AdobeOrg', name: 'Org Two' };
 
 function serve(opts: { authed?: boolean; noManager?: boolean } = {}) {
     const tools = new Map<string, (a: unknown) => Promise<{ content: Array<{ text: string }> }>>();
@@ -46,6 +52,7 @@ function serve(opts: { authed?: boolean; noManager?: boolean } = {}) {
                       isAuthenticated,
                       createProject,
                       createWorkspace,
+                      getOrganizations,
                   }),
             logger: createMockLogger(),
         });
@@ -132,6 +139,7 @@ describe('tool descriptors', () => {
 beforeEach(() => {
     jest.clearAllMocks();
     mockGetAdobeTarget.mockReturnValue({ orgId: 'org-1', projectId: 'proj-1' });
+    getOrganizations.mockResolvedValue([ORG_ONE, ORG_TWO]);
     createProject.mockResolvedValue({ id: 'p9', name: 'New Project' });
     createWorkspace.mockResolvedValue({ id: 'w9', name: 'dev' });
     mockTeardown.mockResolvedValue({
@@ -361,6 +369,26 @@ describe('delete_adobe_project', () => {
 
         expect(out.error).toMatch(/select_org/);
         expect(mockTeardown).not.toHaveBeenCalled();
+    });
+
+    // 2026-09-19: an agent whose sign-in reached ONE org was told to select it.
+    it('deletes in the only org the sign-in reaches when none is selected', async () => {
+        mockGetAdobeTarget.mockReturnValue(undefined);
+        getOrganizations.mockResolvedValue([ORG_ONE]);
+
+        const out = await serve()('delete_adobe_project', { ...ARGS, confirm: true, confirmName: 'Doomed' });
+
+        expect(mockTeardown).toHaveBeenCalledWith(
+            expect.anything(),
+            { orgId: 'org-1', projectId: 'proj-1', projectTitle: 'Doomed' },
+            expect.any(Function)
+        );
+        expect(mockSetAdobeTarget).toHaveBeenCalledWith({
+            orgId: 'org-1',
+            orgCode: 'C1@AdobeOrg',
+            orgName: 'Org One',
+        });
+        expect(out).toEqual({ deleted: true, project: 'Doomed' });
     });
 
     it('hands off a fully confirmed delete when not signed in', async () => {

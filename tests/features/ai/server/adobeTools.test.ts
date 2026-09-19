@@ -120,8 +120,19 @@ describe('registerAdobeTools', () => {
         const server = fakeServer();
         registerAdobeTools(server, ctxFactoryWith(auth));
         const res = await server.call('select_project', { projectId: 'proj-1' });
-        expect(res.error).toMatch(/select_org first/);
+        expect(res.error).toMatch(/reaches 2 orgs.*select_org/);
         expect(getAdobeTarget()).toBeUndefined();
+    });
+
+    it('select_project uses the only org the sign-in reaches when none is selected', async () => {
+        const auth = makeAuth({
+            getOrganizations: jest.fn(async () => [{ id: 'org-1', code: 'C1@AdobeOrg', name: 'Org One' }]),
+        });
+        const server = fakeServer();
+        registerAdobeTools(server, ctxFactoryWith(auth));
+        const res = await server.call('select_project', { projectId: 'proj-1' });
+        expect(res).toEqual({ selected: { org: 'org-1', project: 'proj-1' } });
+        expect(getAdobeTarget()).toMatchObject({ orgId: 'org-1', orgName: 'Org One', projectId: 'proj-1' });
     });
 
     it('select_workspace errors clearly when no project has been selected into the store', async () => {

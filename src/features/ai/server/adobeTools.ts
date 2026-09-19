@@ -20,6 +20,7 @@
 
 import { z } from 'zod';
 import { getAdobeTarget, runWithAdobeTarget, setAdobeTarget } from './adobeTargetStore';
+import { resolveAgentOrg } from './agentOrg';
 import { asText } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
 import { hasErrorCode } from '@/core/errors';
@@ -276,8 +277,10 @@ export function registerAdobeTools(server: McpToolServer, ctxFactory: () => Hand
         async (args: any) => {
             const mgr = await authedManager(ctxFactory());
             if (!mgr) return NEEDS_ADOBE_AUTH;
-            const stored = getAdobeTarget();
-            if (!stored?.orgId) return asText({ error: 'No org selected — call select_org first.' });
+            // The agent's org, or the only one the sign-in reaches (remembered).
+            const org = await resolveAgentOrg(mgr);
+            if ('error' in org) return asText(org);
+            const stored = { ...getAdobeTarget(), orgId: org.orgId };
             // List projects within the stored org via env targeting (no global mutation).
             const projects = await mgr.getProjects({ orgId: stored.orgId });
             const project = projects.find((p) => p.id === args.projectId);

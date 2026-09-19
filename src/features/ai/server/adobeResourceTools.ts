@@ -30,6 +30,7 @@
 
 import { z } from 'zod';
 import { getAdobeTarget } from './adobeTargetStore';
+import { resolveAgentOrg } from './agentOrg';
 import { asText } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
 import { ServiceLocator } from '@/core/di/serviceLocator';
@@ -60,32 +61,28 @@ async function authedManager(ctx: HandlerContext): Promise<HandlerContext['authM
     }
 }
 
+type AuthManager = NonNullable<HandlerContext['authManager']>;
+
 /**
- * The org the agent selected, or an instruction to select one.
+ * The org (via `resolveAgentOrg`: the agent's selection, or the only org the
+ * sign-in reaches) and the agent's selected project.
  *
  * Never falls back to the cached UI selection. A fallback here is precisely the
- * bug: it would succeed against the wrong org rather than telling the agent to
- * choose.
+ * bug: it would succeed against the wrong org or project rather than telling the
+ * agent to choose.
  */
-function requireOrg(): { orgId: string } | { error: string } {
-    const target = getAdobeTarget();
-    if (!target?.orgId) {
-        return { error: 'No org selected. Call list_orgs, then select_org(orgId) first.' };
-    }
-    return { orgId: target.orgId };
-}
-
-function requireProject(): { orgId: string; projectId: string } | { error: string } {
-    const target = getAdobeTarget();
-    if (!target?.orgId) {
-        return { error: 'No org selected. Call list_orgs, then select_org(orgId) first.' };
-    }
-    if (!target.projectId) {
+async function requireProject(
+    mgr: AuthManager,
+): Promise<{ orgId: string; projectId: string } | { error: string }> {
+    const org = await resolveAgentOrg(mgr);
+    if ('error' in org) return org;
+    const projectId = getAdobeTarget()?.projectId;
+    if (!projectId) {
         return {
             error: 'No project selected. Call list_adobe_projects, then select_project(projectId) first.',
         };
     }
-    return { orgId: target.orgId, projectId: target.projectId };
+    return { orgId: org.orgId, projectId };
 }
 
 export function registerAdobeResourceTools(
@@ -98,7 +95,7 @@ export function registerAdobeResourceTools(
             needsAuth: ['adobe'],
             annotations: { readOnlyHint: false, destructiveHint: false },
             description:
-                'Create an Adobe Developer Console project in the selected org (select_org first). Returns the project, or why it could not be created.',
+                'Create an Adobe Developer Console project in the selected org (select_org first, unless the sign-in reaches only one org). Returns the project, or why it could not be created.',
             inputSchema: {
                 name: z.string().describe('Project title, max 200 characters'),
                 description: z
@@ -109,11 +106,11 @@ export function registerAdobeResourceTools(
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         async (args: any) => {
-            const target = requireOrg();
-            if ('error' in target) return asText(target);
-
             const mgr = await authedManager(ctxFactory());
             if (!mgr) return asText(NEEDS_ADOBE);
+
+            const target = await resolveAgentOrg(mgr);
+            if ('error' in target) return asText(target);
 
             const project = await mgr.createProject(
                 String(args?.name ?? ''),
@@ -149,11 +146,11 @@ export function registerAdobeResourceTools(
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         async (args: any) => {
-            const target = requireProject();
-            if ('error' in target) return asText(target);
-
             const mgr = await authedManager(ctxFactory());
             if (!mgr) return asText(NEEDS_ADOBE);
+
+            const target = await requireProject(mgr);
+            if ('error' in target) return asText(target);
 
             const workspace = await mgr.createWorkspace(
                 String(args?.name ?? ''),
@@ -211,11 +208,11 @@ export function registerAdobeResourceTools(
                 });
             }
 
-            const target = requireProject();
-            if ('error' in target) return asText(target);
-
             const mgr = await authedManager(ctxFactory());
             if (!mgr) return asText(NEEDS_ADOBE);
+
+            const target = await requireProject(mgr);
+            if ('error' in target) return asText(target);
 
             const result = await mgr.deleteWorkspace(workspaceId, {
                 orgId: target.orgId,
@@ -269,14 +266,15 @@ export function registerAdobeResourceTools(
                 });
             }
 
-            const target = requireOrg();
-            if ('error' in target) return asText(target);
-
             // Step-level debug lines: when this hung headless (AI-5) the args log
             // was the LAST line anywhere, so the hang site was unfindable.
             const ctx = ctxFactory();
             ctx.logger.debug('[delete_adobe_project] checking auth…');
-            if (!(await authedManager(ctx))) return asText(NEEDS_ADOBE);
+            const mgr = await authedManager(ctx);
+            if (!mgr) return asText(NEEDS_ADOBE);
+
+            const target = await resolveAgentOrg(mgr);
+            if ('error' in target) return asText(target);
             ctx.logger.debug('[delete_adobe_project] auth ok — starting teardown');
 
             // TeardownTarget already takes orgId/projectId explicitly, so this path
