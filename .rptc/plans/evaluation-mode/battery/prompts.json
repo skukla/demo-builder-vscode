@@ -859,6 +859,14 @@
         "why": "The ERP journey's build phase ran on general knowledge; the commerce-extensibility server ships the starter-kit rules. Measures whether a build-phase question reaches that surface at all."
     },
     {
+      "id": "rename-adobe-project",
+      "prompt": "Rename my Adobe project 'Kukla Test' to 'Kukla Bodea'.",
+      "expect": [
+        "rename_adobe_project"
+      ],
+      "why": "Added with the tool (2026-09-19): a demo moved onto another Adobe project needs that project renamed to match, and the only rename before this was a side effect of renaming a demo. Judges whether the tool is findable from a plain request."
+    },
+    {
         "id": "delete-workspace",
         "prompt": "Delete the 'scratch' workspace from my Adobe project.",
         "expect": [
