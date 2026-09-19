@@ -67,3 +67,6 @@ surfaces that host the cards.
 - 2026-09-19  feat(integrations): an integration operation shows its progress in a modal (`5aaefb0b1`)
 - 2026-09-19  Merge feature/operation-progress: an integration operation shows its progress in a modal (`9e6e14e97`)
 - 2026-09-19  feat(integrations): the progress modal hands over to a notification and holds still (`7a91197b4`)
+- 2026-09-19  docs(plan): PL-59 phase 2, one progress model for the whole extension (`b40596920`)
+- 2026-09-19  test(integrations): assert the stage-length list is empty strictly (`2f3b46549`)
+- 2026-09-19  fix(integrations): a background notification shows the short stage name (`a937022df`)
