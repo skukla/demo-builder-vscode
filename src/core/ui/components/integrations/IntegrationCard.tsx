@@ -32,10 +32,9 @@
 import React, { useCallback } from 'react';
 import { IntegrationActionsMenu } from './IntegrationActionsMenu';
 import type { CardAction, IntegrationCardModel } from './integrationCardModel.types';
+import { IntegrationStatusLabel } from './IntegrationStatusLabel';
 import { InlineRenameField } from '@/core/ui/components/forms/InlineRenameField';
-import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import { useActivateOnKey } from '@/core/ui/hooks/useActivateOnKey';
-import { cn } from '@/core/ui/utils/classNames';
 
 export interface IntegrationCardProps {
     /** Rename commit (renamable cards only): null on success, else an error string. */
@@ -133,20 +132,7 @@ export function IntegrationCard({
                 <div className="integration-card-statusline">{subline}</div>
             ) : (
                 <div className="integration-card-statusline">
-                    {/* size 6 matches the project card's status dot — the 8px default
-                        sat heavier beside the same 11px uppercase label. */}
-                    {/* No pulse class here: `deploying` maps to the `info` variant, and
-                        StatusDot pulses on info by itself. Applying it per-caller is
-                        what let the dashboard tile forget. */}
-                    <StatusDot variant={model.dotVariant} size={6} />
-                    <span
-                        className={cn(
-                            'integration-card-status',
-                            model.status === 'error' && 'integration-card-status--error',
-                        )}
-                    >
-                        {model.statusLabel}
-                    </span>
+                    <IntegrationStatusLabel model={model} />
                 </div>
             )}
         </div>

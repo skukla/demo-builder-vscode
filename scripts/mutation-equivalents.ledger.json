@@ -8683,7 +8683,7 @@
             "anchors": [
                 "const panel = BaseWebviewCommand.getActivePanel('demoBuilder.projectDashboard');"
             ],
-            "line": 299,
+            "line": 300,
             "mutants": 1,
             "category": "branch",
             "reason": "Same shape as the Configure command's copy: forcing the following 'if (panel)' true calls dispose() on undefined, and the TypeError lands in the try/catch already there for the already-disposed case. Both paths end as a no-op. The false variant is killed by the test that asserts an open panel is disposed.",
@@ -8758,7 +8758,7 @@
             "anchors": [
                 "if (result.success) {"
             ],
-            "line": 691,
+            "line": 793,
             "mutants": 7,
             "category": "branch",
             "reason": "The three-way tail of withComponentProgress writes one USER-log line per outcome and nothing else \u2014 no return value changes, no channel is pushed. Forcing any branch, or emptying any body, changes only which line prints, which is what the ratchet exists to refuse to reward. The outcome itself is asserted through the returned result and the row-status pushes.",
@@ -8783,35 +8783,11 @@
             "anchors": [
                 "success: false,"
             ],
-            "line": 475,
+            "line": 514,
             "mutants": 1,
             "category": "branch",
             "reason": "The Configure route's inner success flag never reaches a caller: the outer handler matches result.blocked first and returns its own { success: false, error }. Flipping it changes a value that is overwritten one frame later. Re-anchored 2026-09-10 (474 -> 475): unchanged code, shifted by the AB-7 cleanup-reporting block added to handleRemoveAppBuilderComponent.",
             "decision": "none \u2014 the inner shape matches GuardableResult, which the outer translates",
-            "recorded": "2026-09-05",
-            "source": "PL-22 MUT-08"
-        },
-        {
-            "module": "src/features/dashboard/handlers/appBuilderComponentHandlers.ts",
-            "anchors": [
-                "const picks = payload?.apis ?? [];"
-            ],
-            "mutants": 1,
-            "category": "optionalChain",
-            "reason": "This line is unreachable with an undefined payload: resolveAddEntry(payload ?? {}) answers undefined for one, and the handler returns 'Unknown appBuilderComponent' before the progress block opens. So dropping the chain cannot throw. The ?? [] fallback beside it IS exercised.",
-            "decision": "none \u2014 the chain matches the optional payload type the handler declares",
-            "recorded": "2026-09-05",
-            "source": "PL-22 MUT-08"
-        },
-        {
-            "module": "src/features/dashboard/handlers/appBuilderComponentHandlers.ts",
-            "anchors": [
-                "buildToolchainConsent(context, payload?.refreshCli),"
-            ],
-            "mutants": 1,
-            "category": "optionalChain",
-            "reason": "Same unreachability as the picks line above: an undefined payload cannot resolve an entry, so the add never reaches this line with one.",
-            "decision": "none \u2014 the chain matches the optional payload type",
             "recorded": "2026-09-05",
             "source": "PL-22 MUT-08"
         },
@@ -9994,7 +9970,7 @@
             "anchors": [
                 "if (result.status === 'failed') {"
             ],
-            "line": 846,
+            "line": 858,
             "mutants": 4,
             "category": "branch",
             "reason": "The guarded body is a single deps.logger.warn call. The Commerce uninstall is best-effort: its outcome is neither surfaced on the RunnerResult nor persisted, and the removal proceeds identically whether the guard is taken, inverted or deleted. Every mutation here changes only which log line is written, which is wording rather than behaviour.",
@@ -10044,7 +10020,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 1048,
+            "line": 1060,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single deps.logger.warn. Emptying it leaves the catch itself in place, so a failing remote teardown is swallowed exactly as before and the removal continues to clear local state - which the remove-contracts suite asserts directly with a rejecting executor. Only the log line differs.",
@@ -10070,7 +10046,7 @@
             "anchors": [
                 "if (cleared.componentApiPicks) {"
             ],
-            "line": 1115,
+            "line": 1127,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this guard true assigns cleared.componentApiPicks onto the caller's project when it is undefined. cleared is spread from that same project, so an undefined value there means the caller's field was already undefined and the assignment writes back exactly what was there. The mutation is a no-op for every input on which the guard was false.",
@@ -10083,7 +10059,7 @@
             "anchors": [
                 "if (cleared.componentConfigs) {"
             ],
-            "line": 1118,
+            "line": 1130,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this guard true assigns cleared.componentConfigs onto the caller's project when it is undefined. cleared is spread from that same project, so an undefined value there means the caller's field was already undefined and the assignment writes back exactly what was there. The mutation is a no-op for every input on which the guard was false.",
@@ -13122,7 +13098,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 178,
+            "line": 181,
             "mutants": 1,
             "category": "other",
             "reason": "A useCallback dependency array of constants is compared element-wise with Object.is on every render, so a literal ['Stryker was here'] invalidates the memo exactly as often as [] does \u2014 never. The callback identity, and therefore everything downstream of it, is byte-for-byte the same either way. Verified by planting all eight at once: the five suites pass unchanged, and no assertion could distinguish them because there is nothing to distinguish.",
@@ -13135,7 +13111,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 182,
+            "line": 185,
             "mutants": 1,
             "category": "other",
             "reason": "A useCallback dependency array of constants is compared element-wise with Object.is on every render, so a literal ['Stryker was here'] invalidates the memo exactly as often as [] does \u2014 never. The callback identity, and therefore everything downstream of it, is byte-for-byte the same either way. Verified by planting all eight at once: the five suites pass unchanged, and no assertion could distinguish them because there is nothing to distinguish.",
@@ -13148,7 +13124,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 186,
+            "line": 189,
             "mutants": 1,
             "category": "other",
             "reason": "A useCallback dependency array of constants is compared element-wise with Object.is on every render, so a literal ['Stryker was here'] invalidates the memo exactly as often as [] does \u2014 never. The callback identity, and therefore everything downstream of it, is byte-for-byte the same either way. Verified by planting all eight at once: the five suites pass unchanged, and no assertion could distinguish them because there is nothing to distinguish.",
@@ -13161,7 +13137,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 190,
+            "line": 193,
             "mutants": 1,
             "category": "other",
             "reason": "A useCallback dependency array of constants is compared element-wise with Object.is on every render, so a literal ['Stryker was here'] invalidates the memo exactly as often as [] does \u2014 never. The callback identity, and therefore everything downstream of it, is byte-for-byte the same either way. Verified by planting all eight at once: the five suites pass unchanged, and no assertion could distinguish them because there is nothing to distinguish.",
@@ -14702,7 +14678,7 @@
             "anchors": [
                 "[],"
             ],
-            "line": 242,
+            "line": 259,
             "mutants": 1,
             "category": "other",
             "reason": "React compares a dependency array element-wise with Object.is, so a constant one-element array of the same string literal is as stable across renders as an empty one \u2014 the builder memo recomputes on neither. The mutant changes the array's contents and not the memo's behaviour, which is the only thing any caller can see. Verified by planting ['Stryker was here'] as the dependency list: all 35 tests green, including the rerender tests that DO fail when a genuinely dependent memo is frozen.",
@@ -14715,7 +14691,7 @@
             "anchors": [
                 "[],"
             ],
-            "line": 250,
+            "line": 267,
             "mutants": 1,
             "category": "other",
             "reason": "Same argument as the builder memo on line 242: useCallback compares dependency arrays element-wise with Object.is, and a constant one-element array of a string literal never changes between renders, so the signIn callback is rebuilt on neither the original nor the mutant. Verified by planting ['Stryker was here'] as the dependency list \u2014 all 35 tests green, while the rerender tests that pin genuinely dependent memos do fail when those are frozen.",
@@ -16587,7 +16563,7 @@
             "anchors": [
                 "const handleClick = useCallback((): void => onOpen?.(model.id), [model.id, onOpen]);"
             ],
-            "line": 81,
+            "line": 80,
             "mutants": 1,
             "category": "other",
             "reason": "Stryker drops the ?. and calls onOpen(model.id) unconditionally, but handleClick is only ever wired up inside pressProps, which is {} when onOpen is absent \u2014 no role, no tabIndex, no onClick and no onKeyDown \u2014 so there is no path on which handleClick runs with onOpen undefined. The guard is required by the compiler (onOpen is optional), not by any reachable input. Verified by planting a non-null-asserted call and re-running the suite: 29 tests, all still green.",

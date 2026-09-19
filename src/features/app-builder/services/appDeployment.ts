@@ -22,6 +22,7 @@ import * as crypto from 'crypto';
 import { promises as fsPromises } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { OPERATION_STAGES } from './operationStages';
 import { aioOutputTail, extractAioErrorDetail, fetchRuntimeCredentials } from './runtimeCredentials';
 import type { AppDeploymentResult } from './types';
 import { buildComponent } from '@/core/shell/buildComponent';
@@ -251,7 +252,7 @@ export async function deployAppComponent(
         return { ...first, error: `${first.error}${TOOLCHAIN_REMEDY_HINT}` };
     }
 
-    opts.onProgress?.('Updating Adobe CLI...', 'npm install -g @adobe/aio-cli');
+    opts.onProgress?.(OPERATION_STAGES.updatingCli.label, 'npm install -g @adobe/aio-cli');
     const refreshed = await refreshGlobalAioCli(commandManager, logger);
     if (!refreshed.ok) {
         return {
@@ -273,7 +274,7 @@ async function deployAppComponentOnce(
     const node = resolveNodeVersion(opts.nodeVersion);
     try {
         if (opts.layout === 'extension') {
-            onProgress?.('Deploying custom integration...', 'Importing workspace configuration');
+            onProgress?.(OPERATION_STAGES.deployingApp.label, 'Importing workspace configuration');
             await importWorkspaceConfig(componentPath, commandManager, node, logger);
         }
 
@@ -290,7 +291,7 @@ async function deployAppComponentOnce(
         // or it dies with "missing Adobe I/O Runtime namespace". Fetch them
         // from the targeted workspace and inject per-invocation (execa merges
         // env, so only the two vars are passed; the auth value is never logged).
-        onProgress?.('Deploying custom integration...', 'Resolving Runtime credentials');
+        onProgress?.(OPERATION_STAGES.deployingApp.label, 'Resolving Runtime credentials');
         const runtimeCreds = await fetchRuntimeCredentials(commandManager, logger, node);
         const runtimeEnv = {
             // Caller-supplied extra env FIRST so the Runtime pair, which this
@@ -300,7 +301,7 @@ async function deployAppComponentOnce(
             AIO_RUNTIME_AUTH: runtimeCreds.auth,
         };
 
-        onProgress?.('Deploying custom integration...', 'Running aio app deploy');
+        onProgress?.(OPERATION_STAGES.deployingApp.label, 'Running aio app deploy');
 
         // `--verbose` because the CLI prints its warnings — such as a database
         // status check refused with a 403 — only in verbose mode, and without
@@ -330,7 +331,7 @@ async function deployAppComponentOnce(
             throw new Error(`App deployment failed: ${detail}`);
         }
 
-        onProgress?.('Resolving app URL...', '');
+        onProgress?.(OPERATION_STAGES.resolvingAppUrl.label, '');
 
         const urlResult = await commandManager.execute('aio app get-url --json', {
             cwd: componentPath,

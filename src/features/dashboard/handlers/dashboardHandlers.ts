@@ -21,6 +21,7 @@
  */
 
 import * as vscode from 'vscode';
+import { handleGetComponentOperationProgress } from './componentOperationProgress';
 import { handleSetProjectDestination } from './destinationHandlers';
 import {
     handleSyncStorefront,
@@ -39,6 +40,7 @@ import {
 import {
     handleConfigure,
     handleNavigateBack,
+    handleOpenDebugLogs,
     handleOpenIntegrations,
     handleShowProjectDashboard,
 } from './panelNavigationHandlers';
@@ -90,6 +92,7 @@ export {
 export {
     handleConfigure,
     handleNavigateBack,
+    handleOpenDebugLogs,
     handleOpenIntegrations,
     handleShowProjectDashboard,
 } from './panelNavigationHandlers';
@@ -243,6 +246,7 @@ export const dashboardHandlers = defineHandlers({
     openDaLive: handleOpenDaLive,
     openAdminPanel: handleOpenAdminPanel,
     configure: handleConfigure,
+    openDebugLogs: handleOpenDebugLogs,
     openDevConsole: handleOpenDevConsole,
     getProjectUrls: handleGetProjectUrls,
     navigateBack: handleNavigateBack,
@@ -265,6 +269,8 @@ export const dashboardHandlers = defineHandlers({
     // install-without-redeploy retry.
     installAppBuilderComponent: handleInstallAppBuilderComponent,
     getAppBuilderInstallStatus: handleGetAppBuilderInstallStatus,
+    // The latest progress of an operation the SC started here, for its modal (PL-59).
+    getComponentOperationProgress: handleGetComponentOperationProgress,
 
     // Console API access (runtime API subscription — list_console_apis / add_console_apis)
     listConsoleApis: handleListConsoleApis,

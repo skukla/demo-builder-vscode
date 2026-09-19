@@ -41,7 +41,23 @@ jest.mock('@adobe/react-spectrum', () => ({
     ),
     Item: ({ children }: any) => <>{children}</>,
     View: ({ children, ...props }: any) => <div {...props}>{children}</div>,
-    Flex: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+    // The progress modal's LoadingDisplay (PL-59).
+    ProgressCircle: ({ 'aria-label': label }: any) => <div role="progressbar" aria-label={label} />,
+    // Layout props are Spectrum's, not the DOM's: drop them rather than let React
+    // warn about each one (the progress modal's LoadingDisplay passes several).
+    Flex: ({
+        children,
+        UNSAFE_className,
+        direction: _d,
+        gap: _g,
+        alignItems: _a,
+        justifyContent: _j,
+        ...props
+    }: any) => (
+        <div className={UNSAFE_className} {...props}>
+            {children}
+        </div>
+    ),
     Heading: ({ children, ...props }: any) => <h3 {...props}>{children}</h3>,
     Button: ({ children, onPress, isDisabled, variant, ...props }: any) => (
         <button onClick={onPress} disabled={isDisabled} data-variant={variant} {...props}>
@@ -58,7 +74,9 @@ jest.mock('@adobe/react-spectrum', () => ({
             {children}
         </span>
     ),
-    Text: ({ children, ...props }: any) => <span {...props}>{children}</span>,
+    Text: ({ children, UNSAFE_className, minHeight: _m, marginTop: _t, ...props }: any) => (
+        <span className={UNSAFE_className} {...props}>{children}</span>
+    ),
     TextField: ({ label, value, onChange, ...props }: any) => (
         <input
             aria-label={label}
@@ -121,6 +139,8 @@ jest.mock('@/features/dashboard/ui/components/ManageApisModal', () => ({
 // babel-plugin-jest-hoist lifts them above every import, so the component
 // module always loads against the mocks.
 import { IntegrationsGrid } from '@/features/dashboard/ui/components/integrations/IntegrationsGrid';
+import { ComponentOperationModal } from '@/features/dashboard/ui/components/integrations/ComponentOperationModal';
+import { useComponentOperation } from '@/features/dashboard/ui/hooks/useComponentOperation';
 import {
     buildIntegrationCards,
     deriveMeshCard,
@@ -250,17 +270,35 @@ export function cardsFor({
  * callbacks), which is how the live-push behaviour the grid owns is exercised:
  * a card leaving the map, or a parent handing over fresh callbacks.
  */
-export function renderCards(
-    cards: IntegrationCardModel[],
-    props: Partial<React.ComponentProps<typeof IntegrationsGrid>> = {}
-) {
-    const result = render(<IntegrationsGrid cards={cards} {...props} />);
+type GridProps = Partial<React.ComponentProps<typeof IntegrationsGrid>>;
+
+/**
+ * The grid with the REAL operation controls and progress modal the screen gives it,
+ * wired as `IntegrationsScreen` wires them, so a test drives the same message
+ * dispatch and modal the SC does. (The screen's own wiring, including an Add on an
+ * empty screen, is pinned in IntegrationsScreen-operationModal.test.tsx.)
+ */
+function GridWithOperations({ cards, ...props }: GridProps & { cards: IntegrationCardModel[] }) {
+    const operations = useComponentOperation();
+    return (
+        <>
+            <IntegrationsGrid cards={cards} operations={operations} {...props} />
+            <ComponentOperationModal
+                operation={operations.open}
+                status={cards.find((c) => (c.componentId ?? c.id) === operations.open?.id)}
+                onRetry={operations.retry}
+                onClose={operations.close}
+            />
+        </>
+    );
+}
+
+export function renderCards(cards: IntegrationCardModel[], props: GridProps = {}) {
+    const result = render(<GridWithOperations cards={cards} {...props} />);
     return {
         ...result,
-        setCards: (
-            next: IntegrationCardModel[],
-            nextProps: Partial<React.ComponentProps<typeof IntegrationsGrid>> = props
-        ) => result.rerender(<IntegrationsGrid cards={next} {...nextProps} />),
+        setCards: (next: IntegrationCardModel[], nextProps: GridProps = props) =>
+            result.rerender(<GridWithOperations cards={next} {...nextProps} />),
     };
 }
 
