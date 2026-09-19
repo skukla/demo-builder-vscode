@@ -15,6 +15,7 @@ The counterpart index for hooks is `../hooks/CLAUDE.md`.
 | Loading ON TOP of existing content | `feedback/LoadingOverlay` | a conditional spinner |
 | Small inline busy indicator | `ui/Spinner` | `ProgressCircle` directly |
 | Long wait needing "still moving" copy | `LoadingDisplay` + `useElapsedStage` | a static message |
+| Progress of an operation the SC started with a button (modal + "Run in background" handover) | `feedback/OperationProgressModal` | a notification, or a screen's own progress modal |
 | Error / empty / success full-block state | `feedback/StatusDisplay` (`variant`, `actions[]`) | red `<Text>`, a bespoke panel |
 | "Nothing here yet" notice inline in a list | `feedback/EmptyState` (icon-in-a-well) | a hand-rolled centered div |
 | First-run empty SCREEN with CTA buttons | `feedback/CtaEmptyState` (bold title + sentence + actions; Projects + Integrations use it) | rebuilding the Projects look per surface |

@@ -51,7 +51,7 @@ import {
     createDeps,
     createProject,
 } from './appBuilderComponentRunner.testUtils';
-import { OPERATION_STAGES } from '@/features/app-builder/services/operationStages';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 
 beforeEach(() => {
     jest.clearAllMocks();

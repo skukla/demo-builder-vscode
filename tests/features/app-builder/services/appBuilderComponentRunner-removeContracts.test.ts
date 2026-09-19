@@ -30,7 +30,7 @@ jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
 // =============================================================================
 
 import { removeAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentRunner';
-import { OPERATION_STAGES } from '@/features/app-builder/services/operationStages';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { MESH_DELETE_COMMAND } from '@/core/shell/meshDeleteCommand';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import {

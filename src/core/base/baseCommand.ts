@@ -1,5 +1,6 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { hasActivePhaseSinks, reportPhase } from '@/core/utils/agentPhaseChannel';
 import { DisposableStore } from '@/core/utils/disposableStore';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -92,10 +93,21 @@ export abstract class BaseCommand implements vscode.Disposable {
         this.disposables.dispose();
     }
 
+    /**
+     * Run `task` under a progress notification — unless an agent started it.
+     *
+     * An agent's tool call already shows its own notification, and the steps reach it
+     * through the phase channel; opening a second one only stacks cards (start/stop
+     * demo showed two, PL-59). So under an agent the task's messages go to the
+     * agent's notification instead, as `withProgressRegister` has done since AI-6.
+     */
     protected async withProgress<T>(
         title: string,
         task: (progress: vscode.Progress<{ message?: string; increment?: number }>) => Promise<T>,
     ): Promise<T> {
+        if (hasActivePhaseSinks()) {
+            return task({ report: ({ message }) => reportPhase(message ?? '') });
+        }
         return vscode.window.withProgress(
             {
                 location: vscode.ProgressLocation.Notification,

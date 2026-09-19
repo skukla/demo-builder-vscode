@@ -26,16 +26,16 @@ import {
     withComponentProgress,
     type GuardableResult,
 } from './appBuilderComponentHandlers';
-import { narrateOutcomeToModal, progressSurfaceOf } from './componentOperationProgress';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getAppBuilderComponent } from '@/core/state/appBuilderComponentState';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operationProgress';
 import {
     AppManagementClient,
     type InstallationState,
     type StepStatus,
 } from '@/features/app-builder/services/appManagementClient';
 import { deriveAppManagementBaseUrl } from '@/features/app-builder/services/appManagementInstaller';
-import { OPERATION_STAGES } from '@/features/app-builder/services/operationStages';
 import {
     buildCustomIntegrationEntry,
     getAppBuilderComponentEntry,

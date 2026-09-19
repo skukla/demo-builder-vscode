@@ -174,8 +174,8 @@ jest.mock('@/features/dashboard/ui/integrationsSurface/AddIntegrationFlowAdapter
 
 // The progress modal has its own suite (via the grid harness); a stub proves the
 // SCREEN hosts it and hands it the operation.
-jest.mock('@/features/dashboard/ui/components/integrations/ComponentOperationModal', () => ({
-    ComponentOperationModal: ({ operation }: any) =>
+jest.mock('@/core/ui/components/feedback/OperationProgressModal', () => ({
+    OperationProgressModal: ({ operation }: any) =>
         operation ? (
             <div data-testid="operation-modal" data-id={operation.id}>
                 {operation.name}

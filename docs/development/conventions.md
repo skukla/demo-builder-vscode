@@ -12,7 +12,7 @@ were wrong within an hour of being written. This one is derived from the
 handbook's own callouts and checked against the enforcers on disk in both
 directions, so it cannot.
 
-- **119** conventions, **119** enforced
+- **120** conventions, **120** enforced
 - **31** name the decision record behind them
 - **6** name a procedure — an SOP or a skill
 - **1** have all three layers
@@ -82,6 +82,7 @@ it means the rule rests on somebody noticing.
 | Message shapes come from a typed file, never written from memory into a string or a `.mjs`. enforced by `npm run typecheck:tests`. |  |  | *named in prose* |
 | A domain error class lives with the domain that throws it. `src/core/errors/` is the legacy central hierarchy and may only shrink. | [ADR](../architecture/adr/023-error-handling.md) |  | `architecture-rules.test.ts` |
 | A failure a PERSON reads is translated, never the library's own words. | [ADR](../architecture/adr/023-error-handling.md) |  | `user-facing-errors.test.ts` |
+| A progress notification's title is an "-ing" verb and its object, and says nothing else: "Deploying API Mesh", never "Demo Builder", never "Loading…", never "Step 2/5:". The message under it is the stage name alone, 25 characters at most. |  |  | `progress-wording.test.ts` |
 
 ## 7. The user interface
 

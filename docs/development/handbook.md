@@ -410,6 +410,26 @@ meant.
 > [ADR-023](../architecture/adr/023-error-handling.md) · Enforced by
 > `tests/sop/user-facing-errors.test.ts` against a shrink-only ledger.
 
+> **Convention.** A progress notification's title is an "-ing" verb and its object, and
+> says nothing else: "Deploying API Mesh", never "Demo Builder", never "Loading…", never
+> "Step 2/5:". The message under it is the stage name alone, 25 characters at most.
+> *Why:* VS Code draws the title and message on one line of fixed width, puts ": "
+> between them itself, and spins a wheel beside them — so a trailing "…" or ":" is said
+> twice, a long stage is cut off mid-word, and a title that names the product instead of
+> the work tells the SC nothing. The same title carries across the progress modal and the
+> notification it hands over to, so moving to the background reads as the same thing
+> carrying on (PL-59, owner review 2026-09-19). A count goes after the stage, "(1 of 2)",
+> and only when the total is known before the operation starts.
+>
+> The message rule holds for every notification, not only the ones fed from the stage
+> table: a palette command's own `progress.report` messages follow it too (owner,
+> 2026-09-19).
+>
+> 16 titles and 40 messages predate the rule and are ledgered; they are reworded slice
+> by slice in `.rptc/plans/operation-progress/extension-wide.md`. Stage names are held
+> separately by `operationStages.test.ts`. Enforced by
+> `tests/sop/progress-wording.test.ts` against a shrink-only ledger.
+
 ---
 
 ## 7. The user interface
@@ -1587,11 +1607,11 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 25 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 52 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 53 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 119 conventions. 119 of them are enforced; 0 are not.**
+**This handbook states 120 conventions. 120 of them are enforced; 0 are not.**
 
 The last one to get there was "vendor CSS sits in the lowest cascade layer", and it was
 outstanding because it was **not yet true**: `@layer vendor` existed in no bundle, so a

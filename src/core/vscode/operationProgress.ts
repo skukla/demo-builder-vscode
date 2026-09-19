@@ -1,6 +1,14 @@
 /**
- * The progress of each integration operation an SC started from the integrations
- * screen, pushed to that screen's modal and held so the modal can ask again (PL-59).
+ * The progress of each operation an SC started from a button on a screen, pushed to
+ * that screen's progress modal and held so the modal can ask again (PL-59).
+ *
+ * WHERE IT GOES. To the screen that started the operation: the request's own
+ * `sendMessage` is recorded when the run begins, and a screen that reopens mid-run
+ * takes over when it asks for the latest state. Not "whichever project screen is
+ * open" — the projects list starts operations too, and it is not a project screen.
+ *
+ * Shared by every screen's handler map (dashboard, integrations, projects list), which
+ * is why it lives in core: one feature may not import another.
  *
  * WHY IT IS HELD. A push reaches only a panel that is open at that moment. An SC who
  * chose "Run in background", reopened the panel, or clicked the tile again mid-deploy
@@ -12,7 +20,7 @@
  * the result. A failure is kept until the next run of that integration starts, so a
  * modal reopened after "Run in background" still shows the reason.
  *
- * @module features/dashboard/handlers/componentOperationProgress
+ * @module core/vscode/operationProgress
  */
 
 import {
@@ -21,19 +29,32 @@ import {
     openBackgroundNotice,
 } from './operationBackgroundNotice';
 import { ErrorCode } from '@/types/errorCodes';
-import type { HandlerResponse, MessageHandler } from '@/types/handlers';
+import type { HandlerContext, HandlerResponse, MessageHandler } from '@/types/handlers';
 import { toError } from '@/types/typeGuards';
-import type { ComponentOperationProgressPayload } from '@/types/webviewPayloads';
+import type { OperationProgressPayload } from '@/types/webviewPayloads';
 
-const latest = new Map<string, ComponentOperationProgressPayload>();
+/** How to reach the screen showing an operation's modal. */
+type SendToScreen = HandlerContext['sendMessage'];
+
+const latest = new Map<string, OperationProgressPayload>();
+const screens = new Map<string, SendToScreen>();
 
 /**
- * Record an operation's progress and push it to the live project panel.
+ * Begin a modal-hosted run: from here on, this operation's progress goes to `send`.
+ * `narrateOutcomeToModal` calls it for every modal request; a test that drives the
+ * progress directly calls it too.
+ */
+export function startModalRun(id: string, send: SendToScreen): void {
+    screens.set(id, send);
+}
+
+/**
+ * Record an operation's progress and push it to the screen showing its modal.
  *
  * @param payload - the operation's current state
  */
-export async function pushComponentOperationProgress(
-    payload: ComponentOperationProgressPayload,
+export async function pushOperationProgress(
+    payload: OperationProgressPayload,
 ): Promise<void> {
     if (payload.state === 'succeeded') {
         latest.delete(payload.id);
@@ -41,12 +62,15 @@ export async function pushComponentOperationProgress(
         latest.set(payload.id, payload);
     }
     forwardToBackgroundNotice(payload);
-    // Lazy, as postRowStatus is: keeps the webview-command class out of the
-    // handler module's load graph.
-    const { ProjectDashboardWebviewCommand } = await import(
-        '@/features/dashboard/commands/showDashboard'
-    );
-    await ProjectDashboardWebviewCommand.sendComponentOperationProgress(payload);
+    const send = screens.get(payload.id);
+    // A screen closed mid-run cannot be reached; the held state answers it on reopen.
+    // Never the operation's problem: a send that throws, synchronously or not, is
+    // swallowed here rather than failing the work it reports on.
+    try {
+        await send?.('operationProgress', payload);
+    } catch {
+        // See above.
+    }
 }
 
 /**
@@ -72,11 +96,12 @@ export function narrateOutcomeToModal<P extends { progress?: 'modal' }>(
         const id = payload?.progress === 'modal' ? idOf(payload) : undefined;
         if (!id) return handler(context, payload);
 
-        await pushComponentOperationProgress({ id, state: 'running' });
+        startModalRun(id, context.sendMessage);
+        await pushOperationProgress({ id, state: 'running' });
         try {
             const result = await handler(context, payload);
             if (latest.get(id)?.state === 'running') {
-                await pushComponentOperationProgress(
+                await pushOperationProgress(
                     result.success
                         ? { id, state: 'succeeded' }
                         : { id, state: 'failed', error: result.error ?? 'The operation did not finish.' },
@@ -86,7 +111,7 @@ export function narrateOutcomeToModal<P extends { progress?: 'modal' }>(
         } catch (error) {
             // The thrown text is for the logs, not the SC (the user-facing-errors rule).
             context.logger.error(`[Operation] ${id} stopped`, toError(error));
-            await pushComponentOperationProgress({
+            await pushOperationProgress({
                 id,
                 state: 'failed',
                 error: 'The operation stopped unexpectedly. Details are in Debug Logs.',
@@ -98,35 +123,38 @@ export function narrateOutcomeToModal<P extends { progress?: 'modal' }>(
 
 /**
  * Where an operation's steps go, from its request: `'modal'` when the SC started it
- * on the integrations screen, otherwise the notification.
+ * from a button on a screen, otherwise the notification.
  */
 export function progressSurfaceOf(payload?: { progress?: 'modal' }): 'modal' | undefined {
     return payload?.progress;
 }
 
 /**
- * Handle `getComponentOperationProgress` — the latest progress for one integration,
- * or `null` when nothing is running or failed for it. Only a REOPENED modal asks, so
- * this is also where the modal takes the operation back from its notification.
+ * Handle `getOperationProgress` — the latest progress for one operation, or `null`
+ * when nothing is running or failed for it. Only a REOPENED modal asks, so this is
+ * also where the modal takes the operation back from its notification, and where a
+ * reopened screen becomes the one its further progress goes to.
  */
-export const handleGetComponentOperationProgress: MessageHandler<{ id?: string }> = async (
-    _context,
+export const handleGetOperationProgress: MessageHandler<{ id?: string }> = async (
+    context,
     payload,
 ): Promise<HandlerResponse> => {
     const id = payload?.id;
-    if (id) closeBackgroundNotice(id);
-    return { success: true, data: id ? latest.get(id) ?? null : null };
+    if (!id) return { success: true, data: null };
+    closeBackgroundNotice(id);
+    if (latest.get(id)?.state === 'running') screens.set(id, context.sendMessage);
+    return { success: true, data: latest.get(id) ?? null };
 };
 
 /** Longest title a background notice takes — the modal's own title, never prose. */
 const MAX_TITLE = 200;
 
 /**
- * Handle `backgroundComponentOperation` — the SC chose "Run in background": carry the
+ * Handle `backgroundOperation` — the SC chose "Run in background": carry the
  * operation on in a progress notification (see operationBackgroundNotice). Nothing
  * opens for an operation that has already ended.
  */
-export const handleBackgroundComponentOperation: MessageHandler<{ id?: string; title?: string }> = async (
+export const handleBackgroundOperation: MessageHandler<{ id?: string; title?: string }> = async (
     _context,
     payload,
 ): Promise<HandlerResponse> => {

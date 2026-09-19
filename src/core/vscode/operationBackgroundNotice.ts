@@ -14,7 +14,7 @@
 
 import * as vscode from 'vscode';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import type { ComponentOperationProgressPayload } from '@/types/webviewPayloads';
+import type { OperationProgressPayload } from '@/types/webviewPayloads';
 
 interface Notice {
     title: string;
@@ -32,7 +32,7 @@ const notices = new Map<string, Notice>();
  * on the workspace's credent…" (owner screenshot, 2026-09-19). VS Code draws the
  * notification at a fixed width, so there is no room to buy.
  */
-function lineFor(payload: ComponentOperationProgressPayload): string | undefined {
+function lineFor(payload: OperationProgressPayload): string | undefined {
     return payload.stage;
 }
 
@@ -45,7 +45,7 @@ function lineFor(payload: ComponentOperationProgressPayload): string | undefined
  */
 export function openBackgroundNotice(
     title: string,
-    current: ComponentOperationProgressPayload,
+    current: OperationProgressPayload,
     stillRunning: () => boolean,
 ): void {
     if (notices.has(current.id)) return;
@@ -75,7 +75,7 @@ export function closeBackgroundNotice(id: string): void {
 }
 
 /** Tell the notification, if the operation has one, where the operation is now. */
-export function forwardToBackgroundNotice(payload: ComponentOperationProgressPayload): void {
+export function forwardToBackgroundNotice(payload: OperationProgressPayload): void {
     const notice = notices.get(payload.id);
     if (!notice) return;
     if (payload.state === 'running') {

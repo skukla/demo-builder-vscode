@@ -10,9 +10,9 @@ import {
     OPERATION_STAGES,
     detailFor,
     expectationFor,
-} from '@/features/app-builder/services/operationStages';
+} from '@/core/utils/operationStages';
 
-const ROOT = join(__dirname, '..', '..', '..', '..');
+const ROOT = join(__dirname, '..', '..', '..');
 
 /**
  * The files whose progress calls report STAGES. The App Management installer and

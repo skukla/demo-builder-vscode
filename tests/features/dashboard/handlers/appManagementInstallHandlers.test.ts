@@ -505,11 +505,12 @@ describe('the install pass and what it hands its collaborators', () => {
         expect(mockInstallAppManagement).not.toHaveBeenCalled();
     });
 
-    it('forwards the runner’s step text, preferring the sub-step when there is one', async () => {
-        // The runner reports a coarse step and a fine one. The notification is
-        // the only surface with room for the fine one, so that is the one it
-        // gets — dropping to the coarse text makes a three-minute install look
-        // frozen on one line.
+    it('forwards the runner’s stage to the notification, never the finer step', async () => {
+        // The runner reports a coarse stage and a fine step. The notification shows
+        // the stage — the short set of words that fits after its title — and the fine
+        // step goes to the progress modal's second row (PL-59 phase 2, owner
+        // 2026-09-19). The cost, accepted then: a long install's retry rounds show in
+        // the modal, not in the notification.
         const { mockContext } = setupMocks(kitProject());
         mockDeveloperPermissions();
 
@@ -523,6 +524,6 @@ describe('the install pass and what it hands its collaborators', () => {
         forward('Registering events', 'provider 2 of 3');
         forward('Creating providers');
 
-        expect(mockProgressSteps).toStrictEqual(['provider 2 of 3', 'Creating providers']);
+        expect(mockProgressSteps).toStrictEqual(['Registering events', 'Creating providers']);
     });
 });

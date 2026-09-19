@@ -23,6 +23,8 @@ finding.
 | **R3** | Started by an agent (MCP tool) | **The agent notification only**, with the operation's stages as its steps | Nothing should pop up that the SC did not click. One notification: the operation must not open a second one of its own |
 | **R4** | Runs inside the wizard's own progress screen (project creation, storefront setup) | **That full-page display**, fed from the same stage list | The wizard step already is a dedicated progress screen; a modal on top of it would be a second one |
 | **R5** | A button whose operation is short (usually under 10 seconds) | **The button's own busy state** | A modal that opens and closes in a few seconds is noise |
+| **R7** | Any operation, while it runs | **Exactly one surface narrates it**, including everything it runs inside itself | A reset stops the demo through the Stop Demo command and a headless reset redeploys the mesh; each opened its own notification, so a modal and a notification would show at once. While a modal (or an agent) is narrating, anything run inside the operation hands its steps to that surface instead of opening its own (owner, 2026-09-19) |
+| **R8** | Every progress modal, while its operation runs | **Offers "Run in background"**, which hands over to a notification | Not only the new modals: Manage APIs, datapack import and AI regenerate too. The shared modal component offers it, so a screen cannot leave it out (owner, 2026-09-19) |
 | **R6** | Any operation, when it ends | Success: the modal closes itself / the notification closes with a status-bar "— done". Failure: the modal stays, or a warning with the reason and "Open Debug Logs" | The end must be as visible as the start. `withProgress` is never used as a success message on a timer |
 
 ### Wording (applies to every surface)
@@ -31,6 +33,8 @@ finding.
   "Deploying API Mesh". The notification and the modal carry the same title.
 - **Message:** the stage name only, at most 25 characters, no trailing "…" (the spinner
   already says it is working). The longer detail belongs in the modal's second row.
+  **This holds for every notification**, not only the ones fed from the stage table: a
+  palette command's own `progress.report` messages follow it too (owner, 2026-09-19).
 - **Counts:** "(1 of 2)" after the stage, and only when the total is known before the
   operation starts. Never "Step n/N:", never a count that can jump.
 - **Failure title:** "Couldn't reset Bodea". The reason follows in plain words.
@@ -88,10 +92,14 @@ to the owner before the next.
 
 0. **Foundation.** Lift the phase-1 modal and its handover out of the integrations
    feature into a shared component any screen can host, keyed by an operation id rather
-   than an integration id. One extension-side helper (`withOperationProgress`) that
-   routes to modal / notification / agent by R1–R3, so a handler cannot pick the wrong
-   surface. `BaseCommand.withProgress` stands down under an agent (row 16a). A wording
-   test over every progress title and message in the source.
+   than an integration id; the component always offers "Run in background" while the
+   operation runs (R8). One extension-side helper (`withOperationProgress`) that routes
+   to modal / notification / agent by R1–R3, so a handler cannot pick the wrong surface.
+   While a modal narrates, everything run inside the operation hands its steps to it
+   (R7) — the same channel an agent's notifier already uses, so `withProgressRegister`
+   and `BaseCommand.withProgress` stand down for both (row 16a). Wording checks over
+   every progress title and every progress message in the source, each with a
+   shrink-only list of today's offenders.
 1. **API Mesh deploy** (row 2) — finishes the integrations screen.
 2. **Resets** (rows 3, 4).
 3. **Delete project** (row 5), after the owner answers 5b.
@@ -109,8 +117,13 @@ to the owner before the next.
   handler, a webview request with `progress: 'modal'` pushes to the modal and opens no
   notification; the same handler without it opens exactly one notification; under an
   agent's phase sinks it opens none of its own.
-- **The wording test** (slice 0) fails on a title without an "-ing" verb, a message over
-  25 characters, a trailing "…", or a `Step n/N` count.
+- **The wording tests** (slice 0) fail on a title without an "-ing" verb, a message over
+  25 characters, a trailing "…", or a `Step n/N` count — titles and messages alike.
+- **R7:** a test runs a modal-hosted operation that calls a command using
+  `BaseCommand.withProgress` and a helper using `withProgressRegister`, and asserts no
+  notification opened and both steps reached the modal.
+- **R8:** a test renders every screen's progress modal while running and asserts
+  "Run in background" is offered and hands over.
 - **Live, per slice:** the owner runs the operation from each place in its rows and
   checks the surface against the "Planned" column.
 - This table is updated in the same commit as any change to a row, so it stays the

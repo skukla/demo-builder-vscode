@@ -21,7 +21,6 @@
 
 import { Button, Flex, Text, View } from '@adobe/react-spectrum';
 import React, { useCallback, useMemo, useState } from 'react';
-import { ComponentOperationModal } from '../components/integrations/ComponentOperationModal';
 import {
     buildIntegrationCards,
     deriveMeshCard,
@@ -40,6 +39,7 @@ import {
 } from '@/core/state/appBuilderComponentState';
 import { CtaEmptyState } from '@/core/ui/components/feedback/CtaEmptyState';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { OperationProgressModal } from '@/core/ui/components/feedback/OperationProgressModal';
 import { FullScreenSurface } from '@/core/ui/components/layout/FullScreenSurface';
 import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 import { PageLayout } from '@/core/ui/components/layout/PageLayout';
@@ -358,7 +358,7 @@ export function IntegrationsScreen({
                 {/* The operation progress modal (PL-59). Here, not in the grid: the
                     first Add happens on a screen with no grid. Keyed by component id,
                     which the mesh card carries as componentId. */}
-                <ComponentOperationModal
+                <OperationProgressModal
                     operation={operations.open}
                     onRetry={operations.retry}
                     onClose={operations.close}

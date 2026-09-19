@@ -38,6 +38,7 @@ is the inventory plus the handful of behaviours the source will not tell you.
 | `useSelectableDefault` | Select-all-on-focus for fields holding a replaceable default |
 | `useVerificationMessage` | Status value → formatted `info`/`success`/`warning`/`error` message |
 | `useElapsedStage` | Advance a sub-message as a wait drags, so a slow fetch does not read as frozen |
+| `useOperationProgress` | Follow one long operation's progress for its modal, asking where it is when reopened mid-run (PL-59) |
 
 **Choosing between the three async ones**, which is the question this list gets asked
 most: `useAsyncData` fetches data that arrives by VS Code message · `useAsyncOperation`

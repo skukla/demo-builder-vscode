@@ -81,16 +81,4 @@
     top: 8px;
     right: 8px;
 }
-
-/* The progress modal's body (PL-59): ONE height for every state, with the content
- * centred in it, so the modal never resizes as stages come and go, a step wraps, or
- * it turns into a failure (owner, 2026-09-19). Sized for the tallest state — a
- * failure whose reason runs to three lines; a longer one scrolls inside. */
-.integrations-operation-body {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    height: 240px;
-    overflow-y: auto;
-}
 }

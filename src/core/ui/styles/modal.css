@@ -199,4 +199,18 @@
     cursor: default;
     pointer-events: none;
 }
+
+/* The progress modal's body (PL-59, OperationProgressModal): ONE height for every
+ * state, with the content centred in it, so the modal never resizes as stages come and
+ * go, a step wraps, or it turns into a failure (owner, 2026-09-19). Sized for the
+ * tallest state — a failure whose reason runs to three lines; a longer one scrolls
+ * inside. Here rather than in a feature sheet because every screen that hosts a Modal
+ * hosts this one, and this sheet is what reaches them. */
+.modal-progress-body {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    height: 240px;
+    overflow-y: auto;
+}
 }
