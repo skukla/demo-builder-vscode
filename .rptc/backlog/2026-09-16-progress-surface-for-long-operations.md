@@ -4,7 +4,7 @@ kind: feature
 area: platform
 needs: []
 value: high
-status: backlog
+status: active
 ---
 
 # A long operation should say what it is doing, not just spin
@@ -64,3 +64,4 @@ surfaces that host the cards.
 ## Shipped so far
 
 - 2026-09-16  docs(backlog): PL-59 — a long operation should say what it is doing (`66b95506c`)
+- 2026-09-19  feat(integrations): an integration operation shows its progress in a modal (`5aaefb0b1`)
