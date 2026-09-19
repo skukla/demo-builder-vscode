@@ -73,3 +73,4 @@ surfaces that host the cards.
 - 2026-09-19  docs(plan): record the owner's PL-59 decisions: start/stop are short, 10 seconds (`bb87529f3`)
 - 2026-09-19  docs(plan): an agent's project delete is local only by design; the cloud question moves out (`090a7efd8`)
 - 2026-09-19  feat(progress): one progress model any screen can use (PL-59 phase 2, slice 0) (`6a002b9cc`)
+- 2026-09-19  feat(mesh): deploy the API Mesh into the progress modal (`7430ae428`)
