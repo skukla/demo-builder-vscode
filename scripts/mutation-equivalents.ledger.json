@@ -854,7 +854,7 @@
             "module": "src/features/authentication/handlers/deleteAdobeProjectHandler.ts",
             "anchors": [
                 "context.debugLogger.debug('[Project] Post-delete selection clear failed:', clearError);",
-                "context.debugLogger.debug('[Project] Post-delete refresh failed:', refreshError);"
+                "context.debugLogger.debug('[Project] Project list refresh failed:', refreshError);"
             ],
             "mutants": 2,
             "category": "block",
@@ -12848,7 +12848,7 @@
             "anchors": [
                 "if (!mgr) return null;"
             ],
-            "line": 55,
+            "line": 56,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this guard false changes nothing the caller can see. With no manager the very next statement calls mgr.isAuthenticated() inside the try, which throws a TypeError, and the catch arm converts it to the same null this line returns. Both paths hand back null for the same input, so no assertion on any tool's output can separate them.",
@@ -12861,7 +12861,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 58,
+            "line": 59,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying this catch makes authedManager return undefined where it returned null. Every caller tests only falsiness - create/workspace do 'if (!mgr)' and delete does 'if (!(await authedManager(ctx)))' - so undefined and null take the identical branch and produce the identical NEEDS_ADOBE handoff. The declared return type already admits null, so nothing downstream distinguishes them either.",
@@ -12874,7 +12874,7 @@
             "anchors": [
                 "if (args?.confirm !== true || args?.confirmName !== projectName) {"
             ],
-            "line": 263,
+            "line": 264,
             "mutants": 2,
             "category": "optionalChain",
             "reason": "Both optional chains on this line are unreachable-nullish. Lines 194-198 read args?.projectId and args?.projectName and return early unless BOTH trim to a non-empty string, which is only possible when args is an object. So by the time control reaches this line args can never be null or undefined, and dropping the '?.' cannot throw or yield a different value for any input the handler can be given.",
