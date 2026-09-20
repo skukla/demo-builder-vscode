@@ -216,11 +216,61 @@ rewrites `name: entry.name` on every redeploy. The ERP is a catalog entry, so th
 an SC types when adding it is a display-name variable on the bound system, not a
 component name, and there is no way to change it afterwards. Worth its own item.
 
+## Two ERPs in one project: not today, yes under this item
+
+**Today it is refused. Under workspace-per-integration it works** — the blocker that no
+amount of id-minting could solve is exactly the one a separate workspace removes.
+
+**The naming needs nothing from the SC.** `mintInstance` already dedupes silently: a
+taken `northwind-erp` mints `northwind-erp-2`, and the DISPLAY name gets the same
+suffix, so the two read as "Northwind ERP" and "Northwind ERP 2" rather than as
+identical twins. The workspace name derives from the id and the title from the display
+name, so two distinct workspaces come out of two unnamed adds:
+
+| component id | workspace name | workspace title |
+|---|---|---|
+| `northwind-erp` | `NorthwindErpq3k9` | Northwind ERP |
+| `northwind-erp-2` | `NorthwindErp2x7m` | Northwind ERP 2 |
+
+### What stops it today, and what each one costs
+
+**1. The fixed OpenWhisk package — the hard one, and this item dissolves it.**
+`erp-integration` is `layout: 'extension'`, so it ships a fixed package name and the
+deploy path skips the per-id rewrite. Two copies from that source overwrite each other
+on Runtime **whatever ids we mint** (AB-2 spike, proven live). That is why
+`packageClashRefusal` exists, and its own wording names the condition: "a second copy
+in the same workspace would overwrite the first". Separate workspaces means separate
+Runtime namespaces, so there is nothing left to overwrite. The refusal becomes
+workspace-aware instead of being deleted: it should refuse only when the clash is
+inside one workspace.
+
+**2. Minting an id for a paired entry.** `alreadyAddedRefusal` refuses a second
+`erp-integration` because the id is the state slot, the clone folder and the package
+name. A second ERP needs a minted id — which the flow already does for every unpaired
+entry, and deliberately does NOT do for a paired one (owner, 2026-09-20). That decision
+was right for two reasons and this item removes the second of them: forking broke the
+pairing (still true, see 3), and forking bought nothing because the package clash
+defeated it anyway (no longer true). So the fork comes back once 3 is solved.
+
+**3. Pairing is a CATALOG-level relationship.** `demo-erp` carries `boundTo:
+'erp-integration'` — a catalog id, not an instance id. This is the real work. Two ERP
+instances need two `demo-erp` instances, bound instance-to-instance, so each
+integration talks to its own ERP. Four workspaces for two ERPs, each pair joined by
+its own I/O Events provider.
+
+### What that means for the plan
+
+`boundTo` is where this starts, and it is a genuine piece of work rather than a
+follow-on. Sequence it after the workspace spine lands — the spine is what makes
+instance pairing worth building — but keep it inside this item, because "two of the
+same integration" is the capability an SC actually asks for and two DIFFERENT
+integrations is only half of it.
+
 ## Done when
 
-An SC can add two App Management integrations to one project, each deploys into its own
-workspace, each is removed by deleting that workspace, and a project made before this
-still works unchanged.
+An SC can add two App Management integrations to one project — including two of the
+SAME kind, such as two ERPs — each deploys into its own workspace, each is removed by
+deleting that workspace, and a project made before this still works unchanged.
 
 ## Shipped so far
 
