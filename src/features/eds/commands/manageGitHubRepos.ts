@@ -15,8 +15,6 @@ import * as vscode from 'vscode';
 import { getLinkedEdsProjects } from '../services/resourceCleanupHelpers';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getLogger } from '@/core/logging/debugLogger';
-import { sleep } from '@/core/utils/sleep';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 interface RepoQuickPickItem extends vscode.QuickPickItem {
     repoFullName: string;
@@ -211,15 +209,10 @@ export async function manageGitHubReposCommand(context: vscode.ExtensionContext)
 
         // Step 7: Show results
         if (deleted.length > 0 && failed.length === 0) {
-            await vscode.window.withProgress(
-                {
-                    location: vscode.ProgressLocation.Notification,
-                    title: `Successfully deleted ${deleted.length} repositor${deleted.length !== 1 ? 'ies' : 'y'}.`,
-                    cancellable: false,
-                },
-                async () => {
-                    await sleep(TIMEOUTS.UI.NOTIFICATION);
-                },
+            // A result, not progress — the same plain message the two failure
+            // branches below use.
+            vscode.window.showInformationMessage(
+                `Deleted ${deleted.length} repositor${deleted.length !== 1 ? 'ies' : 'y'}.`,
             );
         } else if (deleted.length > 0 && failed.length > 0) {
             const failedList = failed.map((f) => f.repo).join(', ');

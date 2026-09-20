@@ -18,8 +18,6 @@ import { DaLiveOrgOperations } from '../services/daLive/daLiveOrgOperations';
 import { getLinkedEdsProjects } from '../services/resourceCleanupHelpers';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getLogger } from '@/core/logging/debugLogger';
-import { sleep } from '@/core/utils/sleep';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 
 interface SiteQuickPickItem extends vscode.QuickPickItem {
@@ -222,16 +220,10 @@ export async function cleanupDaLiveSitesCommand(context: vscode.ExtensionContext
 
         // Step 7: Show results
         if (deleted.length > 0 && failed.length === 0) {
-            const resultMessage = `Successfully deleted ${deleted.length} site${deleted.length !== 1 ? 's' : ''}.`;
-            await vscode.window.withProgress(
-                {
-                    location: vscode.ProgressLocation.Notification,
-                    title: resultMessage,
-                    cancellable: false,
-                },
-                async () => {
-                    await sleep(TIMEOUTS.UI.NOTIFICATION);
-                },
+            // A result, not progress — the same plain message the two failure
+            // branches below use.
+            vscode.window.showInformationMessage(
+                `Deleted ${deleted.length} site${deleted.length !== 1 ? 's' : ''}.`,
             );
         } else if (deleted.length > 0 && failed.length > 0) {
             const failedList = failed.map(f => f.site).join(', ');

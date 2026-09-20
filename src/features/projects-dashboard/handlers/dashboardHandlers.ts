@@ -16,7 +16,7 @@ import { executeCommandForProject } from '@/core/handlers/projectCommandHelper';
 import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell/orgContextEnv';
 import { hasMeshDeploymentRecord } from '@/core/state/appBuilderComponentState';
 import { sessionUIState } from '@/core/state/sessionUIState';
-import { openInIncognito } from '@/core/utils/browserUtils';
+import { openInIncognito, openPrivateBrowser } from '@/core/utils/browserUtils';
 import { deleteOperationId, resetOperationId } from '@/core/utils/operationIds';
 import { validateProjectPath } from '@/core/validation/PathSafetyValidator';
 import { validateURL } from '@/core/validation/URLValidator';
@@ -702,26 +702,17 @@ export const handleOpenLiveSite: MessageHandler<{ projectPath: string }> = async
         return { success: false, error: 'EDS live URL not available' };
     }
 
-    // Show progress notification while browser is opening
-    // Incognito mode can take a moment to launch
-    await vscode.window.withProgress(
-        {
-            location: vscode.ProgressLocation.Notification,
-            title: 'Opening a private browser',
-            cancellable: false,
-        },
-        async () => {
-            // Validate URL before shell execution (defense against injection via stored URLs)
-            try {
-                validateURL(liveUrl);
-            } catch {
-                throw new Error(`Invalid live URL: ${liveUrl}`);
-            }
-            // Open in incognito mode for clean demo experience (no cached content/cookies)
-            // Falls back to normal browser if incognito mode is not available
-            await openInIncognito(liveUrl);
-        },
-    );
+    // Validate before anything opens (defence against injection via stored URLs),
+    // so a bad URL is refused instead of failing inside a notification.
+    try {
+        validateURL(liveUrl);
+    } catch {
+        return { success: false, error: `Invalid live URL: ${liveUrl}` };
+    }
+
+    // Incognito keeps the demo clean — no cached content, nobody signed in — and
+    // falls back to the normal browser where it is not available.
+    await openPrivateBrowser(liveUrl);
 
     return { success: true };
 };

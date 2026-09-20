@@ -49,8 +49,13 @@ jest.mock('@/features/projects-dashboard/services/settingsSerializer', () => ({
 }));
 
 export const mockOpenInIncognito = jest.fn();
+// The notification that covers the launch lives in openPrivateBrowser and is
+// pinned in browserUtils' own suite; here we only care that the handler asks
+// for a private window rather than an ordinary one.
+export const mockOpenPrivateBrowser = jest.fn();
 jest.mock('@/core/utils/browserUtils', () => ({
     openInIncognito: (...args: unknown[]) => mockOpenInIncognito(...args),
+    openPrivateBrowser: (...args: unknown[]) => mockOpenPrivateBrowser(...args),
 }));
 
 export const mockResolveProjectAuthoringExperience = jest.fn();

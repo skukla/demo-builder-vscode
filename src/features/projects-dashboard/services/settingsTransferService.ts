@@ -16,8 +16,6 @@ import {
     getSuggestedFilename,
 } from './settingsSerializer';
 import { showWebviewQuickPick } from '@/core/utils/quickPickUtils';
-import { sleep } from '@/core/utils/sleep';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { writeFileAtomic } from '@/core/utils/writeFileAtomic';
 import { assertPathInsideSync } from '@/core/validation/PathSafetyValidator';
 import { getProjectDescription } from '@/features/projects-dashboard/utils/componentSummaryUtils';
@@ -243,17 +241,9 @@ export async function exportProjectSettings(
 
         context.logger.info(`Exported settings to: ${saveUri.fsPath}`);
 
-        // Show auto-dismissing success message
-        await vscode.window.withProgress(
-            {
-                location: vscode.ProgressLocation.Notification,
-                title: `${project.name} exported.`,
-                cancellable: false,
-            },
-            async () => {
-                await sleep(TIMEOUTS.UI.NOTIFICATION);
-            },
-        );
+        // A plain message, not a progress bar with a sleep in it: nothing is in
+        // progress, and the SC dismisses it when they have read it.
+        void vscode.window.showInformationMessage(`${project.name} exported.`);
 
         return {
             success: true,

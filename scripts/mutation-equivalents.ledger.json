@@ -8531,7 +8531,7 @@
             "anchors": [
                 ".then(undefined, (error) => {"
             ],
-            "line": 789,
+            "line": 780,
             "mutants": 1,
             "category": "block",
             "reason": "The rejection arm of a fire-and-forget notification chain; its body is a single logger.error. Emptying it leaves the same unhandled-free promise and the same already-returned success response.",

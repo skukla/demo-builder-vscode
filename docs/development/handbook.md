@@ -448,7 +448,7 @@ meant.
 >
 > Five modules own the surfaces and call VS Code's progress directly because that is their
 > job: `baseCommand.ts`, `progressRegister.ts`, `operationBackgroundNotice.ts`,
-> `browserSignInNotice.ts` and `agentOperationNotifier.ts`. 24 other sites predate the
+> `browserSignInNotice.ts` and `agentOperationNotifier.ts`. 20 other sites predate the
 > router and are ledgered with the reason each still opens its own notification; the list
 > may only shrink. Each of the 14 blocking dialogs names the decision it gates, so a new
 > one cannot arrive without someone saying what it asks. Enforced by

@@ -10,7 +10,7 @@
 
 import * as vscode from 'vscode';
 import { hasAdobeWorkspaceContext, hasAdobeProjectContext } from './meshStatusHelpers';
-import { openInIncognito } from '@/core/utils/browserUtils';
+import { openInIncognito, openPrivateBrowser } from '@/core/utils/browserUtils';
 import { validateURL } from '@/core/validation/URLValidator';
 import { validateOrgId, validateProjectId, validateWorkspaceId } from '@/core/validation/validators/AdobeResourceValidator';
 import {
@@ -69,23 +69,10 @@ export const handleOpenLiveSite: MessageHandler = async (context, data) => {
         return { success: false, error: 'Invalid URL', code: ErrorCode.CONFIG_INVALID };
     }
 
-    // Show progress notification while browser is opening
-    // Incognito mode can take a moment to launch
-    await vscode.window.withProgress(
-        {
-            location: vscode.ProgressLocation.Notification,
-            title: 'Opening a private browser',
-            cancellable: false,
-        },
-        async () => {
-            // Open in incognito mode for clean demo experience (no cached content/cookies)
-            // Falls back to normal browser if incognito mode is not available
-            const openedIncognito = await openInIncognito(url);
-            context.logger.debug(
-                `[Dashboard] Opening live site: ${url} (incognito: ${openedIncognito})`,
-            );
-        },
-    );
+    // Incognito keeps the demo clean — no cached content, nobody signed in — and
+    // falls back to the normal browser where it is not available.
+    const openedIncognito = await openPrivateBrowser(url);
+    context.logger.debug(`[Dashboard] Opening live site: ${url} (incognito: ${openedIncognito})`);
 
     return { success: true };
 };

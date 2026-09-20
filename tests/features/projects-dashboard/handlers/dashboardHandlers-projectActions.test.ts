@@ -21,7 +21,7 @@ import {
     mockGetAuthenticationService,
     mockGetCommandExecutor,
     mockGetEwCanvasBranch,
-    mockOpenInIncognito,
+    mockOpenPrivateBrowser,
     mockRenameProjectCore,
     mockResetEdsProjectWithUI,
     mockResetProjectWithUI,
@@ -334,24 +334,19 @@ describe('handleRenameProject', () => {
 });
 
 describe('handleOpenLiveSite', () => {
-    it('opens the stored live URL in a private browser inside a progress notification', async () => {
+    it('opens the stored live URL in a private browser', async () => {
         const project = createEdsProject();
         const context = createProjectsDashboardContext([project]);
 
         const result = await handleOpenLiveSite(context, { projectPath: project.path });
 
-        expect(mockOpenInIncognito).toHaveBeenCalledWith('https://main--citisignal--acme.aem.live');
+        // The notification covering the launch belongs to openPrivateBrowser and is
+        // pinned in browserUtils' own suite.
+        expect(mockOpenPrivateBrowser).toHaveBeenCalledWith(
+            'https://main--citisignal--acme.aem.live',
+        );
         // Never the ordinary browser — the whole point is a clean session.
         expect(mockOpenExternal).not.toHaveBeenCalled();
-        // Incognito launch is slow, so it runs behind a NON-cancellable notification:
-        // half-launching a browser is not a state the user can be left in.
-        expect(vscode.window.withProgress).toHaveBeenCalledWith(
-            expect.objectContaining({
-                location: vscode.ProgressLocation.Notification,
-                cancellable: false,
-            }),
-            expect.any(Function),
-        );
         expect(result).toEqual({ success: true });
     });
 
@@ -360,10 +355,14 @@ describe('handleOpenLiveSite', () => {
         edsMetadataOf(project).liveUrl = 'javascript:alert(1)';
         const context = createProjectsDashboardContext([project]);
 
-        await expect(
-            handleOpenLiveSite(context, { projectPath: project.path }),
-        ).rejects.toThrow('Invalid live URL');
-        expect(mockOpenInIncognito).not.toHaveBeenCalled();
+        const result = await handleOpenLiveSite(context, { projectPath: project.path });
+
+        // Refused before anything opens, so nothing fails inside a notification.
+        expect(result).toEqual({
+            success: false,
+            error: 'Invalid live URL: javascript:alert(1)',
+        });
+        expect(mockOpenPrivateBrowser).not.toHaveBeenCalled();
     });
 
     it('reports the URL is unavailable for a non-EDS project', async () => {
@@ -372,7 +371,7 @@ describe('handleOpenLiveSite', () => {
 
         const result = await handleOpenLiveSite(context, { projectPath: project.path });
 
-        expect(mockOpenInIncognito).not.toHaveBeenCalled();
+        expect(mockOpenPrivateBrowser).not.toHaveBeenCalled();
         expect(result).toEqual({ success: false, error: 'EDS live URL not available' });
     });
 
