@@ -38,6 +38,7 @@ import {
     type ApiEditTarget,
     type UseIntegrationFlowReturn,
 } from './useIntegrationFlow';
+import { SteadyHeight } from '@/core/ui/components/layout/SteadyHeight';
 import { DestinationContext as SharedDestinationContext } from '@/core/ui/components/ui/DestinationContext';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
@@ -295,6 +296,9 @@ function FlowJourney(props: JourneyProps): React.ReactElement {
                 },
             ]}
         >
+            {/* Five stages, five natural heights. The dialog jumped at every step
+                without a floor under them (owner, 2026-09-20). */}
+            <SteadyHeight>
             <div className="intflow-stage-body">
                 <DestinationContext
                     state={props.state}
@@ -303,6 +307,7 @@ function FlowJourney(props: JourneyProps): React.ReactElement {
                 />
                 <StageBody flow={flow} props={props} />
             </div>
+        </SteadyHeight>
         </Modal>
     );
 }

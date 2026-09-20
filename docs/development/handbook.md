@@ -430,6 +430,22 @@ meant.
 > separately by `operationStages.test.ts`. Enforced by
 > `tests/sop/progress-wording.test.ts` against a shrink-only ledger.
 
+> **Convention.** A modal does not change size while it works.
+> *Why:* a body that renders a form, then a spinner, then a result is three different
+> amounts of content, and with nothing holding a floor under them the whole dialog
+> jumps at every step. The Data Installer's import modal did it twice in one dry run
+> before anyone measured it (owner, 2026-09-20: "this is bad UX"). Three things hold a
+> floor: `SteadyHeight` measures the tallest state so far and never goes below it,
+> `.modal-progress-body` fixes one height for a body whose states are known, and
+> `CenteredFeedbackContainer` reserves a height the caller names. Measure rather than
+> name a number when the tallest state is data-dependent — the import form is as tall
+> as the pack has data types, so any fixed reserve is dead space for a small pack and
+> still jumps for a large one.
+>
+> What no check can see is whether the floor is the RIGHT height; the ledger is where
+> a body the scan reads as multi-view says it has only one. Enforced by
+> `tests/sop/modal-steady-height.test.ts` against `modal-steady-height.ledger.json`.
+
 > **Convention.** A long operation reports where the SC is looking, and one surface does
 > the narrating. Pressed on a screen, it opens that screen's progress modal; started
 > anywhere else, it opens one notification; run by an agent, it goes to the agent's
@@ -619,6 +635,15 @@ Know the difference before relying on it.
 > styles it on that surface and nowhere else. **Amended 2026-09-09** — this said
 > "a globally-loaded sheet", which was stricter than the check enforcing it and pinned
 > 321 feature rules in one file for a guarantee already provided. Reach, not global.
+>
+> **The cost usually arrives through REUSE, in a component you did not open.** Rendering
+> a shared component pulls in everything it composes, and their classes with it. On
+> 2026-09-20 the progress modal reached for `forms/FormField` — the house field, the
+> right instinct — and that one line put 29 unstyled class uses into the dashboard,
+> integrations and projectsList bundles, because `FormField` composes `FieldHelpButton`
+> and `descriptionRenderer` and their sheet reaches only configure and wizard. So the
+> question to ask before reusing is not what the component renders, but what its whole
+> graph renders, and the check answers it in about a second.
 > [ADR-018 §3](../architecture/adr/018-css-architecture.md) · Enforced by the cross-bundle
 > check in `tests/sop/stylesheet-bundles.test.ts`.
 
@@ -1638,11 +1663,11 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 25 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 54 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 55 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 121 conventions. 121 of them are enforced; 0 are not.**
+**This handbook states 122 conventions. 122 of them are enforced; 0 are not.**
 
 The last one to get there was "vendor CSS sits in the lowest cascade layer", and it was
 outstanding because it was **not yet true**: `@layer vendor` existed in no bundle, so a

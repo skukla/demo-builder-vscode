@@ -1,0 +1,7 @@
+{
+    "_what": "Modals whose body switches on something but does NOT need a floor under it, each with the reason. Enforced by modal-steady-height.test.ts. A modal that genuinely changes what it shows belongs in SteadyHeight (or one of the other two holders), not here — this list is for bodies the scan reads as multi-view and that are not.",
+
+    "noViewsOfItsOwn": {
+        "src/features/dashboard/ui/aiSurface/components/PromptEditDialog.tsx": "Its two modes change the TITLE and which field takes focus. The body is one form either way, so there is no second height to jump to."
+    }
+}
