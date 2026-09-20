@@ -20,8 +20,12 @@
  * - under an agent → the notification, plus a phase line so the agent's own
  *   notification says what the run is waiting for rather than going quiet.
  *
- * Text entry is NOT a question: the DA.live namespace and token still come from
- * VS Code's input boxes, which open over the modal while it says it is waiting.
+ * The modal owns the FORM too (owner, 2026-09-20: "the modal should own the form
+ * elements"). A question that needs something typed — the DA.live namespace, the
+ * pasted token — is asked with `askForDetailsDuringOperation`, and the fields render
+ * in the modal. Handing a form off to a VS Code input box is the same defect one step
+ * along: one question, two surfaces. With no modal up, the caller keeps its own
+ * input-box flow, which `modalIsAsking()` is for.
  *
  * @module core/vscode/operationPrompt
  */
@@ -31,12 +35,19 @@ import * as vscode from 'vscode';
 import { heldProgress, pushOperationProgress } from './operationProgress';
 import { hasActivePhaseSinks, reportPhase } from '@/core/utils/agentPhaseChannel';
 import type { MessageHandler } from '@/types/handlers';
+import type { OperationPrompt, OperationPromptField } from '@/types/webviewPayloads';
 
 /** The operation whose modal is on screen, for anything running inside it. */
 const hosting = new AsyncLocalStorage<string>();
 
+/** What the SC did with a question: the action they chose, and anything they typed. */
+export interface PromptAnswer {
+    action?: string;
+    values: Record<string, string>;
+}
+
 /** Resolvers for questions waiting on a modal, keyed by operation id. */
-const waiting = new Map<string, (answer: string | undefined) => void>();
+const waiting = new Map<string, (answer: PromptAnswer) => void>();
 
 /**
  * Run `work` as the operation a modal is showing, so a guard anywhere inside it can
@@ -80,14 +91,51 @@ export async function askDuringOperation(
         return vscode.window.showWarningMessage(message, ...actions);
     }
 
+    return (await askInModal(id, { message, actions })).action;
+}
+
+/**
+ * Ask the SC to TYPE what the work needs — a namespace, a pasted token — in the
+ * modal that is already narrating it.
+ *
+ * Only a modal can ask this: a notification has no fields. `modalIsAsking()` says
+ * whether one is there, and the caller keeps its own VS Code input-box flow for
+ * when none is.
+ *
+ * Re-asking is how an invalid answer is handled: call it again with the values
+ * already typed and a `description` saying what is wrong, and the SC edits rather
+ * than starts over.
+ *
+ * @param prompt - the question, the fields, and the answers
+ * @returns the action chosen and everything typed; no action means dismissed
+ */
+export async function askForDetailsDuringOperation(prompt: {
+    message: string;
+    fields: OperationPromptField[];
+    actions: string[];
+}): Promise<PromptAnswer> {
+    const id = hosting.getStore();
+    if (!id) {
+        return { action: undefined, values: {} };
+    }
+    return askInModal(id, prompt);
+}
+
+/** Whether a modal is on screen to ask this operation's questions. */
+export function modalIsAsking(): boolean {
+    return hosting.getStore() !== undefined;
+}
+
+/** Put the question up, wait for the answer, then put the stage back. */
+async function askInModal(id: string, prompt: OperationPrompt): Promise<PromptAnswer> {
     const before = heldProgress(id);
-    const answer = await new Promise<string | undefined>((resolve) => {
+    const answer = await new Promise<PromptAnswer>((resolve) => {
         waiting.set(id, resolve);
         void pushOperationProgress({
             ...(before ?? { id, state: 'running' }),
             id,
             state: 'running',
-            prompt: { message, actions },
+            prompt,
         });
     });
     waiting.delete(id);
@@ -104,8 +152,12 @@ export async function askDuringOperation(
  * @param id - the operation the question belongs to
  * @param answer - the action they chose, or undefined if they dismissed it
  */
-export function answerOperationPrompt(id: string, answer?: string): void {
-    waiting.get(id)?.(answer);
+export function answerOperationPrompt(
+    id: string,
+    answer?: string,
+    values: Record<string, string> = {},
+): void {
+    waiting.get(id)?.({ action: answer, values });
 }
 
 /** Whether this operation is waiting on an answer — the modal's Cancel state. */
@@ -117,10 +169,11 @@ export function isAwaitingAnswer(id: string): boolean {
 export const handleAnswerOperationPrompt: MessageHandler<{
     id?: string;
     answer?: string;
+    values?: Record<string, string>;
 }> = async (_context, payload) => {
     if (!payload?.id) {
         return { success: false, error: 'No operation id' };
     }
-    answerOperationPrompt(payload.id, payload.answer);
+    answerOperationPrompt(payload.id, payload.answer, payload.values);
     return { success: true };
 };

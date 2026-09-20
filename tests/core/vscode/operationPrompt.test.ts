@@ -15,8 +15,10 @@ import { heldProgress, pushOperationProgress, startModalRun } from '@/core/vscod
 import {
     answerOperationPrompt,
     askDuringOperation,
+    askForDetailsDuringOperation,
     handleAnswerOperationPrompt,
     isAwaitingAnswer,
+    modalIsAsking,
     withModalAsking,
 } from '@/core/vscode/operationPrompt';
 import { createMockHandlerContext } from '../../helpers/handlerContextTestHelpers';
@@ -167,5 +169,66 @@ describe('the handler behind the modal button', () => {
         const result = await handleAnswerOperationPrompt(createMockHandlerContext(), {});
 
         expect(result).toEqual({ success: false, error: 'No operation id' });
+    });
+});
+
+describe('a question that needs something typed', () => {
+    it('sends the fields to the modal and returns what was typed', async () => {
+        const send = jest.fn();
+        startModalRun('op-7', send);
+
+        const asking = withModalAsking('op-7', () =>
+            askForDetailsDuringOperation({
+                message: 'Sign in to DA.live.',
+                fields: [
+                    { id: 'orgName', label: 'DA.live namespace' },
+                    { id: 'token', label: 'Token', secret: true },
+                ],
+                actions: ['Sign In', 'Open DA.live'],
+            }),
+        );
+        await settle();
+
+        expect(send).toHaveBeenCalledWith(
+            'operationProgress',
+            expect.objectContaining({
+                prompt: {
+                    message: 'Sign in to DA.live.',
+                    fields: [
+                        { id: 'orgName', label: 'DA.live namespace' },
+                        { id: 'token', label: 'Token', secret: true },
+                    ],
+                    actions: ['Sign In', 'Open DA.live'],
+                },
+            }),
+        );
+
+        answerOperationPrompt('op-7', 'Sign In', { orgName: 'acme', token: 'eyJabc' });
+
+        await expect(asking).resolves.toEqual({
+            action: 'Sign In',
+            values: { orgName: 'acme', token: 'eyJabc' },
+        });
+    });
+
+    // A form has no notification equivalent, so the caller keeps its input-box flow
+    // for that case and asks first.
+    it('says whether a modal is there to ask it', async () => {
+        expect(modalIsAsking()).toBe(false);
+
+        await withModalAsking('op-8', async () => {
+            expect(modalIsAsking()).toBe(true);
+        });
+    });
+
+    it('answers nothing when no modal is hosting the work', async () => {
+        const answer = await askForDetailsDuringOperation({
+            message: 'Sign in to DA.live.',
+            fields: [{ id: 'token', label: 'Token' }],
+            actions: ['Sign In'],
+        });
+
+        expect(answer).toEqual({ action: undefined, values: {} });
+        expect(showWarning).not.toHaveBeenCalled();
     });
 });

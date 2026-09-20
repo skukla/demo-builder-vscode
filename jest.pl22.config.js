@@ -75,6 +75,7 @@ module.exports = {
         '**/tests/features/components/services/commerceSecretMigration.test.ts',
         '**/tests/features/eds/handlers/daLive/daLiveAuthPrompt-guard.test.ts',
         '**/tests/features/eds/handlers/daLive/daLiveAuthPrompt-signIn.test.ts',
+        '**/tests/features/eds/handlers/daLive/daLiveAuthPrompt-modalForm.test.ts',
         '**/tests/features/eds/services/patches/codePatchPipelineHelpers.test.ts',
         '**/tests/features/eds/services/patches/codePatchRegistry.test.ts',
         '**/tests/features/prerequisites/handlers/installHandler-adobeCliProgress.test.ts',

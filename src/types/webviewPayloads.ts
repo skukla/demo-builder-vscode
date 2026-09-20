@@ -325,6 +325,25 @@ export interface OperationPrompt {
     message: string;
     /** The answers, the first being the one that continues the work. */
     actions: string[];
+    /**
+     * What the SC has to type for the work to go on — a namespace, a pasted token.
+     * The modal owns these rather than handing off to a VS Code input box, so one
+     * question is one surface (owner, 2026-09-20).
+     */
+    fields?: OperationPromptField[];
+}
+
+/** One thing the SC types into a question the modal is asking. */
+export interface OperationPromptField {
+    id: string;
+    label: string;
+    /** What it is already, so re-asking after an error keeps what was typed. */
+    value?: string;
+    placeholder?: string;
+    /** A line under the field: where to get the value, or what is wrong with it. */
+    description?: string;
+    /** A credential: masked as it is typed. */
+    secret?: boolean;
 }
 
 /** `appBuilderComponentsSnapshot` — the full fresh persisted map. */

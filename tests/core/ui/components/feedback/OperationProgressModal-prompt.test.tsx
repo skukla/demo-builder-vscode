@@ -14,7 +14,23 @@ import type { OperationProgressPayload } from '@/types/webviewPayloads';
 
 jest.mock('@adobe/react-spectrum', () => ({
     DialogContainer: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+    Flex: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+    Text: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
+    TextField: ({ label, type, value, onChange, description }: any) => (
+        <label>
+            {label}
+            <input
+                aria-label={label}
+                type={type === 'password' ? 'password' : 'text'}
+                value={value}
+                onChange={(event) => onChange(event.target.value)}
+            />
+            {description ? <span data-testid={`${label}-description`}>{description}</span> : null}
+        </label>
+    ),
 }));
+
+
 
 // The real Modal, reduced to what these assertions read: its title, its buttons and
 // its dismiss affordance. Buttons carry their label, which is what a guard supplies.
@@ -128,6 +144,9 @@ it('hands the chosen answer back to the work waiting on it', async () => {
     expect(mockPostMessage).toHaveBeenCalledWith('answerOperationPrompt', {
         id: OPERATION.id,
         answer: 'Sign In',
+        // A question with no fields still carries the (empty) form values, so the
+        // extension side reads one shape whatever it asked for.
+        values: {},
     });
     // The work carries on and the modal goes back to narrating it, so answering is
     // not closing.
@@ -149,6 +168,7 @@ it('cancels rather than backgrounding while it waits', async () => {
     expect(mockPostMessage).toHaveBeenCalledWith('answerOperationPrompt', {
         id: OPERATION.id,
         answer: undefined,
+        values: {},
     });
     expect(mockPostMessage).not.toHaveBeenCalledWith('backgroundOperation', expect.anything());
     expect(onClose).toHaveBeenCalled();
@@ -163,5 +183,56 @@ it('still offers Run in background when nothing is being asked', async () => {
     expect(mockPostMessage).toHaveBeenCalledWith('backgroundOperation', {
         id: OPERATION.id,
         title: OPERATION.title,
+    });
+});
+
+describe('a question that needs something typed', () => {
+    const SIGN_IN = {
+        message: 'Sign in to DA.live.',
+        actions: ['Sign In', 'Open DA.live'],
+        fields: [
+            { id: 'orgName', label: 'DA.live namespace', value: 'acme' },
+            { id: 'token', label: 'Token', secret: true, description: 'That token was refused.' },
+        ],
+    };
+
+    it('renders the fields, masking the credential', () => {
+        progress = { id: OPERATION.id, state: 'running', prompt: SIGN_IN };
+
+        renderModal();
+
+        expect(screen.getByText('Sign in to DA.live.')).toBeInTheDocument();
+        expect(screen.getByLabelText('DA.live namespace')).toHaveValue('acme');
+        expect(screen.getByLabelText('Token')).toHaveAttribute('type', 'password');
+        expect(screen.getByTestId('Token-description')).toHaveTextContent('That token was refused.');
+    });
+
+    it('hands back what was typed with the action', async () => {
+        progress = { id: OPERATION.id, state: 'running', prompt: SIGN_IN };
+        renderModal();
+
+        await user().type(screen.getByLabelText('Token'), 'eyJnew');
+        await user().click(screen.getByRole('button', { name: 'Sign In' }));
+
+        expect(mockPostMessage).toHaveBeenCalledWith('answerOperationPrompt', {
+            id: OPERATION.id,
+            answer: 'Sign In',
+            values: { orgName: 'acme', token: 'eyJnew' },
+        });
+    });
+
+    // Going to da.live must not cost what is already typed: the values ride along,
+    // and the extension asks again with them.
+    it('carries the values through the trip to da.live', async () => {
+        progress = { id: OPERATION.id, state: 'running', prompt: SIGN_IN };
+        renderModal();
+
+        await user().click(screen.getByRole('button', { name: 'Open DA.live' }));
+
+        expect(mockPostMessage).toHaveBeenCalledWith('answerOperationPrompt', {
+            id: OPERATION.id,
+            answer: 'Open DA.live',
+            values: { orgName: 'acme', token: '' },
+        });
     });
 });

@@ -28,9 +28,10 @@
  * @module core/ui/components/feedback/OperationProgressModal
  */
 
-import { DialogContainer } from '@adobe/react-spectrum';
-import React, { useCallback, useEffect } from 'react';
+import { DialogContainer, Flex, Text } from '@adobe/react-spectrum';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { OperationPromptForm } from '@/core/ui/components/feedback/OperationPromptForm';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { Modal, type ActionButton } from '@/core/ui/components/ui/Modal';
 import { useElapsedClock } from '@/core/ui/hooks/useElapsedClock';
@@ -109,6 +110,8 @@ interface ProgressBodyProps {
     failureTitle: string;
     progress?: OperationProgressPayload | null;
     elapsed?: string;
+    /** Every keystroke in a question's fields, for the buttons to hand back. */
+    onTyped: (values: Record<string, string>) => void;
 }
 
 /** The one row that changes: a question, a failure, or where the work has got to. */
@@ -118,7 +121,18 @@ function ProgressBody({
     failureTitle,
     progress,
     elapsed,
+    onTyped,
 }: ProgressBodyProps): React.ReactElement {
+    if (prompt?.fields?.length) {
+        // The question and what it needs typed, together: the modal owns the form
+        // rather than handing off to a VS Code input box (owner, 2026-09-20).
+        return (
+            <Flex direction="column" gap="size-200" width="100%">
+                <Text>{prompt.message}</Text>
+                <OperationPromptForm fields={prompt.fields} onChange={onTyped} />
+            </Flex>
+        );
+    }
     if (prompt) {
         return <StatusDisplay variant="warning" title="Waiting for you" message={prompt.message} />;
     }
@@ -163,13 +177,22 @@ export function OperationProgressModal({
         if (progress?.state === 'succeeded') onClose();
     }, [progress?.state, onClose]);
 
-    /** Hand an answer back to the work waiting on it. */
+    // What the SC has typed into the question's fields, if it has any. A ref, not
+    // state: every keystroke would otherwise re-render the modal around the field
+    // being typed into, and nothing here renders from it — the buttons just send it.
+    const typed = useRef<Record<string, string>>({});
+    const onTyped = useCallback((values: Record<string, string>): void => {
+        typed.current = values;
+    }, []);
+
+    /** Hand an answer back to the work waiting on it, with anything typed. */
     const answer = useCallback(
         (chosen?: string): void => {
             if (operation) {
                 webviewClient.postMessage('answerOperationPrompt', {
                     id: operation.id,
                     answer: chosen,
+                    values: typed.current,
                 });
             }
         },
@@ -221,6 +244,7 @@ export function OperationProgressModal({
                         failureTitle={operation.failureTitle}
                         progress={progress}
                         elapsed={elapsed}
+                        onTyped={onTyped}
                     />
                 </div>
             </Modal>

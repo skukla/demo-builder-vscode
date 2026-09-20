@@ -7881,7 +7881,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 244,
+            "line": 249,
             "mutants": 1,
             "category": "block",
             "reason": "This catch holds one logger.debug and a return undefined. Emptying it lets control fall off the end of readTokenFromClipboard, which returns undefined too \u2014 the same value, so the caller opens the paste box either way. A denied or unavailable clipboard is not an auth failure and the function is written to say so by returning nothing; the only observable difference the mutant makes is the missing debug line naming why. That the flow falls through to the paste box when the clipboard yields nothing is asserted in the sign-in suite.",
@@ -7894,7 +7894,7 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 449,
+            "line": 462,
             "mutants": 1,
             "category": "block",
             "reason": "The else arm of the pinned-namespace check contains one logger.debug naming the namespace being reused. Emptying it changes no value: orgName already holds the pinned org, and the next statement is the browser gate. That the org box is NOT opened when a namespace is pinned \u2014 the decision this else belongs to \u2014 is asserted by 'should not ask for an org when a namespace is already pinned', which counts the boxes opened.",

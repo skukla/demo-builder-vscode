@@ -14,7 +14,7 @@
         "src/features/eds/commands/cleanupDaLiveSites.ts:75": "Palette command, reading the site list before anything is chosen. This is the load, not the work.",
         "src/features/eds/commands/manageGitHubRepos.ts:178": "The repository deletion itself, from the palette. One notification is the right surface.",
         "src/features/eds/commands/manageGitHubRepos.ts:89": "Palette command, loading the repository list before anything is chosen.",
-        "src/features/eds/handlers/daLive/daLiveAuthPrompt.ts:473": "Verifies credentials the SC has just pasted, inside the prompt that asked for them. The prompt is the surface; this covers the check.",
+        "src/features/eds/handlers/daLive/daLiveAuthPrompt.ts:486": "Verifies credentials the SC has just pasted, inside the prompt that asked for them. The prompt is the surface; this covers the check.",
         "src/features/project-creation/services/aiBundle/thirdPartyToolingSettingListener.ts:102": "Runs when a VS Code setting changes, so there is no screen and no agent — a notification is the only surface available.",
         "src/features/updates/commands/checkUpdates.ts:58": "The update check, from the palette and from activation. Updates narrate themselves through their own notifications end to end.",
         "src/features/updates/commands/updateExecutor.ts:146": "Template sync during an update run. The update flow is a sequence of notifications by design — the SC is not on a screen while it happens.",

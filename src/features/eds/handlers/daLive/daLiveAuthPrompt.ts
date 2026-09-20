@@ -12,7 +12,11 @@ import * as vscode from 'vscode';
 import { parseJwtPayload } from '../../services/daLive/daLiveAuthService';
 import { getDaLiveAuthService } from '../edsServiceCache';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { askDuringOperation } from '@/core/vscode/operationPrompt';
+import {
+    askDuringOperation,
+    askForDetailsDuringOperation,
+    modalIsAsking,
+} from '@/core/vscode/operationPrompt';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
 
@@ -187,21 +191,22 @@ export async function ensureDaLiveAuth(
         context.logger.warn(`${logPrefix} DA.live token expired or missing`);
     }
 
-    // Asked where the SC is already looking: in the progress modal when one is
-    // narrating this operation, otherwise the notification (PL-59, owner 2026-09-20 —
-    // republishing showed the modal waiting on this and the notification asking it).
-    const selection = await askDuringOperation(
-        refusedByServer
-            ? 'Your DA.live session was refused by the server. Please sign in again to continue.'
-            : 'Your DA.live session has expired. Please sign in to continue.',
-        'Sign In',
-    );
+    const expiry = refusedByServer
+        ? 'Your DA.live session was refused by the server.'
+        : 'Your DA.live session has expired.';
 
-    if (selection !== 'Sign In') {
-        return { authenticated: false, cancelled: true };
+    // In a modal the expiry line heads the sign-in FORM: a Sign In button in front
+    // of a form the modal was going to show anyway is a click that asks nothing
+    // (owner, 2026-09-20). With no modal up, it is the notification it always was,
+    // and its answer opens the input-box flow below.
+    if (!modalIsAsking()) {
+        const selection = await askDuringOperation(`${expiry} Please sign in to continue.`, 'Sign In');
+        if (selection !== 'Sign In') {
+            return { authenticated: false, cancelled: true };
+        }
     }
 
-    const authResult = await showDaLiveAuthQuickPick(context);
+    const authResult = await showDaLiveAuthQuickPick(context, expiry);
 
     if (!authResult.cancelled && authResult.success) {
         return { authenticated: true };
@@ -424,12 +429,20 @@ async function confirmTokenReady(context: DaLiveAuthContext): Promise<boolean> {
  * Used by both project dashboard and projects list for EDS reset operations.
  *
  * @param context - Handler context with extension context for token storage
+ * @param reason - why it is asking, shown at the head of the modal's form
  * @returns Promise with auth result (success/cancelled/error)
  */
 export async function showDaLiveAuthQuickPick(
     context: DaLiveAuthContext,
+    reason?: string,
 ): Promise<QuickPickAuthResult> {
     context.logger.info('[DA.live Auth] Starting authentication flow');
+
+    // A progress modal is already on screen for this operation, so it asks: one
+    // question, one surface, fields and all (owner, 2026-09-20).
+    if (modalIsAsking()) {
+        return signInThroughModal(context, reason);
+    }
 
     // Step 1: Org name — only when we do not already have one. The DA.live org
     // is the GitHub namespace (a personal login or a GitHub org the user
@@ -481,6 +494,97 @@ export async function showDaLiveAuthQuickPick(
 }
 
 /**
+ * Sign in inside the progress modal: one form, however many tries it takes.
+ *
+ * The input-box flow below asks four things in sequence — namespace, a trip to
+ * da.live, a Continue gate, then the token — because a VS Code input box can only
+ * ask one thing at a time. A form has no such limit, so this asks for everything at
+ * once and re-asks with what was typed when something is wrong.
+ *
+ * "Open DA.live" is an answer rather than a link: it opens the browser and asks
+ * again, carrying the values forward, so the SC comes back to the form they left.
+ *
+ * The clipboard is read only after the SC has asked for the browser trip — the same
+ * consent point the notification flow uses. Nothing before that touches it.
+ *
+ * @param context - Handler context, for token storage and logging
+ * @param reason - why it is asking, when something expired
+ * @returns The auth result
+ */
+async function signInThroughModal(
+    context: DaLiveAuthContext,
+    reason?: string,
+): Promise<QuickPickAuthResult> {
+    const service = getDaLiveAuthService(context.context);
+    let orgName = service.getOrgName() ?? '';
+    let token = '';
+    // What is wrong with each field, shown under it on the next ask.
+    let orgProblem: string | undefined;
+    let tokenProblem: string | undefined;
+
+    for (;;) {
+        const asked = await askForDetailsDuringOperation({
+            message: [
+                reason,
+                'Sign in to DA.live: run the bookmarklet on da.live to copy a token, then paste it here.',
+            ]
+                .filter(Boolean)
+                .join(' '),
+            fields: [
+                {
+                    id: 'orgName',
+                    label: 'DA.live namespace',
+                    value: orgName,
+                    placeholder: 'your GitHub username, or an org you belong to',
+                    description: orgProblem,
+                },
+                {
+                    id: 'token',
+                    label: 'Token',
+                    value: token,
+                    placeholder: 'Paste the token from the bookmarklet',
+                    secret: true,
+                    description: tokenProblem,
+                },
+            ],
+            actions: ['Sign In', 'Open DA.live'],
+        });
+
+        orgName = asked.values.orgName ?? orgName;
+        token = asked.values.token ?? token;
+
+        if (!asked.action) {
+            context.logger.info('[DA.live Auth] Cancelled in the progress modal');
+            return { success: false, cancelled: true };
+        }
+
+        if (asked.action === 'Open DA.live') {
+            context.logger.debug('[DA.live Auth] Opening DA.live in browser');
+            await vscode.env.openExternal(vscode.Uri.parse('https://da.live'));
+            // The trip is the consent to read the clipboard, exactly as in the
+            // notification flow — and coming back to a filled field is the point.
+            token = (await readTokenFromClipboard(context.logger)) ?? token;
+            orgProblem = undefined;
+            tokenProblem = undefined;
+            continue;
+        }
+
+        orgProblem = orgName.trim() ? undefined : 'Enter your DA.live namespace.';
+        tokenProblem = token.trim() ? undefined : 'Paste the token the bookmarklet copied.';
+        if (orgProblem || tokenProblem) {
+            continue;
+        }
+
+        const stored = await validateAndStoreToken(context, token, orgName);
+        if (stored.success) {
+            return stored;
+        }
+        // Wrong or expired: say so under the field and let them paste another.
+        tokenProblem = stored.error ?? 'That token was not accepted.';
+    }
+}
+
+/**
  * Validate the collected token and pin it to the namespace.
  *
  * Runs for BOTH token sources. The clipboard path already passed
@@ -515,7 +619,11 @@ async function validateAndStoreToken(
         const validation = validateDaLiveTokenStrict(trimmedToken);
         if (!validation.valid) {
             context.logger.warn(`[DA.live Auth] Token validation failed: ${validation.error}`);
-            await vscode.window.showErrorMessage(validation.error ?? 'Token validation failed');
+            // Only when nothing else is telling them: the modal shows the reason
+            // under the field it belongs to.
+            if (!modalIsAsking()) {
+                await vscode.window.showErrorMessage(validation.error ?? 'Token validation failed');
+            }
             return { success: false, error: validation.error };
         }
 
@@ -549,7 +657,9 @@ async function validateAndStoreToken(
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         context.logger.error(`[DA.live Auth] Authentication error: ${errorMessage}`);
-        await vscode.window.showErrorMessage(`Authentication failed: ${errorMessage}`);
+        if (!modalIsAsking()) {
+            await vscode.window.showErrorMessage(`Authentication failed: ${errorMessage}`);
+        }
         return { success: false, error: errorMessage };
     }
 }
