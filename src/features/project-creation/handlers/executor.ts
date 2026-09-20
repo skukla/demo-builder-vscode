@@ -36,6 +36,7 @@ import { executeSampleDataPhase } from './executorSampleDataPhase';
 import { ProgressTracker } from './shared';
 import { COMPONENT_IDS } from '@/core/constants';
 import { ServiceLocator } from '@/core/di/serviceLocator';
+import { reportPhase } from '@/core/utils/agentPhaseChannel';
 import { getAppBuilderComponentEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { migrateDeclaredSecrets } from '@/features/components/services/commerceSecretMigration';
 import { componentRegistryFrom } from '@/features/components/services/componentRegistryAccess';
@@ -180,6 +181,10 @@ export async function executeProjectCreation(
             meshPhase: currentMeshPhase,
         };
         context.sendMessage('creationProgress', payload);
+        // ...and to an AGENT, which has no wizard screen to send to. A
+        // `create_project` used to announce itself and then say nothing for two
+        // minutes (PL-59 R3, slice 7).
+        reportPhase(message ? `${currentOperation} — ${message}` : currentOperation);
     };
 
     // ========================================================================

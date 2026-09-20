@@ -16,6 +16,7 @@
 
 import * as vscode from 'vscode';
 import { ServiceLocator } from '@/core/di/serviceLocator';
+import { reportPhase } from '@/core/utils/agentPhaseChannel';
 import { extractEdsMetadata } from '@/features/eds/services/resourceCleanupHelpers';
 import { tearDownStorefront } from '@/features/eds/services/storefront/storefrontTeardown';
 import type { Project } from '@/types/base';
@@ -100,6 +101,7 @@ export async function cleanUpProjectCloud(
     if (!metadata) return outcome;
 
     if (choice.deleteDaLiveSite && metadata.daLiveOrg && metadata.daLiveSite) {
+        reportPhase('Taking the storefront down');
         const name = `${metadata.daLiveOrg}/${metadata.daLiveSite}`;
         try {
             const tokenManager = ServiceLocator.getAuthenticationService().getTokenManager();
@@ -116,6 +118,9 @@ export async function cleanUpProjectCloud(
                 {
                     tokenProvider,
                     logger: context.logger,
+                    // The teardown's own step names, which is what the agent's
+                    // notification shows while it waits (PL-59 R3).
+                    onStep: (step) => reportPhase(step),
                     initKeyStore: () =>
                         HelixService.initKeyStore(
                             context.context.secrets,
@@ -141,6 +146,7 @@ export async function cleanUpProjectCloud(
     }
 
     if (choice.deleteGithubRepo && metadata.githubRepo) {
+        reportPhase('Deleting the repository');
         const [owner, repo] = metadata.githubRepo.split('/');
         try {
             const { getGitHubServices } = await import('@/features/eds/handlers/edsHelpers');

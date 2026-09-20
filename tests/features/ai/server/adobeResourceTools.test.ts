@@ -424,7 +424,8 @@ describe('delete_adobe_project', () => {
             serve()('delete_adobe_project', { ...ARGS, confirm: true, confirmName: 'Doomed' })
         );
 
-        expect(seen).toEqual(['Removing event providers (2/5)']);
+        // The house count shape, the same one the buttons show (PL-59 slice 7).
+        expect(seen).toEqual(['Removing event providers (2 of 5)']);
     });
 });
 

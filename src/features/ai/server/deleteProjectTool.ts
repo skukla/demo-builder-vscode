@@ -16,6 +16,7 @@ import { z } from 'zod';
 import { cleanUpProjectCloud, resolveCloudCleanup } from './agentProjectCleanup';
 import { asText } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
+import { reportPhase } from '@/core/utils/agentPhaseChannel';
 import { deleteProjectFiles } from '@/features/projects-dashboard/services/projectDeletionService';
 import type { HandlerContext } from '@/types/handlers';
 
@@ -90,6 +91,8 @@ export function registerDeleteProjectTool(
             const cloud = await cleanUpProjectCloud(ctx, project, choice);
 
             try {
+                // The button's own words for the step it runs (PL-59 slice 7).
+                reportPhase('Removing the project files');
                 await deleteProjectFiles(ctx, project);
                 return asText({
                     deleted: true,

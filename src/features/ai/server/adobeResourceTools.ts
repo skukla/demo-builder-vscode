@@ -35,6 +35,7 @@ import { asText } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { reportPhase } from '@/core/utils/agentPhaseChannel';
+import { stageLine } from '@/core/utils/stageLine';
 import { createTeardownDeps } from '@/features/authentication/handlers/deleteAdobeProjectHandler';
 import { handleRenameAdobeProject } from '@/features/authentication/handlers/renameAdobeProjectHandler';
 import { teardownConsoleProject } from '@/features/authentication/services/consoleProjectTeardown';
@@ -287,7 +288,7 @@ export function registerAdobeResourceTools(
                 // project itself, and runs long enough that a silent wait reads
                 // as a hang. Step count rides along for the same reason reset's
                 // does.
-                (p) => reportPhase(`${p.message} (${p.step}/${p.totalSteps})`),
+                (p) => reportPhase(stageLine(p.message, { index: p.step, total: p.totalSteps })),
             );
 
             // `items` is the per-step teardown log the dashboard renders. An agent

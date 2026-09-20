@@ -19,7 +19,9 @@ import {
     handleSaveAiPrompt,
 } from './aiPromptHandlers';
 import { ServiceLocator } from '@/core/di/serviceLocator';
+import { reportPhase } from '@/core/utils/agentPhaseChannel';
 import { AI_FILES_OPERATION_ID } from '@/core/utils/operationIds';
+import { stageLine } from '@/core/utils/stageLine';
 import { sanitizeErrorForLogging } from '@/core/validation/SensitiveDataRedactor';
 import { pushOperationProgress } from '@/core/vscode/operationProgress';
 import { verifyAiSetup, type AiVerificationResult } from '@/features/ai/aiSetupVerifier';
@@ -203,6 +205,9 @@ export async function handleRegenerateAiFiles(context: HandlerContext): Promise<
             logs: [],
         };
         void context.sendMessage('creationProgress', payload);
+        // ...and to an AGENT, which has no panel to send to: without this a
+        // regenerate said its name and then nothing for a minute (PL-59 R3).
+        reportPhase(stageLine(currentOperation, { index: stepNumber, total: totalSteps }));
         // The same step on the shared channel, so closing the AI Capabilities
         // modal can hand the run to a notification that keeps narrating
         // (PL-59 R8). The modal's own per-step view is unchanged.

@@ -1864,7 +1864,7 @@
             "anchors": [
                 "if (!targetVersions || targetVersions.length === 0) {"
             ],
-            "line": 124,
+            "line": 126,
             "mutants": 1,
             "category": "branch",
             "reason": "targetVersions comes from getTargetNodeVersions, which returns sortedMissingMajors only when its length is above zero, otherwise [version] or undefined. It can never hand back an EMPTY array, so the second half of this guard has no input that makes it decide anything the first half did not.",
@@ -1877,7 +1877,7 @@
             "anchors": [
                 "if (installableVersions.length < missingNodeVersions.length) {"
             ],
-            "line": 157,
+            "line": 159,
             "mutants": 5,
             "category": "branch",
             "reason": "The whole block is one context.logger.debug call naming the versions that will actually be installed. Flipping the comparison, forcing it either way, or emptying the block changes which debug line prints; targetVersions is computed on the next line from installableVersions regardless.",
@@ -1890,7 +1890,7 @@
             "anchors": [
                 "if (defaultSteps.length > 0) {"
             ],
-            "line": 223,
+            "line": 229,
             "mutants": 2,
             "category": "branch",
             "reason": "Forcing this guard true when there are no default steps computes lastVersion, logs it, and then iterates an empty array \u2014 no step runs and no message is pushed. The only difference is one debug line, and lastVersion cannot throw because this arm is already inside `targetVersions?.length`.",
@@ -1903,7 +1903,7 @@
             "anchors": [
                 "const requiredForComponents = plugin.requiredFor || [];"
             ],
-            "line": 247,
+            "line": 253,
             "mutants": 1,
             "category": "other",
             "reason": "The array is used only for `includes(componentId)` against the component ids in nodeVersionMapping. Seeding it with a string no component is ever named after matches nothing, exactly as the empty default matches nothing, so no plugin resolves to a different set of Node versions.",
@@ -1916,7 +1916,7 @@
             "anchors": [
                 "if (installablePluginVersions.length > 0) {"
             ],
-            "line": 281,
+            "line": 287,
             "mutants": 2,
             "category": "branch",
             "reason": "Forcing this guard true or admitting zero assigns versionsToInstall the SAME empty array the else arm was there to reject, and installPlugins then iterates it zero times \u2014 no command runs and no status is pushed, which is what returning null achieves. The two paths differ only in one debug line.",
@@ -1929,7 +1929,7 @@
             "anchors": [
                 "} else if (targetVersions?.length) {"
             ],
-            "line": 287,
+            "line": 293,
             "mutants": 2,
             "category": "branch",
             "reason": "This arm is reached only for a per-node-version prerequisite with a non-empty Node mapping, and for exactly those the caller has already assigned targetVersions from resolvePerNodeTargetVersions, which early-returns rather than hand back an empty or absent list. So targetVersions is always a non-empty array here: neither forcing the condition true nor dropping the optional chain can change or throw.",
@@ -1942,7 +1942,7 @@
             "anchors": [
                 "if (dependents && dependents.length > 0) {"
             ],
-            "line": 360,
+            "line": 366,
             "mutants": 2,
             "category": "branch",
             "reason": "dependents is the result of Array.filter, so it is either undefined (when currentPrerequisites is absent, which the first operand already catches) or an array. Admitting a length of zero enters a forEach over nothing. No cache entry is invalidated either way.",
@@ -1955,7 +1955,7 @@
             "anchors": [
                 "if (isTimeoutErr) {"
             ],
-            "line": 381,
+            "line": 387,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying the THEN arm removes three logging calls and nothing else \u2014 the warning payload built below reads isTimeoutErr again for its message, so the branch itself has no other effect. The ELSE arm is not equivalent and is killed by a test asserting that a non-timeout failure reaches the error logger.",
@@ -1968,7 +1968,7 @@
             "anchors": [
                 "if (overallInstalled) {"
             ],
-            "line": 463,
+            "line": 469,
             "mutants": 4,
             "category": "branch",
             "reason": "Anchored at 463 and covering the else at 469 too. Both arms of this if/else do nothing but call logger.info/logger.warn and debugLogger.debug; overallInstalled is read again below for the status, installed and canInstall fields of the payload, which tests do pin. Flipping or emptying either arm changes only which line is logged.",
@@ -1981,7 +1981,7 @@
             "anchors": [
                 "const index = resolved?.findIndex((p) => p.id === payload.prerequisiteId) ?? -1;"
             ],
-            "line": 516,
+            "line": 522,
             "mutants": 1,
             "category": "other",
             "reason": "The -1 default applies only when resolved is undefined, and the very next line returns undefined on `!resolved` regardless of the index. findIndex itself returns -1 rather than undefined when it finds nothing, so the coalesce never fires on a defined list.",
@@ -1994,7 +1994,7 @@
             "anchors": [
                 "if (typeof payload.prereqId !== 'number') return undefined;"
             ],
-            "line": 524,
+            "line": 530,
             "mutants": 1,
             "category": "branch",
             "reason": "Removing the guard reads currentPrerequisiteStates.get(undefined), which is undefined, so the function returns undefined exactly as the guard would have \u2014 and the caller's error message is chosen from the payload, not from how the resolution failed. No payload distinguishes the two.",
@@ -2007,7 +2007,7 @@
             "anchors": [
                 "const pluginCommands = await context.prereqManager?.getPluginInstallCommands(prereq.id, plugin.id);"
             ],
-            "line": 310,
+            "line": 316,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "Reaching this line requires an install plan, and the plan comes from `context.prereqManager?.getInstallSteps(...)` earlier in the SAME invocation \u2014 a context with no manager gets undefined there and throws \"No installation steps defined\" before any of this runs. So no input can distinguish the optional chain from a plain member access.",
@@ -2020,7 +2020,7 @@
             "anchors": [
                 "context.prereqManager?.getCacheManager().invalidate(prereq.id);"
             ],
-            "line": 354,
+            "line": 360,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "Reaching this line requires an install plan, and the plan comes from `context.prereqManager?.getInstallSteps(...)` earlier in the SAME invocation \u2014 a context with no manager gets undefined there and throws \"No installation steps defined\" before any of this runs. So no input can distinguish the optional chain from a plain member access.",
@@ -2033,7 +2033,7 @@
             "anchors": [
                 "context.prereqManager?.getCacheManager().invalidate(dep.id);"
             ],
-            "line": 362,
+            "line": 368,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "Reaching this line requires an install plan, and the plan comes from `context.prereqManager?.getInstallSteps(...)` earlier in the SAME invocation \u2014 a context with no manager gets undefined there and throws \"No installation steps defined\" before any of this runs. So no input can distinguish the optional chain from a plain member access.",
@@ -2046,7 +2046,7 @@
             "anchors": [
                 "installResult = prereq ? await context.prereqManager?.checkPrerequisite(prereq) : undefined;"
             ],
-            "line": 644,
+            "line": 650,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "Reaching this line requires an install plan, and the plan comes from `context.prereqManager?.getInstallSteps(...)` earlier in the SAME invocation \u2014 a context with no manager gets undefined there and throws \"No installation steps defined\" before any of this runs. So no input can distinguish the optional chain from a plain member access.",
@@ -2059,7 +2059,7 @@
             "anchors": [
                 "finalNodeVersionStatus = await context.prereqManager?.checkMultipleNodeVersions(mapping);"
             ],
-            "line": 660,
+            "line": 666,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "Reaching this line requires an install plan, and the plan comes from `context.prereqManager?.getInstallSteps(...)` earlier in the SAME invocation \u2014 a context with no manager gets undefined there and throws \"No installation steps defined\" before any of this runs. So no input can distinguish the optional chain from a plain member access.",
@@ -12159,7 +12159,7 @@
             "anchors": [
                 "if (!mgr) return null;"
             ],
-            "line": 57,
+            "line": 58,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this guard false changes nothing the caller can see. With no manager the very next statement calls mgr.isAuthenticated() inside the try, which throws a TypeError, and the catch arm converts it to the same null this line returns. Both paths hand back null for the same input, so no assertion on any tool's output can separate them.",
@@ -12172,7 +12172,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 60,
+            "line": 61,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying this catch makes authedManager return undefined where it returned null. Every caller tests only falsiness - create/workspace do 'if (!mgr)' and delete does 'if (!(await authedManager(ctx)))' - so undefined and null take the identical branch and produce the identical NEEDS_ADOBE handoff. The declared return type already admits null, so nothing downstream distinguishes them either.",
@@ -16696,7 +16696,7 @@
             "anchors": [
                 "if (args?.confirm !== true || args?.confirmName !== projectName) {"
             ],
-            "line": 261,
+            "line": 262,
             "mutants": 2,
             "category": "optionalChain",
             "reason": "Both optional chains on this line are unreachable-nullish. Lines 194-198 read args?.projectId and args?.projectName and return early unless BOTH trim to a non-empty string, which is only possible when args is an object. So by the time control reaches this line args can never be null or undefined, and dropping the '?.' cannot throw or yield a different value for any input the handler can be given.",

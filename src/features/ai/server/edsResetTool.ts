@@ -18,6 +18,7 @@ import { asText } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { reportPhase } from '@/core/utils/agentPhaseChannel';
+import { stageLine } from '@/core/utils/stageLine';
 import {
     getDaLiveAuthService,
     resolveByomOverlayConfig,
@@ -149,7 +150,12 @@ export function registerEdsResetTool(
                                 totalSteps: p.totalSteps,
                                 message: p.message,
                             });
-                            reportPhase(`${p.message} (${p.step}/${p.totalSteps})`);
+                            // The same shape the button's modal and notification
+                            // show — "Resetting the repository (1 of 12)" — not a
+                            // second dialect for the same run (PL-59 slice 7).
+                            reportPhase(
+                                stageLine(p.message, { index: p.step, total: p.totalSteps }),
+                            );
                         },
                     ),
                 );

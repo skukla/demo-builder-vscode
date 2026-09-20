@@ -17,6 +17,8 @@
 import * as vscode from 'vscode';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { classifyTransience } from '@/core/errors';
+import { reportPhase } from '@/core/utils/agentPhaseChannel';
+import { stageLine } from '@/core/utils/stageLine';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getRequiredNodeVersions, getNodeVersionMapping, checkPerNodeVersionStatus, determinePrerequisiteStatus, hasNodeVersions, getNodeVersionKeys } from '@/features/prerequisites/handlers/shared';
 import type { InstallStep, PrerequisiteDefinition, PrerequisiteStatus } from '@/features/prerequisites/services/PrerequisitesManager';
@@ -191,6 +193,10 @@ async function executeInstallSteps(
     const run = async (step: InstallStep, ver?: string) => {
         const resolvedStepName = ver ? step.name.replace(/{version}/g, ver) : step.name;
         context.debugLogger.debug(`[Prerequisites] Executing step: ${resolvedStepName}`);
+        // The wizard sees each step through `prerequisite-status`; an AGENT has
+        // no wizard, and an install that runs for a minute said nothing at all
+        // (PL-59 R3, slice 7).
+        reportPhase(stageLine(resolvedStepName, { index: counter + 1, total }));
         await context.progressUnifier?.executeStep(
             step, counter, total,
             async (progress) => {
