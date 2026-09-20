@@ -6,6 +6,7 @@
  */
 
 import * as vscode from 'vscode';
+import { surfaceShowsItself } from '@/core/vscode/surfaceShowsItself';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 
 /**
@@ -36,8 +37,13 @@ export async function executeCommandForProject(
     // Set as current project so the command knows which project to operate on
     await context.stateManager.saveProject(project);
 
-    // Execute the command
-    await vscode.commands.executeCommand(commandId);
+    // Execute the command. The CARD that started it already shows the
+    // transition, so the command's own notification would be a second, slower
+    // copy of it (PL-59 R5) — under an agent the sinks stay live and it still
+    // narrates.
+    await surfaceShowsItself(async () => {
+        await vscode.commands.executeCommand(commandId);
+    });
 
     return { success: true };
 }

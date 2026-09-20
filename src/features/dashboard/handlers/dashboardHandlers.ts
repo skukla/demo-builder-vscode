@@ -59,6 +59,7 @@ import {
     narrateOutcomeToModal,
     progressSurfaceOf,
 } from '@/core/vscode/operationProgress';
+import { surfaceShowsItself } from '@/core/vscode/surfaceShowsItself';
 import {
     handleAddAppBuilderComponent,
     handleDeployAppBuilderComponent,
@@ -168,7 +169,11 @@ async function refuseLifecycleOnEds(
 export const handleStartDemo: MessageHandler = async (context) => {
     const refusal = await refuseLifecycleOnEds(context, 'start');
     if (refusal) return refusal;
-    await vscode.commands.executeCommand('demoBuilder.startDemo');
+    // The tile already shows the transition: the command's own notification
+    // would be a second, slower copy of it (PL-59 R5).
+    await surfaceShowsItself(async () => {
+        await vscode.commands.executeCommand('demoBuilder.startDemo');
+    });
     // Update demo status only (don't re-check mesh)
     setTimeout(() => sendDemoStatusUpdate(context), TIMEOUTS.DEMO_STATUS_UPDATE_DELAY);
     return { success: true };
@@ -180,7 +185,11 @@ export const handleStartDemo: MessageHandler = async (context) => {
 export const handleStopDemo: MessageHandler = async (context) => {
     const refusal = await refuseLifecycleOnEds(context, 'stop');
     if (refusal) return refusal;
-    await vscode.commands.executeCommand('demoBuilder.stopDemo');
+    // The tile already shows the transition: the command's own notification
+    // would be a second, slower copy of it (PL-59 R5).
+    await surfaceShowsItself(async () => {
+        await vscode.commands.executeCommand('demoBuilder.stopDemo');
+    });
     // Update demo status only (don't re-check mesh)
     setTimeout(() => sendDemoStatusUpdate(context), TIMEOUTS.DEMO_STATUS_UPDATE_DELAY);
     return { success: true };
@@ -200,7 +209,11 @@ export const handleStopDemo: MessageHandler = async (context) => {
 export const handleRestartDemo: MessageHandler = async (context) => {
     const refusal = await refuseLifecycleOnEds(context, 'restart');
     if (refusal) return refusal;
-    await vscode.commands.executeCommand('demoBuilder.restartDemo');
+    // The tile already shows the transition: the command's own notification
+    // would be a second, slower copy of it (PL-59 R5).
+    await surfaceShowsItself(async () => {
+        await vscode.commands.executeCommand('demoBuilder.restartDemo');
+    });
     // Update demo status only (don't re-check mesh) — same as start/stop.
     setTimeout(() => sendDemoStatusUpdate(context), TIMEOUTS.DEMO_STATUS_UPDATE_DELAY);
     return { success: true };
