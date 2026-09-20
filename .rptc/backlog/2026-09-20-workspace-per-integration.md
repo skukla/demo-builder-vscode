@@ -328,3 +328,7 @@ deleting that workspace, and a project made before this still works unchanged.
 
 - 2026-09-20  fix(ai): point delete_adobe_workspace at a tool that exists (`e6e5ca096`)
 - 2026-09-20  docs(research): the Commerce-profile row cited a function that is gone (`97cde4033`)
+- 2026-09-20  docs(backlog): one workspace per add, so a pair shares one (`01b00deba`)
+- 2026-09-20  docs(backlog): two of the same integration is in scope, not a follow-on (`37b44ef52`)
+- 2026-09-20  docs(backlog): the id names the workspace, the SC name titles it (`551fc7133`)
+- 2026-09-20  docs(backlog): how workspaces are made and named today (`eb422d0a9`)

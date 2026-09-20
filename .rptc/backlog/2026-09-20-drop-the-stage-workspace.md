@@ -83,3 +83,7 @@ still one fewer create and one fewer answer to "which workspace is this".
 
 Creating a project makes one workspace, the demo runs in it, a project created before this
 still works untouched, and no code matches a workspace by the substring "stage".
+
+## Shipped so far
+
+- 2026-09-20  docs(backlog): AB-24, stop creating a Stage workspace (`c8690debd`)
