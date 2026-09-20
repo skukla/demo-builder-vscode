@@ -82,3 +82,4 @@ surfaces that host the cards.
 - 2026-09-19  Merge feature/operation-progress: the mesh deploy on the progress modal (`9b5a0d304`)
 - 2026-09-19  feat(progress): keep a long operation visibly moving (`35880ca7e`)
 - 2026-09-19  perf(app-builder): stop paying a minute for a question Adobe won't answer (`072095629`)
+- 2026-09-19  feat(progress): say it in the SC's words, everywhere they watch (`d8cc4b097`)
