@@ -273,11 +273,29 @@ Why the scope is every integration, not just a coupled pair:
   teardown would each keep two branches, and the runner would need a predicate the research
   says it should not have ("nothing in the runner should know it is handling the ERP").
 
-**The two blockers are cleared** (owner, 2026-09-20): deleting a workspace and assigning a
-Commerce product profile both work today. The cause of the 2026-09-17 read-only failure
-recorded above is NOT recorded here — the evidence in this file is left as it stands rather
-than rewritten, so a future reader can tell the difference between "this was fixed" and
-"this was never explained". AB-18 and PL-61 keep their own records.
+**Both blockers verified clear, 2026-09-20** — the owner said so and it has since been
+checked rather than taken on the word:
+
+- **Deleting a workspace works.** Created `zzdeletecheckIBDc` in Bodea's CURRENT project
+  through `create_adobe_workspace`, confirmed it had its own Runtime namespace
+  (`285361-214brownarmadillo-zzdeletecheckibdc` — the condition Adobe's docs say blocks
+  deletion), then deleted it through `aio-lib-console` `deleteWorkspace`: **HTTP 200 in
+  3 seconds.** The workspace is gone from the project listing and its namespace is gone
+  from `aio runtime namespace list`. **That also answers an open question in the research**:
+  deleting a workspace removes its Runtime namespace, not just the workspace record.
+- **The Commerce profile is already built.** `profileForTenant` (`subscriptionList.ts`)
+  picks the org profile whose name matches the project's configured Commerce tenant, and
+  refuses only when nothing or several match. The research's citation
+  (`toServiceSubscriptionInfo`, said to refuse whenever the org offers more than one) names
+  a function that no longer exists.
+
+**Why the 2026-09-17 failure is still worth keeping above.** Bodea now points at a
+DIFFERENT Adobe project (`4566206088345759588`, `214BrownArmadillo`, created 2026-09-18)
+from the read-only one the spike ran in (`4566206088345738527`, `KuklaBodeaMesh5NgV`).
+Both spike workspaces — `zzerpspike` and `ErpSpikeq3e9` — are still sitting in that old
+project, undeleted. So the read-only condition has not been shown to be fixed; it has been
+moved away from. If an SC's project acquires the same condition, AB-18 is live again, and
+AB-23's removal path is what breaks. AB-18 keeps its record for that reason.
 
 ## Done when
 

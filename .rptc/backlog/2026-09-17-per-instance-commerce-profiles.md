@@ -70,3 +70,4 @@ with instance-aware profile selection fixes both.
 
 - 2026-09-17  docs(backlog): PL-61, and what our subscription did not do (`bbb976fb7`)
 - 2026-09-20  Owner, 2026-09-20: no longer a blocker — assigning a Commerce product profile works today. AB-23 still has to CHOOSE the tenant's profile rather than refuse when the org offers several (toServiceSubscriptionInfo).
+- 2026-09-20  Verified 2026-09-20: profileForTenant (subscriptionList.ts) already picks the tenant's profile and refuses only on zero or several matches. The research's citation toServiceSubscriptionInfo names a function that no longer exists.

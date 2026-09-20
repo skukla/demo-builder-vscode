@@ -65,3 +65,4 @@ extension cannot tear it down.
 
 - 2026-09-17  docs(backlog): AB-18 — the Commerce subscription can make an SC's project read-only (`2046ae5e6`)
 - 2026-09-20  Owner, 2026-09-20: no longer a blocker — deleting a workspace works today. The CAUSE of the 2026-09-17 read-only failure is not recorded; the evidence in AB-17 is left as it stands so a later reader can tell 'fixed' from 'never explained'.
+- 2026-09-20  Verified 2026-09-20, NOT just taken on word: a create+delete round trip in Bodea's CURRENT project returned HTTP 200 in 3s and removed the Runtime namespace too. But the read-only project from 2026-09-17 still holds both undeleted spike workspaces — the condition was moved away from, not shown fixed. Keep this item.
