@@ -9098,7 +9098,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 647,
+            "line": 690,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is one debugLogger.debug. That the catch EXISTS is tested \u2014 a project write that throws must still report the import as started, because the service has already accepted it \u2014 and emptying the body changes only which line reaches Debug Logs.",
@@ -9111,7 +9111,7 @@
             "anchors": [
                 "if (!project) {"
             ],
-            "line": 638,
+            "line": 681,
             "mutants": 2,
             "category": "branch",
             "reason": "Both mutants are absorbed by the catch two lines below. Removing the guard lets 'project.datapack = ...' throw on a null project; the catch swallows it, logs, and the handler still reports the import as started \u2014 which is exactly what the guard produces. The only difference is a debug line.",
@@ -11318,7 +11318,7 @@
             "anchors": [
                 "const [selection, setSelection] = useState<TypeSelection>({ selected: [], auto: [] });"
             ],
-            "line": 128,
+            "line": 130,
             "mutants": 1,
             "category": "other",
             "reason": "The 'auto' provenance set is only ever consulted as auto.has(t) for a type that is already in 'selected' and is a declared dependency of the type being unticked. A seeded entry that is not a real data type therefore matches nothing, and deselectType's final filter (auto kept only where it appears in the surviving selection) removes it on the first untick. Nothing rendered or sent reads 'auto' at all.",
@@ -11331,7 +11331,7 @@
             "anchors": [
                 "allSelected ? { selected: [], auto: [] } : { selected: [...availableTypes], auto: [] },"
             ],
-            "line": 228,
+            "line": 230,
             "mutants": 2,
             "category": "other",
             "reason": "Both survivors seed the 'auto' provenance set rather than the selection. 'auto' is read only as auto.has(t) while unticking, and only for types that are both currently selected and declared dependencies of the departing type, so an entry that is not a real data type can never match. The checkboxes, the Start guard and the request body all read 'selected'; none of them reads 'auto'.",
@@ -11356,7 +11356,7 @@
             "anchors": [
                 "}, [loadStatus]);"
             ],
-            "line": 158,
+            "line": 160,
             "mutants": 1,
             "category": "other",
             "reason": "Emptying this dependency array changes nothing, because loadStatus is referentially stable for the life of the modal: useDataInstallerRequest returns load as a useCallback keyed on execute, and useVSCodeRequest builds execute as a useCallback keyed on the request type, which is a literal here. The effect therefore runs exactly once either way.",
@@ -11369,7 +11369,7 @@
             "anchors": [
                 "}, [loadTarget]);"
             ],
-            "line": 163,
+            "line": 165,
             "mutants": 1,
             "category": "other",
             "reason": "Emptying this dependency array changes nothing, because loadTarget is referentially stable for the life of the modal: useDataInstallerRequest returns load as a useCallback keyed on execute, and useVSCodeRequest builds execute as a useCallback keyed on the request type, which is a literal here. The effect therefore runs exactly once either way.",
@@ -11382,7 +11382,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 249,
+            "line": 251,
             "mutants": 1,
             "category": "other",
             "reason": "Replacing this empty dependency array with a one-element constant array keeps the callback just as stable: React compares dependency arrays element by element with Object.is, and the same string literal is produced on every render, so the comparison succeeds and useCallback returns the memoised function exactly as it does now. Nothing about act's identity or behaviour moves.",
@@ -11395,7 +11395,7 @@
             "anchors": [
                 "const goBack = useCallback((): void => setDismissed(true), []);"
             ],
-            "line": 276,
+            "line": 278,
             "mutants": 1,
             "category": "other",
             "reason": "Replacing this empty dependency array with a one-element constant array keeps the callback just as stable: React compares dependency arrays element by element with Object.is, and the same string literal is produced on every render, so the comparison succeeds and useCallback returns the memoised function. goBack closes over nothing but a setState function, which React guarantees is stable.",
@@ -11408,7 +11408,7 @@
             "anchors": [
                 "}, [act, provision]);"
             ],
-            "line": 274,
+            "line": 276,
             "mutants": 1,
             "category": "other",
             "reason": "Emptying this dependency array freezes provisionCredentials on the FIRST render's closure, and neither thing it closes over can go stale: act is a useCallback with an empty dependency list, and the only member of provision it touches is load, which useDataInstallerRequest memoises on execute, itself memoised on the literal request type. So the frozen callback calls the same two functions the fresh one would.",
@@ -11421,7 +11421,7 @@
             "anchors": [
                 "setWatching(true);"
             ],
-            "line": 258,
+            "line": 260,
             "mutants": 1,
             "category": "branch",
             "reason": "Unreachable with watching already false. watching only becomes false through the Stop watching button, which buildActions renders solely for the 'watching' view; that view requires a running record, and turning the watch off also stops the poll that could retire it. So while watching is false the modal shows the watching view and offers no Start import, and this call can only ever re-assert a value that is already true.",
@@ -11434,7 +11434,7 @@
             "anchors": [
                 "setWatching(true);"
             ],
-            "line": 265,
+            "line": 267,
             "mutants": 1,
             "category": "branch",
             "reason": "Unreachable with watching already false. watching only becomes false through the Stop watching button, which buildActions renders solely for the 'watching' view; that view requires a running record, and turning the watch off also stops the poll that could retire it. So while watching is false the modal offers no Remove data affordance to arm, and this call can only ever re-assert a value that is already true.",
@@ -11447,7 +11447,7 @@
             "anchors": [
                 "{view === 'result' && ctx.result ? ("
             ],
-            "line": 484,
+            "line": 499,
             "mutants": 2,
             "category": "branch",
             "reason": "Both survivors need a state the state machine cannot produce: a non-null result while the view is not 'result'. resolveView returns 'result' whenever result is truthy and none of busy, resetArmed or running outranks it; result is forced null while busy, resolveResult returns null for a record still watching, and the affordances that set lastAction or arm a reset are absent from the views that outrank it. So view === 'result' and a truthy result coincide exactly.",
@@ -13306,7 +13306,7 @@
             "anchors": [
                 "[],"
             ],
-            "line": 174,
+            "line": 183,
             "mutants": 1,
             "category": "other",
             "reason": "The sign-in callback's dependency array is empty and constant. Replacing it with a different constant array changes nothing: React compares the arrays element by element between renders, and two renders both produce the same one, so the callback is memoised identically. Planted: all 35 tests pass.",

@@ -212,6 +212,8 @@ describe('handleAddConsoleApis', () => {
             ['ExistingSDK', 'FireflyAPISDK'],
             undefined,
             [],
+            // The apply's own lines, for the modal to show while it waits.
+            expect.objectContaining({ onStep: expect.any(Function) }),
         );
         // Step 07 retired the flat write; the keyed map carries the union.
         expect(resolveDesiredApis(project)).toEqual(['ExistingSDK', 'FireflyAPISDK']);
@@ -293,6 +295,7 @@ describe('handleSetConsoleApis', () => {
             ['KeepSDK', 'NewSDK'],
             undefined,
             ['DropSDK'],
+            expect.objectContaining({ onStep: expect.any(Function) }),
         );
         expect(resolveDesiredApis(project)).toEqual(['KeepSDK', 'NewSDK']);
         expect(context.stateManager.saveProject).toHaveBeenCalledWith(project);
@@ -356,6 +359,7 @@ describe('handleSetConsoleApis', () => {
             [],
             undefined,
             ['DropSDK'],
+            expect.objectContaining({ onStep: expect.any(Function) }),
         );
         expect(resolveDesiredApis(project)).toStrictEqual([]);
     });

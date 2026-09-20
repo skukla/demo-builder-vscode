@@ -22,6 +22,8 @@ import { AiSkillsList } from './AiSkillsList';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import { Spinner } from '@/core/ui/components/ui/Spinner';
+import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import { AI_FILES_OPERATION_ID } from '@/core/utils/operationIds';
 import type { McpInventoryEntry, SkillInventoryEntry } from '@/types/ai';
 
 /**
@@ -122,11 +124,25 @@ export function AiCapabilitiesModal({
         mcps.length > 0 &&
         skills.length > 0 &&
         sections.length > 0;
+    // Closing a regenerate that is still RUNNING hands it to a progress
+    // notification rather than leaving it to finish unseen — the same handover
+    // every progress modal offers (PL-59 R8). Nothing is cancelled.
+    const close = (): void => {
+        if (isBusy) {
+            webviewClient.postMessage('backgroundOperation', {
+                id: AI_FILES_OPERATION_ID,
+                title: 'Regenerating AI files',
+            });
+        }
+        onClose();
+    };
+
     return (
         <Modal
             title="AI Capabilities"
             size="L"
-            onClose={onClose}
+            onClose={close}
+            closeLabel={isBusy ? 'Run in background' : undefined}
             actionButtons={[
                 {
                     label: isBusy ? 'Regenerating…' : 'Regenerate AI files',

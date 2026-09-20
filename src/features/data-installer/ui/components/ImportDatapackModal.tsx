@@ -54,6 +54,8 @@ import {
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { Modal } from '@/core/ui/components/ui/Modal';
+import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';
 
 /**
  * Provisioning talks to the Console three times; the subscribe PUT alone took
@@ -316,8 +318,21 @@ export function ImportDatapackModal({
         noInstance: !commerceInstance && target.settled,
     });
 
+    // Closing a job that is still RUNNING hands it to a progress notification,
+    // so the SC keeps seeing where it is — the same handover every progress
+    // modal offers (PL-59 R8). Nothing is cancelled: the watcher carries on.
+    const close = (): void => {
+        if (running) {
+            webviewClient.postMessage('backgroundOperation', {
+                id: DATAPACK_OPERATION_ID,
+                title: `${record?.operation === 'reset' ? 'Removing' : 'Importing'} ${displayName}`,
+            });
+        }
+        onClose();
+    };
+
     return (
-        <DialogContainer type="modal" onDismiss={onClose}>
+        <DialogContainer type="modal" onDismiss={close}>
             <Modal
                 // Wide, so the type list fits three uniform columns instead of
                 // two scrolling ones. The target block's removal freed the rest.
@@ -325,8 +340,8 @@ export function ImportDatapackModal({
                 title={`Import ${displayName}`}
                 size="L"
                 fitContent
-                onClose={onClose}
-                closeLabel="Close"
+                onClose={close}
+                closeLabel={running ? 'Run in background' : 'Close'}
                 actionButtons={buildActions({
                     view,
                     canStart,

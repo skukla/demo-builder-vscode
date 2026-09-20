@@ -23,6 +23,7 @@
 import { DialogContainer, Text } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useState } from 'react';
 import { renderApiCatalogFeedback } from '@/core/ui/components/feedback/ApiCatalogFeedback';
+import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { ApiAccessPicker, type ApiAccessOption } from '@/core/ui/components/selection/ApiAccessPicker';
 import { Modal } from '@/core/ui/components/ui/Modal';
@@ -30,7 +31,9 @@ import {
     useElapsedStage,
     ORG_SERVICES_LOADING_STAGES,
 } from '@/core/ui/hooks/useElapsedStage';
+import { useOperationProgress } from '@/core/ui/hooks/useOperationProgress';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import { CONSOLE_APIS_OPERATION_ID } from '@/core/utils/operationIds';
 import type { CloudGrouping } from '@/types/adobeApis';
 import { ErrorCode } from '@/types/errorCodes';
 
@@ -163,6 +166,12 @@ export function ManageApisModal({
     /** The set as loaded — Apply is a no-op (disabled) until this changes. */
     const [initial, setInitial] = useState<string[]>([]);
     const [isApplying, setIsApplying] = useState(false);
+    // The shared progress channel, which the apply handler reports on.
+    const applying = useOperationProgress(
+        isApplying ? CONSOLE_APIS_OPERATION_ID : null,
+        isApplying ? 1 : 0,
+        false,
+    );
     const loadingStage = useElapsedStage(isLoading, ORG_SERVICES_LOADING_STAGES);
     /** Bumped by the error view's Retry to re-fire the fetch. */
     const [reloadKey, setReloadKey] = useState(0);
@@ -284,6 +293,17 @@ export function ManageApisModal({
                         its own container and the modal grew a horizontal
                         scrollbar. */}
                     <div className="manage-apis-body">
+                        {/* While applying, the subscribe's own lines — it reads
+                            the workspace's credentials and can wait on Adobe for
+                            a minute, where this said "Applying…" on a button and
+                            nothing else (PL-59 slice 6). */}
+                        {isApplying ? (
+                            <LoadingDisplay
+                                size="M"
+                                message={applying?.stage ?? 'Applying'}
+                                subMessage={applying?.step}
+                            />
+                        ) : null}
                         <Text>
                             Manage Adobe API access for <strong>{componentName}</strong>.
                         </Text>

@@ -34,6 +34,18 @@ export const REPUBLISH_OPERATION_ID = 'republish';
  */
 export const DESTINATION_OPERATION_ID = 'destination';
 
+/**
+ * A datapack import or removal. One job at a time (the Data Installer watches a
+ * single activation), so the id names the operation rather than the pack.
+ */
+export const DATAPACK_OPERATION_ID = 'datapack';
+
+/** Applying an edit from the Manage APIs modal. */
+export const CONSOLE_APIS_OPERATION_ID = 'console-apis';
+
+/** Regenerating a project's AI files. */
+export const AI_FILES_OPERATION_ID = 'ai-files';
+
 /** A project deletion, keyed by the project being deleted. */
 export function deleteOperationId(projectName: string): string {
     return `delete:${projectName}`;

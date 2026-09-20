@@ -69,7 +69,7 @@ finding.
 | 9 | Change deploy destination (moves integrations; minutes) | Integrations screen | Notification `Changing destination to …` | **Modal + handover**, with "(n of N)" per integration moved | R1 |
 | 10 | Apply Console APIs | Manage APIs modal | Button reads "Applying…" | **The Manage APIs modal shows the progress rows itself** (it is already a modal; no second one) | R1 |
 | 11 | Datapack import / remove (minutes) | Data Installer modal | Its own progress modal; nothing once closed | Same modal, **plus the handover** when closed | R1 |
-| 12 | Datapack export | Export modal | Button reads "Exporting…" | Measure first: R5 if short, else the export modal shows progress rows | R1/R5 |
+| 12 | Datapack export | Export modal | Button reads "Exporting…" | **Measured 2026-09-20: unchanged.** The export is ONE synchronous call — the service gives no activation id to watch and returns the result inline (`start-datapack-export`), so there is nothing to narrate and the button's busy state is right | R5 |
 | 13 | Regenerate AI files | AI Capabilities modal | Its own progress rows | Same, **plus the handover** when closed | R1 |
 | 13a | same | Agent `regenerate_ai_files` | Agent notification, no steps | With steps | R3 |
 | 14 | Project creation / edit | Wizard | Full-page progress screen | Same screen, shared stage list and wording | R4 |

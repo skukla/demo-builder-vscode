@@ -28,6 +28,9 @@ import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell/org
 import { resolveApiOwners } from '@/core/state/apiOwners';
 import { resolveApiRowStates } from '@/core/state/apiRowState';
 import { applyDesiredApis, resolveDesiredApis } from '@/core/state/componentApiPicks';
+import { CONSOLE_APIS_OPERATION_ID } from '@/core/utils/operationIds';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { pushOperationProgress } from '@/core/vscode/operationProgress';
 import { deriveAllowedDomain } from '@/features/app-builder/services/allowedDomain';
 import { fetchApiAccessRows } from '@/features/app-builder/services/apiAccessRows';
 import {
@@ -201,6 +204,10 @@ async function reconcileExtras(
         authService.getCachedOrganization(),
     );
     try {
+        // The subscribe's own lines, on the shared channel: this step reads the
+        // workspace's credentials and can wait on Adobe for a minute, and the
+        // modal showed a button that said "Applying…" and nothing else
+        // (PL-59 slice 6).
         const subscribed = await withOrgContext(orgTarget, () =>
             subscribeRequiredApis(
                 resolveProjectCatalog(project),
@@ -210,6 +217,16 @@ async function reconcileExtras(
                 desiredExtras,
                 undefined,
                 removing,
+                {
+                    onStep: (step) =>
+                        void pushOperationProgress({
+                            id: CONSOLE_APIS_OPERATION_ID,
+                            state: 'running',
+                            stage: OPERATION_STAGES.subscribingApis.label,
+                            step,
+                        }),
+                    log: (message) => context.logger.debug(message),
+                },
             ),
         );
         // Reconciled, not replaced. This edits the UNION, and overwriting the map

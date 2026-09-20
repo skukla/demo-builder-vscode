@@ -19,7 +19,9 @@ import {
     handleSaveAiPrompt,
 } from './aiPromptHandlers';
 import { ServiceLocator } from '@/core/di/serviceLocator';
+import { AI_FILES_OPERATION_ID } from '@/core/utils/operationIds';
 import { sanitizeErrorForLogging } from '@/core/validation/SensitiveDataRedactor';
+import { pushOperationProgress } from '@/core/vscode/operationProgress';
 import { verifyAiSetup, type AiVerificationResult } from '@/features/ai/aiSetupVerifier';
 import { clearMcpCache } from '@/features/ai/mcpInspector';
 import { generateAIContextFiles } from '@/features/project-creation/services/aiBundle/aiBundleService';
@@ -201,6 +203,16 @@ export async function handleRegenerateAiFiles(context: HandlerContext): Promise<
             logs: [],
         };
         void context.sendMessage('creationProgress', payload);
+        // The same step on the shared channel, so closing the AI Capabilities
+        // modal can hand the run to a notification that keeps narrating
+        // (PL-59 R8). The modal's own per-step view is unchanged.
+        void pushOperationProgress({
+            id: AI_FILES_OPERATION_ID,
+            state: 'running',
+            stage: currentOperation,
+            step: message,
+            position: { index: stepNumber, total: totalSteps },
+        });
     };
 
     if (needsAiTooling) {
@@ -291,6 +303,9 @@ export async function handleRegenerateAiFiles(context: HandlerContext): Promise<
     // cache so the next verify re-spawns from a clean slate.
     clearMcpCache();
 
+    // Ends the run on the shared channel: a modal closes, a backgrounded run
+    // says "— done" (PL-59 R6).
+    await pushOperationProgress({ id: AI_FILES_OPERATION_ID, state: 'succeeded' });
     return { success: true, skippedFiles, removedFiles };
 }
 

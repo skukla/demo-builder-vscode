@@ -44,6 +44,11 @@ import { exportHandlers } from './exportHandlers';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { PollingService } from '@/core/shell/pollingService';
 import { TransientStateManager } from '@/core/state/transientStateManager';
+import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';
+import {
+    handleBackgroundOperation,
+    pushOperationProgress,
+} from '@/core/vscode/operationProgress';
 import { migrateDeclaredSecrets } from '@/features/components/services/commerceSecretMigration';
 import { discoverStoreStructure } from '@/features/eds/services/commerceStoreDiscovery';
 import type { Project } from '@/types/base';
@@ -90,6 +95,9 @@ interface StartImportPayload {
 }
 
 export const importHandlers = defineHandlers({
+    // Closing a running import hands it to a notification that keeps narrating
+    // (PL-59 R8); this is the channel that says so.
+    backgroundOperation: handleBackgroundOperation,
     // Stage 3 lives in its own module; merged here so the panel and the tests
     // keep ONE handler map to reach for.
     ...exportHandlers,
@@ -479,6 +487,23 @@ async function prepareImport(
  * five green gates. The import itself is unaffected — it is already running
  * server-side — so this reports a lost WATCH, never a failed import.
  */
+/**
+ * The stage line a datapack job shows on the SHARED progress channel: the verb,
+ * and how far through the types it is. The modal shows each type; a notification
+ * has room for one line (PL-59 wording).
+ */
+function datapackStage(
+    operation: ImportJobRecord['operation'],
+    perType: ImportJobRecord['perType'],
+): { stage: string; position?: { index: number; total: number } } {
+    const total = Object.keys(perType ?? {}).length;
+    const done = Object.values(perType ?? {}).filter(
+        (entry) => (entry as { status?: string })?.status === 'success',
+    ).length;
+    const stage = operation === 'reset' ? 'Removing the sample data' : 'Importing the sample data';
+    return total > 0 ? { stage, position: { index: Math.max(1, done), total } } : { stage };
+}
+
 async function watchAndRecord(
     context: HandlerContext,
     transient: TransientStateManager,
@@ -509,8 +534,26 @@ async function watchAndRecord(
                     operation: record.operation,
                     perType,
                 });
+                // The SAME progress on the shared channel, so closing the modal
+                // can hand the job to a notification that keeps narrating
+                // (PL-59 R8). The modal's own view is richer — per type, with
+                // counts — and stays where it is.
+                void pushOperationProgress({
+                    id: DATAPACK_OPERATION_ID,
+                    state: 'running',
+                    ...datapackStage(record.operation, perType),
+                });
             },
         });
+        await pushOperationProgress(
+            result.outcome === 'success'
+                ? { id: DATAPACK_OPERATION_ID, state: 'succeeded' }
+                : {
+                      id: DATAPACK_OPERATION_ID,
+                      state: 'failed',
+                      error: result.reason ?? 'The job did not finish.',
+                  },
+        );
         await transient.set(JOB_KEY, {
             ...record,
             outcome: result.outcome,
