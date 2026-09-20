@@ -49,6 +49,7 @@ import {
     handleBackgroundOperation,
     pushOperationProgress,
 } from '@/core/vscode/operationProgress';
+import { handleAnswerOperationPrompt } from '@/core/vscode/operationPrompt';
 import { migrateDeclaredSecrets } from '@/features/components/services/commerceSecretMigration';
 import { discoverStoreStructure } from '@/features/eds/services/commerceStoreDiscovery';
 import type { Project } from '@/types/base';
@@ -98,6 +99,9 @@ export const importHandlers = defineHandlers({
     // Closing a running import hands it to a notification that keeps narrating
     // (PL-59 R8); this is the channel that says so.
     backgroundOperation: handleBackgroundOperation,
+    // The SC answered a question the work was paused on — a sign-in that expired,
+    // a prerequisite missing, a merge needing a decision (PL-59, owner 2026-09-20).
+    answerOperationPrompt: handleAnswerOperationPrompt,
     // Stage 3 lives in its own module; merged here so the panel and the tests
     // keep ONE handler map to reach for.
     ...exportHandlers,

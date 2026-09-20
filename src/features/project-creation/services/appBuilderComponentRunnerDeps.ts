@@ -20,6 +20,7 @@ import type { CachedOrgRef } from '@/core/shell/orgContextEnv';
 import { resolveDesiredApis } from '@/core/state/componentApiPicks';
 import { formatDuration } from '@/core/utils/timeFormatting';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { askDuringOperation } from '@/core/vscode/operationPrompt';
 import { deriveAllowedDomain } from '@/features/app-builder/services/allowedDomain';
 import {
     subscribeRequiredApis,
@@ -91,7 +92,7 @@ export interface RunnerDepsContext {
  * park an agent on a dialog.
  */
 async function promptForToolchainRefresh(): Promise<boolean> {
-    const choice = await vscode.window.showWarningMessage(
+    const choice = await askDuringOperation(
         'Adobe CLI is out of date. Update and retry?',
         'Update & Retry',
         'Not Now',

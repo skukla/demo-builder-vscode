@@ -34,6 +34,7 @@ import {
     handleBackgroundOperation,
     handleGetOperationProgress,
 } from '@/core/vscode/operationProgress';
+import { handleAnswerOperationPrompt } from '@/core/vscode/operationPrompt';
 import { handleOpenDebugLogs } from '@/features/dashboard/handlers/panelNavigationHandlers';
 import { defineHandlers } from '@/types/handlers';
 
@@ -98,5 +99,8 @@ export const projectsListHandlers = defineHandlers({
     // notification. Shared with every other screen that hosts the modal.
     getOperationProgress: handleGetOperationProgress,
     backgroundOperation: handleBackgroundOperation,
+    // The SC answered a question the work was paused on — a sign-in that expired,
+    // a prerequisite missing, a merge needing a decision (PL-59, owner 2026-09-20).
+    answerOperationPrompt: handleAnswerOperationPrompt,
     openDebugLogs: handleOpenDebugLogs,
 });

@@ -49,6 +49,17 @@ export function startModalRun(id: string, send: SendToScreen): void {
 }
 
 /**
+ * The last thing pushed for an operation, so a question can take the modal over and
+ * the stage underneath it be put back once the SC has answered.
+ *
+ * @param id - the operation
+ * @returns its held progress, or undefined when nothing is held
+ */
+export function heldProgress(id: string): OperationProgressPayload | undefined {
+    return latest.get(id);
+}
+
+/**
  * Record an operation's progress and push it to the screen showing its modal.
  *
  * @param payload - the operation's current state

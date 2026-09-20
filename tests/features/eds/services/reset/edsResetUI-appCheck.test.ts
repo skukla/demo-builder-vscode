@@ -350,10 +350,13 @@ describe('resetEdsProjectWithUI — the AEM Code Sync check', () => {
         });
 
         it('Install App opens the install URL for THIS repo, then continues on Continue', async () => {
+            // Three questions in order: the reset confirm, the App warning, and the
+            // after-install Continue — which is a question now, so it arrives on the
+            // same channel rather than as an information message.
             (vscode.window.showWarningMessage as jest.Mock)
                 .mockResolvedValueOnce(RESET)
-                .mockResolvedValueOnce('Install App');
-            (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Continue');
+                .mockResolvedValueOnce('Install App')
+                .mockResolvedValueOnce('Continue');
 
             const result = await run(createProject());
 
@@ -362,7 +365,9 @@ describe('resetEdsProjectWithUI — the AEM Code Sync check', () => {
                 'https://github.com/apps/aem-code-sync/new?o=test-owner&r=test-repo',
             );
             expect(vscode.env.openExternal).toHaveBeenCalledTimes(1);
-            expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
+            // Through askDuringOperation now, so it reaches the progress modal when
+            // one is narrating the reset; with none up it is this notification.
+            expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
                 expect.stringContaining('click Continue'),
                 'Continue',
                 'Cancel',

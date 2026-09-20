@@ -7,6 +7,7 @@
 import * as vscode from 'vscode';
 import { getEndpoint as getEndpointHelper } from '../services/meshEndpoint';
 import { ServiceLocator } from '@/core/di/serviceLocator';
+import { askDuringOperation } from '@/core/vscode/operationPrompt';
 import { ErrorCode } from '@/types/errorCodes';
 import { HandlerContext } from '@/types/handlers';
 
@@ -95,7 +96,7 @@ export async function ensureAuthenticated(
     }
 
     // Webview surface: a person is looking at this, so offer the way there.
-    const selection = await vscode.window.showWarningMessage(
+    const selection = await askDuringOperation(
         `Adobe authentication required to ${operationName}. Please sign in via the Project Dashboard.`,
         'Open Dashboard',
     );

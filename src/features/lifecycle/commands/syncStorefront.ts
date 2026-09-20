@@ -29,6 +29,7 @@ import { BaseCommand } from '@/core/base/baseCommand';
 import { COMPONENT_IDS } from '@/core/constants';
 import { PollingService } from '@/core/shell/pollingService';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { askDuringOperation } from '@/core/vscode/operationPrompt';
 import { getDaLiveAuthService } from '@/features/eds/handlers/edsHelpers';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import { HelixApiError } from '@/features/eds/services/helix/helixApiClient';
@@ -215,11 +216,10 @@ export class SyncStorefrontCommand extends BaseCommand {
         }
 
         // Conflict path — open Source Control, poll until clear, decide based on user action.
-        const action = await vscode.window.showWarningMessage(
+        const action = await askDuringOperation(
             'Demo Builder pulled the latest changes and found conflicts that need your input. ' +
                 'Resolve each conflict in the Source Control panel (Accept Current / Incoming / Both buttons), ' +
                 'then click Continue. Cancel undoes the pull and leaves your storefront exactly as it was.',
-            { modal: true },
             'Continue',
             'Cancel and Reset',
         );

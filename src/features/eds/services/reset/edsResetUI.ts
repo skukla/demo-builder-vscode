@@ -27,6 +27,7 @@ import {
 import { COMPONENT_IDS } from '@/core/constants';
 import { resetOperationId } from '@/core/utils/operationIds';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { askDuringOperation } from '@/core/vscode/operationPrompt';
 import {
     withOperationProgress,
     type ReportStage,
@@ -254,7 +255,7 @@ async function checkGitHubAppInstallation(
 
     context.logger.warn(`${logPrefix} AEM Code Sync app not installed on ${repoOwner}/${repoName}`);
 
-    const appWarning = await vscode.window.showWarningMessage(
+    const appWarning = await askDuringOperation(
         'The AEM Code Sync GitHub App is not installed on this repository. ' +
             'Without it, code changes will not sync to the CDN and the site may not work correctly.',
         'Install App',
@@ -265,7 +266,7 @@ async function checkGitHubAppInstallation(
         const installUrl = appService.getInstallUrl(repoOwner, repoName);
         await vscode.env.openExternal(vscode.Uri.parse(installUrl));
 
-        const afterInstall = await vscode.window.showInformationMessage(
+        const afterInstall = await askDuringOperation(
             'After installing the app, click Continue to proceed with the reset.',
             'Continue',
             'Cancel',

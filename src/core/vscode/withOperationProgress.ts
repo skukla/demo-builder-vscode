@@ -22,6 +22,7 @@
  */
 
 import { pushOperationProgress } from './operationProgress';
+import { withModalAsking } from './operationPrompt';
 import { withProgressRegister } from './progressRegister';
 import { withPhaseSinks } from '@/core/utils/agentPhaseChannel';
 import { detailFor, expectationFor } from '@/core/utils/operationStages';
@@ -95,7 +96,9 @@ async function runInModal<T extends OperationOutcome>(
     // Something nested reports a plain line: the step under the stage in progress.
     const nested = (message: string): void => (current ? push(current, message) : report(message));
 
-    const result = await withPhaseSinks([nested], () => run(report));
+    // The id goes where a guard deep inside the work can find it, so a question it
+    // must ask reaches this modal instead of a notification beside it.
+    const result = await withModalAsking(id, () => withPhaseSinks([nested], () => run(report)));
     await pushOperationProgress(
         result.success
             ? { id, state: 'succeeded' }

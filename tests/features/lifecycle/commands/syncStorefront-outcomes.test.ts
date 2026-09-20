@@ -325,7 +325,6 @@ describe('the push that follows a clean rebase', () => {
 
         expect(showWarningMessage).toHaveBeenCalledWith(
             expect.stringContaining('found conflicts'),
-            { modal: true },
             'Continue',
             'Cancel and Reset'
         );

@@ -15,6 +15,7 @@ import { showOneTimeTip } from '@/core/utils/oneTimeTip';
 import { deleteOperationId } from '@/core/utils/operationIds';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { askDuringOperation } from '@/core/vscode/operationPrompt';
 import { withOperationProgress } from '@/core/vscode/withOperationProgress';
 import { ensureDaLiveAuth as ensureDaLiveAuthShared, getDaLiveAuthService } from '@/features/eds/handlers/edsHelpers';
 import { DaLiveAuthService } from '@/features/eds/services/daLive/daLiveAuthService';
@@ -546,7 +547,7 @@ async function promptGitHubAuth(
     githubRepo: string,
     results: CleanupResultItem[],
 ): Promise<boolean> {
-    const selection = await vscode.window.showWarningMessage(
+    const selection = await askDuringOperation(
         'GitHub authentication required to delete the repository.',
         'Sign In',
     );

@@ -59,6 +59,7 @@ import {
     narrateOutcomeToModal,
     progressSurfaceOf,
 } from '@/core/vscode/operationProgress';
+import { handleAnswerOperationPrompt } from '@/core/vscode/operationPrompt';
 import { surfaceShowsItself } from '@/core/vscode/surfaceShowsItself';
 import {
     handleAddAppBuilderComponent,
@@ -327,6 +328,9 @@ export const dashboardHandlers = defineHandlers({
     getOperationProgress: handleGetOperationProgress,
     // "Run in background": the operation carries on in a progress notification (PL-59).
     backgroundOperation: handleBackgroundOperation,
+    // The SC answered a question the work was paused on — a sign-in that expired,
+    // a prerequisite missing, a merge needing a decision (PL-59, owner 2026-09-20).
+    answerOperationPrompt: handleAnswerOperationPrompt,
 
     // Console API access (runtime API subscription — list_console_apis / add_console_apis)
     listConsoleApis: handleListConsoleApis,

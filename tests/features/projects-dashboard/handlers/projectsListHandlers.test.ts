@@ -135,12 +135,13 @@ describe('projectsListHandlers', () => {
             expect(hasHandler(projectsListHandlers, 'setAuthoringExperience')).toBe(false);
         });
 
-        // 21 of its own, plus the three channels every screen that hosts the
+        // 21 of its own, plus the four channels every screen that hosts the
         // progress modal registers (getOperationProgress, backgroundOperation,
-        // openDebugLogs — PL-59).
-        it('should have exactly 24 handlers', () => {
+        // answerOperationPrompt, openDebugLogs — PL-59; the fourth arrived
+        // 2026-09-20, when a question the work is paused on moved into the modal).
+        it('should have exactly 25 handlers', () => {
             const types = getRegisteredTypes(projectsListHandlers) as Array<keyof typeof projectsListHandlers>;
-            expect(types).toHaveLength(24);
+            expect(types).toHaveLength(25);
         });
 
         it('should have handlers as functions', () => {

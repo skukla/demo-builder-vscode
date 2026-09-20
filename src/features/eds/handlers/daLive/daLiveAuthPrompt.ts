@@ -12,6 +12,7 @@ import * as vscode from 'vscode';
 import { parseJwtPayload } from '../../services/daLive/daLiveAuthService';
 import { getDaLiveAuthService } from '../edsServiceCache';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { askDuringOperation } from '@/core/vscode/operationPrompt';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
 
@@ -186,7 +187,10 @@ export async function ensureDaLiveAuth(
         context.logger.warn(`${logPrefix} DA.live token expired or missing`);
     }
 
-    const selection = await vscode.window.showWarningMessage(
+    // Asked where the SC is already looking: in the progress modal when one is
+    // narrating this operation, otherwise the notification (PL-59, owner 2026-09-20 —
+    // republishing showed the modal waiting on this and the notification asking it).
+    const selection = await askDuringOperation(
         refusedByServer
             ? 'Your DA.live session was refused by the server. Please sign in again to continue.'
             : 'Your DA.live session has expired. Please sign in to continue.',

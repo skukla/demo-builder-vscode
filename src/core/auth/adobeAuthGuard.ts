@@ -10,10 +10,10 @@
  * @module core/auth/adobeAuthGuard
  */
 
-import * as vscode from 'vscode';
 import { withBrowserSignInNotice } from './browserSignInNotice';
 import { SingleFlight } from '@/core/utils/singleFlight';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { askDuringOperation } from '@/core/vscode/operationPrompt';
 import type { Logger } from '@/types/logger';
 
 export interface AdobeAuthResult {
@@ -89,7 +89,7 @@ async function promptAndSignIn(
     logger.info(`${logPrefix} awaiting the sign-in prompt in the VS Code window…`);
     let timedOut = false;
     const selection = await Promise.race([
-        vscode.window.showWarningMessage(warningMessage, 'Sign In', 'Cancel'),
+        askDuringOperation(warningMessage, 'Sign In', 'Cancel'),
         new Promise<undefined>((resolve) =>
             setTimeout(() => {
                 timedOut = true;

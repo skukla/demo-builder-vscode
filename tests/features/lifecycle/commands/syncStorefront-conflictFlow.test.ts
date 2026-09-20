@@ -122,15 +122,18 @@ describe('classifying the rebase failure', () => {
 });
 
 describe('the manual conflict flow', () => {
-    it('asks with a modal, then waits on the SC before continuing the rebase', async () => {
+    it('asks the SC, then waits before continuing the rebase', async () => {
         const git = conflictOn(['blocks/hero/hero.js']);
         showWarningMessage.mockResolvedValue('Continue');
 
         await runCommand();
 
+        // No longer a BLOCKING dialog: it asks the SC to go and resolve conflicts in
+        // Source Control, which a modal:true dialog stops them reaching. It goes
+        // through askDuringOperation now — the progress modal when one is up, this
+        // notification otherwise (PL-59, owner 2026-09-20).
         expect(showWarningMessage).toHaveBeenCalledWith(
             expect.stringContaining('Resolve each conflict in the Source Control panel'),
-            { modal: true },
             'Continue',
             'Cancel and Reset'
         );

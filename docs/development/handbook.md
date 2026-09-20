@@ -435,7 +435,10 @@ meant.
 > anywhere else, it opens one notification; run by an agent, it goes to the agent's
 > notifier. Work shorter than about ten seconds gets a busy state on the control that
 > started it and nothing else. A blocking dialog is for a DECISION made before the work
-> starts — never for progress, never for an outcome.
+> starts — never for progress, never for an outcome. A question the work cannot
+> continue without — an expired sign-in, a missing prerequisite, a merge needing a
+> decision — is asked through `askDuringOperation`, which sends it to whichever
+> surface is already narrating.
 > *Why:* the surface is not a per-handler choice, because the handler cannot see how it
 > was reached. `withOperationProgress` reads that from the request and routes, so one
 > handler serves a button, the palette and an agent without knowing which is which, and a
@@ -444,13 +447,17 @@ meant.
 > the failure is invisible: the path you tested still works, and the other two either say
 > nothing or say it twice. The dialog half is the one that actually shipped wrong — Delete
 > put a modal dialog up in the middle of its own run, behind the modal already showing the
-> deletion (PL-59, 2026-09-19).
+> deletion (PL-59, 2026-09-19). The question half shipped wrong too, and was caught the
+> first time someone republished a storefront: the modal sat on "Checking requirements /
+> Your DA.live sign-in" while a notification in the corner asked for that sign-in. The
+> pause-and-continue was right; the surface was wrong. Eleven guards asked VS Code
+> directly, and none of them could know a modal was up.
 >
 > Five modules own the surfaces and call VS Code's progress directly because that is their
 > job: `baseCommand.ts`, `progressRegister.ts`, `operationBackgroundNotice.ts`,
 > `browserSignInNotice.ts` and `agentOperationNotifier.ts`. 20 other sites predate the
 > router and are ledgered with the reason each still opens its own notification; the list
-> may only shrink. Each of the 14 blocking dialogs names the decision it gates, so a new
+> may only shrink. Each of the 13 blocking dialogs names the decision it gates, so a new
 > one cannot arrive without someone saying what it asks. Enforced by
 > `tests/sop/progress-surface.test.ts` against `progress-surface.ledger.json`.
 

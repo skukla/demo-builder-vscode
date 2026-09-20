@@ -130,7 +130,7 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'exportProjectSettings')).toBe(true);
         });
 
-        it('should have exactly 49 handlers', () => {
+        it('should have exactly 50 handlers', () => {
             // Given: dashboardHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(dashboardHandlers) as Array<
@@ -215,7 +215,12 @@ describe('dashboardHandlers', () => {
             //
             // backgroundComponentOperation (48 → 49, PL-59): "Run in background"
             // hands the operation to a notification. Also counted in the table above.
-            expect(types).toHaveLength(49);
+            //
+            // answerOperationPrompt (49 → 50, PL-59, 2026-09-20): the SC answering a
+            // question the work is paused on — an expired sign-in, a missing
+            // prerequisite — now that the modal asks it instead of a notification
+            // beside the modal.
+            expect(types).toHaveLength(50);
         });
 
         it('should have handlers as functions', () => {

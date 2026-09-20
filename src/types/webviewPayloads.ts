@@ -312,6 +312,19 @@ export interface OperationProgressPayload {
     step?: string;
     expectation?: string;
     error?: string;
+    /** Set while the work is paused on a question only the SC can answer. */
+    prompt?: OperationPrompt;
+}
+
+/**
+ * A question the work cannot continue without — a sign-in that expired, a
+ * prerequisite that is missing, a merge that needs a decision. The modal shows it
+ * in place of the spinner and hands back the action the SC chose.
+ */
+export interface OperationPrompt {
+    message: string;
+    /** The answers, the first being the one that continues the work. */
+    actions: string[];
 }
 
 /** `appBuilderComponentsSnapshot` — the full fresh persisted map. */
