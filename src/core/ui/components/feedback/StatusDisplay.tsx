@@ -35,6 +35,7 @@ import Clock from '@spectrum-icons/workflow/Clock';
 import InfoOutline from '@spectrum-icons/workflow/InfoOutline';
 import React from 'react';
 import { FadeTransition } from '@/core/ui/components/ui/FadeTransition';
+import { cn } from '@/core/ui/utils/classNames';
 
 export type StatusVariant = 'error' | 'success' | 'warning' | 'info' | 'pending';
 
@@ -110,10 +111,6 @@ export function StatusDisplay({
     const { icon: defaultIcon } = variantConfig[variant];
     const displayIcon = customIcon ?? defaultIcon;
 
-    const messageClassName = centerMessage
-        ? 'text-sm text-gray-600 text-center'
-        : 'text-sm text-gray-600';
-
     return (
         <FadeTransition show={true}>
             <Flex
@@ -135,10 +132,25 @@ export function StatusDisplay({
                         <Flex direction="column" gap="size-100" alignItems="center">
                             <Text UNSAFE_className="text-xl font-medium">{title}</Text>
                             {message && (
-                                <Text UNSAFE_className={messageClassName}>{message}</Text>
+                                <Text
+                                    UNSAFE_className={cn(
+                                        'text-sm',
+                                        'text-gray-600',
+                                        centerMessage && 'text-center',
+                                    )}
+                                >
+                                    {message}
+                                </Text>
                             )}
                             {details?.map((detail, index) => (
-                                <Text key={index} UNSAFE_className={messageClassName}>
+                                <Text
+                                    key={index}
+                                    UNSAFE_className={cn(
+                                        'text-sm',
+                                        'text-gray-600',
+                                        centerMessage && 'text-center',
+                                    )}
+                                >
                                     {detail}
                                 </Text>
                             ))}

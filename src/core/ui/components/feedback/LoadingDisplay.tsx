@@ -1,5 +1,6 @@
 import { Flex, ProgressCircle, Text } from '@adobe/react-spectrum';
 import React from 'react';
+import { cn } from '@/core/ui/utils/classNames';
 
 export interface LoadingDisplayProps {
     /** Size of the progress circle */
@@ -42,11 +43,10 @@ export function LoadingDisplay({
     const shouldCenter = size === 'L';
     const hasDeterminateProgress = progress !== undefined && progress >= 0;
 
-    // Text size and color classes based on progress circle size
-    const textSizeMap = { L: 'text-lg', M: 'text-base', S: '' };
-    const mainTextClass = `${textSizeMap[size]} font-medium`.trim();
-    const subTextClass = 'text-sm text-gray-600';
-    const helperTextClass = 'text-xs text-gray-500 italic';
+    // Text size by circle size. Written as literals AT each use below rather
+    // than assigned here: a className the bundle scan cannot read is a class it
+    // cannot check a stylesheet for (ADR-017 §6).
+    const textSizeClass = { L: 'text-lg', M: 'text-base', S: '' }[size];
 
     // Container props based on centering
     const containerProps = shouldCenter
@@ -64,7 +64,7 @@ export function LoadingDisplay({
         return (
             <Flex gap="size-200" alignItems="center" UNSAFE_className={className}>
                 <ProgressCircle size={size} isIndeterminate={true} aria-label={message} />
-                <Text UNSAFE_className={mainTextClass}>{message}</Text>
+                <Text UNSAFE_className={cn(textSizeClass, 'font-medium')}>{message}</Text>
             </Flex>
         );
     }
@@ -89,13 +89,22 @@ export function LoadingDisplay({
                     gap="size-50"
                     alignItems={shouldCenter ? 'center' : 'start'}
                 >
-                    <Text UNSAFE_className={mainTextClass}>{message}</Text>
+                    <Text UNSAFE_className={cn(textSizeClass, 'font-medium')}>{message}</Text>
                     {/* Always render sub-message row to prevent layout shift */}
-                    <Text UNSAFE_className={subTextClass} minHeight="size-200">
+                    <Text UNSAFE_className={cn('text-sm', 'text-gray-600')} minHeight="size-200">
                         {subMessage || '\u00A0'}
                     </Text>
                     {helperText && (
-                        <Text UNSAFE_className={helperTextClass} marginTop="size-100">
+                        <Text
+                            // No 'italic': that class is defined in no
+                            // stylesheet, so this line has never rendered
+                            // italic. Asking for it again would be a look
+                            // nobody has reviewed — found when the class came
+                            // out of a variable and the bundle scan could read
+                            // it (2026-09-19).
+                            UNSAFE_className={cn('text-xs', 'text-gray-500')}
+                            marginTop="size-100"
+                        >
                             {helperText}
                         </Text>
                     )}

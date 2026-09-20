@@ -16006,7 +16006,7 @@
             "anchors": [
                 "maxWidth === 'none' ? 'none' : translateSpectrumToken(maxWidth),"
             ],
-            "line": 160,
+            "line": 146,
             "mutants": 1,
             "category": "branch",
             "reason": "Stryker forces the false arm, so maxWidth='none' becomes translateSpectrumToken('none'). That function passes any string it does not recognise through unchanged \u2014 verified by planting a probe suite that asserts translateSpectrumToken('none') === 'none', which passed \u2014 so both arms produce the identical style value for every input the prop type allows. The ternary exists for the COMPILER: maxWidth is typed DimensionValue | 'none' and translateSpectrumToken takes DimensionValue | undefined, so the equality check is what narrows 'none' away before the call. No render can tell the two arms apart. ANCHOR RE-POINTED 2026-09-10: the property was renamed to `--two-col-max-width` and re-wrapped when TwoColumnLayout stopped writing inline styles. The ternary is unchanged, so the equivalence claim stands; only the text the anchor matches moved.",

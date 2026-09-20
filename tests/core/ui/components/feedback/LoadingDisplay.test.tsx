@@ -344,7 +344,10 @@ describe('LoadingDisplay', () => {
                 <LoadingDisplay message="Loading..." helperText="This usually takes a minute" />
             );
 
-            expect(container.querySelector('.italic')).toHaveTextContent(
+            // Queried by the class that actually styles it: `.italic` was asked
+            // for in the markup but defined in no stylesheet, so it never did
+            // anything (2026-09-19).
+            expect(container.querySelector('.text-gray-500')).toHaveTextContent(
                 'This usually takes a minute'
             );
         });

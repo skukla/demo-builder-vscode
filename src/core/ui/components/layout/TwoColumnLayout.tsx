@@ -1,4 +1,5 @@
 import React from 'react';
+import { cn } from '@/core/ui/utils/classNames';
 import { translateSpectrumToken, DimensionValue } from '@/core/ui/utils/spectrumTokens';
 
 export interface TwoColumnLayoutProps {
@@ -108,30 +109,6 @@ export function TwoColumnLayout({
     const fixedRight = rightWidth !== undefined;
     const translatedRightWidth = fixedRight ? translateSpectrumToken(rightWidth) : undefined;
 
-    const containerClasses = [
-        'flex',
-        'h-full',
-        'w-full',
-        'flex-1',
-        'min-h-0',
-        'items-stretch',
-        'two-column-layout',
-        className,
-    ]
-        .filter(Boolean)
-        .join(' ');
-    const leftColumnClasses =
-        'flex flex-column w-full min-w-0 overflow-hidden two-column-layout-left';
-    const rightColumnClasses = [
-        fixedRight ? null : 'flex-1',
-        'flex',
-        'flex-column',
-        'overflow-hidden',
-        'two-column-layout-right',
-    ]
-        .filter(Boolean)
-        .join(' ');
-
     // The two modes are a DATA ATTRIBUTE, not two style objects.
     //
     // Left column. Default: capped-primary (flex grow + max-width for
@@ -148,7 +125,16 @@ export function TwoColumnLayout({
 
     return (
         <div
-            className={containerClasses}
+            className={cn(
+                'flex',
+                'h-full',
+                'w-full',
+                'flex-1',
+                'min-h-0',
+                'items-stretch',
+                'two-column-layout',
+                className,
+            )}
             data-fixed-right={fixedRight ? 'true' : undefined}
             style={
                 {
@@ -168,14 +154,32 @@ export function TwoColumnLayout({
             }
         >
             {/* Left Column: Main Content (constrained width) */}
-            <div className={leftColumnClasses}>
+            <div
+                className={cn(
+                    'flex',
+                    'flex-column',
+                    'w-full',
+                    'min-w-0',
+                    'overflow-hidden',
+                    'two-column-layout-left',
+                )}
+            >
                 {leftContent}
             </div>
 
             {/* Right Column: Sidebar/Summary. Default: flexible (flex-1), floored by
                 rightMinWidth. Fixed-width mode (rightWidth set): a pinned sidebar
                 (flex: 0 0 <rightWidth> + width: <rightWidth>, no grow). */}
-            <div className={rightColumnClasses} data-show-border={showBorder ? 'true' : undefined}>
+            <div
+                className={cn(
+                    !fixedRight && 'flex-1',
+                    'flex',
+                    'flex-column',
+                    'overflow-hidden',
+                    'two-column-layout-right',
+                )}
+                data-show-border={showBorder ? 'true' : undefined}
+            >
                 {rightContent}
             </div>
         </div>
