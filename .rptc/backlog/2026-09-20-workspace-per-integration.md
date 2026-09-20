@@ -166,6 +166,56 @@ projects. The limit is measured for projects (`adobeEntityName.ts`); the longest
 name created so far was 17. A derived name is 19 at most, so this only matters if the
 workspace limit is lower.
 
+## Renaming: the id names the workspace, the SC's name titles it
+
+Adobe gives a workspace two fields, and they answer two different questions.
+
+| Field | Comes from | Changes on a rename |
+|---|---|---|
+| machine `name` | the component id, through `deriveAdobeEntityName` | **never** |
+| `title` | the SC's display name for the integration | yes, best-effort |
+
+So the relationship is 1:1 with the component **id**, not with the name the SC typed.
+
+**Why the machine name must not follow a rename.** It reaches the Runtime namespace —
+a real one is `285361-kuklabodeamesh5ngv-stage`, which is org id + project machine name
++ workspace machine name. Renaming it has two possible outcomes and both are bad: either
+the namespace follows, and every deployed action moves to a new URL while the mesh,
+storefront and Commerce config still point at the old one; or it does not, and Console
+disagrees with reality forever. Neither is worth a cosmetic rename.
+
+This is the rule the code already applies one level up: `renameRemoteProject` sends
+`{ title }` alone, deliberately, because the machine name is part of the project's
+identity.
+
+**Why the id is the right source.** It is already the machine identity everywhere else —
+the folder (`components/<id>/`), the keyed-state key, and the deployed OpenWhisk package
+(`deriveOwPackage(componentId)`, a pure function of the id). It is immutable by
+declaration: `handleRenameAppBuilderComponent` states that the id is immutable and only
+the entry's `name` changes. And it is collision-checked at mint against every catalog id
+and every selected id, so it is unique inside the project.
+
+It is also already human-friendly, because it is derived from the name the SC typed:
+"Northwind ERP" mints `northwind-erp`. So deriving the workspace name from the id gives
+a readable name without tracking a mutable one.
+
+**Uniqueness across demo projects.** Two demo projects can share one Adobe project
+(AB-15), so two `northwind-erp` components could ask for the same workspace name.
+`deriveAdobeEntityName` appends four random characters, so they differ and Adobe returns
+no 409. This is also why the name must be RECORDED on the component and never
+re-derived for a lookup.
+
+**Renaming should sync the title.** When an SC renames an integration, PATCH the
+workspace title through `editWorkspace`, best-effort, exactly as the project rename does.
+A failed sync must not fail the rename — renaming works offline today and should keep
+working offline.
+
+**A gap this exposes, outside this item.** A pre-built catalog integration cannot be
+renamed at all today: `handleRenameAppBuilderComponent` refuses it because the runner
+rewrites `name: entry.name` on every redeploy. The ERP is a catalog entry, so the name
+an SC types when adding it is a display-name variable on the bound system, not a
+component name, and there is no way to change it afterwards. Worth its own item.
+
 ## Done when
 
 An SC can add two App Management integrations to one project, each deploys into its own
