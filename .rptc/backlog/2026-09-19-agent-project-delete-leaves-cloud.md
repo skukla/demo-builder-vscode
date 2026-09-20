@@ -76,3 +76,4 @@ teardown so both surfaces do it.
 ## Shipped so far
 
 - 2026-09-19  docs(backlog): AI-9, should an agent's project delete also clean up the cloud (`6f8315213`)
+- 2026-09-20  Answered: mirror the button's checklist as two args on delete_project; the CDN unpublish gap is a defect to fix (merge 7f69e91cc)
