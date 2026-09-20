@@ -23,7 +23,10 @@ import {
     runGuards,
 } from './appBuilderComponentHandlers';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import { withProgressRegister } from '@/core/vscode/progressRegister';
+import { DESTINATION_OPERATION_ID } from '@/core/utils/operationIds';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operationProgress';
+import { withOperationProgress, type ReportStage } from '@/core/vscode/withOperationProgress';
 import { moveAppBuilderComponentsToDestination } from '@/features/app-builder/services/appBuilderComponentMigration';
 import {
     buildDefaultRunnerDeps,
@@ -57,10 +60,8 @@ export type {
  * @returns the saved destination plus the PREVIOUS one, which step-02 needs to
  *          address the old target after this write has overwritten it
  */
-export const handleSetProjectDestination: MessageHandler<SetProjectDestinationPayload> = async (
-    context,
-    payload,
-) => {
+export const handleSetProjectDestination: MessageHandler<SetProjectDestinationPayload> =
+    narrateOutcomeToModal(async (context, payload) => {
     const project = await context.stateManager.getCurrentProject();
     if (!project) {
         return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
@@ -77,15 +78,17 @@ export const handleSetProjectDestination: MessageHandler<SetProjectDestinationPa
     }
 
     const target = `${nextProject.title ?? nextProject.name} \u00b7 ${nextWorkspace.title ?? nextWorkspace.name}`;
-    return withProgressRegister(
+    return withOperationProgress(
         {
             // No card options: the destination is PROJECT-scoped, so no single card
             // owns it. The per-component cards are telegraphed separately, by the
             // callback handed to the migration below — this slot has no card to fill,
             // which is NOT the same as the move having nothing to say.
+            id: payload?.id ?? DESTINATION_OPERATION_ID,
             title: `Changing destination to ${target}`,
+            inModal: progressSurfaceOf(payload) === 'modal',
         },
-        (report) =>
+        async (report) =>
             applyDestination(
                 context,
                 project,
@@ -97,7 +100,9 @@ export const handleSetProjectDestination: MessageHandler<SetProjectDestinationPa
                 report,
             ),
     );
-};
+    },
+    (payload) => payload?.id ?? '',
+);
 
 /**
  * The destination change itself, inside the notification.
@@ -114,7 +119,7 @@ async function applyDestination(
     nextProject: DestinationRef & { id: string },
     nextWorkspace: DestinationRef & { id: string },
     target: string,
-    report: (message: string) => void,
+    report: ReportStage,
 ): Promise<ReturnType<MessageHandler<SetProjectDestinationPayload>>> {
     // First line, per the progress-register contract: the auth check is the slow
     // step and the user must see why they are waiting.
@@ -130,7 +135,7 @@ async function applyDestination(
         return { success: true, data: { destination: project.adobe, unchanged: true } };
     }
 
-    report('Checking requirements…');
+    report(OPERATION_STAGES.checkingRequirements.label);
     const guardError = await runGuards(context, project);
     if (guardError) {
         return { success: false, error: guardError.error, code: guardError.code };
@@ -161,7 +166,7 @@ async function applyDestination(
         workspaceTitle: nextWorkspace.title,
     };
 
-    report(`Saving destination ${target}…`);
+    report('Saving the new destination');
     await context.stateManager.saveProject(project);
     context.logger.info(
         `[Destination] Now deploying to ${project.adobe.projectTitle ?? project.adobe.projectName}` +
@@ -179,7 +184,14 @@ async function applyDestination(
 
     // `project.adobe` already holds the NEW destination, so every deploy the
     // migration runs targets it; `previous` is what addresses the old one.
-    report(`Moving ${movingIds.length} integration${movingIds.length === 1 ? '' : 's'}…`);
+    // One stage for the whole move, carrying WHICH of the N is in flight. The
+    // count is known up front, which is the only case a count is allowed (PL-59).
+    const at = (id: string): { index: number; total: number } => ({
+        index: Math.max(1, movingIds.indexOf(id) + 1),
+        total: movingIds.length,
+    });
+    let moving = movingIds[0] ?? '';
+    report('Moving the integrations', undefined, at(moving));
     const deps = buildDefaultRunnerDeps(
         await buildRunnerDepsContext(context, project, {
                     authManager: ServiceLocator.getAuthenticationService(),
@@ -187,7 +199,12 @@ async function applyDestination(
                 }),
         // The deploy tails narrate their own steps; surface them as sub-messages so
         // a multi-minute move reads as progress rather than a stalled notification.
-        (message, subMessage) => report(subMessage ? `${message} ${subMessage}` : message),
+        (message, subMessage) =>
+            report(
+                'Moving the integrations',
+                subMessage ? `${message} — ${subMessage}` : message,
+                at(moving),
+            ),
     );
     // The per-card channel. The notification above is project-scoped and owns no
     // card, so this is what keeps the grid from reading DEPLOYED throughout a move
@@ -196,7 +213,12 @@ async function applyDestination(
         project,
         previous,
         deps,
-        (id, status, message) => routeCardStatus(project, id, status, message),
+        (id, status, message) => {
+            // The migration moves them one at a time; its card updates are what
+            // say which one, so the modal's count follows them.
+            moving = id;
+            routeCardStatus(project, id, status, message);
+        },
     );
     // Seed the grid from the persisted map either way: on success the entries carry
     // new deploy records, and on an abort the rows that landed must not stay stuck

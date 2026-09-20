@@ -40,7 +40,6 @@ import type { WizardState } from '@/types/webview';
 import type {
     AddAppBuilderComponentRequestPayload,
     DestinationRef,
-    SetProjectDestinationRequestPayload,
 } from '@/types/webviewRequests';
 
 export interface AddIntegrationFlowAdapterProps {
@@ -75,6 +74,15 @@ export interface AddIntegrationFlowAdapterProps {
      * (`buildCustomIntegrationEntry`).
      */
     onAddStarted?: (id: string, name: string) => void;
+    /**
+     * A destination was chosen (mode `destination`). The move itself belongs to
+     * the SCREEN, which hosts the progress modal it narrates into — this only
+     * says which project and workspace were picked (PL-59 slice 5).
+     */
+    onDestinationChosen?: (chosen: {
+        project: DestinationRef;
+        workspace: DestinationRef;
+    }) => void;
 }
 
 /** Post an add whose steps narrate to the progress modal. */
@@ -94,10 +102,13 @@ export function AddIntegrationFlowAdapter({
     adobeOrgId,
     mode = 'add',
     onAddStarted,
+    onDestinationChosen,
 }: AddIntegrationFlowAdapterProps): React.ReactElement {
     // Read through a ref: the builder callbacks below are memoised once.
     const onAddStartedRef = useRef(onAddStarted);
     onAddStartedRef.current = onAddStarted;
+    const onDestinationChosenRef = useRef(onDestinationChosen);
+    onDestinationChosenRef.current = onDestinationChosen;
     const catalogRef = useRef(catalog);
     catalogRef.current = catalog;
 
@@ -149,10 +160,10 @@ export function AddIntegrationFlowAdapter({
             // destination did nothing at all (found live 2026-08-07).
             const { project, workspace } = destinationRef.current;
             if (mode === 'destination' && updates.adobeWorkspace && project && workspace) {
-                webviewClient.postMessage('setProjectDestination', {
-                    project,
-                    workspace,
-                } satisfies SetProjectDestinationRequestPayload);
+                // Handed UP rather than posted here: the screen owns the progress
+                // modal this move narrates into, so the screen sends the message
+                // (PL-59 slice 5).
+                onDestinationChosenRef.current?.({ project, workspace });
             }
 
             setOverrides((current) => ({ ...current, ...updates }));

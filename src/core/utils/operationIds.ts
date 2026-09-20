@@ -28,6 +28,12 @@ export const SYNC_OPERATION_ID = 'sync-storefront';
 export const BLOCK_LIBRARY_OPERATION_ID = 'block-library';
 export const REPUBLISH_OPERATION_ID = 'republish';
 
+/**
+ * Changing where a project's integrations deploy. Project-scoped, like the
+ * storefront buttons, so it names the operation rather than a target.
+ */
+export const DESTINATION_OPERATION_ID = 'destination';
+
 /** A project deletion, keyed by the project being deleted. */
 export function deleteOperationId(projectName: string): string {
     return `delete:${projectName}`;

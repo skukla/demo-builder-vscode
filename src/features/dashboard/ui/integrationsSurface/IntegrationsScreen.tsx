@@ -47,9 +47,11 @@ import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
 import { DestinationContext } from '@/core/ui/components/ui/DestinationContext';
 import { matchesSearchFields } from '@/core/ui/hooks/useSearchFilter';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import { DESTINATION_OPERATION_ID } from '@/core/utils/operationIds';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { Project } from '@/types/base';
 import type { IntegrationsInitialData } from '@/types/webviewPayloads';
+import type { DestinationRef } from '@/types/webviewRequests';
 
 /** Module-level stable empty catalog — avoids a new array ref each render. */
 const EMPTY_CATALOG: AppBuilderComponentCatalogEntry[] = [];
@@ -235,6 +237,30 @@ export function IntegrationsScreen({
     const openDestination = useCallback((): void => setDestOpen(true), []);
     const closeDestination = useCallback((): void => setDestOpen(false), []);
 
+    // The move takes minutes and moves each integration in turn, so it narrates
+    // into the same modal every other operation here uses (PL-59 slice 5).
+    const handleDestinationChosen = useCallback(
+        (chosen: { project: DestinationRef; workspace: DestinationRef }): void => {
+            const target = [
+                chosen.project.title ?? chosen.project.name,
+                chosen.workspace.title ?? chosen.workspace.name,
+            ]
+                .filter(Boolean)
+                .join(' · ');
+            startOperation({
+                id: DESTINATION_OPERATION_ID,
+                name: target,
+                message: 'setProjectDestination',
+                payload: { project: chosen.project, workspace: chosen.workspace },
+                title: `Changing destination to ${target}`,
+                failureTitle: "Couldn't change the destination",
+            });
+            closeDestination();
+        },
+        [startOperation, closeDestination],
+    );
+
+
     // Status has not resolved yet — the mesh card would otherwise pop in a beat
     // after the integration cards. Same LoadingDisplay as ProjectsDashboard's gate.
     // The Flex stays: CenteredFeedbackContainer takes a FIXED DimensionValue (it
@@ -393,6 +419,7 @@ export function IntegrationsScreen({
                     adobeWorkspaceTitle={destination?.workspaceTitle}
                     adobeOrgId={adobeOrgId}
                     onAddStarted={operations.started}
+                    onDestinationChosen={handleDestinationChosen}
                 />
 
                 {/* The operation progress modal (PL-59). Here, not in the grid: the

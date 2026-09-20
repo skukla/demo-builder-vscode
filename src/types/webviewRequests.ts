@@ -392,6 +392,9 @@ export interface DestinationRef {
 export interface SetProjectDestinationRequestPayload {
     project?: DestinationRef;
     workspace?: DestinationRef;
+    /** The id the screen's progress modal follows, when one started it (PL-59). */
+    id?: string;
+    progress?: 'modal';
 }
 
 /**

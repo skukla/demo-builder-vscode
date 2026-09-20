@@ -277,13 +277,21 @@ describe('handleSetProjectDestination — telegraph and guards', () => {
         );
     });
 
-    it('reports the destination it is saving, as a step', async () => {
+    // The destination NAMES itself in the title ("Changing destination to New
+    // Project · Stage"), which is fixed for the whole run; the step says what is
+    // happening now. It used to be repeated in both (PL-59 wording).
+    it('names the destination in its title, and the work in its step', async () => {
         const { context } = makeDestinationContext();
 
         await handleSetProjectDestination(context, NEW_DESTINATION);
 
+        // The suite drives VS Code through its own stub (`mockWithProgress`).
+        expect(mockWithProgress).toHaveBeenCalledWith(
+            expect.objectContaining({ title: expect.stringContaining('New Project') }),
+            expect.any(Function)
+        );
         expect(mockProgressReport).toHaveBeenCalledWith(
-            expect.objectContaining({ message: expect.stringContaining('New Project') })
+            expect.objectContaining({ message: 'Saving the new destination' })
         );
     });
 

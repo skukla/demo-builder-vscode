@@ -11,6 +11,7 @@
 
 // The shared mock wall FIRST: importing it is what registers the module mocks,
 // and an import of the handler above this line would load it unmocked.
+import { startModalRun } from '@/core/vscode/operationProgress';
 import {
     NEW_DESTINATION,
     makeDestinationContext,
@@ -192,7 +193,8 @@ describe('handleSetProjectDestination — what the move is handed and what it sa
 
         await handleSetProjectDestination(context, NEW_DESTINATION);
 
-        expect(reported()).toContain('Moving 1 integration…');
+        // One stage for the whole move, carrying which of the N is in flight.
+        expect(reported()).toContain('Moving the integrations (1 of 1)');
     });
 
     it('counts several in the plural', async () => {
@@ -200,7 +202,7 @@ describe('handleSetProjectDestination — what the move is handed and what it sa
 
         await handleSetProjectDestination(context, NEW_DESTINATION);
 
-        expect(reported()).toContain('Moving 2 integrations…');
+        expect(reported()).toContain('Moving the integrations (1 of 2)');
     });
 
     it('builds the runner deps against the project and the shared services', async () => {
@@ -218,22 +220,32 @@ describe('handleSetProjectDestination — what the move is handed and what it sa
         );
     });
 
-    it('relays the deploy tails own steps into the notification', async () => {
-        // A multi-minute move reads as a stalled notification without this: the
-        // tails narrate themselves and nothing else reports while they run.
+    // A multi-minute move reads as stalled without this: the deploy tails narrate
+    // themselves and nothing else reports while they run. Their lines are the
+    // STEP under the stage, so they reach the modal's second row — a notification
+    // deliberately shows the stage alone (PL-59 R2).
+    it("relays the deploy tails own steps as the move's step line", async () => {
         const { context } = withComponentIds(['erp-sync']);
+        const screen = jest.fn(async (_type: string, _payload?: unknown): Promise<void> => undefined);
+        context.sendMessage = screen;
+        startModalRun('destination', screen);
 
-        await handleSetProjectDestination(context, NEW_DESTINATION);
+        await handleSetProjectDestination(context, {
+            ...NEW_DESTINATION,
+            id: 'destination',
+            progress: 'modal',
+        });
 
         const relay = mockBuildDefaultRunnerDeps.mock.calls[0][1] as (
             message: string,
             subMessage?: string
         ) => void;
         relay('Deploying erp-sync', 'building');
-        relay('Deploying erp-sync');
 
-        expect(reported()).toContain('Deploying erp-sync building');
-        expect(reported()).toContain('Deploying erp-sync');
+        const steps = screen.mock.calls
+            .filter(([type]) => type === 'operationProgress')
+            .map(([, payload]) => (payload as { step?: string }).step);
+        expect(steps).toContain('Deploying erp-sync — building');
     });
 
     it('pushes a row status for a component the map does not know', async () => {
