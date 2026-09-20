@@ -145,7 +145,14 @@ export function extractSettingsFromProject(
         // templateOwner, templateRepo, contentSource, patches are derived from brand+stack
         edsConfig = {
             daLiveOrg: metadata.daLiveOrg as string | undefined,
-            daLiveSite: metadata.daLiveSite as string | undefined,
+            // DERIVED, not read raw. `daLiveSite` is legacy metadata the loader
+            // STRIPS on load (projectFileLoader), because the DA site name IS the
+            // repo name; only unmigrated projects still carry one. Reading it raw
+            // gave every migrated project an undefined site, and the edit wizard's
+            // last step refused with "Storefront configuration is incomplete" after
+            // the SC had walked the whole wizard with nothing wrong on screen
+            // (owner, 2026-09-20). Same derivation as `getEdsDaLiveTarget`.
+            daLiveSite: (metadata.daLiveSite as string | undefined) ?? githubRepoParts?.[1],
             githubOwner: githubRepoParts?.[0], // Extract owner from "owner/repo"
             repoName: githubRepoParts?.[1], // Extract repo name from "owner/repo"
             repoUrl: metadata.repoUrl as string | undefined,

@@ -566,6 +566,40 @@ describe('settingsSerializer', () => {
             });
         });
 
+        // THE regression this derivation exists for. The loader STRIPS daLiveSite
+        // on load (the site name IS the repo name), so every migrated project
+        // reaches here without one. Read raw, that gave the edit wizard an
+        // incomplete storefront config and a refusal at the LAST step, after the
+        // SC had walked the whole wizard with nothing wrong on screen (owner,
+        // 2026-09-20, on Bodea).
+        it('derives the DA.live site from the repo when the metadata has none', () => {
+            const { daLiveSite: _stripped, ...withoutSite } = edsMetadata;
+
+            const result = extractSettingsFromProject(
+                projectWithEdsMetadata(withoutSite),
+                false
+            );
+
+            expect(result.edsConfig).toEqual({
+                daLiveOrg: 'acme',
+                daLiveSite: 'demo-storefront',
+                githubOwner: 'acme-org',
+                repoName: 'demo-storefront',
+                repoUrl: 'https://github.com/acme-org/demo-storefront',
+            });
+        });
+
+        // An unmigrated project's own site name still wins: there the DA content
+        // really does live somewhere other than the repo name.
+        it('keeps a stored site name that differs from the repo', () => {
+            const result = extractSettingsFromProject(
+                projectWithEdsMetadata({ ...edsMetadata, daLiveSite: 'somewhere-else' }),
+                false
+            );
+
+            expect(result.edsConfig?.daLiveSite).toBe('somewhere-else');
+        });
+
         it('splits githubRepo on the slash — owner first, repo second', () => {
             const result = extractSettingsFromProject(
                 projectWithEdsMetadata({ githubRepo: 'owner-side/repo-side' }),

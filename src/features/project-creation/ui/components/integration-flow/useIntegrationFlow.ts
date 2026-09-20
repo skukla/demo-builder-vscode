@@ -257,6 +257,20 @@ export function useIntegrationFlow(args: UseIntegrationFlowArgs): UseIntegration
             // refuses an extension-layout duplicate.
             const entry = args.catalog.find((c) => c.id === draft.catalogId);
             if (entry) {
+                // A PAIRED entry keeps its identity, whatever it is called. Its
+                // system is bound to the catalog id, so forking the entry under a
+                // minted id loses the pairing — the add then refused with
+                // "Provider demo-erp is not deployed yet", naming a component the
+                // SC had never heard of and could not add (owner, 2026-09-20).
+                // The typed name names the SYSTEM instead, through the display-name
+                // var its catalog entry already declares.
+                const bound = args.catalog.find(
+                    (candidate) => candidate.kind === 'system' && candidate.boundTo === entry.id,
+                );
+                if (bound) {
+                    builder.onAppBuilderComponentToggle(entry.id, true, draft.label?.trim());
+                    return;
+                }
                 const instance = mintFor(entry.name, entry.id);
                 if (instance.id !== entry.id) {
                     builder.onAddCustomAppBuilderComponent(entry.source, instance);

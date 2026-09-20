@@ -68,7 +68,12 @@ export interface UseProjectBuilderReturn {
     onAddonsChange: (addons: string[]) => void;
     onBlockLibrariesChange: (libraries: string[]) => void;
     onCustomBlockLibrariesChange: (libs: CustomBlockLibrary[]) => void;
-    onAppBuilderComponentToggle: (id: string, isSelected: boolean) => void;
+    /**
+     * @param displayName - what the SC typed for a PAIRED entry: the name of its
+     *   bound system, not a new identity for the entry (the dashboard add records
+     *   it; the wizard stages the selection only).
+     */
+    onAppBuilderComponentToggle: (id: string, isSelected: boolean, displayName?: string) => void;
     /**
      * Add a custom-URL integration. With `instance` (a named AI-built shell
      * instance) the selection commits under the INSTANCE id and the source record

@@ -240,11 +240,18 @@ export function AddIntegrationFlowAdapter({
     // The wizard stages these into its draft; here each one deploys.
     const builder = useMemo(
         () => ({
-            onAppBuilderComponentToggle: (id: string, selected: boolean): void => {
+            onAppBuilderComponentToggle: (
+                id: string,
+                selected: boolean,
+                displayName?: string,
+            ): void => {
                 if (selected) {
-                    postAdd({ id, apis: apiPicksRef.current[id] });
-                    const name = catalogRef.current.find((entry) => entry.id === id)?.name;
-                    onAddStartedRef.current?.(id, name ?? id);
+                    // `displayName` names the entry's bound SYSTEM (the ERP the
+                    // integration talks to); the entry keeps its catalog identity,
+                    // so the pair still arrives together.
+                    postAdd({ id, apis: apiPicksRef.current[id], name: displayName });
+                    const catalogName = catalogRef.current.find((entry) => entry.id === id)?.name;
+                    onAddStartedRef.current?.(id, displayName ?? catalogName ?? id);
                 }
             },
             onAddCustomAppBuilderComponent: (

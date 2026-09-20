@@ -66,6 +66,43 @@ describe('useIntegrationFlow — catalog/custom finish (deterministic, no API pi
         expect(s.onClose).toHaveBeenCalledTimes(1);
     });
 
+    // A PAIRED entry is not a template. Its system is bound to the catalog id, so
+    // forking it under a minted id loses the pairing — the add then refused with
+    // "Provider demo-erp is not deployed yet", naming something the SC had never
+    // heard of and could not add (owner, 2026-09-20).
+    it('a RENAMED pick of a PAIRED entry keeps the identity and names the SYSTEM', () => {
+        const INTEGRATION: AppBuilderComponentCatalogEntry = {
+            id: 'erp-integration',
+            name: 'ERP integration',
+            description: 'Talks to an ERP',
+            kind: 'integration',
+            source: { owner: 'skukla', repo: 'erp-integration', branch: 'main' },
+        };
+        const SYSTEM: AppBuilderComponentCatalogEntry = {
+            id: 'demo-erp',
+            name: 'ERP',
+            description: 'The ERP it talks to',
+            kind: 'system',
+            boundTo: 'erp-integration',
+            nameFromEnvVar: 'ERP_DISPLAY_NAME',
+            source: { owner: 'skukla', repo: 'demo-erp', branch: 'main' },
+        };
+        const s = setup({ initial: LATER_ADD, catalog: [INTEGRATION, SYSTEM] });
+        pickKindAndContinue(s, 'catalog');
+        act(() => s.result.current.pickCatalog(INTEGRATION.id));
+        act(() => s.result.current.setLabel('Northwind ERP'));
+        act(() => s.result.current.onContinue());
+
+        expect(s.builder.onAppBuilderComponentToggle).toHaveBeenCalledWith(
+            'erp-integration',
+            true,
+            'Northwind ERP',
+        );
+        expect(s.builder.onAddCustomAppBuilderComponent).not.toHaveBeenCalled();
+    });
+
+    // The unpaired case is unchanged: naming one of those still commits an
+    // instance of its template.
     it('control: a KEPT default name (slug = entry id) still commits the catalog identity', () => {
         const KIT_ENTRY: AppBuilderComponentCatalogEntry = {
             id: 'commerce-integration-starter-kit',

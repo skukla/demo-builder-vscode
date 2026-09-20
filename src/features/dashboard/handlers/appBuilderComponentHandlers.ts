@@ -47,6 +47,7 @@ import type { CommerceDetachResult } from '@/features/app-builder/services/erpDe
 import {
     buildCustomIntegrationEntry,
     entryFitsProjectAxes,
+    getAppBuilderComponentCatalog,
     getAppBuilderComponentEntry,
 } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import {
@@ -511,6 +512,7 @@ function runAdd(
             }
 
             await recordApiPicks(context, project, entry.id, payload.apis);
+            await recordPairedSystemName(context, project, entry, payload.name);
 
             report(OPERATION_STAGES.adding.label);
             // The deploy tails report every step; hand them the reporter so a slow add
@@ -527,6 +529,43 @@ function runAdd(
             return addAppBuilderComponent(project, entry, deps);
         },
     );
+}
+
+/**
+ * A typed name on a PAIRED entry names its bound SYSTEM.
+ *
+ * The ERP integration is called what the catalog calls it; the ERP it talks to is
+ * called whatever the SC typed. Recorded against the INTEGRATION's id because
+ * that is the owner `resolveDeployInputs` reads first for a bound pair, so the
+ * system picks it up when it deploys — and the pair keeps arriving together,
+ * which forking the entry under a minted id had broken (owner, 2026-09-20).
+ *
+ * @param context - the handler context, for saving
+ * @param project - the project being added to
+ * @param entry - the entry being added
+ * @param name - what the SC typed, if anything
+ */
+async function recordPairedSystemName(
+    context: HandlerContext,
+    project: Project,
+    entry: AppBuilderComponentCatalogEntry,
+    name: string | undefined,
+): Promise<void> {
+    const typed = name?.trim();
+    if (!typed) return;
+    const bound = getAppBuilderComponentCatalog().find(
+        (candidate) => candidate.kind === 'system' && candidate.boundTo === entry.id,
+    );
+    if (!bound?.nameFromEnvVar) return;
+
+    project.componentConfigs = {
+        ...(project.componentConfigs ?? {}),
+        [entry.id]: {
+            ...(project.componentConfigs?.[entry.id] ?? {}),
+            [bound.nameFromEnvVar]: typed,
+        },
+    };
+    await context.stateManager.saveProject(project);
 }
 
 /**

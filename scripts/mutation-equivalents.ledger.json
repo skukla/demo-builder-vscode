@@ -4485,7 +4485,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 337,
+            "line": 351,
             "mutants": 1,
             "category": "other",
             "reason": "These eight callbacks take no dependencies because each one updates the draft through the functional form of setDraft, so nothing they close over can change. The Stryker replacement is a constant literal that compares equal on every render, so useCallback still returns the same function; neither the identity, the call count, nor the resulting draft differs in any way a test can observe.",
@@ -4498,7 +4498,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 341,
+            "line": 355,
             "mutants": 1,
             "category": "other",
             "reason": "These eight callbacks take no dependencies because each one updates the draft through the functional form of setDraft, so nothing they close over can change. The Stryker replacement is a constant literal that compares equal on every render, so useCallback still returns the same function; neither the identity, the call count, nor the resulting draft differs in any way a test can observe.",
@@ -4511,33 +4511,7 @@
             "anchors": [
                 "[],"
             ],
-            "line": 347,
-            "mutants": 1,
-            "category": "other",
-            "reason": "These eight callbacks take no dependencies because each one updates the draft through the functional form of setDraft, so nothing they close over can change. The Stryker replacement is a constant literal that compares equal on every render, so useCallback still returns the same function; neither the identity, the call count, nor the resulting draft differs in any way a test can observe.",
-            "decision": "none \u2014 the empty list is what \"this callback closes over nothing\" is spelled as",
-            "recorded": "2026-09-04",
-            "source": "PL-22 batch MUT-02"
-        },
-        {
-            "module": "src/features/project-creation/ui/components/integration-flow/useIntegrationFlow.ts",
-            "anchors": [
-                "}, []);"
-            ],
-            "line": 352,
-            "mutants": 1,
-            "category": "other",
-            "reason": "These eight callbacks take no dependencies because each one updates the draft through the functional form of setDraft, so nothing they close over can change. The Stryker replacement is a constant literal that compares equal on every render, so useCallback still returns the same function; neither the identity, the call count, nor the resulting draft differs in any way a test can observe.",
-            "decision": "none \u2014 the empty list is what \"this callback closes over nothing\" is spelled as",
-            "recorded": "2026-09-04",
-            "source": "PL-22 batch MUT-02"
-        },
-        {
-            "module": "src/features/project-creation/ui/components/integration-flow/useIntegrationFlow.ts",
-            "anchors": [
-                "}, []);"
-            ],
-            "line": 357,
+            "line": 361,
             "mutants": 1,
             "category": "other",
             "reason": "These eight callbacks take no dependencies because each one updates the draft through the functional form of setDraft, so nothing they close over can change. The Stryker replacement is a constant literal that compares equal on every render, so useCallback still returns the same function; neither the identity, the call count, nor the resulting draft differs in any way a test can observe.",
@@ -4563,7 +4537,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 370,
+            "line": 371,
             "mutants": 1,
             "category": "other",
             "reason": "These eight callbacks take no dependencies because each one updates the draft through the functional form of setDraft, so nothing they close over can change. The Stryker replacement is a constant literal that compares equal on every render, so useCallback still returns the same function; neither the identity, the call count, nor the resulting draft differs in any way a test can observe.",
@@ -4576,7 +4550,33 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 374,
+            "line": 380,
+            "mutants": 1,
+            "category": "other",
+            "reason": "These eight callbacks take no dependencies because each one updates the draft through the functional form of setDraft, so nothing they close over can change. The Stryker replacement is a constant literal that compares equal on every render, so useCallback still returns the same function; neither the identity, the call count, nor the resulting draft differs in any way a test can observe.",
+            "decision": "none \u2014 the empty list is what \"this callback closes over nothing\" is spelled as",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/project-creation/ui/components/integration-flow/useIntegrationFlow.ts",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 384,
+            "mutants": 1,
+            "category": "other",
+            "reason": "These eight callbacks take no dependencies because each one updates the draft through the functional form of setDraft, so nothing they close over can change. The Stryker replacement is a constant literal that compares equal on every render, so useCallback still returns the same function; neither the identity, the call count, nor the resulting draft differs in any way a test can observe.",
+            "decision": "none \u2014 the empty list is what \"this callback closes over nothing\" is spelled as",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/project-creation/ui/components/integration-flow/useIntegrationFlow.ts",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 388,
             "mutants": 1,
             "category": "other",
             "reason": "These eight callbacks take no dependencies because each one updates the draft through the functional form of setDraft, so nothing they close over can change. The Stryker replacement is a constant literal that compares equal on every render, so useCallback still returns the same function; neither the identity, the call count, nor the resulting draft differs in any way a test can observe.",
@@ -8343,7 +8343,7 @@
             "anchors": [
                 "if (result.success) {"
             ],
-            "line": 772,
+            "line": 811,
             "mutants": 7,
             "category": "branch",
             "reason": "The three-way tail of withComponentProgress writes one USER-log line per outcome and nothing else \u2014 no return value changes, no channel is pushed. Forcing any branch, or emptying any body, changes only which line prints, which is what the ratchet exists to refuse to reward. The outcome itself is asserted through the returned result and the row-status pushes.",
@@ -8368,7 +8368,7 @@
             "anchors": [
                 "success: false,"
             ],
-            "line": 504,
+            "line": 505,
             "mutants": 1,
             "category": "branch",
             "reason": "The Configure route's inner success flag never reaches a caller: the outer handler matches result.blocked first and returns its own { success: false, error }. Flipping it changes a value that is overwritten one frame later. Re-anchored 2026-09-10 (474 -> 475): unchanged code, shifted by the AB-7 cleanup-reporting block added to handleRemoveAppBuilderComponent.",
@@ -13951,7 +13951,7 @@
             "anchors": [
                 "[],"
             ],
-            "line": 270,
+            "line": 277,
             "mutants": 1,
             "category": "other",
             "reason": "React compares a dependency array element-wise with Object.is, so a constant one-element array of the same string literal is as stable across renders as an empty one \u2014 the builder memo recomputes on neither. The mutant changes the array's contents and not the memo's behaviour, which is the only thing any caller can see. Verified by planting ['Stryker was here'] as the dependency list: all 35 tests green, including the rerender tests that DO fail when a genuinely dependent memo is frozen.",
@@ -13964,7 +13964,7 @@
             "anchors": [
                 "[],"
             ],
-            "line": 278,
+            "line": 285,
             "mutants": 1,
             "category": "other",
             "reason": "Same argument as the builder memo on line 242: useCallback compares dependency arrays element-wise with Object.is, and a constant one-element array of a string literal never changes between renders, so the signIn callback is rebuilt on neither the original nor the mutant. Verified by planting ['Stryker was here'] as the dependency list \u2014 all 35 tests green, while the rerender tests that pin genuinely dependent memos do fail when those are frozen.",
