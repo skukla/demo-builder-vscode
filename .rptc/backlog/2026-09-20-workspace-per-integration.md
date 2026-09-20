@@ -116,3 +116,7 @@ that read a component's state should carry it once it exists.
 An SC can add two App Management integrations to one project, each deploys into its own
 workspace, each is removed by deleting that workspace, and a project made before this
 still works unchanged.
+
+## Shipped so far
+
+- 2026-09-20  fix(ai): point delete_adobe_workspace at a tool that exists (`e6e5ca096`)
