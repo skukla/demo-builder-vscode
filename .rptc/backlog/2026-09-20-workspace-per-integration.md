@@ -120,3 +120,4 @@ still works unchanged.
 ## Shipped so far
 
 - 2026-09-20  fix(ai): point delete_adobe_workspace at a tool that exists (`e6e5ca096`)
+- 2026-09-20  docs(research): the Commerce-profile row cited a function that is gone (`97cde4033`)
