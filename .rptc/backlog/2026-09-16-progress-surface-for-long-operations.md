@@ -95,3 +95,4 @@ surfaces that host the cards.
 - 2026-09-20  feat(lifecycle): start, stop and restart leave the tile to say it (`ecaa415d1`)
 - 2026-09-20  docs(plan): PL-59 phase 2 — all ten slices built (`fef31647a`)
 - 2026-09-20  test(sop): pin which surface a long operation opens (`d003872af`)
+- 2026-09-20  fix(ui): results are messages, and the private-browser wait is written once (`c0560c9d1`)
