@@ -144,7 +144,12 @@ export function extractSettingsFromProject(
         // Only include project-specific EDS fields
         // templateOwner, templateRepo, contentSource, patches are derived from brand+stack
         edsConfig = {
-            daLiveOrg: metadata.daLiveOrg as string | undefined,
+            // Derived too, and for the same reason as the site below: republish
+            // and the agent's storefront tools both read `daLiveOrg || repoOwner`,
+            // because the DA.live org IS the GitHub namespace. A project without a
+            // stored one would reach the edit wizard's last step with an
+            // incomplete config, exactly as a missing site did.
+            daLiveOrg: (metadata.daLiveOrg as string | undefined) ?? githubRepoParts?.[0],
             // DERIVED, not read raw. `daLiveSite` is legacy metadata the loader
             // STRIPS on load (projectFileLoader), because the DA site name IS the
             // repo name; only unmigrated projects still carry one. Reading it raw

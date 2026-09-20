@@ -324,7 +324,13 @@ export function getEdsDaLiveTarget(
 ): { org: string; site: string } | undefined {
     if (!isEdsProject(project)) return undefined;
     const edsInstance = project?.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
-    const org = edsInstance?.metadata?.daLiveOrg as string | undefined;
+    // Legacy-first, repo fallback — the same rule the site below uses, and the
+    // one republish and the agent's storefront tools already apply: the DA.live
+    // org IS the GitHub namespace, so a project with no stored one is not a
+    // project with no DA.live (owner sweep, 2026-09-20).
+    const org =
+        (edsInstance?.metadata?.daLiveOrg as string | undefined) ??
+        (edsInstance?.metadata?.githubRepo as string | undefined)?.split('/')[0];
     // `daLiveSite` is legacy metadata: present only on unmigrated projects
     // (where it points at where the DA content actually lives) — everywhere
     // else the DA site name IS the repo name, and the loader strips the
@@ -491,7 +497,9 @@ export function getEdsDaLiveUrl(
 ): string | undefined {
     if (!isEdsProject(project)) return undefined;
     const edsInstance = project?.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
-    const daLiveOrg = edsInstance?.metadata?.daLiveOrg as string | undefined;
+    const daLiveOrg =
+        (edsInstance?.metadata?.daLiveOrg as string | undefined) ??
+        (edsInstance?.metadata?.githubRepo as string | undefined)?.split('/')[0];
     // Legacy-first, repo fallback — see getEdsDaLiveTarget.
     const daLiveSite =
         (edsInstance?.metadata?.daLiveSite as string | undefined) ??

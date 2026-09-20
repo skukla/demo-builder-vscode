@@ -589,6 +589,21 @@ describe('settingsSerializer', () => {
             });
         });
 
+        // The org half of the same rule: republish and the agent's storefront
+        // tools both fall back to the repo OWNER, because the DA.live org is the
+        // GitHub namespace. Bodea had one stored, so this half never bit — a
+        // project without one would have died at the same step.
+        it('derives the DA.live org from the repo owner when the metadata has none', () => {
+            const { daLiveOrg: _stripped, ...withoutOrg } = edsMetadata;
+
+            const result = extractSettingsFromProject(
+                projectWithEdsMetadata(withoutOrg),
+                false
+            );
+
+            expect(result.edsConfig?.daLiveOrg).toBe('acme-org');
+        });
+
         // An unmigrated project's own site name still wins: there the DA content
         // really does live somewhere other than the repo name.
         it('keeps a stored site name that differs from the repo', () => {

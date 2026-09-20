@@ -412,9 +412,25 @@ describe('handleOpenDaLive', () => {
         );
     });
 
-    it('reports the URL is unavailable when the DA.live org is missing', async () => {
+    // No STORED org is not no org: the DA.live org IS the GitHub namespace, which
+    // republish and the agent's storefront tools have always fallen back to. This
+    // used to refuse and hide a link that works (owner sweep, 2026-09-20).
+    it('falls back to the repo owner when no DA.live org is stored', async () => {
         const project = createEdsProject();
         delete edsMetadataOf(project).daLiveOrg;
+        const context = createProjectsDashboardContext([project]);
+
+        const result = await handleOpenDaLive(context, { projectPath: project.path });
+
+        expect(String(mockOpenExternal.mock.calls[0][0])).toBe('https://da.live/#/acme/citisignal');
+        expect(result).toEqual({ success: true });
+    });
+
+    // With no repo either there is nothing to derive from, and it still refuses.
+    it('reports the URL is unavailable when nothing names the storefront', async () => {
+        const project = createEdsProject();
+        delete edsMetadataOf(project).daLiveOrg;
+        delete edsMetadataOf(project).githubRepo;
         const context = createProjectsDashboardContext([project]);
 
         const result = await handleOpenDaLive(context, { projectPath: project.path });
