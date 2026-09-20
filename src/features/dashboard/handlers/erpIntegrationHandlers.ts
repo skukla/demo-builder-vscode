@@ -22,13 +22,15 @@
 import {
     guardOrBlock,
     resolveComponentTarget,
-    withComponentProgress,
     type GuardableResult,
 } from './appBuilderComponentHandlers';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import { openInIncognito } from '@/core/utils/browserUtils';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { validateURL } from '@/core/validation/URLValidator';
+import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operationProgress';
+import { withOperationProgress } from '@/core/vscode/withOperationProgress';
 import type { AppManagementAuth } from '@/features/app-builder/services/appManagementClient';
 import {
     ErpIntegrationClient,
@@ -122,10 +124,15 @@ export const handleGetErpStatus: MessageHandler<{ id?: string }> = async (contex
 
 /**
  * Handle 'resetErpRecords' — the integration's reset, under the guard chain and
- * a progress notification. Answers the action's report (what was reverted,
+ * wherever the SC is looking. Answers the action's report (what was reverted,
  * wiped and mirrored).
+ *
+ * Pressed on the integrations screen, so it belongs in that screen's progress
+ * modal like every other card action; it was still opening a notification of its
+ * own (owner, 2026-09-20).
  */
-export const handleResetErpRecords: MessageHandler<{ id?: string }> = async (context, payload): Promise<HandlerResponse> => {
+export const handleResetErpRecords: MessageHandler<{ id?: string; progress?: 'modal' }> =
+    narrateOutcomeToModal(async (context, payload): Promise<HandlerResponse> => {
     const call = await openErpCall(context, payload, 'reset the ERP');
     if ('error' in call) return call.error;
     if (call.integration.status !== 'deployed') {
@@ -134,12 +141,22 @@ export const handleResetErpRecords: MessageHandler<{ id?: string }> = async (con
     }
 
     const erpName = call.erp?.name ?? 'ERP';
-    const result = await withComponentProgress(
-        { title: 'Resetting', id: call.id, label: `${erpName} records`, noun: 'System', logger: context.logger },
+    const result = await withOperationProgress(
+        {
+            id: call.id,
+            title: `Resetting ${erpName} records`,
+            inModal: progressSurfaceOf(payload) === 'modal',
+            cardLabel: `${erpName} records`,
+        },
         async (report): Promise<GuardableResult & { report?: ErpResetReport }> => {
-            const refused = await guardOrBlock(context, call.project, report);
+            const refused = await guardOrBlock(context, call.project, (message) => report(message));
             if (refused) return refused;
-            report("Undoing the ERP's writes in Commerce, wiping the ERP, mirroring Commerce again…");
+            // Three writes in one stage, because the SC cannot act between them and
+            // the reset is not resumable part-way.
+            report(
+                OPERATION_STAGES.resettingErpRecords.label,
+                "Undoing the ERP's writes, wiping it, mirroring Commerce again",
+            );
             try {
                 return { success: true, report: await new ErpIntegrationClient(call.integration.deployedUrls, call.auth).reset() };
             } catch (error) {
@@ -151,7 +168,9 @@ export const handleResetErpRecords: MessageHandler<{ id?: string }> = async (con
         return { success: false, error: result.error };
     }
     return { success: true, data: { id: call.id, erp: shapeErpRow(call.erp), report: result.report } };
-};
+    },
+    (payload) => payload?.id ?? '',
+);
 
 /**
  * Handle 'openErpScreen' — open the ERP bound to an integration at its own

@@ -128,7 +128,13 @@ describe('IntegrationsGrid — the system card verbs', () => {
         const dialog = screen.getByRole('dialog', { name: /reset erp records/i });
         await user.click(within(dialog).getByRole('button', { name: /^reset$/i }));
 
-        expect(getClient().postMessage).toHaveBeenCalledWith('resetErpRecords', { id: 'erp-integration' });
+        // Through the runner now, so it carries `progress: 'modal'` and this
+        // screen's modal narrates it rather than a notification of its own
+        // (owner, 2026-09-20).
+        expect(getClient().postMessage).toHaveBeenCalledWith('resetErpRecords', {
+            id: 'erp-integration',
+            progress: 'modal',
+        });
     });
 
     it('SAFETY: closing the reset dialog posts nothing', async () => {

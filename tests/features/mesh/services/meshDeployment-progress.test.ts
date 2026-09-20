@@ -112,12 +112,18 @@ describe('MeshDeployment - Progress Reporting', () => {
                 onProgress
             );
 
-            // Each poll carries the seconds so far: Adobe says nothing else while
-            // it builds, so the count IS the movement (owner, 2026-09-19).
+            // The step says WHAT is being waited on and carries no clock of its
+            // own: the modal times the stage, and a second count beside it
+            // disagreed by the seconds between when the stage started and when
+            // polling did (owner, 2026-09-20).
             expect(onProgress).toHaveBeenCalledWith(
                 OPERATION_STAGES.verifyingMesh.label,
-                expect.stringMatching(/^Waiting for Adobe — \d+ seconds?$/),
+                'Waiting for Adobe',
             );
+            const counted = onProgress.mock.calls.filter(([, step]: [string, string?]) =>
+                /\d/.test(step ?? ''),
+            );
+            expect(counted).toStrictEqual([]);
         });
 
         it('should report completion', async () => {

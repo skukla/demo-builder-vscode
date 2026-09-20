@@ -255,12 +255,15 @@ export function IntegrationsGrid({
     }, [cards, pendingRemoveId]);
 
     const closeResetDialog = useCallback((): void => setPendingReset(null), []);
+    // Through the runner, so the reset reports into this screen's progress modal
+    // like every other card action rather than opening a notification of its own
+    // (owner, 2026-09-20).
     const confirmReset = useCallback((): void => {
         if (pendingReset) {
-            webviewClient.postMessage('resetErpRecords', { id: pendingReset.id });
+            operations.resetErp(pendingReset.id, pendingReset.erpName);
         }
         setPendingReset(null);
-    }, [pendingReset]);
+    }, [operations, pendingReset]);
 
     const closeRemoveDialog = useCallback((): void => setPendingRemoveId(null), []);
     const confirmRemove = useCallback((): void => {

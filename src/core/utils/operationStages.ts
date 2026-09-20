@@ -90,6 +90,11 @@ export const OPERATION_STAGES = {
         expectation: 'Usually a few seconds',
         detail: "For the mesh's Commerce connection",
     },
+    resettingErpRecords: {
+        label: 'Resetting the records',
+        expectation: 'Usually a minute or two',
+        detail: "Undoing the ERP's writes in Commerce",
+    },
     updatingCli: {
         label: 'Updating Adobe CLI',
         expectation: 'A minute or two, and only when the CLI is out of date',

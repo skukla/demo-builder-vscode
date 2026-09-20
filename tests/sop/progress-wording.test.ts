@@ -21,7 +21,7 @@
  * `progress.report` — `withOperationProgress` sends only stage names, which the stage
  * table already caps.
  */
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { globSync } from 'glob';
 
@@ -82,6 +82,38 @@ const KINDS = [
     { kind: 'titles', patterns: TITLE_SITES, problem: titleProblem },
     { kind: 'messages', patterns: MESSAGE_SITES, problem: messageProblem },
 ] as const;
+
+/**
+ * The two modules that may render a running clock: the modal's own, and the
+ * wizard's install-step detail, which has no modal to time it.
+ */
+const CLOCK_OWNERS = [
+    'src/core/ui/hooks/useElapsedClock.ts',
+    'src/core/utils/progressUnifier/ProgressUnifier.ts',
+    'src/core/utils/timeFormatting.ts',
+];
+
+// One wait, one clock. Mesh deploy's step counted the seconds from when POLLING
+// started, beside the modal's clock counting from when the STAGE started, so a
+// deploy read "Waiting for Adobe — 1 second · 4 seconds" — two numbers for one
+// wait, disagreeing (owner, 2026-09-20).
+describe('a wait is timed once', () => {
+    it('CONTROL: the clock exists and its owners are found', () => {
+        const owners = CLOCK_OWNERS.filter((f) => existsSync(join(ROOT, f)));
+        expect(owners).toEqual(CLOCK_OWNERS);
+        expect(readFileSync(join(ROOT, CLOCK_OWNERS[0]), 'utf8')).toContain('formatElapsed');
+    });
+
+    it('is the SURFACE that counts, never a step it is narrating', () => {
+        const counted = globSync('src/**/*.{ts,tsx}', { cwd: ROOT }).filter(
+            (file) =>
+                !CLOCK_OWNERS.includes(file) &&
+                /formatElapsed\s*\(/.test(readFileSync(join(ROOT, file), 'utf8')),
+        );
+
+        expect(counted).toStrictEqual([]);
+    });
+});
 
 describe('progress-notification wording', () => {
     it('CONTROL: the scans find what they are meant to read, and tell good from bad', () => {

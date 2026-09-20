@@ -8,7 +8,6 @@ import { buildComponent } from '@/core/shell/buildComponent';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { getMeshNodeVersion } from '@/core/utils/meshConfig';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
-import { formatElapsed } from '@/core/utils/timeFormatting';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { MeshDeploymentResult } from '@/features/mesh/services/types';
 import type { Logger } from '@/types/logger';
@@ -230,15 +229,19 @@ export async function deployMeshComponent(
             // this function's own parameter — so the verifier receives it
             // rather than fetching a second one.
             commandManager,
-            // Every poll (~3s) moves the step line on. Adobe reports nothing else
-            // while it builds, so the count of seconds IS the movement — a line
-            // that never changes for two minutes reads as a hang (owner,
-            // 2026-09-19).
-            onProgress: (_attempt, _max, elapsedSeconds) => {
-                onProgress?.(
-                    OPERATION_STAGES.verifyingMesh.label,
-                    `Waiting for Adobe — ${formatElapsed(elapsedSeconds * 1000)}`,
-                );
+            // The step says WHAT is being waited on; the surface says how long.
+            // This used to count the seconds itself, from when polling started,
+            // beside the modal's own clock, which counts from when the STAGE
+            // started — two clocks for one wait, disagreeing by the few seconds
+            // between those two moments (owner, 2026-09-20, watching a deploy
+            // read "Waiting for Adobe — 1 second · 4 seconds").
+            //
+            // The 2026-09-19 note this replaces was right that a line which never
+            // changes for two minutes reads as a hang. What has changed since is
+            // that something else now moves: the modal ticks the stage, and a
+            // notification carries the stage rather than this step.
+            onProgress: () => {
+                onProgress?.(OPERATION_STAGES.verifyingMesh.label, 'Waiting for Adobe');
             },
             logger: logger,
         });

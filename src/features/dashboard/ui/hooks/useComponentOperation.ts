@@ -85,6 +85,8 @@ export interface ComponentOperationControls extends OperationRunnerControls {
     run: (id: string, name: string, action: CardAction) => boolean;
     /** Open the modal for an add the Add flow has just sent. */
     started: (id: string, name: string) => void;
+    /** Run the ERP reset the card's confirmation dialog just agreed to. */
+    resetErp: (id: string, erpName: string) => void;
 }
 
 /** The integrations screen's operation controls. */
@@ -98,6 +100,27 @@ export function useComponentOperation(): ComponentOperationControls {
             if (!message) return false;
             start({ id, name, message, ...titlesFor(action, name) });
             return true;
+        },
+        [start],
+    );
+
+    /**
+     * The ERP reset, which the card confirms in its own dialog first.
+     *
+     * Not in `run`: the others are card ACTIONS keyed by CardAction, and this one
+     * arrives after a confirmation with the ERP's name already resolved. It was
+     * opening a notification of its own until 2026-09-20.
+     */
+    const resetErp = useCallback(
+        (id: string, erpName: string): void => {
+            start({
+                id,
+                name: erpName,
+                message: 'resetErpRecords',
+                title: `Resetting ${erpName} records`,
+                failureTitle: `Couldn't reset ${erpName} records`,
+                successTitle: `${erpName} records reset`,
+            });
         },
         [start],
     );
@@ -119,5 +142,8 @@ export function useComponentOperation(): ComponentOperationControls {
         [show],
     );
 
-    return useMemo(() => ({ ...runner, run, started }), [runner, run, started]);
+    return useMemo(
+        () => ({ ...runner, run, started, resetErp }),
+        [runner, run, started, resetErp],
+    );
 }
