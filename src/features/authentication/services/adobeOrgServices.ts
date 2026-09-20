@@ -19,6 +19,7 @@ import type {
     ServiceSubscriptionInfo,
     SubscribedService,
 } from './types';
+import { classifyTransience } from '@/core/errors';
 import { getLogger } from '@/core/logging/debugLogger';
 import { tryWithTimeout } from '@/core/utils/promiseUtils';
 import { SingleFlight } from '@/core/utils/singleFlight';
@@ -138,6 +139,43 @@ export class AdobeOrgServices {
         return flight.run(() => this.fetchServicesForOrg(orgId));
     }
 
+    /**
+     * Run a Developer Console call, retrying ONCE when it fails transiently.
+     *
+     * Console answers 504 Gateway Timeout when its own licence service times out —
+     * nothing the SC did, and nothing they can fix. On 2026-09-20 one of those
+     * aborted an add three minutes in and sent the SC away to "try again in a few
+     * minutes", which is exactly what a retry does without asking them.
+     *
+     * The classifier decides what counts (`classifyTransience`): a timeout or a
+     * network failure retries, an auth failure never does, because repeating the
+     * same call with the same credentials does the same thing.
+     *
+     * ONE retry, like the org-services fetch above. A second adds delay to a case
+     * that is already unlucky, and the surfaces this serves all carry a Retry.
+     *
+     * Safe for the subscribe PUT as well as the reads: that call REPLACES the
+     * credential's whole service list with what it was given, so sending the same
+     * list again converges on the same state whether or not the first one landed —
+     * which is the thing a 504 leaves unknown.
+     *
+     * @param label - what to call it in the logs
+     * @param run - the call, re-invoked on a transient failure
+     * @returns whatever the call answers
+     */
+    private async withOneTransientRetry<T>(label: string, run: () => Promise<T>): Promise<T> {
+        try {
+            return await run();
+        } catch (error) {
+            if (!classifyTransience(error).retryable) throw error;
+            this.debugLogger.warn(
+                `[Entity Fetcher] ${label} failed transiently — retrying once`,
+            );
+            await sleep(TIMEOUTS.ORG_SERVICES_RETRY_DELAY);
+            return run();
+        }
+    }
+
     /** The uncached catalog fetch behind {@link getServicesForOrg}'s single-flight. */
     private async fetchServicesForOrg(orgId: string): Promise<OrgServiceInfo[]> {
         const startTime = Date.now();
@@ -221,7 +259,9 @@ export class AdobeOrgServices {
                     idIntegration: string
                 ) => Promise<SDKResponse<{ sdkList?: string[] }>>;
             };
-            const response = await client.getIntegration(orgId, idIntegration);
+            const response = await this.withOneTransientRetry('getSubscribedServiceCodes', () =>
+                client.getIntegration(orgId, idIntegration),
+            );
             return response?.body?.sdkList ?? [];
         } catch (error) {
             this.debugLogger.debug('[Entity Fetcher] getSubscribedServiceCodes failed', error);
@@ -260,19 +300,25 @@ export class AdobeOrgServices {
                     sdkCode: string,
                 ) => Promise<SDKResponse<{ licenseConfigs?: ServiceLicenseConfig[] | null }>>;
             };
-            const codes = (await client.getIntegration(orgId, idIntegration))?.body?.sdkList ?? [];
+            const codes =
+                (
+                    await this.withOneTransientRetry('getSubscribedServices', () =>
+                        client.getIntegration(orgId, idIntegration),
+                    )
+                )?.body?.sdkList ?? [];
             return await Promise.all(
                 codes.map(async (sdkCode) => {
                     // An API-key credential has no profile properties at all: Adobe
                     // answers 404 for them (the API Mesh credential, measured live
                     // 2026-09-19). That is "no profiles", not "unknown" — every other
                     // failure still makes the whole answer unknown.
-                    const props = await client
-                        .getSDKProperties(orgId, idIntegration, sdkCode)
-                        .catch((error: unknown) => {
-                            if (isNotFound(error)) return undefined;
-                            throw error;
-                        });
+                    const props = await this.withOneTransientRetry(
+                        `getSDKProperties(${sdkCode})`,
+                        () => client.getSDKProperties(orgId, idIntegration, sdkCode),
+                    ).catch((error: unknown) => {
+                        if (isNotFound(error)) return undefined;
+                        throw error;
+                    });
                     return { sdkCode, licenseConfigs: props?.body?.licenseConfigs ?? [] };
                 }),
             );
@@ -300,10 +346,11 @@ export class AdobeOrgServices {
                 serviceInfo: ServiceSubscriptionInfo[]
             ) => Promise<SDKResponse<unknown>>;
         };
-        const response = await client.subscribeAdobeIdIntegrationToServices(
-            orgId,
-            idIntegration,
-            serviceInfo,
+        // Retried once on a transient failure, and safe to: the call REPLACES the
+        // credential's whole list, so re-sending the same list converges whether or
+        // not the first attempt landed — which is what a 504 leaves unknown.
+        const response = await this.withOneTransientRetry('subscribeAdobeIdIntegrationToServices', () =>
+            client.subscribeAdobeIdIntegrationToServices(orgId, idIntegration, serviceInfo),
         );
         assertSubscribeAccepted(response);
     }
@@ -330,10 +377,11 @@ export class AdobeOrgServices {
                 serviceInfo: ServiceSubscriptionInfo[]
             ) => Promise<SDKResponse<unknown>>;
         };
-        const response = await client.subscribeOAuthServerToServerIntegrationToServices(
-            orgId,
-            idIntegration,
-            serviceInfo,
+        // Retried once on a transient failure, and safe to: the call REPLACES the
+        // credential's whole list, so re-sending the same list converges whether or
+        // not the first attempt landed — which is what a 504 leaves unknown.
+        const response = await this.withOneTransientRetry('subscribeOAuthServerToServerIntegrationToServices', () =>
+            client.subscribeOAuthServerToServerIntegrationToServices(orgId, idIntegration, serviceInfo),
         );
         assertSubscribeAccepted(response);
     }

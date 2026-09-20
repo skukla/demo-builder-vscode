@@ -81,3 +81,69 @@ describe('getServicesForOrg retry hardening', () => {
         }
     });
 });
+
+/**
+ * The same hardening on the calls an ADD dies on.
+ *
+ * 2026-09-20: Developer Console answered 504 Gateway Timeout on its own licence
+ * lookup three minutes into an add, and the SC was told to try again in a few
+ * minutes — which is what one retry does without asking them. A 504 says the
+ * outcome is UNKNOWN, which is why the subscribe is safe to repeat: it replaces
+ * the credential's whole list, so the same list twice converges.
+ */
+describe('the credential calls an add depends on', () => {
+    beforeEach(() => jest.clearAllMocks());
+
+    const GATEWAY_TIMEOUT = new Error(
+        '[CoreConsoleAPISDK:ERROR_GET_INTEGRATION] 504 - Gateway Timeout ("upstream request timeout")',
+    );
+
+    it('retries a 504 on the credential read and lands the second answer', async () => {
+        const { service, client } = makeService();
+        client.getIntegration
+            .mockRejectedValueOnce(GATEWAY_TIMEOUT)
+            .mockResolvedValueOnce({ body: { sdkList: ['AdobeAnalyticsSDK'] } });
+
+        await expect(service.getSubscribedServiceCodes('org-1', 'int-1')).resolves.toEqual([
+            'AdobeAnalyticsSDK',
+        ]);
+        expect(client.getIntegration).toHaveBeenCalledTimes(2);
+        expect(sleep).toHaveBeenCalledWith(TIMEOUTS.ORG_SERVICES_RETRY_DELAY);
+    });
+
+    it('retries a 504 on the subscribe, which is safe because it replaces the whole list', async () => {
+        const { service, client } = makeService();
+        client.subscribeOAuthServerToServerIntegrationToServices
+            .mockRejectedValueOnce(GATEWAY_TIMEOUT)
+            .mockResolvedValueOnce({ body: {} });
+
+        await service.subscribeOAuthServerToServerIntegrationToServices('org-1', 'int-1', []);
+
+        expect(client.subscribeOAuthServerToServerIntegrationToServices).toHaveBeenCalledTimes(2);
+    });
+
+    // Repeating the same call with the same credentials does the same thing, so a
+    // refusal is answered, never retried.
+    it('never retries a refusal', async () => {
+        const { service, client } = makeService();
+        const refused = new Error('403 Forbidden — not entitled');
+        client.getIntegration.mockRejectedValue(refused);
+
+        await expect(service.getSubscribedServiceCodes('org-1', 'int-1')).resolves.toStrictEqual(
+            [],
+        );
+        expect(client.getIntegration).toHaveBeenCalledTimes(1);
+    });
+
+    it('two 504s in a row still fail, rather than retrying forever', async () => {
+        const { service, client } = makeService();
+        client.subscribeOAuthServerToServerIntegrationToServices.mockRejectedValue(
+            GATEWAY_TIMEOUT,
+        );
+
+        await expect(
+            service.subscribeOAuthServerToServerIntegrationToServices('org-1', 'int-1', []),
+        ).rejects.toThrow('504');
+        expect(client.subscribeOAuthServerToServerIntegrationToServices).toHaveBeenCalledTimes(2);
+    });
+});
