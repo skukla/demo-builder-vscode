@@ -454,7 +454,8 @@ meant.
 > starts — never for progress, never for an outcome. A question the work cannot
 > continue without — an expired sign-in, a missing prerequisite, a merge needing a
 > decision — is asked through `askDuringOperation`, which sends it to whichever
-> surface is already narrating.
+> surface is already narrating. **A check the SC did not start asks nothing at all**:
+> it reports what it found on the surface that wanted it.
 > *Why:* the surface is not a per-handler choice, because the handler cannot see how it
 > was reached. `withOperationProgress` reads that from the request and routes, so one
 > handler serves a button, the palette and an agent without knowing which is which, and a
@@ -468,6 +469,14 @@ meant.
 > Your DA.live sign-in" while a notification in the corner asked for that sign-in. The
 > pause-and-continue was right; the surface was wrong. Eleven guards asked VS Code
 > directly, and none of them could know a modal was up.
+>
+> The last clause is the one the routing cannot decide for you, because a background
+> check has no start to route by. The dashboard's status read prompted "Adobe sign-in
+> required to check mesh status" every time the extension reloaded while signed out —
+> unasked, and for something the screen was already showing two inches away: an
+> unauthenticated mesh derives `needs-auth`, which renders as "Session expired" beside
+> a sign-in affordance, with the re-auth action already on the status header. It reads
+> `isAuthenticated()` silently now, which is what the agent path always did.
 >
 > Five modules own the surfaces and call VS Code's progress directly because that is their
 > job: `baseCommand.ts`, `progressRegister.ts`, `operationBackgroundNotice.ts`,

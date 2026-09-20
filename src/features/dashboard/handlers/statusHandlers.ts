@@ -78,25 +78,18 @@ export const handleRequestStatus: MessageHandler = async (context) => {
         const settledWithoutAuth =
             meshComponent.status === 'deploying' || meshComponent.status === 'error';
 
-        // Auth check — prompt for inline sign-in if not authenticated. Skipped for
-        // the two states that are reported without waiting on auth, so a failed
-        // deploy never costs the user a sign-in prompt to look at.
+        // Auth check, SILENTLY. Nobody started this: it runs when the dashboard
+        // opens, so a prompt arrives unasked — and it asked for something the
+        // screen was already showing. An unauthenticated mesh derives `needs-auth`,
+        // which this dashboard renders as "Session expired" beside a sign-in
+        // affordance, with the re-auth action already on the status header. The
+        // notification was a second voice for that (owner, 2026-09-20).
+        //
+        // Skipped entirely for the two states reported without waiting on auth, so
+        // a failed deploy costs nothing to look at.
         let authenticated = false;
         if (!settledWithoutAuth) {
-            const authManager = ServiceLocator.getAuthenticationService();
-            const { ensureAdobeIOAuth } = await import('@/core/auth/adobeAuthGuard');
-            const authResult = await ensureAdobeIOAuth({
-                authManager,
-                logger: context.logger,
-                logPrefix: '[Dashboard]',
-                projectContext: {
-                    organization: project.adobe?.organization,
-                    projectId: project.adobe?.projectId,
-                    workspace: project.adobe?.workspace,
-                },
-                warningMessage: 'Adobe sign-in required to check mesh status.',
-            });
-            authenticated = authResult.authenticated;
+            authenticated = await ServiceLocator.getAuthenticationService().isAuthenticated();
         }
 
         const derived = deriveMeshStatus(project, authenticated);

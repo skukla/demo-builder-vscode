@@ -209,7 +209,10 @@ describe('dashboardHandlers - handleRequestStatus', () => {
         });
     });
 
-    it('should return needs-auth when not authenticated and user cancels sign-in', async () => {
+    // Nobody started this: it runs when the dashboard opens. So it reports what it
+    // found and asks nothing — the screen already renders `needs-auth` as "Session
+    // expired" beside a sign-in affordance (owner, 2026-09-20).
+    it('reports needs-auth without asking the SC anything', async () => {
         const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
         detectFrontendChanges.mockReturnValue(false);
 
@@ -217,14 +220,11 @@ describe('dashboardHandlers - handleRequestStatus', () => {
 
         // Override auth mock AFTER setupMocks (which sets isAuthenticated=true)
         const { ServiceLocator } = require('@/core/di/serviceLocator');
+        const signIn = jest.fn().mockResolvedValue(false);
         ServiceLocator.getAuthenticationService.mockReturnValue({
             isAuthenticated: jest.fn().mockResolvedValue(false),
-            loginAndRestoreProjectContext: jest.fn().mockResolvedValue(false),
+            loginAndRestoreProjectContext: signIn,
         });
-
-        // Mock user clicking "Cancel" on the sign-in prompt
-        const vscode = require('vscode');
-        vscode.window.showWarningMessage.mockResolvedValue('Cancel');
 
         const result = await handleRequestStatus(mockContext);
 
@@ -235,12 +235,9 @@ describe('dashboardHandlers - handleRequestStatus', () => {
             },
         });
 
-        // Verify sign-in prompt was shown
-        expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
-            'Adobe sign-in required to check mesh status.',
-            'Sign In',
-            'Cancel'
-        );
+        const vscode = require('vscode');
+        expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
+        expect(signIn).not.toHaveBeenCalled();
     });
 
     it('should NOT carry orgMismatch in the status payload (delivered separately)', async () => {
@@ -265,26 +262,19 @@ describe('dashboardHandlers - handleRequestStatus', () => {
         expect((result.data as { orgMismatch?: unknown }).orgMismatch).toBeUndefined();
     });
 
-    it('should check mesh status after successful sign-in', async () => {
+    // The counterpart: signed in, so the same silent read gives the real status.
+    it('reports the deployed mesh when the session is still good', async () => {
         const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
         detectFrontendChanges.mockReturnValue(false);
 
         const { mockContext } = setupMocks({ meshStatusSummary: 'deployed' });
 
-        // Auth returns false initially, then true after login
         const { ServiceLocator } = require('@/core/di/serviceLocator');
-        const mockAuthManager = {
-            isAuthenticated: jest
-                .fn()
-                .mockResolvedValueOnce(false) // Initial check
-                .mockResolvedValueOnce(true), // After login
-            loginAndRestoreProjectContext: jest.fn().mockResolvedValue(true),
-        };
-        ServiceLocator.getAuthenticationService.mockReturnValue(mockAuthManager);
-
-        // Mock user clicking "Sign In"
-        const vscode = require('vscode');
-        vscode.window.showWarningMessage.mockResolvedValue('Sign In');
+        const signIn = jest.fn().mockResolvedValue(true);
+        ServiceLocator.getAuthenticationService.mockReturnValue({
+            isAuthenticated: jest.fn().mockResolvedValue(true),
+            loginAndRestoreProjectContext: signIn,
+        });
 
         const result = await handleRequestStatus(mockContext);
 
@@ -294,8 +284,7 @@ describe('dashboardHandlers - handleRequestStatus', () => {
                 status: 'deployed',
             },
         });
-
-        // Verify login was called
-        expect(mockAuthManager.loginAndRestoreProjectContext).toHaveBeenCalled();
+        // A status read never signs anyone in, in either direction.
+        expect(signIn).not.toHaveBeenCalled();
     });
 });
