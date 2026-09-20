@@ -430,6 +430,30 @@ meant.
 > separately by `operationStages.test.ts`. Enforced by
 > `tests/sop/progress-wording.test.ts` against a shrink-only ledger.
 
+> **Convention.** A long operation reports where the SC is looking, and one surface does
+> the narrating. Pressed on a screen, it opens that screen's progress modal; started
+> anywhere else, it opens one notification; run by an agent, it goes to the agent's
+> notifier. Work shorter than about ten seconds gets a busy state on the control that
+> started it and nothing else. A blocking dialog is for a DECISION made before the work
+> starts — never for progress, never for an outcome.
+> *Why:* the surface is not a per-handler choice, because the handler cannot see how it
+> was reached. `withOperationProgress` reads that from the request and routes, so one
+> handler serves a button, the palette and an agent without knowing which is which, and a
+> nested command stands down instead of opening a second thing that says the same thing.
+> A handler calling `vscode.window.withProgress` itself has opted out of all of that, and
+> the failure is invisible: the path you tested still works, and the other two either say
+> nothing or say it twice. The dialog half is the one that actually shipped wrong — Delete
+> put a modal dialog up in the middle of its own run, behind the modal already showing the
+> deletion (PL-59, 2026-09-19).
+>
+> Five modules own the surfaces and call VS Code's progress directly because that is their
+> job: `baseCommand.ts`, `progressRegister.ts`, `operationBackgroundNotice.ts`,
+> `browserSignInNotice.ts` and `agentOperationNotifier.ts`. 24 other sites predate the
+> router and are ledgered with the reason each still opens its own notification; the list
+> may only shrink. Each of the 14 blocking dialogs names the decision it gates, so a new
+> one cannot arrive without someone saying what it asks. Enforced by
+> `tests/sop/progress-surface.test.ts` against `progress-surface.ledger.json`.
+
 ---
 
 ## 7. The user interface
@@ -1607,11 +1631,11 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 25 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 53 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 54 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 120 conventions. 120 of them are enforced; 0 are not.**
+**This handbook states 121 conventions. 121 of them are enforced; 0 are not.**
 
 The last one to get there was "vendor CSS sits in the lowest cascade layer", and it was
 outstanding because it was **not yet true**: `@layer vendor` existed in no bundle, so a

@@ -12,7 +12,7 @@ were wrong within an hour of being written. This one is derived from the
 handbook's own callouts and checked against the enforcers on disk in both
 directions, so it cannot.
 
-- **120** conventions, **120** enforced
+- **121** conventions, **121** enforced
 - **31** name the decision record behind them
 - **6** name a procedure — an SOP or a skill
 - **1** have all three layers
@@ -83,6 +83,7 @@ it means the rule rests on somebody noticing.
 | A domain error class lives with the domain that throws it. `src/core/errors/` is the legacy central hierarchy and may only shrink. | [ADR](../architecture/adr/023-error-handling.md) |  | `architecture-rules.test.ts` |
 | A failure a PERSON reads is translated, never the library's own words. | [ADR](../architecture/adr/023-error-handling.md) |  | `user-facing-errors.test.ts` |
 | A progress notification's title is an "-ing" verb and its object, and says nothing else: "Deploying API Mesh", never "Demo Builder", never "Loading…", never "Step 2/5:". The message under it is the stage name alone, 25 characters at most. |  |  | `progress-wording.test.ts` |
+| A long operation reports where the SC is looking, and one surface does the narrating. Pressed on a screen, it opens that screen's progress modal; started anywhere else, it opens one notification; run by an agent, it goes to the agent's notifier. Work shorter than about ten seconds gets a busy state on the control that started it and nothing else. A blocking dialog is for a DECISION made before the work starts — never for progress, never for an outcome. |  |  | `progress-surface.test.ts` |
 
 ## 7. The user interface
 
