@@ -39,6 +39,7 @@ is the inventory plus the handful of behaviours the source will not tell you.
 | `useVerificationMessage` | Status value → formatted `info`/`success`/`warning`/`error` message |
 | `useElapsedStage` | Advance a sub-message as a wait drags, so a slow fetch does not read as frozen |
 | `useElapsedClock` | How long the current stage has run ("1m 12s"), restarting on each new stage — the progress modal's proof that a long wait is still alive |
+| `useOperationRunner` | Which long operation a screen's progress modal is showing: start it, open on the first report (VS Code asks first), reopen the running one, Retry |
 | `useOperationProgress` | Follow one long operation's progress for its modal, asking where it is when reopened mid-run (PL-59) |
 
 **Choosing between the three async ones**, which is the question this list gets asked

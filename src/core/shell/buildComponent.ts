@@ -16,10 +16,10 @@
  * (buildArgs: undefined) issues a plain `npm run build`.
  */
 
-import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { promises as fsPromises } from 'fs';
 import * as path from 'path';
 import type { CommandExecutor } from './commandExecutor';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 import { parseJSON } from '@/types/typeGuards';

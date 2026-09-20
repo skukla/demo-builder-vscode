@@ -30,6 +30,11 @@ import {
     handleOpenAiForProject,
     handleSetProjectPinned,
 } from './dashboardHandlers';
+import {
+    handleBackgroundOperation,
+    handleGetOperationProgress,
+} from '@/core/vscode/operationProgress';
+import { handleOpenDebugLogs } from '@/features/dashboard/handlers/panelNavigationHandlers';
 import { defineHandlers } from '@/types/handlers';
 
 /**
@@ -87,4 +92,11 @@ export const projectsListHandlers = defineHandlers({
 
     // Pin / unpin a project — pinned projects sort first on the dashboard
     setProjectPinned: handleSetProjectPinned,
+
+    // The progress modal a reset narrates into (PL-59): where a reopened modal
+    // asks how far the run got, and how a closed one hands over to a
+    // notification. Shared with every other screen that hosts the modal.
+    getOperationProgress: handleGetOperationProgress,
+    backgroundOperation: handleBackgroundOperation,
+    openDebugLogs: handleOpenDebugLogs,
 });

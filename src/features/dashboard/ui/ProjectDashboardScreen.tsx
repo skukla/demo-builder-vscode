@@ -10,7 +10,7 @@
  */
 
 import { DialogContainer } from '@adobe/react-spectrum';
-import React, { useState, useRef } from 'react';
+import React, { useCallback, useState, useRef } from 'react';
 import { ActionGrid } from './components/ActionGrid';
 import { AiCapabilitiesModal } from './components/AiCapabilitiesModal';
 import { DashboardStatusHeader } from './components/DashboardStatusHeader';
@@ -21,11 +21,14 @@ import { useDashboardStatus, isMeshBusy } from './hooks/useDashboardStatus';
 import { useInlineRename } from './hooks/useInlineRename';
 import { useLiveDaLiveUrl } from './hooks/useLiveDaLiveUrl';
 import { useOrgSwitchFlow } from './hooks/useOrgSwitchFlow';
+import { OperationProgressModal } from '@/core/ui/components/feedback/OperationProgressModal';
 import { InlineRenameField } from '@/core/ui/components/forms/InlineRenameField';
 import { ControlPanelLayout } from '@/core/ui/components/layout/ControlPanelLayout';
 import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 import { PageLayout } from '@/core/ui/components/layout/PageLayout';
 import { useFocusTrap } from '@/core/ui/hooks/useFocusTrap';
+import { useOperationRunner } from '@/core/ui/hooks/useOperationRunner';
+import { resetOperationId } from '@/core/utils/operationIds';
 import type { DashboardInitialData } from '@/types/webviewPayloads';
 
 /**
@@ -133,7 +136,6 @@ export function ProjectDashboardScreen({
         handleExportProject,
         handleRepublishContent,
         handleRestartDemo,
-        handleResetProject,
         handleNavigateBack,
         handleReAuthenticate,
         handleSwitchOrg,
@@ -161,6 +163,22 @@ export function ProjectDashboardScreen({
 
     // Derived values
     const displayName = statusDisplayName || project?.name || 'Demo Project';
+
+    // The reset narrates into this screen's progress modal (PL-59 R1). It opens
+    // when the run starts reporting, not on the click: VS Code asks to confirm
+    // first, and may ask about sample data.
+    const operations = useOperationRunner();
+    const startReset = operations.startWhenItBegins;
+    const handleResetProject = useCallback((): void => {
+        startReset({
+            id: resetOperationId(displayName),
+            name: displayName,
+            message: 'resetProject',
+            title: `Resetting ${displayName}`,
+            failureTitle: `Couldn't reset ${displayName}`,
+        });
+    }, [startReset, displayName]);
+
 
     // Build subtitle from package/stack (e.g., "CitiSignal · Headless + PaaS")
     const brandStackSubtitle = [packageName, stackName].filter(Boolean).join(' · ') || undefined;
@@ -274,6 +292,12 @@ export function ProjectDashboardScreen({
             {/* Capability catalog — reached from the "View AI Capabilities" link,
                 NOT the health badge. Two sections (skills + MCP servers) plus a
                 Regenerate AI files action (which rewrites both). */}
+            <OperationProgressModal
+                operation={operations.open}
+                onRetry={operations.retry}
+                onClose={operations.close}
+            />
+
             {showCapabilities && (
                 <DialogContainer onDismiss={() => setShowCapabilities(false)}>
                     <AiCapabilitiesModal

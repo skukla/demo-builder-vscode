@@ -83,7 +83,6 @@ jest.mock('@/core/utils/sleep', () => ({ sleep: (...a: unknown[]) => mockSleep(.
 
 import * as vscode from 'vscode';
 import { resetProjectWithUI } from '@/features/lifecycle/services/projectResetService';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import {
     FRONTEND_DEF,
     MESH_DEF,
@@ -196,8 +195,10 @@ describe('resetProjectWithUI — the gate and the demo stop', () => {
         expect((context.stateManager.saveProject as jest.Mock).mock.invocationCallOrder[0]).toBeLessThan(
             withProgress.mock.invocationCallOrder[0],
         );
+        // Titled for the project, not for the feature: the same title the modal
+        // carries and the notification it hands over to (PL-59 wording).
         expect(withProgress).toHaveBeenCalledWith(
-            { location: vscode.ProgressLocation.Notification, title: 'Resetting Project', cancellable: false },
+            expect.objectContaining({ title: 'Resetting demo' }),
             expect.any(Function),
         );
     });
@@ -490,7 +491,10 @@ describe('resetProjectWithUI — the rebuild itself', () => {
         expect(context.stateManager.saveProject).toHaveBeenCalledWith(project);
 
         installContext.progressTracker('clone', 40, 'Cloning citisignal…');
-        expect(progressReport).toHaveBeenCalledWith({ message: 'Cloning citisignal…' });
+        // The clone's own line rides under the stage, which keeps its count.
+        expect(progressReport).toHaveBeenCalledWith({
+            message: 'Downloading the components (3 of 6)',
+        });
     });
 
     it('a missing components directory is not an error — it is noted once, at debug', async () => {
@@ -524,17 +528,20 @@ describe('resetProjectWithUI — the rebuild itself', () => {
         await run();
 
         expect(progressReport.mock.calls.map((c) => c[0].message)).toEqual([
-            'Loading component definitions…',
-            'Removing existing components…',
-            'Downloading components…',
-            'Installing dependencies…',
-            'Regenerating configuration files…',
+            'Reading what this project has (1 of 6)',
+            'Removing the old components (2 of 6)',
+            'Downloading the components (3 of 6)',
+            'Installing dependencies (4 of 6)',
+            'Writing the settings back (5 of 6)',
         ]);
     });
 });
 
 describe('resetProjectWithUI — the ending', () => {
-    it('lands on ready, saves it, and shows a self-dismissing success notice', async () => {
+    // R6: a success ends the progress and says "— done" where it was being
+    // watched. The toast that used to sit here held the screen for its own timer
+    // after the work had already finished.
+    it('lands on ready, saves it, and raises no success toast of its own', async () => {
         const project = createResetProject();
         const context = createResetHandlerContext();
 
@@ -542,24 +549,17 @@ describe('resetProjectWithUI — the ending', () => {
 
         expect(project.status).toBe('ready');
         expect(context.stateManager.saveProject).toHaveBeenLastCalledWith(project);
-        const notice = withProgress.mock.calls[1];
-        expect(notice[0]).toEqual({
-            location: vscode.ProgressLocation.Notification,
-            title: '"demo" reset successfully',
-        });
-        await notice[1]();
-        expect(mockSleep).toHaveBeenCalledWith(TIMEOUTS.UI.NOTIFICATION);
+        expect(withProgress).toHaveBeenCalledTimes(1);
+        expect(mockSleep).not.toHaveBeenCalled();
     });
 
-    it('says the mesh was redeployed when it was', async () => {
+    it('raises no second notice when the mesh was redeployed too', async () => {
         mockGetMeshComponentInstance.mockReturnValue({ path: '/projects/demo/components/mesh' });
 
         await expect(run()).resolves.toEqual({ success: true });
 
-        expect(withProgress.mock.calls[1][0]).toEqual({
-            location: vscode.ProgressLocation.Notification,
-            title: '"demo" reset and mesh redeployed successfully',
-        });
+        // One progress for the whole reset, mesh leg included.
+        expect(withProgress).toHaveBeenCalledTimes(1);
     });
 
     it('returns the mesh leg’s early result when the redeploy failed', async () => {

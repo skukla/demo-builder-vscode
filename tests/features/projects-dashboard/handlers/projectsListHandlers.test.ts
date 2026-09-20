@@ -135,9 +135,12 @@ describe('projectsListHandlers', () => {
             expect(hasHandler(projectsListHandlers, 'setAuthoringExperience')).toBe(false);
         });
 
-        it('should have exactly 21 handlers', () => {
+        // 21 of its own, plus the three channels every screen that hosts the
+        // progress modal registers (getOperationProgress, backgroundOperation,
+        // openDebugLogs — PL-59).
+        it('should have exactly 24 handlers', () => {
             const types = getRegisteredTypes(projectsListHandlers) as Array<keyof typeof projectsListHandlers>;
-            expect(types).toHaveLength(21);
+            expect(types).toHaveLength(24);
         });
 
         it('should have handlers as functions', () => {

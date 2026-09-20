@@ -112,7 +112,8 @@ function createContext(): HandlerContext {
     });
 }
 
-const progress = { report: jest.fn() };
+/** The shared stage reporter: (stage, step?, position?) — PL-59. */
+const report = jest.fn();
 const vscode = { window: { showWarningMessage: jest.fn() } } as unknown as typeof import('vscode');
 
 // =============================================================================
@@ -142,7 +143,7 @@ describe('Project Reset Service - Mesh Redeployment Org-Context', () => {
             project,
             context,
             '[ProjectReset]',
-            progress,
+            report,
             vscode,
             executor,
             authManagerFake
@@ -160,7 +161,7 @@ describe('Project Reset Service - Mesh Redeployment Org-Context', () => {
             project,
             context,
             '[ProjectReset]',
-            progress,
+            report,
             vscode,
             executor,
             authManagerFake
@@ -189,7 +190,7 @@ describe('Project Reset Service - Mesh Redeployment Org-Context', () => {
             project,
             context,
             '[ProjectReset]',
-            progress,
+            report,
             vscode,
             executor,
             authManagerFake
@@ -218,7 +219,7 @@ describe('Project Reset Service - Mesh Redeployment Org-Context', () => {
             project,
             context,
             '[ProjectReset]',
-            progress,
+            report,
             vscode,
             executor,
             authManagerFake
@@ -239,7 +240,7 @@ describe('Project Reset Service - Mesh Redeployment Org-Context', () => {
             project,
             context,
             '[ProjectReset]',
-            progress,
+            report,
             vscode,
             executor,
             authManagerFake
@@ -257,7 +258,7 @@ describe('Project Reset Service - Mesh Redeployment Org-Context', () => {
             createProject(),
             createContext(),
             '[ProjectReset]',
-            progress,
+            report,
             vscode,
             executor,
             authManagerFake
@@ -275,7 +276,7 @@ describe('Project Reset Service - Mesh Redeployment Org-Context', () => {
             project,
             context,
             '[Dashboard]',
-            progress,
+            report,
             vscode,
             executor,
             authManagerFake
@@ -292,9 +293,11 @@ describe('Project Reset Service - Mesh Redeployment Org-Context', () => {
         expect(mockEnsureAdobeIOAuth.mock.invocationCallOrder[0]).toBeLessThan(
             mockWithOrgContext.mock.invocationCallOrder[0]
         );
-        expect(progress.report).toHaveBeenCalledWith({
-            message: 'Checking Adobe organization access…',
-        });
+        expect(report).toHaveBeenCalledWith(
+            'Redeploying the mesh',
+            'Checking your Adobe access',
+            { index: 6, total: 6 },
+        );
     });
 
     it('deploys the mesh at the component path through the handed-in executor and logger', async () => {
@@ -305,7 +308,7 @@ describe('Project Reset Service - Mesh Redeployment Org-Context', () => {
             project,
             context,
             '[ProjectReset]',
-            progress,
+            report,
             vscode,
             executor,
             authManagerFake
@@ -318,15 +321,15 @@ describe('Project Reset Service - Mesh Redeployment Org-Context', () => {
             expect.any(Function),
             'mesh-123'
         );
-        expect(progress.report).toHaveBeenCalledWith({ message: 'Redeploying API Mesh…' });
+        expect(report).toHaveBeenCalledWith('Redeploying the mesh', undefined, { index: 6, total: 6 });
     });
 
-    it('relays deploy progress to the notification, preferring the sub-message', async () => {
+    it('relays the deploy\'s own progress into the reset\'s step line, preferring the sub-message', async () => {
         await handleMeshRedeployment(
             createProject(),
             createContext(),
             '[ProjectReset]',
-            progress,
+            report,
             vscode,
             executor,
             authManagerFake
@@ -336,10 +339,16 @@ describe('Project Reset Service - Mesh Redeployment Org-Context', () => {
             message: string,
             subMessage?: string
         ) => void;
-        onProgress('Deploying mesh', 'Provisioning…');
-        expect(progress.report).toHaveBeenLastCalledWith({ message: 'Provisioning…' });
-        onProgress('Deploying mesh', undefined);
-        expect(progress.report).toHaveBeenLastCalledWith({ message: 'Deploying mesh' });
+        onProgress('Deploying the mesh', 'Provisioning…');
+        expect(report).toHaveBeenLastCalledWith('Redeploying the mesh', 'Provisioning…', {
+            index: 6,
+            total: 6,
+        });
+        onProgress('Deploying the mesh', undefined);
+        expect(report).toHaveBeenLastCalledWith('Redeploying the mesh', 'Deploying the mesh', {
+            index: 6,
+            total: 6,
+        });
     });
 
     describe('when the deploy fails', () => {
@@ -352,7 +361,7 @@ describe('Project Reset Service - Mesh Redeployment Org-Context', () => {
                 project,
                 context,
                 '[ProjectReset]',
-                progress,
+                report,
                 vscode,
                 executor,
                 authManagerFake
@@ -382,7 +391,7 @@ describe('Project Reset Service - Mesh Redeployment Org-Context', () => {
                 createProject(),
                 createContext(),
                 '[ProjectReset]',
-                progress,
+                report,
                 vscode,
                 executor,
                 authManagerFake
@@ -400,7 +409,7 @@ describe('Project Reset Service - Mesh Redeployment Org-Context', () => {
                 createProject(),
                 createContext(),
                 '[ProjectReset]',
-                progress,
+                report,
                 vscode,
                 executor,
                 authManagerFake
@@ -419,7 +428,7 @@ describe('Project Reset Service - Mesh Redeployment Org-Context', () => {
                 createProject(),
                 createContext(),
                 '[ProjectReset]',
-                progress,
+                report,
                 vscode,
                 executor,
                 authManagerFake
@@ -440,7 +449,7 @@ describe('Project Reset Service - Mesh Redeployment Org-Context', () => {
             project,
             context,
             '[ProjectReset]',
-            progress,
+            report,
             vscode,
             executor,
             authManagerFake
@@ -501,7 +510,7 @@ describe('Project Reset Service - Mesh Redeployment Org-Context', () => {
                 project,
                 createContext(),
                 '[ProjectReset]',
-                progress,
+                report,
                 vscode,
                 executor,
                 authManagerFake
@@ -524,7 +533,7 @@ describe('Project Reset Service - Mesh Redeployment Org-Context', () => {
                 project,
                 createContext(),
                 '[ProjectReset]',
-                progress,
+                report,
                 vscode,
                 executor,
                 authManagerFake

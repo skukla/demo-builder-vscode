@@ -9,8 +9,11 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { createRoot } from 'react-dom/client';
 import type { ProjectActions } from './components/ProjectActionsMenu';
 import { ProjectsDashboard } from './ProjectsDashboard';
+import { OperationProgressModal } from '@/core/ui/components/feedback/OperationProgressModal';
 import { WebviewApp } from '@/core/ui/components/WebviewApp';
+import { useOperationRunner } from '@/core/ui/hooks/useOperationRunner';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import { resetOperationId } from '@/core/utils/operationIds';
 import { sleep } from '@/core/utils/sleep';
 import type { Project } from '@/types/base';
 import type {
@@ -41,6 +44,9 @@ import './styles/project-cards.css';
 import '@/core/ui/styles/shared-ui.css';
 // .db-* — the shared detail drawer.
 import '@/core/ui/styles/drawer.css';
+// The progress modal a reset narrates into is hosted here now (PL-59): a
+// stylesheet reaches only the bundles whose entry imports it (ADR-017 §6).
+import '@/core/ui/styles/modal.css';
 // .inline-notice-*, .inline-rename-* — two small shared components.
 import '@/core/ui/styles/inline-controls.css';
 
@@ -306,26 +312,26 @@ function ProjectsDashboardApp() {
         }
     }, []);
 
-    // Handle reset project (all project types)
-    const handleResetProject = useCallback(
-        async (project: Project) => {
-            try {
-                const response = await webviewClient.request<{
-                    success: boolean;
-                    cancelled?: boolean;
-                }>('resetProject', {
-                    projectPath: project.path,
-                });
+    const operations = useOperationRunner();
 
-                // Refresh projects list if reset was successful
-                if (response?.success) {
-                    fetchProjects(true);
-                }
-            } catch (error) {
-                console.error('Failed to reset project:', error);
-            }
+    // Handle reset project (all project types) — narrated in this screen's
+    // progress modal (PL-59 R1), which opens once the run starts reporting: VS
+    // Code confirms first, and may ask about sample data.
+    const startReset = operations.startWhenItBegins;
+    const handleResetProject = useCallback(
+        (project: Project) => {
+            startReset({
+                id: resetOperationId(project.name),
+                name: project.name,
+                message: 'resetProject',
+                title: `Resetting ${project.name}`,
+                failureTitle: `Couldn't reset ${project.name}`,
+                // The list must reflect what the reset changed; the modal closes
+                // on success, so the refresh rides the same moment.
+                payload: { projectPath: project.path },
+            }, () => fetchProjects(true));
         },
-        [fetchProjects],
+        [startReset, fetchProjects],
     );
 
     // Handle per-integration redeploy (one kebab item per redeployable keyed
@@ -462,6 +468,7 @@ function ProjectsDashboardApp() {
     );
 
     return (
+        <>
         <ProjectsDashboard
             projects={projects}
             runningProjectPath={runningProjectPath}
@@ -477,6 +484,12 @@ function ProjectsDashboardApp() {
             initialViewMode={initialViewMode}
             onViewModeOverride={handleViewModeOverride}
         />
+        <OperationProgressModal
+            operation={operations.open}
+            onRetry={operations.retry}
+            onClose={operations.close}
+        />
+        </>
     );
 }
 

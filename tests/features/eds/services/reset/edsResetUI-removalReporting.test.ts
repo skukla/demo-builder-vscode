@@ -140,7 +140,7 @@ describe('the removal narration', () => {
 
         await run(context);
 
-        expect(report).toHaveBeenCalledWith({ message: 'Removing datapack…' });
+        expect(report).toHaveBeenCalledWith({ message: 'Removing the sample data' });
         expect(mockedDeps).toHaveBeenCalledWith(
             context,
             expect.objectContaining({ name: 'test-project' }),
@@ -149,13 +149,15 @@ describe('the removal narration', () => {
         );
 
         const relay = mockedDeps.mock.calls[0][2] as (p: SampleDataProgress) => void;
+        // The count rides the stage in the house shape, and what is being worked
+        // on is the step under it.
         relay({ verb: 'Removing', done: 1, total: 3, processing: ['Products', 'Categories'] });
         expect(report).toHaveBeenLastCalledWith({
-            message: 'Removing datapack (1/3) — Products, Categories',
+            message: 'Removing the sample data (1 of 3)',
         });
 
         relay({ verb: 'Removing', done: 3, total: 3, processing: [] });
-        expect(report).toHaveBeenLastCalledWith({ message: 'Removing datapack (3/3)' });
+        expect(report).toHaveBeenLastCalledWith({ message: 'Removing the sample data (3 of 3)' });
     });
 });
 

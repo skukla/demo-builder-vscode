@@ -6,7 +6,7 @@ the `projectsList` bundle, auto-shown on activation when no project is current.
 ```
 projects-dashboard/
 ├── commands/showProjectsList.ts       the webview command
-├── handlers/projectsListHandlers.ts   21 keys — the source of truth for messages
+├── handlers/projectsListHandlers.ts   24 keys — the source of truth for messages
 └── ui/
     ├── ProjectsDashboard.tsx          container
     └── components/                    ProjectCard · ProjectsGrid · DashboardEmptyState

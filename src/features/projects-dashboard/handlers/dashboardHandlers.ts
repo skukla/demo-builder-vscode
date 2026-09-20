@@ -17,8 +17,13 @@ import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell/org
 import { hasMeshDeploymentRecord } from '@/core/state/appBuilderComponentState';
 import { sessionUIState } from '@/core/state/sessionUIState';
 import { openInIncognito } from '@/core/utils/browserUtils';
+import { resetOperationId } from '@/core/utils/operationIds';
 import { validateProjectPath } from '@/core/validation/PathSafetyValidator';
 import { validateURL } from '@/core/validation/URLValidator';
+import {
+    narrateOutcomeToModal,
+    progressSurfaceOf,
+} from '@/core/vscode/operationProgress';
 import {
     getEwCanvasBranch,
     resolveProjectAuthoringExperience,
@@ -808,52 +813,72 @@ export const handleOpenAdminPanel: MessageHandler<{ projectPath: string }> = asy
     return { success: true };
 };
 
+/** What the projects list sends to reset one of the projects it lists. */
+export interface ResetProjectPayload {
+    projectPath: string;
+    /** The id its progress modal follows (PL-59); absent from other callers. */
+    id?: string;
+    progress?: 'modal';
+}
+
 /**
  * Handle 'resetProject' message - Reset project to initial state
  *
  * Dispatches to the appropriate reset service based on project type:
  * - EDS projects: resetEdsProjectWithUI (template-based reset)
  * - Headless projects: resetProjectWithUI (component re-clone)
+ *
+ * From a screen that hosts the progress modal it narrates there (PL-59 R1),
+ * which is why the whole body is wrapped: the modal has to be recorded before
+ * the first confirmation dialog, not after it.
  */
-export const handleResetProject: MessageHandler<{ projectPath: string }> = async (
-    context: HandlerContext,
-    payload?: { projectPath: string },
-): Promise<HandlerResponse> => {
-    const resolved = await resolveProjectFromPath(context, payload);
-    if (!resolved.ok) {
-        return resolved.error;
-    }
-    const { project } = resolved;
+export const handleResetProject: MessageHandler<ResetProjectPayload> = narrateOutcomeToModal(
+    async (context, payload) => {
+        const resolved = await resolveProjectFromPath(context, payload);
+        if (!resolved.ok) {
+            return resolved.error;
+        }
+        const { project } = resolved;
+        const progress = progressSurfaceOf(payload);
+        const operationId = payload?.id ?? resetOperationId(project.name);
 
-    const { isEdsProject } = await import('@/types/typeGuards');
+        const { isEdsProject } = await import('@/types/typeGuards');
 
-    if (isEdsProject(project)) {
-        const { resetEdsProjectWithUI } = await import('@/features/eds/services/reset/edsResetUI');
-        return resetEdsProjectWithUI({
-            meshDeps: {
-                commandManager: ServiceLocator.getCommandExecutor(),
-                authManager: ServiceLocator.getAuthenticationService(),
-            },
+        if (isEdsProject(project)) {
+            const { resetEdsProjectWithUI } = await import(
+                '@/features/eds/services/reset/edsResetUI'
+            );
+            return resetEdsProjectWithUI({
+                meshDeps: {
+                    commandManager: ServiceLocator.getCommandExecutor(),
+                    authManager: ServiceLocator.getAuthenticationService(),
+                },
+                project,
+                context,
+                logPrefix: '[ProjectsList]',
+                includeBlockLibrary: true,
+                verifyCdn: true,
+                showLogsOnError: true,
+                progress,
+                operationId,
+            });
+        }
+
+        const { resetProjectWithUI } = await import(
+            '@/features/lifecycle/services/projectResetService'
+        );
+        return resetProjectWithUI({
+            commandManager: ServiceLocator.getCommandExecutor(),
+            authManager: ServiceLocator.getAuthenticationService(),
             project,
             context,
             logPrefix: '[ProjectsList]',
-            includeBlockLibrary: true,
-            verifyCdn: true,
-            showLogsOnError: true,
+            progress,
+            operationId,
         });
-    }
-
-    const { resetProjectWithUI } = await import(
-        '@/features/lifecycle/services/projectResetService'
-    );
-    return resetProjectWithUI({
-        commandManager: ServiceLocator.getCommandExecutor(),
-        authManager: ServiceLocator.getAuthenticationService(),
-        project,
-        context,
-        logPrefix: '[ProjectsList]',
-    });
-};
+    },
+    (payload) => payload?.id ?? '',
+);
 
 // ============================================================================
 // Project Pinning

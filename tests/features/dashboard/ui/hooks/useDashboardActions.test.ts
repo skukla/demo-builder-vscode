@@ -103,7 +103,6 @@ describe('useDashboardActions', () => {
             expect(result.current.handleEditProject).toBeDefined();
             expect(result.current.handleExportProject).toBeDefined();
             expect(result.current.handleRepublishContent).toBeDefined();
-            expect(result.current.handleResetProject).toBeDefined();
         });
 
         it('should return functions for all handlers', () => {
@@ -286,15 +285,6 @@ describe('useDashboardActions', () => {
             expect(mockPostMessage).toHaveBeenCalledWith('republishContent');
         });
 
-        it('should send resetProject message', () => {
-            const { result } = renderActionsHook();
-
-            act(() => {
-                result.current.handleResetProject();
-            });
-
-            expect(mockPostMessage).toHaveBeenCalledWith('resetProject');
-        });
     });
 
     // The authoring-experience flip was relocated to the Configure webview

@@ -8504,7 +8504,7 @@
             "anchors": [
                 "} catch (openError) {"
             ],
-            "line": 218,
+            "line": 223,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger.error call \u2014 emptying it leaves the same swallowed error and the same returned success, so the only observable difference is which log line prints. The classifier reads the 'catch (openError) {' line, which carries no logger token.",
@@ -8517,7 +8517,7 @@
             "anchors": [
                 "if (edsStorefront) {"
             ],
-            "line": 514,
+            "line": 519,
             "mutants": 2,
             "category": "branch",
             "reason": "The whole block is three logger.debug calls describing the EDS metadata for troubleshooting. Both branch outcomes produce the same wizard command and the same response; only the debug transcript differs.",
@@ -8530,7 +8530,7 @@
             "anchors": [
                 "if (edsStorefront.metadata) {"
             ],
-            "line": 516,
+            "line": 521,
             "mutants": 3,
             "category": "branch",
             "reason": "Nested inside the debug-only block above: its body is three more logger.debug lines. Nothing downstream reads anything it computes.",
@@ -8543,7 +8543,7 @@
             "anchors": [
                 "if (settings.edsConfig) {"
             ],
-            "line": 529,
+            "line": 534,
             "mutants": 2,
             "category": "branch",
             "reason": "Body is four logger.debug calls echoing the already-extracted edsConfig. The settings object handed to the wizard is identical either way.",
@@ -8556,7 +8556,7 @@
             "anchors": [
                 ".then(undefined, (error) => {"
             ],
-            "line": 781,
+            "line": 786,
             "mutants": 1,
             "category": "block",
             "reason": "The rejection arm of a fire-and-forget notification chain; its body is a single logger.error. Emptying it leaves the same unhandled-free promise and the same already-returned success response.",
@@ -8569,7 +8569,7 @@
             "anchors": [
                 "if (!payload?.projectPath || !payload?.newName) {"
             ],
-            "line": 576,
+            "line": 581,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "Two optional chains on one line; only the SECOND is unreachable. Dropping the '?' on payload?.newName throws only when payload is undefined, and short-circuiting means the left operand already returned in that case. No input reaches it. The first chain on the same line IS killed, by the absent-payload test.",
@@ -12396,7 +12396,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 111,
+            "line": 109,
             "mutants": 13,
             "category": "other",
             "reason": "Thirteen handlers in this hook are memoised with an EMPTY dependency list (handleSyncStorefront, handleRefreshBlockLibrary, handleOpenAdminPanel, handleConfigure, handleEditProject, handleOpenDevConsole, handleDeleteProject, handleExportProject, handleRepublishContent, handleResetProject, handleNavigateBack, handleReAuthenticate, handleSwitchOrg), and their closing lines are textually identical so they cannot be anchored apart \u2014 this row covers the one mutant on each. Stryker does not empty these lists; it replaces the empty array with a one-element array holding a constant string. React compares dependency lists element by element with Object.is, and that constant is identical on every render, so the callback is created once and never recreated \u2014 exactly as with the empty list. Each of these handlers also closes over nothing but the imported webviewClient, so there is no captured value that could go stale even if the memo did invalidate. No sequence of renders, messages or payloads can distinguish the two.",

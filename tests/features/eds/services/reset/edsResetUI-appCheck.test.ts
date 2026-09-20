@@ -195,15 +195,13 @@ describe('resetEdsProjectWithUI — before the progress window', () => {
 });
 
 describe('resetEdsProjectWithUI — inside the progress window', () => {
-    it('opens a non-cancellable notification titled for the reset', async () => {
+    // Titled for the PROJECT: the same words the modal shows and the
+    // notification it hands over to, rather than the feature's name.
+    it('opens a non-cancellable notification titled for the project', async () => {
         await run(createProject());
 
         expect(vscode.window.withProgress).toHaveBeenCalledWith(
-            {
-                location: vscode.ProgressLocation.Notification,
-                title: 'Resetting EDS Project',
-                cancellable: false,
-            },
+            expect.objectContaining({ title: 'Resetting test-project', cancellable: false }),
             expect.any(Function),
         );
     });
@@ -211,16 +209,18 @@ describe('resetEdsProjectWithUI — inside the progress window', () => {
     it('narrates the four pre-flight checks in order, then each pipeline step', async () => {
         await run(createProject());
 
+        // Four checks under ONE stage, each naming what it is asking about, and
+        // then the pipeline's own steps with the count they know up front.
         expect(report.mock.calls.map((c) => c[0])).toEqual([
-            { message: 'Checking authentication…' },
-            { message: 'Checking Adobe I/O authentication…' },
-            { message: 'Checking Adobe organization…' },
-            { message: 'Checking GitHub App…' },
+            { message: 'Checking requirements' },
+            { message: 'Checking requirements' },
+            { message: 'Checking requirements' },
+            { message: 'Checking requirements' },
         ]);
 
         const onProgress = mockedReset.mock.calls[0][4]!;
         onProgress({ step: 3, totalSteps: 11, message: 'Syncing repository' });
-        expect(report).toHaveBeenLastCalledWith({ message: 'Step 3/11: Syncing repository' });
+        expect(report).toHaveBeenLastCalledWith({ message: 'Syncing repository (3 of 11)' });
     });
 
     it('hands the org gate the auth manager, the project and the logger', async () => {

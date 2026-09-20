@@ -18,8 +18,11 @@ import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { buildOrgTargetFromProjectAdobe, withOrgContext, type OrgContextTarget } from '@/core/shell/orgContextEnv';
-import { sleep } from '@/core/utils/sleep';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { resetOperationId } from '@/core/utils/operationIds';
+import {
+    withOperationProgress,
+    type ReportStage,
+} from '@/core/vscode/withOperationProgress';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { getComponentRegistryManager } from '@/features/components/services/componentRegistryInstance';
 import { getStackById } from '@/features/components/services/demoPackageLoader';
@@ -33,7 +36,18 @@ import type { Stack } from '@/types/stacks';
 // Types
 // ==========================================================
 
+/**
+ * The reset's steps are a fixed list, so a count is known up front and may ride
+ * the stage as "(4 of 6)" — the one shape a count is allowed to take (PL-59).
+ */
+const RESET_STEPS = 6;
+const at = (index: number): { index: number; total: number } => ({ index, total: RESET_STEPS });
+
 export interface ResetWithUIOptions {
+    /** Started from a screen that hosts the progress modal (PL-59 R1). */
+    progress?: 'modal';
+    /** The id that screen named the operation by, so its modal follows this run. */
+    operationId?: string;
     /** Project to reset */
     project: Project;
     /** Handler context */
@@ -256,11 +270,11 @@ async function runTargetedMeshDeploy(
     meshPath: string,
     context: HandlerContext,
     logPrefix: string,
-    progress: { report: (value: { message: string }) => void },
+    report: ReportStage,
     vscode: typeof import('vscode'),
     commandManager: CommandExecutor,
 ): Promise<{ redeployed: boolean; earlyReturn?: HandlerResponse }> {
-    progress.report({ message: 'Redeploying API Mesh…' });
+    report('Redeploying the mesh', undefined, at(6));
     context.logger.info(`${logPrefix} Redeploying mesh`);
 
     try {
@@ -271,7 +285,7 @@ async function runTargetedMeshDeploy(
             meshPath,
             commandManager,
             context.logger,
-            (_msg, sub) => progress.report({ message: sub || _msg }),
+            (stage, step) => report('Redeploying the mesh', step || stage, at(6)),
         );
 
         if (meshResult.success && meshResult.data?.endpoint) {
@@ -305,7 +319,7 @@ export async function handleMeshRedeployment(
     project: Project,
     context: HandlerContext,
     logPrefix: string,
-    progress: { report: (value: { message: string }) => void },
+    report: ReportStage,
     vscode: typeof import('vscode'),
     commandManager: CommandExecutor,
     authService: AuthenticationService,
@@ -315,7 +329,7 @@ export async function handleMeshRedeployment(
 
     if (!meshComponent?.path) return null;
 
-    progress.report({ message: 'Checking Adobe organization access…' });
+    report('Redeploying the mesh', 'Checking your Adobe access', at(6));
     const ready = await ensureAdobeContext(project, context, logPrefix, authService);
 
     if (!ready) {
@@ -332,7 +346,7 @@ export async function handleMeshRedeployment(
             meshComponent.path as string,
             context,
             logPrefix,
-            progress,
+            report,
             vscode,
             commandManager,
         ),
@@ -393,17 +407,17 @@ export async function resetProjectWithUI(options: ResetWithUIOptions): Promise<H
     await context.stateManager.saveProject(project);
 
     try {
-        return await vscode.window.withProgress(
+        return await withOperationProgress(
             {
-                location: vscode.ProgressLocation.Notification,
-                title: 'Resetting Project',
-                cancellable: false,
+                id: options.operationId ?? resetOperationId(project.name),
+                title: `Resetting ${project.name}`,
+                inModal: options.progress === 'modal',
             },
-            async (progress) => {
+            async (report) => {
                 context.logger.info(`${logPrefix} Resetting project: ${project.name}`);
 
                 // Step 1: Load component definitions from saved project state
-                progress.report({ message: 'Loading component definitions…' });
+                report('Reading what this project has', undefined, at(1));
                 const { componentDefinitions, registry } =
                     await loadComponentDefinitionsFromProject(project, context);
 
@@ -419,7 +433,7 @@ export async function resetProjectWithUI(options: ResetWithUIOptions): Promise<H
                 );
 
                 // Step 2: Delete existing components directory
-                progress.report({ message: 'Removing existing components…' });
+                report('Removing the old components', undefined, at(2));
                 const componentsDir = path.join(project.path, 'components');
 
                 try {
@@ -433,7 +447,7 @@ export async function resetProjectWithUI(options: ResetWithUIOptions): Promise<H
                 project.componentInstances = {};
 
                 // Step 3: Clone all components (reuse from orchestrator)
-                progress.report({ message: 'Downloading components…' });
+                report('Downloading the components', undefined, at(3));
                 const { cloneAllComponents, installAllComponents } = await import(
                     '@/features/project-creation/services/componentInstallationOrchestrator'
                 );
@@ -442,7 +456,7 @@ export async function resetProjectWithUI(options: ResetWithUIOptions): Promise<H
                     project,
                     componentDefinitions,
                     progressTracker: ((_phase: string, _pct: number, msg: string) => {
-                        progress.report({ message: msg });
+                        report('Downloading the components', msg, at(3));
                     }) as import('@/features/project-creation/handlers/shared').ProgressTracker,
                     logger: context.logger,
                     saveProject: () => context.stateManager.saveProject(project),
@@ -452,11 +466,11 @@ export async function resetProjectWithUI(options: ResetWithUIOptions): Promise<H
                 await cloneAllComponents(installContext);
 
                 // Step 4: Install npm dependencies (reuse from orchestrator)
-                progress.report({ message: 'Installing dependencies…' });
+                report('Installing dependencies', undefined, at(4));
                 await installAllComponents(installContext);
 
                 // Step 5: Regenerate .env files from saved config
-                progress.report({ message: 'Regenerating configuration files…' });
+                report('Writing the settings back', undefined, at(5));
                 const { regenerateProjectEnvFiles } = await import(
                     '@/features/project-creation/helpers/envFileGenerator'
                 );
@@ -472,7 +486,7 @@ export async function resetProjectWithUI(options: ResetWithUIOptions): Promise<H
                     project,
                     context,
                     logPrefix,
-                    progress,
+                    report,
                     vscode,
                     commandManager,
                     authManager,
@@ -484,20 +498,13 @@ export async function resetProjectWithUI(options: ResetWithUIOptions): Promise<H
                 project.status = 'ready';
                 await context.stateManager.saveProject(project);
 
-                // Show auto-dismissing success notification
-                const successMessage = meshRedeployed
-                    ? `"${project.name}" reset and mesh redeployed successfully`
-                    : `"${project.name}" reset successfully`;
-
-                void vscode.window.withProgress(
-                    {
-                        location: vscode.ProgressLocation.Notification,
-                        title: successMessage,
-                    },
-                    async () => sleep(TIMEOUTS.UI.NOTIFICATION),
+                // No timed success toast (PL-59 R6): the modal closes itself, and
+                // a run handed to the background ends with "— done". What the mesh
+                // did belongs in the log, which is where anyone checking will look.
+                context.logger.info(
+                    `${logPrefix} Project reset completed` +
+                        (meshRedeployed ? ' (mesh redeployed)' : ''),
                 );
-
-                context.logger.info(`${logPrefix} Project reset completed`);
                 return { success: true };
             },
         );
@@ -505,7 +512,10 @@ export async function resetProjectWithUI(options: ResetWithUIOptions): Promise<H
         const errorMessage = (error as Error).message;
         context.logger.error(`${logPrefix} Reset failed`, error as Error);
 
-        vscode.window.showErrorMessage(`Failed to reset project: ${errorMessage}`);
+        // A modal already shows the reason, with Debug Logs beside it.
+        if (options.progress !== 'modal') {
+            vscode.window.showErrorMessage(`Failed to reset project: ${errorMessage}`);
+        }
 
         return { success: false, error: errorMessage };
     } finally {

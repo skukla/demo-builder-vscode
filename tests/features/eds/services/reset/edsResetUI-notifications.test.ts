@@ -111,17 +111,14 @@ beforeEach(() => {
 });
 
 describe('reset notifications — success', () => {
-    it('shows a success toast that names the project and holds for the notification delay', async () => {
+    // R6: the progress itself ends with the outcome — the modal closes, a
+    // background run says "— done". A toast on a timer used to hold the screen
+    // after the work had finished.
+    it('raises no success toast of its own', async () => {
         await run({ success: true });
 
-        expect(vscode.window.withProgress).toHaveBeenLastCalledWith(
-            {
-                location: vscode.ProgressLocation.Notification,
-                title: '"test-project" reset successfully',
-            },
-            expect.any(Function),
-        );
-        expect(sleep).toHaveBeenCalledWith(2000);
+        expect(vscode.window.withProgress).toHaveBeenCalledTimes(1);
+        expect(sleep).not.toHaveBeenCalled();
         expect(vscode.window.showErrorMessage).not.toHaveBeenCalled();
     });
 

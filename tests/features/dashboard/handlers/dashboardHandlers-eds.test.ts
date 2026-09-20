@@ -314,6 +314,9 @@ describe('handleResetProject', () => {
             includeBlockLibrary: true,
             verifyCdn: true,
             showLogsOnError: true,
+            // Where it reports, and the id whose modal follows it (PL-59).
+            progress: undefined,
+            operationId: expect.stringContaining('reset:'),
         });
     });
 

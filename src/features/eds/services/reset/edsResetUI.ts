@@ -25,8 +25,12 @@ import {
     type EdsResetResult,
 } from './edsResetService';
 import { COMPONENT_IDS } from '@/core/constants';
-import { sleep } from '@/core/utils/sleep';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { resetOperationId } from '@/core/utils/operationIds';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import {
+    withOperationProgress,
+    type ReportStage,
+} from '@/core/vscode/withOperationProgress';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import type { Project, ProjectStatus } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
@@ -76,6 +80,10 @@ export interface EdsResetWithUIOptions {
      * ADR-016's wall. A dynamic import has no seam unless the caller offers one.
      */
     githubAppService?: GitHubAppService;
+    /** Started from a screen that hosts the progress modal (PL-59 R1). */
+    progress?: 'modal';
+    /** The id that screen named the operation by, so its modal follows this run. */
+    operationId?: string;
 }
 
 // ==========================================================
@@ -287,16 +295,12 @@ async function showResetResultNotifications(
     result: EdsResetResult,
     projectName: string,
     showLogsOnError: boolean,
+    inModal: boolean,
 ): Promise<void> {
     if (result.success) {
-        void vscode.window.withProgress(
-            {
-                location: vscode.ProgressLocation.Notification,
-                title: `"${projectName}" reset successfully`,
-            },
-            async () => sleep(TIMEOUTS.UI.NOTIFICATION),
-        );
-
+        // No timed success toast: a success closes the modal, and the notification
+        // it may have handed over to ends with "— done" (PL-59 R6). It used to sit
+        // on screen for its own timer after the work had finished.
         if (result.errorType === 'CONFIG_WRITE_FAILED') {
             // A dialog, not a progress line: `report()` writes to the single-line
             // notification that steps 8-11 overwrite within seconds, so the
@@ -320,7 +324,8 @@ async function showResetResultNotifications(
                 vscode.Uri.parse(result.errorDetails.installUrl as string),
             );
         }
-    } else if (result.error) {
+    } else if (result.error && !inModal) {
+        // In a modal the reason is already on screen, with Debug Logs beside it.
         if (showLogsOnError) {
             const { getLogger } = await import('@/core/logging/debugLogger');
             vscode.window
@@ -431,17 +436,19 @@ export async function resetEdsProjectWithUI(options: EdsResetWithUIOptions): Pro
     await context.stateManager.saveProject(project);
 
     try {
-        return await vscode.window.withProgress(
+        return await withOperationProgress(
             {
-                location: vscode.ProgressLocation.Notification,
-                title: 'Resetting EDS Project',
-                cancellable: false,
+                id: options.operationId ?? resetOperationId(project.name),
+                title: `Resetting ${project.name}`,
+                inModal: options.progress === 'modal',
             },
-            async (progress) => {
+            async (report) => {
                 context.logger.info(`${logPrefix} Resetting EDS project: ${repoFullName}`);
 
-                // Pre-flight auth checks
-                progress.report({ message: 'Checking authentication…' });
+                // Four pre-flight checks under one stage: each names what it is
+                // asking about, rather than a stage of its own for a call that
+                // usually answers in under a second.
+                report(OPERATION_STAGES.checkingRequirements.label, 'Your DA.live sign-in');
                 const daLiveResult = await checkDaLiveAuth(
                     context,
                     project,
@@ -460,7 +467,7 @@ export async function resetEdsProjectWithUI(options: EdsResetWithUIOptions): Pro
                 // reset never runs against the wrong org; the gate aborts with a
                 // "Switch IMS Org" prompt, mirroring DeployMeshCommand.
                 if (project.adobe?.organization) {
-                    progress.report({ message: 'Checking Adobe I/O authentication…' });
+                    report(OPERATION_STAGES.checkingRequirements.label, 'Your Adobe sign-in');
                     const adobeResult = await checkAdobeAuth(
                         project,
                         context,
@@ -470,7 +477,7 @@ export async function resetEdsProjectWithUI(options: EdsResetWithUIOptions): Pro
                     );
                     if (adobeResult) return adobeResult;
 
-                    progress.report({ message: 'Checking Adobe organization…' });
+                    report(OPERATION_STAGES.checkingRequirements.label, 'The Adobe organization');
                     const orgResult = await checkOrgContext(
                         project,
                         context,
@@ -481,7 +488,7 @@ export async function resetEdsProjectWithUI(options: EdsResetWithUIOptions): Pro
                     if (orgResult) return orgResult;
                 }
 
-                progress.report({ message: 'Checking GitHub App…' });
+                report(OPERATION_STAGES.checkingRequirements.label, 'The GitHub app on your repo');
                 const appResult = await checkGitHubAppInstallation(
                     vscode,
                     context,
@@ -524,14 +531,23 @@ export async function resetEdsProjectWithUI(options: EdsResetWithUIOptions): Pro
                 // was asked for, and a data step that refuses is reported while
                 // the reset still stands.
                 if (removeData) {
-                    await removeProjectSampleData(project, context, progress);
+                    await removeProjectSampleData(project, context, report);
                 }
 
+                // The reset's steps are a fixed list, so the count is known up
+                // front and rides the stage as "(4 of 12)" — the one shape a count
+                // is allowed to take (PL-59 wording rules).
                 const result = await executeEdsReset(resetParams, context, tokenProvider, options.meshDeps, (p) => {
-                    progress.report({ message: `Step ${p.step}/${p.totalSteps}: ${p.message}` });
+                    report(p.message, undefined, { index: p.step, total: p.totalSteps });
                 });
 
-                await showResetResultNotifications(vscode, result, project.name, showLogsOnError);
+                await showResetResultNotifications(
+                    vscode,
+                    result,
+                    project.name,
+                    showLogsOnError,
+                    options.progress === 'modal',
+                );
                 return result;
             },
         );
@@ -651,10 +667,10 @@ async function confirmSampleDataRemoval(
 async function removeProjectSampleData(
     project: Project,
     context: HandlerContext,
-    progress: { report: (value: { message: string }) => void },
+    report: ReportStage,
 ): Promise<void> {
     try {
-        progress.report({ message: 'Removing datapack…' });
+        report('Removing the sample data');
 
         const { removeSampleData } = await import(
             '@/features/data-installer/services/sampleDataInstall'
@@ -671,11 +687,11 @@ async function removeProjectSampleData(
                 context,
                 project,
                 (sd) =>
-                    progress.report({
-                        message: `${sd.verb} datapack (${sd.done}/${sd.total})${
-                            sd.processing.length > 0 ? ` — ${sd.processing.join(', ')}` : ''
-                        }`,
-                    }),
+                    report(
+                        'Removing the sample data',
+                        sd.processing.length > 0 ? sd.processing.join(', ') : undefined,
+                        { index: sd.done, total: sd.total },
+                    ),
                 'remove',
             ),
         );

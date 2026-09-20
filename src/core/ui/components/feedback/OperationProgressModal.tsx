@@ -98,50 +98,57 @@ export function OperationProgressModal({
         onClose();
     }, [operation, failed, onClose]);
 
+    // Nothing mounted while closed, not an empty DialogContainer: a screen hosts
+    // this beside its own dialogs, and a container with no child still occupies
+    // the dialog slot (two dismiss targets on the dashboard, 2026-09-19).
+    if (!operation) return <></>;
+
     return (
         <DialogContainer onDismiss={close}>
-            {operation && (
-                <Modal
-                    fitContent
-                    title={operation.title}
-                    size="M"
-                    onClose={close}
-                    closeLabel={failed ? 'Close' : 'Run in background'}
-                    actionButtons={
-                        failed
-                            ? [
-                                  {
-                                      label: 'Open Debug Logs',
-                                      variant: 'secondary',
-                                      onPress: () => webviewClient.postMessage('openDebugLogs', {}),
-                                  },
-                                  { label: 'Retry', variant: 'accent', onPress: onRetry },
-                              ]
-                            : []
-                    }
-                >
-                    {/* One fixed height for every state, so the modal never resizes as
+            <Modal
+                fitContent
+                title={operation.title}
+                size="M"
+                onClose={close}
+                closeLabel={failed ? 'Close' : 'Run in background'}
+                actionButtons={
+                    failed
+                        ? [
+                              {
+                                  label: 'Open Debug Logs',
+                                  variant: 'secondary',
+                                  onPress: () => webviewClient.postMessage('openDebugLogs', {}),
+                              },
+                              { label: 'Retry', variant: 'accent', onPress: onRetry },
+                          ]
+                        : []
+                }
+            >
+                {/* One fixed height for every state, so the modal never resizes as
                         stages come and go or it turns into a failure. */}
-                    <div className="modal-progress-body">
-                        {failed ? (
-                            <StatusDisplay
-                                variant="error"
-                                title={operation.failureTitle}
-                                message={progress?.error}
-                            />
-                        ) : (
-                            // Size L, as every other progress display here: M
-                            // left-aligns and shrinks the text (ImportDatapackModal).
-                            <LoadingDisplay
-                                size="L"
-                                message={progress?.stage ? stageLine(progress.stage, progress.position) : 'Starting'}
-                                subMessage={progress?.step}
-                                helperText={helperLine(progress?.expectation, elapsed)}
-                            />
-                        )}
-                    </div>
-                </Modal>
-            )}
+                <div className="modal-progress-body">
+                    {failed ? (
+                        <StatusDisplay
+                            variant="error"
+                            title={operation.failureTitle}
+                            message={progress?.error}
+                        />
+                    ) : (
+                        // Size L, as every other progress display here: M
+                        // left-aligns and shrinks the text (ImportDatapackModal).
+                        <LoadingDisplay
+                            size="L"
+                            message={
+                                progress?.stage
+                                    ? stageLine(progress.stage, progress.position)
+                                    : 'Starting'
+                            }
+                            subMessage={progress?.step}
+                            helperText={helperLine(progress?.expectation, elapsed)}
+                        />
+                    )}
+                </div>
+            </Modal>
         </DialogContainer>
     );
 }

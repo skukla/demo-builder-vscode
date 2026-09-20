@@ -65,8 +65,6 @@ export interface UseDashboardActionsReturn {
     handleExportProject: () => void;
     /** Republish DA.live content to CDN (EDS projects only) */
     handleRepublishContent: () => void;
-    /** Reset the project to its initial state */
-    handleResetProject: () => void;
     /** Navigate back to projects list */
     handleNavigateBack: () => void;
     /** Re-authenticate with Adobe (after session expired) */
@@ -166,10 +164,6 @@ export function useDashboardActions({
         webviewClient.postMessage('republishContent');
     }, []);
 
-    const handleResetProject = useCallback(() => {
-        webviewClient.postMessage('resetProject');
-    }, []);
-
     const handleNavigateBack = useCallback(() => {
         webviewClient.postMessage('navigateBack');
     }, []);
@@ -202,7 +196,6 @@ export function useDashboardActions({
         handleDeleteProject,
         handleExportProject,
         handleRepublishContent,
-        handleResetProject,
         handleNavigateBack,
         handleReAuthenticate,
         handleSwitchOrg,

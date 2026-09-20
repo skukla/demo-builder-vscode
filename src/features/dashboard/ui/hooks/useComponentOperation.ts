@@ -1,19 +1,31 @@
 /**
  * useComponentOperation Hook
  *
- * Starts an integration operation from the integrations screen and keeps what its
- * progress modal needs: which integration, what it is called, and which action to
- * run again on Retry (PL-59).
+ * The integrations screen's operations, in ITS words: which message each card
+ * action sends, and what the action is called while it runs and when it fails.
  *
- * Owned by the SCREEN rather than the grid because two places start operations: the
- * grid's tiles, and the Add flow the screen hosts. Both must open the same modal.
+ * Everything that is not integration-specific — what the modal is showing,
+ * reopening a running one, Retry — belongs to `useOperationRunner` in core, which
+ * the dashboard and the projects list use directly. This is the vocabulary layer
+ * over it (PL-59).
+ *
+ * Owned by the SCREEN rather than the grid because two places start operations:
+ * the grid's tiles, and the Add flow the screen hosts. Both must open the same
+ * modal.
  *
  * @module features/dashboard/ui/hooks/useComponentOperation
  */
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import type { CardAction } from '../components/integrations/integrationCardModel';
-import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import {
+    useOperationRunner,
+    type OperationRunnerControls,
+    type ScreenOperation,
+} from '@/core/ui/hooks/useOperationRunner';
+
+/** What the modal and the runner know about one operation. */
+export type ComponentOperation = ScreenOperation;
 
 /**
  * The message each operation action sends. Retry rides Deploy. Update has its own
@@ -49,62 +61,31 @@ const VERBS: Partial<Record<CardAction, { running: string; base: string; suffix?
 };
 
 /** The running title and the failure title for an action on a named integration. */
-function titlesFor(action: CardAction, name: string): Pick<ComponentOperation, 'title' | 'failureTitle'> {
+function titlesFor(
+    action: CardAction,
+    name: string,
+): Pick<ScreenOperation, 'title' | 'failureTitle'> {
     const verb = VERBS[action];
     if (!verb) return { title: name, failureTitle: `${name} did not finish` };
     const suffix = verb.suffix ?? '';
-    return { title: `${verb.running} ${name}${suffix}`, failureTitle: `Couldn't ${verb.base} ${name}${suffix}` };
+    return {
+        title: `${verb.running} ${name}${suffix}`,
+        failureTitle: `Couldn't ${verb.base} ${name}${suffix}`,
+    };
 }
 
-export interface ComponentOperation {
-    id: string;
-    name: string;
-    /** The message that starts it, re-sent on Retry. */
-    message: string;
-    /** The modal's title, and the notification's when it runs in the background. */
-    title: string;
-    /** The failure view's title: "Couldn't redeploy ERP integration". */
-    failureTitle: string;
-    /**
-     * Which run this is. A new run of the same integration must start the modal
-     * clean, not on the previous run's failure.
-     */
-    run: number;
-    /** Reopened mid-run: ask the extension where it is, since the pushes so far were missed. */
-    resume: boolean;
-}
-
-export interface ComponentOperationControls {
-    /** The operation the modal shows, or `null` when it is closed. */
-    open: ComponentOperation | null;
+/** An integration's operations: the runner's controls, plus the two cards need. */
+export interface ComponentOperationControls extends OperationRunnerControls {
     /** Start an operation and open its modal. `false` when the action is not one. */
     run: (id: string, name: string, action: CardAction) => boolean;
-    /**
-     * Start an operation the card-action tables do not cover — the mesh deploy,
-     * which has its own message and a title of its own rather than a verb and a
-     * component name.
-     */
-    start: (operation: Omit<ComponentOperation, 'run' | 'resume'>) => void;
     /** Open the modal for an add the Add flow has just sent. */
     started: (id: string, name: string) => void;
-    /** Reopen the modal for the operation last started here. `false` for any other id. */
-    reopen: (id: string) => boolean;
-    /** Run the last operation again. */
-    retry: () => void;
-    /** Close the modal; the operation carries on. */
-    close: () => void;
 }
 
-/** The screen's one set of operation controls. */
+/** The integrations screen's operation controls. */
 export function useComponentOperation(): ComponentOperationControls {
-    const [last, setLast] = useState<ComponentOperation | null>(null);
-    const [isOpen, setIsOpen] = useState(false);
-
-    const start = useCallback((operation: Omit<ComponentOperation, 'run' | 'resume'>): void => {
-        webviewClient.postMessage(operation.message, { id: operation.id, progress: 'modal' });
-        setLast((previous) => ({ ...operation, run: (previous?.run ?? 0) + 1, resume: false }));
-        setIsOpen(true);
-    }, []);
+    const runner = useOperationRunner();
+    const { start, show } = runner;
 
     const run = useCallback(
         (id: string, name: string, action: CardAction): boolean => {
@@ -117,38 +98,20 @@ export function useComponentOperation(): ComponentOperationControls {
     );
 
     // A failed add persists the integration in an error state, so its Retry is a
-    // deploy of what was added.
-    const started = useCallback((id: string, name: string): void => {
-        setLast((previous) => ({
-            id,
-            name,
-            message: 'deployAppBuilderComponent',
-            title: `Adding ${name}`,
-            failureTitle: `Couldn't add ${name}`,
-            run: (previous?.run ?? 0) + 1,
-            resume: false,
-        }));
-        setIsOpen(true);
-    }, []);
-
-    const reopen = useCallback(
-        (id: string): boolean => {
-            if (last?.id !== id) return false;
-            setLast({ ...last, resume: true });
-            setIsOpen(true);
-            return true;
+    // deploy of what was added. The Add flow has already sent its own message —
+    // this only puts the modal in front of it.
+    const started = useCallback(
+        (id: string, name: string): void => {
+            show({
+                id,
+                name,
+                message: 'deployAppBuilderComponent',
+                title: `Adding ${name}`,
+                failureTitle: `Couldn't add ${name}`,
+            });
         },
-        [last],
+        [show],
     );
 
-    const retry = useCallback((): void => {
-        if (last) start(last);
-    }, [last, start]);
-
-    const close = useCallback((): void => setIsOpen(false), []);
-
-    return useMemo(
-        () => ({ open: isOpen ? last : null, run, start, started, reopen, retry, close }),
-        [isOpen, last, run, start, started, reopen, retry, close],
-    );
+    return useMemo(() => ({ ...runner, run, started }), [runner, run, started]);
 }

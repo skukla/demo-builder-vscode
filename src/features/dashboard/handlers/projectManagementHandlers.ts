@@ -11,6 +11,11 @@
 import * as vscode from 'vscode';
 import { handleRequestStatus } from './statusHandlers';
 import { ServiceLocator } from '@/core/di/serviceLocator';
+import { resetOperationId } from '@/core/utils/operationIds';
+import {
+    narrateOutcomeToModal,
+    progressSurfaceOf,
+} from '@/core/vscode/operationProgress';
 import { deleteProject } from '@/features/projects-dashboard/services/projectDeletionService';
 import { ErrorCode } from '@/types/errorCodes';
 import { MessageHandler } from '@/types/handlers';
@@ -68,20 +73,35 @@ export const handleDeleteProject: MessageHandler = async (context) => {
     return deleteProject(context, project);
 };
 
+/** What the dashboard sends when its kebab starts a reset. */
+export interface ResetProjectPayload {
+    /** The id its progress modal follows (PL-59). */
+    id?: string;
+    progress?: 'modal';
+}
+
 /**
  * Handle 'resetProject' message - Reset project to initial state
+ *
+ * From a screen that hosts the progress modal it narrates there (PL-59 R1): the
+ * whole body is wrapped so the modal is recorded before the first confirmation
+ * dialog rather than after it.
  *
  * Dispatches to the appropriate reset service based on project type:
  * - EDS projects: resetEdsProjectWithUI (template-based reset)
  * - Headless projects: resetProjectWithUI (component re-clone)
  */
-export const handleResetProject: MessageHandler = async (context) => {
+export const handleResetProject: MessageHandler<ResetProjectPayload> = narrateOutcomeToModal(
+    async (context, payload) => {
     const project = await context.stateManager.getCurrentProject();
 
     if (!project) {
         context.logger.error('[Dashboard] resetProject: No current project');
         return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
     }
+
+    const progress = progressSurfaceOf(payload);
+    const operationId = payload?.id ?? resetOperationId(project.name);
 
     if (isEdsProject(project)) {
         const { resetEdsProjectWithUI } = await import('@/features/eds/services/reset/edsResetUI');
@@ -102,6 +122,8 @@ export const handleResetProject: MessageHandler = async (context) => {
             includeBlockLibrary: true,
             verifyCdn: true,
             showLogsOnError: true,
+            progress,
+            operationId,
         });
     }
 
@@ -114,8 +136,12 @@ export const handleResetProject: MessageHandler = async (context) => {
         project,
         context,
         logPrefix: '[Dashboard]',
+        progress,
+        operationId,
     });
-};
+    },
+    (payload) => payload?.id ?? '',
+);
 
 /**
  * Handle 'exportProject' message - Export the current project's settings to a file

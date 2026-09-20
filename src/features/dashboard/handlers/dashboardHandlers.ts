@@ -80,8 +80,6 @@ import {
     handleListConsoleApis,
     handleSetConsoleApis,
 } from '@/features/dashboard/handlers/consoleApiHandlers';
-import { deployMeshFromScreen } from '@/features/mesh/handlers/deployHandler';
-import { MESH_OPERATION_ID } from '@/features/mesh/services/deployMeshWithFeedback';
 import {
     handleGetErpStatus,
     handleOpenErpScreen,
@@ -91,6 +89,8 @@ import {
     handleCheckIntegrationUpdates,
     handleUpdateAppBuilderComponent,
 } from '@/features/dashboard/handlers/integrationUpdateHandlers';
+import { deployMeshFromScreen } from '@/features/mesh/handlers/deployHandler';
+import { MESH_OPERATION_ID } from '@/features/mesh/services/deployMeshWithFeedback';
 import {
     MessageHandler,
     defineHandlers,

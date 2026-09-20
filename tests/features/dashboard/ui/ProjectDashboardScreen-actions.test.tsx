@@ -169,13 +169,19 @@ describe('ProjectDashboardScreen - Action Buttons', () => {
             expect(ctx.mockPostMessage).toHaveBeenCalledWith('exportProject');
         });
 
-        it('should send resetProject message when Reset clicked', async () => {
+        // A REQUEST, not a push: the reset narrates into this screen's progress
+        // modal, and its answer is how the screen learns a run that never
+        // reported is over — the SC said no at the confirmation (PL-59).
+        it('starts the reset as an operation this screen can follow', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             renderDashboard();
 
             await user.click(screen.getByText('Reset'));
 
-            expect(ctx.mockPostMessage).toHaveBeenCalledWith('resetProject');
+            expect(ctx.mockRequest).toHaveBeenCalledWith('resetProject', {
+                id: expect.stringContaining('reset:'),
+                progress: 'modal',
+            });
         });
     });
 
