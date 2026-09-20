@@ -88,3 +88,4 @@ surfaces that host the cards.
 - 2026-09-20  feat(dashboard): the storefront buttons narrate into the progress modal (`d15168675`)
 - 2026-09-20  feat(destination): the move narrates, and says which integration it is on (`89f032ca9`)
 - 2026-09-20  feat(progress): the modals that already show progress can be left running (`ad686cbba`)
+- 2026-09-20  feat(ai): the agent paths that ran steps now say them (`f54a99fb5`)
