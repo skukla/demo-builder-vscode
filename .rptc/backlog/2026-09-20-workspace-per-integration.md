@@ -151,9 +151,11 @@ append 4 random ones. So a workspace titled "ERP Integration" gets the machine n
   (`id`, `name`, `title`) is the only lookup; matching by name would be a guess.
 - **Title from the catalog entry's display name, not its id**, since the base truncates
   at 15 alphanumeric characters.
-- **Leave Production alone.** It cannot be deleted and costs nothing.
-- **Keep Stage as the project's main workspace.** It has a job in this model — one mesh
-  per workspace, and the ACCS data credential — so it is not a leftover.
+- **Make Production the project's main workspace and stop creating Stage** — the owner's
+  call, 2026-09-20, and the right one: the workspace Adobe will not let us delete is
+  exactly where the permanent core (the mesh, the Commerce credential) belongs, while
+  every ADD gets a deletable workspace of its own. Creating Stage puts the permanent core
+  somewhere deletable and leaves the undeletable workspace empty. Filed as [[AB-24]].
 - **Make the Stage match EXACT before adding more workspaces.** With two workspaces a
   substring match cannot go wrong. With one per integration it can: any workspace whose
   title contains "stage" is a candidate, and which one `find` reaches first depends on
