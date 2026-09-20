@@ -102,3 +102,4 @@ surfaces that host the cards.
 - 2026-09-20  fix(dashboard): a status read asks nothing (`fb9506345`)
 - 2026-09-20  feat(ui): an operation ends on its result, then the modal closes itself (`7411eec66`)
 - 2026-09-20  feat(ui): the running clock is written out, and the success closes quicker (`7adea6980`)
+- 2026-09-20  fix(ui): one clock per wait, and the ERP reset opens the modal (`33277f12a`)
