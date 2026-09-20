@@ -7,9 +7,10 @@
  * the extension half is `tests/core/vscode/operationPrompt.test.ts`.
  */
 
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { OperationProgressPayload } from '@/types/webviewPayloads';
 
 jest.mock('@adobe/react-spectrum', () => ({
@@ -78,6 +79,7 @@ const OPERATION = {
     id: 'republish:bodea',
     title: 'Republishing Bodea',
     failureTitle: "Couldn't republish Bodea",
+    successTitle: 'Bodea republished',
     run: 1,
     resume: false,
 };
@@ -234,5 +236,49 @@ describe('a question that needs something typed', () => {
             answer: 'Open DA.live',
             values: { orgName: 'acme', token: '' },
         });
+    });
+});
+
+describe('the end of a run', () => {
+    // It used to vanish the instant the run succeeded, so an operation the SC had
+    // watched ended by saying nothing (owner, 2026-09-20).
+    it('shows the success, then closes itself once it has been read', async () => {
+        progress = { id: OPERATION.id, state: 'succeeded' };
+        const { onClose } = renderModal();
+
+        const status = screen.getByTestId('status');
+        expect(status).toHaveAttribute('data-variant', 'success');
+        expect(screen.getByText('Bodea republished')).toBeInTheDocument();
+        expect(onClose).not.toHaveBeenCalled();
+
+        await act(async () => {
+            jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE);
+        });
+
+        expect(onClose).toHaveBeenCalled();
+    });
+
+    // A failure has a reason to read and a Retry to press, so it waits.
+    it('leaves a failure on screen', async () => {
+        progress = { id: OPERATION.id, state: 'failed', error: 'Adobe refused this.' };
+        const { onClose } = renderModal();
+
+        await act(async () => {
+            jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE * 3);
+        });
+
+        expect(screen.getByText("Couldn't republish Bodea")).toBeInTheDocument();
+        expect(onClose).not.toHaveBeenCalled();
+    });
+
+    // Neither ending has anything left to narrate, so neither offers the background.
+    it('offers Close rather than Run in background once it has ended', () => {
+        progress = { id: OPERATION.id, state: 'succeeded' };
+        renderModal();
+
+        expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
+        expect(
+            screen.queryByRole('button', { name: 'Run in background' }),
+        ).not.toBeInTheDocument();
     });
 });

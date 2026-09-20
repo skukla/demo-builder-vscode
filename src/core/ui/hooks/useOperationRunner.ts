@@ -39,6 +39,15 @@ export interface ScreenOperation {
     /** The failure view's title: "Couldn't redeploy ERP integration". */
     failureTitle: string;
     /**
+     * The success view's title: "ERP integration redeployed".
+     *
+     * The modal used to close itself the moment an operation succeeded, so a run the
+     * SC had watched for two minutes ended by vanishing — and the Data Installer's
+     * import modal, which shows a green check, disagreed with every other one
+     * (owner, 2026-09-20). It ends on this now, and they close it.
+     */
+    successTitle: string;
+    /**
      * Which run this is. A new run of the same operation must start the modal
      * clean, not on the previous run's failure.
      */

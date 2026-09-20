@@ -53,6 +53,7 @@ export function useDashboardOperations(projectName: string): DashboardOperations
             message: 'resetProject',
             title: `Resetting ${projectName}`,
             failureTitle: `Couldn't reset ${projectName}`,
+            successTitle: `${projectName} reset`,
         });
     }, [start, projectName]);
 
@@ -63,6 +64,7 @@ export function useDashboardOperations(projectName: string): DashboardOperations
             message: 'deleteProject',
             title: `Deleting ${projectName}`,
             failureTitle: `Couldn't delete ${projectName}`,
+            successTitle: `${projectName} deleted`,
         });
     }, [start, projectName]);
 
@@ -73,6 +75,7 @@ export function useDashboardOperations(projectName: string): DashboardOperations
             message: 'syncStorefront',
             title: 'Syncing the storefront',
             failureTitle: "Couldn't sync the storefront",
+            successTitle: 'Storefront synced',
         });
     }, [start, projectName]);
 
@@ -83,6 +86,7 @@ export function useDashboardOperations(projectName: string): DashboardOperations
             message: 'refreshBlockLibrary',
             title: 'Refreshing the block library',
             failureTitle: "Couldn't refresh the block library",
+            successTitle: 'Block library refreshed',
         });
     }, [start, projectName]);
 
@@ -93,6 +97,7 @@ export function useDashboardOperations(projectName: string): DashboardOperations
             message: 'republishContent',
             title: `Republishing ${projectName}`,
             failureTitle: `Couldn't republish ${projectName}`,
+            successTitle: `${projectName} republished`,
         });
     }, [start, projectName]);
 

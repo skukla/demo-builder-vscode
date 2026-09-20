@@ -71,6 +71,7 @@ export const MESH_OPERATION: Omit<ComponentOperation, 'run' | 'resume'> = {
     message: 'deployMesh',
     title: 'Deploying API Mesh',
     failureTitle: "Couldn't deploy API Mesh",
+    successTitle: 'API Mesh deployed',
 };
 
 /**
@@ -254,6 +255,7 @@ export function IntegrationsScreen({
                 payload: { project: chosen.project, workspace: chosen.workspace },
                 title: `Changing destination to ${target}`,
                 failureTitle: "Couldn't change the destination",
+                successTitle: 'Destination changed',
             });
             closeDestination();
         },

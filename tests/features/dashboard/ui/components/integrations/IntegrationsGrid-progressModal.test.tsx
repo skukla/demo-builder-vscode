@@ -17,6 +17,7 @@ import {
     resetGridMocks,
     setupUser,
 } from './IntegrationsGrid.testUtils';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { OperationProgressPayload } from '@/types/webviewPayloads';
 
 const NOT_DEPLOYED = { 'custom-app': { ...DEPLOYED_INTEGRATION, status: 'not-deployed' as const } };
@@ -117,14 +118,28 @@ describe('the progress modal', () => {
         expect(within(modal).queryByText('Deploying the app')).not.toBeInTheDocument();
     });
 
-    it('closes by itself when the operation succeeds', async () => {
+    // It used to vanish the instant the run succeeded, so a deploy the SC had
+    // watched for two minutes ended with nothing said (owner, 2026-09-20). It shows
+    // the result, then closes itself.
+    it('shows the success, then closes by itself', async () => {
         const user = setupUser();
         renderGrid({ appBuilderComponents: NOT_DEPLOYED });
-        await startDeploy(user);
+        const modal = await startDeploy(user);
 
         push({ id: 'custom-app', state: 'succeeded' });
 
-        expect(screen.queryByRole('dialog', { name: 'Deploying custom-app' })).not.toBeInTheDocument();
+        const success = within(modal).getByTestId('status-display');
+        // The green tick itself is asserted where the mock carries the variant:
+        // tests/core/ui/components/feedback/OperationProgressModal-prompt.tsx.
+        expect(within(success).getByText('custom-app deployed')).toBeInTheDocument();
+
+        // Long enough to read, then gone without a click.
+        await act(async () => {
+            jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE);
+        });
+        expect(
+            screen.queryByRole('dialog', { name: 'Deploying custom-app' }),
+        ).not.toBeInTheDocument();
     });
 
     it('stays open on failure with the reason', async () => {

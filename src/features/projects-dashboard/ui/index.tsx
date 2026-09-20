@@ -233,6 +233,7 @@ function ProjectsDashboardApp() {
                     message: 'deleteProject',
                     title: `Deleting ${project.name}`,
                     failureTitle: `Couldn't delete ${project.name}`,
+                    successTitle: `${project.name} deleted`,
                     payload: { projectPath: project.path },
                 },
                 () => fetchProjects(true),
@@ -326,6 +327,7 @@ function ProjectsDashboardApp() {
                 message: 'resetProject',
                 title: `Resetting ${project.name}`,
                 failureTitle: `Couldn't reset ${project.name}`,
+                successTitle: `${project.name} reset`,
                 // The list must reflect what the reset changed; the modal closes
                 // on success, so the refresh rides the same moment.
                 payload: { projectPath: project.path },

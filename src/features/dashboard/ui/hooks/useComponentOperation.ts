@@ -43,7 +43,7 @@ const OPERATION_MESSAGES: Partial<Record<CardAction, string>> = {
 };
 
 /**
- * What each action is called while it runs, and in the sentence when it fails.
+ * What each action is called while it runs, when it fails, and when it is done.
  *
  * The running form is the modal's title and, word for word, the title of the
  * notification it hands over to on "Run in background" — the same "-ing" title the
@@ -51,26 +51,31 @@ const OPERATION_MESSAGES: Partial<Record<CardAction, string>> = {
  * `withComponentProgress`). So moving to the background reads as the same thing
  * carrying on.
  */
-const VERBS: Partial<Record<CardAction, { running: string; base: string; suffix?: string }>> = {
-    deploy: { running: 'Deploying', base: 'deploy' },
-    retry: { running: 'Deploying', base: 'deploy' },
-    redeploy: { running: 'Redeploying', base: 'redeploy' },
-    update: { running: 'Updating', base: 'update' },
-    install: { running: 'Installing', base: 'install', suffix: ' into Commerce' },
-    remove: { running: 'Removing', base: 'remove' },
+const VERBS: Partial<
+    Record<CardAction, { running: string; base: string; done: string; suffix?: string }>
+> = {
+    deploy: { running: 'Deploying', base: 'deploy', done: 'deployed' },
+    retry: { running: 'Deploying', base: 'deploy', done: 'deployed' },
+    redeploy: { running: 'Redeploying', base: 'redeploy', done: 'redeployed' },
+    update: { running: 'Updating', base: 'update', done: 'updated' },
+    install: { running: 'Installing', base: 'install', done: 'installed', suffix: ' into Commerce' },
+    remove: { running: 'Removing', base: 'remove', done: 'removed' },
 };
 
 /** The running title and the failure title for an action on a named integration. */
 function titlesFor(
     action: CardAction,
     name: string,
-): Pick<ScreenOperation, 'title' | 'failureTitle'> {
+): Pick<ScreenOperation, 'title' | 'failureTitle' | 'successTitle'> {
     const verb = VERBS[action];
-    if (!verb) return { title: name, failureTitle: `${name} did not finish` };
+    if (!verb) {
+        return { title: name, failureTitle: `${name} did not finish`, successTitle: `${name} finished` };
+    }
     const suffix = verb.suffix ?? '';
     return {
         title: `${verb.running} ${name}${suffix}`,
         failureTitle: `Couldn't ${verb.base} ${name}${suffix}`,
+        successTitle: `${name}${suffix} ${verb.done}`,
     };
 }
 
@@ -108,6 +113,7 @@ export function useComponentOperation(): ComponentOperationControls {
                 message: 'deployAppBuilderComponent',
                 title: `Adding ${name}`,
                 failureTitle: `Couldn't add ${name}`,
+                successTitle: `${name} added`,
             });
         },
         [show],

@@ -38,6 +38,7 @@ import { useElapsedClock } from '@/core/ui/hooks/useElapsedClock';
 import { useOperationProgress } from '@/core/ui/hooks/useOperationProgress';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { stageLine } from '@/core/utils/stageLine';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { OperationPrompt, OperationProgressPayload } from '@/types/webviewPayloads';
 
 /** The operation a progress modal shows: which one, and what it is called. */
@@ -48,6 +49,8 @@ export interface ProgressModalOperation {
     title: string;
     /** The failure view's title: "Couldn't redeploy ERP integration". */
     failureTitle: string;
+    /** The success view's title: "ERP integration redeployed". */
+    successTitle: string;
     /** Which run this is; a new run starts the modal clean. */
     run: number;
     /** Reopened mid-run: ask where it is now, since earlier pushes were missed. */
@@ -75,11 +78,12 @@ function helperLine(expectation?: string, elapsed?: string): string {
 
 /**
  * The dismiss label. A question cannot be put in the background — nothing would be
- * left to answer it — so dismissing it IS the answer, and it says Cancel.
+ * left to answer it — so dismissing it IS the answer, and it says Cancel. An
+ * operation that has ENDED, either way, has nothing left to narrate.
  */
-function closeLabelFor(failed: boolean, asking: boolean): string {
+function closeLabelFor(ended: boolean, asking: boolean): string {
     if (asking) return 'Cancel';
-    return failed ? 'Close' : 'Run in background';
+    return ended ? 'Close' : 'Run in background';
 }
 
 /** The answers, as the guard gave them: the one that continues the work is first. */
@@ -107,7 +111,9 @@ function failureButtons(failed: boolean, onRetry: () => void): ActionButton[] {
 interface ProgressBodyProps {
     prompt?: OperationPrompt;
     failed: boolean;
+    succeeded: boolean;
     failureTitle: string;
+    successTitle: string;
     progress?: OperationProgressPayload | null;
     elapsed?: string;
     /** Every keystroke in a question's fields, for the buttons to hand back. */
@@ -118,7 +124,9 @@ interface ProgressBodyProps {
 function ProgressBody({
     prompt,
     failed,
+    succeeded,
     failureTitle,
+    successTitle,
     progress,
     elapsed,
     onTyped,
@@ -138,6 +146,9 @@ function ProgressBody({
     }
     if (failed) {
         return <StatusDisplay variant="error" title={failureTitle} message={progress?.error} />;
+    }
+    if (succeeded) {
+        return <StatusDisplay variant="success" title={successTitle} />;
     }
     // Size L, as every other progress display here: M left-aligns and shrinks
     // the text (ImportDatapackModal).
@@ -163,19 +174,16 @@ export function OperationProgressModal({
         operation?.resume ?? false,
     );
     const failed = progress?.state === 'failed';
+    const succeeded = progress?.state === 'succeeded';
     // A question the work is paused on — a sign-in that expired, a prerequisite that
     // is missing, a merge that needs a decision. It takes the modal over, because the
     // modal is where the SC is looking, and a notification beside it asks twice
     // (owner, 2026-09-20: republishing Bodea showed both at once).
-    const prompt = failed ? undefined : progress?.prompt;
+    const prompt = failed || succeeded ? undefined : progress?.prompt;
     // Restarts on every new stage, so the clock times the stage in progress and
     // not the whole run. It is the only thing that moves while a step waits on
     // Adobe (owner, 2026-09-19: "I wasn't happy with the frequency of updates").
     const elapsed = useElapsedClock(failed ? null : progress?.stage);
-
-    useEffect(() => {
-        if (progress?.state === 'succeeded') onClose();
-    }, [progress?.state, onClose]);
 
     // What the SC has typed into the question's fields, if it has any. A ref, not
     // state: every keystroke would otherwise re-render the modal around the field
@@ -204,17 +212,30 @@ export function OperationProgressModal({
     // has nothing left to narrate. A question is the third case: backgrounding it
     // would leave the work waiting on an answer with nothing left to answer it, so
     // dismissing IS the answer, and the guard reads it as cancelled.
+    // Show the result, then get out of the way (owner, 2026-09-20). Only a success:
+    // a failure has a reason to read and a Retry to press, so it waits to be closed.
+    //
+    // Not the timed toast this repo removed three of on the same day — that was a
+    // message that dismissed itself before anyone had read it, and was the ONLY
+    // confirmation there was. This modal has been on screen for the whole run, and
+    // the checkmark is its last beat.
+    useEffect(() => {
+        if (!succeeded) return undefined;
+        const timer = setTimeout(onClose, TIMEOUTS.UI.RESULT_GLANCE);
+        return () => clearTimeout(timer);
+    }, [succeeded, onClose]);
+
     const close = useCallback((): void => {
         if (prompt) {
             answer(undefined);
-        } else if (operation && !failed) {
+        } else if (operation && !failed && !succeeded) {
             webviewClient.postMessage('backgroundOperation', {
                 id: operation.id,
                 title: operation.title,
             });
         }
         onClose();
-    }, [operation, failed, prompt, answer, onClose]);
+    }, [operation, failed, succeeded, prompt, answer, onClose]);
 
     // Nothing mounted while closed, not an empty DialogContainer: a screen hosts
     // this beside its own dialogs, and a container with no child still occupies
@@ -228,7 +249,7 @@ export function OperationProgressModal({
                 title={operation.title}
                 size="M"
                 onClose={close}
-                closeLabel={closeLabelFor(failed, Boolean(prompt))}
+                closeLabel={closeLabelFor(failed || succeeded, Boolean(prompt))}
                 actionButtons={
                     prompt
                         ? answerButtons(prompt.actions, answer)
@@ -241,7 +262,9 @@ export function OperationProgressModal({
                     <ProgressBody
                         prompt={prompt}
                         failed={failed}
+                        succeeded={succeeded}
                         failureTitle={operation.failureTitle}
+                        successTitle={operation.successTitle}
                         progress={progress}
                         elapsed={elapsed}
                         onTyped={onTyped}

@@ -77,6 +77,17 @@ export const TIMEOUTS = {
 
         /** Fallback timeout for MutationObserver-based focus management */
         FOCUS_FALLBACK: 1000,
+
+        /**
+         * How long a finished operation's modal shows its result before closing
+         * itself (owner, 2026-09-20: "show success, then auto-close").
+         *
+         * Longer than NOTIFICATION's 2s: this one has to be READ, and it lands at
+         * the end of a run the SC may have looked away from. Shorter than the ~5s
+         * at which a window that will not go away starts to feel stuck. A failure
+         * never auto-closes — only a success, where there is nothing to act on.
+         */
+        RESULT_GLANCE: 3000,
     },
 
     // =========================================================================

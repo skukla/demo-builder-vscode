@@ -34,6 +34,7 @@ const RESET = {
     message: 'resetProject',
     title: 'Resetting bodea',
     failureTitle: "Couldn't reset bodea",
+    successTitle: 'bodea reset',
     payload: { projectPath: '/projects/bodea' },
 };
 
