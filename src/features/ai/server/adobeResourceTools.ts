@@ -179,7 +179,7 @@ export function registerAdobeResourceTools(
             description:
                 'Delete a workspace from the SELECTED Adobe project (select_org and select_project first). Requires confirm:true and confirmName equal to the workspace name.',
             inputSchema: {
-                workspaceId: z.string().describe('Workspace id from list_adobe_workspaces'),
+                workspaceId: z.string().describe('Workspace id from list_workspaces'),
                 workspaceName: z
                     .string()
                     .describe('Workspace name — echoed back as confirmName'),
