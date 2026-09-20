@@ -94,6 +94,8 @@ describe('progress-notification wording', () => {
         expect(sites(MESSAGE_SITES).length).toBeGreaterThan(20);
         expect(titleProblem('Deploying API Mesh')).toBeUndefined();
         expect(titleProblem('Demo Builder')).toBeDefined();
+        // Deliberately BAD examples: they prove the scan can tell. A wording
+        // pass that "fixes" these blinds the control (caught 2026-09-20).
         expect(titleProblem('Loading GitHub repositories...')).toBeDefined();
         expect(messageProblem('Deploying the app')).toBeUndefined();
         expect(messageProblem('Pushing to GitHub…')).toBeDefined();

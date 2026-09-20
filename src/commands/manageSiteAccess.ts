@@ -24,6 +24,7 @@
  */
 
 import * as vscode from 'vscode';
+import { stageLine } from '@/core/utils/stageLine';
 import { BaseCommand } from '@/core/base/baseCommand';
 import { openUrl } from '@/core/utils/browserUtils';
 import { maskEmail } from '@/core/utils/maskEmail';
@@ -220,7 +221,7 @@ export class ManageSiteAccessCommand extends BaseCommand {
                     site,
                     this.logger,
                     (attempt, total) =>
-                        progress.report({ message: `Checking access (${attempt}/${total})…` }),
+                        progress.report({ message: stageLine('Checking access', { index: attempt, total }) }),
                 ),
         );
 

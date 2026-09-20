@@ -433,14 +433,14 @@ describe('handleDeleteAdobeProject', () => {
             expect(mockWithProgress).toHaveBeenCalledWith(
                 expect.objectContaining({
                     location: vscode.ProgressLocation.Notification,
-                    title: expect.stringContaining('Deleting Adobe project'),
+                    title: expect.stringContaining('Deleting the Adobe project'),
                     cancellable: false,
                 }),
                 expect.any(Function)
             );
         });
 
-        it('reports teardown progress as "Step N/M: message"', async () => {
+        it('reports teardown progress as "message (N of M)"', async () => {
             const report = jest.fn();
             mockWithProgress.mockImplementation(async (_options: any, task: any) =>
                 task({ report })
@@ -452,7 +452,7 @@ describe('handleDeleteAdobeProject', () => {
 
             await handleDeleteAdobeProject(mockContext, PAYLOAD);
 
-            expect(report).toHaveBeenCalledWith({ message: 'Step 1/4: Finding workspaces…' });
+            expect(report).toHaveBeenCalledWith({ message: 'Finding workspaces… (1 of 4)' });
         });
 
         it('shows an info toast with deleted registration/provider counts', async () => {

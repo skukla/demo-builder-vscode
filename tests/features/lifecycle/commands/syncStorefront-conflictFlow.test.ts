@@ -115,7 +115,7 @@ describe('classifying the rebase failure', () => {
         await runCommand();
 
         expect(report).toHaveBeenCalledWith({
-            message: 'Someone else changed the storefront — merging their work in…',
+            message: 'Merging their work in',
         });
         expect(git[0]).toEqual(['-C', STOREFRONT, 'pull', '--rebase']);
     });
@@ -135,7 +135,7 @@ describe('the manual conflict flow', () => {
             'Cancel and Reset'
         );
         expect(report).toHaveBeenCalledWith({
-            message: 'Waiting for you to resolve the overlapping changes in Source Control…',
+            message: 'Waiting for your merge',
         });
         expect(pollingMock().pollUntilCondition).toHaveBeenCalledWith(expect.any(Function), {
             timeout: TIMEOUTS.VERY_LONG,
@@ -143,9 +143,9 @@ describe('the manual conflict flow', () => {
             initialDelay: TIMEOUTS.POLL.INITIAL,
             maxDelay: TIMEOUTS.POLL.MAX,
         });
-        expect(report).toHaveBeenCalledWith({ message: 'Finishing the merge…' });
+        expect(report).toHaveBeenCalledWith({ message: 'Finishing the merge' });
         expect(git).toContainEqual(['-C', STOREFRONT, 'rebase', '--continue']);
-        expect(report).toHaveBeenCalledWith({ message: 'Pushing to GitHub…' });
+        expect(report).toHaveBeenCalledWith({ message: 'Pushing to GitHub' });
         expect(syncAndPublishMock).toHaveBeenCalledTimes(2);
     });
 

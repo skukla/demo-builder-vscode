@@ -104,7 +104,7 @@ export class SyncStorefrontCommand extends BaseCommand {
 
         const result = await this.withProgress('Syncing storefront', async (progress) => {
             try {
-                progress.report({ message: 'Saving your storefront changes…' });
+                progress.report({ message: 'Saving your changes' });
                 return await syncAndPublish({
                     storefrontPath,
                     commitMessage,
@@ -176,7 +176,7 @@ export class SyncStorefrontCommand extends BaseCommand {
 
         // Plain words: a producer syncing a storefront has never heard of a
         // rebase, and this fires during an operation they cannot cancel.
-        progress.report({ message: 'Someone else changed the storefront — merging their work in…' });
+        progress.report({ message: 'Merging their work in' });
 
         const rebaseOutcome = await this.attemptRebase(storefrontPath);
         if (rebaseOutcome === 'clean') {
@@ -231,7 +231,7 @@ export class SyncStorefrontCommand extends BaseCommand {
         }
 
         progress.report({
-            message: 'Waiting for you to resolve the overlapping changes in Source Control…',
+            message: 'Waiting for your merge',
         });
         await this.revealStorefrontConflicts(storefrontPath);
 
@@ -252,7 +252,7 @@ export class SyncStorefrontCommand extends BaseCommand {
             return;
         }
 
-        progress.report({ message: 'Finishing the merge…' });
+        progress.report({ message: 'Finishing the merge' });
         try {
             await execFile('git', ['-C', storefrontPath, 'rebase', '--continue']);
         } catch (err) {
@@ -363,7 +363,7 @@ export class SyncStorefrontCommand extends BaseCommand {
         // injection, push semantics, and Helix preview+publish all stay in
         // one place. The rebase has already produced the commits we want to
         // push, so we skip the stage + commit phase.
-        progress.report({ message: 'Pushing to GitHub…' });
+        progress.report({ message: 'Pushing to GitHub' });
         let result: SyncAndPublishResult;
         try {
             result = await syncAndPublish({

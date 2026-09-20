@@ -105,7 +105,7 @@ describe('execute — the inputs it gathers', () => {
 
         await runCommand();
 
-        expect(report).toHaveBeenCalledWith({ message: 'Saving your storefront changes…' });
+        expect(report).toHaveBeenCalledWith({ message: 'Saving your changes' });
     });
 
     it('lets an unexpected sync failure escape — it is not a push rejection', async () => {

@@ -13,6 +13,7 @@
  */
 
 import * as vscode from 'vscode';
+import { stageLine } from '@/core/utils/stageLine';
 import { resolveOrgContext, sendOrgMismatch } from './projectHandlers';
 import { BASELINE_API } from '@/core/constants';
 import { validateOrgId, validateProjectId } from '@/core/validation/validators/AdobeResourceValidator';
@@ -133,11 +134,11 @@ function runTeardownWithProgress(
     return vscode.window.withProgress(
         {
             location: vscode.ProgressLocation.Notification,
-            title: 'Deleting Adobe project…',
+            title: 'Deleting the Adobe project',
             cancellable: false,
         },
         (progress) => teardownConsoleProject(deps, target, (p) =>
-            progress.report({ message: `Step ${p.step}/${p.totalSteps}: ${p.message}` })),
+            progress.report({ message: stageLine(p.message, { index: p.step, total: p.totalSteps }) })),
     );
 }
 

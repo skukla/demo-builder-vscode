@@ -77,7 +77,7 @@ export async function cleanupDaLiveSitesCommand(context: vscode.ExtensionContext
         await vscode.window.withProgress(
             {
                 location: vscode.ProgressLocation.Notification,
-                title: `Loading DA.live sites from ${orgName}:`,
+                title: 'Loading DA.live sites',
                 cancellable: false,
             },
             async () => {

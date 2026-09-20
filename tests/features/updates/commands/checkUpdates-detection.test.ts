@@ -138,13 +138,13 @@ describe('CheckUpdatesCommand — check phase', () => {
             expect(withProgressMock).toHaveBeenCalledTimes(1);
         });
 
-        it('runs under a non-cancellable notification titled Demo Builder Updates', async () => {
+        it('runs under a non-cancellable notification titled Checking for updates', async () => {
             await command.execute();
 
             expect(withProgressMock).toHaveBeenCalledWith(
                 {
                     location: vscode.ProgressLocation.Notification,
-                    title: 'Demo Builder Updates',
+                    title: 'Checking for updates',
                     cancellable: false,
                 },
                 expect.any(Function),
@@ -155,13 +155,15 @@ describe('CheckUpdatesCommand — check phase', () => {
             await command.execute();
 
             const messages = harness.mockProgress.report.mock.calls.map(([p]) => p.message);
-            expect(messages.slice(0, 6)).toEqual([
-                'Checking for updates…',
-                'Checking all projects…',
-                'Checking source repos…',
-                'Checking EDS templates…',
-                'Checking add-ons…',
-                'Checking the Adobe AI tools…',
+            expect(messages.slice(0, 7)).toEqual([
+                'Checking for updates',
+                'Checking all projects',
+                'Checking source repos',
+                // Phase 3 ran across every project and said nothing (slice 9).
+                'Checking components',
+                'Checking EDS templates',
+                'Checking add-ons',
+                'Checking the AI tools',
             ]);
         });
 

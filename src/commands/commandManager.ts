@@ -386,7 +386,7 @@ export class CommandManager {
             const ok = await vscode.window.withProgress(
                 {
                     location: vscode.ProgressLocation.Notification,
-                    title: 'Signing in to Adobe…',
+                    title: 'Signing in to Adobe',
                 },
                 () => auth.login(force),
             );

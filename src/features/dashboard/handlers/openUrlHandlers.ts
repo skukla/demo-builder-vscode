@@ -74,7 +74,7 @@ export const handleOpenLiveSite: MessageHandler = async (context, data) => {
     await vscode.window.withProgress(
         {
             location: vscode.ProgressLocation.Notification,
-            title: 'Opening in private browser...',
+            title: 'Opening a private browser',
             cancellable: false,
         },
         async () => {

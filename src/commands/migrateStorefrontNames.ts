@@ -157,7 +157,7 @@ export class MigrateStorefrontNamesCommand extends BaseCommand {
         await vscode.window.withProgress(
             {
                 location: vscode.ProgressLocation.Notification,
-                title: 'Demo Builder: Migrating storefront names',
+                title: 'Migrating storefront names',
                 cancellable: false,
             },
             async (progress) => {
