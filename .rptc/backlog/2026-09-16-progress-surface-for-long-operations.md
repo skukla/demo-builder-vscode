@@ -86,3 +86,4 @@ surfaces that host the cards.
 - 2026-09-19  feat(reset): a reset narrates into the progress modal (`3c9cd8399`)
 - 2026-09-19  refactor(ui): put class names where the bundle scan can read them (`3cadd5c8a`)
 - 2026-09-20  feat(dashboard): the storefront buttons narrate into the progress modal (`d15168675`)
+- 2026-09-20  feat(destination): the move narrates, and says which integration it is on (`89f032ca9`)
