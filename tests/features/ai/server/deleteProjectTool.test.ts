@@ -1,7 +1,8 @@
 /**
  * delete_project tests — extra-strict confirm gate (confirm + name echo), name
- * resolution via getAllProjects + loadProjectFromPath, and success/failure
- * passthrough. The deletion-service core is mocked.
+ * resolution via getAllProjects + loadProjectFromPath, success/failure
+ * passthrough, and what it SAYS while it runs. The deletion-service core is
+ * mocked.
  */
 
 jest.mock('@/features/projects-dashboard/services/projectDeletionService', () => ({
@@ -11,6 +12,7 @@ jest.mock('@/features/projects-dashboard/services/projectDeletionService', () =>
 import { z } from 'zod';
 
 import { registerDeleteProjectTool } from '@/features/ai/server/deleteProjectTool';
+import { withPhaseSinks } from '@/core/utils/agentPhaseChannel';
 import type { McpToolSchema } from '@/features/ai/server/mcpToolServer';
 import { deleteProjectFiles } from '@/features/projects-dashboard/services/projectDeletionService';
 import { createMockLogger } from '../../../helpers/loggerFake';
@@ -213,5 +215,25 @@ describe('delete_project', () => {
         registerDeleteProjectTool(s, ctxFactory);
         const res = await s.call({ name: 'alpha', confirm: true, confirmName: 'alpha' });
         expect(res).toMatchObject({ deleted: false, name: 'alpha', error: 'EBUSY' });
+    });
+});
+
+/**
+ * The steps an agent is shown (PL-59 slice 7, plan row 5b). The tool ran them
+ * and reported none, so a delete that spends a minute unpublishing pages
+ * announced itself once and went quiet.
+ */
+describe('what it says while it runs', () => {
+    it('names the step it runs, so an agent notification has something to show', async () => {
+        const s = fakeServer();
+        registerDeleteProjectTool(s, ctxFactory);
+        const seen: string[] = [];
+
+        await withPhaseSinks([(message) => seen.push(message)], () =>
+            s.call({ name: 'alpha', confirm: true, confirmName: 'alpha' })
+        );
+
+        expect(seen).toEqual(['Removing the project files']);
+        expect(deleteProjectFilesMock).toHaveBeenCalled();
     });
 });
