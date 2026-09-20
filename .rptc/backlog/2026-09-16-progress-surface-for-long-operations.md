@@ -104,3 +104,4 @@ surfaces that host the cards.
 - 2026-09-20  feat(ui): the running clock is written out, and the success closes quicker (`7adea6980`)
 - 2026-09-20  fix(ui): one clock per wait, and the ERP reset opens the modal (`33277f12a`)
 - 2026-09-20  fix(eds): the edit wizard derives the DA.live site, like every other reader (`e173d3884`)
+- 2026-09-20  fix(eds): the DA.live org falls back to the repo owner, everywhere (`4a5e42866`)
