@@ -3,7 +3,7 @@ id: AB-15
 kind: fix
 area: app-builder
 parent: AB-9
-needs: []
+needs: [AB-23]
 value: med
 status: backlog
 ---
@@ -33,6 +33,25 @@ Nothing was run live.
 Twice in one project is already refused. Separate workspaces with separate Commerce
 instances share nothing the spike could find.
 
+## What AB-17's answer changes (2026-09-20)
+
+**The first case goes away.** Each integration and each system gets its own workspace,
+created by and recorded on ONE project (AB-17 answered; AB-23 builds it), so two projects
+cannot land in the same namespace — there is nothing left to collide over. The refusal
+this item was going to add for that case should not be written.
+
+**The second case stays**, and stays a refusal for now. Two workspaces pointed at one
+Commerce instance still collide on webhook and event subscription names, because those
+are named from the App Management app id, not from the workspace. AB-17's local spike
+showed the id CAN vary per build, and that webhooks, event names and provider instance
+ids all carry it — so this could become a fix rather than a refusal. It needs the live
+check first (AB-17's step 6: two copies with different ids on one Commerce, the first
+copy's webhooks untouched), and the id is fixed at first install and cannot change on an
+upgrade.
+
+So this item shrinks to: refuse the Commerce-instance collision, name the other project,
+and say plainly that projects on another machine are invisible to the check.
+
 ## The fix
 
 At add time, before anything deploys, refuse either setup and name the other project:
@@ -44,10 +63,14 @@ admit.
 Making the setups coexist (per-project names for packages, collections, webhooks and
 subscriptions) is a larger change; do it only when a demo needs it.
 
-AB-17 asks whether systems get their own workspaces; if so, the first case goes away and a
-per-copy app id could make the second a fix rather than a refusal.
-
 ## Done when
 
-Both setups are refused before deploy with a message naming the other project, with tests,
-and `erp-integration.md` says what is and is not supported.
+The Commerce-instance collision is refused before deploy with a message naming the other
+project, with tests, and `erp-integration.md` says what is and is not supported —
+including that the check cannot see projects on another machine. The workspace collision
+needs no refusal once AB-23 has landed; a test should show that two projects can no longer
+reach the same workspace.
+
+## Shipped so far
+
+- 2026-09-20  Rewritten around AB-17's answer: the two-projects-one-workspace case disappears with AB-23 and needs no refusal; the Commerce-instance collision remains, and a per-copy app id could later make it a fix.

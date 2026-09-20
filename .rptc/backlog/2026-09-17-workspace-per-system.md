@@ -3,9 +3,9 @@ id: AB-17
 kind: question
 area: app-builder
 parent: AB-9
-needs: [AB-18]
+needs: []
 value: high
-status: open
+status: shipped
 ---
 
 # Should each system and integration get its own Adobe workspace?
@@ -249,6 +249,36 @@ What this means for the design:
 - The downloaded workspace configs, the scratch copies and the helper scripts were deleted
   from the session scratchpad.
 
+## The answer (owner, 2026-09-20)
+
+**Yes, and for every integration an SC adds — not only the ones bound to a system.**
+Each integration and each system gets its own workspace inside the demo's one Adobe I/O
+project. The mesh stays in the project's main workspace, because a workspace may hold
+only one mesh. AB-23 builds it.
+
+Why the scope is every integration, not just a coupled pair:
+
+- **The strongest limit is not about pairs.** `commerce-integration-starter-kit` is an
+  App Management app with no system, and one workspace holds only one App Management app
+  (AB-2's spike: the install record's key and the `commerce/extensibility/1` registration
+  are per workspace). So a project cannot hold the starter kit and the ERP integration at
+  the same time today, with no system involved either way.
+- **The blank shell cannot have a web UI at all.** One static site per namespace, and in a
+  shared workspace it is already spoken for. The shell is the "SC builds their own app"
+  path, so the limit lands on the one component meant to grow.
+- **Narrowing to pairs postpones neither blocker.** Deleting a workspace and choosing the
+  Commerce product profile are both needed for the ERP pair itself, so a narrower scope
+  buys no less risk — only fewer workspaces.
+- **A split would cost a permanent fork.** Add, subscribe, update, change-destination and
+  teardown would each keep two branches, and the runner would need a predicate the research
+  says it should not have ("nothing in the runner should know it is handling the ERP").
+
+**The two blockers are cleared** (owner, 2026-09-20): deleting a workspace and assigning a
+Commerce product profile both work today. The cause of the 2026-09-17 read-only failure
+recorded above is NOT recorded here — the evidence in this file is left as it stands rather
+than rewritten, so a future reader can tell the difference between "this was fixed" and
+"this was never explained". AB-18 and PL-61 keep their own records.
+
 ## Done when
 
 The three open points each have a recorded answer with its evidence, and AB-15 and AB-16
@@ -260,3 +290,4 @@ are rewritten around the answer (or left as they are, with the reason).
 - 2026-09-17  docs(backlog): AB-17 steps 1 and 2 — the integration app id can vary per deploy (`0a560b980`)
 - 2026-09-17  docs(backlog): AB-17 live spike — events cross workspaces, direct calls and workspace delete do not (`3e000b584`)
 - 2026-09-18  docs(research): a workspace per integration, and how its apps reach each other (`a458a47c6`)
+- 2026-09-20  Answered: every integration and system gets its own workspace; the mesh stays in the main one. Scope decided by the owner 2026-09-20; AB-23 builds it.

@@ -3,7 +3,7 @@ id: AB-16
 kind: feature
 area: app-builder
 parent: AB-9
-needs: [AB-17]
+needs: [AB-23]
 value: med
 status: backlog
 ---
@@ -24,13 +24,33 @@ common, and a project can hold one ERP today.
   app per workspace (the AB-2 spike's finding). Its Commerce webhook and event subscription
   names are fixed per app id, so two integrations on one Commerce collide (AB-15).
 
-## The shape: one integration, several ERPs
+## The shape, rewritten by AB-17 (2026-09-20)
 
-"One integration per ERP" is ruled out by the two limits above. The ERPs, though, are plain
-App Builder apps, which the spine can package-isolate in one workspace, as it does meshes.
-So the integration stays the single Commerce-facing app and routes each piece of work to
-the right ERP, which is also how middleware between Commerce and several back ends usually
-looks.
+**Both limits above were limits of ONE SHARED WORKSPACE, and that is being removed**
+(AB-17 answered; AB-23 builds it). Each integration and each system gets its own
+workspace, so:
+
+- **Item 1 below comes free.** A second ERP has its own namespace, its own database and
+  its own static site. No package renaming, no collection prefixes, no per-project screen
+  key — the renaming work this item was carrying is deleted, not done.
+- **"One integration per ERP" is back on the table.** It was ruled out because one
+  workspace holds one App Management app; with a workspace each, a second integration is
+  possible. That makes it a real choice rather than a constraint, and it is now the first
+  owner decision below.
+
+The rest of this item — routing, tagging, per-ERP teardown, the cards — stands whichever
+shape wins, because it is about which ERP owns which work, not about where the code runs.
+
+### The two shapes now worth comparing
+
+| | One integration, several ERPs | One integration per ERP |
+|---|---|---|
+| Commerce-facing apps | one | one per ERP, each its own App Management app |
+| Routing | inside the integration (by website, store view, company) | by which app Commerce calls |
+| Webhook and event names | one app id, so no collision | per-copy `metadata.id` (AB-17 steps 1–2 showed it can vary per build) |
+| Resembles | middleware in front of several back ends | a separate connector per system |
+
+Deciding between them is the first thing this item needs; everything else follows.
 
 ## What it needs
 
@@ -47,21 +67,25 @@ looks.
 5. **Cards:** the integration's Uses row lists every ERP (the stored link is already a list,
    `.rptc/plans/erp-linked-tiles/overview.md`).
 
-## Waiting on AB-17
+## Waiting on AB-23
 
-Whether each ERP (and each integration) gets its own Adobe workspace. If it does, item 1
-above comes free (no renaming inside one workspace), and "one integration per ERP" may
-become possible too.
+The workspace-per-integration build. This item cannot be planned before it lands, because
+which of the two shapes above is even possible depends on it.
 
 ## Owner decisions before planning
 
+- **Which shape** (one integration routing to several ERPs, or one integration per ERP).
 - The routing rule (store view, website, product attribute, company).
 - How an SC adds the second ERP (from the integration's card, or the gallery tile again).
 - Whether each ERP keeps its own screen, or one screen switches between them.
 
 ## Live checks before building
 
-- Two package-isolated copies of the ERP in one workspace, each with its own database
-  collections, both reachable.
-- Whether App Builder Database collections can be named per instance, or need a prefix
-  inside one collection.
+Both of the old checks are gone: they asked whether two ERPs could live side by side in
+ONE workspace, which is no longer the plan. What replaces them belongs to the shape that
+wins — for one-integration-per-ERP, it is AB-17's step 6: two copies with different
+`metadata.id` on one Commerce, and the first copy's webhooks untouched.
+
+## Shipped so far
+
+- 2026-09-20  Rewritten around AB-17's answer: the renaming work is deleted (a workspace each gives every ERP its own namespace and database), and one-integration-per-ERP becomes a choice rather than an impossibility. Now waits on AB-23.
