@@ -266,6 +266,56 @@ instance pairing worth building — but keep it inside this item, because "two o
 same integration" is the capability an SC actually asks for and two DIFFERENT
 integrations is only half of it.
 
+## The unit is one workspace per ADD, not per component
+
+A pair — an integration and the system bound to it — shares ONE workspace. Two ERPs
+means two workspaces, not four.
+
+**They already share one, and the arrangement is deliberate.** `demo-erp`'s own
+`app.config.yaml` says why it has no static site: *"the ERP shares a Runtime namespace
+with its integration, a namespace has ONE static site, and `aio app deploy` empties it
+before uploading."* The integration owns that site, because its Commerce Admin screen is
+an Admin UI SDK extension (`commerce/backend-ui/2`, web-src and all). The ERP serves its
+screen from a web ACTION instead, keyed by `ERP_SCREEN_KEY`.
+
+**What splitting the pair would buy, and what it would cost.** It buys the ERP a real
+static site with the SC's own Adobe sign-in, which kills `ERP_SCREEN_KEY`. It costs the
+ERP-login credential: an app's Adobe token is refused by an app in another workspace
+(live, AB-17 step 5), so Demo Builder would have to mint, store and delete a login for
+the integration to reach the ERP.
+
+That is not a trade worth taking. **It replaces one shared secret with another shared
+secret and adds a workspace.** The screen-auth problem is a screen-auth problem; moving
+a workspace boundary is an expensive and indirect way to attack it.
+
+**Keeping the pair together also buys real things:**
+
+- The ERP-login row leaves this item entirely — the largest new mechanism in the plan,
+  and it exists only to work around a separation we would be choosing.
+- Reversibility gets simpler. The catalog says the ERP *"Comes with the ERP integration
+  and goes with it"* — they are added as one act and removed as one act, so a workspace
+  whose lifetime is exactly the pair's lifetime is the right unit. One delete takes the
+  whole pair. Two workspaces means a half-removed state to handle.
+- Nothing in either repo has to change. `web: no-static-site` and the build hook stay as
+  they are.
+- The shared database is correct here rather than a compromise: the ERP owns the records
+  and the integration reaches them over the ERP's API, which is the design.
+
+**The rule, stated so it generalises:** a workspace is created per ADD. One add — the
+starter kit alone, or the ERP with its system — is one workspace. This also keeps the
+"one App Management app per workspace" limit satisfied, since a pair has exactly one
+(`erp-integration` is `lifecycle: app-management`; `demo-erp` is not).
+
+### What changes in the tables above
+
+- **ERP screen**: NOT part of this item. The web-action screen and `ERP_SCREEN_KEY` stay.
+  If the key is worth removing, that is its own item about how the screen authenticates.
+- **ERP login**: NOT part of this item. Same workspace, so the Adobe token works.
+- **ERP → integration events**: unchanged in effect — I/O Events already work and there
+  is no reason to switch to direct calls just because they are now co-located.
+- **Remove**: deleting the workspace removes the pair, so teardown resolves both
+  components to the same workspace and deletes it once.
+
 ## Done when
 
 An SC can add two App Management integrations to one project — including two of the
