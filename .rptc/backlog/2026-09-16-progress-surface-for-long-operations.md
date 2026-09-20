@@ -91,3 +91,4 @@ surfaces that host the cards.
 - 2026-09-20  feat(ai): the agent paths that ran steps now say them (`f54a99fb5`)
 - 2026-09-20  test(ai): the delete tool's phase test joins its own suite (`b534a4d5a`)
 - 2026-09-20  feat(wizard): the creation screens read from the shared stage table (`592ae1902`)
+- 2026-09-20  feat(commands): the palette's notifications follow the wording rules (`658ccc6e1`)
