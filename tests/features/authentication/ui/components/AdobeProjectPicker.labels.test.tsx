@@ -62,7 +62,7 @@ describe('AdobeProjectPicker — what it hands SelectionStepContent', () => {
     describe('labels', () => {
         it('names the organization in the loading and empty copy', () => {
             const { labels } = listProps();
-            expect(labels.loadingSubMessage).toBe('Fetching from organization: Test Organization');
+            expect(labels.loadingSubMessage).toBe('Fetching from organization: Test Organization...');
             expect(labels.emptyMessage).toBe(
                 'No projects found in organization Test Organization. ' +
                     'Please create a project in Adobe Console first.',

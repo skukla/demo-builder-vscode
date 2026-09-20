@@ -379,9 +379,12 @@ describe('executeEdsPipeline - step detail', () => {
         it('says it is configuring the library before it starts', async () => {
             await executeEdsPipeline(withLibrary(), services, onProgress);
 
+            // The second line names the storefront it is building into: the
+            // step had no second line at all until 2026-09-20.
             expect(progress).toContainEqual({
                 operation: 'block-library',
                 message: 'Configuring block library...',
+                subMessage: 'test-org/test-site',
             });
         });
 

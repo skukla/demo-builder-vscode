@@ -2358,7 +2358,7 @@
             "anchors": [
                 "if (!githubOwner || !repoName) {"
             ],
-            "line": 671,
+            "line": 673,
             "mutants": 6,
             "category": "branch",
             "reason": "This whole if is a logger.warn and nothing else. The params object was already built above it and is passed to generateConfigJson unchanged whichever way the condition goes, so forcing it true, forcing it false, flipping the || to &&, dropping either negation or emptying the block all change only whether a warning prints. Distinguishing them would mean asserting warning text, which pins wording rather than behaviour.",
@@ -2371,7 +2371,7 @@
             "anchors": [
                 "if (!daLiveOrg || !daLiveSite) {"
             ],
-            "line": 676,
+            "line": 678,
             "mutants": 6,
             "category": "branch",
             "reason": "The same shape as the GitHub warning above: the body is one logger.warn, the daLiveOrg and daLiveSite values already sit in the params object built earlier, and generateConfigJson receives them identically whichever way this condition evaluates. Every mutant here \u2014 condition forced either way, || to &&, either negation dropped, block emptied \u2014 moves only a log line.",

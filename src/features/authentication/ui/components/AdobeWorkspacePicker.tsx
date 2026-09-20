@@ -142,7 +142,7 @@ export function AdobeWorkspacePicker({
             labels={{
                 loadingMessage: 'Loading workspaces...',
                 loadingSubMessage: state.adobeProject
-                    ? `Fetching from project: ${state.adobeProject.title || state.adobeProject.name}`
+                    ? `Fetching from project: ${state.adobeProject.title || state.adobeProject.name}...`
                     : undefined,
                 errorTitle: 'Error Loading Workspaces',
                 emptyTitle: 'No Workspaces Found',

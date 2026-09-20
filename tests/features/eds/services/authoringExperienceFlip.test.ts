@@ -128,11 +128,22 @@ describe('applyAuthoringExperienceFlip', () => {
         expect(result.editorPath).toBe('ok');
     });
 
-    it('skips editor.path when DA org/site coordinates are missing (still ok)', async () => {
+    // Stored coordinates are not the only coordinates: the org IS the GitHub
+    // namespace and the site IS the repo name, so a project with a repo can still
+    // be addressed. Read raw, this guard was true for every migrated project and
+    // the flip quietly never ran (owner sweep, 2026-09-20).
+    it('derives the coordinates from the repo when none are stored', async () => {
         const result = await flip(
             makeEdsProject('acme-org/acme-storefront', NO_COORDS),
             'da-live-classic'
         );
+
+        expect(mockApplyDaLiveOrgConfigSettings).toHaveBeenCalled();
+        expect(result.editorPath).toBe('ok');
+    });
+
+    it('skips editor.path when NOTHING names the storefront (still ok)', async () => {
+        const result = await flip(makeEdsProject(NO_REPO, NO_COORDS), 'da-live-classic');
 
         expect(mockApplyDaLiveOrgConfigSettings).not.toHaveBeenCalled();
         expect(result.editorPath).toBe('ok');

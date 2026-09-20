@@ -166,14 +166,17 @@ describe('the cleanup dialog it builds', () => {
     it('offers only the GitHub row when the DA.live pair is incomplete', async () => {
         const pick = armQuickPick('accept', []);
         const project = edsProject();
-        // A half pair addresses nothing, so it must not be offered as deletable.
-        // The ORG is the half to remove: extractEdsMetadata falls back to the repo
-        // name for a missing site, so deleting daLiveSite leaves the pair complete.
+        // A half pair addresses nothing, so it must not be offered as deletable —
+        // but BOTH halves now fall back to the repo (the org is the namespace, the
+        // site is the repo name), so the pair is incomplete only when nothing names
+        // the storefront at all (owner sweep, 2026-09-20).
         delete metadataOf(project).daLiveOrg;
+        delete metadataOf(project).daLiveSite;
+        delete metadataOf(project).githubRepo;
 
         await deleteProject(context(), project, SERVICES);
 
-        expect(pick.items().map((i) => i.id)).toEqual(['github']);
+        expect(pick.items().map((i) => i.id)).toStrictEqual([]);
     });
 
     it('stays open when the webview steals focus, and carries a cancel button', async () => {
@@ -269,13 +272,28 @@ describe('cleanupBehavior: deleteAll picks the resources itself', () => {
         expect(mockDeleteDaLiveSite).toHaveBeenCalled();
     });
 
-    it('takes only the repo when the DA.live pair is incomplete', async () => {
+    // Both halves fall back to the repo, so a project that stored neither is still
+    // addressable — and must still have its site taken down. Read raw, deleting a
+    // migrated project left the storefront up (owner sweep, 2026-09-20).
+    it('still takes the DA.live site down when neither half was stored', async () => {
         const project = edsProject();
         delete metadataOf(project).daLiveOrg;
+        delete metadataOf(project).daLiveSite;
 
         await deleteProject(context(), project, SERVICES);
 
         expect(mockDeleteRepository).toHaveBeenCalled();
+        expect(mockDeleteDaLiveSite).toHaveBeenCalled();
+    });
+
+    it('takes only the repo when nothing names the storefront', async () => {
+        const project = edsProject();
+        delete metadataOf(project).daLiveOrg;
+        delete metadataOf(project).daLiveSite;
+        delete metadataOf(project).githubRepo;
+
+        await deleteProject(context(), project, SERVICES);
+
         expect(mockDeleteDaLiveSite).not.toHaveBeenCalled();
     });
 });

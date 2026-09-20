@@ -505,6 +505,9 @@ async function pipelineConfigureBlockLibrary(
     onProgress?.({
         operation: 'block-library',
         message: 'Configuring block library...',
+        // Which storefront it is building the library into — the same slot, and
+        // the same org/site shape, the other DA.live steps fill.
+        subMessage: `${daLiveOrg}/${daLiveSite}`,
     });
 
     // Copy block doc pages from library content sources via DA.live API.

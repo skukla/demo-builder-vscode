@@ -318,7 +318,7 @@ export function AdobeProjectPicker({
                     heading: '',
                     loadingMessage: 'Loading your Adobe projects...',
                     loadingSubMessage: state.adobeOrg?.name
-                        ? `Fetching from organization: ${state.adobeOrg.name}`
+                        ? `Fetching from organization: ${state.adobeOrg.name}...`
                         : 'Fetching projects...',
                     errorTitle: 'Error Loading Projects',
                     emptyTitle: 'No Projects Found',

@@ -109,7 +109,7 @@ describe('projectHandlers - Fetch', () => {
             expect(mockContext.sendMessage).toHaveBeenCalledWith('project-loading-status', {
                 isLoading: true,
                 message: 'Loading your Adobe projects...',
-                subMessage: 'Fetching from organization: Test Org'
+                subMessage: 'Fetching from organization: Test Org...'
             });
         });
 

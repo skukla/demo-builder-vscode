@@ -1,0 +1,9 @@
+{
+    "_what": "Places that read the DA.live org and site together WITHOUT naming the repo they both fall back to. Enforced by derived-fields.test.ts. An entry is a claim that the pair is not a DA.live target being assembled here — a log line, or a value already derived upstream. A target that genuinely skips the fallback does not belong here; it belongs fixed, because every instance so far went silently wrong rather than loudly: a wizard that refused at its last step, a delete that left the site up, a flip that never ran.",
+
+    "pairsThatDoNotDerive": {
+        "src/features/ai/server/agentProjectCleanup.ts": "Reads the pair off `extractEdsMetadata`, which derives BOTH halves before it is handed over (resourceCleanupHelpers). Deriving again here would be the same rule stated twice.",
+        "src/features/eds/services/cleanupService.ts": "Same: its `metadata` parameter is an `EdsMetadata` built by `extractEdsMetadata`, so both halves arrive derived. The guard here is a presence check on values that already carry their fallback.",
+        "src/features/projects-dashboard/handlers/dashboardHandlers.ts": "Two debug log lines that print what the project STORED, during an edit. Deriving there would log a value the manifest does not hold and hide the very absence worth seeing."
+    }
+}

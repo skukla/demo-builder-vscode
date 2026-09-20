@@ -98,7 +98,11 @@ export function extractEdsMetadata(project: Project): EdsProjectMetadata | null 
     const githubRepo = metadata?.githubRepo as string | undefined;
     return {
         githubRepo,
-        daLiveOrg: metadata?.daLiveOrg as string | undefined,
+        // Both halves fall back to the repo, and for the same reason: the DA.live
+        // org IS the GitHub namespace and the site name IS the repo name. The
+        // cleanups below gate on BOTH, so a project missing either silently
+        // skipped taking its storefront down (owner sweep, 2026-09-20).
+        daLiveOrg: (metadata?.daLiveOrg as string | undefined) ?? githubRepo?.split('/')[0],
         // Legacy-first, repo fallback (the loader strips the equal copy) —
         // without it, deleting a migrated project skipped the DA site cleanup.
         daLiveSite:

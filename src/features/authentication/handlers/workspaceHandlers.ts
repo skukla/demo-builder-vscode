@@ -34,7 +34,7 @@ export async function handleGetWorkspaces(
             await context.sendMessage('workspace-loading-status', {
                 isLoading: true,
                 message: 'Loading workspaces...',
-                subMessage: `Fetching from project: ${currentProject.title || currentProject.name}`,
+                subMessage: `Fetching from project: ${currentProject.title || currentProject.name}...`,
             });
         }
 

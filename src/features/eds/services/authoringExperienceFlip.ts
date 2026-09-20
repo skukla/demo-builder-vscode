@@ -115,8 +115,16 @@ async function reapplyEditorPath(
     { context, logger }: AuthoringExperienceFlipDeps,
 ): Promise<'ok' | 'warn'> {
     const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
-    const daLiveOrg = edsInstance?.metadata?.daLiveOrg as string | undefined;
-    const daLiveSite = edsInstance?.metadata?.daLiveSite as string | undefined;
+    // Both halves fall back to the repo: the DA.live org IS the GitHub namespace
+    // and the site name IS the repo name. Read raw, the guard below was true for
+    // every migrated project — the loader strips a site that equals the repo — so
+    // "a missing DA org/site is a no-op" quietly became "this never runs"
+    // (owner sweep, 2026-09-20).
+    const githubRepo = edsInstance?.metadata?.githubRepo as string | undefined;
+    const daLiveOrg =
+        (edsInstance?.metadata?.daLiveOrg as string | undefined) ?? githubRepo?.split('/')[0];
+    const daLiveSite =
+        (edsInstance?.metadata?.daLiveSite as string | undefined) ?? githubRepo?.split('/')[1];
     if (!daLiveOrg || !daLiveSite) {
         return 'ok';
     }

@@ -645,9 +645,11 @@ async function generateEdsConfigJson(
         [githubOwner, repoName] = githubRepo.split('/');
     }
 
-    // Get DA.live org and site
-    const daLiveOrg = (metadata.daLiveOrg as string) || '';
-    const daLiveSite = (metadata.daLiveSite as string) || '';
+    // Get DA.live org and site. Falling back to the repo halves just parsed
+    // above, not to '': the org IS the namespace and the site IS the repo name,
+    // and a migrated project stores neither (owner sweep, 2026-09-20).
+    const daLiveOrg = (metadata.daLiveOrg as string) || githubOwner;
+    const daLiveSite = (metadata.daLiveSite as string) || repoName;
 
     // Extract Commerce config params from componentConfigs
     const componentConfigs = context.getComponentConfigs();

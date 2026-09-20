@@ -430,6 +430,44 @@ meant.
 > separately by `operationStages.test.ts`. Enforced by
 > `tests/sop/progress-wording.test.ts` against a shrink-only ledger.
 
+> **Convention.** A field with a fallback rule is read through that rule, everywhere.
+> *Why:* two fields carry one — the DA.live org IS the GitHub namespace, the site
+> name IS the repo name — and the loader STRIPS a stored site that merely duplicates
+> the repo, so a normal project reaches every reader without one. Read raw, they do
+> not fail: they go quiet. The edit wizard refused at its LAST step after the SC had
+> walked the whole thing ("Storefront configuration is incomplete", 2026-09-20);
+> deleting a migrated project left its DA.live site up; flipping the authoring
+> experience skipped its own work under a docstring that called it "a no-op". Four
+> readers had the site rule and one did not; then five had it and three lacked the
+> org half of the same rule.
+>
+> A LONE read can be right — the storefront-name migration reads the raw site as its
+> detection signal, and a log line should print what was stored. What breaks is the
+> PAIR: a DA.live target assembled from both halves with one read raw. So the check
+> is about pairs, and the three entries in its ledger are places the pair is not a
+> target being assembled. Enforced by `tests/sop/derived-fields.test.ts`.
+
+> **Convention.** On the wizard's progress view, a trailing "…" marks an ACTION in
+> progress — on either line. A line that names a STATE reached, or the THING being
+> acted on, never takes one.
+> *Why:* the same line can be either — "Creating GitHub repository…" then
+> "Repository ready" — and the ellipsis is what tells them apart at a glance. It
+> belongs to the action, not to the line it sits on, so a sub-step still running
+> takes one and reads as part of a larger whole ("Verifying the library previewed…"),
+> while the second line that merely names its target does not: "skukla/kukla-bodea…"
+> says nothing true. Measured 2026-09-20 — 66 of 71 first lines already follow it,
+> and of the second lines, 6 of 8 actions carry one against 0 of 23 targets. The
+> remaining exceptions end in a live count ("Publishing to CDN (12/40)"), where the
+> count carries the movement instead.
+> **This is the OPPOSITE of the notification rule above, deliberately**: VS Code
+> joins a notification's title and message with ": " and spins its own wheel, so an
+> ellipsis there is said twice. Two surfaces, two reasons — written down because
+> without it someone eventually makes one match the other. Not enforced: telling an
+> "-ing" verb from a word like "Missing" is beyond a scan, and the first attempt got
+> exactly that wrong (owner, 2026-09-20). **Not enforced**, deliberately: a check
+> that cannot tell those apart would fail honest lines, and a rule people switch off
+> is worse than one they can read.
+
 > **Convention.** A modal does not change size while it works.
 > *Why:* a body that renders a form, then a spinner, then a result is three different
 > amounts of content, and with nothing holding a floor under them the whole dialog
@@ -1672,11 +1710,11 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 25 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 55 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 56 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 122 conventions. 122 of them are enforced; 0 are not.**
+**This handbook states 124 conventions. 123 of them are enforced; 1 is not.**
 
 The last one to get there was "vendor CSS sits in the lowest cascade layer", and it was
 outstanding because it was **not yet true**: `@layer vendor` existed in no bundle, so a
