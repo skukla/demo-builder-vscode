@@ -111,6 +111,61 @@ What is missing is not a tool but STATE: nothing reports WHICH workspace an inte
 lives in, because nothing records it yet. That is this item's first change, and the tools
 that read a component's state should carry it once it exists.
 
+## How workspaces are made and named today
+
+Read from the code and confirmed against Bodea's live project (2026-09-20), because
+this decides what the per-integration naming has to fit into.
+
+Creating a project makes **two** workspaces:
+
+1. `createFireflyProject` provisions **Production** and nothing else. That is Adobe's,
+   and Adobe refuses to delete it.
+2. `createDefaultStageWorkspace` then adds **Stage** explicitly, to match what the
+   Console's own App Builder template produces (`adobeConsoleProjectOps.ts`).
+3. Both get a Runtime namespace, because a workspace added through `createWorkspace`
+   does not get one automatically.
+
+Everything the demo uses lives in Stage. Production sits empty and undeletable.
+`list_workspaces` on Bodea returns exactly those two.
+
+**Stage is chosen by a substring match**, in two places that must agree —
+`pickWorkspace` in `useProjectCreationPhases.ts` and `autoSelectCustom` in
+`AdobeWorkspacePicker.tsx`. Both take the first workspace whose name or title
+*contains* "stage".
+
+**Naming.** Stage is hardcoded, with no suffix. Every other workspace goes through
+`deriveAdobeEntityName(title)`: strip to alphanumeric, cap the base at 15 characters,
+append 4 random ones. So a workspace titled "ERP Integration" gets the machine name
+`ERPIntegrationx7k2`. The title stays human-readable; the SC never types the name.
+
+### What that means for this item
+
+- **Name each workspace after the integration it serves.** The workspace machine name
+  becomes part of the Runtime namespace — a real one observed this session was
+  `285361-kuklabodeamesh5ngv-stage`, which is org id + project machine name + workspace
+  machine name, lowercased. So the workspace name reaches every action URL for that
+  integration, and it is the only label an SC sees in Developer Console. It is also what
+  makes a delete confirmable by a person.
+- **Record the name, never re-derive it.** The 4-character suffix is random, so the same
+  title produces a different name every time. The component's recorded workspace
+  (`id`, `name`, `title`) is the only lookup; matching by name would be a guess.
+- **Title from the catalog entry's display name, not its id**, since the base truncates
+  at 15 alphanumeric characters.
+- **Leave Production alone.** It cannot be deleted and costs nothing.
+- **Keep Stage as the project's main workspace.** It has a job in this model — one mesh
+  per workspace, and the ACCS data credential — so it is not a leftover.
+- **Make the Stage match EXACT before adding more workspaces.** With two workspaces a
+  substring match cannot go wrong. With one per integration it can: any workspace whose
+  title contains "stage" is a candidate, and which one `find` reaches first depends on
+  the order Adobe returns them, which is not ours to rely on. Matching `=== 'Stage'` in
+  both places costs one line each and removes the question. An integration workspace
+  must also never be titled something containing "stage".
+
+**Not settled:** whether Adobe's 20-character name limit applies to workspaces or only to
+projects. The limit is measured for projects (`adobeEntityName.ts`); the longest workspace
+name created so far was 17. A derived name is 19 at most, so this only matters if the
+workspace limit is lower.
+
 ## Done when
 
 An SC can add two App Management integrations to one project, each deploys into its own
