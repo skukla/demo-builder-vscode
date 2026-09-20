@@ -92,3 +92,4 @@ surfaces that host the cards.
 - 2026-09-20  test(ai): the delete tool's phase test joins its own suite (`b534a4d5a`)
 - 2026-09-20  feat(wizard): the creation screens read from the shared stage table (`592ae1902`)
 - 2026-09-20  feat(commands): the palette's notifications follow the wording rules (`658ccc6e1`)
+- 2026-09-20  feat(lifecycle): start, stop and restart leave the tile to say it (`ecaa415d1`)
