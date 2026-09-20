@@ -28,7 +28,7 @@ import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 import { PageLayout } from '@/core/ui/components/layout/PageLayout';
 import { useFocusTrap } from '@/core/ui/hooks/useFocusTrap';
 import { useOperationRunner } from '@/core/ui/hooks/useOperationRunner';
-import { resetOperationId } from '@/core/utils/operationIds';
+import { deleteOperationId, resetOperationId } from '@/core/utils/operationIds';
 import type { DashboardInitialData } from '@/types/webviewPayloads';
 
 /**
@@ -132,7 +132,6 @@ export function ProjectDashboardScreen({
         handleConfigure,
         handleEditProject,
         handleOpenDevConsole,
-        handleDeleteProject,
         handleExportProject,
         handleRepublishContent,
         handleRestartDemo,
@@ -164,20 +163,30 @@ export function ProjectDashboardScreen({
     // Derived values
     const displayName = statusDisplayName || project?.name || 'Demo Project';
 
-    // The reset narrates into this screen's progress modal (PL-59 R1). It opens
-    // when the run starts reporting, not on the click: VS Code asks to confirm
-    // first, and may ask about sample data.
+    // The two kebab actions that take minutes narrate into this screen's progress
+    // modal (PL-59 R1). It opens when the run starts reporting, not on the click:
+    // VS Code confirms first, and asks about sample data or cloud resources.
     const operations = useOperationRunner();
-    const startReset = operations.startWhenItBegins;
+    const startOperation = operations.startWhenItBegins;
     const handleResetProject = useCallback((): void => {
-        startReset({
+        startOperation({
             id: resetOperationId(displayName),
             name: displayName,
             message: 'resetProject',
             title: `Resetting ${displayName}`,
             failureTitle: `Couldn't reset ${displayName}`,
         });
-    }, [startReset, displayName]);
+    }, [startOperation, displayName]);
+
+    const handleDeleteProject = useCallback((): void => {
+        startOperation({
+            id: deleteOperationId(displayName),
+            name: displayName,
+            message: 'deleteProject',
+            title: `Deleting ${displayName}`,
+            failureTitle: `Couldn't delete ${displayName}`,
+        });
+    }, [startOperation, displayName]);
 
 
     // Build subtitle from package/stack (e.g., "CitiSignal · Headless + PaaS")

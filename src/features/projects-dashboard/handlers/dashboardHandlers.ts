@@ -17,7 +17,7 @@ import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell/org
 import { hasMeshDeploymentRecord } from '@/core/state/appBuilderComponentState';
 import { sessionUIState } from '@/core/state/sessionUIState';
 import { openInIncognito } from '@/core/utils/browserUtils';
-import { resetOperationId } from '@/core/utils/operationIds';
+import { deleteOperationId, resetOperationId } from '@/core/utils/operationIds';
 import { validateProjectPath } from '@/core/validation/PathSafetyValidator';
 import { validateURL } from '@/core/validation/URLValidator';
 import {
@@ -448,10 +448,8 @@ async function resolveProjectFromPath(
  *
  * Delegates to projectDeletionService which handles confirmation, cleanup, and retry logic.
  */
-export const handleDeleteProject: MessageHandler<{ projectPath: string }> = async (
-    context: HandlerContext,
-    payload?: { projectPath: string },
-): Promise<HandlerResponse> => {
+export const handleDeleteProject: MessageHandler<DeleteProjectPayload> = narrateOutcomeToModal(
+    async (context, payload): Promise<HandlerResponse> => {
     try {
         const resolved = await resolveProjectFromPath(context, payload);
         if (!resolved.ok) {
@@ -459,7 +457,10 @@ export const handleDeleteProject: MessageHandler<{ projectPath: string }> = asyn
         }
         const { project } = resolved;
 
-        const result = await deleteProject(context, project);
+        const result = await deleteProject(context, project, undefined, {
+            progress: progressSurfaceOf(payload),
+            operationId: payload?.id ?? deleteOperationId(project.name),
+        });
 
         // Notify UI to refresh (handles timeout scenarios)
         // Cast data to expected shape - deleteProject returns { success: boolean }
@@ -479,7 +480,9 @@ export const handleDeleteProject: MessageHandler<{ projectPath: string }> = asyn
             error: 'Failed to delete project',
         };
     }
-};
+    },
+    (payload) => payload?.id ?? '',
+);
 
 // ============================================================================
 // Edit Project Handler
@@ -814,6 +817,14 @@ export const handleOpenAdminPanel: MessageHandler<{ projectPath: string }> = asy
 };
 
 /** What the projects list sends to reset one of the projects it lists. */
+/** What a screen sends to delete one of the projects it lists. */
+export interface DeleteProjectPayload {
+    projectPath: string;
+    /** The id its progress modal follows (PL-59); absent from other callers. */
+    id?: string;
+    progress?: 'modal';
+}
+
 export interface ResetProjectPayload {
     projectPath: string;
     /** The id its progress modal follows (PL-59); absent from other callers. */

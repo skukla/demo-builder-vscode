@@ -87,7 +87,11 @@ describe('progress-notification wording', () => {
     it('CONTROL: the scans find what they are meant to read, and tell good from bad', () => {
         expect(sites(TITLE_SITES).map((s) => s.text)).toContain('Deploying API Mesh');
         expect(sites(TITLE_SITES).length).toBeGreaterThan(30);
-        expect(sites(MESSAGE_SITES).length).toBeGreaterThan(30);
+        // The floor FALLS as operations move onto `withOperationProgress`, which
+        // reports stage names from the table instead of writing a message here:
+        // 30 -> 20 when the resets and the delete moved (PL-59 slices 2 and 3).
+        // It still has to find a real corpus, or the scan above proves nothing.
+        expect(sites(MESSAGE_SITES).length).toBeGreaterThan(20);
         expect(titleProblem('Deploying API Mesh')).toBeUndefined();
         expect(titleProblem('Demo Builder')).toBeDefined();
         expect(titleProblem('Loading GitHub repositories...')).toBeDefined();

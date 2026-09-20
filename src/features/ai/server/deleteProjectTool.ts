@@ -4,12 +4,16 @@
  * `deleteProjectFiles` core extracted from the deletion service (no modals).
  *
  * Name-addressed and EXTRA-STRICT for this irreversible op: requires
- * `confirm:true` AND a `confirmName` that exactly echoes the project name. It does
- * NOT touch cloud resources — the agent uses `delete_github_repo` /
- * `cleanup_dalive_site` for the GitHub repo and DA.live site.
+ * `confirm:true` AND a `confirmName` that exactly echoes the project name.
+ *
+ * The cloud resources are the checklist the button shows, as arguments: both
+ * unticked by default, both obeying `demoBuilder.cleanupBehavior` (AI-9, answered
+ * 2026-09-19). A plain call still deletes only the local footprint, which is what
+ * the button does when you press Enter without ticking anything.
  */
 
 import { z } from 'zod';
+import { cleanUpProjectCloud, resolveCloudCleanup } from './agentProjectCleanup';
 import { asText } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
 import { deleteProjectFiles } from '@/features/projects-dashboard/services/projectDeletionService';
@@ -31,7 +35,7 @@ export function registerDeleteProjectTool(
             needsAuth: false,
             annotations: { readOnlyHint: false, destructiveHint: true },
             description:
-                'Permanently delete a project locally (files + recent list). Irreversible; does NOT delete cloud resources. Requires confirm:true and confirmName="<project name>".',
+                'Permanently delete a project: its local files, and optionally its GitHub repo and DA.live site (which also unpublishes the storefront). Irreversible. Requires confirm:true and confirmName="<project name>".',
             inputSchema: {
                 name: z.string().describe('Name of the project to delete'),
                 confirm: z.boolean().optional().describe('Must be true to proceed'),
@@ -39,6 +43,16 @@ export function registerDeleteProjectTool(
                     .string()
                     .optional()
                     .describe('Must equal the project name exactly — guards this irreversible deletion'),
+                deleteGithubRepo: z
+                    .boolean()
+                    .optional()
+                    .describe("Also delete the project's GitHub repository (default: false)"),
+                deleteDaLiveSite: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "Also delete the project's DA.live site and take its pages off the CDN (default: false)",
+                    ),
             },
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -66,11 +80,30 @@ export function registerDeleteProjectTool(
                 return asText({ error: `Failed to load project "${name}"` });
             }
 
+            // The cloud first: the local record is how the cloud resources are
+            // found, so deleting it first would strand them (the button orders it
+            // the same way).
+            const choice = resolveCloudCleanup({
+                deleteGithubRepo: args?.deleteGithubRepo === true,
+                deleteDaLiveSite: args?.deleteDaLiveSite === true,
+            });
+            const cloud = await cleanUpProjectCloud(ctx, project, choice);
+
             try {
                 await deleteProjectFiles(ctx, project);
-                return asText({ deleted: true, name });
+                return asText({
+                    deleted: true,
+                    name,
+                    ...cloud,
+                    ...(choice.refusedBySetting ? { note: choice.refusedBySetting } : {}),
+                });
             } catch (err) {
-                return asText({ deleted: false, name, error: err instanceof Error ? err.message : String(err) });
+                return asText({
+                    deleted: false,
+                    name,
+                    ...cloud,
+                    error: err instanceof Error ? err.message : String(err),
+                });
             }
         },
     );

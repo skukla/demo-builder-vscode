@@ -12,19 +12,21 @@
 import * as fs from 'fs/promises';
 import * as vscode from 'vscode';
 import { showOneTimeTip } from '@/core/utils/oneTimeTip';
+import { deleteOperationId } from '@/core/utils/operationIds';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { withOperationProgress } from '@/core/vscode/withOperationProgress';
 import { ensureDaLiveAuth as ensureDaLiveAuthShared, getDaLiveAuthService } from '@/features/eds/handlers/edsHelpers';
 import { DaLiveAuthService } from '@/features/eds/services/daLive/daLiveAuthService';
-import { createDaLiveServiceTokenProvider, DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
+import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
 import { HelixService } from '@/features/eds/services/helix/helixService';
 import {
     isEdsProject,
     extractEdsMetadata,
-    deleteDaLiveSite,
     formatCleanupResults,
     type CleanupResultItem,
 } from '@/features/eds/services/resourceCleanupHelpers';
+import { tearDownStorefront } from '@/features/eds/services/storefront/storefrontTeardown';
 import type { Project } from '@/types/base';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
@@ -105,10 +107,18 @@ export interface DeletionServices {
  *
  * For EDS projects, offers optional external resource cleanup.
  */
+/** Where a delete reports, when a screen started it (PL-59 R1). */
+export interface DeleteProgressOptions {
+    progress?: 'modal';
+    /** The id that screen named the operation by. */
+    operationId?: string;
+}
+
 export async function deleteProject(
     context: HandlerContext,
     project: Project,
     services?: DeletionServices,
+    options?: DeleteProgressOptions,
 ): Promise<HandlerResponse> {
     // Check if this is an EDS project with external resources
     const isEds = isEdsProject(project);
@@ -151,14 +161,17 @@ export async function deleteProject(
     // Collect cleanup results for EDS projects
     const cleanupResults: CleanupResultItem[] = [];
 
-    // Show progress notification during deletion
-    await vscode.window.withProgress(
+    // Where this narrates is the shared routing: the screen's progress modal when
+    // a kebab started it, else one notification (PL-59 R1/R2). Titled for the
+    // PROJECT — it used to say "Demo Builder", which names the extension rather
+    // than what is happening.
+    await withOperationProgress(
         {
-            location: vscode.ProgressLocation.Notification,
-            title: 'Demo Builder',
-            cancellable: false,
+            id: options?.operationId ?? deleteOperationId(project.name),
+            title: `Deleting ${project.name}`,
+            inModal: options?.progress === 'modal',
         },
-        async (progress) => {
+        async (report) => {
             // EDS cleanup: Perform external resource cleanup first
             if (isEds && edsMetadata && cleanupOptions) {
                 await performEdsCleanup(
@@ -166,19 +179,19 @@ export async function deleteProject(
                     edsMetadata,
                     cleanupOptions,
                     cleanupResults,
-                    progress,
+                    { report: ({ message }) => report(message ?? '') },
                     services,
                 );
             }
 
-            progress.report({ message: `Deleting "${project.name}"...` });
+            report('Removing the project files');
 
             // Local deletion (stop demo, remove files, drop from recent, clear current).
             await deleteProjectFiles(context, project);
 
-            // Show success message
-            progress.report({ message: `"${project.name}" deleted` });
-            await sleep(TIMEOUTS.UPDATE_RESULT_DISPLAY);
+            // No "deleted" line on a timer: the modal closes itself and a
+            // background run ends with "— done" (PL-59 R6).
+            return { success: true };
         },
     );
 
@@ -418,61 +431,6 @@ async function ensureDaLiveAuth(
 }
 
 /**
- * Unpublish CDN content and clean up Admin API key before deleting DA.live site
- */
-async function unpublishCdnContent(
-    context: HandlerContext,
-    edsMetadata: ReturnType<typeof extractEdsMetadata>,
-    daLiveTokenProvider: { getAccessToken: () => Promise<string | null> },
-    results: CleanupResultItem[],
-    progress: vscode.Progress<{ message?: string }>,
-    services?: DeletionServices,
-): Promise<void> {
-    if (!edsMetadata?.githubRepo) return;
-
-    const [githubOwner, githubRepo] = edsMetadata.githubRepo.split('/');
-    if (!githubOwner || !githubRepo) return;
-
-    try {
-        progress.report({ message: 'Unpublishing CDN content…' });
-        const initKeyStore =
-            services?.initKeyStore ??
-            ((secrets: vscode.SecretStorage, globalState: vscode.Memento) =>
-                HelixService.initKeyStore(secrets, globalState));
-        await initKeyStore(context.context.secrets, context.context.globalState);
-        const makeHelix =
-            services?.makeHelix ??
-            ((l: Logger, tp: { getAccessToken: () => Promise<string | null> }) =>
-                new HelixService(l, undefined, tp));
-        const helixService = makeHelix(context.logger, daLiveTokenProvider);
-        const daOrg = edsMetadata.daLiveOrg ?? '';
-        const daSite = edsMetadata.daLiveSite ?? '';
-        const pages = await helixService.listAllPages(daOrg, daSite);
-
-        const unpublishResult = await helixService.unpublishPages(
-            githubOwner, githubRepo, 'main', pages,
-        );
-
-        if (unpublishResult.success && unpublishResult.count > 0) {
-            results.push({
-                type: 'helix',
-                name: `${githubOwner}/${githubRepo}`,
-                success: true,
-            });
-        } else if (!unpublishResult.success) {
-            context.logger.warn(`[Delete Project] CDN unpublish failed for ${githubOwner}/${githubRepo}`);
-        }
-
-        const keyDeleteResult = await helixService.deleteAdminApiKey(daOrg, daSite);
-        if (!keyDeleteResult.success) {
-            context.logger.debug(`[Delete Project] Admin API key cleanup skipped: ${keyDeleteResult.error}`);
-        }
-    } catch (unpublishError) {
-        context.logger.warn(`[Delete Project] CDN unpublish failed: ${(unpublishError as Error).message}`);
-    }
-}
-
-/**
  * Delete DA.live site content and clean up config
  */
 async function performDaLiveCleanup(
@@ -485,7 +443,7 @@ async function performDaLiveCleanup(
 ): Promise<void> {
     if (!options.deleteDaLiveSite || !edsMetadata?.daLiveOrg || !edsMetadata?.daLiveSite) return;
 
-    progress.report({ message: 'Deleting DA.live site…' });
+    progress.report({ message: 'Deleting the DA.live site' });
     const resourceName = `${edsMetadata.daLiveOrg}/${edsMetadata.daLiveSite}`;
 
     try {
@@ -494,51 +452,45 @@ async function performDaLiveCleanup(
 
         const daLiveTokenProvider = createDaLiveServiceTokenProvider(daLiveAuthService);
 
-        const daLiveContentOps = new DaLiveContentOperations(daLiveTokenProvider, context.logger);
-
-        // Unpublish CDN content before deleting the site
-        // Uses DA.live Bearer token auth which bypasses the "source exists" restriction
-        await unpublishCdnContent(
-            context,
-            edsMetadata,
-            daLiveTokenProvider,
-            results,
-            progress,
-            services,
+        // The same four steps the agent's cleanup runs, in the same order — the
+        // CDN unpublish lived only here until 2026-09-19 (AI-9).
+        const torn = await tearDownStorefront(
+            {
+                daLiveOrg: edsMetadata.daLiveOrg,
+                daLiveSite: edsMetadata.daLiveSite,
+                githubRepo: edsMetadata.githubRepo,
+            },
+            {
+                tokenProvider: daLiveTokenProvider,
+                logger: context.logger,
+                initKeyStore: async () => {
+                    const initKeyStore =
+                        services?.initKeyStore ??
+                        ((secrets: vscode.SecretStorage, globalState: vscode.Memento) =>
+                            HelixService.initKeyStore(secrets, globalState));
+                    await initKeyStore(context.context.secrets, context.context.globalState);
+                },
+                makeHelix: services?.makeHelix,
+                onStep: (step) => progress.report({ message: step }),
+            },
         );
 
-        progress.report({ message: 'Deleting DA.live site content…' });
-        const cleanupResult = await deleteDaLiveSite(
-            daLiveContentOps,
-            edsMetadata.daLiveOrg,
-            edsMetadata.daLiveSite,
-            context.logger,
-        );
+        // Only when pages actually came down: nothing was published means nothing
+        // to report as cleaned up.
+        if ((torn.unpublishedPages ?? 0) > 0 && !torn.stillPublished) {
+            results.push({
+                type: 'helix',
+                name: edsMetadata.githubRepo ?? resourceName,
+                success: true,
+            });
+        }
 
         results.push({
             type: 'daLive',
             name: resourceName,
-            success: cleanupResult.success,
-            error: cleanupResult.error,
+            success: torn.contentDeleted,
+            error: torn.error,
         });
-
-        // Clean up stale site-specific permission rows from org config
-        const { DaLiveConfigService } = await import('@/features/eds/services/daLive/daLiveConfigService');
-        const configService = new DaLiveConfigService(daLiveTokenProvider, context.logger);
-
-        const permResult = await configService.removeSitePermissions(
-            edsMetadata.daLiveOrg, edsMetadata.daLiveSite,
-        );
-        if (!permResult.success) {
-            context.logger.warn(`[Delete Project] Permission cleanup failed: ${permResult.error}`);
-        }
-
-        const configDeleteResult = await configService.deleteSiteConfig(
-            edsMetadata.daLiveOrg, edsMetadata.daLiveSite,
-        );
-        if (!configDeleteResult.success) {
-            context.logger.debug(`[Delete Project] Site config cleanup skipped: ${configDeleteResult.error}`);
-        }
     } catch (error) {
         context.logger.error('[Delete Project] DA.live cleanup failed', error as Error);
         results.push({
@@ -559,7 +511,7 @@ async function performGitHubCleanup(
     results: CleanupResultItem[],
     progress: vscode.Progress<{ message?: string }>,
 ): Promise<void> {
-    progress.report({ message: 'Deleting GitHub repository…' });
+    progress.report({ message: 'Deleting the repository' });
 
     try {
         const { getGitHubServices } = await import('@/features/eds/handlers/edsHelpers');

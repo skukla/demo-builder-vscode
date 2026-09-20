@@ -80,12 +80,20 @@ describe('delete_project', () => {
 
         // The gate the handler enforces has to be REACHABLE: an agent can only
         // send confirm/confirmName if the declared input shape accepts them.
-        it('declares the name and both confirmation fields, with only name required', () => {
+        it('declares the name, both confirmation fields and the two cloud choices', () => {
             const s = fakeServer();
             registerDeleteProjectTool(s, ctxFactory);
             const shape = s.schema().inputSchema as Record<string, z.ZodTypeAny>;
 
-            expect(Object.keys(shape)).toEqual(['name', 'confirm', 'confirmName']);
+            // The two cloud choices mirror the checkboxes the button shows, and
+            // like them they default to unticked (AI-9).
+            expect(Object.keys(shape)).toEqual([
+                'name',
+                'confirm',
+                'confirmName',
+                'deleteGithubRepo',
+                'deleteDaLiveSite',
+            ]);
             expect(z.object(shape).safeParse({ name: 'alpha' }).success).toBe(true);
             expect(z.object(shape).safeParse({}).success).toBe(false);
             expect(

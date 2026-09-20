@@ -99,7 +99,11 @@ describe('handleDeleteProject', () => {
 
         const result = await handleDeleteProject(context, { projectPath: project.path });
 
-        expect(mockDeleteProject).toHaveBeenCalledWith(context, project);
+        // Plus where it reports and the id its modal follows (PL-59).
+        expect(mockDeleteProject).toHaveBeenCalledWith(context, project, undefined, {
+            progress: undefined,
+            operationId: expect.stringContaining('delete:'),
+        });
         expect(context.sendMessage).toHaveBeenCalledWith('projectDeleted', {});
         expect(result).toEqual({ success: true, data: { success: true } });
     });

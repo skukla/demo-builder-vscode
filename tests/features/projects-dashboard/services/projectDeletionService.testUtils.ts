@@ -74,13 +74,27 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 // the CONTROL test exists to catch.
 jest.mock('@/features/eds/services/resourceCleanupHelpers', () => ({
     ...jest.requireActual('@/features/eds/services/resourceCleanupHelpers'),
-    deleteDaLiveSite: (...a: unknown[]) => mockDeleteDaLiveSite(...a),
     formatCleanupResults: () => '',
 }));
 
+// The site deletion is now ONE call on the content operations, made by the
+// shared storefront teardown (AI-9): the same four steps the agent's cleanup
+// runs. `mockDeleteDaLiveSite` drives it, keeping every suite's setup intact.
 jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     createDaLiveServiceTokenProvider: () => async () => 'token',
-    DaLiveContentOperations: class {},
+    DaLiveContentOperations: class {
+        async deleteAllSiteContent(org: string, site: string) {
+            const result = (await mockDeleteDaLiveSite(org, site)) as
+                | { success?: boolean; error?: string; deletedCount?: number }
+                | undefined;
+            return {
+                success: result?.success ?? true,
+                deletedCount: result?.deletedCount ?? 0,
+                deletedPaths: [],
+                error: result?.error,
+            };
+        }
+    },
 }));
 
 /**

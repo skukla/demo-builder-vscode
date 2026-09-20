@@ -7708,31 +7708,6 @@
         {
             "module": "src/features/eds/services/resourceCleanupHelpers.ts",
             "anchors": [
-                "success: false,"
-            ],
-            "line": 189,
-            "mutants": 1,
-            "category": "branch",
-            "reason": "This initialiser is overwritten on every path out of the function: the last statement before the return is 'result.success = result.daLiveDeleted', which runs whether the delete succeeded, reported nothing deleted, or threw into the catch. The type requires success to be initialised, so it must hold some boolean here, but no caller ever observes the one written at this line. Flipping it to true leaves every returned result byte-identical.",
-            "decision": "none \u2014 the field is required by DaLiveSiteCleanupResult and false is the honest value before any work has been done",
-            "recorded": "2026-09-05",
-            "source": "PL-22 MUT-02, 2026-09-05"
-        },
-        {
-            "module": "src/features/eds/services/resourceCleanupHelpers.ts",
-            "anchors": [
-                "if (result.daLiveDeleted) {"
-            ],
-            "mutants": 3,
-            "category": "branch",
-            "reason": "The guard's body is a single logger.debug reporting the file count. result.daLiveDeleted and result.alreadyDeleted are both assigned above it and read by the caller from the returned object, which 'should successfully delete DA.live site content recursively' and 'should report site as already empty when deletedCount is 0' both pin. Forcing the condition either way, or emptying the block, changes only whether that debug line prints \u2014 the returned result is identical.",
-            "decision": "none \u2014 the success line is what puts the deleted-file count in a pasted log, and the counts it reports are asserted through the result",
-            "recorded": "2026-09-05",
-            "source": "PL-22 MUT-02, 2026-09-05"
-        },
-        {
-            "module": "src/features/eds/services/resourceCleanupHelpers.ts",
-            "anchors": [
                 "if (failed.length > 0) {"
             ],
             "mutants": 2,
@@ -8517,7 +8492,7 @@
             "anchors": [
                 "if (edsStorefront) {"
             ],
-            "line": 519,
+            "line": 522,
             "mutants": 2,
             "category": "branch",
             "reason": "The whole block is three logger.debug calls describing the EDS metadata for troubleshooting. Both branch outcomes produce the same wizard command and the same response; only the debug transcript differs.",
@@ -8530,7 +8505,7 @@
             "anchors": [
                 "if (edsStorefront.metadata) {"
             ],
-            "line": 521,
+            "line": 524,
             "mutants": 3,
             "category": "branch",
             "reason": "Nested inside the debug-only block above: its body is three more logger.debug lines. Nothing downstream reads anything it computes.",
@@ -8543,7 +8518,7 @@
             "anchors": [
                 "if (settings.edsConfig) {"
             ],
-            "line": 534,
+            "line": 537,
             "mutants": 2,
             "category": "branch",
             "reason": "Body is four logger.debug calls echoing the already-extracted edsConfig. The settings object handed to the wizard is identical either way.",
@@ -8556,7 +8531,7 @@
             "anchors": [
                 ".then(undefined, (error) => {"
             ],
-            "line": 786,
+            "line": 789,
             "mutants": 1,
             "category": "block",
             "reason": "The rejection arm of a fire-and-forget notification chain; its body is a single logger.error. Emptying it leaves the same unhandled-free promise and the same already-returned success response.",
@@ -8569,7 +8544,7 @@
             "anchors": [
                 "if (!payload?.projectPath || !payload?.newName) {"
             ],
-            "line": 581,
+            "line": 584,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "Two optional chains on one line; only the SECOND is unreachable. Dropping the '?' on payload?.newName throws only when payload is undefined, and short-circuiting means the left operand already returned in that case. No input reaches it. The first chain on the same line IS killed, by the absent-payload test.",
@@ -8586,138 +8561,6 @@
             "category": "branch",
             "reason": "The block is one logger.info of the formatted cleanup summary. Both outcomes return the same response and perform no further work; only the log transcript differs.",
             "decision": "none \u2014 a test could only assert log wording, which the logger-argument rule forbids.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
-            "anchors": [
-                "} else if (!unpublishResult.success) {"
-            ],
-            "mutants": 4,
-            "category": "branch",
-            "reason": "The arm's body is a single logger.warn. The unpublish result is not read again and no result row is pushed on this arm \u2014 the KILLED half of the pair (whether a helix row is recorded) is tested; this half is the log.",
-            "decision": "none \u2014 log-only.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
-            "anchors": [
-                "if (!keyDeleteResult.success) {"
-            ],
-            "mutants": 4,
-            "category": "branch",
-            "reason": "Body is one logger.debug. The Admin API key delete is asserted by its arguments; whether its failure is narrated is not behaviour.",
-            "decision": "none \u2014 log-only.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
-            "anchors": [
-                "} catch (unpublishError) {"
-            ],
-            "mutants": 1,
-            "category": "block",
-            "reason": "The catch body is one logger.warn. That the catch EXISTS is tested (a thrown unpublish must not stop the deletion); emptying its body changes only which line prints.",
-            "decision": "none \u2014 log-only.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
-            "anchors": [
-                "if (!permResult.success) {"
-            ],
-            "mutants": 4,
-            "category": "branch",
-            "reason": "Body is one logger.warn. The removeSitePermissions CALL is asserted by its arguments; whether its failure is narrated is not behaviour.",
-            "decision": "none \u2014 log-only.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
-            "anchors": [
-                "if (!configDeleteResult.success) {"
-            ],
-            "mutants": 4,
-            "category": "branch",
-            "reason": "The body is one logger.debug. The deleteSiteConfig CALL and its org/site arguments are asserted by a test; whether the service narrates a failed config delete is not behaviour anything downstream reads.",
-            "decision": "none \u2014 log-only, same reason as its sibling permission check above.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
-            "anchors": [
-                "progress.report({ message: 'Unpublishing CDN content\u2026' });"
-            ],
-            "mutants": 1,
-            "category": "other",
-            "reason": "Emptying the report payload changes the notification text and nothing else. progress.report has no return value and no caller reads the message; asserting it would pin UI wording, which is what the ratchet exists to refuse to reward.",
-            "decision": "none \u2014 presentation.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
-            "anchors": [
-                "progress.report({ message: 'Deleting DA.live site\u2026' });"
-            ],
-            "mutants": 1,
-            "category": "other",
-            "reason": "Emptying the report payload changes the notification text and nothing else. progress.report has no return value and no caller reads the message; asserting it would pin UI wording.",
-            "decision": "none \u2014 presentation.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
-            "anchors": [
-                "progress.report({ message: 'Deleting DA.live site content\u2026' });"
-            ],
-            "mutants": 1,
-            "category": "other",
-            "reason": "Emptying the report payload changes the notification text and nothing else. progress.report has no return value and no caller reads the message; asserting it would pin UI wording.",
-            "decision": "none \u2014 presentation.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
-            "anchors": [
-                "progress.report({ message: 'Deleting GitHub repository\u2026' });"
-            ],
-            "mutants": 1,
-            "category": "other",
-            "reason": "Emptying the report payload changes the notification text and nothing else. progress.report has no return value and no caller reads the message; asserting it would pin UI wording.",
-            "decision": "none \u2014 presentation.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
-            "anchors": [
-                "progress.report({ message: `Deleting \"${project.name}\"...` });"
-            ],
-            "mutants": 1,
-            "category": "other",
-            "reason": "Emptying the report payload changes the notification text and nothing else. progress.report has no return value and no caller reads the message; asserting it would pin UI wording.",
-            "decision": "none \u2014 presentation.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
-            "anchors": [
-                "progress.report({ message: `\"${project.name}\" deleted` });"
-            ],
-            "mutants": 1,
-            "category": "other",
-            "reason": "Emptying the report payload changes the notification text and nothing else. progress.report has no return value and no caller reads the message; asserting it would pin UI wording.",
-            "decision": "none \u2014 presentation.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-01"
         },
@@ -8760,18 +8603,6 @@
         {
             "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
             "anchors": [
-                "if (!edsMetadata?.githubRepo) return;"
-            ],
-            "mutants": 1,
-            "category": "optionalChain",
-            "reason": "edsMetadata cannot be null on this path. deleteProject computes it as `isEds ? extractEdsMetadata(project) : null` and only enters the EDS branch under `if (isEds && edsMetadata)`, so every function below is reached with a non-null one. Dropping the '?' therefore cannot throw for any input the module accepts.",
-            "decision": "none \u2014 equivalent; the CONDITION is tested (a project with no repo skips the CDN step), only the chain is unkillable.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
-            "anchors": [
                 "if (!options.deleteDaLiveSite || !edsMetadata?.daLiveOrg || !edsMetadata?.daLiveSite) return;"
             ],
             "mutants": 2,
@@ -8798,7 +8629,7 @@
             "anchors": [
                 "if (resolved) return;"
             ],
-            "line": 363,
+            "line": 376,
             "mutants": 1,
             "category": "branch",
             "reason": "A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. The guard's FORCED-TRUE half IS killed (a gesture that returns early never settles, and the test hangs); the forced-false and 'resolved = false' halves leave behaviour identical because the extra resolve is discarded.",
@@ -8811,7 +8642,7 @@
             "anchors": [
                 "resolved = true;"
             ],
-            "line": 364,
+            "line": 377,
             "mutants": 1,
             "category": "branch",
             "reason": "A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. The guard's FORCED-TRUE half IS killed (a gesture that returns early never settles, and the test hangs); the forced-false and 'resolved = false' halves leave behaviour identical because the extra resolve is discarded.",
@@ -8824,7 +8655,7 @@
             "anchors": [
                 "if (resolved) return;"
             ],
-            "line": 371,
+            "line": 384,
             "mutants": 1,
             "category": "branch",
             "reason": "A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. The guard's FORCED-TRUE half IS killed (a gesture that returns early never settles, and the test hangs); the forced-false and 'resolved = false' halves leave behaviour identical because the extra resolve is discarded.",
@@ -8837,7 +8668,7 @@
             "anchors": [
                 "resolved = true;"
             ],
-            "line": 372,
+            "line": 385,
             "mutants": 1,
             "category": "branch",
             "reason": "A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. The guard's FORCED-TRUE half IS killed (a gesture that returns early never settles, and the test hangs); the forced-false and 'resolved = false' halves leave behaviour identical because the extra resolve is discarded.",
@@ -8850,7 +8681,7 @@
             "anchors": [
                 "if (resolved) return;"
             ],
-            "line": 383,
+            "line": 396,
             "mutants": 1,
             "category": "branch",
             "reason": "A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. The guard's FORCED-TRUE half IS killed (a gesture that returns early never settles, and the test hangs); the forced-false and 'resolved = false' halves leave behaviour identical because the extra resolve is discarded.",
@@ -8863,7 +8694,7 @@
             "anchors": [
                 "resolved = true;"
             ],
-            "line": 384,
+            "line": 397,
             "mutants": 1,
             "category": "branch",
             "reason": "A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. The guard's FORCED-TRUE half IS killed (a gesture that returns early never settles, and the test hangs); the forced-false and 'resolved = false' halves leave behaviour identical because the extra resolve is discarded.",
@@ -8912,7 +8743,7 @@
             "anchors": [
                 "return { deleteGitHubRepo: false, deleteDaLiveSite: false };"
             ],
-            "line": 292,
+            "line": 305,
             "mutants": 1,
             "category": "other",
             "reason": "Emptying the returned object leaves both flags undefined, which is falsy exactly where false was: performEdsCleanup skips the repo on a falsy deleteGitHubRepo and performDaLiveCleanup returns on a falsy deleteDaLiveSite. The same is true of flipping either literal to true on this path, because the project reaching it has neither a repo nor a complete DA.live pair to act on. The suite asserts the CALLS made, which do not move.",
@@ -8925,7 +8756,7 @@
             "anchors": [
                 "return { deleteGitHubRepo: false, deleteDaLiveSite: false };"
             ],
-            "line": 339,
+            "line": 352,
             "mutants": 3,
             "category": "other",
             "reason": "Emptying the returned object leaves both flags undefined, which is falsy exactly where false was: performEdsCleanup skips the repo on a falsy deleteGitHubRepo and performDaLiveCleanup returns on a falsy deleteDaLiveSite. The same is true of flipping either literal to true on this path, because the project reaching it has neither a repo nor a complete DA.live pair to act on. The suite asserts the CALLS made, which do not move.",
@@ -11062,7 +10893,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 33,
+            "line": 34,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying this catch makes githubAuthed return undefined instead of false, and its single call site is 'if (!(await githubAuthed(ctx)))' - which takes the same branch for both, returning the needsAuth handoff. The function's return type is boolean, so no caller can distinguish them either; the test that a throwing token validation is treated as unauthenticated already covers the path and passes under both.",
@@ -11075,7 +10906,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 70,
+            "line": 77,
             "mutants": 1,
             "category": "block",
             "reason": "Same shape as its twin in githubAuthed: emptying this catch makes buildDaLiveOps return undefined rather than null, and both call sites read 'if (!ops) return asText(NEEDS_ADOBE)'. Both values are falsy, so both produce the Adobe sign-in handoff, and the test that a throwing token inspection hands off to Adobe auth passes under either. Nothing downstream ever holds the value long enough to compare it.",
@@ -11114,7 +10945,7 @@
             "anchors": [
                 "if (args?.confirm !== true || args?.confirmName !== fullName) {"
             ],
-            "line": 232,
+            "line": 239,
             "mutants": 2,
             "category": "optionalChain",
             "reason": "delete_github_repo reads args?.owner and args?.repo above this line and returns early unless both are non-empty, so by the time the confirmation gate runs, args is known to be an object carrying them. Dropping either optional chain here cannot throw on any input that reaches the line. The chains on the owner and repo reads ARE killed, by the no-arguments test - which is where a missing argument object actually arrives.",
@@ -11127,7 +10958,7 @@
             "anchors": [
                 "if (args?.confirm !== true || args?.confirmName !== fullName) {"
             ],
-            "line": 319,
+            "line": 332,
             "mutants": 2,
             "category": "optionalChain",
             "reason": "cleanup_dalive_site's copy of the same situation: args?.org and args?.site are read above and the tool returns early unless both are non-empty strings, so args is an object by the time this gate runs and the optional chains cannot fire. Both halves of the gate - confirm:true and the confirmName echo - are killed by their own tests, including one that supplies a correct echo without confirm.",
@@ -11140,7 +10971,7 @@
             "anchors": [
                 "const offset = Math.max(0, Math.trunc(args?.offset ?? 0));"
             ],
-            "line": 280,
+            "line": 287,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "This line is inside list_dalive_sites, past its \"org is required\" guard, which reads args?.org and returns early when it is empty - so args is an object with a non-empty org string by the time pagination is computed. Dropping the optional chain here cannot throw on any input that reaches the line. The identical line in list_github_repos has no guard in front of it and its chain IS killed, by the test that calls that tool with no argument object at all.",
@@ -11153,7 +10984,7 @@
             "anchors": [
                 "const limit = Math.min(100, Math.max(1, Math.trunc(args?.limit ?? 30)));"
             ],
-            "line": 281,
+            "line": 288,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "This line is inside list_dalive_sites, past its \"org is required\" guard, which reads args?.org and returns early when it is empty - so args is an object with a non-empty org string by the time pagination is computed. Dropping the optional chain here cannot throw on any input that reaches the line. The identical line in list_github_repos has no guard in front of it and its chain IS killed, by the test that calls that tool with no argument object at all.",
@@ -12396,7 +12227,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 109,
+            "line": 108,
             "mutants": 13,
             "category": "other",
             "reason": "Thirteen handlers in this hook are memoised with an EMPTY dependency list (handleSyncStorefront, handleRefreshBlockLibrary, handleOpenAdminPanel, handleConfigure, handleEditProject, handleOpenDevConsole, handleDeleteProject, handleExportProject, handleRepublishContent, handleResetProject, handleNavigateBack, handleReAuthenticate, handleSwitchOrg), and their closing lines are textually identical so they cannot be anchored apart \u2014 this row covers the one mutant on each. Stryker does not empty these lists; it replaces the empty array with a one-element array holding a constant string. React compares dependency lists element by element with Object.is, and that constant is identical on every render, so the callback is created once and never recreated \u2014 exactly as with the empty list. Each of these handlers also closes over nothing but the imported webviewClient, so there is no captured value that could go stale even if the memo did invalidate. No sequence of renders, messages or payloads can distinguish the two.",

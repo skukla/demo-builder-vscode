@@ -385,7 +385,15 @@ describe('cloud-resource tools (DA.live)', () => {
                 confirm: true,
                 confirmName: 'acme/shop',
             });
-            expect(res).toEqual({ deleted: true, site: 'acme/shop', deletedCount: 7 });
+            // Without a repo the pages stay live, and the answer says so rather
+            // than reading as a finished teardown (AI-9).
+            expect(res).toEqual({
+                deleted: true,
+                site: 'acme/shop',
+                deletedCount: 7,
+                stillPublished: true,
+                note: expect.stringContaining('githubRepo'),
+            });
             expect(mockDeleteAllSiteContent).toHaveBeenCalledWith('acme', 'shop');
         });
 

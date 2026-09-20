@@ -13,7 +13,7 @@ import { OperationProgressModal } from '@/core/ui/components/feedback/OperationP
 import { WebviewApp } from '@/core/ui/components/WebviewApp';
 import { useOperationRunner } from '@/core/ui/hooks/useOperationRunner';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
-import { resetOperationId } from '@/core/utils/operationIds';
+import { deleteOperationId, resetOperationId } from '@/core/utils/operationIds';
 import { sleep } from '@/core/utils/sleep';
 import type { Project } from '@/types/base';
 import type {
@@ -216,26 +216,29 @@ function ProjectsDashboardApp() {
         }
     }, []);
 
-    // Handle delete project
-    const handleDeleteProject = useCallback(
-        async (project: Project) => {
-            try {
-                const response = await webviewClient.request<{
-                    success: boolean;
-                    data?: { success: boolean; error?: string };
-                }>('deleteProject', {
-                    projectPath: project.path,
-                });
+    // Both kebab actions that take minutes — delete and reset — narrate into this
+    // screen's one progress modal (PL-59).
+    const operations = useOperationRunner();
+    const startOperation = operations.startWhenItBegins;
 
-                // Refresh projects list if deletion was successful
-                if (response?.success && response.data?.success) {
-                    fetchProjects(true);
-                }
-            } catch (error) {
-                console.error('Failed to delete project:', error);
-            }
+    // Handle delete project — narrated in this screen's progress modal, which
+    // opens once the run reports: VS Code asks to confirm first, and for an EDS
+    // project it also asks which cloud resources to take with it (PL-59 R1).
+    const handleDeleteProject = useCallback(
+        (project: Project) => {
+            startOperation(
+                {
+                    id: deleteOperationId(project.name),
+                    name: project.name,
+                    message: 'deleteProject',
+                    title: `Deleting ${project.name}`,
+                    failureTitle: `Couldn't delete ${project.name}`,
+                    payload: { projectPath: project.path },
+                },
+                () => fetchProjects(true),
+            );
         },
-        [fetchProjects],
+        [startOperation, fetchProjects],
     );
 
     // Handle start demo
@@ -312,15 +315,12 @@ function ProjectsDashboardApp() {
         }
     }, []);
 
-    const operations = useOperationRunner();
-
     // Handle reset project (all project types) — narrated in this screen's
     // progress modal (PL-59 R1), which opens once the run starts reporting: VS
     // Code confirms first, and may ask about sample data.
-    const startReset = operations.startWhenItBegins;
     const handleResetProject = useCallback(
         (project: Project) => {
-            startReset({
+            startOperation({
                 id: resetOperationId(project.name),
                 name: project.name,
                 message: 'resetProject',
@@ -331,7 +331,7 @@ function ProjectsDashboardApp() {
                 payload: { projectPath: project.path },
             }, () => fetchProjects(true));
         },
-        [startReset, fetchProjects],
+        [startOperation, fetchProjects],
     );
 
     // Handle per-integration redeploy (one kebab item per redeployable keyed

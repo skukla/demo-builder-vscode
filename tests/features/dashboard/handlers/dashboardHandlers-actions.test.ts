@@ -108,7 +108,11 @@ describe('Dashboard Action Handlers', () => {
             const result = await handleDeleteProject(mockContext);
 
             expect(result).toEqual({ success: true });
-            expect(deleteProject).toHaveBeenCalledWith(mockContext, mockProject);
+            // Plus where it reports and the id its modal follows (PL-59).
+            expect(deleteProject).toHaveBeenCalledWith(mockContext, mockProject, undefined, {
+                progress: undefined,
+                operationId: expect.stringContaining('delete:'),
+            });
         });
 
         it('should return error when no project available', async () => {

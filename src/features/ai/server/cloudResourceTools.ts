@@ -24,6 +24,7 @@ import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
 import { DaLiveOrgOperations } from '@/features/eds/services/daLive/daLiveOrgOperations';
+import { tearDownStorefront } from '@/features/eds/services/storefront/storefrontTeardown';
 import type { HandlerContext } from '@/types/handlers';
 
 /** Silent GitHub auth pre-flight → `true` when a valid token is present. */
@@ -54,7 +55,12 @@ const NEEDS_ADOBE = {
  */
 async function buildDaLiveOps(
     ctx: HandlerContext,
-): Promise<{ org: DaLiveOrgOperations; content: DaLiveContentOperations } | null> {
+): Promise<{
+    org: DaLiveOrgOperations;
+    content: DaLiveContentOperations;
+    /** Handed on to the shared storefront teardown, which reads it per call. */
+    tokenProvider: { getAccessToken: () => Promise<string | null> };
+} | null> {
     try {
         const tokenManager = ServiceLocator.getAuthenticationService().getTokenManager();
         if (!(await tokenManager.inspectToken()).valid) {
@@ -64,6 +70,7 @@ async function buildDaLiveOps(
             getAccessToken: async () => (await tokenManager.inspectToken()).token ?? null,
         };
         return {
+            tokenProvider,
             org: new DaLiveOrgOperations(tokenProvider, ctx.logger),
             content: new DaLiveContentOperations(tokenProvider, ctx.logger),
         };
@@ -297,10 +304,16 @@ export function registerCloudResourceTools(
             needsAuth: ['adobe'],
             annotations: { readOnlyHint: false, destructiveHint: true },
             description:
-                'Delete all content for a DA.live site (irreversible). Requires confirm:true and confirmName="org/site".',
+                'Delete all content for a DA.live site, and take its pages off the CDN when the GitHub repo is given (irreversible). Requires confirm:true and confirmName="org/site".',
             inputSchema: {
                 org: z.string().describe('DA.live organization name'),
                 site: z.string().describe('DA.live site name'),
+                githubRepo: z
+                    .string()
+                    .optional()
+                    .describe(
+                        'owner/repo for the storefront. WITHOUT it the published pages stay live on the CDN — the unpublish is addressed by repo, not by site',
+                    ),
                 confirm: z.boolean().optional().describe('Must be true to proceed'),
                 confirmName: z
                     .string()
@@ -327,12 +340,38 @@ export function registerCloudResourceTools(
                 return asText(NEEDS_ADOBE);
             }
             try {
-                const result = await runWithAdobeTarget(() => ops.content.deleteAllSiteContent(org, site));
+                // The same teardown the delete-project button runs. Until
+                // 2026-09-19 this deleted the SOURCE only, so an agent could
+                // clear a site and leave the storefront serving (AI-9).
+                const ctx = ctxFactory();
+                const { HelixService } = await import('@/features/eds/services/helix/helixService');
+                const torn = await runWithAdobeTarget(() =>
+                    tearDownStorefront(
+                        { daLiveOrg: org, daLiveSite: site, githubRepo: args?.githubRepo },
+                        {
+                            tokenProvider: ops.tokenProvider,
+                            logger: ctx.logger,
+                            initKeyStore: () =>
+                                HelixService.initKeyStore(
+                                    ctx.context.secrets,
+                                    ctx.context.globalState,
+                                ),
+                            makeContentOps: () => ops.content,
+                        },
+                    ),
+                );
                 return asText({
-                    deleted: result.success,
+                    deleted: torn.contentDeleted,
                     site: fullName,
-                    deletedCount: result.deletedCount,
-                    error: result.error,
+                    deletedCount: torn.deletedCount,
+                    unpublishedPages: torn.unpublishedPages,
+                    stillPublished: torn.stillPublished,
+                    ...(torn.stillPublished && !args?.githubRepo
+                        ? {
+                              note: 'The source is gone but the published pages are still live. Call again with githubRepo:"owner/repo" to take them off the CDN.',
+                          }
+                        : {}),
+                    error: torn.error,
                 });
             } catch (err) {
                 if (isOrgMismatchError(err)) return orgMismatchResult();

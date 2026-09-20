@@ -141,14 +141,19 @@ describe('ProjectDashboardScreen - Action Buttons', () => {
             expect(ctx.mockPostMessage).toHaveBeenCalledWith('openBrowser');
         });
 
-        it('should send deleteProject message when Delete clicked', async () => {
+        // A REQUEST: the delete narrates into this screen's progress modal, and
+        // its answer is how the screen learns a cancelled run is over (PL-59).
+        it('starts the delete as an operation this screen can follow', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             renderDashboard();
 
             const deleteButton = screen.getByText('Delete');
             await user.click(deleteButton);
 
-            expect(ctx.mockPostMessage).toHaveBeenCalledWith('deleteProject');
+            expect(ctx.mockRequest).toHaveBeenCalledWith('deleteProject', {
+                id: expect.stringContaining('delete:'),
+                progress: 'modal',
+            });
         });
 
         it('should send editProject message when Edit clicked', async () => {

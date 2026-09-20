@@ -8,14 +8,11 @@
  * - isEdsProject: Check if a project has EDS component
  * - extractEdsMetadata: Extract EDS metadata from project
  * - getLinkedEdsProjects: Get all projects with EDS metadata
- * - deleteDaLiveSite: DA.live site deletion
  * - formatCleanupResults: Human-readable cleanup summary
  */
 
-import type { DaLiveContentOperations } from './daLive/daLiveContentOperations';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { Project } from '@/types/base';
-import type { Logger } from '@/types/logger';
 import type { StateManager } from '@/types/state';
 
 // ==========================================================
@@ -46,20 +43,6 @@ export interface EdsProjectInfo {
     path: string;
     /** EDS metadata */
     metadata: EdsProjectMetadata;
-}
-
-/**
- * Result of DA.live site deletion
- */
-export interface DaLiveSiteCleanupResult {
-    /** Overall success */
-    success: boolean;
-    /** Whether DA.live site was deleted */
-    daLiveDeleted: boolean;
-    /** Error message if operation failed */
-    error?: string;
-    /** Whether the site was already deleted */
-    alreadyDeleted?: boolean;
 }
 
 /**
@@ -161,53 +144,6 @@ export async function getLinkedEdsProjects(
 // ==========================================================
 // Combined Cleanup Operations
 // ==========================================================
-
-/**
- * Delete a DA.live site by recursively removing all content
- *
- * Uses DaLiveContentOperations.deleteAllSiteContent() to walk the tree,
- * batch-delete files, then clean up directories deepest-first. A single
- * non-recursive DELETE on the root (the old approach) leaves nested
- * content intact and the site remains in the org listing.
- *
- * CDN unpublish is handled separately by the caller (projectDeletionService)
- * via HelixService.unpublishPages (page-by-page DELETE with DA.live Bearer token auth).
- *
- * @param contentOps - DaLiveContentOperations for recursive content deletion
- * @param daLiveOrg - DA.live organization name
- * @param daLiveSite - DA.live site name
- * @param logger - Logger instance
- * @returns Cleanup result
- */
-export async function deleteDaLiveSite(
-    contentOps: DaLiveContentOperations,
-    daLiveOrg: string,
-    daLiveSite: string,
-    logger: Logger,
-): Promise<DaLiveSiteCleanupResult> {
-    const result: DaLiveSiteCleanupResult = {
-        success: false,
-        daLiveDeleted: false,
-    };
-
-    try {
-        logger.debug(`[Cleanup] Deleting DA.live site content: ${daLiveOrg}/${daLiveSite}`);
-        const deleteResult = await contentOps.deleteAllSiteContent(daLiveOrg, daLiveSite);
-        result.daLiveDeleted = deleteResult.success;
-        result.alreadyDeleted = deleteResult.deletedCount === 0;
-
-        if (result.daLiveDeleted) {
-            logger.debug(`[Cleanup] DA.live site deleted (${deleteResult.deletedCount} files)${result.alreadyDeleted ? ' (was already empty)' : ''}`);
-        }
-    } catch (error) {
-        const errorMessage = (error as Error).message;
-        logger.error(`[Cleanup] DA.live deletion failed: ${errorMessage}`);
-        result.error = `DA.live deletion failed: ${errorMessage}`;
-    }
-
-    result.success = result.daLiveDeleted;
-    return result;
-}
 
 // ==========================================================
 // Results Formatting

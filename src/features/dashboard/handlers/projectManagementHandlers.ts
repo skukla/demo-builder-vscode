@@ -11,7 +11,7 @@
 import * as vscode from 'vscode';
 import { handleRequestStatus } from './statusHandlers';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import { resetOperationId } from '@/core/utils/operationIds';
+import { deleteOperationId, resetOperationId } from '@/core/utils/operationIds';
 import {
     narrateOutcomeToModal,
     progressSurfaceOf,
@@ -64,14 +64,28 @@ export const handleEditProject: MessageHandler = async (context) => {
  * Uses projectDeletionService for unified delete experience including EDS cleanup.
  * Panel disposal is handled by projectDeletionService when deletion succeeds.
  */
-export const handleDeleteProject: MessageHandler = async (context) => {
-    const project = await context.stateManager.getCurrentProject();
-    if (!project) {
-        return { success: false, error: 'No project found to delete' };
-    }
+export const handleDeleteProject: MessageHandler<DeleteFromDashboardPayload> =
+    narrateOutcomeToModal(
+        async (context, payload) => {
+            const project = await context.stateManager.getCurrentProject();
+            if (!project) {
+                return { success: false, error: 'No project found to delete' };
+            }
 
-    return deleteProject(context, project);
-};
+            return deleteProject(context, project, undefined, {
+                progress: progressSurfaceOf(payload),
+                operationId: payload?.id ?? deleteOperationId(project.name),
+            });
+        },
+        (payload) => payload?.id ?? '',
+    );
+
+/** What the dashboard sends when its kebab starts a delete. */
+export interface DeleteFromDashboardPayload {
+    /** The id its progress modal follows (PL-59). */
+    id?: string;
+    progress?: 'modal';
+}
 
 /** What the dashboard sends when its kebab starts a reset. */
 export interface ResetProjectPayload {
