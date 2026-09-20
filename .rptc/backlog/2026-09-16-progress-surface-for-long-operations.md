@@ -85,3 +85,4 @@ surfaces that host the cards.
 - 2026-09-19  feat(progress): say it in the SC's words, everywhere they watch (`d8cc4b097`)
 - 2026-09-19  feat(reset): a reset narrates into the progress modal (`3c9cd8399`)
 - 2026-09-19  refactor(ui): put class names where the bundle scan can read them (`3cadd5c8a`)
+- 2026-09-20  feat(dashboard): the storefront buttons narrate into the progress modal (`d15168675`)
