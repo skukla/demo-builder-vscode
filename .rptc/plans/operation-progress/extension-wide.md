@@ -87,10 +87,15 @@ finding.
 
 ## Order of work
 
-Each slice is its own commit series on `feature/operation-progress`, tested, and shown
-to the owner before the next.
+Each slice is its own commit series, tested, and shown to the owner before the next.
 
-0. **Foundation.** Lift the phase-1 modal and its handover out of the integrations
+**All ten are built and pushed (2026-09-19/20).** Slices 0 and 1 landed on
+`feature/operation-progress`; 2 onwards were built on `feature/erp-integration`, which
+is where the owner tests and where the App Builder fixes they sit on already lived
+(owner's call, 2026-09-20). The owner has tried slice 1; 2 onwards are waiting on a
+run-through.
+
+0. ✅ **Foundation.** Lift the phase-1 modal and its handover out of the integrations
    feature into a shared component any screen can host, keyed by an operation id rather
    than an integration id; the component always offers "Run in background" while the
    operation runs (R8). One extension-side helper (`withOperationProgress`) that routes
@@ -100,16 +105,16 @@ to the owner before the next.
    and `BaseCommand.withProgress` stand down for both (row 16a). Wording checks over
    every progress title and every progress message in the source, each with a
    shrink-only list of today's offenders.
-1. **API Mesh deploy** (row 2) — finishes the integrations screen.
-2. **Resets** (rows 3, 4).
-3. **Delete project** (row 5), after the owner answers 5b.
-4. **Dashboard storefront buttons** (rows 6–8).
-5. **Destination move** (row 9).
-6. **Modals that already exist** gain the handover (rows 10, 11, 13); export measured (12).
-7. **Agent paths without steps** (rows 3a, 5b, 7b, 8b, 13a, 14a, 19).
-8. **Wizard screens** share the stage list and wording (rows 14, 15).
-9. **Palette notifications** follow the wording rules; the silent updates get one (rows 20, 21).
-10. Start/stop/restart (row 16): the busy state on the button, and the palette wording.
+1. ✅ **API Mesh deploy** (row 2) — finishes the integrations screen.
+2. ✅ **Resets** (rows 3, 4) — the modal opens once the run reports, since VS Code confirms first.
+3. ✅ **Delete project** (row 5). AI-9 answered: the agent gets the same two checkboxes the button shows, as arguments — and the CDN unpublish moved into a shared teardown both surfaces run.
+4. ✅ **Dashboard storefront buttons** (rows 6–8) — their commands answer their outcome now, so a modal can end on it.
+5. ✅ **Destination move** (row 9) — "(2 of 3)" per integration moved.
+6. ✅ **Modals that already exist** gain the handover (rows 10, 11, 13); export measured (12) and left alone.
+7. ✅ **Agent paths without steps** (rows 3a, 5b, 13a, 14a, 19; 7b and 8b already narrated).
+8. ✅ **Wizard screens** share the stage list and wording (rows 14, 15).
+9. ✅ **Palette notifications** follow the wording rules; the silent update leg got a line (rows 20, 21). The wording ledger fell from 16 titles / 40 messages to 4 / 6.
+10. ✅ Start/stop/restart (row 16): the tile says it; the command stands down through `surfaceShowsItself`.
 
 ## How this is validated
 
