@@ -287,3 +287,5 @@ export function capturedPollCondition(): () => Promise<boolean> {
     return instance.pollUntilCondition.mock.calls[0][0] as () => Promise<boolean>;
 }
 
+
+export type { SyncStorefrontOutcome } from '@/features/lifecycle/commands/syncStorefront';

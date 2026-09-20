@@ -10,13 +10,14 @@
  */
 
 import { DialogContainer } from '@adobe/react-spectrum';
-import React, { useCallback, useState, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { ActionGrid } from './components/ActionGrid';
 import { AiCapabilitiesModal } from './components/AiCapabilitiesModal';
 import { DashboardStatusHeader } from './components/DashboardStatusHeader';
 import { OrgContextNotice } from './components/OrgContextNotice';
 import { isStartActionDisabled } from './dashboardPredicates';
 import { useDashboardActions } from './hooks/useDashboardActions';
+import { useDashboardOperations } from './hooks/useDashboardOperations';
 import { useDashboardStatus, isMeshBusy } from './hooks/useDashboardStatus';
 import { useInlineRename } from './hooks/useInlineRename';
 import { useLiveDaLiveUrl } from './hooks/useLiveDaLiveUrl';
@@ -27,8 +28,6 @@ import { ControlPanelLayout } from '@/core/ui/components/layout/ControlPanelLayo
 import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 import { PageLayout } from '@/core/ui/components/layout/PageLayout';
 import { useFocusTrap } from '@/core/ui/hooks/useFocusTrap';
-import { useOperationRunner } from '@/core/ui/hooks/useOperationRunner';
-import { deleteOperationId, resetOperationId } from '@/core/utils/operationIds';
 import type { DashboardInitialData } from '@/types/webviewPayloads';
 
 /**
@@ -123,8 +122,6 @@ export function ProjectDashboardScreen({
     const {
         handleStartDemo,
         handleStopDemo,
-        handleSyncStorefront,
-        handleRefreshBlockLibrary,
         handleOpenBrowser,
         handleOpenLiveSite,
         handleOpenDaLive,
@@ -133,7 +130,6 @@ export function ProjectDashboardScreen({
         handleEditProject,
         handleOpenDevConsole,
         handleExportProject,
-        handleRepublishContent,
         handleRestartDemo,
         handleNavigateBack,
         handleReAuthenticate,
@@ -163,36 +159,19 @@ export function ProjectDashboardScreen({
     // Derived values
     const displayName = statusDisplayName || project?.name || 'Demo Project';
 
-    // The two kebab actions that take minutes narrate into this screen's progress
-    // modal (PL-59 R1). It opens when the run starts reporting, not on the click:
-    // VS Code confirms first, and asks about sample data or cloud resources.
-    const operations = useOperationRunner();
-    const startOperation = operations.startWhenItBegins;
-    const handleResetProject = useCallback((): void => {
-        startOperation({
-            id: resetOperationId(displayName),
-            name: displayName,
-            message: 'resetProject',
-            title: `Resetting ${displayName}`,
-            failureTitle: `Couldn't reset ${displayName}`,
-        });
-    }, [startOperation, displayName]);
-
-    const handleDeleteProject = useCallback((): void => {
-        startOperation({
-            id: deleteOperationId(displayName),
-            name: displayName,
-            message: 'deleteProject',
-            title: `Deleting ${displayName}`,
-            failureTitle: `Couldn't delete ${displayName}`,
-        });
-    }, [startOperation, displayName]);
-
+    // The five actions measured in minutes, and the modal they narrate into.
+    const {
+        controls: operations,
+        handleResetProject,
+        handleDeleteProject,
+        handleSyncStorefront,
+        handleRefreshBlockLibrary,
+        handleRepublishContent,
+    } = useDashboardOperations(displayName);
 
     // Build subtitle from package/stack (e.g., "CitiSignal · Headless + PaaS")
     const brandStackSubtitle = [packageName, stackName].filter(Boolean).join(' · ') || undefined;
 
-    // Button disabled states
     const isStartDisabled = isStartActionDisabled(isTransitioning, meshStatus, status || 'ready');
     // Only consulted while `isRunning` — the Stop tile is the Start tile
     // otherwise — and `isRunning` is set from the SAME payload as `status`

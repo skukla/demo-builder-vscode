@@ -1315,7 +1315,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 548,
+            "line": 563,
             "mutants": 1,
             "category": "block",
             "reason": "The catch in readDaLiveToken holds only `return undefined;`, and a function that falls off the end of an empty catch also returns undefined, so the mutant is behaviourally identical. The explicit return cannot be deleted: tsconfig sets noImplicitReturns, which rejects a path that returns nothing when another path returns a value. The suite pins the outcome \u2014 a throwing auth service yields no DA.live token and the sync still runs.",
@@ -12227,7 +12227,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 108,
+            "line": 129,
             "mutants": 13,
             "category": "other",
             "reason": "Thirteen handlers in this hook are memoised with an EMPTY dependency list (handleSyncStorefront, handleRefreshBlockLibrary, handleOpenAdminPanel, handleConfigure, handleEditProject, handleOpenDevConsole, handleDeleteProject, handleExportProject, handleRepublishContent, handleResetProject, handleNavigateBack, handleReAuthenticate, handleSwitchOrg), and their closing lines are textually identical so they cannot be anchored apart \u2014 this row covers the one mutant on each. Stryker does not empty these lists; it replaces the empty array with a one-element array holding a constant string. React compares dependency lists element by element with Object.is, and that constant is identical on every render, so the callback is created once and never recreated \u2014 exactly as with the empty list. Each of these handlers also closes over nothing but the imported webviewClient, so there is no captured value that could go stale even if the memo did invalidate. No sequence of renders, messages or payloads can distinguish the two.",

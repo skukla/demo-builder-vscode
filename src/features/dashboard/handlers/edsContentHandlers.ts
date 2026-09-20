@@ -10,18 +10,55 @@
 import * as vscode from 'vscode';
 import { handleRequestStatus } from './statusHandlers';
 import { COMPONENT_IDS } from '@/core/constants';
-import { withProgressRegister } from '@/core/vscode/progressRegister';
+import {
+    BLOCK_LIBRARY_OPERATION_ID,
+    REPUBLISH_OPERATION_ID,
+    SYNC_OPERATION_ID,
+} from '@/core/utils/operationIds';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operationProgress';
+import { withOperationProgress } from '@/core/vscode/withOperationProgress';
 import { ErrorCode } from '@/types/errorCodes';
 import { MessageHandler } from '@/types/handlers';
 import { isEdsProject } from '@/types/typeGuards';
 
 /**
+ * What a dashboard storefront button sends: which operation its modal follows,
+ * and that it wants one (PL-59 R1).
+ */
+export interface StorefrontActionPayload {
+    id?: string;
+    progress?: 'modal';
+}
+
+/**
  * Handle 'syncStorefront' message - Push storefront changes and refresh Helix preview/live
  */
-export const handleSyncStorefront: MessageHandler = async () => {
-    await vscode.commands.executeCommand('demoBuilder.syncStorefront');
-    return { success: true };
-};
+export const handleSyncStorefront: MessageHandler<StorefrontActionPayload> = narrateOutcomeToModal(
+    async (_context, payload) =>
+        // The command owns the commit-message prompt and its own reporting; this
+        // only decides WHERE its steps are read. Inside a modal its
+        // `BaseCommand.withProgress` stands down and reports there instead (R7).
+        withOperationProgress(
+            {
+                id: payload?.id ?? SYNC_OPERATION_ID,
+                title: 'Syncing the storefront',
+                inModal: progressSurfaceOf(payload) === 'modal',
+            },
+            async () => {
+                const outcome = await vscode.commands.executeCommand<{
+                    success: boolean;
+                    error?: string;
+                    cancelled?: boolean;
+                }>('demoBuilder.syncStorefront');
+                // A cancelled run is not a failure to show: the SC dismissed the
+                // commit-message prompt, or the command reported it itself.
+                if (outcome?.cancelled) return { success: true };
+                return { success: outcome?.success ?? true, error: outcome?.error };
+            },
+        ),
+    (payload) => payload?.id ?? '',
+);
 
 /**
  * Handle 'refreshBlockLibrary' message - Rebuild the DA.live authoring library
@@ -36,23 +73,45 @@ export const handleSyncStorefront: MessageHandler = async () => {
  * (progress + success/error toasts). The webview does not poll for completion;
  * the kebab item simply fires-and-forgets and the user watches the notification.
  */
-export const handleRefreshBlockLibrary: MessageHandler = async (context) => {
-    const project = await context.stateManager.getCurrentProject();
-    if (!project) {
-        return { success: false, error: 'No project loaded', code: ErrorCode.PROJECT_NOT_FOUND };
-    }
+export const handleRefreshBlockLibrary: MessageHandler<StorefrontActionPayload> =
+    narrateOutcomeToModal(
+        async (context, payload) => {
+            const project = await context.stateManager.getCurrentProject();
+            if (!project) {
+                return {
+                    success: false,
+                    error: 'No project loaded',
+                    code: ErrorCode.PROJECT_NOT_FOUND,
+                };
+            }
 
-    if (!isEdsProject(project)) {
-        return {
-            success: false,
-            error: 'Block library refresh applies to EDS projects only',
-            code: ErrorCode.INVALID_OPERATION,
-        };
-    }
+            if (!isEdsProject(project)) {
+                return {
+                    success: false,
+                    error: 'Block library refresh applies to EDS projects only',
+                    code: ErrorCode.INVALID_OPERATION,
+                };
+            }
 
-    await vscode.commands.executeCommand('demoBuilder.refreshBlockLibrary');
-    return { success: true };
-};
+            return withOperationProgress(
+                {
+                    id: payload?.id ?? BLOCK_LIBRARY_OPERATION_ID,
+                    title: 'Refreshing the block library',
+                    inModal: progressSurfaceOf(payload) === 'modal',
+                },
+                async () => {
+                    const outcome = await vscode.commands.executeCommand<{
+                        success: boolean;
+                        error?: string;
+                        cancelled?: boolean;
+                    }>('demoBuilder.refreshBlockLibrary');
+                    if (outcome?.cancelled) return { success: true };
+                    return { success: outcome?.success ?? true, error: outcome?.error };
+                },
+            );
+        },
+        (payload) => payload?.id ?? '',
+    );
 
 /**
  * Handle 'republishContent' message - Republish DA.live content to CDN (EDS only)
@@ -61,7 +120,8 @@ export const handleRefreshBlockLibrary: MessageHandler = async (context) => {
  * getCurrentProject(). Reuses republishStorefrontContent and the same EDS
  * metadata reads + DA.live auth + progress notification.
  */
-export const handleRepublishContent: MessageHandler = async (context) => {
+export const handleRepublishContent: MessageHandler<StorefrontActionPayload> =
+    narrateOutcomeToModal(async (context, payload) => {
     const project = await context.stateManager.getCurrentProject();
     if (!project) {
         return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
@@ -98,13 +158,17 @@ export const handleRepublishContent: MessageHandler = async (context) => {
     // only the VS Code window — so `republish` and `sync_content`, the long
     // operations an EDS project actually runs, narrated nothing to the chat while
     // mesh deploy did.
-    return withProgressRegister(
-        { title: `Republishing ${project.name}` },
+    return withOperationProgress(
+        {
+            id: payload?.id ?? REPUBLISH_OPERATION_ID,
+            title: `Republishing ${project.name}`,
+            inModal: progressSurfaceOf(payload) === 'modal',
+        },
         async (report) => {
             try {
                 context.logger.info(`[Dashboard] Republishing content for ${repoFullName}`);
 
-                report('Checking authentication…');
+                report(OPERATION_STAGES.checkingRequirements.label, 'Your DA.live sign-in');
                 const { ensureDaLiveAuth, getDaLiveAuthService, getGitHubServices } = await import(
                     '@/features/eds/handlers/edsHelpers'
                 );
@@ -122,7 +186,7 @@ export const handleRepublishContent: MessageHandler = async (context) => {
                 const daLiveAuthService = getDaLiveAuthService(context.context);
                 const { tokenService: githubTokenService } = getGitHubServices(context.context.secrets);
 
-                report('Republishing content…');
+                report('Republishing the content');
                 const { republishStorefrontContent } = await import(
                     '@/features/eds/services/storefront/storefrontRepublishService'
                 );
@@ -137,7 +201,7 @@ export const handleRepublishContent: MessageHandler = async (context) => {
                     logger: context.logger,
                     daLiveAuthService,
                     githubTokenService,
-                    onProgress: (message: string) => report(message),
+                    onProgress: (message: string) => report('Republishing the content', message),
                 });
 
                 if (!contentResult.success) {
@@ -160,9 +224,14 @@ export const handleRepublishContent: MessageHandler = async (context) => {
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : String(error);
                 context.logger.error('[Dashboard] Republish failed', error as Error);
-                vscode.window.showErrorMessage(`Failed to republish content: ${errorMessage}`);
+                // A modal shows the reason itself, with Debug Logs beside it.
+                if (progressSurfaceOf(payload) !== 'modal') {
+                    vscode.window.showErrorMessage(`Failed to republish content: ${errorMessage}`);
+                }
                 return { success: false, error: errorMessage };
             }
         },
     );
-};
+    },
+    (payload) => payload?.id ?? '',
+);

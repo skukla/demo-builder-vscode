@@ -78,7 +78,13 @@ export abstract class BaseCommand implements vscode.Disposable {
         this.logger = logger;
     }
 
-    public abstract execute(): Promise<void>;
+    /**
+     * Run the command. Most answer nothing — the palette ignores a return value
+     * and the command reports to the SC itself. A command a SCREEN can also
+     * start returns its outcome, so the screen's progress modal knows whether to
+     * close or to show why it stopped (PL-59).
+     */
+    public abstract execute(): Promise<unknown>;
 
     /**
      * Dispose all resources owned by this command

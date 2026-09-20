@@ -20,6 +20,14 @@ export function resetOperationId(projectName: string): string {
     return `reset:${projectName}`;
 }
 
+/**
+ * The dashboard's storefront buttons. One project is open at a time there, so
+ * these need no key of their own — they name the operation, not the target.
+ */
+export const SYNC_OPERATION_ID = 'sync-storefront';
+export const BLOCK_LIBRARY_OPERATION_ID = 'block-library';
+export const REPUBLISH_OPERATION_ID = 'republish';
+
 /** A project deletion, keyed by the project being deleted. */
 export function deleteOperationId(projectName: string): string {
     return `delete:${projectName}`;

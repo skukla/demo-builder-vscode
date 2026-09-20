@@ -30,6 +30,7 @@ import {
     statMock,
     syncAndPublishMock,
     SyncStorefrontCommand,
+    type SyncStorefrontOutcome,
 } from './syncStorefront.testUtils';
 import type { StateManager } from '@/core/state/stateManager';
 
@@ -215,7 +216,7 @@ describe('SyncStorefrontCommand', () => {
             );
         };
 
-        const runCommand = (): Promise<void> =>
+        const runCommand = (): Promise<SyncStorefrontOutcome> =>
             new SyncStorefrontCommand(
                 makeSyncStorefrontContext(),
                 makeStateManager(makeSyncTargetProject()) as unknown as StateManager,

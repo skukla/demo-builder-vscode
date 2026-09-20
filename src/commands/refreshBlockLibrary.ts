@@ -34,11 +34,11 @@ export class RefreshBlockLibraryCommand extends BaseCommand {
      */
     public helixService?: RefreshBlockLibraryHeadlessDeps['helixService'];
 
-    public async execute(): Promise<void> {
+    public async execute(): Promise<RefreshBlockLibraryHeadlessResult> {
         const project = await this.stateManager.getCurrentProject();
         if (!project) {
             await this.showWarning('No project loaded.');
-            return;
+            return { success: false, error: 'No project loaded.' };
         }
 
         // Run the shared, UI-free rebuild core inside the progress notification,
@@ -57,12 +57,14 @@ export class RefreshBlockLibraryCommand extends BaseCommand {
 
         if (result.success) {
             await this.showSuccessMessage('Block library refreshed.');
-            return;
+            return result;
         }
         // The user cancelled the mid-pipeline DA.live re-auth — no error toast.
         if (result.cancelled) {
-            return;
+            return result;
         }
         await this.showError(`Failed to refresh block library: ${result.error || 'Unknown error'}`);
+        // ...and the same reason to whoever is watching a progress modal (PL-59).
+        return result;
     }
 }

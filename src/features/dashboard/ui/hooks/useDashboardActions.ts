@@ -42,9 +42,7 @@ export interface UseDashboardActionsReturn {
      */
     handleRestartDemo: () => void;
     /** Sync storefront — git push + Helix preview/publish (EDS projects only) */
-    handleSyncStorefront: () => void;
     /** Refresh DA.live block library from component-definition.json (EDS projects only) */
-    handleRefreshBlockLibrary: () => void;
     /** Open demo in browser (non-EDS projects) */
     handleOpenBrowser: () => void;
     /** Open live site in browser (EDS projects) */
@@ -63,7 +61,6 @@ export interface UseDashboardActionsReturn {
     /** Export the project's settings to a file */
     handleExportProject: () => void;
     /** Republish DA.live content to CDN (EDS projects only) */
-    handleRepublishContent: () => void;
     /** Navigate back to projects list */
     handleNavigateBack: () => void;
     /** Re-authenticate with Adobe (after session expired) */
@@ -102,14 +99,6 @@ export function useDashboardActions({
         setIsTransitioning(true);
         webviewClient.postMessage('restartDemo');
     }, [setIsTransitioning]);
-
-    const handleSyncStorefront = useCallback(() => {
-        webviewClient.postMessage('syncStorefront');
-    }, []);
-
-    const handleRefreshBlockLibrary = useCallback(() => {
-        webviewClient.postMessage('refreshBlockLibrary');
-    }, []);
 
     const handleOpenBrowser = useCallback(() => {
         if (isOpeningBrowser) return; // Prevent double-click
@@ -155,10 +144,6 @@ export function useDashboardActions({
         webviewClient.postMessage('exportProject');
     }, []);
 
-    const handleRepublishContent = useCallback(() => {
-        webviewClient.postMessage('republishContent');
-    }, []);
-
     const handleNavigateBack = useCallback(() => {
         webviewClient.postMessage('navigateBack');
     }, []);
@@ -179,8 +164,6 @@ export function useDashboardActions({
         handleStartDemo,
         handleStopDemo,
         handleRestartDemo,
-        handleSyncStorefront,
-        handleRefreshBlockLibrary,
         handleOpenBrowser,
         handleOpenLiveSite,
         handleOpenDaLive,
@@ -189,7 +172,6 @@ export function useDashboardActions({
         handleEditProject,
         handleOpenDevConsole,
         handleExportProject,
-        handleRepublishContent,
         handleNavigateBack,
         handleReAuthenticate,
         handleSwitchOrg,

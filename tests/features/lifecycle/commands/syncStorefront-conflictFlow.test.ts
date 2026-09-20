@@ -25,6 +25,7 @@ import {
     resetSyncStorefrontMocks,
     syncAndPublishMock,
     SyncStorefrontCommand,
+    type SyncStorefrontOutcome,
 } from './syncStorefront.testUtils';
 import type { StateManager } from '@/core/state/stateManager';
 import type { Logger } from '@/types/logger';
@@ -42,7 +43,7 @@ const showTextDocument = vscode.window.showTextDocument as jest.Mock;
 let report: jest.Mock;
 let logger: Logger;
 
-function runCommand(): Promise<void> {
+function runCommand(): Promise<SyncStorefrontOutcome> {
     return new SyncStorefrontCommand(
         makeSyncStorefrontContext(),
         makeStateManager(makeSyncTargetProject()) as unknown as StateManager,
@@ -152,7 +153,9 @@ describe('the manual conflict flow', () => {
         conflictOn([], { 'diff --name-only --diff-filter=U': gitFailure({ stderr: 'fatal: bad index' }) });
         showWarningMessage.mockResolvedValue('Continue');
 
-        await expect(runCommand()).resolves.toBeUndefined();
+        // The command answers its outcome now, for a screen's progress modal to
+        // end on; the rebase path reports itself, so it reads as cancelled.
+        await expect(runCommand()).resolves.toEqual({ success: false, cancelled: true });
 
         expect(showWarningMessage).toHaveBeenCalledTimes(1);
         // Nothing to reveal: no file was opened.

@@ -48,29 +48,41 @@ const execFile = promisify(childProcess.execFile);
  */
 const CONFLICT_MARKER_RE = /^(<{7}|={7}|>{7})( |$)/m;
 
+/**
+ * What the sync answers, so a caller can END its progress honestly (PL-59). The
+ * palette ignores it — the command still shows its own toasts and dialogs — but
+ * the dashboard's progress modal must know whether to close or to show why.
+ */
+export interface SyncStorefrontOutcome {
+    success: boolean;
+    error?: string;
+    /** No commit message, or a refusal the command already reported. */
+    cancelled?: boolean;
+}
+
 export class SyncStorefrontCommand extends BaseCommand {
-    async execute(): Promise<void> {
+    async execute(): Promise<SyncStorefrontOutcome> {
         const project = await this.stateManager.getCurrentProject();
         if (!project) {
             await this.showWarning('No project loaded.');
-            return;
+            return { success: false, error: 'No project loaded.', cancelled: true };
         }
 
         const storefrontPath = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.path;
         if (!storefrontPath) {
-            await this.showError(
-                'This project does not have an EDS storefront — Sync Storefront only applies to EDS projects.',
-            );
-            return;
+            const error =
+                'This project does not have an EDS storefront — Sync Storefront only applies to EDS projects.';
+            await this.showError(error);
+            return { success: false, error };
         }
 
         try {
             await fsPromises.stat(path.join(storefrontPath, '.git'));
         } catch {
-            await this.showError(
-                'Storefront repository not initialized. Re-create the project or run the EDS setup step.',
-            );
-            return;
+            const error =
+                'Storefront repository not initialized. Re-create the project or run the EDS setup step.';
+            await this.showError(error);
+            return { success: false, error };
         }
 
         const commitMessage = await this.showInputBox({
@@ -78,7 +90,7 @@ export class SyncStorefrontCommand extends BaseCommand {
             value: 'Demo Builder: sync local changes',
             placeHolder: 'Describe what changed',
         });
-        if (!commitMessage) return; // user cancelled
+        if (!commitMessage) return { success: false, cancelled: true }; // user cancelled
 
         const { tokenService } = getGitHubServices(this.context.secrets);
         const tokenEntry = await tokenService.getToken();
@@ -130,7 +142,7 @@ export class SyncStorefrontCommand extends BaseCommand {
 
         if (rulesetRejection) {
             await this.showError(rulesetRejection.message, rulesetRejection);
-            return;
+            return { success: false, error: rulesetRejection.message };
         }
 
         // Report the plain-sync outcome AFTER the progress notification closes.
@@ -139,7 +151,10 @@ export class SyncStorefrontCommand extends BaseCommand {
         // held the "Saving your storefront changes…" spinner open until the user dismissed it.
         if (result) {
             await this.reportSyncResult(result, project);
+            return { success: true };
         }
+        // The rebase path reported its own outcome; nothing left to say here.
+        return { success: false, cancelled: true };
     }
 
     /**

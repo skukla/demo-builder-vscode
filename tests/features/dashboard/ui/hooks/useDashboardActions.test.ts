@@ -101,7 +101,6 @@ describe('useDashboardActions', () => {
             expect(result.current.handleReAuthenticate).toBeDefined();
             expect(result.current.handleEditProject).toBeDefined();
             expect(result.current.handleExportProject).toBeDefined();
-            expect(result.current.handleRepublishContent).toBeDefined();
         });
 
         it('should return functions for all handlers', () => {
@@ -264,15 +263,6 @@ describe('useDashboardActions', () => {
             expect(mockPostMessage).toHaveBeenCalledWith('exportProject');
         });
 
-        it('should send republishContent message', () => {
-            const { result } = renderActionsHook();
-
-            act(() => {
-                result.current.handleRepublishContent();
-            });
-
-            expect(mockPostMessage).toHaveBeenCalledWith('republishContent');
-        });
 
     });
 
@@ -306,27 +296,7 @@ describe('useDashboardActions', () => {
     });
 
     describe('Storefront Actions', () => {
-        it('should send syncStorefront without entering the transitioning state', () => {
-            const { result } = renderActionsHook();
 
-            act(() => {
-                result.current.handleSyncStorefront();
-            });
-
-            expect(mockPostMessage).toHaveBeenCalledWith('syncStorefront');
-            expect(mockSetIsTransitioning).not.toHaveBeenCalled();
-        });
-
-        it('should send refreshBlockLibrary without entering the transitioning state', () => {
-            const { result } = renderActionsHook();
-
-            act(() => {
-                result.current.handleRefreshBlockLibrary();
-            });
-
-            expect(mockPostMessage).toHaveBeenCalledWith('refreshBlockLibrary');
-            expect(mockSetIsTransitioning).not.toHaveBeenCalled();
-        });
     });
 
     describe('Open Live Site Action', () => {

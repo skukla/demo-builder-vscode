@@ -25,6 +25,7 @@ import {
     setGitHubTokenServiceReturns,
     syncAndPublishMock,
     SyncStorefrontCommand,
+    type SyncStorefrontOutcome,
 } from './syncStorefront.testUtils';
 import type { StateManager } from '@/core/state/stateManager';
 import type { Project } from '@/types/base';
@@ -44,7 +45,7 @@ function projectWithMetadata(metadata: Record<string, unknown> | undefined): Pro
     return project;
 }
 
-function runCommand(project: Project = makeSyncTargetProject()): Promise<void> {
+function runCommand(project: Project = makeSyncTargetProject()): Promise<SyncStorefrontOutcome> {
     return new SyncStorefrontCommand(
         makeSyncStorefrontContext(),
         makeStateManager(project) as unknown as StateManager,
