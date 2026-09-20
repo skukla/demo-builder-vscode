@@ -291,3 +291,4 @@ are rewritten around the answer (or left as they are, with the reason).
 - 2026-09-17  docs(backlog): AB-17 live spike — events cross workspaces, direct calls and workspace delete do not (`3e000b584`)
 - 2026-09-18  docs(research): a workspace per integration, and how its apps reach each other (`a458a47c6`)
 - 2026-09-20  Answered: every integration and system gets its own workspace; the mesh stays in the main one. Scope decided by the owner 2026-09-20; AB-23 builds it.
+- 2026-09-20  docs(backlog): the answer, AB-23 filed, AB-15 and AB-16 rewritten (`366e5428c`)
