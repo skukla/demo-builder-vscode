@@ -10,6 +10,7 @@ import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredF
 import { PageFooter } from '@/core/ui/components/layout/PageFooter';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { vscode, webviewClient } from '@/core/ui/utils/vscode-api';
+import { expectationFor } from '@/core/utils/operationStages';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { GitHubAppInstallDialog } from '@/features/eds/ui/components/GitHubAppInstallDialog';
 import { DemoPackage } from '@/types/demoPackages';
@@ -166,7 +167,15 @@ function StepContentArea(props: {
                     size="L"
                     message={progress.currentOperation || 'Processing'}
                     subMessage={progress.message}
-                    helperText="This could take up to 3 minutes"
+                    // The stage's OWN expectation where the shared table names
+                    // it, so this screen says what every other surface says
+                    // about the same work; the whole-run estimate is the
+                    // fallback for a stage the table does not name (PL-59
+                    // slice 8).
+                    helperText={
+                        expectationFor(progress.currentOperation ?? '') ??
+                        'This could take up to 3 minutes'
+                    }
                 />
             </CenteredFeedbackContainer>
         );

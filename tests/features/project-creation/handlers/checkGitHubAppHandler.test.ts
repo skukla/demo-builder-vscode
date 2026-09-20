@@ -346,7 +346,7 @@ describe('checkGitHubApp handler', () => {
  *
  * Observed 2026-08-14 editing `demo-builder-test`: the check sent only the GitHub
  * token, admin.hlx.page answered 401 "[admin] not authenticated", and the wizard
- * showed a permanent "Registering...". Cause: writing any `access.admin` role
+ * showed a permanent "Registering". Cause: writing any `access.admin` role
  * makes Adobe set `requireAuth: "auto"`, closing the whole admin API to callers
  * without an accepted admin identity — and storefront setup now pins such a role
  * on every project it registers, so this is the normal state, not an edge case.

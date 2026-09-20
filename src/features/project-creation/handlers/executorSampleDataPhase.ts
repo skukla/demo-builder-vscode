@@ -9,6 +9,7 @@
  */
 
 import type { ProgressTracker } from './shared';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import type { HandlerContext } from '@/types/handlers';
 
 /**
@@ -39,7 +40,7 @@ export async function executeSampleDataPhase(
         return;
     }
 
-    progressTracker('Installing Datapack', 92, `Installing ${chosen.name}\u2026`);
+    progressTracker(OPERATION_STAGES.installingDatapack.label, 92, `Installing ${chosen.name}\u2026`);
 
     try {
         const { installSampleData } = await import(
@@ -64,7 +65,7 @@ export async function executeSampleDataPhase(
         );
 
         progressTracker(
-            'Installing Datapack',
+            OPERATION_STAGES.installingDatapack.label,
             96,
             describeSampleDataResult(chosen.name, result),
         );
@@ -75,7 +76,7 @@ export async function executeSampleDataPhase(
         const reason = error instanceof Error ? error.message : String(error);
         context.logger.warn(`[Sample Data] Phase failed, continuing: ${reason}`);
         progressTracker(
-            'Installing Datapack',
+            OPERATION_STAGES.installingDatapack.label,
             96,
             `Datapack could not be installed \u2014 ${reason}`,
         );

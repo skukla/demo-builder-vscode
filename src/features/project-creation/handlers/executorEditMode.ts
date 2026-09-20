@@ -10,6 +10,7 @@
  */
 
 import * as fsPromises from 'fs/promises';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import * as path from 'path';
 import type { ProgressTracker } from './shared';
 import type { HandlerContext } from '@/types/handlers';
@@ -80,7 +81,7 @@ async function performAtomicComponentSwap(
     projectPath: string,
     progressTracker: ProgressTracker,
 ): Promise<void> {
-    progressTracker('Applying Changes', 71, 'Swapping components...');
+    progressTracker(OPERATION_STAGES.applyingChanges.label, 71, 'Swapping components');
     context.logger.info('[Project Edit] Swapping temporary components with production');
 
     try {

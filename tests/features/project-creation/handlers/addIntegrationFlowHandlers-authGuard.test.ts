@@ -3,7 +3,7 @@
  *
  * REGRESSION (2026-08-04): opening Add Integration on a project whose token had
  * expired launched a BROWSER unannounced, mid-modal, while the destination stage
- * showed "Fetching projects…". The pause-and-prompt guard did exist, but it lived
+ * showed "Fetching projects". The pause-and-prompt guard did exist, but it lived
  * in `appBuilderComponentHandlers.runGuards` — which runs on the ADD, after the
  * modal choices. The user saw the browser first and the in-app prompt afterwards.
  *
@@ -105,7 +105,7 @@ describe('Adobe entity handlers refuse before fetching when sign-in is declined'
         expect(mockEnsureAdobeIOAuth).toHaveBeenCalledTimes(1);
     });
 
-    // THE regression. Reaching the fetcher is what runs `aio console …` and
+    // THE regression. Reaching the fetcher is what runs `aio console ` and
     // opens the browser, so "did we fetch" is the only assertion that
     // distinguishes the fixed code from the broken code.
     it('never reaches the project fetch (the call that shells out to aio)', async () => {

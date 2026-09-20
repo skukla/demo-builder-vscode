@@ -10,6 +10,7 @@
  */
 
 import * as fs from 'fs';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import type { ProgressTracker } from './shared';
@@ -126,7 +127,7 @@ export async function syncEdsConfigToRemote(
         return;
     }
 
-    progressTracker('Syncing Config', 92, 'Pushing config.json to GitHub...');
+    progressTracker(OPERATION_STAGES.syncingConfig.label, 92, 'Pushing config.json to GitHub');
 
     const repoUrl = typedConfig.edsConfig?.repoUrl;
     if (!repoUrl) {
@@ -151,7 +152,7 @@ export async function syncEdsConfigToRemote(
         logger: context.logger,
         secrets: context.context.secrets,
         authManager: context.authManager,
-        onProgress: (message) => progressTracker('Syncing Config', 94, message),
+        onProgress: (message) => progressTracker(OPERATION_STAGES.syncingConfig.label, 94, message),
         verifyBlockLibrary: true,
     });
 
@@ -279,7 +280,7 @@ export async function setupEdsContent(
                 extensionContext: context.context,
             },
             (message, subMessage) =>
-                progressTracker('Setting Up Content', 95, subMessage || message),
+                progressTracker(OPERATION_STAGES.settingUpContent.label, 95, subMessage || message),
         );
 
         if (contentCopied) {

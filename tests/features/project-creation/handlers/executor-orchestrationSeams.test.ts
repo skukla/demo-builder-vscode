@@ -16,6 +16,7 @@
 jest.setTimeout(30_000);
 
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
@@ -166,9 +167,9 @@ describe('executeProjectCreation — the progress it reports', () => {
         await executeProjectCreation(context, config());
 
         expect(sendMessage).toHaveBeenCalledWith('creationProgress', {
-            currentOperation: 'Setting Up Project',
+            currentOperation: OPERATION_STAGES.settingUpProject.label,
             progress: 10,
-            message: 'Creating project directory structure...',
+            message: 'Creating project directory structure',
             logs: [],
             meshPhase: undefined,
         });

@@ -103,8 +103,8 @@ export function registerThirdPartyToolingSettingListener(
             {
                 location: vscode.ProgressLocation.Notification,
                 title: enabled
-                    ? 'Demo Builder: enabling third-party AI tooling…'
-                    : 'Demo Builder: removing third-party AI tooling…',
+                    ? 'Demo Builder: enabling third-party AI tooling'
+                    : 'Demo Builder: removing third-party AI tooling',
                 cancellable: false,
             },
             () => applyToAllProjects(extensionPath, logger, commandManager),

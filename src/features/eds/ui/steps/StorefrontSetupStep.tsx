@@ -128,26 +128,32 @@ interface StorefrontSetupStepProps {
  * (the 2026-08-22 loading-message audit). Every phase gets a value so the
  * block never reflows between phases.
  */
+/**
+ * How long each phase usually takes. Worded as the shared stage table words an
+ * expectation — "Usually …" — so this screen and every notification, modal and
+ * wizard row say the same kind of thing about the same kind of wait (PL-59
+ * slice 8). The durations themselves are unchanged.
+ */
 function getHelperText(phase: StorefrontSetupPhase): string | undefined {
     switch (phase) {
         case 'repository':
-            return 'This may take up to 30 seconds';
+            return 'Usually under 30 seconds';
         case 'storefront-code':
-            return 'This may take about a minute';
+            return 'Usually about a minute';
         case 'code-sync':
-            return 'This may take up to a minute';
+            return 'Usually under a minute';
         case 'site-config':
-            return 'This may take up to a minute';
+            return 'Usually under a minute';
         case 'content':
-            return 'This may take 1-2 minutes';
+            return 'Usually 1–2 minutes';
         case 'block-library':
-            return 'This may take up to 30 seconds';
+            return 'Usually under 30 seconds';
         case 'publish':
-            return 'This may take 2-3 minutes';
+            return 'Usually 2–3 minutes';
         case 'auth-recovery':
             return 'Waiting for you to finish signing in';
         case 'cancelling':
-            return 'This should only take a moment';
+            return 'Usually a moment';
         default:
             return undefined;
     }

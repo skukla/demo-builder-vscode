@@ -266,7 +266,7 @@ describe('projectFinalizationService', () => {
             expect(mockProgressTracker).toHaveBeenCalledWith(
                 'Configuring Environment',
                 85,
-                'Generating environment files...'
+                'Generating environment files'
             );
         });
 
@@ -490,7 +490,7 @@ describe('projectFinalizationService', () => {
             expect(mockProgressTracker).toHaveBeenCalledWith(
                 'Finalizing Project',
                 95,
-                'Saving project state...'
+                'Saving project state'
             );
             expect(mockProgressTracker).toHaveBeenCalledWith(
                 'Project Created',

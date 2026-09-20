@@ -96,7 +96,7 @@ describe('useProjectCreationPhases — recovery', () => {
             });
 
             expect(hook.result.current.phase).toBe('creating');
-            expect(hook.result.current.phaseMessage).toBe('Creating project "My Demo"…');
+            expect(hook.result.current.phaseMessage).toBe('Creating project "My Demo"');
             expect(route.count('create-adobe-project')).toBe(2);
             expect(mockRequest).toHaveBeenLastCalledWith('create-adobe-project', {
                 name: 'My Demo',
@@ -155,7 +155,7 @@ describe('useProjectCreationPhases — recovery', () => {
 
             // The stale failure must not derail the second run.
             expect(hook.result.current.phase).toBe('creating');
-            expect(hook.result.current.phaseMessage).toBe('Creating project "Second"…');
+            expect(hook.result.current.phaseMessage).toBe('Creating project "Second"');
             expect(hook.result.current.error).toBeUndefined();
         });
 

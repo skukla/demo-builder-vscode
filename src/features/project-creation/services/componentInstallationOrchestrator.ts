@@ -7,6 +7,7 @@
  */
 
 import * as fsPromises from 'fs/promises';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import * as path from 'path';
 import { ProgressTracker } from '../handlers/shared';
 import { installAiDefaultsMcpTools } from './aiBundle/aiDefaultsInstaller';
@@ -49,7 +50,7 @@ export async function cloneAllComponents(context: InstallationContext): Promise<
     const { project, componentDefinitions, progressTracker, logger, saveProject, componentsDir } =
         context;
 
-    progressTracker('Downloading Components', 25, 'Cloning repositories...');
+    progressTracker(OPERATION_STAGES.downloadingComponents.label, 25, 'Cloning repositories');
     logger.debug('[Project Creation] Phase 1: Downloading components...');
 
     // Determine target directory: use override if provided (edit mode), otherwise default
@@ -101,7 +102,7 @@ export async function cloneAllComponents(context: InstallationContext): Promise<
 
     // Save project state after all clones (show components in sidebar)
     await saveProject();
-    progressTracker('Downloading Components', 40, 'All components downloaded');
+    progressTracker(OPERATION_STAGES.downloadingComponents.label, 40, 'All components downloaded');
     logger.debug('[Project Creation] Phase 1 complete: All components downloaded');
 }
 
@@ -111,7 +112,7 @@ export async function cloneAllComponents(context: InstallationContext): Promise<
 export async function installAllComponents(context: InstallationContext): Promise<void> {
     const { project, componentDefinitions, progressTracker, logger } = context;
 
-    progressTracker('Installing Components', 40, 'Installing npm packages...');
+    progressTracker(OPERATION_STAGES.installingComponents.label, 40, 'Installing npm packages');
     logger.debug('[Project Creation] Phase 2: Installing components...');
 
     const componentManager = new ComponentManager(logger, context.commandManager);
@@ -150,7 +151,7 @@ export async function installAllComponents(context: InstallationContext): Promis
             project.path,
             project,
             context.commandManager,
-            (line) => progressTracker('Installing Components', 55, line),
+            (line) => progressTracker(OPERATION_STAGES.installingComponents.label, 55, line),
             logger,
         );
         if (!mcpResult.success) {
@@ -169,6 +170,6 @@ export async function installAllComponents(context: InstallationContext): Promis
         }
     }
 
-    progressTracker('Installing Components', 70, 'All components installed');
+    progressTracker(OPERATION_STAGES.installingComponents.label, 70, 'All components installed');
     logger.debug('[Project Creation] Phase 2 complete: All components installed');
 }

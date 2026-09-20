@@ -272,18 +272,18 @@ describe('meshSetupService', () => {
             expect(mockProgressTracker).toHaveBeenCalledWith(
                 'Configuring API Mesh',
                 70,
-                'Generating mesh configuration...'
+                'Generating mesh configuration'
             );
             // The pre-deploy API subscribe must be communicated to the user.
             expect(mockProgressTracker).toHaveBeenCalledWith(
                 'Configuring API Mesh',
                 72,
-                'Enabling API access...'
+                'Enabling API access'
             );
             expect(mockProgressTracker).toHaveBeenCalledWith(
                 'Deploying API Mesh',
                 75,
-                'Deploying mesh to Adobe I/O...'
+                'Deploying mesh to Adobe I/O'
             );
         });
 
@@ -442,7 +442,7 @@ describe('meshSetupService', () => {
             expect(mockProgressTracker).toHaveBeenCalledWith(
                 'Configuring API Mesh',
                 75,
-                'Updating existing mesh configuration...'
+                'Updating existing mesh configuration'
             );
         });
 

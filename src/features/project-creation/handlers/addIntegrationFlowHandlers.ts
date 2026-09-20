@@ -129,7 +129,7 @@ export const addIntegrationFlowHandlers = defineHandlers({
     // The destination stages: browse or create an Adobe project/workspace.
     //
     // ALL of these reach Adobe through `adobeEntityFetcher`, whose org, project
-    // and workspace reads each carry a `aio console …` CLI fallback — so any of
+    // and workspace reads each carry a `aio console ` CLI fallback — so any of
     // them can launch a browser on a stale token. They are guarded, not the
     // sign-in trio above: guarding those would deadlock the stage's own
     // AdobeAuthStep, which is how a signed-out user gets back in.

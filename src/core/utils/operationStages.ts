@@ -136,6 +136,59 @@ export const OPERATION_STAGES = {
         expectation: 'Usually 2–3 minutes: the system is deployed before the integration',
         detail: 'Deploying it before the integration that reads its address',
     },
+    // The wizard's creation screen (PL-59 slice 8, plan rows 14-15). Same table
+    // as every other surface, so a stage the SC reads while a project is being
+    // built is worded like the same work anywhere else.
+    preparingProject: {
+        label: 'Preparing the project',
+        expectation: 'Usually a few seconds',
+        detail: 'Clearing anything left from before',
+    },
+    settingUpProject: {
+        label: 'Setting up the project',
+        expectation: 'Usually a few seconds',
+        detail: 'Its folders and its settings',
+    },
+    loadingComponents: {
+        label: 'Loading the components',
+        expectation: 'Usually a few seconds',
+        detail: 'What this stack is made of',
+    },
+    downloadingComponents: {
+        label: 'Downloading components',
+        expectation: 'Usually under a minute',
+        detail: 'Cloning them from GitHub',
+    },
+    installingComponents: {
+        label: 'Installing components',
+        expectation: 'A minute or two',
+        detail: 'Running npm install for each',
+    },
+    deployingIntegrations: {
+        label: 'Deploying integrations',
+        expectation: 'Usually 1–2 minutes each',
+        detail: 'Onto Adobe I/O Runtime',
+    },
+    settingUpContent: {
+        label: 'Setting up the content',
+        expectation: 'Usually a minute',
+        detail: 'Copying it into DA.live',
+    },
+    syncingConfig: {
+        label: 'Syncing the settings',
+        expectation: 'Usually under a minute',
+        detail: "The storefront's config.json",
+    },
+    installingDatapack: {
+        label: 'Installing the datapack',
+        expectation: 'Minutes, depending on the pack',
+        detail: 'Into your Commerce instance',
+    },
+    applyingChanges: {
+        label: 'Applying the changes',
+        expectation: 'Usually under a minute',
+        detail: 'Swapping what the edit changed',
+    },
     fetchingUpdate: {
         label: 'Fetching the update',
         expectation: 'Usually a few seconds',

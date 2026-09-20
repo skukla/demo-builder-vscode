@@ -76,15 +76,15 @@ describe('StorefrontSetupStep — the loader rows', () => {
     // the block never reflows; a phase falling through to its neighbour's arm is
     // exactly what these cases catch.
     const HELPER_TEXT: Array<[StorefrontSetupProgressPhase, string]> = [
-        ['repository', 'This may take up to 30 seconds'],
-        ['storefront-code', 'This may take about a minute'],
-        ['code-sync', 'This may take up to a minute'],
-        ['site-config', 'This may take up to a minute'],
-        ['content', 'This may take 1-2 minutes'],
-        ['block-library', 'This may take up to 30 seconds'],
-        ['publish', 'This may take 2-3 minutes'],
+        ['repository', 'Usually under 30 seconds'],
+        ['storefront-code', 'Usually about a minute'],
+        ['code-sync', 'Usually under a minute'],
+        ['site-config', 'Usually under a minute'],
+        ['content', 'Usually 1–2 minutes'],
+        ['block-library', 'Usually under 30 seconds'],
+        ['publish', 'Usually 2–3 minutes'],
         ['auth-recovery', 'Waiting for you to finish signing in'],
-        ['cancelling', 'This should only take a moment'],
+        ['cancelling', 'Usually a moment'],
     ];
 
     it.each(HELPER_TEXT)('phase %s expects "%s"', (phase, helperText) => {

@@ -58,6 +58,7 @@ jest.mock('@/core/di/serviceLocator', () => ({
 }));
 
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { createMockProject } from '../../../helpers/projectFake';
 import {
     executeAppBuilderIntegrationsPhase,
@@ -115,9 +116,9 @@ describe('executeAppBuilderIntegrationsPhase', () => {
         );
         // The API subscribe (union reconcile, inside the runner) is communicated.
         expect(progressTracker).toHaveBeenCalledWith(
-            'Deploying Integrations',
+            OPERATION_STAGES.deployingIntegrations.label,
             expect.any(Number),
-            'Enabling API access...'
+            'Enabling API access'
         );
     });
 

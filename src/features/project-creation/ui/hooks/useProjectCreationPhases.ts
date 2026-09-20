@@ -100,9 +100,9 @@ function pickWorkspace(workspaces: Workspace[]): Workspace {
 
 /** The exact spinner copy per active phase. */
 function phaseMessageFor(phase: ProjectCreationPhase, name: string): string | undefined {
-    if (phase === 'creating') return `Creating project "${name}"…`;
-    if (phase === 'workspace') return 'Setting up workspace…';
-    if (phase === 'enabling') return 'Enabling API access…';
+    if (phase === 'creating') return `Creating project "${name}"`;
+    if (phase === 'workspace') return 'Setting up workspace';
+    if (phase === 'enabling') return 'Enabling API access';
     return undefined;
 }
 

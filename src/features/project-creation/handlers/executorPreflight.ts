@@ -9,6 +9,7 @@
  */
 
 import * as vscode from 'vscode';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import type { ProgressTracker } from './shared';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -65,7 +66,7 @@ export async function cleanupOrphanedDirectory(
             context.logger.debug(
                 `[Project Creation] Found ${existingFiles.length} files, cleaning up...`,
             );
-            progressTracker('Preparing Project', 5, 'Removing existing project data...');
+            progressTracker(OPERATION_STAGES.preparingProject.label, 5, 'Removing existing project data');
             await fs.rm(projectPath, { recursive: true, force: true });
         } else {
             await fs.rmdir(projectPath);

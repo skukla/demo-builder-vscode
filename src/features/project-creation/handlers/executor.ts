@@ -17,6 +17,7 @@
  */
 
 import * as fsPromises from 'fs/promises';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import * as os from 'os';
 import * as path from 'path';
 import {
@@ -214,7 +215,7 @@ export async function executeProjectCreation(
     // PROJECT INITIALIZATION
     // ========================================================================
 
-    progressTracker('Setting Up Project', 10, 'Creating project directory structure...');
+    progressTracker(OPERATION_STAGES.settingUpProject.label, 10, 'Creating project directory structure');
 
     const componentsDir = path.join(projectPath, 'components');
     await fsPromises.mkdir(componentsDir, { recursive: true });
@@ -222,7 +223,7 @@ export async function executeProjectCreation(
 
     context.logger.debug(`[Project Creation] Created directory: ${projectPath}`);
 
-    progressTracker('Setting Up Project', 15, 'Initializing project configuration...');
+    progressTracker(OPERATION_STAGES.settingUpProject.label, 15, 'Initializing project configuration');
 
     const project: import('@/types/base').Project = buildInitialProject(
         typedConfig,
@@ -272,7 +273,7 @@ export async function executeProjectCreation(
     // LOAD COMPONENT DEFINITIONS
     // ========================================================================
 
-    progressTracker('Loading Components', 20, 'Preparing component definitions...');
+    progressTracker(OPERATION_STAGES.loadingComponents.label, 20, 'Preparing component definitions');
 
     const registryManager = componentRegistryFrom(context);
     const registry = await registryManager.loadRegistry();

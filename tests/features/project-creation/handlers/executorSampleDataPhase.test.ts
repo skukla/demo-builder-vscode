@@ -29,6 +29,7 @@
  */
 
 import { executeSampleDataPhase } from '@/features/project-creation/handlers/executorSampleDataPhase';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { installSampleData } from '@/features/data-installer/services/sampleDataInstall';
 import type { Project } from '@/types/base';
 import { createMockLogger } from '../../../helpers/loggerFake';
@@ -101,7 +102,7 @@ describe('executeSampleDataPhase', () => {
 
         expect(progress).toHaveBeenNthCalledWith(
             1,
-            'Installing Datapack',
+            OPERATION_STAGES.installingDatapack.label,
             92,
             'Installing bodea\u2026'
         );
@@ -145,7 +146,7 @@ describe('executeSampleDataPhase', () => {
         await executeSampleDataPhase(makeContext(), makeProject(), progress);
 
         expect(progress).toHaveBeenLastCalledWith(
-            'Installing Datapack',
+            OPERATION_STAGES.installingDatapack.label,
             96,
             'Datapack could not be installed \u2014 unexpected'
         );
@@ -158,7 +159,7 @@ describe('executeSampleDataPhase', () => {
         await executeSampleDataPhase(makeContext(), makeProject(), progress);
 
         expect(progress).toHaveBeenLastCalledWith(
-            'Installing Datapack',
+            OPERATION_STAGES.installingDatapack.label,
             96,
             'Datapack could not be installed \u2014 the module was not there'
         );
@@ -172,7 +173,7 @@ describe('executeSampleDataPhase', () => {
         await executeSampleDataPhase(makeContext(), makeProject(), progress);
 
         expect(progress).toHaveBeenLastCalledWith(
-            'Installing Datapack',
+            OPERATION_STAGES.installingDatapack.label,
             96,
             'Datapack could not be installed \u2014 the service refused'
         );
@@ -190,7 +191,7 @@ describe('executeSampleDataPhase', () => {
         await executeSampleDataPhase(makeContext(), makeProject(), progress);
 
         expect(progress).toHaveBeenLastCalledWith(
-            'Installing Datapack',
+            OPERATION_STAGES.installingDatapack.label,
             96,
             'Datapack could not be installed \u2014 the import did not start'
         );
@@ -212,7 +213,7 @@ describe('executeSampleDataPhase', () => {
         await executeSampleDataPhase(makeContext(), makeProject(), progress);
 
         expect(progress).toHaveBeenLastCalledWith(
-            'Installing Datapack',
+            OPERATION_STAGES.installingDatapack.label,
             96,
             'Skipped datapack \u2014 this instance already holds every type'
         );
@@ -225,7 +226,7 @@ describe('executeSampleDataPhase', () => {
         await executeSampleDataPhase(makeContext(), makeProject(), progress);
 
         expect(progress).toHaveBeenLastCalledWith(
-            'Installing Datapack',
+            OPERATION_STAGES.installingDatapack.label,
             96,
             'Skipped datapack \u2014 nothing to install'
         );
@@ -237,7 +238,7 @@ describe('executeSampleDataPhase', () => {
 
         await executeSampleDataPhase(makeContext(), makeProject(), progress);
 
-        expect(progress).toHaveBeenLastCalledWith('Installing Datapack', 96, 'Installed bodea');
+        expect(progress).toHaveBeenLastCalledWith(OPERATION_STAGES.installingDatapack.label, 96, 'Installed bodea');
     });
 
     it('says so when only some types landed', async () => {
@@ -251,7 +252,7 @@ describe('executeSampleDataPhase', () => {
         await executeSampleDataPhase(makeContext(), makeProject(), progress);
 
         expect(progress).toHaveBeenLastCalledWith(
-            'Installing Datapack',
+            OPERATION_STAGES.installingDatapack.label,
             96,
             'Installed bodea partially \u2014 some data types did not land. Retry from the dashboard.'
         );
