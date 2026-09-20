@@ -116,7 +116,7 @@ describe('MeshDeployment - Progress Reporting', () => {
             // it builds, so the count IS the movement (owner, 2026-09-19).
             expect(onProgress).toHaveBeenCalledWith(
                 OPERATION_STAGES.verifyingMesh.label,
-                expect.stringMatching(/^Waiting for Adobe — \d+s$/),
+                expect.stringMatching(/^Waiting for Adobe — \d+ seconds?$/),
             );
         });
 

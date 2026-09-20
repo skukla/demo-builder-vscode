@@ -95,7 +95,9 @@ describe('the progress modal', () => {
             jest.advanceTimersByTime(12000);
         });
 
-        expect(within(modal).getByText('Usually 1–2 minutes · 12s')).toBeInTheDocument();
+        expect(
+            within(modal).getByText('Usually 1–2 minutes · 12 seconds'),
+        ).toBeInTheDocument();
     });
 
     it("shows the pair count in the stage line", async () => {

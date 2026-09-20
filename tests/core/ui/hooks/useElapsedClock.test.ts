@@ -24,33 +24,33 @@ describe('useElapsedClock', () => {
 
         tick(1000);
 
-        expect(result.current).toBe('1s');
+        expect(result.current).toBe('1 second');
     });
 
     it('keeps counting, and reads as minutes past sixty seconds', () => {
         const { result } = renderHook(() => useElapsedClock('Deploying the app'));
 
         tick(45000);
-        expect(result.current).toBe('45s');
+        expect(result.current).toBe('45 seconds');
 
         tick(27000);
-        expect(result.current).toBe('1m 12s');
+        expect(result.current).toBe('1 minute, 12 seconds');
     });
 
-    // It times the STAGE, not the run: "1m 12s" left over from the previous stage
-    // would say the new one has been stuck since before it started.
+    // It times the STAGE, not the run: "1 minute, 12 seconds" left over from the
+    // previous stage would say the new one has been stuck since before it started.
     it('starts again when the stage changes', () => {
         const { result, rerender } = renderHook(({ stage }) => useElapsedClock(stage), {
             initialProps: { stage: 'Adding Adobe services' },
         });
         tick(30000);
-        expect(result.current).toBe('30s');
+        expect(result.current).toBe('30 seconds');
 
         rerender({ stage: 'Deploying the app' });
 
         expect(result.current).toBeUndefined();
         tick(2000);
-        expect(result.current).toBe('2s');
+        expect(result.current).toBe('2 seconds');
     });
 
     it('stops when nothing is running', () => {

@@ -82,12 +82,13 @@ export const TIMEOUTS = {
          * How long a finished operation's modal shows its result before closing
          * itself (owner, 2026-09-20: "show success, then auto-close").
          *
-         * Longer than NOTIFICATION's 2s: this one has to be READ, and it lands at
-         * the end of a run the SC may have looked away from. Shorter than the ~5s
-         * at which a window that will not go away starts to feel stuck. A failure
-         * never auto-closes — only a success, where there is nothing to act on.
+         * Long enough to register a tick and a line of text, and no longer: at 3s
+         * it "sits too long" (owner, 2026-09-20, watching a real republish). The
+         * SC has been looking at this window for the whole run, so the result is
+         * a confirmation rather than something to read from cold. A failure never
+         * auto-closes — only a success, where there is nothing to act on.
          */
-        RESULT_GLANCE: 3000,
+        RESULT_GLANCE: 1500,
     },
 
     // =========================================================================

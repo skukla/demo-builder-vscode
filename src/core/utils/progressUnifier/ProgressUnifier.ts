@@ -19,6 +19,7 @@ import type {
     ProgressHandler,
     ExecutionContext,
 } from './types';
+import { formatElapsed } from '@/core/utils/timeFormatting';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 import type { InstallStep } from '@/types/prerequisites';
@@ -35,20 +36,6 @@ interface CommandResolveOptions {
     nodeVersion?: string;
 }
 
-/**
- * Format elapsed time in human-readable format
- * @param ms Milliseconds elapsed
- * @returns Formatted string like "35s" or "1m 15s"
- */
-function formatElapsedTime(ms: number): string {
-    const seconds = Math.floor(ms / 1000);
-    if (seconds < 60) {
-        return `${seconds}s`;
-    }
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes}m ${remainingSeconds}s`;
-}
 
 /**
  * ProgressUnifier - Unified progress tracking for install step execution
@@ -627,7 +614,7 @@ export class ProgressUnifier {
 
         // Only show elapsed time for operations exceeding threshold (30s)
         if (elapsed > TIMEOUTS.ELAPSED_TIME_THRESHOLD) {
-            const elapsedStr = formatElapsedTime(elapsed);
+            const elapsedStr = formatElapsed(elapsed);
             return `${detail} (${elapsedStr})`;
         }
 
@@ -668,5 +655,3 @@ export class ProgressUnifier {
     }
 }
 
-// Re-export formatElapsedTime for backward compatibility with tests
-export { formatElapsedTime };

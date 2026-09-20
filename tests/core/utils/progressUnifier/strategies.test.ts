@@ -56,11 +56,11 @@ describe('ProgressUnifier - Progress Tracking Strategies', () => {
 
             // Verify elapsed time is shown in detail
             const progressWith35s = progressUpdates.find((p) =>
-                p.command?.detail?.includes('(35s)')
+                p.command?.detail?.includes('(35 seconds)')
             );
 
             expect(progressWith35s).toBeDefined();
-            expect(progressWith35s?.command?.detail).toMatch(/\(35s\)/);
+            expect(progressWith35s?.command?.detail).toMatch(/\(35 seconds\)/);
         }, 10000);
     });
 
@@ -96,7 +96,7 @@ describe('ProgressUnifier - Progress Tracking Strategies', () => {
     });
 
     describe('Elapsed time formatting', () => {
-        it('should format elapsed time as "1m 15s" for 75-second operation', async () => {
+        it('should format elapsed time as "1 minute, 15 seconds" for a 75-second operation', async () => {
             const { onProgress, progressUpdates } = progressCollectorFactory();
             const { progressUnifier, advanceTime, mocks, createMockProcess } =
                 createTestableProgressUnifier(mockLogger);
@@ -125,20 +125,20 @@ describe('ProgressUnifier - Progress Tracking Strategies', () => {
             // Let spawn complete before advancing time
             await new Promise((resolve) => setImmediate(resolve));
 
-            // Fast-forward time to 75 seconds (1m 15s)
+            // Fast-forward time to 75 seconds (1 minute, 15 seconds)
             await advanceTime(75000);
 
             // Complete execution
             await advanceTime(5000);
             await executePromise;
 
-            // Verify "1m 15s" format in detail
+            // Verify the written-out format in detail
             const progressWithElapsedTime = progressUpdates.find((p) =>
-                p.command?.detail?.includes('(1m 15s)')
+                p.command?.detail?.includes('(1 minute, 15 seconds)')
             );
 
             expect(progressWithElapsedTime).toBeDefined();
-            expect(progressWithElapsedTime?.command?.detail).toMatch(/\(1m 15s\)/);
+            expect(progressWithElapsedTime?.command?.detail).toMatch(/\(1 minute, 15 seconds\)/);
         }, 10000);
     });
 
@@ -175,12 +175,16 @@ describe('ProgressUnifier - Progress Tracking Strategies', () => {
             // Fast-forward to 31 seconds (just past threshold)
             await advanceTime(31000);
 
-            const updates31s = progressUpdates.filter((p) => p.command?.detail?.includes('(31s)'));
+            const updates31s = progressUpdates.filter((p) =>
+                p.command?.detail?.includes('(31 seconds)'),
+            );
 
             // Fast-forward to 32 seconds
             await advanceTime(1000);
 
-            const updates32s = progressUpdates.filter((p) => p.command?.detail?.includes('(32s)'));
+            const updates32s = progressUpdates.filter((p) =>
+                p.command?.detail?.includes('(32 seconds)'),
+            );
 
             // Complete execution (need to reach 35s total: 31 + 1 + 3 = 35)
             await advanceTime(3000);
