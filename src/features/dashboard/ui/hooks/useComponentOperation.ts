@@ -83,8 +83,8 @@ function titlesFor(
 export interface ComponentOperationControls extends OperationRunnerControls {
     /** Start an operation and open its modal. `false` when the action is not one. */
     run: (id: string, name: string, action: CardAction) => boolean;
-    /** Open the modal for an add the Add flow has just sent. */
-    started: (id: string, name: string) => void;
+    /** Open the modal for an add the Add flow has just sent; Retry re-sends it. */
+    started: (id: string, name: string, payload?: Record<string, unknown>) => void;
     /** Run the ERP reset the card's confirmation dialog just agreed to. */
     resetErp: (id: string, erpName: string) => void;
 }
@@ -125,15 +125,27 @@ export function useComponentOperation(): ComponentOperationControls {
         [start],
     );
 
-    // A failed add persists the integration in an error state, so its Retry is a
-    // deploy of what was added. The Add flow has already sent its own message —
-    // this only puts the modal in front of it.
+    /**
+     * Put the modal in front of an add the Add flow has already sent.
+     *
+     * Retry re-sends the ADD, with the payload that started it. It used to send a
+     * DEPLOY, on the reasoning that a failed add leaves the integration persisted
+     * in an error state — true when the add got that far, and false when it did
+     * not. An add that fails at its BOUND SYSTEM persists nothing, so Retry asked
+     * to deploy something that did not exist and answered `AppBuilderComponent
+     * "erp-integration" not found` (owner, 2026-09-20).
+     *
+     * Re-adding is also what the add handler itself documents as the recovery: an
+     * error-state component is exempt from its already-added refusal precisely so
+     * that adding again works.
+     */
     const started = useCallback(
-        (id: string, name: string): void => {
+        (id: string, name: string, payload?: Record<string, unknown>): void => {
             show({
                 id,
                 name,
-                message: 'deployAppBuilderComponent',
+                message: 'addAppBuilderComponent',
+                payload,
                 title: `Adding ${name}`,
                 failureTitle: `Couldn't add ${name}`,
                 successTitle: `${name} added`,

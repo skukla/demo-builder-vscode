@@ -13951,7 +13951,7 @@
             "anchors": [
                 "[],"
             ],
-            "line": 277,
+            "line": 282,
             "mutants": 1,
             "category": "other",
             "reason": "React compares a dependency array element-wise with Object.is, so a constant one-element array of the same string literal is as stable across renders as an empty one \u2014 the builder memo recomputes on neither. The mutant changes the array's contents and not the memo's behaviour, which is the only thing any caller can see. Verified by planting ['Stryker was here'] as the dependency list: all 35 tests green, including the rerender tests that DO fail when a genuinely dependent memo is frozen.",
@@ -13964,7 +13964,7 @@
             "anchors": [
                 "[],"
             ],
-            "line": 285,
+            "line": 290,
             "mutants": 1,
             "category": "other",
             "reason": "Same argument as the builder memo on line 242: useCallback compares dependency arrays element-wise with Object.is, and a constant one-element array of a string literal never changes between renders, so the signIn callback is rebuilt on neither the original nor the mutant. Verified by planting ['Stryker was here'] as the dependency list \u2014 all 35 tests green, while the rerender tests that pin genuinely dependent memos do fail when those are frozen.",

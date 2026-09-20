@@ -73,7 +73,7 @@ export interface AddIntegrationFlowAdapterProps {
      * for a custom repo the instance the SC named, else `owner-repo` and the repo
      * (`buildCustomIntegrationEntry`).
      */
-    onAddStarted?: (id: string, name: string) => void;
+    onAddStarted?: (id: string, name: string, payload?: Record<string, unknown>) => void;
     /**
      * A destination was chosen (mode `destination`). The move itself belongs to
      * the SCREEN, which hosts the progress modal it narrates into — this only
@@ -249,9 +249,13 @@ export function AddIntegrationFlowAdapter({
                     // `displayName` names the entry's bound SYSTEM (the ERP the
                     // integration talks to); the entry keeps its catalog identity,
                     // so the pair still arrives together.
-                    postAdd({ id, apis: apiPicksRef.current[id], name: displayName });
+                    const payload = { id, apis: apiPicksRef.current[id], name: displayName };
+                    postAdd(payload);
                     const catalogName = catalogRef.current.find((entry) => entry.id === id)?.name;
-                    onAddStartedRef.current?.(id, displayName ?? catalogName ?? id);
+                    // The payload rides along so the modal's Retry re-sends this
+                    // exact add rather than a deploy of something that may never
+                    // have been persisted.
+                    onAddStartedRef.current?.(id, displayName ?? catalogName ?? id, payload);
                 }
             },
             onAddCustomAppBuilderComponent: (
@@ -266,12 +270,13 @@ export function AddIntegrationFlowAdapter({
                 // owner-repo slug useProjectBuilder derives — the same key
                 // useIntegrationFlow just wrote them under.
                 const picksKey = instance ? instance.id : `${source.owner}-${source.repo}`;
-                postAdd({
+                const payload = {
                     source,
                     ...(instance ? { name: instance.name, instanceId: instance.id } : {}),
                     apis: apiPicksRef.current[picksKey],
-                });
-                onAddStartedRef.current?.(picksKey, instance?.name ?? source.repo);
+                };
+                postAdd(payload);
+                onAddStartedRef.current?.(picksKey, instance?.name ?? source.repo, payload);
             },
         }),
         [],

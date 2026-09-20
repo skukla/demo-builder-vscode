@@ -310,7 +310,14 @@ describe('AddIntegrationFlowAdapter', () => {
 
             modalProps().builder.onAppBuilderComponentToggle('erp-sync', true);
 
-            expect(onAddStarted).toHaveBeenCalledWith('erp-sync', CATALOG[0].name);
+            // The payload rides along: the modal's Retry re-sends this add rather
+            // than deploying something that may never have been persisted
+            // (owner, 2026-09-20).
+            expect(onAddStarted).toHaveBeenCalledWith('erp-sync', CATALOG[0].name, {
+                id: 'erp-sync',
+                apis: undefined,
+                name: undefined,
+            });
         });
 
         it('reports an unnamed custom add as owner-repo, named for the repo', () => {
@@ -319,7 +326,10 @@ describe('AddIntegrationFlowAdapter', () => {
 
             modalProps().builder.onAddCustomAppBuilderComponent({ owner: 'acme', repo: 'custom-app' });
 
-            expect(onAddStarted).toHaveBeenCalledWith('acme-custom-app', 'custom-app');
+            expect(onAddStarted).toHaveBeenCalledWith('acme-custom-app', 'custom-app', {
+                source: { owner: 'acme', repo: 'custom-app' },
+                apis: undefined,
+            });
         });
 
         it('reports a named instance by the id and name the SC gave it', () => {
@@ -331,7 +341,12 @@ describe('AddIntegrationFlowAdapter', () => {
                 { id: 'firefly-gen', name: 'Firefly Gen' },
             );
 
-            expect(onAddStarted).toHaveBeenCalledWith('firefly-gen', 'Firefly Gen');
+            expect(onAddStarted).toHaveBeenCalledWith('firefly-gen', 'Firefly Gen', {
+                source: { owner: 'skukla', repo: 'app-builder-shell' },
+                name: 'Firefly Gen',
+                instanceId: 'firefly-gen',
+                apis: undefined,
+            });
         });
 
         it('a DESELECT posts nothing (there is no staged draft to un-stage here)', () => {
