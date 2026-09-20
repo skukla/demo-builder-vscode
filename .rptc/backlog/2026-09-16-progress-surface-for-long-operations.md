@@ -107,3 +107,4 @@ surfaces that host the cards.
 - 2026-09-20  fix(eds): the DA.live org falls back to the repo owner, everywhere (`4a5e42866`)
 - 2026-09-20  fix(eds): three more places the DA.live pair was read raw, and a check to hold it (`13ad9a3e7`)
 - 2026-09-20  fix(ui): Retry on a failed add re-runs the ADD (`c042b6520`)
+- 2026-09-20  feat(auth): retry a transient Developer Console failure once (`69abb06ab`)
