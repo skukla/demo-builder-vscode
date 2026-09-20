@@ -384,7 +384,7 @@ describe('teardownConsoleProject', () => {
 
             expect(progress.map((p) => p.step)).toEqual([1, 2, 3, 4]);
             const stepThree = progress.find((p) => p.step === 3);
-            expect(stepThree?.message).toMatch(/no event entities/i);
+            expect(stepThree?.message).toMatch(/nothing to remove/i);
         });
     });
 });

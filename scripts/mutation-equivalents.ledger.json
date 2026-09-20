@@ -15026,7 +15026,7 @@
             "anchors": [
                 "const prefix = opts.logPrefix ?? '[Build]';"
             ],
-            "line": 158,
+            "line": 159,
             "mutants": 1,
             "category": "branch",
             "reason": "The integration path's `prefix` reaches nothing but the text of two logger calls \u2014 a debug line and an install warning \u2014 so the only test that separates `??` from `&&` asserts a logged MESSAGE. That is the one kill this burn-down forbids outright (it pins wording, which is what the ratchet exists to refuse to reward), and no other observable differs: the commands, their options and the return value are identical. Recorded as rule-bounded rather than logically impossible, so the constraint is visible and can be overruled.",
@@ -15039,7 +15039,7 @@
             "anchors": [
                 "return false;"
             ],
-            "line": 59,
+            "line": 60,
             "mutants": 1,
             "category": "block",
             "reason": "hasPackageJson's catch returns false; emptying the block returns undefined instead. Both call sites read the result only through `!(await hasPackageJson(...))`, and undefined and false are equally falsy there, so the two forms take the same branch on every input. No caller stores, compares or returns the value. Planted with three siblings: 31 tests green.",

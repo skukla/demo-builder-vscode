@@ -43,7 +43,7 @@ async function deployMeshAndPersist(
     contentCopied: number,
     deps: MeshRedeployDeps,
 ): Promise<EdsResetResult | null> {
-    report(12, 'Redeploying API Mesh...');
+    report(12, 'Redeploying the mesh');
     context.logger.info(`[EdsReset] Redeploying mesh for ${repoOwner}/${repoName}`);
 
     try {
@@ -107,7 +107,7 @@ export async function redeployApiMesh(
 
     const authService = deps.authManager;
 
-    report(12, 'Checking Adobe organization access...');
+    report(12, 'Checking Adobe access');
     const { ensureProjectAdobeContext } = await import(
         '@/features/authentication/services/ensureProjectAdobeContext'
     );

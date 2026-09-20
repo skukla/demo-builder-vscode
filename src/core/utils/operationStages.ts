@@ -44,7 +44,26 @@ export const OPERATION_STAGES = {
     subscribingApis: {
         label: 'Adding Adobe services',
         expectation: 'Usually under a minute',
-        detail: 'So the app can call them',
+        // The first thing it actually does, so row 2 is never filler: the
+        // subscribe's own steps take over a beat later and start with this one.
+        // The SC's own words (owner, 2026-09-19) — "subscriptions" and
+        // "workspace" are what they say, where "the APIs on the credential" is
+        // Console's vocabulary and meant nothing to a reader.
+        detail: 'Checking what subscriptions the workspace already has',
+    },
+    // `buildComponent` reported a literal "Building..." until 2026-09-19 — an
+    // off-table stage, so the modal showed an ellipsis title and no expectation
+    // line at all. One entry per kind, because the two builds differ in what
+    // they do and how long they take.
+    buildingMesh: {
+        label: 'Building the mesh',
+        expectation: 'Usually a few seconds',
+        detail: 'Compiling it before the deploy',
+    },
+    buildingApp: {
+        label: 'Building the app',
+        expectation: 'Usually under a minute',
+        detail: 'Installing what it needs to run',
     },
     adding: {
         label: 'Preparing the app',

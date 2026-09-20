@@ -91,7 +91,7 @@ describe('what the subscribe says while it runs', () => {
         });
 
         expect(steps).toEqual([
-            'Checking what Adobe already has',
+            'Checking what subscriptions the workspace already has',
             'Reading the Adobe service list',
             'Adding 3 services to your workspace',
         ]);
@@ -110,7 +110,7 @@ describe('what the subscribe says while it runs', () => {
             log: (message) => log.push(message),
         });
 
-        expect(steps).toEqual(['Checking what Adobe already has', 'Everything needed is already there']);
+        expect(steps).toEqual(['Checking what subscriptions the workspace already has', 'Everything needed is already there']);
         expect(log.join(' ')).toContain('skipping the subscribe');
     });
 });

@@ -46,12 +46,12 @@ describe('executeEdsReset - CDN verification', () => {
         expect(progress).toContainEqual({
             step: 11,
             totalSteps: 11,
-            message: 'Verifying configuration...',
+            message: 'Checking the settings',
         });
         expect(progress).toContainEqual({
             step: 11,
             totalSteps: 11,
-            message: 'Configuration verified',
+            message: 'Settings checked',
         });
     });
 
@@ -63,10 +63,10 @@ describe('executeEdsReset - CDN verification', () => {
         expect(progress).toContainEqual({
             step: 11,
             totalSteps: 11,
-            message: 'Configuration propagating...',
+            message: 'Waiting for the settings',
         });
         expect(progress).not.toContainEqual(
-            expect.objectContaining({ message: 'Configuration verified' })
+            expect.objectContaining({ message: 'Settings checked' })
         );
         expect(result.success).toBe(true);
     });

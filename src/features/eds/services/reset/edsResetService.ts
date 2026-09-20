@@ -100,7 +100,7 @@ async function syncCodeAndPermissions(
 ): Promise<void> {
     const { repoOwner, repoName, daLiveOrg, daLiveSite } = params;
     // Step 4: Sync code to CDN
-    report(4, 'Syncing code to CDN...');
+    report(4, 'Publishing the code');
     // tokenProvider required: DA.live auth headers needed for unpublish during bulk sync
     const helixServiceForCodeSync = new HelixService(
         context.logger,
@@ -110,16 +110,16 @@ async function syncCodeAndPermissions(
     try {
         await helixServiceForCodeSync.previewCode(repoOwner, repoName, '/*');
         context.logger.info('[EdsReset] Code synced to CDN');
-        report(4, 'Code synchronized');
+        report(4, 'Code published');
     } catch (codeSyncError) {
         context.logger.warn(
             `[EdsReset] Code sync request failed: ${(codeSyncError as Error).message}, continuing anyway`,
         );
-        report(4, 'Code sync pending...');
+        report(4, 'Waiting for the publish');
     }
 
     // Step 5: Configure site permissions
-    report(5, 'Configuring site permissions...');
+    report(5, 'Setting site permissions');
     const daLiveAuthService = getDaLiveAuthService(context.context);
     const userEmail = await daLiveAuthService.getUserEmail();
     if (userEmail) {
@@ -251,8 +251,8 @@ async function runContentPipeline(
         {
             logPrefix: '[EdsReset]',
             operationLabel: 'Reset',
-            onExpired: async () => report(8, 'DA.live session expired. Please re-authenticate...'),
-            onBeforeRetry: async () => report(8, 'Resuming content pipeline...'),
+            onExpired: async () => report(8, 'Sign in to DA.live again'),
+            onBeforeRetry: async () => report(8, 'Resuming the content copy'),
         },
     );
 }
@@ -289,13 +289,13 @@ async function finalizeReset(
     const { repoOwner, repoName, project, verifyCdn = false, redeployMesh = false } = params;
 
     if (verifyCdn) {
-        report(11, 'Verifying configuration...');
+        report(11, 'Checking the settings');
         const verification = await verifyCdnResources(repoOwner, repoName, context.logger);
         if (verification.configVerified) {
-            report(11, 'Configuration verified');
+            report(11, 'Settings checked');
             context.logger.info('[EdsReset] config.json verified on CDN');
         } else {
-            report(11, 'Configuration propagating...');
+            report(11, 'Waiting for the settings');
             context.logger.warn(
                 '[EdsReset] config.json CDN verification timed out - may need more time to propagate',
             );

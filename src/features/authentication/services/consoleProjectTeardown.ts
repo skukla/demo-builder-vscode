@@ -286,7 +286,7 @@ export async function teardownConsoleProject(
         onProgress?.({ step, totalSteps: TOTAL_STEPS, message });
     };
 
-    report(1, 'Finding workspaces…');
+    report(1, 'Finding workspaces');
     const prep = await prepareTeardown(deps, target, items);
     if (!prep) {
         debugLogger.debug('[Teardown] preparation failed — aborting before any deletion');
@@ -294,7 +294,7 @@ export async function teardownConsoleProject(
     }
     debugLogger.debug(`[Teardown] found ${prep.workspaces.length} workspace(s)`);
 
-    report(2, 'Checking workspace credentials…');
+    report(2, 'Checking credentials');
     const ctx: TeardownContext = {
         deps,
         target,
@@ -310,19 +310,19 @@ export async function teardownConsoleProject(
             `${firstCredential ? '' : ' — skipping event-entity sweep'}`,
     );
     if (firstCredential) {
-        report(3, 'Removing event registrations and providers…');
+        report(3, 'Removing event setup');
         // A failed sweep records a failed item, which the gate below aborts on.
         await teardownEventEntities(ctx, prep.workspaces, firstCredential);
     } else {
         // Keep the reported steps monotonic and complete even on the fast path.
-        report(3, 'No event entities to remove');
+        report(3, 'Nothing to remove');
         skipAllWorkspaces(items, prep.workspaces);
     }
 
     if (items.some((item) => item.outcome === 'failed')) {
         return buildResult(items, false);
     }
-    report(4, 'Deleting Adobe project…');
+    report(4, 'Deleting the project');
     const result = await deleteProject(deps, target, items);
     debugLogger.debug(
         `[Teardown] done — projectDeleted=${result.projectDeleted}, ${result.items.length} item(s)`,

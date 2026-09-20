@@ -175,7 +175,9 @@ export async function deployMeshComponent(
                                 `${command === 'update' ? 'Updating' : 'Creating'} mesh infrastructure`,
                             );
                         } else if (output.includes('deploying')) {
-                            onProgress?.(OPERATION_STAGES.deployingMesh.label, 'Deploying mesh');
+                            // Not "Deploying mesh": row 1 already says that, and a
+                            // row 2 repeating it is a line that tells the SC nothing.
+                            onProgress?.(OPERATION_STAGES.deployingMesh.label, 'Adobe is deploying it');
                         } else if (output.includes('success')) {
                             onProgress?.(OPERATION_STAGES.deployingMesh.label, `Mesh ${verb}`);
                         }

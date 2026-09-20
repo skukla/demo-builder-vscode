@@ -162,7 +162,7 @@ describe('resetRepoToTemplate — block library reinstall', () => {
             'pkg',
             context.logger,
         );
-        expect(report).toHaveBeenCalledWith(3, 'Installing inspector tagging...');
+        expect(report).toHaveBeenCalledWith(3, 'Installing the inspector');
         expect(result.blockCollectionIds).toBeUndefined();
         expect(result.libraryContentSources).toStrictEqual([]);
     });

@@ -123,9 +123,9 @@ describe('executeEdsReset - repo, code sync and permissions', () => {
         expect(progress).toContainEqual({
             step: 4,
             totalSteps: 11,
-            message: 'Syncing code to CDN...',
+            message: 'Publishing the code',
         });
-        expect(progress).toContainEqual({ step: 4, totalSteps: 11, message: 'Code synchronized' });
+        expect(progress).toContainEqual({ step: 4, totalSteps: 11, message: 'Code published' });
     });
 
     it('carries on past a failed code sync, reporting it as pending', async () => {
@@ -137,10 +137,10 @@ describe('executeEdsReset - repo, code sync and permissions', () => {
         expect(progress).toContainEqual({
             step: 4,
             totalSteps: 11,
-            message: 'Code sync pending...',
+            message: 'Waiting for the publish',
         });
         expect(progress).not.toContainEqual(
-            expect.objectContaining({ message: 'Code synchronized' })
+            expect.objectContaining({ message: 'Code published' })
         );
         expect(configureDaLivePermissions).toHaveBeenCalledTimes(1);
     });
@@ -151,7 +151,7 @@ describe('executeEdsReset - repo, code sync and permissions', () => {
         expect(progress).toContainEqual({
             step: 5,
             totalSteps: 11,
-            message: 'Configuring site permissions...',
+            message: 'Setting site permissions',
         });
         expect(configureDaLivePermissions).toHaveBeenCalledWith(
             mockTokenProvider,
@@ -312,8 +312,8 @@ describe('executeEdsReset - content pipeline', () => {
 
         const stepEight = progress.filter((p) => p.step === 8).map((p) => p.message);
         expect(stepEight).toStrictEqual([
-            'DA.live session expired. Please re-authenticate...',
-            'Resuming content pipeline...',
+            'Sign in to DA.live again',
+            'Resuming the content copy',
         ]);
     });
 

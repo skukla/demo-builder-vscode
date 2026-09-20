@@ -123,7 +123,7 @@ async function installInspectorOnly(
     logger: Logger,
     report: (step: number, message: string) => void,
 ): Promise<void> {
-    report(3, 'Installing inspector tagging...');
+    report(3, 'Installing the inspector');
     const inspectorResult = await installInspectorTagging(
         githubFileOps,
         repoOwner,
@@ -157,7 +157,7 @@ async function reinstallBlockLibraries(
     blockCollectionIds?: string[];
     libraryContentSources: Array<{ org: string; site: string }>;
 }> {
-    report(2, 'Preparing block libraries...');
+    report(2, 'Preparing block libraries');
 
     // Generate inspector tree entries (always, for consistency with storefront setup)
     let inspectorEntries: GitHubTreeInput[] = [];
@@ -249,7 +249,7 @@ export async function resetRepoToTemplate(
         codePatchSource,
     } = params;
 
-    report(1, 'Resetting repository to template...');
+    report(1, 'Resetting the repository');
     context.logger.info(`[EdsReset] Resetting repo using bulk tree operations`);
 
     const fstabContent = generateFstabContent({ daLiveOrg, daLiveSite });

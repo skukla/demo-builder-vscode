@@ -285,7 +285,7 @@ async function deployAppComponentOnce(
     const node = resolveNodeVersion(opts.nodeVersion);
     try {
         if (opts.layout === 'extension') {
-            onProgress?.(OPERATION_STAGES.deployingApp.label, 'Importing workspace configuration');
+            onProgress?.(OPERATION_STAGES.deployingApp.label, 'Pointing the app at your workspace');
             await importWorkspaceConfig(componentPath, commandManager, node, logger);
         }
 
@@ -302,7 +302,7 @@ async function deployAppComponentOnce(
         // or it dies with "missing Adobe I/O Runtime namespace". Fetch them
         // from the targeted workspace and inject per-invocation (execa merges
         // env, so only the two vars are passed; the auth value is never logged).
-        onProgress?.(OPERATION_STAGES.deployingApp.label, 'Resolving Runtime credentials');
+        onProgress?.(OPERATION_STAGES.deployingApp.label, 'Finding where the app will run');
         const runtimeCreds = await fetchRuntimeCredentials(commandManager, logger, node);
         // An action with `include-ims-credentials` makes aio require the workspace's
         // S2S credential as IMS_OAUTH_S2S_* — what `aio app use` would have written to

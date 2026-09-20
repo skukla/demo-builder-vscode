@@ -149,7 +149,7 @@ describe('MeshDeployment — translating CLI output into progress', () => {
 
         await deployEmitting(['Deploying mesh to the workspace'], { onProgress });
 
-        expect(subMessages(onProgress)).toContain('Deploying mesh');
+        expect(subMessages(onProgress)).toContain('Adobe is deploying it');
     });
 
     // The verb follows the command actually running, so an update never

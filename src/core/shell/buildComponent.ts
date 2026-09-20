@@ -16,6 +16,7 @@
  * (buildArgs: undefined) issues a plain `npm run build`.
  */
 
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { promises as fsPromises } from 'fs';
 import * as path from 'path';
 import type { CommandExecutor } from './commandExecutor';
@@ -103,14 +104,14 @@ async function buildMesh(
     const execOptions = buildExecOptions(componentPath, opts.nodeVersion);
 
     logger.debug(`${prefix} Building component...`);
-    onProgress?.('Building...', 'Installing dependencies');
+    onProgress?.(OPERATION_STAGES.buildingMesh.label, 'Installing dependencies');
 
     const installResult = await commandManager.execute(INSTALL_COMMAND, execOptions);
     if (installResult.code !== 0) {
         logger.warn(`${prefix} npm install had warnings:`, installResult.stderr.substring(0, 300));
     }
 
-    onProgress?.('Building...', 'Compiling');
+    onProgress?.(OPERATION_STAGES.buildingMesh.label, 'Compiling');
 
     const buildCommand = `npm run build${opts.buildArgs ? ` ${opts.buildArgs}` : ''}`;
     const buildResult = await commandManager.execute(buildCommand, execOptions);
@@ -157,7 +158,7 @@ async function buildIntegration(
 
     const prefix = opts.logPrefix ?? '[Build]';
     logger.debug(`${prefix} Installing integration dependencies...`);
-    onProgress?.('Building...', 'Installing dependencies');
+    onProgress?.(OPERATION_STAGES.buildingApp.label, 'Installing dependencies');
 
     const installResult = await commandManager.execute(
         INTEGRATION_INSTALL_COMMAND,

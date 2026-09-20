@@ -290,7 +290,7 @@ export async function subscribeRequiredApis(
 ): Promise<SubscribedApi[]> {
     const requiredApis = computeRequiredApis(appBuilderComponents, extraApis);
     const removed = new Set(removing.filter((code) => !requiredApis.includes(code)));
-    observe?.onStep?.('Checking what Adobe already has');
+    observe?.onStep?.('Checking what subscriptions the workspace already has');
     // Started BEFORE the credential read, not after it: the full path always
     // needs this catalog, and the read can spend its whole budget answering
     // "something is missing". Run one after the other and the SC waits for the

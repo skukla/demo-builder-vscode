@@ -178,8 +178,8 @@ describe('publishConfigAndRegisterSite — the happy path', () => {
 
         await run({}, report);
 
-        expect(report).toHaveBeenCalledWith(6, 'config.json published');
-        expect(report).toHaveBeenCalledWith(7, 'Configuration Service updated');
+        expect(report).toHaveBeenCalledWith(6, 'Settings published');
+        expect(report).toHaveBeenCalledWith(7, 'Site config updated');
         // A success is NOT also a BYOM failure: the overlay advice stays silent.
         expect(mockSurfaceOverlayFailure).not.toHaveBeenCalled();
         expect(mockLostGrantsMessage).not.toHaveBeenCalled();
@@ -231,8 +231,8 @@ describe('publishConfigAndRegisterSite — the failure nuances', () => {
         await expect(run({}, report)).resolves.toEqual({ configWritten: true });
         expect(mockRegisterSiteConfig).toHaveBeenCalled();
         // The SC is told the publish failed and that the reset carries on.
-        expect(report).toHaveBeenCalledWith(6, 'config.json publish failed, continuing...');
-        expect(report).not.toHaveBeenCalledWith(6, 'config.json published');
+        expect(report).toHaveBeenCalledWith(6, 'Settings publish failed');
+        expect(report).not.toHaveBeenCalledWith(6, 'Settings published');
     });
 
     it('a failed registration WITHOUT an overlay warns and stays silent about BYOM', async () => {
@@ -246,7 +246,7 @@ describe('publishConfigAndRegisterSite — the failure nuances', () => {
 
         expect(mockSurfaceOverlayFailure).not.toHaveBeenCalled();
         expect(mockByomFailureMessage).not.toHaveBeenCalled();
-        expect(report).not.toHaveBeenCalledWith(7, 'Configuration Service updated');
+        expect(report).not.toHaveBeenCalledWith(7, 'Site config updated');
         // The one thing this branch does is warn — once, for the registration.
         expect(logger.warn).toHaveBeenCalledTimes(1);
     });

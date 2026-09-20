@@ -24,6 +24,7 @@ const STAGE_REPORTERS = [
     'src/features/app-builder/services/appDeployment.ts',
     'src/features/dashboard/handlers/appBuilderComponentHandlers.ts',
     'src/features/dashboard/handlers/appManagementInstallHandlers.ts',
+    'src/core/shell/buildComponent.ts',
     'src/features/mesh/services/meshDeployment.ts',
     'src/features/mesh/services/deployMeshHeadless.ts',
 ];
