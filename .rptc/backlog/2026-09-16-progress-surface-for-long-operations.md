@@ -100,3 +100,4 @@ surfaces that host the cards.
 - 2026-09-20  feat(ui): the modal owns the form, not just the question (`4f5d37958`)
 - 2026-09-20  feat(ui): a modal keeps the height of its tallest state (`f554726b1`)
 - 2026-09-20  fix(dashboard): a status read asks nothing (`fb9506345`)
+- 2026-09-20  feat(ui): an operation ends on its result, then the modal closes itself (`7411eec66`)
