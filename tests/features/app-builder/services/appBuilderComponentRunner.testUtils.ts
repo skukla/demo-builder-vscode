@@ -170,6 +170,11 @@ export function createDeps(
             .mockResolvedValue({ envVars: { MESH_KEY: 'v' }, sourceHash: 'sha-default' }),
         // Registry-driven .env write (mesh only; see appBuilderComponentRunner-envFile.test.ts).
         writeComponentEnv: jest.fn().mockResolvedValue(undefined),
+        // The component's own Adobe workspace (AB-23). The default makes NONE — it
+        // answers success without recording one — so every suite written before this
+        // keeps exercising the fallback path, which is what components in existing
+        // projects actually do. Suites testing the workspace override it.
+        createComponentWorkspace: jest.fn().mockResolvedValue(undefined),
         // API subscriber (mocked).
         subscribeRequiredApis: jest.fn().mockResolvedValue(undefined),
         // Storefront republish (mocked; production wires republishStorefrontConfig).

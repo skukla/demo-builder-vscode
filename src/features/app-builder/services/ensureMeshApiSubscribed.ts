@@ -49,6 +49,8 @@ export interface MeshSubscribeTarget {
     componentApiPicks?: Project['componentApiPicks'];
     /** Where the configured Commerce endpoint lives — the tenant picks a product profile. */
     componentConfigs?: Project['componentConfigs'];
+    /** Where a component's own workspace is recorded (AB-23). */
+    appBuilderComponents?: Project['appBuilderComponents'];
 }
 
 /**
@@ -57,11 +59,21 @@ export interface MeshSubscribeTarget {
  * service (ACCS-REST-API) offers profiles. Every subscribe caller builds its target
  * here, so the tenant cannot reach one caller and miss another.
  */
-export function subscriberTarget(project: MeshSubscribeTarget): OrgTarget {
+export function subscriberTarget(
+    project: MeshSubscribeTarget,
+    componentId?: string,
+): OrgTarget {
+    // A component may hold its own workspace (AB-23), and the subscribe entitles a
+    // WORKSPACE's credential — so subscribing against the project's workspace for a
+    // component that has its own leaves the one it deploys into without the access.
+    // Absent means the project's, which is every component created before this.
+    const own = componentId
+        ? project.appBuilderComponents?.[componentId]?.workspace?.id
+        : undefined;
     return {
         orgId: project.adobe?.organization ?? '',
         projectId: project.adobe?.projectId ?? '',
-        workspaceId: project.adobe?.workspace ?? '',
+        workspaceId: own ?? project.adobe?.workspace ?? '',
         commerceTenant: deriveAccsTenantId(
             lookupComponentConfigValue(project.componentConfigs ?? {}, ACCS_GRAPHQL_ENDPOINT),
         ),

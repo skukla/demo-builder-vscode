@@ -281,6 +281,23 @@ export interface AppBuilderComponentRunnerDeps extends TeardownDeps {
         project: Project,
         onStep?: (step: string) => void
     ) => Promise<void>;
+    /**
+     * Give a component being ADDED its own Adobe workspace, and record it on the
+     * component (AB-23).
+     *
+     * Returns a reason when the workspace could not be made. That is a HARD failure,
+     * not best-effort: an add that carried on would deploy into the project's
+     * workspace, where an App Management app's fixed package names overwrite whatever
+     * is already there — the exact collision this item exists to remove.
+     *
+     * A component that is bound to another (an ERP and its integration) joins that
+     * one's workspace rather than making a second, so the unit is one workspace per
+     * ADD rather than per component.
+     */
+    createComponentWorkspace: (
+        project: Project,
+        entry: AppBuilderComponentCatalogEntry,
+    ) => Promise<{ error: string } | undefined>;
     /** Storefront config regen + republish (step 04 generalized providesEnvVars path). */
     republishStorefront: (input: RepublishInput) => Promise<{ success: boolean; error?: string }>;
     /** Every appBuilderComponent in the project's catalog (for the union subscribe). */
@@ -742,6 +759,15 @@ async function addOne(
             if (nodeError) {
                 return { success: false, error: nodeError };
             }
+        }
+
+        // The workspace comes BEFORE the subscribe, and that order is the whole
+        // point: the subscribe grants API access to a WORKSPACE's credential, so
+        // subscribing first would entitle the project's workspace and leave the
+        // component's own without the access it deploys against.
+        const workspaceError = await deps.createComponentWorkspace(project, entry);
+        if (workspaceError) {
+            return { success: false, error: workspaceError.error };
         }
 
         // The subscribe's org-services fetch alone measured 43.5s cold — the

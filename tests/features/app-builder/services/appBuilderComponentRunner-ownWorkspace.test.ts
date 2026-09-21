@@ -24,7 +24,10 @@ jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
     detectAppLayout: jest.fn().mockResolvedValue('standalone'),
 }));
 
-import { deployAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentRunner';
+import {
+    addAppBuilderComponent,
+    deployAppBuilderComponent,
+} from '@/features/app-builder/services/appBuilderComponentRunner';
 import { MESH_ENTRY, createDeps, createProject } from './appBuilderComponentRunner.testUtils';
 
 const ID = MESH_ENTRY.id;
@@ -105,4 +108,54 @@ it('never moves the org or the Console project', async () => {
     const target = wrappedTarget();
     expect(target.orgId).toBe(project.adobe!.organization);
     expect(target.projectId).toBe(project.adobe!.projectId);
+});
+
+// =============================================================================
+// The ADD path: a workspace it cannot make is a HARD failure
+// =============================================================================
+
+describe('addAppBuilderComponent — the workspace comes first', () => {
+    /**
+     * Carrying on would deploy into the PROJECT's workspace, where an App
+     * Management app's fixed package names overwrite whatever is already there
+     * (AB-2 spike, proven live). That is the collision this item exists to remove,
+     * so the add stops instead of half-succeeding.
+     */
+    it("refuses the add, and clones nothing, when the workspace can't be made", async () => {
+        const deps = createDeps();
+        deps.createComponentWorkspace.mockResolvedValue({
+            error: 'Couldn\'t make an Adobe workspace for "Commerce Mesh". Quota exceeded.',
+        });
+
+        const result = await addAppBuilderComponent(createProject(), MESH_ENTRY, deps);
+
+        expect(result).toEqual({
+            success: false,
+            error: 'Couldn\'t make an Adobe workspace for "Commerce Mesh". Quota exceeded.',
+        });
+        expect(deps.componentManager.installComponent).not.toHaveBeenCalled();
+        expect(deps.deployMesh).not.toHaveBeenCalled();
+    });
+
+    /**
+     * Order, not merely presence. The subscribe entitles a WORKSPACE's credential,
+     * so running it first would grant the access to the project's workspace and
+     * leave the component's own without it — a deploy that then fails on
+     * permissions with everything apparently configured.
+     */
+    it('makes the workspace BEFORE subscribing APIs', async () => {
+        const deps = createDeps();
+        const order: string[] = [];
+        deps.createComponentWorkspace.mockImplementation(async () => {
+            order.push('workspace');
+            return undefined;
+        });
+        deps.subscribeRequiredApis.mockImplementation(async () => {
+            order.push('subscribe');
+        });
+
+        await addAppBuilderComponent(createProject(), MESH_ENTRY, deps);
+
+        expect(order).toEqual(['workspace', 'subscribe']);
+    });
 });

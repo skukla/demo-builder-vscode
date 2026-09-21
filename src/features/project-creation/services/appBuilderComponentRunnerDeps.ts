@@ -35,6 +35,7 @@ import { readAppManifestVersion } from '@/features/app-builder/services/appManif
 import { resolveSecretDeployEnv } from '@/features/app-builder/services/componentSettingSecrets';
 import { deployAppComponentIsolated } from '@/features/app-builder/services/deployAppIsolated';
 import { subscriberTarget } from '@/features/app-builder/services/ensureMeshApiSubscribed';
+import { ensureComponentWorkspace } from '@/features/app-builder/services/componentWorkspace';
 import { detachErpWrites } from '@/features/app-builder/services/erpDetach';
 import {
     checkCloneForUpdate,
@@ -240,12 +241,27 @@ export function buildDefaultRunnerDeps(
                 );
             return buildS2SDeployEnv(credentials);
         },
+        createComponentWorkspace: (project, entry) =>
+            ensureComponentWorkspace(project, entry, {
+                maker: {
+                    createWorkspace: (title, description, target) =>
+                        ctx.authManager.createWorkspace(title, description, target),
+                },
+                saveProject: ctx.saveProject,
+                displayName: entry.name ?? entry.id,
+            }),
         // The runner's dep contract is void — swallow the returned API list.
         subscribeRequiredApis: async (appBuilderComponents, project, onStep) => {
             const started = Date.now();
             const apis = await subscribeRequiredApis(
                 appBuilderComponents,
-                subscriberTarget(project),
+                // One entry means one component's subscribe, so it targets THAT
+                // component's workspace. Several is the project-wide reconcile, which
+                // still belongs to the project's own.
+                subscriberTarget(
+                    project,
+                    appBuilderComponents.length === 1 ? appBuilderComponents[0].id : undefined,
+                ),
                 ctx.subscriberClient,
                 deriveAllowedDomain(project),
                 // Runtime-added APIs (add_console_apis) must ride every
