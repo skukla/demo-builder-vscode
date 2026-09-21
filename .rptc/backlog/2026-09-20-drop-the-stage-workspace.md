@@ -39,30 +39,52 @@ machine name, with **no workspace segment**. Stage's is
 `285361-214brownarmadillo-stage`. So Adobe treats the project's first workspace as the
 unsuffixed default. Worth knowing before anything is named for a namespace's shape.
 
-## The open decision: where project-level Adobe state lives
+## Decided: Production is the project's workspace, retitled
 
-Per-add workspaces cover the mesh and the integrations. One thing is neither:
+Owner, 2026-09-20. Per-add workspaces ([[AB-23]]) cover the mesh and the integrations.
+One thing is neither: **the datapack credential.** A datapack write authenticates with an
+OAuth server-to-server pair, and one can only be created inside a workspace
+(`accsProvisionEligibility.ts`). It belongs to the PROJECT, so putting it in an add's
+workspace would destroy it when that add is removed.
 
-**The datapack credential.** A datapack write authenticates with an OAuth
-server-to-server pair, and one can only be created inside a workspace
-(`accsProvisionEligibility.ts`). It belongs to the PROJECT, not to any add. Put it in an
-add's workspace and removing that add destroys it.
+So the workspace Adobe creates holds the project-level things — the datapack credential
+and the mesh — and every add gets its own. It costs nothing, because Adobe makes it either
+way.
 
-Two answers, and the first is the recommendation:
+The alternative, a workspace per add including the mesh, was rejected: it splits the
+Commerce subscription, since the mesh and the datapack credential both need
+`ACCS-REST-API` with a product profile attached. Two workspaces means two credentials, two
+subscriptions and two profile attaches, and that attach is the fragile step. It buys
+symmetry rather than a capability.
 
-**(a) Production is the project's workspace.** It holds the datapack credential and the
-mesh. Integrations get their own. Adobe creates it for free, so this costs nothing and
-needs no new create path.
+### "Production" is the wrong word for a demo, so retitle it
 
-**(b) Everything is per-add, including the mesh.** Cleaner symmetry — every workspace is
-made by an add and destroyed by its removal. But it splits the Commerce subscription: the
-mesh and the datapack credential both need `ACCS-REST-API` with a Commerce product
-profile attached, so two workspaces means two credentials, two subscriptions and two
-profile attaches. That attach is the step that has been fragile all week, and doubling it
-buys symmetry rather than a capability. The mesh is also in nearly every demo, so a
-workspace that always exists is the project workspace with extra steps.
+Adobe names it Production and that reads wrong in a demo project — especially sitting
+beside workspaces named for their integrations. **Change the TITLE, never the machine
+name**, at project creation, through `editWorkspace` (a PATCH that accepts both).
 
-Under (a) the mesh stays put and nothing about it changes.
+Title-only is the safe half, for the same reason the project rename is title-only:
+
+- The title is purely display. `destinationHandlers.ts` and `agentsMdSections.ts` both
+  read `workspaceTitle ?? …`, and nothing branches on it.
+- The machine name is not display. It is passed to the CLI as
+  `AIO_CONSOLE_WORKSPACE_NAME` (`orgContextEnv.ts`) and it is what the agent must type to
+  confirm a workspace deletion (`adobeResourceTools.ts`). It is also what Adobe builds the
+  Runtime namespace from.
+- Store the title we set, so the local copy does not go stale.
+
+**Two things to test before building this:**
+
+1. **Whether Adobe permits a PATCH of the default workspace's title at all.** Untested —
+   the workspace it would have been tested on is deleted.
+2. **Whether a machine-name change moves the Runtime namespace.** Not needed for the
+   recommendation, but worth knowing before anyone tries it. Both outcomes are bad: the
+   namespace follows and every deployed action changes URL, or it does not and Console
+   disagrees with reality.
+
+Suggested title: **"Demo"** — it says what the workspace is for, and being the same in
+every project means an SC learns it once. The project's own title is the alternative, but
+it reads redundantly under a project of that name.
 
 ## What changes
 
@@ -72,7 +94,8 @@ Under (a) the mesh stays put and nothing about it changes.
 | `adobeEntityFetcher.createProject.test.ts` | Two tests go — the Stage-create pin and its best-effort-failure sibling. |
 | `useProjectCreationPhases.ts` `pickWorkspace` | A new project has ONE workspace, so `workspaces[0]` is the answer. The stage-find becomes dead. |
 | `AdobeWorkspacePicker.tsx` `autoSelectCustom` | Prefer the project's RECORDED workspace, then a lone workspace, then `=== 'Stage'` exactly. Covers all three populations without a substring match. |
-| Creation copy | `phaseSubMessageFor` names the Stage workspace twice. Both become Production. |
+| Creation copy | `phaseSubMessageFor` names the Stage workspace twice. Both follow the new title. |
+| `adobeConsoleProjectOps.ts` | Add a title-only `editWorkspace` call after create, and store the title we set. |
 
 `ensureProjectWorkspacesHaveRuntime` stays: idempotent, tolerates the 409, and is the net
 for a Console-made project that arrives without a namespace.
