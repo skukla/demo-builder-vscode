@@ -63,8 +63,8 @@ export function AppBuilderComponentRemoveDialog({
                 >
                     <Flex direction="column" gap="size-150">
                         <Text>
-                            <strong>{componentName}</strong> is undeployed from Adobe and removed
-                            from this project.
+                            <strong>{componentName}</strong> will be undeployed from Adobe and
+                            removed from this project.
                         </Text>
                         {consequence && <Text>{consequence}</Text>}
                     </Flex>
