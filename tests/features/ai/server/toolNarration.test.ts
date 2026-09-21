@@ -116,3 +116,13 @@ describe('the phrases read as English, not as schema', () => {
         expect(phrases.length).toBeGreaterThan(95);
     });
 });
+
+// The phrase is an agent notification's title ("Agent · <phrase>"), with the
+// current step after it. "Republishing the storefront configuration" plus a step
+// ran off the card (owner, 2026-09-21), the same wrap the 2026-08-27 feedback was
+// about. 32 characters keeps title and a short step on one line.
+describe('every phrase fits a notification title', () => {
+    it.each(Object.entries(TOOL_NARRATION))('%s is 32 characters or fewer', (_tool, phrase) => {
+        expect(phrase.length).toBeLessThanOrEqual(32);
+    });
+});

@@ -192,7 +192,7 @@ export async function syncConfigToRemote(params: ConfigSyncParams): Promise<Conf
             logger.info(`[ConfigSync] config.json published to Helix CDN`);
 
             // Step 4: Verify CDN accessibility for config.json
-            onProgress?.('Waiting for configuration to reach CDN edge...');
+            onProgress?.('Waiting for the CDN');
 
             const verification = await verifyCdnResources(repoOwner, repoName, logger);
 

@@ -80,12 +80,12 @@ describe('createAgentOperationNotifier', () => {
         // confusion `agentAlertCopy` already records for the consent dialog.
         expect(mockWithProgress).toHaveBeenCalledWith(
             expect.objectContaining({
-                title: expect.stringContaining('Pushing the storefront code to GitHub'),
+                title: expect.stringContaining('Pushing the storefront to GitHub'),
             }),
             expect.any(Function)
         );
         expect(mockSetStatusBarMessage).toHaveBeenCalledWith(
-            expect.stringContaining('Pushing the storefront code to GitHub — done'),
+            expect.stringContaining('Pushing the storefront to GitHub — done'),
             expect.any(Number)
         );
         expect(mockShowWarningMessage).not.toHaveBeenCalled();
@@ -99,7 +99,7 @@ describe('createAgentOperationNotifier', () => {
         await notifier('sync_storefront', async () => ({ ok: true }));
 
         expect(mockWithProgress).toHaveBeenCalledWith(
-            expect.objectContaining({ title: 'Agent · Pushing the storefront code to GitHub' }),
+            expect.objectContaining({ title: 'Agent · Pushing the storefront to GitHub' }),
             expect.any(Function)
         );
     });
@@ -125,7 +125,7 @@ describe('createAgentOperationNotifier', () => {
         await notifier('republish', async () => asText({ needsAuth: 'github', message: 'for the agent' }));
 
         expect(mockShowWarningMessage).toHaveBeenCalledWith(
-            'Demo Builder — Republishing the storefront configuration is waiting on you: Sign in to GitHub.'
+            'Demo Builder — Republishing the storefront is waiting on you: Sign in to GitHub.'
         );
         expect(mockSetStatusBarMessage).not.toHaveBeenCalled();
     });
@@ -136,7 +136,7 @@ describe('createAgentOperationNotifier', () => {
         await notifier('republish', async () => asText({ success: false, error: 'CDN said no' }));
 
         expect(mockShowWarningMessage).toHaveBeenCalledWith(
-            'Demo Builder — Republishing the storefront configuration failed: CDN said no'
+            'Demo Builder — Republishing the storefront failed: CDN said no'
         );
         expect(mockSetStatusBarMessage).not.toHaveBeenCalled();
     });
@@ -153,7 +153,7 @@ describe('createAgentOperationNotifier', () => {
         // "Republish" alone never said republish WHAT — the single worst line
         // the 2026-08-25 narration audit found.
         expect(mockShowWarningMessage).toHaveBeenCalledWith(
-            expect.stringContaining('Republishing the storefront configuration failed: CDN said no')
+            expect.stringContaining('Republishing the storefront failed: CDN said no')
         );
         expect(mockSetStatusBarMessage).not.toHaveBeenCalled();
     });
