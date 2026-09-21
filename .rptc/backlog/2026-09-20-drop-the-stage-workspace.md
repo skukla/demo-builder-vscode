@@ -94,10 +94,11 @@ console client cannot see a malformed call.
 Note that projects and workspaces differ here: `renameRemoteProject` sends `{ title }`
 alone and Adobe accepts it. Do not copy that shape to a workspace.
 
-**Still untested:** whether Adobe permits this on the workspace IT created. The
-measurement above is on a workspace we created; Bodea's Production is deleted, so
-settling it needs a throwaway Adobe project. The failure would surface immediately at
-implementation, so this is a known unknown rather than a blocker.
+**Settled 2026-09-20 on a throwaway project, deleted afterwards.** A fresh
+`createFireflyProject` has exactly one workspace — `Production/Production`, confirming
+that Stage is entirely ours. Retitling Adobe's own Production workspace with
+`{ name: 'Production', title: 'Demo' }` answered **HTTP 200**, and the machine name
+stayed `Production`. Adobe protects nothing here.
 
 Suggested title: **"Demo"** — it says what the workspace is for, and being the same in
 every project means an SC learns it once. The project's own title is the alternative, but
@@ -130,6 +131,22 @@ It also removes a real failure mode. The Stage create is best-effort by design: 
 leaves a Production-only project and the picker falls through to `workspaces[0]`. So the
 system already has two possible answers to "which workspace is this project's", decided by
 whether a call succeeded.
+
+## An observation worth chasing: Production's Runtime namespace
+
+The throwaway project's Production workspace reported **no Runtime namespace** when read
+seconds after creation. Our code says the opposite — `ensureProjectWorkspacesHaveRuntime`
+carries a comment that "the App Builder (jaeger) template provisions Runtime for the
+default Production workspace", and that the workspace WE add is the one that misses out.
+
+**This is a lead, not a finding.** Two readings fit: Adobe provisions it asynchronously
+and the read was too early, or Adobe never provisions it and our sweep is what creates it
+for both workspaces. Telling them apart needs a create, a wait and a re-read.
+
+It changes no decision here — `ensureProjectWorkspacesHaveRuntime` stays either way,
+because it is idempotent and tolerates the 409. But if the second reading is right, that
+comment is a false claim about another system of the same kind as the "Adobe refuses to
+delete Production" one, and it is worth correcting.
 
 ## Every surface
 
