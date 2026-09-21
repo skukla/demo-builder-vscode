@@ -165,7 +165,7 @@ describe('IntegrationsGrid — the link between them', () => {
         await user.click(within(panel).getByRole('button', { name: /^remove$/i }));
 
         const dialog = screen.getByRole('dialog', { name: 'Remove ERP integration' });
-        expect(dialog).toHaveTextContent('Nordwind is removed too, with its records.');
+        expect(dialog).toHaveTextContent('Nordwind will be removed too, with its records.');
     });
 
     it('removing the system names the integration that goes with it', async () => {
@@ -174,6 +174,6 @@ describe('IntegrationsGrid — the link between them', () => {
         await user.click(within(panel).getByRole('button', { name: /^remove$/i }));
 
         const dialog = screen.getByRole('dialog', { name: 'Remove Nordwind' });
-        expect(dialog).toHaveTextContent('Its records are deleted, and ERP integration is removed too.');
+        expect(dialog).toHaveTextContent('Its records will be deleted, and ERP integration will be removed too.');
     });
 });

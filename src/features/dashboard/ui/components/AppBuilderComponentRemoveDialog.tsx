@@ -57,8 +57,8 @@ export function AppBuilderComponentRemoveDialog({
             onClose={onClose}
         >
             <Text>
-                <strong>{componentName}</strong> is undeployed from Adobe and removed from this
-                project.
+                <strong>{componentName}</strong> will be undeployed from Adobe and removed from
+                this project.
             </Text>
             {consequence && <Text>{consequence}</Text>}
         </ConfirmActionDialog>

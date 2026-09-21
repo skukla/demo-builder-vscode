@@ -109,8 +109,8 @@ function removalConsequence(target: IntegrationCardModel | undefined): string | 
 function linkedRemovalConsequence(target: IntegrationCardModel): string {
     const names = (target.linked?.cards ?? []).map((card) => card.name).join(' and ');
     return target.isSystem
-        ? `Its records are deleted, and ${names} is removed too.`
-        : `${names} is removed too, with its records.`;
+        ? `Its records will be deleted, and ${names} will be removed too.`
+        : `${names} will be removed too, with its records.`;
 }
 
 /**
