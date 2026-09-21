@@ -261,5 +261,24 @@ describe('settingsSerializer', () => {
                 __existing__: ['AssetComputeSDK', 'CCAPI'],
             });
         });
+
+        // AB-23 slice 6: a settings file starts a NEW project, and each add there
+        // makes its own workspace. Carrying this one's would point the copy's
+        // integrations at a workspace the original owns — and removing either
+        // project would then delete the other's apps with it.
+        it("never carries an integration's own workspace", () => {
+            const ownWorkspace = { id: '4566206088345806568', name: 'Northwind-ERP', title: 'Northwind ERP' };
+            const project = createProject({
+                appBuilderComponents: {
+                    'acme-widget': { ...CUSTOM_IMPORT_STATE, workspace: ownWorkspace },
+                },
+            });
+
+            const exported = JSON.stringify(extractSettingsFromProject(project, true));
+
+            expect(exported).toContain('"acme-widget"');
+            expect(exported).not.toContain(ownWorkspace.id);
+            expect(exported).not.toContain(ownWorkspace.name);
+        });
     });
 });

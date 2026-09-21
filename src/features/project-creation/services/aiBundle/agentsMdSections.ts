@@ -20,6 +20,7 @@ import {
     sanitizeBlockId,
     escapeMarkdown,
 } from '../sanitization';
+import { integrationWorkspaceLines } from './agentsMdWorkspaces';
 import { aiDefaultsEntryApplies, projectNeedsAppBuilderTooling } from './aiToolingGate';
 import { COMPONENT_IDS } from '@/core/constants';
 import demoPackagesJson from '@/features/components/config/demo-packages.json';
@@ -406,6 +407,7 @@ export function buildAdobeIo(project: Project): string {
             `- **Workspace:** ${escapeMarkdown(sanitizeTemplateValue(project.adobe.workspaceTitle ?? project.adobe.workspace ?? ''))}`,
         );
     }
+    lines.push(...integrationWorkspaceLines(project));
 
     // length > 1 means at least one field was populated beyond the section header.
     // Append the org-context warning only when the section is non-empty.
@@ -446,7 +448,8 @@ export function buildAppBuilderIntegrations(project: Project): string {
         '## App Builder Integrations',
         'A project can hold multiple AI-built App Builder integrations. Each lives in its own',
         '`components/<id>/` folder with its own `app.config.yaml`, and each deploys into its own',
-        'isolated OpenWhisk (I/O Runtime) package.',
+        'isolated OpenWhisk (I/O Runtime) package — and, when listed under **Integration',
+        'workspaces**, into its own Adobe workspace.',
         '',
         '- Before editing, confirm WHICH integration (`components/<id>/`) the user means — ask',
         '  when more than one exists or the target is ambiguous.',
@@ -472,8 +475,10 @@ export function buildConsoleApiAccess(project: Project): string {
         "1. Call the `list_console_apis` MCP tool to find the service's sdk code (it flags",
         '   codes Demo Builder already manages).',
         '2. Confirm the code(s) with the user, then call `add_console_apis` — it subscribes',
-        "   the API on this project's Developer Console workspace credential and persists",
-        '   the choice so later component changes keep it.',
+        "   the API on a Developer Console workspace credential and persists the choice so",
+        '   later component changes keep it. Pass `componentId` when the API is for one',
+        "   integration: one listed under **Integration workspaces** runs in its own",
+        "   workspace, and an API added without its id lands in the project's instead.",
         '3. If a service needs a product profile, the tool will say so — direct the user to',
         '   the Adobe Developer Console (Project → Workspace → Add API) instead.',
         '',

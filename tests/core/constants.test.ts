@@ -124,8 +124,10 @@ describe('AI_CONTEXT_VERSION', () => {
     // exactly one file in the repo: the shipped template. Every project generated
     // since carried it, so an agent following the skill got "command not found".
     // The bump is what delivers the correction to projects that already have it.
-    it('is 32 (the mesh deploy command in sync-changes is api-mesh, not api:mesh)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(32);
+    // v33: AGENTS.md lists each integration's own Adobe workspace, and the API
+    // guidance passes componentId so an integration's API reaches its workspace.
+    it('is 33 (AGENTS.md names the workspace each integration lives in)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(33);
     });
 });
 

@@ -235,7 +235,13 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // exactly one file in the repo: this shipped template. An agent following it got
 // "command not found" in every project generated since. Found by reading every
 // document; the fix only reaches existing projects because of this bump.
-export const AI_CONTEXT_VERSION = 32;
+// v33 (2026-09-21): AB-23 slice 6. An integration added since AB-23 runs in an
+// Adobe workspace of its own, and AGENTS.md named only the project's — so an agent
+// looked for the ERP in Production. The Adobe section now lists each integration
+// workspace, and both AGENTS.md and extend-app-builder-app tell agents to pass
+// `componentId` to add_console_apis, which gained it in the same change; without it
+// an API meant for an integration landed on a workspace that integration never uses.
+export const AI_CONTEXT_VERSION = 33;
 
 /**
  * Component IDs for standardized component instance access
