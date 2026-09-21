@@ -24,6 +24,11 @@ import { ErrorCode } from '@/types/errorCodes';
 import type { MessageHandler } from '@/types/handlers';
 import { toError } from '@/types/typeGuards';
 
+/** What a person reads when the namespace cannot be listed. */
+const LIST_FAILED =
+    "Could not list what is deployed in this project's Adobe Runtime namespace. " +
+    'See Debug Logs for the reason.';
+
 /** The namespace that was read, and the packages in it. */
 export interface RuntimePackagesData {
     namespace: string;
@@ -68,6 +73,9 @@ export const handleListRuntimePackages: MessageHandler = async (context) => {
         );
         return { success: true, data };
     } catch (error) {
-        return { success: false, error: toError(error).message };
+        // The CLI's own reason goes to the Debug Logs (read_debug_logs), where it
+        // is useful; the answer says what failed in words written for a person.
+        context.logger.warn(`[Runtime] Could not list the namespace: ${toError(error).message}`);
+        return { success: false, error: LIST_FAILED };
     }
 };
