@@ -412,3 +412,4 @@ deleting that workspace, and a project made before this still works unchanged.
 - 2026-09-20  docs(backlog): AB-23's real open checks, and what Console will show (`ebad37812`)
 - 2026-09-20  fix(adobe): nothing provisions Runtime except this sweep (`da0f625d4`)
 - 2026-09-20  docs(backlog): AB-23's live checks are closed, and a deploy trap named (`eb042cab7`)
+- 2026-09-20  feat(app-builder): a component can record the workspace it deploys into (`446e6556b`)
