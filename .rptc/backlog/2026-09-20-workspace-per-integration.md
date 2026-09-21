@@ -61,93 +61,39 @@ is a workspace recorded PER COMPONENT and read by the target resolver.
   `set_project_destination` change behaviour; `docs/systems/mcp-server.md` must say so.
 - **The webview**: the Add Integration flow's destination stages assume one shared
   workspace (`flowStages.ts`, `AddIntegrationFlowAdapter.tsx`).
-- **Existing projects** get their own slice — see below. They must keep working
-  untouched, AND they must be able to reach the same shape a new project gets.
+- **Existing projects** keep working untouched on slice 1's fallback, and reach the new
+  model by removing and re-adding an integration. No migration ships — see below.
 - **Project reset** (`projectResetService.ts`) targets `project.adobe` only: decide whether
   reset leaves integration workspaces alone or resets them too.
 
-## Moving an existing project onto this model
+## Existing projects: no migration is built
 
-**Part of this item, not a follow-on** (owner, 2026-09-20). A change that only works for
-projects created after it is half a change: the components already on disk are the ones
-SCs are running demos from, and Kukla Bodea is the first of them.
+**There is no migration feature** (owner, 2026-09-20, correcting a draft of this item that
+designed one). Moving Kukla Bodea onto the model is a TESTING step done by hand, not a
+capability the extension ships.
 
-### What it does
+An earlier version of this section specified a dashboard action, an MCP tool, a handler and
+tests, plus the rules for deleting them afterwards. All of that is removed. It was
+scaffolding designed as a feature, for a population of a handful of projects belonging to
+one person.
 
-For each App Builder component already in the project: create its workspace, record it,
-provision Runtime, subscribe that component's own APIs there, and redeploy it. Then the
-project's workspace holds only what belongs to the project.
+**What actually covers existing projects:**
 
-### It deploys and never deletes, like the move it reuses
+- **They keep working, untouched.** A component with no recorded workspace deploys to the
+  project's workspace, exactly as it does today. That is slice 1's fallback and it needs
+  nothing else.
+- **A project reaches the new model by ordinary use.** Remove an integration and add it
+  again, and the add path gives it its own workspace. That is a thing the product already
+  does; no new code path is needed to reach the same end state.
+- **Bodea is moved by hand when we want to test the model on it.** Its only App Builder
+  component is the mesh, so that is one workspace and one redeploy, done once, leaving
+  nothing behind in the codebase.
 
-`appBuilderComponentMigration.ts` already moves every component when a project's
-destination changes, and its rule is the right one here: **deploy to the new target and
-leave the old deployment serving.** Its own reasoning applies unchanged — undeploy is the
-only irreversible step, the previous namespace is a free rollback when the new target
-turns out wrong, and idle Runtime actions cost essentially nothing.
-
-That buys reversibility almost for free: undoing a migration is clearing the recorded
-workspace, because the old deployment never stopped answering. Deleting the created
-workspace is a separate, later choice.
-
-### Explicit, never automatic
-
-This is a real deploy against live Adobe resources, so it is an action an SC takes, not
-something an activation sweep does behind them. Reachable from the dashboard and as an MCP
-tool, both confirmed before they run.
-
-That is a different rule from the AI-bundle sweep, which refreshes stale files silently —
-and deliberately so. Writing a file into a project is not the same as redeploying it.
-
-### Kukla Bodea, concretely
-
-Its only App Builder component today is the mesh (`eds-accs-mesh`, deployed, no recorded
-workspace). So its migration is one workspace, one redeploy — the smallest possible case,
-which makes it the right first one to run for real.
-
-Its storefront is EDS and not an App Builder component, so nothing touches it.
-
-### The migration deletes itself
-
-**Nothing about the migration survives it** (owner, 2026-09-20). It is scaffolding, and
-this repo does not soft-deprecate: when a code path becomes obsolete it is deleted in the
-change that obsoletes it, not relabelled.
-
-Two things get added, and they have DIFFERENT triggers. Conflating them is how the second
-one survives forever.
-
-**1. The migration action** — the dashboard entry, the MCP tool, the handler, its tests,
-and its section in `docs/systems/mcp-server.md`.
-
-Trigger: every project on disk records a workspace for every App Builder component it has.
-That is checkable in one command against `~/.demo-builder/projects/*/.demo-builder.json`,
-and it is the owner's call to run it.
-
-**2. The fallback** — `targetFor`'s "absent means the project's workspace", the optional
-`workspace?` on `AppBuilderComponentState`, and the tests that pin the fallback.
-
-Trigger is stricter, and it is worth being honest about: not "every project is migrated"
-but **"no project can ARRIVE un-migrated"** — from a backup, another machine, or a
-colleague. A single-owner tool can reasonably decide that point has come; it is still a
-decision rather than an observation, and it is riskier than deleting the action. Removing
-it makes the field required, which regenerates the manifest schema, so the end state is
-checkable.
-
-Staging them is allowed: delete the action as soon as its trigger fires, and let the
-fallback follow when the owner is satisfied nothing old can turn up. What is NOT allowed
-is leaving either one labelled deprecated and accepted-but-ignored.
-
-**Build the removal list as the slice is written**, in this item — every file, symbol and
-test the migration adds. Deleting it should be reading a list, not an excavation. A
-removal nobody wrote down is a removal nobody performs.
-
-### What the slice must prove
-
-- A project migrated this way behaves identically to one created after this item.
-- A project NOT migrated keeps working, because an absent workspace still means the
-  project's own.
-- The old deployment still answers after the move, so the rollback is real rather than
-  assumed.
+**What this does leave open**, and it is a real question rather than a hidden one: the
+fallback in `targetFor` has no end date now, because nothing bulk-converts old projects.
+It stays until every project an SC holds has been through a remove-and-re-add. That is
+cheap to keep — one `??` — and deleting it is a later decision with its own evidence, not
+something this item schedules.
 
 ## Live checks the plan still owes
 
@@ -482,13 +428,8 @@ An SC can add two App Management integrations to one project — including two o
 SAME kind, such as two ERPs — each deploys into its own workspace, and each is removed by
 deleting that workspace.
 
-A project made before this still works unchanged, AND can be moved onto the model, with
-the old deployment left serving so the move can be undone. Kukla Bodea is the first one
-moved.
-
-And it is not finished until the migration is GONE: the action deleted once every project
-on disk records a workspace for every component, the fallback deleted once nothing
-un-migrated can arrive. Neither is left behind labelled deprecated.
+A project made before this still works unchanged, and reaches the new model by removing
+and re-adding an integration — no migration code ships.
 
 ## Shipped so far
 
