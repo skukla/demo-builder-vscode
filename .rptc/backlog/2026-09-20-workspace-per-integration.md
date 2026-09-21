@@ -482,3 +482,4 @@ and re-adding an integration — no migration code ships.
 - 2026-09-21  fix(app-builder): a workspace is named from its title; a pair after its ERP (`47059ba98`)
 - 2026-09-21  fix(app-builder): a workspace's name is bare unless it is taken (`5b85b12f1`)
 - 2026-09-21  fix(app-builder): a workspace name keeps the title's spaces as dashes (`c240493e2`)
+- 2026-09-21  fix(app-builder): a taken workspace name is numbered, not scrambled (`b96d15c27`)
