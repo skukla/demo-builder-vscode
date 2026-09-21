@@ -111,6 +111,34 @@ The CLI evidence is strong but it is not the UI, and checking it needs an Adobe 
 which is the owner's to do. It would only matter if Console shows titles — and even then
 the divergence argument above stands.
 
+## Why we don't use Adobe's project template (asked 2026-09-20)
+
+`createFireflyProject` is documented as "Create a new App Builder Project (from
+template)", and the create endpoint's body schema does accept an optional `templateId`
+(`spec/api.json`, the `/console/organizations/{orgId}/projects` POST). **We never send
+one — and neither does Adobe's own CLI**: `aio console project create` exposes no such
+flag.
+
+What a bare create gives you, measured three times on throwaway projects: **one
+workspace (Production), no Runtime namespace, no subscribed services.** What the Console
+UI's template flow gives you is visible in Kukla Bodea, which was made that way — its
+machine name is Adobe-generated (`214BrownArmadillo`) — and which has Production AND
+Stage, with a Runtime namespace on Production.
+
+So the two paths really do differ, and `createDefaultStageWorkspace` plus
+`ensureProjectWorkspacesHaveRuntime` are hand-rolled stand-ins for whatever the template
+does.
+
+**Not worth chasing, for this item's own reason.** The template's extra output is the
+Stage workspace — the thing this item exists to stop creating. Adopting it would hand back
+exactly what we are removing, in exchange for one fewer call. The other half of what it
+produces, the Runtime namespace, we already create in a single idempotent call that
+tolerates the 409.
+
+**What is not known:** what a valid `templateId` is. There is no template-listing endpoint
+among the SDK spec's 77 paths, so finding one means watching what the Console UI sends.
+Worth recording so the question is not re-opened from scratch.
+
 ## What changes
 
 | Where | Change |
