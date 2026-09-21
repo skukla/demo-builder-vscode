@@ -628,9 +628,9 @@ export class AuthenticationService {
     // the fetcher via the existing ensureEntities() seam.
 
     /** List the org's entitled services (resolves requiredApis → sdkCodes). */
-    async getServicesForOrg(orgId: string): Promise<OrgServiceInfo[]> {
+    async getServicesForOrg(orgId: string, sdkCodes?: readonly string[]): Promise<OrgServiceInfo[]> {
         const { fetcher } = await this.ensureEntities();
-        return fetcher.getServicesForOrg(orgId);
+        return fetcher.getServicesForOrg(orgId, sdkCodes);
     }
 
     /** The sdk codes a credential is already subscribed to (for skip-if-subscribed). */

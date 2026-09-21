@@ -77,7 +77,7 @@ describe('AuthenticationService - ApiSubscriberClient passthroughs', () => {
 
     it('should forward getServicesForOrg', async () => {
         const result = await authService.getServicesForOrg('org1');
-        expect(mockFetcher.getServicesForOrg).toHaveBeenCalledWith('org1');
+        expect(mockFetcher.getServicesForOrg).toHaveBeenCalledWith('org1', undefined);
         expect(result).toEqual([{ code: 'X' }]);
     });
 

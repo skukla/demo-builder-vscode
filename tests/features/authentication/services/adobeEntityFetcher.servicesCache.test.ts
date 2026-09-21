@@ -71,8 +71,8 @@ describe('AdobeEntityFetcher — getServicesForOrg cache', () => {
         await fetcher.getServicesForOrg('org2');
 
         expect(sdk.getServicesForOrg).toHaveBeenCalledTimes(2);
-        expect(sdk.getServicesForOrg).toHaveBeenNthCalledWith(1, 'org1');
-        expect(sdk.getServicesForOrg).toHaveBeenNthCalledWith(2, 'org2');
+        expect(sdk.getServicesForOrg).toHaveBeenNthCalledWith(1, 'org1', undefined);
+        expect(sdk.getServicesForOrg).toHaveBeenNthCalledWith(2, 'org2', undefined);
     });
 
     it('should NOT cache an empty result (2nd call refetches)', async () => {

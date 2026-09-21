@@ -48,7 +48,7 @@ describe('createApiSubscriberClient', () => {
 
     it('should forward getServicesForOrg', async () => {
         const result = await adapter.getServicesForOrg('org1');
-        expect(service.getServicesForOrg).toHaveBeenCalledWith('org1');
+        expect(service.getServicesForOrg).toHaveBeenCalledWith('org1', undefined);
         expect(result).toEqual([{ code: 'X' }]);
     });
 

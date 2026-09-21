@@ -89,7 +89,12 @@ export interface OrgTarget {
  * an adapter over `AdobeEntityFetcher` (step 08 wiring); mocked in unit tests.
  */
 export interface ApiSubscriberClient {
-    getServicesForOrg(orgId: string): Promise<OrgServiceInfo[]>;
+    /**
+     * The org's service catalog. `sdkCodes` narrows it to those rows — which is all
+     * a subscribe ever needs, and the difference between about a second and a 504
+     * after sixty when Adobe's side is cold (measured 2026-09-21).
+     */
+    getServicesForOrg(orgId: string, sdkCodes?: readonly string[]): Promise<OrgServiceInfo[]>;
     /** The sdk codes a credential is already subscribed to (skip-if-subscribed). */
     getSubscribedServiceCodes(orgId: string, idIntegration: string): Promise<string[]>;
     /**
@@ -296,7 +301,9 @@ export async function subscribeRequiredApis(
     // "something is missing". Run one after the other and the SC waits for the
     // sum; run them together and only the slower one shows (2026-09-19 logs:
     // 60s read + 32s catalog).
-    const catalog = client.getServicesForOrg(target.orgId);
+    // Only the codes this subscribe needs: `requiredApis` is already known, and the
+    // whole ~99-row catalog is what runs past Adobe's gateway limit when cold.
+    const catalog = client.getServicesForOrg(target.orgId, requiredApis);
     // Parked so a rejection while the read is still running is not unhandled;
     // awaiting it below still sees the rejection.
     catalog.catch(() => undefined);

@@ -117,13 +117,21 @@ export class AdobeOrgServices {
      * Resolves an App Builder component's `requiredApis` names → sdkCodes + platformList.
      * Each entry carries `{ code, platformList, domainMandatory?, ... }`.
      */
-    async getServicesForOrg(orgId: string): Promise<OrgServiceInfo[]> {
+    async getServicesForOrg(orgId: string, sdkCodes?: readonly string[]): Promise<OrgServiceInfo[]> {
         // Session-TTL cache: the org's service catalog is identical for every
         // workspace in the org and changes rarely, so avoid refetching it on every
-        // workspace commit. Return the cached list while it is still fresh.
+        // workspace commit. Return the cached list while it is still fresh — or,
+        // for a caller naming its codes, just those rows of it, with no call at all.
         const cached = this.servicesCache.get(orgId);
         if (cached && Date.now() < cached.expiresAt) {
-            return cached.services;
+            return sdkCodes ? cached.services.filter((s) => sdkCodes.includes(s.code)) : cached.services;
+        }
+
+        // Only the named codes: cold, the full catalog hit Adobe's 60s gateway limit while
+        // three codes took 1.3s (2026-09-21). Kept out of the full cache and single-flight:
+        // cached, a subset would show the picker 4 APIs; queued, it would wait the 60s.
+        if (sdkCodes) {
+            return this.fetchServicesForOrg(orgId, sdkCodes);
         }
 
         // Single-flight PER ORG. The Add Integration modal PREFETCHES this on open
@@ -177,17 +185,20 @@ export class AdobeOrgServices {
     }
 
     /** The uncached catalog fetch behind {@link getServicesForOrg}'s single-flight. */
-    private async fetchServicesForOrg(orgId: string): Promise<OrgServiceInfo[]> {
+    private async fetchServicesForOrg(
+        orgId: string,
+        sdkCodes?: readonly string[],
+    ): Promise<OrgServiceInfo[]> {
         const startTime = Date.now();
         await this.ensureSDKReady();
-        const client = this.sdkClient.getClient() as {
-            getServicesForOrg: (orgId: string) => Promise<SDKResponse<OrgServiceInfo[]>>;
-        };
+        type ListServices = (orgId: string, codes?: string) => Promise<SDKResponse<OrgServiceInfo[]>>;
+        const client = this.sdkClient.getClient() as { getServicesForOrg: ListServices };
+        const codes = sdkCodes?.join(',');
 
         // Bounded like every other SDK read (trySDKFetch's contract, which this
         // method predates): an unbounded call left the API picker spinning with no
         // log line and no ceiling when the endpoint stalled.
-        let outcome = await tryWithTimeout(client.getServicesForOrg(orgId), {
+        let outcome = await tryWithTimeout(client.getServicesForOrg(orgId, codes), {
             timeoutMs: TIMEOUTS.ORG_SERVICES_FETCH,
             timeoutMessage: 'SDK org services fetch',
         });
@@ -196,15 +207,15 @@ export class AdobeOrgServices {
         // 2026-08-28). The endpoint intermittently answers sub-second 500s whose
         // own template says retry-on-internal-error, and a retry was measured to
         // succeed — three add attempts died on single 500s that day. A TIMEOUT is
-        // never retried: it already spent the full 60s budget, and doubling that
-        // wait is worse than the picker's fast-fail + Retry affordance.
+        // never retried: it already spent the whole ORG_SERVICES_FETCH budget, and
+        // doubling that wait is worse than the picker's fast-fail + Retry affordance.
         const failedFast = !outcome.timedOut && (outcome.error || !outcome.result);
         if (failedFast) {
             this.debugLogger.warn(
                 '[Entity Fetcher] Org services fetch failed fast — retrying once',
             );
             await sleep(TIMEOUTS.ORG_SERVICES_RETRY_DELAY);
-            outcome = await tryWithTimeout(client.getServicesForOrg(orgId), {
+            outcome = await tryWithTimeout(client.getServicesForOrg(orgId, codes), {
                 timeoutMs: TIMEOUTS.ORG_SERVICES_FETCH,
                 timeoutMessage: 'SDK org services fetch (retry)',
             });
@@ -229,9 +240,9 @@ export class AdobeOrgServices {
                 `${formatDuration(Date.now() - startTime)}`,
         );
 
-        // Cache only a successful, non-empty fetch — never a degraded empty result,
-        // so a transient 500 → [] cannot poison the cache for the whole session.
-        if (services.length > 0) {
+        // Cache only a successful, non-empty, FULL fetch: a transient 500 → [] must not
+        // poison the session, and a narrowed answer is a subset by construction.
+        if (services.length > 0 && !sdkCodes) {
             this.servicesCache.set(orgId, {
                 services,
                 expiresAt: Date.now() + CACHE_TTL.ORG_SERVICES,

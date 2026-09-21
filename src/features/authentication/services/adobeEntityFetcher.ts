@@ -214,8 +214,8 @@ export class AdobeEntityFetcher {
     // ---- Org service catalog + subscriptions (AdobeOrgServices) ------------
 
     /** The org's entitled-services catalog — see {@link AdobeOrgServices}. */
-    async getServicesForOrg(orgId: string): Promise<OrgServiceInfo[]> {
-        return this.orgServices.getServicesForOrg(orgId);
+    async getServicesForOrg(orgId: string, sdkCodes?: readonly string[]): Promise<OrgServiceInfo[]> {
+        return this.orgServices.getServicesForOrg(orgId, sdkCodes);
     }
 
     /** A credential's current sdk codes — see {@link AdobeOrgServices}. */

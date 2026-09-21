@@ -85,7 +85,8 @@ describe('AdobeEntityFetcher — API-service wrappers', () => {
 
             const result = await fetcher.getServicesForOrg('org1');
 
-            expect(sdk.getServicesForOrg).toHaveBeenCalledWith('org1');
+            // No codes: the full catalog, which the API picker needs.
+            expect(sdk.getServicesForOrg).toHaveBeenCalledWith('org1', undefined);
             expect(result).toEqual([{ code: MESH, platformList: ['apiKey'] }]);
         });
     });

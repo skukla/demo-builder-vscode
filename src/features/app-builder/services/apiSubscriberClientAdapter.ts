@@ -18,7 +18,7 @@ import type { AuthenticationService } from '@/features/authentication/services/a
 
 export function createApiSubscriberClient(service: AuthenticationService): ApiSubscriberClient {
     return {
-        getServicesForOrg: (orgId) => service.getServicesForOrg(orgId),
+        getServicesForOrg: (orgId, sdkCodes) => service.getServicesForOrg(orgId, sdkCodes),
 
         getSubscribedServiceCodes: (orgId, idIntegration) =>
             service.getSubscribedServiceCodes(orgId, idIntegration),

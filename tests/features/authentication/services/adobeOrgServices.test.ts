@@ -111,7 +111,77 @@ describe('AdobeOrgServices — getServicesForOrg cache', () => {
         expect(a).toEqual(SERVICES);
         expect(b).toEqual(SERVICES);
         expect(client.getServicesForOrg).toHaveBeenCalledTimes(1);
-        expect(client.getServicesForOrg).toHaveBeenCalledWith('org-1');
+        expect(client.getServicesForOrg).toHaveBeenCalledWith('org-1', undefined);
+    });
+});
+
+/**
+ * Asking for only the codes a caller needs (2026-09-21).
+ *
+ * Measured from one cold state: the full catalog ran 60.2s and came back 504 from
+ * Adobe's gateway, while three codes answered in 1.3s with every field intact. So
+ * a subscribe asks for what it needs — and must never be mistaken for the full
+ * catalog, or the API picker opens showing four APIs instead of ninety-nine.
+ */
+describe('AdobeOrgServices — a caller naming its codes', () => {
+    const CATALOG = [
+        { code: 'AdobeIOManagementAPISDK', type: 'entp' },
+        { code: 'ACCS-REST-API', type: 'adobeid' },
+        { code: 'ACCS-REST-API', type: 'entp' },
+        { code: 'FireflyAPISDK', type: 'entp' },
+    ];
+
+    it('asks Adobe for only those codes, comma-joined', async () => {
+        const { service, client } = makeService();
+        client.getServicesForOrg.mockResolvedValue({ body: CATALOG.slice(0, 3) });
+
+        await service.getServicesForOrg('org-1', ['AdobeIOManagementAPISDK', 'ACCS-REST-API']);
+
+        expect(client.getServicesForOrg).toHaveBeenCalledWith(
+            'org-1',
+            'AdobeIOManagementAPISDK,ACCS-REST-API',
+        );
+    });
+
+    it('answers from a WARM full catalog with no call at all', async () => {
+        const { service, client } = makeService();
+        client.getServicesForOrg.mockResolvedValue({ body: CATALOG });
+        await service.getServicesForOrg('org-1');
+        client.getServicesForOrg.mockClear();
+
+        const rows = await service.getServicesForOrg('org-1', ['ACCS-REST-API']);
+
+        expect(client.getServicesForOrg).not.toHaveBeenCalled();
+        // Both ACCS rows — the entp one is where the profiles live.
+        expect(rows.map((r) => r.type)).toEqual(['adobeid', 'entp']);
+    });
+
+    // The one that would do real damage: a four-row answer cached as the org's
+    // catalog, so the next API picker shows four APIs.
+    it('never caches a narrowed answer as the full catalog', async () => {
+        const { service, client } = makeService();
+        client.getServicesForOrg.mockResolvedValueOnce({ body: CATALOG.slice(1, 3) });
+        await service.getServicesForOrg('org-1', ['ACCS-REST-API']);
+
+        client.getServicesForOrg.mockResolvedValueOnce({ body: CATALOG });
+        const full = await service.getServicesForOrg('org-1');
+
+        expect(full).toHaveLength(4);
+        expect(client.getServicesForOrg).toHaveBeenLastCalledWith('org-1', undefined);
+    });
+
+    // Waiting on an in-flight FULL fetch would hand the subscriber the very
+    // sixty seconds this exists to avoid.
+    it('does not wait behind a full fetch that is still in flight', async () => {
+        const { service, client } = makeService();
+        client.getServicesForOrg.mockImplementation((_org: string, codes?: string) =>
+            codes ? Promise.resolve({ body: CATALOG.slice(1, 3) }) : never(),
+        );
+        void service.getServicesForOrg('org-1');
+
+        const rows = await service.getServicesForOrg('org-1', ['ACCS-REST-API']);
+
+        expect(rows).toHaveLength(2);
     });
 });
 

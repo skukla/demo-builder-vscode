@@ -218,6 +218,13 @@ describe('apiSubscriber', () => {
 
                 const result = await subscribeRequiredApis([], target, client, undefined, ['ACCS-REST-API']);
 
+                // Only the codes this subscribe needs, never the ~99-row catalog that
+                // runs past Adobe's gateway limit when cold (60.2s → 504 vs 1.3s,
+                // measured 2026-09-21).
+                expect(client.getServicesForOrg).toHaveBeenCalledWith('org1', [
+                    'AdobeIOManagementAPISDK',
+                    'ACCS-REST-API',
+                ]);
                 const [, , sent] = (client.subscribeOAuthServerToServerIntegrationToServices as jest.Mock).mock.calls[0];
                 // Adobe refuses this service without a product ("requires selection of
                 // a product", 2026-09-16); the org's one profile is named, as the aio
