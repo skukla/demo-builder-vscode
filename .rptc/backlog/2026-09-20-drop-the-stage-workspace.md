@@ -4,7 +4,7 @@ kind: chore
 area: app-builder
 needs: []
 value: med
-status: backlog
+status: active
 ---
 
 # Stop creating a Stage workspace
@@ -169,3 +169,14 @@ delete Production" one, and it is worth correcting.
 Creating a project makes no workspace of its own, the demo runs in the one Adobe provides
 (called Production, in Adobe's surfaces and in ours), a project created before this still
 works untouched, and no code matches a workspace by the substring "stage".
+
+## Shipped so far
+
+- 2026-09-20  docs(backlog): do not rename the workspace after all (`9f70f328b`)
+- 2026-09-20  docs(backlog): the project's workspace is titled "Core" (`1e0c27602`)
+- 2026-09-20  docs(backlog): Adobe's workspace is the project's, every add gets its own (`6aec121f1`)
+- 2026-09-20  docs(backlog): Adobe permits retitling its own Production workspace (`ec1655e21`)
+- 2026-09-20  docs(backlog): a workspace retitle works, but the PATCH must carry the name (`a5d049278`)
+- 2026-09-20  docs(backlog): the project keeps Adobe's workspace, retitled (`032b4c908`)
+- 2026-09-20  fix(adobe): no workspace name is protected, Production included (`d90607e5f`)
+- 2026-09-20  docs(backlog): AB-24, stop creating a Stage workspace (`c8690debd`)

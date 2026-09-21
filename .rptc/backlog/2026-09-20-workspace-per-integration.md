@@ -355,3 +355,5 @@ deleting that workspace, and a project made before this still works unchanged.
 - 2026-09-20  docs(backlog): two of the same integration is in scope, not a follow-on (`37b44ef52`)
 - 2026-09-20  docs(backlog): the id names the workspace, the SC name titles it (`551fc7133`)
 - 2026-09-20  docs(backlog): how workspaces are made and named today (`eb422d0a9`)
+- 2026-09-20  fix(destination): a workspace without its machine name is refused (`4eb80a1e5`)
+- 2026-09-20  docs(backlog): AB-23's real open checks, and what Console will show (`ebad37812`)
