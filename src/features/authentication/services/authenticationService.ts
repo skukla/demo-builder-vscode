@@ -1,7 +1,7 @@
 import * as path from 'path';
-import type { OrgServicesStore } from './adobeOrgServices';
 import { isValidTokenResponse } from './authPredicates';
 import { withOrgContext, type OrgContextTarget } from './orgContextEnv';
+import type { OrgServicesStore } from './orgServicesSavedCatalog';
 import { getLogger } from '@/core/logging/debugLogger';
 import { StepLogger } from '@/core/logging/stepLogger';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';

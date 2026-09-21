@@ -6,10 +6,8 @@
  * can be driven from either side.
  */
 
-import {
-    AdobeOrgServices,
-    type OrgServicesStore,
-} from '@/features/authentication/services/adobeOrgServices';
+import { AdobeOrgServices } from '@/features/authentication/services/adobeOrgServices';
+import type { OrgServicesStore } from '@/features/authentication/services/orgServicesSavedCatalog';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 
 export const SERVICES = [{ code: 'GraphQLServiceSDK', name: 'Mesh', type: 't' }];
