@@ -355,9 +355,17 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
         description:
             "List the packages deployed in this project's Adobe I/O Runtime namespace (its " +
             'Developer Console workspace), with the namespace name. Use to check what an ' +
-            'integration left running after a removal, or what is deployed before a redeploy.',
+            'integration left running after a removal, or what is deployed before a redeploy. ' +
+            'Pass componentId to read the workspace that integration deploys into.',
         map: dashboardHandlers,
         type: 'listRuntimePackages',
+        inputSchema: {
+            componentId: z
+                .string()
+                .min(1)
+                .optional()
+                .describe("An integration id (from get_project); omit for the project's workspace"),
+        },
     },
     {
         tool: 'get_store_structure',

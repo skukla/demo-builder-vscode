@@ -16,6 +16,7 @@
 import { runGuards } from './appBuilderComponentHandlers';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell/orgContextEnv';
+import { deployWorkspaceId } from '@/features/app-builder/services/componentWorkspace';
 import {
     listRuntimePackages,
     runtimeNamespaceEnv,
@@ -36,10 +37,14 @@ export interface RuntimePackagesData {
 }
 
 /**
- * Handle 'listRuntimePackages' — the packages deployed in the project workspace's
- * Runtime namespace.
+ * Handle 'listRuntimePackages' — the packages deployed in a Runtime namespace:
+ * the project workspace's, or, given `componentId`, the workspace that integration
+ * deploys into (its own since AB-23, else the project's).
  */
-export const handleListRuntimePackages: MessageHandler = async (context) => {
+export const handleListRuntimePackages: MessageHandler<{ componentId?: string }> = async (
+    context,
+    payload,
+) => {
     const project = await context.stateManager.getCurrentProject();
     if (!project) {
         return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
@@ -48,6 +53,15 @@ export const handleListRuntimePackages: MessageHandler = async (context) => {
         return {
             success: false,
             error: 'Project has no Adobe org context. Complete Adobe setup first.',
+        };
+    }
+
+    const componentId = payload?.componentId;
+    if (componentId && !project.appBuilderComponents?.[componentId]) {
+        return {
+            success: false,
+            error: `This project has no integration "${componentId}".`,
+            code: ErrorCode.COMPONENT_NOT_FOUND,
         };
     }
 
@@ -61,8 +75,12 @@ export const handleListRuntimePackages: MessageHandler = async (context) => {
             commandManager: ServiceLocator.getCommandExecutor(),
             logger: context.logger,
         };
+        const projectTarget = buildOrgTargetFromProjectAdobe(project.adobe);
+        const target = componentId
+            ? { ...projectTarget, workspaceId: deployWorkspaceId(project, componentId) }
+            : projectTarget;
         const data = await withOrgContext(
-            buildOrgTargetFromProjectAdobe(project.adobe),
+            target,
             async (): Promise<RuntimePackagesData> => {
                 const env = await runtimeNamespaceEnv(deps);
                 return {

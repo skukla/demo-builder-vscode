@@ -16,7 +16,11 @@ jest.mock('@/features/dashboard/handlers/appBuilderComponentHandlers', () => ({
     runGuards: jest.fn().mockResolvedValue(undefined),
 }));
 jest.mock('@/core/shell/orgContextEnv', () => ({
-    buildOrgTargetFromProjectAdobe: jest.fn(() => ({ orgId: 'org-1', workspaceId: 'ws-stage' })),
+    buildOrgTargetFromProjectAdobe: jest.fn(() => ({
+        orgId: 'org-1',
+        projectId: 'proj-1',
+        workspaceId: 'ws-stage',
+    })),
     withOrgContext: jest.fn((_t: unknown, fn: () => Promise<unknown>) => fn()),
 }));
 const mockCommandExecutor = { execute: jest.fn() };
@@ -63,7 +67,7 @@ describe('handleListRuntimePackages', () => {
             data: { namespace: 'ns-stage', packages: ['erp', 'demo-erp'] },
         });
         expect(withOrgContext).toHaveBeenCalledWith(
-            { orgId: 'org-1', workspaceId: 'ws-stage' },
+            { orgId: 'org-1', projectId: 'proj-1', workspaceId: 'ws-stage' },
             expect.any(Function)
         );
         // The list reuses the key fetched for the answer's namespace, not a second fetch.
@@ -107,6 +111,45 @@ describe('handleListRuntimePackages', () => {
             error: 'Sign in to Adobe',
             code: ErrorCode.AUTH_REQUIRED,
         });
+        expect(mockRuntimeNamespaceEnv).not.toHaveBeenCalled();
+    });
+
+    // AB-23: an integration deploys into its own workspace, so "what did it leave
+    // running?" has to be asked THERE — the project's workspace would say "nothing".
+    it("reads an integration's own workspace when given its id", async () => {
+        const project = createMockProject({
+            appBuilderComponents: {
+                'erp-integration': {
+                    kind: 'integration',
+                    status: 'deployed',
+                    source: { owner: 'skukla', repo: 'commerce-erp-integration' },
+                    workspace: { id: 'ws-erp', name: 'erpintegration', title: 'ERP integration' },
+                },
+            },
+        });
+
+        const result = await handleListRuntimePackages(contextWith(project), {
+            componentId: 'erp-integration',
+        });
+
+        expect(result).toMatchObject({ success: true });
+        expect(withOrgContext).toHaveBeenCalledWith(
+            { orgId: 'org-1', projectId: 'proj-1', workspaceId: 'ws-erp' },
+            expect.any(Function)
+        );
+    });
+
+    it('refuses an integration the project does not have, before touching Adobe', async () => {
+        const result = await handleListRuntimePackages(contextWith(adobeProject()), {
+            componentId: 'nope',
+        });
+
+        expect(result).toEqual({
+            success: false,
+            error: 'This project has no integration "nope".',
+            code: ErrorCode.COMPONENT_NOT_FOUND,
+        });
+        expect(runGuards).not.toHaveBeenCalled();
         expect(mockRuntimeNamespaceEnv).not.toHaveBeenCalled();
     });
 

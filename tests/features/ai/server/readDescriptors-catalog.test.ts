@@ -88,7 +88,7 @@ const CATALOG: Row[] = [
         map: dashboardHandlers,
         type: 'listRuntimePackages',
         needsAuth: ['adobe'],
-        args: null,
+        args: ['componentId'],
     },
     {
         tool: 'get_store_structure',
