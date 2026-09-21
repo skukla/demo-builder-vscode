@@ -84,6 +84,12 @@ function assertSubscribeAccepted(response: SDKResponse<unknown> | undefined): vo
 }
 
 /**
+ * How many times one catalog request asks Adobe before its waiters see the error:
+ * about three minutes at Adobe's 60s gateway cutoff (owner, 2026-09-21).
+ */
+const ORG_SERVICES_ATTEMPTS = 3;
+
+/**
  * Reads the org service catalog and subscribes credentials to services.
  */
 /** Whether an SDK error is Adobe's 404 — the SDK carries the status only in its message. */
@@ -198,27 +204,23 @@ export class AdobeOrgServices {
         // Bounded like every other SDK read (trySDKFetch's contract, which this
         // method predates): an unbounded call left the API picker spinning with no
         // log line and no ceiling when the endpoint stalled.
-        let outcome = await tryWithTimeout(client.getServicesForOrg(orgId, codes), {
-            timeoutMs: TIMEOUTS.ORG_SERVICES_FETCH,
-            timeoutMessage: 'SDK org services fetch',
-        });
+        const attempt = (label: string) =>
+            tryWithTimeout(client.getServicesForOrg(orgId, codes), {
+                timeoutMs: TIMEOUTS.ORG_SERVICES_FETCH,
+                timeoutMessage: `SDK org services fetch${label}`,
+            });
 
-        // ONE retry, and only for a FAST failure (owner-approved hardening,
-        // 2026-08-28). The endpoint intermittently answers sub-second 500s whose
-        // own template says retry-on-internal-error, and a retry was measured to
-        // succeed — three add attempts died on single 500s that day. A TIMEOUT is
-        // never retried here: it already spent the whole budget, and a person waits
-        // on the picker. warmOrgServicesCatalog retries once — nobody waits on it.
-        const failedFast = !outcome.timedOut && (outcome.error || !outcome.result);
-        if (failedFast) {
+        // The tries live HERE, in the one shared request, so every waiter (the Manage APIs
+        // spinner, the warm-up) sees one load ending in the list or one error. On 2026-09-21
+        // the retry lived in the warm-up: the dialog showed an error at Adobe's 60s cutoff
+        // while a retry it could not see loaded the list 31s later.
+        let outcome = await attempt('');
+        for (let tryNumber = 2; tryNumber <= ORG_SERVICES_ATTEMPTS && !outcome.result; tryNumber++) {
             this.debugLogger.warn(
-                '[Entity Fetcher] Org services fetch failed fast — retrying once',
+                `[Entity Fetcher] Org services fetch failed — try ${tryNumber} of ${ORG_SERVICES_ATTEMPTS}`,
             );
             await sleep(TIMEOUTS.ORG_SERVICES_RETRY_DELAY);
-            outcome = await tryWithTimeout(client.getServicesForOrg(orgId, codes), {
-                timeoutMs: TIMEOUTS.ORG_SERVICES_FETCH,
-                timeoutMessage: 'SDK org services fetch (retry)',
-            });
+            outcome = await attempt(` (try ${tryNumber})`);
         }
 
         if (outcome.timedOut || outcome.error || !outcome.result) {
