@@ -274,6 +274,15 @@ workspace limit is lower.
 
 ## Renaming: the id names the workspace, the SC's name titles it
 
+> **Changed 2026-09-21 (owner): the name now comes from the TITLE, not the id.** The
+> reasoning below assumed the id is minted from the name the SC typed. That holds for
+> integrations the SC builds, not for catalog entries: the ERP pair's id is the
+> catalog's `erp-integration`, so Console showed `erpintegrationlHJE`. A name taken
+> from the title at creation is exactly as stable — it is fixed then and never
+> follows a rename, which is all the argument below needs. A bound pair is titled
+> after its SYSTEM ("Northwind ERP"), the half the SC names. The four random
+> characters stay. What follows is kept as the record of the first decision.
+
 Adobe gives a workspace two fields, and they answer two different questions.
 
 | Field | Comes from | Changes on a rename |

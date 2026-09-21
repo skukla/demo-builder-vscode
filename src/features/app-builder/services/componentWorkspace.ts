@@ -8,24 +8,20 @@
  * cost a bespoke credential for the calls that an Adobe token already covers inside
  * one workspace. So the bound pair joins one workspace and the unit matches the act.
  *
- * WHY THE NAME COMES FROM THE COMPONENT ID. The id is already the machine identity
- * everywhere else — the folder, the keyed-state key, and the deployed OpenWhisk
- * package through `deriveOwPackage` — and it is immutable by declaration, while the
- * SC's display name is not. That matters because Adobe REFUSES to change a
- * workspace's machine name after creation (`400 "Workspace name can not be
- * changed"`, measured 2026-09-20), and the name reaches the Runtime namespace and so
- * every action URL. A name tracking something renameable would be wrong the first
- * time an SC renamed it, permanently.
+ * THE NAME COMES FROM THE TITLE. Adobe derives nothing itself: we send a machine
+ * name (letters and digits, under 20) and a title. Both come from the name the SC
+ * knows the component by, so "Northwind ERP" is titled "Northwind ERP" and named
+ * `NorthwindERP` plus four random characters that keep two demo projects sharing one
+ * Adobe project from clashing. Adobe refuses to change a machine name later
+ * (`400 "Workspace name can not be changed"`, measured 2026-09-20) and the name
+ * reaches every action URL, so it is fixed at creation; a later rename moves the
+ * title only. It came from the component id until the owner saw `erpintegration…`
+ * in Console (2026-09-21): the id reads well only for integrations the SC builds —
+ * a catalog entry's id is the catalog's word, never the SC's.
  *
- * The TITLE carries the SC's display name, because that is the field a rename can
- * safely follow.
- *
- * A PAIR'S WORKSPACE IS THE INTEGRATION'S. The system is added first, so it is the
- * one that makes the workspace — and it used to name it after itself, so the ERP
- * pair's workspace came out titled "ERP" (the catalog's word, not even the SC's
- * "Northwind ERP") and named `demoerp…`. The SC added the INTEGRATION; the system
- * comes with it. So both the title and the machine name come from the integration
- * (owner decision, 2026-09-21).
+ * A PAIR IS TITLED AFTER ITS SYSTEM. The SC names the ERP ("Northwind ERP"), not the
+ * integration that comes with it, so whichever half makes the workspace titles it
+ * after the system (owner, 2026-09-21 — it was the integration's, "ERP Integration").
  *
  * @module features/app-builder/services/componentWorkspace
  */
@@ -35,14 +31,13 @@ import type { AppBuilderComponentState, Project } from '@/types/base';
 
 /**
  * What this needs from Adobe: make a workspace in the project's Console project.
- * `nameFrom` is what the machine name is derived from; the title stays the SC's.
+ * Adobe's machine name is derived from the title.
  */
 export interface WorkspaceMaker {
     createWorkspace: (
         title: string,
         description: string,
         target: { orgId?: string; projectId?: string },
-        nameFrom: string,
     ) => Promise<{ id: string; name: string; title?: string } | { error: string }>;
 }
 
@@ -77,18 +72,18 @@ function partnerIds(
 }
 
 /**
- * Whose workspace this is: a system bound to an integration makes the pair's
- * workspace, but it belongs to the integration. Anything else owns its own.
+ * Which entry a new workspace is named after: for a bound pair, the system — the
+ * half the SC names — whichever half makes it. Anything else names its own.
  */
-export function workspaceOwner(
+export function workspaceNamedFor(
     entry: AppBuilderComponentCatalogEntry,
     catalog: AppBuilderComponentCatalogEntry[] = [],
 ): AppBuilderComponentCatalogEntry {
-    const integration =
-        entry.kind === 'system' && entry.boundTo
-            ? catalog.find((candidate) => candidate.id === entry.boundTo)
-            : undefined;
-    return integration ?? entry;
+    if (entry.kind === 'system') return entry;
+    const system = catalog.find(
+        (candidate) => candidate.kind === 'system' && candidate.boundTo === entry.id,
+    );
+    return system ?? entry;
 }
 
 /**
@@ -151,7 +146,7 @@ export async function ensureComponentWorkspace(
 
     const workspace =
         inheritedWorkspace(project, entry, deps.catalog) ??
-        (await make(project, workspaceOwner(entry, deps.catalog), deps));
+        (await make(project, workspaceNamedFor(entry, deps.catalog), deps));
     if ('error' in workspace) return workspace;
     // `make` never answers undefined — it returns a workspace or a reason — so this
     // is the type narrowing, not a fallback. A silent skip here would deploy into the
@@ -164,23 +159,22 @@ export async function ensureComponentWorkspace(
     return undefined;
 }
 
-/** Create the owner's workspace in Adobe, titled for the SC and named for the id. */
+/** Create a workspace in Adobe, titled — and so named — for the SC. */
 async function make(
     project: Project,
-    owner: AppBuilderComponentCatalogEntry,
+    named: AppBuilderComponentCatalogEntry,
     deps: {
         maker: WorkspaceMaker;
         nameOf: (entry: AppBuilderComponentCatalogEntry) => string;
         onMaking?: () => void;
     },
 ): Promise<NonNullable<AppBuilderComponentState['workspace']> | { error: string }> {
-    const title = deps.nameOf(owner);
+    const title = deps.nameOf(named);
     deps.onMaking?.();
     const created = await deps.maker.createWorkspace(
         title,
-        `Demo Builder: ${owner.id}`,
+        `Demo Builder: ${named.id}`,
         { orgId: project.adobe?.organization, projectId: project.adobe?.projectId },
-        owner.id,
     );
     if ('error' in created) {
         return {

@@ -153,7 +153,6 @@ describe('AuthenticationService - Entity Retrieval and Selection', () => {
             expect(mockEntities.createWorkspace).toHaveBeenCalledWith(
                 'Stage',
                 'A workspace',
-                undefined,
                 undefined
             );
         });

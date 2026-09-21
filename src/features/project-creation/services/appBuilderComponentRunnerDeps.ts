@@ -254,8 +254,8 @@ export function buildDefaultRunnerDeps(
             ensureComponentWorkspace(project, entry, {
                 onMaking,
                 maker: {
-                    createWorkspace: (title, description, target, nameFrom) =>
-                        ctx.authManager.createWorkspace(title, description, target, nameFrom),
+                    createWorkspace: (title, description, target) =>
+                        ctx.authManager.createWorkspace(title, description, target),
                 },
                 saveProject: ctx.saveProject,
                 // The name the SC gave it (a rename, else the one typed at add),

@@ -69,14 +69,12 @@ describe('a component that needs its own workspace', () => {
         });
 
         expect(result).toBeUndefined();
-        // The TITLE is the SC's name — the only field a rename can safely follow,
-        // because Adobe refuses to change a machine name after creation.
-        // Named after the id, which never changes; titled for the SC.
+        // Titled for the SC, and nothing else is handed over: Adobe's machine name
+        // is derived from this title, so Console reads as the SC named it.
         expect(maker.createWorkspace).toHaveBeenCalledWith(
             'Northwind ERP',
             'Demo Builder: erp-integration',
             { orgId: 'org-1', projectId: 'proj-1' },
-            'erp-integration',
         );
         expect(project.appBuilderComponents?.['erp-integration'].workspace).toEqual({
             id: 'ws-new',
@@ -166,46 +164,43 @@ describe('a bound pair shares ONE workspace', () => {
         });
     });
 
-    // The system is added first, so it makes the pair's workspace — and it used to
-    // name it after itself: "ERP", `demoerp…` (2026-09-21). The SC added the
-    // integration; the workspace is the integration's, titled and named for it.
-    it("a system that makes the pair's workspace names it after its integration", async () => {
-        const project = projectWith();
-        const maker = makerThatCreates();
-        const nameOf = (entry: AppBuilderComponentCatalogEntry) =>
-            entry.id === 'erp-integration' ? 'ERP integration' : 'Northwind ERP';
+    // A pair's workspace is titled after the ERP, the half the SC names. It was
+    // titled after the integration ("ERP Integration", `erpintegration…`) until
+    // the owner saw it in Console, 2026-09-21, and expected "Northwind ERP".
+    const nameOfPair = (entry: AppBuilderComponentCatalogEntry) =>
+        entry.id === 'demo-erp' ? 'Northwind ERP' : 'ERP Integration';
 
-        await ensureComponentWorkspace(project, DEMO_ERP, {
+    it("a system that makes the pair's workspace titles it after itself", async () => {
+        const maker = makerThatCreates();
+
+        await ensureComponentWorkspace(projectWith(), DEMO_ERP, {
             maker,
             saveProject,
-            nameOf,
+            nameOf: nameOfPair,
             catalog: [ERP_INTEGRATION, DEMO_ERP],
-        });
-
-        expect(maker.createWorkspace).toHaveBeenCalledWith(
-            'ERP integration',
-            'Demo Builder: erp-integration',
-            { orgId: 'org-1', projectId: 'proj-1' },
-            'erp-integration',
-        );
-    });
-
-    it('a system whose integration is not in the catalog names the workspace after itself', async () => {
-        const project = projectWith();
-        const maker = makerThatCreates();
-
-        await ensureComponentWorkspace(project, DEMO_ERP, {
-            maker,
-            saveProject,
-            nameOf: () => 'Northwind ERP',
-            catalog: [DEMO_ERP],
         });
 
         expect(maker.createWorkspace).toHaveBeenCalledWith(
             'Northwind ERP',
             'Demo Builder: demo-erp',
             { orgId: 'org-1', projectId: 'proj-1' },
-            'demo-erp',
+        );
+    });
+
+    it("an integration that makes the pair's workspace titles it after its ERP", async () => {
+        const maker = makerThatCreates();
+
+        await ensureComponentWorkspace(projectWith(), ERP_INTEGRATION, {
+            maker,
+            saveProject,
+            nameOf: nameOfPair,
+            catalog: [ERP_INTEGRATION, DEMO_ERP],
+        });
+
+        expect(maker.createWorkspace).toHaveBeenCalledWith(
+            'Northwind ERP',
+            'Demo Builder: demo-erp',
+            { orgId: 'org-1', projectId: 'proj-1' },
         );
     });
 

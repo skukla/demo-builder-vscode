@@ -134,9 +134,9 @@ describe('one component', () => {
         });
     });
 
-    // Adobe will not rename a workspace, and the name reaches every action URL, so
-    // it must come from something that never changes: the component id.
-    it('asks Adobe to name the workspace after the component id', async () => {
+    // The machine name is derived from the title Adobe is handed, so passing no
+    // separate name source is what makes Console read as the SC named it.
+    it('asks Adobe for a workspace titled for the SC, with nothing else to name it from', async () => {
         const adobe = fakeAdobe();
         const deps = depsWithRealWorkspaces(adobe, [SOLO]);
 
@@ -146,7 +146,6 @@ describe('one component', () => {
             'ERP',
             'Demo Builder: demo-erp',
             { orgId: 'org-123', projectId: 'proj-456' },
-            'demo-erp',
         );
     });
 });
@@ -161,12 +160,11 @@ describe('a bound pair', () => {
 
         expect(result).toEqual({ success: true });
         expect(adobe.createWorkspace).toHaveBeenCalledTimes(1);
-        // The ERP is added first and makes it, but the workspace is the integration's.
+        // Titled after the ERP: that is the half the SC names ("Northwind ERP").
         expect(adobe.createWorkspace).toHaveBeenCalledWith(
-            'ERP integration',
-            'Demo Builder: erp-integration',
+            'ERP',
+            'Demo Builder: demo-erp',
             { orgId: 'org-123', projectId: 'proj-456' },
-            'erp-integration',
         );
         expect(project.appBuilderComponents?.['demo-erp']?.workspace?.id).toBe('ws-1');
         expect(project.appBuilderComponents?.['erp-integration']?.workspace?.id).toBe('ws-1');
