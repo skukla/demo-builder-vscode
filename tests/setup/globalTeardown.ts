@@ -12,6 +12,13 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import {
+    ancestorPids,
+    contentionNotice,
+    peerJestPids,
+    processSnapshot,
+    PEERS_AT_START_ENV,
+} from './concurrentRuns';
 import { socketRootBase, socketRootForRun } from './mcpTestSocketRoot';
 
 /**
@@ -32,6 +39,24 @@ function runIsAlive(runId: string): boolean {
     } catch (error) {
         return (error as NodeJS.ErrnoException).code !== 'ESRCH';
     }
+}
+
+/**
+ * Say so when this run did not have the machine to itself.
+ *
+ * The union of what globalSetup saw and what is running now. Printed LAST, after
+ * jest's own summary, because it is the thing that decides whether to believe the
+ * summary above it.
+ */
+function reportContention(): void {
+    const atStart = (process.env[PEERS_AT_START_ENV] ?? '')
+        .split(',')
+        .map((pid) => Number(pid))
+        .filter((pid) => Number.isInteger(pid) && pid > 0);
+    const atEnd = peerJestPids(processSnapshot(), ancestorPids());
+    const pids = [...new Set([...atStart, ...atEnd])].sort((a, b) => a - b);
+    if (pids.length === 0) return;
+    console.warn(contentionNotice(pids));
 }
 
 export default async function globalTeardown() {
@@ -81,4 +106,8 @@ export default async function globalTeardown() {
 
     // Give Node a moment to close any pending handles
     await new Promise((resolve) => setTimeout(resolve, 100));
+
+    // LAST, so it is the final thing on screen: a run that had company cannot be
+    // read the same way as one that did not.
+    reportContention();
 }

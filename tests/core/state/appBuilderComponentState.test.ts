@@ -19,9 +19,10 @@ import {
     recordInstallation,
 } from '@/core/state/appBuilderComponentState';
 import type { Project, AppBuilderComponentState } from '@/types/base';
+import { makeAppBuilderComponent } from './appBuilderComponentState.testUtils';
 import { createMockProject } from '../../helpers/projectFake';
 
-/** Minimal Project for accessor testing. */
+/** Minimal Project for accessor testing — local, never exported (PL-16). */
 function makeProject(overrides: Partial<Project> = {}): Project {
     return {
         name: 'demo',
@@ -29,17 +30,6 @@ function makeProject(overrides: Partial<Project> = {}): Project {
         status: 'stopped',
         created: new Date(),
         lastModified: new Date(),
-        ...overrides,
-    };
-}
-
-function makeAppBuilderComponent(
-    overrides: Partial<AppBuilderComponentState> = {}
-): AppBuilderComponentState {
-    return {
-        kind: 'mesh',
-        status: 'deployed',
-        source: { owner: 'skukla', repo: 'commerce-paas-mesh' },
         ...overrides,
     };
 }

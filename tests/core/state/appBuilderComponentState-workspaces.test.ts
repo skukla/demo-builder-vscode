@@ -16,7 +16,8 @@ import {
     workspacesToRelease,
 } from '@/core/state/appBuilderComponentState';
 import type { AppBuilderComponentState, Project } from '@/types/base';
-import { createMockProject } from '../../../helpers/projectFake';
+import { makeAppBuilderComponent } from './appBuilderComponentState.testUtils';
+import { createMockProject } from '../../helpers/projectFake';
 
 const PAIR_WS = { id: 'ws-pair', name: 'NorthwindErpq3k9' };
 const OTHER_WS = { id: 'ws-other', name: 'StarterKitb2x9' };
@@ -24,12 +25,10 @@ const OTHER_WS = { id: 'ws-other', name: 'StarterKitb2x9' };
 function component(
     workspace?: AppBuilderComponentState['workspace'],
 ): AppBuilderComponentState {
-    return {
+    return makeAppBuilderComponent({
         kind: 'integration',
-        status: 'deployed',
-        source: { owner: 'skukla', repo: 'whatever' },
         ...(workspace ? { workspace } : {}),
-    };
+    });
 }
 
 function projectWith(components: Project['appBuilderComponents']): Project {
