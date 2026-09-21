@@ -87,13 +87,14 @@ export function CustomStage({
                 errorMessage={message}
                 width="100%"
             />
-            {source ? (
-                <OptionalNameField
-                    label={label}
-                    defaultLabel={source.repo}
-                    onLabelChange={onLabelChange}
-                />
-            ) : null}
+            {/* Always on screen, disabled until the URL names a repo — same reason as
+                the catalog stage: a field appearing mid-step grew the dialog. */}
+            <OptionalNameField
+                label={label}
+                defaultLabel={source?.repo ?? ''}
+                onLabelChange={onLabelChange}
+                disabledHint={source ? undefined : 'Enter a repository first'}
+            />
         </div>
     );
 }

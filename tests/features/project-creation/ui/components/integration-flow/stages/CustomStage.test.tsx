@@ -42,6 +42,19 @@ function urlField(): HTMLElement {
 }
 
 describe('CustomStage', () => {
+    // Same reason as the catalog stage: a field appearing mid-step grew the dialog.
+    it('shows the name field before a repository is entered, disabled', () => {
+        renderStage();
+        const field = screen.getByPlaceholderText('Enter a repository first');
+        expect(field).toBeDisabled();
+    });
+
+    it('enables the name field once the URL names a repository, with it as the default', () => {
+        renderStage({ source: { owner: 'acme', repo: 'widget' } });
+        const field = screen.getByPlaceholderText('widget');
+        expect(field).toBeEnabled();
+    });
+
     it('renders the labelled GitHub URL field with no validation message initially', () => {
         const { onSourceChange } = renderStage();
         expect(urlField()).toBeInTheDocument();

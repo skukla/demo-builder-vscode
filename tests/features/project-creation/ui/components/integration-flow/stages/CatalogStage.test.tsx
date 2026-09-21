@@ -186,9 +186,13 @@ describe('CatalogStage', () => {
 });
 
 describe('naming a picked entry (optional-name model, 2026-08-27)', () => {
-    it('shows NO name field until an entry is picked', () => {
+    // On screen from the start, disabled until a pick: appearing ON the pick grew
+    // the whole dialog under the SC's cursor (owner, 2026-09-21).
+    it('shows the name field before a pick, disabled, saying what to do first', () => {
         renderStage();
-        expect(screen.queryByLabelText(/Name \(optional\)/)).not.toBeInTheDocument();
+        const field = screen.getByLabelText(/Name \(optional\)/);
+        expect(field).toBeDisabled();
+        expect(field).toHaveAttribute('placeholder', 'Pick an integration first');
     });
 
     it("shows the picked entry's name as the PLACEHOLDER, empty value, no validation", () => {

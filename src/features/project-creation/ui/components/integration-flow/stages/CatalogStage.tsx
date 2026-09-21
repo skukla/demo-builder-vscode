@@ -102,13 +102,14 @@ export function CatalogStage({
                     ))}
                 </div>
             )}
-            {selectedEntry ? (
-                <OptionalNameField
-                    label={label}
-                    defaultLabel={selectedEntry.name}
-                    onLabelChange={onLabelChange}
-                />
-            ) : null}
+            {/* Always on screen, disabled until a pick: appearing on the pick made the
+                whole dialog grow under the SC's cursor (owner, 2026-09-21). */}
+            <OptionalNameField
+                label={label}
+                defaultLabel={selectedEntry?.name ?? ''}
+                onLabelChange={onLabelChange}
+                disabledHint={selectedEntry ? undefined : 'Pick an integration first'}
+            />
         </div>
     );
 }

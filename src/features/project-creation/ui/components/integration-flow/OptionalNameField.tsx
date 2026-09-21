@@ -24,6 +24,13 @@ export interface OptionalNameFieldProps {
     defaultLabel: string;
     /** Report every keystroke; the commit trims and falls back to the default. */
     onLabelChange: (label: string) => void;
+    /**
+     * Shown but not yet usable — there is nothing to name until a choice is made.
+     * The field is on screen from the start so the dialog does not grow when it
+     * becomes usable: appearing on the pick made the whole modal jump (owner,
+     * 2026-09-21). The text is the placeholder while disabled.
+     */
+    disabledHint?: string;
 }
 
 /**
@@ -36,13 +43,15 @@ export function OptionalNameField({
     label,
     defaultLabel,
     onLabelChange,
+    disabledHint,
 }: OptionalNameFieldProps): React.ReactElement {
     return (
         <TextField
             label="Name (optional)"
-            value={label ?? ''}
-            placeholder={defaultLabel}
+            value={disabledHint ? '' : (label ?? '')}
+            placeholder={disabledHint ?? defaultLabel}
             onChange={onLabelChange}
+            isDisabled={Boolean(disabledHint)}
             width="100%"
         />
     );
