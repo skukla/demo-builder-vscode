@@ -15,6 +15,7 @@
  */
 
 import { mockWithOrgContext } from './appBuilderComponentRunner.orgContextMock';
+import './appBuilderComponentRunner.runtimeMock';
 import type { Project } from '@/types/base';
 
 jest.setTimeout(5000);
