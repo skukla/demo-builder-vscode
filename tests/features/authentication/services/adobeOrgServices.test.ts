@@ -78,15 +78,57 @@ describe('AdobeOrgServices — getServicesForOrg cache', () => {
         expect(client.getServicesForOrg).toHaveBeenCalledTimes(1);
     });
 
-    it('refetches AT the TTL boundary — the entry expires on, not after, its deadline', async () => {
+    // An old copy is never a wait. On 2026-09-21 a 30-minute expiry turned Manage
+    // APIs, opened 40 minutes after the warm-up, into a blocking fetch that timed
+    // out at 60s. The list barely changes, so the copy is answered at once and a
+    // refresh runs behind it.
+    it('answers an OLD copy at once, even while its refresh never lands', async () => {
         const { service, client } = makeService();
-        client.getServicesForOrg.mockResolvedValue({ body: SERVICES });
-
+        client.getServicesForOrg.mockResolvedValueOnce({ body: SERVICES });
         await service.getServicesForOrg('org-1');
+        client.getServicesForOrg.mockReturnValue(new Promise(() => undefined));
         nowSpy.mockReturnValue(1_000 + CACHE_TTL.ORG_SERVICES);
+
+        await expect(service.getServicesForOrg('org-1')).resolves.toEqual(SERVICES);
+        // The refresh starts AT the boundary — the age counts on, not after, it.
+        expect(client.getServicesForOrg).toHaveBeenCalledTimes(2);
+    });
+
+    it('starts ONE refresh however many callers find the copy old', async () => {
+        const { service, client } = makeService();
+        client.getServicesForOrg.mockResolvedValueOnce({ body: SERVICES });
         await service.getServicesForOrg('org-1');
+        client.getServicesForOrg.mockReturnValue(new Promise(() => undefined));
+        nowSpy.mockReturnValue(1_000 + CACHE_TTL.ORG_SERVICES);
+
+        await Promise.all([service.getServicesForOrg('org-1'), service.getServicesForOrg('org-1')]);
 
         expect(client.getServicesForOrg).toHaveBeenCalledTimes(2);
+    });
+
+    it('replaces the copy with what the refresh brings back', async () => {
+        const { service, client } = makeService();
+        client.getServicesForOrg.mockResolvedValueOnce({ body: SERVICES });
+        await service.getServicesForOrg('org-1');
+        const refreshed = [...SERVICES, { code: 'NewSDK' }];
+        client.getServicesForOrg.mockResolvedValueOnce({ body: refreshed });
+        nowSpy.mockReturnValue(1_000 + CACHE_TTL.ORG_SERVICES);
+        await service.getServicesForOrg('org-1');
+        await new Promise((resolve) => setImmediate(resolve));
+
+        await expect(service.getServicesForOrg('org-1')).resolves.toEqual(refreshed);
+    });
+
+    it('keeps the copy when the refresh fails', async () => {
+        const { service, client } = makeService();
+        client.getServicesForOrg.mockResolvedValueOnce({ body: SERVICES });
+        await service.getServicesForOrg('org-1');
+        client.getServicesForOrg.mockRejectedValue(new Error('504 Gateway Timeout'));
+        nowSpy.mockReturnValue(1_000 + CACHE_TTL.ORG_SERVICES);
+        await service.getServicesForOrg('org-1');
+        await new Promise((resolve) => setTimeout(resolve, 0));
+
+        await expect(service.getServicesForOrg('org-1')).resolves.toEqual(SERVICES);
     });
 
     it('never caches an empty catalog — the next call fetches again', async () => {

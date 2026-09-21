@@ -64,10 +64,18 @@ describe('AuthCacheManager - expiry boundaries and TTL choices', () => {
             fill: () => cache.setCachedTokenInspection({ valid: true, expiresIn: 30, token: 't' }),
             read: () => cache.getCachedTokenInspection(),
         },
+        // Granted lasts an hour (the probe spawns the CLI); denied stays short so a
+        // newly granted role is rechecked soon.
         {
-            name: 'developer permissions',
-            ttl: CACHE_TTL.MEDIUM,
+            name: 'developer permissions (granted)',
+            ttl: CACHE_TTL.LONG,
             fill: () => cache.setCachedDeveloperPermissions({ hasPermissions: true }),
+            read: () => cache.getCachedDeveloperPermissions(),
+        },
+        {
+            name: 'developer permissions (denied)',
+            ttl: CACHE_TTL.MEDIUM,
+            fill: () => cache.setCachedDeveloperPermissions({ hasPermissions: false }),
             read: () => cache.getCachedDeveloperPermissions(),
         },
     ];
