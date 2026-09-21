@@ -27,6 +27,7 @@ jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
 
 import { removeAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentRunner';
 import { deriveOwPackage } from '@/features/app-builder/services/owPackageName';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { createDeps, createProject } from './appBuilderComponentRunner.testUtils';
 
@@ -295,6 +296,21 @@ describe('post-undeploy runtime verification', () => {
         const result = await removeAppBuilderComponent(integrationProject(), ID, deps);
 
         expect(result.runtimeCleanup).toMatchObject({ verified: false, deleted: [], failed: [] });
+    });
+
+    // A removal ran as one line, "Taking the app down", for 3m 39s (2026-09-21).
+    it('says what each phase of the removal is doing, in order', async () => {
+        const deps = createDeps();
+        routeExecute(deps, { 'package list': { stdout: '[]' } });
+        const stages: Array<[string, string | undefined]> = [];
+        deps.onProgress = (message: string, subMessage?: string) => stages.push([message, subMessage]);
+
+        await removeAppBuilderComponent(integrationProject(), ID, deps);
+
+        expect(stages).toEqual([
+            [OPERATION_STAGES.removing.label, 'Undeploying Custom Integration'],
+            [OPERATION_STAGES.checkingLeftovers.label, undefined],
+        ]);
     });
 
     it('a mesh removal runs NO runtime verification (its own status flow owns that)', async () => {

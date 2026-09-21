@@ -144,6 +144,29 @@ export const OPERATION_STAGES = {
         expectation: 'Up to a couple of minutes while Adobe finishes',
         detail: 'Waiting for Adobe to report it deployed',
     },
+    // A removal ran as ONE line, "Taking the app down", for 3m 39s on 2026-09-21
+    // while it undid Commerce writes, uninstalled, undeployed two apps, deleted
+    // eight leftovers and waited on Adobe for the workspace. Each phase now says so.
+    undoingCommerceChanges: {
+        label: 'Undoing Commerce changes',
+        expectation: 'Usually under a minute',
+        detail: 'What the integration wrote into Commerce',
+    },
+    clearingRecords: {
+        label: 'Clearing the records',
+        expectation: 'Usually under a minute',
+        detail: "The system's own data, before its code goes",
+    },
+    checkingLeftovers: {
+        label: 'Checking nothing is left',
+        expectation: 'Usually under a minute',
+        detail: 'Deleting anything the undeploy left running',
+    },
+    removingWorkspace: {
+        label: 'Removing the workspace',
+        expectation: 'Up to a couple of minutes',
+        detail: 'Adobe can take a while to confirm it',
+    },
     removingFromCommerce: {
         label: 'Removing from Commerce',
         expectation: 'Usually under a minute, longer if Commerce asks for a retry',

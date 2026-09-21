@@ -180,6 +180,11 @@ export const TIMEOUTS = {
      *  than showing an error while a retry it cannot see carries on. */
     ORG_SERVICES_RETRY_DELAY: 2000,
 
+    /** Between looks at a project's workspaces after a delete answered an error.
+     *  Adobe's gateway gives up at 60s while the delete carries on: on 2026-09-21
+     *  a look 7s after a 504 still listed the workspace, and it was gone soon after. */
+    WORKSPACE_DELETE_RECHECK: 15000,
+
     /** Initial wait before first mesh verification poll (20 seconds) */
     MESH_VERIFY_INITIAL_WAIT: 20000,
 

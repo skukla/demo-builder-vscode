@@ -9,7 +9,11 @@
  * true. A workspace still listed, or a list that cannot be read, stays a failure.
  */
 
+jest.mock('@/core/utils/sleep', () => ({ sleep: jest.fn().mockResolvedValue(undefined) }));
+
 import { AdobeConsoleProjectOps } from '@/features/authentication/services/adobeConsoleProjectOps';
+import { sleep } from '@/core/utils/sleep';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
 import type { AdobeWorkspace } from '@/features/authentication/services/types';
@@ -54,13 +58,29 @@ describe('AdobeConsoleProjectOps.deleteWorkspace', () => {
         expect(list).toHaveBeenCalledWith('org-1', 'proj-1');
     });
 
-    it('stays a failure when the workspace is still in the project', async () => {
+    // The second 504 of the day: a look 7s after it still listed the workspace, and
+    // it was gone soon after. So it looks again, a few times, before believing it.
+    it('keeps looking, and reports deleted when a later look finds it gone', async () => {
+        const list = jest
+            .fn()
+            .mockResolvedValueOnce([workspace('ws-stage'), workspace('ws-1')])
+            .mockResolvedValueOnce([workspace('ws-stage'), workspace('ws-1')])
+            .mockResolvedValue([workspace('ws-stage')]);
+        const ops = opsWith(jest.fn().mockRejectedValue(GATEWAY_TIMEOUT), list);
+
+        await expect(ops.deleteWorkspace('ws-1', TARGET)).resolves.toMatchObject({ deleted: true });
+        expect(list).toHaveBeenCalledTimes(3);
+        expect(sleep).toHaveBeenCalledWith(TIMEOUTS.WORKSPACE_DELETE_RECHECK);
+    });
+
+    it('stays a failure when the workspace is still there at the last look', async () => {
         const list = jest.fn().mockResolvedValue([workspace('ws-stage'), workspace('ws-1')]);
         const ops = opsWith(jest.fn().mockRejectedValue(GATEWAY_TIMEOUT), list);
 
         await expect(ops.deleteWorkspace('ws-1', TARGET)).resolves.toEqual({
             error: GATEWAY_TIMEOUT.message,
         });
+        expect(list).toHaveBeenCalledTimes(5);
     });
 
     it('stays a failure when the list cannot be read — unknown is not deleted', async () => {

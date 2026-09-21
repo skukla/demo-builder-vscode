@@ -126,7 +126,9 @@ async function detachIfErpIntegration(
     if (!deps.detachFromCommerce || state.kind !== 'integration') {
         return undefined;
     }
-    const result = await deps.detachFromCommerce(project, state.deployedUrls, (message) => deps.onProgress?.(message));
+    const result = await deps.detachFromCommerce(project, state.deployedUrls, (message) =>
+        deps.onProgress?.(OPERATION_STAGES.undoingCommerceChanges.label, message),
+    );
     if (result.status === 'skipped') {
         return undefined;
     }
@@ -169,6 +171,7 @@ async function wipeIfSystem({ project, state, entry }: TeardownTarget, deps: Tea
     if (!deps.wipeSystemRecords || state.kind !== 'system') {
         return undefined;
     }
+    deps.onProgress?.(OPERATION_STAGES.clearingRecords.label);
     const result = await deps.wipeSystemRecords(project, entry, state.deployedUrls, state.name ?? entry.name);
     return result.status === 'failed' ? (result.detail ?? 'no reason given') : undefined;
 }

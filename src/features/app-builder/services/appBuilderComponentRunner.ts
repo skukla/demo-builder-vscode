@@ -1233,6 +1233,8 @@ export async function removeAppBuilderComponent(
         declared = { packages, ...timersAndRules };
     }
 
+    const shownName = state.name ?? project.componentInstances?.[id]?.name ?? id;
+    deps.onProgress?.(OPERATION_STAGES.removing.label, `Undeploying ${shownName}`);
     try {
         await teardownRemote(targetFor(project, deps, id), componentPath, state.kind, deps);
     } catch (error) {
@@ -1243,6 +1245,7 @@ export async function removeAppBuilderComponent(
 
     // Trust nothing: `aio app undeploy` exits 0 with packages still deployed
     // (AB-7, measured live). Meshes verify via their own status flow.
+    if (state.kind !== 'mesh') deps.onProgress?.(OPERATION_STAGES.checkingLeftovers.label);
     const runtimeCleanup =
         state.kind !== 'mesh'
             ? await verifyRuntimeTeardown(targetFor(project, deps, id), id, declared, deps)
@@ -1262,6 +1265,7 @@ export async function removeAppBuilderComponent(
     // pair goes through the integration and takes its systems with it — so the shared
     // workspace is released exactly once, when the last holder is gone.
     for (const workspace of workspacesToRelease(heldWorkspaces, cleared)) {
+        deps.onProgress?.(OPERATION_STAGES.removingWorkspace.label);
         const failure = await deps.deleteComponentWorkspace(cleared, workspace);
         if (failure) {
             deps.logger.warn(

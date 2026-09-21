@@ -28,7 +28,12 @@ import type {
     SDKResponse,
 } from './types';
 import { getLogger } from '@/core/logging/debugLogger';
+import { sleep } from '@/core/utils/sleep';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
+
+/** How many times a failed workspace delete looks again before believing it. */
+const WORKSPACE_DELETE_LOOKS = 5;
 
 /** What renaming an Adobe project answers: done, or Adobe's reason for refusing. */
 export type RemoteRenameResult = { ok: true } | { ok: false; error: string };
@@ -475,14 +480,22 @@ export class AdobeConsoleProjectOps {
         }
     }
 
-    /** Whether a project's workspace list no longer holds this id. False when unknowable. */
+    /**
+     * Whether a project's workspace list stops holding this id, looking a few times
+     * over about a minute: the delete can finish after the error arrives. False when
+     * it is still there at the last look, or the list cannot be read.
+     */
     private async workspaceGone(orgId: string, projectId: string, workspaceId: string): Promise<boolean> {
-        try {
-            const workspaces = await this.listWorkspaces(orgId, projectId);
-            return !workspaces.some((workspace) => workspace.id === workspaceId);
-        } catch {
-            return false;
+        for (let look = 1; look <= WORKSPACE_DELETE_LOOKS; look++) {
+            try {
+                const workspaces = await this.listWorkspaces(orgId, projectId);
+                if (!workspaces.some((workspace) => workspace.id === workspaceId)) return true;
+            } catch {
+                return false;
+            }
+            if (look < WORKSPACE_DELETE_LOOKS) await sleep(TIMEOUTS.WORKSPACE_DELETE_RECHECK);
         }
+        return false;
     }
 
     /**

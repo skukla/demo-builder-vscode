@@ -920,11 +920,14 @@ function runRemove(
             // Undeploy is a slow cloud op — telegraph it, or the grid sits frozen
             // while `aio app undeploy` runs with nothing on screen saying so.
             report(OPERATION_STAGES.removing.label);
+            // Every phase reports through this — it was left out, so a 3-minute
+            // removal read as one line (2026-09-21).
             const deps = buildDefaultRunnerDeps(
                 await buildRunnerDepsContext(context, project, {
                     authManager: ServiceLocator.getAuthenticationService(),
                     commandManager: ServiceLocator.getCommandExecutor(),
                 }),
+                (message, subMessage, position) => report(message, subMessage, position),
             );
             // `force` is the SC's "Remove anyway".
             return removeAppBuilderComponent(project, id, deps, { force });
