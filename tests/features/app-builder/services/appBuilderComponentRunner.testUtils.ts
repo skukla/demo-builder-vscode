@@ -175,6 +175,10 @@ export function createDeps(
         // keeps exercising the fallback path, which is what components in existing
         // projects actually do. Suites testing the workspace override it.
         createComponentWorkspace: jest.fn().mockResolvedValue(undefined),
+        // Releasing a component's workspace on removal (AB-23). The default succeeds
+        // silently; suites assert WHICH workspace it was handed, because a pair shares
+        // one and deleting it early takes the partner's namespace with it.
+        deleteComponentWorkspace: jest.fn().mockResolvedValue(undefined),
         // API subscriber (mocked).
         subscribeRequiredApis: jest.fn().mockResolvedValue(undefined),
         // Storefront republish (mocked; production wires republishStorefrontConfig).

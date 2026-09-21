@@ -177,3 +177,45 @@ export function getMeshEndpoint(project: Project): string | undefined {
 
     return undefined;
 }
+
+/**
+ * The workspaces a removal should delete: the ones the removed components held that
+ * NOTHING remaining still records.
+ *
+ * The check matters because a bound pair SHARES a workspace. Deleting on the first
+ * removal would take the partner's Runtime namespace, its code and its database with
+ * it — and the partner would go on looking deployed, because its record still says so.
+ * Removing a pair goes through the integration and takes its systems with it, so in
+ * practice both are gone by the time this runs and the workspace is released once.
+ *
+ * @param held - the workspaces the removed components recorded, before removal
+ * @param remaining - the project AFTER the removed components were cleared
+ */
+export function workspacesToRelease(
+    held: ReadonlyArray<NonNullable<AppBuilderComponentState['workspace']>>,
+    remaining: Project,
+): NonNullable<AppBuilderComponentState['workspace']>[] {
+    const stillUsed = new Set(
+        Object.values(remaining.appBuilderComponents ?? {})
+            .map((state) => state.workspace?.id)
+            .filter((id): id is string => Boolean(id)),
+    );
+    const seen = new Set<string>();
+    return held.filter((workspace) => {
+        if (stillUsed.has(workspace.id) || seen.has(workspace.id)) return false;
+        seen.add(workspace.id);
+        return true;
+    });
+}
+
+/** Every workspace recorded by a component in this list, in order, deduped later. */
+export function workspacesHeldBy(
+    project: Project,
+    ids: ReadonlyArray<string>,
+): NonNullable<AppBuilderComponentState['workspace']>[] {
+    return ids
+        .map((id) => project.appBuilderComponents?.[id]?.workspace)
+        .filter((workspace): workspace is NonNullable<AppBuilderComponentState['workspace']> =>
+            Boolean(workspace),
+        );
+}

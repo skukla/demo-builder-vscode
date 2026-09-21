@@ -27,6 +27,7 @@ jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
 import {
     addAppBuilderComponent,
     deployAppBuilderComponent,
+    removeAppBuilderComponent,
 } from '@/features/app-builder/services/appBuilderComponentRunner';
 import { MESH_ENTRY, createDeps, createProject } from './appBuilderComponentRunner.testUtils';
 
@@ -157,5 +158,53 @@ describe('addAppBuilderComponent — the workspace comes first', () => {
         await addAppBuilderComponent(createProject(), MESH_ENTRY, deps);
 
         expect(order).toEqual(['workspace', 'subscribe']);
+    });
+});
+
+// =============================================================================
+// The REMOVE path: the workspace goes with the component
+// =============================================================================
+
+describe('removeAppBuilderComponent — releasing the workspace', () => {
+    it('deletes the workspace the component held', async () => {
+        const project = projectWithMesh({ id: 'ws-mesh-own', name: 'CommerceMeshq3k9' });
+        const deps = createDeps();
+
+        const result = await removeAppBuilderComponent(project, ID, deps);
+
+        expect(result.success).toBe(true);
+        expect(deps.deleteComponentWorkspace).toHaveBeenCalledWith(
+            expect.anything(),
+            { id: 'ws-mesh-own', name: 'CommerceMeshq3k9' },
+        );
+    });
+
+    it('deletes nothing when the component held no workspace', async () => {
+        const deps = createDeps();
+
+        await removeAppBuilderComponent(projectWithMesh(), ID, deps);
+
+        expect(deps.deleteComponentWorkspace).not.toHaveBeenCalled();
+    });
+
+    /**
+     * By the time this runs the component is undeployed and cleared, so refusing
+     * would hand the SC a half-removed integration to argue with. An undeleted
+     * workspace is untidy; a stuck removal is not.
+     */
+    it('still succeeds when Adobe refuses the delete, and clears the component anyway', async () => {
+        const project = projectWithMesh({ id: 'ws-mesh-own', name: 'CommerceMeshq3k9' });
+        const deps = createDeps();
+        deps.deleteComponentWorkspace.mockResolvedValue({
+            error: 'Read-only project cannot be deleted (400).',
+        });
+
+        const result = await removeAppBuilderComponent(project, ID, deps);
+
+        expect(result.success).toBe(true);
+        // The component really is gone — the refusal leaves a stray workspace, not a
+        // half-removed integration.
+        const persisted = deps.saveProject.mock.calls.at(-1)?.[0] as Project;
+        expect(persisted.appBuilderComponents?.[ID]).toBeUndefined();
     });
 });

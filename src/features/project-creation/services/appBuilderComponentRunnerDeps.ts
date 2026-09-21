@@ -250,6 +250,19 @@ export function buildDefaultRunnerDeps(
                 saveProject: ctx.saveProject,
                 displayName: entry.name ?? entry.id,
             }),
+        deleteComponentWorkspace: async (project, workspace) => {
+            const result = await ctx.authManager.deleteWorkspace(workspace.id, {
+                orgId: project.adobe?.organization,
+                projectId: project.adobe?.projectId,
+            });
+            // Adobe's own words reach the log rather than a guess. The one refusal
+            // the AB-2 spike predicted here — a workspace still holding live event
+            // registrations answering 409 — has never actually been seen: three
+            // deletes on 2026-09-20 all answered 200 in about three seconds, none
+            // of them holding registrations. If it starts happening, the project
+            // teardown's registration sweep is the thing to reuse.
+            return 'error' in result ? { error: result.error } : undefined;
+        },
         // The runner's dep contract is void — swallow the returned API list.
         subscribeRequiredApis: async (appBuilderComponents, project, onStep) => {
             const started = Date.now();

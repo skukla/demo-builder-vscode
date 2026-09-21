@@ -59,7 +59,13 @@ import type { AppDeploymentResult } from './types';
 import { isMeshComponentId } from '@/core/constants';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { buildOrgTargetFromProjectAdobe, withOrgContext, type CachedOrgRef } from '@/core/shell/orgContextEnv';
-import { clearUpdateAvailable, getProvidedEnvVars, recordInstallation } from '@/core/state/appBuilderComponentState';
+import {
+    clearUpdateAvailable,
+    getProvidedEnvVars,
+    recordInstallation,
+    workspacesHeldBy,
+    workspacesToRelease,
+} from '@/core/state/appBuilderComponentState';
 import { reconcileComponentSelections } from '@/core/state/componentSelectionReconcile';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { explainAdobeAccessFailure } from '@/features/authentication/services/authenticationErrorFormatter';
@@ -297,6 +303,19 @@ export interface AppBuilderComponentRunnerDeps extends TeardownDeps {
     createComponentWorkspace: (
         project: Project,
         entry: AppBuilderComponentCatalogEntry,
+    ) => Promise<{ error: string } | undefined>;
+    /**
+     * Delete a workspace a removed component held (AB-23), so removal returns the
+     * project to what it was — the reversal the create on add earns.
+     *
+     * Returns a reason rather than throwing. A failure here is a WARNING, not a
+     * failed removal: the component is already undeployed and cleared by the time
+     * this runs, so refusing would leave the SC with a half-removed integration to
+     * argue with. An undeleted workspace is untidy; a stuck removal is not.
+     */
+    deleteComponentWorkspace: (
+        project: Project,
+        workspace: { id: string; name: string },
     ) => Promise<{ error: string } | undefined>;
     /** Storefront config regen + republish (step 04 generalized providesEnvVars path). */
     republishStorefront: (input: RepublishInput) => Promise<{ success: boolean; error?: string }>;
@@ -1155,6 +1174,9 @@ export async function removeAppBuilderComponent(
     }
     // Read before the record goes: afterwards nothing says which systems it used.
     const systems = state.kind === 'integration' ? systemsUsedBy(project, id, deps.catalog) : [];
+    // Same reason: once the records are cleared, nothing says which workspaces these
+    // components held, and a workspace nothing names cannot be found or deleted.
+    const heldWorkspaces = workspacesHeldBy(project, [id, ...systems]);
 
     // The storefront config reads ONE provided var; a component providing only
     // to other components (the ERP) earns no republish on its way out.
@@ -1204,6 +1226,20 @@ export async function removeAppBuilderComponent(
 
     const cleared = withoutComponent(project, id, state);
     await deps.saveProject(cleared);
+
+    // AFTER the records are cleared, so "is anything still using this workspace?" is
+    // asked of the project as it now stands. A bound pair shares one, and removing a
+    // pair goes through the integration and takes its systems with it — so the shared
+    // workspace is released exactly once, when the last holder is gone.
+    for (const workspace of workspacesToRelease(heldWorkspaces, cleared)) {
+        const failure = await deps.deleteComponentWorkspace(cleared, workspace);
+        if (failure) {
+            deps.logger.warn(
+                `[AppBuilderComponent Runner] workspace ${workspace.name} was left behind: ` +
+                    failure.error,
+            );
+        }
+    }
     // The screen key goes with the component: nothing reads it again, and a
     // secret left in SecretStorage is one nobody owns.
     const removedEntry = deps.catalog.find((entry) => entry.id === id);
