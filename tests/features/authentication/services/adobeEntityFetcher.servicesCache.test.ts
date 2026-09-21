@@ -136,6 +136,10 @@ describe('AdobeEntityFetcher — getServicesForOrg cache', () => {
     // THROWS rather than resolving []: an empty list is indistinguishable from
     // "this org entitles nothing", and the picker rendered a failed fetch as
     // `No APIs match ""` instead of its "Couldn't load Adobe APIs" + Retry view.
+    // Three tries at the full budget, with the pause between them: the request
+    // only gives up once every try has stalled.
+    const ALL_TRIES_MS = 3 * TIMEOUTS.ORG_SERVICES_FETCH + 2 * TIMEOUTS.ORG_SERVICES_RETRY_DELAY + 1000;
+
     it('THROWS rather than hanging when the SDK call never settles', async () => {
         jest.useFakeTimers();
         sdk.getServicesForOrg.mockReturnValue(new Promise(() => {}));
@@ -146,8 +150,7 @@ describe('AdobeEntityFetcher — getServicesForOrg cache', () => {
         // deferred await.
         // eslint-disable-next-line jest/valid-expect
         const assertion = expect(pending).rejects.toThrow(/timed out/i);
-        await Promise.resolve();
-        jest.advanceTimersByTime(TIMEOUTS.ORG_SERVICES_FETCH + 1000);
+        await jest.advanceTimersByTimeAsync(ALL_TRIES_MS);
 
         await assertion;
         jest.useRealTimers();
@@ -155,7 +158,7 @@ describe('AdobeEntityFetcher — getServicesForOrg cache', () => {
 
     it('does NOT cache a timed-out fetch, and the slot still works after', async () => {
         jest.useFakeTimers();
-        sdk.getServicesForOrg.mockReturnValueOnce(new Promise(() => {}));
+        sdk.getServicesForOrg.mockReturnValue(new Promise(() => {}));
 
         const pending = fetcher.getServicesForOrg('org1');
         // The assertion IS awaited below; the handler must attach BEFORE the
@@ -163,8 +166,7 @@ describe('AdobeEntityFetcher — getServicesForOrg cache', () => {
         // deferred await.
         // eslint-disable-next-line jest/valid-expect
         const rejected = expect(pending).rejects.toThrow();
-        await Promise.resolve();
-        jest.advanceTimersByTime(TIMEOUTS.ORG_SERVICES_FETCH + 1000);
+        await jest.advanceTimersByTimeAsync(ALL_TRIES_MS);
         await rejected;
         jest.useRealTimers();
 

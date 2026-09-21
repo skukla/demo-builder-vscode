@@ -63,8 +63,11 @@ export function useElapsedStage(active: boolean, stages: ElapsedStage[]): string
  * organizations can take a minute"); 96 rows is a tiny response, so size is
  * almost certainly not the bottleneck, and one org is no basis for a claim about
  * bigger ones. Do not add a mechanism here without a measurement behind it.
+ *
+ * No time promise either: the request now makes up to three tries at Adobe's
+ * 60s gateway cutoff (2026-09-21), so "up to a minute" stopped being true.
  */
 export const ORG_SERVICES_LOADING_STAGES: ElapsedStage[] = [
     { afterMs: 4000, message: "Waiting on Adobe's API catalog service" },
-    { afterMs: 15000, message: 'Still waiting — Adobe can take up to a minute to respond.' },
+    { afterMs: 15000, message: 'Still waiting on Adobe' },
 ];

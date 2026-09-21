@@ -14,10 +14,10 @@
  * 30 minutes and single-flights, so a second call joins the first or reads its
  * result — it never costs a second download.
  *
- * ONE retry after any failure, here and nowhere else. The fetcher itself never
- * retries a timeout, because a person waiting on the picker should not wait
- * twice. Nobody waits on this call, and a cold load that dies at the gateway has
- * usually warmed Adobe's side by the time it fails.
+ * No retry here. The fetcher makes its tries inside the one shared request, so
+ * a picker that opens mid-load waits on the same tries. A retry of its own here
+ * is what left the Manage APIs dialog showing an error on 2026-09-21 while this
+ * reloaded the list behind it.
  *
  * Three things this must not do, in order of how badly they would bite:
  * - trigger interactive Adobe auth. `getTokenStatus` reads the token file
@@ -45,16 +45,9 @@ export async function warmOrgServicesCatalog(context: HandlerContext): Promise<v
         const { isAuthenticated } = await authManager.getTokenStatus();
         if (!isAuthenticated) return;
 
-        const fetch = () =>
-            withOrgContext(buildOrgTargetFromProjectAdobe(project.adobe), () =>
-                authManager.getServicesForOrg(orgId),
-            );
-        try {
-            await fetch();
-        } catch {
-            context.logger.debug('[Integrations] API catalog warm-up failed — retrying once');
-            await fetch();
-        }
+        await withOrgContext(buildOrgTargetFromProjectAdobe(project.adobe), () =>
+            authManager.getServicesForOrg(orgId),
+        );
         context.logger.debug('[Integrations] API catalog prefetched');
     } catch {
         // Best-effort: the consumer that actually needs it will fetch and report.

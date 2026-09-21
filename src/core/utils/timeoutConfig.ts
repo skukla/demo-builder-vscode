@@ -145,15 +145,13 @@ export const TIMEOUTS = {
      *  capping a genuine hang (the picker surfaces failures with a Retry). */
     ORG_SERVICES_FETCH: 60000,
 
-    /** Pause before the ONE retry of a fast-failed org-services fetch.
-     *  Adobe's own error template for this endpoint says retry
-     *  (ERR_MSG_RETRY_ON_INTERNAL_ERROR), and the 2026-08-28 incident measured
-     *  the failure mode: intermittent sub-second 500s while a raw retry
-     *  succeeded. Short on purpose — the same fetch feeds the Add Integration
-     *  picker, whose fast-fail + Retry button must stay fast; timeouts are
-     *  never retried here (they already spent the full budget). The background
-     *  warm-up (`warmOrgServicesCatalog`) retries once on its own, because
-     *  nobody waits on it. */
+    /** Pause between the tries of one org-services request (3 tries — see
+     *  `ORG_SERVICES_ATTEMPTS` in `adobeOrgServices.ts`). Adobe's own error
+     *  template for this endpoint says retry (ERR_MSG_RETRY_ON_INTERNAL_ERROR);
+     *  2026-08-28 measured sub-second 500s a raw retry got past, and 2026-09-21
+     *  a 60s gateway 504 that the next try got past in 31s. The tries run inside
+     *  the shared request, so the Manage APIs spinner waits through them rather
+     *  than showing an error while a retry it cannot see carries on. */
     ORG_SERVICES_RETRY_DELAY: 2000,
 
     /** Initial wait before first mesh verification poll (20 seconds) */
