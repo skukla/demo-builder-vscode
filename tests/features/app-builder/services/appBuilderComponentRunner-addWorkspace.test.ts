@@ -81,7 +81,7 @@ function depsWithRealWorkspaces(adobe: ReturnType<typeof fakeAdobe>, catalog: Ap
         ensureComponentWorkspace(project, entry, {
             maker: adobe,
             saveProject: deps.saveProject,
-            displayName: entry.name,
+            nameOf: (named: AppBuilderComponentCatalogEntry) => named.name,
             catalog,
         }),
     );
@@ -158,6 +158,13 @@ describe('a bound pair', () => {
 
         expect(result).toEqual({ success: true });
         expect(adobe.createWorkspace).toHaveBeenCalledTimes(1);
+        // The ERP is added first and makes it, but the workspace is the integration's.
+        expect(adobe.createWorkspace).toHaveBeenCalledWith(
+            'ERP integration',
+            'Demo Builder: erp-integration',
+            { orgId: 'org-123', projectId: 'proj-456' },
+            'erp-integration',
+        );
         expect(project.appBuilderComponents?.['demo-erp']?.workspace?.id).toBe('ws-1');
         expect(project.appBuilderComponents?.['erp-integration']?.workspace?.id).toBe('ws-1');
         expect(wrappedWorkspaces().every((id) => id === 'ws-1')).toBe(true);

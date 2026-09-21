@@ -35,6 +35,7 @@ import { readAppManifestVersion } from '@/features/app-builder/services/appManif
 import { resolveSecretDeployEnv } from '@/features/app-builder/services/componentSettingSecrets';
 import { deployWorkspaceId, ensureComponentWorkspace } from '@/features/app-builder/services/componentWorkspace';
 import { deployAppComponentIsolated } from '@/features/app-builder/services/deployAppIsolated';
+import { displayNameInProject } from '@/features/app-builder/services/deployInputs';
 import { subscriberTarget } from '@/features/app-builder/services/ensureMeshApiSubscribed';
 import { detachErpWrites } from '@/features/app-builder/services/erpDetach';
 import {
@@ -256,7 +257,9 @@ export function buildDefaultRunnerDeps(
                         ctx.authManager.createWorkspace(title, description, target, nameFrom),
                 },
                 saveProject: ctx.saveProject,
-                displayName: entry.name ?? entry.id,
+                // The name the SC gave it (a rename, else the one typed at add),
+                // never the catalog's generic word for it.
+                nameOf: (named) => displayNameInProject(project, named),
                 catalog: ctx.catalog,
             }),
         deleteComponentWorkspace: async (project, workspace) => {

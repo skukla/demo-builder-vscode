@@ -10,6 +10,7 @@
 import {
     deriveProvidedValues,
     deriveWebBase,
+    displayNameInProject,
     resolveDeployInputs,
     resolveDisplayName,
 } from '@/features/app-builder/services/deployInputs';
@@ -134,5 +135,31 @@ describe('resolveDisplayName', () => {
         expect(resolveDisplayName(SYSTEM, { ERP_DISPLAY_NAME: 'Nordwind' })).toBe('Nordwind');
         expect(resolveDisplayName(SYSTEM, { ERP_DISPLAY_NAME: '  ' })).toBe('ERP');
         expect(resolveDisplayName(INTEGRATION, { ERP_DISPLAY_NAME: 'Nordwind' })).toBe('ERP integration');
+    });
+});
+
+describe('displayNameInProject', () => {
+    it("the component's recorded name wins — a rename, or the name typed at add", () => {
+        const project = createMockProject({
+            appBuilderComponents: {
+                'erp-integration': {
+                    kind: 'integration',
+                    status: 'deployed',
+                    name: 'Northwind sync',
+                    source: { owner: 'skukla', repo: 'commerce-erp-integration' },
+                },
+            },
+        });
+
+        expect(displayNameInProject(project, INTEGRATION)).toBe('Northwind sync');
+    });
+
+    // The case the workspace title needs: a bound system names its integration's
+    // workspace BEFORE the integration has any record.
+    it('with no record yet, what its inputs make it, else the catalog name', () => {
+        const typed = createMockProject({ componentConfigs: { 'demo-erp': { ERP_DISPLAY_NAME: 'Northwind ERP' } } });
+
+        expect(displayNameInProject(typed, SYSTEM)).toBe('Northwind ERP');
+        expect(displayNameInProject(createMockProject(), INTEGRATION)).toBe('ERP integration');
     });
 });

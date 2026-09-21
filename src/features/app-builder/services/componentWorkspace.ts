@@ -20,6 +20,13 @@
  * The TITLE carries the SC's display name, because that is the field a rename can
  * safely follow.
  *
+ * A PAIR'S WORKSPACE IS THE INTEGRATION'S. The system is added first, so it is the
+ * one that makes the workspace — and it used to name it after itself, so the ERP
+ * pair's workspace came out titled "ERP" (the catalog's word, not even the SC's
+ * "Northwind ERP") and named `demoerp…`. The SC added the INTEGRATION; the system
+ * comes with it. So both the title and the machine name come from the integration
+ * (owner decision, 2026-09-21).
+ *
  * @module features/app-builder/services/componentWorkspace
  */
 
@@ -70,6 +77,21 @@ function partnerIds(
 }
 
 /**
+ * Whose workspace this is: a system bound to an integration makes the pair's
+ * workspace, but it belongs to the integration. Anything else owns its own.
+ */
+export function workspaceOwner(
+    entry: AppBuilderComponentCatalogEntry,
+    catalog: AppBuilderComponentCatalogEntry[] = [],
+): AppBuilderComponentCatalogEntry {
+    const integration =
+        entry.kind === 'system' && entry.boundTo
+            ? catalog.find((candidate) => candidate.id === entry.boundTo)
+            : undefined;
+    return integration ?? entry;
+}
+
+/**
  * The catalog entries whose APIs belong on an entry's workspace: the entry and
  * the partners it shares that workspace with — never the rest of the project.
  */
@@ -117,7 +139,8 @@ export async function ensureComponentWorkspace(
     deps: {
         maker: WorkspaceMaker;
         saveProject: SaveProject;
-        displayName: string;
+        /** The name the SC knows a component by — the workspace's title. */
+        nameOf: (entry: AppBuilderComponentCatalogEntry) => string;
         catalog?: AppBuilderComponentCatalogEntry[];
     },
 ): Promise<{ error: string } | undefined> {
@@ -125,39 +148,39 @@ export async function ensureComponentWorkspace(
     if (existing) return undefined;
 
     const workspace =
-        inheritedWorkspace(project, entry, deps.catalog) ?? (await make(project, entry, deps));
+        inheritedWorkspace(project, entry, deps.catalog) ??
+        (await make(project, workspaceOwner(entry, deps.catalog), deps));
     if ('error' in workspace) return workspace;
     // `make` never answers undefined — it returns a workspace or a reason — so this
     // is the type narrowing, not a fallback. A silent skip here would deploy into the
     // project's workspace, which is the collision this whole path avoids.
     if (!workspace.id) {
-        return { error: `Adobe returned a workspace with no id for "${deps.displayName}".` };
+        return { error: `Adobe returned a workspace with no id for "${deps.nameOf(entry)}".` };
     }
 
     await record(project, entry.id, workspace, deps.saveProject);
     return undefined;
 }
 
-/** Create the workspace in Adobe, titled for the SC and named for the id. */
+/** Create the owner's workspace in Adobe, titled for the SC and named for the id. */
 async function make(
     project: Project,
-    entry: AppBuilderComponentCatalogEntry,
-    deps: { maker: WorkspaceMaker; displayName: string },
+    owner: AppBuilderComponentCatalogEntry,
+    deps: { maker: WorkspaceMaker; nameOf: (entry: AppBuilderComponentCatalogEntry) => string },
 ): Promise<NonNullable<AppBuilderComponentState['workspace']> | { error: string }> {
+    const title = deps.nameOf(owner);
     const created = await deps.maker.createWorkspace(
-        deps.displayName,
-        `Demo Builder: ${entry.id}`,
+        title,
+        `Demo Builder: ${owner.id}`,
         { orgId: project.adobe?.organization, projectId: project.adobe?.projectId },
-        entry.id,
+        owner.id,
     );
     if ('error' in created) {
         return {
-            error:
-                `Couldn't make an Adobe workspace for "${deps.displayName}", so it was not ` +
-                `added. ${created.error}`,
+            error: `Couldn't make an Adobe workspace for "${title}", so it was not added. ${created.error}`,
         };
     }
-    return { id: created.id, name: created.name, title: created.title ?? deps.displayName };
+    return { id: created.id, name: created.name, title: created.title ?? title };
 }
 
 /** Write the workspace onto the component and persist before anything else runs. */

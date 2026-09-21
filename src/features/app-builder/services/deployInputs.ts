@@ -133,3 +133,20 @@ export function resolveDisplayName(
     const fromInput = entry.nameFromEnvVar ? inputs[entry.nameFromEnvVar] : undefined;
     return fromInput?.trim() || entry.name;
 }
+
+/**
+ * The name the SC knows a component by in this project: its recorded name (a
+ * rename, or the one typed when it was added), else what its inputs make it,
+ * else the catalog's. Works before the component has a record at all, which is
+ * when a bound system names its integration's workspace.
+ *
+ * @param project - the project
+ * @param entry - the catalog entry
+ * @returns the display name
+ */
+export function displayNameInProject(project: Project, entry: AppBuilderComponentCatalogEntry): string {
+    return (
+        project.appBuilderComponents?.[entry.id]?.name ??
+        resolveDisplayName(entry, resolveDeployInputs(project, entry))
+    );
+}

@@ -95,14 +95,12 @@ describe('IntegrationsScreen', () => {
     });
 
     describe('formatDestination', () => {
-        it('joins project and workspace', () => {
-            expect(formatDestination({ projectTitle: 'Kukla Mesh', workspaceTitle: 'Stage' })).toBe(
-                'Kukla Mesh · Stage'
-            );
-        });
-
-        it('returns the project alone when there is no workspace', () => {
-            expect(formatDestination({ projectTitle: 'Kukla Mesh' })).toBe('Kukla Mesh');
+        // Each integration has its own workspace (AB-23); the project-wide one was
+        // wrong for all of them, so the line names the Adobe project only.
+        it('names the Adobe project alone, never a workspace', () => {
+            // The destination the screen is handed carries its workspace too.
+            const destination = { projectTitle: 'Kukla Mesh', workspaceTitle: 'Stage' };
+            expect(formatDestination(destination)).toBe('Kukla Mesh');
         });
 
         // Undefined, not an empty string — the caller hides the line on undefined,
@@ -203,7 +201,8 @@ describe('IntegrationsScreen', () => {
 
                 const band = screen.getByTestId('page-destination');
                 expect(band).toHaveTextContent('Kukla Mesh');
-                expect(band).toHaveTextContent('Stage');
+                // The project only: the project-wide workspace is no integration's.
+                expect(band).not.toHaveTextContent('Stage');
                 // The header keeps the LOCAL project name and nothing else.
                 expect(screen.getByTestId('page-subtitle')).toHaveTextContent('demo-builder-test');
                 expect(screen.getByTestId('page-subtitle')).not.toHaveTextContent('Kukla Mesh');

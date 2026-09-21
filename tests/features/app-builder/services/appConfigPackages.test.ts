@@ -5,9 +5,7 @@
  * shared workspace). Extension/malformed configs have nothing to isolate.
  */
 
-jest.mock('fs', () => ({ promises: { readFile: jest.fn(), writeFile: jest.fn() } }));
-
-import { promises as fsPromises } from 'fs';
+import { mockRead, mockWrite } from './appConfigPackages.testUtils';
 import * as yaml from 'yaml';
 import {
     applyIsolatedPackages,
@@ -18,8 +16,6 @@ import {
     listDeclaredPackageNames,
 } from '@/features/app-builder/services/appConfigPackages';
 
-const mockRead = fsPromises.readFile as jest.Mock;
-const mockWrite = fsPromises.writeFile as jest.Mock;
 
 /** A standalone app.config.yaml with the given package map. */
 function config(packages: Record<string, unknown>): string {

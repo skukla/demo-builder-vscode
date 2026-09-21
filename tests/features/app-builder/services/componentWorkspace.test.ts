@@ -65,7 +65,7 @@ describe('a component that needs its own workspace', () => {
         const result = await ensureComponentWorkspace(project, ERP_INTEGRATION, {
             maker,
             saveProject,
-            displayName: 'Northwind ERP',
+            nameOf: () => 'Northwind ERP',
         });
 
         expect(result).toBeUndefined();
@@ -93,7 +93,7 @@ describe('a component that needs its own workspace', () => {
         await ensureComponentWorkspace(project, ERP_INTEGRATION, {
             maker: makerThatCreates(),
             saveProject,
-            displayName: 'Northwind ERP',
+            nameOf: () => 'Northwind ERP',
         });
 
         expect(saveProject).toHaveBeenCalledWith(project);
@@ -113,7 +113,7 @@ describe('a component that needs its own workspace', () => {
         const result = await ensureComponentWorkspace(project, ERP_INTEGRATION, {
             maker,
             saveProject,
-            displayName: 'Northwind ERP',
+            nameOf: () => 'Northwind ERP',
         });
 
         expect(result).toBeUndefined();
@@ -137,7 +137,7 @@ describe('a bound pair shares ONE workspace', () => {
         await ensureComponentWorkspace(project, DEMO_ERP, {
             maker,
             saveProject,
-            displayName: 'ERP',
+            nameOf: () => 'ERP',
         });
 
         expect(maker.createWorkspace).not.toHaveBeenCalled();
@@ -166,6 +166,49 @@ describe('a bound pair shares ONE workspace', () => {
         });
     });
 
+    // The system is added first, so it makes the pair's workspace — and it used to
+    // name it after itself: "ERP", `demoerp…` (2026-09-21). The SC added the
+    // integration; the workspace is the integration's, titled and named for it.
+    it("a system that makes the pair's workspace names it after its integration", async () => {
+        const project = projectWith();
+        const maker = makerThatCreates();
+        const nameOf = (entry: AppBuilderComponentCatalogEntry) =>
+            entry.id === 'erp-integration' ? 'ERP integration' : 'Northwind ERP';
+
+        await ensureComponentWorkspace(project, DEMO_ERP, {
+            maker,
+            saveProject,
+            nameOf,
+            catalog: [ERP_INTEGRATION, DEMO_ERP],
+        });
+
+        expect(maker.createWorkspace).toHaveBeenCalledWith(
+            'ERP integration',
+            'Demo Builder: erp-integration',
+            { orgId: 'org-1', projectId: 'proj-1' },
+            'erp-integration',
+        );
+    });
+
+    it('a system whose integration is not in the catalog names the workspace after itself', async () => {
+        const project = projectWith();
+        const maker = makerThatCreates();
+
+        await ensureComponentWorkspace(project, DEMO_ERP, {
+            maker,
+            saveProject,
+            nameOf: () => 'Northwind ERP',
+            catalog: [DEMO_ERP],
+        });
+
+        expect(maker.createWorkspace).toHaveBeenCalledWith(
+            'Northwind ERP',
+            'Demo Builder: demo-erp',
+            { orgId: 'org-1', projectId: 'proj-1' },
+            'demo-erp',
+        );
+    });
+
     it('CONTROL: an unrelated deployed component is NOT inherited from', async () => {
         const project = projectWith({
             'some-other-integration': {
@@ -190,7 +233,7 @@ describe('when Adobe refuses', () => {
         const result = await ensureComponentWorkspace(project, ERP_INTEGRATION, {
             maker,
             saveProject,
-            displayName: 'Northwind ERP',
+            nameOf: () => 'Northwind ERP',
         });
 
         expect(result).toEqual({

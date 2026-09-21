@@ -81,15 +81,16 @@ export const MESH_OPERATION: Omit<ComponentOperation, 'run' | 'resume'> = {
 export type IntegrationsScreenProps = Partial<IntegrationsInitialData>;
 
 /**
- * "<project> · <workspace>", or undefined when the project has no Adobe target
- * yet. Undefined hides the destination line rather than rendering an empty one.
+ * The Adobe project an integration deploys to, or undefined when the project has
+ * no Adobe target yet. Undefined hides the destination line rather than
+ * rendering an empty one.
+ *
+ * No workspace (owner, 2026-09-21): since AB-23 each integration deploys into a
+ * workspace of its own, so the project-wide one ("Stage") was wrong for every
+ * integration, and naming each one's own would show plumbing the SC never picks.
  */
-export function formatDestination(destination?: {
-    projectTitle?: string;
-    workspaceTitle?: string;
-}): string | undefined {
-    const parts = [destination?.projectTitle, destination?.workspaceTitle].filter(Boolean);
-    return parts.length > 0 ? parts.join(' · ') : undefined;
+export function formatDestination(destination?: { projectTitle?: string }): string | undefined {
+    return destination?.projectTitle || undefined;
 }
 
 /** Case-insensitive match over the fields a user would search by. */
@@ -337,7 +338,7 @@ export function IntegrationsScreen({
                                             </span>
                                             <DestinationContext
                                                 project={destination?.projectTitle}
-                                                workspace={destination?.workspaceTitle}
+                                                projectOnly
                                                 onChange={openDestination}
                                             />
                                         </div>

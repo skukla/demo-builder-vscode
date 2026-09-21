@@ -19,6 +19,12 @@ export interface DestinationContextProps {
     project?: string;
     /** Adobe workspace display name. */
     workspace?: string;
+    /**
+     * Show the Adobe project alone. The Integrations screen: since AB-23 each
+     * integration runs in a workspace of its own that the SC never picks, so a
+     * workspace on that line is plumbing — and, for any integration, the wrong one.
+     */
+    projectOnly?: boolean;
     /** Change action. Omit to render the destination read-only. */
     onChange?: () => void;
     /** Extra class on the wrapper — lets a host pick inline vs full-width. */
@@ -35,14 +41,15 @@ export interface DestinationContextProps {
 export function DestinationContext({
     project,
     workspace,
+    projectOnly,
     onChange,
     className,
 }: DestinationContextProps): React.ReactElement | null {
-    if (!project || !workspace) return null;
+    if (!project || (!projectOnly && !workspace)) return null;
     return (
         <span className={cn('dest-context', className)}>
             <span className="dest-context-value">
-                {project} · {workspace}
+                {projectOnly ? project : `${project} · ${workspace}`}
             </span>
             {onChange ? (
                 /* `.inline-action-link` (utilities.css), NOT EDS's

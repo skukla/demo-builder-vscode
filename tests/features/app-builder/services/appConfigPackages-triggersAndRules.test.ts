@@ -12,13 +12,9 @@
  * extension's `$include`d file.
  */
 
-jest.mock('fs', () => ({ promises: { readFile: jest.fn(), writeFile: jest.fn() } }));
-
-import { promises as fsPromises } from 'fs';
+import { mockRead } from './appConfigPackages.testUtils';
 import * as yaml from 'yaml';
 import { listDeclaredTriggersAndRules } from '@/features/app-builder/services/appConfigPackages';
-
-const mockRead = fsPromises.readFile as jest.Mock;
 
 beforeEach(() => jest.clearAllMocks());
 
