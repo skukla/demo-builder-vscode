@@ -457,3 +457,4 @@ and re-adding an integration — no migration code ships.
 - 2026-09-21  perf(apis): a subscribe asks Adobe for only the APIs it needs (`b9257483c`)
 - 2026-09-21  fix(app-builder): an added component really deploys into its own workspace (`258ba1735`)
 - 2026-09-21  fix(integrations): the ERP pair's remove line says it plainly (`e903d7119`)
+- 2026-09-21  feat(app-builder): list_runtime_packages can read one integration's workspace (`131cbb365`)
