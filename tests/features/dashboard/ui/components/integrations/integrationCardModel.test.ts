@@ -70,7 +70,7 @@ describe('deriveIntegrationCard — status matrix', () => {
         expect(model.statusLabel).toBe('Not deployed');
         // The status verb is a kebab item like every other verb, and it leads:
         // on a card that needs something, that something is the first item.
-        expect(model.menuActions).toEqual(['deploy', 'manage-apis', 'remove']);
+        expect(model.menuActions).toEqual(['deploy', 'open', 'manage-apis', 'remove']);
     });
 
     // REGRESSION: the live step text used to land ONLY on `message`, which the
@@ -139,12 +139,13 @@ describe('deriveIntegrationCard — status matrix', () => {
     // failed card flipped to Deployed until the next reload. The org-reachability
     // question it actually answered is already covered by the deploy guards and
     // the org-mismatch detection.
-    // No url ⇒ no Open. The other three still stand, so the kebab renders.
-    it('deployed WITHOUT any url: menu drops Open, keeps the rest', () => {
+    // Open is the integration's Developer Console workspace (owner, 2026-09-21), so
+    // it no longer depends on the app serving an address.
+    it('deployed WITHOUT any url: Open stays — it goes to the Console', () => {
         const model = deriveIntegrationCard(integration({ status: 'deployed' }));
 
         expect(model.url).toBeUndefined();
-        expect(model.menuActions).toEqual(['redeploy', 'manage-apis', 'remove']);
+        expect(model.menuActions).toEqual(['open', 'redeploy', 'manage-apis', 'remove']);
     });
 
     it('stale: warning dot, "Update needed", Update LEADS the menu', () => {
@@ -155,7 +156,7 @@ describe('deriveIntegrationCard — status matrix', () => {
         expect(model.statusLabel).toBe('Update needed');
         // No Redeploy beside it: Update IS the redeploy here, and two names for
         // one intent in one menu is what this whole change removed.
-        expect(model.menuActions).toEqual(['update', 'manage-apis', 'remove']);
+        expect(model.menuActions).toEqual(['update', 'open', 'manage-apis', 'remove']);
     });
 
     it('error: error dot, "Deploy failed", Retry face, Manage APIs·Remove menu', () => {
@@ -168,7 +169,7 @@ describe('deriveIntegrationCard — status matrix', () => {
         expect(model.dotVariant).toBe('error');
         expect(model.statusLabel).toBe('Deploy failed');
         expect(model.message).toBe('aio deploy failed');
-        expect(model.menuActions).toEqual(['retry', 'manage-apis', 'remove']);
+        expect(model.menuActions).toEqual(['retry', 'open', 'manage-apis', 'remove']);
     });
 
     it('stale is DISTINCT from deployed (dot, label, menu verb)', () => {
@@ -463,7 +464,7 @@ describe('deriveIntegrationCard — url + lastDeployed derivation', () => {
             'leads with the status verb, then Manage APIs + Remove on %s',
             (status, verb) => {
                 const model = deriveIntegrationCard(integration({ status }));
-                expect(model.menuActions).toEqual([verb, 'manage-apis', 'remove']);
+                expect(model.menuActions).toEqual([verb, 'open', 'manage-apis', 'remove']);
             }
         );
 
@@ -471,7 +472,7 @@ describe('deriveIntegrationCard — url + lastDeployed derivation', () => {
         // card is calm), so Redeploy joins the menu.
         it('adds Redeploy on deployed', () => {
             const model = deriveIntegrationCard(integration({ status: 'deployed' }));
-            expect(model.menuActions).toEqual(['redeploy', 'manage-apis', 'remove']);
+            expect(model.menuActions).toEqual(['open', 'redeploy', 'manage-apis', 'remove']);
         });
 
         // Both would race the runner: an API change mid-deploy fights the

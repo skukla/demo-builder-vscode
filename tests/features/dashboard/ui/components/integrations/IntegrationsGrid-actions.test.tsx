@@ -191,15 +191,17 @@ describe('IntegrationsGrid actions', () => {
 
         // Open moved from the card FACE to the kebab (a healthy card is calm), so
         // this is a menu item scoped to the tile now.
-        it('routes the deployed card Open to openLiveSite with the primary url', async () => {
+        // Open is the integration's Adobe workspace in the Developer Console (owner,
+        // 2026-09-21) — the extension resolves which workspace from the id.
+        it("routes the card's Open to the Developer Console, naming the integration", async () => {
             const user = setupUser();
             renderGrid({ appBuilderComponents: oneDeployed() });
 
             const tile = card('custom-app', 'Deployed');
             await user.click(within(tile).getByRole('button', { name: /^open$/i }));
 
-            expect(getClient().postMessage).toHaveBeenCalledWith('openLiveSite', {
-                url: 'https://custom-app.example.com',
+            expect(getClient().postMessage).toHaveBeenCalledWith('openDevConsole', {
+                componentId: 'custom-app',
             });
         });
     });

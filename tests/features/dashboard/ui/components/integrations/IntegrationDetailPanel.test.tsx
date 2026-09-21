@@ -239,7 +239,8 @@ describe('IntegrationDetailPanel', () => {
             expect(screen.queryByText('Destination')).not.toBeInTheDocument();
         });
 
-        it('renders the integration URL as a link firing onAction(open)', () => {
+        // The address opens the address; Open (the menu) is the Console (2026-09-21).
+        it('renders the integration URL as a link firing onAction(open-url)', () => {
             const model = makeModel();
             const { onAction } = renderPanel(model);
 
@@ -247,7 +248,7 @@ describe('IntegrationDetailPanel', () => {
             const link = screen.getByRole('link', { name: 'https://example.com/app' });
             fireEvent.click(link);
 
-            expect(onAction).toHaveBeenCalledWith(model, 'open');
+            expect(onAction).toHaveBeenCalledWith(model, 'open-url');
         });
 
         // These rows are the app's deployed endpoint URLs, one per action or web

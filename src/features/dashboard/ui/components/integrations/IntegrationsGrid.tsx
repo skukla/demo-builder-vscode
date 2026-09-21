@@ -187,7 +187,13 @@ export function IntegrationsGrid({
             if (model.isSystem && handleSystemAction(model, action, setPendingReset)) {
                 return;
             }
+            // Open: the integration's Adobe workspace in the Developer Console
+            // (owner, 2026-09-21). Its address has its own link in the flyout.
             if (action === 'open') {
+                webviewClient.postMessage('openDevConsole', { componentId: model.componentId ?? model.id });
+                return;
+            }
+            if (action === 'open-url') {
                 if (model.url) {
                     webviewClient.postMessage('openLiveSite', { url: model.url });
                 }

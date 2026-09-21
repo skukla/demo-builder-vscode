@@ -37,7 +37,11 @@ export type CardAction =
     | 'settings'
     | 'remove'
     | 'sign-in'
+    // An integration: its Adobe workspace in the Developer Console. A system: its
+    // own screen.
     | 'open'
+    // An integration's deployed address, from the flyout's address row.
+    | 'open-url'
     // A system card's reset of its records (the ERP's; it runs through the
     // integration that uses it).
     | 'reset-records'

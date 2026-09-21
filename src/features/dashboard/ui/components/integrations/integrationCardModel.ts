@@ -156,10 +156,12 @@ function buildMenuActions(
     // removes what the app set up in Commerce.
     const install: CardAction[] =
         status === 'deployed' && installation?.failed ? [installation.needsReinstall ? 'reinstall' : 'install'] : [];
+    // Open is the integration's Adobe workspace in the Developer Console — there
+    // whether or not the app serves an address (owner, 2026-09-21).
     return [
         ...(verb ? [verb] : []),
         ...install,
-        ...(url ? (['open'] as CardAction[]) : []),
+        'open',
         ...redeploy,
         'manage-apis',
         'remove',

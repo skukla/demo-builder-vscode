@@ -220,7 +220,7 @@ function PanelContent({
                         <PanelRow label={model.urlLabel}>
                             {/* A system's screen URL lacks the key the extension
                                 adds, so it reads as an action, not an address. */}
-                            <Link isQuiet onPress={() => onAction(model, 'open')}>
+                            <Link isQuiet onPress={() => onAction(model, model.isSystem ? 'open' : 'open-url')}>
                                 {model.isSystem ? `Open ${model.name}` : model.url}
                             </Link>
                         </PanelRow>

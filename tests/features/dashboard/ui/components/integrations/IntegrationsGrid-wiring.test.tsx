@@ -177,14 +177,18 @@ describe('IntegrationsGrid wiring', () => {
             return [{ ...base, menuActions, ...overrides }];
         }
 
-        it('does not post openLiveSite for a card that carries no URL', async () => {
+        // Open goes to the Console, which every integration has, address or not.
+        it('opens the Console for a card that carries no URL', async () => {
             const user = setupUser();
             renderCards(withActions(['open'], { url: undefined }));
 
             const tile = card('custom-app', 'Deployed');
             await user.click(within(tile).getByRole('button', { name: /^open$/i }));
 
-            expect(getClient().postMessage).not.toHaveBeenCalled();
+            expect(getClient().postMessage).toHaveBeenCalledWith('openDevConsole', {
+                componentId: 'custom-app',
+            });
+            expect(getClient().postMessage).not.toHaveBeenCalledWith('openLiveSite', expect.anything());
         });
 
         it('posts nothing for a verb no keyed message covers', async () => {

@@ -17,6 +17,7 @@ import {
     getEwCanvasBranch,
     resolveProjectAuthoringExperience,
 } from '@/features/eds/handlers/edsHelpers';
+import { deployWorkspaceId } from '@/features/app-builder/services/componentWorkspace';
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import { MessageHandler, HandlerContext } from '@/types/handlers';
@@ -158,10 +159,22 @@ export const handleOpenAdminPanel: MessageHandler = async (context) => {
 };
 
 /**
- * Handle 'openDevConsole' message - Open Adobe Developer Console
+ * The project as seen from one integration: its Adobe workspace is the one that
+ * integration deploys into (its own since AB-23, else the project's). Unchanged
+ * when no integration is named, or the project has no such integration.
  */
-export const handleOpenDevConsole: MessageHandler = async (context) => {
-    const project = await context.stateManager.getCurrentProject();
+function scopedToComponent(project: Project | undefined, componentId: string | undefined): Project | undefined {
+    if (!project?.adobe || !componentId || !project.appBuilderComponents?.[componentId]) return project;
+    return { ...project, adobe: { ...project.adobe, workspace: deployWorkspaceId(project, componentId) } };
+}
+
+/**
+ * Handle 'openDevConsole' message - Open Adobe Developer Console. Given a
+ * `componentId`, opens THAT integration's workspace: "Open" on an integration
+ * card goes to its Adobe I/O project in the Console (owner, 2026-09-21).
+ */
+export const handleOpenDevConsole: MessageHandler<{ componentId?: string }> = async (context, payload) => {
+    const project = scopedToComponent(await context.stateManager.getCurrentProject(), payload?.componentId);
     let consoleUrl = 'https://developer.adobe.com/console';
 
     if (hasAdobeWorkspaceContext(project)) {
