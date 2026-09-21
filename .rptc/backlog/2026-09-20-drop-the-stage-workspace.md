@@ -39,23 +39,40 @@ machine name, with **no workspace segment**. Stage's is
 `285361-214brownarmadillo-stage`. So Adobe treats the project's first workspace as the
 unsuffixed default. Worth knowing before anything is named for a namespace's shape.
 
-## Decided: Production is the project's workspace, retitled
+## Decided: Adobe's workspace is the PROJECT's; every add gets its own
 
-Owner, 2026-09-20. Per-add workspaces ([[AB-23]]) cover the mesh and the integrations.
-One thing is neither: **the datapack credential.** A datapack write authenticates with an
-OAuth server-to-server pair, and one can only be created inside a workspace
-(`accsProvisionEligibility.ts`). It belongs to the PROJECT, so putting it in an add's
-workspace would destroy it when that add is removed.
+Owner, 2026-09-20, after two wrong turns worth recording because each was an inference
+nobody had checked.
 
-So the workspace Adobe creates holds the project-level things — the datapack credential
-and the mesh — and every add gets its own. It costs nothing, because Adobe makes it either
-way.
+**The mesh is not guaranteed** (owner). So "the mesh takes the first workspace" is not a
+rule — whatever occupied it would depend on what the SC happened to add first, and the
+workspace's name would depend on add order.
 
-The alternative, a workspace per add including the mesh, was rejected: it splits the
-Commerce subscription, since the mesh and the datapack credential both need
-`ACCS-REST-API` with a product profile attached. Two workspaces means two credentials, two
-subscriptions and two profile attaches, and that attach is the fragile step. It buys
-symmetry rather than a capability.
+**And the mesh does not need `ACCS-REST-API`.** An earlier draft here argued against
+giving the mesh its own workspace because it would split the Commerce subscription and
+double the product-profile attach. That was inferred from `subscriberTarget` threading
+`commerceTenant` through the mesh path — which is defensive plumbing, not a requirement.
+Its own comment says why: "Every subscribe caller builds its target here, so the tenant
+cannot reach one caller and miss another." The mesh entries in `components.json` declare
+no `requiredApis` at all, so a mesh subscribe resolves to the baseline
+(`AdobeIOManagementAPISDK`) plus the SC's own picks. `ACCS-REST-API` comes from
+`erp-integration`'s `requiredApis` and from the datapack provisioner — never from the
+mesh. **The objection is withdrawn: splitting the mesh out costs nothing.**
+
+So the model is uniform:
+
+| Workspace | Holds | Created by | Removed by |
+|---|---|---|---|
+| Adobe's first one, retitled | the datapack credential — the only thing that is not an add and must outlive every add | Adobe, at project create | project delete |
+| one per add | that add: the mesh, an integration, an integration+system pair | the add | the removal |
+
+Nothing is empty, nothing is named for a thing it does not contain, and nothing called
+"Production" survives.
+
+**One consequence for [[AB-23]]:** `resolveDesiredApis` returns the union of every
+component's picks across the whole project — it is project-scoped, which is the shared-
+workspace assumption in code form. Per-workspace subscribing has to make it
+per-component. AB-23 already names this; this is the reason it is not optional.
 
 ### "Production" is the wrong word for a demo, so retitle it
 
@@ -100,9 +117,10 @@ that Stage is entirely ours. Retitling Adobe's own Production workspace with
 `{ name: 'Production', title: 'Demo' }` answered **HTTP 200**, and the machine name
 stayed `Production`. Adobe protects nothing here.
 
-Suggested title: **"Demo"** — it says what the workspace is for, and being the same in
-every project means an SC learns it once. The project's own title is the alternative, but
-it reads redundantly under a project of that name.
+Suggested title: **"Demo"**. It cannot be named for its occupant the way every other
+workspace is, because its occupant is a credential rather than a component, and because
+it has to make sense in a project that never gets a mesh. "Demo" says what it is for and
+is the same in every project, so an SC learns it once.
 
 ## What changes
 
