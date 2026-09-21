@@ -51,7 +51,7 @@ describe('installAppManagementApp — upgrading an installed app', () => {
         const progress: string[] = [];
 
         const result = await installAppManagementApp(
-            paasProject(),
+            paasProject(), 'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client, {
                 appVersion: '0.2.0',
@@ -78,7 +78,7 @@ describe('installAppManagementApp — upgrading an installed app', () => {
         });
 
         const result = await installAppManagementApp(
-            paasProject(),
+            paasProject(), 'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client, { appVersion: '0.2.0', since: DEPLOY_STARTED })
         );
@@ -101,7 +101,7 @@ describe('installAppManagementApp — upgrading an installed app', () => {
         });
 
         const result = await installAppManagementApp(
-            paasProject(),
+            paasProject(), 'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client, { appVersion: '0.2.0', since: DEPLOY_STARTED })
         );
@@ -123,7 +123,7 @@ describe('installAppManagementApp — upgrading an installed app', () => {
         });
 
         const result = await installAppManagementApp(
-            paasProject(),
+            paasProject(), 'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client, { appVersion: '0.2.0', since: DEPLOY_STARTED })
         );
@@ -143,7 +143,7 @@ describe('installAppManagementApp — upgrading an installed app', () => {
         });
 
         const result = await installAppManagementApp(
-            paasProject(),
+            paasProject(), 'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client, { appVersion: '0.1.0' })
         );
@@ -163,7 +163,7 @@ describe('installAppManagementApp — upgrading an installed app', () => {
         });
 
         const result = await installAppManagementApp(
-            paasProject(),
+            paasProject(), 'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client, { appVersion: '0.3.0' })
         );
@@ -190,7 +190,7 @@ describe('installAppManagementApp — upgrading an installed app', () => {
         });
 
         const result = await installAppManagementApp(
-            paasProject(),
+            paasProject(), 'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client, { appVersion: '0.2.0' })
         );
@@ -212,7 +212,7 @@ describe('installAppManagementApp — upgrading an installed app', () => {
         });
 
         const result = await installAppManagementApp(
-            paasProject(),
+            paasProject(), 'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client, { appVersion: '0.2.0' })
         );
@@ -230,7 +230,7 @@ describe('installAppManagementApp — upgrading an installed app', () => {
         });
 
         const result = await installAppManagementApp(
-            paasProject(),
+            paasProject(), 'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client, { appVersion: '0.2.0' })
         );
@@ -248,7 +248,7 @@ describe('installAppManagementApp — upgrading an installed app', () => {
         });
 
         const result = await installAppManagementApp(
-            paasProject(),
+            paasProject(), 'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client)
         );
@@ -266,7 +266,7 @@ describe('installAppManagementApp — upgrading an installed app', () => {
         });
 
         const result = await installAppManagementApp(
-            paasProject(),
+            paasProject(), 'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client, { wait })
         );

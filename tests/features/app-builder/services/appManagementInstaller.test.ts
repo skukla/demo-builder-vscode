@@ -11,11 +11,11 @@
 
 import {
     APP_MANAGEMENT_HANDS_BACK,
-    buildAppData,
     deriveAppManagementBaseUrl,
     deriveCommerceTarget,
     installAppManagementApp,
 } from '@/features/app-builder/services/appManagementInstaller';
+import { buildAppData } from '@/features/app-builder/services/appManagementAppData';
 import { AppManagementApiError } from '@/features/app-builder/services/appManagementClient';
 import {
     DEPLOYED_URLS,
@@ -78,7 +78,7 @@ describe('deriveCommerceTarget', () => {
 
 describe('buildAppData', () => {
     it('maps the persisted Adobe context onto the spec-required eight fields', () => {
-        expect(buildAppData(paasProject())).toEqual({
+        expect(buildAppData(paasProject(), 'app')).toEqual({
             consumerOrgId: '285361',
             orgName: 'Kukla Org',
             projectId: 'p-1',
@@ -94,17 +94,53 @@ describe('buildAppData', () => {
         const project = paasProject();
         delete project.adobe?.projectTitle;
         delete project.adobe?.workspaceTitle;
-        const data = buildAppData(project);
+        const data = buildAppData(project, 'app');
         expect(data).toMatchObject({
             projectTitle: 'KuklaBodeaMesh5NgV',
             workspaceTitle: 'Stage',
         });
     });
 
+    // AB-23: an app is deployed into its own workspace, so that is the one Commerce
+    // must be told about. The project's workspace is only a fallback, for apps
+    // added before AB-23 that have none recorded.
+    it("names the component's OWN workspace when it has one", () => {
+        const project = paasProject({
+            appBuilderComponents: {
+                app: {
+                    kind: 'integration',
+                    status: 'deployed',
+                    source: { owner: 'o', repo: 'r' },
+                    workspace: { id: 'w-own', name: 'demo-erp', title: 'Northwind ERP' },
+                },
+            },
+        });
+        expect(buildAppData(project, 'app')).toMatchObject({
+            projectId: 'p-1',
+            workspaceId: 'w-own',
+            workspaceName: 'demo-erp',
+            workspaceTitle: 'Northwind ERP',
+        });
+    });
+
+    it("titles the component's workspace by its name when it recorded no title", () => {
+        const project = paasProject({
+            appBuilderComponents: {
+                app: {
+                    kind: 'integration',
+                    status: 'deployed',
+                    source: { owner: 'o', repo: 'r' },
+                    workspace: { id: 'w-own', name: 'demo-erp' },
+                },
+            },
+        });
+        expect(buildAppData(project, 'app')).toMatchObject({ workspaceTitle: 'demo-erp' });
+    });
+
     it('a missing field is an error NAMING it, not a silent partial body', () => {
         const project = paasProject();
         delete project.adobe?.workspaceName;
-        expect(buildAppData(project)).toEqual({
+        expect(buildAppData(project, 'app')).toEqual({
             error: expect.stringContaining('workspaceName'),
         });
     });
@@ -114,7 +150,7 @@ describe('installAppManagementApp', () => {
     it('associates then reconciles with the DERIVED bodies (the calls are the contract)', async () => {
         const client = makeInstallerClient();
         const result = await installAppManagementApp(
-            paasProject(),
+            paasProject(), 'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client)
         );
@@ -144,7 +180,7 @@ describe('installAppManagementApp', () => {
                 .mockResolvedValueOnce({ id: 'job-1', status: 'succeeded' }),
         });
         const result = await installAppManagementApp(
-            paasProject(),
+            paasProject(), 'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client)
         );
@@ -161,7 +197,7 @@ describe('installAppManagementApp', () => {
             getInstallationState: jest.fn().mockResolvedValue({ id: 'job-1', status: 'failed' }),
         });
         const result = await installAppManagementApp(
-            paasProject(),
+            paasProject(), 'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client)
         );
@@ -190,7 +226,7 @@ describe('installAppManagementApp', () => {
                 .mockResolvedValueOnce({ id: 'job-3', status: 'succeeded' }),
         });
         const result = await installAppManagementApp(
-            paasProject(),
+            paasProject(), 'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client)
         );
@@ -211,7 +247,7 @@ describe('installAppManagementApp', () => {
             }),
         });
         const result = await installAppManagementApp(
-            paasProject(),
+            paasProject(), 'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client)
         );
@@ -233,7 +269,7 @@ describe('installAppManagementApp', () => {
             getInstallationState: jest.fn().mockResolvedValue(racy),
         });
         const result = await installAppManagementApp(
-            paasProject(),
+            paasProject(), 'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client)
         );
@@ -252,7 +288,7 @@ describe('installAppManagementApp', () => {
                 ),
         });
         const result = await installAppManagementApp(
-            paasProject(),
+            paasProject(), 'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client)
         );
@@ -278,7 +314,7 @@ describe('installAppManagementApp', () => {
                 ),
         });
         const result = await installAppManagementApp(
-            paasProject(),
+            paasProject(), 'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client)
         );
@@ -295,7 +331,7 @@ describe('installAppManagementApp', () => {
                 ),
         });
         const result = await installAppManagementApp(
-            paasProject(),
+            paasProject(), 'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client)
         );
@@ -309,7 +345,7 @@ describe('installAppManagementApp', () => {
     it('no auth available → failed with the hands-back, and no client call at all', async () => {
         const client = makeInstallerClient();
         const deps = makeInstallerDeps(client, { getAuth: jest.fn().mockResolvedValue(undefined) });
-        const result = await installAppManagementApp(paasProject(), DEPLOYED_URLS, deps);
+        const result = await installAppManagementApp(paasProject(), 'app', DEPLOYED_URLS, deps);
 
         expect(result.status).toBe('failed');
         expect(client.setAssociation).not.toHaveBeenCalled();
@@ -318,7 +354,7 @@ describe('installAppManagementApp', () => {
     it('no app-management URL in the deploy → failed naming that, no client call', async () => {
         const client = makeInstallerClient();
         const result = await installAppManagementApp(
-            paasProject(),
+            paasProject(), 'app',
             { 'starter-kit/info': `${NS_BASE}/starter-kit/info` },
             makeInstallerDeps(client)
         );

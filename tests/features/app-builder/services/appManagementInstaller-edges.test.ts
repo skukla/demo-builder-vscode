@@ -13,11 +13,11 @@
 
 import {
     APP_MANAGEMENT_HANDS_BACK,
-    buildAppData,
     deriveCommerceTarget,
     installAppManagementApp,
     isRetryableInstallFailure,
 } from '@/features/app-builder/services/appManagementInstaller';
+import { buildAppData } from '@/features/app-builder/services/appManagementAppData';
 import { AppManagementApiError } from '@/features/app-builder/services/appManagementClient';
 import type { InstallationState } from '@/features/app-builder/services/appManagementClient';
 import type { Project } from '@/types/base';
@@ -146,14 +146,14 @@ describe('buildAppData — the Adobe context', () => {
         const project = paasProject();
         delete (project.adobe as Record<string, unknown>)[field];
 
-        expect(buildAppData(project)).toEqual({ error: expect.stringContaining('is missing') });
+        expect(buildAppData(project, 'app')).toEqual({ error: expect.stringContaining('is missing') });
     });
 
     it('refuses a project with no Adobe context at all', () => {
         const project = paasProject();
         delete (project as { adobe?: unknown }).adobe;
 
-        expect(buildAppData(project)).toEqual({ error: expect.stringContaining('consumerOrgId') });
+        expect(buildAppData(project, 'app')).toEqual({ error: expect.stringContaining('consumerOrgId') });
     });
 });
 
@@ -192,7 +192,7 @@ describe('installAppManagementApp — 409s that are NOT the benign no-op', () =>
                 .mockRejectedValue(new AppManagementApiError('boom', 500, 'already-current')),
         });
 
-        return installAppManagementApp(paasProject(), DEPLOYED_URLS, makeInstallerDeps(client)).then(
+        return installAppManagementApp(paasProject(), 'app', DEPLOYED_URLS, makeInstallerDeps(client)).then(
             (result) => {
                 expect(result.status).toBe('failed');
                 expect(result.detail).toContain(APP_MANAGEMENT_HANDS_BACK);
@@ -215,7 +215,7 @@ describe('installAppManagementApp — 409s that are NOT the benign no-op', () =>
         });
 
         const result = await installAppManagementApp(
-            paasProject(),
+            paasProject(), 'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client)
         );
@@ -231,7 +231,7 @@ describe('installAppManagementApp — 409s that are NOT the benign no-op', () =>
         });
 
         const result = await installAppManagementApp(
-            paasProject(),
+            paasProject(), 'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client)
         );
@@ -257,7 +257,7 @@ describe('installAppManagementApp — the poll budget', () => {
         const client = neverLands();
 
         const result = await installAppManagementApp(
-            paasProject(),
+            paasProject(), 'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client)
         );
@@ -270,7 +270,7 @@ describe('installAppManagementApp — the poll budget', () => {
     it('spends exactly the allowance, not one round more', async () => {
         const client = neverLands();
 
-        await installAppManagementApp(paasProject(), DEPLOYED_URLS, makeInstallerDeps(client));
+        await installAppManagementApp(paasProject(), 'app', DEPLOYED_URLS, makeInstallerDeps(client));
 
         expect(client.getInstallationState).toHaveBeenCalledTimes(POLL_ROUNDS);
     });
@@ -280,7 +280,7 @@ describe('installAppManagementApp — the poll budget', () => {
         const client = neverLands();
 
         await installAppManagementApp(
-            paasProject(),
+            paasProject(), 'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client, { wait })
         );
@@ -296,7 +296,7 @@ describe('installAppManagementApp — the poll budget', () => {
         });
 
         const result = await installAppManagementApp(
-            paasProject(),
+            paasProject(), 'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client)
         );
@@ -314,7 +314,7 @@ describe('installAppManagementApp — what it tells the user', () => {
         const client = makeInstallerClient();
 
         await installAppManagementApp(
-            paasProject(),
+            paasProject(), 'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client, { onProgress })
         );
@@ -343,7 +343,7 @@ describe('installAppManagementApp — what it tells the user', () => {
         });
 
         await installAppManagementApp(
-            paasProject(),
+            paasProject(), 'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client, { onProgress })
         );
@@ -366,7 +366,7 @@ describe('installAppManagementApp — what it tells the user', () => {
         });
 
         await installAppManagementApp(
-            paasProject(),
+            paasProject(), 'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client, { onProgress })
         );
@@ -382,7 +382,7 @@ describe('installAppManagementApp — the guards before any call', () => {
         const client = makeInstallerClient();
         const project = paasProject({ componentSelections: {} });
 
-        const result = await installAppManagementApp(project, DEPLOYED_URLS, makeInstallerDeps(client));
+        const result = await installAppManagementApp(project, 'app', DEPLOYED_URLS, makeInstallerDeps(client));
 
         expect(result.status).toBe('failed');
         expect(result.detail).toContain('no Commerce backend');
@@ -394,7 +394,7 @@ describe('installAppManagementApp — the guards before any call', () => {
         const project = paasProject();
         delete project.adobe?.workspaceName;
 
-        const result = await installAppManagementApp(project, DEPLOYED_URLS, makeInstallerDeps(client));
+        const result = await installAppManagementApp(project, 'app', DEPLOYED_URLS, makeInstallerDeps(client));
 
         expect(result.status).toBe('failed');
         expect(result.detail).toContain('workspaceName');
@@ -421,7 +421,7 @@ describe('installAppManagementApp — the default client', () => {
             const deps = makeInstallerDeps(makeInstallerClient());
             delete deps.clientFactory;
 
-            const result = await installAppManagementApp(paasProject(), DEPLOYED_URLS, deps);
+            const result = await installAppManagementApp(paasProject(), 'app', DEPLOYED_URLS, deps);
 
             expect(result.status).toBe('installed');
             const urls = fetchMock.mock.calls.map((c) => c[0]);

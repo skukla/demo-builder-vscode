@@ -284,9 +284,11 @@ describe('handleInstallAppBuilderComponent', () => {
         })) as { success: boolean; installation: { status: string } };
 
         expect(result.success).toBe(true);
+        // The component's id, not its URLs: the id also picks the workspace
+        // Commerce is told about (AB-23), and the URLs are read from it.
         expect(mockInstallAppManagement).toHaveBeenCalledWith(
             mockProject,
-            APP_URLS,
+            'kit-app',
             expect.any(Function),
             { appVersion: undefined }
         );
@@ -574,8 +576,8 @@ describe('handleReinstallAppBuilderComponent', () => {
 
         expect(result.success).toBe(true);
         expect(order).toEqual(['uninstall', 'install']);
-        expect(mockUninstallAppManagement).toHaveBeenCalledWith(mockProject, APP_URLS, expect.any(Function));
-        expect(mockInstallAppManagement).toHaveBeenCalledWith(mockProject, APP_URLS, expect.any(Function), {
+        expect(mockUninstallAppManagement).toHaveBeenCalledWith(mockProject, 'kit-app', expect.any(Function));
+        expect(mockInstallAppManagement).toHaveBeenCalledWith(mockProject, 'kit-app', expect.any(Function), {
             appVersion: undefined,
         });
         expect(mockProgressTitles.some((title) => title.startsWith('Reinstalling'))).toBe(true);

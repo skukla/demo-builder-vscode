@@ -71,7 +71,7 @@ export interface TeardownDeps {
      */
     uninstallAppManagement?: (
         project: Project,
-        deployedUrls: Record<string, string> | undefined,
+        componentId: string,
         onProgress?: (message: string) => void,
     ) => Promise<{ status: 'uninstalled' | 'skipped' | 'failed'; detail?: string }>;
     /** Delete a system's records before its undeploy (systemRecordsWipe). */
@@ -131,14 +131,14 @@ async function detachIfErpIntegration(
  * @returns why it did not finish, or undefined
  */
 async function uninstallIfAppManagement(
-    { project, state, entry }: TeardownTarget,
+    { project, id, state, entry }: TeardownTarget,
     deps: TeardownDeps,
 ): Promise<string | undefined> {
     if (!deps.uninstallAppManagement || state.kind !== 'integration' || entry.lifecycle !== 'app-management') {
         return undefined;
     }
     try {
-        const result = await deps.uninstallAppManagement(project, state.deployedUrls, (message) =>
+        const result = await deps.uninstallAppManagement(project, id, (message) =>
             deps.onProgress?.(OPERATION_STAGES.removingFromCommerce.label, message),
         );
         return result.status === 'failed' ? (result.detail ?? 'no reason given') : undefined;

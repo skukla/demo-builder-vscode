@@ -33,9 +33,9 @@ import { installAppManagementApp } from '@/features/app-builder/services/appMana
 import { uninstallAppManagementApp } from '@/features/app-builder/services/appManagementUninstaller';
 import { readAppManifestVersion } from '@/features/app-builder/services/appManifestVersion';
 import { resolveSecretDeployEnv } from '@/features/app-builder/services/componentSettingSecrets';
+import { deployWorkspaceId, ensureComponentWorkspace } from '@/features/app-builder/services/componentWorkspace';
 import { deployAppComponentIsolated } from '@/features/app-builder/services/deployAppIsolated';
 import { subscriberTarget } from '@/features/app-builder/services/ensureMeshApiSubscribed';
-import { ensureComponentWorkspace } from '@/features/app-builder/services/componentWorkspace';
 import { detachErpWrites } from '@/features/app-builder/services/erpDetach';
 import {
     checkCloneForUpdate,
@@ -130,6 +130,11 @@ export async function resolveAppManagementAuth(
     return code ? { accessToken: inspection.token, imsOrgId: code } : undefined;
 }
 
+/** A component's persisted per-action URL map — where its install API lives. */
+function deployedUrlsOf(project: Project, componentId: string): Record<string, string> | undefined {
+    return project.appBuilderComponents?.[componentId]?.deployedUrls;
+}
+
 export function buildDefaultRunnerDeps(
     ctx: RunnerDepsContext,
     onProgress?: (message: string, subMessage?: string, position?: OperationPosition) => void,
@@ -184,8 +189,8 @@ export function buildDefaultRunnerDeps(
         // Post-deploy install for app-management lifecycle apps (automatic with
         // hands-back — owner decision 2026-08-27). The runner records the
         // outcome; a failure never fails the deploy.
-        installAppManagement: (project, deployedUrls, installProgress, options) =>
-            installAppManagementApp(project, deployedUrls, {
+        installAppManagement: (project, componentId, installProgress, options) =>
+            installAppManagementApp(project, componentId, deployedUrlsOf(project, componentId), {
                 getAuth: () => resolveAppManagementAuth(project, ctx.authManager),
                 logger: ctx.logger,
                 onProgress: installProgress,
@@ -209,8 +214,8 @@ export function buildDefaultRunnerDeps(
                 onProgress: detachProgress,
             }),
         // then the app's own uninstall API, which takes down what its installer created:
-        uninstallAppManagement: (project, deployedUrls, uninstallProgress) =>
-            uninstallAppManagementApp(project, deployedUrls, {
+        uninstallAppManagement: (project, componentId, uninstallProgress) =>
+            uninstallAppManagementApp(project, componentId, deployedUrlsOf(project, componentId), {
                 getAuth: () => resolveAppManagementAuth(project, ctx.authManager),
                 logger: ctx.logger,
                 onProgress: uninstallProgress,
@@ -227,9 +232,12 @@ export function buildDefaultRunnerDeps(
         // the workspace S2S credential's full identity (ensured + read via the
         // Console SDK), mapped by s2sDeployEnv. The secret rides the
         // per-invocation env only.
-        resolveAppManagementEnv: async (project) => {
+        resolveAppManagementEnv: async (project, componentId) => {
             const adobe = project.adobe;
-            if (!adobe?.organization || !adobe.projectId || !adobe.workspace) {
+            // The workspace the app is deployed into: its credential is the one the
+            // app's actions must authenticate with.
+            const workspaceId = deployWorkspaceId(project, componentId);
+            if (!adobe?.organization || !adobe.projectId || !workspaceId) {
                 throw new Error(
                     'The project has no Adobe org/project/workspace context to resolve credentials from.',
                 );
@@ -237,7 +245,7 @@ export function buildDefaultRunnerDeps(
             const credentials = await ctx.authManager.getS2SDeployCredentials(
                     adobe.organization,
                     adobe.projectId,
-                    adobe.workspace,
+                    workspaceId,
                 );
             return buildS2SDeployEnv(credentials);
         },

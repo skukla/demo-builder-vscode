@@ -199,6 +199,7 @@ export async function handlerRunnerDeps(
 /** Everything an install-pass handler needs once the target checks pass. */
 interface InstallPass {
     project: Project;
+    id: string;
     state: AppBuilderComponentState;
     deps: AppBuilderComponentRunnerDeps;
     report: (message: string) => void;
@@ -252,7 +253,7 @@ async function runInstallPass(
             // runner's own install pass — the stage keeps its expectation line.
             const stepReport = (message: string): void =>
                 report(OPERATION_STAGES.installingIntoCommerce.label, message);
-            const outcome = await pass({ project, state, deps, report: stepReport, appVersion });
+            const outcome = await pass({ project, id, state, deps, report: stepReport, appVersion });
             if (typeof outcome === 'string') {
                 return { success: false, error: outcome };
             }
@@ -299,13 +300,13 @@ export const handleInstallAppBuilderComponent: MessageHandler<{
         runInstallPass(
             context,
             { requestedId: payload?.id, title: 'Installing', progress: progressSurfaceOf(payload) },
-            async ({ project, state, deps, report, appVersion }) => {
+            async ({ project, id, deps, report, appVersion }) => {
                 // Always wired by buildDefaultRunnerDeps; the field is optional only
                 // for bare unit-test deps, so a guard beats asserting it away.
                 if (!deps.installAppManagement) {
                     return 'The install pass is not available.';
                 }
-                return deps.installAppManagement(project, state.deployedUrls, report, { appVersion });
+                return deps.installAppManagement(project, id, report, { appVersion });
             },
         ),
     (payload) => payload?.id,
@@ -332,14 +333,14 @@ export const handleReinstallAppBuilderComponent: MessageHandler<{ id?: string }>
                     ? undefined
                     : `"${id}" does not need a reinstall: Commerce has not refused an upgrade of it.`,
         },
-        async ({ project, state, deps, report, appVersion }) => {
+        async ({ project, id, deps, report, appVersion }) => {
             const { installAppManagement, uninstallAppManagement } = deps;
             if (!installAppManagement || !uninstallAppManagement) {
                 return 'The reinstall is not available.';
             }
             return reinstallAppManagementApp({
-                uninstall: () => uninstallAppManagement(project, state.deployedUrls, report),
-                install: () => installAppManagement(project, state.deployedUrls, report, { appVersion }),
+                uninstall: () => uninstallAppManagement(project, id, report),
+                install: () => installAppManagement(project, id, report, { appVersion }),
             });
         },
     );

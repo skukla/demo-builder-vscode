@@ -243,7 +243,7 @@ export interface AppBuilderComponentRunnerDeps extends TeardownDeps {
      * value goes into the per-invocation env and nowhere else. Optional:
      * mesh/standalone paths and bare unit tests never need it.
      */
-    resolveAppManagementEnv?: (project: Project) => Promise<Record<string, string> | undefined>;
+    resolveAppManagementEnv?: (project: Project, componentId: string) => Promise<Record<string, string> | undefined>;
     /**
      * The deploy env carrying an entry's secrets: its screen key (`systemScreen.ts`,
      * generated the first time) and its secret settings from SecretStorage
@@ -262,7 +262,7 @@ export interface AppBuilderComponentRunnerDeps extends TeardownDeps {
      */
     installAppManagement?: (
         project: Project,
-        deployedUrls: Record<string, string> | undefined,
+        componentId: string,
         onProgress?: (message: string) => void,
         options?: AppManagementInstallOptions,
     ) => Promise<AppManagementInstallResult>;
@@ -655,7 +655,7 @@ async function dispatchDeploy(
     if (entry.lifecycle === 'app-management' && deps.resolveAppManagementEnv) {
         deps.onProgress?.(OPERATION_STAGES.resolvingCommerceCredentials.label);
         try {
-            extraEnv = { ...extraEnv, ...(await deps.resolveAppManagementEnv(project)) };
+            extraEnv = { ...extraEnv, ...(await deps.resolveAppManagementEnv(project, entry.id)) };
         } catch (error) {
             return {
                 ok: false,
@@ -887,7 +887,7 @@ async function installIfAppManagement(
     // under one install stage — the stage keeps its expectation line while they change.
     const result = await deps.installAppManagement(
         project,
-        state?.deployedUrls,
+        entry.id,
         (message) => deps.onProgress?.(OPERATION_STAGES.installingIntoCommerce.label, message),
         options,
     );

@@ -319,11 +319,7 @@ describe('removeAppBuilderComponent — the Commerce uninstall pass', () => {
 
         await removeAppBuilderComponent(project, APP_ID, deps);
 
-        expect(uninstallAppManagement).toHaveBeenCalledWith(
-            project,
-            { 'web/app': 'https://app/api' },
-            expect.any(Function)
-        );
+        expect(uninstallAppManagement).toHaveBeenCalledWith(project, APP_ID, expect.any(Function));
     });
 
     // A MESH never has a Commerce-side installation, whatever a same-named
@@ -350,7 +346,7 @@ describe('removeAppBuilderComponent — the Commerce uninstall pass', () => {
             uninstallAppManagement: jest.fn(
                 async (
                     _p: Project,
-                    _urls: Record<string, string> | undefined,
+                    _id: string,
                     report?: (message: string) => void
                 ) => {
                     report?.('Removing the Commerce association...');
@@ -378,7 +374,7 @@ describe('removeAppBuilderComponent — the Commerce uninstall pass', () => {
             uninstallAppManagement: jest.fn(
                 async (
                     _p: Project,
-                    _urls: Record<string, string> | undefined,
+                    _id: string,
                     report?: (message: string) => void
                 ) => {
                     report?.('Removing the Commerce association...');

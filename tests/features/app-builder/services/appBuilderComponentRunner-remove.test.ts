@@ -472,11 +472,7 @@ describe('removeAppBuilderComponent — the Commerce uninstall pass (AB-4)', () 
         const result = await removeAppBuilderComponent(project, 'kit-app', deps);
 
         expect(result.success).toBe(true);
-        expect(uninstallAppManagement).toHaveBeenCalledWith(
-            project,
-            KIT_URLS,
-            expect.any(Function)
-        );
+        expect(uninstallAppManagement).toHaveBeenCalledWith(project, 'kit-app', expect.any(Function));
         // Order: the app's API must still exist when the uninstall runs.
         const uninstallOrder = uninstallAppManagement.mock.invocationCallOrder[0];
         const undeployOrder = (deps.commandManager.execute as jest.Mock).mock

@@ -384,7 +384,7 @@ describe('addAppBuilderComponent — the app-management install pass reports bac
             installAppManagement: jest.fn(
                 async (
                     _p: Project,
-                    _urls: Record<string, string> | undefined,
+                    _id: string,
                     report?: (message: string) => void
                 ) => {
                     report?.('Associating with Commerce...');
@@ -406,7 +406,7 @@ describe('addAppBuilderComponent — the app-management install pass reports bac
             installAppManagement: jest.fn(
                 async (
                     _p: Project,
-                    _urls: Record<string, string> | undefined,
+                    _id: string,
                     report?: (message: string) => void
                 ) => {
                     report?.('Associating with Commerce...');

@@ -65,7 +65,7 @@ describe('S2S deploy-env wiring', () => {
 
         await addAppBuilderComponent(project, KIT_ENTRY, deps);
 
-        expect(resolveAppManagementEnv).toHaveBeenCalledWith(project);
+        expect(resolveAppManagementEnv).toHaveBeenCalledWith(project, KIT_ENTRY.id);
         expect(deps.deployApp).toHaveBeenCalledWith(
             expect.any(String),
             expect.any(String),
@@ -176,7 +176,7 @@ describe('install-after-deploy wiring', () => {
         const result = await addAppBuilderComponent(project, KIT_ENTRY, deps);
 
         expect(result.success).toBe(true);
-        expect(installAppManagement).toHaveBeenCalledWith(project, KIT_URLS, expect.any(Function), {
+        expect(installAppManagement).toHaveBeenCalledWith(project, KIT_ENTRY.id, expect.any(Function), {
             appVersion: undefined,
             since: expect.any(String),
         });

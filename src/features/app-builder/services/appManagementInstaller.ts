@@ -26,10 +26,10 @@
  * @module features/app-builder/services/appManagementInstaller
  */
 
+import { buildAppData } from './appManagementAppData';
 import {
     AppManagementApiError,
     AppManagementClient,
-    type AppData,
     type AppManagementAuth,
     type CommerceEnv,
     type InstallationState,
@@ -148,36 +148,6 @@ export function deriveCommerceTarget(
             .replace(/\/+$/, '');
     }
     return { commerceBaseUrl, commerceEnv: contract.flavor };
-}
-
-/**
- * The Console identity block the install API requires — every field from the
- * project's persisted `adobe` config, with an error naming the first gap
- * (all fields are optional in the manifest; the spec requires all eight).
- *
- * @param project - the current project
- * @returns the appData, or an error naming the missing field
- */
-export function buildAppData(project: Project): AppData | { error: string } {
-    const adobe = project.adobe ?? {};
-    // Constructed as the declared type, empty-string for absent — then validated
-    // — rather than entries + a cast: a cast at this boundary would silence the
-    // one checker that can see a missing spec-required field.
-    const candidate: AppData = {
-        consumerOrgId: adobe.organization ?? '',
-        orgName: adobe.organizationName ?? '',
-        projectId: adobe.projectId ?? '',
-        projectName: adobe.projectName ?? '',
-        projectTitle: adobe.projectTitle ?? adobe.projectName ?? '',
-        workspaceId: adobe.workspace ?? '',
-        workspaceName: adobe.workspaceName ?? '',
-        workspaceTitle: adobe.workspaceTitle ?? adobe.workspaceName ?? '',
-    };
-    const missing = Object.entries(candidate).find(([, value]) => value === '');
-    if (missing) {
-        return { error: `The project's Adobe context is missing ${missing[0]}.` };
-    }
-    return candidate;
 }
 
 /**
@@ -309,12 +279,14 @@ async function settleReconcile(
  * preceded this SUCCEEDED and must not be reported as broken.
  *
  * @param project - the current project (Commerce config + Adobe context)
+ * @param componentId - the app's component id; picks the workspace it lives in
  * @param deployedUrls - the app's persisted per-action URL map
  * @param deps - auth, logging, progress, and the test seams
  * @returns the outcome — installed / skipped (already current) / failed
  */
 export async function installAppManagementApp(
     project: Project,
+    componentId: string,
     deployedUrls: Record<string, string> | undefined,
     deps: AppManagementInstallDeps,
 ): Promise<AppManagementInstallResult> {
@@ -331,7 +303,7 @@ export async function installAppManagementApp(
     if ('error' in target) {
         return fail(target.error);
     }
-    const appData = buildAppData(project);
+    const appData = buildAppData(project, componentId);
     if ('error' in appData) {
         return fail(appData.error);
     }

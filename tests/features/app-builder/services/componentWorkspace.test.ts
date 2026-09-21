@@ -15,6 +15,7 @@
  */
 
 import {
+    deployWorkspaceId,
     ensureComponentWorkspace,
     inheritedWorkspace,
 } from '@/features/app-builder/services/componentWorkspace';
@@ -197,5 +198,34 @@ describe('when Adobe refuses', () => {
         });
         expect(project.appBuilderComponents?.['erp-integration']).toBeUndefined();
         expect(saveProject).not.toHaveBeenCalled();
+    });
+});
+
+// AB-23 slice 5: the credential an App Management app authenticates with is the
+// one in the workspace it is deployed into.
+describe('the workspace a component is deployed into', () => {
+    it('is its own when it has one', () => {
+        const project = projectWith({
+            'erp-integration': {
+                kind: 'integration',
+                status: 'deployed',
+                source: { owner: 'skukla', repo: 'commerce-erp-integration' },
+                workspace: { id: 'ws-erp', name: 'erp-integration' },
+            },
+        });
+
+        expect(deployWorkspaceId(project, 'erp-integration')).toBe('ws-erp');
+    });
+
+    it("is the project's for a component added before AB-23", () => {
+        const project = projectWith({
+            'erp-integration': {
+                kind: 'integration',
+                status: 'deployed',
+                source: { owner: 'skukla', repo: 'commerce-erp-integration' },
+            },
+        });
+
+        expect(deployWorkspaceId(project, 'erp-integration')).toBe('ws-project');
     });
 });

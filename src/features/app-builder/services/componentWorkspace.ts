@@ -38,6 +38,14 @@ export interface WorkspaceMaker {
 /** Persisting the project, so a created workspace is never lost to a later failure. */
 export type SaveProject = (project: Project) => Promise<void>;
 
+/**
+ * The workspace a component is deployed into: its own when it has one, otherwise
+ * the project's — where every component added before AB-23 lives.
+ */
+export function deployWorkspaceId(project: Project, componentId: string): string | undefined {
+    return project.appBuilderComponents?.[componentId]?.workspace?.id ?? project.adobe?.workspace;
+}
+
 /** The workspace an entry should JOIN rather than create: its bound partner's. */
 export function inheritedWorkspace(
     project: Project,
