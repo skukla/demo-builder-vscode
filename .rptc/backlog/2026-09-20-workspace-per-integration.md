@@ -477,3 +477,4 @@ and re-adding an integration — no migration code ships.
 - 2026-09-21  fix(app-builder): a removal says what each phase is doing; a slow workspace delete is waited for (`5f05a7007`)
 - 2026-09-21  feat(integrations): Open on an integration goes to its Adobe workspace in the Console (`fc3321d5e`)
 - 2026-09-21  fix(app-builder): a workspace is named from its title; a pair after its ERP (`47059ba98`)
+- 2026-09-21  fix(app-builder): a workspace's name is bare unless it is taken (`5b85b12f1`)
