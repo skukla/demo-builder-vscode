@@ -408,8 +408,8 @@ describe('handleUpdateAppBuilderComponent — started from the integrations scre
             .filter((payload) => payload.stage === 'Deploying the app')
             .map((payload) => payload.position);
         expect(positions).toEqual([
-            { index: 1, total: 2 },
-            { index: 2, total: 2 },
+            { index: 1, total: 2, name: 'Nordwind' },
+            { index: 2, total: 2, name: 'ERP integration' },
         ]);
     });
 

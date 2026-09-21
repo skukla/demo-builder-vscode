@@ -188,21 +188,24 @@ describe('handleSetProjectDestination — what the move is handed and what it sa
 
     const reported = reportedSteps;
 
-    it('counts one integration in the singular', async () => {
+    // One stage for the whole move, NAMING which integration is in flight: a count
+    // like "(1 of 2)" said nothing when each part is many steps (owner, 2026-09-21).
+    // These fixtures carry no display name, so the id stands in for it.
+    it('names the integration being moved', async () => {
         const { context } = withComponentIds(['erp-sync']);
 
         await handleSetProjectDestination(context, NEW_DESTINATION);
 
-        // One stage for the whole move, carrying which of the N is in flight.
-        expect(reported()).toContain('Moving the integrations (1 of 1)');
+        expect(reported()).toContain('Moving the integrations · erp-sync');
     });
 
-    it('counts several in the plural', async () => {
+    it('names the first of several, not a count', async () => {
         const { context } = withComponentIds(['erp-sync', 'firefly-shell']);
 
         await handleSetProjectDestination(context, NEW_DESTINATION);
 
-        expect(reported()).toContain('Moving the integrations (1 of 2)');
+        expect(reported()).toContain('Moving the integrations · erp-sync');
+        expect(reported().some((line: string) => / of \d\)$/.test(line))).toBe(false);
     });
 
     it('builds the runner deps against the project and the shared services', async () => {

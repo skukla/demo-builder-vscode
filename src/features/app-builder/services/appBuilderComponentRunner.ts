@@ -56,7 +56,7 @@ import {
 } from './appConfigPackages';
 import type { AppManagementInstallOptions, AppManagementInstallResult } from './appManagementUpgrade';
 import { entriesSharingWorkspace } from './componentWorkspace';
-import { resolveDeployInputs, resolveDisplayName } from './deployInputs';
+import { displayNameInProject, resolveDeployInputs, resolveDisplayName } from './deployInputs';
 import type { CommerceDetachResult } from './erpDetach';
 import type { SourceUpdateResult, UpdateCheckResult } from './integrationSourceUpdate';
 import { deriveOwPackage } from './owPackageName';
@@ -726,8 +726,9 @@ async function addBoundSystemFirst(
     if (!system) return { success: true };
     const existing = project.appBuilderComponents?.[system.id];
     if (existing && existing.status !== 'error') return { success: true };
-    const first = atPairPosition(deps, 1, 2);
-    first.onProgress?.(OPERATION_STAGES.addingSystem.label, `Adding ${system.name}`);
+    const systemName = displayNameInProject(project, system);
+    const first = atPairPosition(deps, 1, 2, systemName);
+    first.onProgress?.(OPERATION_STAGES.addingSystem.label, `Adding ${systemName}`);
     const result = await addAppBuilderComponent(project, system, first);
     if (!result.success) {
         return {
@@ -739,18 +740,19 @@ async function addBoundSystemFirst(
 }
 
 /**
- * The same deps, with every progress report saying which member of a pair it is
- * on: "Deploying the app (1 of 2)" (PL-59). The deploy tails get the wrapped
- * reporter too, so their steps carry the count without knowing about pairs.
+ * The same deps, with every progress report naming which member of a pair it is
+ * on: "Deploying the app · Northwind ERP" (PL-59). The deploy tails get the wrapped
+ * reporter too, so their steps carry the name without knowing about pairs.
  */
 function atPairPosition(
     deps: AppBuilderComponentRunnerDeps,
     index: number,
     total: number,
+    name: string,
 ): AppBuilderComponentRunnerDeps {
     const report = deps.onProgress;
     if (!report) return deps;
-    return { ...deps, onProgress: (message, subMessage) => report(message, subMessage, { index, total }) };
+    return { ...deps, onProgress: (message, subMessage) => report(message, subMessage, { index, total, name }) };
 }
 
 /**
@@ -767,7 +769,11 @@ export async function addAppBuilderComponent(
     const boundSystem = await addBoundSystemFirst(project, entry, deps);
     if (!boundSystem.success) return { success: false, error: boundSystem.error };
     // After its system, the entry is the pair's second member.
-    return addOne(project, entry, boundSystem.added ? atPairPosition(deps, 2, 2) : deps);
+    return addOne(
+        project,
+        entry,
+        boundSystem.added ? atPairPosition(deps, 2, 2, displayNameInProject(project, entry)) : deps,
+    );
 }
 
 /** Add ONE component, its bound system already in place. */

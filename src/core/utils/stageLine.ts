@@ -1,6 +1,7 @@
 /**
- * An operation's stage as the SC reads it: "Deploying the app", with the pair count
- * after it when the operation deploys two things — "Deploying the app (1 of 2)".
+ * An operation's stage as the SC reads it: "Deploying the app", with the part it is
+ * on when it works through several — named when the part has a name ("Deploying the
+ * app · Northwind ERP"), else counted ("Importing the data (3 of 5)").
  *
  * One formatter for both places the stage shows, the progress modal (webview) and
  * the notification it hands over to (extension), so the two cannot word it
@@ -17,5 +18,6 @@ import type { OperationPosition } from '@/types/webviewPayloads';
  * @returns the line to show
  */
 export function stageLine(stage: string, position?: OperationPosition): string {
-    return position ? `${stage} (${position.index} of ${position.total})` : stage;
+    if (!position) return stage;
+    return position.name ? `${stage} · ${position.name}` : `${stage} (${position.index} of ${position.total})`;
 }

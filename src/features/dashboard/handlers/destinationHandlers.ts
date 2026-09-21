@@ -202,9 +202,10 @@ async function applyDestination(
     // migration runs targets it; `previous` is what addresses the old one.
     // One stage for the whole move, carrying WHICH of the N is in flight. The
     // count is known up front, which is the only case a count is allowed (PL-59).
-    const at = (id: string): { index: number; total: number } => ({
+    const at = (id: string): { index: number; total: number; name: string } => ({
         index: Math.max(1, movingIds.indexOf(id) + 1),
         total: movingIds.length,
+        name: project.appBuilderComponents?.[id]?.name ?? id,
     });
     let moving = movingIds[0] ?? '';
     report('Moving the integrations', undefined, at(moving));

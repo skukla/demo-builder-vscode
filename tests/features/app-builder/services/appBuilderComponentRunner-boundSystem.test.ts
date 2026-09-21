@@ -170,7 +170,8 @@ describe('adding the integration adds its system first', () => {
 
         const positions = onProgress.mock.calls.map((call) => call[2]);
         const firstForIntegration = positions.findIndex((p) => p?.index === 2);
-        expect(positions[0]).toEqual({ index: 1, total: 2 });
+        // Named, so the SC can tell the halves apart: the ERP by the name it was given.
+        expect(positions[0]).toEqual({ index: 1, total: 2, name: 'Acme ERP' });
         expect(firstForIntegration).toBeGreaterThan(0);
         expect(positions.slice(0, firstForIntegration).every((p) => p?.index === 1)).toBe(true);
         expect(positions.slice(firstForIntegration).every((p) => p?.index === 2 && p.total === 2)).toBe(true);

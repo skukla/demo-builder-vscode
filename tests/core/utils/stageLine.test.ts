@@ -8,4 +8,11 @@ describe('stageLine', () => {
     it('is the stage alone when the operation is not a pair', () => {
         expect(stageLine('Deploying the app')).toBe('Deploying the app');
     });
+
+    // "(1 of 2)" read as a step count when each part is many steps (owner, 2026-09-21).
+    it('names the part instead of counting it, when it has a name', () => {
+        expect(stageLine('Adding Adobe services', { index: 1, total: 2, name: 'Northwind ERP' })).toBe(
+            'Adding Adobe services · Northwind ERP'
+        );
+    });
 });

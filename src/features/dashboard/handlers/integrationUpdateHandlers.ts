@@ -135,7 +135,10 @@ async function updatePair(
     let last: UpdateResult = { success: true };
     for (const [index, memberId] of order.entries()) {
         // A pair updates two things back to back: each one's reports say which.
-        const position = order.length > 1 ? { index: index + 1, total: order.length } : undefined;
+        const position =
+            order.length > 1
+                ? { index: index + 1, total: order.length, name: nameOf(project, memberId) }
+                : undefined;
         const deps = await runnerDeps(context, project, (message, step) => report(message, step, position));
         last = await updateOne(project, memberId, deps);
         const rest = order.slice(index + 1);

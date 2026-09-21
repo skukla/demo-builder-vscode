@@ -288,13 +288,17 @@ export interface AppBuilderComponentStatusUpdatePayload {
 }
 
 /**
- * Which member of a pair an operation is on — the ERP and its integration deploy one
- * after the other, a total known before anything starts. Shown after the stage:
- * "Deploying the app (1 of 2)".
+ * Where an operation is in a known run of parts. With a `name`, the part is named
+ * after the stage — "Adding Adobe services · Northwind ERP" — and the count is not
+ * shown: when each part is many steps, "(1 of 2)" read as a step count nobody could
+ * relate to anything (owner, 2026-09-21). Without one it is a count of like items,
+ * "(3 of 5)", which is what a count is good for.
  */
 export interface OperationPosition {
     index: number;
     total: number;
+    /** The part in flight, as the SC knows it. */
+    name?: string;
 }
 
 /**
