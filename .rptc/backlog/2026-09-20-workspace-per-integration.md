@@ -459,3 +459,5 @@ and re-adding an integration — no migration code ships.
 - 2026-09-21  fix(integrations): the ERP pair's remove line says it plainly (`e903d7119`)
 - 2026-09-21  feat(app-builder): list_runtime_packages can read one integration's workspace (`131cbb365`)
 - 2026-09-21  fix(app-builder): removal also clears the timers and rules an app leaves (`d4591e81f`)
+- 2026-09-21  fix(app-builder): an add's progress says each thing once, under its own name (`232944b98`)
+- 2026-09-21  fix(app-builder): a pair's workspace is the integration's; Destination names the project (`ea4e67423`)
