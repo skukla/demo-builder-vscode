@@ -444,9 +444,11 @@ export class AdobeConsoleProjectOps {
      * multi-step teardown that maps SDK errors itself; this one answers a single tool
      * call.
      *
-     * Adobe refuses to delete the Production workspace, and that refusal arrives as an
-     * SDK error rather than as anything this can check first — so it is surfaced rather
-     * than pre-empted with a guess about which names are protected.
+     * No workspace name is protected: deleting the Production workspace of a real
+     * project answered HTTP 200 in 3 seconds and took its Runtime namespace with it
+     * (measured 2026-09-20). This used to claim Adobe refused that, which was never
+     * true and was never tested. Whatever Adobe does refuse arrives as an SDK error
+     * and is surfaced verbatim rather than pre-empted with a guess.
      */
     async deleteWorkspace(
         workspaceId: string,

@@ -221,9 +221,10 @@ export function registerAdobeResourceTools(
                 projectId: target.projectId,
             });
 
-            // Adobe refuses to delete the Production workspace. That arrives as an SDK
-            // error rather than something checkable up front, so it reaches the agent as
-            // the reason it actually is instead of a guess made here.
+            // No workspace name is protected — deleting a real project's Production
+            // workspace answered HTTP 200 (measured 2026-09-20). Whatever Adobe does
+            // refuse arrives as an SDK error rather than something checkable up front,
+            // so it reaches the agent as the reason it actually is.
             if (isConsoleOpFailure(result)) {
                 return asText({ deleted: false, error: result.error });
             }
