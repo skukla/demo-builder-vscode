@@ -9,9 +9,9 @@
  */
 
 import * as vscode from 'vscode';
+import { warmOrgServicesCatalog } from './warmOrgServicesCatalog';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { MessageHandler } from '@/types/handlers';
-import { warmOrgServicesCatalog } from './warmOrgServicesCatalog';
 
 /**
  * Handle 'configure' message - Open configuration UI
