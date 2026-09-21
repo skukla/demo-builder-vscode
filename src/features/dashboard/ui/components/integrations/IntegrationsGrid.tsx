@@ -93,6 +93,15 @@ function handleSystemAction(
     return false;
 }
 
+/** The dialog's second line: what the remove reaches beyond the card, if anything. */
+function removalConsequence(target: IntegrationCardModel | undefined): string | undefined {
+    if (target?.isMesh) {
+        return 'Your storefront loses its API Mesh endpoint until you deploy a new mesh.';
+    }
+    // A linked pair goes together (decision 2), whichever card asked.
+    return target?.linked ? linkedRemovalConsequence(target) : undefined;
+}
+
 /**
  * What removing a linked card also removes: the other card, and the system's
  * records, which removal deletes before the undeploy.
@@ -245,14 +254,11 @@ export function IntegrationsGrid({
     // regenerates the storefront config WITHOUT the MESH_ENDPOINT it provided, so
     // the storefront has no data layer until a mesh is deployed again. That is the
     // honest consequence of the verb, and it belongs in front of the click.
-    const removeConsequence = useMemo((): string | undefined => {
-        const target = cards.find((card) => (card.componentId ?? card.id) === pendingRemoveId);
-        if (target?.isMesh) {
-            return 'Your storefront loses its API Mesh endpoint until you deploy a new mesh.';
-        }
-        // A linked pair goes together (decision 2), whichever card asked.
-        return target?.linked ? linkedRemovalConsequence(target) : undefined;
-    }, [cards, pendingRemoveId]);
+    const pendingRemove = useMemo(
+        () => cards.find((card) => (card.componentId ?? card.id) === pendingRemoveId),
+        [cards, pendingRemoveId],
+    );
+    const removeConsequence = removalConsequence(pendingRemove);
 
     const closeResetDialog = useCallback((): void => setPendingReset(null), []);
     // Through the runner, so the reset reports into this screen's progress modal
@@ -268,11 +274,10 @@ export function IntegrationsGrid({
     const closeRemoveDialog = useCallback((): void => setPendingRemoveId(null), []);
     const confirmRemove = useCallback((): void => {
         if (pendingRemoveId) {
-            const target = cards.find((card) => (card.componentId ?? card.id) === pendingRemoveId);
-            operations.run(pendingRemoveId, target?.name ?? pendingRemoveId, 'remove');
+            operations.run(pendingRemoveId, pendingRemove?.name ?? pendingRemoveId, 'remove');
         }
         setPendingRemoveId(null);
-    }, [cards, operations, pendingRemoveId]);
+    }, [operations, pendingRemove, pendingRemoveId]);
 
     return (
         // No section heading, count, or Add button here: the SCREEN's page header
@@ -305,7 +310,7 @@ export function IntegrationsGrid({
 
             <AppBuilderComponentRemoveDialog
                 isOpen={pendingRemoveId !== null}
-                appBuilderComponentId={pendingRemoveId ?? ''}
+                componentName={pendingRemove?.name ?? pendingRemoveId ?? ''}
                 consequence={removeConsequence}
                 onConfirm={confirmRemove}
                 onClose={closeRemoveDialog}

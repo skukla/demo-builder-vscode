@@ -164,7 +164,7 @@ describe('IntegrationsGrid — the link between them', () => {
 
         await user.click(within(panel).getByRole('button', { name: /^remove$/i }));
 
-        const dialog = screen.getByRole('dialog', { name: /remove app builder component/i });
+        const dialog = screen.getByRole('dialog', { name: 'Remove ERP integration' });
         expect(dialog).toHaveTextContent("Removes the integration and Nordwind too, with Nordwind's records.");
     });
 
@@ -173,7 +173,7 @@ describe('IntegrationsGrid — the link between them', () => {
 
         await user.click(within(panel).getByRole('button', { name: /^remove$/i }));
 
-        const dialog = screen.getByRole('dialog', { name: /remove app builder component/i });
+        const dialog = screen.getByRole('dialog', { name: 'Remove Nordwind' });
         expect(dialog).toHaveTextContent('Removes Nordwind, its records, and ERP integration, the integration that uses it.');
     });
 });

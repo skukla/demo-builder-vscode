@@ -21,8 +21,8 @@ import { ConfirmActionDialog } from './ConfirmActionDialog';
 export interface AppBuilderComponentRemoveDialogProps {
     /** Whether the confirm dialog is shown. */
     isOpen: boolean;
-    /** The appBuilderComponent id being torn down (named in the warning). */
-    appBuilderComponentId: string;
+    /** The name the card shows — what the person recognises, never the id. */
+    componentName: string;
     /**
      * One extra consequence sentence, when the component's teardown reaches past
      * itself. The mesh is the case that needs it: removing it also strips
@@ -43,7 +43,7 @@ export interface AppBuilderComponentRemoveDialogProps {
  */
 export function AppBuilderComponentRemoveDialog({
     isOpen,
-    appBuilderComponentId,
+    componentName,
     consequence,
     onConfirm,
     onClose,
@@ -51,14 +51,14 @@ export function AppBuilderComponentRemoveDialog({
     return (
         <ConfirmActionDialog
             isOpen={isOpen}
-            title="Remove App Builder component"
+            title={`Remove ${componentName}`}
             actionLabel="Remove"
             onConfirm={onConfirm}
             onClose={onClose}
         >
             <Text>
-                Remove <strong>{appBuilderComponentId}</strong>? This permanently undeploys it
-                from the cloud (a destructive teardown) and cannot be undone.
+                <strong>{componentName}</strong> is undeployed from Adobe and removed from this
+                project.
             </Text>
             {consequence && <Text>{consequence}</Text>}
         </ConfirmActionDialog>
