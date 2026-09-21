@@ -548,7 +548,8 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         description:
             "Subscribe Adobe APIs (sdk codes from list_console_apis) on this project's Developer " +
             'Console workspace credential, e.g. to give a custom App Builder app Firefly Services ' +
-            'access. Persisted — survives later component adds/removes. Confirm the codes with the ' +
+            'access. Pass componentId to add them to one integration, in its own workspace when it ' +
+            'has one. Persisted — survives later component adds/removes. Confirm the codes with the ' +
             'user first.',
         map: dashboardHandlers,
         type: 'addConsoleApis',
@@ -557,6 +558,10 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
                 .array(z.string())
                 .min(1)
                 .describe('Adobe sdk codes to subscribe (from list_console_apis)'),
+            componentId: z
+                .string()
+                .optional()
+                .describe("Add to this integration's APIs, in its own workspace; omit for the project's"),
         },
     },
     {

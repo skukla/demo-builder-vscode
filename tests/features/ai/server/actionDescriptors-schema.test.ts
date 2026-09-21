@@ -92,7 +92,7 @@ const INPUT_KEYS: Record<string, string[]> = {
     export_project_settings: ['includeSecrets', 'path'],
     refresh_block_library: [],
     delete_mesh: ['workspaceId'],
-    add_console_apis: ['apis'],
+    add_console_apis: ['apis', 'componentId'],
     install_prerequisite: ['prerequisiteId', 'version'],
 };
 

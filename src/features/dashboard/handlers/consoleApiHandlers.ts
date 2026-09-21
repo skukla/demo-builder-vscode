@@ -262,10 +262,15 @@ async function reconcileExtras(
         const taken = new Set(subscribed.map((api) => api.code));
         const notSubscribed = desiredExtras.filter((code) => !taken.has(code));
         const keep = (codes: string[]) => codes.filter((code) => taken.has(code));
+        // In a workspace of its own, `taken` is only what THAT workspace holds, so it
+        // can judge only this component's picks. Filtering every owner by it erased
+        // the picks of integrations in other workspaces (found 2026-09-21).
+        const judged = (owner: string, codes: string[]) =>
+            ownWorkspace && owner !== componentId ? codes : keep(codes);
         const picks = nextPicks
             ? Object.fromEntries(
                   Object.entries(nextPicks)
-                      .map(([owner, codes]) => [owner, keep(codes)] as const)
+                      .map(([owner, codes]) => [owner, judged(owner, codes)] as const)
                       .filter(([, codes]) => codes.length > 0),
               )
             : applyDesiredApis(project, keep(desiredExtras));
@@ -295,11 +300,15 @@ async function reconcileExtras(
 /**
  * Handle 'addConsoleApis' — additively subscribe the given sdk codes (union with
  * the existing extras). The MCP `add_console_apis` tool path.
+ *
+ * With a `componentId` the codes are added to THAT integration's picks, and so reach
+ * its own workspace when it has one (AB-23). Without one an agent asked to give the
+ * ERP an API subscribed it on the project's workspace, where the ERP never runs.
  */
-export const handleAddConsoleApis: MessageHandler<{ apis?: string[] }> = async (
-    context,
-    payload,
-) => {
+export const handleAddConsoleApis: MessageHandler<{
+    apis?: string[];
+    componentId?: string;
+}> = async (context, payload) => {
     const apis = payload?.apis;
     const codeError = validateSdkCodes(apis, { allowEmpty: false });
     if (codeError) {
@@ -315,8 +324,19 @@ export const handleAddConsoleApis: MessageHandler<{ apis?: string[] }> = async (
         return { success: false, error: guardError.error, code: guardError.code };
     }
 
-    const merged = [...new Set([...resolveDesiredApis(project), ...(apis as string[])])];
-    const result = await reconcileExtras(context, project, merged);
+    const componentId = payload?.componentId;
+    if (componentId && !project.appBuilderComponents?.[componentId]) {
+        return {
+            success: false,
+            error: `This project has no integration "${componentId}".`,
+            code: ErrorCode.CONFIG_INVALID,
+        };
+    }
+    const current = componentId
+        ? (project.componentApiPicks?.[componentId] ?? [])
+        : resolveDesiredApis(project);
+    const merged = [...new Set([...current, ...(apis as string[])])];
+    const result = await reconcileExtras(context, project, merged, componentId);
     if (result.success) {
         context.logger.info(
             `[Console APIs] Added ${(apis as string[]).join(', ')} (union now ${merged.length} extras)`,
