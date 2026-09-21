@@ -462,3 +462,4 @@ and re-adding an integration — no migration code ships.
 - 2026-09-21  fix(app-builder): an add's progress says each thing once, under its own name (`232944b98`)
 - 2026-09-21  fix(app-builder): a pair's workspace is the integration's; Destination names the project (`ea4e67423`)
 - 2026-09-21  fix(app-builder): a removal says what each phase is doing; a slow workspace delete is waited for (`5f05a7007`)
+- 2026-09-21  feat(integrations): Open on an integration goes to its Adobe workspace in the Console (`fc3321d5e`)
