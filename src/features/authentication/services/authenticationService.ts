@@ -594,15 +594,17 @@ export class AuthenticationService {
     /**
      * Create a new workspace in the current organization's selected project.
      * Returns the created workspace, or a ConsoleOpFailure naming the real reason.
+     * `nameFrom` is what the machine name derives from (the title when absent).
      */
     async createWorkspace(
         name: string,
         description: string,
         target?: { orgId?: string; projectId?: string },
+        nameFrom?: string,
     ): Promise<AdobeWorkspace | ConsoleOpFailure> {
         return withTiming('createWorkspace', async () => {
             const { projectOps } = await this.ensureEntities();
-            return projectOps.createWorkspace(name, description, target);
+            return projectOps.createWorkspace(name, description, target, nameFrom);
         });
     }
 

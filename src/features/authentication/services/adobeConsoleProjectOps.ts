@@ -318,6 +318,7 @@ export class AdobeConsoleProjectOps {
         title: string,
         description: string,
         target?: { orgId?: string; projectId?: string },
+        nameFrom?: string,
     ): Promise<AdobeWorkspace | ConsoleOpFailure> {
         // Input validation — enforce constraints regardless of caller.
         if (!title || title.length > 200) {
@@ -363,9 +364,10 @@ export class AdobeConsoleProjectOps {
                 ) => Promise<SDKResponse<RawAdobeWorkspace>>;
             };
 
-            // Adobe validates the machine `name` as alphanumeric-only; derive it from the
-            // free-form title (the user's input). The title stays human-readable in the UI.
-            const name = deriveAdobeEntityName(title);
+            // Adobe validates the machine `name` as alphanumeric-only; derive it from
+            // `nameFrom` when given (a component id, which never changes — Adobe will not
+            // rename a workspace), else the title. The title stays human-readable.
+            const name = deriveAdobeEntityName(nameFrom ?? title);
             this.debugLogger.info(
                 `[Entity Fetcher] Creating workspace "${title}" (name: ${name}) in project ${projectId}`,
             );

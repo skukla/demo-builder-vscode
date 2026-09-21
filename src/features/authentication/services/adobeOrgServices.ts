@@ -21,7 +21,7 @@ import type {
 } from './types';
 import { classifyTransience } from '@/core/errors';
 import { getLogger } from '@/core/logging/debugLogger';
-import { tryWithTimeout } from '@/core/utils/promiseUtils';
+import { tryWithTimeout , firstSuccess } from '@/core/utils/promiseUtils';
 import { SingleFlight } from '@/core/utils/singleFlight';
 import { sleep } from '@/core/utils/sleep';
 import { formatDuration } from '@/core/utils/timeFormatting';
@@ -127,23 +127,18 @@ export class AdobeOrgServices {
             return sdkCodes ? cached.services.filter((s) => sdkCodes.includes(s.code)) : cached.services;
         }
 
-        // Only the named codes: cold, the full catalog hit Adobe's 60s gateway limit while
-        // three codes took 1.3s (2026-09-21). Kept out of the full cache and single-flight:
-        // cached, a subset would show the picker 4 APIs; queued, it would wait the 60s.
+        // Only the named codes: warm, three took 1.3s where the full catalog hit Adobe's 60s
+        // limit. Never cached as the full list (the picker would show 4 APIs). A full load
+        // already running races it rather than queuing it: cold, three codes took 54s too.
+        const flight = this.servicesFlights.get(orgId) ?? new SingleFlight<OrgServiceInfo[]>();
+        this.servicesFlights.set(orgId, flight);
         if (sdkCodes) {
-            return this.fetchServicesForOrg(orgId, sdkCodes);
+            const narrowed = this.fetchServicesForOrg(orgId, sdkCodes);
+            if (!flight.isInFlight) return narrowed;
+            const running = flight.run(() => this.fetchServicesForOrg(orgId));
+            return firstSuccess(narrowed, running.then((all) => all.filter((s) => sdkCodes.includes(s.code))));
         }
-
-        // Single-flight PER ORG. The Add Integration modal PREFETCHES this on open
-        // and the API picker fetches it again when the user reaches that stage —
-        // a concurrent pair by construction, so without this both pulled the org's
-        // full ~90-row catalog. Third instance of the stampede (org list, token
-        // inspection, this).
-        let flight = this.servicesFlights.get(orgId);
-        if (!flight) {
-            flight = new SingleFlight<OrgServiceInfo[]>();
-            this.servicesFlights.set(orgId, flight);
-        }
+        // Single-flight PER ORG: the picker and the dashboard's warm-up ask at once.
         return flight.run(() => this.fetchServicesForOrg(orgId));
     }
 

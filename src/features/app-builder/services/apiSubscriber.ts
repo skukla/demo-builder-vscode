@@ -27,7 +27,7 @@ import {
     resolveServiceInfos,
     type ServiceInfo,
 } from './apiServiceResolution';
-import { credentialsAlreadyCover, type SubscribeObservers } from './credentialCoverage';
+import { credentialsAlreadyCover, type SubscribeOptions } from './credentialCoverage';
 import { alreadySubscribed, buildSubscriptionList, UNKNOWN_CURRENT } from './subscriptionList';
 import { BASELINE_API } from '@/core/constants';
 import type {
@@ -39,7 +39,6 @@ import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponen
 
 // Resolution moved to apiServiceResolution.ts; callers keep importing it from here.
 export { partitionByPlatform, resolveServiceInfos, type ServiceInfo };
-export type { SubscribeObservers };
 
 /** Default allowed-domain when a caller supplies none (matches setupInstructions). */
 const DEFAULT_DOMAIN = 'localhost:3000';
@@ -291,7 +290,7 @@ export async function subscribeRequiredApis(
     extraApis: string[] = [],
     onProgress?: SubscribeProgressListener,
     removing: string[] = [],
-    observe?: SubscribeObservers,
+    observe?: SubscribeOptions,
 ): Promise<SubscribedApi[]> {
     const requiredApis = computeRequiredApis(appBuilderComponents, extraApis);
     const removed = new Set(removing.filter((code) => !requiredApis.includes(code)));
@@ -309,13 +308,14 @@ export async function subscribeRequiredApis(
     catalog.catch(() => undefined);
 
     if (
-        await credentialsAlreadyCover({
+        !observe?.skipCoverageCheck &&
+        (await credentialsAlreadyCover({
             required: requiredApis,
             target,
             client,
             removing: removed,
             observe,
-        })
+        }))
     ) {
         observe?.onStep?.('Everything needed is already there');
         for (const code of requiredApis) {

@@ -252,11 +252,12 @@ export function buildDefaultRunnerDeps(
         createComponentWorkspace: (project, entry) =>
             ensureComponentWorkspace(project, entry, {
                 maker: {
-                    createWorkspace: (title, description, target) =>
-                        ctx.authManager.createWorkspace(title, description, target),
+                    createWorkspace: (title, description, target, nameFrom) =>
+                        ctx.authManager.createWorkspace(title, description, target, nameFrom),
                 },
                 saveProject: ctx.saveProject,
                 displayName: entry.name ?? entry.id,
+                catalog: ctx.catalog,
             }),
         deleteComponentWorkspace: async (project, workspace) => {
             const result = await ctx.authManager.deleteWorkspace(workspace.id, {
@@ -272,16 +273,17 @@ export function buildDefaultRunnerDeps(
             return 'error' in result ? { error: result.error } : undefined;
         },
         // The runner's dep contract is void — swallow the returned API list.
-        subscribeRequiredApis: async (appBuilderComponents, project, onStep) => {
+        subscribeRequiredApis: async (appBuilderComponents, project, onStep, scope) => {
             const started = Date.now();
-            // The single component this subscribe is FOR, when it is for one.
-            const only = appBuilderComponents.length === 1 ? appBuilderComponents[0] : undefined;
+            // The component this subscribe is FOR, named by the caller. It used to be
+            // guessed from the list's length, and a project with a mesh always passed
+            // two or more, so every add subscribed to the project's workspace.
+            const forComponent = scope?.forComponent;
             const apis = await subscribeRequiredApis(
                 appBuilderComponents,
-                // One entry means one component's subscribe, so it targets THAT
-                // component's workspace. Several is the project-wide reconcile, which
-                // still belongs to the project's own.
-                subscriberTarget(project, only?.id),
+                // One component's subscribe targets THAT component's workspace; the
+                // project-wide reconcile still belongs to the project's own.
+                subscriberTarget(project, forComponent),
                 ctx.subscriberClient,
                 deriveAllowedDomain(project),
                 // Runtime-added APIs (add_console_apis) must ride every reconcile.
@@ -289,10 +291,14 @@ export function buildDefaultRunnerDeps(
                 // subscribed, because it may hold a workspace of its own and the
                 // project's union would entitle that credential to APIs belonging
                 // to integrations living elsewhere.
-                resolveDesiredApis(project, only?.id),
+                resolveDesiredApis(project, forComponent),
                 undefined,
                 [],
-                { onStep, log: (message) => ctx.logger.debug(message) },
+                {
+                    onStep,
+                    log: (message) => ctx.logger.debug(message),
+                    skipCoverageCheck: scope?.adding,
+                },
             );
             // Which APIs, and how long: the step that stalled Bodea's redeploys
             // left no trace of either (2026-09-18).

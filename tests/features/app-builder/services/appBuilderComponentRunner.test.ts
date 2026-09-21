@@ -166,7 +166,11 @@ describe('addAppBuilderComponent (mesh)', () => {
         expect(entry?.providesEnvVars?.MESH_ENDPOINT).toBe('https://mesh/graphql');
     });
 
-    it('subscribes what the project has as well as what is being added, so nothing it has is dropped', async () => {
+    // An add subscribes into the component's OWN workspace (AB-23), so it sends
+    // only its own APIs: an integration already in the project lives elsewhere, and
+    // its APIs do not belong on this credential. Nothing already on the credential
+    // is dropped either way — the PUT keeps what it finds (subscriptionList.ts).
+    it("subscribes only the component being added, into its own workspace", async () => {
         const project = createProject({
             appBuilderComponents: { [INTEGRATION_ENTRY.id]: { kind: 'integration', status: 'deployed', source: INTEGRATION_ENTRY.source } },
         });
@@ -174,10 +178,11 @@ describe('addAppBuilderComponent (mesh)', () => {
 
         await addAppBuilderComponent(project, MESH_ENTRY, deps);
 
-        const subscribedAppBuilderComponents = deps.subscribeRequiredApis.mock
-            .calls[0][0] as AppBuilderComponentCatalogEntry[];
-        expect(subscribedAppBuilderComponents).toEqual(
-            expect.arrayContaining([MESH_ENTRY, INTEGRATION_ENTRY])
+        expect(deps.subscribeRequiredApis).toHaveBeenCalledWith(
+            [MESH_ENTRY],
+            project,
+            expect.any(Function),
+            { forComponent: MESH_ENTRY.id, adding: true },
         );
     });
 

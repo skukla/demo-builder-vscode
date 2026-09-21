@@ -58,6 +58,20 @@ describe('subscribeRequiredApis — already subscribed', () => {
         expect(ticks).toContainEqual({ code: 'SomeOtherSDK', done: true });
     });
 
+    // An ADD never asks: its workspace is new, or shared with a partner that never
+    // needed its APIs, so the read could only answer "something is missing" — and on
+    // the first live ERP add it spent ten seconds per half saying so (2026-09-21).
+    it('does not read the credentials at all for an add', async () => {
+        const fake = client({ s2s: [MGMT, 'SomeOtherSDK'], apikey: [MESH] });
+
+        await subscribeRequiredApis(entries(), TARGET, fake, undefined, [], undefined, [], {
+            skipCoverageCheck: true,
+        });
+
+        expect(fake.listCredentialIds).not.toHaveBeenCalled();
+        expect(fake.getServicesForOrg).toHaveBeenCalledTimes(1);
+    });
+
     it('takes the full path when one API is missing', async () => {
         const fake = client({ s2s: [MGMT], apikey: [MESH] });
 

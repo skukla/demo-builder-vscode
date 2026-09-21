@@ -26,12 +26,16 @@
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState, Project } from '@/types/base';
 
-/** What this needs from Adobe: make a workspace in the project's Console project. */
+/**
+ * What this needs from Adobe: make a workspace in the project's Console project.
+ * `nameFrom` is what the machine name is derived from; the title stays the SC's.
+ */
 export interface WorkspaceMaker {
     createWorkspace: (
         title: string,
         description: string,
-        target?: { orgId?: string; projectId?: string },
+        target: { orgId?: string; projectId?: string },
+        nameFrom: string,
     ) => Promise<{ id: string; name: string; title?: string } | { error: string }>;
 }
 
@@ -46,21 +50,51 @@ export function deployWorkspaceId(project: Project, componentId: string): string
     return project.appBuilderComponents?.[componentId]?.workspace?.id ?? project.adobe?.workspace;
 }
 
-/** The workspace an entry should JOIN rather than create: its bound partner's. */
-export function inheritedWorkspace(
+/** The components bound to an entry, from either side of the binding. */
+function partnerIds(
     project: Project,
     entry: AppBuilderComponentCatalogEntry,
-): NonNullable<AppBuilderComponentState['workspace']> | undefined {
-    const partnerIds = [
+    catalog: AppBuilderComponentCatalogEntry[] = [],
+): string[] {
+    const ids = [
         // A system names the integration it belongs to.
         entry.boundTo,
-        // An integration's systems name it instead, so look from the other side.
+        // An integration's systems name it instead, so look from the other side:
+        // the record once the pair is linked, the catalog before it is.
         ...Object.entries(project.appBuilderComponents ?? {})
             .filter(([, state]) => state.usedBy === entry.id)
             .map(([id]) => id),
+        ...catalog.filter((candidate) => candidate.boundTo === entry.id).map((candidate) => candidate.id),
     ].filter((id): id is string => Boolean(id));
+    return [...new Set(ids)];
+}
 
-    for (const id of partnerIds) {
+/**
+ * The catalog entries whose APIs belong on an entry's workspace: the entry and
+ * the partners it shares that workspace with — never the rest of the project.
+ */
+export function entriesSharingWorkspace(
+    catalog: AppBuilderComponentCatalogEntry[],
+    project: Project,
+    entry: AppBuilderComponentCatalogEntry,
+): AppBuilderComponentCatalogEntry[] {
+    const partners = new Set(partnerIds(project, entry, catalog));
+    const inProject = new Set(Object.keys(project.appBuilderComponents ?? {}));
+    const shared = catalog.filter((c) => partners.has(c.id) && inProject.has(c.id));
+    return [...shared, entry];
+}
+
+/**
+ * The workspace an entry should JOIN rather than create: its bound partner's.
+ * Pass the catalog: an integration added with its system runs this before the
+ * pair is linked, so only the catalog knows the system is its partner.
+ */
+export function inheritedWorkspace(
+    project: Project,
+    entry: AppBuilderComponentCatalogEntry,
+    catalog: AppBuilderComponentCatalogEntry[] = [],
+): NonNullable<AppBuilderComponentState['workspace']> | undefined {
+    for (const id of partnerIds(project, entry, catalog)) {
         const workspace = project.appBuilderComponents?.[id]?.workspace;
         if (workspace) return workspace;
     }
@@ -80,12 +114,18 @@ export function inheritedWorkspace(
 export async function ensureComponentWorkspace(
     project: Project,
     entry: AppBuilderComponentCatalogEntry,
-    deps: { maker: WorkspaceMaker; saveProject: SaveProject; displayName: string },
+    deps: {
+        maker: WorkspaceMaker;
+        saveProject: SaveProject;
+        displayName: string;
+        catalog?: AppBuilderComponentCatalogEntry[];
+    },
 ): Promise<{ error: string } | undefined> {
     const existing = project.appBuilderComponents?.[entry.id]?.workspace;
     if (existing) return undefined;
 
-    const workspace = inheritedWorkspace(project, entry) ?? (await make(project, entry, deps));
+    const workspace =
+        inheritedWorkspace(project, entry, deps.catalog) ?? (await make(project, entry, deps));
     if ('error' in workspace) return workspace;
     // `make` never answers undefined — it returns a workspace or a reason — so this
     // is the type narrowing, not a fallback. A silent skip here would deploy into the
@@ -108,6 +148,7 @@ async function make(
         deps.displayName,
         `Demo Builder: ${entry.id}`,
         { orgId: project.adobe?.organization, projectId: project.adobe?.projectId },
+        entry.id,
     );
     if ('error' in created) {
         return {

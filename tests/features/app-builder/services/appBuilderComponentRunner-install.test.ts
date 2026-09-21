@@ -134,11 +134,13 @@ describe('S2S deploy-env wiring', () => {
 
         await deployAppBuilderComponent(project, KIT_ENTRY.id, deps);
 
-        // The third argument is the step reporter the subscribe narrates through.
+        // The third argument is the step reporter the subscribe narrates through; the
+        // fourth names the component, so the subscribe targets its own workspace.
         expect(deps.subscribeRequiredApis).toHaveBeenCalledWith(
             [KIT_ENTRY],
             project,
             expect.any(Function),
+            { forComponent: KIT_ENTRY.id },
         );
     });
 

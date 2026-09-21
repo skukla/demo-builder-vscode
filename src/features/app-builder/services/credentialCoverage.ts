@@ -36,6 +36,16 @@ export interface SubscribeObservers {
     log?: (message: string) => void;
 }
 
+/**
+ * The observers, plus whether to skip the coverage read. An ADD skips it: its
+ * workspace is new or shared with a partner that never needed its APIs, so the
+ * answer is always "something is missing", and the read spent 10s saying so on
+ * each half of the first live ERP add (2026-09-21).
+ */
+export interface SubscribeOptions extends SubscribeObservers {
+    skipCoverageCheck?: boolean;
+}
+
 /** The reads this question needs — the subset of `ApiSubscriberClient` it uses. */
 export interface CredentialReader {
     listCredentialIds?(target: { orgId: string; projectId: string; workspaceId: string }): Promise<string[]>;

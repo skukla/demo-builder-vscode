@@ -71,10 +71,12 @@ describe('a component that needs its own workspace', () => {
         expect(result).toBeUndefined();
         // The TITLE is the SC's name — the only field a rename can safely follow,
         // because Adobe refuses to change a machine name after creation.
+        // Named after the id, which never changes; titled for the SC.
         expect(maker.createWorkspace).toHaveBeenCalledWith(
             'Northwind ERP',
             'Demo Builder: erp-integration',
             { orgId: 'org-1', projectId: 'proj-1' },
+            'erp-integration',
         );
         expect(project.appBuilderComponents?.['erp-integration'].workspace).toEqual({
             id: 'ws-new',

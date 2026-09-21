@@ -183,6 +183,35 @@ describe('AdobeOrgServices — a caller naming its codes', () => {
 
         expect(rows).toHaveLength(2);
     });
+    // Nor does it ignore one. Cold, the narrowed call took 54s on 2026-09-21 while
+    // the dashboard's background load of the full list, started earlier, was
+    // nearly done — so whichever answers first is the one used.
+    it('takes a full fetch already in flight when that answers first', async () => {
+        const { service, client } = makeService();
+        client.getServicesForOrg.mockImplementation((_org: string, codes?: string) =>
+            codes ? never() : Promise.resolve({ body: CATALOG }),
+        );
+        const full = service.getServicesForOrg('org-1');
+
+        const rows = await service.getServicesForOrg('org-1', ['ACCS-REST-API']);
+
+        expect(rows.map((r) => r.code)).toEqual(['ACCS-REST-API', 'ACCS-REST-API']);
+        await full;
+        // The in-flight load was JOINED, not started again.
+        expect(client.getServicesForOrg).toHaveBeenCalledTimes(2);
+    });
+
+    it('falls back to the in-flight full fetch when the narrowed call fails', async () => {
+        const { service, client } = makeService();
+        client.getServicesForOrg.mockImplementation((_org: string, codes?: string) =>
+            codes ? Promise.reject(new Error('504')) : Promise.resolve({ body: CATALOG }),
+        );
+        void service.getServicesForOrg('org-1');
+
+        const rows = await service.getServicesForOrg('org-1', ['FireflyAPISDK']);
+
+        expect(rows.map((r) => r.code)).toEqual(['FireflyAPISDK']);
+    });
 });
 
 describe('AdobeOrgServices — fetch budget and empty answers', () => {

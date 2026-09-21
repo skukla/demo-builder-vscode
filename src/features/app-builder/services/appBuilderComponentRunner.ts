@@ -30,7 +30,6 @@
  * defaults wire the real functions; unit tests mock them.
  */
 
-import { entriesThatNeedApis } from './apiSubscriber';
 import {
     cleanUpBeforeUndeploy,
     leftBehind,
@@ -51,6 +50,7 @@ import {
 } from './appBuilderDeployOutcome';
 import { detectAppLayout, listDeclaredPackageNames, type AppConfigLayout } from './appConfigPackages';
 import type { AppManagementInstallOptions, AppManagementInstallResult } from './appManagementUpgrade';
+import { entriesSharingWorkspace } from './componentWorkspace';
 import { resolveDeployInputs, resolveDisplayName } from './deployInputs';
 import type { CommerceDetachResult } from './erpDetach';
 import type { SourceUpdateResult, UpdateCheckResult } from './integrationSourceUpdate';
@@ -134,6 +134,13 @@ interface RepublishInput {
  * the INTERFACE it uses, not on the class that happens to implement it (ADR-015).
  * `ComponentManager` satisfies this structurally, so production wiring is unchanged.
  */
+/** Which component a subscribe is for, and whether it is that component's add. */
+export interface SubscribeScope {
+    forComponent: string;
+    /** An add: a new workspace holds nothing yet, so there is no coverage to check. */
+    adding?: boolean;
+}
+
 export interface ComponentInstaller {
     installComponent(
         project: Project,
@@ -280,12 +287,15 @@ export interface AppBuilderComponentRunnerDeps extends TeardownDeps {
     /**
      * Union-reconcile API subscriber (step 07). `onStep` carries its own short
      * lines to the screen: this step can hold still for a minute and a stage name
-     * alone reads as frozen (owner, 2026-09-19).
+     * alone reads as frozen (owner, 2026-09-19). `scope` names the ONE component
+     * the subscribe is for, whose workspace it targets; without it the subscribe
+     * is the project-wide reconcile on the project's workspace.
      */
     subscribeRequiredApis: (
         appBuilderComponents: AppBuilderComponentCatalogEntry[],
         project: Project,
-        onStep?: (step: string) => void
+        onStep?: (step: string) => void,
+        scope?: SubscribeScope,
     ) => Promise<void>;
     /**
      * Give a component being ADDED its own Adobe workspace, and record it on the
@@ -793,9 +803,10 @@ async function addOne(
         // longest silent stretch in the chain (owner audit, 2026-08-27).
         deps.onProgress?.(OPERATION_STAGES.subscribingApis.label);
         await deps.subscribeRequiredApis(
-            entriesThatNeedApis(deps.catalog, project, [entry]),
+            entriesSharingWorkspace(deps.catalog, project, entry),
             project,
             (step) => deps.onProgress?.(OPERATION_STAGES.subscribingApis.label, step),
+            { forComponent: entry.id, adding: true },
         );
 
         const installed = await cloneAndInstall(project, entry, deps);
@@ -819,10 +830,14 @@ async function addOne(
         }
 
         // Transient in-flight marker so pollers can tell this run from a
-        // stale prior outcome; the final outcome overwrites it.
+        // stale prior outcome; the final outcome overwrites it. It KEEPS the
+        // workspace recorded above: dropping it sent the deploy, its credentials
+        // and its Commerce install to the project's workspace (2026-09-21).
+        const workspace = project.appBuilderComponents?.[entry.id]?.workspace;
         project.appBuilderComponents = {
             ...(project.appBuilderComponents ?? {}),
             [entry.id]: {
+                ...(workspace ? { workspace } : {}),
                 kind: entry.kind,
                 status: 'deploying',
                 name: resolveDisplayName(entry, resolveDeployInputs(project, entry)),
@@ -957,9 +972,10 @@ export async function deployAppBuilderComponent(
         if (entry.lifecycle === 'app-management') {
             deps.onProgress?.(OPERATION_STAGES.subscribingApis.label);
             await deps.subscribeRequiredApis(
-                entriesThatNeedApis(deps.catalog, project),
+                entriesSharingWorkspace(deps.catalog, project, entry),
                 project,
                 (step) => deps.onProgress?.(OPERATION_STAGES.subscribingApis.label, step),
+                { forComponent: entry.id },
             );
         }
 
