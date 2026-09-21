@@ -160,43 +160,34 @@ describe('AdobeOrgServices — getServicesForOrg cache', () => {
 describe('AdobeOrgServices — fetch budget and empty answers', () => {
     beforeEach(() => jest.clearAllMocks());
 
-    it('gives the first try exactly ORG_SERVICES_FETCH before timing out', async () => {
+    it('gives the first try exactly ORG_SERVICES_FETCH before trying again', async () => {
         jest.useFakeTimers();
         try {
             const { service, client } = makeService();
-            client.getServicesForOrg.mockImplementation(never);
-            let settled = false;
+            client.getServicesForOrg
+                .mockImplementationOnce(never)
+                .mockResolvedValueOnce({ body: SERVICES });
 
             const pending = service.getServicesForOrg('org-1');
-            pending.then(
-                () => (settled = true),
-                () => (settled = true)
-            );
-            // The handler must attach BEFORE the timers advance or the rejection is
-            // unhandled; the rule cannot see a deferred await.
-            // eslint-disable-next-line jest/valid-expect
-            const guard = expect(pending).rejects.toThrow(
-                `SDK org services fetch timed out after ${TIMEOUTS.ORG_SERVICES_FETCH}ms`
-            );
 
             await jest.advanceTimersByTimeAsync(TIMEOUTS.ORG_SERVICES_FETCH - 1);
-            expect(settled).toBe(false);
+            expect(client.getServicesForOrg).toHaveBeenCalledTimes(1);
 
             await jest.advanceTimersByTimeAsync(1);
-            await guard;
-            expect(settled).toBe(true);
+            await expect(pending).resolves.toEqual(SERVICES);
+            expect(client.getServicesForOrg).toHaveBeenCalledTimes(2);
         } finally {
             jest.useRealTimers();
         }
     });
 
-    it('gives the retry the same budget, and names it as the retry', async () => {
+    it('gives every try the same budget, and names the last one', async () => {
         jest.useFakeTimers();
         try {
             const { service, client } = makeService();
             client.getServicesForOrg
                 .mockRejectedValueOnce(new Error('500'))
-                .mockImplementationOnce(never);
+                .mockImplementation(never);
             let settled = false;
 
             const pending = service.getServicesForOrg('org-1');
@@ -206,13 +197,16 @@ describe('AdobeOrgServices — fetch budget and empty answers', () => {
             );
             // eslint-disable-next-line jest/valid-expect
             const guard = expect(pending).rejects.toThrow(
-                `SDK org services fetch (retry) timed out after ${TIMEOUTS.ORG_SERVICES_FETCH}ms`
+                `SDK org services fetch (try 3) timed out after ${TIMEOUTS.ORG_SERVICES_FETCH}ms`
             );
 
             await jest.advanceTimersByTimeAsync(TIMEOUTS.ORG_SERVICES_FETCH - 1);
-            expect(settled).toBe(false);
             expect(client.getServicesForOrg).toHaveBeenCalledTimes(2);
+            await jest.advanceTimersByTimeAsync(1);
+            expect(client.getServicesForOrg).toHaveBeenCalledTimes(3);
 
+            await jest.advanceTimersByTimeAsync(TIMEOUTS.ORG_SERVICES_FETCH - 1);
+            expect(settled).toBe(false);
             await jest.advanceTimersByTimeAsync(1);
             await guard;
         } finally {
@@ -220,7 +214,7 @@ describe('AdobeOrgServices — fetch budget and empty answers', () => {
         }
     });
 
-    it('an SDK that resolves nothing is a fast failure — retried once, retry answer lands', async () => {
+    it('an SDK that resolves nothing is a failure — tried again, the next answer lands', async () => {
         const { service, client } = makeService();
         client.getServicesForOrg
             .mockResolvedValueOnce(undefined)
@@ -232,7 +226,7 @@ describe('AdobeOrgServices — fetch budget and empty answers', () => {
         expect(sleep).toHaveBeenCalledWith(TIMEOUTS.ORG_SERVICES_RETRY_DELAY);
     });
 
-    it("two empty answers throw the module's own message, not a TypeError", async () => {
+    it("three empty answers throw the module's own message, not a TypeError", async () => {
         const { service, client } = makeService();
         client.getServicesForOrg.mockResolvedValue(undefined);
 

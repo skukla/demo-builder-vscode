@@ -1,8 +1,9 @@
 /**
  * The background warm-up of the org's Adobe API list.
  *
- * Its callers' tests check WHEN it runs; this suite checks what it does — above
- * all the one retry, which exists only here because nobody is waiting on it.
+ * Its callers' tests check WHEN it runs; this suite checks what it does. It makes
+ * no retry of its own: the fetcher's tries run inside the shared request, so a
+ * dialog that opens mid-load waits on them too (adobeOrgServices-retry.test.ts).
  */
 
 jest.mock('@/core/di/serviceLocator', () => ({
@@ -61,22 +62,14 @@ it('loads the project org\'s API list, org-targeted', async () => {
     expect(mockWithOrgContext).toHaveBeenCalledWith({ orgId: 'org-A' }, expect.any(Function));
 });
 
-it('retries once after a failure — a cold load that 504s usually warms Adobe\'s side', async () => {
-    mockGetServicesForOrg
-        .mockRejectedValueOnce(new Error('504 Gateway Timeout'))
-        .mockResolvedValueOnce([]);
-
-    await warmOrgServicesCatalog(contextFor());
-
-    expect(mockGetServicesForOrg).toHaveBeenCalledTimes(2);
-});
-
-it('retries only once, and never throws', async () => {
+// A retry here once ran where the Manage APIs dialog could not see it: the dialog
+// showed an error while this reloaded the list behind it (2026-09-21).
+it('asks once and never throws — the retries belong to the shared request', async () => {
     mockGetServicesForOrg.mockRejectedValue(new Error('504 Gateway Timeout'));
 
     await expect(warmOrgServicesCatalog(contextFor())).resolves.toBeUndefined();
 
-    expect(mockGetServicesForOrg).toHaveBeenCalledTimes(2);
+    expect(mockGetServicesForOrg).toHaveBeenCalledTimes(1);
 });
 
 it('does nothing when signed out — a warm-up must never open a browser', async () => {
