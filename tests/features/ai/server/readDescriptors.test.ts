@@ -4,6 +4,7 @@
  * the catalog wiring so a row can't silently point at the wrong handler.
  */
 
+import { z } from 'zod';
 import { descriptorFor, shapeOf, shaped } from './readDescriptors.testUtils';
 
 import { READ_DESCRIPTORS } from '@/features/ai/server/readDescriptors';
@@ -202,6 +203,19 @@ describe('list_console_apis emits the group legend once, not per row', () => {
         const out = JSON.parse(row('list_console_apis')!.shape!(RESPONSE, {}));
         expect(out.apis[0]).toMatchObject({ code: 'A', name: 'Alpha' });
         expect(out.added).toStrictEqual([]);
+    });
+});
+
+// The handler always accepted a componentId (the Manage APIs modal sends one), but
+// the tool's schema did not declare it, so the SDK stripped it before the handler
+// ran and an agent only ever saw the project's union (found live, 2026-09-21).
+describe('list_console_apis takes an integration to scope to', () => {
+    it('declares componentId, so it reaches the handler instead of being stripped', () => {
+        const schema = z.object(row('list_console_apis')!.inputSchema ?? {});
+
+        expect(schema.parse({ componentId: 'erp-integration' })).toEqual({
+            componentId: 'erp-integration',
+        });
     });
 });
 
