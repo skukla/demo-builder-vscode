@@ -68,7 +68,7 @@ describe('runGuards — auth, then org, then permission', () => {
                     projectId: 'p1',
                     workspace: 'Stage',
                 },
-                warningMessage: 'Adobe sign-in required to manage App Builder components.',
+                warningMessage: 'Sign in to Adobe to continue.',
             })
         );
     });

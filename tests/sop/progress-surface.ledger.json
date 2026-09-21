@@ -28,6 +28,7 @@
         "src/commands/manageSiteAccess.ts:303": "Gates: remove this person as a configuration admin? Takes away someone else's access.",
         "src/commands/migrateStorefrontNames.ts:139": "Gates: rename these storefronts? The detail lists exactly which ones, so the SC answers with the list in front of them.",
         "src/core/base/baseCommand.ts:246": "The generic confirm every command asks through. It gates whatever its caller is about to do; the callers are where the decision is named.",
+        "src/core/vscode/operationPrompt.ts:113": "Gates: sign in (or answer another question the work needs) before an agent's call can go on. Modal like the agent's consent dialogs, so a question an agent asks is never a corner notification (owner, 2026-09-21).",
         "src/features/ai/server/agentOperationNotifier.ts:163": "Gates: let the agent run this tool? A cloud write an agent proposes is confirmed by a person before it happens.",
         "src/features/eds/commands/cleanupDaLiveSites.ts:166": "Gates: delete these DA.live sites? Named in the detail, and the content does not come back.",
         "src/features/eds/commands/manageGitHubRepos.ts:166": "Gates: delete these GitHub repositories? Named in the detail, and they do not come back.",

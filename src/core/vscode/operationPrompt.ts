@@ -17,8 +17,11 @@
  *   becomes Cancel while it waits, because backgrounding an unanswered question
  *   leaves the work stuck with nothing to answer it;
  * - nothing is hosting it → the notification, exactly as before;
- * - under an agent → the notification, plus a phase line so the agent's own
- *   notification says what the run is waiting for rather than going quiet.
+ * - under an agent, with no modal → a VS Code MODAL, like the agent's consent
+ *   dialogs, plus a phase line so the agent's own notification says what the run
+ *   is waiting for. It was the notification until 2026-09-21, when an agent's read
+ *   needed Adobe sign-in and the question sat in a corner the owner expected to be
+ *   a modal: every other thing an agent asks of the SC is one.
  *
  * The modal owns the FORM too (owner, 2026-09-20: "the modal should own the form
  * elements"). A question that needs something typed — the DA.live namespace, the
@@ -33,6 +36,7 @@
 import { AsyncLocalStorage } from 'async_hooks';
 import * as vscode from 'vscode';
 import { heldProgress, pushOperationProgress } from './operationProgress';
+import { currentCallTag } from '@/core/logging/callTagContext';
 import { hasActivePhaseSinks, reportPhase } from '@/core/utils/agentPhaseChannel';
 import type { MessageHandler } from '@/types/handlers';
 import type { OperationPrompt, OperationPromptField } from '@/types/webviewPayloads';
@@ -85,13 +89,30 @@ export async function askDuringOperation(
     const id = hosting.getStore();
 
     if (!id) {
-        // No modal: the notification, as before. Under an agent, say what the run is
-        // waiting for — otherwise its narration simply stops mid-operation.
+        // Under an agent, say what the run is waiting for — otherwise its narration
+        // simply stops mid-operation.
         if (hasActivePhaseSinks()) reportPhase(message);
+        // An agent call (every tool call carries a tag, reads included) asks the way
+        // the agent's other questions do: a modal. A button press keeps the
+        // notification.
+        if (currentCallTag() !== undefined) return askAsModal(message, actions);
         return vscode.window.showWarningMessage(message, ...actions);
     }
 
     return (await askInModal(id, { message, actions })).action;
+}
+
+/**
+ * The agent's question as a VS Code modal. VS Code gives every modal its own
+ * Cancel, so a "Cancel" action is left out rather than shown twice; dismissing
+ * answers `undefined`, as a notification's Cancel did.
+ */
+function askAsModal(message: string, actions: string[]): Thenable<string | undefined> {
+    return vscode.window.showWarningMessage(
+        message,
+        { modal: true, detail: "Demo Builder's agent asked for this." },
+        ...actions.filter((action) => action !== 'Cancel'),
+    );
 }
 
 /**

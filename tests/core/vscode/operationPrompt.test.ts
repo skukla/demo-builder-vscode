@@ -21,6 +21,7 @@ import {
     modalIsAsking,
     withModalAsking,
 } from '@/core/vscode/operationPrompt';
+import { runWithCallTag } from '@/core/logging/callTagContext';
 import { createMockHandlerContext } from '../../helpers/handlerContextTestHelpers';
 
 const showWarning = vscode.window.showWarningMessage as jest.Mock;
@@ -31,6 +32,33 @@ beforeEach(() => {
 
 /** Let the question reach the screen before answering it. */
 const settle = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
+
+// Every other question an agent puts to the SC is a modal (its consent dialogs);
+// its sign-in request sat in a corner notification instead (2026-09-21).
+describe('an agent asks, with no modal up', () => {
+    it('asks in a VS Code modal, naming the agent, with one Cancel', async () => {
+        showWarning.mockResolvedValue('Sign In');
+
+        const answer = await runWithCallTag(7, () =>
+            askDuringOperation('Sign in to Adobe to continue.', 'Sign In', 'Cancel'),
+        );
+
+        expect(showWarning).toHaveBeenCalledWith(
+            'Sign in to Adobe to continue.',
+            { modal: true, detail: "Demo Builder's agent asked for this." },
+            'Sign In',
+        );
+        expect(answer).toBe('Sign In');
+    });
+
+    it('answers undefined when the SC dismisses it', async () => {
+        showWarning.mockResolvedValue(undefined);
+
+        await expect(
+            runWithCallTag(8, () => askDuringOperation('Sign in to Adobe to continue.', 'Sign In', 'Cancel')),
+        ).resolves.toBeUndefined();
+    });
+});
 
 describe('no modal is hosting the operation', () => {
     it('asks in a notification, exactly as before', async () => {

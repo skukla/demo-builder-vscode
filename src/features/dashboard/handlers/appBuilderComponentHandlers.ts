@@ -129,7 +129,9 @@ export async function runGuards(
             projectId: project.adobe?.projectId,
             workspace: project.adobe?.workspace,
         },
-        warningMessage: 'Adobe sign-in required to manage App Builder components.',
+        // Every App Builder operation passes this guard, reads included — so it names
+        // what is needed, not an action ("to manage…" read wrong for a list).
+        warningMessage: 'Sign in to Adobe to continue.',
     });
     if (!authResult.authenticated) {
         // TYPED so UI surfaces can offer a SIGN-IN action; a Retry cannot fix this.
