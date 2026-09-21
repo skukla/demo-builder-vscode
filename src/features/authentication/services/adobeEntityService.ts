@@ -17,9 +17,9 @@
 import { AdobeContextResolver } from './adobeContextResolver';
 import { AdobeEntityFetcher } from './adobeEntityFetcher';
 import { AdobeEntitySelector } from './adobeEntitySelector';
-import type { OrgServicesStore } from './adobeOrgServices';
 import type { AdobeSDKClient } from './adobeSDKClient';
 import type { AuthCacheManager } from './authCacheManager';
+import type { OrgServicesStore } from './orgServicesSavedCatalog';
 import type { StepLogger } from '@/core/logging/stepLogger';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import type { Logger } from '@/types/logger';

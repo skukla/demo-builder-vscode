@@ -25,10 +25,11 @@
 import { AdobeCliFallback } from './adobeCliFallback';
 import { AdobeConsoleProjectOps, type RemoteRenameResult } from './adobeConsoleProjectOps';
 import { AdobeEntityReads } from './adobeEntityReads';
-import { AdobeOrgServices, type OrgServicesStore } from './adobeOrgServices';
+import { AdobeOrgServices } from './adobeOrgServices';
 import type { AdobeSDKClient } from './adobeSDKClient';
 import { AdobeWorkspaceCredentials } from './adobeWorkspaceCredentials';
 import type { AuthCacheManager } from './authCacheManager';
+import type { OrgServicesStore } from './orgServicesSavedCatalog';
 import type {
     AdobeIdCredentialInput,
     AdobeOrg,
