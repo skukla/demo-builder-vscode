@@ -319,6 +319,17 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
         shape: shapeConsoleApis,
     },
     {
+        tool: 'list_runtime_packages',
+        needsAuth: ['adobe'],
+        readOnly: true,
+        description:
+            "List the packages deployed in this project's Adobe I/O Runtime namespace (its " +
+            'Developer Console workspace), with the namespace name. Use to check what an ' +
+            'integration left running after a removal, or what is deployed before a redeploy.',
+        map: dashboardHandlers,
+        type: 'listRuntimePackages',
+    },
+    {
         tool: 'get_store_structure',
         needsAuth: ['commerce'],
         readOnly: true,
