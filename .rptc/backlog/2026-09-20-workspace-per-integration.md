@@ -69,30 +69,56 @@ is a workspace recorded PER COMPONENT and read by the target resolver.
 
 ## Live checks the plan still owes
 
-Two remain. The first is the one that could break the design.
+**Both were answered on 2026-09-20. Nothing live is outstanding.**
 
-1. **An App Management install from a workspace that is not the project's first.**
-   Load-bearing: if App Management can only install from the workspace Adobe created,
-   every integration has to live there and this item has no shape. Nothing in the AB-2
-   spike tested it.
-2. **Commerce REST on a NEW workspace's credential**, with the tenant's own product
-   profile, done by an SC with a Developer role, without the project turning read-only.
-   The choosing is already built — `profileForTenant` in `subscriptionList.ts` matches the
-   project's configured tenant — so what is unproven is the live subscribe on a
-   freshly-created workspace's credential, not the code.
+**1. An App Management install from a workspace that is not the project's first.**
+Already proven, by the AB-2 spike on 2026-08-27, and an earlier draft of this item said
+the opposite without checking: *"the kit deployed to a second workspace (KitSpike) of the
+same Console project produced a second, fully independent install service — both
+workspaces' `/app-management` endpoints answered 401-auth-required side by side."*
 
-Both need a real deploy, so both want the owner present.
+What that establishes is the part the design rests on: a second workspace gets its own
+App Management service, so two Commerce-facing integrations in one project are possible.
+The narrower thing it did NOT do is complete a Commerce-side install handshake from that
+second workspace. That is worth watching for during the build rather than blocking on —
+the endpoint existing independently is what was in doubt.
 
-**Answered 2026-09-20:**
+**2. Commerce REST on a NEW workspace's credential**, with the tenant's own product
+profile. **Done, end to end, on a throwaway workspace in a real project:**
 
-- ~~Deleting a workspace really removes its Runtime namespace.~~ A create+delete round
-  trip answered HTTP 200 in 3 seconds and the namespace went with it. Still unsettled:
-  whether a Developer-role SC can do the same in a project that has turned read-only
-  (AB-18) — that condition was moved away from, not fixed.
+| Step | Result |
+|---|---|
+| org catalog read (control) | 99 rows, 2 of them ACCS-REST-API |
+| the server-to-server row's profiles | 105 |
+| profiles naming this project's Commerce instance | exactly 1 — `profileForTenant` picks it |
+| subscribe, then read back | accepted; ACCS-REST-API carries 1 profile |
+| credential scopes | include `commerce.accs` |
+| IMS token | HTTP 200 |
+| Commerce REST `storeConfigs` | **HTTP 200** |
 
-**Dropped** — both were about separating the ERP from its integration, which this item no
-longer does: the ERP's cross-workspace login, and the ERP's `web-src` in a workspace of
-its own.
+The workspace was deleted afterwards. **Watch the row-picking**: a first attempt reported
+ZERO profiles because it took the first catalog row for the code. The org lists
+`ACCS-REST-API` twice and only the server-to-server row carries `properties.licenseConfigs`
+— `pickServiceRow` in `apiServiceResolution.ts` already knows this, and anything new must
+go through it rather than a bare find.
+
+**Answered earlier the same day:** deleting a workspace removes its Runtime namespace
+(HTTP 200 in 3 seconds). Still open: whether a Developer-role SC can do that in a project
+that has turned read-only (AB-18) — that condition was moved away from, not fixed.
+
+## A deploy trap the build must handle
+
+From the same spike, and directly on this item's add path: **a freshly created workspace
+fails `aio app deploy` at the log-forwarding sync step** — `Cannot read properties of
+undefined 'runtime'`, seen twice — and `--no-log-forwarding-update` bypasses it. Cause
+unknown: propagation delay or an `aio` bug.
+
+This item creates a workspace and deploys into it immediately, which is exactly the
+sequence that hits it. The add path needs the flag, or a wait, or both.
+
+The spike also flagged that a workspace holding live event registrations may 409 on delete
+the way project deletes did — the Remove row above already reuses the teardown
+registration sweep for that reason.
 
 ## What Console will actually show
 
