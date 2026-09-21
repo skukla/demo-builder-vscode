@@ -107,6 +107,40 @@ which makes it the right first one to run for real.
 
 Its storefront is EDS and not an App Builder component, so nothing touches it.
 
+### The migration deletes itself
+
+**Nothing about the migration survives it** (owner, 2026-09-20). It is scaffolding, and
+this repo does not soft-deprecate: when a code path becomes obsolete it is deleted in the
+change that obsoletes it, not relabelled.
+
+Two things get added, and they have DIFFERENT triggers. Conflating them is how the second
+one survives forever.
+
+**1. The migration action** — the dashboard entry, the MCP tool, the handler, its tests,
+and its section in `docs/systems/mcp-server.md`.
+
+Trigger: every project on disk records a workspace for every App Builder component it has.
+That is checkable in one command against `~/.demo-builder/projects/*/.demo-builder.json`,
+and it is the owner's call to run it.
+
+**2. The fallback** — `targetFor`'s "absent means the project's workspace", the optional
+`workspace?` on `AppBuilderComponentState`, and the tests that pin the fallback.
+
+Trigger is stricter, and it is worth being honest about: not "every project is migrated"
+but **"no project can ARRIVE un-migrated"** — from a backup, another machine, or a
+colleague. A single-owner tool can reasonably decide that point has come; it is still a
+decision rather than an observation, and it is riskier than deleting the action. Removing
+it makes the field required, which regenerates the manifest schema, so the end state is
+checkable.
+
+Staging them is allowed: delete the action as soon as its trigger fires, and let the
+fallback follow when the owner is satisfied nothing old can turn up. What is NOT allowed
+is leaving either one labelled deprecated and accepted-but-ignored.
+
+**Build the removal list as the slice is written**, in this item — every file, symbol and
+test the migration adds. Deleting it should be reading a list, not an excavation. A
+removal nobody wrote down is a removal nobody performs.
+
 ### What the slice must prove
 
 - A project migrated this way behaves identically to one created after this item.
@@ -451,6 +485,10 @@ deleting that workspace.
 A project made before this still works unchanged, AND can be moved onto the model, with
 the old deployment left serving so the move can be undone. Kukla Bodea is the first one
 moved.
+
+And it is not finished until the migration is GONE: the action deleted once every project
+on disk records a workspace for every component, the fallback deleted once nothing
+un-migrated can arrive. Neither is left behind labelled deprecated.
 
 ## Shipped so far
 
