@@ -307,6 +307,7 @@ export async function activate(context: vscode.ExtensionContext) {
             context.extensionPath,
             logger,
             externalCommandManager,
+            context.globalState,
         );
 
         // Register AuthenticationService with ServiceLocator
