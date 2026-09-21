@@ -91,7 +91,7 @@ describe('AppBuilderComponentRemoveDialog', () => {
         expect(screen.getByRole('dialog', { name: 'Remove ERP sync' })).toBeInTheDocument();
         // Says it leaves Adobe, not just this screen.
         expect(screen.getByTestId('dialog-line')).toHaveTextContent(
-            'ERP sync is undeployed from Adobe and removed from this project.',
+            'ERP sync will be undeployed from Adobe and removed from this project.',
         );
     });
 
