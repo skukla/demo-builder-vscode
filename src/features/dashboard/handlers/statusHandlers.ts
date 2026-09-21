@@ -22,6 +22,7 @@ import {
     handleRegenerateAiFiles,
     logAiVerification,
 } from '@/features/dashboard/handlers/aiHandlers';
+import { warmOrgServicesCatalog } from '@/features/dashboard/handlers/warmOrgServicesCatalog';
 import { createAiContextFreshnessCheck } from '@/features/dashboard/services/onOpenChecks/aiContextFreshnessCheck';
 import { createAiVerifyCheck } from '@/features/dashboard/services/onOpenChecks/aiVerifyCheck';
 import { createMcpHealthCheck } from '@/features/dashboard/services/onOpenChecks/mcpHealthCheck';
@@ -188,6 +189,11 @@ export const handleRequestStatus: MessageHandler = async (context) => {
             }),
         );
     }
+
+    // Start loading the org's Adobe API list now, so it is ready before the user
+    // reaches a picker — see warmOrgServicesCatalog. Not an on-open check: it has
+    // no badge and nothing to report. Deliberately not awaited.
+    void warmOrgServicesCatalog(context);
 
     void runOnOpenChecks(
         {
