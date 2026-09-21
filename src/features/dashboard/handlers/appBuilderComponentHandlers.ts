@@ -933,7 +933,7 @@ function cleanupWarning(
             : (cleanup.note ?? 'the Runtime namespace could not be listed');
     return (
         `${displayName} was removed, but its Runtime cleanup did not finish — ${detail}. ` +
-        `Check the namespace with \`aio runtime package list\` before reusing this project.`
+        `Ask the agent to run list_runtime_packages before reusing this project.`
     );
 }
 
