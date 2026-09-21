@@ -69,24 +69,47 @@ is a workspace recorded PER COMPONENT and read by the target resolver.
 
 ## Live checks the plan still owes
 
-The research lists these; none is a blocker to starting, but each must be answered before
-the matching code is trusted.
+Two remain. The first is the one that could break the design.
 
-1. ~~Deleting a workspace really removes its Runtime namespace.~~ **Done 2026-09-20**: a
-   create+delete round trip in Bodea's current project answered HTTP 200 in 3 seconds, and
-   the namespace went with it. What is NOT settled is whether a Developer-role SC can do
-   the same in a project that has turned read-only (AB-18) — that condition was moved away
-   from, not fixed.
-2. The ERP's login works across workspaces: 200 with it, 401 without and with a wrong one,
-   and an admin action still 200 with the SC's own token.
-3. Commerce REST on a new workspace's credential with the tenant's own profile, done by an
-   SC with a Developer role, without the project turning read-only. **The choosing is
-   already built** — `profileForTenant` in `subscriptionList.ts` matches the project's
-   configured tenant — so what is left to check is the live subscribe on a NEW workspace's
-   credential, not the code.
-4. The ERP's `web-src` in its own workspace opens with the SC's sign-in and reaches its
-   actions.
-5. An App Management install from a workspace that is not the project's main one.
+1. **An App Management install from a workspace that is not the project's first.**
+   Load-bearing: if App Management can only install from the workspace Adobe created,
+   every integration has to live there and this item has no shape. Nothing in the AB-2
+   spike tested it.
+2. **Commerce REST on a NEW workspace's credential**, with the tenant's own product
+   profile, done by an SC with a Developer role, without the project turning read-only.
+   The choosing is already built — `profileForTenant` in `subscriptionList.ts` matches the
+   project's configured tenant — so what is unproven is the live subscribe on a
+   freshly-created workspace's credential, not the code.
+
+Both need a real deploy, so both want the owner present.
+
+**Answered 2026-09-20:**
+
+- ~~Deleting a workspace really removes its Runtime namespace.~~ A create+delete round
+  trip answered HTTP 200 in 3 seconds and the namespace went with it. Still unsettled:
+  whether a Developer-role SC can do the same in a project that has turned read-only
+  (AB-18) — that condition was moved away from, not fixed.
+
+**Dropped** — both were about separating the ERP from its integration, which this item no
+longer does: the ERP's cross-workspace login, and the ERP's `web-src` in a workspace of
+its own.
+
+## What Console will actually show
+
+The rename measurements in [[AB-24]] apply here too, and they change what the titles buy.
+
+Adobe will not let a workspace's machine name change after creation (`400 — "Workspace
+name can not be changed"`), and `aio console workspace list` has no Title column at all.
+So **the machine name is what Adobe's own surfaces display.**
+
+That is fine at creation, because the machine name is derived from the SC's name:
+"Northwind ERP" gives `NorthwindErpq3k9`, which reads correctly in Console.
+
+**It is not fine after a rename.** An SC who renames "Northwind ERP" to "Acme ERP" gets
+the new name in the extension and `NorthwindErpq3k9` in Console, forever. There is no
+alternative — the name is frozen. So the title sync is still worth doing, because the
+extension is where an SC lives, but the plan must state that Adobe keeps the original
+name and that an SC walking a customer through Console will see it.
 
 ## Documents this makes out of date
 
