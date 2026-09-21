@@ -34,7 +34,7 @@ import { AdobeConsoleProjectOps } from './adobeConsoleProjectOps';
 import { AdobeContextResolver } from './adobeContextResolver';
 import { AdobeEntityReads } from './adobeEntityReads';
 import { AdobeEntitySelector } from './adobeEntitySelector';
-import { AdobeOrgServices } from './adobeOrgServices';
+import { AdobeOrgServices, type OrgServicesStore } from './adobeOrgServices';
 import type { AdobeSDKClient } from './adobeSDKClient';
 import { AdobeWorkspaceCredentials } from './adobeWorkspaceCredentials';
 import type { AuthCacheManager } from './authCacheManager';
@@ -70,6 +70,7 @@ export function createEntityCollaborators(
     config: {
         onNoOrgsAccessible?: () => Promise<void>;
         isTokenValid?: () => Promise<boolean>;
+        orgServicesStore?: OrgServicesStore;
     } = {},
 ): EntityCollaborators {
     const cli = new AdobeCliFallback(
@@ -84,7 +85,7 @@ export function createEntityCollaborators(
         onNoOrgsAccessible: config.onNoOrgsAccessible,
     });
     const credentials = new AdobeWorkspaceCredentials(sdkClient, cacheManager);
-    const orgServices = new AdobeOrgServices(sdkClient);
+    const orgServices = new AdobeOrgServices(sdkClient, config.orgServicesStore);
     const projectOps = new AdobeConsoleProjectOps(sdkClient, cacheManager, (orgId, projectId) =>
         reads.fetchWorkspaces(orgId, projectId),
     );
@@ -110,6 +111,8 @@ export function createEntityServices(
      * when absent the CLI fallback keeps its previous, blunter assertion.
      */
     isTokenValid?: () => Promise<boolean>,
+    /** Keeps the org's API list across window reloads (`context.globalState`). */
+    orgServicesStore?: OrgServicesStore,
 ): EntityServices {
     const selector = new AdobeEntitySelector(commandManager, cacheManager);
     const collaborators = createEntityCollaborators(
@@ -121,6 +124,7 @@ export function createEntityServices(
         {
             onNoOrgsAccessible: () => selector.clearConsoleContext(),
             ...(isTokenValid ? { isTokenValid } : {}),
+            ...(orgServicesStore ? { orgServicesStore } : {}),
         },
     );
     const resolver = new AdobeContextResolver(commandManager, cacheManager, collaborators.reads);

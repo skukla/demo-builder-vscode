@@ -1,7 +1,7 @@
 /**
  * AdobeOrgServices — the org's service catalog and credential subscriptions.
  *
- * Owns the entitled-services catalog (session-cached, single-flight per org),
+ * Owns the entitled-services catalog (cached, saved across reloads, single-flight per org),
  * the "what is this credential already subscribed to" read, and the two
  * subscribe calls — including {@link assertSubscribeAccepted}, the check that
  * catches Adobe refusing a subscription INSIDE an HTTP 200. SDK-only.
@@ -83,6 +83,30 @@ function assertSubscribeAccepted(response: SDKResponse<unknown> | undefined): vo
 }
 
 /**
+ * Where the org's API list is kept between sessions. Production passes
+ * `context.globalState`; this is the two methods of it that are used.
+ */
+export interface OrgServicesStore {
+    get<T>(key: string): T | undefined;
+    update(key: string, value: unknown): PromiseLike<void>;
+}
+
+/** One org's saved list, and when Adobe sent it. */
+interface SavedCatalog {
+    services: OrgServiceInfo[];
+    fetchedAt: number;
+}
+
+const savedCatalogKey = (orgId: string): string => `demoBuilder.orgServicesCatalog.${orgId}`;
+
+/** A saved value is used only if it is a non-empty list with a timestamp. */
+function isSavedCatalog(value: unknown): value is SavedCatalog {
+    const saved = value as Partial<SavedCatalog> | undefined;
+    return typeof saved?.fetchedAt === 'number' &&
+        Array.isArray(saved.services) && saved.services.length > 0;
+}
+
+/**
  * Reads the org service catalog and subscribes credentials to services.
  */
 /** Whether an SDK error is Adobe's 404 — the SDK carries the status only in its message. */
@@ -101,7 +125,14 @@ export class AdobeOrgServices {
     /** In-flight catalog fetch per org — see getServicesForOrg. */
     private readonly servicesFlights = new Map<string, SingleFlight<OrgServiceInfo[]>>();
 
-    constructor(private sdkClient: AdobeSDKClient) {}
+    /**
+     * @param store - keeps the API list across window reloads. Without one the
+     *   list lives for the session only, and every reload waits on Adobe again.
+     */
+    constructor(
+        private sdkClient: AdobeSDKClient,
+        private readonly store?: OrgServicesStore,
+    ) {}
 
     /**
      * Ensure SDK is initialized (lazy init pattern)
@@ -121,8 +152,9 @@ export class AdobeOrgServices {
         // Once loaded, ALWAYS answered from memory (Developer Console's pattern): the list is
         // the same for every workspace and barely changes, and a cold fetch takes about a minute.
         // An old copy starts one background refresh; only the session's first ask waits. On
-        // 2026-09-21 a 30-minute expiry made Manage APIs a 60s timeout 40 minutes in.
-        const cached = this.servicesCache.get(orgId);
+        // 2026-09-21 a 30-minute expiry made Manage APIs a 60s timeout 40 minutes in. The copy
+        // is also SAVED, so a reload keeps it: that day the first open after one hit 60s twice.
+        const cached = this.servicesCache.get(orgId) ?? this.restoreSaved(orgId);
         const flight = this.servicesFlights.get(orgId) ?? new SingleFlight<OrgServiceInfo[]>();
         this.servicesFlights.set(orgId, flight);
         if (cached) {
@@ -144,6 +176,28 @@ export class AdobeOrgServices {
         }
         // Single-flight PER ORG: the picker and the dashboard's warm-up ask at once.
         return flight.run(() => this.fetchServicesForOrg(orgId));
+    }
+
+    /** Load the org's saved list into memory, keeping its age. */
+    private restoreSaved(orgId: string): { services: OrgServiceInfo[]; expiresAt: number } | undefined {
+        const saved = this.store?.get<unknown>(savedCatalogKey(orgId));
+        if (!isSavedCatalog(saved)) {
+            return undefined;
+        }
+        const entry = { services: saved.services, expiresAt: saved.fetchedAt + CACHE_TTL.ORG_SERVICES };
+        this.servicesCache.set(orgId, entry);
+        return entry;
+    }
+
+    /** Save a fresh list for the next session. A failed save costs only that. */
+    private save(orgId: string, services: OrgServiceInfo[]): void {
+        if (!this.store) {
+            return;
+        }
+        const saved: SavedCatalog = { services, fetchedAt: Date.now() };
+        Promise.resolve(this.store.update(savedCatalogKey(orgId), saved)).catch((error) => {
+            this.debugLogger.debug('[Entity Fetcher] Could not save the org services list', error);
+        });
     }
 
     /**
@@ -246,6 +300,7 @@ export class AdobeOrgServices {
                 services,
                 expiresAt: Date.now() + CACHE_TTL.ORG_SERVICES,
             });
+            this.save(orgId, services);
         }
         return services;
     }

@@ -1,5 +1,6 @@
 import * as path from 'path';
 import type { RemoteRenameResult } from './adobeConsoleProjectOps';
+import type { OrgServicesStore } from './adobeOrgServices';
 import { isValidTokenResponse } from './authPredicates';
 import { withOrgContext, type OrgContextTarget } from './orgContextEnv';
 import { getLogger } from '@/core/logging/debugLogger';
@@ -57,6 +58,8 @@ export class AuthenticationService {
         extensionPath: string,
         logger: Logger,
         private commandManager: CommandExecutor,
+        /** Keeps the org's API list across window reloads (`context.globalState`). */
+        private readonly orgServicesStore?: OrgServicesStore,
     ) {
         this.logger = logger;
 
@@ -128,6 +131,7 @@ export class AuthenticationService {
                 // this same manager says the token has hours left — the state
                 // that had a user signing in three times to no effect.
                 async () => (await this.tokenManager.inspectToken()).valid,
+                this.orgServicesStore,
             );
 
             return stepLogger;

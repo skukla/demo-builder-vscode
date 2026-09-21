@@ -106,6 +106,18 @@ describe('AuthenticationService - Entity Retrieval and Selection', () => {
     });
 
     describe('entity retrieval methods', () => {
+        // extension.ts hands in context.globalState so the API list survives a
+        // reload; the service must pass that same object to the entity services.
+        it('passes the store it was given to the entity services', async () => {
+            const store = { get: jest.fn(), update: jest.fn() };
+            const service = new AuthenticationService('/mock', mockLogger, mockCommandExecutor, store);
+
+            await service.getOrganizations();
+
+            const args = (createEntityServices as jest.Mock).mock.calls.at(-1) ?? [];
+            expect(args[6]).toBe(store);
+        });
+
         it('should get organizations', async () => {
             const result = await authService.getOrganizations();
 
