@@ -453,3 +453,5 @@ and re-adding an integration — no migration code ships.
 - 2026-09-21  fix(apis): never add a Commerce API without its product profile (`837395477`)
 - 2026-09-21  feat(dashboard): Manage APIs edits the component's own workspace (`aeb6530ac`)
 - 2026-09-21  docs(state): cite what makes the merge claim true (`e5c1982b4`)
+- 2026-09-21  feat(app-builder): App Management uses the integration's own workspace (`8303d84f3`)
+- 2026-09-21  perf(apis): a subscribe asks Adobe for only the APIs it needs (`b9257483c`)
