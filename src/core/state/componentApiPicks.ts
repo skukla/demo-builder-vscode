@@ -65,9 +65,13 @@ export const UNATTRIBUTED_PICKS_KEY = '__existing__';
  *
  * This used to warn that "the subscribe PUT sets extras to EXACTLY this list, so
  * an empty union unsubscribes everything". That stopped being true on 2026-09-19,
- * when the subscriber began merging: `buildSubscriptionList` carries every CURRENT
- * subscription forward with its profiles, and a code leaves only when a caller
- * names it in `removing`. Narrowing this list therefore adds fewer, never removes.
+ * when the subscriber began merging, and the claim is checkable rather than taken
+ * on trust: `buildSubscriptionList` keeps every current subscription whose code is
+ * not in `removing` and only ADDS from the needed list, `reconcileCredential` is
+ * the single PUT site and is shared by both credential paths, and
+ * `subscriptionList.test.ts` pins the exact case the old warning described —
+ * "drops only what is being removed" passes an EMPTY needed list and ACCS-REST-API
+ * survives with its profile. Narrowing this list adds fewer, never removes.
  *
  * @param project - the project to read (keyed map wins over the legacy field)
  * @param componentId - narrow to this component's picks plus the unattributed ones
