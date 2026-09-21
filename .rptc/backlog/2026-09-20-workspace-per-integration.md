@@ -106,18 +106,45 @@ go through it rather than a bare find.
 (HTTP 200 in 3 seconds). Still open: whether a Developer-role SC can do that in a project
 that has turned read-only (AB-18) — that condition was moved away from, not fixed.
 
-## A deploy trap the build must handle
+## The deploy trap, explained and already handled
 
-From the same spike, and directly on this item's add path: **a freshly created workspace
-fails `aio app deploy` at the log-forwarding sync step** — `Cannot read properties of
-undefined 'runtime'`, seen twice — and `--no-log-forwarding-update` bypasses it. Cause
-unknown: propagation delay or an `aio` bug.
+The AB-2 spike found that a freshly created workspace **fails `aio app deploy`** at the
+log-forwarding step — `Cannot read properties of undefined 'runtime'`, seen twice — and
+recorded `--no-log-forwarding-update` as a bypass with the cause unknown: propagation, or
+an `aio` bug.
 
-This item creates a workspace and deploys into it immediately, which is exactly the
-sequence that hits it. The add path needs the flag, or a wait, or both.
+**It was neither.** Measured 2026-09-20 on a fresh project, reading the workspace over a
+minute without provisioning anything:
 
-The spike also flagged that a workspace holding live event registrations may 409 on delete
-the way project deletes did — the Remove row above already reuses the teardown
+```
++ 0s  runtime present, 0 namespaces
++15s  runtime present, 0 namespaces
++30s  runtime present, 0 namespaces
++60s  runtime present, 0 namespaces
+after createRuntimeNamespace: 285361-zzrtwaittrkg
+```
+
+A workspace has **no Runtime namespace until one is created**, and waiting never helps.
+The spike drove the CLI directly — create workspace, download config, `aio app use`,
+deploy — and never provisioned one, so it deployed into a workspace with nothing to
+deploy to.
+
+**The extension already does the right thing.** `createWorkspace` calls
+`ensureWorkspaceRuntimeNamespace` immediately, and `createProject` sweeps every workspace.
+So this item's add path inherits the fix rather than needing `--no-log-forwarding-update`.
+
+**Two things to carry anyway:**
+
+- Whatever creates a workspace for an integration must provision Runtime before
+  deploying. That is one call, it is idempotent, and it tolerates the 409.
+- The same measurement corrects a comment that claimed Adobe's App Builder template
+  provisions Runtime for the Production workspace and that only our added workspace
+  missed out. It does not; the sweep is the only thing that provisions either. That
+  comment is the kind that gets a loop deleted as redundant, so it is fixed in the same
+  change as this note.
+
+The spike also flagged that a workspace holding live event registrations may 409 on
+delete the way project deletes did — the Remove row above already reuses the teardown
 registration sweep for that reason.
 
 ## What Console will actually show

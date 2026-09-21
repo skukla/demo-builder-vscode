@@ -138,21 +138,18 @@ leaves a Production-only project and the picker falls through to `workspaces[0]`
 system already has two possible answers to "which workspace is this project's", decided by
 whether a call succeeded.
 
-## An observation worth chasing: Production's Runtime namespace
+## Settled: Adobe provisions no Runtime namespace, for any workspace
 
-The throwaway project's Production workspace reported **no Runtime namespace** when read
-seconds after creation. Our code says the opposite — `ensureProjectWorkspacesHaveRuntime`
-carries a comment that "the App Builder (jaeger) template provisions Runtime for the
-default Production workspace", and that the workspace WE add is the one that misses out.
+An earlier note here called this a lead. It is now measured. On a fresh project, read
+without provisioning anything, `runtime` is present with ZERO namespaces at 0s, 15s, 30s
+and 60s; `createRuntimeNamespace` fills it immediately. Not propagation.
 
-**This is a lead, not a finding.** Two readings fit: Adobe provisions it asynchronously
-and the read was too early, or Adobe never provisions it and our sweep is what creates it
-for both workspaces. Telling them apart needs a create, a wait and a re-read.
+So `ensureProjectWorkspacesHaveRuntime` is not a top-up for the workspace we add — it is
+the only thing that provisions Runtime at all, Production included. Its comment said the
+App Builder template handled Production, which was never true and never tested. Corrected.
 
-It changes no decision here — `ensureProjectWorkspacesHaveRuntime` stays either way,
-because it is idempotent and tolerates the 409. But if the second reading is right, that
-comment is a false claim about another system of the same kind as the "Adobe refuses to
-delete Production" one, and it is worth correcting.
+**This strengthens keeping the sweep** after Stage creation goes away: with one workspace
+instead of two it still has to run, because Adobe leaves that workspace with no namespace.
 
 ## Every surface
 

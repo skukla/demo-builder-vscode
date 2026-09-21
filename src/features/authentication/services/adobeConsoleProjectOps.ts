@@ -260,12 +260,21 @@ export class AdobeConsoleProjectOps {
      * Ensure EVERY workspace in a freshly-created project has an Adobe I/O Runtime
      * namespace.
      *
-     * The App Builder (jaeger) template provisions Runtime for the default
-     * Production workspace, but a workspace added via `createWorkspace` (our Stage —
-     * the one the picker auto-selects and deploys to) does NOT get one — so an App
-     * Builder app deployed there fails with "no Runtime namespace" (a mesh doesn't,
-     * masking it). Provision it explicitly. Best-effort: a failure logs and leaves
-     * the deploy-time pre-flight as the safety net.
+     * NO workspace gets one on its own — not the one added via `createWorkspace`, and
+     * not the Production workspace Adobe creates. Measured 2026-09-20 on a fresh
+     * project: `runtime` is present with ZERO namespaces at 0s, 15s, 30s and 60s, and
+     * `createRuntimeNamespace` fills it immediately. So this is not propagation, and
+     * this sweep is the ONLY thing that provisions Runtime for a project we create.
+     *
+     * This used to say the App Builder (jaeger) template provisioned Production and
+     * only our added workspace missed out. That was never true and never tested, and
+     * it is the kind of claim that gets a loop deleted as redundant.
+     *
+     * It matters because an App Builder app deployed to a workspace with no namespace
+     * fails (a mesh does not, masking it) — the likeliest cause of the AB-2 spike's
+     * `aio app deploy` failing on a fresh workspace with "Cannot read properties of
+     * undefined 'runtime'". Best-effort: a failure logs and leaves the deploy-time
+     * pre-flight as the safety net.
      *
      * @param orgId - Organization AMS id.
      * @param projectId - The just-created project's id.
