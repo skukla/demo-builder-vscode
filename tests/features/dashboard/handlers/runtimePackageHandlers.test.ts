@@ -79,7 +79,7 @@ describe('handleListRuntimePackages', () => {
         expect(JSON.stringify(result)).not.toContain(ENV.AIO_RUNTIME_AUTH);
     });
 
-    it('refuses with the reason when the namespace cannot be listed', async () => {
+    it('refuses in plain words when the namespace cannot be listed — never with an empty list', async () => {
         mockListRuntimePackages.mockRejectedValue(
             new Error('aio runtime package list --json: An AUTH key must be specified')
         );
@@ -88,7 +88,9 @@ describe('handleListRuntimePackages', () => {
 
         expect(result).toEqual({
             success: false,
-            error: 'aio runtime package list --json: An AUTH key must be specified',
+            error:
+                "Could not list what is deployed in this project's Adobe Runtime namespace. " +
+                'See Debug Logs for the reason.',
         });
     });
 
