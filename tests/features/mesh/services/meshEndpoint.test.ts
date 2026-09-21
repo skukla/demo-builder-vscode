@@ -3,13 +3,14 @@
  * Tests endpoint extraction from CLI output, URL parsing, and validation
  */
 
-import { getEndpoint } from '@/features/mesh/services/meshEndpoint';
+import { answeringEndpoint, getEndpoint } from '@/features/mesh/services/meshEndpoint';
 import type { Logger } from '@/types/logger';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 // Mock validation
+jest.mock('@/core/utils/sleep', () => ({ sleep: jest.fn().mockResolvedValue(undefined) }));
 jest.mock('@/core/validation/validators/AdobeResourceValidator', () => ({
     validateMeshId: jest.fn(),
 }));
@@ -490,5 +491,48 @@ describe('meshEndpoint', () => {
             expect(mockCommandManager.execute).toHaveBeenCalledTimes(2);
             expect(result).toBe(constructed);
         });
+    });
+});
+
+// 2026-09-21: `aio api-mesh:describe` reported a Production workspace's mesh on the
+// sandbox host, which answered 404 "Mesh … does not exist"; edge-graph answered.
+// That address went into the live storefront.
+describe('answeringEndpoint', () => {
+    const SANDBOX = 'https://edge-sandbox-graph.adobe.io/api/mesh-1/graphql';
+    const PRODUCTION = 'https://edge-graph.adobe.io/api/mesh-1/graphql';
+
+    it('keeps the stated address when the mesh answers there', async () => {
+        const ask = jest.fn(async () => true);
+
+        await expect(answeringEndpoint(SANDBOX, ask)).resolves.toBe(SANDBOX);
+        expect(ask).toHaveBeenCalledTimes(1);
+    });
+
+    it('moves to the other host when the stated one does not answer', async () => {
+        const ask = jest.fn(async (url: string) => url === PRODUCTION);
+
+        await expect(answeringEndpoint(SANDBOX, ask)).resolves.toBe(PRODUCTION);
+    });
+
+    it('works from either side', async () => {
+        const ask = jest.fn(async (url: string) => url === SANDBOX);
+
+        await expect(answeringEndpoint(PRODUCTION, ask)).resolves.toBe(SANDBOX);
+    });
+
+    it('asks again when neither answers yet, and keeps the stated one if none ever does', async () => {
+        const ask = jest.fn(async () => false);
+
+        await expect(answeringEndpoint(SANDBOX, ask)).resolves.toBe(SANDBOX);
+        expect(ask).toHaveBeenCalledTimes(6);
+    });
+
+    it('leaves an address that is not an Adobe mesh host alone', async () => {
+        const ask = jest.fn(async () => true);
+
+        await expect(answeringEndpoint('https://example.test/graphql', ask)).resolves.toBe(
+            'https://example.test/graphql'
+        );
+        expect(ask).not.toHaveBeenCalled();
     });
 });

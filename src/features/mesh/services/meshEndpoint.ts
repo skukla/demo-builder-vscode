@@ -4,6 +4,7 @@
 
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { getMeshNodeVersion } from '@/core/utils/meshConfig';
+import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateMeshId } from '@/core/validation/validators/AdobeResourceValidator';
 import type { Logger } from '@/types/logger';
@@ -135,5 +136,57 @@ export async function getEndpoint(
     // Construct as reliable fallback
     const endpoint = `https://edge-sandbox-graph.adobe.io/api/${meshId}/graphql`;
     logger.debug('[API Mesh] Using constructed endpoint (fallback)');
+    return endpoint;
+}
+
+/** The two hosts Adobe serves meshes from. */
+const MESH_HOSTS = ['edge-sandbox-graph.adobe.io', 'edge-graph.adobe.io'] as const;
+/** Rounds of asking before settling for the stated address. */
+const PROBE_ROUNDS = 3;
+
+/** Whether a mesh answers at this address: anything but a 404 or no reply at all. */
+export async function meshAnswersAt(url: string): Promise<boolean> {
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: '{ __typename }' }),
+            signal: AbortSignal.timeout(TIMEOUTS.QUICK),
+        });
+        return response.status !== 404;
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * The address a mesh actually answers on.
+ *
+ * Adobe serves a mesh from `edge-sandbox-graph` or `edge-graph`, and what it SAYS
+ * is not proof: on 2026-09-21 a mesh in a workspace titled "Production" was
+ * reported by `aio api-mesh:describe` on the sandbox host, which answered 404
+ * "Mesh … does not exist", while `edge-graph` answered 200. That address was
+ * published into the live storefront. So the stated address is tried first, then
+ * the other host, for a few rounds (a new mesh can take seconds to reach the
+ * edge); the first that answers wins. When neither does, the stated one stands.
+ *
+ * @param endpoint - the address Adobe reported, or one built from the mesh id
+ * @param ask - whether a mesh answers at a URL (injected in tests)
+ * @returns the address that answers, else `endpoint`
+ */
+export async function answeringEndpoint(
+    endpoint: string,
+    ask: (url: string) => Promise<boolean> = meshAnswersAt,
+): Promise<string> {
+    const match = /^https:\/\/(edge-(?:sandbox-)?graph\.adobe\.io)(\/api\/[^\s]+)$/.exec(endpoint);
+    if (!match) return endpoint;
+    const [, statedHost, path] = match;
+    const candidates = [endpoint, ...MESH_HOSTS.filter((host) => host !== statedHost).map((host) => `https://${host}${path}`)];
+    for (let round = 1; round <= PROBE_ROUNDS; round++) {
+        for (const url of candidates) {
+            if (await ask(url)) return url;
+        }
+        if (round < PROBE_ROUNDS) await sleep(TIMEOUTS.MESH_ENDPOINT_PROBE_INTERVAL);
+    }
     return endpoint;
 }

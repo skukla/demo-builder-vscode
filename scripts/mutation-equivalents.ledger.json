@@ -15432,7 +15432,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 37,
+            "line": 38,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is one debug log. checkApiMeshPlugin returns false on the next line whether or not the block runs, so emptying it changes no return value and no command execution \u2014 the four tests that assert WHICH commands ran all still pass with it planted. The only observable difference is a log line, and asserting log wording is exactly what the ratchet exists to refuse to reward.",
@@ -15469,7 +15469,7 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 131,
+            "line": 132,
             "mutants": 1,
             "category": "block",
             "reason": "The else body is one debug log. Both arms of this branch fall through to the same constructed endpoint on the following lines, so emptying it leaves the return value and every command call identical \u2014 the plugin-not-installed test that asserts execute ran exactly once passes with it planted. Only a log line differs, which the ratchet does not reward pinning.",

@@ -185,6 +185,10 @@ export const TIMEOUTS = {
      *  a look 7s after a 504 still listed the workspace, and it was gone soon after. */
     WORKSPACE_DELETE_RECHECK: 15000,
 
+    /** Between rounds of asking a new mesh which address it answers on — the edge
+     *  can take a few seconds to know a mesh Adobe already calls deployed. */
+    MESH_ENDPOINT_PROBE_INTERVAL: 5000,
+
     /** Initial wait before first mesh verification poll (20 seconds) */
     MESH_VERIFY_INITIAL_WAIT: 20000,
 

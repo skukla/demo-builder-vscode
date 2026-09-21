@@ -3,6 +3,7 @@
  * Used by both project creation wizard and manual deploy command
  */
 
+import { answeringEndpoint } from './meshEndpoint';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { getMeshNodeVersion } from '@/core/utils/meshConfig';
 import { sleep } from '@/core/utils/sleep';
@@ -93,7 +94,9 @@ async function processMeshStatus(
         const deployedMeshId = meshData.meshId || meshData.mesh_id;
         let deployedEndpoint: string | undefined;
         if (deployedMeshId) {
-            deployedEndpoint = await getEndpoint(deployedMeshId, commandManager, logger);
+            const stated = await getEndpoint(deployedMeshId, commandManager, logger);
+            // What Adobe states is not proof it answers there (2026-09-21) — ask.
+            deployedEndpoint = stated ? await answeringEndpoint(stated) : undefined;
         } else {
             logger?.warn('[Mesh Verification] No meshId found in response, cannot retrieve endpoint');
         }
