@@ -84,6 +84,54 @@ describe('buildSubscriptionList', () => {
     });
 });
 
+describe('buildSubscriptionList — a profile-needing service it cannot give one', () => {
+    /**
+     * Before this, a service arriving with no profiles was added with
+     * `licenseConfigs: null`, and `profileForTenant`'s refusal never ran — it is
+     * only reached when profiles ARE listed. Commerce then refused the credential
+     * later with "requires selection of a product", nothing tying it back.
+     */
+    it('refuses to add ACCS when the catalog listed no profiles for it', () => {
+        expect(() =>
+            buildSubscriptionList([svc('ACCS-REST-API')], [], NONE, 'Tenant123abc'),
+        ).toThrow("didn't list the product profiles for ACCS-REST-API just now");
+    });
+
+    // Adobe's own verdict beats the known-list, because it says whose problem it is:
+    // an admin has to act, and retrying changes nothing.
+    it("says it is ACCESS, not a retry, when Adobe reports the user has no profile", () => {
+        const noAccess: ServiceInfo = { ...svc('ACCS-REST-API'), profileAccessMissing: true };
+
+        expect(() => buildSubscriptionList([noAccess], [], NONE, 'Tenant123abc')).toThrow(
+            "You don't have a product profile for ACCS-REST-API",
+        );
+    });
+
+    /**
+     * The refusal is for ADDITIONS only. A credential that already holds ACCS keeps
+     * it with its own profile, so a catalog that has lost its profiles for twenty
+     * minutes must not fail a redeploy of something already in place.
+     */
+    it('does NOT refuse when the credential already holds it', () => {
+        const list = buildSubscriptionList(
+            [svc('ACCS-REST-API')],
+            [{ sdkCode: 'ACCS-REST-API', licenseConfigs: [BODEA] }],
+            NONE,
+            'Tenant123abc',
+        );
+
+        expect(list.map((s) => s.sdkCode)).toStrictEqual(['ACCS-REST-API']);
+    });
+
+    it('CONTROL: a service needing no profile is still added with none', () => {
+        const list = buildSubscriptionList([svc('CloudIntegrationSDK')], [], NONE, undefined);
+
+        expect(list).toStrictEqual([
+            { sdkCode: 'CloudIntegrationSDK', licenseConfigs: null, roles: null },
+        ]);
+    });
+});
+
 describe('profileForTenant', () => {
     const service = { ...svc('ACCS-REST-API', [OTHER, BODEA]), name: 'Adobe Commerce' };
 

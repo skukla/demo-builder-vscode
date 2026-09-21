@@ -175,6 +175,14 @@ export interface S2SDeployCredentials {
  */
 export interface OrgServiceInfo {
     code: string;
+    /**
+     * Which KIND of access this row describes. A code the catalog lists more than
+     * once has one row per kind — `adobeid` (user sign-in) and `entp`
+     * (server-to-server), sometimes also `admin_entp` or `analytics`. Read from the
+     * live catalog 2026-09-21: of 17 codes listed more than once, every row carrying
+     * product profiles was the `entp` one and no `adobeid` row carried any.
+     */
+    type?: string;
     /** Human-readable service name (e.g. "API Mesh") — present in the SDK response. */
     name?: string;
     platformList?: string[];

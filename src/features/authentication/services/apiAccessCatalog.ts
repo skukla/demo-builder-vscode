@@ -24,7 +24,7 @@ import type { OrgServiceInfo } from './types';
 import type { CloudGrouping } from '@/types/adobeApis';
 
 /** The disabled-reason that means "you could subscribe, but you lack a product profile". */
-const PROFILE_MISSING_REASON = 'USER_MISSING_PRODUCT_PROFILES';
+export const PROFILE_MISSING_REASON = 'USER_MISSING_PRODUCT_PROFILES';
 
 /** A picker-ready row: deduped, entitlement-filtered, gating classified. */
 export interface ApiCatalogRow {

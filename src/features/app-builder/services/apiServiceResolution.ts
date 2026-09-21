@@ -7,6 +7,7 @@
  */
 
 import { BASELINE_API } from '@/core/constants';
+import { PROFILE_MISSING_REASON } from '@/features/authentication/services/apiAccessCatalog';
 import type { OrgServiceInfo, ServiceLicenseConfig } from '@/features/authentication/services/types';
 
 /** A resolved service: its sdkCode plus the platform metadata that picks the path. */
@@ -18,6 +19,14 @@ export interface ServiceInfo {
     domainMandatory: boolean;
     /** The product profiles the org offers for it; one must be named when there are any. */
     licenseConfigs?: ServiceLicenseConfig[];
+    /**
+     * Adobe says this user has no product profile for the service — the row is
+     * disabled with `USER_MISSING_PRODUCT_PROFILES`. The authoritative "you do not
+     * have access" signal (26 services in the org carried it on 2026-09-21), and
+     * worth distinguishing from profiles merely missing from a response, because
+     * the SC's next step is different: ask an admin, versus try again.
+     */
+    profileAccessMissing?: boolean;
 }
 
 /**
@@ -55,17 +64,44 @@ function isS2SRow(service: OrgServiceInfo): boolean {
 }
 
 /**
- * The org catalog can list one code TWICE — `ACCS-REST-API` has a user-login row
- * (web-app platforms) and a server-to-server row, and BOTH carry
- * `oauthServerToServerOnly: true` (measured 2026-09-16). Only the second carries
- * `properties`, the product profiles a server-to-server subscription must name, so
- * that is the tie-breaker.
+ * The org catalog lists some codes more than once — one row per KIND of access,
+ * and Adobe labels which is which in `type`. A server-to-server subscription wants
+ * the `entp` row, because that is where the product profiles live.
+ *
+ * This used to break the tie on "the row that has `properties`", on the strength
+ * of a 2026-09-16 measurement that only the server-to-server row carried it. That
+ * stopped being true: on 2026-09-21 the catalog answered in three different shapes
+ * within twenty minutes — neither ACCS row with `properties`, both with it (the
+ * first holding no profiles), and only the right one — so the rule picked the
+ * row with NO profiles whenever the wrong one happened to come first. `type` did
+ * not move across any of it: 8 of 8 calls, `adobeid` never carried profiles and
+ * `entp` always did, and the same held for every one of the 17 codes listed twice.
+ *
+ * When no row is labelled — a response without `type`, which is what the 2026-09-16
+ * fixture recorded — the next best is the server-to-server row that actually
+ * CARRIES profiles. Not merely "has `properties`": that was the fragile half of the
+ * old rule. And not "the first server-to-server row" either, which is what the
+ * first draft of this fell back to: both ACCS rows are marked
+ * `oauthServerToServerOnly`, so that took the sign-in row and the existing pin in
+ * apiSubscriber.test.ts caught it.
+ *
+ * A code with neither falls through unchanged. That includes API Mesh
+ * (`GraphQLServiceSDK`), which has a single `adobeid`/`apiKey` row and rides the
+ * other credential path.
  */
 function pickServiceRow(servicesForOrg: OrgServiceInfo[], code: string): OrgServiceInfo | undefined {
     const rows = servicesForOrg.filter((s) => s.code === code);
     return (
-        rows.find((row) => isS2SRow(row) && row.properties) ?? rows.find(isS2SRow) ?? rows[0]
+        rows.find((row) => row.type === 'entp') ??
+        rows.find((row) => isS2SRow(row) && hasProfiles(row)) ??
+        rows.find(isS2SRow) ??
+        rows[0]
     );
+}
+
+/** Whether a catalog row lists at least one product profile. */
+function hasProfiles(row: OrgServiceInfo): boolean {
+    return (row.properties?.licenseConfigs?.length ?? 0) > 0;
 }
 
 /** Resolve API names → ServiceInfo via the org service list. Throws on unknown. */
@@ -95,6 +131,9 @@ export function resolveServiceInfos(
             platformList,
             domainMandatory: Boolean(service.domainMandatory),
             licenseConfigs: service.properties?.licenseConfigs ?? undefined,
+            profileAccessMissing:
+                service.enabled === false &&
+                (service.disabledReasons ?? []).includes(PROFILE_MISSING_REASON),
         };
     });
 }
