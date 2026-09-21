@@ -148,7 +148,7 @@ describe('ACTION_DESCRIPTORS — per-row contract', () => {
             expect(source.safeParse({ owner: 'acme' }).success).toBe(false);
         });
 
-        it('set_project_destination keeps the project and workspace ids', () => {
+        it('set_project_destination keeps the ids, and REQUIRES the workspace name', () => {
             const d = row('set_project_destination');
             for (const field of ['project', 'workspace'] as const) {
                 const schema = d.inputSchema![field];
@@ -157,10 +157,21 @@ describe('ACTION_DESCRIPTORS — per-row contract', () => {
                     name: 'n',
                     title: 't',
                 });
-                // The id is what the move targets; name/title are display only.
                 expect(schema.safeParse({ name: 'n' }).success).toBe(false);
-                expect(schema.safeParse({ id: 'p1' }).success).toBe(true);
             }
+
+            // This pin used to say "name/title are display only" and accept an
+            // id alone for BOTH — which is the belief that broke a real project.
+            // An App Management install sends the workspace MACHINE name, so a
+            // destination written without it leaves the project unable to install
+            // one, and the refusal names an internal field days later (Kukla
+            // Bodea, moved 2026-09-18, found 2026-09-20).
+            expect(d.inputSchema!.project.safeParse({ id: 'p1' }).success).toBe(true);
+            expect(d.inputSchema!.workspace.safeParse({ id: 'w1' }).success).toBe(false);
+            expect(d.inputSchema!.workspace.safeParse({ id: 'w1', name: '' }).success).toBe(false);
+            expect(d.inputSchema!.workspace.safeParse({ id: 'w1', name: 'Stage' }).success).toBe(
+                true,
+            );
         });
 
         it('save_ai_prompt.prompt keeps id, title, body and the pinned flag', () => {

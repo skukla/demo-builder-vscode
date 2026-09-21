@@ -135,6 +135,22 @@ async function applyDestination(
         return { success: true, data: { destination: project.adobe, unchanged: true } };
     }
 
+    // The machine name is not decoration: an App Management install sends it, and a
+    // destination stored without one leaves the project unable to install any such
+    // integration. The failure surfaces days later as "missing workspaceName", naming
+    // a field the SC has never seen (Kukla Bodea, moved 2026-09-18, found 2026-09-20).
+    // Refused here rather than resolved, so the caller that omitted it is the thing
+    // that gets fixed.
+    if (!nextWorkspace.name) {
+        return {
+            success: false,
+            error:
+                'That workspace was given without its name, so the destination was not ' +
+                'changed. Choose the workspace again.',
+            code: ErrorCode.CONFIG_INVALID,
+        };
+    }
+
     report(OPERATION_STAGES.checkingRequirements.label);
     const guardError = await runGuards(context, project);
     if (guardError) {

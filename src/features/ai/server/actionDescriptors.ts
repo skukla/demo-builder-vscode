@@ -163,7 +163,15 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
             workspace: z
                 .object({
                     id: z.string().describe('Workspace id (from list_workspaces)'),
-                    name: z.string().optional(),
+                    // REQUIRED, and optional until 2026-09-20. The machine name is what an
+                    // App Management install sends; a destination written without it leaves
+                    // the project unable to install one AT ALL, and the refusal names an
+                    // internal field ("missing workspaceName") long after the move that
+                    // caused it. Kukla Bodea was moved this way on 2026-09-18.
+                    name: z
+                        .string()
+                        .min(1)
+                        .describe('Workspace MACHINE name, exactly as list_workspaces returns it'),
                     title: z
                         .string()
                         .optional()
