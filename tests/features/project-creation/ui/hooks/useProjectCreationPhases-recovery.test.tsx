@@ -204,7 +204,13 @@ describe('useProjectCreationPhases — recovery', () => {
     });
 
     describe('workspace pick — which field decides, and holes in the list', () => {
-        it('matches "stage" on the NAME alone when the title says something else', async () => {
+        /**
+         * These two pinned the substring match on each field in turn. The pick is now
+         * "the first workspace" (AB-24), so what is worth pinning instead is that a
+         * name or title the API left out cannot break it — both fields are optional
+         * and a stale cache can be missing either.
+         */
+        it('takes the first workspace even when a later one is named Stage', async () => {
             const route = routeDeferred();
             const hook = renderPhases();
             const namedStage = { id: 'w-name', name: 'Stage-Env', title: 'Deployment' };
@@ -220,25 +226,21 @@ describe('useProjectCreationPhases — recovery', () => {
             expect(hook.updateState).toHaveBeenNthCalledWith(
                 2,
                 expect.objectContaining({
-                    adobeWorkspace: { id: 'w-name', name: 'Stage-Env', title: 'Deployment' },
+                    adobeWorkspace: { id: PROD_WS.id, name: PROD_WS.name, title: PROD_WS.title },
                 })
             );
         });
 
-        // A workspace can arrive with no title (the API's own field is optional) and,
-        // in a stale cache, with no name — scanning past either must not throw and
-        // lose the whole list to the workspace-phase catch.
-        it('scans past workspaces missing a name or a title and still finds Stage', async () => {
+        it('does not throw on a workspace with no title, and still advances', async () => {
             const route = routeDeferred();
             const hook = renderPhases();
-            const noName = { id: 'w-noname', title: 'Prod' } as unknown as typeof PROD_WS;
             const noTitle = { id: 'w-notitle', name: 'Beta' } as unknown as typeof PROD_WS;
 
             await startAndCreate(route, hook);
             await act(async () => {
                 route.latest('get-workspaces').resolve({
                     success: true,
-                    data: [noName, noTitle, STAGE_WS],
+                    data: [noTitle, STAGE_WS],
                 });
             });
 
@@ -246,7 +248,7 @@ describe('useProjectCreationPhases — recovery', () => {
             expect(hook.updateState).toHaveBeenNthCalledWith(
                 2,
                 expect.objectContaining({
-                    adobeWorkspace: { id: 'w-stage', name: 'Stage', title: 'Stage' },
+                    adobeWorkspace: { id: 'w-notitle', name: 'Beta', title: undefined },
                 })
             );
         });

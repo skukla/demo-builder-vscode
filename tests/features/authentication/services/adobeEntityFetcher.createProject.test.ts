@@ -45,15 +45,12 @@ describe('AdobeEntityFetcher.createProject()', () => {
         mockCommandExecutor = createMockCommandExecutor({ execute: jest.fn() });
 
         createFireflyProject = jest.fn();
-        // The default Stage-workspace create (App Builder template parity); resolves unless overridden.
-        createWorkspace = jest.fn().mockResolvedValue({ body: { workspaceId: 'ws-stage' } });
+        createWorkspace = jest.fn().mockResolvedValue({ body: { workspaceId: 'ws-new' } });
         // Runtime-namespace provisioning: after create, every workspace is listed and
-        // each gets a Runtime namespace (idempotent). Defaults cover Production + Stage.
+        // each gets a namespace. A created project has exactly ONE workspace, Adobe's —
+        // creation stopped adding a second on 2026-09-20 (AB-24).
         getWorkspacesForProject = jest.fn().mockResolvedValue({
-            body: [
-                { id: 'ws-prod', name: 'Production' },
-                { id: 'ws-stage', name: 'Stage' },
-            ],
+            body: [{ id: 'ws-prod', name: 'Production' }],
         });
         createRuntimeNamespace = jest.fn().mockResolvedValue({ body: {} });
         mockSDKClient = {
@@ -121,40 +118,29 @@ describe('AdobeEntityFetcher.createProject()', () => {
         expect(createFireflyProject.mock.calls[0][1]).not.toHaveProperty('who_created');
     });
 
-    it('creates a "Stage" workspace after the project (App Builder template parity)', async () => {
-        // createFireflyProject provisions only Production; we add Stage to match the template.
+    it('adds NO workspace of its own — the project keeps the one Adobe made', async () => {
+        // Creation used to add a second workspace called "Stage" and then use that one,
+        // leaving Adobe's empty. Removed 2026-09-20 (AB-24): a workspace for its own
+        // sake, whose best-effort create gave "which workspace is this project's?" two
+        // possible answers depending on whether one call succeeded.
         createFireflyProject.mockResolvedValue({ body: { projectId: 'proj-new' } });
 
         await fetcher.createProject('My Demo', '');
 
-        expect(createWorkspace).toHaveBeenCalledWith(
-            'org-123',
-            'proj-new',
-            // Named exactly "Stage" — NOT the suffix-derived name — to match the convention.
-            expect.objectContaining({ name: 'Stage', title: 'Stage' })
-        );
-        expect(createWorkspace.mock.calls[0][2]).not.toHaveProperty('who_created');
-    });
-
-    it('returns the project even when the Stage workspace fails (best-effort)', async () => {
-        createFireflyProject.mockResolvedValue({ body: { projectId: 'proj-new' } });
-        createWorkspace.mockRejectedValue(new Error('workspace create failed'));
-
-        const result = await fetcher.createProject('My Demo', '');
-
-        // The project was created (Production exists); a Stage failure must not fail the create.
-        expect(result).toEqual(expect.objectContaining({ id: 'proj-new', title: 'My Demo' }));
+        expect(createWorkspace).not.toHaveBeenCalled();
     });
 
     it('provisions a Runtime namespace for every workspace after create', async () => {
-        // The added Stage workspace has no Runtime namespace by default — provision one
-        // (and re-affirm Production's, idempotently) so App Builder apps can deploy.
+        // Adobe provisions one for NO workspace, its own Production included — measured
+        // 2026-09-20 on a fresh project: zero namespaces at 0s, 15s, 30s and 60s, and
+        // createRuntimeNamespace fills it immediately. So this sweep is the only thing
+        // that provisions Runtime at all, and a project created without it cannot deploy
+        // an App Builder app anywhere.
         createFireflyProject.mockResolvedValue({ body: { projectId: 'proj-new' } });
 
         await fetcher.createProject('My Demo', '');
 
         expect(createRuntimeNamespace).toHaveBeenCalledWith('org-123', 'proj-new', 'ws-prod');
-        expect(createRuntimeNamespace).toHaveBeenCalledWith('org-123', 'proj-new', 'ws-stage');
     });
 
     it('tolerates a 409 (namespace already present) and still returns the project', async () => {

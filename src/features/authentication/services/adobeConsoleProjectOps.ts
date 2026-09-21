@@ -2,9 +2,9 @@
  * AdobeConsoleProjectOps — Console project and workspace mutations.
  *
  * Owns creating, renaming, and deleting Console projects and workspaces,
- * including the App Builder template-parity work a bare `createFireflyProject`
- * leaves undone: the Stage workspace, and a Runtime namespace on every
- * workspace. SDK-only — none of these have a CLI fallback.
+ * including the one thing a bare `createFireflyProject` leaves undone: a Runtime
+ * namespace, which Adobe provisions for NO workspace. SDK-only — none of these
+ * have a CLI fallback.
  *
  * Listing a fresh project's workspaces (for the Runtime sweep) is NOT this
  * class's job — the injected `listWorkspaces` does it, wired by the facade to
@@ -140,16 +140,16 @@ export class AdobeConsoleProjectOps {
 
             this.debugLogger.info('[Entity Fetcher] App Builder project created successfully');
 
-            // createFireflyProject provisions ONLY the default Production workspace. The
-            // Console's "Project from template → App Builder" flow also creates Stage, and
-            // there is NO public API to provision both in one call (aio-lib-console exposes
-            // createWorkspace only as a separate operation). Mirror the template so our
-            // projects match. Best-effort: a Stage failure leaves the valid Production-only
-            // project rather than failing the whole create.
-            await this.createDefaultStageWorkspace(orgId, projectId);
-
-            // Every workspace must ship a Runtime namespace so App Builder apps can
-            // deploy to it (the added Stage workspace doesn't get one automatically).
+            // A project gets exactly the one workspace Adobe creates. We used to add a
+            // second, "Stage", to mirror the Console's template flow — and then used that
+            // one and left Adobe's empty. Removed 2026-09-20 (AB-24): it was a workspace
+            // for its own sake, its best-effort create gave "which workspace is this
+            // project's?" two possible answers, and under workspace-per-add every other
+            // workspace belongs to something.
+            //
+            // The namespace is NOT optional and NOT free: Adobe provisions one for no
+            // workspace at all, Production included (measured 2026-09-20 — zero namespaces
+            // at 0s, 15s, 30s and 60s).
             await this.ensureProjectWorkspacesHaveRuntime(orgId, projectId);
 
             return {
@@ -214,45 +214,6 @@ export class AdobeConsoleProjectOps {
             const reason = error instanceof Error ? error.message : String(error);
             this.debugLogger.warn(`[Entity Fetcher] Remote project rename refused: ${reason}`);
             return { ok: false, error: reason };
-        }
-    }
-
-    /**
-     * Create the "Stage" workspace to mirror the App Builder template.
-     *
-     * createFireflyProject provisions only the default Production workspace; the Console's
-     * templated App Builder create additionally makes Stage. There is no public API to
-     * provision both at once, so we add Stage explicitly. Named exactly "Stage" (NOT the
-     * suffix-derived name) to match the convention the workspace picker auto-selects on and
-     * downstream tooling expects. Best-effort — never throws; a failure just leaves the
-     * project with Production only.
-     */
-    private async createDefaultStageWorkspace(orgId: string, projectId: string): Promise<void> {
-        try {
-            const client = this.sdkClient.getClient() as {
-                createWorkspace: (
-                    orgId: string,
-                    projectId: string,
-                    details: {
-                        name: string;
-                        title: string;
-                        description: string;
-                    }
-                ) => Promise<SDKResponse<RawAdobeWorkspace>>;
-            };
-            await client.createWorkspace(orgId, projectId, {
-                name: 'Stage',
-                title: 'Stage',
-                description: '',
-            });
-            this.debugLogger.info(
-                '[Entity Fetcher] Created Stage workspace (App Builder template parity)',
-            );
-        } catch (error) {
-            this.debugLogger.warn(
-                '[Entity Fetcher] Could not create the Stage workspace; project has Production only: ' +
-                    `${(error as Error).message}`,
-            );
         }
     }
 

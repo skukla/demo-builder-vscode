@@ -94,16 +94,22 @@ export function AdobeWorkspacePicker({
         selectedItem: state.adobeWorkspace,
         autoSelectSingle: !suppressAutoSelect,
         searchFields: WORKSPACE_SEARCH_FIELDS,
-        // Auto-select "Stage" workspace if available and nothing selected — unless the
-        // user reopened this picker to change it, in which case leave it to them.
+        // Prefer the workspace the PROJECT already records, then a workspace named
+        // exactly "Stage". Unless the user reopened this picker to change it, in
+        // which case leave it to them.
+        //
+        // This matched the substring "stage" until 2026-09-20. Two reasons it cannot:
+        // creation no longer adds a Stage workspace (AB-24), so new projects have
+        // none; and under workspace-per-add a project holds a workspace per
+        // integration, where any title containing "stage" would match and which one
+        // `find` reaches first is Adobe's ordering rather than ours. The recorded
+        // workspace is the only answer that is right for all three populations —
+        // new projects, projects made before this, and Console-made projects.
         autoSelectCustom: suppressAutoSelect
             ? undefined
             : (items) =>
-                  items.find(
-                      (ws) =>
-                          ws.name.toLowerCase().includes('stage') ||
-                          ws.title?.toLowerCase().includes('stage'),
-                  ),
+                  items.find((ws) => ws.id === state.adobeWorkspace?.id) ??
+                  items.find((ws) => ws.name === 'Stage'),
         onSelect: (workspace) => {
             const ws = { id: workspace.id, name: workspace.name, title: workspace.title };
             if (onWorkspaceSelect) {

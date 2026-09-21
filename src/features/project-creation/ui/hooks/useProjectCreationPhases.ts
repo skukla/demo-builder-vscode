@@ -6,10 +6,9 @@
  *
  *   creating  → `create-adobe-project` (commits `adobeProject`, clears the
  *               dependent workspace + cache — exactly what AdobeProjectField does)
- *   workspace → `get-workspaces` for the new project, auto-picking the
- *               Stage-named workspace / the single one / the first (the same
- *               policy AdobeWorkspacePicker's useSelectionStep applies), then
- *               commits `adobeWorkspace` + `workspacesCache`
+ *   workspace → `get-workspaces` for the new project, taking the only workspace it
+ *               has (AB-24 stopped creating a second one), then commits
+ *               `adobeWorkspace` + `workspacesCache`
  *   enabling  → `ensure-mesh-api-subscribed` for the new project's workspace;
  *               the resolved {@link EnsureResult} (success OR failure) is exposed
  *               as `enableResult` for the creation UI
@@ -89,13 +88,18 @@ export interface UseProjectCreationPhasesResult {
     reset: () => void;
 }
 
-/** Stage-named workspace first (case-insensitive), else the first (covers "single"). */
+/**
+ * The workspace a brand-new project deploys to: the only one it has.
+ *
+ * This matched the substring "stage" until 2026-09-20, because creation added a
+ * Stage workspace beside Adobe's. It no longer does (AB-24), so a new project has
+ * exactly one workspace and there is nothing to choose between. Matching a name
+ * here would also be wrong under workspace-per-add, where a project accumulates a
+ * workspace per integration and which one `find` reaches first is Adobe's ordering,
+ * not ours.
+ */
 function pickWorkspace(workspaces: Workspace[]): Workspace {
-    const stage = workspaces.find(
-        (ws) =>
-            ws.name?.toLowerCase().includes('stage') || ws.title?.toLowerCase().includes('stage'),
-    );
-    return stage ?? workspaces[0];
+    return workspaces[0];
 }
 
 /** The exact spinner copy per active phase. */
@@ -108,8 +112,8 @@ function phaseMessageFor(phase: ProjectCreationPhase, name: string): string | un
 
 /** A secondary line naming the concrete action behind each phase. */
 function phaseSubMessageFor(phase: ProjectCreationPhase): string | undefined {
-    if (phase === 'creating') return 'Registering the project and its Stage workspace in Adobe I/O';
-    if (phase === 'workspace') return 'Selecting the Stage workspace';
+    if (phase === 'creating') return 'Registering the project in Adobe I/O';
+    if (phase === 'workspace') return 'Selecting the workspace';
     if (phase === 'enabling') return 'Subscribing to API Mesh and the I/O Management API';
     return undefined;
 }

@@ -54,7 +54,7 @@ describe('useProjectCreationPhases', () => {
             expect(hook.result.current.phase).toBe('creating');
             expect(hook.result.current.phaseMessage).toBe('Creating project "My Demo"');
             expect(hook.result.current.phaseSubMessage).toBe(
-                'Registering the project and its Stage workspace in Adobe I/O'
+                'Registering the project in Adobe I/O'
             );
             expect(mockRequest).toHaveBeenCalledTimes(1);
             expect(mockRequest).toHaveBeenCalledWith('create-adobe-project', { name: 'My Demo' });
@@ -151,26 +151,33 @@ describe('useProjectCreationPhases', () => {
 
             expect(hook.result.current.phase).toBe('workspace');
             expect(hook.result.current.phaseMessage).toBe('Setting up workspace');
-            expect(hook.result.current.phaseSubMessage).toBe('Selecting the Stage workspace');
+            expect(hook.result.current.phaseSubMessage).toBe('Selecting the workspace');
             expect(mockRequest).toHaveBeenCalledWith('get-workspaces', {
                 orgId: 'org-1',
                 projectId: 'p-new',
             });
         });
 
-        it('picks the Stage-named workspace among several and commits it with the cache', async () => {
+        /**
+         * It used to pick the Stage-named one out of several, matching the substring
+         * in either field. Creation no longer makes a second workspace (AB-24), so a
+         * new project has exactly one and there is nothing to choose between — and
+         * under workspace-per-add, matching a name would pick whichever integration's
+         * workspace Adobe happened to return first.
+         */
+        it('takes the first workspace the new project has, whatever it is called', async () => {
             const route = routeDeferred();
             const hook = renderPhases();
 
             await startThroughWorkspace(route, hook);
 
             expect(hook.updateState).toHaveBeenNthCalledWith(2, {
-                adobeWorkspace: { id: 'w-stage', name: 'Stage', title: 'Stage' },
+                adobeWorkspace: { id: PROD_WS.id, name: PROD_WS.name, title: PROD_WS.title },
                 workspacesCache: [PROD_WS, STAGE_WS],
             });
         });
 
-        it('matches "stage" case-insensitively in name or title', async () => {
+        it('does NOT prefer a Stage-named workspace over the first one', async () => {
             const route = routeDeferred();
             const hook = renderPhases();
 
@@ -183,7 +190,7 @@ describe('useProjectCreationPhases', () => {
             expect(hook.updateState).toHaveBeenNthCalledWith(
                 2,
                 expect.objectContaining({
-                    adobeWorkspace: { id: 'w-2', name: 'ws2', title: 'STAGE AREA' },
+                    adobeWorkspace: { id: PROD_WS.id, name: PROD_WS.name, title: PROD_WS.title },
                 })
             );
         });
@@ -272,7 +279,7 @@ describe('useProjectCreationPhases', () => {
             expect(mockRequest).toHaveBeenCalledWith('ensure-mesh-api-subscribed', {
                 orgId: 'org-1',
                 projectId: 'p-new',
-                workspaceId: 'w-stage',
+                workspaceId: 'w-prod',
                 backendId: 'adobe-commerce-paas',
                 frontendId: 'eds-storefront',
             });
@@ -337,7 +344,7 @@ describe('useProjectCreationPhases', () => {
 
             // Workspace still committed exactly as the mesh path does...
             expect(hook.updateState).toHaveBeenNthCalledWith(2, {
-                adobeWorkspace: { id: 'w-stage', name: 'Stage', title: 'Stage' },
+                adobeWorkspace: { id: 'w-prod', name: 'Production', title: 'Production' },
                 workspacesCache: [PROD_WS, STAGE_WS],
             });
             // ...but the flow ends at "done" with NO enable step.

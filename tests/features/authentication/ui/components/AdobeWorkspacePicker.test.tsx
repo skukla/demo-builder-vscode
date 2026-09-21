@@ -103,12 +103,14 @@ describe('AdobeWorkspacePicker', () => {
      * as "finds Stage" until these were written.
      */
     describe('the Stage finder it hands useSelectionStep', () => {
-        function stageFinder(): (items: Workspace[]) => Workspace | undefined {
+        function stageFinder(
+            state: WizardState = baseState as WizardState,
+        ): (items: Workspace[]) => Workspace | undefined {
             mockUseSelectionStep.mockReturnValue(createMockUseSelectionStepReturn({}));
             render(
                 <Provider theme={defaultTheme}>
                     <AdobeWorkspacePicker
-                        state={baseState as WizardState}
+                        state={state}
                         updateState={mockUpdateState}
                     />
                 </Provider>
@@ -126,20 +128,39 @@ describe('AdobeWorkspacePicker', () => {
             expect(stageFinder()([production, development])).toBeUndefined();
         });
 
-        it('matches on the name alone', () => {
-            const byName: Workspace = { id: 'w', name: 'stage-eu', title: 'Pre-Production' };
-            expect(stageFinder()([mockWorkspaces[1], byName])?.id).toBe('w');
+        /**
+         * It matched the SUBSTRING "stage", in either field, case-insensitively,
+         * until 2026-09-20. Two things killed that: creation no longer adds a Stage
+         * workspace (AB-24), and under workspace-per-add a project holds a workspace
+         * per integration — where any title containing "stage" matches and which one
+         * `find` reaches first is Adobe's ordering, not ours.
+         */
+        it('takes the workspace the PROJECT records, over one named Stage', () => {
+            const recorded: Workspace = { id: 'w-recorded', name: 'NorthwindErpq3k9' };
+            const stage: Workspace = { id: 'w-stage', name: 'Stage', title: 'Stage' };
+            const withRecord = {
+                ...baseState,
+                adobeWorkspace: { id: 'w-recorded', name: 'NorthwindErpq3k9' },
+            };
+            expect(stageFinder(withRecord as WizardState)([stage, recorded])?.id).toBe(
+                'w-recorded',
+            );
         });
 
-        it('matches on the title alone', () => {
+        it('matches "Stage" EXACTLY — not a name that merely contains it', () => {
+            const nearly: Workspace = { id: 'w', name: 'stage-eu', title: 'Pre-Production' };
+            expect(stageFinder()([mockWorkspaces[1], nearly])).toBeUndefined();
+        });
+
+        it('does not match a TITLE containing stage, only the name', () => {
             const byTitle: Workspace = { id: 'w', name: 'ws-2', title: 'Stage Environment' };
-            expect(stageFinder()([mockWorkspaces[1], byTitle])?.id).toBe('w');
+            expect(stageFinder()([mockWorkspaces[1], byTitle])).toBeUndefined();
         });
 
-        it('matches regardless of case, and tolerates a workspace with no title', () => {
+        it('is case-sensitive, so a shouted name is not Stage', () => {
             const untitled: Workspace = { id: 'p', name: 'Production' };
             const shouting: Workspace = { id: 'w', name: 'STAGE' };
-            expect(stageFinder()([untitled, shouting])?.id).toBe('w');
+            expect(stageFinder()([untitled, shouting])).toBeUndefined();
         });
     });
     const mockUpdateState = jest.fn();

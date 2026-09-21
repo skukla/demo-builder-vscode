@@ -4379,7 +4379,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 171,
+            "line": 175,
             "mutants": 1,
             "category": "other",
             "reason": "Every callback in this hook closes over refs and over other callbacks whose own dependency lists are empty, so no dependency in the chain ever changes identity. Emptying the list therefore memoises exactly the same function, and the Stryker replacement is a constant literal that is also equal on every render, so useCallback still returns a stable reference either way. Nothing a test can observe \u2014 identity, call count, or payload \u2014 differs.",
@@ -4392,7 +4392,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 177,
+            "line": 181,
             "mutants": 1,
             "category": "other",
             "reason": "Every callback in this hook closes over refs and over other callbacks whose own dependency lists are empty, so no dependency in the chain ever changes identity. Emptying the list therefore memoises exactly the same function, and the Stryker replacement is a constant literal that is also equal on every render, so useCallback still returns a stable reference either way. Nothing a test can observe \u2014 identity, call count, or payload \u2014 differs.",
@@ -4405,7 +4405,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 295,
+            "line": 299,
             "mutants": 1,
             "category": "other",
             "reason": "Every callback in this hook closes over refs and over other callbacks whose own dependency lists are empty, so no dependency in the chain ever changes identity. Emptying the list therefore memoises exactly the same function, and the Stryker replacement is a constant literal that is also equal on every render, so useCallback still returns a stable reference either way. Nothing a test can observe \u2014 identity, call count, or payload \u2014 differs.",
