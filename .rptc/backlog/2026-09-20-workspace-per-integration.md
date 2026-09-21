@@ -61,11 +61,59 @@ is a workspace recorded PER COMPONENT and read by the target resolver.
   `set_project_destination` change behaviour; `docs/systems/mcp-server.md` must say so.
 - **The webview**: the Add Integration flow's destination stages assume one shared
   workspace (`flowStages.ts`, `AddIntegrationFlowAdapter.tsx`).
-- **Existing projects**: every integration sits in the main workspace and must keep
-  working. Whether to move them, and how, is a plan decision — the destination-move code
-  is the likely starting point.
+- **Existing projects** get their own slice — see below. They must keep working
+  untouched, AND they must be able to reach the same shape a new project gets.
 - **Project reset** (`projectResetService.ts`) targets `project.adobe` only: decide whether
   reset leaves integration workspaces alone or resets them too.
+
+## Moving an existing project onto this model
+
+**Part of this item, not a follow-on** (owner, 2026-09-20). A change that only works for
+projects created after it is half a change: the components already on disk are the ones
+SCs are running demos from, and Kukla Bodea is the first of them.
+
+### What it does
+
+For each App Builder component already in the project: create its workspace, record it,
+provision Runtime, subscribe that component's own APIs there, and redeploy it. Then the
+project's workspace holds only what belongs to the project.
+
+### It deploys and never deletes, like the move it reuses
+
+`appBuilderComponentMigration.ts` already moves every component when a project's
+destination changes, and its rule is the right one here: **deploy to the new target and
+leave the old deployment serving.** Its own reasoning applies unchanged — undeploy is the
+only irreversible step, the previous namespace is a free rollback when the new target
+turns out wrong, and idle Runtime actions cost essentially nothing.
+
+That buys reversibility almost for free: undoing a migration is clearing the recorded
+workspace, because the old deployment never stopped answering. Deleting the created
+workspace is a separate, later choice.
+
+### Explicit, never automatic
+
+This is a real deploy against live Adobe resources, so it is an action an SC takes, not
+something an activation sweep does behind them. Reachable from the dashboard and as an MCP
+tool, both confirmed before they run.
+
+That is a different rule from the AI-bundle sweep, which refreshes stale files silently —
+and deliberately so. Writing a file into a project is not the same as redeploying it.
+
+### Kukla Bodea, concretely
+
+Its only App Builder component today is the mesh (`eds-accs-mesh`, deployed, no recorded
+workspace). So its migration is one workspace, one redeploy — the smallest possible case,
+which makes it the right first one to run for real.
+
+Its storefront is EDS and not an App Builder component, so nothing touches it.
+
+### What the slice must prove
+
+- A project migrated this way behaves identically to one created after this item.
+- A project NOT migrated keeps working, because an absent workspace still means the
+  project's own.
+- The old deployment still answers after the move, so the rollback is real rather than
+  assumed.
 
 ## Live checks the plan still owes
 
@@ -397,8 +445,12 @@ starter kit alone, or the ERP with its system — is one workspace. This also ke
 ## Done when
 
 An SC can add two App Management integrations to one project — including two of the
-SAME kind, such as two ERPs — each deploys into its own workspace, each is removed by
-deleting that workspace, and a project made before this still works unchanged.
+SAME kind, such as two ERPs — each deploys into its own workspace, and each is removed by
+deleting that workspace.
+
+A project made before this still works unchanged, AND can be moved onto the model, with
+the old deployment left serving so the move can be undone. Kukla Bodea is the first one
+moved.
 
 ## Shipped so far
 
