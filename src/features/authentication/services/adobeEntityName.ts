@@ -10,7 +10,7 @@
  * `deriveAdobeEntityName` always appends a short random suffix so two entities with the
  * same title (→ same base) don't collide (409). A WORKSPACE name is shown to the SC —
  * Console's workspace boxes print the name, not the title — so workspaces use
- * `deriveFreeAdobeEntityName`: dashes for spaces, and no ending unless the name is taken.
+ * `deriveFreeAdobeEntityName`: dashes for spaces, and a number only when the name is taken.
  *
  * Shared by both project and workspace creation (AdobeConsoleProjectOps).
  *
@@ -58,9 +58,10 @@ export function deriveAdobeEntityName(title: string, suffix: string = randomName
  * Runtime namespace answered normally (both measured live 2026-09-21; projects were
  * not tested, so project names keep `deriveAdobeEntityName`).
  *
- * The random ending (`-ab12`) is added when a name in `taken` matches, ignoring case,
- * or when `taken` is undefined — names that could not be read are not proof the name
- * is free.
+ * A taken name (compared ignoring case) is numbered with the lowest free number —
+ * `Northwind-ERP-1`, `-2`, ... (owner, 2026-09-21). When `taken` is undefined the
+ * names in use could not be read, so nothing proves a name free and a random ending
+ * (`-ab12`) is used instead of a number.
  *
  * @param title - the free-form title
  * @param taken - the names already in use, or undefined when unknown
@@ -74,7 +75,15 @@ export function deriveFreeAdobeEntityName(
 ): string {
     const dashed = (title || '').replace(/[^A-Za-z0-9]+/g, '-');
     const cut = (length: number) => dashed.slice(0, length).replace(/^-+|-+$/g, '');
+    const withEnding = (ending: string) =>
+        `${cut(MAX_NAME_LENGTH - ending.length - 1) || 'App'}-${ending}`;
+    if (!taken) return withEnding(suffix);
+
+    const inUse = new Set(taken.map((name) => name.toLowerCase()));
     const bare = cut(MAX_NAME_LENGTH) || 'App';
-    const inUse = taken?.some((name) => name.toLowerCase() === bare.toLowerCase()) ?? true;
-    return inUse ? `${cut(MAX_NAME_LENGTH - SUFFIX_LENGTH - 1) || 'App'}-${suffix}` : bare;
+    if (!inUse.has(bare.toLowerCase())) return bare;
+    for (let n = 1; ; n++) {
+        const numbered = withEnding(String(n));
+        if (!inUse.has(numbered.toLowerCase())) return numbered;
+    }
 }

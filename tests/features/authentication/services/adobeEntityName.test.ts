@@ -78,7 +78,8 @@ describe('randomNameSuffix', () => {
 // Console's workspace boxes show the NAME, so "ProductionKnDo" is what the SC read
 // (owner, 2026-09-21). A space is refused but a dash is not (both measured live
 // that day, the dash with a Runtime namespace that answered), so a space becomes a
-// dash; the random ending is kept for when the name is taken.
+// dash. A taken name is numbered; the random ending is only for when the names
+// in use cannot be read.
 describe('deriveFreeAdobeEntityName', () => {
     it('is the title with spaces as dashes when nothing in the project has it', () => {
         expect(deriveFreeAdobeEntityName('Northwind ERP', ['Production'])).toBe('Northwind-ERP');
@@ -88,10 +89,16 @@ describe('deriveFreeAdobeEntityName', () => {
         expect(deriveFreeAdobeEntityName('  My  demo_2024! ', [])).toBe('My-demo-2024');
     });
 
-    it('adds the random ending when the name is taken, ignoring case', () => {
-        expect(deriveFreeAdobeEntityName('Northwind ERP', ['northwind-erp'], 'ZZZZ')).toBe(
-            'Northwind-ERP-ZZZZ',
-        );
+    // A second one is numbered, not scrambled: Northwind-ERP-1, -2, ... (owner, 2026-09-21).
+    it('numbers a taken name with the lowest free number, ignoring case', () => {
+        expect(deriveFreeAdobeEntityName('Northwind ERP', ['northwind-erp'])).toBe('Northwind-ERP-1');
+        expect(
+            deriveFreeAdobeEntityName('Northwind ERP', ['Northwind-ERP', 'Northwind-ERP-1', 'Northwind-ERP-3']),
+        ).toBe('Northwind-ERP-2');
+    });
+
+    it('keeps a numbered name at 19 or fewer', () => {
+        expect(deriveFreeAdobeEntityName('a'.repeat(40), ['a'.repeat(19)])).toBe('a'.repeat(17) + '-1');
     });
 
     it('adds the random ending when the names in use are unknown', () => {

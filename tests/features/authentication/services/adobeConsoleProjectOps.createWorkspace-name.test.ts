@@ -33,13 +33,13 @@ describe('the name a new workspace is given', () => {
         expect(result).toEqual({ id: 'ws-new', name: 'Northwind-ERP', title: 'Northwind ERP' });
     });
 
-    it('carries a random ending when the project already has that name', async () => {
+    it('is numbered when the project already has that name', async () => {
         const create = jest.fn().mockResolvedValue({ body: { workspaceId: 'ws-new' } });
         const ops = opsWith(create, jest.fn().mockResolvedValue([workspace('Northwind-ERP')]));
 
         await ops.createWorkspace('Northwind ERP', 'd', TARGET);
 
-        expect(sentName(create)).toMatch(/^Northwind-ERP-[A-Za-z0-9]{4}$/);
+        expect(sentName(create)).toBe('Northwind-ERP-1');
     });
 
     it('carries a random ending when the names in use cannot be read', async () => {

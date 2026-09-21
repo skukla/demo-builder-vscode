@@ -11,7 +11,7 @@
  * THE NAME COMES FROM THE TITLE. Console's workspace boxes show the machine NAME,
  * so it is what the SC reads. A space there 400s and a dash does not (measured
  * 2026-09-21), so "Northwind ERP" is titled "Northwind ERP" and named
- * `Northwind-ERP`, with four random characters only when that name is taken
+ * `Northwind-ERP` — or `Northwind-ERP-1`, `-2` when that name is taken
  * (`deriveFreeAdobeEntityName`). Adobe refuses to change a machine name later
  * (`400 "Workspace name can not be changed"`, measured 2026-09-20) and the name
  * reaches every action URL, so it is fixed at creation; a later rename moves the

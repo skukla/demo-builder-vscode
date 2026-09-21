@@ -376,14 +376,13 @@ export class AdobeConsoleProjectOps {
 
             // Console's workspace boxes SHOW the name, so it is the title with spaces
             // as dashes — "Northwind ERP" → `Northwind-ERP` (a space 400s, a dash does
-            // not; measured 2026-09-21) — and a random ending only when the name is
-            // taken. A clash the list could not show gets one retry with the ending.
+            // not; measured 2026-09-21) — numbered `-1`, `-2` when the name is taken.
+            // A clash the list could not show gets one retry with a random ending.
             const taken = await this.listWorkspaces(orgId, projectId).then(
                 (all) => all.map((w) => w.name),
                 () => undefined,
             );
             let name = deriveFreeAdobeEntityName(title, taken);
-            const sentBare = name === deriveFreeAdobeEntityName(title, []);
             const send = () => {
                 this.debugLogger.info(
                     `[Entity Fetcher] Creating workspace "${title}" (name: ${name}) in project ${projectId}`,
@@ -391,7 +390,7 @@ export class AdobeConsoleProjectOps {
                 return client.createWorkspace(orgId, projectId, { name, title, description });
             };
             const response = await send().catch((error: Error) => {
-                if (!isNameClash(error) || !sentBare) throw error;
+                if (!isNameClash(error) || !taken) throw error;
                 name = deriveFreeAdobeEntityName(title, undefined);
                 return send();
             });

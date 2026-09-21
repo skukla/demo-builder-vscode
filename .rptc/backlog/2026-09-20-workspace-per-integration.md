@@ -282,7 +282,8 @@ workspace limit is lower.
 > follows a rename, which is all the argument below needs. A bound pair is titled
 > after its SYSTEM ("Northwind ERP"), the half the SC names, or after the integration
 > when the SC gave the system no name. Console's workspace boxes show the NAME, not
-> the title, so the four random characters are added only when the name is taken.
+> the title, so a taken name is numbered (`Northwind-ERP-1`, `-2`) instead of carrying
+> four random characters.
 > A space becomes a dash: Adobe answered `400 "Workspace name allows only alpha numeric
 > values"` to "Space Test" yet accepted "Space-Test", and a dashed workspace's Runtime
 > namespace (`<org>-<project>-dash-test`) answered a package list normally
