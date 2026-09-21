@@ -73,14 +73,31 @@ Title-only is the safe half, for the same reason the project rename is title-onl
   Runtime namespace from.
 - Store the title we set, so the local copy does not go stale.
 
-**Two things to test before building this:**
+**Measured 2026-09-20, on Bodea's Stage workspace, and fully reverted:**
 
-1. **Whether Adobe permits a PATCH of the default workspace's title at all.** Untested —
-   the workspace it would have been tested on is deleted.
-2. **Whether a machine-name change moves the Runtime namespace.** Not needed for the
-   recommendation, but worth knowing before anyone tries it. Both outcomes are bad: the
-   namespace follows and every deployed action changes URL, or it does not and Console
-   disagrees with reality.
+| What was sent | Result |
+|---|---|
+| `{ title: 'Demo' }` | **400 — "Workspace name is required."** Nothing changed. |
+| `{ name: <current>, title: 'Demo' }` | **HTTP 200.** Title became "Demo", machine name stayed `Stage`, namespace stayed `285361-214brownarmadillo-stage`. |
+| `{ name: <current>, title: 'Stage' }` | **HTTP 200.** Restored. |
+
+So a workspace retitle works and moves nothing — but **`editWorkspace` refuses a
+title-only body.** The PATCH must carry the machine name, which makes this a call where
+getting the argument wrong silently renames the machine name and, with it, the Runtime
+namespace.
+
+**The rule that follows: READ the current name and echo it back. Never construct it.**
+A derived name in that field would look correct at every layer. The test for this must
+assert the ARGUMENT — that the `name` sent equals the `name` read — because a mocked
+console client cannot see a malformed call.
+
+Note that projects and workspaces differ here: `renameRemoteProject` sends `{ title }`
+alone and Adobe accepts it. Do not copy that shape to a workspace.
+
+**Still untested:** whether Adobe permits this on the workspace IT created. The
+measurement above is on a workspace we created; Bodea's Production is deleted, so
+settling it needs a throwaway Adobe project. The failure would surface immediately at
+implementation, so this is a known unknown rather than a blocker.
 
 Suggested title: **"Demo"** — it says what the workspace is for, and being the same in
 every project means an SC learns it once. The project's own title is the alternative, but
