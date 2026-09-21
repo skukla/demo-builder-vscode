@@ -168,21 +168,21 @@ export function IntegrationsGrid({
     // regenerates the storefront config WITHOUT the MESH_ENDPOINT it provided, so
     // the storefront has no data layer until a mesh is deployed again. That is the
     // honest consequence of the verb, and it belongs in front of the click.
-    const removeConsequence = useMemo((): string | undefined => {
-        const target = cards.find((card) => (card.componentId ?? card.id) === pendingRemoveId);
-        return target?.isMesh
-            ? 'Your storefront loses its API Mesh endpoint until you deploy a new mesh.'
-            : undefined;
-    }, [cards, pendingRemoveId]);
+    const pendingRemove = useMemo(
+        () => cards.find((card) => (card.componentId ?? card.id) === pendingRemoveId),
+        [cards, pendingRemoveId],
+    );
+    const removeConsequence = pendingRemove?.isMesh
+        ? 'Your storefront loses its API Mesh endpoint until you deploy a new mesh.'
+        : undefined;
 
     const closeRemoveDialog = useCallback((): void => setPendingRemoveId(null), []);
     const confirmRemove = useCallback((): void => {
         if (pendingRemoveId) {
-            const target = cards.find((card) => (card.componentId ?? card.id) === pendingRemoveId);
-            operations.run(pendingRemoveId, target?.name ?? pendingRemoveId, 'remove');
+            operations.run(pendingRemoveId, pendingRemove?.name ?? pendingRemoveId, 'remove');
         }
         setPendingRemoveId(null);
-    }, [cards, operations, pendingRemoveId]);
+    }, [operations, pendingRemove, pendingRemoveId]);
 
     return (
         // No section heading, count, or Add button here: the SCREEN's page header
@@ -214,7 +214,7 @@ export function IntegrationsGrid({
 
             <AppBuilderComponentRemoveDialog
                 isOpen={pendingRemoveId !== null}
-                appBuilderComponentId={pendingRemoveId ?? ''}
+                componentName={pendingRemove?.name ?? pendingRemoveId ?? ''}
                 consequence={removeConsequence}
                 onConfirm={confirmRemove}
                 onClose={closeRemoveDialog}
