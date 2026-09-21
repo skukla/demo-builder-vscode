@@ -16,6 +16,11 @@ jest.mock('@/features/app-builder/services/runtimeCredentials', () => ({
     extractAioErrorDetail: jest.requireActual('@/features/app-builder/services/runtimeCredentials')
         .extractAioErrorDetail,
     aioOutputTail: jest.requireActual('@/features/app-builder/services/runtimeCredentials').aioOutputTail,
+    // An extension app's credentials come from the config it just imported.
+    readRuntimeCredentials: jest.fn().mockResolvedValue({
+        namespace: 'test-namespace',
+        auth: 'fake-test-pw-not-a-secret',
+    }),
     fetchRuntimeCredentials: jest.fn().mockResolvedValue({
         namespace: 'test-namespace',
         auth: 'fake-test-pw-not-a-secret',

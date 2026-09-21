@@ -69,6 +69,10 @@ export function timedSteps(write: (line: string) => void): { step: (message: str
     };
     return {
         step: (message) => {
+            // The same message again is the same step still running — a poller
+            // re-reporting its line — not a new one. Logging each as its own step
+            // printed "Installing into Commerce…" four times for one install.
+            if (message === current?.message) return;
             const now = Date.now();
             close(now);
             write(message);

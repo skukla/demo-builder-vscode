@@ -430,6 +430,7 @@ describe('addAppBuilderComponent partial-failure', () => {
         // before the deploy and is otherwise silent time.
         expect(seen).toEqual([
             OPERATION_STAGES.subscribingApis.label,
+            OPERATION_STAGES.gettingCode.label,
             OPERATION_STAGES.generatingMeshConfig.label,
             'Reading mesh configuration...',
             'Deploying...',
@@ -461,7 +462,8 @@ describe('addAppBuilderComponent partial-failure', () => {
             },
         });
 
-        expect(seen).toEqual([OPERATION_STAGES.subscribingApis.label, 'Building…']);
+        const { subscribingApis, gettingCode } = OPERATION_STAGES;
+        expect(seen).toEqual([subscribingApis.label, gettingCode.label, 'Building…']);
     });
 
     // BEHAVIOUR CHANGE (2026-08-04 consolidation): a redeploy used to REPLACE the

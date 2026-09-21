@@ -23,10 +23,16 @@ import { promises as fsPromises } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { declaresIncludeImsCredentials, listDeclaredActions } from './appConfigPackages';
-import { urlPayload, urlsForDeclaredActions } from './deployedUrls';
+import { parseGetUrlOutput, urlPayload, urlsForDeclaredActions } from './deployedUrls';
 import { writeFailureLog } from './deployFailureLog';
 import { forgetDeployRecordOnNewTarget, rememberDeployTarget } from './deployRecord';
-import { aioOutputTail, extractAioErrorDetail, fetchRuntimeCredentials } from './runtimeCredentials';
+import {
+    aioOutputTail,
+    extractAioErrorDetail,
+    fetchRuntimeCredentials,
+    readRuntimeCredentials,
+    type RuntimeCredentials,
+} from './runtimeCredentials';
 import type { AppDeploymentResult } from './types';
 import { buildComponent } from '@/core/shell/buildComponent';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
@@ -34,7 +40,7 @@ import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
-import { parseJSON, toError } from '@/types/typeGuards';
+import { toError } from '@/types/typeGuards';
 
 export type { AppDeploymentResult };
 
@@ -61,34 +67,6 @@ function resolveNodeVersion(declared?: string): string {
 type ProgressCallback = (message: string, subMessage?: string) => void;
 
 /**
- * Flatten a nested URL map into a flat { name -> url } record, keeping only
- * string-valued leaves. Tolerates any shape (returns {} for non-objects).
- */
-function flattenUrls(value: unknown, prefix = ''): Record<string, string> {
-    const result: Record<string, string> = {};
-    if (!value || typeof value !== 'object') {
-        return result;
-    }
-    for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
-        const name = prefix ? `${prefix}/${key}` : key;
-        if (typeof val === 'string') {
-            result[name] = val;
-        } else if (val && typeof val === 'object') {
-            Object.assign(result, flattenUrls(val, name));
-        }
-    }
-    return result;
-}
-
-/**
- * Parse `aio app get-url --json` stdout defensively into a deploy result payload.
- * Never throws: an unparseable or unexpected shape yields empty url/deployedUrls.
- */
-function parseGetUrlOutput(stdout: string | undefined): AppDeploymentResult['data'] {
-    return urlPayload(flattenUrls(parseJSON<Record<string, unknown>>(stdout ?? '')));
-}
-
-/**
  * Import the targeted workspace's Console configuration into an EXTENSION
  * app's directory (`aio app use`) so deploy's registry sync can read it.
  *
@@ -104,7 +82,7 @@ async function importWorkspaceConfig(
     commandManager: CommandExecutor,
     nodeVersion: string,
     logger: Logger,
-): Promise<void> {
+): Promise<RuntimeCredentials> {
     const scratchDir = await fsPromises.mkdtemp(path.join(os.tmpdir(), 'db-use-'));
     const filePath = path.join(scratchDir, `ws-${crypto.randomBytes(6).toString('hex')}.json`);
     try {
@@ -116,6 +94,8 @@ async function importWorkspaceConfig(
             const detail = extractAioErrorDetail(download.stderr) || `exit code ${download.code}`;
             throw new Error(`Could not download workspace configuration: ${detail}`);
         }
+        // The deploy's namespace and key are in this same file — read, not re-downloaded.
+        const credentials = await readRuntimeCredentials(filePath, logger);
 
         const use = await commandManager.execute(
             `aio app use "${filePath}" --overwrite --no-service-sync --no-input`,
@@ -132,6 +112,7 @@ async function importWorkspaceConfig(
             throw new Error(`Could not import workspace configuration: ${detail}`);
         }
         logger.debug('[App Builder] Workspace configuration imported for extension app');
+        return credentials;
     } finally {
         await fsPromises.rm(scratchDir, { recursive: true, force: true });
         // aio app use writes runtime credentials into the app's .env — remove
@@ -284,9 +265,10 @@ async function deployAppComponentOnce(
     const { onProgress } = opts;
     const node = resolveNodeVersion(opts.nodeVersion);
     try {
+        let imported: RuntimeCredentials | undefined;
         if (opts.layout === 'extension') {
             onProgress?.(OPERATION_STAGES.deployingApp.label, 'Pointing the app at your workspace');
-            await importWorkspaceConfig(componentPath, commandManager, node, logger);
+            imported = await importWorkspaceConfig(componentPath, commandManager, node, logger);
         }
 
         await buildComponent(
@@ -302,8 +284,8 @@ async function deployAppComponentOnce(
         // or it dies with "missing Adobe I/O Runtime namespace". Fetch them
         // from the targeted workspace and inject per-invocation (execa merges
         // env, so only the two vars are passed; the auth value is never logged).
-        onProgress?.(OPERATION_STAGES.deployingApp.label, 'Finding where the app will run');
-        const runtimeCreds = await fetchRuntimeCredentials(commandManager, logger, node);
+        if (!imported) onProgress?.(OPERATION_STAGES.deployingApp.label, 'Finding where the app will run');
+        const runtimeCreds = imported ?? (await fetchRuntimeCredentials(commandManager, logger, node));
         // An action with `include-ims-credentials` makes aio require the workspace's
         // S2S credential as IMS_OAUTH_S2S_* — what `aio app use` would have written to
         // the .env this pipeline never keeps. Only an app that asks is handed the secret.

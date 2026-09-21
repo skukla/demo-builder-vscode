@@ -282,6 +282,16 @@ async function subscribeApiKeyServices(
  *   A credential still holding one is sent the full list even when nothing is
  *   missing, because that PUT is the only way a removal reaches Adobe.
  */
+/** Whether a promise has already settled, without waiting on it. */
+async function answeredAlready(pending: Promise<unknown>): Promise<boolean> {
+    const settled = pending.then(
+        () => true,
+        () => true,
+    );
+    const stillWaiting = new Promise<false>((resolve) => setImmediate(() => resolve(false)));
+    return Promise.race([settled, stillWaiting]);
+}
+
 export async function subscribeRequiredApis(
     appBuilderComponents: AppBuilderComponentCatalogEntry[],
     target: OrgTarget,
@@ -294,7 +304,11 @@ export async function subscribeRequiredApis(
 ): Promise<SubscribedApi[]> {
     const requiredApis = computeRequiredApis(appBuilderComponents, extraApis);
     const removed = new Set(removing.filter((code) => !requiredApis.includes(code)));
-    observe?.onStep?.('Checking what subscriptions the workspace already has');
+    // Said only when it happens: an add skips the check (a new workspace holds
+    // nothing), and announcing it anyway flashed a 0ms step (2026-09-21).
+    if (!observe?.skipCoverageCheck) {
+        observe?.onStep?.('Checking what subscriptions the workspace already has');
+    }
     // Started BEFORE the credential read, not after it: the full path always
     // needs this catalog, and the read can spend its whole budget answering
     // "something is missing". Run one after the other and the SC waits for the
@@ -323,7 +337,11 @@ export async function subscribeRequiredApis(
         }
         return requiredApis.map((code) => ({ code }));
     }
-    observe?.onStep?.('Reading the Adobe service list');
+    // Said only when the list is still on its way: an answer already held (the
+    // saved copy, a warm load) is not a step anyone waits on.
+    if (!(await answeredAlready(catalog))) {
+        observe?.onStep?.('Reading the Adobe service list');
+    }
     const servicesForOrg = await catalog;
     const services = resolveServiceInfos(requiredApis, servicesForOrg);
     const { apiKey, oauthS2S, unmatched } = partitionByPlatform(services);

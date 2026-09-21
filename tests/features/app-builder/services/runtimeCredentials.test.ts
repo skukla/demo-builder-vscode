@@ -14,6 +14,7 @@ import {
     aioOutputTail,
     extractAioErrorDetail,
     fetchRuntimeCredentials,
+    readRuntimeCredentials,
     workspaceHasRuntime,
 } from '@/features/app-builder/services/runtimeCredentials';
 import { sleep } from '@/core/utils/sleep';
@@ -77,6 +78,29 @@ const WORKSPACE_WITH_S2S = JSON.stringify({
             },
         },
     },
+});
+
+// An extension app's `aio app use` already downloaded the workspace config; its
+// namespace and key are read from that file instead of downloading it again.
+describe('readRuntimeCredentials', () => {
+    beforeEach(() => jest.clearAllMocks());
+
+    it('reads namespace and key from the given file, with no download', async () => {
+        (fsPromises.readFile as jest.Mock).mockResolvedValue(WORKSPACE_JSON);
+
+        await expect(readRuntimeCredentials('/tmp/db-use-x/ws.json', logger)).resolves.toEqual({
+            namespace: '12345-myproject-stage',
+            auth: 'fake-test-pw-not-a-secret',
+        });
+        expect(fsPromises.readFile).toHaveBeenCalledWith('/tmp/db-use-x/ws.json', 'utf-8');
+        expect(executeMock).not.toHaveBeenCalled();
+    });
+
+    it('refuses a file with no Runtime namespace, as the download path does', async () => {
+        (fsPromises.readFile as jest.Mock).mockResolvedValue(JSON.stringify({ project: {} }));
+
+        await expect(readRuntimeCredentials('/tmp/x.json', logger)).rejects.toThrow(/no Adobe I\/O Runtime namespace/);
+    });
 });
 
 describe('fetchRuntimeCredentials', () => {

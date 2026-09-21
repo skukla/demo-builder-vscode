@@ -1,5 +1,9 @@
 import { deployAppComponent } from '@/features/app-builder/services/appDeployment';
 import { mockFs, createMockCommandManager, createMockLogger } from './appDeployment.testUtils';
+import {
+    fetchRuntimeCredentials,
+    readRuntimeCredentials,
+} from '@/features/app-builder/services/runtimeCredentials';
 
 /**
  * deployAppComponent Test Suite
@@ -42,6 +46,10 @@ jest.mock('@/features/app-builder/services/runtimeCredentials', () => ({
     extractAioErrorDetail: jest.requireActual('@/features/app-builder/services/runtimeCredentials')
         .extractAioErrorDetail,
     aioOutputTail: jest.requireActual('@/features/app-builder/services/runtimeCredentials').aioOutputTail,
+    readRuntimeCredentials: jest.fn().mockResolvedValue({
+        namespace: 'test-namespace',
+        auth: 'fake-test-pw-not-a-secret',
+    }),
     fetchRuntimeCredentials: jest.fn().mockResolvedValue({
         namespace: 'test-namespace',
         auth: 'fake-test-pw-not-a-secret',
@@ -519,6 +527,11 @@ describe('extension layout: workspace config import', () => {
         const useIdx = commands.findIndex((c: string) => c.startsWith('aio app use'));
         expect(downloadIdx).toBeGreaterThanOrEqual(0);
         expect(useIdx).toBeGreaterThan(downloadIdx);
+        // ONE download: the namespace and key are read from the imported file (a
+        // second download cost 12s of the ERP add, 2026-09-21).
+        expect(commands.filter((c) => c.startsWith('aio console workspace download'))).toHaveLength(1);
+        expect(jest.mocked(fetchRuntimeCredentials)).not.toHaveBeenCalled();
+        expect(jest.mocked(readRuntimeCredentials)).toHaveBeenCalledWith(expect.any(String), logger);
         // Non-interactive, overwrite, no service sync — the measured-live shape.
         expect(commands[useIdx]).toContain('--overwrite');
         expect(commands[useIdx]).toContain('--no-input');

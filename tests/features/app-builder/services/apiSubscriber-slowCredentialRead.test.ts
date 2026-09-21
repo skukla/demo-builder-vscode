@@ -90,11 +90,46 @@ describe('what the subscribe says while it runs', () => {
             onStep: (step) => steps.push(step),
         });
 
+        // The service list answered while the credentials were read, so waiting on
+        // it is not a step — announcing it anyway flashed a 0ms line (2026-09-21).
         expect(steps).toEqual([
             'Checking what subscriptions the workspace already has',
-            'Reading the Adobe service list',
             'Adding 3 services to your workspace',
         ]);
+    });
+
+    it('names the service list when it is still on its way', async () => {
+        let answer: (services: typeof SERVICES_FOR_ORG) => void = () => undefined;
+        const fake = clientWithHangingRead({
+            getServicesForOrg: jest.fn(() => new Promise((resolve) => (answer = resolve))),
+            listCredentialIds: jest.fn().mockResolvedValue(['s2s']),
+            getSubscribedServiceCodes: jest.fn().mockResolvedValue([MGMT]),
+        });
+        const steps: string[] = [];
+
+        const run = subscribeRequiredApis(entries(), TARGET, fake, undefined, [], undefined, [], {
+            onStep: (step) => steps.push(step),
+        });
+        await new Promise((resolve) => setImmediate(resolve));
+        await new Promise((resolve) => setImmediate(resolve));
+        answer(SERVICES_FOR_ORG);
+        await run;
+
+        expect(steps).toContain('Reading the Adobe service list');
+    });
+
+    // An add's workspace is new, so there is nothing to check — and it is not said.
+    it('does not announce the check an add skips', async () => {
+        const fake = clientWithHangingRead();
+        const steps: string[] = [];
+
+        await subscribeRequiredApis(entries(), TARGET, fake, undefined, [], undefined, [], {
+            onStep: (step) => steps.push(step),
+            skipCoverageCheck: true,
+        });
+
+        expect(steps).not.toContain('Checking what subscriptions the workspace already has');
+        expect(fake.listCredentialIds).not.toHaveBeenCalled();
     });
 
     it('says so when there was nothing to do', async () => {

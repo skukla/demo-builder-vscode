@@ -142,6 +142,8 @@ export async function ensureComponentWorkspace(
         /** The name the SC knows a component by — the workspace's title. */
         nameOf: (entry: AppBuilderComponentCatalogEntry) => string;
         catalog?: AppBuilderComponentCatalogEntry[];
+        /** Told just before a workspace is made — not when one is joined. */
+        onMaking?: () => void;
     },
 ): Promise<{ error: string } | undefined> {
     const existing = project.appBuilderComponents?.[entry.id]?.workspace;
@@ -166,9 +168,14 @@ export async function ensureComponentWorkspace(
 async function make(
     project: Project,
     owner: AppBuilderComponentCatalogEntry,
-    deps: { maker: WorkspaceMaker; nameOf: (entry: AppBuilderComponentCatalogEntry) => string },
+    deps: {
+        maker: WorkspaceMaker;
+        nameOf: (entry: AppBuilderComponentCatalogEntry) => string;
+        onMaking?: () => void;
+    },
 ): Promise<NonNullable<AppBuilderComponentState['workspace']> | { error: string }> {
     const title = deps.nameOf(owner);
+    deps.onMaking?.();
     const created = await deps.maker.createWorkspace(
         title,
         `Demo Builder: ${owner.id}`,

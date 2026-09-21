@@ -622,7 +622,7 @@ export class AuthenticationService {
     async deleteWorkspace(
         workspaceId: string,
         target?: { orgId?: string; projectId?: string },
-    ): Promise<{ deleted: true } | ConsoleOpFailure> {
+    ): Promise<{ deleted: true; note?: string } | ConsoleOpFailure> {
         return withTiming('deleteWorkspace', async () => {
             const { projectOps } = await this.ensureEntities();
             return projectOps.deleteWorkspace(workspaceId, target);

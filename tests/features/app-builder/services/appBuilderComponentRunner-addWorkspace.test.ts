@@ -30,6 +30,7 @@ jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
 import { addAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentRunner';
 import { ensureComponentWorkspace } from '@/features/app-builder/services/componentWorkspace';
 import { MESH_ENTRY, createDeps, createProject } from './appBuilderComponentRunner.testUtils';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 
 const SYSTEM: AppBuilderComponentCatalogEntry = {
     id: 'demo-erp',
@@ -77,8 +78,10 @@ function depsWithRealWorkspaces(adobe: ReturnType<typeof fakeAdobe>, catalog: Ap
             },
         })),
     });
-    deps.createComponentWorkspace.mockImplementation((project: Project, entry: AppBuilderComponentCatalogEntry) =>
+    deps.createComponentWorkspace.mockImplementation(
+        (project: Project, entry: AppBuilderComponentCatalogEntry, onMaking?: () => void) =>
         ensureComponentWorkspace(project, entry, {
+            onMaking,
             maker: adobe,
             saveProject: deps.saveProject,
             nameOf: (named: AppBuilderComponentCatalogEntry) => named.name,
@@ -168,6 +171,27 @@ describe('a bound pair', () => {
         expect(project.appBuilderComponents?.['demo-erp']?.workspace?.id).toBe('ws-1');
         expect(project.appBuilderComponents?.['erp-integration']?.workspace?.id).toBe('ws-1');
         expect(wrappedWorkspaces().every((id) => id === 'ws-1')).toBe(true);
+    });
+});
+
+// What the SC watches: a stage for each thing that takes time, said only when it
+// happens. On 2026-09-21 the workspace was made under "Preparing Node", the code
+// was fetched under "Adding Adobe services", and Node said "Installing … (one-time
+// install)" for both halves though it was already there.
+describe('what an add says while it runs', () => {
+    it('names the workspace and the code stages, and makes the workspace once for a pair', async () => {
+        const project = createProject();
+        const deps = depsWithRealWorkspaces(fakeAdobe(), [SYSTEM, INTEGRATION]);
+        const stages: string[] = [];
+        deps.onProgress = (message: string) => stages.push(message);
+
+        await addAppBuilderComponent(project, INTEGRATION, deps);
+
+        expect(stages.filter((s) => s === OPERATION_STAGES.makingWorkspace.label)).toHaveLength(1);
+        expect(stages.filter((s) => s === OPERATION_STAGES.gettingCode.label)).toHaveLength(2);
+        expect(stages.indexOf(OPERATION_STAGES.makingWorkspace.label)).toBeLessThan(
+            stages.indexOf(OPERATION_STAGES.subscribingApis.label),
+        );
     });
 });
 

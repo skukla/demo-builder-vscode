@@ -44,12 +44,26 @@ export const OPERATION_STAGES = {
     subscribingApis: {
         label: 'Adding Adobe services',
         expectation: 'Usually under a minute',
-        // The first thing it actually does, so row 2 is never filler: the
-        // subscribe's own steps take over a beat later and start with this one.
-        // The SC's own words (owner, 2026-09-19) — "subscriptions" and
-        // "workspace" are what they say, where "the APIs on the credential" is
-        // Console's vocabulary and meant nothing to a reader.
-        detail: 'Checking what subscriptions the workspace already has',
+        // What the stage is for, so row 2 is never filler and never claims a step
+        // that may not run: an ADD skips the "what does it already have" check (a
+        // new workspace has nothing), yet this row used to say it was checking —
+        // then flashed that step for 0ms (2026-09-21). The subscribe's own steps
+        // replace it as they happen. The SC's own words (owner, 2026-09-19) —
+        // "subscriptions" and "workspace" are what they say.
+        detail: 'The subscriptions this app needs on its workspace',
+    },
+    // Both were silent until 2026-09-21: creating the workspace ran under
+    // "Preparing Node", and the clone and npm install under "Adding Adobe
+    // services" — so the subscribe read as a minute when it took 25s.
+    makingWorkspace: {
+        label: 'Setting up the workspace',
+        expectation: 'Usually a few seconds',
+        detail: 'Its own, so it runs apart from the rest of the project',
+    },
+    gettingCode: {
+        label: 'Getting the code',
+        expectation: 'Usually under a minute',
+        detail: 'Downloading it and installing its packages',
     },
     // `buildComponent` reported a literal "Building..." until 2026-09-19 — an
     // off-table stage, so the modal showed an ellipsis title and no expectation

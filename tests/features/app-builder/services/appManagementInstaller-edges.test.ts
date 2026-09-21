@@ -353,7 +353,10 @@ describe('installAppManagementApp — what it tells the user', () => {
         expect(messages).toContain('Retrying the install (transient conflict, round 2)…');
     });
 
-    it('narrates each poll round while the install is queued', async () => {
+    // Each round used to re-send "Installing into Commerce…", and every resend read
+    // as a new step: four of them for one install (2026-09-21). The install's own
+    // line describes the wait.
+    it('does not re-announce itself on every poll round', async () => {
         const onProgress = jest.fn();
         const client = makeInstallerClient({
             reconcileInstallation: jest
@@ -371,9 +374,10 @@ describe('installAppManagementApp — what it tells the user', () => {
             makeInstallerDeps(client, { onProgress })
         );
 
-        expect(onProgress.mock.calls.map((c) => c[0] as string)).toContain(
-            'Installing into Commerce…'
-        );
+        expect(onProgress.mock.calls.map((c) => c[0] as string)).toEqual([
+            'Associating the app with your Commerce instance…',
+            'Installing into Commerce (App Management)…',
+        ]);
     });
 });
 

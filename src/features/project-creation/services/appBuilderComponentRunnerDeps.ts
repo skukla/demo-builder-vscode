@@ -250,8 +250,9 @@ export function buildDefaultRunnerDeps(
                 );
             return buildS2SDeployEnv(credentials);
         },
-        createComponentWorkspace: (project, entry) =>
+        createComponentWorkspace: (project, entry, onMaking) =>
             ensureComponentWorkspace(project, entry, {
+                onMaking,
                 maker: {
                     createWorkspace: (title, description, target, nameFrom) =>
                         ctx.authManager.createWorkspace(title, description, target, nameFrom),

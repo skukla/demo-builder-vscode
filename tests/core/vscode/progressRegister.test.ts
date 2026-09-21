@@ -288,6 +288,25 @@ describe('timedSteps', () => {
         ]);
     });
 
+    // A poller re-reporting its line is one step still running, not a new one:
+    // "Installing into Commerce…" was logged four times for one install (2026-09-21).
+    it('treats the same message again as the same step, timed as one', () => {
+        const lines: string[] = [];
+        const steps = timedSteps((line) => lines.push(line));
+
+        steps.step('Installing into Commerce');
+        jest.advanceTimersByTime(5000);
+        steps.step('Installing into Commerce');
+        jest.advanceTimersByTime(5000);
+        steps.finish();
+
+        expect(lines).toStrictEqual([
+            'Installing into Commerce',
+            'Installing into Commerce took 10.0s',
+            'finished in 10.0s',
+        ]);
+    });
+
     it('an operation that reported no step still writes its total', () => {
         const lines: string[] = [];
 

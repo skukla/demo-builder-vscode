@@ -425,18 +425,17 @@ export class AdobeConsoleProjectOps {
     async deleteWorkspace(
         workspaceId: string,
         target?: { orgId?: string; projectId?: string },
-    ): Promise<{ deleted: true } | ConsoleOpFailure> {
+    ): Promise<{ deleted: true; note?: string } | ConsoleOpFailure> {
         if (!workspaceId) {
             return { error: 'A workspace id is required.' };
         }
 
+        // Explicit target wins over the cache — same reason as createWorkspace: an
+        // agent's selection lives in `adobeTargetStore`, which never reaches this cache.
+        const orgId = target?.orgId ?? this.cacheManager.getCachedOrganization()?.id;
+        const projectId = target?.projectId ?? this.cacheManager.getCachedProject()?.id;
         try {
             await this.ensureSDKReady();
-
-            // Explicit target wins over the cache — same reason as createWorkspace: an
-            // agent's selection lives in `adobeTargetStore`, which never reaches this cache.
-            const orgId = target?.orgId ?? this.cacheManager.getCachedOrganization()?.id;
-            const projectId = target?.projectId ?? this.cacheManager.getCachedProject()?.id;
             if (!orgId || !projectId) {
                 return { error: 'No organization or project selected.' };
             }
@@ -462,7 +461,27 @@ export class AdobeConsoleProjectOps {
         } catch (error) {
             const message = (error as Error).message || '';
             this.debugLogger.error('[Entity Fetcher] Failed to delete workspace', error as Error);
+            // An error is not proof the delete failed: on 2026-09-21 Adobe's gateway
+            // answered 504 and the workspace was gone a minute later. Look before
+            // reporting a failure the SC would then act on.
+            if (orgId && projectId && (await this.workspaceGone(orgId, projectId, workspaceId))) {
+                this.debugLogger.info('[Entity Fetcher] The workspace is gone despite the error');
+                return {
+                    deleted: true,
+                    note: 'Adobe answered with an error, but the workspace is no longer in the project.',
+                };
+            }
             return { error: message || 'Console rejected the delete with no error message.' };
+        }
+    }
+
+    /** Whether a project's workspace list no longer holds this id. False when unknowable. */
+    private async workspaceGone(orgId: string, projectId: string, workspaceId: string): Promise<boolean> {
+        try {
+            const workspaces = await this.listWorkspaces(orgId, projectId);
+            return !workspaces.some((workspace) => workspace.id === workspaceId);
+        } catch {
+            return false;
         }
     }
 

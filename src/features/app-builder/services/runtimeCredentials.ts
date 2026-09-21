@@ -132,17 +132,34 @@ export async function fetchRuntimeCredentials(
     nodeVersion: string,
 ): Promise<RuntimeCredentials> {
     try {
-        const config = await downloadWorkspaceConfig(commandManager, nodeVersion);
-        const ns = firstNamespaceOf(config);
-        if (!ns?.name || !ns?.auth) {
-            throw new Error(NO_RUNTIME_MESSAGE);
-        }
-        logger.debug(`[App Builder] Runtime namespace resolved: ${ns.name}`);
-        const imsOAuthS2SEnv = imsOAuthS2SEnvOf(config);
-        return { namespace: ns.name, auth: ns.auth, ...(imsOAuthS2SEnv ? { imsOAuthS2SEnv } : {}) };
+        return credentialsIn(await downloadWorkspaceConfig(commandManager, nodeVersion), logger);
     } catch (error) {
         throw new Error(`Runtime credential fetch failed: ${toError(error).message}`);
     }
+}
+
+/**
+ * The Runtime credentials in a workspace config ALREADY downloaded — the one an
+ * extension app's `aio app use` imports. Reading them from that file saves the
+ * second download {@link fetchRuntimeCredentials} would make: 12s of a 6-minute
+ * ERP add on 2026-09-21.
+ *
+ * @throws When the file holds no Runtime namespace
+ */
+export async function readRuntimeCredentials(filePath: string, logger: Logger): Promise<RuntimeCredentials> {
+    const config = parseJSON<WorkspaceJson>(await fsPromises.readFile(filePath, 'utf-8')) ?? undefined;
+    return credentialsIn(config, logger);
+}
+
+/** The namespace, its key and the S2S env from a parsed workspace config. */
+function credentialsIn(config: WorkspaceJson | undefined, logger: Logger): RuntimeCredentials {
+    const ns = firstNamespaceOf(config);
+    if (!ns?.name || !ns?.auth) {
+        throw new Error(NO_RUNTIME_MESSAGE);
+    }
+    logger.debug(`[App Builder] Runtime namespace resolved: ${ns.name}`);
+    const imsOAuthS2SEnv = imsOAuthS2SEnvOf(config);
+    return { namespace: ns.name, auth: ns.auth, ...(imsOAuthS2SEnv ? { imsOAuthS2SEnv } : {}) };
 }
 
 /**

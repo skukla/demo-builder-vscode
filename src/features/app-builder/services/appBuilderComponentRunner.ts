@@ -319,6 +319,8 @@ export interface AppBuilderComponentRunnerDeps extends TeardownDeps {
     createComponentWorkspace: (
         project: Project,
         entry: AppBuilderComponentCatalogEntry,
+        /** Called only when a workspace is actually made, not when one is joined. */
+        onMaking?: () => void,
     ) => Promise<{ error: string } | undefined>;
     /**
      * Delete a workspace a removed component held (AB-23), so removal returns the
@@ -786,10 +788,9 @@ async function addOne(
         if (entry.nodeVersion) {
             // Visible, not silent: a first-time fnm install takes ~30s and the
             // progress channel is the surface every add path already has.
-            deps.onProgress?.(
-            OPERATION_STAGES.preparingNode.label,
-            `Installing Node ${entry.nodeVersion} (one-time install)`,
-        );
+            // "Installing … (one-time install)" was said even when Node was already
+            // there — every add of a pair said it twice (2026-09-21).
+            deps.onProgress?.(OPERATION_STAGES.preparingNode.label, `Node ${entry.nodeVersion}`);
             const nodeError = await deps.ensureNodeVersion?.(entry.nodeVersion);
             if (nodeError) {
                 return { success: false, error: nodeError };
@@ -800,7 +801,9 @@ async function addOne(
         // point: the subscribe grants API access to a WORKSPACE's credential, so
         // subscribing first would entitle the project's workspace and leave the
         // component's own without the access it deploys against.
-        const workspaceError = await deps.createComponentWorkspace(project, entry);
+        const workspaceError = await deps.createComponentWorkspace(project, entry, () =>
+            deps.onProgress?.(OPERATION_STAGES.makingWorkspace.label),
+        );
         if (workspaceError) {
             return { success: false, error: workspaceError.error };
         }
@@ -815,6 +818,7 @@ async function addOne(
             { forComponent: entry.id, adding: true },
         );
 
+        deps.onProgress?.(OPERATION_STAGES.gettingCode.label);
         const installed = await cloneAndInstall(project, entry, deps);
         if ('error' in installed) {
             return { success: false, error: installed.error };

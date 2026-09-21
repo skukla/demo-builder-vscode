@@ -8,6 +8,7 @@
 
 import type { DeclaredAction } from './appConfigPackages';
 import type { AppDeploymentResult } from './types';
+import { parseJSON } from '@/types/typeGuards';
 
 /**
  * The URL of every action the app declares, in the namespace it was deployed to.
@@ -41,4 +42,32 @@ export function urlPayload(deployedUrls: Record<string, string>): AppDeploymentR
     const webKey = Object.keys(deployedUrls).find((k) => k.startsWith('web/'));
     const url = webKey ? deployedUrls[webKey] : (Object.values(deployedUrls)[0] ?? '');
     return { url, deployedUrls };
+}
+
+/**
+ * Flatten a nested URL map into a flat { name -> url } record, keeping only
+ * string-valued leaves. Tolerates any shape (returns {} for non-objects).
+ */
+function flattenUrls(value: unknown, prefix = ''): Record<string, string> {
+    const result: Record<string, string> = {};
+    if (!value || typeof value !== 'object') {
+        return result;
+    }
+    for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
+        const name = prefix ? `${prefix}/${key}` : key;
+        if (typeof val === 'string') {
+            result[name] = val;
+        } else if (val && typeof val === 'object') {
+            Object.assign(result, flattenUrls(val, name));
+        }
+    }
+    return result;
+}
+
+/**
+ * Parse `aio app get-url --json` stdout defensively into a deploy result payload.
+ * Never throws: an unparseable or unexpected shape yields empty url/deployedUrls.
+ */
+export function parseGetUrlOutput(stdout: string | undefined): AppDeploymentResult['data'] {
+    return urlPayload(flattenUrls(parseJSON<Record<string, unknown>>(stdout ?? '')));
 }

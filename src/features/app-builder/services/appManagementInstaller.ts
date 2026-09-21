@@ -199,7 +199,9 @@ async function pollInstallation(
         if (state && state.status !== 'in-progress') {
             return state;
         }
-        deps.onProgress?.('Installing into Commerce…');
+        // No progress line per round: the install's own line ("Installing into
+        // Commerce (App Management)…") still describes it, and a new line every
+        // five seconds read as a new step each time.
     }
     return undefined;
 }

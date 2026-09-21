@@ -228,7 +228,12 @@ export function registerAdobeResourceTools(
             if (isConsoleOpFailure(result)) {
                 return asText({ deleted: false, error: result.error });
             }
-            return asText({ deleted: true, workspaceId, projectId: target.projectId });
+            return asText({
+                deleted: true,
+                workspaceId,
+                projectId: target.projectId,
+                ...(result.note ? { note: result.note } : {}),
+            });
         },
     );
 

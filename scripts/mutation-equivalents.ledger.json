@@ -9422,7 +9422,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 1234,
+            "line": 1238,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single deps.logger.warn. Emptying it leaves the catch itself in place, so a failing remote teardown is swallowed exactly as before and the removal continues to clear local state - which the remove-contracts suite asserts directly with a rejecting executor. Only the log line differs.",
@@ -9448,7 +9448,7 @@
             "anchors": [
                 "if (cleared.componentApiPicks) {"
             ],
-            "line": 1395,
+            "line": 1399,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this guard true assigns cleared.componentApiPicks onto the caller's project when it is undefined. cleared is spread from that same project, so an undefined value there means the caller's field was already undefined and the assignment writes back exactly what was there. The mutation is a no-op for every input on which the guard was false.",
@@ -9461,7 +9461,7 @@
             "anchors": [
                 "if (cleared.componentConfigs) {"
             ],
-            "line": 1398,
+            "line": 1402,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this guard true assigns cleared.componentConfigs onto the caller's project when it is undefined. cleared is spread from that same project, so an undefined value there means the caller's field was already undefined and the assignment writes back exactly what was there. The mutation is a no-op for every input on which the guard was false.",
@@ -10293,7 +10293,7 @@
             "source": "PL-22 batch MUT-07"
         },
         {
-            "module": "src/features/app-builder/services/appDeployment.ts",
+            "module": "src/features/app-builder/services/deployedUrls.ts",
             "anchors": [
                 "} else if (val && typeof val === 'object') {"
             ],
@@ -12751,7 +12751,7 @@
             "anchors": [
                 "return false;"
             ],
-            "line": 235,
+            "line": 237,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying this catch changes nothing observable: control then falls to the pattern test with the `text` variable still unassigned, and RegExp.test(undefined) coerces to the string 'undefined', which matches no retryable pattern \u2014 so the function returns false either way, exactly as the early return does. The BooleanLiteral mutant on the same line IS killable and is killed by the circular-error test. Verified by planting the empty catch: all 58 tests pass.",
@@ -16657,7 +16657,7 @@
             "anchors": [
                 "if (args?.confirm !== true || args?.confirmName !== projectName) {"
             ],
-            "line": 263,
+            "line": 268,
             "mutants": 2,
             "category": "optionalChain",
             "reason": "Both optional chains on this line are unreachable-nullish. Lines 194-198 read args?.projectId and args?.projectName and return early unless BOTH trim to a non-empty string, which is only possible when args is an object. So by the time control reaches this line args can never be null or undefined, and dropping the '?.' cannot throw or yield a different value for any input the handler can be given.",
