@@ -8,6 +8,7 @@
  */
 
 import { mockWithOrgContext } from './appBuilderComponentRunner.orgContextMock';
+import './appBuilderComponentRunner.runtimeMock';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState, ComponentInstance } from '@/types/base';
 

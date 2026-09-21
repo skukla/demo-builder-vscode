@@ -9408,18 +9408,6 @@
         {
             "module": "src/features/app-builder/services/appBuilderComponentTeardown.ts",
             "anchors": [
-                "present = parsed.map((p) => p.name ?? '').filter(Boolean);"
-            ],
-            "mutants": 1,
-            "category": "other",
-            "reason": "The filter drops empty names from the listed namespace. present is used only as the right-hand side of expected.filter(name => present.includes(name)), and every member of expected has already passed RUNTIME_PACKAGE_NAME, which rejects the empty string. An empty entry can therefore never match, so keeping or dropping it cannot change which leftovers are found.",
-            "decision": "none - defensive filter with no reachable effect on the attribution set.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-02"
-        },
-        {
-            "module": "src/features/app-builder/services/appBuilderComponentTeardown.ts",
-            "anchors": [
                 "if (leftovers.length > 0) {"
             ],
             "mutants": 5,

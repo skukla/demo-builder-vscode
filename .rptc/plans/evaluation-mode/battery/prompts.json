@@ -945,5 +945,13 @@
         ],
         "cwd": "project",
         "why": "AB-13 step 5 (2026-09-17): whether an update exists is answered by a fetch from GitHub, which get_project cannot do; the prompt asks exactly that."
+    },
+    {
+        "id": "runtime-packages",
+        "prompt": "What is still deployed in this project's Adobe Runtime namespace?",
+        "expect": [
+            "list_runtime_packages"
+        ],
+        "why": "Added with the tool (2026-09-21): a removal reported done while fifteen packages kept running in Stage, and no tool could show it. A MISS is a discoverability finding about the tool, not a bad prompt."
     }
 ]

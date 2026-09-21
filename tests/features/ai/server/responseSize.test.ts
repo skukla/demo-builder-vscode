@@ -295,6 +295,9 @@ describe('rows with no output safety net are classified', () => {
         'set_console_apis',
         'set_project_destination',
         'add_console_apis',
+        // Category 2, read before listing: `handleListRuntimePackages` returns
+        // `{data: {namespace, packages}}` or a named refusal (runtimePackageHandlers.ts).
+        'list_runtime_packages',
         'check_datapack_service',
         'check_mesh',
         'delete_ai_prompt',
@@ -523,7 +526,9 @@ describe('the ceiling table tracks the tool surface', () => {
         // Empty again: Group 8's three variable-size rows were probed against a
         // real Data Installer and now carry measured ceilings. A row lands here
         // only between being built and being probed.
-        const PENDING_LIVE_MEASUREMENT = new Set<string>([]);
+        // list_runtime_packages: one name per package, so its size is the size of
+        // somebody's namespace. Measured on the first live call, then promoted.
+        const PENDING_LIVE_MEASUREMENT = new Set<string>(['list_runtime_packages']);
 
         const missing = descriptorTools.filter(
             (t) => !RESPONSE_CEILINGS[t] && !EXEMPT.has(t) && !PENDING_LIVE_MEASUREMENT.has(t)

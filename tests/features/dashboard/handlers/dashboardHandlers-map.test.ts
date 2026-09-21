@@ -130,14 +130,14 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'exportProjectSettings')).toBe(true);
         });
 
-        it('should have exactly 50 handlers', () => {
+        it('should have exactly 51 handlers', () => {
             // Given: dashboardHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(dashboardHandlers) as Array<
                 keyof typeof dashboardHandlers
             >;
 
-            // Then: exactly 49 — the 41 below, then the additions noted after the
+            // Then: exactly 51 — the 41 below, then the additions noted after the
             // table — derived in the map's own declaration order so a
             // reader can check it against the source top to bottom.
             //
@@ -220,7 +220,10 @@ describe('dashboardHandlers', () => {
             // question the work is paused on — an expired sign-in, a missing
             // prerequisite — now that the modal asks it instead of a notification
             // beside the modal.
-            expect(types).toHaveLength(50);
+            //
+            // listRuntimePackages (50 → 51, 2026-09-21): the list_runtime_packages
+            // read — what a removal left running in the Runtime namespace.
+            expect(types).toHaveLength(51);
         });
 
         it('should have handlers as functions', () => {

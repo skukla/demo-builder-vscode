@@ -10,6 +10,7 @@
  */
 
 import { mockWithOrgContext } from './appBuilderComponentRunner.orgContextMock';
+import './appBuilderComponentRunner.runtimeMock';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 
 jest.setTimeout(5000);

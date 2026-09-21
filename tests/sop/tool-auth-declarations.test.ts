@@ -41,7 +41,7 @@ const PROVIDERS = new Set(['adobe', 'dalive', 'github', 'commerce']);
  * some tool's declared sign-ins changed, which is a product decision, not a refactor.
  */
 const EXPECTED: Record<string, number> = {
-    adobe: 43,
+    adobe: 44,
     dalive: 19,
     github: 10,
     commerce: 2,
@@ -59,7 +59,7 @@ const EXPECTED: Record<string, number> = {
  * files. That counts text, not declarations, and was roughly double. The CONTROL below
  * caught it — which is the argument for having one.)
  */
-const EXPECTED_TOOLS = 119;
+const EXPECTED_TOOLS = 120;
 
 interface Declaration {
     name: string;

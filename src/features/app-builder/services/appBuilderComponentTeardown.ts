@@ -17,6 +17,14 @@
 
 import type { CommerceDetachResult } from './erpDetach';
 import { deriveOwPackage } from './owPackageName';
+import {
+    commandFailure,
+    deleteRuntimePackage,
+    listRuntimePackages,
+    runInNamespace,
+    runtimeNamespaceEnv,
+    type RuntimeNamespaceEnv,
+} from './runtimeNamespace';
 import type { SystemWipeResult } from './systemRecordsWipe';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { MESH_DELETE_COMMAND } from '@/core/shell/meshDeleteCommand';
@@ -248,17 +256,30 @@ export async function teardownRemote(
     kind: AppBuilderComponentState['kind'],
     deps: TeardownDeps,
 ): Promise<void> {
-    const command = kind === 'mesh' ? MESH_DELETE_COMMAND : 'aio app undeploy';
-    await withOrgContext(target, () =>
-        deps.commandManager.execute(command, {
+    if (kind === 'mesh') {
+        await withOrgContext(target, () =>
+            deps.commandManager.execute(MESH_DELETE_COMMAND, {
+                cwd: componentPath,
+                useNodeVersion: 'auto',
+                enhancePath: true,
+                streaming: true,
+                shell: true,
+                timeout: TIMEOUTS.LONG,
+            }),
+        );
+        return;
+    }
+    // With the namespace key, as deploy has it (see runtimeNamespace.ts), and a
+    // refusal is thrown: a silent exit 2 left the ERP pair running on 2026-09-21.
+    const result = await withOrgContext(target, async () =>
+        runInNamespace(deps, 'aio app undeploy', await runtimeNamespaceEnv(deps), {
             cwd: componentPath,
-            useNodeVersion: 'auto',
-            enhancePath: true,
             streaming: true,
-            shell: true,
-            timeout: TIMEOUTS.LONG,
         }),
     );
+    if (result.code !== 0) {
+        throw new Error(commandFailure('aio app undeploy', result));
+    }
 }
 
 /**
@@ -267,18 +288,6 @@ export async function teardownRemote(
  * is never deleted (and never quoted into a shell line).
  */
 const RUNTIME_PACKAGE_NAME = /^[A-Za-z0-9@._-]+$/;
-
-/** Run one `aio runtime package` command under the org context. */
-function runtimePackageCommand(target: OrgContextTarget, command: string, deps: TeardownDeps) {
-    return withOrgContext(target, () =>
-        deps.commandManager.execute(command, {
-            useNodeVersion: 'auto',
-            enhancePath: true,
-            shell: true,
-            timeout: TIMEOUTS.LONG,
-        }),
-    );
-}
 
 /**
  * Verify the undeploy actually cleared the namespace, and delete what it left
@@ -303,11 +312,17 @@ export async function verifyRuntimeTeardown(
     const expected = [...new Set([...expectedPackages, deriveOwPackage(id)])].filter((name) =>
         RUNTIME_PACKAGE_NAME.test(name),
     );
+    // The key is fetched once and used for the list and every delete. A list that
+    // cannot answer THROWS (runtimeNamespace.ts), so it lands here as "not
+    // verified" — it used to parse the empty output of a failed list as "nothing
+    // deployed" and report the namespace clean.
     let present: string[];
+    let env: RuntimeNamespaceEnv;
     try {
-        const listed = await runtimePackageCommand(target, 'aio runtime package list --json', deps);
-        const parsed = JSON.parse(listed.stdout || '[]') as Array<{ name?: string }>;
-        present = parsed.map((p) => p.name ?? '').filter(Boolean);
+        [env, present] = await withOrgContext(target, async () => {
+            const namespaceEnv = await runtimeNamespaceEnv(deps);
+            return [namespaceEnv, await listRuntimePackages(deps, namespaceEnv)] as const;
+        });
     } catch (error) {
         return {
             verified: false,
@@ -322,7 +337,7 @@ export async function verifyRuntimeTeardown(
     const failed: string[] = [];
     for (const name of leftovers) {
         try {
-            await runtimePackageCommand(target, `aio runtime package delete ${name} --recursive`, deps);
+            await withOrgContext(target, () => deleteRuntimePackage(deps, name, env));
             deleted.push(name);
         } catch (error) {
             deps.logger.warn(
