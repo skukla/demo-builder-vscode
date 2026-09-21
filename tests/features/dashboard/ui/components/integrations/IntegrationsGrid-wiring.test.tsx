@@ -215,7 +215,7 @@ describe('IntegrationsGrid wiring', () => {
             await user.click(within(panel).getByRole('button', { name: /^remove$/i }));
 
             const dialog = screen.getByRole('dialog', { name: 'Remove custom-app' });
-            expect(dialog).toHaveTextContent('custom-app is undeployed from Adobe');
+            expect(dialog).toHaveTextContent('custom-app will be undeployed from Adobe');
             expect(
                 within(dialog).queryByText(/storefront loses its API Mesh endpoint/i)
             ).not.toBeInTheDocument();
