@@ -444,3 +444,7 @@ and re-adding an integration — no migration code ships.
 - 2026-09-20  fix(adobe): nothing provisions Runtime except this sweep (`da0f625d4`)
 - 2026-09-20  docs(backlog): AB-23's live checks are closed, and a deploy trap named (`eb042cab7`)
 - 2026-09-20  feat(app-builder): a component can record the workspace it deploys into (`446e6556b`)
+- 2026-09-20  feat(app-builder): an added component gets its own Adobe workspace (`614a09e70`)
+- 2026-09-20  docs(backlog): no migration is built — moving Bodea is a testing step (`c9cc8478e`)
+- 2026-09-20  docs(backlog): the migration deletes itself, and says when (`1dca6660d`)
+- 2026-09-20  docs(backlog): moving existing projects is part of AB-23, not a follow-on (`ee53cef66`)
