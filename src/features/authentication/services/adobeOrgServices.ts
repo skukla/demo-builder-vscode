@@ -12,6 +12,7 @@
  */
 
 import type { AdobeSDKClient } from './adobeSDKClient';
+import { readSavedCatalog, saveCatalog, type OrgServicesStore } from './orgServicesSavedCatalog';
 import type { OrgServiceInfo, SDKResponse, ServiceSubscriptionInfo } from './types';
 import { getLogger } from '@/core/logging/debugLogger';
 import { tryWithTimeout } from '@/core/utils/promiseUtils';
@@ -73,30 +74,6 @@ function assertSubscribeAccepted(response: SDKResponse<unknown> | undefined): vo
         .filter(Boolean);
     const named = reasons.length > 0 ? reasons.join('; ') : refusedCodes.join(', ');
     throw new Error(`Adobe refused the API subscription — ${named}`);
-}
-
-/**
- * Where the org's API list is kept between sessions. Production passes
- * `context.globalState`; this is the two methods of it that are used.
- */
-export interface OrgServicesStore {
-    get<T>(key: string): T | undefined;
-    update(key: string, value: unknown): PromiseLike<void>;
-}
-
-/** One org's saved list, and when Adobe sent it. */
-interface SavedCatalog {
-    services: OrgServiceInfo[];
-    fetchedAt: number;
-}
-
-const savedCatalogKey = (orgId: string): string => `demoBuilder.orgServicesCatalog.${orgId}`;
-
-/** A saved value is used only if it is a non-empty list with a timestamp. */
-function isSavedCatalog(value: unknown): value is SavedCatalog {
-    const saved = value as Partial<SavedCatalog> | undefined;
-    return typeof saved?.fetchedAt === 'number' &&
-        Array.isArray(saved.services) && saved.services.length > 0;
 }
 
 /**
@@ -162,24 +139,13 @@ export class AdobeOrgServices {
 
     /** Load the org's saved list into memory, keeping its age. */
     private restoreSaved(orgId: string): { services: OrgServiceInfo[]; expiresAt: number } | undefined {
-        const saved = this.store?.get<unknown>(savedCatalogKey(orgId));
-        if (!isSavedCatalog(saved)) {
+        const saved = readSavedCatalog(this.store, orgId);
+        if (!saved) {
             return undefined;
         }
         const entry = { services: saved.services, expiresAt: saved.fetchedAt + CACHE_TTL.ORG_SERVICES };
         this.servicesCache.set(orgId, entry);
         return entry;
-    }
-
-    /** Save a fresh list for the next session. A failed save costs only that. */
-    private save(orgId: string, services: OrgServiceInfo[]): void {
-        if (!this.store) {
-            return;
-        }
-        const saved: SavedCatalog = { services, fetchedAt: Date.now() };
-        Promise.resolve(this.store.update(savedCatalogKey(orgId), saved)).catch((error) => {
-            this.debugLogger.debug('[Entity Fetcher] Could not save the org services list', error);
-        });
     }
 
     /**
@@ -257,7 +223,7 @@ export class AdobeOrgServices {
                 services,
                 expiresAt: Date.now() + CACHE_TTL.ORG_SERVICES,
             });
-            this.save(orgId, services);
+            saveCatalog(this.store, orgId, services);
         }
         return services;
     }
