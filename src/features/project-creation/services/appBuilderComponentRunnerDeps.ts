@@ -266,21 +266,22 @@ export function buildDefaultRunnerDeps(
         // The runner's dep contract is void — swallow the returned API list.
         subscribeRequiredApis: async (appBuilderComponents, project, onStep) => {
             const started = Date.now();
+            // The single component this subscribe is FOR, when it is for one.
+            const only = appBuilderComponents.length === 1 ? appBuilderComponents[0] : undefined;
             const apis = await subscribeRequiredApis(
                 appBuilderComponents,
                 // One entry means one component's subscribe, so it targets THAT
                 // component's workspace. Several is the project-wide reconcile, which
                 // still belongs to the project's own.
-                subscriberTarget(
-                    project,
-                    appBuilderComponents.length === 1 ? appBuilderComponents[0].id : undefined,
-                ),
+                subscriberTarget(project, only?.id),
                 ctx.subscriberClient,
                 deriveAllowedDomain(project),
-                // Runtime-added APIs (add_console_apis) must ride every
-                // reconcile or the full-union PUT strips them. Unioned across
-                // every integration's picks — the flat field is legacy.
-                resolveDesiredApis(project),
+                // Runtime-added APIs (add_console_apis) must ride every reconcile.
+                // Narrowed to THIS component when one component is being
+                // subscribed, because it may hold a workspace of its own and the
+                // project's union would entitle that credential to APIs belonging
+                // to integrations living elsewhere.
+                resolveDesiredApis(project, only?.id),
                 undefined,
                 [],
                 { onStep, log: (message) => ctx.logger.debug(message) },

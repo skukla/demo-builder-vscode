@@ -45,21 +45,39 @@ export interface ApiPickSource {
 export const UNATTRIBUTED_PICKS_KEY = '__existing__';
 
 /**
- * The union of every integration's picks — the `desired` extras handed to
- * `subscribeRequiredApis`, which adds baseline + catalog `requiredApis` on top.
+ * The `desired` extras handed to `subscribeRequiredApis`, which adds the baseline
+ * and the catalog `requiredApis` on top.
+ *
+ * WITHOUT a component id this is the union of every integration's picks, which is
+ * right when one workspace serves the whole project. WITH one it is that
+ * component's picks — because under AB-23 a component has a workspace of its own
+ * and subscribing the project's union there would entitle its credential to APIs
+ * belonging to integrations that do not live in it. Each of those is a product
+ * profile attached to a credential nothing in that workspace uses.
+ *
+ * UNATTRIBUTED picks ride along with every component, deliberately. Their owner
+ * is unrecoverable by construction ({@link UNATTRIBUTED_PICKS_KEY}), so leaving
+ * them out of a NEW workspace would silently drop an API an SC added by hand,
+ * and there is no way to tell which component wanted it.
  *
  * Falls back to the legacy flat field when no keyed map exists, so a project
- * loaded by a path that has not migrated still reports its real set. Returning
- * an empty list there would be actively destructive: the subscribe PUT sets
- * extras to EXACTLY this list, so an empty union unsubscribes everything.
+ * loaded by a path that has not migrated still reports its real set.
+ *
+ * This used to warn that "the subscribe PUT sets extras to EXACTLY this list, so
+ * an empty union unsubscribes everything". That stopped being true on 2026-09-19,
+ * when the subscriber began merging: `buildSubscriptionList` carries every CURRENT
+ * subscription forward with its profiles, and a code leaves only when a caller
+ * names it in `removing`. Narrowing this list therefore adds fewer, never removes.
  *
  * @param project - the project to read (keyed map wins over the legacy field)
+ * @param componentId - narrow to this component's picks plus the unattributed ones
  * @returns deduped sdk codes; empty when nothing is picked
  */
-export function resolveDesiredApis(project: ApiPickSource): string[] {
+export function resolveDesiredApis(project: ApiPickSource, componentId?: string): string[] {
     const keyed = project.componentApiPicks;
     if (keyed) {
-        return [...new Set(Object.values(keyed).flat())];
+        const owners = componentId ? [componentId, UNATTRIBUTED_PICKS_KEY] : Object.keys(keyed);
+        return [...new Set(owners.flatMap((owner) => keyed[owner] ?? []))];
     }
     return [...new Set(project.additionalConsoleApis ?? [])];
 }
