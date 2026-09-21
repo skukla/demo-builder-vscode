@@ -449,3 +449,4 @@ and re-adding an integration — no migration code ships.
 - 2026-09-20  docs(backlog): the migration deletes itself, and says when (`1dca6660d`)
 - 2026-09-20  docs(backlog): moving existing projects is part of AB-23, not a follow-on (`ee53cef66`)
 - 2026-09-20  feat(app-builder): removing a component deletes its workspace (`0af3ac9f6`)
+- 2026-09-21  feat(app-builder): subscribe a component's own APIs, not the project's union (`9b08d6757`)
