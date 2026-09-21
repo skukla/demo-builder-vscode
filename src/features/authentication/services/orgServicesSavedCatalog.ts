@@ -13,6 +13,7 @@
 
 import type { OrgServiceInfo } from './types';
 import { getLogger } from '@/core/logging/debugLogger';
+import { CACHE_TTL } from '@/core/utils/timeoutConfig';
 
 /**
  * Where the org's API list is kept between sessions. Production passes
@@ -24,7 +25,7 @@ export interface OrgServicesStore {
 }
 
 /** One org's saved list, and when Adobe sent it. */
-export interface SavedCatalog {
+interface SavedCatalog {
     services: OrgServiceInfo[];
     fetchedAt: number;
 }
@@ -39,7 +40,7 @@ function isSavedCatalog(value: unknown): value is SavedCatalog {
 }
 
 /** The org's saved list, or `undefined` when there is none worth using. */
-export function readSavedCatalog(
+function readSavedCatalog(
     store: OrgServicesStore | undefined,
     orgId: string,
 ): SavedCatalog | undefined {
@@ -48,7 +49,7 @@ export function readSavedCatalog(
 }
 
 /** Save a fresh list for the next session. A failed save costs only that. */
-export function saveCatalog(
+function saveCatalog(
     store: OrgServicesStore | undefined,
     orgId: string,
     services: OrgServiceInfo[],
@@ -60,4 +61,42 @@ export function saveCatalog(
     Promise.resolve(store.update(savedCatalogKey(orgId), saved)).catch((error) => {
         getLogger().debug('[Entity Fetcher] Could not save the org services list', error);
     });
+}
+
+/** A kept copy of an org's list, and when it stops being fresh. */
+export interface CatalogCopy {
+    services: OrgServiceInfo[];
+    expiresAt: number;
+}
+
+/**
+ * Each org's kept API list: in memory for this session, and saved so the next
+ * session starts from it instead of waiting on Adobe. A copy read back from the
+ * store keeps its original age, so an old one is refreshed straight away.
+ */
+export class OrgServicesCatalog {
+    private readonly copies = new Map<string, CatalogCopy>();
+
+    constructor(private readonly store?: OrgServicesStore) {}
+
+    /** The org's kept copy — from memory, else from the store — or `undefined`. */
+    get(orgId: string): CatalogCopy | undefined {
+        const kept = this.copies.get(orgId);
+        if (kept) {
+            return kept;
+        }
+        const saved = readSavedCatalog(this.store, orgId);
+        if (!saved) {
+            return undefined;
+        }
+        const copy = { services: saved.services, expiresAt: saved.fetchedAt + CACHE_TTL.ORG_SERVICES };
+        this.copies.set(orgId, copy);
+        return copy;
+    }
+
+    /** Keep a freshly fetched list, in memory and in the store. */
+    keep(orgId: string, services: OrgServiceInfo[]): void {
+        this.copies.set(orgId, { services, expiresAt: Date.now() + CACHE_TTL.ORG_SERVICES });
+        saveCatalog(this.store, orgId, services);
+    }
 }

@@ -35,7 +35,6 @@ import { AdobeContextResolver } from './adobeContextResolver';
 import { AdobeEntityReads } from './adobeEntityReads';
 import { AdobeEntitySelector } from './adobeEntitySelector';
 import { AdobeOrgServices } from './adobeOrgServices';
-import type { OrgServicesStore } from './orgServicesSavedCatalog';
 import type { AdobeSDKClient } from './adobeSDKClient';
 import { AdobeWorkspaceCredentials } from './adobeWorkspaceCredentials';
 import type { AuthCacheManager } from './authCacheManager';

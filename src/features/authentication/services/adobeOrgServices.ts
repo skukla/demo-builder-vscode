@@ -12,7 +12,7 @@
  */
 
 import type { AdobeSDKClient } from './adobeSDKClient';
-import { readSavedCatalog, saveCatalog, type OrgServicesStore } from './orgServicesSavedCatalog';
+import { OrgServicesCatalog, type OrgServicesStore } from './orgServicesSavedCatalog';
 import type {
     OrgServiceInfo,
     SDKResponse,
@@ -26,7 +26,7 @@ import { tryWithTimeout , firstSuccess } from '@/core/utils/promiseUtils';
 import { SingleFlight } from '@/core/utils/singleFlight';
 import { sleep } from '@/core/utils/sleep';
 import { formatDuration } from '@/core/utils/timeFormatting';
-import { CACHE_TTL, TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 /**
  * The subscribe response, only as deep as the refusal check reads.
@@ -93,23 +93,15 @@ function isNotFound(error: unknown): boolean {
 
 export class AdobeOrgServices {
     private debugLogger = getLogger();
-    /**
-     * Per-org cache of the entitled-services catalog (see getServicesForOrg).
-     * Per-instance: the owning fetcher is a session singleton (created once via
-     * ServiceLocator/AuthenticationService), so this lives for the session.
-     */
-    private servicesCache = new Map<string, { services: OrgServiceInfo[]; expiresAt: number }>();
+    /** Each org's kept API list, in memory and saved across reloads (see getServicesForOrg). */
+    private readonly catalog: OrgServicesCatalog;
     /** In-flight catalog fetch per org — see getServicesForOrg. */
     private readonly servicesFlights = new Map<string, SingleFlight<OrgServiceInfo[]>>();
 
-    /**
-     * @param store - keeps the API list across window reloads. Without one the
-     *   list lives for the session only, and every reload waits on Adobe again.
-     */
-    constructor(
-        private sdkClient: AdobeSDKClient,
-        private readonly store?: OrgServicesStore,
-    ) {}
+    /** @param store - keeps the API list across window reloads; without one, every reload waits. */
+    constructor(private sdkClient: AdobeSDKClient, store?: OrgServicesStore) {
+        this.catalog = new OrgServicesCatalog(store);
+    }
 
     /**
      * Ensure SDK is initialized (lazy init pattern)
@@ -131,7 +123,7 @@ export class AdobeOrgServices {
         // An old copy starts one background refresh; only the session's first ask waits. On
         // 2026-09-21 a 30-minute expiry made Manage APIs a 60s timeout 40 minutes in. The copy
         // is also SAVED, so a reload keeps it: that day the first open after one hit 60s twice.
-        const cached = this.servicesCache.get(orgId) ?? this.restoreSaved(orgId);
+        const cached = this.catalog.get(orgId);
         const flight = this.servicesFlights.get(orgId) ?? new SingleFlight<OrgServiceInfo[]>();
         this.servicesFlights.set(orgId, flight);
         if (cached) {
@@ -153,17 +145,6 @@ export class AdobeOrgServices {
         }
         // Single-flight PER ORG: the picker and the dashboard's warm-up ask at once.
         return flight.run(() => this.fetchServicesForOrg(orgId));
-    }
-
-    /** Load the org's saved list into memory, keeping its age. */
-    private restoreSaved(orgId: string): { services: OrgServiceInfo[]; expiresAt: number } | undefined {
-        const saved = readSavedCatalog(this.store, orgId);
-        if (!saved) {
-            return undefined;
-        }
-        const entry = { services: saved.services, expiresAt: saved.fetchedAt + CACHE_TTL.ORG_SERVICES };
-        this.servicesCache.set(orgId, entry);
-        return entry;
     }
 
     /**
@@ -262,11 +243,7 @@ export class AdobeOrgServices {
         // Cache only a successful, non-empty, FULL fetch: a transient 500 → [] must not
         // poison the session, and a narrowed answer is a subset by construction.
         if (services.length > 0 && !sdkCodes) {
-            this.servicesCache.set(orgId, {
-                services,
-                expiresAt: Date.now() + CACHE_TTL.ORG_SERVICES,
-            });
-            saveCatalog(this.store, orgId, services);
+            this.catalog.keep(orgId, services);
         }
         return services;
     }
