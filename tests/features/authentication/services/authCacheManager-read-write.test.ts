@@ -249,5 +249,29 @@ describe('AuthCacheManager - Read/Write Operations', () => {
 
             expect(result).toBeUndefined();
         });
+        // A granted role barely changes, and re-probing it spawns the CLI: ~4s on
+        // almost every open of Manage APIs when the answer lasted five minutes
+        // (2026-09-21). Switching org or signing out still clears it at once.
+        it('keeps a GRANTED result well past five minutes', () => {
+            const now = jest.spyOn(Date, 'now').mockReturnValue(0);
+            cacheManager.setCachedDeveloperPermissions({ hasPermissions: true });
+
+            now.mockReturnValue(10 * 60 * 1000);
+
+            expect(cacheManager.getCachedDeveloperPermissions()).toEqual({ hasPermissions: true });
+            now.mockRestore();
+        });
+
+        // A refusal stays short, so an SC who has just been given the role is
+        // rechecked soon rather than an hour later.
+        it('lets a DENIED result go after about five minutes', () => {
+            const now = jest.spyOn(Date, 'now').mockReturnValue(0);
+            cacheManager.setCachedDeveloperPermissions({ hasPermissions: false, error: 'no role' });
+
+            now.mockReturnValue(10 * 60 * 1000);
+
+            expect(cacheManager.getCachedDeveloperPermissions()).toBeUndefined();
+            now.mockRestore();
+        });
     });
 });

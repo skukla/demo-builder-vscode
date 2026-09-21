@@ -288,11 +288,19 @@ export class AuthCacheManager {
 
     /**
      * Set cached developer-permission probe result
-     * PERFORMANCE: Cache definitive probe outcomes to prevent redundant CLI calls
+     * PERFORMANCE: Cache definitive probe outcomes to prevent redundant CLI calls.
+     *
+     * A GRANTED role is kept an hour: it barely changes, and the probe spawns the
+     * CLI — about 4s on almost every open of Manage APIs when it lasted five minutes
+     * (2026-09-21). A REFUSAL stays five minutes, so an SC just given the role is
+     * rechecked soon. Switching IMS org (a forced sign-in) or signing out clears
+     * either at once (`clearAll`).
      */
     setCachedDeveloperPermissions(result: { hasPermissions: boolean; error?: string }): void {
         const now = Date.now();
-        const jitteredTTL = getCacheTTLWithJitter(CACHE_TTL.MEDIUM);
+        const jitteredTTL = getCacheTTLWithJitter(
+            result.hasPermissions ? CACHE_TTL.LONG : CACHE_TTL.MEDIUM,
+        );
         this.developerPermissionsCache = {
             data: result,
             expiry: now + jitteredTTL,
