@@ -76,5 +76,26 @@ describe('AdobeEntityService - Organizations - Error Handling', () => {
             await expect(fetcher.getOrganizations()).rejects.toThrow(/AUTH_EXPIRED/);
             expect(isTokenValid).toHaveBeenCalledTimes(1);
         });
+
+        // The store is what keeps the API list across a window reload. Handed in
+        // here and dropped anywhere on the way down, every reload waits on Adobe.
+        it('forwards the store to the org services, which answer from its saved list', async () => {
+            const { mockCommandExecutor, mockSDKClient, mockCacheManager, mockLogger, mockStepLogger } =
+                testMocks;
+            const saved = { services: [{ code: 'GraphQLServiceSDK' }], fetchedAt: Date.now() };
+            const store = { get: jest.fn().mockReturnValue(saved), update: jest.fn() };
+            const { fetcher } = createEntityServices(
+                mockCommandExecutor,
+                mockSDKClient,
+                mockCacheManager,
+                mockLogger,
+                mockStepLogger,
+                undefined,
+                store,
+            );
+
+            await expect(fetcher.getServicesForOrg('org-1')).resolves.toEqual(saved.services);
+            expect(store.get).toHaveBeenCalledWith('demoBuilder.orgServicesCatalog.org-1');
+        });
     });
 });

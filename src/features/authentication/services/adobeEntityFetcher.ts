@@ -25,7 +25,7 @@
 import { AdobeCliFallback } from './adobeCliFallback';
 import { AdobeConsoleProjectOps } from './adobeConsoleProjectOps';
 import { AdobeEntityReads } from './adobeEntityReads';
-import { AdobeOrgServices } from './adobeOrgServices';
+import { AdobeOrgServices, type OrgServicesStore } from './adobeOrgServices';
 import type { AdobeSDKClient } from './adobeSDKClient';
 import { AdobeWorkspaceCredentials } from './adobeWorkspaceCredentials';
 import type { AuthCacheManager } from './authCacheManager';
@@ -66,6 +66,8 @@ export interface AdobeEntityFetcherConfig {
      * caller behaving exactly as before.
      */
     isTokenValid?: () => Promise<boolean>;
+    /** Keeps the org's API list across window reloads — see {@link AdobeOrgServices}. */
+    orgServicesStore?: OrgServicesStore;
 }
 
 /**
@@ -100,7 +102,7 @@ export class AdobeEntityFetcher {
             () => this.getOrganizationsSdkOnly(),
         );
         this.credentials = new AdobeWorkspaceCredentials(sdkClient, cacheManager);
-        this.orgServices = new AdobeOrgServices(sdkClient);
+        this.orgServices = new AdobeOrgServices(sdkClient, config.orgServicesStore);
         this.projectOps = new AdobeConsoleProjectOps(sdkClient, cacheManager, (orgId, projectId) =>
             this.reads.fetchWorkspaces(orgId, projectId),
         );
