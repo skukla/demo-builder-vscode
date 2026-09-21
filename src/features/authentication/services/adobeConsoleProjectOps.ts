@@ -374,11 +374,10 @@ export class AdobeConsoleProjectOps {
                 ) => Promise<SDKResponse<RawAdobeWorkspace>>;
             };
 
-            // Adobe accepts only letters and digits in the name (a space 400s, measured
-            // 2026-09-21), and Console's workspace boxes SHOW the name, so it is the
-            // title stripped bare — "Northwind ERP" → `NorthwindERP` — with a random
-            // ending only when the name is taken. A clash the list could not show
-            // gets one retry with the ending.
+            // Console's workspace boxes SHOW the name, so it is the title with spaces
+            // as dashes — "Northwind ERP" → `Northwind-ERP` (a space 400s, a dash does
+            // not; measured 2026-09-21) — and a random ending only when the name is
+            // taken. A clash the list could not show gets one retry with the ending.
             const taken = await this.listWorkspaces(orgId, projectId).then(
                 (all) => all.map((w) => w.name),
                 () => undefined,
@@ -393,7 +392,7 @@ export class AdobeConsoleProjectOps {
             };
             const response = await send().catch((error: Error) => {
                 if (!isNameClash(error) || !sentBare) throw error;
-                name = deriveAdobeEntityName(title);
+                name = deriveFreeAdobeEntityName(title, undefined);
                 return send();
             });
 

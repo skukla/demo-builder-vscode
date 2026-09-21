@@ -10,7 +10,7 @@
  * `deriveAdobeEntityName` always appends a short random suffix so two entities with the
  * same title (→ same base) don't collide (409). A WORKSPACE name is shown to the SC —
  * Console's workspace boxes print the name, not the title — so workspaces use
- * `deriveFreeAdobeEntityName`, which is bare unless the name is already in use.
+ * `deriveFreeAdobeEntityName`: dashes for spaces, and no ending unless the name is taken.
  *
  * Shared by both project and workspace creation (AdobeConsoleProjectOps).
  *
@@ -52,22 +52,29 @@ export function deriveAdobeEntityName(title: string, suffix: string = randomName
 }
 
 /**
- * Derive a name with NO random ending when it is free: "Northwind ERP" →
- * `NorthwindERP`. Adds the ending when a name in `taken` matches, ignoring case, or
- * when `taken` is undefined — names in use that could not be read are not proof
- * the name is free.
+ * A WORKSPACE name as the SC should read it on Console's boxes: the title with each
+ * run of spaces or punctuation turned into one dash — "Northwind ERP" →
+ * `Northwind-ERP`. A space 400s but a dash is accepted, and a dashed workspace's
+ * Runtime namespace answered normally (both measured live 2026-09-21; projects were
+ * not tested, so project names keep `deriveAdobeEntityName`).
+ *
+ * The random ending (`-ab12`) is added when a name in `taken` matches, ignoring case,
+ * or when `taken` is undefined — names that could not be read are not proof the name
+ * is free.
  *
  * @param title - the free-form title
  * @param taken - the names already in use, or undefined when unknown
  * @param suffix - uniqueness suffix used only on a clash (injectable for tests)
- * @returns an alphanumeric name of at most 19 characters
+ * @returns a name of letters, digits and single dashes, at most 19 characters
  */
 export function deriveFreeAdobeEntityName(
     title: string,
     taken: string[] | undefined,
     suffix: string = randomNameSuffix(),
 ): string {
-    const bare = (title || '').replace(/[^A-Za-z0-9]/g, '').slice(0, MAX_NAME_LENGTH) || 'App';
+    const dashed = (title || '').replace(/[^A-Za-z0-9]+/g, '-');
+    const cut = (length: number) => dashed.slice(0, length).replace(/^-+|-+$/g, '');
+    const bare = cut(MAX_NAME_LENGTH) || 'App';
     const inUse = taken?.some((name) => name.toLowerCase() === bare.toLowerCase()) ?? true;
-    return inUse ? deriveAdobeEntityName(title, suffix) : bare;
+    return inUse ? `${cut(MAX_NAME_LENGTH - SUFFIX_LENGTH - 1) || 'App'}-${suffix}` : bare;
 }

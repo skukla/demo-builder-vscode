@@ -11,32 +11,16 @@
 
 jest.mock('@/core/utils/sleep', () => ({ sleep: jest.fn().mockResolvedValue(undefined) }));
 
-import { AdobeConsoleProjectOps } from '@/features/authentication/services/adobeConsoleProjectOps';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
-import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
-import type { AdobeWorkspace } from '@/features/authentication/services/types';
+import { TARGET, opsWith as buildOps, workspace } from './adobeConsoleProjectOps.testUtils';
 
-const TARGET = { orgId: 'org-1', projectId: 'proj-1' };
 const GATEWAY_TIMEOUT = new Error(
     '[CoreConsoleAPISDK:ERROR_DELETE_WORKSPACE] 504 - Gateway Timeout ("upstream request timeout")',
 );
 
-function opsWith(deleteWorkspace: jest.Mock, listWorkspaces: jest.Mock) {
-    const sdkClient = {
-        isInitialized: jest.fn().mockReturnValue(true),
-        ensureInitialized: jest.fn().mockResolvedValue(true),
-        getClient: jest.fn().mockReturnValue({ deleteWorkspace }),
-    } as unknown as AdobeSDKClient;
-    const cacheManager = {
-        getCachedOrganization: jest.fn(),
-        getCachedProject: jest.fn(),
-    } as unknown as AuthCacheManager;
-    return new AdobeConsoleProjectOps(sdkClient, cacheManager, listWorkspaces);
-}
-
-const workspace = (id: string) => ({ id, name: id, title: id }) as AdobeWorkspace;
+const opsWith = (deleteWorkspace: jest.Mock, listWorkspaces: jest.Mock) =>
+    buildOps({ deleteWorkspace }, listWorkspaces);
 
 describe('AdobeConsoleProjectOps.deleteWorkspace', () => {
     it('reports a plain success without looking anything up', async () => {

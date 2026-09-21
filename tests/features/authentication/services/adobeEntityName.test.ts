@@ -76,24 +76,36 @@ describe('randomNameSuffix', () => {
 });
 
 // Console's workspace boxes show the NAME, so "ProductionKnDo" is what the SC read
-// (owner, 2026-09-21). The random ending is kept for when the name is taken.
+// (owner, 2026-09-21). A space is refused but a dash is not (both measured live
+// that day, the dash with a Runtime namespace that answered), so a space becomes a
+// dash; the random ending is kept for when the name is taken.
 describe('deriveFreeAdobeEntityName', () => {
-    it('is the bare name when nothing in the project has it', () => {
-        expect(deriveFreeAdobeEntityName('Northwind ERP', ['Production'])).toBe('NorthwindERP');
+    it('is the title with spaces as dashes when nothing in the project has it', () => {
+        expect(deriveFreeAdobeEntityName('Northwind ERP', ['Production'])).toBe('Northwind-ERP');
     });
 
-    it('adds the random ending when the bare name is taken, ignoring case', () => {
-        expect(deriveFreeAdobeEntityName('Northwind ERP', ['northwinderp'], 'ZZZZ')).toBe(
-            'NorthwindERPZZZZ',
+    it('turns any run of other characters into one dash, and trims the ends', () => {
+        expect(deriveFreeAdobeEntityName('  My  demo_2024! ', [])).toBe('My-demo-2024');
+    });
+
+    it('adds the random ending when the name is taken, ignoring case', () => {
+        expect(deriveFreeAdobeEntityName('Northwind ERP', ['northwind-erp'], 'ZZZZ')).toBe(
+            'Northwind-ERP-ZZZZ',
         );
     });
 
     it('adds the random ending when the names in use are unknown', () => {
-        expect(deriveFreeAdobeEntityName('Northwind ERP', undefined, 'ZZZZ')).toBe('NorthwindERPZZZZ');
+        expect(deriveFreeAdobeEntityName('Northwind ERP', undefined, 'ZZZZ')).toBe(
+            'Northwind-ERP-ZZZZ',
+        );
     });
 
-    it('caps a bare name at 19, the longest Adobe accepts', () => {
-        expect(deriveFreeAdobeEntityName('a'.repeat(40), [])).toBe('a'.repeat(19));
+    it('stays at 19 or fewer, with no dash left at the cut', () => {
+        expect(deriveFreeAdobeEntityName('Northwind Tradersx ERP', [])).toBe('Northwind-Tradersx');
+        expect(deriveFreeAdobeEntityName('a'.repeat(40), [], 'ZZZZ')).toBe('a'.repeat(19));
+        expect(deriveFreeAdobeEntityName('a'.repeat(40), undefined, 'ZZZZ')).toBe(
+            'a'.repeat(14) + '-ZZZZ',
+        );
     });
 
     it('falls back to App when the title has nothing Adobe accepts', () => {

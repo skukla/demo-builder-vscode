@@ -80,12 +80,12 @@ describe('entity collaborators.createWorkspace()', () => {
 
         expect(result).toEqual({
             id: 'ws-new',
-            name: expect.stringMatching(/^Stage[A-Za-z0-9]+$/),
+            name: expect.stringMatching(/^Stage(-[A-Za-z0-9]{4})?$/),
             title: 'Stage',
         });
     });
 
-    it('passes the free-form title through and derives an alphanumeric name from it', async () => {
+    it('passes the free-form title through and derives a dashed name from it', async () => {
         createWorkspace.mockResolvedValue({ body: { id: 'ws1', name: 'Stage', title: 'Stage' } });
 
         await entities.projectOps.createWorkspace('My Stage', 'A workspace');
@@ -95,7 +95,7 @@ describe('entity collaborators.createWorkspace()', () => {
             'proj-456',
             expect.objectContaining({
                 title: 'My Stage',
-                name: expect.stringMatching(/^MyStage[A-Za-z0-9]+$/),
+                name: expect.stringMatching(/^My-Stage(-[A-Za-z0-9]{4})?$/),
             })
         );
         // See createProject.test.ts: Adobe owns this field; sending a literal is misleading.
