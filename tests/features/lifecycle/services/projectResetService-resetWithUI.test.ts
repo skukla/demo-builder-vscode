@@ -21,7 +21,11 @@
 import type { Project } from '@/types/base';
 
 const mockRm = jest.fn();
-jest.mock('fs/promises', () => ({ rm: (...a: unknown[]) => mockRm(...a) }));
+const mockReaddir = jest.fn();
+jest.mock('fs/promises', () => ({
+    rm: (...a: unknown[]) => mockRm(...a),
+    readdir: (...a: unknown[]) => mockReaddir(...a),
+}));
 
 const mockGetFrontends = jest.fn();
 const mockGetDependencies = jest.fn();
@@ -123,6 +127,7 @@ beforeEach(() => {
     );
     showWarningMessage.mockResolvedValue('Reset Project');
     mockRm.mockResolvedValue(undefined);
+    mockReaddir.mockResolvedValue([]);
     mockLoadRegistry.mockResolvedValue(REGISTRY);
     mockGetStackById.mockReturnValue(STACK);
     mockGetFrontends.mockResolvedValue([DECOY_FRONTEND, FRONTEND_DEF]);
@@ -317,40 +322,41 @@ describe('resetProjectWithUI — rebuilding the component definitions', () => {
         );
     });
 
-    it('rebuilds a dashboard-added App Builder app from its saved instance instead of dropping it', async () => {
+    // AB-23 slice 7 (owner, 2026-09-21): reset never touches an integration. Its
+    // code may be the SC's own work — one built with AI exists only on disk, and
+    // downloading it again gave back the blank starter it came from — and its app
+    // keeps running in Adobe either way. It also used to delete the ERP half of a
+    // pair and never download it again: only `appBuilder` selections were rebuilt,
+    // and the ERP comes with its integration rather than being selected.
+    it('leaves integrations alone: no download, their folders and records kept', async () => {
+        const instance = (id: string) => ({
+            id,
+            name: id,
+            status: 'ready' as const,
+            path: `/projects/demo/components/${id}`,
+            repoUrl: `https://github.com/skukla/${id}.git`,
+        });
         const project = createResetProject({
-            componentSelections: { dependencies: [], appBuilder: ['my-app'] },
+            componentSelections: { dependencies: [], appBuilder: ['erp-integration'] },
+            appBuilderComponents: {
+                'erp-integration': { kind: 'integration', status: 'deployed', source: { owner: 'o', repo: 'r' } },
+                'demo-erp': { kind: 'system', status: 'deployed', source: { owner: 'o', repo: 'r' } },
+            },
             componentInstances: {
-                'my-app': {
-                    id: 'my-app',
-                    name: 'My App',
-                    status: 'ready',
-                    subType: 'app',
-                    repoUrl: 'https://github.com/acme/my-app.git',
-                    branch: 'main',
-                },
+                citisignal: instance('citisignal'),
+                'erp-integration': instance('erp-integration'),
+                'demo-erp': instance('demo-erp'),
             },
         });
+        mockReaddir.mockResolvedValue(['citisignal', 'erp-integration', 'demo-erp']);
 
         await run(project);
 
-        expect(handedDefinitions()).toEqual({
-            citisignal: expect.anything(),
-            'my-app': {
-                definition: {
-                    id: 'my-app',
-                    name: 'My App',
-                    type: 'app-builder',
-                    subType: 'app',
-                    source: { type: 'git', url: 'https://github.com/acme/my-app.git', branch: 'main' },
-                },
-                type: 'app-builder',
-                installOptions: { skipDependencies: true },
-            },
-        });
-        // An App Builder app is never looked for among frontends or dependencies.
-        expect(mockGetDependencies).not.toHaveBeenCalled();
-        expect(mockGetComponentById).not.toHaveBeenCalled();
+        expect(Object.keys(handedDefinitions())).toEqual(['citisignal']);
+        expect(mockRm.mock.calls).toEqual([
+            ['/projects/demo/components/citisignal', { recursive: true, force: true }],
+        ]);
+        expect(Object.keys(project.componentInstances ?? {})).toEqual(['erp-integration', 'demo-erp']);
     });
 
     it('does NOT rebuild a missing DEPENDENCY from its saved instance — only App Builder apps are', async () => {

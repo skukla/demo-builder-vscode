@@ -35,7 +35,7 @@
         "src/features/eds/handlers/storefrontSetup/storefrontSetupHandlers.ts:96": "Gates: cancel setup, knowing the GitHub repo and DA.live content created so far will be deleted? The cost of stopping is not obvious without asking.",
         "src/features/eds/services/reset/edsResetUI.ts:413": "Gates: reset this storefront to the template and re-copy demo content? Hand edits are lost.",
         "src/features/eds/services/reset/edsResetUI.ts:648": "Gates: also reset the Commerce backend, which takes several minutes and is not needed for a storefront reset? A separate, costlier choice inside the same flow.",
-        "src/features/lifecycle/services/projectResetService.ts:389": "Gates: delete every component and reinstall from scratch? Configuration survives, the components do not.",
+        "src/features/lifecycle/services/projectResetService.ts:400": "Gates: delete the components and reinstall them from scratch? Configuration and integrations survive, the rest does not.",
         "src/features/updates/commands/templateConflictPrompt.ts:47": "Gates: which side wins where an update and the SC's own edits touched the same file? The update cannot proceed until someone chooses."
     }
 }

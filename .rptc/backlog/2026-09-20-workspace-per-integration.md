@@ -51,7 +51,7 @@ is a workspace recorded PER COMPONENT and read by the target resolver.
 | ERP screen | `systemScreen.ts`, the catalog's `screen` block, `demo-erp` | Delete the key and the web-action screen; the ERP ships `web-src` and opens with the SC's own sign-in. |
 | ERP login | SecretStorage + deploy env; `demo-erp` API actions; `commerce-erp-integration` `erpAuthHeaders` | An app's Adobe token is REFUSED by an app in another workspace (live, AB-17 step 5). Demo Builder issues the ERP's login for the integration when the pair is added, and deletes it on removal. |
 | ERP → integration | `demo-erp/lib/events.js`; `commerce-erp-integration` | Through I/O Events, which cross workspaces (proven live). Not a direct call. |
-| Destination move | `destinationHandlers.ts`, `appBuilderComponentMigration.ts`, `set_project_destination` | Decide what "change destination" means when each app has its own workspace. |
+| Destination move | `destinationHandlers.ts`, `appBuilderComponentMigration.ts`, `set_project_destination` | **Decided 2026-09-21.** Within the same Adobe project, an integration in its own workspace stays put and its APIs stay off the project's workspace (built). Into ANOTHER Adobe project: owner chose "new workspaces there, then delete the old once everything landed" — not built yet; see the open question below. |
 | Links and display | `openUrlHandlers.ts`, `agentsMdSections.ts`, `settingsSerializer.ts` | One Console link and one entry per component. |
 
 ## Every surface
@@ -63,8 +63,13 @@ is a workspace recorded PER COMPONENT and read by the target resolver.
   workspace (`flowStages.ts`, `AddIntegrationFlowAdapter.tsx`).
 - **Existing projects** keep working untouched on slice 1's fallback, and reach the new
   model by removing and re-adding an integration. No migration ships — see below.
-- **Project reset** (`projectResetService.ts`) targets `project.adobe` only: decide whether
-  reset leaves integration workspaces alone or resets them too.
+- **Project reset** — decided 2026-09-21: reset never touches an integration, neither its
+  code on disk nor its app in Adobe; only what the storefront calls (the mesh) is
+  redeployed. A storefront project's reset already behaved that way. The reset for
+  projects without a storefront used to delete every integration folder and download
+  the selected ones again, which gave an AI-built integration back its blank starter and
+  lost the ERP half of a pair for good (it is not a selection). Clearing data an ERP
+  synced into Commerce belongs with the Commerce data reset, not project reset.
 
 ## Existing projects: no migration is built
 

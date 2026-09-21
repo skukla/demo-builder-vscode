@@ -96,43 +96,58 @@ export function buildComponentList(stack: Stack, project: Project): { id: string
     const frontend = stack.frontend;
     // Use project's saved dependencies (includes user-selected optional deps like mesh) or fall back to stack defaults
     const dependencies = project.componentSelections?.dependencies ?? stack.dependencies ?? [];
-    // App Builder apps come from the explicit saved selection (mirrors executor
-    // Step-4), NOT from selectedAddons — so reset re-clones a dashboard-added app
-    // instead of dropping it.
-    const appBuilder = project.componentSelections?.appBuilder ?? [];
+    // No integrations: reset leaves them alone (see `integrationIds`).
     return [
         ...(frontend ? [{ id: frontend, type: 'frontend' }] : []),
         ...dependencies.map((id: string) => ({ id, type: 'dependency' })),
-        ...appBuilder.map((id: string) => ({ id, type: 'app-builder' })),
     ];
 }
 
 /**
- * Reconstruct a git component definition for a dashboard-added App Builder app
- * from its saved componentInstance.
+ * The components a reset leaves exactly as they are: every App Builder component
+ * except a mesh (the mesh is a stack dependency, downloaded again and redeployed).
  *
- * App Builder apps are added at runtime from a public git URL, so they have NO
- * entry in the static registry. Reset must rebuild the definition (with its git
- * source) from the saved instance — otherwise the app is dropped from the
- * re-clone and silently lost. Returns undefined when there is nothing to clone
- * (no saved instance, or a saved instance without a repo URL). Mirrors the
- * git-source shape `appBuilderComponentRunner.buildDefinition` produces.
+ * Owner decision, 2026-09-21 (AB-23 slice 7): reset never touches an integration.
+ * Its code may be the SC's own work — one built with AI exists only on disk, and
+ * downloading it again gave back the blank starter it came from — and its app keeps
+ * running in Adobe either way, as a storefront project's reset has always left it.
+ * Rebuilding only the selected integrations had also deleted the ERP half of a pair
+ * for good, since the ERP comes with its integration rather than being selected.
+ *
+ * @param project - the project being reset
+ * @returns the ids whose folders and records stay
  */
-export function buildAppBuilderDefinitionFromInstance(
+function integrationIds(project: Project): Set<string> {
+    return new Set(
+        Object.entries(project.appBuilderComponents ?? {})
+            .filter(([, state]) => state.kind !== 'mesh')
+            .map(([id]) => id),
+    );
+}
+
+/**
+ * Remove the components folder, except the folders of what `keep` names.
+ *
+ * @param componentsDir - the project's components folder
+ * @param project - the project, whose instances say where each kept folder is
+ * @param keep - the ids whose folders stay
+ */
+async function removeComponentsExcept(
+    componentsDir: string,
     project: Project,
-    appId: string,
-): TransformedComponentDefinition | undefined {
-    const instance = project.componentInstances?.[appId];
-    if (!instance?.repoUrl) {
-        return undefined;
+    keep: Set<string>,
+): Promise<void> {
+    const options = { recursive: true, force: true };
+    if (keep.size === 0) {
+        await fsPromises.rm(componentsDir, options);
+        return;
     }
-    return {
-        id: appId,
-        name: instance.name || appId,
-        type: 'app-builder',
-        subType: 'app',
-        source: { type: 'git', url: instance.repoUrl, branch: instance.branch || 'main' },
-    } as TransformedComponentDefinition;
+    const kept = new Set(
+        [...keep].map((id) => path.basename(project.componentInstances?.[id]?.path ?? id)),
+    );
+    for (const name of await fsPromises.readdir(componentsDir)) {
+        if (!kept.has(name)) await fsPromises.rm(path.join(componentsDir, name), options);
+    }
 }
 
 /**
@@ -163,12 +178,6 @@ async function loadComponentDefinitionsFromProject(
 
     for (const comp of allComponents) {
         let componentDef = await findComponentByType(registryManager, comp);
-
-        // App Builder apps are added at runtime (not in the static registry), so
-        // rebuild their definition from the saved instance instead of dropping them.
-        if (!componentDef && comp.type === 'app-builder') {
-            componentDef = buildAppBuilderDefinitionFromInstance(project, comp.id);
-        }
 
         // Fallback: search all sections (e.g., mesh in "mesh" section)
         if (!componentDef) {
@@ -385,7 +394,9 @@ export async function resetProjectWithUI(options: ResetWithUIOptions): Promise<H
     // Show confirmation dialog
     const confirmButton = 'Reset Project';
     const confirmation = await vscode.window.showWarningMessage(
-        `Are you sure you want to reset "${project.name}"? This will delete all components and re-install them from scratch. Your configuration will be preserved.`,
+        `Are you sure you want to reset "${project.name}"? This will delete its components and ` +
+            'install them again from scratch. Integrations are left as they are, and your ' +
+            'configuration is kept.',
         { modal: true },
         confirmButton,
     );
@@ -436,15 +447,19 @@ export async function resetProjectWithUI(options: ResetWithUIOptions): Promise<H
                 report('Removing the old components', undefined, at(2));
                 const componentsDir = path.join(project.path, 'components');
 
+                const kept = integrationIds(project);
                 try {
-                    await fsPromises.rm(componentsDir, { recursive: true, force: true });
+                    await removeComponentsExcept(componentsDir, project, kept);
                     context.logger.info(`${logPrefix} Removed components directory`);
                 } catch {
                     context.logger.debug(`${logPrefix} No components directory to remove`);
                 }
 
-                // Clear component instances (will be rebuilt by cloneAllComponents)
-                project.componentInstances = {};
+                // Clear component instances (rebuilt by cloneAllComponents), except the
+                // integrations', whose folders were left where they are.
+                project.componentInstances = Object.fromEntries(
+                    Object.entries(project.componentInstances ?? {}).filter(([id]) => kept.has(id)),
+                );
 
                 // Step 3: Clone all components (reuse from orchestrator)
                 report('Downloading the components', undefined, at(3));
