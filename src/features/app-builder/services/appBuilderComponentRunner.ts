@@ -289,9 +289,30 @@ export interface AppBuilderComponentRunnerDeps extends TeardownDeps {
     secrets: unknown;
 }
 
-/** Build the org-context target for the project's known Adobe identity. */
-function targetFor(project: Project, deps: AppBuilderComponentRunnerDeps) {
-    return buildOrgTargetFromProjectAdobe(project.adobe, deps.getCachedOrganization());
+/**
+ * The org-context target a component's Adobe calls run under.
+ *
+ * A component may live in its OWN workspace (AB-23). When it records one, that is
+ * what deploys, redeploys, undeploys and verifies target; when it does not, the
+ * project's workspace is the answer — which is every component created before this
+ * existed, and the reason no migration is needed.
+ *
+ * Only the workspace moves. The org and the Console project are the project's, and
+ * a component cannot be in a different one.
+ *
+ * `componentId` is optional so a call with nothing to resolve reads the same as it
+ * did, but every call inside this module passes one: a deploy that silently used
+ * the project's workspace for a component that has its own would deploy to the
+ * wrong namespace and report success.
+ */
+function targetFor(
+    project: Project,
+    deps: AppBuilderComponentRunnerDeps,
+    componentId?: string,
+) {
+    const base = buildOrgTargetFromProjectAdobe(project.adobe, deps.getCachedOrganization());
+    const own = componentId ? project.appBuilderComponents?.[componentId]?.workspace : undefined;
+    return own ? { ...base, workspaceId: own.id } : base;
 }
 
 /** Build a runtime git ComponentDefinition for a catalog entry. */
@@ -770,7 +791,7 @@ async function addOne(
         await deps.saveProject(project);
 
         const since = new Date().toISOString();
-        const deployed = await withOrgContext(targetFor(project, deps), () =>
+        const deployed = await withOrgContext(targetFor(project, deps, entry.id), () =>
             dispatchDeploy(project, entry, installed.path, deps),
         );
 
@@ -898,7 +919,7 @@ export async function deployAppBuilderComponent(
         }
 
         const since = new Date().toISOString();
-        const deployed = await withOrgContext(targetFor(project, deps), () =>
+        const deployed = await withOrgContext(targetFor(project, deps, entry.id), () =>
             dispatchDeploy(project, entry, componentPath, deps),
         );
         if (!deployed.ok) {
@@ -1135,7 +1156,7 @@ export async function removeAppBuilderComponent(
     }
 
     try {
-        await teardownRemote(targetFor(project, deps), componentPath, state.kind, deps);
+        await teardownRemote(targetFor(project, deps, id), componentPath, state.kind, deps);
     } catch (error) {
         deps.logger.warn(
             `[AppBuilderComponent Runner] remote teardown warning: ${toError(error).message}`,
@@ -1146,7 +1167,7 @@ export async function removeAppBuilderComponent(
     // (AB-7, measured live). Meshes verify via their own status flow.
     const runtimeCleanup =
         state.kind !== 'mesh'
-            ? await verifyRuntimeTeardown(targetFor(project, deps), id, declaredPackages, deps)
+            ? await verifyRuntimeTeardown(targetFor(project, deps, id), id, declaredPackages, deps)
             : undefined;
 
     // A missing instance (a folder removed by hand, a half-finished add) must not

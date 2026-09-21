@@ -311,6 +311,24 @@ export interface AppBuilderComponentState {
         checkedAt: string;
     };
     /**
+     * The Adobe workspace this component is deployed into.
+     *
+     * **ABSENT means the project's own workspace** (`project.adobe`), which is what
+     * every component created before AB-23 has and what every component still gets
+     * until the add path starts creating one. That default is the whole reason this
+     * is optional: existing projects keep working with no migration.
+     *
+     * The `id` is what deploys target. The `name` is Adobe's machine name, which an
+     * App Management install sends (`buildAppData`) and which CANNOT be changed after
+     * the workspace is created — Adobe answers `400 "Workspace name can not be
+     * changed"` — so it is recorded here rather than looked up or derived.
+     */
+    workspace?: {
+        id: string;
+        name: string;
+        title?: string;
+    };
+    /**
      * The systems this integration uses (their `appBuilderComponents` ids), written
      * when the pair is added. Read through `appBuilderComponentLinks`.
      */

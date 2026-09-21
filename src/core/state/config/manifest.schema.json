@@ -738,6 +738,25 @@
           ],
           "description": "Newer code is available: the source branch on GitHub has commits the clone lacks, or the clone's app version differs from the one installed in Commerce. Set by the integrations screen's check, removed by a successful update (integrationUpdateCheck)."
         },
+        "workspace": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "name"
+          ],
+          "description": "The Adobe workspace this component is deployed into.\n\n**ABSENT means the project's own workspace** (`project.adobe`), which is what every component created before AB-23 has and what every component still gets until the add path starts creating one. That default is the whole reason this is optional: existing projects keep working with no migration.\n\nThe `id` is what deploys target. The `name` is Adobe's machine name, which an App Management install sends (`buildAppData`) and which CANNOT be changed after the workspace is created — Adobe answers `400 \"Workspace name can not be changed\"` — so it is recorded here rather than looked up or derived."
+        },
         "systems": {
           "type": "array",
           "items": {
