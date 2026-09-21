@@ -356,11 +356,10 @@ export const CACHE_TTL = {
     LONG: 3600000,
 
     /**
-     * Org entitled-services catalog (`getServicesForOrg`) — 30 minutes.
-     * The catalog is identical for every workspace in an org and changes rarely.
-     * Opening the dashboard and the integrations surface warms this cache in the
-     * background (`warmOrgServicesCatalog`), so a longer TTL keeps the picker's
-     * later fetch fast across a whole session.
+     * Org entitled-services catalog (`getServicesForOrg`) — refreshed after 30 minutes.
+     * Not an expiry: past this age the cached list is still returned at once, and a
+     * background refresh replaces it (`AdobeOrgServices.getServicesForOrg`). Only the
+     * session's first ask waits on Adobe.
      */
     ORG_SERVICES: 30 * 60 * 1000,
 } as const;
