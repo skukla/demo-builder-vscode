@@ -118,20 +118,24 @@ export class AdobeOrgServices {
      * Each entry carries `{ code, platformList, domainMandatory?, ... }`.
      */
     async getServicesForOrg(orgId: string, sdkCodes?: readonly string[]): Promise<OrgServiceInfo[]> {
-        // Session-TTL cache: the org's service catalog is identical for every
-        // workspace in the org and changes rarely, so avoid refetching it on every
-        // workspace commit. Return the cached list while it is still fresh — or,
-        // for a caller naming its codes, just those rows of it, with no call at all.
+        // Once loaded, ALWAYS answered from memory (Developer Console's pattern): the list is
+        // the same for every workspace and barely changes, and a cold fetch takes about a minute.
+        // An old copy starts one background refresh; only the session's first ask waits. On
+        // 2026-09-21 a 30-minute expiry made Manage APIs a 60s timeout 40 minutes in.
         const cached = this.servicesCache.get(orgId);
-        if (cached && Date.now() < cached.expiresAt) {
+        const flight = this.servicesFlights.get(orgId) ?? new SingleFlight<OrgServiceInfo[]>();
+        this.servicesFlights.set(orgId, flight);
+        if (cached) {
+            if (Date.now() >= cached.expiresAt) {
+                flight.run(() => this.fetchServicesForOrg(orgId)).catch(() => {
+                    this.debugLogger.debug('[Entity Fetcher] Background org services refresh failed');
+                });
+            }
             return sdkCodes ? cached.services.filter((s) => sdkCodes.includes(s.code)) : cached.services;
         }
-
         // Only the named codes: warm, three took 1.3s where the full catalog hit Adobe's 60s
         // limit. Never cached as the full list (the picker would show 4 APIs). A full load
         // already running races it rather than queuing it: cold, three codes took 54s too.
-        const flight = this.servicesFlights.get(orgId) ?? new SingleFlight<OrgServiceInfo[]>();
-        this.servicesFlights.set(orgId, flight);
         if (sdkCodes) {
             const narrowed = this.fetchServicesForOrg(orgId, sdkCodes);
             if (!flight.isInFlight) return narrowed;
