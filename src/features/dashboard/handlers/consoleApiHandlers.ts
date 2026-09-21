@@ -177,10 +177,23 @@ async function reconcileExtras(
     error?: string;
     data?: { subscribed?: SubscribedApi[]; notSubscribed?: string[] };
 }> {
-    // Per-integration edit: `desiredExtras` is THIS component's list, not the union.
-    // The subscribe still has to send the union, or dropping a code here would
-    // unsubscribe it out from under every other integration that holds it — the one
-    // failure mode in this plan that damages a live workspace.
+    // Does this component hold a workspace of its own (AB-23)? It decides the whole
+    // shape of the edit, because the danger the union protects against only exists
+    // in a SHARED workspace.
+    const ownWorkspace = componentId
+        ? project.appBuilderComponents?.[componentId]?.workspace
+        : undefined;
+
+    // Per-integration edit: `desiredExtras` arrives as THIS component's list.
+    //
+    // In a SHARED workspace it must be widened to the union before it is sent, or
+    // dropping a code here unsubscribes it out from under every other integration
+    // that holds it — the one failure mode in this plan that damages a live
+    // workspace. In the component's OWN workspace that cannot happen: nothing else
+    // deploys there, so widening would instead entitle its credential to APIs
+    // belonging to integrations living elsewhere, and every profile service among
+    // them is another Commerce profile attach on a credential nobody uses.
+    const previous = resolveDesiredApis(project, ownWorkspace ? componentId : undefined);
     let nextPicks: Record<string, string[]> | undefined;
     if (componentId) {
         const current = { ...(project.componentApiPicks ?? {}) };
@@ -192,11 +205,15 @@ async function reconcileExtras(
             delete current[componentId];
         }
         nextPicks = current;
-        desiredExtras = [...new Set(Object.values(current).flat())];
+        if (!ownWorkspace) {
+            desiredExtras = [...new Set(Object.values(current).flat())];
+        }
     }
-    // What this edit takes away from the project's union. The subscribe must send
-    // those credentials the full list, or the removal never reaches Adobe.
-    const removing = resolveDesiredApis(project).filter((code) => !desiredExtras.includes(code));
+    // What this edit takes away, measured against the same scope it sends: the
+    // project's union for a shared workspace, this component's own list otherwise.
+    // Scoping these two differently is how an unrelated integration's code ends up
+    // in `removing` and is stripped from a workspace this edit never mentioned.
+    const removing = previous.filter((code) => !desiredExtras.includes(code));
     const authService = ServiceLocator.getAuthenticationService();
     const client = createApiSubscriberClient(authService);
     const orgTarget = buildOrgTargetFromProjectAdobe(
@@ -210,8 +227,12 @@ async function reconcileExtras(
         // (PL-59 slice 6).
         const subscribed = await withOrgContext(orgTarget, () =>
             subscribeRequiredApis(
-                resolveProjectCatalog(project),
-                subscriberTarget(project),
+                // Only this component's entry when it has a workspace to itself —
+                // the others' `requiredApis` belong to their own workspaces.
+                ownWorkspace
+                    ? resolveProjectCatalog(project).filter((entry) => entry.id === componentId)
+                    : resolveProjectCatalog(project),
+                subscriberTarget(project, ownWorkspace ? componentId : undefined),
                 client,
                 deriveAllowedDomain(project),
                 desiredExtras,

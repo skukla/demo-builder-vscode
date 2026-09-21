@@ -436,6 +436,69 @@ describe('per-integration attribution (step 04)', () => {
         });
     }
 
+    /** The same pair, but erp-sync has a workspace of its own (AB-23). */
+    function withOwnWorkspace() {
+        const project = twoIntegrationProject();
+        const components = project.appBuilderComponents as Record<string, Record<string, unknown>>;
+        components['erp-sync'].workspace = { id: 'ws-erp-own', name: 'ErpSyncq3k9' };
+        return project;
+    }
+
+    describe('a component with a workspace of its own', () => {
+        /**
+         * The union exists to stop an edit unsubscribing a code out from under
+         * another integration that SHARES the workspace. Nothing else deploys to
+         * this one, so widening would instead entitle its credential to APIs
+         * belonging to integrations living elsewhere — and every profile service
+         * among them is another Commerce profile attach on a credential nobody
+         * there uses.
+         */
+        it("sends THIS component's list to ITS workspace, not the project union", async () => {
+            const context = makeContext(withOwnWorkspace());
+
+            await handleSetConsoleApis(context, {
+                apis: ['FireflyAPISDK'],
+                componentId: 'erp-sync',
+            });
+
+            const call = (subscribeRequiredApis as jest.Mock).mock.calls[0];
+            expect(call[1]).toEqual(expect.objectContaining({ workspaceId: 'ws-erp-own' }));
+            expect(call[4]).toEqual(['FireflyAPISDK']);
+        });
+
+        /**
+         * Removal is measured against the SAME scope it sends. Scoping the two
+         * differently is how another integration's code lands in `removing` and is
+         * stripped from a workspace the edit never mentioned.
+         */
+        it('removes only what THIS component is giving up', async () => {
+            const context = makeContext(withOwnWorkspace());
+
+            await handleSetConsoleApis(context, {
+                apis: ['FireflyAPISDK'],
+                componentId: 'erp-sync',
+            });
+
+            expect((subscribeRequiredApis as jest.Mock).mock.calls[0][6]).toEqual([
+                'GraphQLServiceSDK',
+            ]);
+        });
+
+        it('CONTROL: the same edit on a SHARED workspace still sends the union', async () => {
+            const context = makeContext(twoIntegrationProject());
+
+            await handleSetConsoleApis(context, {
+                apis: ['FireflyAPISDK'],
+                componentId: 'erp-sync',
+            });
+
+            const call = (subscribeRequiredApis as jest.Mock).mock.calls[0];
+            expect(call[1]).toEqual(expect.objectContaining({ workspaceId: 'w-1' }));
+            expect(call[4]).toEqual(['FireflyAPISDK', 'GraphQLServiceSDK']);
+            expect(call[6]).toStrictEqual([]);
+        });
+    });
+
     describe('list', () => {
         it("returns only THIS integration's picks as `added`, not the union", async () => {
             const context = makeContext(twoIntegrationProject());
