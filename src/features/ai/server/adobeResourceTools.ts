@@ -6,7 +6,7 @@
  *
  * ## Every tool here passes its target EXPLICITLY. That is the point.
  *
- * `AdobeEntityFetcher.createProject` / `createWorkspace` resolved their target
+ * `AdobeConsoleProjectOps.createProject` / `createWorkspace` resolved their target
  * from `cacheManager.getCachedOrganization()` / `getCachedProject()` — the
  * selection made in the EXTENSION UI. The agent's selection lives somewhere
  * else entirely: `select_org` / `select_project` write only `adobeTargetStore`

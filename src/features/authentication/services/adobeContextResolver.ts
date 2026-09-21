@@ -12,11 +12,11 @@
  * Dependencies:
  * - CommandExecutor for CLI operations
  * - AuthCacheManager for caching
- * - AdobeEntityFetcher for ID resolution
+ * - AdobeEntityReads for ID resolution
  * - Logger for logging
  */
 
-import type { AdobeEntityFetcher } from './adobeEntityFetcher';
+import type { AdobeEntityReads } from './adobeEntityReads';
 import type { AuthCacheManager } from './authCacheManager';
 import type {
     AdobeOrg,
@@ -40,7 +40,7 @@ export class AdobeContextResolver {
     constructor(
         private commandManager: CommandExecutor,
         private cacheManager: AuthCacheManager,
-        private fetcher: AdobeEntityFetcher,
+        private reads: AdobeEntityReads,
     ) {}
 
     /**
@@ -119,7 +119,7 @@ export class AdobeContextResolver {
      */
     private async fetchOrgListSafely(): Promise<AdobeOrg[]> {
         try {
-            return await this.fetcher.getOrganizations();
+            return await this.reads.getOrganizations();
         } catch (error) {
             this.debugLogger.trace(
                 '[Context Resolver] Failed to fetch org list for ID resolution:',
@@ -204,10 +204,10 @@ export class AdobeContextResolver {
     ): Promise<AdobeProject | undefined> {
         try {
             // getProjects resolves the org itself: threaded → cached → TOKEN org via the
-            // SDK (see AdobeEntityFetcher.resolveEffectiveOrgId). That systemic fallback
+            // SDK (see AdobeEntityReads.resolveEffectiveOrgId). That systemic fallback
             // keeps this best-effort project-ID lookup on the SDK path — no need to thread
             // the token org here — while avoiding the stale-console CLI 403 -> ORG_MISMATCH.
-            const projects = await this.fetcher.getProjects({ silent: true });
+            const projects = await this.reads.getProjects({ silent: true });
             const matched = projects.find(
                 (p) => p.name === projectString || p.title === projectString,
             );

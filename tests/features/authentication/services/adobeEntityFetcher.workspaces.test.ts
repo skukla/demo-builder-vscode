@@ -6,8 +6,8 @@
  */
 
 import {
-    AdobeEntityFetcher,
     setupEntityFetcher,
+    type EntityCollaborators,
 } from './adobeEntityFetcher.testUtils';
 
 import { ErrorCode } from '@/types/errorCodes';
@@ -19,14 +19,14 @@ import type { AuthCacheManager } from '@/features/authentication/services/authCa
 // Mock external dependencies
 
 describe('AdobeEntityFetcher', () => {
-    let fetcher: AdobeEntityFetcher;
+    let entities: EntityCollaborators;
     let mockCommandExecutor: jest.Mocked<CommandExecutor>;
     let mockSDKClient: jest.Mocked<AdobeSDKClient>;
     let mockCacheManager: jest.Mocked<AuthCacheManager>;
 
     beforeEach(() => {
         ({
-            fetcher,
+            entities,
             mockCommandExecutor,
             mockSDKClient,
             mockCacheManager,
@@ -45,7 +45,7 @@ describe('AdobeEntityFetcher', () => {
                 duration: 0,
             });
 
-            await expect(fetcher.getProjects()).rejects.toMatchObject({
+            await expect(entities.reads.getProjects()).rejects.toMatchObject({
                 code: ErrorCode.ORG_MISMATCH,
             });
         });
@@ -63,7 +63,7 @@ describe('AdobeEntityFetcher', () => {
 
             let caught: unknown;
             try {
-                await fetcher.getProjects();
+                await entities.reads.getProjects();
             } catch (err) {
                 caught = err;
             }
@@ -86,7 +86,7 @@ describe('AdobeEntityFetcher', () => {
                 duration: 0,
             });
 
-            await expect(fetcher.getProjects()).rejects.toThrow('AUTH_EXPIRED');
+            await expect(entities.reads.getProjects()).rejects.toThrow('AUTH_EXPIRED');
         });
 
         it('runs the project fetch under org-context targeting when orgId is supplied', async () => {
@@ -103,7 +103,7 @@ describe('AdobeEntityFetcher', () => {
                 return { stdout: JSON.stringify([]), stderr: '', code: 0, duration: 0 };
             });
 
-            await fetcher.getProjects({ orgId: 'org-target' });
+            await entities.reads.getProjects({ orgId: 'org-target' });
 
             expect(seenOrgIds).toContain('org-target');
         });
@@ -119,7 +119,7 @@ describe('AdobeEntityFetcher', () => {
                 return { stdout: JSON.stringify([]), stderr: '', code: 0, duration: 0 };
             });
 
-            await fetcher.getProjects();
+            await entities.reads.getProjects();
 
             expect(seenOrgIds).toEqual([undefined]);
         });
@@ -141,7 +141,7 @@ describe('AdobeEntityFetcher', () => {
                 return { stdout: JSON.stringify([]), stderr: '', code: 0, duration: 0 };
             });
 
-            await fetcher.getWorkspaces();
+            await entities.reads.getWorkspaces();
 
             expect(seen).toContainEqual({ orgId: 'org-ws', projectId: 'proj-ws' });
         });
@@ -158,7 +158,7 @@ describe('AdobeEntityFetcher', () => {
                 return { stdout: JSON.stringify([]), stderr: '', code: 0, duration: 0 };
             });
 
-            await fetcher.getWorkspaces();
+            await entities.reads.getWorkspaces();
 
             expect(seen).toEqual([undefined]);
         });
@@ -178,7 +178,7 @@ describe('AdobeEntityFetcher', () => {
                 return { stdout: JSON.stringify([]), stderr: '', code: 0, duration: 0 };
             });
 
-            await fetcher.getWorkspaces({ orgId: 'threaded-org', projectId: 'threaded-proj' });
+            await entities.reads.getWorkspaces({ orgId: 'threaded-org', projectId: 'threaded-proj' });
 
             expect(seen).toContainEqual({ orgId: 'threaded-org', projectId: 'threaded-proj' });
         });
@@ -202,7 +202,7 @@ describe('AdobeEntityFetcher', () => {
                 getProjectsForOrg,
             } as ReturnType<typeof mockSDKClient.getClient>);
 
-            await fetcher.getProjects({ orgId: 'target-org' });
+            await entities.reads.getProjects({ orgId: 'target-org' });
 
             expect(getProjectsForOrg).toHaveBeenCalledWith('target-org');
             expect(getProjectsForOrg).not.toHaveBeenCalledWith('stale-org');
@@ -222,7 +222,7 @@ describe('AdobeEntityFetcher', () => {
                 getProjectsForOrg,
             } as ReturnType<typeof mockSDKClient.getClient>);
 
-            await fetcher.getProjects();
+            await entities.reads.getProjects();
 
             expect(getProjectsForOrg).toHaveBeenCalledWith('cached-org');
         });
@@ -237,7 +237,7 @@ describe('AdobeEntityFetcher', () => {
                 getProjectsForOrg,
             } as ReturnType<typeof mockSDKClient.getClient>);
 
-            await fetcher.getProjects({ orgId: 'target-org' });
+            await entities.reads.getProjects({ orgId: 'target-org' });
 
             expect(getProjectsForOrg).toHaveBeenCalledWith('target-org');
         });
@@ -265,7 +265,7 @@ describe('AdobeEntityFetcher', () => {
                 }),
             } as ReturnType<typeof mockSDKClient.getClient>);
 
-            const result = await fetcher.getWorkspaces();
+            const result = await entities.reads.getWorkspaces();
 
             expect(result).toHaveLength(2);
             expect(result[0].name).toBe('Production');
@@ -290,7 +290,7 @@ describe('AdobeEntityFetcher', () => {
                 duration: 0,
             });
 
-            const result = await fetcher.getWorkspaces();
+            const result = await entities.reads.getWorkspaces();
 
             expect(result).toHaveLength(1);
             expect(result[0].name).toBe('CLI Workspace');

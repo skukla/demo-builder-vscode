@@ -17,7 +17,10 @@ import {
     StepLogger,
     getLogger,
 } from './adobeEntityFetcher.testUtils';
-import { AdobeEntityFetcher } from '@/features/authentication/services/adobeEntityFetcher';
+import {
+    createEntityCollaborators,
+    type EntityCollaborators,
+} from '@/features/authentication/services/adobeEntityService';
 import { CACHE_TTL, TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
@@ -26,7 +29,7 @@ import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 describe('AdobeEntityFetcher — getServicesForOrg cache', () => {
-    let fetcher: AdobeEntityFetcher;
+    let entities: EntityCollaborators;
     let mockSDKClient: jest.Mocked<AdobeSDKClient>;
     let sdk: { getServicesForOrg: jest.Mock };
 
@@ -41,7 +44,7 @@ describe('AdobeEntityFetcher — getServicesForOrg cache', () => {
             ensureInitialized: jest.fn().mockResolvedValue(true),
         } as unknown as jest.Mocked<AdobeSDKClient>;
 
-        fetcher = new AdobeEntityFetcher(
+        entities = createEntityCollaborators(
             createMockCommandExecutor(),
             mockSDKClient,
             {} as unknown as jest.Mocked<AuthCacheManager>,
@@ -57,8 +60,8 @@ describe('AdobeEntityFetcher — getServicesForOrg cache', () => {
     it('should return the cached list on a 2nd call within the TTL (SDK hit once)', async () => {
         sdk.getServicesForOrg.mockResolvedValue({ body: [{ code: MESH, platformList: ['apiKey'] }] });
 
-        const first = await fetcher.getServicesForOrg('org1');
-        const second = await fetcher.getServicesForOrg('org1');
+        const first = await entities.orgServices.getServicesForOrg('org1');
+        const second = await entities.orgServices.getServicesForOrg('org1');
 
         expect(sdk.getServicesForOrg).toHaveBeenCalledTimes(1);
         expect(second).toEqual(first);
@@ -67,8 +70,8 @@ describe('AdobeEntityFetcher — getServicesForOrg cache', () => {
     it('should fetch separately for a different orgId', async () => {
         sdk.getServicesForOrg.mockResolvedValue({ body: [{ code: MESH, platformList: ['apiKey'] }] });
 
-        await fetcher.getServicesForOrg('org1');
-        await fetcher.getServicesForOrg('org2');
+        await entities.orgServices.getServicesForOrg('org1');
+        await entities.orgServices.getServicesForOrg('org2');
 
         expect(sdk.getServicesForOrg).toHaveBeenCalledTimes(2);
         expect(sdk.getServicesForOrg).toHaveBeenNthCalledWith(1, 'org1', undefined);
@@ -78,8 +81,8 @@ describe('AdobeEntityFetcher — getServicesForOrg cache', () => {
     it('should NOT cache an empty result (2nd call refetches)', async () => {
         sdk.getServicesForOrg.mockResolvedValue({ body: [] });
 
-        await fetcher.getServicesForOrg('org1');
-        await fetcher.getServicesForOrg('org1');
+        await entities.orgServices.getServicesForOrg('org1');
+        await entities.orgServices.getServicesForOrg('org1');
 
         expect(sdk.getServicesForOrg).toHaveBeenCalledTimes(2);
     });
@@ -88,10 +91,10 @@ describe('AdobeEntityFetcher — getServicesForOrg cache', () => {
         sdk.getServicesForOrg.mockResolvedValue({ body: [{ code: MESH, platformList: ['apiKey'] }] });
         const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(1_000);
 
-        await fetcher.getServicesForOrg('org1');
+        await entities.orgServices.getServicesForOrg('org1');
         // Advance the clock past the TTL — the cache entry is now stale.
         nowSpy.mockReturnValue(1_000 + CACHE_TTL.ORG_SERVICES + 1);
-        await fetcher.getServicesForOrg('org1');
+        await entities.orgServices.getServicesForOrg('org1');
 
         expect(sdk.getServicesForOrg).toHaveBeenCalledTimes(2);
     });
@@ -110,9 +113,9 @@ describe('AdobeEntityFetcher — getServicesForOrg cache', () => {
             })
         );
 
-        const a = fetcher.getServicesForOrg('org1');
-        const b = fetcher.getServicesForOrg('org1');
-        const c = fetcher.getServicesForOrg('org1');
+        const a = entities.orgServices.getServicesForOrg('org1');
+        const b = entities.orgServices.getServicesForOrg('org1');
+        const c = entities.orgServices.getServicesForOrg('org1');
         await Promise.resolve();
         await Promise.resolve();
         release({ body: [{ code: MESH, platformList: ['apiKey'] }] });
@@ -126,7 +129,7 @@ describe('AdobeEntityFetcher — getServicesForOrg cache', () => {
     it('keeps concurrent flights SEPARATE per org', async () => {
         sdk.getServicesForOrg.mockResolvedValue({ body: [{ code: MESH, platformList: ['apiKey'] }] });
 
-        await Promise.all([fetcher.getServicesForOrg('org1'), fetcher.getServicesForOrg('org2')]);
+        await Promise.all([entities.orgServices.getServicesForOrg('org1'), entities.orgServices.getServicesForOrg('org2')]);
 
         expect(sdk.getServicesForOrg).toHaveBeenCalledTimes(2);
     });
@@ -140,7 +143,7 @@ describe('AdobeEntityFetcher — getServicesForOrg cache', () => {
         jest.useFakeTimers();
         sdk.getServicesForOrg.mockReturnValue(new Promise(() => {}));
 
-        const pending = fetcher.getServicesForOrg('org1');
+        const pending = entities.orgServices.getServicesForOrg('org1');
         // The assertion IS awaited below; the handler must attach BEFORE the
         // timers advance or the rejection is unhandled. The rule cannot see a
         // deferred await.
@@ -157,7 +160,7 @@ describe('AdobeEntityFetcher — getServicesForOrg cache', () => {
         jest.useFakeTimers();
         sdk.getServicesForOrg.mockReturnValueOnce(new Promise(() => {}));
 
-        const pending = fetcher.getServicesForOrg('org1');
+        const pending = entities.orgServices.getServicesForOrg('org1');
         // The assertion IS awaited below; the handler must attach BEFORE the
         // timers advance or the rejection is unhandled. The rule cannot see a
         // deferred await.
@@ -171,6 +174,6 @@ describe('AdobeEntityFetcher — getServicesForOrg cache', () => {
         // A failed flight must be released AND uncached, or one transient stall
         // would wedge the picker for the whole session.
         sdk.getServicesForOrg.mockResolvedValue({ body: [{ code: MESH, platformList: ['apiKey'] }] });
-        expect(await fetcher.getServicesForOrg('org1')).toHaveLength(1);
+        expect(await entities.orgServices.getServicesForOrg('org1')).toHaveLength(1);
     });
 });

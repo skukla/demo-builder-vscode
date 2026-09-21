@@ -10,7 +10,7 @@
  * A short random suffix is always appended so two entities with the same title (→ same
  * base) don't collide (409). The user never sees this name — the UI shows the title.
  *
- * Shared by both project and workspace creation (adobeEntityFetcher).
+ * Shared by both project and workspace creation (AdobeConsoleProjectOps).
  *
  * @module features/authentication/services/adobeEntityName
  */

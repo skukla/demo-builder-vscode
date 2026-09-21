@@ -83,19 +83,28 @@ export const createMockSDKClient = (): jest.Mocked<AdobeSDKClient> => ({
 
 /**
  * Creates mock entity services matching the EntityServices shape.
- * Methods are grouped by sub-service (fetcher, resolver, selector).
+ * Methods are grouped by the sub-service that OWNS them — the same split
+ * AuthenticationService now calls into directly, with no facade between.
  */
 export const createMockEntityServices = (): {
     entities: EntityServices;
-    fetcher: jest.Mocked<EntityServices['fetcher']>;
+    reads: jest.Mocked<EntityServices['reads']>;
+    credentials: jest.Mocked<EntityServices['credentials']>;
+    orgServices: jest.Mocked<EntityServices['orgServices']>;
+    projectOps: jest.Mocked<EntityServices['projectOps']>;
     resolver: jest.Mocked<EntityServices['resolver']>;
     selector: jest.Mocked<EntityServices['selector']>;
 } => {
-    const fetcher = {
+    const reads = {
         getOrganizations: jest.fn().mockResolvedValue([mockOrg]),
         getProjects: jest.fn().mockResolvedValue([mockProject]),
         getWorkspaces: jest.fn().mockResolvedValue([mockWorkspace]),
-    } as unknown as jest.Mocked<EntityServices['fetcher']>;
+    } as unknown as jest.Mocked<EntityServices['reads']>;
+    // Empty on purpose: a suite that drives one of these adds the method it needs,
+    // and an unset one fails loudly rather than answering a plausible default.
+    const credentials = {} as unknown as jest.Mocked<EntityServices['credentials']>;
+    const orgServices = {} as unknown as jest.Mocked<EntityServices['orgServices']>;
+    const projectOps = {} as unknown as jest.Mocked<EntityServices['projectOps']>;
 
     const resolver = {
         getCurrentOrganization: jest.fn().mockResolvedValue(mockOrg),
@@ -111,8 +120,11 @@ export const createMockEntityServices = (): {
     } as unknown as jest.Mocked<EntityServices['selector']>;
 
     return {
-        entities: { fetcher, resolver, selector },
-        fetcher,
+        entities: { reads, credentials, orgServices, projectOps, resolver, selector },
+        reads,
+        credentials,
+        orgServices,
+        projectOps,
         resolver,
         selector,
     };
@@ -137,14 +149,14 @@ export interface AuthServiceHarness {
  * that and failed two tests with the REAL collaborator running; passing the
  * suite's own bindings removes the question rather than answering it.
  *
- * @param deps - the suite's own mocked bindings, and the fetcher it needs
+ * @param deps - the suite's own mocked bindings, and the entity reads it needs
  */
 export function setupAuthServiceSuite(deps: {
     AdobeSDKClient: { mockImplementation: (fn: () => AdobeSDKClient) => unknown };
     createEntityServices: jest.Mock;
     getLogger: jest.Mock;
     /** The context suite also needs `getOrganizationsSdkOnly`; operations does not. */
-    fetcher?: Record<string, unknown>;
+    reads?: Record<string, unknown>;
 }): AuthServiceHarness {
     const commandExecutor = createMockCommandExecutorLocal();
     const logger = createMockLoggerLocal();
@@ -164,7 +176,7 @@ export function setupAuthServiceSuite(deps: {
     deps.AdobeSDKClient.mockImplementation(() => sdkClient);
 
     deps.createEntityServices.mockReturnValue({
-        fetcher: deps.fetcher ?? { getOrganizations: jest.fn().mockResolvedValue([mockOrg]) },
+        reads: deps.reads ?? { getOrganizations: jest.fn().mockResolvedValue([mockOrg]) },
         resolver: {},
         selector: {},
     });

@@ -20,7 +20,10 @@ import {
     StepLogger,
     getLogger,
 } from './adobeEntityFetcher.testUtils';
-import { AdobeEntityFetcher } from '@/features/authentication/services/adobeEntityFetcher';
+import {
+    createEntityCollaborators,
+    type EntityCollaborators,
+} from '@/features/authentication/services/adobeEntityService';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
 import type { Logger } from '@/types/logger';
@@ -30,7 +33,7 @@ import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake'
 const ORGS = [{ id: 'org-1', name: 'Acme', code: 'acme@AdobeOrg', type: 'entp' }];
 
 describe('AdobeEntityFetcher — getOrganizationsSdkOnly single-flight', () => {
-    let fetcher: AdobeEntityFetcher;
+    let entities: EntityCollaborators;
     let sdk: { getOrganizations: jest.Mock };
     let cache: { getCachedOrgList: jest.Mock; setCachedOrgList: jest.Mock };
 
@@ -62,7 +65,7 @@ describe('AdobeEntityFetcher — getOrganizationsSdkOnly single-flight', () => {
             ensureInitialized: jest.fn().mockResolvedValue(true),
         } as unknown as jest.Mocked<AdobeSDKClient>;
 
-        fetcher = new AdobeEntityFetcher(
+        entities = createEntityCollaborators(
             createMockCommandExecutor(),
             sdkClient,
             cache as unknown as jest.Mocked<AuthCacheManager>,
@@ -73,9 +76,9 @@ describe('AdobeEntityFetcher — getOrganizationsSdkOnly single-flight', () => {
 
     // THE regression: two callers racing must cost ONE round-trip, not two.
     it('collapses concurrent callers into a single SDK round-trip', async () => {
-        const a = fetcher.getOrganizationsSdkOnly();
-        const b = fetcher.getOrganizationsSdkOnly();
-        const c = fetcher.getOrganizationsSdkOnly();
+        const a = entities.reads.getOrganizationsSdkOnly();
+        const b = entities.reads.getOrganizationsSdkOnly();
+        const c = entities.reads.getOrganizationsSdkOnly();
 
         // Let the shared flight reach the SDK before resolving it.
         await Promise.resolve();
@@ -90,8 +93,8 @@ describe('AdobeEntityFetcher — getOrganizationsSdkOnly single-flight', () => {
     });
 
     it('every concurrent caller gets the real result, not undefined', async () => {
-        const a = fetcher.getOrganizationsSdkOnly();
-        const b = fetcher.getOrganizationsSdkOnly();
+        const a = entities.reads.getOrganizationsSdkOnly();
+        const b = entities.reads.getOrganizationsSdkOnly();
 
         await Promise.resolve();
         await Promise.resolve();
@@ -106,13 +109,13 @@ describe('AdobeEntityFetcher — getOrganizationsSdkOnly single-flight', () => {
 
     // A flight that is never released would wedge the fetcher for the session.
     it('releases the flight so a LATER call can fetch again', async () => {
-        const first = fetcher.getOrganizationsSdkOnly();
+        const first = entities.reads.getOrganizationsSdkOnly();
         await Promise.resolve();
         await Promise.resolve();
         release({ body: ORGS });
         await first;
 
-        const second = fetcher.getOrganizationsSdkOnly();
+        const second = entities.reads.getOrganizationsSdkOnly();
         await Promise.resolve();
         await Promise.resolve();
         release({ body: ORGS });
@@ -124,7 +127,7 @@ describe('AdobeEntityFetcher — getOrganizationsSdkOnly single-flight', () => {
     it('releases the flight after a FAILED fetch (no permanent wedge)', async () => {
         sdk.getOrganizations.mockRejectedValueOnce(new Error('network'));
 
-        const first = await fetcher.getOrganizationsSdkOnly();
+        const first = await entities.reads.getOrganizationsSdkOnly();
         expect(first).toBeUndefined();
 
         // A rejected flight must not be cached NOR left pending.
@@ -134,7 +137,7 @@ describe('AdobeEntityFetcher — getOrganizationsSdkOnly single-flight', () => {
                     release = resolve;
                 })
         );
-        const second = fetcher.getOrganizationsSdkOnly();
+        const second = entities.reads.getOrganizationsSdkOnly();
         await Promise.resolve();
         await Promise.resolve();
         release({ body: ORGS });
@@ -146,7 +149,7 @@ describe('AdobeEntityFetcher — getOrganizationsSdkOnly single-flight', () => {
     it('still short-circuits on a cache HIT without starting a flight', async () => {
         cache.getCachedOrgList.mockReturnValue(ORGS);
 
-        const result = await fetcher.getOrganizationsSdkOnly();
+        const result = await entities.reads.getOrganizationsSdkOnly();
 
         expect(result).toEqual(ORGS);
         expect(sdk.getOrganizations).not.toHaveBeenCalled();

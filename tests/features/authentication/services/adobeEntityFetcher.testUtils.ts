@@ -34,12 +34,15 @@ jest.mock('@/types/typeGuards');
 import { parseJSON } from '@/types/typeGuards';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
-import { AdobeEntityFetcher } from '@/features/authentication/services/adobeEntityFetcher';
+import {
+    createEntityCollaborators,
+    type EntityCollaborators,
+} from '@/features/authentication/services/adobeEntityService';
 
-export { AdobeEntityFetcher, parseJSON };
+export { createEntityCollaborators, parseJSON, type EntityCollaborators };
 
 export interface EntityFetcherHarness {
-    fetcher: AdobeEntityFetcher;
+    entities: EntityCollaborators;
     mockCommandExecutor: jest.Mocked<CommandExecutor>;
     mockSDKClient: jest.Mocked<AdobeSDKClient>;
     mockCacheManager: jest.Mocked<AuthCacheManager>;
@@ -49,7 +52,7 @@ export interface EntityFetcherHarness {
 }
 
 /**
- * The fetcher with every collaborator stubbed to its quiet default: no SDK, an
+ * The entity collaborators with every dependency stubbed to its quiet default: no SDK, an
  * empty cache, and a `parseJSON` that behaves like the real one.
  *
  * 46 lines, identical in two suites down to a trailing comma. The SDK reports
@@ -91,7 +94,7 @@ export function setupEntityFetcher(): EntityFetcherHarness {
 
     const onNoOrgsAccessible = jest.fn();
 
-    const fetcher = new AdobeEntityFetcher(
+    const entities = createEntityCollaborators(
         mockCommandExecutor,
         mockSDKClient,
         mockCacheManager,
@@ -101,7 +104,7 @@ export function setupEntityFetcher(): EntityFetcherHarness {
     );
 
     return {
-        fetcher,
+        entities,
         mockCommandExecutor,
         mockSDKClient,
         mockCacheManager,

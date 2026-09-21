@@ -467,8 +467,8 @@ export class AuthenticationService {
      */
     async getOrganizations(): Promise<AdobeOrg[]> {
         return withTiming('getOrganizations', async () => {
-            const { fetcher } = await this.ensureEntities();
-            return fetcher.getOrganizations();
+            const { reads } = await this.ensureEntities();
+            return reads.getOrganizations();
         });
     }
 
@@ -484,8 +484,8 @@ export class AuthenticationService {
      */
     async getOrganizationsSdkOnly(): Promise<AdobeOrg[] | undefined> {
         return withTiming('getOrganizationsSdkOnly', async () => {
-            const { fetcher } = await this.ensureEntities();
-            return fetcher.getOrganizationsSdkOnly();
+            const { reads } = await this.ensureEntities();
+            return reads.getOrganizationsSdkOnly();
         });
     }
 
@@ -498,8 +498,8 @@ export class AuthenticationService {
      */
     async getProjects(options?: { orgId?: string }): Promise<AdobeProject[]> {
         return withTiming('getProjects', async () => {
-            const { fetcher } = await this.ensureEntities();
-            return fetcher.getProjects(options);
+            const { reads } = await this.ensureEntities();
+            return reads.getProjects(options);
         });
     }
 
@@ -511,8 +511,8 @@ export class AuthenticationService {
      */
     async getProjectsSdkOnly(options?: { orgId?: string }): Promise<AdobeProject[]> {
         return withTiming('getProjectsSdkOnly', async () => {
-            const { fetcher } = await this.ensureEntities();
-            return fetcher.getProjectsSdkOnly(options);
+            const { reads } = await this.ensureEntities();
+            return reads.getProjectsSdkOnly(options);
         });
     }
 
@@ -525,8 +525,8 @@ export class AuthenticationService {
         projectId?: string;
     }): Promise<AdobeWorkspace[]> {
         return withTiming('getWorkspaces', async () => {
-            const { fetcher } = await this.ensureEntities();
-            return fetcher.getWorkspaces(target);
+            const { reads } = await this.ensureEntities();
+            return reads.getWorkspaces(target);
         });
     }
 
@@ -536,8 +536,8 @@ export class AuthenticationService {
         projectId?: string;
     }): Promise<AdobeWorkspace[]> {
         return withTiming('getWorkspacesSdkOnly', async () => {
-            const { fetcher } = await this.ensureEntities();
-            return fetcher.getWorkspacesSdkOnly(target);
+            const { reads } = await this.ensureEntities();
+            return reads.getWorkspacesSdkOnly(target);
         });
     }
 
@@ -547,8 +547,8 @@ export class AuthenticationService {
      * Returns undefined if credentials are unavailable (SDK not ready, no workspace selected, etc.)
      */
     async getWorkspaceCredential(): Promise<WorkspaceCredential | undefined> {
-        const { fetcher } = await this.ensureEntities();
-        return fetcher.getWorkspaceCredential();
+        const { credentials } = await this.ensureEntities();
+        return credentials.getWorkspaceCredential();
     }
 
     /**
@@ -560,8 +560,8 @@ export class AuthenticationService {
         projectId: string,
         title: string,
     ): Promise<RemoteRenameResult> {
-        const { fetcher } = await this.ensureEntities();
-        return fetcher.renameRemoteProject(orgId, projectId, title);
+        const { projectOps } = await this.ensureEntities();
+        return projectOps.renameRemoteProject(orgId, projectId, title);
     }
 
     /**
@@ -572,8 +572,8 @@ export class AuthenticationService {
         name: string,
         description: string,
     ): Promise<WorkspaceCredential | undefined> {
-        const { fetcher } = await this.ensureEntities();
-        return fetcher.createWorkspaceCredential(name, description);
+        const { credentials } = await this.ensureEntities();
+        return credentials.createWorkspaceCredential(name, description);
     }
 
     /**
@@ -586,8 +586,8 @@ export class AuthenticationService {
         target?: { orgId?: string },
     ): Promise<AdobeProject | ConsoleOpFailure> {
         return withTiming('createProject', async () => {
-            const { fetcher } = await this.ensureEntities();
-            return fetcher.createProject(name, description, target);
+            const { projectOps } = await this.ensureEntities();
+            return projectOps.createProject(name, description, target);
         });
     }
 
@@ -601,8 +601,8 @@ export class AuthenticationService {
         target?: { orgId?: string; projectId?: string },
     ): Promise<AdobeWorkspace | ConsoleOpFailure> {
         return withTiming('createWorkspace', async () => {
-            const { fetcher } = await this.ensureEntities();
-            return fetcher.createWorkspace(name, description, target);
+            const { projectOps } = await this.ensureEntities();
+            return projectOps.createWorkspace(name, description, target);
         });
     }
 
@@ -618,8 +618,8 @@ export class AuthenticationService {
         target?: { orgId?: string; projectId?: string },
     ): Promise<{ deleted: true } | ConsoleOpFailure> {
         return withTiming('deleteWorkspace', async () => {
-            const { fetcher } = await this.ensureEntities();
-            return fetcher.deleteWorkspace(workspaceId, target);
+            const { projectOps } = await this.ensureEntities();
+            return projectOps.deleteWorkspace(workspaceId, target);
         });
     }
 
@@ -629,20 +629,20 @@ export class AuthenticationService {
 
     /** List the org's entitled services (resolves requiredApis → sdkCodes). */
     async getServicesForOrg(orgId: string, sdkCodes?: readonly string[]): Promise<OrgServiceInfo[]> {
-        const { fetcher } = await this.ensureEntities();
-        return fetcher.getServicesForOrg(orgId, sdkCodes);
+        const { orgServices } = await this.ensureEntities();
+        return orgServices.getServicesForOrg(orgId, sdkCodes);
     }
 
     /** The sdk codes a credential is already subscribed to (for skip-if-subscribed). */
     async getSubscribedServiceCodes(orgId: string, idIntegration: string): Promise<string[]> {
-        const { fetcher } = await this.ensureEntities();
-        return fetcher.getSubscribedServiceCodes(orgId, idIntegration);
+        const { orgServices } = await this.ensureEntities();
+        return orgServices.getSubscribedServiceCodes(orgId, idIntegration);
     }
 
     /** Every service a credential holds, with its profiles; `undefined` when unknown. */
     async getSubscribedServices(orgId: string, idIntegration: string): Promise<SubscribedService[] | undefined> {
-        const { fetcher } = await this.ensureEntities();
-        return fetcher.getSubscribedServices(orgId, idIntegration);
+        const { orgServices } = await this.ensureEntities();
+        return orgServices.getSubscribedServices(orgId, idIntegration);
     }
 
     /** Create an apiKey/AdobeID credential; returns its `id_integration`. */
@@ -652,8 +652,8 @@ export class AuthenticationService {
         workspaceId: string,
         input: AdobeIdCredentialInput,
     ): Promise<string | undefined> {
-        const { fetcher } = await this.ensureEntities();
-        return fetcher.createAdobeIdCredential(orgId, projectId, workspaceId, input);
+        const { credentials } = await this.ensureEntities();
+        return credentials.createAdobeIdCredential(orgId, projectId, workspaceId, input);
     }
 
     /** Subscribe apiKey/AdobeID services onto an AdobeID credential. */
@@ -662,8 +662,8 @@ export class AuthenticationService {
         idIntegration: string,
         serviceInfo: ServiceSubscriptionInfo[],
     ): Promise<void> {
-        const { fetcher } = await this.ensureEntities();
-        return fetcher.subscribeAdobeIdIntegrationToServices(orgId, idIntegration, serviceInfo);
+        const { orgServices } = await this.ensureEntities();
+        return orgServices.subscribeAdobeIdIntegrationToServices(orgId, idIntegration, serviceInfo);
     }
 
     /** Subscribe OAuth-S2S services onto an S2S credential. */
@@ -672,8 +672,8 @@ export class AuthenticationService {
         idIntegration: string,
         serviceInfo: ServiceSubscriptionInfo[],
     ): Promise<void> {
-        const { fetcher } = await this.ensureEntities();
-        return fetcher.subscribeOAuthServerToServerIntegrationToServices(
+        const { orgServices } = await this.ensureEntities();
+        return orgServices.subscribeOAuthServerToServerIntegrationToServices(
             orgId,
             idIntegration,
             serviceInfo,
@@ -686,8 +686,8 @@ export class AuthenticationService {
         projectId: string,
         workspaceId: string,
     ): Promise<string[]> {
-        const { fetcher } = await this.ensureEntities();
-        return fetcher.listCredentialIds(orgId, projectId, workspaceId);
+        const { credentials } = await this.ensureEntities();
+        return credentials.listCredentialIds(orgId, projectId, workspaceId);
     }
 
     /** Ensure the shared S2S credential exists; returns its `id_integration`. */
@@ -696,8 +696,8 @@ export class AuthenticationService {
         projectId: string,
         workspaceId: string,
     ): Promise<string> {
-        const { fetcher } = await this.ensureEntities();
-        return fetcher.ensureOAuthCredentialId(orgId, projectId, workspaceId);
+        const { credentials } = await this.ensureEntities();
+        return credentials.ensureOAuthCredentialId(orgId, projectId, workspaceId);
     }
 
     // --- Console-project teardown passthroughs (delete-aio-project) ------------
@@ -708,8 +708,8 @@ export class AuthenticationService {
         projectId: string,
         workspaceId: string,
     ): Promise<WorkspaceS2SCredentialIds | undefined> {
-        const { fetcher } = await this.ensureEntities();
-        return fetcher.getWorkspaceS2SCredential(orgId, projectId, workspaceId);
+        const { credentials } = await this.ensureEntities();
+        return credentials.getWorkspaceS2SCredential(orgId, projectId, workspaceId);
     }
 
     /** Create the shared S2S credential on the workspace; returns its ids. */
@@ -718,8 +718,8 @@ export class AuthenticationService {
         projectId: string,
         workspaceId: string,
     ): Promise<WorkspaceS2SCredentialIds> {
-        const { fetcher } = await this.ensureEntities();
-        return fetcher.createWorkspaceS2SCredentialFor(orgId, projectId, workspaceId);
+        const { credentials } = await this.ensureEntities();
+        return credentials.createWorkspaceS2SCredentialFor(orgId, projectId, workspaceId);
     }
 
     /**
@@ -732,8 +732,8 @@ export class AuthenticationService {
         projectId: string,
         workspaceId: string,
     ): Promise<S2SDeployCredentials> {
-        const { fetcher } = await this.ensureEntities();
-        return fetcher.getS2SDeployCredentials(orgId, projectId, workspaceId);
+        const { credentials } = await this.ensureEntities();
+        return credentials.getS2SDeployCredentials(orgId, projectId, workspaceId);
     }
 
     /**
@@ -746,14 +746,14 @@ export class AuthenticationService {
         projectId: string,
         workspaceId: string,
     ): Promise<void> {
-        const { fetcher } = await this.ensureEntities();
-        return fetcher.ensureWorkspaceRuntimeNamespace(orgId, projectId, workspaceId);
+        const { projectOps } = await this.ensureEntities();
+        return projectOps.ensureWorkspaceRuntimeNamespace(orgId, projectId, workspaceId);
     }
 
     /** Delete a Console project. SDK errors propagate unchanged (callers map them). */
     async deleteConsoleProject(orgId: string, projectId: string): Promise<void> {
-        const { fetcher } = await this.ensureEntities();
-        return fetcher.deleteConsoleProject(orgId, projectId);
+        const { projectOps } = await this.ensureEntities();
+        return projectOps.deleteConsoleProject(orgId, projectId);
     }
 
     /** Clear the aio console selection (org/project/workspace) after a delete. */

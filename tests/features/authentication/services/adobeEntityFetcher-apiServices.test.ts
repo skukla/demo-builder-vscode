@@ -20,7 +20,10 @@ import {
     StepLogger,
     getLogger,
 } from './adobeEntityFetcher.testUtils';
-import { AdobeEntityFetcher } from '@/features/authentication/services/adobeEntityFetcher';
+import {
+    createEntityCollaborators,
+    type EntityCollaborators,
+} from '@/features/authentication/services/adobeEntityService';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
 import type { Logger } from '@/types/logger';
@@ -28,7 +31,7 @@ import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 describe('AdobeEntityFetcher — API-service wrappers', () => {
-    let fetcher: AdobeEntityFetcher;
+    let entities: EntityCollaborators;
     let mockSDKClient: jest.Mocked<AdobeSDKClient>;
     let sdk: {
         getServicesForOrg: jest.Mock;
@@ -68,7 +71,7 @@ describe('AdobeEntityFetcher — API-service wrappers', () => {
             getCachedWorkspace: jest.fn().mockReturnValue({ id: 'cache-ws' }),
         } as unknown as jest.Mocked<AuthCacheManager>;
 
-        fetcher = new AdobeEntityFetcher(
+        entities = createEntityCollaborators(
             createMockCommandExecutor(),
             mockSDKClient,
             mockCacheManager,
@@ -83,7 +86,7 @@ describe('AdobeEntityFetcher — API-service wrappers', () => {
                 body: [{ code: MESH, platformList: ['apiKey'] }],
             });
 
-            const result = await fetcher.getServicesForOrg('org1');
+            const result = await entities.orgServices.getServicesForOrg('org1');
 
             // No codes: the full catalog, which the API picker needs.
             expect(sdk.getServicesForOrg).toHaveBeenCalledWith('org1', undefined);
@@ -97,7 +100,7 @@ describe('AdobeEntityFetcher — API-service wrappers', () => {
                 body: { id_integration: 'int-123', id: 'should-not-be-used' },
             });
 
-            const id = await fetcher.createAdobeIdCredential('org1', 'proj1', 'ws1', {
+            const id = await entities.credentials.createAdobeIdCredential('org1', 'proj1', 'ws1', {
                 name: 'demo', description: 'demo cred', platform: 'apiKey', domain: 'localhost:3000',
             });
 
@@ -115,7 +118,7 @@ describe('AdobeEntityFetcher — API-service wrappers', () => {
                 body: { id: 'cred-id-789' },
             });
 
-            const id = await fetcher.createAdobeIdCredential('org1', 'proj1', 'ws1', {
+            const id = await entities.credentials.createAdobeIdCredential('org1', 'proj1', 'ws1', {
                 name: 'demo-builder-api-mesh', description: 'demo cred', platform: 'apiKey', domain: 'localhost:3000',
             });
 
@@ -130,7 +133,7 @@ describe('AdobeEntityFetcher — API-service wrappers', () => {
                 ],
             });
 
-            const id = await fetcher.createAdobeIdCredential('org1', 'proj1', 'ws1', {
+            const id = await entities.credentials.createAdobeIdCredential('org1', 'proj1', 'ws1', {
                 name: 'demo-builder-api-mesh', description: 'demo cred', platform: 'apiKey', domain: 'localhost:3000',
             });
 
@@ -149,7 +152,7 @@ describe('AdobeEntityFetcher — API-service wrappers', () => {
                 body: { id_integration: 'new-int' },
             });
 
-            const id = await fetcher.createAdobeIdCredential('org1', 'proj1', 'ws1', {
+            const id = await entities.credentials.createAdobeIdCredential('org1', 'proj1', 'ws1', {
                 name: 'demo-builder-api-mesh', description: 'demo cred', platform: 'apiKey', domain: 'localhost:3000',
             });
 
@@ -168,7 +171,7 @@ describe('AdobeEntityFetcher — API-service wrappers', () => {
                 ],
             });
 
-            const id = await fetcher.createAdobeIdCredential('org1', 'proj1', 'ws1', {
+            const id = await entities.credentials.createAdobeIdCredential('org1', 'proj1', 'ws1', {
                 name: 'demo-builder-api-mesh-ws1',
                 reuseNames: ['demo-builder-api-mesh'],
                 description: 'demo cred', platform: 'apiKey', domain: 'localhost:3000',
@@ -182,7 +185,7 @@ describe('AdobeEntityFetcher — API-service wrappers', () => {
             sdk.getCredentials.mockResolvedValue({ body: [] });
             sdk.createAdobeIdCredential.mockResolvedValue({ body: { id: 'new-int' } });
 
-            await fetcher.createAdobeIdCredential('org1', 'proj1', 'ws1', {
+            await entities.credentials.createAdobeIdCredential('org1', 'proj1', 'ws1', {
                 name: 'demo-builder-api-mesh-ws1',
                 reuseNames: ['demo-builder-api-mesh'],
                 description: 'demo cred', platform: 'apiKey', domain: 'localhost:3000',
@@ -200,7 +203,7 @@ describe('AdobeEntityFetcher — API-service wrappers', () => {
         it('returns the credential sdkList from getIntegration', async () => {
             sdk.getIntegration.mockResolvedValue({ body: { sdkList: ['GraphQLServiceSDK', 'AdobeIOManagementAPISDK'] } });
 
-            const codes = await fetcher.getSubscribedServiceCodes('org1', 'int-1');
+            const codes = await entities.orgServices.getSubscribedServiceCodes('org1', 'int-1');
 
             expect(codes).toEqual(['GraphQLServiceSDK', 'AdobeIOManagementAPISDK']);
             expect(sdk.getIntegration).toHaveBeenCalledWith('org1', 'int-1');
@@ -208,12 +211,12 @@ describe('AdobeEntityFetcher — API-service wrappers', () => {
 
         it('returns [] when sdkList is absent', async () => {
             sdk.getIntegration.mockResolvedValue({ body: {} });
-            expect(await fetcher.getSubscribedServiceCodes('org1', 'int-1')).toStrictEqual([]);
+            expect(await entities.orgServices.getSubscribedServiceCodes('org1', 'int-1')).toStrictEqual([]);
         });
 
         it('returns [] (never throws) when the SDK call fails', async () => {
             sdk.getIntegration.mockRejectedValue(new Error('boom'));
-            expect(await fetcher.getSubscribedServiceCodes('org1', 'int-1')).toStrictEqual([]);
+            expect(await entities.orgServices.getSubscribedServiceCodes('org1', 'int-1')).toStrictEqual([]);
         });
     });
 
@@ -221,7 +224,7 @@ describe('AdobeEntityFetcher — API-service wrappers', () => {
         it('should call the SDK with orgId, id_integration, and the serviceInfo list', async () => {
             sdk.subscribeAdobeIdIntegrationToServices.mockResolvedValue({ body: { sdkList: [MESH] } });
 
-            await fetcher.subscribeAdobeIdIntegrationToServices('org1', 'int-123', [
+            await entities.orgServices.subscribeAdobeIdIntegrationToServices('org1', 'int-123', [
                 { sdkCode: MESH, licenseConfigs: null, roles: null },
             ]);
 
@@ -235,7 +238,7 @@ describe('AdobeEntityFetcher — API-service wrappers', () => {
         it('should call the SDK with orgId, id_integration, and the serviceInfo list', async () => {
             sdk.subscribeOAuthServerToServerIntegrationToServices.mockResolvedValue({ body: { sdkList: [MGMT] } });
 
-            await fetcher.subscribeOAuthServerToServerIntegrationToServices('org1', 'int-456', [
+            await entities.orgServices.subscribeOAuthServerToServerIntegrationToServices('org1', 'int-456', [
                 { sdkCode: MGMT, licenseConfigs: null, roles: null },
             ]);
 
@@ -282,7 +285,7 @@ describe('AdobeEntityFetcher — API-service wrappers', () => {
             sdk.subscribeOAuthServerToServerIntegrationToServices.mockResolvedValue(REFUSAL);
 
             await expect(
-                fetcher.subscribeOAuthServerToServerIntegrationToServices('org1', 'int-456', [
+                entities.orgServices.subscribeOAuthServerToServerIntegrationToServices('org1', 'int-456', [
                     { sdkCode: 'ACCS-REST-API', licenseConfigs: null, roles: null },
                 ]),
             ).rejects.toThrow();
@@ -292,7 +295,7 @@ describe('AdobeEntityFetcher — API-service wrappers', () => {
             sdk.subscribeAdobeIdIntegrationToServices.mockResolvedValue(REFUSAL);
 
             await expect(
-                fetcher.subscribeAdobeIdIntegrationToServices('org1', 'int-123', [
+                entities.orgServices.subscribeAdobeIdIntegrationToServices('org1', 'int-123', [
                     { sdkCode: 'ACCS-REST-API', licenseConfigs: null, roles: null },
                 ]),
             ).rejects.toThrow();
@@ -305,7 +308,7 @@ describe('AdobeEntityFetcher — API-service wrappers', () => {
             sdk.subscribeOAuthServerToServerIntegrationToServices.mockResolvedValue(REFUSAL);
 
             await expect(
-                fetcher.subscribeOAuthServerToServerIntegrationToServices('org1', 'int-456', [
+                entities.orgServices.subscribeOAuthServerToServerIntegrationToServices('org1', 'int-456', [
                     { sdkCode: 'ACCS-REST-API', licenseConfigs: null, roles: null },
                 ]),
             ).rejects.toThrow(/requires selection of a product/);
@@ -315,7 +318,7 @@ describe('AdobeEntityFetcher — API-service wrappers', () => {
             sdk.subscribeOAuthServerToServerIntegrationToServices.mockResolvedValue(REFUSAL);
 
             await expect(
-                fetcher.subscribeOAuthServerToServerIntegrationToServices('org1', 'int-456', [
+                entities.orgServices.subscribeOAuthServerToServerIntegrationToServices('org1', 'int-456', [
                     { sdkCode: 'ACCS-REST-API', licenseConfigs: null, roles: null },
                 ]),
             ).rejects.toThrow(/ACCS-REST-API/);
@@ -333,7 +336,7 @@ describe('AdobeEntityFetcher — API-service wrappers', () => {
             sdk.subscribeOAuthServerToServerIntegrationToServices.mockResolvedValue(response);
 
             await expect(
-                fetcher.subscribeOAuthServerToServerIntegrationToServices('org1', 'int-456', [
+                entities.orgServices.subscribeOAuthServerToServerIntegrationToServices('org1', 'int-456', [
                     { sdkCode: MGMT, licenseConfigs: null, roles: null },
                 ]),
             ).resolves.toBeUndefined();
@@ -346,7 +349,7 @@ describe('AdobeEntityFetcher — API-service wrappers', () => {
             });
 
             await expect(
-                fetcher.subscribeOAuthServerToServerIntegrationToServices('org1', 'int-456', [
+                entities.orgServices.subscribeOAuthServerToServerIntegrationToServices('org1', 'int-456', [
                     { sdkCode: 'X', licenseConfigs: null, roles: null },
                 ]),
             ).rejects.toThrow(/nope/);
@@ -362,7 +365,7 @@ describe('AdobeEntityFetcher — API-service wrappers', () => {
                 ],
             });
 
-            const id = await fetcher.ensureOAuthCredentialId('o', 'p', 'w');
+            const id = await entities.credentials.ensureOAuthCredentialId('o', 'p', 'w');
 
             expect(id).toBe('cred-123');
             expect(sdk.getCredentials).toHaveBeenCalledWith('o', 'p', 'w');
@@ -375,7 +378,7 @@ describe('AdobeEntityFetcher — API-service wrappers', () => {
                 body: { id: 'new-cred-456', apiKey: 'key' },
             });
 
-            const id = await fetcher.ensureOAuthCredentialId('o', 'p', 'w');
+            const id = await entities.credentials.ensureOAuthCredentialId('o', 'p', 'w');
 
             expect(sdk.createOAuthServerToServerCredential).toHaveBeenCalledWith(
                 'o', 'p', 'w', expect.any(String), expect.any(String),
@@ -387,7 +390,7 @@ describe('AdobeEntityFetcher — API-service wrappers', () => {
             sdk.getCredentials.mockResolvedValue({ body: [] });
             sdk.createOAuthServerToServerCredential.mockResolvedValue({ body: { id: 'x', apiKey: 'key-x' } });
 
-            await fetcher.ensureOAuthCredentialId('arg-org', 'arg-proj', 'arg-ws');
+            await entities.credentials.ensureOAuthCredentialId('arg-org', 'arg-proj', 'arg-ws');
 
             expect(sdk.getCredentials).toHaveBeenCalledWith('arg-org', 'arg-proj', 'arg-ws');
             expect(sdk.createOAuthServerToServerCredential).toHaveBeenCalledWith(
@@ -401,7 +404,7 @@ describe('AdobeEntityFetcher — API-service wrappers', () => {
             });
             sdk.createOAuthServerToServerCredential.mockResolvedValue({ body: { id: 'created', apiKey: 'key-created' } });
 
-            const id = await fetcher.ensureOAuthCredentialId('o', 'p', 'w');
+            const id = await entities.credentials.ensureOAuthCredentialId('o', 'p', 'w');
 
             expect(id).toBe('created');
             expect(sdk.createOAuthServerToServerCredential).toHaveBeenCalled();
@@ -410,18 +413,18 @@ describe('AdobeEntityFetcher — API-service wrappers', () => {
         it('should throw when SDK is not initialized', async () => {
             (mockSDKClient.isInitialized as jest.Mock).mockReturnValue(false);
 
-            await expect(fetcher.ensureOAuthCredentialId('o', 'p', 'w')).rejects.toThrow();
+            await expect(entities.credentials.ensureOAuthCredentialId('o', 'p', 'w')).rejects.toThrow();
         });
 
         it('should throw when required args are missing', async () => {
-            await expect(fetcher.ensureOAuthCredentialId('', 'p', 'w')).rejects.toThrow();
+            await expect(entities.credentials.ensureOAuthCredentialId('', 'p', 'w')).rejects.toThrow();
         });
 
         it('should throw when create yields no id', async () => {
             sdk.getCredentials.mockResolvedValue({ body: [] });
             sdk.createOAuthServerToServerCredential.mockResolvedValue({ body: {} });
 
-            await expect(fetcher.ensureOAuthCredentialId('o', 'p', 'w')).rejects.toThrow();
+            await expect(entities.credentials.ensureOAuthCredentialId('o', 'p', 'w')).rejects.toThrow();
         });
     });
 });

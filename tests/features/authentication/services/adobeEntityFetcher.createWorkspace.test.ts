@@ -5,7 +5,10 @@
  * fallback), needs org id AND project id, validates input, never throws.
  */
 
-import { AdobeEntityFetcher } from '@/features/authentication/services/adobeEntityFetcher';
+import {
+    createEntityCollaborators,
+    type EntityCollaborators,
+} from '@/features/authentication/services/adobeEntityService';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
@@ -19,7 +22,7 @@ import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 describe('AdobeEntityFetcher.createWorkspace()', () => {
-    let fetcher: AdobeEntityFetcher;
+    let entities: EntityCollaborators;
     let mockCommandExecutor: jest.Mocked<CommandExecutor>;
     let mockSDKClient: jest.Mocked<AdobeSDKClient>;
     let mockCacheManager: jest.Mocked<AuthCacheManager>;
@@ -59,7 +62,7 @@ describe('AdobeEntityFetcher.createWorkspace()', () => {
         mockLogger = createMockLogger() as unknown as jest.Mocked<Logger>;
         mockStepLogger = { logTemplate: jest.fn() } as unknown as jest.Mocked<StepLogger>;
 
-        fetcher = new AdobeEntityFetcher(
+        entities = createEntityCollaborators(
             mockCommandExecutor,
             mockSDKClient,
             mockCacheManager,
@@ -73,7 +76,7 @@ describe('AdobeEntityFetcher.createWorkspace()', () => {
         // The create endpoint returns ONLY the new id ({ workspaceId }), not a full workspace.
         createWorkspace.mockResolvedValue({ body: { workspaceId: 'ws-new' } });
 
-        const result = await fetcher.createWorkspace('Stage', 'A workspace');
+        const result = await entities.projectOps.createWorkspace('Stage', 'A workspace');
 
         expect(result).toEqual({
             id: 'ws-new',
@@ -85,7 +88,7 @@ describe('AdobeEntityFetcher.createWorkspace()', () => {
     it('passes the free-form title through and derives an alphanumeric name from it', async () => {
         createWorkspace.mockResolvedValue({ body: { id: 'ws1', name: 'Stage', title: 'Stage' } });
 
-        await fetcher.createWorkspace('My Stage', 'A workspace');
+        await entities.projectOps.createWorkspace('My Stage', 'A workspace');
 
         expect(createWorkspace).toHaveBeenCalledWith(
             'org-123',
@@ -103,7 +106,7 @@ describe('AdobeEntityFetcher.createWorkspace()', () => {
         // A user-added workspace also needs Runtime for App Builder app deploys.
         createWorkspace.mockResolvedValue({ body: { workspaceId: 'ws-new' } });
 
-        await fetcher.createWorkspace('Stage', '');
+        await entities.projectOps.createWorkspace('Stage', '');
 
         expect(createRuntimeNamespace).toHaveBeenCalledWith('org-123', 'proj-456', 'ws-new');
     });
@@ -112,39 +115,39 @@ describe('AdobeEntityFetcher.createWorkspace()', () => {
         createWorkspace.mockResolvedValue({ body: { workspaceId: 'ws-new' } });
         createRuntimeNamespace.mockRejectedValue(new Error('500 Internal Error'));
 
-        const result = await fetcher.createWorkspace('Stage', '');
+        const result = await entities.projectOps.createWorkspace('Stage', '');
 
         expect(result).toEqual(expect.objectContaining({ id: 'ws-new' }));
     });
 
     it('names the failure for an empty name (no SDK call)', async () => {
-        const result = await fetcher.createWorkspace('', 'desc');
+        const result = await entities.projectOps.createWorkspace('', 'desc');
         expect(result).toEqual({ error: expect.stringContaining('1–200 characters') });
         expect(createWorkspace).not.toHaveBeenCalled();
     });
 
     it('names the failure for a name longer than 200 chars (no SDK call)', async () => {
-        const result = await fetcher.createWorkspace('x'.repeat(201), 'desc');
+        const result = await entities.projectOps.createWorkspace('x'.repeat(201), 'desc');
         expect(result).toEqual({ error: expect.stringContaining('1–200 characters') });
         expect(createWorkspace).not.toHaveBeenCalled();
     });
 
     it('names the failure for a description longer than 500 chars (no SDK call)', async () => {
-        const result = await fetcher.createWorkspace('Stage', 'd'.repeat(501));
+        const result = await entities.projectOps.createWorkspace('Stage', 'd'.repeat(501));
         expect(result).toEqual({ error: expect.stringContaining('500 characters') });
         expect(createWorkspace).not.toHaveBeenCalled();
     });
 
     it('names the failure when no organization is selected', async () => {
         mockCacheManager.getCachedOrganization.mockReturnValue(undefined);
-        const result = await fetcher.createWorkspace('Stage', 'desc');
+        const result = await entities.projectOps.createWorkspace('Stage', 'desc');
         expect(result).toEqual({ error: expect.stringContaining('No organization or project') });
         expect(createWorkspace).not.toHaveBeenCalled();
     });
 
     it('names the failure when no project is selected', async () => {
         mockCacheManager.getCachedProject.mockReturnValue(undefined);
-        const result = await fetcher.createWorkspace('Stage', 'desc');
+        const result = await entities.projectOps.createWorkspace('Stage', 'desc');
         expect(result).toEqual({ error: expect.stringContaining('No organization or project') });
         expect(createWorkspace).not.toHaveBeenCalled();
     });
@@ -152,26 +155,26 @@ describe('AdobeEntityFetcher.createWorkspace()', () => {
     it('names the failure when the SDK is not initialized', async () => {
         mockSDKClient.isInitialized.mockReturnValue(false);
         mockSDKClient.ensureInitialized.mockResolvedValue(false);
-        const result = await fetcher.createWorkspace('Stage', 'desc');
+        const result = await entities.projectOps.createWorkspace('Stage', 'desc');
         expect(result).toEqual({ error: expect.stringContaining('sign in to Adobe') });
         expect(createWorkspace).not.toHaveBeenCalled();
     });
 
     it('carries the SDK error TEXT when the SDK throws', async () => {
         createWorkspace.mockRejectedValue(new Error('403 Forbidden'));
-        const result = await fetcher.createWorkspace('Stage', 'desc');
+        const result = await entities.projectOps.createWorkspace('Stage', 'desc');
         expect(result).toEqual({ error: expect.stringContaining('403 Forbidden') });
     });
 
     it('translates a 409 Conflict into the name-taken reason', async () => {
         createWorkspace.mockRejectedValue(new Error('409 Conflict'));
-        const result = await fetcher.createWorkspace('Stage', 'desc');
+        const result = await entities.projectOps.createWorkspace('Stage', 'desc');
         expect(result).toEqual({ error: expect.stringContaining('already exists') });
     });
 
     it('names the failure when the response has no workspace body', async () => {
         createWorkspace.mockResolvedValue({ body: undefined });
-        const result = await fetcher.createWorkspace('Stage', 'desc');
+        const result = await entities.projectOps.createWorkspace('Stage', 'desc');
         expect(result).toEqual({ error: expect.stringContaining('no workspace id') });
     });
 });

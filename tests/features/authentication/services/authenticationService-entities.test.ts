@@ -39,7 +39,7 @@ describe('AuthenticationService - Entity Retrieval and Selection', () => {
     let mockLogger: jest.Mocked<Logger>;
     let mockStepLogger: jest.Mocked<StepLogger>;
     let mockSDKClient: jest.Mocked<AdobeSDKClient>;
-    let mockFetcher: any;
+    let mockEntities: any;
     let mockResolver: any;
     let mockSelector: any;
 
@@ -61,7 +61,7 @@ describe('AuthenticationService - Entity Retrieval and Selection', () => {
         mockSDKClient = createMockSDKClient();
 
         // Create mock entity sub-services
-        mockFetcher = {
+        mockEntities = {
             getOrganizations: jest.fn().mockResolvedValue([mockOrg]),
             getProjects: jest.fn().mockResolvedValue([mockProject]),
             getWorkspaces: jest.fn().mockResolvedValue([mockWorkspace]),
@@ -87,8 +87,13 @@ describe('AuthenticationService - Entity Retrieval and Selection', () => {
         (AdobeSDKClient as jest.MockedClass<typeof AdobeSDKClient>).mockImplementation(
             () => mockSDKClient
         );
+        // One pool behind all four collaborator slots — routing a call to the right
+        // one is the compiler's job, so this fake only has to answer.
         (createEntityServices as jest.Mock).mockReturnValue({
-            fetcher: mockFetcher,
+            reads: mockEntities,
+            credentials: mockEntities,
+            orgServices: mockEntities,
+            projectOps: mockEntities,
             resolver: mockResolver,
             selector: mockSelector,
         });
@@ -105,45 +110,45 @@ describe('AuthenticationService - Entity Retrieval and Selection', () => {
             const result = await authService.getOrganizations();
 
             expect(result).toEqual([mockOrg]);
-            expect(mockFetcher.getOrganizations).toHaveBeenCalled();
+            expect(mockEntities.getOrganizations).toHaveBeenCalled();
         });
 
         it('should get projects', async () => {
             const result = await authService.getProjects();
 
             expect(result).toEqual([mockProject]);
-            expect(mockFetcher.getProjects).toHaveBeenCalled();
+            expect(mockEntities.getProjects).toHaveBeenCalled();
         });
 
-        it('should create a project (delegates to fetcher.createProject)', async () => {
+        it('should create a project (delegates to projectOps.createProject)', async () => {
             const result = await authService.createProject('My Demo', 'A demo project');
 
             expect(result).toEqual(mockProject);
             // Third arg is the optional explicit target, threaded through for the
             // agent surface (phase-4 defect 0a). Undefined here means "use the
             // cached selection", which is what every webview caller wants.
-            expect(mockFetcher.createProject).toHaveBeenCalledWith(
+            expect(mockEntities.createProject).toHaveBeenCalledWith(
                 'My Demo',
                 'A demo project',
                 undefined
             );
         });
 
-        it('should create a workspace (delegates to fetcher.createWorkspace)', async () => {
+        it('should create a workspace (delegates to projectOps.createWorkspace)', async () => {
             const result = await authService.createWorkspace('Stage', 'A workspace');
 
             expect(result).toEqual(mockWorkspace);
-            expect(mockFetcher.createWorkspace).toHaveBeenCalledWith(
+            expect(mockEntities.createWorkspace).toHaveBeenCalledWith(
                 'Stage',
                 'A workspace',
                 undefined
             );
         });
 
-        it('ensures a workspace Runtime namespace (delegates to the fetcher)', async () => {
+        it('ensures a workspace Runtime namespace (delegates to projectOps)', async () => {
             await authService.ensureWorkspaceRuntimeNamespace('org-x', 'proj-x', 'ws-x');
 
-            expect(mockFetcher.ensureWorkspaceRuntimeNamespace).toHaveBeenCalledWith(
+            expect(mockEntities.ensureWorkspaceRuntimeNamespace).toHaveBeenCalledWith(
                 'org-x',
                 'proj-x',
                 'ws-x'
@@ -154,7 +159,7 @@ describe('AuthenticationService - Entity Retrieval and Selection', () => {
             const result = await authService.getWorkspaces();
 
             expect(result).toEqual([mockWorkspace]);
-            expect(mockFetcher.getWorkspaces).toHaveBeenCalled();
+            expect(mockEntities.getWorkspaces).toHaveBeenCalled();
         });
 
         it('should get current organization', async () => {

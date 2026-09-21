@@ -16,7 +16,10 @@ import {
     StepLogger,
     getLogger,
 } from './adobeEntityFetcher.testUtils';
-import { AdobeEntityFetcher } from '@/features/authentication/services/adobeEntityFetcher';
+import {
+    createEntityCollaborators,
+    type EntityCollaborators,
+} from '@/features/authentication/services/adobeEntityService';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
 import type { Logger } from '@/types/logger';
@@ -24,7 +27,7 @@ import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 describe('AdobeEntityFetcher — teardown SDK wrappers', () => {
-    let fetcher: AdobeEntityFetcher;
+    let entities: EntityCollaborators;
     let mockSDKClient: jest.Mocked<AdobeSDKClient>;
     let sdk: {
         getCredentials: jest.Mock;
@@ -55,7 +58,7 @@ describe('AdobeEntityFetcher — teardown SDK wrappers', () => {
             getCachedWorkspace: jest.fn().mockReturnValue({ id: 'cache-ws' }),
         } as unknown as jest.Mocked<AuthCacheManager>;
 
-        fetcher = new AdobeEntityFetcher(
+        entities = createEntityCollaborators(
             createMockCommandExecutor(),
             mockSDKClient,
             mockCacheManager,
@@ -73,7 +76,7 @@ describe('AdobeEntityFetcher — teardown SDK wrappers', () => {
                 ],
             });
 
-            const result = await fetcher.getWorkspaceS2SCredential('o', 'p', 'w');
+            const result = await entities.credentials.getWorkspaceS2SCredential('o', 'p', 'w');
 
             expect(result).toEqual({ clientId: 'client-abc', idIntegration: 'int-123' });
         });
@@ -86,7 +89,7 @@ describe('AdobeEntityFetcher — teardown SDK wrappers', () => {
                 ],
             });
 
-            const result = await fetcher.getWorkspaceS2SCredential('o', 'p', 'w');
+            const result = await entities.credentials.getWorkspaceS2SCredential('o', 'p', 'w');
 
             expect(result).toBeUndefined();
             expect(sdk.createOAuthServerToServerCredential).not.toHaveBeenCalled();
@@ -95,7 +98,7 @@ describe('AdobeEntityFetcher — teardown SDK wrappers', () => {
         it('should return undefined when the credential list is empty', async () => {
             sdk.getCredentials.mockResolvedValue({ body: [] });
 
-            const result = await fetcher.getWorkspaceS2SCredential('o', 'p', 'w');
+            const result = await entities.credentials.getWorkspaceS2SCredential('o', 'p', 'w');
 
             expect(result).toBeUndefined();
         });
@@ -103,7 +106,7 @@ describe('AdobeEntityFetcher — teardown SDK wrappers', () => {
         it('should return undefined when the response has no body', async () => {
             sdk.getCredentials.mockResolvedValue({});
 
-            const result = await fetcher.getWorkspaceS2SCredential('o', 'p', 'w');
+            const result = await entities.credentials.getWorkspaceS2SCredential('o', 'p', 'w');
 
             expect(result).toBeUndefined();
         });
@@ -111,7 +114,7 @@ describe('AdobeEntityFetcher — teardown SDK wrappers', () => {
         it('should call getCredentials with the explicit args, not cacheManager values', async () => {
             sdk.getCredentials.mockResolvedValue({ body: [] });
 
-            await fetcher.getWorkspaceS2SCredential('arg-org', 'arg-proj', 'arg-ws');
+            await entities.credentials.getWorkspaceS2SCredential('arg-org', 'arg-proj', 'arg-ws');
 
             expect(sdk.getCredentials).toHaveBeenCalledWith('arg-org', 'arg-proj', 'arg-ws');
         });
@@ -120,18 +123,18 @@ describe('AdobeEntityFetcher — teardown SDK wrappers', () => {
             const sdkError = new Error('getCredentials failed: 500');
             sdk.getCredentials.mockRejectedValue(sdkError);
 
-            await expect(fetcher.getWorkspaceS2SCredential('o', 'p', 'w')).rejects.toBe(sdkError);
+            await expect(entities.credentials.getWorkspaceS2SCredential('o', 'p', 'w')).rejects.toBe(sdkError);
         });
 
         it('should throw when required args are missing', async () => {
-            await expect(fetcher.getWorkspaceS2SCredential('', 'p', 'w')).rejects.toThrow();
+            await expect(entities.credentials.getWorkspaceS2SCredential('', 'p', 'w')).rejects.toThrow();
             expect(sdk.getCredentials).not.toHaveBeenCalled();
         });
 
         it('should throw when the SDK is not initialized', async () => {
             (mockSDKClient.isInitialized as jest.Mock).mockReturnValue(false);
 
-            await expect(fetcher.getWorkspaceS2SCredential('o', 'p', 'w')).rejects.toThrow();
+            await expect(entities.credentials.getWorkspaceS2SCredential('o', 'p', 'w')).rejects.toThrow();
         });
     });
 
@@ -141,7 +144,7 @@ describe('AdobeEntityFetcher — teardown SDK wrappers', () => {
                 body: { id: 'int-new', apiKey: 'client-new' },
             });
 
-            const result = await fetcher.createWorkspaceS2SCredentialFor('arg-org', 'arg-proj', 'arg-ws');
+            const result = await entities.credentials.createWorkspaceS2SCredentialFor('arg-org', 'arg-proj', 'arg-ws');
 
             expect(sdk.createOAuthServerToServerCredential).toHaveBeenCalledWith(
                 'arg-org', 'arg-proj', 'arg-ws', expect.any(String), expect.any(String),
@@ -154,7 +157,7 @@ describe('AdobeEntityFetcher — teardown SDK wrappers', () => {
                 body: { id: 'int-new' },
             });
 
-            await expect(fetcher.createWorkspaceS2SCredentialFor('o', 'p', 'w')).rejects.toThrow();
+            await expect(entities.credentials.createWorkspaceS2SCredentialFor('o', 'p', 'w')).rejects.toThrow();
         });
 
         it('should throw when the create response is missing id', async () => {
@@ -162,25 +165,25 @@ describe('AdobeEntityFetcher — teardown SDK wrappers', () => {
                 body: { apiKey: 'client-new' },
             });
 
-            await expect(fetcher.createWorkspaceS2SCredentialFor('o', 'p', 'w')).rejects.toThrow();
+            await expect(entities.credentials.createWorkspaceS2SCredentialFor('o', 'p', 'w')).rejects.toThrow();
         });
 
         it('should propagate SDK errors from the create call unchanged', async () => {
             const sdkError = new Error('createOAuthServerToServerCredential failed: 403');
             sdk.createOAuthServerToServerCredential.mockRejectedValue(sdkError);
 
-            await expect(fetcher.createWorkspaceS2SCredentialFor('o', 'p', 'w')).rejects.toBe(sdkError);
+            await expect(entities.credentials.createWorkspaceS2SCredentialFor('o', 'p', 'w')).rejects.toBe(sdkError);
         });
 
         it('should throw when required args are missing', async () => {
-            await expect(fetcher.createWorkspaceS2SCredentialFor('o', '', 'w')).rejects.toThrow();
+            await expect(entities.credentials.createWorkspaceS2SCredentialFor('o', '', 'w')).rejects.toThrow();
             expect(sdk.createOAuthServerToServerCredential).not.toHaveBeenCalled();
         });
 
         it('should throw when the SDK is not initialized', async () => {
             (mockSDKClient.isInitialized as jest.Mock).mockReturnValue(false);
 
-            await expect(fetcher.createWorkspaceS2SCredentialFor('o', 'p', 'w')).rejects.toThrow();
+            await expect(entities.credentials.createWorkspaceS2SCredentialFor('o', 'p', 'w')).rejects.toThrow();
         });
     });
 
@@ -190,7 +193,7 @@ describe('AdobeEntityFetcher — teardown SDK wrappers', () => {
                 body: [{ integration_type: 'oauth_server_to_server', client_id: 'client-abc', id_integration: 'int-existing' }],
             });
 
-            const id = await fetcher.ensureOAuthCredentialId('o', 'p', 'w');
+            const id = await entities.credentials.ensureOAuthCredentialId('o', 'p', 'w');
 
             expect(id).toBe('int-existing');
             expect(sdk.createOAuthServerToServerCredential).not.toHaveBeenCalled();
@@ -202,7 +205,7 @@ describe('AdobeEntityFetcher — teardown SDK wrappers', () => {
                 body: { id: 'int-created', apiKey: 'client-created' },
             });
 
-            const id = await fetcher.ensureOAuthCredentialId('o', 'p', 'w');
+            const id = await entities.credentials.ensureOAuthCredentialId('o', 'p', 'w');
 
             expect(id).toBe('int-created');
         });
@@ -212,7 +215,7 @@ describe('AdobeEntityFetcher — teardown SDK wrappers', () => {
         it('should call the SDK deleteProject with orgId and projectId and resolve', async () => {
             sdk.deleteProject.mockResolvedValue({ body: {} });
 
-            await expect(fetcher.deleteConsoleProject('arg-org', 'arg-proj')).resolves.toBeUndefined();
+            await expect(entities.projectOps.deleteConsoleProject('arg-org', 'arg-proj')).resolves.toBeUndefined();
 
             expect(sdk.deleteProject).toHaveBeenCalledWith('arg-org', 'arg-proj');
         });
@@ -225,18 +228,18 @@ describe('AdobeEntityFetcher — teardown SDK wrappers', () => {
             });
             sdk.deleteProject.mockRejectedValue(sdkError);
 
-            await expect(fetcher.deleteConsoleProject('o', 'p')).rejects.toBe(sdkError);
+            await expect(entities.projectOps.deleteConsoleProject('o', 'p')).rejects.toBe(sdkError);
         });
 
         it('should throw when required args are missing', async () => {
-            await expect(fetcher.deleteConsoleProject('o', '')).rejects.toThrow();
+            await expect(entities.projectOps.deleteConsoleProject('o', '')).rejects.toThrow();
             expect(sdk.deleteProject).not.toHaveBeenCalled();
         });
 
         it('should throw when the SDK is not initialized', async () => {
             (mockSDKClient.isInitialized as jest.Mock).mockReturnValue(false);
 
-            await expect(fetcher.deleteConsoleProject('o', 'p')).rejects.toThrow();
+            await expect(entities.projectOps.deleteConsoleProject('o', 'p')).rejects.toThrow();
         });
     });
 });

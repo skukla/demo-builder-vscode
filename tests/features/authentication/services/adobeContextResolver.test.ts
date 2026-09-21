@@ -8,7 +8,7 @@
 import { AdobeContextResolver } from '@/features/authentication/services/adobeContextResolver';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
-import type { AdobeEntityFetcher } from '@/features/authentication/services/adobeEntityFetcher';
+import type { AdobeEntityReads } from '@/features/authentication/services/adobeEntityReads';
 
 // Mock external dependencies
 jest.mock('@/types/typeGuards');
@@ -24,7 +24,7 @@ describe('AdobeContextResolver', () => {
     let resolver: AdobeContextResolver;
     let mockCommandExecutor: jest.Mocked<CommandExecutor>;
     let mockCacheManager: jest.Mocked<AuthCacheManager>;
-    let mockFetcher: jest.Mocked<AdobeEntityFetcher>;
+    let mockFetcher: jest.Mocked<AdobeEntityReads>;
 
     beforeEach(() => {
         // Setup logger mock
@@ -58,7 +58,7 @@ describe('AdobeContextResolver', () => {
             getOrganizations: jest.fn(),
             getProjects: jest.fn(),
             getWorkspaces: jest.fn(),
-        } as unknown as jest.Mocked<AdobeEntityFetcher>;
+        } as unknown as jest.Mocked<AdobeEntityReads>;
 
         resolver = new AdobeContextResolver(mockCommandExecutor, mockCacheManager, mockFetcher);
     });

@@ -10,7 +10,10 @@
  * — the machine `name` and description are never touched by a rename.
  */
 
-import { AdobeEntityFetcher } from '@/features/authentication/services/adobeEntityFetcher';
+import {
+    createEntityCollaborators,
+    type EntityCollaborators,
+} from '@/features/authentication/services/adobeEntityService';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
 import type { StepLogger } from '@/core/logging/stepLogger';
@@ -22,7 +25,7 @@ import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 describe('AdobeEntityFetcher.renameRemoteProject()', () => {
-    let fetcher: AdobeEntityFetcher;
+    let entities: EntityCollaborators;
     let mockSDKClient: jest.Mocked<AdobeSDKClient>;
     let editProject: jest.Mock;
 
@@ -36,7 +39,7 @@ describe('AdobeEntityFetcher.renameRemoteProject()', () => {
             ensureInitialized: jest.fn().mockResolvedValue(true),
         } as unknown as jest.Mocked<AdobeSDKClient>;
 
-        fetcher = new AdobeEntityFetcher(
+        entities = createEntityCollaborators(
             createMockCommandExecutor({ execute: jest.fn() }),
             mockSDKClient,
             {} as unknown as AuthCacheManager,
@@ -47,7 +50,7 @@ describe('AdobeEntityFetcher.renameRemoteProject()', () => {
     });
 
     it('PATCHes only the title to the given org/project and reports success', async () => {
-        const result = await fetcher.renameRemoteProject('org-1', 'proj-1', 'New Title');
+        const result = await entities.projectOps.renameRemoteProject('org-1', 'proj-1', 'New Title');
 
         expect(result).toStrictEqual({ ok: true });
         expect(editProject).toHaveBeenCalledWith('org-1', 'proj-1', { title: 'New Title' });
@@ -56,7 +59,7 @@ describe('AdobeEntityFetcher.renameRemoteProject()', () => {
     it('reports why without calling the API when the SDK is unavailable', async () => {
         (mockSDKClient.isInitialized as jest.Mock).mockReturnValue(false);
 
-        const result = await fetcher.renameRemoteProject('org-1', 'proj-1', 'New Title');
+        const result = await entities.projectOps.renameRemoteProject('org-1', 'proj-1', 'New Title');
 
         expect(result).toStrictEqual({ ok: false, error: 'The Adobe Console SDK is not available.' });
         expect(editProject).not.toHaveBeenCalled();
@@ -65,7 +68,7 @@ describe('AdobeEntityFetcher.renameRemoteProject()', () => {
     it("never throws — an API refusal (e.g. wrong org, 403) reports Adobe's own words", async () => {
         editProject.mockRejectedValue(new Error('403 Forbidden'));
 
-        const result = await fetcher.renameRemoteProject('org-1', 'proj-1', 'New Title');
+        const result = await entities.projectOps.renameRemoteProject('org-1', 'proj-1', 'New Title');
 
         expect(result).toStrictEqual({ ok: false, error: '403 Forbidden' });
     });

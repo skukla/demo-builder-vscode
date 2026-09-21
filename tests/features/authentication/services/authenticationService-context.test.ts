@@ -66,7 +66,7 @@ describe('AuthenticationService - Context Validation and SDK', () => {
             >,
             createEntityServices: createEntityServices as jest.Mock,
             getLogger: getLogger as jest.Mock,
-            fetcher: {
+            reads: {
                 getOrganizations: jest.fn().mockResolvedValue([mockOrg]),
                 getOrganizationsSdkOnly: sdkOnlyOrgs,
             },

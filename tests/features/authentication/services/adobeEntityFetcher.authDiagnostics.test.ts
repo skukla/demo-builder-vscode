@@ -36,7 +36,10 @@ jest.mock('@/core/logging/debugLogger', () => ({
     getLogger: () => mockDebugLogger,
 }));
 
-import { AdobeEntityFetcher } from '@/features/authentication/services/adobeEntityFetcher';
+import {
+    createEntityCollaborators,
+    type EntityCollaborators,
+} from '@/features/authentication/services/adobeEntityService';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
@@ -45,7 +48,7 @@ import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
-let fetcher: AdobeEntityFetcher;
+let entities: EntityCollaborators;
 let mockCommandExecutor: jest.Mocked<CommandExecutor>;
 let mockSDKClient: jest.Mocked<AdobeSDKClient>;
 let mockLogger: jest.Mocked<Logger>;
@@ -62,7 +65,7 @@ function build(config: Record<string, unknown> = {}) {
     } as unknown as jest.Mocked<AdobeSDKClient>;
     mockLogger = createMockLogger() as unknown as jest.Mocked<Logger>;
 
-    fetcher = new AdobeEntityFetcher(
+    entities = createEntityCollaborators(
         mockCommandExecutor,
         mockSDKClient,
         {
@@ -114,7 +117,7 @@ describe('a 401 from the CLI', () => {
             duration: 0,
         });
 
-        await expect(fetcher.getOrganizations()).rejects.not.toThrow(/AUTH_EXPIRED/);
+        await expect(entities.reads.getOrganizations()).rejects.not.toThrow(/AUTH_EXPIRED/);
     });
 
     it('STILL reports expiry when the token really is invalid', async () => {
@@ -126,7 +129,7 @@ describe('a 401 from the CLI', () => {
             duration: 0,
         });
 
-        await expect(fetcher.getOrganizations()).rejects.toThrow(/AUTH_EXPIRED/);
+        await expect(entities.reads.getOrganizations()).rejects.toThrow(/AUTH_EXPIRED/);
     });
 
     it('reports expiry when nothing can vouch for the token', async () => {
@@ -138,7 +141,7 @@ describe('a 401 from the CLI', () => {
             duration: 0,
         });
 
-        await expect(fetcher.getOrganizations()).rejects.toThrow(/AUTH_EXPIRED/);
+        await expect(entities.reads.getOrganizations()).rejects.toThrow(/AUTH_EXPIRED/);
     });
 });
 
@@ -153,7 +156,7 @@ describe('what the logs must show', () => {
             duration: 0,
         });
 
-        await expect(fetcher.getOrganizations()).rejects.toThrow();
+        await expect(entities.reads.getOrganizations()).rejects.toThrow();
 
         expect(visibleLines()).toMatch(/Raw organizations (stdout|stderr)/);
     });
@@ -166,7 +169,7 @@ describe('what the logs must show', () => {
             duration: 0,
         });
 
-        await expect(fetcher.getOrganizations()).rejects.toThrow();
+        await expect(entities.reads.getOrganizations()).rejects.toThrow();
 
         expect(visibleLines()).toMatch(/Raw organizations (stdout|stderr)/);
     });

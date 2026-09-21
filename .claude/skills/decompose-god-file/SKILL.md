@@ -41,8 +41,9 @@ find src -name "*.tsx" -not -name "*.test.tsx" -exec wc -l {} + | awk '$1 > 350'
    | Repository + Service | data access mixed with business logic | repository + service layers |
 
    Live reference for Facade + Services: `src/features/authentication/services/adobeEntityService.ts`
-   delegating to `adobeEntityFetcher` / `adobeContextResolver` / `adobeEntitySelector` /
-   `adobeEntityMapper`. For hook extraction, the wizard hooks (`useProjectBuilder` et al.).
+   — `createEntityCollaborators` WIRES the extracted services and hands them back; callers use
+   the one that owns the job. Note what is not there: a class of forwarding methods. See step 6.
+   For hook extraction, the wizard hooks (`useProjectBuilder` et al.).
 3. **Extract leaf-first, TDD each unit.** Extract the dependency with no internal deps first, write
    its unit tests, confirm green in isolation BEFORE touching the original:
    `npm run test:file -- tests/<path-to-extracted>.test.ts`. Then extract its dependents, then the
@@ -52,6 +53,17 @@ find src -name "*.tsx" -not -name "*.test.tsx" -exec wc -l {} + | awk '$1 > 350'
    suite after each extraction.
 5. **Keep tests in sync** (project rule): moving a method moves its tests to the new unit's test
    file; the facade keeps a delegation/integration test. Don't leave orphaned tests behind.
+6. **Then retire the forwarding.** Step 4's thin methods are scaffolding: they keep everything
+   green WHILE you extract. They are not the finished shape. Once the units are out, move the
+   callers onto the unit that owns each job and delete the forwarders, keeping only the wiring
+   (a `create...` function that builds the units and returns them).
+
+   Why this is a step and not a nicety, measured: the 2026-08-23 decomposition of
+   `adobeEntityFetcher.ts` stopped at step 4, and left a class whose 24 of 25 methods only
+   passed calls on. On 2026-09-21 adding ONE optional parameter to the org-services fetch
+   meant editing five signatures, three of them only to forward it. Removing the facade took
+   one sitting: 25 production call sites and 154 test call sites, found by `tsc` — see the
+   `ask-the-tool` skill for the method.
 
 ## Gotchas
 - **Premature extraction**: don't extract a helper with a single use case. This said "Rule
@@ -60,6 +72,8 @@ find src -name "*.tsx" -not -name "*.test.tsx" -exec wc -l {} + | awk '$1 > 350'
   it is three.
 - **Facade accumulation**: NEW behavior goes into the appropriate specialized service, never as a
   new method bolted onto the facade — that just recreates the god file behind a thin front.
+  Its quieter cousin is the facade that never shrinks: nothing new added, nothing old removed,
+  every call paying a layer of forwarding forever. Step 6 exists for that one.
 - **Shared mutable state**: extracted units must not reach into each other's private caches. Give
   state to a dedicated cache/manager passed by injection.
 - **Circular deps**: if A needs B and B needs A, wire cross-cutting concerns via a callback/event at

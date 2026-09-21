@@ -86,7 +86,7 @@ export interface OrgTarget {
 
 /**
  * The credential + subscribe operations the orchestrator needs. Implemented by
- * an adapter over `AdobeEntityFetcher` (step 08 wiring); mocked in unit tests.
+ * an adapter over `AuthenticationService` (step 08 wiring); mocked in unit tests.
  */
 export interface ApiSubscriberClient {
     /**

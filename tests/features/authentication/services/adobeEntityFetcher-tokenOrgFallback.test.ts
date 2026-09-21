@@ -7,7 +7,10 @@
  * to the stale-console CLI (which 403s -> ORG_MISMATCH).
  */
 
-import { AdobeEntityFetcher } from '@/features/authentication/services/adobeEntityFetcher';
+import {
+    createEntityCollaborators,
+    type EntityCollaborators,
+} from '@/features/authentication/services/adobeEntityService';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
@@ -23,7 +26,7 @@ import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 describe('AdobeEntityFetcher — token-org SDK fallback', () => {
-    let fetcher: AdobeEntityFetcher;
+    let entities: EntityCollaborators;
     let mockCommandExecutor: jest.Mocked<CommandExecutor>;
     let mockSDKClient: jest.Mocked<AdobeSDKClient>;
     let mockCacheManager: jest.Mocked<AuthCacheManager>;
@@ -65,7 +68,7 @@ describe('AdobeEntityFetcher — token-org SDK fallback', () => {
 
         onNoOrgsAccessible = jest.fn();
 
-        fetcher = new AdobeEntityFetcher(
+        entities = createEntityCollaborators(
             mockCommandExecutor,
             mockSDKClient,
             mockCacheManager,
@@ -89,11 +92,11 @@ describe('AdobeEntityFetcher — token-org SDK fallback', () => {
             mockSDKClient.getClient.mockReturnValue({
                 getProjectsForOrg,
             } as ReturnType<typeof mockSDKClient.getClient>);
-            jest.spyOn(fetcher, 'getOrganizationsSdkOnly').mockResolvedValue([
+            jest.spyOn(entities.reads, 'getOrganizationsSdkOnly').mockResolvedValue([
                 { id: 'tok-org', code: 'TOK@AdobeOrg', name: 'Token Org' },
             ]);
 
-            await fetcher.getProjects();
+            await entities.reads.getProjects();
 
             expect(getProjectsForOrg).toHaveBeenCalledWith('tok-org');
             // The SDK path succeeded — the CLI fallback must NOT run.
@@ -109,9 +112,9 @@ describe('AdobeEntityFetcher — token-org SDK fallback', () => {
             mockSDKClient.getClient.mockReturnValue({
                 getProjectsForOrg,
             } as ReturnType<typeof mockSDKClient.getClient>);
-            const tokenSpy = jest.spyOn(fetcher, 'getOrganizationsSdkOnly');
+            const tokenSpy = jest.spyOn(entities.reads, 'getOrganizationsSdkOnly');
 
-            await fetcher.getProjects({ orgId: 'threaded-org' });
+            await entities.reads.getProjects({ orgId: 'threaded-org' });
 
             expect(getProjectsForOrg).toHaveBeenCalledWith('threaded-org');
             expect(tokenSpy).not.toHaveBeenCalled();
@@ -128,9 +131,9 @@ describe('AdobeEntityFetcher — token-org SDK fallback', () => {
             mockSDKClient.getClient.mockReturnValue({
                 getProjectsForOrg,
             } as ReturnType<typeof mockSDKClient.getClient>);
-            const tokenSpy = jest.spyOn(fetcher, 'getOrganizationsSdkOnly');
+            const tokenSpy = jest.spyOn(entities.reads, 'getOrganizationsSdkOnly');
 
-            await fetcher.getProjects();
+            await entities.reads.getProjects();
 
             expect(getProjectsForOrg).toHaveBeenCalledWith('cached-org');
             expect(tokenSpy).not.toHaveBeenCalled();
@@ -148,11 +151,11 @@ describe('AdobeEntityFetcher — token-org SDK fallback', () => {
             mockSDKClient.getClient.mockReturnValue({
                 getWorkspacesForProject,
             } as ReturnType<typeof mockSDKClient.getClient>);
-            jest.spyOn(fetcher, 'getOrganizationsSdkOnly').mockResolvedValue([
+            jest.spyOn(entities.reads, 'getOrganizationsSdkOnly').mockResolvedValue([
                 { id: 'tok-org', code: 'TOK@AdobeOrg', name: 'Token Org' },
             ]);
 
-            await fetcher.getWorkspaces({ projectId: 'threaded-proj' });
+            await entities.reads.getWorkspaces({ projectId: 'threaded-proj' });
 
             expect(getWorkspacesForProject).toHaveBeenCalledWith('tok-org', 'threaded-proj');
             expect(mockCommandExecutor.execute).not.toHaveBeenCalled();

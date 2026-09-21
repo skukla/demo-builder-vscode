@@ -6,8 +6,8 @@
  */
 
 import {
-    AdobeEntityFetcher,
     setupEntityFetcher,
+    type EntityCollaborators,
 } from './adobeEntityFetcher.testUtils';
 
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -19,7 +19,7 @@ import type { StepLogger } from '@/core/logging/stepLogger';
 // Mock external dependencies
 
 describe('AdobeEntityFetcher', () => {
-    let fetcher: AdobeEntityFetcher;
+    let entities: EntityCollaborators;
     let mockCommandExecutor: jest.Mocked<CommandExecutor>;
     let mockSDKClient: jest.Mocked<AdobeSDKClient>;
     let mockCacheManager: jest.Mocked<AuthCacheManager>;
@@ -28,7 +28,7 @@ describe('AdobeEntityFetcher', () => {
 
     beforeEach(() => {
         ({
-            fetcher,
+            entities,
             mockCommandExecutor,
             mockSDKClient,
             mockCacheManager,
@@ -42,7 +42,7 @@ describe('AdobeEntityFetcher', () => {
             const cachedOrgs = [{ id: 'org1', code: 'ORG1@AdobeOrg', name: 'Organization 1' }];
             mockCacheManager.getCachedOrgList.mockReturnValue(cachedOrgs);
 
-            const result = await fetcher.getOrganizations();
+            const result = await entities.reads.getOrganizations();
 
             expect(result).toEqual(cachedOrgs);
             expect(mockSDKClient.isInitialized).not.toHaveBeenCalled();
@@ -61,7 +61,7 @@ describe('AdobeEntityFetcher', () => {
                 }),
             } as ReturnType<typeof mockSDKClient.getClient>);
 
-            const result = await fetcher.getOrganizations();
+            const result = await entities.reads.getOrganizations();
 
             expect(result).toHaveLength(2);
             expect(result[0].id).toBe('org1');
@@ -83,7 +83,7 @@ describe('AdobeEntityFetcher', () => {
                 duration: 0,
             });
 
-            const result = await fetcher.getOrganizations();
+            const result = await entities.reads.getOrganizations();
 
             expect(result).toHaveLength(1);
             expect(result[0].name).toBe('CLI Org');
@@ -114,7 +114,7 @@ describe('AdobeEntityFetcher', () => {
                     duration: 0,
                 });
 
-                const resultPromise = fetcher.getOrganizations();
+                const resultPromise = entities.reads.getOrganizations();
                 await jest.advanceTimersByTimeAsync(TIMEOUTS.SDK_ENTITY_FETCH + 1);
                 const result = await resultPromise;
 
@@ -141,7 +141,7 @@ describe('AdobeEntityFetcher', () => {
                 duration: 0,
             });
 
-            const result = await fetcher.getOrganizations();
+            const result = await entities.reads.getOrganizations();
 
             expect(result).toHaveLength(1);
             expect(mockSDKClient.ensureInitialized).toHaveBeenCalled();
@@ -158,7 +158,7 @@ describe('AdobeEntityFetcher', () => {
                 duration: 0,
             });
 
-            const result = await fetcher.getOrganizations();
+            const result = await entities.reads.getOrganizations();
 
             expect(result).toHaveLength(0);
             expect(onNoOrgsAccessible).toHaveBeenCalled();
@@ -175,7 +175,7 @@ describe('AdobeEntityFetcher', () => {
                 duration: 0,
             });
 
-            await expect(fetcher.getOrganizations()).rejects.toThrow('Failed to get organizations');
+            await expect(entities.reads.getOrganizations()).rejects.toThrow('Failed to get organizations');
         });
     });
 
@@ -184,7 +184,7 @@ describe('AdobeEntityFetcher', () => {
             const cachedOrgs = [{ id: 'org1', code: 'ORG1@AdobeOrg', name: 'Organization 1' }];
             mockCacheManager.getCachedOrgList.mockReturnValue(cachedOrgs);
 
-            const result = await fetcher.getOrganizationsSdkOnly();
+            const result = await entities.reads.getOrganizationsSdkOnly();
 
             expect(result).toEqual(cachedOrgs);
             expect(mockSDKClient.isInitialized).not.toHaveBeenCalled();
@@ -200,7 +200,7 @@ describe('AdobeEntityFetcher', () => {
                 }),
             } as ReturnType<typeof mockSDKClient.getClient>);
 
-            const result = await fetcher.getOrganizationsSdkOnly();
+            const result = await entities.reads.getOrganizationsSdkOnly();
 
             expect(result).toHaveLength(1);
             expect(result?.[0]?.id).toBe('org1');
@@ -221,7 +221,7 @@ describe('AdobeEntityFetcher', () => {
                 getOrganizations: jest.fn().mockRejectedValue(new Error('SDK error')),
             } as ReturnType<typeof mockSDKClient.getClient>);
 
-            const result = await fetcher.getOrganizationsSdkOnly();
+            const result = await entities.reads.getOrganizationsSdkOnly();
 
             expect(result).toBeUndefined();
             expect(mockCommandExecutor.execute).not.toHaveBeenCalled();
@@ -234,7 +234,7 @@ describe('AdobeEntityFetcher', () => {
             mockSDKClient.isInitialized.mockReturnValue(false);
             mockSDKClient.ensureInitialized.mockResolvedValue(false);
 
-            const result = await fetcher.getOrganizationsSdkOnly();
+            const result = await entities.reads.getOrganizationsSdkOnly();
 
             expect(result).toBeUndefined();
             expect(mockSDKClient.ensureInitialized).toHaveBeenCalled();
@@ -251,7 +251,7 @@ describe('AdobeEntityFetcher', () => {
                 getOrganizations: jest.fn().mockResolvedValue({ body: [] }),
             } as ReturnType<typeof mockSDKClient.getClient>);
 
-            const result = await fetcher.getOrganizationsSdkOnly();
+            const result = await entities.reads.getOrganizationsSdkOnly();
 
             expect(result).toStrictEqual([]);
             expect(mockCommandExecutor.execute).not.toHaveBeenCalled();
@@ -263,7 +263,7 @@ describe('AdobeEntityFetcher', () => {
             mockSDKClient.isInitialized.mockReturnValue(false);
             mockSDKClient.ensureInitialized.mockResolvedValue(false);
 
-            await fetcher.getOrganizationsSdkOnly();
+            await entities.reads.getOrganizationsSdkOnly();
 
             expect(onNoOrgsAccessible).not.toHaveBeenCalled();
         });
@@ -290,7 +290,7 @@ describe('AdobeEntityFetcher', () => {
                 }),
             } as ReturnType<typeof mockSDKClient.getClient>);
 
-            const result = await fetcher.getProjectsSdkOnly();
+            const result = await entities.reads.getProjectsSdkOnly();
 
             expect(result).toHaveLength(1);
             expect(mockCommandExecutor.execute).not.toHaveBeenCalled();
@@ -309,7 +309,7 @@ describe('AdobeEntityFetcher', () => {
                 getProjectsForOrg: jest.fn().mockRejectedValue(new Error('SDK error')),
             } as ReturnType<typeof mockSDKClient.getClient>);
 
-            const result = await fetcher.getProjectsSdkOnly();
+            const result = await entities.reads.getProjectsSdkOnly();
 
             expect(result).toStrictEqual([]);
             expect(mockCommandExecutor.execute).not.toHaveBeenCalled();
@@ -326,7 +326,7 @@ describe('AdobeEntityFetcher', () => {
                 getWorkspacesForProject: jest.fn().mockRejectedValue(new Error('SDK error')),
             } as ReturnType<typeof mockSDKClient.getClient>);
 
-            const result = await fetcher.getWorkspacesSdkOnly({ projectId: 'proj1' });
+            const result = await entities.reads.getWorkspacesSdkOnly({ projectId: 'proj1' });
 
             expect(result).toStrictEqual([]);
             expect(mockCommandExecutor.execute).not.toHaveBeenCalled();
@@ -351,7 +351,7 @@ describe('AdobeEntityFetcher', () => {
                 duration: 0,
             });
 
-            await fetcher.getProjects();
+            await entities.reads.getProjects();
 
             expect(mockCommandExecutor.execute).toHaveBeenCalled();
         });
@@ -371,7 +371,7 @@ describe('AdobeEntityFetcher', () => {
                 }),
             } as ReturnType<typeof mockSDKClient.getClient>);
 
-            const result = await fetcher.getProjects();
+            const result = await entities.reads.getProjects();
 
             expect(result).toHaveLength(1);
             expect(result[0].name).toBe('Project 1');
@@ -398,7 +398,7 @@ describe('AdobeEntityFetcher', () => {
                 }),
             } as ReturnType<typeof mockSDKClient.getClient>);
 
-            const result = await fetcher.getProjects();
+            const result = await entities.reads.getProjects();
 
             expect(result[0].who_created).toBe('5DA1B2C3D4E5F607080910A1@abcdef1234567890.e');
             // Missing on the wire → stays absent (ownership gate fails closed later).
@@ -409,7 +409,7 @@ describe('AdobeEntityFetcher', () => {
             mockCacheManager.getCachedOrganization.mockReturnValue(undefined);
             mockSDKClient.isInitialized.mockReturnValue(true);
             // No threaded/cached org AND the token org fallback yields nothing → CLI.
-            jest.spyOn(fetcher, 'getOrganizationsSdkOnly').mockResolvedValue([]);
+            jest.spyOn(entities.reads, 'getOrganizationsSdkOnly').mockResolvedValue([]);
 
             mockCommandExecutor.execute.mockResolvedValue({
                 stdout: JSON.stringify([
@@ -420,7 +420,7 @@ describe('AdobeEntityFetcher', () => {
                 duration: 0,
             });
 
-            const result = await fetcher.getProjects();
+            const result = await entities.reads.getProjects();
 
             expect(result).toHaveLength(1);
             expect(result[0].name).toBe('CLI Project');
@@ -437,7 +437,7 @@ describe('AdobeEntityFetcher', () => {
                 duration: 0,
             });
 
-            await fetcher.getProjects({ silent: true });
+            await entities.reads.getProjects({ silent: true });
 
             expect(mockStepLogger.logTemplate).not.toHaveBeenCalledWith(
                 'adobe-auth',
@@ -457,7 +457,7 @@ describe('AdobeEntityFetcher', () => {
                 duration: 0,
             });
 
-            const result = await fetcher.getProjects();
+            const result = await entities.reads.getProjects();
 
             expect(result).toHaveLength(0);
         });
@@ -484,7 +484,7 @@ describe('AdobeEntityFetcher', () => {
                 duration: 0,
             });
 
-            const result = await fetcher.getProjects();
+            const result = await entities.reads.getProjects();
 
             expect(result).toHaveLength(1);
             expect(result[0].name).toBe('Project 1');
@@ -504,7 +504,7 @@ describe('AdobeEntityFetcher', () => {
                 duration: 0,
             });
 
-            const result = await fetcher.getOrganizations();
+            const result = await entities.reads.getOrganizations();
 
             expect(result).toHaveLength(1);
             expect(result[0].name).toBe('Org 1');

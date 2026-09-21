@@ -58,7 +58,7 @@ describe('AdobeEntityFetcher — credential and Runtime delegates', () => {
             ],
         });
 
-        const credential = await h.fetcher.getWorkspaceCredential();
+        const credential = await h.entities.credentials.getWorkspaceCredential();
 
         expect(client.getCredentials).toHaveBeenCalledWith(ORG, PROJECT, WORKSPACE);
         expect(credential).toEqual({
@@ -74,7 +74,7 @@ describe('AdobeEntityFetcher — credential and Runtime delegates', () => {
             body: { id: 'int-1', apiKey: 'new-cid', orgId: ORG },
         });
 
-        const credential = await h.fetcher.createWorkspaceCredential('Demo Builder', 'Created by the wizard');
+        const credential = await h.entities.credentials.createWorkspaceCredential('Demo Builder', 'Created by the wizard');
 
         expect(client.createOAuthServerToServerCredential).toHaveBeenCalledWith(
             ORG,
@@ -106,7 +106,7 @@ describe('AdobeEntityFetcher — credential and Runtime delegates', () => {
             body: { client_secrets: [{ client_secret: FAKE_SECRET }] },
         });
 
-        const creds = await h.fetcher.getS2SDeployCredentials(ORG, PROJECT, WORKSPACE);
+        const creds = await h.entities.credentials.getS2SDeployCredentials(ORG, PROJECT, WORKSPACE);
 
         expect(client.getCredentials).toHaveBeenCalledWith(ORG, PROJECT, WORKSPACE);
         expect(client.getIntegration).toHaveBeenCalledWith(ORG, 'int-9');
@@ -123,7 +123,7 @@ describe('AdobeEntityFetcher — credential and Runtime delegates', () => {
 
     it('ensureWorkspaceRuntimeNamespace provisions Runtime on exactly the given workspace', async () => {
         await expect(
-            h.fetcher.ensureWorkspaceRuntimeNamespace(ORG, PROJECT, WORKSPACE),
+            h.entities.projectOps.ensureWorkspaceRuntimeNamespace(ORG, PROJECT, WORKSPACE),
         ).resolves.toBeUndefined();
 
         expect(client.createRuntimeNamespace).toHaveBeenCalledTimes(1);

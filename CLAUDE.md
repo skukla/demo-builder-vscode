@@ -137,7 +137,7 @@ Feature config lives per-feature in `src/features/*/config/*.json`.
 
 1. `src/extension.ts` — entry point, command registration
 2. `src/features/project-creation/ui/wizard/WizardContainer.tsx` — wizard UI container
-3. `src/features/authentication/services/authenticationService.ts` (+ `adobeEntityFetcher.ts`, `ensureOrgContext.ts`) — Adobe auth, Console SDK, org-context handling
+3. `src/features/authentication/services/authenticationService.ts` (+ `adobeEntityService.ts`, which wires the entity services, and `ensureOrgContext.ts`) — Adobe auth, Console SDK, org-context handling
 4. `src/core/state/stateManager.ts` — project state persistence
 5. `src/features/updates/services/updateManager.ts` (+ `componentUpdater.ts`) — GitHub Releases updates with snapshot/rollback
 6. `src/features/prerequisites/config/prerequisites.json` — prerequisite definitions

@@ -38,9 +38,9 @@ export const mockWorkspaces: AdobeWorkspace[] = [
  * Preserves the test API so existing test files need no changes.
  */
 export interface EntityServiceFacade {
-    getOrganizations: EntityServices['fetcher']['getOrganizations'];
-    getProjects: EntityServices['fetcher']['getProjects'];
-    getWorkspaces: EntityServices['fetcher']['getWorkspaces'];
+    getOrganizations: EntityServices['reads']['getOrganizations'];
+    getProjects: EntityServices['reads']['getProjects'];
+    getWorkspaces: EntityServices['reads']['getWorkspaces'];
     getCurrentOrganization: EntityServices['resolver']['getCurrentOrganization'];
     getCurrentProject: EntityServices['resolver']['getCurrentProject'];
     getCurrentWorkspace: EntityServices['resolver']['getCurrentWorkspace'];
@@ -107,9 +107,9 @@ export function setupMocks(): TestMocks {
 
     // Build a convenience facade so tests can call service.getOrganizations() etc.
     const service: EntityServiceFacade = {
-        getOrganizations: (...args) => entities.fetcher.getOrganizations(...args),
-        getProjects: (...args) => entities.fetcher.getProjects(...args),
-        getWorkspaces: (...args) => entities.fetcher.getWorkspaces(...args),
+        getOrganizations: (...args) => entities.reads.getOrganizations(...args),
+        getProjects: (...args) => entities.reads.getProjects(...args),
+        getWorkspaces: (...args) => entities.reads.getWorkspaces(...args),
         getCurrentOrganization: (...args) => entities.resolver.getCurrentOrganization(...args),
         getCurrentProject: (...args) => entities.resolver.getCurrentProject(...args),
         getCurrentWorkspace: (...args) => entities.resolver.getCurrentWorkspace(...args),

@@ -48,7 +48,7 @@ import { defineHandlers, type HandlerContext } from '@/types/handlers';
  *
  * REGRESSION (2026-08-04): the destination stage's "Fetching projects…" opened a
  * BROWSER unannounced on a stale token. `handleGetProjects` fetched with no auth
- * check, and `adobeEntityFetcher.getProjects` is "SDK with CLI fallback" — the
+ * check, and `AdobeEntityReads.getProjects` is "SDK with CLI fallback" — the
  * fallback is `aio console project list --json`, which triggers interactive
  * browser auth. The codebase already names this hazard as the P1 rule behind
  * `getOrganizationsSdkOnly` ("can stall ~14.5s and trigger interactive browser
@@ -128,7 +128,7 @@ export const addIntegrationFlowHandlers = defineHandlers({
 
     // The destination stages: browse or create an Adobe project/workspace.
     //
-    // ALL of these reach Adobe through `adobeEntityFetcher`, whose org, project
+    // ALL of these reach Adobe through the entity services, whose org, project
     // and workspace reads each carry a `aio console ` CLI fallback — so any of
     // them can launch a browser on a stale token. They are guarded, not the
     // sign-in trio above: guarding those would deadlock the stage's own

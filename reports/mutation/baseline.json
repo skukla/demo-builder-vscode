@@ -3185,18 +3185,6 @@
             "equivalent": 23,
             "openGaps": 0
         },
-        "src/features/authentication/services/adobeEntityFetcher.ts": {
-            "score": 100,
-            "killed": 24,
-            "survived": 0,
-            "noCoverage": 0,
-            "timeout": 0,
-            "survivorCategories": {},
-            "uncoveredCategories": {},
-            "highValueSurvivors": 0,
-            "equivalent": 0,
-            "openGaps": 0
-        },
         "src/features/authentication/services/adobeEntityName.ts": {
             "score": 100,
             "killed": 22,

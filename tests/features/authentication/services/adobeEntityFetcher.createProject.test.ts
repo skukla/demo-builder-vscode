@@ -5,7 +5,10 @@
  * pattern: SDK-only (no CLI fallback), needs org id, validates input, never throws.
  */
 
-import { AdobeEntityFetcher } from '@/features/authentication/services/adobeEntityFetcher';
+import {
+    createEntityCollaborators,
+    type EntityCollaborators,
+} from '@/features/authentication/services/adobeEntityService';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
@@ -19,7 +22,7 @@ import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 describe('AdobeEntityFetcher.createProject()', () => {
-    let fetcher: AdobeEntityFetcher;
+    let entities: EntityCollaborators;
     let mockCommandExecutor: jest.Mocked<CommandExecutor>;
     let mockSDKClient: jest.Mocked<AdobeSDKClient>;
     let mockCacheManager: jest.Mocked<AuthCacheManager>;
@@ -72,7 +75,7 @@ describe('AdobeEntityFetcher.createProject()', () => {
         mockLogger = createMockLogger() as unknown as jest.Mocked<Logger>;
         mockStepLogger = { logTemplate: jest.fn() } as unknown as jest.Mocked<StepLogger>;
 
-        fetcher = new AdobeEntityFetcher(
+        entities = createEntityCollaborators(
             mockCommandExecutor,
             mockSDKClient,
             mockCacheManager,
@@ -86,7 +89,7 @@ describe('AdobeEntityFetcher.createProject()', () => {
         // The create endpoint returns ONLY the new id ({ projectId }), not a full project.
         createFireflyProject.mockResolvedValue({ body: { projectId: 'proj-new' } });
 
-        const result = await fetcher.createProject('My Demo', 'A demo project');
+        const result = await entities.projectOps.createProject('My Demo', 'A demo project');
 
         expect(result).toEqual({
             id: 'proj-new',
@@ -103,7 +106,7 @@ describe('AdobeEntityFetcher.createProject()', () => {
         });
 
         // "My Demo" has a space — Adobe rejects a spaced `name`, so it must be stripped.
-        await fetcher.createProject('My Demo', 'A demo project');
+        await entities.projectOps.createProject('My Demo', 'A demo project');
 
         expect(createFireflyProject).toHaveBeenCalledWith(
             'org-123',
@@ -125,7 +128,7 @@ describe('AdobeEntityFetcher.createProject()', () => {
         // possible answers depending on whether one call succeeded.
         createFireflyProject.mockResolvedValue({ body: { projectId: 'proj-new' } });
 
-        await fetcher.createProject('My Demo', '');
+        await entities.projectOps.createProject('My Demo', '');
 
         expect(createWorkspace).not.toHaveBeenCalled();
     });
@@ -138,7 +141,7 @@ describe('AdobeEntityFetcher.createProject()', () => {
         // an App Builder app anywhere.
         createFireflyProject.mockResolvedValue({ body: { projectId: 'proj-new' } });
 
-        await fetcher.createProject('My Demo', '');
+        await entities.projectOps.createProject('My Demo', '');
 
         expect(createRuntimeNamespace).toHaveBeenCalledWith('org-123', 'proj-new', 'ws-prod');
     });
@@ -147,7 +150,7 @@ describe('AdobeEntityFetcher.createProject()', () => {
         createFireflyProject.mockResolvedValue({ body: { projectId: 'proj-new' } });
         createRuntimeNamespace.mockRejectedValue(new Error('409 Conflict'));
 
-        const result = await fetcher.createProject('My Demo', '');
+        const result = await entities.projectOps.createProject('My Demo', '');
 
         expect(result).toEqual(expect.objectContaining({ id: 'proj-new' }));
     });
@@ -156,32 +159,32 @@ describe('AdobeEntityFetcher.createProject()', () => {
         createFireflyProject.mockResolvedValue({ body: { projectId: 'proj-new' } });
         createRuntimeNamespace.mockRejectedValue(new Error('500 Internal Error'));
 
-        const result = await fetcher.createProject('My Demo', '');
+        const result = await entities.projectOps.createProject('My Demo', '');
 
         expect(result).toEqual(expect.objectContaining({ id: 'proj-new' }));
     });
 
     it('names the failure for an empty name (no SDK call)', async () => {
-        const result = await fetcher.createProject('', 'desc');
+        const result = await entities.projectOps.createProject('', 'desc');
         expect(result).toEqual({ error: expect.stringContaining('1–200 characters') });
         expect(createFireflyProject).not.toHaveBeenCalled();
     });
 
     it('names the failure for a name longer than 200 chars (no SDK call)', async () => {
-        const result = await fetcher.createProject('x'.repeat(201), 'desc');
+        const result = await entities.projectOps.createProject('x'.repeat(201), 'desc');
         expect(result).toEqual({ error: expect.stringContaining('1–200 characters') });
         expect(createFireflyProject).not.toHaveBeenCalled();
     });
 
     it('names the failure for a description longer than 500 chars (no SDK call)', async () => {
-        const result = await fetcher.createProject('My Demo', 'd'.repeat(501));
+        const result = await entities.projectOps.createProject('My Demo', 'd'.repeat(501));
         expect(result).toEqual({ error: expect.stringContaining('500 characters') });
         expect(createFireflyProject).not.toHaveBeenCalled();
     });
 
     it('names the failure when no organization is selected', async () => {
         mockCacheManager.getCachedOrganization.mockReturnValue(undefined);
-        const result = await fetcher.createProject('My Demo', 'desc');
+        const result = await entities.projectOps.createProject('My Demo', 'desc');
         expect(result).toEqual({ error: expect.stringContaining('No organization') });
         expect(createFireflyProject).not.toHaveBeenCalled();
     });
@@ -189,7 +192,7 @@ describe('AdobeEntityFetcher.createProject()', () => {
     it('names the failure when the SDK is not initialized', async () => {
         mockSDKClient.isInitialized.mockReturnValue(false);
         mockSDKClient.ensureInitialized.mockResolvedValue(false);
-        const result = await fetcher.createProject('My Demo', 'desc');
+        const result = await entities.projectOps.createProject('My Demo', 'desc');
         expect(result).toEqual({ error: expect.stringContaining('sign in to Adobe') });
         expect(createFireflyProject).not.toHaveBeenCalled();
     });
@@ -198,19 +201,19 @@ describe('AdobeEntityFetcher.createProject()', () => {
         createFireflyProject.mockRejectedValue(
             new Error('400 - Bad Request ("Project name length must be less than 20")'),
         );
-        const result = await fetcher.createProject('My Demo', 'desc');
+        const result = await entities.projectOps.createProject('My Demo', 'desc');
         expect(result).toEqual({ error: expect.stringContaining('less than 20') });
     });
 
     it('translates a 409 Conflict into the name-taken reason', async () => {
         createFireflyProject.mockRejectedValue(new Error('409 Conflict'));
-        const result = await fetcher.createProject('My Demo', 'desc');
+        const result = await entities.projectOps.createProject('My Demo', 'desc');
         expect(result).toEqual({ error: expect.stringContaining('already exists') });
     });
 
     it('names the failure when the response has no project body', async () => {
         createFireflyProject.mockResolvedValue({ body: undefined });
-        const result = await fetcher.createProject('My Demo', 'desc');
+        const result = await entities.projectOps.createProject('My Demo', 'desc');
         expect(result).toEqual({ error: expect.stringContaining('no project id') });
     });
 
@@ -224,7 +227,7 @@ describe('AdobeEntityFetcher.createProject()', () => {
         it('creates in the PASSED org, not the cached one', async () => {
             createFireflyProject.mockResolvedValue({ body: { projectId: 'proj-9' } });
 
-            await fetcher.createProject('My Demo', '', { orgId: 'org-FROM-AGENT' });
+            await entities.projectOps.createProject('My Demo', '', { orgId: 'org-FROM-AGENT' });
 
             expect(createFireflyProject).toHaveBeenCalledWith(
                 'org-FROM-AGENT',
@@ -237,7 +240,7 @@ describe('AdobeEntityFetcher.createProject()', () => {
         it('control: falls back to the cached org when no target is passed', async () => {
             createFireflyProject.mockResolvedValue({ body: { projectId: 'proj-9' } });
 
-            await fetcher.createProject('My Demo', '');
+            await entities.projectOps.createProject('My Demo', '');
 
             expect(createFireflyProject).toHaveBeenCalledWith('org-123', expect.anything());
         });
@@ -245,7 +248,7 @@ describe('AdobeEntityFetcher.createProject()', () => {
         it('still requires an org from somewhere', async () => {
             (mockCacheManager.getCachedOrganization as jest.Mock).mockReturnValue(undefined);
 
-            expect(await fetcher.createProject('My Demo', '')).toEqual({
+            expect(await entities.projectOps.createProject('My Demo', '')).toEqual({
                 error: expect.stringContaining('No organization'),
             });
             expect(createFireflyProject).not.toHaveBeenCalled();
