@@ -9497,7 +9497,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 493,
+            "line": 494,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a logger.error plus a showErrorMessage whose text is built from the error. Activation's own tests assert showErrorMessage was NOT called on every success path, which is the observable half; the wording of the message when it IS called is the rest.",
@@ -9510,7 +9510,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 529,
+            "line": 530,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here the step is the global ~/.claude.json repair, and a test makes it reject and asserts activation still registers its commands.",
@@ -9523,7 +9523,7 @@
             "anchors": [
                 "} catch (err) {"
             ],
-            "line": 753,
+            "line": 754,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here the step is starting the in-extension MCP server, whose failure must never abort activation.",
@@ -9536,7 +9536,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 798,
+            "line": 799,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here it is the commerce-secret sweep, whose arguments are asserted and whose failure a test drives.",
@@ -9549,7 +9549,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 820,
+            "line": 821,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here it is the publish-key renewal sweep.",
@@ -9562,7 +9562,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 844,
+            "line": 845,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here it is the manifest-format sweep.",
