@@ -77,6 +77,7 @@ import {
 } from '@/features/dashboard/handlers/consoleApiHandlers';
 import { deployMeshFromScreen } from '@/features/mesh/handlers/deployHandler';
 import { MESH_OPERATION_ID } from '@/features/mesh/services/deployMeshWithFeedback';
+import { handleListRuntimePackages } from '@/features/dashboard/handlers/runtimePackageHandlers';
 import {
     MessageHandler,
     defineHandlers,
@@ -293,6 +294,9 @@ export const dashboardHandlers = defineHandlers({
     listConsoleApis: handleListConsoleApis,
     addConsoleApis: handleAddConsoleApis,
     setConsoleApis: handleSetConsoleApis,
+
+    // What is deployed in the project's Runtime namespace (list_runtime_packages)
+    listRuntimePackages: handleListRuntimePackages,
 
     // EDS storefront sync
     syncStorefront: handleSyncStorefront,

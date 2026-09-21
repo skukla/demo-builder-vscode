@@ -10,6 +10,7 @@
  */
 
 import { mockWithOrgContext } from './appBuilderComponentRunner.orgContextMock';
+import { TEST_RUNTIME_ENV } from './appBuilderComponentRunner.runtimeMock';
 import type { Project } from '@/types/base';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 
@@ -112,13 +113,16 @@ describe('removeAppBuilderComponent — the teardown command', () => {
 
         await removeAppBuilderComponent(integrationProject(), APP_ID, deps);
 
+        // With the workspace's namespace key: without it the undeploy fails with
+        // "An AUTH key must be specified" and the app keeps running (2026-09-21).
         expect(deps.commandManager.execute).toHaveBeenCalledWith('aio app undeploy', {
             cwd: `/proj/components/${APP_ID}`,
+            streaming: true,
             useNodeVersion: 'auto',
             enhancePath: true,
-            streaming: true,
             shell: true,
             timeout: TIMEOUTS.LONG,
+            env: TEST_RUNTIME_ENV,
         });
     });
 
@@ -147,7 +151,7 @@ describe('removeAppBuilderComponent — the teardown command', () => {
         const result = await removeAppBuilderComponent(project, APP_ID, deps);
 
         expect(result.success).toBe(true);
-        expect(undeployCall(deps)?.[1]).toMatchObject({ cwd: undefined });
+        expect(undeployCall(deps)?.[1]?.cwd).toBeUndefined();
     });
 
     it('still tears down when the instance map has no entry for this id', async () => {
@@ -157,7 +161,7 @@ describe('removeAppBuilderComponent — the teardown command', () => {
         const result = await removeAppBuilderComponent(project, APP_ID, deps);
 
         expect(result.success).toBe(true);
-        expect(undeployCall(deps)?.[1]).toMatchObject({ cwd: undefined });
+        expect(undeployCall(deps)?.[1]?.cwd).toBeUndefined();
     });
 
     // Reversibility: a teardown that cannot reach Adobe must still let the SC
@@ -206,6 +210,7 @@ describe('removeAppBuilderComponent — the declared-package inventory', () => {
     it('an unreadable app config leaves the removal to proceed on the derived name alone', async () => {
         mockListDeclaredPackageNames.mockRejectedValue(new Error('app.config.yaml is gone'));
         const deps = createDeps();
+        deps.commandManager.execute.mockResolvedValue({ code: 0, stdout: '[]', stderr: '', duration: 0 });
 
         const result = await removeAppBuilderComponent(integrationProject(), APP_ID, deps);
 

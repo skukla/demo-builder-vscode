@@ -164,6 +164,8 @@ describe('dashboardHandlers', () => {
             //                      and backgroundComponentOperation ("Run in
             //                      background" hands it to a notification)
             //   3  console APIs    listConsoleApis, addConsoleApis, setConsoleApis
+            //   1  runtime         listRuntimePackages (the list_runtime_packages
+            //                      read: what a removal left running, 2026-09-21)
             //   2  storefront      syncStorefront, refreshBlockLibrary
             //   2  auth            reAuthenticate, switchOrg
             //   1  delete          deleteProject

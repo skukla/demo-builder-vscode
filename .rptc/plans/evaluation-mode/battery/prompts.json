@@ -873,5 +873,13 @@
             "delete_adobe_workspace"
         ],
         "why": "The reversal of create_adobe_workspace, added 2026-09-11 to close the last real gap in the reversibility ledger. The tool is confirm-gated and name-echoed, so an agent that REACHES it without both still gets a refusal -- what this judges is whether the tool is findable from a plain request at all, which is the question the battery exists to ask."
+    },
+    {
+        "id": "runtime-packages",
+        "prompt": "What is still deployed in this project's Adobe Runtime namespace?",
+        "expect": [
+            "list_runtime_packages"
+        ],
+        "why": "Added with the tool (2026-09-21): a removal reported done while fifteen packages kept running in Stage, and no tool could show it. A MISS is a discoverability finding about the tool, not a bad prompt."
     }
 ]
