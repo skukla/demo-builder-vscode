@@ -67,7 +67,7 @@ const CATALOG: Row[] = [
         map: dashboardHandlers,
         type: 'listConsoleApis',
         needsAuth: ['adobe'],
-        args: ['search'],
+        args: ['search', 'componentId'],
     },
     {
         tool: 'get_store_structure',
