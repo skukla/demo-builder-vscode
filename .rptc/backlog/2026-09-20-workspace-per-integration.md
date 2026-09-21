@@ -455,3 +455,4 @@ and re-adding an integration — no migration code ships.
 - 2026-09-21  docs(state): cite what makes the merge claim true (`e5c1982b4`)
 - 2026-09-21  feat(app-builder): App Management uses the integration's own workspace (`8303d84f3`)
 - 2026-09-21  perf(apis): a subscribe asks Adobe for only the APIs it needs (`b9257483c`)
+- 2026-09-21  fix(app-builder): an added component really deploys into its own workspace (`258ba1735`)
