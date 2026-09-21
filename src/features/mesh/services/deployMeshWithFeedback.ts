@@ -38,8 +38,12 @@ import {
     type DeployMeshHeadlessResult,
 } from './deployMeshHeadless';
 import { meshFailureForPerson } from './meshDeployWording';
+import { getProvidedEnvVars } from '@/core/state/appBuilderComponentState';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { cardInFlightLabel } from '@/core/vscode/progressRegister';
 import { withOperationProgress } from '@/core/vscode/withOperationProgress';
+import type { Project } from '@/types/base';
+import { toError } from '@/types/typeGuards';
 
 /**
  * The card's one in-flight line. Built through the shared helper so this surface
@@ -51,7 +55,26 @@ const CARD_IN_FLIGHT_LABEL = cardInFlightLabel('Deploying', 'Mesh');
 export const MESH_OPERATION_ID = 'mesh';
 
 /** The deploy inputs, minus the feedback bridges this module supplies. */
-export type DeployMeshWithFeedbackDeps = Omit<DeployMeshHeadlessDeps, 'onStatus' | 'onProgress'>;
+export type DeployMeshWithFeedbackDeps = Omit<DeployMeshHeadlessDeps, 'onStatus' | 'onProgress'> & {
+    /**
+     * Regenerate and publish the storefront's config. After a successful deploy
+     * the storefront must read the mesh where it now answers: a redeploy that
+     * moved it left the live site on a dead address until a hand republish
+     * (owner, 2026-09-21). Passed in, not imported — the storefront is another
+     * feature's.
+     */
+    republishStorefront?: (project: Project) => Promise<RepublishOutcome>;
+};
+
+/** What a republish answers, as much of it as this reads. */
+export interface RepublishOutcome {
+    success: boolean;
+    error?: string;
+    cdnPublished?: boolean;
+}
+
+/** The one mesh value the storefront config reads. */
+const STOREFRONT_READS = 'MESH_ENDPOINT';
 
 /** Where the deploy reports: the screen's modal when a button started it (PL-59 R1). */
 export interface DeployMeshFeedbackOptions {
@@ -118,9 +141,36 @@ export async function deployMeshWithFeedback(
                 },
                 onProgress: (stage, step) => report(stage, step),
             });
+            if (result.success) {
+                const notRepublished = await republishAfterDeploy(deps, (stage) => report(stage));
+                if (notRepublished) return { ...result, storefrontNotRepublished: notRepublished };
+            }
             // A modal shows the reason to a person; other callers word their own
             // (the agent's handler names its tools).
             return inModal && !result.success ? { ...result, error: meshFailureForPerson(result) } : result;
         },
     );
+}
+
+/**
+ * Republish the storefront after a deploy, when the storefront reads the mesh.
+ *
+ * @returns why it was not republished, or undefined when it was (or had no need)
+ */
+async function republishAfterDeploy(
+    deps: DeployMeshWithFeedbackDeps,
+    report: (stage: string) => void,
+): Promise<string | undefined> {
+    if (!deps.republishStorefront || !(STOREFRONT_READS in getProvidedEnvVars(deps.project))) {
+        return undefined;
+    }
+    report(OPERATION_STAGES.republishingStorefront.label);
+    try {
+        const published = await deps.republishStorefront(deps.project);
+        if (!published.success) return published.error ?? 'the republish did not finish';
+        if (published.cdnPublished === false) return 'the CDN still serves the previous config';
+        return undefined;
+    } catch (error) {
+        return toError(error).message;
+    }
 }

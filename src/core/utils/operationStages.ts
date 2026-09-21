@@ -162,6 +162,13 @@ export const OPERATION_STAGES = {
         expectation: 'Usually under a minute',
         detail: 'Deleting anything the undeploy left running',
     },
+    // A mesh redeploy that changed its address left the storefront on the old one
+    // until someone republished by hand (2026-09-21).
+    republishingStorefront: {
+        label: 'Republishing storefront',
+        expectation: 'Usually under a minute',
+        detail: 'So it reads the mesh at its current address',
+    },
     removingWorkspace: {
         label: 'Removing the workspace',
         expectation: 'Up to a couple of minutes',

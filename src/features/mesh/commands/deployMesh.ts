@@ -60,8 +60,26 @@ export class DeployMeshCommand extends BaseCommand {
                     stateManager: this.stateManager,
                     logger: this.logger,
                     extensionPath: this.context.extensionPath,
+                    republishStorefront: async (deployed) => {
+                        const { republishStorefrontConfig } = await import(
+                            '@/features/eds/services/storefront/storefrontRepublishService'
+                        );
+                        return republishStorefrontConfig({
+                            project: deployed,
+                            secrets: this.context.secrets,
+                            logger: this.logger,
+                            persist: (p) => this.stateManager.saveProject(p),
+                        });
+                    },
                 });
 
+                if (result.success && result.storefrontNotRepublished) {
+                    vscode.window.showWarningMessage(
+                        `API Mesh deployed, but the storefront was not republished: ${result.storefrontNotRepublished}`,
+                    );
+                    await vscode.commands.executeCommand('demoBuilder._internal.meshActionTaken');
+                    return;
+                }
                 if (result.success) {
                     this.showSuccessMessage('API Mesh deployed successfully');
                     // Reset mesh notification flag (user has deployed).

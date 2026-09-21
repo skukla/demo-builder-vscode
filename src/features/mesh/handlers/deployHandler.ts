@@ -16,7 +16,8 @@
 
 import * as vscode from 'vscode';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import type { MeshDeployBlock } from '@/features/mesh/services/deployMeshHeadless';
+import { republishStorefrontConfig } from '@/features/eds/services/storefront/storefrontRepublishService';
+import type { DeployMeshHeadlessResult, MeshDeployBlock } from '@/features/mesh/services/deployMeshHeadless';
 import {
     deployMeshWithFeedback,
     type DeployMeshWithFeedbackDeps,
@@ -46,6 +47,24 @@ function meshDeps(context: HandlerContext, project: Project): DeployMeshWithFeed
         stateManager: context.stateManager,
         logger: context.logger,
         extensionPath: context.context.extensionPath,
+        republishStorefront: (deployed) =>
+            republishStorefrontConfig({
+                project: deployed,
+                secrets: context.context.secrets,
+                logger: context.logger,
+                persist: (p) => context.stateManager.saveProject(p),
+            }),
+    };
+}
+
+/** What a successful deploy answers — with the storefront republish, when it did not happen. */
+function deployedData(result: DeployMeshHeadlessResult): Record<string, unknown> {
+    return {
+        meshId: result.meshId,
+        endpoint: result.endpoint,
+        ...(result.storefrontNotRepublished
+            ? { warning: `The mesh is deployed, but the storefront was not republished: ${result.storefrontNotRepublished}` }
+            : {}),
     };
 }
 
@@ -61,7 +80,7 @@ export const handleDeployApiMesh: MessageHandler = async (context) => {
     const result = await deployMeshWithFeedback(meshDeps(context, project));
 
     if (result.success) {
-        return { success: true, data: { meshId: result.meshId, endpoint: result.endpoint } };
+        return { success: true, data: deployedData(result) };
     }
     if (result.blockedBy) {
         return { success: false, error: result.error || BLOCK_MESSAGE[result.blockedBy] };
@@ -94,7 +113,7 @@ export async function deployMeshFromScreen(
         });
         if (result.success) {
             await vscode.commands.executeCommand('demoBuilder._internal.meshActionTaken');
-            return { success: true, data: { meshId: result.meshId, endpoint: result.endpoint } };
+            return { success: true, data: deployedData(result) };
         }
         return { success: false, error: result.error };
     });

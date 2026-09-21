@@ -258,3 +258,79 @@ describe('started from a button on a screen', () => {
         expect(result.error).toBeUndefined();
     });
 });
+
+// A redeploy that moved the mesh left the live storefront on its dead old address
+// until someone republished by hand (owner, 2026-09-21): a deploy republishes.
+describe('republishing the storefront after a deploy', () => {
+    /** A project whose storefront reads the mesh address. */
+    function withStorefront(): DeployMeshWithFeedbackDeps {
+        const base = deps();
+        base.project = createMockProject({
+            name: 'p',
+            path: '/p',
+            appBuilderComponents: {
+                mesh: {
+                    kind: 'mesh',
+                    status: 'deployed',
+                    source: { owner: 'skukla', repo: 'commerce-mesh' },
+                    providesEnvVars: { MESH_ENDPOINT: 'https://edge-graph.adobe.io/api/m/graphql' },
+                },
+            },
+        });
+        return base;
+    }
+
+    it('republishes after a successful deploy, as its own stage', async () => {
+        const { report } = stubWithProgress();
+        const republishStorefront = jest.fn().mockResolvedValue({ success: true, cdnPublished: true });
+        const input = { ...withStorefront(), republishStorefront };
+
+        const result = await deployMeshWithFeedback(input);
+
+        expect(republishStorefront).toHaveBeenCalledWith(input.project);
+        expect(report).toHaveBeenCalledWith(
+            expect.objectContaining({ message: OPERATION_STAGES.republishingStorefront.label }),
+        );
+        expect(result).toEqual({ success: true });
+    });
+
+    it('says so when the republish does not reach the CDN — the mesh still counts as deployed', async () => {
+        stubWithProgress();
+        const republishStorefront = jest.fn().mockResolvedValue({ success: true, cdnPublished: false });
+
+        const result = await deployMeshWithFeedback({ ...withStorefront(), republishStorefront });
+
+        expect(result).toEqual({
+            success: true,
+            storefrontNotRepublished: 'the CDN still serves the previous config',
+        });
+    });
+
+    it('reports a republish that throws, in its own words', async () => {
+        stubWithProgress();
+        const republishStorefront = jest.fn().mockRejectedValue(new Error('GitHub sign-in expired'));
+
+        const result = await deployMeshWithFeedback({ ...withStorefront(), republishStorefront });
+
+        expect(result.storefrontNotRepublished).toBe('GitHub sign-in expired');
+    });
+
+    it('does not republish a project whose storefront does not read the mesh', async () => {
+        stubWithProgress();
+        const republishStorefront = jest.fn();
+
+        await deployMeshWithFeedback({ ...deps(), republishStorefront });
+
+        expect(republishStorefront).not.toHaveBeenCalled();
+    });
+
+    it('does not republish after a failed deploy', async () => {
+        stubWithProgress();
+        mockDeployMeshHeadless.mockResolvedValue({ success: false, error: 'boom' });
+        const republishStorefront = jest.fn();
+
+        await deployMeshWithFeedback({ ...withStorefront(), republishStorefront });
+
+        expect(republishStorefront).not.toHaveBeenCalled();
+    });
+});

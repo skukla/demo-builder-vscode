@@ -48,6 +48,11 @@ export interface DeployMeshHeadlessResult {
     /** True when a preflight prompt was dismissed (auth/org) — not an error. */
     cancelled?: boolean;
     currentOrg?: string;
+    /**
+     * Why the storefront was NOT republished after a successful deploy, when it
+     * was not. The mesh itself deployed; this is said, never swallowed.
+     */
+    storefrontNotRepublished?: string;
 }
 
 export interface DeployMeshHeadlessDeps {
