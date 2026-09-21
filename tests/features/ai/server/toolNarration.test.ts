@@ -18,7 +18,12 @@
  */
 
 import { readdirSync, readFileSync } from 'fs';
-import { TOOL_NARRATION, narrationFor } from '@/features/ai/server/toolNarration';
+import {
+    NAMED_NARRATION_TOOLS,
+    TOOL_NARRATION,
+    narrationFor,
+    narrationForCall,
+} from '@/features/ai/server/toolNarration';
 import { ACTION_DESCRIPTORS } from '@/features/ai/server/actionDescriptors';
 import { READ_DESCRIPTORS } from '@/features/ai/server/readDescriptors';
 import { STATUS_DESCRIPTORS } from '@/features/ai/server/statusDescriptors';
@@ -124,5 +129,39 @@ describe('the phrases read as English, not as schema', () => {
 describe('every phrase fits a notification title', () => {
     it.each(Object.entries(TOOL_NARRATION))('%s is 32 characters or fewer', (_tool, phrase) => {
         expect(phrase.length).toBeLessThanOrEqual(32);
+    });
+});
+
+// "Agent · Deleting the Adobe workspace" said everything but which one (owner,
+// 2026-09-21). A call handed a readable name is narrated with it.
+describe('a call is narrated with the name it acts on', () => {
+    it('names the workspace being deleted', () => {
+        expect(narrationForCall('delete_adobe_workspace', { workspaceId: '4566', workspaceName: 'Stage' })).toBe(
+            'Deleting the Stage workspace'
+        );
+    });
+
+    it('needs every name it uses — a partial one keeps the tool phrase', () => {
+        expect(narrationForCall('delete_github_repo', { owner: 'skukla' })).toBe(
+            narrationFor('delete_github_repo')
+        );
+        expect(narrationForCall('delete_github_repo', { owner: 'skukla', repo: 'kukla-bodea' })).toBe(
+            'Deleting skukla/kukla-bodea'
+        );
+    });
+
+    it('keeps the tool phrase when the name is missing or blank', () => {
+        expect(narrationForCall('delete_adobe_workspace', { workspaceName: '  ' })).toBe(
+            narrationFor('delete_adobe_workspace')
+        );
+        expect(narrationForCall('delete_adobe_workspace', undefined)).toBe(narrationFor('delete_adobe_workspace'));
+    });
+
+    it('leaves a tool without a named form to its phrase', () => {
+        expect(narrationForCall('republish', { confirm: true })).toBe(narrationFor('republish'));
+    });
+
+    it.each(NAMED_NARRATION_TOOLS)('%s is a real tool with a phrase to fall back to', (tool) => {
+        expect(TOOL_NARRATION[tool]).toBeDefined();
     });
 });

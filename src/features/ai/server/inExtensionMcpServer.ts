@@ -255,7 +255,9 @@ function withToolLogging(
     notifier?: (
         toolName: string,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        run: (report: PhaseSink) => Promise<any>
+        run: (report: PhaseSink) => Promise<any>,
+        /** The call's arguments, so the notification can name what it acts on. */
+        args?: Record<string, unknown>,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ) => Promise<any>,
     consentGate?: (
@@ -407,8 +409,10 @@ function withToolLogging(
                             invoke = () => handler(args);
                         } else if (notifier) {
                             invoke = () =>
-                                notifier(name, (report) =>
-                                    withPhaseSinks([mcpSink, report], () => handler(args)),
+                                notifier(
+                                    name,
+                                    (report) => withPhaseSinks([mcpSink, report], () => handler(args)),
+                                    args,
                                 );
                         } else {
                             invoke = () => withPhaseSinks([mcpSink], () => handler(args));
@@ -464,7 +468,8 @@ export interface InExtensionMcpServerOptions {
     // its own implementation, which is exactly the silenced-type-error shape.
     longRunningNotifier?: (
         toolName: string,
-        run: (report: (message: string) => void) => Promise<unknown>
+        run: (report: (message: string) => void) => Promise<unknown>,
+        args?: Record<string, unknown>,
     ) => Promise<unknown>;
     /**
      * Native consent for destructive calls (injected — this module stays

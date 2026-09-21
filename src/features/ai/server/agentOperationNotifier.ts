@@ -33,7 +33,7 @@ import { outcomeOf, type AgentOutcome } from './agentOutcome';
 import { buildConsentPrompt } from './consentText';
 import type { ConsentVerdict } from './inExtensionMcpServer';
 import { asRawText } from './mcpToolResult';
-import { narrationFor } from './toolNarration';
+import { narrationForCall } from './toolNarration';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
@@ -80,8 +80,8 @@ async function currentProjectLine(): Promise<string> {
  * visibly a fallback rather than prose pretending to be authored, and
  * `toolNarration.test.ts` makes the case unreachable.
  */
-function label(toolName: string): string {
-    return narrationFor(toolName) ?? toolName;
+function label(toolName: string, args?: Record<string, unknown>): string {
+    return narrationForCall(toolName, args) ?? toolName;
 }
 
 /**
@@ -214,19 +214,17 @@ const TRAILING_ELLIPSIS = /\s*(…|\.\.\.)$/;
  * hand-back and a failed answer are both things the user must not miss, and
  * both used to read as "— done" because neither throws (see `agentOutcome`).
  */
-function landOutcome(toolName: string, outcome: AgentOutcome, logger: Logger): void {
+function landOutcome(title: string, toolName: string, outcome: AgentOutcome, logger: Logger): void {
     if (outcome.kind === 'done') {
-        vscode.window.setStatusBarMessage(`$(check) ${label(toolName)} — done`, TIMEOUTS.STATUS_BAR_SUCCESS);
+        vscode.window.setStatusBarMessage(`$(check) ${title} — done`, TIMEOUTS.STATUS_BAR_SUCCESS);
         return;
     }
     if (outcome.kind === 'needsUser') {
-        void vscode.window.showWarningMessage(
-            `Demo Builder — ${label(toolName)} is waiting on you: ${outcome.text}.`,
-        );
+        void vscode.window.showWarningMessage(`Demo Builder — ${title} is waiting on you: ${outcome.text}.`);
         return;
     }
     logger.warn(`[MCP] agent operation ${toolName} answered a failure: ${outcome.text}`);
-    void vscode.window.showWarningMessage(`Demo Builder — ${label(toolName)} failed: ${outcome.text}`);
+    void vscode.window.showWarningMessage(`Demo Builder — ${title} failed: ${outcome.text}`);
 }
 
 /**
@@ -240,9 +238,10 @@ export function createAgentOperationNotifier(
     logger: Logger,
 ): (
     toolName: string,
-    run: (report: (message: string) => void) => Promise<unknown>
+    run: (report: (message: string) => void) => Promise<unknown>,
+    args?: Record<string, unknown>,
 ) => Promise<unknown> {
-    return (toolName, run) =>
+    return (toolName, run, args) =>
         Promise.resolve(
             vscode.window.withProgress(
                 {
@@ -253,7 +252,7 @@ export function createAgentOperationNotifier(
                     // on the card ("Source: Adobe Demo Builder"). No colon and no
                     // ellipsis: VS Code renders `title: message` itself, so either
                     // one here doubled it (owner, 2026-09-16 and 2026-09-19).
-                    title: `Agent · ${label(toolName)}`,
+                    title: `Agent · ${label(toolName, args)}`,
                     cancellable: false,
                 },
                 async (progress) => {
@@ -265,7 +264,7 @@ export function createAgentOperationNotifier(
                         const result = await run((message) =>
                             progress.report({ message: message.replace(TRAILING_ELLIPSIS, '') }),
                         );
-                        landOutcome(toolName, outcomeOf(result), logger);
+                        landOutcome(label(toolName, args), toolName, outcomeOf(result), logger);
                         return result;
                     } catch (error) {
                         const message = error instanceof Error ? error.message : String(error);
@@ -273,7 +272,7 @@ export function createAgentOperationNotifier(
                         // A toast, not a status-bar flash: a failed live-site
                         // mutation is the one outcome the user must not miss.
                         void vscode.window.showWarningMessage(
-                            `Demo Builder — ${label(toolName)} failed: ${message}`,
+                            `Demo Builder — ${label(toolName, args)} failed: ${message}`,
                         );
                         throw error;
                     }

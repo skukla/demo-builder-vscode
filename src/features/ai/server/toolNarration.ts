@@ -237,3 +237,63 @@ export const TOOL_NARRATION: Record<string, string> = {
 export function narrationFor(toolName: string): string | undefined {
     return TOOL_NARRATION[toolName];
 }
+
+/** An argument's value when it is a non-empty string. */
+function arg(args: Record<string, unknown> | undefined, key: string): string | undefined {
+    const value = args?.[key];
+    return typeof value === 'string' && value.trim() ? value.trim() : undefined;
+}
+
+/** Build a phrase from named arguments, or nothing when any is missing. */
+function naming(
+    keys: string[],
+    phrase: (...values: string[]) => string,
+): (args: Record<string, unknown> | undefined) => string | undefined {
+    return (args) => {
+        const values = keys.map((key) => arg(args, key));
+        return values.every(Boolean) ? phrase(...(values as string[])) : undefined;
+    };
+}
+
+/**
+ * The phrase for a call that names what it acts on, when the name is readable.
+ *
+ * "Agent · Deleting the Adobe workspace" said everything but WHICH one (owner,
+ * 2026-09-21: "Should it not include the workspace's name?"). The consent dialog
+ * already names it; the notification now does too. Only tools handed a name a
+ * person reads — an internal id is not worth showing, so those keep their phrase.
+ */
+const NAMED_NARRATION: Readonly<
+    Record<string, (args: Record<string, unknown> | undefined) => string | undefined>
+> = {
+    delete_adobe_workspace: naming(['workspaceName'], (name) => `Deleting the ${name} workspace`),
+    delete_adobe_project: naming(['projectName'], (name) => `Deleting the ${name} project`),
+    rename_adobe_project: naming(['projectName'], (name) => `Renaming ${name}`),
+    delete_project: naming(['name'], (name) => `Deleting the ${name} project`),
+    delete_github_repo: naming(['owner', 'repo'], (owner, repo) => `Deleting ${owner}/${repo}`),
+    cleanup_dalive_site: naming(['org', 'site'], (org, site) => `Deleting ${org}/${site} content`),
+    delete_page: naming(['path'], (path) => `Deleting ${path}`),
+    reset_datapack: naming(['datapackName'], (name) => `Resetting ${name}`),
+    start_datapack_import: naming(['datapackName'], (name) => `Importing ${name}`),
+    start_datapack_export: naming(['datapackName'], (name) => `Exporting ${name}`),
+    remove_block_from_library: naming(['blockId'], (block) => `Removing the ${block} block`),
+    set_site_admin: naming(['email'], (email) => `Changing ${email}'s access`),
+};
+
+/**
+ * The phrase for this call: named for its target when the tool is handed a
+ * readable name, else the tool's phrase.
+ *
+ * @param toolName - MCP tool name
+ * @param args - the call's arguments
+ * @returns the phrase, or undefined when the tool has none
+ */
+export function narrationForCall(
+    toolName: string,
+    args: Record<string, unknown> | undefined,
+): string | undefined {
+    return NAMED_NARRATION[toolName]?.(args) ?? narrationFor(toolName);
+}
+
+/** The tools whose calls are named for their target (for the tests). */
+export const NAMED_NARRATION_TOOLS: readonly string[] = Object.keys(NAMED_NARRATION);

@@ -104,6 +104,25 @@ describe('createAgentOperationNotifier', () => {
         );
     });
 
+    // The card said "Deleting the Adobe workspace" without saying which (2026-09-21).
+    it('names what the call acts on, in the card and in how it lands', async () => {
+        const notifier = createAgentOperationNotifier(logger);
+
+        await notifier('delete_adobe_workspace', async () => ({ deleted: true }), {
+            workspaceId: '4566',
+            workspaceName: 'Stage',
+        });
+
+        expect(mockWithProgress).toHaveBeenCalledWith(
+            expect.objectContaining({ title: 'Agent · Deleting the Stage workspace' }),
+            expect.any(Function)
+        );
+        expect(mockSetStatusBarMessage).toHaveBeenCalledWith(
+            expect.stringContaining('Deleting the Stage workspace — done'),
+            expect.any(Number)
+        );
+    });
+
     it('drops a trailing ellipsis from a phase — the spinner already says it is working', async () => {
         const notifier = createAgentOperationNotifier(logger);
 
