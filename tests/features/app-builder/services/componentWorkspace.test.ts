@@ -204,6 +204,27 @@ describe('a bound pair shares ONE workspace', () => {
         );
     });
 
+    // "ERP" is the catalog's word, not a name anyone gave it. With nothing typed,
+    // the pair is titled after the integration the SC chose (owner, 2026-09-21).
+    it("a pair whose ERP was given no name is titled after its integration", async () => {
+        const maker = makerThatCreates();
+        const untyped = (entry: AppBuilderComponentCatalogEntry) =>
+            entry.id === 'demo-erp' ? 'ERP' : 'ERP Integration';
+
+        await ensureComponentWorkspace(projectWith(), DEMO_ERP, {
+            maker,
+            saveProject,
+            nameOf: untyped,
+            catalog: [ERP_INTEGRATION, DEMO_ERP],
+        });
+
+        expect(maker.createWorkspace).toHaveBeenCalledWith(
+            'ERP Integration',
+            'Demo Builder: demo-erp',
+            { orgId: 'org-1', projectId: 'proj-1' },
+        );
+    });
+
     it('CONTROL: an unrelated deployed component is NOT inherited from', async () => {
         const project = projectWith({
             'some-other-integration': {

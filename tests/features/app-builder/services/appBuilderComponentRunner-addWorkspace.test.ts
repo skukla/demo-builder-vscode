@@ -160,9 +160,10 @@ describe('a bound pair', () => {
 
         expect(result).toEqual({ success: true });
         expect(adobe.createWorkspace).toHaveBeenCalledTimes(1);
-        // Titled after the ERP: that is the half the SC names ("Northwind ERP").
+        // The ERP was given no name here (it answers the catalog's "ERP"), so the
+        // pair is titled after the integration; a typed name would title it instead.
         expect(adobe.createWorkspace).toHaveBeenCalledWith(
-            'ERP',
+            'ERP integration',
             'Demo Builder: demo-erp',
             { orgId: 'org-123', projectId: 'proj-456' },
         );

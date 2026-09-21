@@ -280,8 +280,12 @@ workspace limit is lower.
 > catalog's `erp-integration`, so Console showed `erpintegrationlHJE`. A name taken
 > from the title at creation is exactly as stable — it is fixed then and never
 > follows a rename, which is all the argument below needs. A bound pair is titled
-> after its SYSTEM ("Northwind ERP"), the half the SC names. The four random
-> characters stay. What follows is kept as the record of the first decision.
+> after its SYSTEM ("Northwind ERP"), the half the SC names, or after the integration
+> when the SC gave the system no name. Console's workspace boxes show the NAME, not
+> the title, so the four random characters are added only when the name is taken.
+> Spaces are impossible: Adobe answered `400 "Workspace name allows only alpha numeric
+> values"` to "Space Test" (2026-09-21). What follows is kept as the record of the
+> first decision.
 
 Adobe gives a workspace two fields, and they answer two different questions.
 

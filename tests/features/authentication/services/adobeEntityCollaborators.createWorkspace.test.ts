@@ -102,24 +102,6 @@ describe('entity collaborators.createWorkspace()', () => {
         expect(createWorkspace.mock.calls[0][2]).not.toHaveProperty('who_created');
     });
 
-    // An add's workspace is named from its title — "Northwind ERP" gives
-    // `NorthwindERP…` — so Console reads as the SC named it (owner, 2026-09-21).
-    it('derives the name of a spaced title by dropping what Adobe refuses', async () => {
-        createWorkspace.mockResolvedValue({ body: { id: 'ws1' } });
-
-        const result = await entities.projectOps.createWorkspace('Northwind ERP', 'A workspace');
-
-        expect(createWorkspace).toHaveBeenCalledWith(
-            'org-123',
-            'proj-456',
-            expect.objectContaining({
-                title: 'Northwind ERP',
-                name: expect.stringMatching(/^NorthwindERP[A-Za-z0-9]{4}$/),
-            })
-        );
-        expect(result).toMatchObject({ title: 'Northwind ERP' });
-    });
-
     it('provisions a Runtime namespace on the new workspace', async () => {
         // A user-added workspace also needs Runtime for App Builder app deploys.
         createWorkspace.mockResolvedValue({ body: { workspaceId: 'ws-new' } });

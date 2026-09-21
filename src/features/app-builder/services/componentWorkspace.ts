@@ -8,20 +8,21 @@
  * cost a bespoke credential for the calls that an Adobe token already covers inside
  * one workspace. So the bound pair joins one workspace and the unit matches the act.
  *
- * THE NAME COMES FROM THE TITLE. Adobe derives nothing itself: we send a machine
- * name (letters and digits, under 20) and a title. Both come from the name the SC
- * knows the component by, so "Northwind ERP" is titled "Northwind ERP" and named
- * `NorthwindERP` plus four random characters that keep two demo projects sharing one
- * Adobe project from clashing. Adobe refuses to change a machine name later
+ * THE NAME COMES FROM THE TITLE. Console's workspace boxes show the machine NAME,
+ * so it is what the SC reads. Adobe accepts only letters and digits there (a space
+ * 400s, measured 2026-09-21), so "Northwind ERP" is titled "Northwind ERP" and named
+ * `NorthwindERP`, with four random characters only when that name is taken
+ * (`deriveFreeAdobeEntityName`). Adobe refuses to change a machine name later
  * (`400 "Workspace name can not be changed"`, measured 2026-09-20) and the name
  * reaches every action URL, so it is fixed at creation; a later rename moves the
  * title only. It came from the component id until the owner saw `erpintegration…`
- * in Console (2026-09-21): the id reads well only for integrations the SC builds —
- * a catalog entry's id is the catalog's word, never the SC's.
+ * in Console (2026-09-21): a catalog entry's id is the catalog's word, not the SC's.
  *
  * A PAIR IS TITLED AFTER ITS SYSTEM. The SC names the ERP ("Northwind ERP"), not the
  * integration that comes with it, so whichever half makes the workspace titles it
- * after the system (owner, 2026-09-21 — it was the integration's, "ERP Integration").
+ * after the system — unless the SC gave it no name, when the system answers only the
+ * catalog's word ("ERP") and the integration's name titles it instead
+ * (owner, 2026-09-21).
  *
  * @module features/app-builder/services/componentWorkspace
  */
@@ -159,6 +160,23 @@ export async function ensureComponentWorkspace(
     return undefined;
 }
 
+/**
+ * A system's own name when the SC gave it one; the catalog's word for it is not one,
+ * so then its integration's name. Anything else, its own name.
+ */
+function titleFor(
+    named: AppBuilderComponentCatalogEntry,
+    deps: {
+        nameOf: (entry: AppBuilderComponentCatalogEntry) => string;
+        catalog?: AppBuilderComponentCatalogEntry[];
+    },
+): string {
+    const own = deps.nameOf(named);
+    if (named.kind !== 'system' || own !== named.name) return own;
+    const integration = deps.catalog?.find((candidate) => candidate.id === named.boundTo);
+    return integration ? deps.nameOf(integration) : own;
+}
+
 /** Create a workspace in Adobe, titled — and so named — for the SC. */
 async function make(
     project: Project,
@@ -166,10 +184,11 @@ async function make(
     deps: {
         maker: WorkspaceMaker;
         nameOf: (entry: AppBuilderComponentCatalogEntry) => string;
+        catalog?: AppBuilderComponentCatalogEntry[];
         onMaking?: () => void;
     },
 ): Promise<NonNullable<AppBuilderComponentState['workspace']> | { error: string }> {
-    const title = deps.nameOf(named);
+    const title = titleFor(named, deps);
     deps.onMaking?.();
     const created = await deps.maker.createWorkspace(
         title,

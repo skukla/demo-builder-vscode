@@ -8,6 +8,7 @@
 
 import {
     deriveAdobeEntityName,
+    deriveFreeAdobeEntityName,
     randomNameSuffix,
 } from '@/features/authentication/services/adobeEntityName';
 
@@ -71,5 +72,31 @@ describe('randomNameSuffix', () => {
         } finally {
             random.mockRestore();
         }
+    });
+});
+
+// Console's workspace boxes show the NAME, so "ProductionKnDo" is what the SC read
+// (owner, 2026-09-21). The random ending is kept for when the name is taken.
+describe('deriveFreeAdobeEntityName', () => {
+    it('is the bare name when nothing in the project has it', () => {
+        expect(deriveFreeAdobeEntityName('Northwind ERP', ['Production'])).toBe('NorthwindERP');
+    });
+
+    it('adds the random ending when the bare name is taken, ignoring case', () => {
+        expect(deriveFreeAdobeEntityName('Northwind ERP', ['northwinderp'], 'ZZZZ')).toBe(
+            'NorthwindERPZZZZ',
+        );
+    });
+
+    it('adds the random ending when the names in use are unknown', () => {
+        expect(deriveFreeAdobeEntityName('Northwind ERP', undefined, 'ZZZZ')).toBe('NorthwindERPZZZZ');
+    });
+
+    it('caps a bare name at 19, the longest Adobe accepts', () => {
+        expect(deriveFreeAdobeEntityName('a'.repeat(40), [])).toBe('a'.repeat(19));
+    });
+
+    it('falls back to App when the title has nothing Adobe accepts', () => {
+        expect(deriveFreeAdobeEntityName('***', [])).toBe('App');
     });
 });

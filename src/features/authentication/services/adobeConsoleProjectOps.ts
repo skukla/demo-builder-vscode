@@ -16,7 +16,7 @@
  * @module features/authentication/services/adobeConsoleProjectOps
  */
 
-import { deriveAdobeEntityName } from './adobeEntityName';
+import { deriveAdobeEntityName, deriveFreeAdobeEntityName } from './adobeEntityName';
 import type { AdobeSDKClient } from './adobeSDKClient';
 import type { AuthCacheManager } from './authCacheManager';
 import type {
@@ -34,6 +34,12 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 /** How many times a failed workspace delete looks again before believing it. */
 const WORKSPACE_DELETE_LOOKS = 5;
+
+/** Adobe's answer when a workspace name is already in use. */
+function isNameClash(error: Error): boolean {
+    const message = error.message || '';
+    return message.includes('409') || message.includes('Conflict');
+}
 
 /** What renaming an Adobe project answers: done, or Adobe's reason for refusing. */
 export type RemoteRenameResult = { ok: true } | { ok: false; error: string };
@@ -368,17 +374,27 @@ export class AdobeConsoleProjectOps {
                 ) => Promise<SDKResponse<RawAdobeWorkspace>>;
             };
 
-            // Adobe validates the machine `name` as alphanumeric-only, so it is derived
-            // from the title: "Northwind ERP" → `NorthwindERP…`. The title stays as typed.
-            const name = deriveAdobeEntityName(title);
-            this.debugLogger.info(
-                `[Entity Fetcher] Creating workspace "${title}" (name: ${name}) in project ${projectId}`,
+            // Adobe accepts only letters and digits in the name (a space 400s, measured
+            // 2026-09-21), and Console's workspace boxes SHOW the name, so it is the
+            // title stripped bare — "Northwind ERP" → `NorthwindERP` — with a random
+            // ending only when the name is taken. A clash the list could not show
+            // gets one retry with the ending.
+            const taken = await this.listWorkspaces(orgId, projectId).then(
+                (all) => all.map((w) => w.name),
+                () => undefined,
             );
-
-            const response = await client.createWorkspace(orgId, projectId, {
-                name,
-                title,
-                description,
+            let name = deriveFreeAdobeEntityName(title, taken);
+            const sentBare = name === deriveFreeAdobeEntityName(title, []);
+            const send = () => {
+                this.debugLogger.info(
+                    `[Entity Fetcher] Creating workspace "${title}" (name: ${name}) in project ${projectId}`,
+                );
+                return client.createWorkspace(orgId, projectId, { name, title, description });
+            };
+            const response = await send().catch((error: Error) => {
+                if (!isNameClash(error) || !sentBare) throw error;
+                name = deriveAdobeEntityName(title);
+                return send();
             });
 
             // The create endpoint returns only the new id ({ workspaceId }), NOT a full
@@ -401,7 +417,7 @@ export class AdobeConsoleProjectOps {
             return { id: workspaceId, name, title };
         } catch (error) {
             const message = (error as Error).message || '';
-            if (message.includes('409') || message.includes('Conflict')) {
+            if (isNameClash(error as Error)) {
                 this.debugLogger.error('[Entity Fetcher] Workspace name already exists (409)');
                 return { error: 'A workspace with this name already exists in the project (409).' };
             }
