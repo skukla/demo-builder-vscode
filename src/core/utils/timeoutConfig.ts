@@ -177,7 +177,9 @@ export const TIMEOUTS = {
      *  the failure mode: intermittent sub-second 500s while a raw retry
      *  succeeded. Short on purpose — the same fetch feeds the Add Integration
      *  picker, whose fast-fail + Retry button must stay fast; timeouts are
-     *  never retried (they already spent the full budget). */
+     *  never retried here (they already spent the full budget). The background
+     *  warm-up (`warmOrgServicesCatalog`) retries once on its own, because
+     *  nobody waits on it. */
     ORG_SERVICES_RETRY_DELAY: 2000,
 
     /** Initial wait before first mesh verification poll (20 seconds) */
@@ -382,8 +384,9 @@ export const CACHE_TTL = {
     /**
      * Org entitled-services catalog (`getServicesForOrg`) — 30 minutes.
      * The catalog is identical for every workspace in an org and changes rarely.
-     * The Add Integration modal prefetches (warms) this cache on open, so a longer
-     * TTL keeps the picker's later fetch fast across a whole add session.
+     * Opening the dashboard and the integrations surface warms this cache in the
+     * background (`warmOrgServicesCatalog`), so a longer TTL keeps the picker's
+     * later fetch fast across a whole session.
      */
     ORG_SERVICES: 30 * 60 * 1000,
 } as const;

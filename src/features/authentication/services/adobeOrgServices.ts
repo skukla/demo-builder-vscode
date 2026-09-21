@@ -207,8 +207,8 @@ export class AdobeOrgServices {
         // 2026-08-28). The endpoint intermittently answers sub-second 500s whose
         // own template says retry-on-internal-error, and a retry was measured to
         // succeed — three add attempts died on single 500s that day. A TIMEOUT is
-        // never retried: it already spent the whole ORG_SERVICES_FETCH budget, and
-        // doubling that wait is worse than the picker's fast-fail + Retry affordance.
+        // never retried here: it already spent the whole budget, and a person waits
+        // on the picker. warmOrgServicesCatalog retries once — nobody waits on it.
         const failedFast = !outcome.timedOut && (outcome.error || !outcome.result);
         if (failedFast) {
             this.debugLogger.warn(
