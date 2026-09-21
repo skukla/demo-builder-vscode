@@ -450,3 +450,6 @@ and re-adding an integration — no migration code ships.
 - 2026-09-20  docs(backlog): moving existing projects is part of AB-23, not a follow-on (`ee53cef66`)
 - 2026-09-20  feat(app-builder): removing a component deletes its workspace (`0af3ac9f6`)
 - 2026-09-21  feat(app-builder): subscribe a component's own APIs, not the project's union (`9b08d6757`)
+- 2026-09-21  fix(apis): never add a Commerce API without its product profile (`837395477`)
+- 2026-09-21  feat(dashboard): Manage APIs edits the component's own workspace (`aeb6530ac`)
+- 2026-09-21  docs(state): cite what makes the merge claim true (`e5c1982b4`)
