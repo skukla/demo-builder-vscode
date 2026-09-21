@@ -1003,7 +1003,7 @@ function runtimeWarning(displayName: string, cleanup: RuntimeCleanupSummary | un
     }
     const detail =
         stillRunning.length > 0
-            ? `${stillRunning.length} package(s) are still deployed: ${stillRunning.join(', ')}`
+            ? `${stillRunning.length} item(s) are still deployed: ${stillRunning.join(', ')}`
             : (cleanup.note ?? 'the Runtime namespace could not be listed');
     return (
         `${displayName} was removed, but its Runtime cleanup did not finish — ${detail}. ` +

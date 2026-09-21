@@ -145,11 +145,50 @@ export async function applyIsolatedPackages(
  * rule as provider bindings.
  */
 export async function listDeclaredPackageNames(componentPath: string): Promise<string[]> {
-    const names = new Set<string>();
-    const doc = await readConfigDoc(componentPath);
-    for (const name of Object.keys(doc?.application?.runtimeManifest?.packages ?? {})) {
-        names.add(name);
+    return Object.keys(await declaredPackageBlocks(componentPath));
+}
+
+/** The timers and rules an app declares inside its packages, by name. */
+export interface DeclaredTriggersAndRules {
+    triggers: string[];
+    rules: string[];
+}
+
+/**
+ * The triggers and rules an app declares, read from the same package blocks as
+ * {@link listDeclaredPackageNames}.
+ *
+ * They live beside a package's actions in the config, but in Runtime they are
+ * separate, namespace-level entities: deleting a package does not delete them.
+ * On 2026-09-21 a failed undeploy left the ERP's one-minute timer and its rule
+ * firing at code that was being removed, and the leftover clean-up — which
+ * knew only packages — could not see them.
+ */
+export async function listDeclaredTriggersAndRules(
+    componentPath: string,
+): Promise<DeclaredTriggersAndRules> {
+    const triggers = new Set<string>();
+    const rules = new Set<string>();
+    for (const block of Object.values(await declaredPackageBlocks(componentPath))) {
+        const entities = block as { triggers?: unknown; rules?: unknown } | null | undefined;
+        for (const name of Object.keys(asRecord(entities?.triggers))) triggers.add(name);
+        for (const name of Object.keys(asRecord(entities?.rules))) rules.add(name);
     }
+    return { triggers: [...triggers], rules: [...rules] };
+}
+
+/** A parsed YAML value as a map, or an empty one when it is not a map. */
+function asRecord(value: unknown): Record<string, unknown> {
+    return value && typeof value === 'object' && !Array.isArray(value)
+        ? (value as Record<string, unknown>)
+        : {};
+}
+
+/** Every package block the app declares, its own and its extensions' `$include`s. */
+async function declaredPackageBlocks(componentPath: string): Promise<RuntimePackages> {
+    const blocks: RuntimePackages = {};
+    const doc = await readConfigDoc(componentPath);
+    Object.assign(blocks, doc?.application?.runtimeManifest?.packages ?? {});
     for (const entry of Object.values(doc?.extensions ?? {})) {
         const include = (entry as { $include?: unknown } | undefined)?.$include;
         if (typeof include !== 'string') {
@@ -176,11 +215,9 @@ export async function listDeclaredPackageNames(componentPath: string): Promise<s
         } catch {
             continue;
         }
-        for (const name of Object.keys(extDoc?.runtimeManifest?.packages ?? {})) {
-            names.add(name);
-        }
+        Object.assign(blocks, extDoc?.runtimeManifest?.packages ?? {});
     }
-    return [...names];
+    return blocks;
 }
 
 /** The annotation that makes `aio app deploy` require the four IMS_OAUTH_S2S values. */

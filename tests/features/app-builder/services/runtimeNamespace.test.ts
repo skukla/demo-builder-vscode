@@ -19,7 +19,8 @@ jest.mock('@/features/app-builder/services/runtimeCredentials', () => ({
 }));
 
 import {
-    deleteRuntimePackage,
+    deleteRuntimeEntity,
+    listRuntimeNames,
     listRuntimePackages,
     runInNamespace,
     runtimeNamespaceEnv,
@@ -150,22 +151,51 @@ describe('listRuntimePackages', () => {
         deps.commandManager.execute.mockResolvedValue(createSuccessResult(''));
 
         await expect(listRuntimePackages(deps, ENV)).rejects.toThrow(
-            'the answer was not a list of packages'
+            'the answer was not a list'
         );
     });
 });
 
-describe('deleteRuntimePackage', () => {
+describe('listRuntimeNames', () => {
+    it('lists rules and triggers with their own command, and the same key', async () => {
+        const deps = makeDeps();
+        deps.commandManager.execute.mockResolvedValue(
+            createSuccessResult(JSON.stringify([{ name: 'erp-refresh-on-timer' }]))
+        );
+
+        await expect(listRuntimeNames(deps, 'rule', ENV)).resolves.toEqual(['erp-refresh-on-timer']);
+        expect(deps.commandManager.execute).toHaveBeenCalledWith(
+            'aio runtime rule list --json',
+            expect.objectContaining({ env: ENV })
+        );
+    });
+});
+
+describe('deleteRuntimeEntity', () => {
     it('deletes the package recursively, with the key', async () => {
         const deps = makeDeps();
         deps.commandManager.execute.mockResolvedValue(createSuccessResult());
 
-        await deleteRuntimePackage(deps, 'demo-erp', ENV);
+        await deleteRuntimeEntity(deps, 'package', 'demo-erp', ENV);
 
         expect(deps.commandManager.execute).toHaveBeenCalledWith(
             'aio runtime package delete demo-erp --recursive',
             expect.objectContaining({ env: ENV })
         );
+    });
+
+    // A rule or trigger is not a container: `--recursive` belongs to packages only.
+    it('deletes a rule or a trigger by name, without --recursive', async () => {
+        const deps = makeDeps();
+        deps.commandManager.execute.mockResolvedValue(createSuccessResult());
+
+        await deleteRuntimeEntity(deps, 'rule', 'erp-refresh-on-timer', ENV);
+        await deleteRuntimeEntity(deps, 'trigger', 'erp-refresh-timer', ENV);
+
+        expect(deps.commandManager.execute.mock.calls.map((call) => call[0])).toEqual([
+            'aio runtime rule delete erp-refresh-on-timer',
+            'aio runtime trigger delete erp-refresh-timer',
+        ]);
     });
 
     it('throws when the CLI refuses, naming the exit code when it gave no reason', async () => {
@@ -177,7 +207,7 @@ describe('deleteRuntimePackage', () => {
             duration: 0,
         });
 
-        await expect(deleteRuntimePackage(deps, 'demo-erp', ENV)).rejects.toThrow(
+        await expect(deleteRuntimeEntity(deps, 'package', 'demo-erp', ENV)).rejects.toThrow(
             'aio runtime package delete demo-erp --recursive: exited with code 2'
         );
     });

@@ -53,6 +53,7 @@ function kitDeps(overrides: Partial<Record<string, unknown>> = {}) {
 // agree with the entry so the door admits it.
 jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
     listDeclaredPackageNames: jest.fn().mockResolvedValue([]),
+    listDeclaredTriggersAndRules: jest.fn().mockResolvedValue({ triggers: [], rules: [] }),
     detectAppLayout: jest.fn(async () => 'extension'),
 }));
 

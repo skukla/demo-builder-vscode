@@ -13,6 +13,7 @@
 
 jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
     listDeclaredPackageNames: jest.fn().mockResolvedValue([]),
+    listDeclaredTriggersAndRules: jest.fn().mockResolvedValue({ triggers: [], rules: [] }),
     applyIsolatedPackages: jest.fn(),
 }));
 jest.mock('@/features/app-builder/services/appDeployment', () => ({

@@ -48,13 +48,19 @@ import {
     recordDeployOutcome,
     type DeployOutcome,
 } from './appBuilderDeployOutcome';
-import { detectAppLayout, listDeclaredPackageNames, type AppConfigLayout } from './appConfigPackages';
+import {
+    detectAppLayout,
+    listDeclaredPackageNames,
+    listDeclaredTriggersAndRules,
+    type AppConfigLayout,
+} from './appConfigPackages';
 import type { AppManagementInstallOptions, AppManagementInstallResult } from './appManagementUpgrade';
 import { entriesSharingWorkspace } from './componentWorkspace';
 import { resolveDeployInputs, resolveDisplayName } from './deployInputs';
 import type { CommerceDetachResult } from './erpDetach';
 import type { SourceUpdateResult, UpdateCheckResult } from './integrationSourceUpdate';
 import { deriveOwPackage } from './owPackageName';
+import type { DeclaredRuntime } from './runtimeNamespace';
 import type { AppDeploymentResult } from './types';
 import { isMeshComponentId } from '@/core/constants';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
@@ -1214,9 +1220,13 @@ export async function removeAppBuilderComponent(
     // The declared package inventory is read BEFORE the undeploy and the local
     // delete — afterwards the config files it attributes by are gone.
     const componentPath = project.componentInstances?.[id]?.path;
-    let declaredPackages: string[] = [];
+    let declared: DeclaredRuntime = { packages: [], triggers: [], rules: [] };
     if (state.kind !== 'mesh' && componentPath) {
-        declaredPackages = await listDeclaredPackageNames(componentPath).catch(() => []);
+        const [packages, timersAndRules] = await Promise.all([
+            listDeclaredPackageNames(componentPath).catch(() => []),
+            listDeclaredTriggersAndRules(componentPath).catch(() => ({ triggers: [], rules: [] })),
+        ]);
+        declared = { packages, ...timersAndRules };
     }
 
     try {
@@ -1231,7 +1241,7 @@ export async function removeAppBuilderComponent(
     // (AB-7, measured live). Meshes verify via their own status flow.
     const runtimeCleanup =
         state.kind !== 'mesh'
-            ? await verifyRuntimeTeardown(targetFor(project, deps, id), id, declaredPackages, deps)
+            ? await verifyRuntimeTeardown(targetFor(project, deps, id), id, declared, deps)
             : undefined;
 
     // A missing instance (a folder removed by hand, a half-finished add) must not

@@ -18,6 +18,7 @@ jest.setTimeout(5000);
 const mockDetectAppLayout = jest.fn();
 jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
     listDeclaredPackageNames: jest.fn().mockResolvedValue([]),
+    listDeclaredTriggersAndRules: jest.fn().mockResolvedValue({ triggers: [], rules: [] }),
     detectAppLayout: (...args: unknown[]) => mockDetectAppLayout(...args),
 }));
 

@@ -13,6 +13,7 @@ jest.setTimeout(5000);
 
 jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
     listDeclaredPackageNames: jest.fn().mockResolvedValue([]),
+    listDeclaredTriggersAndRules: jest.fn().mockResolvedValue({ triggers: [], rules: [] }),
     detectAppLayout: jest.fn(async (path: string) => (path.includes('demo-erp') ? 'standalone' : 'extension')),
 }));
 

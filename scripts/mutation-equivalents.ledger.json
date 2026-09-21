@@ -9420,22 +9420,9 @@
         {
             "module": "src/features/app-builder/services/appBuilderComponentRunner.ts",
             "anchors": [
-                "let declaredPackages: string[] = [];",
-                "declaredPackages = await listDeclaredPackageNames(componentPath).catch(() => []);"
-            ],
-            "mutants": 2,
-            "category": "other",
-            "reason": "Both empty arrays are replaced with a one-element array whose value contains spaces. That value flows into verifyRuntimeTeardown's attribution set and is immediately removed by RUNTIME_PACKAGE_NAME, which rejects any name outside the Adobe id charset, so it can never become a delete candidate. The resulting summary is identical to the one the empty default produces.",
-            "decision": "none - the injected name is filtered out before it can affect anything.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-02"
-        },
-        {
-            "module": "src/features/app-builder/services/appBuilderComponentRunner.ts",
-            "anchors": [
                 "} catch (error) {"
             ],
-            "line": 1224,
+            "line": 1234,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single deps.logger.warn. Emptying it leaves the catch itself in place, so a failing remote teardown is swallowed exactly as before and the removal continues to clear local state - which the remove-contracts suite asserts directly with a rejecting executor. Only the log line differs.",
@@ -9461,7 +9448,7 @@
             "anchors": [
                 "if (cleared.componentApiPicks) {"
             ],
-            "line": 1385,
+            "line": 1395,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this guard true assigns cleared.componentApiPicks onto the caller's project when it is undefined. cleared is spread from that same project, so an undefined value there means the caller's field was already undefined and the assignment writes back exactly what was there. The mutation is a no-op for every input on which the guard was false.",
@@ -9474,7 +9461,7 @@
             "anchors": [
                 "if (cleared.componentConfigs) {"
             ],
-            "line": 1388,
+            "line": 1398,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this guard true assigns cleared.componentConfigs onto the caller's project when it is undefined. cleared is spread from that same project, so an undefined value there means the caller's field was already undefined and the assignment writes back exactly what was there. The mutation is a no-op for every input on which the guard was false.",
@@ -14224,7 +14211,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 166,
+            "line": 205,
             "mutants": 1,
             "category": "other",
             "reason": "Emptying the include-read catch drops its continue, leaving raw unassigned when the file cannot be read; the next statement is yaml.parse(raw), whose TypeError on undefined lands in the parse-catch immediately below and continues from there. An unreadable include is skipped by either route.",
@@ -14237,7 +14224,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 176,
+            "line": 215,
             "mutants": 1,
             "category": "other",
             "reason": "Emptying the extension-config parse-catch drops its continue, leaving extDoc undefined; the very next statement reads it through an optional chain with a '?? {}' fallback, so the loop adds no names and moves on. An unparseable included config contributes nothing either way.",

@@ -36,6 +36,7 @@ jest.mock('@/core/shell/orgContextEnv', () => ({
 // the happy path (the rejection is pinned in the runner suite).
 jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
     listDeclaredPackageNames: jest.fn().mockResolvedValue([]),
+    listDeclaredTriggersAndRules: jest.fn().mockResolvedValue({ triggers: [], rules: [] }),
     detectAppLayout: jest.fn().mockResolvedValue('standalone'),
 }));
 

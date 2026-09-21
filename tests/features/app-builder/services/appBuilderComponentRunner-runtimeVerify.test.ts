@@ -18,9 +18,11 @@ import type { Project } from '@/types/base';
 jest.setTimeout(5000);
 
 const mockListDeclaredPackageNames = jest.fn();
+const mockListDeclaredTriggersAndRules = jest.fn();
 jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
     detectAppLayout: jest.fn().mockResolvedValue('standalone'),
     listDeclaredPackageNames: (...a: unknown[]) => mockListDeclaredPackageNames(...a),
+    listDeclaredTriggersAndRules: (...a: unknown[]) => mockListDeclaredTriggersAndRules(...a),
 }));
 
 import { removeAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentRunner';
@@ -72,6 +74,7 @@ beforeEach(() => {
     jest.clearAllMocks();
     mockWithOrgContext.mockImplementation((_target: unknown, fn: () => Promise<unknown>) => fn());
     mockListDeclaredPackageNames.mockResolvedValue([]);
+    mockListDeclaredTriggersAndRules.mockResolvedValue({ triggers: [], rules: [] });
 });
 
 describe('post-undeploy runtime verification', () => {
@@ -250,6 +253,48 @@ describe('post-undeploy runtime verification', () => {
         const result = await removeAppBuilderComponent(integrationProject(), ID, deps);
 
         expect(result.runtimeCleanup).toEqual({ verified: true, deleted: [owPackage], failed: [] });
+    });
+
+    // 2026-09-21: the ERP's one-minute timer and its rule outlived a failed undeploy,
+    // firing at an action that was gone. Deleting the package does not delete them.
+    it("deletes the app's own leftover rule and timer — rules first, then timers, then packages", async () => {
+        const owPackage = deriveOwPackage(ID);
+        mockListDeclaredTriggersAndRules.mockResolvedValue({
+            triggers: ['erp-refresh-timer'],
+            rules: ['erp-refresh-on-timer'],
+        });
+        const deps = createDeps();
+        routeExecute(deps, {
+            'rule list': { stdout: JSON.stringify([{ name: 'erp-refresh-on-timer' }, { name: 'not-ours' }]) },
+            'trigger list': { stdout: JSON.stringify([{ name: 'erp-refresh-timer' }]) },
+            'package list': { stdout: JSON.stringify([{ name: owPackage }]) },
+        });
+
+        const result = await removeAppBuilderComponent(integrationProject(), ID, deps);
+
+        const deletes = (deps.commandManager.execute as jest.Mock).mock.calls
+            .map((c: unknown[]) => String(c[0]))
+            .filter((command: string) => command.includes(' delete '));
+        expect(deletes).toEqual([
+            'aio runtime rule delete erp-refresh-on-timer',
+            'aio runtime trigger delete erp-refresh-timer',
+            `aio runtime package delete ${owPackage} --recursive`,
+        ]);
+        expect(result.runtimeCleanup).toEqual({
+            verified: true,
+            deleted: ['rule erp-refresh-on-timer', 'trigger erp-refresh-timer', owPackage],
+            failed: [],
+        });
+    });
+
+    it('a rule list that fails is "not verified" too', async () => {
+        mockListDeclaredTriggersAndRules.mockResolvedValue({ triggers: [], rules: ['erp-refresh-on-timer'] });
+        const deps = createDeps();
+        routeExecute(deps, { 'rule list': { code: 2 }, 'package list': { stdout: '[]' } });
+
+        const result = await removeAppBuilderComponent(integrationProject(), ID, deps);
+
+        expect(result.runtimeCleanup).toMatchObject({ verified: false, deleted: [], failed: [] });
     });
 
     it('a mesh removal runs NO runtime verification (its own status flow owns that)', async () => {

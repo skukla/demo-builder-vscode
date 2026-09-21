@@ -12,6 +12,7 @@ import { createDeps, createProject } from './appBuilderComponentRunner.testUtils
 
 jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
     listDeclaredPackageNames: jest.fn().mockResolvedValue([]),
+    listDeclaredTriggersAndRules: jest.fn().mockResolvedValue({ triggers: [], rules: [] }),
     detectAppLayout: jest.fn(async () => 'extension'),
 }));
 

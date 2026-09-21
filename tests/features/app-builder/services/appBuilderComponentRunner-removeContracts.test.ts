@@ -24,6 +24,7 @@ const mockListDeclaredPackageNames = jest.fn();
 jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
     detectAppLayout: jest.fn().mockResolvedValue('standalone'),
     listDeclaredPackageNames: (...a: unknown[]) => mockListDeclaredPackageNames(...a),
+    listDeclaredTriggersAndRules: jest.fn().mockResolvedValue({ triggers: [], rules: [] }),
 }));
 
 // =============================================================================

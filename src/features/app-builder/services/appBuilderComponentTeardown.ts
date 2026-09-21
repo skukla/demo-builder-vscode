@@ -19,10 +19,14 @@ import type { CommerceDetachResult } from './erpDetach';
 import { deriveOwPackage } from './owPackageName';
 import {
     commandFailure,
-    deleteRuntimePackage,
-    listRuntimePackages,
+    deleteRuntimeEntity,
+    listRuntimeNames,
     runInNamespace,
     runtimeNamespaceEnv,
+    CLEANUP_ORDER,
+    leftoverLabel,
+    type DeclaredRuntime,
+    type RuntimeEntityKind,
     type RuntimeNamespaceEnv,
 } from './runtimeNamespace';
 import type { SystemWipeResult } from './systemRecordsWipe';
@@ -283,45 +287,55 @@ export async function teardownRemote(
 }
 
 /**
- * Package names safe to interpolate into an `aio runtime package` command.
- * Declared names come from config FILES; a name outside the Adobe id charset
- * is never deleted (and never quoted into a shell line).
+ * Names safe to interpolate into an `aio runtime` command. Declared names come
+ * from config FILES; a name outside the Adobe id charset is never deleted (and
+ * never quoted into a shell line).
  */
-const RUNTIME_PACKAGE_NAME = /^[A-Za-z0-9@._-]+$/;
+const RUNTIME_ENTITY_NAME = /^[A-Za-z0-9@._-]+$/;
 
 /**
  * Verify the undeploy actually cleared the namespace, and delete what it left
- * (AB-7). Attribution is exact and conservative: only packages the app itself
- * names — its declared config packages plus the derived isolation package —
- * are candidates; anything else in the namespace is not ours to touch.
- * Best-effort like the rest of teardown, but never SILENT: the summary lands
- * on the result, and an unverifiable namespace says so.
+ * (AB-7). Attribution is exact and conservative: only what the app itself names
+ * is a candidate — its declared packages plus the derived isolation package, and
+ * the triggers and rules its packages declare. Triggers and rules are checked
+ * too because deleting a package does not delete them: on 2026-09-21 the ERP's
+ * one-minute timer kept firing at a removed action. Anything else in the
+ * namespace is not ours to touch. Best-effort like the rest of teardown, but
+ * never SILENT: the summary lands on the result, and an unverifiable namespace
+ * says so.
  *
  * @param target - the org context to run under
  * @param id - the component id
- * @param expectedPackages - the packages its config declared
+ * @param declared - what its config declared
  * @param deps - the command runner and logger
  * @returns what was found and done
  */
 export async function verifyRuntimeTeardown(
     target: OrgContextTarget,
     id: string,
-    expectedPackages: string[],
+    declared: DeclaredRuntime,
     deps: TeardownDeps,
 ): Promise<RuntimeCleanupSummary> {
-    const expected = [...new Set([...expectedPackages, deriveOwPackage(id)])].filter((name) =>
-        RUNTIME_PACKAGE_NAME.test(name),
-    );
-    // The key is fetched once and used for the list and every delete. A list that
+    const safe = (names: string[]) => [...new Set(names)].filter((n) => RUNTIME_ENTITY_NAME.test(n));
+    const expected: Record<RuntimeEntityKind, string[]> = {
+        rule: safe(declared.rules),
+        trigger: safe(declared.triggers),
+        package: safe([...declared.packages, deriveOwPackage(id)]),
+    };
+    // The key is fetched once and used for every list and delete. A list that
     // cannot answer THROWS (runtimeNamespace.ts), so it lands here as "not
     // verified" — it used to parse the empty output of a failed list as "nothing
     // deployed" and report the namespace clean.
-    let present: string[];
+    const leftovers: Array<[RuntimeEntityKind, string]> = [];
     let env: RuntimeNamespaceEnv;
     try {
-        [env, present] = await withOrgContext(target, async () => {
+        env = await withOrgContext(target, async () => {
             const namespaceEnv = await runtimeNamespaceEnv(deps);
-            return [namespaceEnv, await listRuntimePackages(deps, namespaceEnv)] as const;
+            for (const kind of CLEANUP_ORDER.filter((k) => expected[k].length > 0)) {
+                const present = await listRuntimeNames(deps, kind, namespaceEnv);
+                leftovers.push(...expected[kind].filter((n) => present.includes(n)).map((n) => [kind, n] as [RuntimeEntityKind, string]));
+            }
+            return namespaceEnv;
         });
     } catch (error) {
         return {
@@ -332,24 +346,24 @@ export async function verifyRuntimeTeardown(
         };
     }
 
-    const leftovers = expected.filter((name) => present.includes(name));
     const deleted: string[] = [];
     const failed: string[] = [];
-    for (const name of leftovers) {
+    for (const [kind, name] of leftovers) {
         try {
-            await withOrgContext(target, () => deleteRuntimePackage(deps, name, env));
-            deleted.push(name);
+            await withOrgContext(target, () => deleteRuntimeEntity(deps, kind, name, env));
+            deleted.push(leftoverLabel(kind, name));
         } catch (error) {
             deps.logger.warn(
-                `[AppBuilderComponent Runner] leftover package "${name}" delete failed: ${toError(error).message}`,
+                `[AppBuilderComponent Runner] leftover ${kind} "${name}" delete failed: ${toError(error).message}`,
             );
-            failed.push(name);
+            failed.push(leftoverLabel(kind, name));
         }
     }
     if (leftovers.length > 0) {
+        const labels = leftovers.map(([kind, name]) => leftoverLabel(kind, name));
         deps.logger.warn(
-            `[AppBuilderComponent Runner] undeploy left ${leftovers.length} package(s) running ` +
-                `(${leftovers.join(', ')}); deleted ${deleted.length}, failed ${failed.length}`,
+            `[AppBuilderComponent Runner] undeploy left ${leftovers.length} item(s) running ` +
+                `(${labels.join(', ')}); deleted ${deleted.length}, failed ${failed.length}`,
         );
     }
     return { verified: true, deleted, failed };
