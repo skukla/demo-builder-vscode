@@ -106,25 +106,38 @@ export class AdobeOrgServices {
      * Each entry carries `{ code, platformList, domainMandatory?, ... }`.
      */
     async getServicesForOrg(orgId: string): Promise<OrgServiceInfo[]> {
-        // Session-TTL cache: the org's service catalog is identical for every
-        // workspace in the org and changes rarely, so avoid refetching it on every
-        // workspace commit. Return the cached list while it is still fresh.
+        // Once loaded, the list is ALWAYS answered from memory — Developer Console's
+        // pattern. It is identical for every workspace in the org and barely changes,
+        // while a cold fetch takes about a minute and can hit Adobe's 60s gateway limit.
+        // An expired copy is still returned, and starts one background refresh; only
+        // the session's very first ask waits on Adobe. On 2026-09-21 a 30-minute expiry
+        // turned Manage APIs, opened 40 minutes after the warm-up, into a 60s timeout.
         const cached = this.servicesCache.get(orgId);
-        if (cached && Date.now() < cached.expiresAt) {
+        if (cached) {
+            if (Date.now() >= cached.expiresAt) {
+                this.flightFor(orgId)
+                    .run(() => this.fetchServicesForOrg(orgId))
+                    .catch(() => {
+                        // Keep the copy we have; the next ask tries again.
+                        this.debugLogger.debug('[Entity Fetcher] Background org services refresh failed');
+                    });
+            }
             return cached.services;
         }
+        return this.flightFor(orgId).run(() => this.fetchServicesForOrg(orgId));
+    }
 
-        // Single-flight PER ORG. The Add Integration modal PREFETCHES this on open
-        // and the API picker fetches it again when the user reaches that stage —
-        // a concurrent pair by construction, so without this both pulled the org's
-        // full ~90-row catalog. Third instance of the stampede (org list, token
-        // inspection, this).
+    /**
+     * The org's single-flight slot. The Add Integration modal and the dashboard's
+     * warm-up ask at once by construction; without this each pulled the full list.
+     */
+    private flightFor(orgId: string): SingleFlight<OrgServiceInfo[]> {
         let flight = this.servicesFlights.get(orgId);
         if (!flight) {
             flight = new SingleFlight<OrgServiceInfo[]>();
             this.servicesFlights.set(orgId, flight);
         }
-        return flight.run(() => this.fetchServicesForOrg(orgId));
+        return flight;
     }
 
     /** The uncached catalog fetch behind {@link getServicesForOrg}'s single-flight. */
