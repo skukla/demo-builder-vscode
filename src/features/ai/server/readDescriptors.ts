@@ -327,7 +327,10 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
         description:
             "List the Adobe APIs (sdk codes + names) the org can subscribe to on this project's " +
             'Developer Console workspace, flagging the ones Demo Builder already manages. Use before ' +
-            'add_console_apis to find the right code — pass search to narrow it (e.g. "firefly").',
+            'add_console_apis to find the right code — pass search to narrow it (e.g. "firefly"). ' +
+            "Pass componentId for ONE integration's view: `added` becomes its own picks, and each " +
+            'row carries `ownership` (baseline / mine-required / other-required / mine-optional) ' +
+            'and `requiredBy` (the integrations that need it).',
         map: dashboardHandlers,
         type: 'listConsoleApis',
         inputSchema: {
@@ -335,6 +338,13 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
                 .string()
                 .optional()
                 .describe('Case-insensitive substring match on sdk code, name or group'),
+            // The handler always took this (the Manage APIs modal sends it); the tool
+            // dropped it, so an agent could only ever see the project's union.
+            componentId: z
+                .string()
+                .min(1)
+                .optional()
+                .describe("Show only this integration's picks; omit for the project-wide union"),
         },
         shape: shapeConsoleApis,
     },
