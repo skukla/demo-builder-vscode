@@ -132,14 +132,14 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'exportProjectSettings')).toBe(true);
         });
 
-        it('should have exactly 48 handlers', () => {
+        it('should have exactly 49 handlers', () => {
             // Given: dashboardHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(dashboardHandlers) as Array<
                 keyof typeof dashboardHandlers
             >;
 
-            // Then: exactly 48, derived in the map's own declaration order so a
+            // Then: exactly 49, derived in the map's own declaration order so a
             // reader can check it against the source top to bottom.
             //
             // NOTE: the previous derivation did not add up — it said "9
@@ -164,6 +164,8 @@ describe('dashboardHandlers', () => {
             //                      state read), plus getComponentOperationProgress
             //                      (PL-59: the latest step for the progress modal)
             //   3  console APIs    listConsoleApis, addConsoleApis, setConsoleApis
+            //   1  runtime         listRuntimePackages (the list_runtime_packages
+            //                      read: what a removal left running, 2026-09-21)
             //   2  storefront      syncStorefront, refreshBlockLibrary
             //   2  auth            reAuthenticate, switchOrg
             //   1  delete          deleteProject
@@ -191,7 +193,7 @@ describe('dashboardHandlers', () => {
             //                      back only what we did), and exportDemoBundle
             //                      (Export's "Send a file": one bundle of the ticked parts)
             //  ==
-            //  48
+            //  49
             //
             // Retired, so they are absent by design: verifyAppBuilderComponent
             // (2026-08-03); the 4 singular App Builder actions (addApp,
@@ -209,7 +211,7 @@ describe('dashboardHandlers', () => {
             // the integrations surface's Eventing section — workspace-scoped
             // I/O event providers/registrations, same service as the MCP
             // event tools.
-            expect(types).toHaveLength(48);
+            expect(types).toHaveLength(49);
         });
 
         it('should have handlers as functions', () => {

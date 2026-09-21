@@ -9722,23 +9722,11 @@
             "anchors": [
                 "if (result.status === 'failed') {"
             ],
-            "line": 858,
+            "line": 866,
             "mutants": 4,
             "category": "branch",
             "reason": "The guarded body is a single deps.logger.warn call. The Commerce uninstall is best-effort: its outcome is neither surfaced on the RunnerResult nor persisted, and the removal proceeds identically whether the guard is taken, inverted or deleted. Every mutation here changes only which log line is written, which is wording rather than behaviour.",
             "decision": "none - log-only body; the removal's own effects are asserted separately.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-02"
-        },
-        {
-            "module": "src/features/app-builder/services/appBuilderComponentRunner.ts",
-            "anchors": [
-                "present = parsed.map((p) => p.name ?? '').filter(Boolean);"
-            ],
-            "mutants": 1,
-            "category": "other",
-            "reason": "The filter drops empty names from the listed namespace. present is used only as the right-hand side of expected.filter(name => present.includes(name)), and every member of expected has already passed RUNTIME_PACKAGE_NAME, which rejects the empty string. An empty entry can therefore never match, so keeping or dropping it cannot change which leftovers are found.",
-            "decision": "none - defensive filter with no reachable effect on the attribution set.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-02"
         },
@@ -9772,7 +9760,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 1060,
+            "line": 1073,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single deps.logger.warn. Emptying it leaves the catch itself in place, so a failing remote teardown is swallowed exactly as before and the removal continues to clear local state - which the remove-contracts suite asserts directly with a rejecting executor. Only the log line differs.",
@@ -9798,7 +9786,7 @@
             "anchors": [
                 "if (cleared.componentApiPicks) {"
             ],
-            "line": 1127,
+            "line": 1140,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this guard true assigns cleared.componentApiPicks onto the caller's project when it is undefined. cleared is spread from that same project, so an undefined value there means the caller's field was already undefined and the assignment writes back exactly what was there. The mutation is a no-op for every input on which the guard was false.",
@@ -9811,7 +9799,7 @@
             "anchors": [
                 "if (cleared.componentConfigs) {"
             ],
-            "line": 1130,
+            "line": 1143,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this guard true assigns cleared.componentConfigs onto the caller's project when it is undefined. cleared is spread from that same project, so an undefined value there means the caller's field was already undefined and the assignment writes back exactly what was there. The mutation is a no-op for every input on which the guard was false.",

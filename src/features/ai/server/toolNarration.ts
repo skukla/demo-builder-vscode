@@ -101,6 +101,7 @@ export const TOOL_NARRATION: Record<string, string> = {
     list_components: 'Listing the available components',
     list_console_apis: 'Listing the Adobe APIs you can subscribe to',
     list_content: 'Listing the storefront content',
+    list_runtime_packages: 'Listing what is deployed in the Adobe Runtime namespace',
     list_dalive_sites: 'Listing the DA.live sites',
     list_datapack_data_types: 'Listing the sample-data types',
     list_datapack_export_items: 'Listing what this store holds',

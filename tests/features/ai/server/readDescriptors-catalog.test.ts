@@ -70,6 +70,13 @@ const CATALOG: Row[] = [
         args: ['search', 'componentId'],
     },
     {
+        tool: 'list_runtime_packages',
+        map: dashboardHandlers,
+        type: 'listRuntimePackages',
+        needsAuth: ['adobe'],
+        args: null,
+    },
+    {
         tool: 'get_store_structure',
         map: edsHandlers,
         type: 'get-store-structure',
