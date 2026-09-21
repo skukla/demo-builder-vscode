@@ -1,5 +1,5 @@
 /**
- * Shared setup for the adobeEntityFetcher suites.
+ * Shared setup for the entity-collaborator suites (formerly adobeEntityFetcher.*).
  *
  * THIS FILE OWNS THE MOCKS AND EVERY IMPORT THEY REPLACE. Specs import those
  * from HERE and declare no jest.mock of their own — jest.mock hoists above the
@@ -41,7 +41,7 @@ import {
 
 export { createEntityCollaborators, parseJSON, type EntityCollaborators };
 
-export interface EntityFetcherHarness {
+export interface EntityCollaboratorsHarness {
     entities: EntityCollaborators;
     mockCommandExecutor: jest.Mocked<CommandExecutor>;
     mockSDKClient: jest.Mocked<AdobeSDKClient>;
@@ -59,7 +59,7 @@ export interface EntityFetcherHarness {
  * NOT initialised on purpose — the fetcher is SDK-first with a CLI fallback, so
  * this default sends every test down the fallback unless it says otherwise.
  */
-export function setupEntityFetcher(): EntityFetcherHarness {
+export function setupEntityCollaborators(): EntityCollaboratorsHarness {
     (getLogger as jest.Mock).mockReturnValue(createMockLogger());
 
     (parseJSON as jest.Mock).mockImplementation((str: string) => {

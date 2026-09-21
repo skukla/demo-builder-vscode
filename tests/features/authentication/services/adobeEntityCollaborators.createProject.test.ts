@@ -21,7 +21,7 @@ import { parseJSON } from '@/types/typeGuards';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
-describe('AdobeEntityFetcher.createProject()', () => {
+describe('entity collaborators.createProject()', () => {
     let entities: EntityCollaborators;
     let mockCommandExecutor: jest.Mocked<CommandExecutor>;
     let mockSDKClient: jest.Mocked<AdobeSDKClient>;

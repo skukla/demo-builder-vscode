@@ -6,9 +6,9 @@
  */
 
 import {
-    setupEntityFetcher,
+    setupEntityCollaborators,
     type EntityCollaborators,
-} from './adobeEntityFetcher.testUtils';
+} from './adobeEntityCollaborators.testUtils';
 
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
@@ -18,7 +18,7 @@ import type { StepLogger } from '@/core/logging/stepLogger';
 
 // Mock external dependencies
 
-describe('AdobeEntityFetcher', () => {
+describe('entity collaborators', () => {
     let entities: EntityCollaborators;
     let mockCommandExecutor: jest.Mocked<CommandExecutor>;
     let mockSDKClient: jest.Mocked<AdobeSDKClient>;
@@ -34,7 +34,7 @@ describe('AdobeEntityFetcher', () => {
             mockCacheManager,
             mockStepLogger,
             onNoOrgsAccessible,
-        } = setupEntityFetcher());
+        } = setupEntityCollaborators());
     });
 
     describe('getOrganizations()', () => {

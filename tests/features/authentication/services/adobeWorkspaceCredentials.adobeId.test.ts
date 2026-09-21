@@ -6,7 +6,7 @@
  * response carries it, else `id` — Console's create answers in `.id`).
  *
  * The delegation through AdobeEntityFetcher is pinned in
- * `adobeEntityFetcher-apiServices.test.ts`; this suite pins the DECISIONS in
+ * `adobeEntityCollaborators-apiServices.test.ts`; this suite pins the DECISIONS in
  * the matcher and the payload, against the module directly.
  */
 

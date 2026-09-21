@@ -19,7 +19,7 @@
 import {
     StepLogger,
     getLogger,
-} from './adobeEntityFetcher.testUtils';
+} from './adobeEntityCollaborators.testUtils';
 import {
     createEntityCollaborators,
     type EntityCollaborators,
@@ -32,7 +32,7 @@ import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake'
 
 const ORGS = [{ id: 'org-1', name: 'Acme', code: 'acme@AdobeOrg', type: 'entp' }];
 
-describe('AdobeEntityFetcher — getOrganizationsSdkOnly single-flight', () => {
+describe('entity collaborators — getOrganizationsSdkOnly single-flight', () => {
     let entities: EntityCollaborators;
     let sdk: { getOrganizations: jest.Mock };
     let cache: { getCachedOrgList: jest.Mock; setCachedOrgList: jest.Mock };

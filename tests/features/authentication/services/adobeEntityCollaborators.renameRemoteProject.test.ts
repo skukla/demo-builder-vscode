@@ -24,7 +24,7 @@ import { getLogger } from '@/core/logging/debugLogger';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
-describe('AdobeEntityFetcher.renameRemoteProject()', () => {
+describe('entity collaborators.renameRemoteProject()', () => {
     let entities: EntityCollaborators;
     let mockSDKClient: jest.Mocked<AdobeSDKClient>;
     let editProject: jest.Mock;

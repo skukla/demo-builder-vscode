@@ -6,9 +6,9 @@
  */
 
 import {
-    setupEntityFetcher,
+    setupEntityCollaborators,
     type EntityCollaborators,
-} from './adobeEntityFetcher.testUtils';
+} from './adobeEntityCollaborators.testUtils';
 
 import { ErrorCode } from '@/types/errorCodes';
 import { AdobeOrgMismatchError } from '@/features/authentication/services/authenticationErrors';
@@ -18,7 +18,7 @@ import type { AuthCacheManager } from '@/features/authentication/services/authCa
 
 // Mock external dependencies
 
-describe('AdobeEntityFetcher', () => {
+describe('entity collaborators', () => {
     let entities: EntityCollaborators;
     let mockCommandExecutor: jest.Mocked<CommandExecutor>;
     let mockSDKClient: jest.Mocked<AdobeSDKClient>;
@@ -30,7 +30,7 @@ describe('AdobeEntityFetcher', () => {
             mockCommandExecutor,
             mockSDKClient,
             mockCacheManager,
-        } = setupEntityFetcher());
+        } = setupEntityCollaborators());
     });
 
     describe('getProjects() - org targeting & typed 403', () => {

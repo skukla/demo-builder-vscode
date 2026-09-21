@@ -19,7 +19,7 @@ import {
     MGMT,
     StepLogger,
     getLogger,
-} from './adobeEntityFetcher.testUtils';
+} from './adobeEntityCollaborators.testUtils';
 import {
     createEntityCollaborators,
     type EntityCollaborators,
@@ -30,7 +30,7 @@ import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
-describe('AdobeEntityFetcher — API-service wrappers', () => {
+describe('entity collaborators — API-service wrappers', () => {
     let entities: EntityCollaborators;
     let mockSDKClient: jest.Mocked<AdobeSDKClient>;
     let sdk: {

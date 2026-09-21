@@ -8,7 +8,7 @@
  * modal choices. The user saw the browser first and the in-app prompt afterwards.
  *
  * Mechanism: `handleGetProjects` fetched with no auth check, and
- * `adobeEntityFetcher.getProjects` is "SDK with CLI fallback" — a stale token
+ * `AdobeEntityReads.getProjects` is "SDK with CLI fallback" — a stale token
  * drops it to `aio console project list --json`, which triggers interactive
  * browser auth. The codebase already names this hazard (the P1 rule behind
  * `getOrganizationsSdkOnly`: the CLI path "can stall ~14.5s and trigger
@@ -42,7 +42,7 @@ jest.mock('@/core/di/serviceLocator', () => ({
  * Every handler in the flow map that reaches Adobe through the entity fetcher.
  *
  * `getProjects`, `getWorkspaces` and the org read each carry a CLI fallback
- * (`adobeEntityFetcher` lines ~300/~471/~568), and the create/delete/select
+ * (`AdobeEntityReads`), and the create/delete/select
  * handlers reach the same fetcher to resolve their target — so all of them can
  * open a browser on a stale token.
  */

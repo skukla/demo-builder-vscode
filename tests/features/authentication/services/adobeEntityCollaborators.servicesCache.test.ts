@@ -16,7 +16,7 @@ import {
     MESH,
     StepLogger,
     getLogger,
-} from './adobeEntityFetcher.testUtils';
+} from './adobeEntityCollaborators.testUtils';
 import {
     createEntityCollaborators,
     type EntityCollaborators,
@@ -28,7 +28,7 @@ import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
-describe('AdobeEntityFetcher — getServicesForOrg cache', () => {
+describe('entity collaborators — getServicesForOrg cache', () => {
     let entities: EntityCollaborators;
     let mockSDKClient: jest.Mocked<AdobeSDKClient>;
     let sdk: { getServicesForOrg: jest.Mock };

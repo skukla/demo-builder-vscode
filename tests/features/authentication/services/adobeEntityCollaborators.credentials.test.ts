@@ -11,7 +11,7 @@
  * All ids and secrets are obviously fake — this repo is public.
  */
 
-import { setupEntityFetcher, type EntityFetcherHarness } from './adobeEntityFetcher.testUtils';
+import { setupEntityCollaborators, type EntityCollaboratorsHarness } from './adobeEntityCollaborators.testUtils';
 
 const ORG = 'org-1';
 const PROJECT = 'proj-1';
@@ -26,18 +26,18 @@ interface ConsoleClientFake {
     createRuntimeNamespace: jest.Mock;
 }
 
-function pointCacheAtWorkspace(h: EntityFetcherHarness): void {
+function pointCacheAtWorkspace(h: EntityCollaboratorsHarness): void {
     h.mockCacheManager.getCachedOrganization.mockReturnValue({ id: ORG, code: 'org', name: 'Org' });
     h.mockCacheManager.getCachedProject.mockReturnValue({ id: PROJECT, name: 'proj', title: 'Proj' });
     h.mockCacheManager.getCachedWorkspace.mockReturnValue({ id: WORKSPACE, name: 'Stage' });
 }
 
-describe('AdobeEntityFetcher — credential and Runtime delegates', () => {
-    let h: EntityFetcherHarness;
+describe('entity collaborators — credential and Runtime delegates', () => {
+    let h: EntityCollaboratorsHarness;
     let client: ConsoleClientFake;
 
     beforeEach(() => {
-        h = setupEntityFetcher();
+        h = setupEntityCollaborators();
         client = {
             getCredentials: jest.fn().mockResolvedValue({ body: [] }),
             createOAuthServerToServerCredential: jest.fn(),
