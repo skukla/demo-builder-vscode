@@ -2,8 +2,10 @@
  * Moving a project's App Builder components when its Adobe destination changes.
  *
  * The destination is PROJECT-scoped — one `organization`/`projectId`/`workspace`
- * for every integration — so a change moves them all rather than leaving some
- * behind in a Console project the project no longer points at.
+ * for every component that lives in the project's workspace — so a change moves
+ * them all rather than leaving some behind in a Console project the project no
+ * longer points at. A component in a workspace of its own (AB-23) is not moved by
+ * a change of the project's workspace within the same Adobe project.
  *
  * ## It deploys, and it never deletes
  *
@@ -87,7 +89,7 @@ export async function moveAppBuilderComponentsToDestination(
     deps: AppBuilderComponentRunnerDeps,
     onRowStatus?: OnMigrationRowStatus,
 ): Promise<MigrationResult> {
-    const ids = Object.keys(project.appBuilderComponents ?? {});
+    const ids = idsThatMove(project, previous);
     if (ids.length === 0 || sameDestination(previous, project.adobe)) {
         return { success: true, moved: [], failed: [] };
     }
@@ -118,7 +120,14 @@ export async function moveAppBuilderComponentsToDestination(
     // the union it is given, and this is the first reconcile against the NEW
     // workspace. Skip it and every moved component deploys into a workspace
     // subscribed to nothing it needs.
-    await deps.subscribeRequiredApis(entriesThatNeedApis(deps.catalog, project), project);
+    //
+    // Only what runs in the project's workspace: a component with a workspace of
+    // its own is subscribed there, and its APIs on this credential would be
+    // entitlements nothing here uses (AB-23).
+    const onProjectWorkspace = entriesThatNeedApis(deps.catalog, project).filter(
+        (entry) => !project.appBuilderComponents?.[entry.id]?.workspace,
+    );
+    await deps.subscribeRequiredApis(onProjectWorkspace, project);
 
     const moved: string[] = [];
     for (const id of ids) {
@@ -155,6 +164,24 @@ export async function moveAppBuilderComponentsToDestination(
     }
 
     return { success: true, moved, failed: [] };
+}
+
+/**
+ * The components a move redeploys.
+ *
+ * A move to another workspace of the SAME Adobe project changes only the project's
+ * workspace, so a component in a workspace of its own (AB-23) stays where it is:
+ * redeploying it would only put it back where it already runs.
+ *
+ * @param project - the project, with `adobe` already naming the new destination
+ * @param previous - the destination being left
+ * @returns the ids to redeploy
+ */
+function idsThatMove(project: Project, previous: ProjectAdobeRef | undefined): string[] {
+    const ids = Object.keys(project.appBuilderComponents ?? {});
+    const sameAdobeProject = Boolean(previous) && previous?.projectId === project.adobe?.projectId;
+    if (!sameAdobeProject) return ids;
+    return ids.filter((id) => !project.appBuilderComponents?.[id]?.workspace);
 }
 
 /**

@@ -12,14 +12,11 @@
  * both destinations, because nothing is ever removed from one.
  */
 
-const mockDeployAppBuilderComponent = jest.fn();
-const mockTeardownRemote = jest.fn();
-jest.mock('@/features/app-builder/services/appBuilderComponentRunner', () => ({
-    deployAppBuilderComponent: (...a: unknown[]) => mockDeployAppBuilderComponent(...a),
-    teardownRemote: (...a: unknown[]) => mockTeardownRemote(...a),
-}));
-
-import { moveAppBuilderComponentsToDestination } from '@/features/app-builder/services/appBuilderComponentMigration';
+import {
+    mockDeployAppBuilderComponent,
+    mockTeardownRemote,
+    moveAppBuilderComponentsToDestination,
+} from './appBuilderComponentMigration.testUtils';
 import type { Project } from '@/types/base';
 
 import { createDeps } from './appBuilderComponentRunner.testUtils';
