@@ -117,10 +117,30 @@ that Stage is entirely ours. Retitling Adobe's own Production workspace with
 `{ name: 'Production', title: 'Demo' }` answered **HTTP 200**, and the machine name
 stayed `Production`. Adobe protects nothing here.
 
-Suggested title: **"Demo"**. It cannot be named for its occupant the way every other
-workspace is, because its occupant is a credential rather than a component, and because
-it has to make sense in a project that never gets a mesh. "Demo" says what it is for and
-is the same in every project, so an SC learns it once.
+**The title is "Core"** (owner, 2026-09-20). It cannot be named for its occupant the way
+every other workspace is — its occupant is a credential rather than a component, and it
+has to still make sense in a project that never gets a mesh. "Core" says foundation
+without implying the others rank below it, and it is the same in every project, so an SC
+learns it once.
+
+"Demo" was considered and rejected: every workspace in the project is part of the demo,
+so the word distinguishes nothing.
+
+An SC then sees:
+
+```
+Kukla Bodea
+├── Core            the project's own
+├── API Mesh
+└── Northwind ERP
+```
+
+**The machine name stays `Production`.** Two places still use it: the CLI targeting
+variable `AIO_CONSOLE_WORKSPACE_NAME`, and the delete confirmation in
+`adobeResourceTools.ts`, which makes an agent type the workspace's name to prove it means
+it. So an agent deleting this workspace would have to type `Production` while every
+surface says `Core`. **Let that guard accept the title as well as the name** — a small
+piece of work that belongs with this one rather than being found later.
 
 ## What changes
 
