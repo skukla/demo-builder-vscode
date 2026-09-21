@@ -278,7 +278,7 @@ describe('ManageApisModal', () => {
             await flush();
 
             expect(screen.getByText('Loading Adobe APIs…')).toBeInTheDocument();
-            expect(screen.getByText('This can take up to a minute')).toBeInTheDocument();
+            expect(screen.getByText('The first load can take a few minutes')).toBeInTheDocument();
         });
 
         it('offers a Retry on failure that re-fires the fetch', async () => {
