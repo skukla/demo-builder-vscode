@@ -74,73 +74,42 @@ component's picks across the whole project — it is project-scoped, which is th
 workspace assumption in code form. Per-workspace subscribing has to make it
 per-component. AB-23 already names this; this is the reason it is not optional.
 
-### "Production" is the wrong word for a demo, so retitle it
+### Do NOT retitle it. Leave it "Production", in our UI too.
 
-Adobe names it Production and that reads wrong in a demo project — especially sitting
-beside workspaces named for their integrations. **Change the TITLE, never the machine
-name**, at project creation, through `editWorkspace` (a PATCH that accepts both).
+The retitle was the plan until 2026-09-20 and the measurements killed it. Recorded in
+full because the reasoning reversed twice.
 
-Title-only is the safe half, for the same reason the project rename is title-only:
+**What was measured, all on throwaway projects that were deleted afterwards:**
 
-- The title is purely display. `destinationHandlers.ts` and `agentsMdSections.ts` both
-  read `workspaceTitle ?? …`, and nothing branches on it.
-- The machine name is not display. It is passed to the CLI as
-  `AIO_CONSOLE_WORKSPACE_NAME` (`orgContextEnv.ts`) and it is what the agent must type to
-  confirm a workspace deletion (`adobeResourceTools.ts`). It is also what Adobe builds the
-  Runtime namespace from.
-- Store the title we set, so the local copy does not go stale.
-
-**Measured 2026-09-20, on Bodea's Stage workspace, and fully reverted:**
-
-| What was sent | Result |
+| Question | Answer |
 |---|---|
-| `{ title: 'Demo' }` | **400 — "Workspace name is required."** Nothing changed. |
-| `{ name: <current>, title: 'Demo' }` | **HTTP 200.** Title became "Demo", machine name stayed `Stage`, namespace stayed `285361-214brownarmadillo-stage`. |
-| `{ name: <current>, title: 'Stage' }` | **HTTP 200.** Restored. |
+| Can a workspace's machine name change? | **No.** `400 — "Workspace name can not be changed."` |
+| Can a project's machine name change? | **No — and Adobe returns 200 and silently ignores it.** |
+| Can a workspace's TITLE change? | Yes, `200` — but the PATCH must carry the machine name. |
+| Does the title reach Adobe's own tooling? | **No.** `aio console workspace list` prints Id, Name, Enabled — there is no Title column. `aio console project list` prints Name AND Title. |
 
-So a workspace retitle works and moves nothing — but **`editWorkspace` refuses a
-title-only body.** The PATCH must carry the machine name, which makes this a call where
-getting the argument wrong silently renames the machine name and, with it, the Runtime
-namespace.
+So a workspace title is a field Adobe barely surfaces. Retitling changes what the
+EXTENSION shows (`workspaceTitle` drives every display we own) and nothing an SC or a
+customer would see in Adobe's own surfaces.
 
-**The rule that follows: READ the current name and echo it back. Never construct it.**
-A derived name in that field would look correct at every layer. The test for this must
-assert the ARGUMENT — that the `name` sent equals the `name` read — because a mocked
-console client cannot see a malformed call.
+**That makes the rename actively harmful for the case that motivated it.** The reason to
+rename was walking a customer IT team through the code. A name only we honour produces
+exactly the failure it was meant to prevent: the SC says "the Core workspace", the IT
+team's Console says "Production", and nobody can match them up. One name that is slightly
+wrong beats two names that disagree.
 
-Note that projects and workspaces differ here: `renameRemoteProject` sends `{ title }`
-alone and Adobe accepts it. Do not copy that shape to a workspace.
+**The word barely surfaces anyway.** Adobe's first workspace has NO workspace segment in
+its Runtime namespace — measured twice: `285361-zznschecke1mk` and
+`285361-zzprcheckfosh`, both org id plus project machine name. So "production" appears in
+no action URL. It is a label in Adobe's Console, which is Adobe's surface, not ours.
 
-**Settled 2026-09-20 on a throwaway project, deleted afterwards.** A fresh
-`createFireflyProject` has exactly one workspace — `Production/Production`, confirming
-that Stage is entirely ours. Retitling Adobe's own Production workspace with
-`{ name: 'Production', title: 'Demo' }` answered **HTTP 200**, and the machine name
-stayed `Production`. Adobe protects nothing here.
+And dropping Stage improves those URLs on its own: today they carry `-stage`, and after
+this they carry nothing extra.
 
-**The title is "Core"** (owner, 2026-09-20). It cannot be named for its occupant the way
-every other workspace is — its occupant is a credential rather than a component, and it
-has to still make sense in a project that never gets a mesh. "Core" says foundation
-without implying the others rank below it, and it is the same in every project, so an SC
-learns it once.
-
-"Demo" was considered and rejected: every workspace in the project is part of the demo,
-so the word distinguishes nothing.
-
-An SC then sees:
-
-```
-Kukla Bodea
-├── Core            the project's own
-├── API Mesh
-└── Northwind ERP
-```
-
-**The machine name stays `Production`.** Two places still use it: the CLI targeting
-variable `AIO_CONSOLE_WORKSPACE_NAME`, and the delete confirmation in
-`adobeResourceTools.ts`, which makes an agent type the workspace's name to prove it means
-it. So an agent deleting this workspace would have to type `Production` while every
-surface says `Core`. **Let that guard accept the title as well as the name** — a small
-piece of work that belongs with this one rather than being found later.
+**Still unverified:** whether the Console web UI shows a workspace's name or its title.
+The CLI evidence is strong but it is not the UI, and checking it needs an Adobe sign-in,
+which is the owner's to do. It would only matter if Console shows titles — and even then
+the divergence argument above stands.
 
 ## What changes
 
@@ -151,7 +120,6 @@ piece of work that belongs with this one rather than being found later.
 | `useProjectCreationPhases.ts` `pickWorkspace` | A new project has ONE workspace, so `workspaces[0]` is the answer. The stage-find becomes dead. |
 | `AdobeWorkspacePicker.tsx` `autoSelectCustom` | Prefer the project's RECORDED workspace, then a lone workspace, then `=== 'Stage'` exactly. Covers all three populations without a substring match. |
 | Creation copy | `phaseSubMessageFor` names the Stage workspace twice. Both follow the new title. |
-| `adobeConsoleProjectOps.ts` | Add a title-only `editWorkspace` call after create, and store the title we set. |
 
 `ensureProjectWorkspacesHaveRuntime` stays: idempotent, tolerates the 409, and is the net
 for a Console-made project that arrives without a namespace.
@@ -198,6 +166,6 @@ delete Production" one, and it is worth correcting.
 
 ## Done when
 
-Creating a project makes no workspace of its own, the demo runs in the one Adobe provides,
-a project created before this still works untouched, and no code matches a workspace by the
-substring "stage".
+Creating a project makes no workspace of its own, the demo runs in the one Adobe provides
+(called Production, in Adobe's surfaces and in ours), a project created before this still
+works untouched, and no code matches a workspace by the substring "stage".
