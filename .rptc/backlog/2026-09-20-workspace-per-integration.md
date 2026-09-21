@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-9
 needs: []
 value: high
-status: backlog
+status: active
 ---
 
 # Every integration and system gets its own Adobe workspace
@@ -410,3 +410,5 @@ deleting that workspace, and a project made before this still works unchanged.
 - 2026-09-20  docs(backlog): how workspaces are made and named today (`eb422d0a9`)
 - 2026-09-20  fix(destination): a workspace without its machine name is refused (`4eb80a1e5`)
 - 2026-09-20  docs(backlog): AB-23's real open checks, and what Console will show (`ebad37812`)
+- 2026-09-20  fix(adobe): nothing provisions Runtime except this sweep (`da0f625d4`)
+- 2026-09-20  docs(backlog): AB-23's live checks are closed, and a deploy trap named (`eb042cab7`)

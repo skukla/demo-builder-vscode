@@ -4,7 +4,7 @@ kind: chore
 area: app-builder
 needs: []
 value: med
-status: active
+status: built
 ---
 
 # Stop creating a Stage workspace
@@ -205,3 +205,6 @@ works untouched, and no code matches a workspace by the substring "stage".
 - 2026-09-20  docs(backlog): the project keeps Adobe's workspace, retitled (`032b4c908`)
 - 2026-09-20  fix(adobe): no workspace name is protected, Production included (`d90607e5f`)
 - 2026-09-20  docs(backlog): AB-24, stop creating a Stage workspace (`c8690debd`)
+- 2026-09-20  feat(adobe): a project keeps the one workspace Adobe gives it (`d036442a1`)
+- 2026-09-20  docs(backlog): why we do not use Adobe's project template (`f977c369a`)
+- 2026-09-21  Stage creation removed; the project keeps Adobe's workspace (d036442a1)
