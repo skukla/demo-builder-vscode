@@ -102,6 +102,20 @@ describe('resolveDeployInputs', () => {
     it('a provided var whose provider is absent is simply not there (the add door guards it)', () => {
         expect(resolveDeployInputs(createMockProject(), INTEGRATION)).toEqual({ ERP_DISPLAY_NAME: 'Acme ERP' });
     });
+
+    // Commerce knows an App Management app by the id it declares, and names its webhooks
+    // and events from it. A second copy on the same Commerce store needs its own, so the
+    // app is told which copy it is; the first copy is told nothing and keeps today's id,
+    // which Commerce refuses to change on an installed app (AB-15).
+    it('a second copy is told its copy number; the first copy is not', () => {
+        const copy = { ...INTEGRATION, id: 'erp-integration-2', catalogId: 'erp-integration' };
+
+        expect(resolveDeployInputs(createMockProject(), copy)).toStrictEqual({
+            DEMO_BUILDER_COPY_NUMBER: '2',
+            ERP_DISPLAY_NAME: 'Acme ERP',
+        });
+        expect(resolveDeployInputs(createMockProject(), INTEGRATION)).not.toHaveProperty('DEMO_BUILDER_COPY_NUMBER');
+    });
 });
 
 describe('deriveWebBase / deriveProvidedValues', () => {

@@ -3,14 +3,15 @@
  *
  * Catalog app repos ship no `.env`; everything they take as an `inputs:` value
  * arrives in the deploy's process environment. Until the ERP pair (2026-09-14)
- * the only such values were the App Management IMS credentials. Two more kinds
- * exist now, and both resolve here so add and redeploy cannot drift on them:
+ * the only such values were the App Management IMS credentials. Three more kinds
+ * exist now, and all resolve here so add and redeploy cannot drift on them:
  *
  *   - the entry's TEXT settings (`componentConfigs[id]`, set on the integration's
  *     tile): a bound system takes its integration's value first (the SC names the
  *     ERP once, on the integration), then its own, then the schema's `default`;
  *   - the values another component PROVIDES (`envSchema[].providedBy`), read off
- *     the persisted `providesEnvVars` of every component in the project.
+ *     the persisted `providesEnvVars` of every component in the project;
+ *   - for a second copy of a kind, which copy it is (`DEMO_BUILDER_COPY_NUMBER`).
  *
  * And the inverse: what a deployed component provides to others. A mesh provides
  * its endpoint; any other component provides the WEB BASE of its deployed
@@ -28,6 +29,8 @@ import type { Project } from '@/types/base';
 /** The mesh's provided value is its GraphQL endpoint, resolved by the mesh tail, not here. */
 const MESH_ENDPOINT = 'MESH_ENDPOINT';
 const WEB_SEGMENT = '/api/v1/web/';
+/** Tells a second copy of an app which copy it is (see `copyNumber`). */
+const COPY_NUMBER = 'DEMO_BUILDER_COPY_NUMBER';
 
 /**
  * The value of one text input for an entry. A system bound to an integration
@@ -98,7 +101,28 @@ export function resolveDeployInputs(
             inputs[envVar.name] = value;
         }
     }
+    const copy = copyNumber(entry);
+    if (copy) {
+        inputs[COPY_NUMBER] = copy;
+    }
     return inputs;
+}
+
+/**
+ * Which copy of its kind an entry is: `erp-integration-2` → `'2'`; the entry
+ * itself → undefined.
+ *
+ * Every copy is told its number because Commerce knows an App Management app by
+ * the id the app declares, and names its webhooks and events from it — so a
+ * second ERP integration on the same Commerce store needs an id of its own,
+ * which the app builds from this number (AB-15). The first copy is told nothing
+ * and keeps the id it was installed with; Commerce refuses to change an
+ * installed app's id.
+ */
+function copyNumber(entry: AppBuilderComponentCatalogEntry): string | undefined {
+    const { id, catalogId } = entry;
+    if (!catalogId || id === catalogId || !id.startsWith(`${catalogId}-`)) return undefined;
+    return id.slice(catalogId.length + 1);
 }
 
 /**
