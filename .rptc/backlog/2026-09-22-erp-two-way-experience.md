@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-9
 needs: []
 value: med
-status: backlog
+status: active
 ---
 
 # The two-way ERP integration, as the two business users experience it
@@ -151,3 +151,4 @@ Filed 2026-09-22.
 - 2026-09-22  docs(backlog): AB-25, a section per ERP, its rules read-only, switches only for their use (`8929da9d8`)
 - 2026-09-22  docs(research): what two-way commerce-ERP integrations give each person (`3318afaa6`)
 - 2026-09-22  docs(research): second pass on two-way ERP UX, one first-pass claim overturned (`7a31fd348`)
+- 2026-09-22  History and Retry for orders sent to the ERP, in skukla/commerce-erp-integration on feature/sync-history (2244a65, 1aedb8e); not pushed, not deployed
