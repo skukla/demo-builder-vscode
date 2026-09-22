@@ -156,6 +156,14 @@ function buildMenuActions(
     // removes what the app set up in Commerce.
     const install: CardAction[] =
         status === 'deployed' && installation?.failed ? [installation.needsReinstall ? 'reinstall' : 'install'] : [];
+    // The REPAIR, below Redeploy rather than leading: Commerce can lose what the app
+    // registered while the app still reports itself installed — measured live
+    // 2026-09-22, when another copy of the same app uninstalled and took this one's
+    // webhooks with it. The install pass then answers "skipped" and nothing comes
+    // back, so the reinstall (the one pass that starts from nothing) must be
+    // reachable on any installed card, not only on a refused upgrade.
+    const repair: CardAction[] =
+        status === 'deployed' && installation && !install.includes('reinstall') ? ['reinstall'] : [];
     // Open is the integration's Adobe workspace in the Developer Console — there
     // whether or not the app serves an address (owner, 2026-09-21).
     return [
@@ -163,6 +171,7 @@ function buildMenuActions(
         ...install,
         'open',
         ...redeploy,
+        ...repair,
         'manage-apis',
         'remove',
     ];

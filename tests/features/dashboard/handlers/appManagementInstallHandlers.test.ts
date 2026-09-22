@@ -589,14 +589,34 @@ describe('handleReinstallAppBuilderComponent', () => {
         expect(saved.appBuilderComponents['kit-app'].installation.needsReinstall).toBeUndefined();
     });
 
-    it('refuses an app Commerce has not refused to upgrade, touching nothing', async () => {
+    // The repair an SC has no other way to make: Commerce can lose what an app
+    // registered — another copy of the same app uninstalling took its webhooks with
+    // it (2026-09-22, live) — and the app still reports itself installed, so the
+    // install pass answers "skipped" and nothing comes back. A reinstall is the one
+    // pass that starts from nothing, so it may be asked for at any time.
+    it('reinstalls an app Commerce never refused to upgrade — the repair for a lost install', async () => {
         const { mockContext } = setupMocks(kitProject());
+        mockDeveloperPermissions();
+        mockUninstallAppManagement.mockResolvedValue({ status: 'uninstalled' });
+        mockInstallAppManagement.mockResolvedValue({ status: 'installed', version: '0.2.0' });
+
+        const result = await handleReinstallAppBuilderComponent(mockContext, { id: 'kit-app' });
+
+        expect(result.success).toBe(true);
+        expect(mockUninstallAppManagement).toHaveBeenCalled();
+        expect(mockInstallAppManagement).toHaveBeenCalled();
+    });
+
+    it('still refuses an integration that is not deployed', async () => {
+        const project = kitProject();
+        project.appBuilderComponents!['kit-app']!.status = 'error';
+        const { mockContext } = setupMocks(project);
 
         const result = await handleReinstallAppBuilderComponent(mockContext, { id: 'kit-app' });
 
         expect(result).toEqual({
             success: false,
-            error: '"kit-app" does not need a reinstall: Commerce has not refused an upgrade of it.',
+            error: '"kit-app" is not deployed yet — deploy it first (the deploy runs the install).',
             code: ErrorCode.INVALID_OPERATION,
         });
         expect(mockUninstallAppManagement).not.toHaveBeenCalled();

@@ -314,9 +314,18 @@ export const handleInstallAppBuilderComponent: MessageHandler<{
 
 /**
  * Handle 'reinstallAppBuilderComponent' — uninstall the app from Commerce and
- * install it again from the code already deployed. Destructive (the uninstall
- * removes what the app set up in Commerce), so it is refused unless Commerce
- * has refused an in-place upgrade: that record is the only state that needs it.
+ * install it again from the code already deployed.
+ *
+ * Open to any deployed App Management integration, not only one Commerce refused
+ * to upgrade. It is the only pass that starts from nothing, and that is the
+ * repair when Commerce has LOST what the app registered while the app still
+ * reports itself installed: the install pass then answers "skipped" and nothing
+ * comes back. Measured live 2026-09-22 — a second copy of the same app
+ * uninstalling took this one's webhooks with it (they share names), and the only
+ * way back was clearing the app's record by hand.
+ *
+ * Destructive, so it stays behind the card's confirm dialog and the agent
+ * surface's `confirm: true`.
  */
 export const handleReinstallAppBuilderComponent: MessageHandler<{ id?: string }> = async (
     context: HandlerContext,
@@ -328,10 +337,6 @@ export const handleReinstallAppBuilderComponent: MessageHandler<{ id?: string }>
             requestedId: payload?.id,
             title: 'Reinstalling',
             progress: undefined,
-            check: (id, state) =>
-                state.installation?.needsReinstall
-                    ? undefined
-                    : `"${id}" does not need a reinstall: Commerce has not refused an upgrade of it.`,
         },
         async ({ project, id, deps, report, appVersion }) => {
             const { installAppManagement, uninstallAppManagement } = deps;

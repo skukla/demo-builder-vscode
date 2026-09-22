@@ -306,8 +306,10 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         readOnly: false,
         description:
             'Uninstall a DEPLOYED App Management integration from Commerce and install it again ' +
-            'from the code already deployed. Only for when get_integration_install_status shows ' +
-            'needsReinstall (Commerce refused to upgrade it in place); refused otherwise. ' +
+            'from the code already deployed. Use when get_integration_install_status shows ' +
+            'needsReinstall (Commerce refused to upgrade it in place), and as the REPAIR when ' +
+            "Commerce has lost what the app registered (its webhooks or events are gone) while " +
+            'the app still reports itself installed — install_integration then answers skipped. ' +
             'DESTRUCTIVE: what the app set up in Commerce is removed first, and its saved ' +
             'settings may reset. Confirm with the user first.',
         map: dashboardHandlers,

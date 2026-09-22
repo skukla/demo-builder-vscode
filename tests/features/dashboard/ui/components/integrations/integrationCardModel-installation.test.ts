@@ -104,7 +104,12 @@ describe('deriveIntegrationCard — installation facet', () => {
         expect(model.menuActions).not.toContain('install');
     });
 
-    it('Reinstall is offered only while it is needed', () => {
+    // Commerce can lose what an app registered while the app still reports itself
+    // installed (2026-09-22, live: another copy of the same app uninstalled and took
+    // this one's webhooks with it). The install pass then answers "skipped", so the
+    // reinstall — the one pass that starts from nothing — is the SC's only repair and
+    // is offered on every installed card, below Redeploy rather than leading.
+    it('Reinstall is offered on any installed card, as the repair', () => {
         const states = [
             { status: 'installed' as const },
             { status: 'upgraded' as const, version: '0.2.0' },
@@ -113,13 +118,26 @@ describe('deriveIntegrationCard — installation facet', () => {
 
         for (const installation of states) {
             const model = deriveIntegrationCard(integration({ status: 'deployed', installation }));
-            expect(model.menuActions).not.toContain('reinstall');
+            expect(model.menuActions).toContain('reinstall');
+            expect(model.menuActions.indexOf('reinstall')).toBeGreaterThan(
+                model.menuActions.indexOf('redeploy')
+            );
             expect(model.installation?.needsReinstall).toBeUndefined();
         }
+    });
+
+    it('no Reinstall where there is nothing installed to redo', () => {
         const deploying = deriveIntegrationCard(
             integration({ status: 'deploying', installation: { status: 'failed', needsReinstall: true } })
         );
+        const errored = deriveIntegrationCard(
+            integration({ status: 'error', installation: { status: 'installed' } })
+        );
+        const noRecord = deriveIntegrationCard(integration({ status: 'deployed' }));
+
         expect(deploying.menuActions).not.toContain('reinstall');
+        expect(errored.menuActions).not.toContain('reinstall');
+        expect(noRecord.menuActions).not.toContain('reinstall');
     });
 
     it('no install action while deploying or on an errored card — the deploy re-runs the install itself', () => {

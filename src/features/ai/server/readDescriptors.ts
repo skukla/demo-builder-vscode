@@ -284,7 +284,9 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
             'outcome plus the LIVE state from the app’s own install API (failed step names ' +
             'included). Use after deploy_integration to answer "did it install, and which step ' +
             'failed" — a failed install is retried with install_integration, not a redeploy; ' +
-            'a persisted needsReinstall (Commerce refused an in-place upgrade) needs reinstall_integration.',
+            'a persisted needsReinstall (Commerce refused an in-place upgrade) needs reinstall_integration, '  +
+            'which is also the repair when Commerce has lost the app\'s webhooks or events while the '  +
+            'app still reports itself installed (install_integration then answers skipped).',
         map: dashboardHandlers,
         type: 'getAppBuilderInstallStatus',
         inputSchema: {

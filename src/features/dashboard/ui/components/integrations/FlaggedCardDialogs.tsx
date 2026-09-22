@@ -52,8 +52,18 @@ function ReinstallDialog({ dialog }: { dialog: FlaggedCardDialog }): React.React
             onClose={dialog.close}
         >
             <Text>
-                Commerce would not upgrade <strong>{dialog.pending?.name}</strong> in place. Reinstalling
-                removes it from Commerce, then installs the version already deployed.
+                {dialog.pending?.installation?.needsReinstall ? (
+                    <>
+                        Commerce would not upgrade <strong>{dialog.pending?.name}</strong> in place.
+                        Reinstalling removes it from Commerce, then installs the version already deployed.
+                    </>
+                ) : (
+                    <>
+                        Reinstalling removes <strong>{dialog.pending?.name}</strong> from Commerce, then
+                        installs the version already deployed. Use it when Commerce has lost what the app
+                        set up and the app still says it is installed.
+                    </>
+                )}
             </Text>
             <Text>
                 Its webhooks and event subscriptions are set up again. Its saved settings may be reset to
