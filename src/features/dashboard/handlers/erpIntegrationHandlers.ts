@@ -32,16 +32,14 @@ import { validateURL } from '@/core/validation/URLValidator';
 import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operationProgress';
 import { withOperationProgress } from '@/core/vscode/withOperationProgress';
 import type { AppManagementAuth } from '@/features/app-builder/services/appManagementClient';
+import { catalogEntryFor } from '@/features/app-builder/services/componentEntry';
 import {
     ErpIntegrationClient,
     deriveErpActionUrl,
     type ErpResetReport,
 } from '@/features/app-builder/services/erpIntegrationClient';
 import { deriveScreenUrl, readScreenKey, screenLink } from '@/features/app-builder/services/systemScreen';
-import {
-    getAppBuilderComponentCatalog,
-    getAppBuilderComponentEntry,
-} from '@/features/components/services/appBuilderComponentCatalogLoader';
+import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { systemsUsedBy } from '@/features/components/services/appBuilderComponentLinks';
 import { resolveAppManagementAuth } from '@/features/project-creation/services/appBuilderComponentRunnerDeps';
 import type { AppBuilderComponentState, Project } from '@/types/base';
@@ -182,7 +180,9 @@ export const handleOpenErpScreen: MessageHandler<{ id?: string }> = async (conte
     const { id, project } = target;
     const erpId = erpOf(project, id);
     const erp = erpId ? getAppBuilderComponent(project, erpId) : undefined;
-    const systemEntry = erpId ? getAppBuilderComponentEntry(erpId) : undefined;
+    // Under the ERP's OWN id: a second ERP (AB-23) is the catalog's ERP re-keyed, and
+    // its screen key is stored under its id — the first ERP's key would be refused.
+    const systemEntry = erpId ? catalogEntryFor(project, erpId, getAppBuilderComponentCatalog()) : undefined;
     if (!systemEntry || !erp) {
         return { success: false, error: `"${id}" has no ERP in this project.`, code: ErrorCode.INVALID_OPERATION };
     }

@@ -45,7 +45,11 @@ describe('apiSubscriber', () => {
         const catalog = [meshAppBuilderComponent(), shell, erp];
 
         it('keeps the stack meshes and the integrations the project has; drops the rest', () => {
-            const project = { appBuilderComponents: { shell: { kind: 'integration' } } };
+            const project = {
+                appBuilderComponents: {
+                    shell: { kind: 'integration' as const, status: 'deployed' as const, source: { owner: 'o', repo: 'shell' } },
+                },
+            };
 
             expect(entriesThatNeedApis(catalog, project).map((e) => e.id)).toEqual(['mesh', 'shell']);
         });
@@ -61,7 +65,11 @@ describe('apiSubscriber', () => {
         });
 
         it("so a project without the ERP never asks for the ERP's database API", () => {
-            const project = { appBuilderComponents: { shell: { kind: 'integration' } } };
+            const project = {
+                appBuilderComponents: {
+                    shell: { kind: 'integration' as const, status: 'deployed' as const, source: { owner: 'o', repo: 'shell' } },
+                },
+            };
 
             expect(computeRequiredApis(entriesThatNeedApis(catalog, project))).not.toContain('AppBuilderDataServicesSDK');
         });

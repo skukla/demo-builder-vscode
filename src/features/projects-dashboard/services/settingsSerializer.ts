@@ -110,6 +110,10 @@ function deriveAppBuilderComponentSources(
     for (const [id, state] of Object.entries(project.appBuilderComponents ?? {})) {
         if (state.kind !== 'integration') continue;
         if (getAppBuilderComponentEntry(id) !== undefined) continue;
+        // A second copy of a pre-built kind (AB-23) is not an imported repo: exported
+        // as one, a new project would add it bare, without its ERP. Creation cannot
+        // make copies yet, so it stays out of the file.
+        if (state.catalogId) continue;
         if (!state.source) continue; // defensive: malformed persisted entry
         derived[id] = state.name ? { ...state.source, name: state.name } : { ...state.source };
     }

@@ -233,7 +233,11 @@ async function reconcileExtras(
                 // the others' `requiredApis` belong to their own workspaces.
                 ownWorkspace
                     ? resolveProjectCatalog(project).filter((entry) => entry.id === componentId)
-                    : resolveProjectCatalog(project),
+                    : // The project's workspace gets only what runs in it: an integration
+                      // in a workspace of its own is subscribed there (AB-23).
+                      resolveProjectCatalog(project).filter(
+                          (entry) => !project.appBuilderComponents?.[entry.id]?.workspace,
+                      ),
                 subscriberTarget(project, ownWorkspace ? componentId : undefined),
                 client,
                 deriveAllowedDomain(project),

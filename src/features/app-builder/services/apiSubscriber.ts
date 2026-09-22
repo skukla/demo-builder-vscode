@@ -27,6 +27,7 @@ import {
     resolveServiceInfos,
     type ServiceInfo,
 } from './apiServiceResolution';
+import { catalogEntryFor } from './componentEntry';
 import { credentialsAlreadyCover, type SubscribeOptions } from './credentialCoverage';
 import { alreadySubscribed, buildSubscriptionList, UNKNOWN_CURRENT } from './subscriptionList';
 import { BASELINE_API } from '@/core/constants';
@@ -36,6 +37,7 @@ import type {
     SubscribedService,
 } from '@/features/authentication/services/types';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
+import type { Project } from '@/types/base';
 
 // Resolution moved to apiServiceResolution.ts; callers keep importing it from here.
 export { partitionByPlatform, resolveServiceInfos, type ServiceInfo };
@@ -171,7 +173,7 @@ export function computeRequiredApis(
  */
 export function entriesThatNeedApis(
     catalog: AppBuilderComponentCatalogEntry[],
-    project: { appBuilderComponents?: Record<string, unknown> },
+    project: Pick<Project, 'appBuilderComponents'>,
     adding: AppBuilderComponentCatalogEntry[] = [],
 ): AppBuilderComponentCatalogEntry[] {
     const has = new Set(Object.keys(project.appBuilderComponents ?? {}));
@@ -179,8 +181,14 @@ export function entriesThatNeedApis(
     const kept = catalog.filter(
         (entry) => entry.kind === 'mesh' || has.has(entry.id) || addingIds.has(entry.id),
     );
-    const keptIds = new Set(kept.map((entry) => entry.id));
-    return [...kept, ...adding.filter((entry) => !keptIds.has(entry.id))];
+    // A second copy of a kind (`erp-integration-2`, AB-23) has no catalog row of its
+    // own: it is its catalog entry under its own id.
+    const copies = Object.entries(project.appBuilderComponents ?? {})
+        .filter(([, state]) => state.catalogId && catalog.some((entry) => entry.id === state.catalogId))
+        .map(([id]) => catalogEntryFor(project, id, catalog))
+        .filter((entry): entry is AppBuilderComponentCatalogEntry => Boolean(entry));
+    const keptIds = new Set([...kept, ...copies].map((entry) => entry.id));
+    return [...kept, ...copies, ...adding.filter((entry) => !keptIds.has(entry.id))];
 }
 
 /**

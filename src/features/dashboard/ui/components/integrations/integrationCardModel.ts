@@ -307,7 +307,8 @@ function deriveKindFacet(entry: IdentifiedAppBuilderComponent): {
     apis?: string[];
     isCatalog: boolean;
 } {
-    const catalogEntry = getAppBuilderComponentEntry(entry.id);
+    // A second copy of a kind (AB-23) reads as the entry it was made from.
+    const catalogEntry = getAppBuilderComponentEntry(entry.catalogId ?? entry.id);
     if (catalogEntry) {
         return {
             kindLabel: 'Pre-built',
@@ -427,7 +428,8 @@ export function deriveSystemCard(
     catalog?: readonly AppBuilderComponentCatalogEntry[],
 ): IntegrationCardModel {
     const face = deriveFace(entry, override);
-    const catalogEntry = catalog?.find((e) => e.id === entry.id) ?? getAppBuilderComponentEntry(entry.id);
+    const kind = entry.catalogId ?? entry.id;
+    const catalogEntry = catalog?.find((e) => e.id === kind) ?? getAppBuilderComponentEntry(kind);
     const type = catalogEntry?.systemType ?? 'System';
     const screenUrl = resolvePrimaryUrl(entry);
 

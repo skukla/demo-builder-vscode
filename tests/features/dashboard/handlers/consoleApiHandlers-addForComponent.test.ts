@@ -11,6 +11,7 @@
 
 import {
     createApiSubscriberClient,
+    getAvailableAppBuilderComponents,
     handleAddConsoleApis,
     handleListConsoleApis,
     handleSetConsoleApis,
@@ -139,5 +140,23 @@ describe("the API list for one integration in its own workspace", () => {
         const data = result.data as { apis: Array<{ code: string }>; added: string[] };
         expect(data.added).toEqual(['LegacyEventsSDK']);
         expect(data.apis.map((api) => api.code)).toContain('LegacyEventsSDK');
+    });
+});
+
+// The project's workspace is given only what runs in it. Its required-API list held
+// every integration's, including one living in a workspace of its own, so Manage APIs
+// on the project would have entitled Production to the ERP's Commerce API.
+describe("Manage APIs on the project's own workspace", () => {
+    it('leaves out the integrations that live in workspaces of their own', async () => {
+        (getAvailableAppBuilderComponents as jest.Mock).mockReturnValueOnce([
+            { id: 'erp-integration', name: 'ERP', kind: 'integration', requiredApis: ['ACCS-REST-API'] },
+            { id: 'firefly-app', name: 'Firefly', kind: 'integration', requiredApis: ['FireflyAPISDK'] },
+        ]);
+        const context = consoleApiContext(bodea());
+
+        await handleSetConsoleApis(context, { apis: [] });
+
+        const [entries] = (subscribeRequiredApis as jest.Mock).mock.calls[0];
+        expect((entries as Array<{ id: string }>).map((e) => e.id)).toEqual(['firefly-app']);
     });
 });

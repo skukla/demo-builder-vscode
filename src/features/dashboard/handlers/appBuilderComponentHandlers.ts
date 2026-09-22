@@ -1103,7 +1103,8 @@ export const handleRenameAppBuilderComponent: MessageHandler<{
     // catalog-first and rewrites `name: entry.name` on every redeploy, so a
     // rename would be silently reverted. Same exclusion the settings
     // serializer applies (deriveAppBuilderComponentSources).
-    if (getAppBuilderComponentEntry(id) !== undefined) {
+    // A second copy of a pre-built integration (AB-23) is pre-built too.
+    if (getAppBuilderComponentEntry(entry.catalogId ?? id) !== undefined) {
         return {
             success: false,
             error: 'Pre-built catalog integrations cannot be renamed',

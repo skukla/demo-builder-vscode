@@ -198,3 +198,26 @@ describe('a caller with no catalog loaded yet', () => {
         expect(cards[1].linked?.cards.map((c) => c.id)).toEqual(['erp-integration']);
     });
 });
+
+// AB-23: a second pair's cards read as what they are — the pre-built ERP and its
+// integration — not as an imported repo and a generic system.
+describe('a second pair', () => {
+    it("shows the second ERP as an ERP, from the entry it was made from", () => {
+        const card = deriveSystemCard(
+            erp({ id: 'demo-erp-2', catalogId: 'demo-erp', name: 'Contoso' }),
+            undefined,
+            undefined,
+            CATALOG,
+        );
+
+        expect(card).toMatchObject({ id: 'demo-erp-2', typeBadge: 'ERP', name: 'Contoso' });
+    });
+
+    it('shows the second integration as pre-built, not as an imported repo', () => {
+        const card = deriveIntegrationCard(
+            pairIntegration({ id: 'erp-integration-2', catalogId: 'erp-integration', name: 'ERP integration 2' }),
+        );
+
+        expect(card.kindLabel).toBe('Pre-built');
+    });
+});

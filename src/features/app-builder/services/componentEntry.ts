@@ -29,7 +29,7 @@ import type { AppBuilderComponentState, Project } from '@/types/base';
 export function catalogEntryFor(
     project: Pick<Project, 'appBuilderComponents'>,
     id: string,
-    catalog: AppBuilderComponentCatalogEntry[],
+    catalog: readonly AppBuilderComponentCatalogEntry[],
 ): AppBuilderComponentCatalogEntry | undefined {
     const own = catalog.find((entry) => entry.id === id);
     if (own) return own;

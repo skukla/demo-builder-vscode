@@ -43,3 +43,27 @@ The survey that located every such site (2026-09-21) is summarised per slice bel
    be unique per Commerce store. Read-only.
 
 Live proof (adding a second ERP to Bodea) is the owner's, with the other live checks.
+
+## Outside check — result (2026-09-22, read from Bodea's clone, not run)
+
+The ERP integration app (`skukla/commerce-erp-integration`, `app.commerce.config.ts`)
+declares fixed identities to Commerce, identical for every copy:
+
+| What | Value |
+|---|---|
+| App Management app id (`metadata.id`) | `commerce-erp-integration` |
+| Admin menu id | `erp_integration` |
+| Webhook `hook_name`s | `erp_contract_price`, `erp_discount_ceiling` (batches `erp_totals_collector*`) |
+| Event provider keys | `commerce`, `erp` |
+
+So a second ERP integration installed into the SAME Commerce store will very likely
+collide with the first — refused as already installed, or replacing its webhooks. This
+is inferred from the manifest, not measured. This repo now supports two pairs end to
+end up to the install; the install itself needs either a live test that shows Commerce
+tolerates it, or the ERP app to take these ids from a deploy-time setting (a change in
+that repo, not this one).
+
+## Known limit
+
+Project creation cannot make copies, so a settings export leaves a second copy out
+(`settingsSerializer`); a project made from the file gets the first pair.

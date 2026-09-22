@@ -634,6 +634,10 @@
           "type": "string",
           "description": "Display name for the integration (durable home for the user-facing name)."
         },
+        "catalogId": {
+          "type": "string",
+          "description": "The catalog entry this component was made from, when its id is not that entry's id: a second copy of a kind the project already holds (`demo-erp-2`). ABSENT means the id IS the catalog id — every component before this, and the first of each kind. Read through `catalogEntryFor`."
+        },
         "source": {
           "type": "object",
           "properties": {
@@ -737,10 +741,6 @@
             "checkedAt"
           ],
           "description": "Newer code is available: the source branch on GitHub has commits the clone lacks, or the clone's app version differs from the one installed in Commerce. Set by the integrations screen's check, removed by a successful update (integrationUpdateCheck)."
-        },
-        "catalogId": {
-          "type": "string",
-          "description": "The catalog entry this component was made from, when its id is not that entry's id (a second copy of a kind, e.g. demo-erp-2). Absent means the id is the catalog id."
         },
         "workspace": {
           "type": "object",

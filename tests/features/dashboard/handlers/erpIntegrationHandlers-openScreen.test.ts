@@ -13,7 +13,7 @@ const mockErpEntry = {
     screen: { action: 'screen', keyEnvVar: 'ERP_SCREEN_KEY' },
 };
 jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => ({
-    getAppBuilderComponentCatalog: jest.fn(() => [mockErpEntry]),
+    getAppBuilderComponentCatalog: jest.fn(() => [mockErpEntry, { id: 'erp-integration', kind: 'integration' }]),
     getAppBuilderComponentEntry: jest.fn((id: string) => (id === 'demo-erp' ? mockErpEntry : undefined)),
     buildCustomIntegrationEntry: jest.fn(),
     entryFitsProjectAxes: jest.fn().mockReturnValue(true),
@@ -127,5 +127,42 @@ describe('handleOpenErpScreen', () => {
         const result = await handleOpenErpScreen(context, {});
 
         expect(result).toMatchObject({ success: false, code: ErrorCode.CONFIG_INVALID });
+    });
+});
+
+// AB-23: a second ERP opens ITS screen with ITS key — the key is stored under the
+// ERP's own id, so the first ERP's would be refused by the second screen.
+describe('handleOpenErpScreen for a second pair', () => {
+    it("opens the second ERP's screen with the second ERP's key", async () => {
+        const screen2 = 'https://ns2.adobeioruntime.net/api/v1/web/demo-erp/screen';
+        const erp2: AppBuilderComponentState = {
+            ...ERP,
+            catalogId: 'demo-erp',
+            name: 'Contoso',
+            usedBy: 'erp-integration-2',
+            url: screen2,
+            deployedUrls: { 'runtime/demo-erp/screen': screen2 },
+        };
+        const mocks = setupMocks({
+            appBuilderComponents: {
+                'erp-integration-2': {
+                    kind: 'integration',
+                    status: 'deployed',
+                    catalogId: 'erp-integration',
+                    source: { owner: 'skukla', repo: 'x' },
+                    systems: ['demo-erp-2'],
+                },
+                'demo-erp-2': erp2,
+            },
+        });
+        await mocks.mockContext.context.secrets.store(
+            secretKey(mocks.mockProject.path, 'demo-erp-2', 'ERP_SCREEN_KEY'),
+            'second-key-for-tests',
+        );
+
+        const result = await handleOpenErpScreen(mocks.mockContext, { id: 'erp-integration-2' });
+
+        expect(result).toMatchObject({ success: true, data: { erp: 'demo-erp-2', screenUrl: screen2 } });
+        expect(mockOpenInIncognito).toHaveBeenCalledWith(expect.stringContaining('second-key-for-tests'));
     });
 });

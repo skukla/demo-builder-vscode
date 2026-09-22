@@ -262,6 +262,22 @@ describe('settingsSerializer', () => {
             });
         });
 
+        // AB-23: a second copy of a pre-built kind (erp-integration-2) is not an
+        // imported repo. Exported as one, a new project would add it bare, without
+        // its ERP. Project creation cannot make copies yet, so it is left out.
+        it('leaves out a second copy of a pre-built kind', () => {
+            const project = createProject({
+                appBuilderComponents: {
+                    'erp-integration-2': { ...CUSTOM_IMPORT_STATE, catalogId: 'erp-integration' },
+                    'acme-widget': CUSTOM_IMPORT_STATE,
+                },
+            });
+
+            const exported = extractSettingsFromProject(project, false);
+
+            expect(Object.keys(exported.appBuilderComponentSources ?? {})).toEqual(['acme-widget']);
+        });
+
         // AB-23 slice 6: a settings file starts a NEW project, and each add there
         // makes its own workspace. Carrying this one's would point the copy's
         // integrations at a workspace the original owns — and removing either
