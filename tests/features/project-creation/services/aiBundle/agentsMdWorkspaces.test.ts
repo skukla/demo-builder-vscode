@@ -13,7 +13,7 @@ import { integrationWorkspaceLines } from '@/features/project-creation/services/
 import type { AppBuilderComponentState, Project } from '@/types/base';
 import { createMockProject } from '../../../../helpers/projectFake';
 
-const PAIR_WORKSPACE = { id: '4566206088345806568', name: 'Northwind-ERP', title: 'Northwind ERP' };
+const PAIR_WORKSPACE = { id: '1000000000000000004', name: 'Northwind-ERP', title: 'Northwind ERP' };
 
 const deployed = (
     kind: AppBuilderComponentState['kind'],
@@ -28,10 +28,10 @@ const deployed = (
 function bodea(components: Project['appBuilderComponents']): Project {
     return createMockProject({
         adobe: {
-            organization: '285361',
-            projectId: '4566206088345759588',
-            projectTitle: 'Kukla Bodea',
-            workspace: '4566206088345806475',
+            organization: '100000',
+            projectId: '1000000000000000001',
+            projectTitle: 'Demo Project',
+            workspace: '1000000000000000002',
             workspaceTitle: 'Production',
             authenticated: true,
         },

@@ -17,10 +17,10 @@ import { createMockHandlerContext } from '../../../helpers/handlerContextTestHel
 import { createMockProject } from '../../../helpers/projectFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
-const ORG = '285361';
-const PROJECT = '4566206088345759588';
-const PROJECT_WORKSPACE = '4566206088345806475';
-const OWN_WORKSPACE = '4566206088345806999';
+const ORG = '100000';
+const PROJECT = '1000000000000000001';
+const PROJECT_WORKSPACE = '1000000000000000002';
+const OWN_WORKSPACE = '1000000000000000003';
 
 function contextFor(project: Project) {
     const stateManager = createMockStateManager();

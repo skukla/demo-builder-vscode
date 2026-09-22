@@ -31,7 +31,7 @@ const CATALOG = [
 function bodea(workspace: string): Project {
     const instance = (id: string) => ({ id, name: id, path: `/p/components/${id}`, status: 'ready' as const });
     return createMockProject({
-        adobe: { organization: '285361', projectId: 'proj-1', workspace },
+        adobe: { organization: '100000', projectId: 'proj-1', workspace },
         appBuilderComponents: {
             'eds-accs-mesh': { kind: 'mesh', status: 'deployed', source: { owner: '', repo: '' } },
             'erp-integration': { kind: 'integration', status: 'deployed', source: { owner: 'o', repo: 'r' }, workspace: OWN },
@@ -51,7 +51,7 @@ beforeEach(() => {
 });
 
 describe('a move to another workspace of the SAME Adobe project', () => {
-    const PREVIOUS = { organization: '285361', projectId: 'proj-1', workspace: 'ws-stage' };
+    const PREVIOUS = { organization: '100000', projectId: 'proj-1', workspace: 'ws-stage' };
 
     it('redeploys what lives in the project workspace, and leaves an own workspace alone', async () => {
         const deps = createDeps({ catalog: CATALOG });
@@ -92,7 +92,7 @@ describe('a move to another workspace of the SAME Adobe project', () => {
 // removed from the old one and added in the new one (componentRelocation), after
 // everything in the project's workspace has moved.
 describe('a move into a DIFFERENT Adobe project', () => {
-    const PREVIOUS = { organization: '285361', projectId: 'old-proj', workspace: 'ws-old-production' };
+    const PREVIOUS = { organization: '100000', projectId: 'old-proj', workspace: 'ws-old-production' };
     const MANAGED = CATALOG.map((entry) =>
         entry.id === 'erp-integration' ? { ...entry, lifecycle: 'app-management' as const } : entry,
     );

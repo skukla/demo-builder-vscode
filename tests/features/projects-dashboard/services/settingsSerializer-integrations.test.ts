@@ -283,7 +283,7 @@ describe('settingsSerializer', () => {
         // integrations at a workspace the original owns — and removing either
         // project would then delete the other's apps with it.
         it("never carries an integration's own workspace", () => {
-            const ownWorkspace = { id: '4566206088345806568', name: 'Northwind-ERP', title: 'Northwind ERP' };
+            const ownWorkspace = { id: '1000000000000000004', name: 'Northwind-ERP', title: 'Northwind ERP' };
             const project = createProject({
                 appBuilderComponents: {
                     'acme-widget': { ...CUSTOM_IMPORT_STATE, workspace: ownWorkspace },

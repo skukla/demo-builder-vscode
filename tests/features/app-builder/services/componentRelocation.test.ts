@@ -20,7 +20,7 @@ import type { Project } from '@/types/base';
 import { createDeps } from './appBuilderComponentRunner.testUtils';
 import { createMockProject } from '../../../helpers/projectFake';
 
-const PREVIOUS = { organization: '285361', projectId: 'old-proj', workspace: 'old-production' };
+const PREVIOUS = { organization: '100000', projectId: 'old-proj', workspace: 'old-production' };
 const OLD_WS = { id: 'ws-old-erp', name: 'Northwind-ERP', title: 'Northwind ERP' };
 
 const INTEGRATION = {
@@ -46,7 +46,7 @@ function bodea(): Project {
         workspace: OLD_WS,
     });
     return createMockProject({
-        adobe: { organization: '285361', projectId: 'new-proj', workspace: 'new-production' },
+        adobe: { organization: '100000', projectId: 'new-proj', workspace: 'new-production' },
         appBuilderComponents: {
             'eds-accs-mesh': { kind: 'mesh', status: 'deployed', source: { owner: '', repo: '' } },
             'erp-integration': record('integration'),
