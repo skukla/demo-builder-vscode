@@ -437,6 +437,42 @@ was *extracted* and both call it — never copied.
 `rerunSafe: true` on failure so the agent knows it can fix the cause and call
 again.
 
+### Integrations live in Adobe workspaces of their own (AB-23)
+
+Since 2026-09-21 every integration an SC adds gets an Adobe workspace of its own,
+inside the project's Adobe project. One add is one workspace: the ERP and its
+integration share one. The mesh is the exception: it stays in the project's own
+workspace (Production), where the storefront calls it. An integration added before
+this has no workspace of its own and lives in the project's.
+
+What an agent needs to know to act on the right one:
+
+| Question | Where the answer is |
+|---|---|
+| Which workspace is this integration in? | `get_project` → `appBuilderComponents[id].workspace` (`id`, `name`, `title`); absent means the project's. The project's AGENTS.md lists them too |
+| What is deployed there? | `list_runtime_packages` with `componentId` |
+| Give one integration an Adobe API | `add_console_apis` / `set_console_apis` with `componentId`. Without it the API goes on the project's workspace, which that integration never uses |
+| What APIs does it have? | `list_console_apis` with `componentId` |
+
+`deploy_integration`, `redeploy_integration` and `remove_integration` find the
+workspace themselves. Removing an integration also deletes its workspace, once
+nothing else in the project uses it.
+
+`set_project_destination` moves integrations by what it changes:
+
+- **Another workspace of the same Adobe project** — an integration with its own
+  workspace stays where it is; only what lives in the project's workspace moves.
+- **A different Adobe project** — each integration with its own workspace is removed
+  from the old Adobe project (Commerce changes undone, uninstalled, its workspace
+  deleted) and added again in the new one, with its files on disk kept. This deletes
+  live resources, so the SC confirms it in a modal first; a decline answers
+  `cancelled: true` and changes nothing.
+
+A workspace's name is what Console shows on its box: its title with spaces as dashes
+(`Northwind-ERP`), with `-1`, `-2` when the name is taken. Adobe refuses a space in a
+workspace name and accepts a dash (measured 2026-09-21), and it never renames one, so
+a name is fixed when the workspace is made.
+
 ---
 
 ## 11. Security model

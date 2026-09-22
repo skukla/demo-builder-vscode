@@ -182,7 +182,7 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     remove_integration: {
         action: 'Remove an integration',
         consequence:
-            'Undeploys the integration from Adobe Runtime and deletes its files. Anything calling it stops working.',
+            'Undeploys the integration, deletes its files and its Adobe workspace. Anything calling it stops working.',
         target: ['id'],
         // The deployment could be redeployed, but the local files are deleted.
         sessionGrant: false,

@@ -166,11 +166,11 @@ describe('handleAddAppBuilderComponent', () => {
         expect(mockAddAppBuilderComponent).toHaveBeenCalled();
     });
 
-    it('refuses a SECOND extension-layout app from the same source (fixed package names)', async () => {
-        // Extension-layout deploys skip the per-id ow-package rewrite, so two
-        // apps from one source in one workspace overwrite each other on Runtime
-        // whatever ids we mint (AB-2 spike). The id-collision check cannot see a
-        // seeded instance under a new name; the same-source scan must.
+    // Extension-layout apps ship fixed Runtime package names, so two from one source
+    // in ONE workspace overwrite each other (AB-2 spike, 2026-08-27). This was refused
+    // until every add got a workspace of its own (AB-23): the second copy now lands in
+    // its own, and nothing it deploys can reach the first.
+    it('adds a SECOND extension-layout app from the same source, now that each add has its own workspace', async () => {
         const { mockContext } = setupMocks({
             componentSelections: { backend: 'adobe-commerce-paas' },
             appBuilderComponents: {
@@ -192,10 +192,8 @@ describe('handleAddAppBuilderComponent', () => {
 
         const result = await handleAddAppBuilderComponent(mockContext, { id: 'stock-sync' });
 
-        expect(result.success).toBe(false);
-        expect(result.error).toContain('fixed internal package names');
-        expect(result.error).toContain('Order Sync');
-        expect(mockAddAppBuilderComponent).not.toHaveBeenCalled();
+        expect(result.success).toBe(true);
+        expect(mockAddAppBuilderComponent).toHaveBeenCalled();
     });
 
     it('control: a second STANDALONE app from the same source still adds (ids isolate it)', async () => {

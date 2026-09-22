@@ -2,16 +2,16 @@
  * appBuilderComponentHandlers — the refusals and the fallbacks.
  *
  * Split from the main handler suite for size; this one holds the paths a project
- * only reaches when something is missing or already there. Two of them are gates
- * against a silent overwrite and are worth stating plainly:
+ * only reaches when something is missing or already there. One of them is a gate
+ * against a silent overwrite and is worth stating plainly:
  *
  *   the same-id gate      an id is simultaneously the map slot, the clone folder
  *                         and the OpenWhisk package, so a second add REPLACES the
  *                         first on Runtime rather than sitting beside it
- *   the same-source gate  extension-layout apps ship FIXED package names, so two
- *                         copies collide even under different ids — the scan is
- *                         over owner AND repo AND a different id, and dropping any
- *                         one of the three either misses a real clash or invents one
+ *
+ * A same-SOURCE gate stood beside it (extension-layout apps ship fixed package
+ * names, so two copies in ONE workspace collide) until every add got a workspace
+ * of its own (AB-23), which removed the collision it guarded.
  *
  * The rest are fallbacks: a project with no selections, an entry with no name, a
  * runner failure with no message. Each is asserted on what a collaborator is
@@ -135,82 +135,6 @@ describe('the same-id gate', () => {
 
         expect(result.error).toContain('"ERP Sync"');
         expect(mockAddAppBuilderComponent).not.toHaveBeenCalled();
-    });
-});
-
-describe('the same-source gate on extension-layout apps', () => {
-    const EXTENSION_ENTRY = {
-        ...ERP_ENTRY,
-        id: 'shell-two',
-        name: 'Shell Two',
-        layout: 'extension' as const,
-        source: { owner: 'acme', repo: 'shell' },
-    };
-
-    beforeEach(() => {
-        mockGetAppBuilderComponentEntry.mockReturnValue(EXTENSION_ENTRY);
-    });
-
-    it('refuses a second copy built from the same owner AND repo', async () => {
-        const { mockContext } = setupMocks({
-            appBuilderComponents: { 'shell-one': deployed('acme', 'shell', 'Shell One') },
-        });
-        mockTestDeveloperPermissions(true);
-
-        const result = await handleAddAppBuilderComponent(mockContext, { id: 'shell-two' });
-
-        expect(result.success).toBe(false);
-        expect(result.error).toContain('"Shell One"');
-        expect(result.error).toContain('acme/shell');
-        expect(mockAddAppBuilderComponent).not.toHaveBeenCalled();
-    });
-
-    it('allows the same repo under a DIFFERENT owner', async () => {
-        const { mockContext } = setupMocks({
-            appBuilderComponents: { 'shell-one': deployed('other-org', 'shell', 'Shell One') },
-        });
-        mockTestDeveloperPermissions(true);
-
-        await expect(
-            handleAddAppBuilderComponent(mockContext, { id: 'shell-two' })
-        ).resolves.toMatchObject({ success: true });
-    });
-
-    it('allows the same owner with a DIFFERENT repo', async () => {
-        const { mockContext } = setupMocks({
-            appBuilderComponents: { 'shell-one': deployed('acme', 'other-shell', 'Shell One') },
-        });
-        mockTestDeveloperPermissions(true);
-
-        await expect(
-            handleAddAppBuilderComponent(mockContext, { id: 'shell-two' })
-        ).resolves.toMatchObject({ success: true });
-    });
-
-    it('adds when nothing else in the project came from anywhere near it', async () => {
-        const { mockContext } = setupMocks({
-            appBuilderComponents: { 'erp-sync': deployed('vendor', 'erp-sync', 'ERP') },
-        });
-        mockTestDeveloperPermissions(true);
-
-        await expect(
-            handleAddAppBuilderComponent(mockContext, { id: 'shell-two' })
-        ).resolves.toMatchObject({ success: true });
-    });
-
-    it('does NOT count the entry itself as its own clash on the error retry', async () => {
-        const { mockContext } = setupMocks({
-            appBuilderComponents: {
-                'shell-two': { ...deployed('acme', 'shell', 'Shell Two'), status: 'error' },
-            },
-        });
-        mockTestDeveloperPermissions(true);
-
-        // Re-adding an entry left in error is the documented recovery; a scan
-        // that matched the same id would block it.
-        await expect(
-            handleAddAppBuilderComponent(mockContext, { id: 'shell-two' })
-        ).resolves.toMatchObject({ success: true });
     });
 });
 

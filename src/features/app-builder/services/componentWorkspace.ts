@@ -121,7 +121,7 @@ export function inheritedWorkspace(
 
 /**
  * Ensure the component being added has a workspace recorded, creating one when it
- * needs its own.
+ * needs its own. A mesh never does: it stays in the project's workspace.
  *
  * Records BEFORE returning and saves immediately: a workspace that exists in Adobe
  * but not in the manifest is an orphan nothing can find, target or delete, which is
@@ -142,6 +142,10 @@ export async function ensureComponentWorkspace(
         onMaking?: () => void;
     },
 ): Promise<{ error: string } | undefined> {
+    // The mesh is the project's permanent core: it lives in the project's workspace,
+    // where the storefront calls it (owner, 2026-09-20). A dashboard-added mesh used
+    // to get a workspace of its own like any other add.
+    if (entry.kind === 'mesh') return undefined;
     const existing = project.appBuilderComponents?.[entry.id]?.workspace;
     if (existing) return undefined;
 

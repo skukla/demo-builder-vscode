@@ -370,14 +370,18 @@ function addedIdOf(payload: AddAppBuilderComponentRequestPayload): string | unde
 }
 
 /**
- * Why this add must not go ahead, or `undefined` when it may. Three refusals, each
- * answered before any progress opens because none of them costs a cloud call.
+ * Why this add must not go ahead, or `undefined` when it may. Two refusals, each
+ * answered before any progress opens because neither costs a cloud call.
+ *
+ * A third refused a second extension-layout app from the same source: those ship
+ * fixed Runtime package names, so two in one workspace overwrite each other. It was
+ * removed once every add got a workspace of its own (AB-23).
  */
 function refuseAdd(
     project: Project,
     entry: AppBuilderComponentCatalogEntry,
 ): HandlerResponse | undefined {
-    return stackRefusal(project, entry) ?? alreadyAddedRefusal(project, entry) ?? packageClashRefusal(project, entry);
+    return stackRefusal(project, entry) ?? alreadyAddedRefusal(project, entry);
 }
 
 /**
@@ -429,39 +433,6 @@ function alreadyAddedRefusal(
     return {
         success: false,
         error: `"${entry.name ?? entry.id}" is already added to this project.`,
-        code: ErrorCode.CONFIG_INVALID,
-    };
-}
-
-/**
- * Extension-layout apps (App Management generation) ship FIXED OpenWhisk package
- * names — the deploy path deliberately skips the per-id ow-package rewrite for them,
- * so two apps built from the same source in ONE workspace overwrite each other on
- * Runtime no matter what ids we mint (proven live, AB-2 spike 2026-08-27). The id
- * check cannot catch a seeded instance under a different name, so the same-source
- * scan here is the real gate. The same-id error-retry exemption stays: that path
- * returned before this.
- */
-function packageClashRefusal(
-    project: Project,
-    entry: AppBuilderComponentCatalogEntry,
-): HandlerResponse | undefined {
-    if (entry.layout !== 'extension') return undefined;
-    const clash = Object.entries(project.appBuilderComponents ?? {}).find(
-        ([existingId, component]) =>
-            existingId !== entry.id &&
-            component.source.owner === entry.source.owner &&
-            component.source.repo === entry.source.repo,
-    );
-    if (!clash) return undefined;
-    const [clashId, component] = clash;
-    return {
-        success: false,
-        error:
-            `"${component.name ?? clashId}" is already built from ${entry.source.owner}/` +
-            `${entry.source.repo}. Apps of this kind have fixed internal package names, so a ` +
-            'second copy in the same workspace would overwrite the first. Remove the ' +
-            'existing one first, or use a separate project.',
         code: ErrorCode.CONFIG_INVALID,
     };
 }

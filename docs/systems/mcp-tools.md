@@ -18,7 +18,7 @@ server IS — transport, lifecycle, scoping, security — is in
 | Tool | | What it does |
 |---|---|---|
 | `add_console_apis` |  | Subscribe Adobe APIs (sdk codes from list_console_apis) on this project's Developer |
-| `add_integration` |  | Add an App Builder integration to the current project: clone it, subscribe its |
+| `add_integration` |  | Add an App Builder integration to the current project: give it an Adobe workspace |
 | `check_integration_updates` |  | Check which deployed integrations (and their ERPs) have newer code on their GitHub |
 | `delete_ai_prompt` | **confirm** | Delete a saved AI prompt by id |
 | `delete_mesh` | **confirm** | Delete the API Mesh for an Adobe I/O workspace |

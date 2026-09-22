@@ -239,6 +239,23 @@ describe('a bound pair shares ONE workspace', () => {
     });
 });
 
+// The mesh is the project's permanent core and lives in the project's workspace —
+// Production — where the storefront calls it (AB-23, owner 2026-09-20). Every other
+// add gets its own workspace, and a dashboard-added mesh used to get one too.
+describe('a mesh', () => {
+    it('never gets a workspace of its own', async () => {
+        const project = projectWith();
+        const maker = makerThatCreates();
+        const MESH = { id: 'eds-accs-mesh', name: 'API Mesh', kind: 'mesh', source: { owner: 'o', repo: 'm' } } as AppBuilderComponentCatalogEntry;
+
+        const result = await ensureComponentWorkspace(project, MESH, { maker, saveProject, nameOf: () => 'API Mesh' });
+
+        expect(result).toBeUndefined();
+        expect(maker.createWorkspace).not.toHaveBeenCalled();
+        expect(project.appBuilderComponents?.['eds-accs-mesh']).toBeUndefined();
+    });
+});
+
 describe('when Adobe refuses', () => {
     it('answers a reason naming the component, and records nothing', async () => {
         const project = projectWith();

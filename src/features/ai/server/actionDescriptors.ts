@@ -72,9 +72,11 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: ['adobe'],
         readOnly: false,
         description:
-            'Add an App Builder integration to the current project: clone it, subscribe its ' +
-            'Adobe APIs, build and deploy it under the project org, and register it on the ' +
-            'dashboard. Pass a catalog `id` (from list_components) OR a custom GitHub `source`. ' +
+            'Add an App Builder integration to the current project: give it an Adobe workspace ' +
+            "of its own (an ERP and its integration share one; a mesh stays in the project's " +
+            'workspace), clone it, subscribe its Adobe APIs there, build and deploy it, and ' +
+            'register it on the dashboard. get_project shows the workspace on its record. ' +
+            'Pass a catalog `id` (from list_components) OR a custom GitHub `source`. ' +
             'Takes about a minute. Returns the id to use with deploy_integration / ' +
             'remove_integration. Confirm the choice with the user first.',
         map: dashboardHandlers,
@@ -319,8 +321,8 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         readOnly: false,
         description:
             'Remove one App Builder integration by its id. DESTRUCTIVE: undeploys it remotely ' +
-            '(aio app undeploy / api-mesh:delete), deletes its local files, and republishes the ' +
-            'storefront without it. The ERP integration first undoes what it wrote into Commerce ' +
+            '(aio app undeploy / api-mesh:delete), deletes its local files and its own Adobe ' +
+            'workspace, and republishes the storefront without it. The ERP integration first undoes what it wrote into Commerce ' +
             'and takes its ERP with it; removing the ERP removes its integration the same way. ' +
             'Before undeploying it runs the clean-ups only the deployed code can do (the Commerce ' +
             "undo and uninstall, the ERP's records); if one fails NOTHING is removed and the " +
