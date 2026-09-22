@@ -20,12 +20,9 @@
  * @module features/app-builder/services/componentRelocation
  */
 
-import {
-    deployAppBuilderComponent,
-    entryFromState,
-    type AppBuilderComponentRunnerDeps,
-} from './appBuilderComponentRunner';
+import { deployAppBuilderComponent, type AppBuilderComponentRunnerDeps } from './appBuilderComponentRunner';
 import { cleanUpBeforeUndeploy } from './appBuilderComponentTeardown';
+import { catalogEntryFor, entryFromState } from './componentEntry';
 import { entriesSharingWorkspace } from './componentWorkspace';
 import type { ProjectAdobeRef } from '@/core/shell/orgContextEnv';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
@@ -83,7 +80,7 @@ export async function relocateGroup(
     deps: AppBuilderComponentRunnerDeps,
 ): Promise<RelocationResult> {
     const entryOf = (id: string): AppBuilderComponentCatalogEntry =>
-        deps.catalog.find((entry) => entry.id === id) ??
+        catalogEntryFor(project, id, deps.catalog) ??
         entryFromState(id, project.appBuilderComponents?.[id] as AppBuilderComponentState);
     // The old side runs against the Adobe project being left, with the records as
     // they stand now. A copy, records included: the project itself names the new

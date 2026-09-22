@@ -260,6 +260,13 @@ export interface AppBuilderComponentState {
     status: 'deployed' | 'deploying' | 'stale' | 'error' | 'not-deployed';
     /** Display name for the integration (durable home for the user-facing name). */
     name?: string;
+    /**
+     * The catalog entry this component was made from, when its id is not that entry's
+     * id: a second copy of a kind the project already holds (`demo-erp-2`). ABSENT
+     * means the id IS the catalog id — every component before this, and the first of
+     * each kind. Read through `catalogEntryFor`.
+     */
+    catalogId?: string;
     source: { owner: string; repo: string; branch?: string };
     endpoint?: string; // mesh GraphQL endpoint
     url?: string; // integration primary URL

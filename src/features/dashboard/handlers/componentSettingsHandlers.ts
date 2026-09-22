@@ -15,7 +15,7 @@
 
 import { handleRedeployAppBuilderComponent, resolveComponentTarget } from './appBuilderComponentHandlers';
 import { getAppBuilderComponent } from '@/core/state/appBuilderComponentState';
-import { entryFromState } from '@/features/app-builder/services/appBuilderComponentRunner';
+import { catalogEntryFor, entryFromState } from '@/features/app-builder/services/componentEntry';
 import {
     type ComponentSettingsChange,
     redeployOrder,
@@ -48,7 +48,8 @@ export function settingsCatalogOf(project: Project): AppBuilderComponentCatalogE
     );
     const imported = Object.entries(project.appBuilderComponents ?? {})
         .filter(([id, state]) => state.kind !== 'mesh' && !catalog.some((entry) => entry.id === id))
-        .map(([id, state]) => entryFromState(id, state));
+        // A second copy of a catalog kind is its catalog entry under its own id.
+        .map(([id, state]) => catalogEntryFor(project, id, catalog) ?? entryFromState(id, state));
     return [...catalog, ...imported];
 }
 

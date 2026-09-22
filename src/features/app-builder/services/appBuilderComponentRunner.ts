@@ -55,6 +55,7 @@ import {
     type AppConfigLayout,
 } from './appConfigPackages';
 import type { AppManagementInstallOptions, AppManagementInstallResult } from './appManagementUpgrade';
+import { catalogEntryFor, entryFromState } from './componentEntry';
 import { entriesSharingWorkspace } from './componentWorkspace';
 import { displayNameInProject, resolveDeployInputs, resolveDisplayName } from './deployInputs';
 import type { CommerceDetachResult } from './erpDetach';
@@ -75,7 +76,6 @@ import {
 import { reconcileComponentSelections } from '@/core/state/componentSelectionReconcile';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { explainAdobeAccessFailure } from '@/features/authentication/services/authenticationErrorFormatter';
-import { buildCustomIntegrationEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import {
     integrationUsing,
     linkBroughtSystem,
@@ -955,7 +955,7 @@ export async function deployAppBuilderComponent(
         return { success: false, error: `AppBuilderComponent "${id}" not found.` };
     }
 
-    const entry = deps.catalog.find((c) => c.id === id) ?? entryFromState(id, existing);
+    const entry = catalogEntryFor(project, id, deps.catalog) ?? entryFromState(id, existing);
 
     try {
         // Transient in-flight marker (see addAppBuilderComponent): without it
@@ -1056,7 +1056,7 @@ export async function updateAppBuilderComponent(
     if (!deps.fetchComponentSource || !deps.installComponentDependencies) {
         return { success: false, error: 'Updating integrations is not available here.' };
     }
-    const entry = deps.catalog.find((c) => c.id === id) ?? entryFromState(id, existing);
+    const entry = catalogEntryFor(project, id, deps.catalog) ?? entryFromState(id, existing);
 
     deps.onProgress?.(OPERATION_STAGES.fetchingUpdate.label);
     const fetched = await deps.fetchComponentSource(componentPath, existing.source.branch ?? 'main');
@@ -1101,37 +1101,6 @@ async function forgetUpdate(project: Project, id: string, deps: AppBuilderCompon
     await deps.saveProject(project);
 }
 
-/**
- * Reconstruct a catalog entry from persisted state (redeploy fallback). Also how an
- * imported integration's Settings find its entry (`componentSettingsHandlers.ts`).
- *
- * Routed through {@link buildCustomIntegrationEntry} so a SEEDED instance —
- * a kit clone under a user-chosen id — recovers its capability fields
- * (layout/lifecycle/nodeVersion) via source recognition. Hand-building the
- * entry here lost them, and a redeploy of such an instance ran the standalone
- * path against an extension-layout app.
- */
-export function entryFromState(
-    id: string,
-    state: AppBuilderComponentState,
-): AppBuilderComponentCatalogEntry {
-    const entry = buildCustomIntegrationEntry(
-        {
-            owner: state.source.owner,
-            repo: state.source.repo,
-            branch: state.source.branch,
-            // Prefer the persisted display name (shell instances carry it) so a
-            // redeploy does not clobber it with the id.
-            name: state.name ?? id,
-        },
-        id,
-    );
-    return {
-        ...entry,
-        kind: state.kind,
-        providesEnvVars: state.providesEnvVars ? Object.keys(state.providesEnvVars) : undefined,
-    };
-}
 
 /**
  * The project's selections with every mesh dependency dropped.
@@ -1263,6 +1232,8 @@ export async function removeAppBuilderComponent(
         deps.logger.warn(`[AppBuilderComponent Runner] ${id} local removal skipped: ${toError(error).message}`);
     });
 
+    // Read while the record is still there: a second copy's entry comes from it.
+    const removedEntry = catalogEntryFor(project, id, deps.catalog);
     const cleared = withoutComponent(project, id, state);
     await deps.saveProject(cleared);
 
@@ -1282,7 +1253,6 @@ export async function removeAppBuilderComponent(
     }
     // The screen key goes with the component: nothing reads it again, and a
     // secret left in SecretStorage is one nobody owns.
-    const removedEntry = deps.catalog.find((entry) => entry.id === id);
     if (removedEntry && deps.forgetScreenKey) {
         await deps.forgetScreenKey(project, removedEntry);
     }
@@ -1316,8 +1286,13 @@ export interface RemoveOptions {
 const NOTHING_UNFINISHED: CleanupOutcome = { unfinished: [] };
 
 /** The catalog entry behind a record: the catalog's, else one read off the record. */
-function entryFor(id: string, state: AppBuilderComponentState, deps: AppBuilderComponentRunnerDeps) {
-    return deps.catalog.find((c) => c.id === id) ?? entryFromState(id, state);
+function entryFor(
+    project: Project,
+    id: string,
+    state: AppBuilderComponentState,
+    deps: AppBuilderComponentRunnerDeps,
+) {
+    return catalogEntryFor(project, id, deps.catalog) ?? entryFromState(id, state);
 }
 
 /**
@@ -1331,10 +1306,10 @@ async function cleanUpPair(
     systems: string[],
     deps: AppBuilderComponentRunnerDeps,
 ): Promise<CleanupOutcome> {
-    const targets: TeardownTarget[] = [{ project, id, state, entry: entryFor(id, state, deps) }];
+    const targets: TeardownTarget[] = [{ project, id, state, entry: entryFor(project, id, state, deps) }];
     for (const systemId of systems) {
         const system = project.appBuilderComponents?.[systemId];
-        if (system) targets.push({ project, id: systemId, state: system, entry: entryFor(systemId, system, deps) });
+        if (system) targets.push({ project, id: systemId, state: system, entry: entryFor(project, systemId, system, deps) });
     }
     const [own, ...rest] = await sequence(targets, (target) => cleanUpBeforeUndeploy(target, deps));
     return { ...own, unfinished: [...own.unfinished, ...rest.flatMap((r) => r.unfinished)] };
