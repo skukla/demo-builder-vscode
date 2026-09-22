@@ -87,9 +87,12 @@ Decisions 5 to 7 were proposed from how these integrations are usually run. The 
 (`.rptc/research/erp-two-way-ux/research.md`, 2026-09-22, public vendor docs) checked them:
 
 - **5, a section per ERP:** the common shape is one settings card PER CONNECTION, assigned to
-  stores (Business Central, Celigo, SAP Commerce by sales area). One store talking to two
-  different ERPs was not seen in any product — only a marketing claim. So the per-ERP section
-  follows the norm for settings; two ERPs side by side would be ahead of it.
+  stores (Business Central, Celigo, SAP Commerce by sales area). One store feeding SEVERAL
+  back ends does exist — SAP Commerce with Order Management Services splits one order into
+  sub-orders across several SAP systems, and the buyer still sees one order (second pass;
+  the first pass had said "not seen") — but for ORDERS only: live pricing then works with a
+  single back end. Two ERPs from different vendors behind one store: not found. So if we demo
+  two ERPs on one store, name which one prices.
 - **6, rules read-only in Commerce:** not seen anywhere. It would be new — a way to stand out,
   not a copy of the norm. Worth building only if it earns its place in a demo.
 - **7, switches for Commerce's use only:** confirmed. Sana's docs say it "does not have any
@@ -99,8 +102,13 @@ Decisions 5 to 7 were proposed from how these integrations are usually run. The 
   last known price, or block checkout.
 
 It also settled the rest of the table: a run log, a failed-record list with the reason, and
-retry of one record are the common pattern (Boomi, Celigo, Business Central); an end-to-end
-trace of one order is not a named feature anywhere — again a way to stand out. On the ERP
+retry of one record are the common pattern (Boomi, Celigo, Business Central). Adobe ships that
+exact shape in its own Admin — Data Feed Sync Status: per-record status, an error column, a
+"Schedule Resync" mass action — for Commerce → Adobe services, not ERPs; it is the layout for
+part 2. An end-to-end trace of one order inside a commerce admin is not a named feature
+anywhere (middleware only lets you search its logs by order number) — a way to stand out.
+When the ERP is down during live pricing, SAP's pages document no fallback; Adobe's own SAP
+article calls a fallback mandatory and something you build — decision 7's offline switch. On the ERP
 side, the ERP order carries the web order number and the buyer's PO number, with an inbound
 list that flags errors and filters by channel (Business Central, NetSuite): the start of part 6.
 
