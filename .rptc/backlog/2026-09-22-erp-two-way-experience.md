@@ -83,9 +83,26 @@ Read from the code in a project's clone of both apps on 2026-09-22 (the Admin pa
    The first two exist as business settings today. A "pretend the ERP is down" switch for live
    demos belongs here too (AB-10 names failure toggles).
 
-Decisions 5 to 7 were proposed from how these integrations are usually run, not from sources;
-the research pass in `.rptc/research/erp-two-way-ux/` (2026-09-22) is checking them against
-what shipped integrations actually offer.
+Decisions 5 to 7 were proposed from how these integrations are usually run. The research pass
+(`.rptc/research/erp-two-way-ux/research.md`, 2026-09-22, public vendor docs) checked them:
+
+- **5, a section per ERP:** the common shape is one settings card PER CONNECTION, assigned to
+  stores (Business Central, Celigo, SAP Commerce by sales area). One store talking to two
+  different ERPs was not seen in any product — only a marketing claim. So the per-ERP section
+  follows the norm for settings; two ERPs side by side would be ahead of it.
+- **6, rules read-only in Commerce:** not seen anywhere. It would be new — a way to stand out,
+  not a copy of the norm. Worth building only if it earns its place in a demo.
+- **7, switches for Commerce's use only:** confirmed. Sana's docs say it "does not have any
+  influence on how prices are calculated"; its admin, like SAP Commerce's Backoffice, holds only
+  "use ERP prices", a price cache, and what to show when the ERP is offline. Turning an ERP rule
+  on or off from the commerce side: not seen. Offline options to offer: hide the price, show the
+  last known price, or block checkout.
+
+It also settled the rest of the table: a run log, a failed-record list with the reason, and
+retry of one record are the common pattern (Boomi, Celigo, Business Central); an end-to-end
+trace of one order is not a named feature anywhere — again a way to stand out. On the ERP
+side, the ERP order carries the web order number and the buyer's PO number, with an inbound
+list that flags errors and filters by channel (Business Central, NetSuite): the start of part 6.
 
 ## Parts
 
