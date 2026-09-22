@@ -58,7 +58,9 @@ declares fixed identities to Commerce, identical for every copy:
 
 So a second ERP integration installed into the SAME Commerce store will very likely
 collide with the first — refused as already installed, or replacing its webhooks. This
-is inferred from the manifest, not measured. This repo now supports two pairs end to
+is inferred from the manifest, not measured. It is not new: AB-15 recorded the same
+collision on 2026-09-17 from its own code-only spike ("the second install finds them
+'already subscribed' and skips them … either uninstall deletes both"). This repo now supports two pairs end to
 end up to the install; the install itself needs either a live test that shows Commerce
 tolerates it, or the ERP app to take these ids from a deploy-time setting (a change in
 that repo, not this one).

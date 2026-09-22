@@ -17,8 +17,9 @@ offline, contract-price behaviour, and failure toggles for a live demo. The scre
 look like Commerce, so they are built with Adobe's App Builder React libraries
 (`@adobe/aio-commerce-lib-admin-ui`, React Spectrum 2), which the integration already uses.
 
-Today the integration contributes one page, **System ▸ ERP integration**, showing health, the
-sync log and reset. It has no settings.
+Today the integration contributes one page, **System ▸ ERP integration**, showing health,
+counts and reset. It has no settings. (This said "the sync log" until 2026-09-22; the page
+keeps no history, only what its buttons did during one visit — see AB-25.)
 
 ## What the reference app does
 

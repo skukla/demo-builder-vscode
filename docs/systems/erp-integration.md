@@ -17,8 +17,10 @@ Adobe's Commerce integration starter kit. The design record is
   or stock change in the ERP lands on the Commerce product. A company's credit limit or
   block set in the ERP lands on the Commerce company. A contract price for a company
   applies in that company's cart, with a discount ceiling.
-- **A screen inside the Commerce Admin** (Admin UI SDK), showing the integration's health
-  and its sync log.
+- **A screen inside the Commerce Admin** (Admin UI SDK), showing whether the ERP is
+  reachable, counts of what it holds, and buttons to refresh partners, push records and
+  reset. It keeps no history of what crossed — its log is only what its own buttons did
+  during one visit (read from the page's code, 2026-09-22; the history is AB-25).
 
 ## The two components
 
