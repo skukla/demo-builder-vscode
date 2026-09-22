@@ -17,6 +17,9 @@ import type { AppBuilderComponentState } from '@/types/base';
 
 /** Stable id for the migrated mesh appBuilderComponent. */
 const MESH_ID = 'mesh';
+/** Stands in for the source a half-written record never held (see `healPartialComponents`). */
+const UNKNOWN_SOURCE_OWNER = 'unknown';
+
 /** Fallback id for a migrated app with no appId. */
 const APP_ID_FALLBACK = 'app';
 
@@ -127,7 +130,12 @@ export function healPartialComponents(
                     kind: state?.kind ?? 'integration',
                     status: 'error' as const,
                     name: state?.name ?? state?.workspace?.title ?? id,
-                    source: state?.source ?? { owner: '', repo: id },
+                    // A placeholder, not a guess: the record never held a source, and
+                    // owner/repo are gated on GitHub's name charset before any clone
+                    // (`appBuilderComponentCatalogLoader`), so an empty owner threw and
+                    // took the whole integrations screen with it. Nothing clones this —
+                    // the card exists to be removed.
+                    source: state?.source ?? { owner: UNKNOWN_SOURCE_OWNER, repo: state?.catalogId ?? id },
                     error:
                         state?.error ??
                         'Adding this did not finish. Remove it to clean up what it made, then add it again.',

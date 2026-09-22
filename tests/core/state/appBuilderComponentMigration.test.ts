@@ -285,7 +285,13 @@ describe('healPartialComponents', () => {
             name: 'Contoso ERP',
             workspace: { id: 'ws-9' },
         });
-        expect(healed['erp-integration-2'].source).toBeDefined();
+        // A source that would fail GitHub's name charset is worse than none: the
+        // catalog loader throws on it, which is what blanked the integrations screen
+        // (live, 2026-09-22).
+        expect(healed['erp-integration-2'].source).toStrictEqual({
+            owner: 'unknown',
+            repo: 'erp-integration-2',
+        });
         expect(healed['erp-integration-2'].error).toContain('did not finish');
     });
 
