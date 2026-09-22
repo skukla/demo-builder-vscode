@@ -47,7 +47,7 @@ describe('catalogEntryFor', () => {
 
         const entry = catalogEntryFor(project, 'demo-erp-2', [DEMO_ERP]);
 
-        expect(entry).toEqual({ ...DEMO_ERP, id: 'demo-erp-2' });
+        expect(entry).toEqual({ ...DEMO_ERP, id: 'demo-erp-2', catalogId: 'demo-erp' });
         // What a record cannot rebuild: the screen and the name rule survive.
         expect(entry?.screen).toEqual(DEMO_ERP.screen);
         expect(entry?.nameFromEnvVar).toBe('ERP_DISPLAY_NAME');

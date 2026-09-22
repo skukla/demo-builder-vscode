@@ -17,6 +17,7 @@
  */
 
 import { getProvidedEnvVars } from '@/core/state/appBuilderComponentState';
+import { pairedInstanceId } from '@/features/components/services/appBuilderComponentLinks';
 import { classifyEnvSchema } from '@/features/project-creation/services/envVarClassifier';
 import type {
     AppBuilderComponentCatalogEntry,
@@ -84,11 +85,14 @@ export function buildComponentSettings(
     }));
     const provided = getProvidedEnvVars(project);
     const connected = classifyEnvSchema(entry.envSchema ?? []).autoWired.map((envVar) => {
-        const providerId = envVar.providedBy as string;
-        const from = project.appBuilderComponents?.[providerId]?.name
-            ?? catalog.find((candidate) => candidate.id === providerId)?.name
-            ?? providerId;
-        return { name: envVar.name, label: envVar.label, from, value: provided[envVar.name] };
+        const kind = envVar.providedBy as string;
+        // The provider THIS entry pairs with: a second ERP's integration shows the
+        // second ERP and its address (AB-23).
+        const providerId = pairedInstanceId(entry.id, entry.catalogId, kind);
+        const provider = project.appBuilderComponents?.[providerId];
+        const from = provider?.name ?? catalog.find((candidate) => candidate.id === kind)?.name ?? providerId;
+        const value = provider?.providesEnvVars?.[envVar.name] ?? provided[envVar.name];
+        return { name: envVar.name, label: envVar.label, from, value };
     });
     return { fields, connected };
 }
@@ -146,12 +150,16 @@ export function redeployOrder(
     catalog: AppBuilderComponentCatalogEntry[],
     project: Project,
 ): string[] {
-    const systems = catalog.filter((candidate) =>
-        candidate.kind === 'system'
-        && candidate.boundTo === entry.id
-        && project.appBuilderComponents?.[candidate.id] !== undefined
-        && (candidate.envSchema ?? []).some((envVar) => changedNames.includes(envVar.name)));
-    return [...systems.map((system) => system.id), entry.id];
+    const kind = entry.catalogId ?? entry.id;
+    const systems = catalog
+        .filter((candidate) =>
+            candidate.kind === 'system'
+            && candidate.boundTo === kind
+            && (candidate.envSchema ?? []).some((envVar) => changedNames.includes(envVar.name)))
+        // Each as the instance this entry pairs with (AB-23).
+        .map((system) => pairedInstanceId(entry.id, entry.catalogId, system.id))
+        .filter((id) => project.appBuilderComponents?.[id] !== undefined);
+    return [...systems, entry.id];
 }
 
 /**

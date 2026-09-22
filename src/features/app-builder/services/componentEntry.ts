@@ -12,6 +12,7 @@
  */
 
 import { buildCustomIntegrationEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
+import { pairedInstanceId } from '@/features/components/services/appBuilderComponentLinks';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState, Project } from '@/types/base';
 
@@ -35,7 +36,26 @@ export function catalogEntryFor(
     const state = project.appBuilderComponents?.[id];
     if (!state) return undefined;
     const template = state.catalogId ? catalog.find((entry) => entry.id === state.catalogId) : undefined;
-    return template ? { ...template, id } : entryFromState(id, state);
+    return template ? { ...template, id, catalogId: template.id } : entryFromState(id, state);
+}
+
+/**
+ * A partner's catalog entry as the instance THIS entry pairs with: the catalog's own
+ * for the first of a kind, a copy numbered with it for a second — `erp-integration-2`
+ * pairs with `demo-erp-2`, named "ERP 2".
+ *
+ * @param entry - this entry
+ * @param partner - the partner's catalog entry
+ * @returns the partner as this entry's pair
+ */
+export function pairedEntry(
+    entry: AppBuilderComponentCatalogEntry,
+    partner: AppBuilderComponentCatalogEntry,
+): AppBuilderComponentCatalogEntry {
+    if (!entry.catalogId) return partner;
+    const id = pairedInstanceId(entry.id, entry.catalogId, partner.id);
+    const number = id.slice(partner.id.length).replace(/^-/, ' ');
+    return { ...partner, id, catalogId: partner.id, name: `${partner.name}${number}` };
 }
 
 /**

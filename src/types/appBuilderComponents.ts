@@ -124,6 +124,13 @@ export interface AppBuilderComponentCatalogEntry {
      */
     boundTo?: string;
     /**
+     * Set on a SECOND copy of a catalog entry (`demo-erp-2`): the entry it was made
+     * from. Never written in the catalog JSON — `catalogEntryFor` sets it, and the
+     * add persists it as the component's `catalogId`. Every "which kind is this"
+     * question asks `entry.catalogId ?? entry.id`.
+     */
+    catalogId?: string;
+    /**
      * kind 'system' only: what kind of system it is ("ERP"), shown as the badge
      * on its card. The SC names the system; the type says what it is.
      */

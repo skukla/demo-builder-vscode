@@ -55,7 +55,7 @@ import {
     type AppConfigLayout,
 } from './appConfigPackages';
 import type { AppManagementInstallOptions, AppManagementInstallResult } from './appManagementUpgrade';
-import { catalogEntryFor, entryFromState } from './componentEntry';
+import { catalogEntryFor, entryFromState, pairedEntry } from './componentEntry';
 import { entriesSharingWorkspace } from './componentWorkspace';
 import { displayNameInProject, resolveDeployInputs, resolveDisplayName } from './deployInputs';
 import type { CommerceDetachResult } from './erpDetach';
@@ -79,6 +79,7 @@ import { explainAdobeAccessFailure } from '@/features/authentication/services/au
 import {
     integrationUsing,
     linkBroughtSystem,
+    pairedInstanceId,
     systemsUsedBy,
 } from '@/features/components/services/appBuilderComponentLinks';
 import type {
@@ -430,8 +431,11 @@ function findMissingProvider(
     entry: AppBuilderComponentCatalogEntry,
 ): string | undefined {
     for (const envVar of entry.envSchema ?? []) {
-        const provider = envVar.providedBy;
-        if (provider && !project.appBuilderComponents?.[provider]) {
+        if (!envVar.providedBy) continue;
+        // The provider THIS component pairs with: a second ERP's integration needs the
+        // second ERP, not whichever one the catalog id names.
+        const provider = pairedInstanceId(entry.id, entry.catalogId, envVar.providedBy);
+        if (!project.appBuilderComponents?.[provider]) {
             return provider;
         }
     }
@@ -703,12 +707,18 @@ async function dispatchDeploy(
         : { ok: false, error: result.error || 'App deployment failed.' };
 }
 
-/** The `kind: 'system'` catalog entry bound to an integration, when one exists. */
+/**
+ * The system an integration brings, as the instance THIS integration pairs with: the
+ * catalog's own for the first of a kind, a copy numbered with it for a second
+ * (`erp-integration-2` brings `demo-erp-2`, named "ERP 2").
+ */
 function boundSystemOf(
     entry: AppBuilderComponentCatalogEntry,
     catalog: AppBuilderComponentCatalogEntry[],
 ): AppBuilderComponentCatalogEntry | undefined {
-    return catalog.find((candidate) => candidate.kind === 'system' && candidate.boundTo === entry.id);
+    const kind = entry.catalogId ?? entry.id;
+    const system = catalog.find((candidate) => candidate.kind === 'system' && candidate.boundTo === kind);
+    return system && pairedEntry(entry, system);
 }
 
 /**
@@ -854,6 +864,7 @@ async function addOne(
             ...(project.appBuilderComponents ?? {}),
             [entry.id]: {
                 ...(workspace ? { workspace } : {}),
+                ...(entry.catalogId ? { catalogId: entry.catalogId } : {}),
                 kind: entry.kind,
                 status: 'deploying',
                 name: resolveDisplayName(entry, resolveDeployInputs(project, entry)),

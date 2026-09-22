@@ -21,6 +21,7 @@
  */
 
 import { getProvidedEnvVars } from '@/core/state/appBuilderComponentState';
+import { pairedInstanceId } from '@/features/components/services/appBuilderComponentLinks';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { Project } from '@/types/base';
 
@@ -40,12 +41,31 @@ function textInputValue(
     name: string,
     fallback: string | undefined,
 ): string | undefined {
-    const owners = entry.boundTo ? [entry.boundTo, entry.id] : [entry.id];
+    // The integration THIS system pairs with — a second ERP reads the second
+    // integration's value, not the first's.
+    const owners = entry.boundTo
+        ? [pairedInstanceId(entry.id, entry.catalogId, entry.boundTo), entry.id]
+        : [entry.id];
     for (const owner of owners) {
         const value = project.componentConfigs?.[owner]?.[name];
         if (typeof value === 'string' && value.trim().length > 0) return value;
     }
     return fallback;
+}
+
+/**
+ * A provided value from the provider THIS entry pairs with. The project-wide map is
+ * last-writer-wins, so with two ERPs it held one address for both integrations and a
+ * redeploy of the first could pick up the second's (AB-23).
+ */
+function providedValue(
+    project: Project,
+    entry: AppBuilderComponentCatalogEntry,
+    providedBy: string,
+    name: string,
+): string | undefined {
+    const provider = pairedInstanceId(entry.id, entry.catalogId, providedBy);
+    return project.appBuilderComponents?.[provider]?.providesEnvVars?.[name];
 }
 
 /**
@@ -72,7 +92,7 @@ export function resolveDeployInputs(
     for (const envVar of entry.envSchema ?? []) {
         if (envVar.type === 'secret') continue;
         const value = envVar.providedBy
-            ? provided[envVar.name]
+            ? providedValue(project, entry, envVar.providedBy, envVar.name) ?? provided[envVar.name]
             : textInputValue(project, entry, envVar.name, envVar.default);
         if (value !== undefined) {
             inputs[envVar.name] = value;

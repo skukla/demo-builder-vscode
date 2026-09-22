@@ -224,3 +224,76 @@ describe("the subscribe is for the component being added", () => {
         ]);
     });
 });
+
+// AB-23: two ERPs in one project. The second is numbered as a pair and must behave
+// as its own pair end to end — its own ERP, its own workspace, its own ERP address.
+describe('a second pair', () => {
+    const PAIR_ONE_WS = { id: 'ws-pair-1', name: 'ERP-integration' };
+    const SECOND: AppBuilderComponentCatalogEntry = {
+        ...INTEGRATION,
+        id: 'erp-integration-2',
+        catalogId: 'erp-integration',
+        name: 'ERP integration 2',
+    };
+
+    function withFirstPair(): Project {
+        const deployedRecord = { status: 'deployed' as const, workspace: PAIR_ONE_WS };
+        return createProject({
+            appBuilderComponents: {
+                'demo-erp': {
+                    ...deployedRecord,
+                    kind: 'system',
+                    source: SYSTEM.source,
+                    usedBy: 'erp-integration',
+                    providesEnvVars: { ERP_BASE_URL: 'https://pair-one/erp' },
+                },
+                'erp-integration': {
+                    ...deployedRecord,
+                    kind: 'integration',
+                    source: INTEGRATION.source,
+                    systems: ['demo-erp'],
+                },
+            },
+        });
+    }
+
+    it('brings its own ERP, numbered with it, in a workspace of their own', async () => {
+        const project = withFirstPair();
+        const deps = depsWithRealWorkspaces(fakeAdobe(), [SYSTEM, INTEGRATION]);
+
+        const result = await addAppBuilderComponent(project, SECOND, deps);
+
+        expect(result).toEqual({ success: true });
+        const components = project.appBuilderComponents ?? {};
+        expect(components['demo-erp-2']).toMatchObject({
+            catalogId: 'demo-erp',
+            name: 'ERP 2',
+            usedBy: 'erp-integration-2',
+            workspace: { id: 'ws-1' },
+        });
+        expect(components['erp-integration-2']).toMatchObject({
+            catalogId: 'erp-integration',
+            systems: ['demo-erp-2'],
+            workspace: { id: 'ws-1' },
+        });
+        // The first pair is exactly as it was.
+        expect(components['erp-integration']).toMatchObject({ systems: ['demo-erp'], workspace: PAIR_ONE_WS });
+        expect(components['demo-erp']).toMatchObject({ usedBy: 'erp-integration', workspace: PAIR_ONE_WS });
+    });
+
+    it("gives its integration ITS ERP's address, not the first pair's", async () => {
+        const project = withFirstPair();
+        const deps = depsWithRealWorkspaces(fakeAdobe(), [SYSTEM, INTEGRATION]);
+
+        await addAppBuilderComponent(project, SECOND, deps);
+
+        const call = (deps.deployApp as jest.Mock).mock.calls.find(([path]) =>
+            String(path).includes('erp-integration-2'),
+        );
+        const handed = (call?.[4] as { extraEnv?: Record<string, string> } | undefined)?.extraEnv;
+        const own = project.appBuilderComponents?.['demo-erp-2']?.providesEnvVars?.ERP_BASE_URL;
+        expect(own).toBeDefined();
+        expect(handed?.ERP_BASE_URL).toBe(own);
+        expect(handed?.ERP_BASE_URL).not.toBe('https://pair-one/erp');
+    });
+});

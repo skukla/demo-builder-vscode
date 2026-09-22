@@ -114,8 +114,30 @@ export function linkComponents(
  * @returns whether a link was written (the caller saves)
  */
 export function linkBroughtSystem(project: Project, integrationId: string, catalog: Catalog): boolean {
-    const system = catalog.find((entry) => entry.kind === 'system' && entry.boundTo === integrationId);
-    if (!system || !present(project, system.id) || !present(project, integrationId)) return false;
-    linkComponents(project, integrationId, system.id, catalog);
+    const catalogId = project.appBuilderComponents?.[integrationId]?.catalogId;
+    const kind = catalogId ?? integrationId;
+    const system = catalog.find((entry) => entry.kind === 'system' && entry.boundTo === kind);
+    if (!system) return false;
+    const systemId = pairedInstanceId(integrationId, catalogId, system.id);
+    if (!present(project, systemId) || !present(project, integrationId)) return false;
+    linkComponents(project, integrationId, systemId, catalog);
     return true;
+}
+
+/**
+ * The id of the partner a component pairs with, given the partner's catalog id.
+ *
+ * A second copy of a kind is numbered as a pair: `erp-integration-2` brings
+ * `demo-erp-2`. So the partner's id is its catalog id plus this instance's number,
+ * which answers before any link is stored — the ERP deploys first, before its
+ * integration exists (AB-23).
+ *
+ * @param id - this component's id
+ * @param catalogId - the catalog entry it was made from, when its id is not that entry's
+ * @param partnerCatalogId - the partner's catalog id (`boundTo`, `providedBy`)
+ * @returns the partner's component id
+ */
+export function pairedInstanceId(id: string, catalogId: string | undefined, partnerCatalogId: string): string {
+    const number = catalogId && id.startsWith(catalogId) ? id.slice(catalogId.length) : '';
+    return partnerCatalogId + number;
 }

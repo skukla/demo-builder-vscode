@@ -14,6 +14,7 @@
 import { buildComponentSettings, hasSettings } from './componentSettings';
 import { secretKey } from './secretKey';
 import { ensureScreenKeyEnv, type ScreenKeyStore } from './systemScreen';
+import { pairedInstanceId } from '@/features/components/services/appBuilderComponentLinks';
 import type { AppBuilderComponentCatalogEntry, ComponentSettings } from '@/types/appBuilderComponents';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
@@ -120,7 +121,10 @@ export async function resolveSecretInputs(
     projectPath: string,
     secretStorage: SecretReader,
 ): Promise<Record<string, string>> {
-    const owners = entry.boundTo ? [entry.boundTo, entry.id] : [entry.id];
+    // The integration THIS system pairs with, as for text settings (deployInputs).
+    const owners = entry.boundTo
+        ? [pairedInstanceId(entry.id, entry.catalogId, entry.boundTo), entry.id]
+        : [entry.id];
     const inputs: Record<string, string> = {};
     const names = secretVarsByAppBuilderComponent([entry]).get(entry.id) ?? [];
     for (const varName of names) {

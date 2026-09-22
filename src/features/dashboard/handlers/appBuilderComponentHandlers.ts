@@ -526,8 +526,9 @@ async function recordPairedSystemName(
 ): Promise<void> {
     const typed = name?.trim();
     if (!typed) return;
+    const kind = entry.catalogId ?? entry.id;
     const bound = getAppBuilderComponentCatalog().find(
-        (candidate) => candidate.kind === 'system' && candidate.boundTo === entry.id,
+        (candidate) => candidate.kind === 'system' && candidate.boundTo === kind,
     );
     if (!bound?.nameFromEnvVar) return;
 

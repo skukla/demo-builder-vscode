@@ -9,6 +9,7 @@ import {
     integrationUsing,
     linkBroughtSystem,
     linkComponents,
+    pairedInstanceId,
     systemsUsedBy,
 } from '@/features/components/services/appBuilderComponentLinks';
 import type { AppBuilderComponentState, Project } from '@/types/base';
@@ -134,5 +135,36 @@ describe('linkBroughtSystem', () => {
         expect(linkBroughtSystem(p, 'other', CATALOG)).toBe(false);
         expect(linkBroughtSystem(p, 'erp-integration', CATALOG)).toBe(false);
         expect(p.appBuilderComponents?.['erp-integration']).not.toHaveProperty('systems');
+    });
+});
+
+// AB-23: a project may hold two ERP pairs. The second is numbered as a pair —
+// `erp-integration-2` with `demo-erp-2` — so each half can name its partner before
+// any link is stored (the ERP deploys first, before its integration exists).
+describe('pairedInstanceId', () => {
+    it("names the first of a kind's partner by the partner's catalog id", () => {
+        expect(pairedInstanceId('erp-integration', undefined, 'demo-erp')).toBe('demo-erp');
+    });
+
+    it("carries a second copy's number over to its partner", () => {
+        expect(pairedInstanceId('erp-integration-2', 'erp-integration', 'demo-erp')).toBe('demo-erp-2');
+        expect(pairedInstanceId('demo-erp-3', 'demo-erp', 'erp-integration')).toBe('erp-integration-3');
+    });
+});
+
+describe('linkBroughtSystem for a second pair', () => {
+    it("links the second integration to the second ERP, not the first", () => {
+        const p = project({
+            'erp-integration': component('integration', { systems: ['demo-erp'] }),
+            'demo-erp': component('system', { usedBy: 'erp-integration' }),
+            'erp-integration-2': component('integration', { catalogId: 'erp-integration' }),
+            'demo-erp-2': component('system', { catalogId: 'demo-erp' }),
+        });
+
+        expect(linkBroughtSystem(p, 'erp-integration-2', CATALOG)).toBe(true);
+
+        expect(systemsUsedBy(p, 'erp-integration-2', CATALOG)).toEqual(['demo-erp-2']);
+        expect(integrationUsing(p, 'demo-erp-2', CATALOG)).toBe('erp-integration-2');
+        expect(systemsUsedBy(p, 'erp-integration', CATALOG)).toEqual(['demo-erp']);
     });
 });

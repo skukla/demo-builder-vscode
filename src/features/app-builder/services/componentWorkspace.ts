@@ -27,6 +27,8 @@
  * @module features/app-builder/services/componentWorkspace
  */
 
+import { catalogEntryFor, pairedEntry } from './componentEntry';
+import { pairedInstanceId } from '@/features/components/services/appBuilderComponentLinks';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState, Project } from '@/types/base';
 
@@ -59,15 +61,19 @@ function partnerIds(
     entry: AppBuilderComponentCatalogEntry,
     catalog: AppBuilderComponentCatalogEntry[] = [],
 ): string[] {
+    // Partners are the instances THIS entry pairs with: a second ERP's partner is the
+    // second integration, never the first (AB-23).
+    const pairOf = (partnerCatalogId: string) => pairedInstanceId(entry.id, entry.catalogId, partnerCatalogId);
+    const kind = entry.catalogId ?? entry.id;
     const ids = [
         // A system names the integration it belongs to.
-        entry.boundTo,
+        entry.boundTo && pairOf(entry.boundTo),
         // An integration's systems name it instead, so look from the other side:
         // the record once the pair is linked, the catalog before it is.
         ...Object.entries(project.appBuilderComponents ?? {})
             .filter(([, state]) => state.usedBy === entry.id)
             .map(([id]) => id),
-        ...catalog.filter((candidate) => candidate.boundTo === entry.id).map((candidate) => candidate.id),
+        ...catalog.filter((candidate) => candidate.boundTo === kind).map((candidate) => pairOf(candidate.id)),
     ].filter((id): id is string => Boolean(id));
     return [...new Set(ids)];
 }
@@ -81,10 +87,9 @@ export function workspaceNamedFor(
     catalog: AppBuilderComponentCatalogEntry[] = [],
 ): AppBuilderComponentCatalogEntry {
     if (entry.kind === 'system') return entry;
-    const system = catalog.find(
-        (candidate) => candidate.kind === 'system' && candidate.boundTo === entry.id,
-    );
-    return system ?? entry;
+    const kind = entry.catalogId ?? entry.id;
+    const system = catalog.find((candidate) => candidate.kind === 'system' && candidate.boundTo === kind);
+    return system ? pairedEntry(entry, system) : entry;
 }
 
 /**
@@ -97,8 +102,16 @@ export function entriesSharingWorkspace(
     entry: AppBuilderComponentCatalogEntry,
 ): AppBuilderComponentCatalogEntry[] {
     const partners = new Set(partnerIds(project, entry, catalog));
-    const inProject = new Set(Object.keys(project.appBuilderComponents ?? {}));
-    const shared = catalog.filter((c) => partners.has(c.id) && inProject.has(c.id));
+    // Each partner as its own entry: a second ERP is its catalog entry under its own
+    // id. Only partners the catalog knows — directly or as the entry they were made
+    // from — carry APIs of their own.
+    const shared = [...partners]
+        .filter((id) => {
+            const state = project.appBuilderComponents?.[id];
+            return state && catalog.some((c) => c.id === (state.catalogId ?? id));
+        })
+        .map((id) => catalogEntryFor(project, id, catalog))
+        .filter((partner): partner is AppBuilderComponentCatalogEntry => Boolean(partner));
     return [...shared, entry];
 }
 
@@ -178,7 +191,7 @@ function titleFor(
     const own = deps.nameOf(named);
     if (named.kind !== 'system' || own !== named.name) return own;
     const integration = deps.catalog?.find((candidate) => candidate.id === named.boundTo);
-    return integration ? deps.nameOf(integration) : own;
+    return integration ? deps.nameOf(pairedEntry(named, integration)) : own;
 }
 
 /** Create a workspace in Adobe, titled — and so named — for the SC. */

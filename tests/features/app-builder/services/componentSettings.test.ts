@@ -166,3 +166,43 @@ describe('redeployOrder', () => {
             .toEqual(['erp-integration']);
     });
 });
+
+// AB-23: with two ERP pairs, each integration's Settings and redeploys concern ITS
+// ERP — the second pair is numbered with it (`erp-integration-2` ↔ `demo-erp-2`).
+describe('a second pair', () => {
+    const SECOND: AppBuilderComponentCatalogEntry = { ...INTEGRATION, id: 'erp-integration-2', catalogId: 'erp-integration' };
+    const record = (kind: 'system' | 'integration', extra = {}) => ({
+        kind,
+        status: 'deployed' as const,
+        source: { owner: 'skukla', repo: 'r' },
+        ...extra,
+    });
+    const twoPairs = () =>
+        createMockProject({
+            appBuilderComponents: {
+                'demo-erp': record('system', { name: 'Northwind ERP', providesEnvVars: { ERP_BASE_URL: 'https://one' } }),
+                'erp-integration': record('integration'),
+                'demo-erp-2': record('system', {
+                    catalogId: 'demo-erp',
+                    name: 'Contoso ERP',
+                    providesEnvVars: { ERP_BASE_URL: 'https://two' },
+                }),
+                'erp-integration-2': record('integration', { catalogId: 'erp-integration' }),
+            },
+        });
+
+    it('shows the second integration connected to the second ERP, with its address', () => {
+        const { connected } = buildComponentSettings(SECOND, CATALOG, twoPairs(), {});
+
+        expect(connected).toEqual([
+            expect.objectContaining({ name: 'ERP_BASE_URL', from: 'Contoso ERP', value: 'https://two' }),
+        ]);
+    });
+
+    it('redeploys the second ERP before the second integration, never the first ERP', () => {
+        expect(redeployOrder(SECOND, ['ERP_DISPLAY_NAME'], CATALOG, twoPairs())).toEqual([
+            'demo-erp-2',
+            'erp-integration-2',
+        ]);
+    });
+});
