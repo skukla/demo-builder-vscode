@@ -65,6 +65,14 @@ end up to the install; the install itself needs either a live test that shows Co
 tolerates it, or the ERP app to take these ids from a deploy-time setting (a change in
 that repo, not this one).
 
+**Fixed 2026-09-22 (AB-15).** The ERP app now takes its id from a deploy-time value: a copy
+is deployed with `DEMO_BUILDER_COPY_NUMBER` and becomes `erp-integration-<n>` (menu id
+`erp_integration_<n>`, menu label the ERP's name); the first copy keeps
+`commerce-erp-integration`. Not `commerce-erp-integration-<n>`: the library counts a webhook as
+an app's when its name starts with the app's id, so that id would have let the first copy's
+upgrade or removal delete the second's webhooks (read in lib-app's `isWebhookOwnedByApp`).
+Checked with the library's pre-app-build hook; not yet installed live.
+
 ## Known limit
 
 Project creation cannot make copies, so a settings export leaves a second copy out
