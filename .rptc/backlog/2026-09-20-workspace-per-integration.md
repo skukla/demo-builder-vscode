@@ -503,3 +503,4 @@ and re-adding an integration — no migration code ships.
 - 2026-09-22  feat(app-builder): each half of a pair finds ITS partner, not the first of its kind (`1e255fde4`)
 - 2026-09-21  feat(app-builder): a component can record which catalog entry it came from (`b7de86803`)
 - 2026-09-22  fix(app-builder): a workspace name is letters and digits, never a dash (`a9e1e8eb0`)
+- 2026-09-22  fix(app-builder): an add that stops half-way says so and can be retried (`2d425f7f8`)
