@@ -144,8 +144,10 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         description:
             'Point the current project at a different Adobe Console project + workspace, and MOVE ' +
             'every integration there (each is redeployed under the new target; the old deployments ' +
-            'are left running and can be cleaned up in the Console). Takes a minute or more per ' +
-            'integration. The org is NOT taken from here — sign-in owns org selection. Create the ' +
+            'are left running and can be cleaned up in the Console). An integration with a ' +
+            'workspace of its own stays put within the same Adobe project; into a different one ' +
+            'it is removed from the old (uninstalled from Commerce, its workspace deleted) and ' +
+            'added again, after the SC confirms. Takes a minute or more per integration. The org is NOT taken from here — sign-in owns org selection. Create the ' +
             'target first with create_adobe_project / create_adobe_workspace if it does not exist.',
         map: dashboardHandlers,
         type: 'setProjectDestination',

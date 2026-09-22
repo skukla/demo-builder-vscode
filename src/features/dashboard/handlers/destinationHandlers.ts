@@ -10,11 +10,14 @@
  *
  * Scope note: the destination is PROJECT-scoped, not per-integration. One
  * `organization` / `projectId` / `workspace` covers every integration in the
- * project — which is why changing it has to move them all (step-02).
+ * project — which is why changing it has to move them all (step-02). An integration
+ * with a workspace of its own (AB-23) moves only when the Adobe project changes, and
+ * then by leaving the old one (see `confirmLeavingAdobeProject`).
  *
  * @module features/dashboard/handlers/destinationHandlers
  */
 
+import * as vscode from 'vscode';
 import {
     postComponentsSnapshot,
     postDestination,
@@ -28,12 +31,14 @@ import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operationProgress';
 import { withOperationProgress, type ReportStage } from '@/core/vscode/withOperationProgress';
 import { moveAppBuilderComponentsToDestination } from '@/features/app-builder/services/appBuilderComponentMigration';
+import { ownWorkspaceGroups } from '@/features/app-builder/services/componentRelocation';
 import {
     buildDefaultRunnerDeps,
     buildRunnerDepsContext,
 } from '@/features/project-creation/services/appBuilderComponentRunnerDeps';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type MessageHandler } from '@/types/handlers';
+import type { Project } from '@/types/base';
 import type {
     DestinationRef,
     SetProjectDestinationRequestPayload as SetProjectDestinationPayload,
@@ -157,11 +162,18 @@ async function applyDestination(
         return { success: false, error: guardError.error, code: guardError.code };
     }
 
-    // NO confirmation. It was a modal in front of an operation that destroys
-    // nothing and is undone by changing the destination back — the prompt cost a
-    // click on every change and bought no safety (user decision 2026-08-07). The
-    // notification and the per-card status say what is happening while it happens,
-    // which is the affordance that actually helps.
+    // NO confirmation for a move that only deploys. It was a modal in front of an
+    // operation that destroys nothing and is undone by changing the destination
+    // back — the prompt cost a click on every change and bought no safety (user
+    // decision 2026-08-07). The notification and the per-card status say what is
+    // happening while it happens, which is the affordance that actually helps.
+    //
+    // The exception deletes live resources, so it is confirmed: leaving the Adobe
+    // project removes each integration with a workspace of its own from it (AB-23,
+    // owner 2026-09-21).
+    if (!(await confirmLeavingAdobeProject(project, nextProject))) {
+        return { success: false, cancelled: true, error: 'The destination was not changed.' };
+    }
     const movingIds = Object.keys(project.appBuilderComponents ?? {});
 
     // Captured BEFORE the overwrite: once `project.adobe` holds the new ref the old
@@ -246,6 +258,17 @@ async function applyDestination(
         // keeps naming a destination the project no longer uses.
         await postDestination(project.adobe);
         const cause = move.failed.map((f) => `${f.id} (${f.error})`).join(', ');
+        // Once an integration's old side is gone the project is NOT pointed back,
+        // and there is no previous destination still serving it to point at.
+        if (!move.rolledBack && previous) {
+            return {
+                success: false,
+                error:
+                    `Moved to ${target}, but ${cause} did not finish. Redeploy it to try ` +
+                    'again: it is already set up in the new Adobe project.',
+                data: { destination: project.adobe, previous, move },
+            };
+        }
         // Nothing was destroyed — the move only ever deploys — so the previous
         // destination is still serving everything and the project points back at
         // it. The components that DID land at the new destination stay there, and
@@ -270,6 +293,41 @@ async function applyDestination(
         );
     }
     return { success: true, data: { destination: project.adobe, previous, move } };
+}
+
+/**
+ * Ask before a move that takes integrations out of their Adobe project.
+ *
+ * Only a change of Adobe PROJECT asks, and only when an integration has a workspace
+ * of its own: that workspace belongs to the project being left, so the move removes
+ * the integration there — uninstalled from Commerce, its workspace deleted — before
+ * adding it again (componentRelocation).
+ *
+ * @returns true to go ahead
+ */
+async function confirmLeavingAdobeProject(
+    project: Project,
+    nextProject: DestinationRef & { id: string },
+): Promise<boolean> {
+    const current = project.adobe?.projectId;
+    const groups = current && current !== nextProject.id ? ownWorkspaceGroups(project) : [];
+    if (groups.length === 0) return true;
+
+    const from = project.adobe?.projectTitle ?? project.adobe?.projectName ?? 'the previous Adobe project';
+    const to = nextProject.title ?? nextProject.name ?? nextProject.id;
+    const names = groups.map((group) => group.workspace.title ?? group.workspace.name).join(', ');
+    const theirs = groups.length > 1 ? 'their workspaces' : 'its workspace';
+    const choice = await vscode.window.showWarningMessage(
+        `Move this project to ${to}?`,
+        {
+            modal: true,
+            detail:
+                `${names} will be removed from ${from} — uninstalled from Commerce and ` +
+                `${theirs} deleted — then added again in ${to}.`,
+        },
+        'Move',
+    );
+    return choice === 'Move';
 }
 
 export const destinationHandlers = defineHandlers({

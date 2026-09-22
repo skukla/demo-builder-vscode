@@ -285,6 +285,9 @@ describe('handleSetProjectDestination — what the move is handed and what it sa
             success: false,
             moved: ['firefly-shell'],
             failed: [{ id: 'erp-sync', error: 'boom' }],
+            // What the real move answers when a deploy in the project's workspace
+            // fails: it points the project back.
+            rolledBack: true,
         });
         const { context } = withComponentIds(['erp-sync', 'firefly-shell']);
 
@@ -308,6 +311,7 @@ describe('handleSetProjectDestination — what the move is handed and what it sa
                 { id: 'erp-sync', error: 'boom' },
                 { id: 'firefly-shell', error: 'nope' },
             ],
+            rolledBack: true,
         });
         const { context } = withComponentIds(['erp-sync', 'firefly-shell']);
 

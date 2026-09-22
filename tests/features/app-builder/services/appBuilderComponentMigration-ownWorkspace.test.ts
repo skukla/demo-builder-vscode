@@ -87,3 +87,75 @@ describe('a move to another workspace of the SAME Adobe project', () => {
         expect((entries as AppBuilderComponentCatalogEntry[]).map((e) => e.id)).toEqual(['eds-accs-mesh']);
     });
 });
+
+// Owner decision 2026-09-21: into ANOTHER Adobe project, an own-workspace group is
+// removed from the old one and added in the new one (componentRelocation), after
+// everything in the project's workspace has moved.
+describe('a move into a DIFFERENT Adobe project', () => {
+    const PREVIOUS = { organization: '285361', projectId: 'old-proj', workspace: 'ws-old-production' };
+    const MANAGED = CATALOG.map((entry) =>
+        entry.id === 'erp-integration' ? { ...entry, lifecycle: 'app-management' as const } : entry,
+    );
+
+    function movedBodea(): Project {
+        const project = bodea('ws-new-production');
+        project.adobe = { ...project.adobe!, projectId: 'new-proj' };
+        return project;
+    }
+
+    it('moves the project workspace first, then the pair, ERP before integration', async () => {
+        const project = movedBodea();
+
+        const result = await moveAppBuilderComponentsToDestination(project, PREVIOUS, createDeps({ catalog: CATALOG }));
+
+        expect(result).toEqual({
+            success: true,
+            moved: ['eds-accs-mesh', 'demo-erp', 'erp-integration'],
+            failed: [],
+        });
+        expect(mockDeployAppBuilderComponent.mock.calls.map(([, id]) => id)).toEqual([
+            'eds-accs-mesh',
+            'demo-erp',
+            'erp-integration',
+        ]);
+    });
+
+    it('rolls the whole move back when the pair cannot be cleaned up in the old project', async () => {
+        const project = movedBodea();
+        const deps = createDeps({
+            catalog: MANAGED,
+            uninstallAppManagement: jest.fn().mockResolvedValue({ status: 'failed', detail: '503' }),
+        });
+
+        const result = await moveAppBuilderComponentsToDestination(project, PREVIOUS, deps);
+
+        expect(result).toMatchObject({ success: false, rolledBack: true, moved: ['eds-accs-mesh'] });
+        expect(result.failed[0]).toMatchObject({ id: 'erp-integration' });
+        expect(project.adobe).toEqual(PREVIOUS);
+        expect(deps.deleteComponentWorkspace).not.toHaveBeenCalled();
+    });
+
+    it('does not roll back once the old side is gone — the card carries the failure', async () => {
+        const project = movedBodea();
+        mockDeployAppBuilderComponent.mockImplementation(async (_p: Project, id: string) =>
+            id === 'erp-integration' ? { success: false, error: 'boom' } : { success: true },
+        );
+        const onRowStatus = jest.fn();
+
+        const result = await moveAppBuilderComponentsToDestination(
+            project,
+            PREVIOUS,
+            createDeps({ catalog: CATALOG }),
+            onRowStatus,
+        );
+
+        expect(result).toEqual({
+            success: false,
+            moved: ['eds-accs-mesh', 'demo-erp'],
+            failed: [{ id: 'erp-integration', error: 'boom' }],
+            rolledBack: false,
+        });
+        expect(project.adobe?.projectId).toBe('new-proj');
+        expect(onRowStatus).toHaveBeenCalledWith('erp-integration', 'error', 'boom');
+    });
+});

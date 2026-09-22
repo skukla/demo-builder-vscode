@@ -9,6 +9,7 @@
  */
 
 export const mockProgressReport = jest.fn();
+export const mockShowWarningMessage = jest.fn();
 export const mockWithProgress = jest.fn(async (_o: unknown, task: (p: unknown) => unknown) =>
     task({ report: mockProgressReport })
 );
@@ -18,6 +19,7 @@ jest.mock(
         window: {
             withProgress: (...a: unknown[]) =>
                 (mockWithProgress as (...x: unknown[]) => unknown)(...a),
+            showWarningMessage: (...a: unknown[]) => mockShowWarningMessage(...a),
         },
         ProgressLocation: { Notification: 15 },
     }),
@@ -89,7 +91,10 @@ export function makeDestinationContext(adobe: Record<string, unknown> | undefine
 
 /** A handler context over a project whose keyed map holds the given components. */
 export function makeContextWithComponents(
-    components: Record<string, { kind: string; status?: string }>
+    components: Record<
+        string,
+        { kind: string; status?: string; workspace?: { id: string; name: string; title?: string } }
+    >
 ) {
     const project = {
         name: 'demo',
