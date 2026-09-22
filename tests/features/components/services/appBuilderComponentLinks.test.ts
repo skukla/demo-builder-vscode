@@ -172,6 +172,44 @@ describe('linkBroughtSystem for a second pair', () => {
 
 // Adding a kind the project already has makes a numbered copy of it — for a pair,
 // numbered so its ERP can take the same number (AB-23).
+// The link is written only after a deploy succeeds. An add that failed before that
+// leaves both halves unlinked — and the project-wide "stored links exist" test then
+// switched the catalog fallback off for them too, because the FIRST pair had links.
+// Removing either half left the other behind, and the workspace with it (live,
+// 2026-09-22: Contoso ERP).
+describe('a pair whose add never got as far as storing its link', () => {
+    const halfAdded = () =>
+        project({
+            'erp-integration': component('integration', { systems: ['demo-erp'] }),
+            'demo-erp': component('system', { usedBy: 'erp-integration' }),
+            'erp-integration-2': component('integration', { status: 'error', catalogId: 'erp-integration' }),
+            'demo-erp-2': component('system', { catalogId: 'demo-erp' }),
+        });
+
+    it('still finds the system its integration brought', () => {
+        expect(systemsUsedBy(halfAdded(), 'erp-integration-2', CATALOG)).toEqual(['demo-erp-2']);
+    });
+
+    it('still finds the integration the system belongs to', () => {
+        expect(integrationUsing(halfAdded(), 'demo-erp-2', CATALOG)).toBe('erp-integration-2');
+    });
+
+    it('leaves the linked pair reading from its own records', () => {
+        expect(systemsUsedBy(halfAdded(), 'erp-integration', CATALOG)).toEqual(['demo-erp']);
+        expect(integrationUsing(halfAdded(), 'demo-erp', CATALOG)).toBe('erp-integration');
+    });
+
+    // A stored EMPTY list is an answer: this integration uses no system.
+    it('respects a stored empty list rather than pairing from the catalog', () => {
+        const p = project({
+            'erp-integration': component('integration', { systems: [] }),
+            'demo-erp': component('system'),
+        });
+
+        expect(systemsUsedBy(p, 'erp-integration', CATALOG)).toStrictEqual([]);
+    });
+});
+
 describe('nextCopyOf', () => {
     const INTEGRATION = { id: 'erp-integration', name: 'ERP Integration', kind: 'integration' as const };
 

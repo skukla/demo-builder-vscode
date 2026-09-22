@@ -11,15 +11,17 @@
  * knows what it has, because a project may one day hold more than one of a kind
  * (AB-16).
  *
- * Projects saved before links were stored carry neither field. For those the
- * catalog pairing stands in, once, on read: {@link hasStoredLinks} tells the two
- * apart. Pure and webview-safe (the integration cards read it too).
+ * A record carrying no link of its own falls back to the catalog pairing, per
+ * COMPONENT: projects saved before links existed carry none, and so does a pair
+ * whose add failed before its deploy (the link is written after). A STORED link is
+ * always the answer, including an empty `systems` list — that says "no system", and
+ * the catalog must not overrule it. Pure and webview-safe (the cards read it too).
  *
  * @module features/components/services/appBuilderComponentLinks
  */
 
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
-import type { Project } from '@/types/base';
+import type { AppBuilderComponentState, Project } from '@/types/base';
 
 type Catalog = readonly Pick<AppBuilderComponentCatalogEntry, 'id' | 'kind' | 'boundTo'>[];
 /** The part of a project these questions read. */
@@ -45,12 +47,20 @@ const present = (project: Components, id: string): boolean => Boolean(project.ap
 export function systemsUsedBy(project: Components, integrationId: string, catalog: Catalog): string[] {
     const state = project.appBuilderComponents?.[integrationId];
     if (!state) return [];
-    if (hasStoredLinks(project)) {
-        return (state.systems ?? []).filter((id) => present(project, id));
+    // Its OWN list first, and a stored empty list is an answer: this integration uses
+    // no system. Only a record carrying no list at all falls back to the catalog.
+    if (state.systems) {
+        return state.systems.filter((id) => present(project, id));
     }
+    // Per COMPONENT, not per project (2026-09-22). The link is written after a deploy
+    // succeeds, so an add that failed earlier leaves both halves unlinked — and asking
+    // "does this PROJECT have links?" answered yes because the FIRST pair had them.
+    // Removing either half of the second pair then left the other behind, holding the
+    // workspace nothing else could release.
+    const entry = catalogEntryOf(state, integrationId);
     return catalog
-        .filter((entry) => entry.kind === 'system' && entry.boundTo === integrationId)
-        .map((entry) => entry.id)
+        .filter((candidate) => candidate.kind === 'system' && candidate.boundTo === entry)
+        .map((candidate) => pairedInstanceId(integrationId, state.catalogId, candidate.id))
         .filter((id) => present(project, id));
 }
 
@@ -65,10 +75,38 @@ export function systemsUsedBy(project: Components, integrationId: string, catalo
 export function integrationUsing(project: Components, systemId: string, catalog: Catalog): string | undefined {
     const state = project.appBuilderComponents?.[systemId];
     if (state?.kind !== 'system') return undefined;
-    const owner = hasStoredLinks(project)
-        ? state.usedBy
-        : catalog.find((entry) => entry.id === systemId)?.boundTo;
+    const owner = state.usedBy ?? pairedFromCatalog(project, state, systemId, catalog);
     return owner && present(project, owner) ? owner : undefined;
+}
+
+/**
+ * The catalog entry a record was made from: its `catalogId`, else its own id. Not
+ * checked against the catalog — a custom integration is in no catalog and still
+ * brings nothing, which the `boundTo` lookup answers by finding no system.
+ */
+function catalogEntryOf(state: AppBuilderComponentState, id: string): string {
+    return state.catalogId ?? id;
+}
+
+/**
+ * The integration the catalog pairs this system with, for a system carrying no
+ * `usedBy` — and only when that integration does not DISCLAIM it. An integration
+ * with a stored `systems` list has answered the question already; overruling it
+ * from the catalog would re-link a system it was deliberately parted from.
+ */
+function pairedFromCatalog(
+    project: Components,
+    state: AppBuilderComponentState,
+    systemId: string,
+    catalog: Catalog,
+): string | undefined {
+    const entry = catalogEntryOf(state, systemId);
+    const boundTo = catalog.find((candidate) => candidate.id === entry)?.boundTo;
+    if (!boundTo) return undefined;
+    const owner = pairedInstanceId(systemId, state.catalogId, boundTo);
+    const stored = project.appBuilderComponents?.[owner]?.systems;
+    if (stored && !stored.includes(systemId)) return undefined;
+    return owner;
 }
 
 /**
