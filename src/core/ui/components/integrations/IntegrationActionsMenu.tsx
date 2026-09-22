@@ -45,6 +45,7 @@ const MENU_ROWS: Partial<Record<CardAction, { label: string; icon: string }>> = 
     'sign-in': { label: 'Sign in', icon: 'admin' },
     // The deliberate ones.
     open: { label: 'Open', icon: 'globe' },
+    'open-admin': { label: 'Open Commerce Admin', icon: 'admin' },
     redeploy: { label: 'Redeploy', icon: 'redeploy' },
     settings: { label: 'Settings', icon: 'settings' },
     'manage-apis': { label: 'Manage APIs', icon: 'apiAccess' },

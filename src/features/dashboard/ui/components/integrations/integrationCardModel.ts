@@ -164,12 +164,20 @@ function buildMenuActions(
     // reachable on any installed card, not only on a refused upgrade.
     const repair: CardAction[] =
         status === 'deployed' && installation && !install.includes('reinstall') ? ['reinstall'] : [];
+    // Where an installed app is SEEN: its own entry under System in the Commerce
+    // Admin. The drawer already links there; this is the same message from the menu,
+    // so the SC need not open the card first (owner, 2026-09-22). It lands on the
+    // Admin, not the app's page — that URL carries a per-session security key
+    // Commerce will not accept without (measured 2026-09-22: it bounces to the
+    // dashboard).
+    const admin: CardAction[] = status === 'deployed' && installation ? ['open-admin'] : [];
     // Open is the integration's Adobe workspace in the Developer Console — there
     // whether or not the app serves an address (owner, 2026-09-21).
     return [
         ...(verb ? [verb] : []),
         ...install,
         'open',
+        ...admin,
         ...redeploy,
         ...repair,
         'manage-apis',

@@ -126,6 +126,30 @@ describe('deriveIntegrationCard — installation facet', () => {
         }
     });
 
+    // The Admin is where an installed app is SEEN (its menu entry under System), and
+    // the drawer's own "Open Commerce Admin" link sits three clicks away behind the
+    // card. The menu item is the shortcut; both post the same message (owner,
+    // 2026-09-22). Commerce's Admin page for the app cannot be linked directly — its
+    // URL carries a per-session security key — so this lands on the Admin itself.
+    it('an installed card can open the Commerce Admin, right after Open', () => {
+        const model = deriveIntegrationCard(
+            integration({ status: 'deployed', installation: { status: 'installed' } })
+        );
+
+        expect(model.menuActions).toContain('open-admin');
+        expect(model.menuActions.indexOf('open-admin')).toBe(model.menuActions.indexOf('open') + 1);
+    });
+
+    it('no Commerce Admin item on a card with nothing installed', () => {
+        const noRecord = deriveIntegrationCard(integration({ status: 'deployed' }));
+        const deploying = deriveIntegrationCard(
+            integration({ status: 'deploying', installation: { status: 'installed' } })
+        );
+
+        expect(noRecord.menuActions).not.toContain('open-admin');
+        expect(deploying.menuActions).not.toContain('open-admin');
+    });
+
     it('no Reinstall where there is nothing installed to redo', () => {
         const deploying = deriveIntegrationCard(
             integration({ status: 'deploying', installation: { status: 'failed', needsReinstall: true } })

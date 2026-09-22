@@ -182,9 +182,10 @@ describe('IntegrationsGrid actions', () => {
                 },
             });
 
-            // The link lives on the drawer's Commerce-install row.
+            // The link lives on the drawer's Commerce-install row. The card's kebab
+            // carries the same label (owner, 2026-09-22), so this asks for the LINK.
             await user.click(card('custom-app', 'Deployed'));
-            await user.click(screen.getByText('Open Commerce Admin'));
+            await user.click(screen.getByRole('link', { name: 'Open Commerce Admin' }));
 
             expect(getClient().postMessage).toHaveBeenCalledWith('openAdminPanel', {});
         });
