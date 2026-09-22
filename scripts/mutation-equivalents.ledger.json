@@ -8435,7 +8435,7 @@
             "anchors": [
                 "const panel = BaseWebviewCommand.getActivePanel('demoBuilder.projectDashboard');"
             ],
-            "line": 317,
+            "line": 318,
             "mutants": 1,
             "category": "branch",
             "reason": "Same shape as the Configure command's copy: forcing the following 'if (panel)' true calls dispose() on undefined, and the TypeError lands in the try/catch already there for the already-disposed case. Both paths end as a no-op. The false variant is killed by the test that asserts an open panel is disposed.",
@@ -16897,19 +16897,6 @@
             "decision": "none - the trailing throw re-raises the same error object this arm would have thrown",
             "recorded": "2026-09-06",
             "source": "PL-22 MUT-04, 2026-09-05"
-        },
-        {
-            "module": "src/features/ai/server/adobeResourceTools.ts",
-            "anchors": [
-                "if (args?.confirm !== true || args?.confirmName !== projectName) {"
-            ],
-            "line": 263,
-            "mutants": 2,
-            "category": "optionalChain",
-            "reason": "Both optional chains on this line are unreachable-nullish. Lines 194-198 read args?.projectId and args?.projectName and return early unless BOTH trim to a non-empty string, which is only possible when args is an object. So by the time control reaches this line args can never be null or undefined, and dropping the '?.' cannot throw or yield a different value for any input the handler can be given.",
-            "decision": "none - the required-identifier guard above makes a nullish args impossible here",
-            "recorded": "2026-09-06",
-            "source": "PL-22 batch MUT-05"
         },
         {
             "module": "src/features/ai/server/toolDescriptors.ts",
