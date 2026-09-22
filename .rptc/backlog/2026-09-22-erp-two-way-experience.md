@@ -141,3 +141,4 @@ Filed 2026-09-22.
 
 - 2026-09-22  docs(backlog): AB-25, the two-way ERP integration as its business users see it (`3da75a2ff`)
 - 2026-09-22  docs(backlog): AB-25, a section per ERP, its rules read-only, switches only for their use (`8929da9d8`)
+- 2026-09-22  docs(research): what two-way commerce-ERP integrations give each person (`3318afaa6`)
