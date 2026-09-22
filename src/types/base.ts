@@ -258,6 +258,15 @@ export interface AppBuilderComponentState {
      * next deploy or verify corrects it.
      */
     status: 'deployed' | 'deploying' | 'stale' | 'error' | 'not-deployed';
+    /**
+     * The id this component declares to Commerce (App Management apps only, and only
+     * for a COPY — the first of a kind keeps the id its app ships with).
+     *
+     * Written the first time the copy deploys and never rewritten: Commerce names its
+     * webhooks and events from it and refuses to change it on an upgrade, so a later
+     * rename moves the label and leaves this alone (`commerceAppId.ts`).
+     */
+    commerceAppId?: string;
     /** Display name for the integration (durable home for the user-facing name). */
     name?: string;
     /**

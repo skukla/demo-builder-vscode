@@ -506,3 +506,5 @@ and re-adding an integration — no migration code ships.
 - 2026-09-22  fix(app-builder): an add that stops half-way says so and can be retried (`2d425f7f8`)
 - 2026-09-22  fix(state): a project holding a half-written record still opens (`e9934f441`)
 - 2026-09-22  fix(state): the healed record carries a source GitHub would accept (`c2d8265ef`)
+- 2026-09-22  fix(state): heal a source that is present and unusable, not only a missing one (`293fac931`)
+- 2026-09-22  fix(integrations): a pair that never stored its link is still a pair (`aade1e06c`)

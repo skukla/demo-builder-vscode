@@ -21,6 +21,7 @@
  * @module features/app-builder/services/deployInputs
  */
 
+export { ensureCommerceAppId } from './commerceAppId';
 import { getProvidedEnvVars } from '@/core/state/appBuilderComponentState';
 import { pairedInstanceId } from '@/features/components/services/appBuilderComponentLinks';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
@@ -31,6 +32,8 @@ const MESH_ENDPOINT = 'MESH_ENDPOINT';
 const WEB_SEGMENT = '/api/v1/web/';
 /** Tells a second copy of an app which copy it is (see `copyNumber`). */
 const COPY_NUMBER = 'DEMO_BUILDER_COPY_NUMBER';
+/** Tells a copy which id to declare to Commerce (see `commerceAppId.ts`). */
+const APP_ID = 'DEMO_BUILDER_APP_ID';
 
 /**
  * The value of one text input for an entry. A system bound to an integration
@@ -104,6 +107,11 @@ export function resolveDeployInputs(
     const copy = copyNumber(entry);
     if (copy) {
         inputs[COPY_NUMBER] = copy;
+        // The id this copy declares to Commerce: recorded on the component the first
+        // time it deploys and reused ever after, because Commerce refuses an id change
+        // on an upgrade. Absent only for a copy that predates the record.
+        const appId = project.appBuilderComponents?.[entry.id]?.commerceAppId;
+        if (appId) inputs[APP_ID] = appId;
     }
     return inputs;
 }

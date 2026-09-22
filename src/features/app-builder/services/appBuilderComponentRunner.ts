@@ -57,7 +57,12 @@ import {
 import type { AppManagementInstallOptions, AppManagementInstallResult } from './appManagementUpgrade';
 import { catalogEntryFor, entryFromState, pairedEntry } from './componentEntry';
 import { entriesSharingWorkspace } from './componentWorkspace';
-import { displayNameInProject, resolveDeployInputs, resolveDisplayName } from './deployInputs';
+import {
+    displayNameInProject,
+    ensureCommerceAppId,
+    resolveDeployInputs,
+    resolveDisplayName,
+} from './deployInputs';
 import type { CommerceDetachResult } from './erpDetach';
 import type { SourceUpdateResult, UpdateCheckResult } from './integrationSourceUpdate';
 import { deriveOwPackage } from './owPackageName';
@@ -660,6 +665,12 @@ async function dispatchDeploy(
         };
     }
     const owPackage = deriveOwPackage(entry.id);
+    // Before the inputs are read: a COPY's Commerce id is chosen once and recorded,
+    // because Commerce names its webhooks and events from it and refuses to change it
+    // on an upgrade (`commerceAppId.ts`). `resolveDeployInputs` reads it back.
+    if (ensureCommerceAppId(project, entry, deps.catalog)) {
+        await deps.saveProject(project);
+    }
     // The app's own inputs — its settings, a bound integration's values, the
     // schema defaults, and what other components provide (the ERP's base URL to
     // its integration) — ride the deploy's process env, the same way the
