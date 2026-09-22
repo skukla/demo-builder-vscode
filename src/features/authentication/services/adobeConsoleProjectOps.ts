@@ -374,9 +374,9 @@ export class AdobeConsoleProjectOps {
                 ) => Promise<SDKResponse<RawAdobeWorkspace>>;
             };
 
-            // Console's workspace boxes SHOW the name, so it is the title with spaces
-            // as dashes — "Northwind ERP" → `Northwind-ERP` (a space 400s, a dash does
-            // not; measured 2026-09-21) — numbered `-1`, `-2` when the name is taken.
+            // Console's workspace boxes SHOW the name, so it is the title's letters and
+            // digits — "Northwind ERP" → `NorthwindERP` (no dash: the deploy service
+            // refuses a dashed namespace) — numbered `NorthwindERP1` when it is taken.
             // A clash the list could not show gets one retry with a random ending.
             const taken = await this.listWorkspaces(orgId, projectId).then(
                 (all) => all.map((w) => w.name),

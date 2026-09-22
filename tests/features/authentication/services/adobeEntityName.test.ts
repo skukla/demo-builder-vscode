@@ -76,43 +76,42 @@ describe('randomNameSuffix', () => {
 });
 
 // Console's workspace boxes show the NAME, so "ProductionKnDo" is what the SC read
-// (owner, 2026-09-21). A space is refused but a dash is not (both measured live
-// that day, the dash with a Runtime namespace that answered), so a space becomes a
-// dash. A taken name is numbered; the random ending is only for when the names
-// in use cannot be read.
+// (owner, 2026-09-21). A workspace name becomes part of its Runtime namespace
+// (`<org>-<project>-<workspace>`), and Adobe's deploy service refuses a namespace
+// with a dash in the workspace part: "Non-standard namespace formats are not
+// supported after aio-cli v10" (measured 2026-09-22, adding Northwind ERP as
+// `Northwind-ERP`). So the name is letters and digits only. A taken name is
+// numbered; the random ending is only for when the names in use cannot be read.
 describe('deriveFreeAdobeEntityName', () => {
-    it('is the title with spaces as dashes when nothing in the project has it', () => {
-        expect(deriveFreeAdobeEntityName('Northwind ERP', ['Production'])).toBe('Northwind-ERP');
+    it('is the title without spaces when nothing in the project has it', () => {
+        expect(deriveFreeAdobeEntityName('Northwind ERP', ['Production'])).toBe('NorthwindERP');
     });
 
-    it('turns any run of other characters into one dash, and trims the ends', () => {
-        expect(deriveFreeAdobeEntityName('  My  demo_2024! ', [])).toBe('My-demo-2024');
+    it('drops every other character, so no dash ever reaches the namespace', () => {
+        expect(deriveFreeAdobeEntityName('  My  demo_2024! ', [])).toBe('Mydemo2024');
+        expect(deriveFreeAdobeEntityName('Northwind-ERP', [])).toMatch(/^[A-Za-z0-9]+$/);
     });
 
-    // A second one is numbered, not scrambled: Northwind-ERP-1, -2, ... (owner, 2026-09-21).
+    // A second one is numbered, not scrambled (owner, 2026-09-21).
     it('numbers a taken name with the lowest free number, ignoring case', () => {
-        expect(deriveFreeAdobeEntityName('Northwind ERP', ['northwind-erp'])).toBe('Northwind-ERP-1');
+        expect(deriveFreeAdobeEntityName('Northwind ERP', ['northwinderp'])).toBe('NorthwindERP1');
         expect(
-            deriveFreeAdobeEntityName('Northwind ERP', ['Northwind-ERP', 'Northwind-ERP-1', 'Northwind-ERP-3']),
-        ).toBe('Northwind-ERP-2');
+            deriveFreeAdobeEntityName('Northwind ERP', ['NorthwindERP', 'NorthwindERP1', 'NorthwindERP3']),
+        ).toBe('NorthwindERP2');
     });
 
     it('keeps a numbered name at 19 or fewer', () => {
-        expect(deriveFreeAdobeEntityName('a'.repeat(40), ['a'.repeat(19)])).toBe('a'.repeat(17) + '-1');
+        expect(deriveFreeAdobeEntityName('a'.repeat(40), ['a'.repeat(19)])).toBe('a'.repeat(18) + '1');
     });
 
     it('adds the random ending when the names in use are unknown', () => {
-        expect(deriveFreeAdobeEntityName('Northwind ERP', undefined, 'ZZZZ')).toBe(
-            'Northwind-ERP-ZZZZ',
-        );
+        expect(deriveFreeAdobeEntityName('Northwind ERP', undefined, 'ZZZZ')).toBe('NorthwindERPZZZZ');
     });
 
-    it('stays at 19 or fewer, with no dash left at the cut', () => {
-        expect(deriveFreeAdobeEntityName('Northwind Tradersx ERP', [])).toBe('Northwind-Tradersx');
+    it('stays at 19 or fewer', () => {
+        expect(deriveFreeAdobeEntityName('Northwind Tradersx ERP', [])).toBe('NorthwindTradersxER');
         expect(deriveFreeAdobeEntityName('a'.repeat(40), [], 'ZZZZ')).toBe('a'.repeat(19));
-        expect(deriveFreeAdobeEntityName('a'.repeat(40), undefined, 'ZZZZ')).toBe(
-            'a'.repeat(14) + '-ZZZZ',
-        );
+        expect(deriveFreeAdobeEntityName('a'.repeat(40), undefined, 'ZZZZ')).toBe('a'.repeat(15) + 'ZZZZ');
     });
 
     it('falls back to App when the title has nothing Adobe accepts', () => {

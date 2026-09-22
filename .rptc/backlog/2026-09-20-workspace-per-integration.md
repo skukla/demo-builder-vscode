@@ -292,8 +292,11 @@ workspace limit is lower.
 > A space becomes a dash: Adobe answered `400 "Workspace name allows only alpha numeric
 > values"` to "Space Test" yet accepted "Space-Test", and a dashed workspace's Runtime
 > namespace (`<org>-<project>-dash-test`) answered a package list normally
-> (2026-09-21). What follows is kept as the record of the
-> first decision.
+> (2026-09-21). **Reversed 2026-09-22:** that package list went straight to Runtime;
+> `aio app deploy` goes through Adobe's deploy service, which answered `400 "Non-standard
+> namespace formats are not supported after aio-cli v10"` for `…-northwind-erp` when the
+> owner re-added Northwind ERP. Names are now letters and digits only (`NorthwindERP`,
+> `NorthwindERP1`). What follows is kept as the record of the first decision.
 
 Adobe gives a workspace two fields, and they answer two different questions.
 

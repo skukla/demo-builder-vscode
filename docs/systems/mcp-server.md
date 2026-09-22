@@ -468,10 +468,12 @@ nothing else in the project uses it.
   live resources, so the SC confirms it in a modal first; a decline answers
   `cancelled: true` and changes nothing.
 
-A workspace's name is what Console shows on its box: its title with spaces as dashes
-(`Northwind-ERP`), with `-1`, `-2` when the name is taken. Adobe refuses a space in a
-workspace name and accepts a dash (measured 2026-09-21), and it never renames one, so
-a name is fixed when the workspace is made.
+A workspace's name is what Console shows on its box: the letters and digits of its
+title (`NorthwindERP`), numbered `NorthwindERP1`, `NorthwindERP2` when the name is taken.
+Adobe refuses a space in a workspace name; it accepts a dash, but the workspace's Runtime
+namespace then refuses every deploy ("Non-standard namespace formats are not supported
+after aio-cli v10", measured 2026-09-22). Adobe never renames a workspace, so a name is
+fixed when the workspace is made.
 
 ---
 
