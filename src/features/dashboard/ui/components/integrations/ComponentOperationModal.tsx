@@ -84,7 +84,7 @@ export function ComponentOperationModal({
                         ) : (
                             <LoadingDisplay
                                 size="M"
-                                message={progress?.stage ?? 'Starting…'}
+                                message={progress?.stage ?? 'Starting'}
                                 subMessage={progress?.step}
                                 helperText={progress?.expectation}
                             />
