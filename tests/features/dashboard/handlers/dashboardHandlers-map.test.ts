@@ -130,14 +130,14 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'exportProjectSettings')).toBe(true);
         });
 
-        it('should have exactly 41 handlers', () => {
+        it('should have exactly 42 handlers', () => {
             // Given: dashboardHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(dashboardHandlers) as Array<
                 keyof typeof dashboardHandlers
             >;
 
-            // Then: exactly 41, derived in the map's own declaration order so a
+            // Then: exactly 42, derived in the map's own declaration order so a
             // reader can check it against the source top to bottom.
             //
             // NOTE: the previous derivation did not add up — it said "9
@@ -159,9 +159,9 @@ describe('dashboardHandlers', () => {
             //                      installAppBuilderComponent (re-run the
             //                      Commerce install without a redeploy) and
             //                      getAppBuilderInstallStatus (live install
-            //                      state read), plus getComponentOperationProgress
+            //                      state read), plus getOperationProgress
             //                      (PL-59: the latest step for the progress modal)
-            //                      and backgroundComponentOperation ("Run in
+            //                      and backgroundOperation ("Run in
             //                      background" hands it to a notification)
             //   3  console APIs    listConsoleApis, addConsoleApis, setConsoleApis
             //   1  runtime         listRuntimePackages (the list_runtime_packages
@@ -176,7 +176,7 @@ describe('dashboardHandlers', () => {
             //   1  reset           resetProject
             //   1  destination     setProjectDestination
             //  ==
-            //  41
+            //  42
             //
             // Retired, so they are absent by design: verifyAppBuilderComponent
             // (2026-08-03); the 4 singular App Builder actions (addApp,
@@ -194,7 +194,7 @@ describe('dashboardHandlers', () => {
             // the integrations surface's Eventing section — workspace-scoped
             // I/O event providers/registrations, same service as the MCP
             // event tools.
-            expect(types).toHaveLength(41);
+            expect(types).toHaveLength(42);
         });
 
         it('should have handlers as functions', () => {
