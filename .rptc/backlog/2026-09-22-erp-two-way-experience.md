@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-9
 needs: []
 value: med
-status: backlog
+status: active
 ---
 
 # The two-way ERP integration, as the two business users experience it
@@ -94,3 +94,7 @@ then explain a price. Fixing mismatches and a forced resync matter least on stag
   shape as price explanations.
 
 Filed 2026-09-22.
+
+## Shipped so far
+
+- 2026-09-22  docs(backlog): AB-25, the two-way ERP integration as its business users see it (`3da75a2ff`)
