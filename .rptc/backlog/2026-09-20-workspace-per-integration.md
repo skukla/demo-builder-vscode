@@ -494,3 +494,4 @@ and re-adding an integration — no migration code ships.
 - 2026-09-21  fix(destination): a move within one Adobe project leaves own workspaces alone (`001f15040`)
 - 2026-09-21  feat(destination): a move into another Adobe project takes each integration along (`5cf0fa515`)
 - 2026-09-21  fix(apis): the project's workspace no longer gets other workspaces' APIs (`cec358cc0`)
+- 2026-09-21  feat(ai): the agent surface describes per-integration workspaces (`305bf6f15`)
