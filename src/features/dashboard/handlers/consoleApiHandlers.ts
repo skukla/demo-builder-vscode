@@ -105,7 +105,9 @@ export const handleListConsoleApis: MessageHandler<{ componentId?: string }> = a
         const rows = await fetchApiAccessRows(
             ServiceLocator.getAuthenticationService(),
             orgId,
-            new Set([...managed, ...union]),
+            // `added` too: an integration with a workspace of its own is not in the
+            // project's union, and its rows must still come back.
+            new Set([...managed, ...union, ...added]),
         );
 
         // Attribution: which integration is holding each code, and under what claim.

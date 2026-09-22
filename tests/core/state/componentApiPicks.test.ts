@@ -290,3 +290,48 @@ describe('applyDesiredApis — editing the union without losing attribution', ()
         expect(next).toEqual({ [UNATTRIBUTED_PICKS_KEY]: ['SharedSDK', 'LegacySDK', 'NewSDK'] });
     });
 });
+
+// Found 2026-09-21 and fixed on the owner's word: the project's workspace was handed
+// the picks of integrations living in workspaces of their own, so Production held
+// APIs nothing in it uses. The project-wide list is now the project workspace's.
+describe('the project-wide list leaves out integrations with a workspace of their own', () => {
+    const OWN = { id: 'ws-erp', name: 'Northwind-ERP' };
+    const record = (workspace?: typeof OWN) => ({
+        kind: 'integration' as const,
+        status: 'deployed' as const,
+        source: { owner: 'o', repo: 'r' },
+        ...(workspace ? { workspace } : {}),
+    });
+    const bodea = () =>
+        project({
+            appBuilderComponents: { 'erp-integration': record(OWN), 'firefly-app': record() },
+            componentApiPicks: {
+                'erp-integration': ['commerceeventing'],
+                'firefly-app': ['FireflySDK'],
+                [UNATTRIBUTED_PICKS_KEY]: ['CCAPI'],
+            },
+        });
+
+    it('resolves the project workspace without them', () => {
+        expect(resolveDesiredApis(bodea()).sort()).toEqual(['CCAPI', 'FireflySDK']);
+    });
+
+    it('CONTROL: asked for that integration, its picks are still there', () => {
+        expect(resolveDesiredApis(bodea(), 'erp-integration').sort()).toEqual(['CCAPI', 'commerceeventing']);
+    });
+
+    it("keeps their picks untouched when the project's list is edited", () => {
+        expect(applyDesiredApis(bodea(), ['FireflySDK'])).toEqual({
+            'erp-integration': ['commerceeventing'],
+            'firefly-app': ['FireflySDK'],
+        });
+    });
+
+    it("records a project-workspace pick of the same code as the project's own", () => {
+        expect(applyDesiredApis(bodea(), ['FireflySDK', 'commerceeventing'])).toEqual({
+            'erp-integration': ['commerceeventing'],
+            'firefly-app': ['FireflySDK'],
+            [UNATTRIBUTED_PICKS_KEY]: ['commerceeventing'],
+        });
+    });
+});

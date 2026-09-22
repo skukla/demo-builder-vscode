@@ -10,7 +10,9 @@
  */
 
 import {
+    createApiSubscriberClient,
     handleAddConsoleApis,
+    handleListConsoleApis,
     handleSetConsoleApis,
     consoleApiContext,
     consoleApiProject,
@@ -113,5 +115,29 @@ describe("an edit in one integration's own workspace", () => {
             'erp-integration': ['FireflyAPISDK'],
             'firefly-app': ['GraphQLServiceSDK'],
         });
+    });
+});
+
+// The project's union leaves out an integration with a workspace of its own
+// (componentApiPicks), so its list must keep its own picks' rows by name. The list
+// drops a service Adobe marks disabled unless it is kept — which is the case here.
+describe("the API list for one integration in its own workspace", () => {
+    it('still shows an API that integration picked, even one Adobe marks disabled', async () => {
+        (createApiSubscriberClient as jest.Mock).mockReturnValueOnce({
+            getServicesForOrg: jest.fn().mockResolvedValue([
+                { code: 'AdobeIOManagementAPISDK', name: 'I/O Management API' },
+                { code: 'LegacyEventsSDK', name: 'Legacy Events', enabled: false },
+            ]),
+        });
+        const project = bodea();
+        project.componentApiPicks = { 'erp-integration': ['LegacyEventsSDK'] };
+
+        const result = await handleListConsoleApis(consoleApiContext(project), {
+            componentId: 'erp-integration',
+        });
+
+        const data = result.data as { apis: Array<{ code: string }>; added: string[] };
+        expect(data.added).toEqual(['LegacyEventsSDK']);
+        expect(data.apis.map((api) => api.code)).toContain('LegacyEventsSDK');
     });
 });
