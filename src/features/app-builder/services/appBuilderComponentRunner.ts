@@ -786,8 +786,47 @@ export async function addAppBuilderComponent(
     );
 }
 
-/** Add ONE component, its bound system already in place. */
+/**
+ * Add ONE component, its bound system already in place — and, when the add does
+ * not finish, leave a record that says so.
+ *
+ * The workspace is recorded before anything else runs, on purpose: one that
+ * exists in Adobe must never be lost to a later failure. But a failure BETWEEN
+ * that and the deploy's own in-flight marker used to leave the component holding
+ * its workspace and nothing else — no kind, no status, no source. The manifest
+ * then failed its own schema, no card showed the component, and `nextCopyOf` read
+ * the record as taken and numbered the next add a copy higher. Measured live
+ * 2026-09-22: a second ERP's workspace was made and its ERP deployed, then Adobe
+ * did not list the product profiles the integration's subscribe needed.
+ */
 async function addOne(
+    project: Project,
+    entry: AppBuilderComponentCatalogEntry,
+    deps: AppBuilderComponentRunnerDeps,
+): Promise<RunnerResult> {
+    const result = await runAdd(project, entry, deps);
+    // Only a record left mid-flight: an add that failed before anything was written
+    // leaves no component behind and must not gain one here, and a deploy that failed
+    // has already recorded its own reason.
+    const inFlight = project.appBuilderComponents?.[entry.id];
+    if (!result.success && inFlight !== undefined && inFlight.status === 'deploying') {
+        const name = resolveDisplayName(entry, resolveDeployInputs(project, entry));
+        // What the SC is left with, said plainly. The step that refused speaks for
+        // ITSELF ("No API access was changed"), which reads as "nothing happened"
+        // while the workspace it just made — and, for a pair, the system already
+        // deployed into it — are sitting in their Adobe project (2026-09-22).
+        const failure = result.error ?? `${name} was not added.`;
+        const reason = inFlight.workspace
+            ? `${failure} The Adobe workspace made for ${name} is kept, so adding it again continues from there.`
+            : failure;
+        await persistOutcome(project, entry, errorOutcome(entry, reason, name), deps);
+        return { success: false, error: reason };
+    }
+    return result;
+}
+
+/** The add itself; {@link addOne} records what it leaves behind when it fails. */
+async function runAdd(
     project: Project,
     entry: AppBuilderComponentCatalogEntry,
     deps: AppBuilderComponentRunnerDeps,

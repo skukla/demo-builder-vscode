@@ -174,7 +174,7 @@ export async function ensureComponentWorkspace(
         return { error: `Adobe returned a workspace with no id for "${deps.nameOf(entry)}".` };
     }
 
-    await record(project, entry.id, workspace, deps.saveProject);
+    await record(project, entry, workspace, deps.nameOf(entry), deps.saveProject);
     return undefined;
 }
 
@@ -221,17 +221,34 @@ async function make(
     return { id: created.id, name: created.name, title: created.title ?? title };
 }
 
-/** Write the workspace onto the component and persist before anything else runs. */
+/**
+ * Write the workspace onto the component and persist before anything else runs.
+ *
+ * A component that has no record yet gets a WHOLE one — kind, source, the name it
+ * is being added under, and `deploying`, which is what it is. It used to get the
+ * workspace alone through an `as AppBuilderComponentState` cast, and an add that
+ * failed before its deploy began (Adobe not listing product profiles, live
+ * 2026-09-22) left that shape on disk: the manifest failed its own schema, no card
+ * rendered it, and the next add read the id as taken and numbered itself higher.
+ */
 async function record(
     project: Project,
-    id: string,
+    entry: AppBuilderComponentCatalogEntry,
     workspace: NonNullable<AppBuilderComponentState['workspace']>,
+    name: string,
     saveProject: SaveProject,
 ): Promise<void> {
-    const current = project.appBuilderComponents?.[id];
+    const current = project.appBuilderComponents?.[entry.id];
+    const fresh: AppBuilderComponentState = {
+        kind: entry.kind,
+        status: 'deploying',
+        name,
+        source: { owner: entry.source.owner, repo: entry.source.repo, branch: entry.source.branch },
+        ...(entry.catalogId ? { catalogId: entry.catalogId } : {}),
+    };
     project.appBuilderComponents = {
         ...(project.appBuilderComponents ?? {}),
-        [id]: { ...(current ?? ({} as AppBuilderComponentState)), workspace },
+        [entry.id]: { ...(current ?? fresh), workspace },
     };
     await saveProject(project);
 }

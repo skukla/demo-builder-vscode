@@ -165,7 +165,12 @@ export function nextCopyOf<T extends { id: string; name: string }>(
     const family = [entry.id, ...catalog.filter((c) => c.boundTo === entry.id).map((c) => c.id)];
     const components = project.appBuilderComponents ?? {};
     for (let number = 2; ; number++) {
-        const failedCopy = components[`${entry.id}-${number}`]?.status === 'error';
+        const copy = components[`${entry.id}-${number}`];
+        // A record with no status is a failed add as well: one that stopped after its
+        // workspace was recorded and before its deploy began (measured live
+        // 2026-09-22). Counting it as taken started a THIRD copy while the second's
+        // workspace sat there unused.
+        const failedCopy = copy !== undefined && (copy.status === 'error' || copy.status === undefined);
         const free = family.every((id) => !components[`${id}-${number}`]);
         if (failedCopy || free) {
             return { ...entry, id: `${entry.id}-${number}`, catalogId: entry.id, name: `${entry.name} ${number}` };

@@ -203,4 +203,20 @@ describe('nextCopyOf', () => {
 
         expect(nextCopyOf(p, INTEGRATION, CATALOG).id).toBe('erp-integration-2');
     });
+
+    // A project saved by a build that left a half-written record — the workspace and
+    // nothing else, from an add that failed between making the workspace and starting
+    // the deploy (measured live 2026-09-22). That is a failed add too, so adding again
+    // retries it rather than starting a third copy.
+    it('reuses the number of a half-written record, which is a failed add as well', () => {
+        const halfWritten = {
+            workspace: { id: 'ws-9', name: 'ContosoERP', title: 'Contoso ERP' },
+        } as AppBuilderComponentState;
+        const p = project({
+            'erp-integration': component('integration'),
+            'erp-integration-2': halfWritten,
+        });
+
+        expect(nextCopyOf(p, INTEGRATION, CATALOG).id).toBe('erp-integration-2');
+    });
 });

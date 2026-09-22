@@ -75,7 +75,7 @@ export function profileForTenant(
     if (!tenant) {
         throw new Error(
             `${label} needs a product profile, and this project has no Commerce instance ` +
-                'configured to choose one for. Nothing was changed.',
+                'configured to choose one for. No API access was changed.',
         );
     }
     const wanted = tenant.toLowerCase();
@@ -86,7 +86,7 @@ export function profileForTenant(
         throw new Error(
             `${label} needs the product profile for Commerce instance ${tenant}, and ` +
                 `${matches.length} of the org's ${profiles.length} profiles name it. ` +
-                'Nothing was changed.',
+                'No API access was changed.',
         );
     }
     return matches[0];
@@ -124,7 +124,7 @@ function profileEntryFor(
     if (service.profileAccessMissing) {
         throw new Error(
             `You don't have a product profile for ${label}, so it was not added. An Adobe ` +
-                'admin for your org can give you one. Nothing was changed.',
+                'admin for your org can give you one. No API access was changed.',
         );
     }
     if (service.licenseConfigs?.length) {
@@ -133,7 +133,7 @@ function profileEntryFor(
     if (NEEDS_PROFILE.has(service.sdkCode)) {
         throw new Error(
             `Adobe didn't list the product profiles for ${label} just now, so it was not ` +
-                'added — try again. Nothing was changed.',
+                'added — try again. No API access was changed.',
         );
     }
     return null;

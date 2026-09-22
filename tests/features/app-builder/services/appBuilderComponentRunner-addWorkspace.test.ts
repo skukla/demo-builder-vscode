@@ -296,4 +296,52 @@ describe('a second pair', () => {
         expect(handed?.ERP_BASE_URL).toBe(own);
         expect(handed?.ERP_BASE_URL).not.toBe('https://pair-one/erp');
     });
+
+    // Live, 2026-09-22: adding a second ERP made the workspace, deployed the ERP, then
+    // failed at the integration's API subscribe because Adobe did not list the product
+    // profiles. The integration's record was left holding its workspace and NOTHING
+    // else — no kind, no status — so the manifest failed its own schema, no card showed
+    // it, and the next add would have started a THIRD copy instead of retrying this one.
+    it('a failure after the workspace is made leaves a failed record, not a bare stub', async () => {
+        const project = withFirstPair();
+        const deps = depsWithRealWorkspaces(fakeAdobe(), [SYSTEM, INTEGRATION]);
+        (deps.subscribeRequiredApis as jest.Mock).mockImplementation(async (entries: AppBuilderComponentCatalogEntry[]) => {
+            if (entries.some((entry) => entry.id === 'erp-integration-2')) {
+                throw new Error('Adobe did not list the product profiles just now.');
+            }
+        });
+
+        const result = await addAppBuilderComponent(project, SECOND, deps);
+
+        expect(result.success).toBe(false);
+        const record = project.appBuilderComponents?.['erp-integration-2'];
+        expect(record).toMatchObject({
+            kind: 'integration',
+            status: 'error',
+            catalogId: 'erp-integration',
+            workspace: { id: 'ws-1' },
+        });
+        expect(record?.error).toContain('product profiles');
+        expect(record?.source).toEqual({ owner: 'skukla', repo: 'commerce-erp-integration', branch: 'main' });
+    });
+
+    // The subscriber's own refusal ends "No API access was changed", which is true of
+    // the subscribe and false of the ADD: by then the workspace is made and, for a
+    // pair, its ERP is deployed. The add says what it left, so the SC is not told
+    // nothing happened while a workspace sits in their Adobe project (2026-09-22).
+    it('says the workspace is kept and adding again continues from there', async () => {
+        const project = withFirstPair();
+        const deps = depsWithRealWorkspaces(fakeAdobe(), [SYSTEM, INTEGRATION]);
+        (deps.subscribeRequiredApis as jest.Mock).mockImplementation(async (entries: AppBuilderComponentCatalogEntry[]) => {
+            if (entries.some((entry) => entry.id === 'erp-integration-2')) {
+                throw new Error('Adobe did not list the product profiles just now.');
+            }
+        });
+
+        const result = await addAppBuilderComponent(project, SECOND, deps);
+
+        expect(result.error).toContain('Adobe did not list the product profiles');
+        expect(result.error).toContain('Adobe workspace');
+        expect(result.error).toContain('adding it again continues from there');
+    });
 });
