@@ -63,17 +63,42 @@ Read from the code in a project's clone of both apps on 2026-09-22 (the Admin pa
    not the same as a documented no). The Bulk Actions log could show ERP → Commerce changes
    made through the asynchronous bulk API, for that one direction only; untested on the
    cloud service.
+5. **Each ERP gets its own section in the Commerce Admin menu**, named after the ERP
+   ("Northwind ERP"), not one shared "ERP integration" item. Each ERP has its own contracts,
+   settings and health, and with two ERPs (AB-16) one item cannot show both. Its items, as a
+   first cut: **Status** (reachable or not, the exchange history, retry), **Pricing** (below),
+   **Settings** (the rest of the integration's behaviour: orders, offline handling). Buildable:
+   AB-10 records the reference app declaring a three-item section through the Admin UI SDK.
+   With two copies each section needs its own ids — the same fixed-name problem as AB-15,
+   solved by the same per-copy setting.
+6. **The ERP's pricing rules are visible in Commerce, read-only**: which contracts exist, which
+   companies they cover, their validity dates, active or not. The price explanation (decision
+   2) widened from one cart to the rule list. It serves the store operator who fields "why is
+   this buyer's price wrong?".
+7. **Commerce switches its USE of the ERP's rules, never the rules themselves.** Pricing
+   conditions sit behind the ERP's own approvals and audit trail, so switching one off from
+   Commerce would go around them and bring back two owners. Commerce's switches are the
+   integration's behaviour, per website: use contract prices, apply the discount ceiling, and
+   what happens when the ERP does not answer (fall back to Commerce prices, or block checkout).
+   The first two exist as business settings today. A "pretend the ERP is down" switch for live
+   demos belongs here too (AB-10 names failure toggles).
+
+Decisions 5 to 7 were proposed from how these integrations are usually run, not from sources;
+the research pass in `.rptc/research/erp-two-way-ux/` (2026-09-22) is checking them against
+what shipped integrations actually offer.
 
 ## Parts
 
 1. **The Admin menu reads "ERP integration" twice.** The section heading and the item both
    come from the app manifest: the item is `adminUi.menu.label`, the heading most likely
-   `metadata.displayName` (inferred). Keep the section as the app's name; name the item for
-   the page ("Sync status"). Bump `metadata.version`, or the change never reaches Commerce.
+   `metadata.displayName` (inferred). Superseded in shape by decision 5 — a section per ERP,
+   named after it, with items named for their pages — but the rule stands: bump
+   `metadata.version`, or the change never reaches Commerce.
 2. **An exchange history**, written by the integration for every crossing — price answers,
    orders sent, statuses received, failures — kept like its company ledger, shown on the
    Admin page with filters (failed; this order; this company).
-3. **Price explanations**, answered live by the ERP and shown read-only (decision 2).
+3. **Price explanations and the rule list**, answered live by the ERP and shown read-only
+   (decisions 2 and 6), with the per-website switches beside them (decision 7).
 4. **Retry one failed item** from the history.
 5. **Follow one record end to end**, built on the history.
 6. **The ERP user's side**: what the ERP screen shows about Commerce (not designed; the table
