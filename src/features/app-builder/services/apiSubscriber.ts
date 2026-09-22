@@ -29,7 +29,8 @@ import {
 } from './apiServiceResolution';
 import { catalogEntryFor } from './componentEntry';
 import { credentialsAlreadyCover, type SubscribeOptions } from './credentialCoverage';
-import { alreadySubscribed, buildSubscriptionList, UNKNOWN_CURRENT } from './subscriptionList';
+import { subscribeApiKeyServices, subscribeOAuthServices } from './credentialSubscribe';
+import type { RememberedProfile } from './subscriptionList';
 import { BASELINE_API } from '@/core/constants';
 import type {
     OrgServiceInfo,
@@ -44,10 +45,6 @@ export { partitionByPlatform, resolveServiceInfos, type ServiceInfo };
 
 /** Default allowed-domain when a caller supplies none (matches setupInstructions). */
 const DEFAULT_DOMAIN = 'localhost:3000';
-/** apiKey credential metadata (a formality satisfying `domainMandatory`). */
-const APIKEY_CREDENTIAL_NAME = 'demo-builder-api-mesh';
-const APIKEY_CREDENTIAL_DESCRIPTION = 'API Mesh access (Demo Builder)';
-
 /** A subscribed API as reported back to callers (code + display name when known). */
 export interface SubscribedApi {
     code: string;
@@ -83,6 +80,12 @@ export interface OrgTarget {
      * service that needs one (ACCS-REST-API); without it such a service is refused.
      */
     commerceTenant?: string;
+    /**
+     * The Commerce product profile this project already uses, for the days Adobe's
+     * catalog does not list profiles at all. Only ever applied when its tenant
+     * matches `commerceTenant` (`subscriptionList.ts`).
+     */
+    commerceProfile?: RememberedProfile;
 }
 
 /**
@@ -191,93 +194,6 @@ export function entriesThatNeedApis(
     return [...kept, ...copies, ...adding.filter((entry) => !keptIds.has(entry.id))];
 }
 
-/**
- * Fire a `done` tick for every service in the group (no-op without a listener).
- * AWAITS each tick so it is flushed to the listener's channel before the subscribe
- * continues — the guarantee that makes a per-API progress stream race-proof.
- */
-async function emitProgress(
-    services: ServiceInfo[],
-    done: boolean,
-    onProgress?: SubscribeProgressListener,
-): Promise<void> {
-    if (!onProgress) return;
-    for (const service of services) {
-        await onProgress({ code: service.sdkCode, done });
-    }
-}
-
-/**
- * Send the credential its merged list, or nothing: read what it holds now, skip when
- * nothing is missing or leaving, and refuse rather than PUT from an unknown list —
- * the PUT REPLACES the credential's list (`subscriptionList.ts`). Shared by both
- * credential paths.
- */
-async function reconcileCredential(
-    services: ServiceInfo[],
-    idIntegration: string,
-    target: OrgTarget,
-    client: ApiSubscriberClient,
-    removing: ReadonlySet<string>,
-    put: (serviceInfo: ServiceSubscriptionInfo[]) => Promise<void>,
-): Promise<void> {
-    const current = await client.getSubscribedServices(target.orgId, idIntegration);
-    if (!current) throw new Error(UNKNOWN_CURRENT);
-    if (alreadySubscribed(services, current, removing)) return;
-    await put(buildSubscriptionList(services, current, removing, target.commerceTenant));
-}
-
-async function subscribeOAuthServices(
-    services: ServiceInfo[],
-    target: OrgTarget,
-    client: ApiSubscriberClient,
-    removing: ReadonlySet<string>,
-    onProgress?: SubscribeProgressListener,
-): Promise<void> {
-    if (services.length === 0) {
-        return;
-    }
-    await emitProgress(services, false, onProgress);
-    const idIntegration = await client.ensureOAuthCredentialId(target);
-    await reconcileCredential(services, idIntegration, target, client, removing, (serviceInfo) =>
-        client.subscribeOAuthServerToServerIntegrationToServices(target.orgId, idIntegration, serviceInfo),
-    );
-    await emitProgress(services, true, onProgress);
-}
-
-async function subscribeApiKeyServices(
-    services: ServiceInfo[],
-    target: OrgTarget,
-    client: ApiSubscriberClient,
-    domain: string,
-    removing: ReadonlySet<string>,
-    onProgress?: SubscribeProgressListener,
-): Promise<void> {
-    if (services.length === 0) {
-        return;
-    }
-    await emitProgress(services, false, onProgress);
-    const idIntegration = await client.createAdobeIdCredential(
-        target.orgId,
-        target.projectId,
-        target.workspaceId,
-        {
-            // AdobeID credential names are unique per PROJECT, so a fixed name
-            // collides on the 2nd workspace (409 duplicate). Scope it to the
-            // workspace; still reuse the legacy fixed-name credential where it
-            // already exists so nothing provisioned earlier is duplicated.
-            name: `${APIKEY_CREDENTIAL_NAME}-${target.workspaceId}`,
-            reuseNames: [APIKEY_CREDENTIAL_NAME],
-            description: APIKEY_CREDENTIAL_DESCRIPTION,
-            platform: 'apiKey',
-            domain,
-        },
-    );
-    await reconcileCredential(services, idIntegration, target, client, removing, (serviceInfo) =>
-        client.subscribeAdobeIdIntegrationToServices(target.orgId, idIntegration, serviceInfo),
-    );
-    await emitProgress(services, true, onProgress);
-}
 
 /**
  * Reconcile the UNION of all appBuilderComponents' `requiredApis` (+ baseline) onto the
@@ -361,10 +277,17 @@ export async function subscribeRequiredApis(
     // every tick is still delivered before this function (and the handler) returns.
     const sending = apiKey.length + oauthS2S.length;
     observe?.onStep?.(`Adding ${sending} service${sending === 1 ? '' : 's'} to your workspace`);
+    // The profile each group chose, kept once at the end: the callers persist it on
+    // the project so a later workspace does not depend on Adobe listing it again.
+    let chosenProfile: RememberedProfile | undefined;
+    const keepProfile = (profile: RememberedProfile): void => {
+        chosenProfile = profile;
+    };
     await Promise.all([
-        subscribeOAuthServices(oauthS2S, target, client, removed, onProgress),
-        subscribeApiKeyServices(apiKey, target, client, domain, removed, onProgress),
+        subscribeOAuthServices(oauthS2S, target, client, removed, onProgress, keepProfile),
+        subscribeApiKeyServices(apiKey, target, client, domain, removed, onProgress, keepProfile),
     ]);
+    if (chosenProfile) await observe?.onProfileResolved?.(chosenProfile);
 
     // Report only what a subscribe endpoint actually took. An unmatched service
     // was never PUT anywhere, so including it here would let the caller log it as

@@ -107,6 +107,28 @@ export function profileForTenant(
 const NEEDS_PROFILE = new Set(['ACCS-REST-API']);
 
 /**
+ * The product profile a project uses for its Commerce instance, kept on the project
+ * so a later workspace does not depend on Adobe listing it again.
+ *
+ * ALWAYS carried with the tenant it was chosen for: reusing another instance's
+ * profile would succeed and grant the wrong access, which is worse than refusing.
+ */
+export interface RememberedProfile {
+    /** The Commerce tenant this profile was chosen for. */
+    tenant: string;
+    id: string;
+    productId: string;
+}
+
+/** What the list-builder may reuse, and where it reports what it chose. */
+export interface ProfileMemory {
+    /** The profile this project already uses, when it has one. */
+    remembered?: RememberedProfile;
+    /** Called with each profile chosen from the catalog, for the caller to keep. */
+    onResolved?: (profile: RememberedProfile) => void;
+}
+
+/**
  * The profile entry for a service being ADDED — or a refusal naming why not.
  *
  * Only ever called for an addition. A service the credential already holds is
@@ -118,9 +140,12 @@ const NEEDS_PROFILE = new Set(['ACCS-REST-API']);
 function profileEntryFor(
     service: ServiceInfo,
     tenant: string | undefined,
+    options: ProfileMemory = {},
 ): ServiceSubscriptionInfo['licenseConfigs'] {
     const label = service.name ?? service.sdkCode;
-    // Adobe's own verdict first: it is the one that says whose problem this is.
+    // Adobe's own verdict first: it is the one that says whose problem this is — and
+    // the one case a remembered profile must NOT paper over, because an admin has to
+    // act and a remembered id would only turn that into a rejected subscribe.
     if (service.profileAccessMissing) {
         throw new Error(
             `You don't have a product profile for ${label}, so it was not added. An Adobe ` +
@@ -128,9 +153,21 @@ function profileEntryFor(
         );
     }
     if (service.licenseConfigs?.length) {
-        return asLicenseConfigs([profileForTenant(service, tenant)]);
+        const chosen = profileForTenant(service, tenant);
+        // Remembered only with the tenant it was chosen for, so it can never be
+        // reused for a project pointed at another Commerce instance.
+        if (tenant) options.onResolved?.({ tenant, id: chosen.id, productId: chosen.productId });
+        return asLicenseConfigs([chosen]);
     }
     if (NEEDS_PROFILE.has(service.sdkCode)) {
+        // The catalog has lost the profiles before (twenty minutes on 2026-09-21; a
+        // second ERP's whole add on 2026-09-22) while the entitlement was intact. The
+        // profile this project already uses answers it — for the SAME Commerce
+        // instance, never another's.
+        const remembered = options.remembered;
+        if (remembered && tenant && remembered.tenant === tenant) {
+            return asLicenseConfigs([{ id: remembered.id, productId: remembered.productId }]);
+        }
         throw new Error(
             `Adobe didn't list the product profiles for ${label} just now, so it was not ` +
                 'added — try again. No API access was changed.',
@@ -153,6 +190,7 @@ export function buildSubscriptionList(
     current: SubscribedService[],
     removing: ReadonlySet<string>,
     tenant: string | undefined,
+    profiles: ProfileMemory = {},
 ): ServiceSubscriptionInfo[] {
     const kept = current
         .filter((service) => !removing.has(service.sdkCode))
@@ -166,7 +204,7 @@ export function buildSubscriptionList(
         .filter((service) => !have.has(service.sdkCode))
         .map((service) => ({
             sdkCode: service.sdkCode,
-            licenseConfigs: profileEntryFor(service, tenant),
+            licenseConfigs: profileEntryFor(service, tenant, profiles),
             roles: null,
         }));
     return [...kept, ...added];

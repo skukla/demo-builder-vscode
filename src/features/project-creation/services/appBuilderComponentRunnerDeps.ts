@@ -302,6 +302,15 @@ export function buildDefaultRunnerDeps(
                     onStep,
                     log: (message) => ctx.logger.debug(message),
                     skipCoverageCheck: scope?.adding,
+                    // Kept on the project so the NEXT workspace can subscribe even on
+                    // the days Adobe's catalog lists no profiles for Commerce at all
+                    // (2026-09-21, 2026-09-22). Written only when it changed.
+                    onProfileResolved: async (profile) => {
+                        const held = project.adobe?.commerceProfile;
+                        if (held?.id === profile.id && held.tenant === profile.tenant) return;
+                        project.adobe = { ...(project.adobe ?? {}), commerceProfile: profile };
+                        await ctx.saveProject(project);
+                    },
                 },
             );
             // Which APIs, and how long: the step that stalled Bodea's redeploys

@@ -42,7 +42,7 @@ import type { Logger } from '@/types/logger';
  * no change — and the wizard handler can build one from a payload (no cast).
  */
 export interface MeshSubscribeTarget {
-    adobe?: Pick<AdobeConfig, 'organization' | 'projectId' | 'workspace'>;
+    adobe?: Pick<AdobeConfig, 'organization' | 'projectId' | 'workspace' | 'commerceProfile'>;
     componentSelections?: Pick<NonNullable<Project['componentSelections']>, 'backend' | 'frontend'>;
     componentInstances?: Project['componentInstances'];
     additionalConsoleApis?: Project['additionalConsoleApis'];
@@ -70,13 +70,19 @@ export function subscriberTarget(
     const own = componentId
         ? project.appBuilderComponents?.[componentId]?.workspace?.id
         : undefined;
+    const tenant = deriveAccsTenantId(
+        lookupComponentConfigValue(project.componentConfigs ?? {}, ACCS_GRAPHQL_ENDPOINT),
+    );
+    const remembered = project.adobe?.commerceProfile;
     return {
         orgId: project.adobe?.organization ?? '',
         projectId: project.adobe?.projectId ?? '',
         workspaceId: own ?? project.adobe?.workspace ?? '',
-        commerceTenant: deriveAccsTenantId(
-            lookupComponentConfigValue(project.componentConfigs ?? {}, ACCS_GRAPHQL_ENDPOINT),
-        ),
+        commerceTenant: tenant,
+        // Only for the SAME Commerce instance: a project moved to another tenant must
+        // not be handed the old one's profile, which would succeed and grant the wrong
+        // access (see `RememberedProfile`).
+        ...(remembered && tenant && remembered.tenant === tenant ? { commerceProfile: remembered } : {}),
     };
 }
 

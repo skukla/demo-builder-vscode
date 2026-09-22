@@ -440,6 +440,21 @@ export interface AdobeConfig {
     /** Human-readable workspace title (preferred for display) */
     workspaceTitle?: string;
     authenticated?: boolean;
+    /**
+     * The Adobe product profile this project's credentials use for Commerce
+     * (ACCS-REST-API), with the Commerce tenant it was chosen for.
+     *
+     * Adobe's org catalog answers that service with no profiles at all now and
+     * then — twenty minutes of it on 2026-09-21, and a whole failed add on
+     * 2026-09-22 — while the entitlement is intact. Remembering what was chosen
+     * lets a later workspace subscribe anyway. The TENANT is what makes it safe:
+     * a project pointed at another Commerce instance must never be handed this.
+     */
+    commerceProfile?: {
+        tenant: string;
+        id: string;
+        productId: string;
+    };
 }
 
 export interface CommerceConfig {

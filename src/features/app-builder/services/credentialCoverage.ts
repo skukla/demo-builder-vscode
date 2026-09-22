@@ -44,6 +44,12 @@ export interface SubscribeObservers {
  */
 export interface SubscribeOptions extends SubscribeObservers {
     skipCoverageCheck?: boolean;
+    /**
+     * Called with the Commerce product profile the subscribe chose from Adobe's
+     * catalog, so the caller can keep it on the project for the days the catalog
+     * does not list it (see `RememberedProfile`).
+     */
+    onProfileResolved?: (profile: { tenant: string; id: string; productId: string }) => void | Promise<void>;
 }
 
 /** The reads this question needs — the subset of `ApiSubscriberClient` it uses. */

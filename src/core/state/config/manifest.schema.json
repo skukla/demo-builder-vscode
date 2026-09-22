@@ -259,6 +259,26 @@
         },
         "authenticated": {
           "type": "boolean"
+        },
+        "commerceProfile": {
+          "type": "object",
+          "properties": {
+            "tenant": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "productId": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "tenant",
+            "id",
+            "productId"
+          ],
+          "description": "The Adobe product profile this project's credentials use for Commerce (ACCS-REST-API), with the Commerce tenant it was chosen for.\n\nAdobe's org catalog answers that service with no profiles at all now and then — twenty minutes of it on 2026-09-21, and a whole failed add on 2026-09-22 — while the entitlement is intact. Remembering what was chosen lets a later workspace subscribe anyway. The TENANT is what makes it safe: a project pointed at another Commerce instance must never be handed this."
         }
       }
     },
