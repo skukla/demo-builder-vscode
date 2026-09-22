@@ -495,3 +495,7 @@ and re-adding an integration — no migration code ships.
 - 2026-09-21  feat(destination): a move into another Adobe project takes each integration along (`5cf0fa515`)
 - 2026-09-21  fix(apis): the project's workspace no longer gets other workspaces' APIs (`cec358cc0`)
 - 2026-09-21  feat(ai): the agent surface describes per-integration workspaces (`305bf6f15`)
+- 2026-09-22  feat(integrations): a second copy reads, opens and subscribes as what it is (`4d86e6f47`)
+- 2026-09-22  feat(integrations): adding a kind the project has adds a numbered copy (`05df923c3`)
+- 2026-09-22  feat(app-builder): each half of a pair finds ITS partner, not the first of its kind (`1e255fde4`)
+- 2026-09-21  feat(app-builder): a component can record which catalog entry it came from (`b7de86803`)
