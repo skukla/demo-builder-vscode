@@ -152,3 +152,4 @@ Filed 2026-09-22.
 - 2026-09-22  docs(research): what two-way commerce-ERP integrations give each person (`3318afaa6`)
 - 2026-09-22  docs(research): second pass on two-way ERP UX, one first-pass claim overturned (`7a31fd348`)
 - 2026-09-22  History and Retry for orders sent to the ERP, in skukla/commerce-erp-integration on feature/sync-history (2244a65, 1aedb8e); not pushed, not deployed
+- 2026-09-22  docs(plan): AB-25 history and retry, built in the ERP integration repo (`f88eee0e8`)
