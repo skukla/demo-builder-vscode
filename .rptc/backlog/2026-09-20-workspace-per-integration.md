@@ -492,3 +492,4 @@ and re-adding an integration — no migration code ships.
 - 2026-09-21  fix(apis): add_console_apis can reach one integration's own workspace (`d8fcfc4c3`)
 - 2026-09-21  fix(reset): a project reset never touches an integration (`e9abcfcf6`)
 - 2026-09-21  fix(destination): a move within one Adobe project leaves own workspaces alone (`001f15040`)
+- 2026-09-21  feat(destination): a move into another Adobe project takes each integration along (`5cf0fa515`)
