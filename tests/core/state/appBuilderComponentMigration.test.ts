@@ -295,6 +295,33 @@ describe('healPartialComponents', () => {
         expect(healed['erp-integration-2'].error).toContain('did not finish');
     });
 
+    // The heal's own first version wrote `owner: ''`, the project was saved with it,
+    // and the screens went on failing — a record that LOOKS whole and is not.
+    it('repairs a source whose owner or repo is blank', () => {
+        const saved = {
+            kind: 'integration',
+            status: 'error',
+            name: 'Contoso ERP',
+            source: { owner: '', repo: 'erp-integration-2' },
+            workspace: { id: 'ws-9', name: 'ContosoERP', title: 'Contoso ERP' },
+        } as AppBuilderComponentState;
+
+        const healed = healPartialComponents({ 'erp-integration-2': saved })['erp-integration-2'];
+
+        expect(healed.source).toStrictEqual({ owner: 'unknown', repo: 'erp-integration-2' });
+    });
+
+    // The charset every source is gated on before a clone (GITHUB_NAME in
+    // appBuilderComponentCatalogLoader). A healed record that fails it throws where
+    // the missing field would have.
+    it('heals to a source that passes the charset a clone demands', () => {
+        const healed = healPartialComponents({ 'erp-integration-2': partial as AppBuilderComponentState });
+        const { owner, repo } = healed['erp-integration-2'].source;
+
+        expect(owner).toMatch(/^[A-Za-z0-9._-]+$/);
+        expect(repo).toMatch(/^[A-Za-z0-9._-]+$/);
+    });
+
     it('leaves a whole record exactly as it is', () => {
         const whole: AppBuilderComponentState = {
             kind: 'system',

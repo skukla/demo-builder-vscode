@@ -121,7 +121,13 @@ export function healPartialComponents(
     const entries = Object.entries(components ?? {});
     return Object.fromEntries(
         entries.map(([id, state]) => {
-            const whole = state?.kind && state?.status && state?.source;
+            // A source with a BLANK owner or repo is as unusable as none: both are
+            // gated on GitHub's name charset before any clone, and the throw takes
+            // out whichever screen asked first (dashboard, then integrations, live
+            // 2026-09-22 — the second time because a build of this very heal wrote
+            // an empty owner and the project was saved with it).
+            const source = state?.source;
+            const whole = state?.kind && state?.status && source?.owner && source?.repo;
             if (whole) return [id, state];
             return [
                 id,
@@ -135,7 +141,11 @@ export function healPartialComponents(
                     // (`appBuilderComponentCatalogLoader`), so an empty owner threw and
                     // took the whole integrations screen with it. Nothing clones this —
                     // the card exists to be removed.
-                    source: state?.source ?? { owner: UNKNOWN_SOURCE_OWNER, repo: state?.catalogId ?? id },
+                    source: {
+                        ...source,
+                        owner: source?.owner || UNKNOWN_SOURCE_OWNER,
+                        repo: source?.repo || state?.catalogId || id,
+                    },
                     error:
                         state?.error ??
                         'Adding this did not finish. Remove it to clean up what it made, then add it again.',
