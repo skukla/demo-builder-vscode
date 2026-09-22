@@ -9,6 +9,7 @@ import {
     integrationUsing,
     linkBroughtSystem,
     linkComponents,
+    nextCopyOf,
     pairedInstanceId,
     systemsUsedBy,
 } from '@/features/components/services/appBuilderComponentLinks';
@@ -166,5 +167,40 @@ describe('linkBroughtSystem for a second pair', () => {
         expect(systemsUsedBy(p, 'erp-integration-2', CATALOG)).toEqual(['demo-erp-2']);
         expect(integrationUsing(p, 'demo-erp-2', CATALOG)).toBe('erp-integration-2');
         expect(systemsUsedBy(p, 'erp-integration', CATALOG)).toEqual(['demo-erp']);
+    });
+});
+
+// Adding a kind the project already has makes a numbered copy of it — for a pair,
+// numbered so its ERP can take the same number (AB-23).
+describe('nextCopyOf', () => {
+    const INTEGRATION = { id: 'erp-integration', name: 'ERP Integration', kind: 'integration' as const };
+
+    it('numbers the first copy 2, and remembers what it was made from', () => {
+        const p = project({ 'erp-integration': component('integration'), 'demo-erp': component('system') });
+
+        expect(nextCopyOf(p, INTEGRATION, CATALOG)).toEqual({
+            ...INTEGRATION,
+            id: 'erp-integration-2',
+            catalogId: 'erp-integration',
+            name: 'ERP Integration 2',
+        });
+    });
+
+    it('skips a number either half of the pair already uses', () => {
+        const p = project({
+            'erp-integration': component('integration'),
+            'demo-erp-2': component('system', { catalogId: 'demo-erp' }),
+        });
+
+        expect(nextCopyOf(p, INTEGRATION, CATALOG).id).toBe('erp-integration-3');
+    });
+
+    it('reuses the number of a copy whose add failed, so a retry is a retry', () => {
+        const p = project({
+            'erp-integration': component('integration'),
+            'erp-integration-2': component('integration', { status: 'error', catalogId: 'erp-integration' }),
+        });
+
+        expect(nextCopyOf(p, INTEGRATION, CATALOG).id).toBe('erp-integration-2');
     });
 });

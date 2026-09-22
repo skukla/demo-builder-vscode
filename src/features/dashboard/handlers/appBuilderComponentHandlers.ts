@@ -50,6 +50,7 @@ import {
     getAppBuilderComponentCatalog,
     getAppBuilderComponentEntry,
 } from '@/features/components/services/appBuilderComponentCatalogLoader';
+import { copyForAdd } from '@/features/components/services/appBuilderComponentLinks';
 import {
     buildDefaultRunnerDeps,
     buildRunnerDepsContext,
@@ -604,16 +605,33 @@ export const handleAddAppBuilderComponent: MessageHandler<
     if (!project) {
         return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
     }
-    const entry = resolveAddEntry(payload ?? {});
-    if (!entry) {
+    const resolved = resolveAddEntry(payload ?? {});
+    if (!resolved) {
         return { success: false, error: 'Unknown appBuilderComponent', code: ErrorCode.CONFIG_INVALID };
     }
+    const entry = copyWhenTaken(project, resolved, payload ?? {});
     const refusal = refuseAdd(project, entry);
     if (refusal) return refusal;
 
     const result = await runAdd(context, project, entry, payload ?? {});
     return reportAddOutcome(context, entry, result);
 }, addedIdOf);
+
+/**
+ * A catalog entry the project already holds is added again as a numbered copy
+ * (`erp-integration-2`), which brings its own ERP and gets its own workspace (AB-23).
+ * Not for a mesh — a project has one — nor for a custom source, whose id is its repo;
+ * those still meet the same-id refusal. A copy whose add failed keeps its id, so
+ * adding again retries it.
+ */
+function copyWhenTaken(
+    project: Project,
+    entry: AppBuilderComponentCatalogEntry,
+    payload: AddAppBuilderComponentRequestPayload,
+): AppBuilderComponentCatalogEntry {
+    if (payload.source) return entry;
+    return copyForAdd(project, entry, getAppBuilderComponentCatalog()) ?? entry;
+}
 
 /**
  * Resolve the two things every per-component handler needs first: a non-empty

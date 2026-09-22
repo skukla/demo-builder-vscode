@@ -32,6 +32,7 @@
 
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import { copyForAdd } from '@/features/components/services/appBuilderComponentLinks';
 import { AddIntegrationFlowModal } from '@/features/project-creation/ui/components/integration-flow/AddIntegrationFlowModal';
 import { buildReservedIds } from '@/features/project-creation/ui/components/integration-flow/instanceId';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
@@ -111,6 +112,8 @@ export function AddIntegrationFlowAdapter({
     onDestinationChosenRef.current = onDestinationChosen;
     const catalogRef = useRef(catalog);
     catalogRef.current = catalog;
+    const componentsRef = useRef(appBuilderComponents);
+    componentsRef.current = appBuilderComponents;
 
     // A REAL state store for the modal session, not a filter.
     //
@@ -249,13 +252,29 @@ export function AddIntegrationFlowAdapter({
                     // `displayName` names the entry's bound SYSTEM (the ERP the
                     // integration talks to); the entry keeps its catalog identity,
                     // so the pair still arrives together.
-                    const payload = { id, apis: apiPicksRef.current[id], name: displayName };
+                    const entry = catalogRef.current.find((candidate) => candidate.id === id);
+                    // A kind the project already has is added as a numbered copy
+                    // (AB-23). Named HERE, by the same rule the add handler applies,
+                    // so the progress modal opens under the copy's id rather than the
+                    // first one's.
+                    const copy =
+                        entry &&
+                        copyForAdd({ appBuilderComponents: componentsRef.current }, entry, catalogRef.current);
+                    const payload = {
+                        id,
+                        ...(copy ? { instanceId: copy.id } : {}),
+                        apis: apiPicksRef.current[id],
+                        name: displayName,
+                    };
                     postAdd(payload);
-                    const catalogName = catalogRef.current.find((entry) => entry.id === id)?.name;
                     // The payload rides along so the modal's Retry re-sends this
                     // exact add rather than a deploy of something that may never
                     // have been persisted.
-                    onAddStartedRef.current?.(id, displayName ?? catalogName ?? id, payload);
+                    onAddStartedRef.current?.(
+                        copy?.id ?? id,
+                        displayName ?? copy?.name ?? entry?.name ?? id,
+                        payload,
+                    );
                 }
             },
             onAddCustomAppBuilderComponent: (

@@ -141,3 +141,59 @@ export function pairedInstanceId(id: string, catalogId: string | undefined, part
     const number = catalogId && id.startsWith(catalogId) ? id.slice(catalogId.length) : '';
     return partnerCatalogId + number;
 }
+
+/**
+ * The next copy of a catalog entry the project already holds: `erp-integration-2`,
+ * named "ERP Integration 2", remembering the entry it was made from. The number is one
+ * neither the entry nor the systems it brings use yet, so the pair can share it — or
+ * the number of a copy whose add failed, so adding again retries it rather than
+ * starting a third (AB-23).
+ *
+ * Here, rather than beside the add handler, because the Add Integration screen names
+ * the copy too: it opens the progress modal under the copy's id before the add runs.
+ *
+ * @param project - the project
+ * @param entry - the catalog entry being added again
+ * @param catalog - the catalog, for the systems the entry brings
+ * @returns the copy to add
+ */
+export function nextCopyOf<T extends { id: string; name: string }>(
+    project: Components,
+    entry: T,
+    catalog: Catalog,
+): T & { catalogId: string } {
+    const family = [entry.id, ...catalog.filter((c) => c.boundTo === entry.id).map((c) => c.id)];
+    const components = project.appBuilderComponents ?? {};
+    for (let number = 2; ; number++) {
+        const failedCopy = components[`${entry.id}-${number}`]?.status === 'error';
+        const free = family.every((id) => !components[`${id}-${number}`]);
+        if (failedCopy || free) {
+            return { ...entry, id: `${entry.id}-${number}`, catalogId: entry.id, name: `${entry.name} ${number}` };
+        }
+    }
+}
+
+/**
+ * The copy an add of this entry makes, or undefined when the add is of the entry
+ * itself: the project does not hold it, or holds it from an add that failed (adding
+ * again retries it). A mesh is never copied — a project has one — so a second mesh
+ * meets the add door's same-id refusal instead.
+ *
+ * One rule for the add handler and the Add Integration screen, so the id the screen
+ * opens its progress modal under is the id the handler adds.
+ *
+ * @param project - the project
+ * @param entry - the catalog entry being added
+ * @param catalog - the catalog, for the systems the entry brings
+ * @returns the copy, or undefined
+ */
+export function copyForAdd<T extends { id: string; name: string; kind: string }>(
+    project: Components,
+    entry: T,
+    catalog: Catalog,
+): (T & { catalogId: string }) | undefined {
+    if (entry.kind === 'mesh') return undefined;
+    const existing = project.appBuilderComponents?.[entry.id];
+    if (!existing || existing.status === 'error') return undefined;
+    return nextCopyOf(project, entry, catalog);
+}

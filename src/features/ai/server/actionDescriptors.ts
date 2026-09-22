@@ -76,7 +76,9 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
             "of its own (an ERP and its integration share one; a mesh stays in the project's " +
             'workspace), clone it, subscribe its Adobe APIs there, build and deploy it, and ' +
             'register it on the dashboard. get_project shows the workspace on its record. ' +
-            'Pass a catalog `id` (from list_components) OR a custom GitHub `source`. ' +
+            'Pass a catalog `id` (from list_components) OR a custom GitHub `source`. Adding a ' +
+            'catalog id the project already has adds a numbered copy (`erp-integration-2`, which ' +
+            'brings its own `demo-erp-2`); a project has one mesh. ' +
             'Takes about a minute. Returns the id to use with deploy_integration / ' +
             'remove_integration. Confirm the choice with the user first.',
         map: dashboardHandlers,

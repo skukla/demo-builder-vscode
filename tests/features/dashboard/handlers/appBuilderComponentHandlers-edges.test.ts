@@ -125,7 +125,9 @@ describe('the same-id gate', () => {
         ).resolves.toMatchObject({ success: true });
     });
 
-    it('names the EXISTING entry by its display name when it refuses', async () => {
+    // AB-23: a project may hold two of a kind, each in its own workspace. Adding a
+    // catalog entry the project already has adds a numbered copy instead of refusing.
+    it('adds a numbered copy when the id is taken, remembering the entry it came from', async () => {
         const { mockContext } = setupMocks({
             appBuilderComponents: { 'erp-sync': deployed('acme', 'erp-sync') },
         });
@@ -133,7 +135,42 @@ describe('the same-id gate', () => {
 
         const result = await handleAddAppBuilderComponent(mockContext, { id: 'erp-sync' });
 
-        expect(result.error).toContain('"ERP Sync"');
+        expect(result.success).toBe(true);
+        expect(mockAddAppBuilderComponent).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({ id: 'erp-sync-2', catalogId: 'erp-sync', name: 'ERP Sync 2' }),
+            expect.anything(),
+        );
+    });
+
+    it('retries the first copy under its own id when its add had failed', async () => {
+        const { mockContext } = setupMocks({
+            appBuilderComponents: { 'erp-sync': { ...deployed('acme', 'erp-sync'), status: 'error' } },
+        });
+        mockTestDeveloperPermissions(true);
+
+        await handleAddAppBuilderComponent(mockContext, { id: 'erp-sync' });
+
+        expect(mockAddAppBuilderComponent).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({ id: 'erp-sync' }),
+            expect.anything(),
+        );
+    });
+
+    it('still refuses a second mesh, naming the one it has', async () => {
+        const { mockContext } = setupMocks({
+            appBuilderComponents: {
+                'commerce-mesh': { kind: 'mesh', status: 'deployed', source: { owner: 'o', repo: 'm' }, name: 'API Mesh' },
+            },
+        });
+        mockTestDeveloperPermissions(true);
+        mockGetAppBuilderComponentEntry.mockReturnValue({ ...ERP_ENTRY, id: 'commerce-mesh', name: 'API Mesh', kind: 'mesh' });
+
+        const result = await handleAddAppBuilderComponent(mockContext, { id: 'commerce-mesh' });
+
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('"API Mesh"');
         expect(mockAddAppBuilderComponent).not.toHaveBeenCalled();
     });
 });

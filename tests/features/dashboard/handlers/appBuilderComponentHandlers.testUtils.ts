@@ -43,6 +43,8 @@ jest.mock('@/features/project-creation/services/appBuilderComponentRunnerDeps', 
 
 // ---- catalog loader --------------------------------------------------------
 export const mockGetAppBuilderComponentEntry = jest.fn();
+/** The catalog listing — what a second copy's bound systems are read from. */
+export const mockGetAppBuilderComponentCatalog = jest.fn((): unknown[] => []);
 export const mockBuildCustomIntegrationEntry = jest.fn(
     (source: { owner: string; repo: string; branch?: string }) => ({
         id: `${source.owner}-${source.repo}`,
@@ -54,6 +56,7 @@ export const mockBuildCustomIntegrationEntry = jest.fn(
 );
 jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => ({
     getAppBuilderComponentEntry: (...a: unknown[]) => mockGetAppBuilderComponentEntry(...a),
+    getAppBuilderComponentCatalog: () => mockGetAppBuilderComponentCatalog(),
     buildCustomIntegrationEntry: (...a: unknown[]) =>
         mockBuildCustomIntegrationEntry(...(a as [never])),
     // Pure predicate — run the REAL one so the add-door stack gate is tested

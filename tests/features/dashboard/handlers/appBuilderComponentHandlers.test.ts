@@ -600,21 +600,8 @@ describe('handleRenameAppBuilderComponent (display name only — shell instancin
  * name, which is what makes several of them legitimate.
  */
 describe('handleAddAppBuilderComponent — duplicate ids', () => {
-    it('refuses a catalog entry already present, without calling the runner', async () => {
-        const { mockContext } = setupMocks({
-            appBuilderComponents: {
-                'erp-sync': { kind: 'integration', status: 'deployed', source: { owner: 'acme', repo: 'erp-sync', branch: 'main' } },
-            },
-        });
-        mockTestDeveloperPermissions(true);
-
-        const result = await handleAddAppBuilderComponent(mockContext, { id: 'erp-sync' });
-
-        expect(result.success).toBe(false);
-        expect(result.error).toMatch(/already/i);
-        expect(mockAddAppBuilderComponent).not.toHaveBeenCalled();
-    });
-
+    // A catalog entry already present is now added as a numbered copy (AB-23) —
+    // pinned in the edges suite's same-id gate. A custom source still refuses:
     it('refuses a custom source whose derived id is already present', async () => {
         mockBuildCustomIntegrationEntry.mockReturnValue({
             id: 'acme-erp-sync',

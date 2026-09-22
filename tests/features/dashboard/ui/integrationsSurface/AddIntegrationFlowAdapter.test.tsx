@@ -320,6 +320,28 @@ describe('AddIntegrationFlowAdapter', () => {
             });
         });
 
+        // AB-23: adding a kind the project already has adds a numbered copy. The
+        // screen names the copy itself, so its progress modal follows the copy — the
+        // add handler would otherwise report under an id the modal never opened.
+        it('names a second copy of a kind the project has, and follows it', () => {
+            const onAddStarted = jest.fn();
+            renderAdapter({ onAddStarted, appBuilderComponents: { 'erp-sync': INTEGRATION } });
+
+            modalProps().builder.onAppBuilderComponentToggle('erp-sync', true);
+
+            expect(mockPostMessage).toHaveBeenCalledWith('addAppBuilderComponent', {
+                progress: 'modal',
+                id: 'erp-sync',
+                instanceId: 'erp-sync-2',
+            });
+            expect(onAddStarted).toHaveBeenCalledWith('erp-sync-2', 'ERP Sync 2', {
+                id: 'erp-sync',
+                instanceId: 'erp-sync-2',
+                apis: undefined,
+                name: undefined,
+            });
+        });
+
         it('reports an unnamed custom add as owner-repo, named for the repo', () => {
             const onAddStarted = jest.fn();
             renderAdapter({ onAddStarted });
