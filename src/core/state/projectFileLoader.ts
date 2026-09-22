@@ -8,7 +8,7 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { migrateLegacyToAppBuilderComponents } from './appBuilderComponentMigration';
+import { healPartialComponents, migrateLegacyToAppBuilderComponents } from './appBuilderComponentMigration';
 import { migrateApiPicks } from './componentApiPicks';
 import { reconcileComponentSelections } from './componentSelectionReconcile';
 import { validateManifestShape } from './manifestValidation';
@@ -207,8 +207,12 @@ export class ProjectFileLoader {
             // read-side migration of legacy meshState/appState is the FALLBACK for
             // old manifests that carry no keyed map (never dropped — projects of
             // arbitrary age must keep loading).
-            project.appBuilderComponents =
-                manifest.appBuilderComponents ?? migrateLegacyToAppBuilderComponents(manifest);
+            // `healPartialComponents`: a record an older build left holding only its
+            // workspace would otherwise throw on the missing `source` and blank the
+            // whole dashboard (2026-09-22).
+            project.appBuilderComponents = healPartialComponents(
+                manifest.appBuilderComponents ?? migrateLegacyToAppBuilderComponents(manifest),
+            );
 
             // Selections vs reality: the dashboard add path records the keyed
             // entry and the component instance but never wrote the selection

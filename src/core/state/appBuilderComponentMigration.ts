@@ -90,3 +90,49 @@ export function migrateLegacyToAppBuilderComponents(
 
     return appBuilderComponents;
 }
+
+/**
+ * Complete a record an add left half-written: the workspace and nothing else.
+ *
+ * Measured live 2026-09-22 — a second ERP's add made its workspace, deployed its
+ * ERP, then failed at the API subscribe, and the integration's record was saved
+ * holding only `workspace`. The manifest failed its own schema on every load and
+ * opening the project threw on the missing `source`, so the dashboard rendered
+ * BLANK. The add path no longer writes that shape; this is for the projects that
+ * already carry one, which must keep loading.
+ *
+ * Healed rather than dropped, because the record is the only thing naming the Adobe
+ * workspace the add made: as a failed card the SC can remove it, and the removal
+ * deletes the workspace. Read-side only — the manifest is rewritten on the next save.
+ *
+ * `integration` is the kind assumed: a system is deployed before its integration and
+ * a mesh never gets a workspace of its own, so the integration is the half that can
+ * be left like this.
+ *
+ * @param components - the keyed map as loaded
+ * @returns the map, with any half-written record completed
+ */
+export function healPartialComponents(
+    components: Record<string, AppBuilderComponentState> | undefined,
+): Record<string, AppBuilderComponentState> {
+    const entries = Object.entries(components ?? {});
+    return Object.fromEntries(
+        entries.map(([id, state]) => {
+            const whole = state?.kind && state?.status && state?.source;
+            if (whole) return [id, state];
+            return [
+                id,
+                {
+                    ...state,
+                    kind: state?.kind ?? 'integration',
+                    status: 'error' as const,
+                    name: state?.name ?? state?.workspace?.title ?? id,
+                    source: state?.source ?? { owner: '', repo: id },
+                    error:
+                        state?.error ??
+                        'Adding this did not finish. Remove it to clean up what it made, then add it again.',
+                },
+            ];
+        }),
+    );
+}

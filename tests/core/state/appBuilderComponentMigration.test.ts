@@ -7,7 +7,11 @@
  * malformed/partial legacy state (no silent data loss).
  */
 
-import { migrateLegacyToAppBuilderComponents } from '@/core/state/appBuilderComponentMigration';
+import {
+    healPartialComponents,
+    migrateLegacyToAppBuilderComponents,
+} from '@/core/state/appBuilderComponentMigration';
+import type { AppBuilderComponentState } from '@/types/base';
 import type { ProjectManifest } from '@/core/state/projectFileLoader';
 
 describe('migrateLegacyToAppBuilderComponents', () => {
@@ -256,5 +260,47 @@ describe('migrateLegacyToAppBuilderComponents', () => {
             expect(() => migrateLegacyToAppBuilderComponents(manifest)).not.toThrow();
             expect(migrateLegacyToAppBuilderComponents(manifest)).toStrictEqual({});
         });
+    });
+});
+
+/**
+ * A record left by an add that stopped after its workspace was made and before its
+ * deploy began — the workspace and nothing else (live, 2026-09-22). Builds up to
+ * that day wrote it; the manifest then failed its own schema and, worse, opening the
+ * project threw on the missing `source`, so the whole dashboard went blank.
+ */
+describe('healPartialComponents', () => {
+    const partial = { workspace: { id: 'ws-9', name: 'ContosoERP', title: 'Contoso ERP' } };
+
+    it('completes it as a failed add, keeping the workspace so it can still be removed', () => {
+        const components = {
+            'erp-integration-2': partial as AppBuilderComponentState,
+        };
+
+        const healed = healPartialComponents(components);
+
+        expect(healed['erp-integration-2']).toMatchObject({
+            kind: 'integration',
+            status: 'error',
+            name: 'Contoso ERP',
+            workspace: { id: 'ws-9' },
+        });
+        expect(healed['erp-integration-2'].source).toBeDefined();
+        expect(healed['erp-integration-2'].error).toContain('did not finish');
+    });
+
+    it('leaves a whole record exactly as it is', () => {
+        const whole: AppBuilderComponentState = {
+            kind: 'system',
+            status: 'deployed',
+            name: 'Northwind ERP',
+            source: { owner: 'skukla', repo: 'demo-erp', branch: 'main' },
+        };
+
+        expect(healPartialComponents({ 'demo-erp': whole })['demo-erp']).toBe(whole);
+    });
+
+    it('answers an empty map for a project with no components', () => {
+        expect(healPartialComponents(undefined)).toStrictEqual({});
     });
 });
