@@ -19,7 +19,6 @@
 
 import * as vscode from 'vscode';
 import { announceConfigAccess, pinSiteAdmin } from '../services/configService/configAccessRecovery';
-import { buildCodeSyncSetupUrl } from '../services/configService/configServiceAccess';
 import { buildSiteConfigParams } from '../services/configService/configurationService';
 import { lostGrantsMessage } from '../services/configService/lostGrantsMessage';
 import { registerSiteConfig } from '../services/configService/siteConfigRegistrar';
@@ -153,33 +152,14 @@ export async function registerConfigurationService(
             // Record it, do not just warn: a toast is dismissible and the run
             // otherwise ends by announcing success for a storefront that cannot
             // serve PDPs. The status code picks the message — a 403 is an
-            // account-role refusal that a reset cannot fix.
-            //
-            // On a 403 the caveat carries a deep link to THIS site's Code Sync
-            // setup, built from data already in hand. A generic "open the setup
-            // tool" makes the user find their own site inside it; this lands on
-            // it. Nothing here depends on `repoMode` — an existing project hits
-            // this path exactly as a new one does, which is what previously left
-            // an edit/republish with no route at all.
-            const setupUrl =
-                registration.statusCode === 403
-                    ? buildCodeSyncSetupUrl({
-                          owner: repoInfo.repoOwner,
-                          repo: repoInfo.repoName,
-                          contentSourceUrl: siteParams.contentSourceUrl,
-                          // Pre-fills the tool's Users step.
-                          userEmail: setupUserEmail,
-                      })
-                    : undefined;
-            addPdpCaveat(
-                repoInfo,
-                byomRegistrationFailureMessage(registration.statusCode, setupUrl),
-            );
+            // account-role refusal that a reset cannot fix. Nothing here depends
+            // on `repoMode`: an existing project hits this path exactly as a new
+            // one does.
+            addPdpCaveat(repoInfo, byomRegistrationFailureMessage(registration.statusCode));
             surfaceOverlayRegistrationFailure(
                 logger,
                 vscode.window.showWarningMessage,
                 registration.statusCode,
-                setupUrl,
             );
         }
     } catch (error) {
