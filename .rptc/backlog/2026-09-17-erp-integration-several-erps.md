@@ -13,7 +13,23 @@ status: backlog
 Filed 2026-09-17 from the owner: demonstrating Commerce integrated with several ERPs is
 common, and a project can hold one ERP today.
 
-## Why it cannot today
+## Why it could not, and what shipped since
+
+**Superseded 2026-09-22/23: a project CAN hold two ERP pairs today.** AB-23 shipped the
+workspace-per-integration model and the copy machinery, and a second pair was added to a
+live project on 2026-09-22 (`erp-integration-2` with `demo-erp-2`, in its own Adobe
+workspace). AB-15's Commerce-side collision — two copies declaring the same app id — was
+fixed the same day: a copy now declares the name the SC gave it. The list below is kept as
+the record of what blocked it.
+
+Two collisions REMAIN, and they belong to the routing layer, not here (found while
+establishing the seam, `.rptc/research/multi-erp-order-routing/research.md`):
+
+- both installed copies subscribe to `observer.sales_order_save_commit_after`, and each
+  sends the WHOLE order to its own ERP;
+- both write Commerce's single `ext_order_id`, so the first writer wins.
+
+### The original list (2026-09-17)
 
 - The pair is added under fixed catalog ids (`erp-integration`, `demo-erp`); a second add of
   the same tile is refused.
@@ -120,3 +136,4 @@ wins — for one-integration-per-ERP, it is AB-17's step 6: two copies with diff
 ## Shipped so far
 
 - 2026-09-20  Rewritten around AB-17's answer: the renaming work is deleted (a workspace each gives every ERP its own namespace and database), and one-integration-per-ERP becomes a choice rather than an impossibility. Now waits on AB-23.
+- 2026-09-23  docs(backlog): AB-16, why several ERPs, and the layering decision it has to make (`201eb587e`)
