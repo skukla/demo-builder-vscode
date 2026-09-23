@@ -4,8 +4,7 @@ kind: fix
 area: eds
 needs: []
 value: high
-status: gated
-waiting-on: the reporter re-saving his Code Sync installation to show whether GitHub reopens the AEM setup page with a key
+status: built
 ---
 
 # The "no admin role" remedy sent people to a page that cannot grant anything
@@ -38,44 +37,67 @@ Access names readable org admins, otherwise opens the Code Sync app on GitHub
 and polls for the 403 → 200 flip; if it never flips it names the GitHub user who
 installed Code Sync, or Adobe.
 
-## Still open
+## Answered 2026-09-23: what re-saving the Code Sync app does
 
-Whether saving an EXISTING Code Sync installation's repository access sends GitHub
-back to the setup page with a key. Testing it is a cloud write on a sacrificial
-repo and needs the owner's go-ahead. If it does not, the GitHub button in Manage
-Site Access is also a dead end and should be removed.
+The reporter removed one of his repositories from the AEM Code Sync GitHub App and
+re-added it. Both halves of the question came back, and they point opposite ways:
 
-## A cause Demo Builder can detect (2026-09-15)
+- **It DOES land on Adobe's admin tools, already signed in** — the page reads "AEM
+  Code Sync registration updated" and the Admin Tools menu is available.
+- **It does NOT re-mint the admin role.** Manage Site Access refused the same
+  account straight afterwards. His GitHub primary email had already been changed to
+  his Adobe one, so if re-registration re-minted against today's primary this would
+  have granted it. It did not.
 
-Code Sync most likely gave the admin role to the primary email of the GitHub
-account that installed it, while Demo Builder signs in to Adobe as the SC's Adobe
-email, so the site refuses it. Evidence and the untested parts are in
-`.rptc/research/site-admin-identity-mismatch/research.md`.
+**And the tools it lands on refuse him too.** User Admin, asked for the org's users
+with the site left blank, answered:
 
-On a refusal, `listSiteAccess` reads the GitHub account's emails
-(`GET /user/emails`, covered by the `user` scope Demo Builder already asks for)
-and compares them with the Adobe email. When the role may sit elsewhere, Manage
-Site Access says so, names the addresses, and offers AEM's User Admin tool, where
-their owner can add the Adobe email as an org admin. It then polls for the grant.
-`get_site_access` returns the same `identityMismatch`, so an agent sees it too.
+```
+403  GET https://admin.hlx.page/config/kmanns.json   [admin] not authorized
+```
 
-## Today's primary email was the wrong question (2026-09-23)
+That is the SAME gate as the config read — `configServiceAccess.ts` says so at the
+top of the file, and this is it measured. The admin tools carry the identity the
+user is already signed in with, so **there is no self-serve route at all**: a user
+refused the read is refused the roster and the grant.
 
-The first version compared only the GitHub account's CURRENT primary email. The
-role is minted from whatever was primary AT INSTALL TIME, and that cannot be read
-back — so an account whose primary was changed to the Adobe address afterwards
-gets no explanation at all. That is exactly the reporter's account: his screenshot
-shows the Adobe address primary and a personal one verified beside it, so the
-check written for him would have stayed silent.
+What is left is an account that already holds the role signing in and adding them,
+or Adobe.
 
-`findAdminIdentityMismatch` now answers whenever ANY verified GitHub address is not
-the Adobe identity, ordered primary-first, and says which case it is: the primary
-differs, or the primary matches and an earlier address probably holds the role.
-Unverified addresses are ignored — GitHub never makes one primary.
+**RESOLVED 2026-09-23.** A full uninstall and reinstall of the AEM Code Sync GitHub
+App wrote the missing roster entry within the minute:
 
-Unverified still: that the role really sits on a GitHub-side email, and that
-signing in to AEM with a Google or Microsoft account on that address is accepted.
-Changing the GitHub primary email now will not move a role already given out.
+```
+"users": [{ "id": "…", "email": "<his adobe address>", "roles": ["admin"] }]
+"lastModified": "2026-09-23T20:18:41Z"
+```
+
+The org config had existed since 9 July at version 10, carrying EIGHT expired
+`helix-bot setup-wizard (admin, 30m)` keys — one minted that same afternoon by the
+repo-level re-add. So every earlier attempt had reached Adobe and done something;
+none of them had touched `users`.
+
+| | mints a 30-min admin key | writes the `users` roster |
+|---|---|---|
+| Re-saving a repository on an existing installation | yes | no |
+| Uninstalling the app and installing it again | yes | **yes** |
+
+Both report "AEM Code Sync registration updated", which is why the failing one was
+indistinguishable from the fix.
+
+**Two things this killed that were written down as likely.** That the role sat on
+the GitHub primary email from install time — he signed in as that address and was
+refused identically; the roster held nobody. And that a 403 meant the org existed:
+an org admin reading a made-up org name got the same 403, so it proves nothing.
+
+**What shipped in response:** `noAdminRoleRemedy.ts` states the fix once and the
+four surfaces that report this refusal compose it — the BYOM overlay failure, the
+config probe, Manage Site Access and its poll, all of which were wrong at the same
+time because each kept its own copy. Manage Site Access offers the GitHub settings
+page (the app's own page cannot uninstall) and drops the AEM User Admin route,
+which was measured to refuse the same identity. `adminIdentityMismatch` stopped
+naming an address to go and use and now warns that the primary email must be the
+Adobe one BEFORE reinstalling, or the role is minted for the wrong address.
 
 ## Shipped so far
 
@@ -83,5 +105,9 @@ Changing the GitHub primary email now will not move a role already given out.
 - 2026-09-14  Next step handed to the reporter (he installed Code Sync himself): on his second site, re-save the Code Sync installation on GitHub (no-op Save, else remove and re-add the repo) and report whether GitHub opens tools.aem.live/bot/setup with #token=. If it does, note who is already under Site users, add his Adobe email, run Manage Site Access then Repair Site Configuration, and add those steps to the Manage Site Access message. If it does not, remove the GitHub button and point to Adobe. His answer replaces the sacrificial-repo test.
 - 2026-09-15  feat(eds): explain a refusal caused by the GitHub primary email (`069c05647`)
 - 2026-09-15  Merge fix/site-access-remedy: a site that refuses its owner says why and what to do (`ad76d8898`)
+- 2026-09-23  Re-registration measured on a reported site: opens Adobe's admin tools signed in, does not re-mint the role
 - 2026-09-23  fix(eds): look at every verified GitHub email, not only today's primary (`b56fe547e`)
 - 2026-09-23  docs(eds): stop naming a colleague in a public repo (`39eb6026b`)
+- 2026-09-23  docs(eds): record how a site that refuses its owner is fixed (`25fe0d57b`)
+- 2026-09-23  fix(eds): tell a refused user the fix that actually works (`7f764dbce`)
+- 2026-09-23  feat(eds): state the no-admin-role fix in one place (`5dbcf6304`)

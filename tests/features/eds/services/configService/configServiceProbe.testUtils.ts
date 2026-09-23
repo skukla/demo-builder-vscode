@@ -153,5 +153,4 @@ export function rosterOf(...emails: string[]): { users: Array<{ email: string; r
  */
 export const CREDENTIAL_VALID_BASE =
     'The credential is valid — DA.live accepted it in the same run — but the ' +
-    'Configuration Service refused it. The admin role is minted for whoever ' +
-    'installs AEM Code Sync, so an older site can refuse its own owner. ';
+    'Configuration Service refused it: your identity holds no admin role. ';
