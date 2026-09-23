@@ -83,3 +83,5 @@ Changing the GitHub primary email now will not move a role already given out.
 - 2026-09-14  Next step handed to the reporter (he installed Code Sync himself): on his second site, re-save the Code Sync installation on GitHub (no-op Save, else remove and re-add the repo) and report whether GitHub opens tools.aem.live/bot/setup with #token=. If it does, note who is already under Site users, add his Adobe email, run Manage Site Access then Repair Site Configuration, and add those steps to the Manage Site Access message. If it does not, remove the GitHub button and point to Adobe. His answer replaces the sacrificial-repo test.
 - 2026-09-15  feat(eds): explain a refusal caused by the GitHub primary email (`069c05647`)
 - 2026-09-15  Merge fix/site-access-remedy: a site that refuses its owner says why and what to do (`ad76d8898`)
+- 2026-09-23  fix(eds): look at every verified GitHub email, not only today's primary (`b56fe547e`)
+- 2026-09-23  docs(eds): stop naming a colleague in a public repo (`39eb6026b`)
