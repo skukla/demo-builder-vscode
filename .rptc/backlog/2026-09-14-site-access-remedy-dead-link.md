@@ -108,3 +108,6 @@ Adobe one BEFORE reinstalling, or the role is minted for the wrong address.
 - 2026-09-23  Re-registration measured on a reported site: opens Adobe's admin tools signed in, does not re-mint the role
 - 2026-09-23  fix(eds): look at every verified GitHub email, not only today's primary (`b56fe547e`)
 - 2026-09-23  docs(eds): stop naming a colleague in a public repo (`39eb6026b`)
+- 2026-09-23  docs(eds): record how a site that refuses its owner is fixed (`25fe0d57b`)
+- 2026-09-23  fix(eds): tell a refused user the fix that actually works (`7f764dbce`)
+- 2026-09-23  feat(eds): state the no-admin-role fix in one place (`5dbcf6304`)
