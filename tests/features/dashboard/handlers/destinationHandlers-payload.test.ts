@@ -192,7 +192,7 @@ describe('handleSetProjectDestination — what the move is handed and what it sa
 
         await handleSetProjectDestination(context, NEW_DESTINATION);
 
-        expect(reported()).toContain('Moving 1 integration…');
+        expect(reported()).toContain('Moving 1 integration');
     });
 
     it('counts several in the plural', async () => {
@@ -200,7 +200,7 @@ describe('handleSetProjectDestination — what the move is handed and what it sa
 
         await handleSetProjectDestination(context, NEW_DESTINATION);
 
-        expect(reported()).toContain('Moving 2 integrations…');
+        expect(reported()).toContain('Moving 2 integrations');
     });
 
     it('builds the runner deps against the project and the shared services', async () => {

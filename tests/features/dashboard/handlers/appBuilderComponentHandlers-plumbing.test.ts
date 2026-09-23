@@ -146,7 +146,7 @@ describe('guardOrBlock', () => {
         const report = jest.fn();
 
         await expect(guardOrBlock(mockContext, mockProject, report)).resolves.toBeUndefined();
-        expect(report).toHaveBeenCalledWith('Checking requirements…');
+        expect(report).toHaveBeenCalledWith('Checking requirements');
     });
 
     it('marks a refusal BLOCKED, so the caller skips the failed-op path', async () => {

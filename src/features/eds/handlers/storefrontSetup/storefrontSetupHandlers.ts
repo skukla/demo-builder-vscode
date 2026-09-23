@@ -122,7 +122,7 @@ export async function handleCancelStorefrontSetup(
         try {
             await context.sendMessage('storefront-setup-progress', {
                 phase: 'cancelling',
-                message: 'Cleaning up resources...',
+                message: 'Cleaning up resources',
                 progress: 0,
             } satisfies StorefrontSetupProgressPayload);
 
@@ -186,6 +186,17 @@ export function classifySetupResult(result: StorefrontSetupResult): SetupOutcome
     return 'error';
 }
 
+/**
+ * The card's headline. PDP caveats mean product pages will not load at all;
+ * an added demo's dry-check caveats mean some things may not work on this
+ * demo, which is a different sentence.
+ */
+function completionMessage(pdpBlocked: boolean, hasCaveats: boolean): string {
+    if (pdpBlocked) return 'Storefront created, but product detail pages will not load.';
+    if (hasCaveats) return 'Storefront created. A few things to know about this demo.';
+    return 'Storefront setup completed successfully!';
+}
+
 export async function handleStartStorefrontSetup(
     context: HandlerContext,
     payload?: StorefrontSetupStartPayload,
@@ -204,10 +215,9 @@ export async function handleStartStorefrontSetup(
 
     // Edit mode rebuilds edsConfig from project metadata, which carries no
     // package-derived settings — restore them before any phase reads them.
-    const edsConfig = await rehydratePackageDerivedConfig(
+    const edsConfig = rehydratePackageDerivedConfig(
         payload.edsConfig,
-        payload.selectedPackage,
-        payload.selectedStack,
+        { selectedPackage: payload.selectedPackage, selectedStack: payload.selectedStack, demo: payload.demo },
         context.logger,
     );
 
@@ -281,6 +291,8 @@ export async function handleStartStorefrontSetup(
         // try/catch, so a config read that throws (or a test that mocks only
         // `vscode.window`) surfaces as a bogus "Config Service failed" warning.
         ...(resolvedOverlayUrl ? {} : { byomAbsentReason: explainAbsentOverlay() }),
+        // The added demo's row rides the one config the phases read (D2).
+        ...(payload.demo ? { demo: payload.demo } : {}),
     };
 
     try {
@@ -315,7 +327,8 @@ export async function handleStartStorefrontSetup(
             // after four minutes of writes, leaving a silent defect the user
             // found later. The repo URL still ships: everything except
             // PDPs works, and withholding it would be the opposite lie.
-            const caveats = result.pdpCaveats ?? [];
+            const pdpCaveats = result.pdpCaveats ?? [];
+            const caveats = [...pdpCaveats, ...(result.demoCaveats ?? [])];
             const hasCaveats = caveats.length > 0;
             context.logger.info(
                 hasCaveats
@@ -323,9 +336,7 @@ export async function handleStartStorefrontSetup(
                     : `[Storefront Setup] Complete: ${result.repoUrl}`,
             );
             await context.sendMessage('storefront-setup-complete', {
-                message: hasCaveats
-                    ? 'Storefront created, but product detail pages will not load.'
-                    : 'Storefront setup completed successfully!',
+                message: completionMessage(pdpCaveats.length > 0, hasCaveats),
                 ...(hasCaveats && { warnings: caveats }),
                 githubRepo: result.repoUrl,
                 daLiveSite: `https://da.live/${edsConfig.daLiveOrg}/${edsConfig.daLiveSite}`,

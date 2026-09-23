@@ -281,7 +281,14 @@ export function RepoSelectionInline({
                 success: boolean;
                 data?: { owner: string; name: string; url: string; fullName: string };
                 error?: string;
-            }>('create-github-repo', { repoName, templateOwner, templateRepo, isPrivate: false });
+            }>('create-github-repo', {
+                repoName,
+                templateOwner,
+                templateRepo,
+                isPrivate: false,
+                // An added demo's source may not be a GitHub template; the handler checks.
+                ...(state.demo ? { fromAddedDemo: true } : {}),
+            });
 
             if (!result.success || !result.data) {
                 throw new Error(result.error || 'Failed to create repository');
@@ -319,7 +326,7 @@ export function RepoSelectionInline({
                 error: (err as Error).message,
             });
         }
-    }, [repoName, edsConfig?.templateOwner, edsConfig?.templateRepo, updateEdsConfig]);
+    }, [repoName, edsConfig?.templateOwner, edsConfig?.templateRepo, updateEdsConfig, state.demo]);
 
     const handleCheckAgain = useCallback(async () => {
         // Both repo modes. This gate used to require a freshly CREATED repo, so
@@ -527,6 +534,7 @@ export function RepoSelectionInline({
                             disabled={!selectedRepo}
                             readiness={readiness}
                             unusable={wrongDefaultBranch}
+                            templateName={state.demo?.name}
                         />
                         <SelectionStepContent
                             headerAction={
@@ -549,13 +557,13 @@ export function RepoSelectionInline({
                             selectedId={selectedRepo?.id}
                             onSelect={selectItem}
                             labels={{
-                                loadingMessage: 'Loading your repositories...',
+                                loadingMessage: 'Loading your repositories',
                                 loadingSubMessage: 'Fetching repositories with write access',
                                 errorTitle: 'Error Loading Repositories',
                                 emptyTitle: 'No Repositories Found',
                                 emptyMessage:
                                     'No repositories found with write access. Create a new repository to get started.',
-                                searchPlaceholder: 'Type to filter repositories...',
+                                searchPlaceholder: 'Type to filter repositories',
                                 itemNoun: 'repository',
                                 itemNounPlural: 'repositories',
                                 ariaLabel: 'GitHub Repositories',

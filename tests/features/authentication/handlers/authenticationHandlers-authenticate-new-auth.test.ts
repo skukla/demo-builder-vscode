@@ -50,8 +50,8 @@ describe('authenticationHandlers - handleAuthenticate - New Authentication', () 
 			// Updated: Now uses constant message with subMessage indicating browser opening
 			expect(mockContext.sendMessage).toHaveBeenCalledWith('auth-status', {
 				isChecking: true,
-				message: 'Signing in...',
-				subMessage: 'Opening browser...',
+				message: 'Signing in',
+				subMessage: 'Opening browser',
 				isAuthenticated: false,
 			});
 		});

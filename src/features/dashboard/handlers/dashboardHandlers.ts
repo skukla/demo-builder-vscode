@@ -21,6 +21,7 @@
  */
 
 import * as vscode from 'vscode';
+import { handleGetDemoPackagePreview, handleSaveDemoPackage, handleRemoveDemoPackage } from './demoPackageHandlers';
 import { handleGetComponentOperationProgress } from './componentOperationProgress';
 import { handleSetProjectDestination } from './destinationHandlers';
 import {
@@ -28,6 +29,7 @@ import {
     handleRefreshBlockLibrary,
     handleRepublishContent,
 } from './edsContentHandlers';
+import { handleExportDemoBundle } from './exportDemoBundleHandler';
 import { sendDemoStatusUpdate } from './meshStatusHelpers';
 import {
     handleOpenBrowser,
@@ -48,7 +50,6 @@ import {
     handleEditProject,
     handleDeleteProject,
     handleResetProject,
-    handleExportProject,
     handleRenameProject,
     handleExportProjectSettings,
 } from './projectManagementHandlers';
@@ -70,6 +71,10 @@ import {
     handleListConsoleApis,
     handleSetConsoleApis,
 } from '@/features/dashboard/handlers/consoleApiHandlers';
+import { handleAddSharedDemo } from '@/features/eds/handlers/addSharedDemoHandler';
+import { handleChangeDemoSource } from '@/features/eds/handlers/changeDemoSourceHandler';
+import { handleImportStorefrontZip, handleUseBundleSetup } from '@/features/eds/handlers/importStorefrontZipHandler';
+import { handleProbeSharedDemo } from '@/features/eds/handlers/probeSharedDemoHandler';
 import { handleListRuntimePackages } from '@/features/dashboard/handlers/runtimePackageHandlers';
 import {
     MessageHandler,
@@ -101,7 +106,6 @@ export {
     handleEditProject,
     handleDeleteProject,
     handleResetProject,
-    handleExportProject,
     handleRenameProject,
     handleExportProjectSettings,
 } from './projectManagementHandlers';
@@ -296,7 +300,6 @@ export const dashboardHandlers = defineHandlers({
     editProject: handleEditProject,
     renameProject: handleRenameProject,
     exportProjectSettings: handleExportProjectSettings,
-    exportProject: handleExportProject,
 
     // EDS content republish (re-push DA.live content to CDN)
     republishContent: handleRepublishContent,
@@ -306,4 +309,25 @@ export const dashboardHandlers = defineHandlers({
 
     // Adobe deploy destination (project-scoped — one target for every integration)
     setProjectDestination: handleSetProjectDestination,
+
+    // "Save as demo package": the description file into the project's own
+    // storefront repository, the card on the SC's Welcome step, the checks a
+    // project built from it needs, and the undo.
+    getDemoPackagePreview: handleGetDemoPackagePreview,
+    saveDemoPackage: handleSaveDemoPackage,
+    removeDemoPackage: handleRemoveDemoPackage,
+    // Export, "Send a file": one bundle of the ticked parts (setup, storefront).
+    exportDemoBundle: handleExportDemoBundle,
+
+    // "Change source" for a project built on an added demo: the Add a demo package
+    // dialog in its change mode probes with the wizard's own handler, then
+    // repoints the project's row and instance metadata.
+    'probe-shared-demo': handleProbeSharedDemo,
+    'change-demo-source': handleChangeDemoSource,
+    // The dialog's add mode commits here; the dashboard never opens that mode,
+    // but the dialog is one component and every message it can send is answered.
+    'add-shared-demo': handleAddSharedDemo,
+    // Same reason: the dialog's zip door is a message it can send.
+    'import-storefront-zip': handleImportStorefrontZip,
+    'use-bundle-setup': handleUseBundleSetup,
 });

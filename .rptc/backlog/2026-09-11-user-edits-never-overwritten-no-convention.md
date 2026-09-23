@@ -1,5 +1,5 @@
 ---
-id: PL-56
+id: PL-58
 kind: chore
 area: platform
 parent: PL-30
@@ -74,3 +74,7 @@ Same shape as PL-55 and as the god-file finding before it: a rule stated in the 
 prominent file in the repo, believed by everyone, checked by nothing. A convention
 count cannot report its own gaps — the gap is only visible when the conventions are
 compared against an independent list of what matters.
+
+## Shipped so far
+
+- 2026-09-15  Renumbered from PL-56: the shared-demo work had filed its portability epic as PL-56 on another branch, and merging the two met both.

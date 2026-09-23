@@ -857,7 +857,7 @@ export class DaLiveContentCopy {
             processed: 0,
             total: 0,
             percentage: 0,
-            message: 'Enumerating source content...',
+            message: 'Enumerating source content',
             currentFile: `${source.org}/${source.site}`,
         });
 
@@ -869,7 +869,7 @@ export class DaLiveContentCopy {
             processed: 0,
             total: 0,
             percentage: 0,
-            message: 'Preparing content copy...',
+            message: 'Preparing content copy',
             currentFile: `${contentPaths.length} pages from ${source.org}/${source.site}`,
         });
 

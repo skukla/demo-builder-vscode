@@ -202,7 +202,7 @@ describe('ProjectCard', () => {
             });
             renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
 
-            expect(screen.getByText('Republishing...')).toBeInTheDocument();
+            expect(screen.getByText('Republishing')).toBeInTheDocument();
             expect(screen.getByText('Deployed')).toBeInTheDocument();
         });
 

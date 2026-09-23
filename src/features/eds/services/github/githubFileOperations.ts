@@ -314,6 +314,21 @@ export class GitHubFileOperations {
     }
 
     /**
+     * The message of a branch's latest commit, or null when the branch or repository
+     * does not exist. Remove uses it to recognise a repository a zip import made.
+     */
+    async getLatestCommitMessage(owner: string, repo: string, branch = 'main'): Promise<string | null> {
+        const octokit = await this.ensureAuthenticated();
+        try {
+            const response = await octokit.request('GET /repos/{owner}/{repo}/branches/{branch}', { owner, repo, branch });
+            return response.data.commit.commit.message;
+        } catch (error) {
+            if ((error as GitHubApiError).status === 404) return null;
+            throw error;
+        }
+    }
+
+    /**
      * Get the latest commit SHA for a branch
      * @param owner - Repository owner
      * @param repo - Repository name
@@ -653,22 +668,13 @@ export class GitHubFileOperations {
     }
 
     /**
-     * Download repository as a zipball and extract all file contents
+     * The repository's archive at `ref` as GitHub serves it: a zip with one root
+     * folder. Shared by the template reset (which reads it) and "Storefront as a
+     * zip file" (which hands it to the SC with the description file added).
      *
-     * This is much more efficient than fetching individual blobs:
-     * - Single HTTP request regardless of file count
-     * - Avoids GitHub API rate limits
-     *
-     * @param owner - Repository owner
-     * @param repo - Repository name
-     * @param ref - Git ref (branch/tag/commit) - default: 'main'
-     * @returns Map of path -> the file's bytes and its tree mode
+     * @returns The zip's bytes
      */
-    private async downloadRepoContents(
-        owner: string,
-        repo: string,
-        ref = 'main',
-    ): Promise<Map<string, ArchivedFile>> {
+    async downloadRepoArchive(owner: string, repo: string, ref = 'main'): Promise<Buffer> {
         const token = await this.tokenService.getToken();
         if (!token) {
             throw new Error(ERROR_MESSAGES.NOT_AUTHENTICATED);
@@ -689,11 +695,31 @@ export class GitHubFileOperations {
             throw new Error(`Failed to download archive: HTTP ${response.status}`);
         }
 
-        const arrayBuffer = await response.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
+        const buffer = Buffer.from(await response.arrayBuffer());
         this.logger.debug(
             `[GitHub] Downloaded ${(buffer.length / 1024 / 1024).toFixed(2)} MB archive`,
         );
+        return buffer;
+    }
+
+    /**
+     * Download repository as a zipball and extract all file contents
+     *
+     * This is much more efficient than fetching individual blobs:
+     * - Single HTTP request regardless of file count
+     * - Avoids GitHub API rate limits
+     *
+     * @param owner - Repository owner
+     * @param repo - Repository name
+     * @param ref - Git ref (branch/tag/commit) - default: 'main'
+     * @returns Map of path -> the file's bytes and its tree mode
+     */
+    private async downloadRepoContents(
+        owner: string,
+        repo: string,
+        ref = 'main',
+    ): Promise<Map<string, ArchivedFile>> {
+        const buffer = await this.downloadRepoArchive(owner, repo, ref);
 
         // Extract files from zipball
         const zip = new AdmZip(buffer);

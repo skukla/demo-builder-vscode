@@ -159,15 +159,20 @@ export function buildParams(overrides: Partial<EdsResetParams> = {}): EdsResetPa
 export async function runReset(
     params: EdsResetParams,
     context: HandlerContext = createMockHandlerContext({ logger: createMockLogger() }),
+    /** What GitHub answers for the description file; absent by default. */
+    descriptionFile?: { content: string; sha: string },
 ) {
     const resetMock = jest.fn().mockResolvedValue(RESET_RESULT);
-    // The two calls the reset makes; the class holds private Octokit state.
+    // The calls the reset makes (the description-file read only for a saved
+    // package); the class holds private Octokit state.
+    const getFileContent = jest.fn().mockResolvedValue(descriptionFile ?? null);
     const githubFileOps = {
         resetRepoToTemplate: resetMock,
+        getFileContent,
         getLatestCommitSha: mockGetLatestCommitSha,
     } as unknown as GitHubFileOperations;
     const report = jest.fn<void, [number, string]>();
     const result = await resetRepoToTemplate(params, context, githubFileOps, report);
     const overrides = resetMock.mock.calls[0]?.[4] as Map<string, string> | undefined;
-    return { result, resetMock, githubFileOps, report, overrides, context };
+    return { result, resetMock, getFileContent, githubFileOps, report, overrides, context };
 }

@@ -35,7 +35,7 @@ describe('buttonTextHelpers', () => {
             expect(result).toBe('Back');
         });
 
-        it('should return "Cancelling..." when not checking mesh and is cancelling', () => {
+        it('should return "Cancelling" when not checking mesh and is cancelling', () => {
             // Given: Not in mesh check phase and cancellation in progress
             const isCheckingMesh = false;
             const isCancelling = true;
@@ -43,8 +43,8 @@ describe('buttonTextHelpers', () => {
             // When: Getting the cancel button text
             const result = getCancelButtonText(isCheckingMesh, isCancelling);
 
-            // Then: Should return 'Cancelling...'
-            expect(result).toBe('Cancelling...');
+            // Then: Should return 'Cancelling'
+            expect(result).toBe('Cancelling');
         });
 
         it('should return "Cancel" when not checking mesh and not cancelling', () => {

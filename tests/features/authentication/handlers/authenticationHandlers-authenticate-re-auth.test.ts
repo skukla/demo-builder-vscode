@@ -101,8 +101,8 @@ describe('authenticationHandlers - handleAuthenticate - Re-authentication', () =
 			// Updated: Now uses constant message with subMessage for force mode
 			expect(mockContext.sendMessage).toHaveBeenCalledWith('auth-status', {
 				isChecking: true,
-				message: 'Signing in...',
-				subMessage: 'Starting fresh login...',
+				message: 'Signing in',
+				subMessage: 'Starting fresh login',
 				isAuthenticated: false,
 			});
 		});

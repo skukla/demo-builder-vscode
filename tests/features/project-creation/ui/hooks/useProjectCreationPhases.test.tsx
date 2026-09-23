@@ -150,7 +150,7 @@ describe('useProjectCreationPhases', () => {
             await startAndCreate(route, hook);
 
             expect(hook.result.current.phase).toBe('workspace');
-            expect(hook.result.current.phaseMessage).toBe('Setting up workspace…');
+            expect(hook.result.current.phaseMessage).toBe('Setting up workspace');
             expect(hook.result.current.phaseSubMessage).toBe('Selecting the Stage workspace');
             expect(mockRequest).toHaveBeenCalledWith('get-workspaces', {
                 orgId: 'org-1',
@@ -265,7 +265,7 @@ describe('useProjectCreationPhases', () => {
             await startThroughWorkspace(route, hook);
 
             expect(hook.result.current.phase).toBe('enabling');
-            expect(hook.result.current.phaseMessage).toBe('Enabling API access…');
+            expect(hook.result.current.phaseMessage).toBe('Enabling API access');
             expect(hook.result.current.phaseSubMessage).toBe(
                 'Subscribing to API Mesh and the I/O Management API'
             );

@@ -166,6 +166,22 @@ describe('reset_eds_project', () => {
         expect(res).toMatchObject({ reset: true, project: 'eds-proj' });
     });
 
+    it("carries the dry check's caveats for an added demo, and no key otherwise", async () => {
+        const s = fakeServer();
+        registerEdsResetTool(s, ctxFactory);
+        expect('caveats' in (await s.call({ confirm: true }))).toBe(false);
+
+        executeEdsResetMock.mockResolvedValueOnce({
+            success: true,
+            filesReset: 12,
+            contentCopied: 5,
+            meshRedeployed: false,
+            demoCaveats: ['Product links may not work.'],
+        });
+        const res = await s.call({ confirm: true });
+        expect(res).toMatchObject({ reset: true, caveats: ['Product links may not work.'] });
+    });
+
     it('errors for a non-EDS project', async () => {
         isEdsProjectMock.mockReturnValueOnce(false);
         const s = fakeServer();

@@ -81,7 +81,7 @@ export function GitHubServiceCard({
         >
             <ServiceCardStatus
                 isLoading={isLoading}
-                loadingLabel={isAuthenticating ? 'Connecting...' : 'Checking...'}
+                loadingLabel={isAuthenticating ? 'Connecting' : 'Checking'}
                 isConnected={connected}
                 compact={compact}
                 connectedLabel={user?.login ?? ''}

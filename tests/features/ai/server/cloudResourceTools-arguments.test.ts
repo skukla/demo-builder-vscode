@@ -352,7 +352,7 @@ describe('the DA.live token provider', () => {
         const s = server();
 
         expect(await s.call('list_dalive_sites', { org: 'acme' })).toMatchObject({
-            needsAuth: 'adobe',
+            needsAuth: 'dalive',
         });
     });
 
@@ -382,8 +382,8 @@ describe('the declarations each tool registers under', () => {
         ['list_github_repos', ['github'], true, false],
         ['create_github_repo', ['github'], false, false],
         ['delete_github_repo', ['github'], false, true],
-        ['list_dalive_sites', ['adobe'], true, false],
-        ['cleanup_dalive_site', ['adobe'], false, true],
+        ['list_dalive_sites', ['dalive'], true, false],
+        ['cleanup_dalive_site', ['dalive'], false, true],
     ] as const)('%s declares its provider and both hints', (tool, needsAuth, readOnly, destructive) => {
         // readOnlyHint gates the dry run; destructiveHint is what makes the
         // client ask before an irreversible call.

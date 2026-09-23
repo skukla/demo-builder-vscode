@@ -374,7 +374,7 @@ describe('addAppBuilderComponent partial-failure', () => {
     });
 
     // The deploy tails ALREADY report every step — buildMeshComponent,
-    // "Reading mesh configuration…", "Deploying…" — and the dep type has declared
+    // "Reading mesh configuration…", "Deploying" — and the dep type has declared
     // `onProgress` all along. The creation path passes one; dispatchDeploy called
     // the tail with three arguments and dropped it, so a dashboard add showed one
     // static title for 70 seconds while 42s of API subscribe, 21s of npm install
@@ -387,8 +387,8 @@ describe('addAppBuilderComponent partial-failure', () => {
 
         deps.deployMesh.mockImplementation(
             async (_path, _cmd, _log, onProgress?: (m: string, s?: string) => void) => {
-                onProgress?.('Reading mesh configuration...', '');
-                onProgress?.('Deploying...', 'Validating configuration');
+                onProgress?.('Reading mesh configuration', '');
+                onProgress?.('Deploying', 'Validating configuration');
                 // `meshId` is REQUIRED on MeshDeploymentResult and the runner records
                 // it; omitting it here fed `undefined` into the deploy outcome. This
                 // test only asserts progress forwarding, so nothing failed — but a
@@ -411,10 +411,10 @@ describe('addAppBuilderComponent partial-failure', () => {
         // The env-file write reports its own step ahead of the tail's — it runs
         // before the deploy and is otherwise silent time.
         expect(seen).toEqual([
-            'Subscribing Adobe APIs…',
+            OPERATION_STAGES.subscribingApis.label,
             OPERATION_STAGES.generatingMeshConfig.label,
-            'Reading mesh configuration...',
-            'Deploying...',
+            'Reading mesh configuration',
+            'Deploying',
         ]);
     });
 
@@ -443,7 +443,7 @@ describe('addAppBuilderComponent partial-failure', () => {
             },
         });
 
-        expect(seen).toEqual(['Subscribing Adobe APIs…', 'Building…']);
+        expect(seen).toEqual(['Subscribing Adobe APIs', 'Building…']);
     });
 
     // BEHAVIOUR CHANGE (2026-08-04 consolidation): a redeploy used to REPLACE the

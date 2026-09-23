@@ -171,7 +171,7 @@ generated-bundle write goes through the ADR-013 hash-and-skip seam
 opted out of that."
 
 Filed separately rather than absorbed here — this item is named for two domains and
-has closed both, and a third deserves its own record. See [[PL-56]].
+has closed both, and a third deserves its own record. See [[PL-58]].
 
 ## Shipped so far
 
@@ -191,7 +191,7 @@ has closed both, and a third deserves its own record. See [[PL-56]].
 - 2026-09-11  docs(plan): error strategy revised with sourced research (`8babd76ad`)
 - 2026-09-11  docs(plan): a proposal for the error strategy, measured not assumed (`ea723bd28`)
 - 2026-09-11  fix(sop): two reversibility gaps were not gaps — the reversal already existed (`87eac7dd0`)
-- 2026-09-11  docs(backlog): PL-55 built, both domains ruled; PL-56 filed from its step 3 (`c67c6faa6`)
+- 2026-09-11  docs(backlog): PL-55 built, both domains ruled; PL-56 filed from its step 3 (`c67c6faa6`; renumbered PL-58 on 2026-09-15, when merging met a second PL-56)
 - 2026-09-11  refactor(errors): the central hierarchy was half dead — delete it and rule the rest (`d505ffe34`)
 - 2026-09-11  feat(sop): reversibility is a rule now, not just a stated principle (`e96d07915`)
 - 2026-09-11  feat(tooling): the last conventions are proven, and the harness had two bugs of its own (`5e1522aea`)

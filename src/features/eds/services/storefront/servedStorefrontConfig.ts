@@ -33,6 +33,43 @@ export interface ServedStorefrontConfig {
     scope: StoreScope;
 }
 
+/** What a storefront `config.json` says, wherever it was read from (the CDN or a repository). */
+export interface StorefrontConfigJson extends ServedStorefrontConfig {
+    /** The `config.public.default` boolean flags, e.g. `commerce-b2b-enabled` (ADR-009). */
+    flags: Record<string, boolean>;
+}
+
+/**
+ * Read the store scope, endpoint and flags out of a parsed `config.json`.
+ * `undefined` when the file has no `public.default` block — the one shape
+ * that means "this is not a storefront config".
+ *
+ * @param json - The parsed file
+ */
+export function parseStorefrontConfigJson(json: unknown): StorefrontConfigJson | undefined {
+    const defaults = (json as { public?: { default?: Record<string, unknown> } } | null)?.public
+        ?.default;
+    if (!defaults || typeof defaults !== 'object') return undefined;
+
+    const headers = defaults.headers as { cs?: Record<string, unknown> } | undefined;
+    const cs = headers?.cs;
+    const endpoint = defaults['commerce-endpoint'];
+    const flags: Record<string, boolean> = {};
+    for (const [key, value] of Object.entries(defaults)) {
+        if (typeof value === 'boolean') flags[key] = value;
+    }
+
+    return {
+        commerceEndpoint: typeof endpoint === 'string' ? endpoint : undefined,
+        scope: {
+            websiteCode: header(cs, 'Magento-Website-Code'),
+            storeCode: header(cs, 'Magento-Store-Code'),
+            storeViewCode: header(cs, 'Magento-Store-View-Code'),
+        },
+        flags,
+    };
+}
+
 /** Read a header value, tolerating a missing or malformed headers block. */
 function header(cs: Record<string, unknown> | undefined, key: string): string | undefined {
     const value = cs?.[key];
@@ -65,31 +102,13 @@ export async function fetchServedStorefrontConfig(
             return undefined;
         }
 
-        const json = (await response.json()) as {
-            public?: {
-                default?: Record<string, unknown> & {
-                    headers?: { cs?: Record<string, unknown> };
-                };
-            };
-        };
-
-        const defaults = json.public?.default;
-        if (!defaults) {
+        const parsed = parseStorefrontConfigJson(await response.json());
+        if (!parsed) {
             logger.debug('[Served Config] config.json has no public.default block');
             return undefined;
         }
-
-        const cs = defaults.headers?.cs;
-        const endpoint = defaults['commerce-endpoint'];
-
-        return {
-            commerceEndpoint: typeof endpoint === 'string' ? endpoint : undefined,
-            scope: {
-                websiteCode: header(cs, 'Magento-Website-Code'),
-                storeCode: header(cs, 'Magento-Store-Code'),
-                storeViewCode: header(cs, 'Magento-Store-View-Code'),
-            },
-        };
+        const { commerceEndpoint, scope } = parsed;
+        return { commerceEndpoint, scope };
     } catch (error) {
         logger.debug(`[Served Config] Could not read ${url}: ${(error as Error).message}`);
         return undefined;

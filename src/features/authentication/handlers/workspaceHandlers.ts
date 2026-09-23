@@ -33,7 +33,7 @@ export async function handleGetWorkspaces(
         if (currentProject) {
             await context.sendMessage('workspace-loading-status', {
                 isLoading: true,
-                message: 'Loading workspaces...',
+                message: 'Loading workspaces',
                 subMessage: `Fetching from project: ${currentProject.title || currentProject.name}`,
             });
         }

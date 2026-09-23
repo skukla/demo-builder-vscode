@@ -17,7 +17,7 @@ describe('useVerificationMessage', () => {
             );
 
             expect(result.current).toEqual({
-                text: 'Verifying...',
+                text: 'Verifying',
                 type: 'info',
             });
         });

@@ -151,6 +151,11 @@
                 "command": "demoBuilder.signInDaLive",
                 "title": "Sign in to DA.live",
                 "category": "Demo Builder"
+            },
+            {
+                "command": "demoBuilder.signInGitHub",
+                "title": "Sign in to GitHub",
+                "category": "Demo Builder"
             }
         ],
         "configuration": [
@@ -266,6 +271,20 @@
                         ],
                         "default": "ask",
                         "description": "How to handle two-way block library sync: applying upstream library updates to your storefront and promoting your local block changes back to the library repo."
+                    }
+                }
+            },
+            {
+                "title": "Demos",
+                "properties": {
+                    "demoBuilder.demos.added": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "description": "A demo added from a link: its description and the repository it comes from. Written by \"Add a demo\"; each entry is the demo.demo-builder.json shape plus a source."
+                        },
+                        "default": [],
+                        "description": "Demos you've added from a link. They appear as cards on the Welcome step. Remove an entry to forget a demo; projects already built on it keep working."
                     }
                 }
             },

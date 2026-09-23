@@ -124,7 +124,7 @@ describe('a response that arrives after the modal has moved on', () => {
             await Promise.resolve();
         });
 
-        expect(screen.getByText('Loading Adobe APIs…')).toBeInTheDocument();
+        expect(screen.getByText('Loading Adobe APIs')).toBeInTheDocument();
     });
 });
 

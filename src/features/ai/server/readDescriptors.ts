@@ -113,6 +113,15 @@ function shapeAiSetup(res: HandlerResponse, args: Record<string, unknown>): stri
     });
 }
 
+/**
+ * The probe answers `{ result }` (Pattern B, the dialog's shape); the agent
+ * wants the result itself, not a wrapper naming it.
+ */
+function shapeProbeResult(res: HandlerResponse): string {
+    const payload = payloadOf(res);
+    return payload && 'result' in payload ? JSON.stringify(payload.result) : defaultShape(res);
+}
+
 /** Unwrap a handler response to its payload, or `undefined` if it is an error. */
 function payloadOf(res: HandlerResponse): Record<string, unknown> | undefined {
     if (!res.success) return undefined;
@@ -340,6 +349,26 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
             'trusting a configured store scope.',
         map: edsHandlers,
         type: 'get-store-structure',
+    },
+    {
+        tool: 'probe_shared_demo',
+        needsAuth: ['github'],
+        readOnly: true,
+        description:
+            "Read a colleague's demo before adding it: what kind of storefront it is (Edge Delivery or headless), " +
+            'its store codes, whether its pages are published, and its company (B2B) posture. Takes owner+repo, or a GitHub link / demo site address as link. ' +
+            'Reads only; add_shared_demo adds it.',
+        map: dashboardHandlers,
+        type: 'probe-shared-demo',
+        inputSchema: {
+            owner: z.string().optional().describe('GitHub owner of the demo repository'),
+            repo: z.string().optional().describe('GitHub repository name'),
+            link: z
+                .string()
+                .optional()
+                .describe('Instead of owner+repo: a GitHub link, or the site address (main--repo--owner.aem.live)'),
+        },
+        shape: shapeProbeResult,
     },
     {
         tool: 'get_project_urls',

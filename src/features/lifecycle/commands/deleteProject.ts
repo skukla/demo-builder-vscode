@@ -172,7 +172,7 @@ export class DeleteProjectCommand extends BaseCommand {
                 if (isRetryable && attempt < this.MAX_RETRIES - 1) {
                     // Exponential backoff: 100ms, 200ms, 400ms, 800ms, 1600ms
                     const delay = this.BASE_DELAY * Math.pow(2, attempt);
-                    this.logger.debug(`[Delete Project] Waiting ${delay}ms before retry...`);
+                    this.logger.debug(`[Delete Project] Waiting ${delay}ms before retry`);
                     await sleep(delay);
                 } else if (isRetryable) {
                     // Last retry failed

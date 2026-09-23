@@ -66,6 +66,8 @@ export async function applyCanonicalCodePatches(
     patchIds: string[],
     source: CodePatchSource,
     logger: Logger,
+    /** The template's branch to read targets from; a shipped template is on `main`. */
+    templateBranch = 'main',
 ): Promise<CodePatchResult[]> {
     if (!patchIds || patchIds.length === 0) return [];
 
@@ -81,7 +83,7 @@ export async function applyCanonicalCodePatches(
     for (const patch of canonicalPatches) {
         if (fileOverrides.has(patch.target)) continue;
         try {
-            const url = `https://raw.githubusercontent.com/${templateOwner}/${templateRepo}/main/${patch.target}`;
+            const url = `https://raw.githubusercontent.com/${templateOwner}/${templateRepo}/${templateBranch}/${patch.target}`;
             const response = await fetch(url, {
                 signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
             });

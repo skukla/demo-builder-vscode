@@ -46,6 +46,7 @@ jest.mock('@/features/eds/services/reset/edsResetService', () => ({
 // Imports (after mocks)
 // =============================================================================
 
+import { makeDemoPackage, makeStorefront } from '../../../../helpers/demoPackageFixtures';
 import { createMeshDepsFake } from '../../../../helpers/meshDepsFake';
 import { createMockStateManager } from '../../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../../helpers/loggerFake';
@@ -63,20 +64,16 @@ const meshDeps = createMeshDepsFake({ authManager: mockAuthService });
 
 // Injected demo-packages fixture for extractResetParams (replaces config leaf mock)
 const testPackages = [
-    {
+    makeDemoPackage({
         id: 'citisignal',
         storefronts: {
-            'eds-paas': {
+            'eds-paas': makeStorefront({
                 templateOwner: 'test-owner',
                 templateRepo: 'test-template',
-                contentSource: {
-                    org: 'content-org',
-                    site: 'content-site',
-                    indexPath: 'index.json',
-                },
-            },
+                contentSource: { org: 'content-org', site: 'content-site', indexPath: 'index.json' },
+            }),
         },
-    },
+    }),
 ];
 
 // =============================================================================

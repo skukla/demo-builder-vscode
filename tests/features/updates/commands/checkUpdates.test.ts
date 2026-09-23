@@ -6,7 +6,7 @@
  *
  * Coverage areas:
  * - Progress message display
- * - 1500ms delay before GitHub API call (ensures user sees "Checking for updates…" message)
+ * - 1500ms delay before GitHub API call (ensures user sees "Checking for updates" message)
  * - Message content verification
  * - Timing verification
  * - Error handling
@@ -81,7 +81,7 @@ describe('CheckUpdatesCommand - Message Visibility Delay (Step 2)', () => {
     });
 
     describe('Happy Path', () => {
-        it('should show "Checking for updates…" progress message', async () => {
+        it('should show "Checking for updates" progress message', async () => {
             // Arrange
             const mockUpdateManager = UpdateManager as jest.MockedClass<typeof UpdateManager>;
             mockUpdateManager.prototype.checkExtensionUpdate = jest.fn().mockResolvedValue({
@@ -99,7 +99,7 @@ describe('CheckUpdatesCommand - Message Visibility Delay (Step 2)', () => {
 
             // Assert - progress.report should be called immediately
             expect(mockProgress.report).toHaveBeenCalledWith({
-                message: 'Checking for updates…',
+                message: 'Checking for updates',
             });
 
             // Complete the test
@@ -244,7 +244,7 @@ describe('CheckUpdatesCommand - Message Visibility Delay (Step 2)', () => {
     });
 
     describe('Message Content', () => {
-        it('should display correct message text "Checking for updates…"', async () => {
+        it('should display correct message text "Checking for updates"', async () => {
             // Arrange
             const mockUpdateManager = UpdateManager as jest.MockedClass<typeof UpdateManager>;
             mockUpdateManager.prototype.checkExtensionUpdate = jest.fn().mockResolvedValue({
@@ -260,7 +260,7 @@ describe('CheckUpdatesCommand - Message Visibility Delay (Step 2)', () => {
 
             // Assert
             expect(mockProgress.report).toHaveBeenCalledWith({
-                message: 'Checking for updates…',
+                message: 'Checking for updates',
             });
 
             // Complete test
@@ -291,7 +291,7 @@ describe('CheckUpdatesCommand - Message Visibility Delay (Step 2)', () => {
 
             // Assert: Progress message shown before error
             expect(mockProgress.report).toHaveBeenCalledWith({
-                message: 'Checking for updates…',
+                message: 'Checking for updates',
             });
 
             // Advance timers to trigger API call and error

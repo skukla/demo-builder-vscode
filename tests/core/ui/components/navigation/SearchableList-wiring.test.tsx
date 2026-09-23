@@ -78,7 +78,7 @@ describe('the search header it builds', () => {
     it('offers a placeholder that says what the field does', () => {
         render(<SearchableList {...defaultProps} />);
 
-        expect(headerProps[0].searchPlaceholder).toBe('Type to filter...');
+        expect(headerProps[0].searchPlaceholder).toBe('Type to filter');
     });
 });
 

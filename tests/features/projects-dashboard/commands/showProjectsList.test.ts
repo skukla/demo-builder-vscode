@@ -74,7 +74,7 @@ describe('ShowProjectsListCommand', () => {
             expect(title).toBe('Projects');
         });
 
-        it('should have loading message "Loading Projects..."', () => {
+        it('should have loading message "Loading Projects"', () => {
             // Given: A new command instance
             const command = createCommand();
 
@@ -82,7 +82,7 @@ describe('ShowProjectsListCommand', () => {
             const message = internals(command).getLoadingMessage();
 
             // Then: Should return appropriate loading message
-            expect(message).toBe('Loading Projects...');
+            expect(message).toBe('Loading Projects');
         });
     });
 

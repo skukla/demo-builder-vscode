@@ -116,7 +116,7 @@ function makeConfig(overrides = {}) {
         repoUrl: 'https://github.com/test-owner/test-repo',
         daLiveOrg: 'test-org',
         daLiveSite: 'test-site',
-        contentSource: { org: 'source-org', site: 'source-site' },
+        contentSource: { org: 'source-org', site: 'source-site', indexPath: '/full-index.json' },
         ...overrides,
     };
 }
@@ -448,7 +448,7 @@ describe('ensureEdsContent — the calls it makes', () => {
             reportProgress({ message: 'Copying /products/index', processed: 3, total: 9 });
 
             expect(onProgress).toHaveBeenCalledWith(
-                'Setting up storefront content...',
+                'Setting up storefront content',
                 'Copying /products/index'
             );
         });
@@ -461,7 +461,7 @@ describe('ensureEdsContent — the calls it makes', () => {
             reportProgress({ processed: 3, total: 9 });
 
             expect(onProgress).toHaveBeenCalledWith(
-                'Setting up storefront content...',
+                'Setting up storefront content',
                 'Copying content (3/9)'
             );
         });

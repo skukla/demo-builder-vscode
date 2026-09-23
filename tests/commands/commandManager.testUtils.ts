@@ -75,6 +75,16 @@ jest.mock('@/features/eds/handlers/daLive/daLiveAuthPrompt', () => ({
     showDaLiveAuthQuickPick: (...a: unknown[]) => mockDaLiveAuthQuickPick(...a),
 }));
 
+// The GitHub sign-in the palette command drives, and the token it reads first.
+const mockSignInToGitHub = jest.fn();
+const mockValidateGitHubToken = jest.fn();
+jest.mock('@/features/eds/handlers/edsGitHubHandlers', () => ({
+    signInToGitHub: (...a: unknown[]) => mockSignInToGitHub(...a),
+}));
+jest.mock('@/features/eds/handlers/edsHelpers', () => ({
+    getGitHubServices: () => ({ tokenService: { validateToken: mockValidateGitHubToken } }),
+}));
+
 const mockGetTokenStatus = jest.fn();
 const mockLogin = jest.fn();
 const mockSetShowingProjectsList = jest.fn();
@@ -107,6 +117,8 @@ export {
     mockOpenUrl,
     mockRegisterGlobalMcp,
     mockSetShowingProjectsList,
+    mockSignInToGitHub,
+    mockValidateGitHubToken,
 };
 
 export interface Harness {

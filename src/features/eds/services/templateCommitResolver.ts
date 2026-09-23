@@ -20,14 +20,17 @@ interface TemplateCommitSource {
     templateRepo?: string;
     /** Present for thin-layer storefronts (ADR-006); names the patches repo's LKG. */
     codePatchSource?: CodePatchSource;
+    /** The source's branch, when not `main`: an added demo's repository may use another. */
+    templateBranch?: string;
 }
 
 /**
  * Resolve the template commit a storefront is (or is about to be) built from.
  *
  * Thin-layer storefronts: the verified Last-Known-Good SHA from the patches repo.
- * If that is unreachable, fall back to the template's `main` head (ADR-006 D1
- * proceed-and-warn). Forked storefronts: the template's `main` head.
+ * If that is unreachable, fall back to the template's branch head (ADR-006 D1
+ * proceed-and-warn). Forked storefronts and added demos: the head of the template's
+ * branch — `main` unless the source names another.
  *
  * @param source - the template repository and, for thin-layer storefronts, the patch source
  * @param githubFileOps - reads the template branch head
@@ -40,7 +43,7 @@ export async function resolveTemplateCommitSha(
     githubFileOps: Pick<GitHubFileOperations, 'getLatestCommitSha'>,
     logger: Logger,
 ): Promise<string | undefined> {
-    const { templateOwner, templateRepo, codePatchSource } = source;
+    const { templateOwner, templateRepo, codePatchSource, templateBranch = 'main' } = source;
     if (!templateOwner || !templateRepo) return undefined;
 
     if (codePatchSource) {
@@ -57,7 +60,7 @@ export async function resolveTemplateCommitSha(
 
     try {
         const sha =
-            (await githubFileOps.getLatestCommitSha(templateOwner, templateRepo, 'main')) ??
+            (await githubFileOps.getLatestCommitSha(templateOwner, templateRepo, templateBranch)) ??
             undefined;
         logger.debug(`[TemplateCommit] Template HEAD: ${sha?.substring(0, 7)}`);
         return sha;

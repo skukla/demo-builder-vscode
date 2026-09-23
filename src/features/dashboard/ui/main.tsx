@@ -35,6 +35,8 @@ import './styles/ai.css';
 // .dashboard-* rules, moved out of utilities.css by the same migration.
 // This is the ONLY entry whose graph reaches a component using them.
 import './styles/dashboard.css';
+// The Export dialog and its parts (More menu).
+import './styles/export-dialog.css';
 // .modal-* — the shared Modal shell.
 import '@/core/ui/styles/modal.css';
 // The shared UI vocabulary — 19 small families. Seven of the eight entries.
@@ -49,6 +51,13 @@ import '@/core/ui/styles/drawer.css';
 import '@/core/ui/styles/two-column-layout.css';
 // .inline-notice-*, .inline-rename-* — two small shared components.
 import '@/core/ui/styles/inline-controls.css';
+// The Add a demo package dialog in its change mode (the "Change source" door): its own
+// sheet plus the three it borrows classes from (ADR-017: a sheet reaches only
+// the bundles whose entry imports it).
+import '@/features/project-creation/ui/styles/add-demo.css';
+import '@/features/project-creation/ui/styles/add-integration-flow.css';
+import '@/features/project-creation/ui/styles/build-summary.css';
+import '@/features/project-creation/ui/styles/choice-cards.css';
 
 // Get root element
 const container = document.getElementById('root');

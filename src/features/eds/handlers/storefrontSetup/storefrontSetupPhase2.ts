@@ -82,7 +82,7 @@ export async function executePhaseHelixConfig(
 
     await context.sendMessage('storefront-setup-progress', {
         phase: 'storefront-code',
-        message: 'Configuring Edge Delivery Services...',
+        message: 'Configuring Edge Delivery Services',
         subMessage: `${edsConfig.daLiveOrg}/${edsConfig.daLiveSite}`,
         progress: 20,
     } satisfies StorefrontSetupProgressPayload);
@@ -180,7 +180,7 @@ async function pushFstabToGitHub(
 ): Promise<void> {
     await context.sendMessage('storefront-setup-progress', {
         phase: 'storefront-code',
-        message: 'Connecting content source...',
+        message: 'Connecting content source',
         subMessage: `fstab.yaml → ${edsConfig.daLiveOrg}/${edsConfig.daLiveSite}`,
         progress: 25,
     } satisfies StorefrontSetupProgressPayload);
@@ -264,7 +264,7 @@ async function installBlockCollectionsWithTracking(
 ): Promise<string[] | undefined> {
     await context.sendMessage('storefront-setup-progress', {
         phase: 'storefront-code',
-        message: 'Preparing inspector tagging...',
+        message: 'Preparing inspector tagging',
         progress: 27,
     } satisfies StorefrontSetupProgressPayload);
     let inspectorEntries: GitHubTreeInput[];
@@ -284,7 +284,7 @@ async function installBlockCollectionsWithTracking(
     if (allLibraries.length > 0) {
         await context.sendMessage('storefront-setup-progress', {
             phase: 'storefront-code',
-            message: `Installing blocks from ${allLibraries.length} ${allLibraries.length === 1 ? 'library' : 'libraries'}...`,
+            message: `Installing blocks from ${allLibraries.length} ${allLibraries.length === 1 ? 'library' : 'libraries'}`,
             subMessage: allLibraries.map((lib) => lib.name).join(', '),
             progress: 28,
         } satisfies StorefrontSetupProgressPayload);

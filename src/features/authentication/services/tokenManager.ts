@@ -275,7 +275,7 @@ export class TokenManager {
     /** The refresh attempt, timeout-bound so it can never become the next hang. */
     private async trySilentRefresh(): Promise<StoredTokenConfig | undefined> {
         try {
-            this.logger.info('[Token] Stored token unusable — attempting silent IMS refresh…');
+            this.logger.info('[Token] Stored token unusable — attempting silent IMS refresh');
             return await withTimeout(this.silentRefresh(), {
                 timeoutMs: TIMEOUTS.NORMAL,
                 timeoutMessage: 'IMS silent refresh timed out',

@@ -293,7 +293,7 @@ describe('Project Reset Service - Mesh Redeployment Org-Context', () => {
             mockWithOrgContext.mock.invocationCallOrder[0]
         );
         expect(progress.report).toHaveBeenCalledWith({
-            message: 'Checking Adobe organization access…',
+            message: 'Checking Adobe organization access',
         });
     });
 
@@ -318,7 +318,7 @@ describe('Project Reset Service - Mesh Redeployment Org-Context', () => {
             expect.any(Function),
             'mesh-123'
         );
-        expect(progress.report).toHaveBeenCalledWith({ message: 'Redeploying API Mesh…' });
+        expect(progress.report).toHaveBeenCalledWith({ message: 'Redeploying API Mesh' });
     });
 
     it('relays deploy progress to the notification, preferring the sub-message', async () => {

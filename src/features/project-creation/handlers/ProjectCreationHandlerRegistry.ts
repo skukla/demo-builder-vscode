@@ -21,11 +21,17 @@ import { handleCheckProjectApis, handleEnsureOrgSelected } from '@/features/auth
 import * as components from '@/features/components/handlers/componentHandlers';
 import { dataInstallerHandlers } from '@/features/data-installer/handlers/dataInstallerHandlers';
 import { handleOpenDataInstallerSettings } from '@/features/data-installer/handlers/settingsHandlers';
+import { handleAddSharedDemo } from '@/features/eds/handlers/addSharedDemoHandler';
+import { handleChangeDemoSource } from '@/features/eds/handlers/changeDemoSourceHandler';
 import { handleCheckRepoReadiness } from '@/features/eds/handlers/checkRepoReadinessHandler';
 import { handleCheckCredentialService } from '@/features/eds/handlers/credentialServiceHandler';
 import { handleCheckDaLiveAuth, handleClearDaLiveAuth, handleOpenDaLiveLogin, handleStoreDaLiveTokenWithOrg } from '@/features/eds/handlers/daLive/edsDaLiveHandlers';
+import { handleEditAddedDemo } from '@/features/eds/handlers/editAddedDemoHandler';
 import { handleCheckGitHubAuth, handleCreateGitHubRepo, handleGetGitHubRepos, handleGitHubChangeAccount, handleGitHubOAuth } from '@/features/eds/handlers/edsGitHubHandlers';
 import { handleDiscoverStoreStructure } from '@/features/eds/handlers/edsHandlers';
+import { handleForgetAddedDemo } from '@/features/eds/handlers/forgetAddedDemoHandler';
+import { handleImportStorefrontZip, handleUseBundleSetup } from '@/features/eds/handlers/importStorefrontZipHandler';
+import { handleProbeSharedDemo } from '@/features/eds/handlers/probeSharedDemoHandler';
 import { handleCancelStorefrontSetup, handleStartStorefrontSetup } from '@/features/eds/handlers/storefrontSetup/storefrontSetupHandlers';
 import { meshHandlers } from '@/features/mesh/handlers/meshHandlers';
 import { handleCheckPrerequisites } from '@/features/prerequisites/handlers/checkHandler';
@@ -101,6 +107,19 @@ export const projectCreationHandlers = defineHandlers({
     'check-github-auth': handleCheckGitHubAuth,
     'check-github-app': checkGitHubApp,
     'check-repo-readiness': handleCheckRepoReadiness,
+    // Reads a colleague's repository before "Add a demo package" offers it (step 04's dialog).
+    'probe-shared-demo': handleProbeSharedDemo,
+    'add-shared-demo': handleAddSharedDemo,
+    // The dialog's second way in: a zip becomes a repository in the SC's account.
+    'import-storefront-zip': handleImportStorefrontZip,
+    // A bundle's setup part: the wizard reopens pre-filled, on the card the storefront became.
+    'use-bundle-setup': handleUseBundleSetup,
+    // Takes a demo off the list; confirms host-side, naming the projects built on it.
+    'forget-added-demo': handleForgetAddedDemo,
+    'edit-added-demo': handleEditAddedDemo,
+    // The dialog's change mode commits here; the wizard never opens that mode,
+    // but the dialog is one component and every message it can send is answered.
+    'change-demo-source': handleChangeDemoSource,
     'create-github-repo': handleCreateGitHubRepo,
     'github-oauth': handleGitHubOAuth,
     'github-change-account': handleGitHubChangeAccount,

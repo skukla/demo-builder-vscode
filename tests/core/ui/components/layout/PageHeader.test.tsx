@@ -91,24 +91,24 @@ describe('PageHeader', () => {
 
         it('should render statusText on a secondary line when provided', () => {
             const { container } = renderWithProvider(
-                <PageHeader title="Title" statusText="Deploying…" />
+                <PageHeader title="Title" statusText="Deploying" />
             );
 
-            expect(screen.getByText('Deploying…')).toBeInTheDocument();
+            expect(screen.getByText('Deploying')).toBeInTheDocument();
             const lines = container.querySelectorAll('.page-header-secondary');
             expect(lines).toHaveLength(1);
-            expect(lines[0]).toHaveTextContent('Deploying…');
+            expect(lines[0]).toHaveTextContent('Deploying');
         });
 
         it('should render both secondary lines when description and status are given', () => {
             const { container } = renderWithProvider(
-                <PageHeader title="Title" description="Set it up" statusText="Deploying…" />
+                <PageHeader title="Title" description="Set it up" statusText="Deploying" />
             );
 
             const lines = container.querySelectorAll('.page-header-secondary');
             expect(lines).toHaveLength(2);
             expect(lines[0]).toHaveTextContent('Set it up');
-            expect(lines[1]).toHaveTextContent('Deploying…');
+            expect(lines[1]).toHaveTextContent('Deploying');
         });
     });
 

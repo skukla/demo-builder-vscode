@@ -40,7 +40,7 @@ describe('useDashboardStatus — Status Display Strings', () => {
             expect(result.current.demoStatusDisplay.color).toBe('gray');
         });
 
-        it('should return Starting... for starting status', () => {
+        it('should return Starting for starting status', () => {
             const { result } = renderHook(() => useDashboardStatus());
 
             act(() => {
@@ -51,7 +51,7 @@ describe('useDashboardStatus — Status Display Strings', () => {
                 });
             });
 
-            expect(result.current.demoStatusDisplay.text).toBe('Starting...');
+            expect(result.current.demoStatusDisplay.text).toBe('Starting');
             expect(result.current.demoStatusDisplay.color).toBe('blue');
         });
 
@@ -88,7 +88,7 @@ describe('useDashboardStatus — Status Display Strings', () => {
             expect(result.current.demoStatusDisplay.color).toBe('yellow');
         });
 
-        it('should return Stopping... for stopping status', () => {
+        it('should return Stopping for stopping status', () => {
             const { result } = renderHook(() => useDashboardStatus());
 
             act(() => {
@@ -99,7 +99,7 @@ describe('useDashboardStatus — Status Display Strings', () => {
                 });
             });
 
-            expect(result.current.demoStatusDisplay.text).toBe('Stopping...');
+            expect(result.current.demoStatusDisplay.text).toBe('Stopping');
             expect(result.current.demoStatusDisplay.color).toBe('yellow');
         });
 
@@ -118,7 +118,7 @@ describe('useDashboardStatus — Status Display Strings', () => {
             expect(result.current.demoStatusDisplay.color).toBe('red');
         });
 
-        it('should return Configuring... for configuring status', () => {
+        it('should return Configuring for configuring status', () => {
             const { result } = renderHook(() => useDashboardStatus());
 
             act(() => {
@@ -129,18 +129,18 @@ describe('useDashboardStatus — Status Display Strings', () => {
                 });
             });
 
-            expect(result.current.demoStatusDisplay.text).toBe('Configuring...');
+            expect(result.current.demoStatusDisplay.text).toBe('Configuring');
             expect(result.current.demoStatusDisplay.color).toBe('blue');
         });
     });
 
     describe('Mesh Status Display', () => {
-        it('should return Loading status... initially when hasMesh is true', () => {
+        it('should return Loading status initially when hasMesh is true', () => {
             const { result } = renderHook(() => useDashboardStatus({ hasMesh: true }));
 
             expect(result.current.meshStatusDisplay).toEqual({
                 color: 'blue',
-                text: 'Loading status...',
+                text: 'Loading status',
             });
         });
 
@@ -231,7 +231,7 @@ describe('useDashboardStatus — Status Display Strings', () => {
             expect(result.current.meshStatusDisplay?.text).toBe('Not deployed');
         });
 
-        it('should return Deploying... with message for deploying', () => {
+        it('should return Deploying with message for deploying', () => {
             const { result } = renderHook(() => useDashboardStatus());
 
             act(() => {

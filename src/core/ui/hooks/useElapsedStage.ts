@@ -68,6 +68,6 @@ export function useElapsedStage(active: boolean, stages: ElapsedStage[]): string
  * 60s gateway cutoff (2026-09-21), so "up to a minute" stopped being true.
  */
 export const ORG_SERVICES_LOADING_STAGES: ElapsedStage[] = [
-    { afterMs: 4000, message: "Waiting on Adobe's API catalog service…" },
-    { afterMs: 15000, message: 'Still waiting on Adobe…' },
+    { afterMs: 4000, message: "Waiting on Adobe's API catalog service" },
+    { afterMs: 15000, message: 'Still waiting on Adobe' },
 ];

@@ -3,7 +3,6 @@
  *
  * Tests for the dashboard "More" overflow handlers that resolve the current
  * project via getCurrentProject() (NOT a projectPath payload):
- * - handleExportProject: export current project settings (reuses exportProjectSettings)
  * - handleRepublishContent: republish EDS content (reuses republishStorefrontContent)
  * - handleRenameProject: rename current project (reuses shared rename core)
  */
@@ -49,11 +48,7 @@ jest.mock('@/features/projects-dashboard/services/projectRenameService', () => (
 // Imports under test
 // =============================================================================
 
-import {
-    handleExportProject,
-    handleRenameProject,
-} from '@/features/dashboard/handlers/dashboardHandlers';
-import { exportProjectSettings } from '@/features/projects-dashboard/services/settingsTransferService';
+import { handleRenameProject } from '@/features/dashboard/handlers/dashboardHandlers';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
@@ -94,29 +89,6 @@ function createMockContext(project: Project | undefined): HandlerContext {
 // =============================================================================
 // Tests
 // =============================================================================
-
-describe('handleExportProject', () => {
-    beforeEach(() => jest.clearAllMocks());
-
-    it('should delegate to exportProjectSettings with the current project', async () => {
-        const project = localProject();
-        const context = createMockContext(project);
-
-        const result = await handleExportProject(context);
-
-        expect(result.success).toBe(true);
-        expect(exportProjectSettings as jest.Mock).toHaveBeenCalledWith(context, project);
-    });
-
-    it('should return error when no current project', async () => {
-        const context = createMockContext(undefined);
-
-        const result = await handleExportProject(context);
-
-        expect(result.success).toBe(false);
-        expect(exportProjectSettings as jest.Mock).not.toHaveBeenCalled();
-    });
-});
 
 describe('handleRenameProject', () => {
     beforeEach(() => {

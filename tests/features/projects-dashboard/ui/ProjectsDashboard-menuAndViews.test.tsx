@@ -79,8 +79,8 @@ describe('the New menu', () => {
 
         expect(items.map(labelOf)).toEqual([
             'New Project',
-            'Copy from Existing...',
-            'Import from File...',
+            'Copy from Existing',
+            'Import from File',
         ]);
     });
 
@@ -88,7 +88,7 @@ describe('the New menu', () => {
         renderDashboard({ onImportFromFile: jest.fn() });
         const items = await openNewMenu();
 
-        expect(items.map(labelOf)).toEqual(['New Project', 'Import from File...']);
+        expect(items.map(labelOf)).toEqual(['New Project', 'Import from File']);
     });
 
     // Each entry must call ITS callback and no other. All three callbacks are
@@ -97,8 +97,8 @@ describe('the New menu', () => {
     describe('each entry calls its own callback and no other', () => {
         const cases = [
             ['New Project', 'onCreateProject'],
-            ['Copy from Existing...', 'onCopyFromExisting'],
-            ['Import from File...', 'onImportFromFile'],
+            ['Copy from Existing', 'onCopyFromExisting'],
+            ['Import from File', 'onImportFromFile'],
         ] as const;
 
         it.each(cases)('%s calls %s alone', async (label, expected) => {

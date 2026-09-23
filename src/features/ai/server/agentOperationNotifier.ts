@@ -28,6 +28,7 @@
 
 import * as vscode from 'vscode';
 import { alertCopyFor } from './agentAlertCopy';
+import { agentNotice } from './agentNotice';
 import { buildConsentPrompt } from './consentText';
 import type { ConsentVerdict } from './inExtensionMcpServer';
 import { asRawText } from './mcpToolResult';
@@ -148,7 +149,7 @@ export function createAgentConsentGate(
         // window, this await was a silent indefinite hang — the tool's args line
         // was the last log anywhere, and the hang site took a live bisection to
         // find (AI-5, 2026-08-27).
-        logger.info(`[MCP] ${toolName} awaiting the user consent dialog in the VS Code window…`);
+        logger.info(`[MCP] ${toolName} awaiting the user consent dialog in the VS Code window`);
         // The dialog cannot be closed programmatically, so an unanswered one
         // resolves as a timeout refusal rather than blocking the agent forever.
         // A click that comes after the timer fires grants nothing — the call
@@ -157,7 +158,7 @@ export function createAgentConsentGate(
         let timedOut = false;
         const choice = await Promise.race([
             vscode.window.showWarningMessage(
-                prompt?.title ?? `Demo Builder: ${toolName}?`,
+                prompt?.title ?? `${agentNotice(toolName)}?`,
                 { modal: true, detail: prompt?.detail || undefined },
                 ...buttons,
             ),
@@ -204,6 +205,11 @@ export function createAgentConsentGate(
     };
 }
 
+/** A phase line for the card: the services' trailing ellipsis removed, the step counter kept. */
+export function phaseLine(message: string): string {
+    return message.replace(/(?:\.{3}|…)(\s*\(\d+\/\d+\))?$/, '$1').trimEnd();
+}
+
 /**
  * Build the notifier the extension passes to `InExtensionMcpServer`.
  *
@@ -222,11 +228,14 @@ export function createAgentOperationNotifier(
             vscode.window.withProgress(
                 {
                     location: vscode.ProgressLocation.Notification,
-                    // "Agent:" and nothing more — the old "Demo Builder — agent:"
-                    // prefix plus the phase message wrapped every card onto two
-                    // lines (owner feedback, 2026-08-27). The source is already
-                    // on the card ("Source: Adobe Demo Builder").
-                    title: `Agent: ${label(toolName)}…`,
+                    // "Agent" and the narration, nothing more — the old "Demo
+                    // Builder — agent:" prefix plus the phase message wrapped every
+                    // card onto two lines (owner feedback, 2026-08-27). The source
+                    // is already on the card ("Source: Adobe Demo Builder"). VS Code
+                    // renders the card as "<title>: <phase>", so the title carries
+                    // no colon and no ellipsis of its own: "Agent: Resetting the
+                    // storefront…: Resetting repo" read as a typo (owner, 2026-09-12).
+                    title: agentNotice(label(toolName)),
                     cancellable: false,
                 },
                 async (progress) => {
@@ -235,9 +244,12 @@ export function createAgentOperationNotifier(
                         // phase strings reach this notification. Previously `run`
                         // took nothing, so the notification could only ever show
                         // the tool's title while the phases went nowhere.
-                        const result = await run((message) => progress.report({ message }));
+                        // The services' own phase lines end in "..." for the wizard's
+                        // list; on this card VS Code already draws the progress, so the
+                        // dots are dropped and the line reads "Resetting repository (3/11)".
+                        const result = await run((message) => progress.report({ message: phaseLine(message) }));
                         vscode.window.setStatusBarMessage(
-                            `$(check) ${label(toolName)} — done`,
+                            `$(check) ${agentNotice(label(toolName))} — done`,
                             TIMEOUTS.STATUS_BAR_SUCCESS,
                         );
                         return result;
@@ -247,7 +259,7 @@ export function createAgentOperationNotifier(
                         // A toast, not a status-bar flash: a failed live-site
                         // mutation is the one outcome the user must not miss.
                         void vscode.window.showWarningMessage(
-                            `Demo Builder — ${label(toolName)} failed: ${message}`,
+                            `${agentNotice(label(toolName))} failed: ${message}`,
                         );
                         throw error;
                     }

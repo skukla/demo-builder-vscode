@@ -39,6 +39,14 @@
     animation: inline-notice-fade-in var(--spectrum-global-animation-duration-300) ease-out;
 }
 
+/* The info tone is blue all the way round. Until 2026-09-14 only the ICON
+   changed colour and the border stayed orange, so every info notice (a saved
+   link, a removed package, "This is the demo behind Starter") read as a
+   warning beside a real one. */
+.inline-notice--info {
+    border-color: var(--spectrum-global-color-blue-500);
+}
+
 .inline-notice--info .inline-notice-icon {
     color: var(--spectrum-global-color-blue-600);
 }

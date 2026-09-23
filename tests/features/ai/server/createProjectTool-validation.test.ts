@@ -15,6 +15,7 @@ import {
     HEADLESS,
     defaultStorefrontSetup,
     executeProjectCreation,
+    getGitHubServices,
     getSelectablePackages,
     getStorefrontForStack,
     storefrontSetup,
@@ -37,7 +38,7 @@ describe('create_project — argument guards', () => {
     it('refuses a call with no arguments at all', async () => {
         const res = await toolServer().call(undefined);
 
-        expect(res.error).toMatch(/projectName, package, and stack are all required/);
+        expect(res.error).toMatch(/projectName, package \(or link\), and stack are all required/);
         expect(getSelectablePackages).not.toHaveBeenCalled();
         expect(executeProjectCreation).not.toHaveBeenCalled();
     });
@@ -49,7 +50,7 @@ describe('create_project — argument guards', () => {
         async (field) => {
             const res = await toolServer().call({ ...HEADLESS, [field]: undefined });
 
-            expect(res.error).toMatch(/projectName, package, and stack are all required/);
+            expect(res.error).toMatch(/projectName, package \(or link\), and stack are all required/);
             expect(executeProjectCreation).not.toHaveBeenCalled();
         },
     );
@@ -135,7 +136,7 @@ describe('create_project — registered schema', () => {
         expect(def().description.length).toBeGreaterThan(0);
     });
 
-    it('accepts the three required ids, the four EDS options, and confirm', () => {
+    it('accepts the ids (package or link), the four EDS options and confirm', () => {
         const schema = schemaOf(def());
 
         expect(Object.keys(schema.shape).sort()).toEqual([
@@ -143,6 +144,8 @@ describe('create_project — registered schema', () => {
             'confirm',
             'daLiveOrg',
             'daLiveSite',
+            'githubOwner',
+            'link',
             'package',
             'projectName',
             'repoName',
@@ -156,6 +159,9 @@ describe('create_project — registered schema', () => {
         // The EDS fields are optional at the schema level and enforced by the
         // handler, which is the only place that knows the stack is an EDS one.
         expect(schema.safeParse({ projectName: 'p', package: 'k' }).success).toBe(false);
+        // `package` is optional at the schema level because `link` can stand in;
+        // the handler is what insists on one of the two.
+        expect(schema.safeParse({ projectName: 'p', link: 'https://github.com/jen/demo', stack: 's' }).success).toBe(true);
         expect(schema.safeParse({ projectName: 1, package: 'k', stack: 's' }).success).toBe(false);
         expect(
             schema.safeParse({ projectName: 'p', package: 'k', stack: 's', confirm: 'yes' }).success,
@@ -166,5 +172,35 @@ describe('create_project — registered schema', () => {
         for (const field of Object.values(schemaOf(def()).shape)) {
             expect((field.description ?? '').length).toBeGreaterThan(0);
         }
+    });
+});
+
+describe('create_project — the GitHub account the repository is created under', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        defaultStorefrontSetup();
+    });
+
+    it("names the signed-in account by default — without it storefront setup refuses, which every agent EDS creation did until 2026-09-12", async () => {
+        await toolServer().call(EDS);
+
+        expect(storefrontSetup.mock.calls[0][1]).toMatchObject({ edsConfig: { githubOwner: 'steve' } });
+    });
+
+    it('takes an organization when the caller names one', async () => {
+        await toolServer().call({ ...EDS, githubOwner: 'kukla-demos' });
+
+        expect(storefrontSetup.mock.calls[0][1]).toMatchObject({ edsConfig: { githubOwner: 'kukla-demos' } });
+    });
+
+    it('refuses, naming the argument, when GitHub names no account and none is given', async () => {
+        (getGitHubServices as jest.Mock).mockReturnValueOnce({
+            tokenService: { validateToken: jest.fn(async () => ({ valid: true })) },
+        });
+
+        const res = await toolServer().call(EDS);
+
+        expect(res.error).toMatch(/pass githubOwner/);
+        expect(storefrontSetup).not.toHaveBeenCalled();
     });
 });

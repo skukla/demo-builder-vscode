@@ -205,7 +205,7 @@ export function IntegrationsScreen({
         return (
             <View height="100vh" backgroundColor="gray-50">
                 <Flex justifyContent="center" alignItems="center" height="100%">
-                    <LoadingDisplay size="L" message="Loading integrations…" />
+                    <LoadingDisplay size="L" message="Loading integrations" />
                 </Flex>
             </View>
         );
@@ -236,7 +236,7 @@ export function IntegrationsScreen({
                             <SearchHeader
                                 searchQuery={searchQuery}
                                 onSearchQueryChange={setSearchQuery}
-                                searchPlaceholder="Filter integrations..."
+                                searchPlaceholder="Filter integrations"
                                 // 0, matching the projects list: show the field
                                 // from the first item. Not a tuning knob — the
                                 // COUNT's position depends on it. SearchHeader

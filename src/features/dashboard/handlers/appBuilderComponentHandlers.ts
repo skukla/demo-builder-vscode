@@ -119,7 +119,7 @@ export async function runGuards(
     // 9+ minutes (2026-08-27) and NOTHING here said which guard was holding it
     // — the same silent-multi-step shape as the teardown (AI-5). Each step
     // names itself BEFORE it runs so the last line in the log is the culprit.
-    context.logger.debug('[Guards] 1/3 auth check…');
+    context.logger.debug('[Guards] 1/3 auth check');
     const authResult = await ensureAdobeIOAuth({
         authManager,
         logger: context.logger,
@@ -136,7 +136,7 @@ export async function runGuards(
         return { error: 'Adobe sign-in required.', code: ErrorCode.AUTH_REQUIRED };
     }
 
-    context.logger.debug('[Guards] 2/3 org-mismatch check…');
+    context.logger.debug('[Guards] 2/3 org-mismatch check');
     const { detectProjectOrgMismatch } = await import(
         '@/features/authentication/services/detectProjectOrgMismatch'
     );
@@ -147,7 +147,7 @@ export async function runGuards(
         };
     }
 
-    context.logger.debug('[Guards] 3/3 developer-permission check…');
+    context.logger.debug('[Guards] 3/3 developer-permission check');
     const permission = await authManager.testDeveloperPermissions();
     if (!permission.hasPermissions) {
         return {
@@ -743,7 +743,7 @@ export async function withComponentProgress<T extends GuardableResult>(
 ): Promise<T> {
     const { title, id, label, noun, logger } = options;
     const inModal = options.progress === 'modal';
-    logger.info(`${title} ${label}...`);
+    logger.info(`${title} ${label}`);
     // Every step also reaches the Debug Logs with how long the step before it
     // took. The notification shows only the step in flight and is gone when it
     // closes, so an update that stalled left nothing to read (owner, 2026-09-18).

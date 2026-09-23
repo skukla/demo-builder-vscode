@@ -138,9 +138,12 @@
         box-sizing: border-box;
     }
 
-    /* Ensure padding is visible on focus */
-    
-    div[class*="spectrum-Textfield"] input {
+    /* Ensure padding is visible on focus. A TextArea renders a TEXTAREA inside the
+       same Textfield wrapper; without it here the two fields sat at different
+       indents in one form (Save as demo package, 2026-09-14). */
+
+    div[class*="spectrum-Textfield"] input,
+    div[class*="spectrum-Textfield"] textarea {
         padding: 10px 14px;
         box-sizing: border-box;
     }

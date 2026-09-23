@@ -142,7 +142,7 @@ export class AutoUpdater {
 
     public async downloadAndInstall(updateInfo: UpdateInfo): Promise<void> {
         try {
-            this.logger.info(`[Updates] Downloading update ${updateInfo.version}...`);
+            this.logger.info(`[Updates] Downloading update ${updateInfo.version}`);
             
             // Download VSIX to temp directory
             const tempDir = os.tmpdir();
