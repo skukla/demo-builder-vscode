@@ -22,6 +22,7 @@ import {
     tokenProvider,
     type ProbeLegs,
 } from './configServiceProbe.testUtils';
+import { NO_ADMIN_ROLE_REMEDY_SHORT } from '@/features/eds/services/configService/noAdminRoleRemedy';
 
 describe('probeConfigService — legs', () => {
     let originalFetch: typeof globalThis.fetch;
@@ -163,10 +164,10 @@ describe('probeConfigService — legs', () => {
             const result = await run({ ...refused, roster: { status: 200, body: rosterOf() } });
 
             expect(result.orgAdmins).toEqual({ status: 'ok', emails: [] });
+            // Nobody to ask means the user fixes it themselves, so the verdict carries
+            // the reinstall rather than pointing at a person who does not exist.
             expect(result.verdict).toBe(
-                `${CREDENTIAL_VALID_BASE}No org admin is visible either. Run Demo Builder: ` +
-                    'Manage Site Access, which opens the AEM Code Sync app on GitHub; failing ' +
-                    'that, the GitHub user who installed it, or Adobe, has to add you.',
+                `${CREDENTIAL_VALID_BASE}No org admin is visible either. ${NO_ADMIN_ROLE_REMEDY_SHORT}`,
             );
         });
 

@@ -40,6 +40,7 @@ import { maskEmail } from '@/core/utils/maskEmail';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { resolveByomOverlayUrl } from '@/features/eds/handlers/edsHelpers';
 import type { Logger } from '@/types/logger';
+import { NO_ADMIN_ROLE_REMEDY_SHORT } from './noAdminRoleRemedy';
 
 // Host constant shared from helixApiClient — one definition (2026-08-22 spine sweep).
 // Host constant shared from daLiveConstants — one definition (2026-08-22 spine sweep).
@@ -172,10 +173,12 @@ function interpret(result: ConfigServiceProbeResult): string {
         if (daLiveOk) {
             // Kept tight on purpose — a test caps the verdict at 400 chars so it
             // stays pasteable into a ticket.
+            // The mechanism used to be spelled out here too. The remedy below now
+            // carries it — "the address that is primary when the app is installed"
+            // says the same thing while also being something to act on.
             const base =
                 'The credential is valid — DA.live accepted it in the same run — but the ' +
-                'Configuration Service refused it. The admin role is minted for whoever ' +
-                'installs AEM Code Sync, so an older site can refuse its own owner. ';
+                'Configuration Service refused it: your identity holds no admin role. ';
 
             // Naming a person beats naming a mechanism. Only possible when the
             // roster is readable — and when it is NOT, that absence is the more
@@ -188,13 +191,9 @@ function interpret(result: ConfigServiceProbeResult): string {
                 const more = emails.length > 3 ? ` (+${emails.length - 3} more)` : '';
                 return `${base}Ask an org admin to add you under Site users: ${named}${more}.`;
             }
-            // Not the AEM setup page: it cannot read or grant anything without the
-            // one-time key the Code Sync bot adds during a GitHub App install.
-            return (
-                `${base}No org admin is visible either. Run Demo Builder: Manage Site Access, ` +
-                'which opens the AEM Code Sync app on GitHub; failing that, the GitHub user ' +
-                'who installed it, or Adobe, has to add you.'
-            );
+            // The user fixes this themselves; noAdminRoleRemedy.ts holds the how and
+            // what was measured to establish it.
+            return `${base}No org admin is visible either. ${NO_ADMIN_ROLE_REMEDY_SHORT}`;
         }
         return (
             'The Configuration Service refused this credential, and DA.live did not accept ' +

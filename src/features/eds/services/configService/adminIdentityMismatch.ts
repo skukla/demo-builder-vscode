@@ -1,24 +1,29 @@
 /**
- * Whether a site's admin role most likely went to a different identity than the
- * one Demo Builder signs in to Adobe with, and what to say about it.
+ * Whether the GitHub account's primary email is the identity Demo Builder signs in
+ * to Adobe with — and why that matters BEFORE the fix is attempted, not after.
  *
- * AEM Code Sync gives the admin role to the primary email of the GitHub account
- * that installed it: Adobe's own setup page said "We are using the primary email
- * address set in the GitHub account" (research,
- * `.rptc/research/site-admin-identity-mismatch/`). Demo Builder calls the
- * Configuration Service as the SC's Adobe identity. When the role sits on a
- * different address, the site refuses its own owner.
+ * AEM Code Sync mints the site admin role for the GitHub account's PRIMARY email as
+ * it stands when the app is installed. So the primary email is a precondition of the
+ * remedy in `noAdminRoleRemedy.ts`: reinstall with the wrong address primary and the
+ * role is granted to the wrong address, which looks exactly like the reinstall
+ * having failed.
  *
- * It is minted from whatever was primary AT INSTALL TIME, and nobody without the
- * role can read back who holds it — so today's primary email is not the whole
- * question. Every VERIFIED address on the account is a candidate; unverified ones
- * are not, because GitHub never makes one primary. The first report this was
- * written for came from an account whose primary email had since been changed to
- * the Adobe one, which a primary-only comparison answers nothing about.
+ * ## This used to give different advice, and the advice was wrong
  *
- * This is a strong lead, not proof: the service that assigns the role is not
- * public. So the wording says what Code Sync does and what to try, not that this
- * is certainly the cause.
+ * Until 2026-09-23 it said the role probably sat on the other address and told the
+ * user to sign in to AEM as that address. That was a reasonable theory and it was
+ * tested that day on the one real case: the other address was signed in to
+ * successfully and refused exactly as the first had been. Neither address held the
+ * role — the roster held nobody — so naming an address to go and use was advice
+ * that could not work.
+ *
+ * It also briefly reported EVERY verified address as a candidate, for the same
+ * theory. That is gone with it: once the remedy is "reinstall, which mints against
+ * today's primary", which old address might have held the role stops being a
+ * question anyone needs answered.
+ *
+ * What survives is the part that is load-bearing: if the primary email is not the
+ * Adobe one, say so, because the fix will not work until it is.
  *
  * @module features/eds/services/configService/adminIdentityMismatch
  */
@@ -26,60 +31,36 @@
 import type { GitHubAccountEmail } from '../types';
 
 
-/** The Adobe identity, and the GitHub addresses that may hold the role instead. */
+/** The two addresses that differ, when they do. */
 export interface AdminIdentityMismatch {
-    /** The GitHub account's primary email today — which may itself be the Adobe one. */
     githubPrimaryEmail: string;
     adobeEmail: string;
-    /** Verified GitHub addresses that are not the Adobe identity, primary first. */
-    candidateEmails: string[];
 }
 
-const same = (a: string, b: string): boolean => a.toLowerCase() === b.toLowerCase();
-
 /**
- * The Code Sync identity mismatch, or nothing when either side is unknown or
- * every verified GitHub address already is the Adobe identity.
+ * The mismatch, or nothing when either side is unknown or the primary email already
+ * IS the Adobe identity — in which case the reinstall will mint the right address
+ * and there is nothing to warn about.
+ *
+ * Only a verified address can be primary on GitHub, so unverified ones are ignored.
  */
 export function findAdminIdentityMismatch(
     adobeEmail: string | null | undefined,
     githubEmails: readonly GitHubAccountEmail[],
 ): AdminIdentityMismatch | undefined {
-    const verified = githubEmails.filter((entry) => entry.verified);
-    const primary = verified.find((entry) => entry.primary)?.email;
+    const primary = githubEmails.find((entry) => entry.verified && entry.primary)?.email;
     if (!adobeEmail || !primary) return undefined;
-
-    // Primary first: it is the likeliest holder, and the one a person recognises.
-    const candidateEmails = verified
-        .map((entry) => entry.email)
-        .filter((email) => !same(email, adobeEmail))
-        .sort((a, b) => Number(same(b, primary)) - Number(same(a, primary)));
-    if (candidateEmails.length === 0) return undefined;
-    return { githubPrimaryEmail: primary, adobeEmail, candidateEmails };
+    if (primary.toLowerCase() === adobeEmail.toLowerCase()) return undefined;
+    return { githubPrimaryEmail: primary, adobeEmail };
 }
 
-/** Which GitHub addresses the role may sit on, and why they are the ones to try. */
-function whichAddresses({ githubPrimaryEmail, adobeEmail, candidateEmails }: AdminIdentityMismatch): string {
-    if (same(githubPrimaryEmail, adobeEmail)) {
-        return (
-            `Your GitHub primary email is now ${adobeEmail} as well, so the role probably sits on ` +
-            `an address that was primary earlier: ${candidateEmails.join(', ')}.`
-        );
-    }
-    const rest = candidateEmails.filter((email) => !same(email, githubPrimaryEmail));
-    if (rest.length === 0) return `Your GitHub primary email is ${githubPrimaryEmail}.`;
-    return `Your GitHub primary email is ${githubPrimaryEmail}, and the account also has ${rest.join(', ')}.`;
-}
-
-/** One paragraph for a person: what Code Sync does, which addresses, and what to do. */
-export function describeAdminIdentityMismatch(mismatch: AdminIdentityMismatch, site: string): string {
-    const { adobeEmail, candidateEmails } = mismatch;
-    const signInAs = candidateEmails.length === 1 ? candidateEmails[0] : 'one of those addresses';
+/** One paragraph: what to change on GitHub, and what happens if it is not changed. */
+export function describeAdminIdentityMismatch(mismatch: AdminIdentityMismatch): string {
+    const { githubPrimaryEmail: github, adobeEmail: adobe } = mismatch;
     return (
-        'AEM Code Sync gives the admin role to the primary email of the GitHub account that ' +
-        `installed it, as that email was at the time. Demo Builder signs in to Adobe as ` +
-        `${adobeEmail}, and ${site} refuses it. ${whichAddresses(mismatch)} Sign in to AEM as ` +
-        `${signInAs} and add ${adobeEmail} as an admin in AEM's User Admin tool, or ask Adobe ` +
-        'to add it.'
+        `Before you reinstall, change your GitHub primary email. It is ${github}, but Demo ` +
+        `Builder signs in to Adobe as ${adobe}, and AEM Code Sync grants the role to whichever ` +
+        `address is primary when it is installed. Reinstalling as it stands would grant ${github} ` +
+        `the role and leave ${adobe} refused exactly as it is now.`
     );
 }
