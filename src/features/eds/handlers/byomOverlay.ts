@@ -138,8 +138,8 @@ export const BYOM_OVERLAY_REGISTRATION_FAILED_MESSAGE =
  * used to, as a self-serve route, and it never was one: the page authenticates
  * only with a one-time key the Code Sync bot places in its URL during a GitHub App
  * install. Opened from a link, bare or with the site in the query string, it can
- * neither read the config nor add a user — reproduced 2026-09-14 for kmanns/wire
- * and kmanns/hardie ("We couldn't load your configuration for editing").
+ * neither read the config nor add a user — reproduced 2026-09-14 on two reported
+ * sites ("We couldn't load your configuration for editing").
  */
 export const BYOM_OVERLAY_NOT_AUTHORIZED_MESSAGE =
     'Product detail pages will not load: the Configuration Service refused the BYOM overlay ' +

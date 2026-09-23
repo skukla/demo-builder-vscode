@@ -482,7 +482,7 @@ describe('surfaceOverlayRegistrationFailure', () => {
         // The AEM setup page is NOT a remedy anyone can reach from a link. It
         // authenticates only with a one-time key that the Code Sync bot puts in
         // the URL during a GitHub App install; opened any other way it cannot read
-        // the config or add a user (reproduced 2026-09-14 for kmanns/wire: "We
+        // the config or add a user (reproduced 2026-09-14 on a reported site: "We
         // couldn't load your configuration for editing"). Naming it sent people
         // to a page that could never grant the role.
         expect(BYOM_OVERLAY_NOT_AUTHORIZED_MESSAGE).not.toContain('tools.aem.live');
