@@ -8233,7 +8233,7 @@
             "anchors": [
                 "try {"
             ],
-            "line": 298,
+            "line": 299,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying this try removes the URL parse and the scheme/host fingerprint, leaving the function to fall off the end and the warning to read 'undefined'. Same argument as the enclosing describeRejectedUrl entry: the value is log text and nothing else reads it. That an unparseable URL is REJECTED, which is what the try/catch is really deciding for the caller, is asserted by 'rejects unparseable URLs'.",
@@ -8246,7 +8246,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 301,
+            "line": 302,
             "mutants": 1,
             "category": "block",
             "reason": "The catch arm returns the not-URL-shaped fingerprint. Emptying it makes the warning say 'undefined' for a value new URL() could not parse, and changes nothing else \u2014 the caller has already decided to fall through to fromConfig by the time this runs. Same argument as the try entry above.",
