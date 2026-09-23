@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **"No admin role on this site" no longer sends people to a page that cannot help.** The 403 message, Manage Site Access and Repair Site Configuration all pointed at AEM's setup page, which only works when AEM Code Sync opens it during a GitHub App install. Opened from Demo Builder it could not load the site or add anyone. Manage Site Access now names the org admins who can add you, otherwise opens the Code Sync app on GitHub, and says who to ask if access still does not arrive. An agent whose repair is refused now gets a hand-off to Manage Site Access instead of the dead link.
-- **Manage Site Access explains the most likely cause of the refusal.** AEM Code Sync gives the admin role to the primary email of the GitHub account that installed it. When that email is not the one Demo Builder signs in to Adobe with, the message now names both and opens AEM's User Admin tool, where the Adobe email can be added.
+- **Manage Site Access explains the most likely cause of the refusal.** AEM Code Sync gives the admin role to the primary email of the GitHub account that installed it, as that email was at the time. When any verified address on the account is not the one Demo Builder signs in to Adobe with, the message names the addresses to try and opens AEM's User Admin tool, where the Adobe email can be added. Changing the GitHub primary email afterwards does not move a role already given out, so an account whose primary is now the Adobe address still gets the explanation.
 
 ## [1.0.0-beta.146] - 2026-09-10
 

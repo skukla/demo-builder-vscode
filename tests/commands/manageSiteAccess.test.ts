@@ -163,11 +163,16 @@ describe('ManageSiteAccessCommand — no admin role', () => {
     });
 
     it("explains a GitHub primary email that is not the Adobe identity, opens AEM's User Admin tool, and polls", async () => {
-        // Reported 2026-09-15 (kmanns): Code Sync gave the role to his personal GitHub email.
+        // Reported 2026-09-15: Code Sync gave the role to the reporter's personal GitHub email.
         const explanation = 'AEM Code Sync gives the admin role to the primary email of the GitHub account that installed it.';
         mockListSiteAccess.mockResolvedValue({
             ...REFUSED,
-            identityMismatch: { githubPrimaryEmail: 'khalil@example.com', adobeEmail: 'sc@adobe.example', explanation },
+            identityMismatch: {
+                githubPrimaryEmail: 'personal@example.com',
+                adobeEmail: 'sc@adobe.example',
+                candidateEmails: ['personal@example.com'],
+                explanation,
+            },
         });
         showWarning.mockResolvedValueOnce('Open AEM User Admin');
 
@@ -191,7 +196,12 @@ describe('ManageSiteAccessCommand — no admin role', () => {
         mockListSiteAccess.mockResolvedValue({
             ...REFUSED,
             orgAdmins: ['admin@example.test'],
-            identityMismatch: { githubPrimaryEmail: 'khalil@example.com', adobeEmail: 'sc@adobe.example', explanation: 'Explained.' },
+            identityMismatch: {
+                githubPrimaryEmail: 'personal@example.com',
+                adobeEmail: 'sc@adobe.example',
+                candidateEmails: ['personal@example.com'],
+                explanation: 'Explained.',
+            },
         });
         showWarning.mockResolvedValueOnce('Close');
 
