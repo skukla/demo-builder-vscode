@@ -121,24 +121,25 @@ describe('repairSiteConfig', () => {
         );
     });
 
-    it('returns not_authorized WITH a setup link on a 403', async () => {
+    it('returns not_authorized on a 403, with no setup-page link', async () => {
         mockRegisterSiteConfig.mockResolvedValue({ registered: false, statusCode: 403 });
 
         const result = await run();
 
         expect(result.status).toBe('not_authorized');
         expect(result.verified).toBe(false);
-        expect(result.setupUrl).toContain('demo-builder-test');
+        // The link it used to carry opened a page that cannot grant anything
+        // without the Code Sync bot's one-time key (reproduced 2026-09-14).
+        expect(result).not.toHaveProperty('setupUrl');
         expect(mockPinSiteAdmin).not.toHaveBeenCalled();
     });
 
-    it('returns failed WITHOUT a setup link on a non-403 failure', async () => {
+    it('returns failed on a non-403 failure', async () => {
         mockRegisterSiteConfig.mockResolvedValue({ registered: false, statusCode: 500 });
 
         const result = await run();
 
         expect(result.status).toBe('failed');
-        expect(result.setupUrl).toBeUndefined();
     });
 
     it('reports lost grants even when the registration FAILED', async () => {

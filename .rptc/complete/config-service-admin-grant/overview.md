@@ -140,3 +140,30 @@ for an org that already exists, which only an affected user can answer.
   (mirror `surfaceOverlayRegistrationFailure`).
 - No credential material in messages or logs (the probe pattern already enforces
   this; a test pins it).
+
+## Correction — 2026-09-14: the setup deep link never granted anything
+
+The shipped remedy for a user holding no role was a deep link to
+`tools.aem.live/bot/setup?user=&site=&url=&org=`. It does not work, for anyone.
+Reproduced for kmanns/wire and kmanns/hardie: the page shows "We couldn't load your
+configuration for editing", and the bare URL printed in the 403 message reproduces
+the console exactly (`GET admin.hlx.page/config/.json Failed to fetch`).
+
+Why, from the tool's own source (`/widgets/bot-info/bot-info.js`): the page reads
+org and site from the query string but authenticates ONLY with a one-time setup key
+from the URL hash (`#token=…&token_id=…`, sent as `authorization: token …`). The
+Code Sync bot mints that key during the GitHub App install callback. Without it the
+page cannot read the config or write Site users. The 2026-08-14 observation of the
+param shape came from a session that arrived through the install callback, which is
+why it looked self-serve.
+
+What changed (`fix/site-access-remedy`): the link builder, the result's `setupUrl`,
+the log redaction that only existed for it, and every mention of the page in user
+copy are removed. Manage Site Access now names readable org admins, otherwise opens
+the AEM Code Sync app on GitHub and keeps the 403 → 200 poll, and its "still
+refused" message names the GitHub user who installed Code Sync, or Adobe.
+
+Still open, and it needs a sacrificial repo (a cloud write, owner-confirmed): does
+saving an EXISTING Code Sync installation's repository access send GitHub back to
+the setup page WITH a key? If not, the GitHub route in Manage Site Access is dead
+too, and the honest remedies are only a named admin or Adobe.

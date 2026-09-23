@@ -11,7 +11,6 @@
 
 import * as vscode from 'vscode';
 import { getLogger } from '@/core/logging/debugLogger';
-import { redactUrlUserParam } from '@/core/utils/maskEmail';
 import type { Logger } from '@/types/logger';
 
 const BYOM_MAX_URL_LENGTH = 2048;
@@ -133,38 +132,35 @@ export const BYOM_OVERLAY_REGISTRATION_FAILED_MESSAGE =
  * The Configuration Service admin role is minted for the GitHub user who installs
  * the AEM Code Sync App at org creation, so an org predating that flow refuses even
  * its own owner (2026-08-13, leah-b2b-demo — Code Sync verified installed, DA.live
- * accepting the same token). The remedy is a role grant, and it is self-serve:
- * `tools.aem.live/bot/setup`'s "Site users" step writes
- * `POST config/{org}/sites/{site}/access/admin.json` (verified 2026-08-14). The
- * message names that rather than the GitHub App, because re-installing is the
- * slower path and does not help when the org roster is the gap.
+ * accepting the same token). The remedy is a role grant by someone who holds it.
+ *
+ * It does NOT name the AEM setup page (`tools.aem.live/bot/setup`). This message
+ * used to, as a self-serve route, and it never was one: the page authenticates
+ * only with a one-time key the Code Sync bot places in its URL during a GitHub App
+ * install. Opened from a link, bare or with the site in the query string, it can
+ * neither read the config nor add a user — reproduced 2026-09-14 for kmanns/wire
+ * and kmanns/hardie ("We couldn't load your configuration for editing").
  */
 export const BYOM_OVERLAY_NOT_AUTHORIZED_MESSAGE =
     'Product detail pages will not load: the Configuration Service refused the BYOM overlay ' +
     'registration (403 not authorized). Your Adobe identity holds no admin role on this ' +
-    "site's configuration — the role is minted when the AEM Code Sync GitHub App is first " +
-    'installed, so an older site can refuse even its own owner. Fix: run ' +
-    '"Demo Builder: Manage Site Access" — it names who holds the role and opens the AEM setup ' +
-    'tool (https://tools.aem.live/bot/setup), where adding your email under "Site users" with ' +
-    'the admin role grants it. Then run "Demo Builder: Repair Site Configuration" to retry ' +
-    'this write and republish. Resetting the storefront retries with the same identity and ' +
-    'will be refused again.';
+    "site's configuration — the role is minted for the GitHub user who first installs the " +
+    'AEM Code Sync GitHub App, so an older site can refuse even its own owner. Fix: run ' +
+    '"Demo Builder: Manage Site Access" — it names anyone who can grant you the role, and ' +
+    'when nobody is visible it opens the AEM Code Sync app on GitHub. Once you hold the role, ' +
+    'run "Demo Builder: Repair Site Configuration" to retry this write and republish. ' +
+    'Resetting the storefront retries with the same identity and will be refused again.';
 
 /**
  * Pick the user-facing message for a failed overlay registration.
  *
  * @param statusCode - the Configuration Service response status, when known
- * @param setupUrl - the site's Code Sync setup deep link
- *   (`configServiceAccess.buildCodeSyncSetupUrl`). Appended for a 403 ONLY: it
- *   is the remedy for an authorization refusal specifically, and attaching it to
- *   every failure teaches users to ignore it.
  * @returns the 403 authorization message, or the generic registration message
  */
-export function byomRegistrationFailureMessage(statusCode?: number, setupUrl?: string): string {
-    if (statusCode !== 403) return BYOM_OVERLAY_REGISTRATION_FAILED_MESSAGE;
-    return setupUrl
-        ? `${BYOM_OVERLAY_NOT_AUTHORIZED_MESSAGE} Open this site's setup directly: ${setupUrl}`
-        : BYOM_OVERLAY_NOT_AUTHORIZED_MESSAGE;
+export function byomRegistrationFailureMessage(statusCode?: number): string {
+    return statusCode === 403
+        ? BYOM_OVERLAY_NOT_AUTHORIZED_MESSAGE
+        : BYOM_OVERLAY_REGISTRATION_FAILED_MESSAGE;
 }
 
 /**
@@ -251,14 +247,9 @@ export function surfaceOverlayRegistrationFailure(
     logger: Logger,
     showWarning?: (message: string, ...actions: string[]) => Thenable<string | undefined> | void,
     statusCode?: number,
-    setupUrl?: string,
 ): void {
-    const message = byomRegistrationFailureMessage(statusCode, setupUrl);
-    // The LOG copy is redacted; the toast and the browser get the full URL.
-    // The setup link carries the signed-in address as `?user=`, percent-encoded,
-    // and `logger.error` is buffered into the debug export users paste into
-    // tickets. Encoding is why the generic email masking missed it.
-    logger.error(`[BYOM] ${redactUrlUserParam(message)}`);
+    const message = byomRegistrationFailureMessage(statusCode);
+    logger.error(`[BYOM] ${message}`);
 
     // A 403 is the only case with an in-app route: the role has to change hands
     // first, then the refused write has to be retried. Other failures get the

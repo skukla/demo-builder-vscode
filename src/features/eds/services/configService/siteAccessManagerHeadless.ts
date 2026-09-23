@@ -23,7 +23,12 @@
 
 import type * as vscode from 'vscode';
 import { maskEmail } from '@/core/utils/maskEmail';
-import { getDaLiveAuthService } from '@/features/eds/handlers/edsHelpers';
+import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
+import {
+    describeAdminIdentityMismatch,
+    findAdminIdentityMismatch,
+    type AdminIdentityMismatch,
+} from '@/features/eds/services/configService/adminIdentityMismatch';
 import {
     ensureSiteAdmin,
     probeConfigWriteAccess,
@@ -61,6 +66,13 @@ export interface SiteAccessListing {
     orgAdmins?: string[];
     /** Whether THIS identity can actually change the list (probed, not assumed). */
     canManage: boolean;
+    /**
+     * On a refusal: the GitHub account's primary email is not the Adobe identity
+     * Demo Builder signs in as. AEM Code Sync gives the admin role to that primary
+     * email, so this most likely explains the refusal. `explanation` is the
+     * sentence to show a person.
+     */
+    identityMismatch?: AdminIdentityMismatch & { explanation: string };
     error?: string;
 }
 
@@ -91,6 +103,33 @@ const canManageFrom = (status: SiteAccessStatus): boolean => status === 'invalid
 /** Cheap sanity check — a typo'd address writes a role nobody can use. */
 export function looksLikeEmail(value: string): boolean {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
+/**
+ * The Code Sync identity mismatch for a refused site, or nothing. Best effort:
+ * any failure to read either email answers nothing rather than a guess.
+ */
+async function explainRefusal(
+    context: vscode.ExtensionContext,
+    site: string,
+    logger: Logger,
+): Promise<SiteAccessListing['identityMismatch']> {
+    try {
+        const [adobeEmail, githubEmails] = await Promise.all([
+            getDaLiveAuthService(context).getUserEmail(),
+            getGitHubServices(context.secrets).tokenService.getUserEmails(),
+        ]);
+        const mismatch = findAdminIdentityMismatch(adobeEmail, githubEmails);
+        if (!mismatch) return undefined;
+        logger.info(
+            `[SiteAccess] ${site}: GitHub primary email ${maskEmail(mismatch.githubPrimaryEmail)} is not the ` +
+                `Adobe identity ${maskEmail(mismatch.adobeEmail)}; the Code Sync admin role likely went to the former`,
+        );
+        return { ...mismatch, explanation: describeAdminIdentityMismatch(mismatch, site) };
+    } catch (error) {
+        logger.debug(`[SiteAccess] Could not compare GitHub and Adobe emails: ${(error as Error).message}`);
+        return undefined;
+    }
 }
 
 /** Resolve the storefront's `owner/repo` plus a DA.live token provider. */
@@ -147,6 +186,7 @@ export async function listSiteAccess(
     if (access !== 'granted') {
         // Do not offer affordances that are guaranteed to be refused.
         const orgRoster = await readOrgAdmins(tokenProvider, owner, logger);
+        const identityMismatch = access === 'refused' ? await explainRefusal(context, site, logger) : undefined;
         return {
             // `not_authorized` is a verdict about the ROLE. A 401 is a verdict
             // about the SESSION, and reporting it as not_authorized would send an
@@ -158,6 +198,7 @@ export async function listSiteAccess(
             site,
             canManage: false,
             orgAdmins: orgRoster.status === 'ok' ? orgRoster.admins : undefined,
+            ...(identityMismatch ? { identityMismatch } : {}),
         };
     }
 

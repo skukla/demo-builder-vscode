@@ -146,15 +146,12 @@ export class RepairSiteConfigurationCommand extends BaseCommand {
             `You hold no admin role on ${result.site}, so the site configuration cannot be ` +
                 'repaired from here. Someone who holds it must grant you access first.',
             'Manage Site Access',
-            'Open AEM setup',
             'Close',
         );
+        // Manage Site Access holds the whole route: who can grant it, the Code
+        // Sync app when nobody is visible, and a poll that says whether it landed.
         if (choice === 'Manage Site Access') {
             await vscode.commands.executeCommand('demoBuilder.manageSiteAccess');
-            return;
-        }
-        if (choice === 'Open AEM setup' && result.setupUrl) {
-            await vscode.env.openExternal(vscode.Uri.parse(result.setupUrl));
         }
     }
 }

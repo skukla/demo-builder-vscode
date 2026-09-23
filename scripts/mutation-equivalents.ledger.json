@@ -6121,7 +6121,7 @@
             "anchors": [
                 "const failures = [];"
             ],
-            "line": 403,
+            "line": 397,
             "mutants": 1,
             "category": "other",
             "reason": "The mutant seeds the failures list with one junk string, which flips the aggregate to 'cleanup had errors'. Its return value is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. So nothing this expression computes can reach a test except through log wording.",
@@ -6134,7 +6134,7 @@
             "anchors": [
                 "if (!result.github.success && !result.github.skipped) {"
             ],
-            "line": 404,
+            "line": 398,
             "mutants": 6,
             "category": "branch",
             "reason": "Every variant of this guard \u2014 forced true, forced false, && to ||, either negation dropped, and the body emptied \u2014 changes only whether a 'GitHub: ...' string joins the failure list. The GitHub deletion itself already happened inside CleanupService; this line classifies its report. Its return value is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. So nothing this expression computes can reach a test except through log wording.",
@@ -6147,7 +6147,7 @@
             "anchors": [
                 "if (!result.daLive.success && !result.daLive.skipped) {"
             ],
-            "line": 407,
+            "line": 401,
             "mutants": 6,
             "category": "branch",
             "reason": "The DA.live twin of the GitHub guard above, with the same shape and the same fate: it appends a 'DA.live: ...' string to the failure list after the deletion has already been attempted. Its return value is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. So nothing this expression computes can reach a test except through log wording.",
@@ -6160,7 +6160,7 @@
             "anchors": [
                 "if (failures.length > 0) {"
             ],
-            "line": 411,
+            "line": 405,
             "mutants": 5,
             "category": "branch",
             "reason": "This is the point where the failure list becomes a success flag, so it is the closest thing here to a decision \u2014 but the flag has one reader and that reader picks a log line. Forcing it either way, or comparing with >= or <=, changes 'Cleanup completed successfully' into 'Cleanup completed with errors' or the reverse. Its return value is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. So nothing this expression computes can reach a test except through log wording.",
@@ -6173,7 +6173,7 @@
             "anchors": [
                 "return { success: false, error: failures.join('; ') };"
             ],
-            "line": 412,
+            "line": 406,
             "mutants": 2,
             "category": "other",
             "reason": "Emptying this object literal, or flipping its false to true, changes the shape and the verdict of the cleanup report. The value returned here is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way.",
@@ -6186,7 +6186,7 @@
             "anchors": [
                 "return { success: true };"
             ],
-            "line": 415,
+            "line": 409,
             "mutants": 2,
             "category": "other",
             "reason": "The all-clear answer from the cleanup helper. Emptying the literal or flipping its true to false turns a clean cleanup into a reported failure. The value returned here is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way.",
@@ -6199,7 +6199,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 416,
+            "line": 410,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying this catch body makes the helper return undefined instead of a failure verdict. The caller then throws a TypeError reading .success on undefined, which its own catch swallows into a different log line \u2014 so the handler still resolves { success: true } and no resource is treated differently. The value returned here is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way.",
@@ -6212,7 +6212,7 @@
             "anchors": [
                 "return { success: false, error: (error as Error).message };"
             ],
-            "line": 417,
+            "line": 411,
             "mutants": 2,
             "category": "other",
             "reason": "The failure verdict for an exception thrown anywhere in the helper \u2014 including the fail-fast when there is no authenticated session. Emptying the literal or flipping its false to true changes only that verdict. The value returned here is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. The fail-fast ITSELF is tested: with no authManager, no CleanupService is constructed and cleanupEdsResources is never called.",
@@ -7417,7 +7417,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 181,
+            "line": 179,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body assigns undefined to a variable declared one line above without an initialiser, so it is already undefined when response.text() throws. Emptying the block leaves the same value on the same path, and the function returns the same object.",
@@ -7455,7 +7455,7 @@
             "anchors": [
                 "if (status === 'ok') {"
             ],
-            "line": 321,
+            "line": 319,
             "mutants": 4,
             "category": "branch",
             "reason": "Both branches of this condition are a single logger call - info on success, warn on failure - and the return below is the same object either way. Whether the grant succeeded is already asserted through that returned status; which log line printed is not behaviour.",
@@ -7468,7 +7468,7 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 323,
+            "line": 321,
             "mutants": 1,
             "category": "block",
             "reason": "The else branch is a single logger.warn. Emptying it leaves the same return, and the failing-grant cases are pinned by the status the caller receives.",
@@ -7481,7 +7481,7 @@
             "anchors": [
                 "if (current.status !== 'ok' || !current.roles) {"
             ],
-            "line": 400,
+            "line": 398,
             "mutants": 2,
             "category": "branch",
             "reason": "The two operands are the same predicate on every input this function can see. current comes straight from readSiteAccess, which sets roles only on an ok status and never on any other - including the drifted-shape case, which it deliberately reports as failed rather than as an ok with no roles. So status not-ok implies roles undefined, and status ok implies roles present: forcing the left operand false, or joining them with &&, produces the same decision on every path.",
@@ -7494,7 +7494,7 @@
             "anchors": [
                 "if (current.status !== 'ok' || !current.roles) {"
             ],
-            "line": 432,
+            "line": 430,
             "mutants": 2,
             "category": "branch",
             "reason": "Identical to the same guard in ensureSiteAdmin: current comes from readSiteAccess, which sets roles exactly when the status is ok, so the two operands agree on every input and neither mutation changes the decision.",
@@ -7507,7 +7507,7 @@
             "anchors": [
                 "const admins = current.roles[ADMIN_ROLE] ?? [];"
             ],
-            "line": 436,
+            "line": 434,
             "mutants": 1,
             "category": "other",
             "reason": "This fallback is reached when the site has a role map with no admin key. Whatever the mutant seeds it with, the next line asks includesEmail(admins, email), which is false for any value that is not the email being revoked - so the function returns { status: 'ok', changed: false }, exactly what the real empty array produces.",
@@ -7520,7 +7520,7 @@
             "anchors": [
                 "if (status === 'ok') {"
             ],
-            "line": 476,
+            "line": 474,
             "mutants": 4,
             "category": "branch",
             "reason": "As in grantSiteAdmin, both branches are a single logger call and the return below is the same object either way. restoreSiteRoles's outcome is asserted through that returned status, for both the success and the refusal.",
@@ -7545,7 +7545,7 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 479,
+            "line": 477,
             "mutants": 1,
             "category": "block",
             "reason": "The else branch is a single logger.warn, and the refusal it describes is already asserted through the status restoreSiteRoles returns.",
@@ -7582,7 +7582,7 @@
             "anchors": [
                 "this.logger.warn('[GitHub] Failed to parse stored token');"
             ],
-            "line": 68,
+            "line": 69,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying the catch block leaves the function returning undefined implicitly, which is what the explicit return already produces. A caller cannot tell the two apart; only the warn line differs.",
@@ -7595,7 +7595,7 @@
             "anchors": [
                 "if (!token) {"
             ],
-            "line": 106,
+            "line": 107,
             "mutants": 2,
             "category": "branch",
             "reason": "Without the no-token guard, validateToken evaluates token.token, throws a TypeError while building the Octokit argument, and the catch returns { valid: false } \u2014 the same object the guard returns, with the same 401-only clearToken decision skipped either way (an undefined status is not 401). No collaborator is called differently: the throw happens while evaluating the argument, so createAuthenticatedOctokit never runs in either version.",
@@ -7608,7 +7608,7 @@
             "anchors": [
                 "if (!token) {"
             ],
-            "line": 153,
+            "line": 180,
             "mutants": 2,
             "category": "branch",
             "reason": "Same shape as the validateToken guard: without it, token.token throws inside the try and the bare catch returns [], which is exactly what the guard returns. The graceful-degradation contract (the namespace picker falls back to personal-account-only) holds either way, so no assertion on the return value or on Octokit can separate them.",
@@ -8258,7 +8258,7 @@
             "anchors": [
                 "try {"
             ],
-            "line": 307,
+            "line": 298,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying this try removes the URL parse and the scheme/host fingerprint, leaving the function to fall off the end and the warning to read 'undefined'. Same argument as the enclosing describeRejectedUrl entry: the value is log text and nothing else reads it. That an unparseable URL is REJECTED, which is what the try/catch is really deciding for the caller, is asserted by 'rejects unparseable URLs'.",
@@ -8271,7 +8271,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 310,
+            "line": 301,
             "mutants": 1,
             "category": "block",
             "reason": "The catch arm returns the not-URL-shaped fingerprint. Emptying it makes the warning say 'undefined' for a value new URL() could not parse, and changes nothing else \u2014 the caller has already decided to fall through to fromConfig by the time this runs. Same argument as the try entry above.",

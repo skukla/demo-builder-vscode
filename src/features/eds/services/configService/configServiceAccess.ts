@@ -20,8 +20,9 @@
  * The role itself is minted for the GitHub user who installs the AEM Code Sync
  * App, which is why new sites work and older ones can refuse their own owner.
  * For a user with no role, the only bootstrap is a flow writing with authority
- * that is not theirs — the Code Sync bot, reachable at the setup URL this module
- * builds ({@link buildCodeSyncSetupUrl}).
+ * that is not theirs — the Code Sync bot. Its setup page (`tools.aem.live/bot/setup`)
+ * authenticates only with a one-time key the bot adds to the URL during a GitHub
+ * App install, so a link built here cannot reach it (reproduced 2026-09-14).
  *
  * ## Two levels, and the org one is the blanket grant
  *
@@ -73,9 +74,6 @@ function maskEmailsIn(text: string): string {
  */
 const adminAccessPath = (org: string, site: string): string =>
     `/config/${encodeURIComponent(org)}/sites/${encodeURIComponent(site)}/access/admin.json`;
-
-/** The AEM Code Sync bot's setup flow — the only bootstrap for a user with no role. */
-const CODE_SYNC_SETUP_URL = 'https://tools.aem.live/bot/setup';
 
 /** The role name the Configuration Service uses for configuration admins. */
 const ADMIN_ROLE = 'admin';
@@ -482,30 +480,8 @@ export async function restoreSiteRoles(
     return { status, error: result.error };
 }
 
-/** Everything the Code Sync setup flow reads from its query string. */
-export interface CodeSyncSetupParams {
+/** The GitHub owner/repo a Configuration Service site is keyed by. */
+export interface ConfigSiteRef {
     owner: string;
     repo: string;
-    /** The DA.live content source; omitting it lands the tool's Content step empty. */
-    contentSourceUrl: string;
-    /** Pre-fills the Users step. Absent is fine — the user types it. */
-    userEmail?: string;
-}
-
-/**
- * Build the AEM Code Sync setup deep link for a site.
- *
- * This is the bootstrap path for a user holding no admin role: the bot writes
- * with its own authority, so it can mint what the user cannot grant themselves.
- * Param shape observed verbatim 2026-08-14.
- *
- * @returns the setup URL, ready to open in a browser
- */
-export function buildCodeSyncSetupUrl(params: CodeSyncSetupParams): string {
-    const url = new URL(CODE_SYNC_SETUP_URL);
-    url.searchParams.set('user', params.userEmail ?? '');
-    url.searchParams.set('site', params.repo);
-    url.searchParams.set('url', params.contentSourceUrl);
-    url.searchParams.set('org', params.owner);
-    return url.toString();
 }
