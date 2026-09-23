@@ -98,10 +98,10 @@ describe('the labels beside a prerequisite name', () => {
 
         fire.fireStatus({
             index: 0, name: 'Node.js', status: 'checking', description: 'JavaScript runtime',
-            required: true, message: 'Checking...',
+            required: true, message: 'Checking',
         });
 
-        await waitFor(() => screen.getByText('Checking...'));
+        await waitFor(() => screen.getByText('Checking'));
         expect(screen.queryByText('(Waiting)')).not.toBeInTheDocument();
     });
 });

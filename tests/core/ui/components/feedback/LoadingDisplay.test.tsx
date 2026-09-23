@@ -11,22 +11,22 @@ describe('LoadingDisplay', () => {
     });
     describe('Basic Rendering', () => {
         it('renders with message', () => {
-            renderWithProviders(<LoadingDisplay message="Loading..." />);
-            expect(screen.getByText('Loading...')).toBeInTheDocument();
+            renderWithProviders(<LoadingDisplay message="Loading" />);
+            expect(screen.getByText('Loading')).toBeInTheDocument();
         });
 
         it('renders with message and subMessage', () => {
             renderWithProviders(
-                <LoadingDisplay message="Loading..." subMessage="Please wait" />
+                <LoadingDisplay message="Loading" subMessage="Please wait" />
             );
-            expect(screen.getByText('Loading...')).toBeInTheDocument();
+            expect(screen.getByText('Loading')).toBeInTheDocument();
             expect(screen.getByText('Please wait')).toBeInTheDocument();
         });
 
         it('renders with helper text', () => {
             renderWithProviders(
                 <LoadingDisplay
-                    message="Loading..."
+                    message="Loading"
                     helperText="This may take a few moments"
                 />
             );
@@ -34,26 +34,26 @@ describe('LoadingDisplay', () => {
         });
 
         it('renders progress circle', () => {
-            renderWithProviders(<LoadingDisplay message="Loading..." />);
+            renderWithProviders(<LoadingDisplay message="Loading" />);
             expect(screen.getByRole('progressbar')).toBeInTheDocument();
         });
     });
 
     describe('Size Variants', () => {
         it('renders with size S in horizontal layout when no subMessage', () => {
-            renderWithProviders(<LoadingDisplay size="S" message="Loading..." />);
-            expect(screen.getByText('Loading...')).toBeInTheDocument();
+            renderWithProviders(<LoadingDisplay size="S" message="Loading" />);
+            expect(screen.getByText('Loading')).toBeInTheDocument();
             expect(screen.getByRole('progressbar')).toBeInTheDocument();
         });
 
         it('renders with size M', () => {
-            renderWithProviders(<LoadingDisplay size="M" message="Loading..." />);
-            expect(screen.getByText('Loading...')).toBeInTheDocument();
+            renderWithProviders(<LoadingDisplay size="M" message="Loading" />);
+            expect(screen.getByText('Loading')).toBeInTheDocument();
         });
 
         it('renders with size L (default)', () => {
-            renderWithProviders(<LoadingDisplay message="Loading..." />);
-            expect(screen.getByText('Loading...')).toBeInTheDocument();
+            renderWithProviders(<LoadingDisplay message="Loading" />);
+            expect(screen.getByText('Loading')).toBeInTheDocument();
         });
     });
 
@@ -168,18 +168,18 @@ describe('LoadingDisplay', () => {
 
     describe('Accessibility', () => {
         it('has status role', () => {
-            renderWithProviders(<LoadingDisplay message="Loading..." />);
+            renderWithProviders(<LoadingDisplay message="Loading" />);
             expect(screen.getByRole('status')).toBeInTheDocument();
         });
 
         it('has aria-live polite', () => {
-            renderWithProviders(<LoadingDisplay message="Loading..." />);
+            renderWithProviders(<LoadingDisplay message="Loading" />);
             const status = screen.getByRole('status');
             expect(status).toHaveAttribute('aria-live', 'polite');
         });
 
         it('has aria-atomic true', () => {
-            renderWithProviders(<LoadingDisplay message="Loading..." />);
+            renderWithProviders(<LoadingDisplay message="Loading" />);
             const status = screen.getByRole('status');
             expect(status).toHaveAttribute('aria-atomic', 'true');
         });
@@ -187,7 +187,7 @@ describe('LoadingDisplay', () => {
 
     describe('Progress States', () => {
         it('renders indeterminate progress by default', () => {
-            renderWithProviders(<LoadingDisplay message="Loading..." />);
+            renderWithProviders(<LoadingDisplay message="Loading" />);
             const progress = screen.getByRole('progressbar');
             expect(progress).toBeInTheDocument();
             // Indeterminate progress has no value attribute
@@ -196,16 +196,16 @@ describe('LoadingDisplay', () => {
 
     describe('Centering', () => {
         it('centers by default for size L', () => {
-            renderWithProviders(<LoadingDisplay size="L" message="Loading..." />);
+            renderWithProviders(<LoadingDisplay size="L" message="Loading" />);
             // Size L should be centered by default
             const container = screen.getByRole('status');
             expect(container).toBeInTheDocument();
         });
 
         it('does not center by default for size S and M', () => {
-            renderWithProviders(<LoadingDisplay size="S" message="Loading..." />);
+            renderWithProviders(<LoadingDisplay size="S" message="Loading" />);
             // Size S should not be centered by default
-            const container = screen.getByText('Loading...').parentElement;
+            const container = screen.getByText('Loading').parentElement;
             expect(container).toBeInTheDocument();
         });
     });
@@ -213,7 +213,7 @@ describe('LoadingDisplay', () => {
     describe('Custom ClassName', () => {
         it('applies custom className', () => {
             const { container: _container } = renderWithProviders(
-                <LoadingDisplay message="Loading..." className="custom-class" />
+                <LoadingDisplay message="Loading" className="custom-class" />
             );
             // The className is applied to the Flex element inside the status div
             const statusDiv = screen.getByRole('status');
@@ -236,7 +236,7 @@ describe('LoadingDisplay', () => {
             Array.from(container.querySelectorAll<HTMLElement>('[data-testid="spectrum-flex"]'));
 
         it('fills and centres the space for size L', () => {
-            const { container } = renderWithProviders(<LoadingDisplay message="Loading..." />);
+            const { container } = renderWithProviders(<LoadingDisplay message="Loading" />);
 
             const [outer, inner] = flexes(container);
             expect(outer).toHaveStyle({ justifyContent: 'center', height: '100%' });
@@ -245,7 +245,7 @@ describe('LoadingDisplay', () => {
 
         it('leaves the smaller sizes uncentred and unsized', () => {
             const { container } = renderWithProviders(
-                <LoadingDisplay size="M" message="Loading..." />
+                <LoadingDisplay size="M" message="Loading" />
             );
 
             const [outer, inner] = flexes(container);
@@ -261,24 +261,24 @@ describe('LoadingDisplay', () => {
             ['L', undefined, 'text-lg font-medium'],
             ['M', 'M' as const, 'text-base font-medium'],
         ])('gives size %s its own message class', (_label, size, expected) => {
-            renderWithProviders(<LoadingDisplay size={size} message="Loading..." />);
+            renderWithProviders(<LoadingDisplay size={size} message="Loading" />);
 
-            expect(screen.getByText('Loading...').className).toBe(expected);
+            expect(screen.getByText('Loading').className).toBe(expected);
         });
 
         it('leaves size S with no size class at all, and no stray space', () => {
             // The map's S entry is empty, so the class is built from nothing plus
             // 'font-medium' — the trim is what stops it reaching the DOM as ' font-medium'.
-            renderWithProviders(<LoadingDisplay size="S" message="Loading..." subMessage="Sub" />);
+            renderWithProviders(<LoadingDisplay size="S" message="Loading" subMessage="Sub" />);
 
-            expect(screen.getByText('Loading...').className).toBe('font-medium');
+            expect(screen.getByText('Loading').className).toBe('font-medium');
         });
     });
 
     describe('the horizontal layout, and when it is used', () => {
         it('drops the status wrapper and the reserved sub-message row for a bare S', () => {
             const { container } = renderWithProviders(
-                <LoadingDisplay size="S" message="Loading..." />
+                <LoadingDisplay size="S" message="Loading" />
             );
 
             expect(screen.queryByRole('status')).not.toBeInTheDocument();
@@ -287,7 +287,7 @@ describe('LoadingDisplay', () => {
 
         it('goes back to the vertical layout as soon as S has something to say', () => {
             renderWithProviders(
-                <LoadingDisplay size="S" message="Loading..." subMessage="Copying page 3" />
+                <LoadingDisplay size="S" message="Loading" subMessage="Copying page 3" />
             );
 
             // The horizontal layout has nowhere to put row 2, so choosing it here
@@ -301,7 +301,7 @@ describe('LoadingDisplay', () => {
         const circle = (): HTMLElement => screen.getByRole('progressbar');
 
         it('spins when no progress is given', () => {
-            renderWithProviders(<LoadingDisplay message="Loading..." />);
+            renderWithProviders(<LoadingDisplay message="Loading" />);
 
             expect(circle()).toHaveAttribute('data-indeterminate', 'true');
             expect(circle()).not.toHaveAttribute('value');
@@ -311,21 +311,21 @@ describe('LoadingDisplay', () => {
             ['a mid-run percentage', 42],
             ['zero, which is a reading and not an absence', 0],
         ])('fills the arc for %s', (_label, progress) => {
-            renderWithProviders(<LoadingDisplay message="Loading..." progress={progress} />);
+            renderWithProviders(<LoadingDisplay message="Loading" progress={progress} />);
 
             expect(circle()).toHaveAttribute('data-indeterminate', 'false');
             expect(circle()).toHaveAttribute('value', String(progress));
         });
 
         it('spins for a negative progress rather than drawing it', () => {
-            renderWithProviders(<LoadingDisplay message="Loading..." progress={-5} />);
+            renderWithProviders(<LoadingDisplay message="Loading" progress={-5} />);
 
             expect(circle()).toHaveAttribute('data-indeterminate', 'true');
             expect(circle()).not.toHaveAttribute('value');
         });
 
         it('spins in the horizontal layout, which takes no progress at all', () => {
-            renderWithProviders(<LoadingDisplay size="S" message="Loading..." progress={42} />);
+            renderWithProviders(<LoadingDisplay size="S" message="Loading" progress={42} />);
 
             expect(circle()).toHaveAttribute('data-indeterminate', 'true');
         });
@@ -333,7 +333,7 @@ describe('LoadingDisplay', () => {
 
     describe('the helper row', () => {
         it('is absent — not empty — when there is no helper text', () => {
-            const { container } = renderWithProviders(<LoadingDisplay message="Loading..." />);
+            const { container } = renderWithProviders(<LoadingDisplay message="Loading" />);
 
             // An empty row still takes its margin, which shifts the two rows above it.
             expect(container.querySelector('.italic')).not.toBeInTheDocument();
@@ -341,7 +341,7 @@ describe('LoadingDisplay', () => {
 
         it('is rendered when there is', () => {
             const { container } = renderWithProviders(
-                <LoadingDisplay message="Loading..." helperText="This usually takes a minute" />
+                <LoadingDisplay message="Loading" helperText="This usually takes a minute" />
             );
 
             expect(container.querySelector('.italic')).toHaveTextContent(

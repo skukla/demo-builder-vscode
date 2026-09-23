@@ -1,12 +1,14 @@
-/* eslint-disable max-lines */
 /**
  * Mock for @adobe/react-spectrum
  *
  * Lightweight stubs to avoid loading the full Spectrum library (~6MB)
  * in Jest tests. This prevents memory exhaustion in parallel test runs.
  *
- * Note: eslint-disable max-lines is used here because mock files naturally
- * need to be large to cover all the components they mock.
+ * It carried an `eslint-disable max-lines` until 2026-09-10, with a note saying
+ * a mock file is naturally large. Both are gone because the rule is: test file
+ * size is owned by `scripts/check-test-file-sizes.js`, and eslint no longer has
+ * a second opinion about it. If this file ever needs an exemption again, it goes
+ * in `.testfilesizerc.json` where that instrument reads it.
  */
 import React from 'react';
 
@@ -367,6 +369,7 @@ export const TextField: React.FC<any> = ({
     placeholder,
     validationState,
     autoFocus,
+    isReadOnly,
     ...props
 }) => (
     <label data-testid="spectrum-textfield">
@@ -389,6 +392,10 @@ export const TextField: React.FC<any> = ({
             // and react-aria's focusSafely never fires, so asserting `toHaveFocus` would
             // fail whatever the component passed.
             data-autofocus={autoFocus ? 'true' : undefined}
+            // Enacted, 2026-09-15: a read-only field is a promise the component makes
+            // (Edit demo package shows the repository it cannot change), and with the
+            // prop filtered no test could tell a read-only field from an editable one.
+            readOnly={isReadOnly}
             {...filterSpectrumProps(props)}
         />
         {description && <span data-testid="spectrum-textfield-description">{description}</span>}

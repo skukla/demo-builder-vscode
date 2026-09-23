@@ -26,7 +26,10 @@ import { AdobeMcpUpdateChecker } from '@/features/updates/services/adobeMcpUpdat
 import { applyAdobeMcpUpdate } from '@/features/updates/services/adobeMcpUpdateCore';
 import { ComponentUpdater } from '@/features/updates/services/componentUpdater';
 import { ForkSyncService } from '@/features/updates/services/forkSyncService';
-import { TemplateSyncService } from '@/features/updates/services/templateSyncService';
+import {
+    TemplateSyncService,
+    type TemplateSyncResult,
+} from '@/features/updates/services/templateSyncService';
 import { TemplateUpdateChecker } from '@/features/updates/services/templateUpdateChecker';
 import {
     applyBlockLibraryUpdateResolved,
@@ -97,7 +100,7 @@ async function applyForkSync(
     if (items.length === 0) return result;
     const svc = new ForkSyncService(ctx.secrets, ctx.logger);
     for (const item of items) {
-        onProgress?.(`Syncing fork ${item.owner}/${item.repo}...`);
+        onProgress?.(`Syncing fork ${item.owner}/${item.repo}`);
         try {
             const r = await svc.syncFork(item.owner, item.repo, item.branch);
             if (r.success) {
@@ -123,26 +126,46 @@ async function applyForkSync(
     return result;
 }
 
+/**
+ * What a headless template update does when the merge stops on conflicts.
+ * `stop` (the default) reports the files and changes nothing; `reset` replaces
+ * them with the template's version — only when the caller asked for exactly that.
+ */
+export type TemplateConflictPolicy = 'stop' | 'reset';
+
+export interface ApplyUpdatesOptions {
+    templateConflicts?: TemplateConflictPolicy;
+}
+
+async function syncTemplateHeadless(
+    svc: TemplateSyncService,
+    project: Project,
+    policy: TemplateConflictPolicy,
+): Promise<TemplateSyncResult> {
+    const merged = await svc.syncWithTemplate(project, { strategy: 'merge' });
+    if (merged.success || !merged.conflicts?.length || policy !== 'reset') return merged;
+    return svc.syncWithTemplate(project, { strategy: 'reset' });
+}
+
 async function applyTemplate(
     items: UpdateSelections['template'],
     ctx: UpdateContext,
     onProgress?: OnProgress,
+    policy: TemplateConflictPolicy = 'stop',
 ): Promise<{ result: CategoryResult; succeededPaths: Set<string> }> {
     const result = emptyResult();
     const succeededPaths = new Set<string>();
     if (items.length === 0) return { result, succeededPaths };
     const svc = new TemplateSyncService(ctx.secrets, ctx.logger, ctx.commandManager);
     for (const { project } of items) {
-        onProgress?.(`Syncing template for ${project.name}...`);
+        onProgress?.(`Syncing template for ${project.name}`);
         try {
-            const r = await svc.syncWithTemplate(project, { strategy: 'merge' });
+            const r = await syncTemplateHeadless(svc, project, policy);
             if (r.success) {
                 await svc.updateLastSyncedCommit(project, r.syncedCommit, ctx.stateManager);
                 succeededPaths.add(project.path);
                 result.successCount++;
-                ctx.logger.info(
-                    `[Updates] Template synced for ${project.name} (${r.strategy}${r.fallbackOccurred ? ', fallback' : ''})`,
-                );
+                ctx.logger.info(`[Updates] Template synced for ${project.name} (${r.strategy})`);
             } else {
                 throw new Error(r.error || 'Unknown error');
             }
@@ -175,7 +198,7 @@ async function applyComponents(
     for (const { project, items: updates } of byProject.values()) {
         for (const update of updates) {
             if (!update.downloadUrl) continue;
-            onProgress?.(`Updating ${update.componentId} in ${project.name}...`);
+            onProgress?.(`Updating ${update.componentId} in ${project.name}`);
             try {
                 await updater.updateComponent(
                     project,
@@ -216,7 +239,7 @@ async function applyAdobeMcp(
     // in the STOREFRONT dir — a silent no-op that re-offered the same update
     // forever. The shared core is what makes that drift impossible now.)
     for (const { project, packageName, latestVersion } of items) {
-        onProgress?.(`Updating ${packageName} → ${latestVersion} in ${project.name}...`);
+        onProgress?.(`Updating ${packageName} → ${latestVersion} in ${project.name}`);
         try {
             await applyAdobeMcpUpdate(project, packageName, latestVersion, ctx);
             result.successCount++;
@@ -255,7 +278,7 @@ async function applyAddons(
             );
             continue;
         }
-        onProgress?.(`Updating block library ${item.library.name}...`);
+        onProgress?.(`Updating block library ${item.library.name}`);
         try {
             await applyBlockLibraryUpdateResolved(item, effectiveBehavior, ctx);
             // 'ask' always resolves to 'disabled' above, so the setting alone says
@@ -276,7 +299,7 @@ async function applyAddons(
     }
 
     for (const item of inspector) {
-        onProgress?.(`Updating Inspector SDK in ${item.project.name}...`);
+        onProgress?.(`Updating Inspector SDK in ${item.project.name}`);
         try {
             await updateCommitShaWithRollback(
                 item.project.installedInspectorSdk,
@@ -313,12 +336,14 @@ export async function applyUpdatesHeadless(
     selections: UpdateSelections,
     ctx: UpdateContext,
     onProgress?: OnProgress,
+    options: ApplyUpdatesOptions = {},
 ): Promise<ApplyUpdatesResult> {
     const forkSync = await applyForkSync(selections.forkSync, ctx, onProgress);
     const { result: template, succeededPaths } = await applyTemplate(
         selections.template,
         ctx,
         onProgress,
+        options.templateConflicts,
     );
     const component = await applyComponents(selections.component, ctx, onProgress);
     const adobeMcp = await applyAdobeMcp(selections.adobeMcp, ctx, onProgress);

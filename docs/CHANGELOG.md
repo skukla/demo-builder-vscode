@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-beta.148] - 2026-09-23
+
+Demos become shareable: a storefront a colleague built can be added to your own
+Welcome step and turned into a project, and one of yours can be handed to them as
+a link or a file.
+
+### Added
+- **Add a demo someone shared.** A new card on the wizard's Welcome step takes a colleague's storefront — by link to their repository, or as a zip — reads it to see what it is, and offers it alongside the shipped brands. Creating a project from it works exactly like picking a brand: the same three store codes are prefilled, the same steps follow. Once added it can be reset, updated, repointed at a different repository, or forgotten, and an agent can do all of that too.
+- **Save your storefront as a demo package.** In the dashboard's Export dialog, "Storefront as demo package" writes a description file into your own storefront repository and puts the card on your own Add a demo list, so you can reuse it without pasting your own link. The link is how a colleague gets the same card. Removing the package takes the card away and leaves the repository alone.
+- **A long integration operation shows its progress in a modal**, naming the step it is on and roughly how long that step takes. "Run in background" hands it to a notification with the same title, so it stays visible once you look away. Every step is written to the Debug Logs with its duration.
+- **Rename an Adobe I/O project** from the project picker, or with the `rename_adobe_project` agent tool.
+- **Sign in to GitHub from the command palette.** GitHub auth is VS Code's and was adopted silently, which left no way in when the stored token went stale — a colleague's public demo refused to import for exactly that reason.
+- **`delete_adobe_workspace` for agents**, which closes the last gap where something could be created and not removed.
+
+### Changed
+- **The "Custom (B2B + B2C)" demo is now "Starter (B2B + B2C)".** Same boilerplate, same B2B features; the old name read as build-it-yourself beside the coming "Add a demo" card. Existing projects built on it keep working.
+- **The CitiSignal headless storefront builds from its `main` branch.** Its source repository now uses `main` like every other storefront source; `master` stays in place at the same commit, so earlier versions of the extension keep working until it is removed.
+
+### Fixed
+- **The Adobe API list stops making you wait.** It now loads when the dashboard opens, survives a window reload, retries itself when Adobe is slow instead of leaving the dialog empty, and never blocks once it is loaded. `list_console_apis` can also be scoped to a single integration.
+- **Two Adobe sign-ins can no longer run at once**, and whether one worked is judged by whether you end up signed in rather than by what the CLI printed.
+- **Removing an integration really undeploys it**, and says so plainly when it cannot tell. The remove dialog names the card and says what will happen before you confirm.
+- **A failed App Builder deploy keeps Adobe's whole error** and writes the CLI's own output to the Debug Logs, instead of a one-line summary that dropped the reason.
+- **A colleague's PUBLIC demo can be read without a credential**, and when it genuinely fails the message says what failed rather than blaming your sign-in.
+- **A failed agent tool call reports that it failed.** Some returned a result that read as success.
+- **A new storefront repository no longer mails a failed "Build workflow run" for every push.** A storefront carries its author's GitHub workflows, and setup and reset push a commit per file, so each push ran them in the new repository and each run failed. Demo Builder now turns GitHub Actions off on every repository it creates, before pushing anything; the workflow files stay, and the SC can turn Actions back on in the repository's settings. Repositories created before this keep Actions on.
+- **A failed template update says which step failed, in plain words.** It used to hand over git's own output, such as `Failed to push: remote: error: GH006: Protected branch update failed`. It now names the step ("Could not push the update to GitHub.") and points to the Debug Logs, which still hold git's output. Resetting an existing repository in the project wizard now runs the same reset as Check for Updates, so it reports failures the same way; its separate copy was removed.
+- **A template update no longer overwrites your edits when the merge conflicts.** Updating a storefront from its template used to fall back to a full reset whenever the merge hit a conflict, replacing exactly the files you had changed and telling you afterwards. It now stops, names the conflicting files, and leaves the storefront untouched. Check Updates offers "Reset to template" as a separate choice in that dialog; the `apply_updates` agent tool resets only when called with `resetTemplateOnConflict:true`. Updates also work now for storefronts whose repository does not share history with its template, such as one GitHub generated from the template: the update used to report success, change nothing, and offer itself again forever. It now applies what the template changed since the version the storefront last recorded. A storefront with no recorded version is asked to reset to its template once, so updates have a starting point.
+- **"Check for Updates" no longer offers a reset storefront updates it already has.** A reset rebuilt the repository from a newer revision of the template but kept the commit recorded at creation, so the update check compared against a commit the repository no longer matched. Reset now records the exact template commit it rebuilt from — the verified last-known-good for thin-layer storefronts, the template's latest commit otherwise — and a failed reset leaves the record alone. Storefronts reset before this keep the old record until their next reset.
+- **Resetting a storefront no longer corrupts its images, fonts and favicon.** Reset rebuilt the repository from an archive of the template but read every file as text, so binary files were written back garbled and scripts lost their executable bit. Binary files now go up as exact bytes and every file keeps its mode. The same code pins a new thin-layer storefront at creation, which is fixed too. Repositories reset before this still hold the corrupted files until their next reset.
+- **The home Chat no longer pushes agent edits into a shared repository.** Its automatic commit-and-push ran in any git clone under the projects folder that had a remote. A headless storefront, an API Mesh or an App Builder app is a clone of its source, so an agent's edit there was committed and pushed to that source (`skukla/citisignal-nextjs`, or a colleague's repository) with no confirmation, wherever the SC had write access. It now pushes only a project's own Edge Delivery storefront repository, as its manifest records it. The fix reaches existing installs the next time the extension starts.
+- **Updating a component no longer deletes most of its files.** Unpacking a release moved the files out of the archive's wrapper folder and then deleted every folder, not only the wrapper, along with every dotfile. A headless storefront or API Mesh kept `package.json` and lost `app/`, `src/` and `.gitignore`, and the update still reported success.
+
 ## [1.0.0-beta.147] - 2026-09-23
 
 ### Fixed
@@ -39,6 +72,7 @@ referenced. Both are fixed, and the whole cascade is now declared and enforced.
 - **Prerequisite and component lookups are cached per session**, not rebuilt on every message.
 
 ### Added
+- **"Sign in to GitHub" in the command palette.** GitHub sign-in is VS Code's, and Demo Builder adopted it silently, so the only way to fix a stale one was the project wizard's Storefront step. Now `Demo Builder: Sign in to GitHub` signs in from anywhere: it says who you are already signed in as and offers to sign in again, and when the stored token is one GitHub no longer accepts it goes straight to a fresh sign-in. Adobe and DA.live already had theirs.
 - **Eventing.** I/O Events provider lifecycle — create, list and delete, scoped to the project — with a new Eventing section on the dashboard.
 - **App Builder removal verifies the Runtime namespace** afterwards, so a removal that left code deployed is reported rather than claimed as success.
 - **Adobe org-services fetch retries once** on a fast failure.

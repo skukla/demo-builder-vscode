@@ -103,6 +103,35 @@ const PAYLOADS: Record<string, HandlerResponse> = {
         success: true,
         data: { items: bigRows(400), count: 400, total: 400 },
     },
+    // The dialog's read of a colleague's repository, with a description file
+    // present: the largest shape the probe answers.
+    probe_shared_demo: {
+        success: true,
+        result: {
+            outcome: 'read',
+            fullName: 'jen/isle5-demo',
+            defaultBranch: 'main',
+            isTemplate: false,
+            kind: 'eds',
+            contentSource: { org: 'jen', site: 'isle5-demo' },
+            contentPublished: { indexFound: true, pageCount: 42 },
+            storeCodes: { websiteCode: 'isle5', storeCode: 'isle5_store', storeViewCode: 'isle5_us' },
+            b2b: 'on',
+            b2bSource: 'config-json',
+            description: {
+                kind: 'demo',
+                version: 1,
+                name: 'Isle5 by Jen',
+                description: 'x'.repeat(300),
+                configDefaults: Object.fromEntries(Array.from({ length: 12 }, (_, i) => [`KEY_${i}`, `value-${i}`])),
+                blockLibraries: ['isle5', 'demo-team-blocks'],
+                integrations: ['erp-sync', 'loyalty'],
+                datapack: { name: 'isle5', version: '2026.09' },
+            },
+            overrides: ['storeCodes', 'name'],
+            warnings: Array.from({ length: 4 }, (_, i) => `Warning number ${i}: ${'w'.repeat(80)}`),
+        },
+    },
     list_ai_prompts: {
         success: true,
         data: {
@@ -193,6 +222,10 @@ describe('descriptor tools — response size', () => {
         // size, so it is the largest of any projector here — which is the point:
         // the caller is CHOOSING from this list, not reading it.
         list_datapack_export_items: 0.1,
+        // Unwraps `{result}`; it does not shrink. The row is shaped so the agent
+        // reads the probe's answer and not a wrapper naming it, and the ceiling
+        // says so rather than pretending a saving.
+        probe_shared_demo: 1,
     };
 
     it.each(SHAPED)('%s shrinks its own payload to the expected degree', async (tool) => {
@@ -295,6 +328,9 @@ describe('rows with no output safety net are classified', () => {
         'set_console_apis',
         'set_project_destination',
         'add_console_apis',
+        // Category 2, read before listing: `handleListRuntimePackages` returns
+        // `{data: {namespace, packages}}` or a named refusal (runtimePackageHandlers.ts).
+        'list_runtime_packages',
         'check_datapack_service',
         'check_mesh',
         'delete_ai_prompt',
@@ -482,7 +518,9 @@ describe('the ceiling table tracks the tool surface', () => {
         // Empty again: Group 8's three variable-size rows were probed against a
         // real Data Installer and now carry measured ceilings. A row lands here
         // only between being built and being probed.
-        const PENDING_LIVE_MEASUREMENT = new Set<string>([]);
+        // list_runtime_packages: one name per package, so its size is the size of
+        // somebody's namespace. Measured on the first live call, then promoted.
+        const PENDING_LIVE_MEASUREMENT = new Set<string>(['list_runtime_packages']);
 
         const missing = descriptorTools.filter(
             (t) => !RESPONSE_CEILINGS[t] && !EXEMPT.has(t) && !PENDING_LIVE_MEASUREMENT.has(t)

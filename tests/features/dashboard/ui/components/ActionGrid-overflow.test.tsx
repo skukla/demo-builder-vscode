@@ -56,6 +56,41 @@ describe('ActionGrid — overflow menu', () => {
             expect(items[items.length - 2]).toHaveTextContent('Reset');
         });
 
+        it('offers Change Demo Source, before Reset, only for a project built on an added demo', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            const handleChangeDemoSource = jest.fn();
+            const first = render(<ActionGrid {...defaultProps} />);
+            expect(screen.queryByText('Change Demo Source')).not.toBeInTheDocument();
+            first.unmount();
+
+            const { container } = render(
+                <ActionGrid {...defaultProps} handleChangeDemoSource={handleChangeDemoSource} />
+            );
+            const menu = container.querySelector('[role="menu"]') as HTMLElement;
+            const labels = within(menu).getAllByRole('menuitem').map((item) => item.textContent);
+            expect(labels.indexOf('Change Demo Source')).toBe(labels.indexOf('Reset') - 1);
+
+            await user.click(screen.getByText('Change Demo Source'));
+
+            expect(handleChangeDemoSource).toHaveBeenCalled();
+        });
+
+        it('offers Save as demo package, right after Export, for an EDS project only', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            const handleSaveDemoPackage = jest.fn();
+            const headless = render(<ActionGrid {...defaultProps} handleSaveDemoPackage={handleSaveDemoPackage} />);
+            expect(screen.queryByText('Save as demo package')).not.toBeInTheDocument();
+            headless.unmount();
+
+            const { container } = render(<ActionGrid {...edsProps} handleSaveDemoPackage={handleSaveDemoPackage} />);
+            const menu = container.querySelector('[role="menu"]') as HTMLElement;
+            const labels = within(menu).getAllByRole('menuitem').map((item) => item.textContent);
+            expect(labels.indexOf('Save as demo package')).toBe(labels.indexOf('Export') + 1);
+
+            await user.click(screen.getByText('Save as demo package'));
+            expect(handleSaveDemoPackage).toHaveBeenCalled();
+        });
+
         it('should call handleExportProject when Export clicked', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             render(<ActionGrid {...defaultProps} />);

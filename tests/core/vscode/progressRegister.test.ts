@@ -12,7 +12,7 @@
 
 import * as vscode from 'vscode';
 import { withPhaseSinks } from '@/core/utils/agentPhaseChannel';
-import { cardInFlightLabel, withProgressRegister } from '@/core/vscode/progressRegister';
+import { cardInFlightLabel, timedSteps, withProgressRegister } from '@/core/vscode/progressRegister';
 
 /** Capture the reporter withProgress hands the task. */
 function stubWithProgress(): {
@@ -48,13 +48,13 @@ describe('withProgressRegister', () => {
         await withProgressRegister(
             { title: 'Deploying API Mesh', cardLabel: 'Deploying Mesh', pushCardStatus: jest.fn() },
             async (step) => {
-                step('Reading mesh configuration...');
-                step('Deploying...');
+                step('Reading mesh configuration');
+                step('Deploying');
             }
         );
 
-        expect(report).toHaveBeenCalledWith({ message: 'Reading mesh configuration...' });
-        expect(report).toHaveBeenCalledWith({ message: 'Deploying...' });
+        expect(report).toHaveBeenCalledWith({ message: 'Reading mesh configuration' });
+        expect(report).toHaveBeenCalledWith({ message: 'Deploying' });
     });
 
     it('tells the card once, and only the label', async () => {
@@ -64,8 +64,8 @@ describe('withProgressRegister', () => {
         await withProgressRegister(
             { title: 'Deploying API Mesh', cardLabel: 'Deploying Mesh', pushCardStatus },
             async (step) => {
-                step('Reading mesh configuration...');
-                step('Deploying...');
+                step('Reading mesh configuration');
+                step('Deploying');
             }
         );
 
@@ -154,7 +154,7 @@ describe('withProgressRegister — inside an agent tool call', () => {
                     pushCardStatus: jest.fn(),
                 },
                 async (step) => {
-                    step('Checking requirements…');
+                    step('Checking requirements');
                     return 'done';
                 }
             )
@@ -163,7 +163,7 @@ describe('withProgressRegister — inside an agent tool call', () => {
         expect(result).toBe('done');
         expect(vscode.window.withProgress).not.toHaveBeenCalled();
         expect(report).not.toHaveBeenCalled();
-        expect(sink).toHaveBeenCalledWith('Checking requirements…');
+        expect(sink).toHaveBeenCalledWith('Checking requirements');
     });
 
     it('still tells the CARD its line — the card is not a notification', async () => {
@@ -191,13 +191,13 @@ describe('withProgressRegister — inside an agent tool call', () => {
 
         const result = await withPhaseSinks([sink], () =>
             withProgressRegister({ title: 'Changing destination' }, async (step) => {
-                step('Checking requirements…');
+                step('Checking requirements');
                 return 'done';
             })
         );
 
         expect(result).toBe('done');
-        expect(sink).toHaveBeenCalledWith('Checking requirements…');
+        expect(sink).toHaveBeenCalledWith('Checking requirements');
     });
 
     it('control: OUTSIDE an agent call the notification opens exactly as before', async () => {
@@ -232,13 +232,13 @@ describe('withProgressRegister — operations with no card', () => {
         const result = await withProgressRegister(
             { title: 'Changing destination' },
             async (step) => {
-                step('Checking requirements…');
+                step('Checking requirements');
                 return 'done';
             }
         );
 
         expect(result).toBe('done');
-        expect(report).toHaveBeenCalledWith({ message: 'Checking requirements…' });
+        expect(report).toHaveBeenCalledWith({ message: 'Checking requirements' });
     });
 
     it('still pushes the card line when a card IS supplied', async () => {
@@ -254,5 +254,45 @@ describe('withProgressRegister — operations with no card', () => {
         );
 
         expect(pushCardStatus).toHaveBeenCalledWith('Deploying Mesh…');
+    });
+});
+
+describe('timedSteps', () => {
+    // Owner, 2026-09-18: an update's steps reached only the notification, which
+    // is gone when it closes, so a stalled step left nothing in the Debug Logs.
+    beforeEach(() => {
+        jest.useFakeTimers();
+        jest.setSystemTime(new Date('2026-09-18T12:00:00Z'));
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    it('writes each step as it starts, closes the one before with its duration, and the total at the end', () => {
+        const lines: string[] = [];
+        const steps = timedSteps((line) => lines.push(line));
+
+        steps.step('Fetching the latest version');
+        jest.advanceTimersByTime(1200);
+        steps.step('Subscribing Adobe APIs');
+        jest.advanceTimersByTime(61000);
+        steps.finish();
+
+        expect(lines).toStrictEqual([
+            'Fetching the latest version',
+            'Fetching the latest version took 1.2s',
+            'Subscribing Adobe APIs',
+            'Subscribing Adobe APIs took 1m 1s',
+            'finished in 1m 2s',
+        ]);
+    });
+
+    it('an operation that reported no step still writes its total', () => {
+        const lines: string[] = [];
+
+        timedSteps((line) => lines.push(line)).finish();
+
+        expect(lines).toStrictEqual(['finished in 0ms']);
     });
 });

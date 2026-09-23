@@ -8,8 +8,10 @@
  * - Uses consistent user-friendly messages from getErrorTitle()
  */
 
-import { AppError } from '@/core/errors';
-import { AuthenticationErrorFormatter } from '@/features/authentication/services/authenticationErrorFormatter';
+import {
+    AuthenticationErrorFormatter,
+    explainAdobeAccessFailure,
+} from '@/features/authentication/services/authenticationErrorFormatter';
 import { ErrorCode } from '@/types/errorCodes';
 
 describe('AuthenticationErrorFormatter', () => {
@@ -223,12 +225,17 @@ describe('AuthenticationErrorFormatter', () => {
             expect(result.technical).toContain('Code: TIMEOUT');
         });
 
-        it('passes a non-auth, non-general AppError through with its own user message', () => {
+        it('passes a non-auth, non-general domain error through with its own user message', () => {
             // A mesh-category error reaches the formatter's fallback branch: the
             // title comes from the code and the message is the error's own userMessage,
             // not the auth or network copy.
-            const error = new AppError('mesh deploy exited 1', ErrorCode.MESH_DEPLOY_FAILED, {
+            // A domain error carrying the FailureShape fields directly — which is what
+            // replaced the central AppError hierarchy. Nothing inherits; the formatter
+            // reads the shape.
+            const error = Object.assign(new Error('mesh deploy exited 1'), {
+                code: ErrorCode.MESH_DEPLOY_FAILED,
                 userMessage: 'The mesh could not be deployed. Check the deploy log.',
+                recoverable: false,
             });
 
             const result = AuthenticationErrorFormatter.formatError(error, { operation: 'DeployMesh' });
@@ -240,5 +247,46 @@ describe('AuthenticationErrorFormatter', () => {
                 code: ErrorCode.MESH_DEPLOY_FAILED,
             });
         });
+    });
+});
+
+// The two Adobe refusals a deploy reaches with no sentence of its own. Inputs are the
+// shapes read off real failures on 2026-09-17/18, with the user id replaced.
+const LICENCE_403 =
+    'App deployment failed: [CoreConsoleAPISDK:ERROR_GET_INTEGRATION_SECRETS] 403 - Forbidden ' +
+    '({"messages":[{"template":"ERR_MSG_OPERATION_NOT_ALLOWED","message":"The user ' +
+    "USER@AdobeID doesn't have the matching licenses for this application\"}]})";
+
+const LICENCE_504 =
+    '[CoreConsoleAPISDK:ERROR_GET_INTEGRATION] 504 - Gateway Timeout ({"messages":[{"message":' +
+    '"Underlying service timed out: I/O error on GET request for licenses: Read timed out"}]})';
+
+describe('explainAdobeAccessFailure', () => {
+    it('names the missing product-profile access and who can grant it', () => {
+        const message = explainAdobeAccessFailure(LICENCE_403);
+
+        expect(message).toContain('not a developer on every product profile');
+        expect(message).toContain('Admin Console');
+    });
+
+    it('recognises the refusal by its template alone', () => {
+        expect(explainAdobeAccessFailure('403 ERR_MSG_OPERATION_NOT_ALLOWED')).toContain(
+            'product profile',
+        );
+    });
+
+    it("says a Console timeout is Adobe's side and worth retrying", () => {
+        const message = explainAdobeAccessFailure(LICENCE_504);
+
+        expect(message).toContain("Adobe's side");
+        expect(message).toContain('try again');
+    });
+
+    it('leaves a timeout from anything other than Adobe Console alone', () => {
+        expect(explainAdobeAccessFailure('npm install: 504 Gateway Timeout')).toBeUndefined();
+    });
+
+    it('leaves every other failure alone', () => {
+        expect(explainAdobeAccessFailure('Build failed (exit 1): tsc: 3 errors')).toBeUndefined();
     });
 });

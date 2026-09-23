@@ -25,6 +25,7 @@ import {
     getStorefrontForStack,
 } from '@/features/components/services/demoPackageLoader';
 import type { HandlerContext } from '@/types/handlers';
+import type { StorefrontSetupCompletePayload } from '@/types/webviewPayloads';
 
 jest.mock('@/features/project-creation/handlers/executor', () => ({
     executeProjectCreation: jest.fn(async () => undefined),
@@ -47,8 +48,9 @@ jest.mock('@/features/components/services/demoPackageLoader', () => ({
     getResolvedMeshRequirement: jest.fn(() => false),
 }));
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
+    // The signed-in account: the tool creates the repository under it by default.
     getGitHubServices: jest.fn(() => ({
-        tokenService: { validateToken: jest.fn(async () => ({ valid: true })) },
+        tokenService: { validateToken: jest.fn(async () => ({ valid: true, user: { login: 'steve' } })) },
     })),
     getDaLiveAuthService: jest.fn(() => ({ isAuthenticated: jest.fn(async () => true) })),
 }));
@@ -88,8 +90,12 @@ export function defaultStorefrontSetup(): void {
                 progress: 10,
             });
             await ctx.sendMessage('storefront-setup-complete', {
-                repoUrl: 'https://github.com/o/r',
-            });
+                message: 'Done',
+                githubRepo: 'https://github.com/o/r',
+                daLiveSite: 'https://da.live/co/cs',
+                repoOwner: 'o',
+                repoName: 'r',
+            } satisfies StorefrontSetupCompletePayload);
             return { success: true };
         }
     );

@@ -7,7 +7,7 @@
  * Actions are grouped into labeled sections rather than a flat list:
  * - USE: open/run the demo (Start/Stop or Open in Browser, Author Content,
  *   Manage Commerce, Open AI).
- * - MANAGE: project-entry actions (Edit, Integrations…, Pin/Unpin, Reset, Export).
+ * - MANAGE: project-entry actions (Edit, Integrations, Pin/Unpin, Reset, Export).
  *   There is NO Rename item: renaming happens in place on the card name /
  *   dashboard title (InlineRenameField).
  *
@@ -229,7 +229,7 @@ export function ProjectActionsMenu({
         // exists, per-integration actions belong there and this is the route —
         // the projects list otherwise has none (project → dashboard → Integrations).
         if (onOpenIntegrations && hasIntegrations(project)) {
-            manage.push({ key: 'openIntegrations', label: 'Integrations…', icon: 'apiAccess' });
+            manage.push({ key: 'openIntegrations', label: 'Integrations', icon: 'apiAccess' });
         }
         if (onPinToggle) {
             manage.push({

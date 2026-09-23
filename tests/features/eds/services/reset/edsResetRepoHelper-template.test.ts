@@ -12,11 +12,13 @@ import {
     RESET_RESULT,
     buildParams,
     installDefaults,
+    mockGetLatestCommitSha,
     mocks,
     runReset,
 } from './edsResetRepoHelper.testUtils';
 import type { CodePatchResult } from '@/features/eds/services/patches/codePatchRegistry';
 import type { CodePatchSource } from '@/types/demoPackages';
+import { createMockProject } from '../../../../helpers/projectFake';
 
 const PATCH_SOURCE: CodePatchSource = {
     owner: 'adobe',
@@ -25,6 +27,7 @@ const PATCH_SOURCE: CodePatchSource = {
     lkgFile: 'families/isle5/last-known-good',
 };
 const LKG_SHA = 'abcdef0123456789abcdef0123456789abcdef01';
+const HEAD_SHA = '0123456789abcdef0123456789abcdef01234567';
 const PATCH_RESULT: CodePatchResult = { patchId: 'p1', target: 'head.html', applied: true };
 const SMART_404_WARNING =
     '⚠️ Smart-404 handler not installed — product pages may not recover on first visit';
@@ -57,6 +60,38 @@ describe('resetRepoToTemplate — the bulk template reset', () => {
         expect(overrides?.get('demo-config.json')).toBe('{"cfg":1}');
         expect(report).toHaveBeenCalledWith(1, 'Reset 20 files');
         expect(mocks.installQuickEdit).toHaveBeenCalledWith(githubFileOps, 'me', 'shop', context.logger);
+    });
+
+    it('carries the demo package description file through the reset for a project that saved one', async () => {
+        // The reset replaces the tree with the template's; the file a Save wrote
+        // is Demo Builder's to keep, like fstab.yaml (owner, 2026-09-14).
+        const params = buildParams({
+            project: createMockProject({ name: 'p', path: '/p', demoPackage: { fileSha: 'blob-1', savedAt: 'x' } }),
+        });
+        const file = { content: '{"kind":"demo","name":"Bodea"}\n', sha: 'blob-1' };
+
+        const { overrides, getFileContent } = await runReset(params, undefined, file);
+
+        expect(getFileContent).toHaveBeenCalledWith('me', 'shop', 'demo.demo-builder.json');
+        expect(overrides?.get('demo.demo-builder.json')).toBe(file.content);
+    });
+
+    it('a saved package whose file is gone from the repository adds nothing', async () => {
+        const params = buildParams({
+            project: createMockProject({ name: 'p', path: '/p', demoPackage: { fileSha: 'blob-1', savedAt: 'x' } }),
+        });
+
+        const { overrides } = await runReset(params);
+
+        expect(overrides?.has('demo.demo-builder.json')).toBe(false);
+    });
+
+    it('never reads the description file for a project without a package record', async () => {
+        // A project built FROM an added demo takes the source's file with the rest of the tree.
+        const { overrides, getFileContent } = await runReset(buildParams());
+
+        expect(getFileContent).not.toHaveBeenCalled();
+        expect(overrides?.has('demo.demo-builder.json')).toBe(false);
     });
 
     it('leaves config.json out of the commit when generation fails, even if stale content is returned', async () => {
@@ -107,6 +142,45 @@ describe('resetRepoToTemplate — the bulk template reset', () => {
 
         expect(mocks.readLkgSha).not.toHaveBeenCalled();
         expect(resetMock.mock.calls[0][5]).toBe('main');
+    });
+
+    it('returns the LKG it pinned to as the commit the repository now matches', async () => {
+        mocks.readLkgSha.mockResolvedValue(LKG_SHA);
+
+        const { result, resetMock } = await runReset(buildParams({ codePatchSource: PATCH_SOURCE }));
+
+        expect(result.templateCommitSha).toBe(LKG_SHA);
+        expect(resetMock.mock.calls[0][5]).toBe(result.templateCommitSha);
+        expect(mockGetLatestCommitSha).not.toHaveBeenCalled();
+    });
+
+    it('pins a storefront without a code patch source to the template head it resolved, and returns it', async () => {
+        mockGetLatestCommitSha.mockResolvedValue(HEAD_SHA);
+
+        const { result, resetMock } = await runReset(buildParams());
+
+        expect(mockGetLatestCommitSha).toHaveBeenCalledWith('tpl-owner', 'tpl-repo', 'main');
+        expect(resetMock.mock.calls[0][5]).toBe(HEAD_SHA);
+        expect(result.templateCommitSha).toBe(HEAD_SHA);
+    });
+
+    it('pins to the template head when the LKG is unreachable, and returns that head', async () => {
+        mocks.readLkgSha.mockResolvedValue(undefined);
+        mockGetLatestCommitSha.mockResolvedValue(HEAD_SHA);
+
+        const { result, resetMock } = await runReset(buildParams({ codePatchSource: PATCH_SOURCE }));
+
+        expect(resetMock.mock.calls[0][5]).toBe(HEAD_SHA);
+        expect(result.templateCommitSha).toBe(HEAD_SHA);
+    });
+
+    it('resets onto main and returns no commit when the template head cannot be fetched', async () => {
+        mockGetLatestCommitSha.mockRejectedValue(new Error('network down'));
+
+        const { result, resetMock } = await runReset(buildParams());
+
+        expect(resetMock.mock.calls[0][5]).toBe('main');
+        expect(result.templateCommitSha).toBeUndefined();
     });
 
     it('applies canonical code patches into the override map before the bulk reset', async () => {

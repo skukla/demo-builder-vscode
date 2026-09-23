@@ -107,18 +107,6 @@
             "source": "PL-22 batch MUT-01, checkUpdates focus run"
         },
         {
-            "module": "src/features/updates/services/templateSyncService.ts",
-            "anchors": [
-                "this.logger.debug(`[TemplateSync] File ${filePath} not found, skipping backup`);"
-            ],
-            "mutants": 1,
-            "category": "block",
-            "reason": "Emptying the catch body in backupPreservedFiles changes nothing the caller can see: a preserved file that does not exist is skipped either way (the skip IS tested \u2014 a rejected readFile still yields a successful sync), and the body is one debug line. Asserting debug text is what the ratchet refuses to reward.",
-            "decision": "none \u2014 the line tells the Debug Logs reader why a preserved file was not restored",
-            "recorded": "2026-09-03",
-            "source": "PL-22 batch MUT-01, templateSyncService focus run"
-        },
-        {
             "module": "src/features/updates/services/componentUpdater.ts",
             "anchors": [
                 "this.logger.debug('[Updates] Could not determine node version from registry, using default');"
@@ -854,7 +842,7 @@
             "module": "src/features/authentication/handlers/deleteAdobeProjectHandler.ts",
             "anchors": [
                 "context.debugLogger.debug('[Project] Post-delete selection clear failed:', clearError);",
-                "context.debugLogger.debug('[Project] Post-delete refresh failed:', refreshError);"
+                "context.debugLogger.debug('[Project] Project list refresh failed:', refreshError);"
             ],
             "mutants": 2,
             "category": "block",
@@ -1251,19 +1239,16 @@
             "source": "PL-22 batch MUT-07, edsResetUI focus run"
         },
         {
-            "module": "src/features/eds/services/reset/edsResetRepoHelper.ts",
+            "module": "src/features/eds/services/reset/edsResetFileOverrides.ts",
             "anchors": [
-                "`[EdsReset] Block library '${libraryId}' selected but no source configured`,",
-                "logger.warn(`[EdsReset] Inspector tagging skipped: ${(error as Error).message}`);",
-                "`[EdsReset] Failed to generate demo-config.json: ${configResult.error}`,",
-                "`[EdsReset] LKG unreachable for ${codePatchSource.owner}/${codePatchSource.repo} \u2014 falling back to template main HEAD`,"
+                "logger.warn(`[EdsReset] Failed to generate demo-config.json: ${configResult.error}`);"
             ],
-            "mutants": 4,
+            "mutants": 1,
             "category": "block",
-            "reason": "Four bodies that only log: the else when a selected library has no source (the library is simply not pushed, which the blockLibraries suite pins from the list handed to installBlockCollections), the catch around inspector-entry generation (the suite pins that the install proceeds with an empty entries list), the else when config generation fails (the suite pins that config.json is absent from the override map), and the else when the LKG is unreachable (the suite pins the fallback to main). Emptying any of them changes what is logged and nothing a collaborator receives; asserting the log is what no-logger-wording-assertions forbids.",
-            "decision": "none \u2014 each line is the Debug Logs trace of a degraded step, which debug-log-triage reads",
-            "recorded": "2026-09-04",
-            "source": "PL-22 batch MUT-07, edsResetRepoHelper focus run"
+            "reason": "The else when config generation fails only logs. Re-triaged 2026-09-14 when the reset's file overrides moved out of edsResetRepoHelper (where it was recorded 2026-09-04): the body is unchanged, and the template suite still pins that config.json is absent from the override map when generation fails. Emptying it changes what is logged and nothing the reset commit receives; asserting the log is what no-logger-wording-assertions forbids.",
+            "decision": "none \u2014 the line is the Debug Logs trace of a degraded step, which debug-log-triage reads",
+            "recorded": "2026-09-14",
+            "source": "moved from the PL-22 batch MUT-07 entry for edsResetRepoHelper"
         },
         {
             "module": "src/features/eds/services/reset/edsResetRepoHelper.ts",
@@ -1870,45 +1855,6 @@
             "category": "branch",
             "reason": "Both call sites of checkPrerequisitePlugins are already guarded by `prereq.plugins && status.installed`, so prereq.plugins is truthy whenever this runs and the early return is unreachable. Removing the guard changes no run.",
             "decision": "Kept: it is what narrows the type for the for-of below.",
-            "recorded": "2026-09-04",
-            "source": "PL-22 MUT-01, 2026-09-04"
-        },
-        {
-            "module": "src/features/prerequisites/services/PrerequisitesManager.ts",
-            "anchors": [
-                "errorObj.code === 'ENOENT' ||"
-            ],
-            "line": 348,
-            "mutants": 7,
-            "category": "branch",
-            "reason": "isCommandNotFound is read exactly once, by the if/else immediately below, and BOTH arms of that if/else call this.logger.info \u2014 one naming the command that was not on PATH, one quoting the error message. Nothing else reads it: status.installed is set false before the branch and the cache write after it is identical either way. So every way of weakening this disjunction changes only which info line prints.",
-            "decision": "Ledgered: killing it would mean asserting a logger call's arguments.",
-            "recorded": "2026-09-04",
-            "source": "PL-22 MUT-01, 2026-09-04"
-        },
-        {
-            "module": "src/features/prerequisites/services/PrerequisitesManager.ts",
-            "anchors": [
-                "if (isCommandNotFound) {"
-            ],
-            "line": 354,
-            "mutants": 3,
-            "category": "branch",
-            "reason": "Both arms of this if/else do nothing but call this.logger.info. Flipping the condition either way, or emptying the block, changes only which of the two messages is written to the log; the status object and the cache write that follow are byte-identical.",
-            "decision": "Ledgered: killing it would mean asserting a logger call's arguments.",
-            "recorded": "2026-09-04",
-            "source": "PL-22 MUT-01, 2026-09-04"
-        },
-        {
-            "module": "src/features/prerequisites/services/PrerequisitesManager.ts",
-            "anchors": [
-                "return firstInstalled?.component || undefined;"
-            ],
-            "line": 473,
-            "mutants": 1,
-            "category": "optionalChain",
-            "reason": "extractVersionFromPerNodeStatus is called from exactly one place, under `if (anyInstalled)`, and anyInstalled is `perNodeVersionStatus.some(v => v.installed)` over the same array this searches. So the find always hits and firstInstalled is never undefined when the line runs.",
-            "decision": "Kept: the optional chain states the local contract without depending on the caller's guard.",
             "recorded": "2026-09-04",
             "source": "PL-22 MUT-01, 2026-09-04"
         },
@@ -2567,7 +2513,7 @@
             "anchors": [
                 "if (importedSettings) {"
             ],
-            "line": 327,
+            "line": 328,
             "mutants": 2,
             "category": "branch",
             "reason": "The body of this if is one log.info and nothing more. Every value it reports \u2014 the selections, the Adobe block, the configs, the generated name \u2014 was computed on the four lines above it and is returned from computeInitialState regardless of whether this branch runs. Forcing it false or emptying it changes only development output.",
@@ -2580,7 +2526,7 @@
             "anchors": [
                 "hasSelections: !!importedSettings.selections,"
             ],
-            "line": 329,
+            "line": 330,
             "mutants": 2,
             "category": "branch",
             "reason": "A field of the object literal passed to log.info, read by nothing else. The initial state returned below takes importedSettings.selections directly, not this boolean, so dropping or adding the negation moves one value inside a development-only log line and nothing in the wizard. Separating the two would require asserting the log payload.",
@@ -2593,7 +2539,7 @@
             "anchors": [
                 "hasAdobe: !!importedSettings.adobe,"
             ],
-            "line": 330,
+            "line": 331,
             "mutants": 2,
             "category": "branch",
             "reason": "A field of the object literal passed to log.info, read by nothing else. The initial state returned below takes importedSettings.adobe directly, not this boolean, so dropping or adding the negation moves one value inside a development-only log line and nothing in the wizard. Separating the two would require asserting the log payload.",
@@ -2606,7 +2552,7 @@
             "anchors": [
                 "hasConfigs: !!importedSettings.configs,"
             ],
-            "line": 331,
+            "line": 332,
             "mutants": 2,
             "category": "branch",
             "reason": "A field of the object literal passed to log.info, read by nothing else. The initial state returned below takes importedSettings.configs directly, not this boolean, so dropping or adding the negation moves one value inside a development-only log line and nothing in the wizard. Separating the two would require asserting the log payload.",
@@ -2619,7 +2565,7 @@
             "anchors": [
                 "configKeys: importedSettings.configs ? Object.keys(importedSettings.configs) : [],"
             ],
-            "line": 332,
+            "line": 333,
             "mutants": 1,
             "category": "other",
             "reason": "The empty fallback here is the else arm of a field inside the log.info payload; it is reached only when the import carried no configs, and it is printed rather than used. componentConfigs on the returned state comes from importedSettings?.configs || {} further down, which this expression cannot reach. Any test able to see the difference would be asserting log content.",
@@ -2632,7 +2578,7 @@
             "anchors": [
                 "existingProjectNames || [],"
             ],
-            "line": 383,
+            "line": 385,
             "mutants": 1,
             "category": "other",
             "reason": "This fallback fires only when the caller passes no existing-names list, and the array goes straight to initializeProjectName, which uses it for one thing: existingNames.includes(baseName) inside generateUniqueProjectName. A list holding Stryker's placeholder string answers that check identically to an empty list for every project name a wizard can be opened with.",
@@ -2645,7 +2591,7 @@
             "anchors": [
                 "const originalStep = wizardSteps?.find((ws) => ws.id === step.id);"
             ],
-            "line": 402,
+            "line": 404,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "Removing the optional call would throw only if this map body ran with wizardSteps undefined, and it cannot: enabledSteps is getEnabledWizardSteps(wizardSteps), which returns an empty array for a missing or empty configuration, so the map never executes a single iteration. There is no input that reaches this line with wizardSteps absent.",
@@ -2658,7 +2604,7 @@
             "anchors": [
                 "condition: originalStep?.condition,"
             ],
-            "line": 407,
+            "line": 409,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "originalStep is the result of finding step.id in wizardSteps, and step came from getEnabledWizardSteps(wizardSteps) \u2014 every id being searched for was taken from that same array, so the find always hits. Removing the optional read can never dereference undefined, whatever step configuration is handed in.",
@@ -2671,7 +2617,7 @@
             "anchors": [
                 "if (currentOrgId) {"
             ],
-            "line": 478,
+            "line": 480,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this true sets hasSeenOrgRef when the org is absent, but the flag can only change an outcome once orgActuallyChanged is evaluated with prevOrgId defined \u2014 and prevOrgId is assigned currentOrgId at the end of a previous run, so a defined prevOrgId means that run had a defined currentOrgId and already set the flag unmutated. The two therefore agree on every sequence of org values.",
@@ -2684,7 +2630,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 507,
+            "line": 509,
             "mutants": 1,
             "category": "other",
             "reason": "This is the useCallback dependency list for updateState. Replacing the empty array with one holding a constant string leaves the memo equally stable \u2014 the value never changes between renders, so the callback identity never invalidates either way, and the test asserting updateState keeps the same reference across a state change passes under both.",
@@ -2788,7 +2734,7 @@
             "anchors": [
                 "if (typeof value !== 'object' || value === null) return false;"
             ],
-            "line": 36,
+            "line": 38,
             "mutants": 4,
             "category": "branch",
             "reason": "Relaxing this first guard does not let a bad step through \u2014 it makes the next line run 'id' in value against a string, a number or null, which throws a TypeError. readWizardStepsFile catches that and returns 'unreadable', and getInitialData answers 'unreadable' with the same null wizardSteps it answers 'invalid-shape' with. Every mutant here therefore lands on the identical response; only which error line is logged differs.",
@@ -2801,7 +2747,7 @@
             "anchors": [
                 "function formatComponentDefaults(defaults: ComponentSelection | null): string {"
             ],
-            "line": 48,
+            "line": 50,
             "mutants": 1,
             "category": "block",
             "reason": "This whole function exists to build one string, and it has exactly one call site: a template literal inside this.logger.debug in getInitialData. Emptying its body changes what that debug line prints and nothing else \u2014 componentDefaults reaches the webview from the parsed file, never from this formatter. Killing it would mean asserting a log string.",
@@ -2814,7 +2760,7 @@
             "anchors": [
                 "if (!defaults) return 'no defaults loaded';"
             ],
-            "line": 49,
+            "line": 51,
             "mutants": 3,
             "category": "branch",
             "reason": "Part of formatComponentDefaults, whose only consumer is a template literal inside this.logger.debug. Every mutant on the not-loaded case changes a substring of that one debug line; the componentDefaults value the webview actually receives is read from defaults.json and passed through untouched, so no returned field, message payload or collaborator call differs.",
@@ -2827,7 +2773,7 @@
             "anchors": [
                 "const frontend = defaults.frontend || 'none';"
             ],
-            "line": 50,
+            "line": 52,
             "mutants": 3,
             "category": "branch",
             "reason": "Part of formatComponentDefaults, whose only consumer is a template literal inside this.logger.debug. Every mutant on the frontend fallback changes a substring of that one debug line; the componentDefaults value the webview actually receives is read from defaults.json and passed through untouched, so no returned field, message payload or collaborator call differs.",
@@ -2840,7 +2786,7 @@
             "anchors": [
                 "const backend = defaults.backend || 'none';"
             ],
-            "line": 51,
+            "line": 53,
             "mutants": 3,
             "category": "branch",
             "reason": "Part of formatComponentDefaults, whose only consumer is a template literal inside this.logger.debug. Every mutant on the backend fallback changes a substring of that one debug line; the componentDefaults value the webview actually receives is read from defaults.json and passed through untouched, so no returned field, message payload or collaborator call differs.",
@@ -2853,7 +2799,7 @@
             "anchors": [
                 "const depCount = defaults.dependencies?.length || 0;"
             ],
-            "line": 52,
+            "line": 54,
             "mutants": 4,
             "category": "branch",
             "reason": "Part of formatComponentDefaults, whose only consumer is a template literal inside this.logger.debug. Every mutant on the dependency count changes a substring of that one debug line; the componentDefaults value the webview actually receives is read from defaults.json and passed through untouched, so no returned field, message payload or collaborator call differs.",
@@ -2866,7 +2812,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 126,
+            "line": 128,
             "mutants": 1,
             "category": "block",
             "reason": "The constructor's api-services catch body is a single this.logger.debug. Emptying it still swallows the failure, still leaves sharedState.apiServicesConfig undefined, and still lets the wizard open \u2014 a test asserting exactly that already passes with and without the log. The only difference is whether the reason appears in the debug channel.",
@@ -2879,7 +2825,7 @@
             "anchors": [
                 "return { outcome: 'absent' };"
             ],
-            "line": 155,
+            "line": 157,
             "mutants": 1,
             "category": "other",
             "reason": "Emptying this result object leaves outcome undefined. Both callers discriminate on it: getInitialData matches 'ok', 'invalid-shape' and 'unreadable', and ensureStepLogger matches 'ok' and 'unreadable'. An undefined outcome matches none of them, which is exactly what 'absent' already does \u2014 no steps, no error logged. The two are indistinguishable from outside.",
@@ -2892,7 +2838,7 @@
             "anchors": [
                 "if (!stepsConfig || !Array.isArray(stepsConfig.steps)) {"
             ],
-            "line": 158,
+            "line": 160,
             "mutants": 3,
             "category": "branch",
             "reason": "Relaxing this guard does not admit a malformed file \u2014 it makes the next line call .every on null or on a string, which throws, so the read returns 'unreadable' instead of 'unparseable'. getInitialData answers both with wizardSteps null, and ensureStepLogger passes undefined steps for both. Only the logged wording separates them.",
@@ -2905,7 +2851,7 @@
             "anchors": [
                 "return { outcome: 'unparseable' };"
             ],
-            "line": 159,
+            "line": 161,
             "mutants": 1,
             "category": "other",
             "reason": "Same as the absent result above: an empty object leaves outcome undefined, which matches none of the branches either caller tests, producing the identical no-steps-and-no-error response that 'unparseable' already produces.",
@@ -2918,7 +2864,7 @@
             "anchors": [
                 "return { outcome: 'unreadable', error: error as Error };"
             ],
-            "line": 166,
+            "line": 168,
             "mutants": 1,
             "category": "other",
             "reason": "Emptying this leaves outcome undefined, so getInitialData skips its error log and ensureStepLogger skips its debug \u2014 but wizardSteps is null either way and StepLogger still gets undefined steps. The error field it drops is only ever passed to a logger call, so nothing observable moves.",
@@ -2931,7 +2877,7 @@
             "anchors": [
                 "if (read.outcome === 'ok') {"
             ],
-            "line": 190,
+            "line": 192,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this true assigns read.steps unconditionally \u2014 and on every non-ok outcome that property does not exist, so wizardSteps becomes undefined, which is precisely the value the untaken branch leaves it at. StepLogger.create therefore receives undefined for a failed read either way, which the suite already asserts.",
@@ -2944,7 +2890,7 @@
             "anchors": [
                 "} else if (read.outcome === 'unreadable') {"
             ],
-            "line": 192,
+            "line": 194,
             "mutants": 4,
             "category": "branch",
             "reason": "The body of this branch is one this.logger.debug and nothing else; the step logger is built below it with whatever wizardSteps holds, which this branch never assigns. Forcing the condition either way, inverting the equality or emptying the block all change only whether a line prints.",
@@ -2957,7 +2903,7 @@
             "anchors": [
                 "if (defaults) {"
             ],
-            "line": 265,
+            "line": 267,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this true reads .componentSelection off the null that parseJSON returns for an unreadable file, which throws inside the surrounding try and lands in the catch \u2014 leaving componentDefaults at its initial null, which is exactly what the untaken branch leaves it at. The suite's malformed-defaults test passes under both.",
@@ -2970,7 +2916,7 @@
             "anchors": [
                 "const stepPreview = wizardSteps"
             ],
-            "line": 286,
+            "line": 288,
             "mutants": 1,
             "category": "other",
             "reason": "stepPreview is built solely to be interpolated into the this.logger.debug two lines below; wizardSteps itself is already assigned and is what reaches the webview. Dropping the slice changes how many ids appear in that one log line and nothing a caller can observe.",
@@ -2983,7 +2929,7 @@
             "anchors": [
                 ".map((s) => s.id)"
             ],
-            "line": 288,
+            "line": 290,
             "mutants": 1,
             "category": "other",
             "reason": "Part of the same preview string: the mapped ids are joined and interpolated into one this.logger.debug call. Replacing the mapper changes the text of that line, while the steps sent to the webview come from the parsed file above, untouched by this expression.",
@@ -2996,7 +2942,7 @@
             "anchors": [
                 "const remainingCount = stepCount > 3 ? ` ... (and ${stepCount - 3} more)` : '';"
             ],
-            "line": 290,
+            "line": 292,
             "mutants": 5,
             "category": "branch",
             "reason": "remainingCount is appended to the preview inside the same this.logger.debug. Forcing the comparison either way, widening it, or flipping the subtraction changes only the suffix of that debug line \u2014 the wizardSteps array the webview receives was assigned before this expression and is not derived from it.",
@@ -3009,7 +2955,7 @@
             "anchors": [
                 "} else if (stepsRead.outcome === 'invalid-shape') {"
             ],
-            "line": 292,
+            "line": 294,
             "mutants": 1,
             "category": "branch",
             "reason": "The body is a single this.logger.error. wizardSteps was left null by the branch above and stays null whichever way this condition goes, so the response the webview receives is identical; only whether the validation message is logged changes.",
@@ -3022,7 +2968,7 @@
             "anchors": [
                 "} else if (stepsRead.outcome === 'unreadable') {"
             ],
-            "line": 298,
+            "line": 300,
             "mutants": 4,
             "category": "branch",
             "reason": "Same shape as the invalid-shape branch above: the body is one this.logger.error, and wizardSteps is null on entry and on exit regardless. Forcing the condition either way, inverting the equality or emptying the block moves only a log line.",
@@ -3035,7 +2981,7 @@
             "anchors": [
                 "const customBlockLibraryDefaults = parseCustomBlockLibrarySettings("
             ],
-            "line": 314,
+            "line": 316,
             "mutants": 1,
             "category": "other",
             "reason": "The empty default on the setting read below is only used when the setting has never been set, and whatever it yields goes straight into parseCustomBlockLibrarySettings, which keeps an entry only when parseCustomBlockLibraryUrl resolves it to an owner and repo. Stryker's placeholder string is not a repository URL, so it is dropped and the result is the same empty array.",
@@ -3048,7 +2994,7 @@
             "anchors": [
                 "const updated = parseCustomBlockLibrarySettings("
             ],
-            "line": 455,
+            "line": 461,
             "mutants": 1,
             "category": "other",
             "reason": "Same as the getInitialData read: the fallback fires only for an unset setting, and the value is parsed by parseCustomBlockLibrarySettings before it is pushed to the webview. A placeholder string resolves to no owner and repo, so it is filtered out and the pushed payload holds the same empty array \u2014 which the settings-listener suite asserts directly.",
@@ -3061,7 +3007,7 @@
             "anchors": [
                 "if (this.editProject?.settings?.edsConfig) {"
             ],
-            "line": 319,
+            "line": 324,
             "mutants": 3,
             "category": "branch",
             "reason": "Both arms of this if are a this.logger.debug, and the editProject sent to the webview is the field itself, assigned in execute and returned untouched below. Forcing the condition false or emptying the block changes only which debug line prints. The optional read on settings is defensive against a value the EditProjectConfig type forbids \u2014 settings is required there, so no caller can produce the shape that would make removing it throw.",
@@ -3074,7 +3020,7 @@
             "anchors": [
                 "} else if (this.editProject) {"
             ],
-            "line": 328,
+            "line": 333,
             "mutants": 3,
             "category": "branch",
             "reason": "The body is one this.logger.debug noting that an edit carried no EDS config. Nothing in the returned initial data is computed here \u2014 editProject is passed through as the field execute assigned \u2014 so forcing the condition either way or emptying the block moves only the debug channel.",
@@ -3087,7 +3033,7 @@
             "anchors": [
                 "if (panel) {"
             ],
-            "line": 477,
+            "line": 488,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this true calls dispose on undefined when no wizard panel is open \u2014 and that call sits inside the try whose catch is deliberately empty, so the TypeError is swallowed and disposeActivePanel still returns having done nothing. The no-panel test passes under both, because the guard and the catch cover the same case.",
@@ -3100,7 +3046,7 @@
             "anchors": [
                 "if (this.importedSettings) {"
             ],
-            "line": 494,
+            "line": 505,
             "mutants": 3,
             "category": "branch",
             "reason": "The body is a single this.logger.debug naming the import source. importedSettings is assigned on the line above and read by getInitialData from the field, never from this branch, so forcing the condition either way or emptying the block leaves the wizard's initial data identical.",
@@ -3113,7 +3059,7 @@
             "anchors": [
                 "if (this.editProject.settings?.selections) {"
             ],
-            "line": 509,
+            "line": 520,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "Removing this optional read would throw only for an edit project whose settings is undefined, and EditProjectConfig declares settings as required \u2014 no caller can construct that value without deliberately defeating the type. The guard is defensive against a shape the compiler already refuses.",
@@ -3126,7 +3072,7 @@
             "anchors": [
                 "let componentDefaults: ComponentSelection | null = null;"
             ],
-            "line": 250,
+            "line": 252,
             "mutants": 1,
             "category": "block",
             "reason": "The catch that closes this try block holds one this.logger.debug. Emptying it still swallows the failure and still leaves componentDefaults at the null declared here, which is what the webview receives \u2014 the suite asserts exactly that for both a malformed defaults.json and a throwing read. Only the debug channel differs.",
@@ -3299,7 +3245,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 94,
+            "line": 113,
             "mutants": 2,
             "category": "other",
             "reason": "This file has TWO effects with an empty dependency list \u2014 the block-library settings listeners at line 94 and the packages/stacks load at line 110 \u2014 and this row covers the mutant on each, because their closing lines are textually identical and cannot be anchored apart. Stryker replaces an empty list with a constant one-element array rather than emptying it, and React compares dependencies with Object.is element by element, so that constant is identical on every render and both effects still run exactly once. No render sequence distinguishes the two forms.",
@@ -3385,7 +3331,7 @@
             "anchors": [
                 "): void {"
             ],
-            "line": 476,
+            "line": 478,
             "mutants": 2,
             "category": "block",
             "reason": "This row covers the body-deletion mutant on BOTH validation helpers \u2014 validateStackPackageConfig at line 476 and validateStackLookup at line 511 \u2014 because their signature lines are textually identical and cannot be anchored apart. Each function returns void and does nothing but write to console.warn and console.log, so emptying either body changes nothing a caller or a test can observe, and the only way to notice would be to assert log output.",
@@ -3506,11 +3452,11 @@
         {
             "module": "src/features/project-creation/ui/steps/WelcomeStep.tsx",
             "anchors": [
-                "const pkg = packages?.find((p) => p.id === packageId);"
+                ": packages?.find((p) => p.id === packageId);"
             ],
             "mutants": 1,
             "category": "optionalChain",
-            "reason": "Dropping the '?.' would throw only when 'packages' is undefined. This handler is passed to BrandGallery and nothing else, and BrandGallery is rendered only inside 'if (hasPackages && hasStacks)' \u2014 so 'packages' is a non-empty array on every path that can call it. The '?.' is required because the prop is optional, not because the value can be missing here.",
+            "reason": "Dropping the '?.' would throw only when 'packages' is undefined. This handler is passed to BrandGallery and nothing else, and BrandGallery is rendered only inside 'if (hasPackages && hasStacks)' \u2014 so 'packages' is a non-empty array on every path that can call it. The '?.' is required because the prop is optional, not because the value can be missing here. (Re-anchored 2026-09-12: the lookup became the catalog arm of a ternary whose other arm derives an added demo's card from its row; the argument is unchanged.)",
             "decision": "none \u2014 the '?.' is required by the optional prop type",
             "recorded": "2026-09-04",
             "source": "mutationLedger add"
@@ -3562,7 +3508,7 @@
             "decision": "none \u2014 a fast path the following lookup already covers",
             "recorded": "2026-09-04",
             "source": "mutationLedger add",
-            "line": 162
+            "line": 233
         },
         {
             "module": "src/features/project-creation/ui/steps/WelcomeStep.tsx",
@@ -3575,14 +3521,14 @@
             "decision": "none \u2014 a fast path the following lookup already covers",
             "recorded": "2026-09-04",
             "source": "mutationLedger add",
-            "line": 186
+            "line": 257
         },
         {
             "module": "src/features/project-creation/ui/components/BrandGallery.tsx",
             "anchors": [
                 "selectedBlockLibraries = [],"
             ],
-            "line": 56,
+            "line": 100,
             "mutants": 1,
             "category": "other",
             "reason": "PackageCard's default only applies when the prop is omitted, and BrandGallery passes 'isSelected ? selectedBlockLibraries : undefined'. For the selected card that is always an array (BrandGallery defaults it to [] itself), so the default is never used there. For an unselected card the default DOES apply, but 'isComplete' is false for that card, so the block-library summary the count feeds is not rendered at all. No render shows the difference.",
@@ -4394,18 +4340,6 @@
         {
             "module": "src/features/project-creation/handlers/createHandler.ts",
             "anchors": [
-                "(appError.cause?.message?.includes('cancelled by user') ?? false);"
-            ],
-            "mutants": 1,
-            "category": "optionalChain",
-            "reason": "Dropping the second optional chain would throw only for a cause that exists and has no message. Every cause on an AppError is set from `error instanceof Error ? error : undefined`, so a present cause is always a real Error and message is always a string \u2014 possibly empty, which includes() handles. No rejection the executor can produce reaches the state this guard protects against.",
-            "decision": "none \u2014 the chain is required by the optional type and unreachable in its failing state",
-            "recorded": "2026-09-04",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/features/project-creation/handlers/createHandler.ts",
-            "anchors": [
                 "previousExists: !!context.sharedState.projectCreationAbortController,"
             ],
             "mutants": 2,
@@ -4751,11 +4685,11 @@
         {
             "module": "src/features/project-creation/ui/steps/SampleDataStep.tsx",
             "anchors": [
-                "}, [load]);"
+                "}, [load, includeCommunity]);"
             ],
             "mutants": 1,
             "category": "other",
-            "reason": "The effect fetches once per mount, and emptying its dependency list keeps that true: load is a useCallback inside useDataInstallerRequest keyed on the execute function useVSCodeRequest memoises, so it never changes identity for a given request type. A test could only tell the two apart by making load change identity, which would mean the hook had started re-fetching on every render \u2014 a defect that hook is what prevents.",
+            "reason": "The effect fetches once per mount, and emptying its dependency list keeps that true: load is a useCallback inside useDataInstallerRequest keyed on the execute function useVSCodeRequest memoises, so it never changes identity for a given request type. A test could only tell the two apart by making load change identity, which would mean the hook had started re-fetching on every render \u2014 a defect that hook is what prevents. (Re-anchored 2026-09-12: the effect now also depends on whether an added demo asks for a pack.)",
             "decision": "none \u2014 the dependency is declared because exhaustive-deps requires it, not because it varies",
             "recorded": "2026-09-04",
             "source": "PL-22 batch MUT-02"
@@ -4765,7 +4699,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 79,
+            "line": 102,
             "mutants": 1,
             "category": "other",
             "reason": "openDataInstallerSettings posts a fixed message and closes over nothing at all. The Stryker replacement is a constant literal that compares equal on every render, so useCallback returns the same function either way, and the message it posts is identical. There is no render, click or payload a test could read that differs.",
@@ -4949,7 +4883,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 128,
+            "line": 129,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is one logger.debug call. Emptying it still swallows the probe failure and still returns false, so the copy runs anyway \u2014 pinned by 'copies content anyway when the probe itself fails'. Only the debug line differs. Re-anchored 2026-09-10 (142 -> 128): the probe moved into contentExistsInDaLive when ensureEdsContent was decomposed. Same code, new line.",
@@ -5263,32 +5197,6 @@
             "decision": "keep \u2014 the empty default is correct; the difference is unreachable for real catalog ids",
             "recorded": "2026-09-04",
             "source": "PL-22 batch MUT-04"
-        },
-        {
-            "module": "src/features/project-creation/services/aiBundle/homeAiContextWriter.ts",
-            "anchors": [
-                "} catch (err) {"
-            ],
-            "line": 140,
-            "mutants": 1,
-            "category": "block",
-            "reason": "Emptying this catch body changes nothing a test can observe. The contract is that ensureHomeAiContext never throws, and that is the catch itself, not its body; the body's only statement is a process.stderr.write. With the body gone the function still swallows the failure and still resolves undefined, and every file it did manage to write is still written. The only difference is whether a warning line reaches stderr, which is wording, and the tests already pin the never-throws half in 'never throws when a write fails'.",
-            "decision": "none \u2014 the warning is the right thing to emit on a best-effort path; there is nothing else to assert",
-            "recorded": "2026-09-04",
-            "source": "PL-22 batch MUT-05"
-        },
-        {
-            "module": "src/features/project-creation/services/aiBundle/homeAiContextWriter.ts",
-            "anchors": [
-                "} catch (err) {"
-            ],
-            "line": 182,
-            "mutants": 1,
-            "category": "block",
-            "reason": "Same shape as the ensureHomeAiContext catch: the body is an ENOENT early return plus one process.stderr.write, so emptying it leaves refreshHomeAgentsMd resolving undefined on every failure exactly as it does now. No file is written either way and no value is returned either way, so the only observable difference is whether a warning line reaches stderr. The never-throws contract is pinned by two tests already.",
-            "decision": "none \u2014 the catch is correct; its body is reporting only",
-            "recorded": "2026-09-04",
-            "source": "PL-22 batch MUT-05"
         },
         {
             "module": "src/features/project-creation/services/aiBundle/homeAiContextWriter.ts",
@@ -5913,7 +5821,7 @@
             "anchors": [
                 "setGitHubAppStatus({ isChecking: false, isInstalled: null });"
             ],
-            "line": 313,
+            "line": 320,
             "mutants": 1,
             "category": "branch",
             "reason": "Right after a successful creation this writes 'not asked yet'. Flipping isChecking to true is invisible because the very next effect - the created-repo App check, armed by the isInstalled null this line sets - calls probeRepoCodeSync, whose first action is to set isChecking true anyway. The two writes land in the same commit as far as any assertion is concerned, and the created-repo probe IS tested (it runs against the repository just created).",
@@ -6000,7 +5908,7 @@
             "anchors": [
                 "}, [repoMode, selectedRepo]);"
             ],
-            "line": 374,
+            "line": 381,
             "mutants": 3,
             "category": "block",
             "reason": "The effect this closes resets the App status when the repo mode or selection changes. On mount it writes exactly the initial state, so it is a no-op there. On a change it is immediately followed by the Code Sync probe for the new selection, which sets isChecking true - measured while writing these tests, that probe fires even when the new repository's readiness has not landed, because the effect reads the previous selection's readiness. So the reset and the probe land in the same commit from any assertion's point of view, and emptying the effect body, emptying its write, or emptying this dependency array all leave the same observable sequence.",
@@ -6041,18 +5949,6 @@
             "category": "other",
             "reason": "safeCommand exists to redact the token before the clone command is written to the trace log; it is passed to logger.trace on the following line and to nothing else. The command git actually runs is cloneCommand, which is built before this line and is unaffected. Widening or narrowing the redaction regex therefore changes only what a log line shows, and the only assertion that could catch it is one on the logger arguments.",
             "decision": "none \u2014 redaction feeds logger.trace, not the executed command",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-03"
-        },
-        {
-            "module": "src/features/eds/services/github/githubRepoOperations.ts",
-            "anchors": [
-                "} catch (cleanupError) {"
-            ],
-            "mutants": 1,
-            "category": "block",
-            "reason": "This catch sits in the finally block of resetToTemplate and its entire body is a logger.warn. Emptying it keeps the swallow \u2014 the catch still stops a failed fs.rm from replacing the real result or error \u2014 so the operation behaves identically whether the body runs or not. The test that the reset still resolves when cleanup rejects passes under both, because what it proves is the catch existing, not what the body does.",
-            "decision": "none \u2014 the catch body is a single warn; the swallow itself is already tested",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-03"
         },
@@ -6121,7 +6017,7 @@
             "anchors": [
                 "const failures = [];"
             ],
-            "line": 397,
+            "line": 408,
             "mutants": 1,
             "category": "other",
             "reason": "The mutant seeds the failures list with one junk string, which flips the aggregate to 'cleanup had errors'. Its return value is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. So nothing this expression computes can reach a test except through log wording.",
@@ -6134,7 +6030,7 @@
             "anchors": [
                 "if (!result.github.success && !result.github.skipped) {"
             ],
-            "line": 398,
+            "line": 409,
             "mutants": 6,
             "category": "branch",
             "reason": "Every variant of this guard \u2014 forced true, forced false, && to ||, either negation dropped, and the body emptied \u2014 changes only whether a 'GitHub: ...' string joins the failure list. The GitHub deletion itself already happened inside CleanupService; this line classifies its report. Its return value is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. So nothing this expression computes can reach a test except through log wording.",
@@ -6147,7 +6043,7 @@
             "anchors": [
                 "if (!result.daLive.success && !result.daLive.skipped) {"
             ],
-            "line": 401,
+            "line": 412,
             "mutants": 6,
             "category": "branch",
             "reason": "The DA.live twin of the GitHub guard above, with the same shape and the same fate: it appends a 'DA.live: ...' string to the failure list after the deletion has already been attempted. Its return value is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. So nothing this expression computes can reach a test except through log wording.",
@@ -6160,7 +6056,7 @@
             "anchors": [
                 "if (failures.length > 0) {"
             ],
-            "line": 405,
+            "line": 416,
             "mutants": 5,
             "category": "branch",
             "reason": "This is the point where the failure list becomes a success flag, so it is the closest thing here to a decision \u2014 but the flag has one reader and that reader picks a log line. Forcing it either way, or comparing with >= or <=, changes 'Cleanup completed successfully' into 'Cleanup completed with errors' or the reverse. Its return value is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. So nothing this expression computes can reach a test except through log wording.",
@@ -6173,7 +6069,7 @@
             "anchors": [
                 "return { success: false, error: failures.join('; ') };"
             ],
-            "line": 406,
+            "line": 417,
             "mutants": 2,
             "category": "other",
             "reason": "Emptying this object literal, or flipping its false to true, changes the shape and the verdict of the cleanup report. The value returned here is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way.",
@@ -6186,7 +6082,7 @@
             "anchors": [
                 "return { success: true };"
             ],
-            "line": 409,
+            "line": 420,
             "mutants": 2,
             "category": "other",
             "reason": "The all-clear answer from the cleanup helper. Emptying the literal or flipping its true to false turns a clean cleanup into a reported failure. The value returned here is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way.",
@@ -6199,7 +6095,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 410,
+            "line": 421,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying this catch body makes the helper return undefined instead of a failure verdict. The caller then throws a TypeError reading .success on undefined, which its own catch swallows into a different log line \u2014 so the handler still resolves { success: true } and no resource is treated differently. The value returned here is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way.",
@@ -6212,7 +6108,7 @@
             "anchors": [
                 "return { success: false, error: (error as Error).message };"
             ],
-            "line": 411,
+            "line": 422,
             "mutants": 2,
             "category": "other",
             "reason": "The failure verdict for an exception thrown anywhere in the helper \u2014 including the fail-fast when there is no authenticated session. Emptying the literal or flipping its false to true changes only that verdict. The value returned here is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. The fail-fast ITSELF is tested: with no authManager, no CleanupService is constructed and cleanupEdsResources is never called.",
@@ -6237,7 +6133,7 @@
             "anchors": [
                 "if (!result.success) {"
             ],
-            "line": 199,
+            "line": 200,
             "mutants": 4,
             "category": "branch",
             "reason": "publishBrandAssets never throws \u2014 fetch and write failures come back as a partly-successful result \u2014 and this guard's whole body is a logger.warn naming the targets that did not land. Nothing downstream reads result: the pipeline proceeds to the next step either way, deliberately, because an incomplete brand set degrades to an unbranded storefront rather than a failed run (proceed-and-warn, ADR-006 D1). Forcing the guard either way, or emptying it, changes only whether that warn prints.",
@@ -7415,19 +7311,6 @@
         {
             "module": "src/features/eds/services/configService/configServiceAccess.ts",
             "anchors": [
-                "} catch {"
-            ],
-            "line": 179,
-            "mutants": 1,
-            "category": "block",
-            "reason": "The catch body assigns undefined to a variable declared one line above without an initialiser, so it is already undefined when response.text() throws. Emptying the block leaves the same value on the same path, and the function returns the same object.",
-            "decision": "none - equivalent; the catch restores a value that was never changed.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-07"
-        },
-        {
-            "module": "src/features/eds/services/configService/configServiceAccess.ts",
-            "anchors": [
                 "const users = (result.body as RawOrgConfig)?.users ?? [];"
             ],
             "mutants": 1,
@@ -7453,103 +7336,12 @@
         {
             "module": "src/features/eds/services/configService/configServiceAccess.ts",
             "anchors": [
-                "if (status === 'ok') {"
-            ],
-            "line": 319,
-            "mutants": 4,
-            "category": "branch",
-            "reason": "Both branches of this condition are a single logger call - info on success, warn on failure - and the return below is the same object either way. Whether the grant succeeded is already asserted through that returned status; which log line printed is not behaviour.",
-            "decision": "none - equivalent; the condition selects a log line and nothing else.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-07"
-        },
-        {
-            "module": "src/features/eds/services/configService/configServiceAccess.ts",
-            "anchors": [
-                "} else {"
-            ],
-            "line": 321,
-            "mutants": 1,
-            "category": "block",
-            "reason": "The else branch is a single logger.warn. Emptying it leaves the same return, and the failing-grant cases are pinned by the status the caller receives.",
-            "decision": "none - equivalent; only the presence of one warn line differs.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-07"
-        },
-        {
-            "module": "src/features/eds/services/configService/configServiceAccess.ts",
-            "anchors": [
-                "if (current.status !== 'ok' || !current.roles) {"
-            ],
-            "line": 398,
-            "mutants": 2,
-            "category": "branch",
-            "reason": "The two operands are the same predicate on every input this function can see. current comes straight from readSiteAccess, which sets roles only on an ok status and never on any other - including the drifted-shape case, which it deliberately reports as failed rather than as an ok with no roles. So status not-ok implies roles undefined, and status ok implies roles present: forcing the left operand false, or joining them with &&, produces the same decision on every path.",
-            "decision": "none - equivalent; readSiteAccess's own contract makes the two halves inseparable.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-07"
-        },
-        {
-            "module": "src/features/eds/services/configService/configServiceAccess.ts",
-            "anchors": [
-                "if (current.status !== 'ok' || !current.roles) {"
-            ],
-            "line": 430,
-            "mutants": 2,
-            "category": "branch",
-            "reason": "Identical to the same guard in ensureSiteAdmin: current comes from readSiteAccess, which sets roles exactly when the status is ok, so the two operands agree on every input and neither mutation changes the decision.",
-            "decision": "none - equivalent; see the ensureSiteAdmin entry for the same guard.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-07"
-        },
-        {
-            "module": "src/features/eds/services/configService/configServiceAccess.ts",
-            "anchors": [
-                "const admins = current.roles[ADMIN_ROLE] ?? [];"
-            ],
-            "line": 434,
-            "mutants": 1,
-            "category": "other",
-            "reason": "This fallback is reached when the site has a role map with no admin key. Whatever the mutant seeds it with, the next line asks includesEmail(admins, email), which is false for any value that is not the email being revoked - so the function returns { status: 'ok', changed: false }, exactly what the real empty array produces.",
-            "decision": "none - equivalent; the seeded value cannot match the email and the no-op return is the same.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-07"
-        },
-        {
-            "module": "src/features/eds/services/configService/configServiceAccess.ts",
-            "anchors": [
-                "if (status === 'ok') {"
-            ],
-            "line": 474,
-            "mutants": 4,
-            "category": "branch",
-            "reason": "As in grantSiteAdmin, both branches are a single logger call and the return below is the same object either way. restoreSiteRoles's outcome is asserted through that returned status, for both the success and the refusal.",
-            "decision": "none - equivalent; the condition selects a log line and nothing else.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-07"
-        },
-        {
-            "module": "src/features/eds/services/configService/configServiceAccess.ts",
-            "anchors": [
                 "const count = Object.values(roles).reduce((n, list) => n + list.length, 0);"
             ],
             "mutants": 2,
             "category": "other",
             "reason": "count is interpolated into the logger.info on the next line and read nowhere else. Neither emptying the reducer nor flipping its arithmetic changes the role map that was written, the status returned, or anything a caller can observe.",
             "decision": "none - equivalent; the value exists only to make one log line specific.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-07"
-        },
-        {
-            "module": "src/features/eds/services/configService/configServiceAccess.ts",
-            "anchors": [
-                "} else {"
-            ],
-            "line": 477,
-            "mutants": 1,
-            "category": "block",
-            "reason": "The else branch is a single logger.warn, and the refusal it describes is already asserted through the status restoreSiteRoles returns.",
-            "decision": "none - equivalent; only the presence of one warn line differs.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-07"
         },
@@ -7578,52 +7370,13 @@
             "source": "PL-22 MUT-08 focus run, 2026-09-05"
         },
         {
-            "module": "src/features/eds/services/github/githubTokenService.ts",
-            "anchors": [
-                "this.logger.warn('[GitHub] Failed to parse stored token');"
-            ],
-            "line": 69,
-            "mutants": 1,
-            "category": "block",
-            "reason": "Emptying the catch block leaves the function returning undefined implicitly, which is what the explicit return already produces. A caller cannot tell the two apart; only the warn line differs.",
-            "decision": "none \u2014 the explicit return states the contract at the site that satisfies it",
-            "recorded": "2026-09-05",
-            "source": "PL-22 MUT-08 focus run, 2026-09-05"
-        },
-        {
-            "module": "src/features/eds/services/github/githubTokenService.ts",
-            "anchors": [
-                "if (!token) {"
-            ],
-            "line": 107,
-            "mutants": 2,
-            "category": "branch",
-            "reason": "Without the no-token guard, validateToken evaluates token.token, throws a TypeError while building the Octokit argument, and the catch returns { valid: false } \u2014 the same object the guard returns, with the same 401-only clearToken decision skipped either way (an undefined status is not 401). No collaborator is called differently: the throw happens while evaluating the argument, so createAuthenticatedOctokit never runs in either version.",
-            "decision": "none \u2014 returning the answer beats throwing and catching it",
-            "recorded": "2026-09-05",
-            "source": "PL-22 MUT-08 focus run, 2026-09-05"
-        },
-        {
-            "module": "src/features/eds/services/github/githubTokenService.ts",
-            "anchors": [
-                "if (!token) {"
-            ],
-            "line": 180,
-            "mutants": 2,
-            "category": "branch",
-            "reason": "Same shape as the validateToken guard: without it, token.token throws inside the try and the bare catch returns [], which is exactly what the guard returns. The graceful-degradation contract (the namespace picker falls back to personal-account-only) holds either way, so no assertion on the return value or on Octokit can separate them.",
-            "decision": "none \u2014 returning the answer beats throwing and catching it",
-            "recorded": "2026-09-05",
-            "source": "PL-22 MUT-08 focus run, 2026-09-05"
-        },
-        {
             "module": "src/features/eds/services/configGenerator.ts",
             "anchors": [
-                "if (params.selectedPackage) {"
+                "if (params.selectedPackage || params.demo) {"
             ],
             "mutants": 1,
             "category": "branch",
-            "reason": "Forcing the guard true calls injectPackageConfigFlags with an undefined package id. demo-packages.json has no entry whose id is undefined, so the find returns undefined, the flags are undefined, and injectConfigFlags's own `flags &&` short-circuits \u2014 the generated config.json is byte-identical. Killing it would need a catalog carrying a package with no id, which is a shape the real file cannot hold.",
+            "reason": "Forcing the guard true calls injectPackageConfigFlags with an undefined package id and no row. The resolver answers undefined for that, the flags are undefined, and injectConfigFlags's own `flags &&` short-circuits \u2014 the generated config.json is byte-identical. Killing it would need a catalog carrying a package with no id, which is a shape the real file cannot hold.",
             "decision": "none \u2014 the guard skips a lookup that is guaranteed to miss",
             "recorded": "2026-09-05",
             "source": "PL-22 MUT-08 focus run, 2026-09-05"
@@ -8256,32 +8009,6 @@
         {
             "module": "src/features/eds/handlers/byomOverlay.ts",
             "anchors": [
-                "try {"
-            ],
-            "line": 299,
-            "mutants": 1,
-            "category": "block",
-            "reason": "Emptying this try removes the URL parse and the scheme/host fingerprint, leaving the function to fall off the end and the warning to read 'undefined'. Same argument as the enclosing describeRejectedUrl entry: the value is log text and nothing else reads it. That an unparseable URL is REJECTED, which is what the try/catch is really deciding for the caller, is asserted by 'rejects unparseable URLs'.",
-            "decision": "none \u2014 parsing is how the fingerprint stays informative without echoing the value",
-            "recorded": "2026-09-05",
-            "source": "PL-22 MUT-03, 2026-09-05"
-        },
-        {
-            "module": "src/features/eds/handlers/byomOverlay.ts",
-            "anchors": [
-                "} catch {"
-            ],
-            "line": 302,
-            "mutants": 1,
-            "category": "block",
-            "reason": "The catch arm returns the not-URL-shaped fingerprint. Emptying it makes the warning say 'undefined' for a value new URL() could not parse, and changes nothing else \u2014 the caller has already decided to fall through to fromConfig by the time this runs. Same argument as the try entry above.",
-            "decision": "none \u2014 'not URL-shaped' is the one fingerprint that tells an SC they pasted something that is not a URL at all",
-            "recorded": "2026-09-05",
-            "source": "PL-22 MUT-03, 2026-09-05"
-        },
-        {
-            "module": "src/features/eds/handlers/byomOverlay.ts",
-            "anchors": [
                 "return `scheme=\"${parsed.protocol.replace(/:$/, '')}\", host=\"${parsed.hostname}\"`;"
             ],
             "mutants": 1,
@@ -8396,7 +8123,7 @@
             "anchors": [
                 "if (!patchIds || patchIds.length === 0) return [];"
             ],
-            "line": 70,
+            "line": 72,
             "mutants": 3,
             "category": "branch",
             "reason": "This is a fast path, not a decision. With the guard gone an empty id list flows into getCodePatches, which has the identical guard and returns [] without fetching, then into applyCodePatches, which also returns [] for an empty list \u2014 so the wrapper still returns [] and still makes no network call. The || to && form differs only when patchIds is null or undefined, which the signature forbids and which all three call sites (edsPipeline, lkgPinHelper, edsResetRepoHelper) already guard against before calling.",
@@ -8409,7 +8136,7 @@
             "anchors": [
                 "if (!patchIds || patchIds.length === 0) return [];"
             ],
-            "line": 130,
+            "line": 132,
             "mutants": 3,
             "category": "branch",
             "reason": "The block-phase copy of the same fast path. Removing it lets an empty id list reach getCodePatches, which returns [] without fetching, so blockPatches is empty, uniqueTargets is empty, no repo read or write happens and applyCodePatches returns [] for the empty list \u2014 the same [] the guard returns. The || to && variant needs a null patchIds, which the signature forbids and which every call site guards before calling.",
@@ -8470,7 +8197,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 93,
+            "line": 95,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger.warn. Emptying it does not stop the catch from swallowing the template-fetch error, so control still continues to the next patch target, the target still never enters fileOverrides, and the engine still reports the patch not-applied. The rejecting-fetch test now covers this path and asserts those outcomes; the only thing the mutant removes is the warning text.",
@@ -8483,7 +8210,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 148,
+            "line": 150,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger.warn. Emptying it still swallows the getFileContent failure, so the loop still moves to the next target, the unreadable target still stays out of the working set, and the engine still reports it not-applied while the other targets are patched and written. The failing-read test covers exactly that and asserts the surviving target is still written; only the warn text goes.",
@@ -8496,7 +8223,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 182,
+            "line": 184,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger.warn. Emptying it still absorbs a failing createOrUpdateFile, so the write loop continues to the remaining targets and the engine results are still returned to the caller rather than thrown at the pipeline. The failing-write test covers this path and asserts the results come back intact; the mutant changes only the warn text.",
@@ -8622,7 +8349,7 @@
             "anchors": [
                 "return undefined;"
             ],
-            "line": 125,
+            "line": 118,
             "mutants": 1,
             "category": "block",
             "reason": "Stryker empties resolveOverlayForNewName's catch block. Nothing follows the try/catch in that function, so an empty catch falls off the end and the function still evaluates to undefined \u2014 the same value the explicit `return undefined` produces. Both versions return undefined for a throwing resolveStorefrontConfig, so the existing 'still yields a candidate when the package config throws' test (which asserts byomOverlayUrl is undefined) passes either way, and no other assertion can separate them.",
@@ -8708,7 +8435,7 @@
             "anchors": [
                 "const panel = BaseWebviewCommand.getActivePanel('demoBuilder.projectDashboard');"
             ],
-            "line": 299,
+            "line": 318,
             "mutants": 1,
             "category": "branch",
             "reason": "Same shape as the Configure command's copy: forcing the following 'if (panel)' true calls dispose() on undefined, and the TypeError lands in the try/catch already there for the already-disposed case. Both paths end as a no-op. The false variant is killed by the test that asserts an open panel is disposed.",
@@ -8783,7 +8510,7 @@
             "anchors": [
                 "if (result.success) {"
             ],
-            "line": 683,
+            "line": 793,
             "mutants": 7,
             "category": "branch",
             "reason": "The three-way tail of withComponentProgress writes one USER-log line per outcome and nothing else \u2014 no return value changes, no channel is pushed. Forcing any branch, or emptying any body, changes only which line prints, which is what the ratchet exists to refuse to reward. The outcome itself is asserted through the returned result and the row-status pushes.",
@@ -8808,35 +8535,11 @@
             "anchors": [
                 "success: false,"
             ],
-            "line": 475,
+            "line": 514,
             "mutants": 1,
             "category": "branch",
             "reason": "The Configure route's inner success flag never reaches a caller: the outer handler matches result.blocked first and returns its own { success: false, error }. Flipping it changes a value that is overwritten one frame later. Re-anchored 2026-09-10 (474 -> 475): unchanged code, shifted by the AB-7 cleanup-reporting block added to handleRemoveAppBuilderComponent.",
             "decision": "none \u2014 the inner shape matches GuardableResult, which the outer translates",
-            "recorded": "2026-09-05",
-            "source": "PL-22 MUT-08"
-        },
-        {
-            "module": "src/features/dashboard/handlers/appBuilderComponentHandlers.ts",
-            "anchors": [
-                "const picks = payload?.apis ?? [];"
-            ],
-            "mutants": 1,
-            "category": "optionalChain",
-            "reason": "This line is unreachable with an undefined payload: resolveAddEntry(payload ?? {}) answers undefined for one, and the handler returns 'Unknown appBuilderComponent' before the progress block opens. So dropping the chain cannot throw. The ?? [] fallback beside it IS exercised.",
-            "decision": "none \u2014 the chain matches the optional payload type the handler declares",
-            "recorded": "2026-09-05",
-            "source": "PL-22 MUT-08"
-        },
-        {
-            "module": "src/features/dashboard/handlers/appBuilderComponentHandlers.ts",
-            "anchors": [
-                "buildToolchainConsent(context, payload?.refreshCli),"
-            ],
-            "mutants": 1,
-            "category": "optionalChain",
-            "reason": "Same unreachability as the picks line above: an undefined payload cannot resolve an entry, so the add never reaches this line with one.",
-            "decision": "none \u2014 the chain matches the optional payload type",
             "recorded": "2026-09-05",
             "source": "PL-22 MUT-08"
         },
@@ -8881,7 +8584,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 234,
+            "line": 238,
             "mutants": 1,
             "category": "other",
             "reason": "The mount effect's empty dependency list. Stryker replaces it with a one-element array of its own constant string, which React compares equal to itself on every render \u2014 so the effect still runs exactly once, subscribes once and cleans up once.",
@@ -8918,7 +8621,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 262,
+            "line": 266,
             "mutants": 1,
             "category": "other",
             "reason": "runVerify's empty useCallback dependency list, with the same Stryker filler-array substitution: a constant string array is equal to itself across renders, so the callback keeps its identity and every memo built on it is unchanged.",
@@ -8943,7 +8646,7 @@
             "anchors": [
                 "} catch (openError) {"
             ],
-            "line": 218,
+            "line": 220,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger.error call \u2014 emptying it leaves the same swallowed error and the same returned success, so the only observable difference is which log line prints. The classifier reads the 'catch (openError) {' line, which carries no logger token.",
@@ -8956,7 +8659,7 @@
             "anchors": [
                 "if (edsStorefront) {"
             ],
-            "line": 514,
+            "line": 521,
             "mutants": 2,
             "category": "branch",
             "reason": "The whole block is three logger.debug calls describing the EDS metadata for troubleshooting. Both branch outcomes produce the same wizard command and the same response; only the debug transcript differs.",
@@ -8969,7 +8672,7 @@
             "anchors": [
                 "if (edsStorefront.metadata) {"
             ],
-            "line": 516,
+            "line": 523,
             "mutants": 3,
             "category": "branch",
             "reason": "Nested inside the debug-only block above: its body is three more logger.debug lines. Nothing downstream reads anything it computes.",
@@ -8982,7 +8685,7 @@
             "anchors": [
                 "if (settings.edsConfig) {"
             ],
-            "line": 529,
+            "line": 536,
             "mutants": 2,
             "category": "branch",
             "reason": "Body is four logger.debug calls echoing the already-extracted edsConfig. The settings object handed to the wizard is identical either way.",
@@ -8995,7 +8698,7 @@
             "anchors": [
                 ".then(undefined, (error) => {"
             ],
-            "line": 781,
+            "line": 788,
             "mutants": 1,
             "category": "block",
             "reason": "The rejection arm of a fire-and-forget notification chain; its body is a single logger.error. Emptying it leaves the same unhandled-free promise and the same already-returned success response.",
@@ -9008,7 +8711,7 @@
             "anchors": [
                 "if (!payload?.projectPath || !payload?.newName) {"
             ],
-            "line": 576,
+            "line": 583,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "Two optional chains on one line; only the SECOND is unreachable. Dropping the '?' on payload?.newName throws only when payload is undefined, and short-circuiting means the left operand already returned in that case. No input reaches it. The first chain on the same line IS killed, by the absent-payload test.",
@@ -9091,7 +8794,7 @@
         {
             "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
             "anchors": [
-                "progress.report({ message: 'Unpublishing CDN content\u2026' });"
+                "progress.report({ message: 'Unpublishing CDN content' });"
             ],
             "mutants": 1,
             "category": "other",
@@ -9103,7 +8806,7 @@
         {
             "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
             "anchors": [
-                "progress.report({ message: 'Deleting DA.live site\u2026' });"
+                "progress.report({ message: 'Deleting DA.live site' });"
             ],
             "mutants": 1,
             "category": "other",
@@ -9115,7 +8818,7 @@
         {
             "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
             "anchors": [
-                "progress.report({ message: 'Deleting DA.live site content\u2026' });"
+                "progress.report({ message: 'Deleting DA.live site content' });"
             ],
             "mutants": 1,
             "category": "other",
@@ -9127,7 +8830,7 @@
         {
             "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
             "anchors": [
-                "progress.report({ message: 'Deleting GitHub repository\u2026' });"
+                "progress.report({ message: 'Deleting GitHub repository' });"
             ],
             "mutants": 1,
             "category": "other",
@@ -9732,7 +9435,7 @@
             "anchors": [
                 "} catch (err) {"
             ],
-            "line": 153,
+            "line": 155,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here the step is the agent-trace file sink, and the test that makes it throw asserts activation degrades to channel-only rather than failing.",
@@ -9745,7 +9448,7 @@
             "anchors": [
                 "} catch (err) {"
             ],
-            "line": 257,
+            "line": 259,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here the step is seeding the built-in AI prompts.",
@@ -9770,7 +9473,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 491,
+            "line": 494,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a logger.error plus a showErrorMessage whose text is built from the error. Activation's own tests assert showErrorMessage was NOT called on every success path, which is the observable half; the wording of the message when it IS called is the rest.",
@@ -9783,7 +9486,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 527,
+            "line": 530,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here the step is the global ~/.claude.json repair, and a test makes it reject and asserts activation still registers its commands.",
@@ -9796,7 +9499,7 @@
             "anchors": [
                 "} catch (err) {"
             ],
-            "line": 749,
+            "line": 754,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here the step is starting the in-extension MCP server, whose failure must never abort activation.",
@@ -9809,7 +9512,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 794,
+            "line": 799,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here it is the commerce-secret sweep, whose arguments are asserted and whose failure a test drives.",
@@ -9822,7 +9525,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 816,
+            "line": 821,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here it is the publish-key renewal sweep.",
@@ -9835,7 +9538,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 840,
+            "line": 845,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here it is the manifest-format sweep.",
@@ -10019,23 +9722,11 @@
             "anchors": [
                 "if (result.status === 'failed') {"
             ],
-            "line": 832,
+            "line": 866,
             "mutants": 4,
             "category": "branch",
             "reason": "The guarded body is a single deps.logger.warn call. The Commerce uninstall is best-effort: its outcome is neither surfaced on the RunnerResult nor persisted, and the removal proceeds identically whether the guard is taken, inverted or deleted. Every mutation here changes only which log line is written, which is wording rather than behaviour.",
             "decision": "none - log-only body; the removal's own effects are asserted separately.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-02"
-        },
-        {
-            "module": "src/features/app-builder/services/appBuilderComponentRunner.ts",
-            "anchors": [
-                "present = parsed.map((p) => p.name ?? '').filter(Boolean);"
-            ],
-            "mutants": 1,
-            "category": "other",
-            "reason": "The filter drops empty names from the listed namespace. present is used only as the right-hand side of expected.filter(name => present.includes(name)), and every member of expected has already passed RUNTIME_PACKAGE_NAME, which rejects the empty string. An empty entry can therefore never match, so keeping or dropping it cannot change which leftovers are found.",
-            "decision": "none - defensive filter with no reachable effect on the attribution set.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-02"
         },
@@ -10069,7 +9760,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 1034,
+            "line": 1073,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single deps.logger.warn. Emptying it leaves the catch itself in place, so a failing remote teardown is swallowed exactly as before and the removal continues to clear local state - which the remove-contracts suite asserts directly with a rejecting executor. Only the log line differs.",
@@ -10095,7 +9786,7 @@
             "anchors": [
                 "if (cleared.componentApiPicks) {"
             ],
-            "line": 1101,
+            "line": 1140,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this guard true assigns cleared.componentApiPicks onto the caller's project when it is undefined. cleared is spread from that same project, so an undefined value there means the caller's field was already undefined and the assignment writes back exactly what was there. The mutation is a no-op for every input on which the guard was false.",
@@ -10108,7 +9799,7 @@
             "anchors": [
                 "if (cleared.componentConfigs) {"
             ],
-            "line": 1104,
+            "line": 1143,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this guard true assigns cleared.componentConfigs onto the caller's project when it is undefined. cleared is spread from that same project, so an undefined value there means the caller's field was already undefined and the assignment writes back exactly what was there. The mutation is a no-op for every input on which the guard was false.",
@@ -10248,7 +9939,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 560,
+            "line": 599,
             "mutants": 1,
             "category": "block",
             "reason": "This is the inner fallback in openComponent: the README open already failed, the package.json open has now failed too, and the body is a single logger.debug. Emptying it leaves the catch in place, so the folder is still revealed and the command still reports success - which the flows suite asserts by driving both file probes to reject. The only difference is whether one debug line prints.",
@@ -10868,7 +10559,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 145,
+            "line": 157,
             "mutants": 1,
             "category": "block",
             "reason": "Stryker empties the catch, so a throwing validateToken leaves githubOk unassigned instead of false. Both readings are falsy at the 'if (!githubOk)' below, so the tool returns the same needsAuth:'github' handoff and calls the same collaborators either way. The only difference is the variable's binding, which nothing observes; a test asserting it would have to reach inside the function.",
@@ -10881,7 +10572,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 158,
+            "line": 172,
             "mutants": 1,
             "category": "block",
             "reason": "Stryker empties the catch, so a throwing isAuthenticated leaves daLiveOk unassigned instead of false. Both readings are falsy at the 'if (!daLiveOk)' below, so the tool returns the same needsAuth:'dalive' handoff and calls the same collaborators either way. The only difference is the variable's binding, which nothing observes; a test asserting it would have to reach inside the function.",
@@ -10898,58 +10589,6 @@
             "category": "optionalChain",
             "reason": "Stryker drops the '?.', which would throw only if args were nullish. It cannot be nullish here: the guard three lines above computes projectName from String(args?.projectName ?? '') and returns early when it is empty, so reaching this line means args carried a non-empty projectName and is therefore an object. The '?.' is required by the handler's 'any' argument type, not by any reachable input.",
             "decision": "none \u2014 the optional chain is defensive on a parameter the SDK may hand over as undefined, and the earlier guard already excludes that case here",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-06"
-        },
-        {
-            "module": "src/features/components/handlers/componentHandlers.ts",
-            "anchors": [
-                "if (!payload || typeof payload !== 'object') {"
-            ],
-            "line": 194,
-            "mutants": 1,
-            "category": "branch",
-            "reason": "Stryker replaces the typeof clause with false, leaving 'if (!payload)'. Every payload that reaches these handlers is a JSON value from a webview message or an in-process tool call, and for every truthy non-object JSON value \u2014 a string, a number, a boolean \u2014 the destructured fields come back undefined and the SECOND guard below refuses with the identical { success: false, error: 'Invalid payload' }. The only input that separates the two is a function or symbol carrying string-typed fields, which no caller can produce and no message channel can carry.",
-            "decision": "none \u2014 the clause is the shared object check every handler in this file runs; the field-type guard below makes it unobservable here, and deleting it would leave the other handlers inconsistent",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-06"
-        },
-        {
-            "module": "src/features/components/handlers/componentHandlers.ts",
-            "anchors": [
-                "if (!payload || typeof payload !== 'object') {"
-            ],
-            "line": 232,
-            "mutants": 1,
-            "category": "branch",
-            "reason": "Stryker replaces the typeof clause with false, leaving 'if (!payload)'. Every payload that reaches these handlers is a JSON value from a webview message or an in-process tool call, and for every truthy non-object JSON value \u2014 a string, a number, a boolean \u2014 the destructured fields come back undefined and the SECOND guard below refuses with the identical { success: false, error: 'Invalid payload' }. The only input that separates the two is a function or symbol carrying string-typed fields, which no caller can produce and no message channel can carry.",
-            "decision": "none \u2014 the clause is the shared object check every handler in this file runs; the field-type guard below makes it unobservable here, and deleting it would leave the other handlers inconsistent",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-06"
-        },
-        {
-            "module": "src/features/components/handlers/componentHandlers.ts",
-            "anchors": [
-                "if (!payload || typeof payload !== 'object') {"
-            ],
-            "line": 275,
-            "mutants": 1,
-            "category": "branch",
-            "reason": "Stryker replaces the typeof clause with false, leaving 'if (!payload)'. Every payload that reaches these handlers is a JSON value from a webview message or an in-process tool call, and for every truthy non-object JSON value \u2014 a string, a number, a boolean \u2014 the destructured fields come back undefined and the SECOND guard below refuses with the identical { success: false, error: 'Invalid payload' }. The only input that separates the two is a function or symbol carrying string-typed fields, which no caller can produce and no message channel can carry.",
-            "decision": "none \u2014 the clause is the shared object check every handler in this file runs; the field-type guard below makes it unobservable here, and deleting it would leave the other handlers inconsistent",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-06"
-        },
-        {
-            "module": "src/features/components/handlers/componentHandlers.ts",
-            "anchors": [
-                "if (!payload || typeof payload !== 'object') {"
-            ],
-            "line": 322,
-            "mutants": 1,
-            "category": "branch",
-            "reason": "Stryker replaces the typeof clause with false, leaving 'if (!payload)'. Every payload that reaches these handlers is a JSON value from a webview message or an in-process tool call, and for every truthy non-object JSON value \u2014 a string, a number, a boolean \u2014 the destructured fields come back undefined and the SECOND guard below refuses with the identical { success: false, error: 'Invalid payload' }. The only input that separates the two is a function or symbol carrying string-typed fields, which no caller can produce and no message channel can carry.",
-            "decision": "none \u2014 the clause is the shared object check every handler in this file runs; the field-type guard below makes it unobservable here, and deleting it would leave the other handlers inconsistent",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-06"
         },
@@ -11566,7 +11205,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 33,
+            "line": 37,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying this catch makes githubAuthed return undefined instead of false, and its single call site is 'if (!(await githubAuthed(ctx)))' - which takes the same branch for both, returning the needsAuth handoff. The function's return type is boolean, so no caller can distinguish them either; the test that a throwing token validation is treated as unauthenticated already covers the path and passes under both.",
@@ -11579,7 +11218,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 70,
+            "line": 83,
             "mutants": 1,
             "category": "block",
             "reason": "Same shape as its twin in githubAuthed: emptying this catch makes buildDaLiveOps return undefined rather than null, and both call sites read 'if (!ops) return asText(NEEDS_ADOBE)'. Both values are falsy, so both produce the Adobe sign-in handoff, and the test that a throwing token inspection hands off to Adobe auth passes under either. Nothing downstream ever holds the value long enough to compare it.",
@@ -11618,7 +11257,7 @@
             "anchors": [
                 "if (args?.confirm !== true || args?.confirmName !== fullName) {"
             ],
-            "line": 232,
+            "line": 256,
             "mutants": 2,
             "category": "optionalChain",
             "reason": "delete_github_repo reads args?.owner and args?.repo above this line and returns early unless both are non-empty, so by the time the confirmation gate runs, args is known to be an object carrying them. Dropping either optional chain here cannot throw on any input that reaches the line. The chains on the owner and repo reads ARE killed, by the no-arguments test - which is where a missing argument object actually arrives.",
@@ -11631,7 +11270,7 @@
             "anchors": [
                 "if (args?.confirm !== true || args?.confirmName !== fullName) {"
             ],
-            "line": 319,
+            "line": 343,
             "mutants": 2,
             "category": "optionalChain",
             "reason": "cleanup_dalive_site's copy of the same situation: args?.org and args?.site are read above and the tool returns early unless both are non-empty strings, so args is an object by the time this gate runs and the optional chains cannot fire. Both halves of the gate - confirm:true and the confirmName echo - are killed by their own tests, including one that supplies a correct echo without confirm.",
@@ -11644,7 +11283,7 @@
             "anchors": [
                 "const offset = Math.max(0, Math.trunc(args?.offset ?? 0));"
             ],
-            "line": 280,
+            "line": 304,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "This line is inside list_dalive_sites, past its \"org is required\" guard, which reads args?.org and returns early when it is empty - so args is an object with a non-empty org string by the time pagination is computed. Dropping the optional chain here cannot throw on any input that reaches the line. The identical line in list_github_repos has no guard in front of it and its chain IS killed, by the test that calls that tool with no argument object at all.",
@@ -11657,7 +11296,7 @@
             "anchors": [
                 "const limit = Math.min(100, Math.max(1, Math.trunc(args?.limit ?? 30)));"
             ],
-            "line": 281,
+            "line": 305,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "This line is inside list_dalive_sites, past its \"org is required\" guard, which reads args?.org and returns early when it is empty - so args is an object with a non-empty org string by the time pagination is computed. Dropping the optional chain here cannot throw on any input that reaches the line. The identical line in list_github_repos has no guard in front of it and its chain IS killed, by the test that calls that tool with no argument object at all.",
@@ -12208,7 +11847,7 @@
             "anchors": [
                 "if (this.config.enableLogging) {"
             ],
-            "line": 200,
+            "line": 214,
             "mutants": 3,
             "category": "block+branch",
             "reason": "The whole body of this guard is a logger call, so flipping the condition changes only whether a debug or warning line prints. Killing it would mean asserting a logger call's arguments, which pins wording rather than behaviour and is what the burn-down rules forbid. Nothing a caller or the webview receives moves, because the work it narrates happens outside the block. Here, the message is pushed onto the queue on the line after this block either way. Emptying the guarded block is the same argument from the other side: the body holds nothing the surrounding code does not already do, so removing it removes the log line and no behaviour.",
@@ -12221,7 +11860,7 @@
             "anchors": [
                 "if (this.config.enableLogging) {"
             ],
-            "line": 375,
+            "line": 389,
             "mutants": 3,
             "category": "block+branch",
             "reason": "The whole body of this guard is a logger call, so flipping the condition changes only whether a debug or warning line prints. Killing it would mean asserting a logger call's arguments, which pins wording rather than behaviour and is what the burn-down rules forbid. Nothing a caller or the webview receives moves, because the work it narrates happens outside the block. Here, it sits inside the timeout hint's catch, which is documented fire-and-forget, and the handler runs next regardless. Emptying the guarded block is the same argument from the other side: the body holds nothing the surrounding code does not already do, so removing it removes the log line and no behaviour.",
@@ -12234,7 +11873,7 @@
             "anchors": [
                 "if (this.config.enableLogging) {"
             ],
-            "line": 460,
+            "line": 474,
             "mutants": 3,
             "category": "block+branch",
             "reason": "The whole body of this guard is a logger call, so flipping the condition changes only whether a debug or warning line prints. Killing it would mean asserting a logger call's arguments, which pins wording rather than behaviour and is what the burn-down rules forbid. Nothing a caller or the webview receives moves, because the work it narrates happens outside the block. Here, the sleep and the recursive send that perform the retry are outside the block. Emptying the guarded block is the same argument from the other side: the body holds nothing the surrounding code does not already do, so removing it removes the log line and no behaviour.",
@@ -12247,7 +11886,7 @@
             "anchors": [
                 "if (this.config.enableLogging) {"
             ],
-            "line": 486,
+            "line": 500,
             "mutants": 3,
             "category": "block+branch",
             "reason": "The whole body of this guard is a logger call, so flipping the condition changes only whether a debug or warning line prints. Killing it would mean asserting a logger call's arguments, which pins wording rather than behaviour and is what the burn-down rules forbid. Nothing a caller or the webview receives moves, because the work it narrates happens outside the block. Here, it sits in sendRawMessage's catch immediately before an unconditional rethrow, so the caller sees the identical error. Emptying the guarded block is the same argument from the other side: the body holds nothing the surrounding code does not already do, so removing it removes the log line and no behaviour.",
@@ -12260,7 +11899,7 @@
             "anchors": [
                 "if (this.config.enableLogging && this.messageQueue.length > 0) {"
             ],
-            "line": 497,
+            "line": 511,
             "mutants": 7,
             "category": "block+branch",
             "reason": "Every survivor on this line changes only whether one debug line prints \u2014 the block holds a single logger.debug and nothing else. The flush itself happens on the three lines below, outside the guard, so the queued messages are copied, the queue cleared and each message sent whichever way the condition goes. Separating the versions would need an assertion on the logger's arguments. Emptying the guarded block is the same argument from the other side: the body holds nothing the surrounding code does not already do, so removing it removes the log line and no behaviour.",
@@ -12273,7 +11912,7 @@
             "anchors": [
                 "enableLogging: config.enableLogging !== false,"
             ],
-            "line": 139,
+            "line": 153,
             "mutants": 4,
             "category": "branch",
             "reason": "This field is read in exactly five places, and every one of them is a guard whose entire body is a logger call. So whatever value the mutation gives it, the only thing that changes is whether some debug or warning lines print \u2014 no message on the wire, no promise and no piece of manager state depends on it. Each of those five guards is itself recorded here for the same reason.",
@@ -12286,7 +11925,7 @@
             "anchors": [
                 "this.messageQueue = [];"
             ],
-            "line": 317,
+            "line": 331,
             "mutants": 1,
             "category": "other",
             "reason": "Nothing reads the queue after dispose. The only reader is flushMessageQueue, which runs once from the handshake completion handler, and that handler was registered with once() and deleted itself when it ran \u2014 a disposed manager cannot handshake again. Seeding the array rather than emptying it therefore leaves a value no code path can observe.",
@@ -12299,7 +11938,7 @@
             "anchors": [
                 "this.messageQueue = [];"
             ],
-            "line": 502,
+            "line": 516,
             "mutants": 1,
             "category": "other",
             "reason": "This assignment is what makes the flush non-repeating, but nothing flushes twice: flushMessageQueue is called only from the handshake completion handler, which once() deletes as it fires. So the array left behind here is read by nothing, and seeding it rather than emptying it cannot change a message sent or a piece of state observed.",
@@ -12312,7 +11951,7 @@
             "anchors": [
                 "}).catch((hintError) => {"
             ],
-            "line": 373,
+            "line": 387,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying this catch body leaves the catch itself in place, so the timeout hint's failure is still swallowed and the handler still runs next \u2014 which is the documented contract, the hint is explicitly fire-and-forget so it cannot block. The only thing inside the body is a guarded logger.warn, so the sole difference is whether a warning prints, and pinning that would mean asserting a logger call's arguments.",
@@ -12828,76 +12467,11 @@
             "source": "PL-22 MUT-04, 2026-09-05"
         },
         {
-            "module": "src/core/shell/retryStrategyManager.ts",
-            "anchors": [
-                "if (attempt > 1) {"
-            ],
-            "line": 146,
-            "mutants": 5,
-            "category": "branch",
-            "reason": "The whole body of this guard is one logger.debug announcing which retry is starting. Every mutant on it - the condition forced either way, the comparison loosened in both directions, the block emptied - changes only whether that line is written and with what attempt number. Nothing else in the loop reads the decision: the identical `attempt > 1` guard eleven lines above it drives the rate limiter, and that one IS pinned by tests asserting the limiter is called for the retry and not for the first try.",
-            "decision": "none - a log-only twin of the rate-limiter guard, which is tested",
-            "recorded": "2026-09-06",
-            "source": "PL-22 MUT-04, 2026-09-05"
-        },
-        {
-            "module": "src/core/shell/retryStrategyManager.ts",
-            "anchors": [
-                "const duration = Date.now() - startTime;"
-            ],
-            "line": 152,
-            "mutants": 1,
-            "category": "other",
-            "reason": "This value has exactly two consumers: the threshold comparison on the next decision line, whose only body is a logger.debug, and that same debug line's formatted text. Turning the subtraction into an addition makes the number large enough to cross the threshold, so the only visible consequence is that a success line prints when it otherwise would not, carrying a wrong duration. No result, no delay and no retry decision depends on it.",
-            "decision": "none - a duration measured solely to decide whether, and with what number, to log",
-            "recorded": "2026-09-06",
-            "source": "PL-22 MUT-04, 2026-09-05"
-        },
-        {
-            "module": "src/core/shell/retryStrategyManager.ts",
-            "anchors": [
-                "if (attempt > 1 || duration > TIMEOUTS.SLOW_COMMAND_THRESHOLD) {"
-            ],
-            "line": 154,
-            "mutants": 10,
-            "category": "branch",
-            "reason": "Ten mutants sit on this guard - each operand forced, both comparisons loosened, the operator swapped, the block emptied - and all of them decide the same single thing: whether a success line is written for a command that either was retried or ran slowly. The result is returned on the very next statement regardless. Separating the arms would mean asserting the logger's arguments, which pins wording rather than behaviour.",
-            "decision": "none - the guard chooses whether to narrate a success it does not otherwise affect",
-            "recorded": "2026-09-06",
-            "source": "PL-22 MUT-04, 2026-09-05"
-        },
-        {
-            "module": "src/core/shell/retryStrategyManager.ts",
-            "anchors": [
-                "if (attempt === strategy.maxAttempts) {"
-            ],
-            "line": 164,
-            "mutants": 4,
-            "category": "branch",
-            "reason": "The body is three consecutive logger.debug calls describing the final failure, and control continues to the timeout check either way. Forcing the comparison, inverting it, or emptying the block changes which attempts get narrated and nothing about which attempt runs next, how long the loop waits, or what it finally throws - all of which are pinned by separate tests on the rate limiter, the backoff delays and the rejection.",
-            "decision": "none - a log-only guard in front of three debug lines",
-            "recorded": "2026-09-06",
-            "source": "PL-22 MUT-04, 2026-09-05"
-        },
-        {
-            "module": "src/core/shell/retryStrategyManager.ts",
-            "anchors": [
-                "} else {"
-            ],
-            "line": 191,
-            "mutants": 1,
-            "category": "block",
-            "reason": "Emptying this else arm removes a warning and a `throw error`. The loop then falls out of its final iteration and reaches the trailing `throw lastError || new Error(...)`, where lastError is the very error object the catch just assigned - so the caller receives the same rejection with the same identity, one statement later. A test proves the rejection and the attempt count; neither can see the difference.",
-            "decision": "none - the trailing throw re-raises the same error object this arm would have thrown",
-            "recorded": "2026-09-06",
-            "source": "PL-22 MUT-04, 2026-09-05"
-        },
-        {
             "module": "src/features/ai/server/adobeResourceTools.ts",
             "anchors": [
                 "if (!mgr) return null;"
             ],
-            "line": 55,
+            "line": 56,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this guard false changes nothing the caller can see. With no manager the very next statement calls mgr.isAuthenticated() inside the try, which throws a TypeError, and the catch arm converts it to the same null this line returns. Both paths hand back null for the same input, so no assertion on any tool's output can separate them.",
@@ -12910,7 +12484,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 58,
+            "line": 59,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying this catch makes authedManager return undefined where it returned null. Every caller tests only falsiness - create/workspace do 'if (!mgr)' and delete does 'if (!(await authedManager(ctx)))' - so undefined and null take the identical branch and produce the identical NEEDS_ADOBE handoff. The declared return type already admits null, so nothing downstream distinguishes them either.",
@@ -12923,7 +12497,7 @@
             "anchors": [
                 "if (args?.confirm !== true || args?.confirmName !== projectName) {"
             ],
-            "line": 203,
+            "line": 264,
             "mutants": 2,
             "category": "optionalChain",
             "reason": "Both optional chains on this line are unreachable-nullish. Lines 194-198 read args?.projectId and args?.projectName and return early unless BOTH trim to a non-empty string, which is only possible when args is an object. So by the time control reaches this line args can never be null or undefined, and dropping the '?.' cannot throw or yield a different value for any input the handler can be given.",
@@ -12978,10 +12552,10 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 118,
-            "mutants": 13,
+            "line": 116,
+            "mutants": 12,
             "category": "other",
-            "reason": "Thirteen handlers in this hook are memoised with an EMPTY dependency list (handleSyncStorefront, handleRefreshBlockLibrary, handleOpenAdminPanel, handleConfigure, handleEditProject, handleOpenDevConsole, handleDeleteProject, handleExportProject, handleRepublishContent, handleResetProject, handleNavigateBack, handleReAuthenticate, handleSwitchOrg), and their closing lines are textually identical so they cannot be anchored apart \u2014 this row covers the one mutant on each. Stryker does not empty these lists; it replaces the empty array with a one-element array holding a constant string. React compares dependency lists element by element with Object.is, and that constant is identical on every render, so the callback is created once and never recreated \u2014 exactly as with the empty list. Each of these handlers also closes over nothing but the imported webviewClient, so there is no captured value that could go stale even if the memo did invalidate. No sequence of renders, messages or payloads can distinguish the two.",
+            "reason": "Twelve handlers in this hook are memoised with an EMPTY dependency list (handleSyncStorefront, handleRefreshBlockLibrary, handleOpenAdminPanel, handleConfigure, handleEditProject, handleOpenDevConsole, handleDeleteProject, handleRepublishContent, handleResetProject, handleNavigateBack, handleReAuthenticate, handleSwitchOrg), and their closing lines are textually identical so they cannot be anchored apart \u2014 this row covers the one mutant on each. Stryker does not empty these lists; it replaces the empty array with a one-element array holding a constant string. React compares dependency lists element by element with Object.is, and that constant is identical on every render, so the callback is created once and never recreated \u2014 exactly as with the empty list. Each of these handlers also closes over nothing but the imported webviewClient, so there is no captured value that could go stale even if the memo did invalidate. No sequence of renders, messages or payloads can distinguish the two.",
             "decision": "none \u2014 an empty dependency list is correct for a handler that closes over nothing",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-06"
@@ -13147,7 +12721,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 178,
+            "line": 181,
             "mutants": 1,
             "category": "other",
             "reason": "A useCallback dependency array of constants is compared element-wise with Object.is on every render, so a literal ['Stryker was here'] invalidates the memo exactly as often as [] does \u2014 never. The callback identity, and therefore everything downstream of it, is byte-for-byte the same either way. Verified by planting all eight at once: the five suites pass unchanged, and no assertion could distinguish them because there is nothing to distinguish.",
@@ -13160,7 +12734,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 182,
+            "line": 185,
             "mutants": 1,
             "category": "other",
             "reason": "A useCallback dependency array of constants is compared element-wise with Object.is on every render, so a literal ['Stryker was here'] invalidates the memo exactly as often as [] does \u2014 never. The callback identity, and therefore everything downstream of it, is byte-for-byte the same either way. Verified by planting all eight at once: the five suites pass unchanged, and no assertion could distinguish them because there is nothing to distinguish.",
@@ -13173,7 +12747,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 186,
+            "line": 189,
             "mutants": 1,
             "category": "other",
             "reason": "A useCallback dependency array of constants is compared element-wise with Object.is on every render, so a literal ['Stryker was here'] invalidates the memo exactly as often as [] does \u2014 never. The callback identity, and therefore everything downstream of it, is byte-for-byte the same either way. Verified by planting all eight at once: the five suites pass unchanged, and no assertion could distinguish them because there is nothing to distinguish.",
@@ -13186,7 +12760,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 190,
+            "line": 193,
             "mutants": 1,
             "category": "other",
             "reason": "A useCallback dependency array of constants is compared element-wise with Object.is on every render, so a literal ['Stryker was here'] invalidates the memo exactly as often as [] does \u2014 never. The callback identity, and therefore everything downstream of it, is byte-for-byte the same either way. Verified by planting all eight at once: the five suites pass unchanged, and no assertion could distinguish them because there is nothing to distinguish.",
@@ -14727,7 +14301,7 @@
             "anchors": [
                 "[],"
             ],
-            "line": 242,
+            "line": 259,
             "mutants": 1,
             "category": "other",
             "reason": "React compares a dependency array element-wise with Object.is, so a constant one-element array of the same string literal is as stable across renders as an empty one \u2014 the builder memo recomputes on neither. The mutant changes the array's contents and not the memo's behaviour, which is the only thing any caller can see. Verified by planting ['Stryker was here'] as the dependency list: all 35 tests green, including the rerender tests that DO fail when a genuinely dependent memo is frozen.",
@@ -14740,7 +14314,7 @@
             "anchors": [
                 "[],"
             ],
-            "line": 250,
+            "line": 267,
             "mutants": 1,
             "category": "other",
             "reason": "Same argument as the builder memo on line 242: useCallback compares dependency arrays element-wise with Object.is, and a constant one-element array of a string literal never changes between renders, so the signIn callback is rebuilt on neither the original nor the mutant. Verified by planting ['Stryker was here'] as the dependency list \u2014 all 35 tests green, while the rerender tests that pin genuinely dependent memos do fail when those are frozen.",
@@ -15962,19 +15536,6 @@
             "source": "PL-22 MUT-08, planted 2026-09-06"
         },
         {
-            "module": "src/features/ai/server/toolDescriptors.ts",
-            "anchors": [
-                "const events: CapturedEvent[] = [];"
-            ],
-            "line": 195,
-            "mutants": 1,
-            "category": "other",
-            "reason": "Stryker seeds the capture sink with a sentinel string. The sink has two readers: withCapturedProgress, which only appends, and payloadOfEvent, which walks backwards comparing each entry's .type to the requested event name \u2014 a string has no .type, so the sentinel can never match and never be returned. Any real event pushed by the handler sits after it and is found first. Verified by planting the sentinel: all 36 tests pass, while a planted control inverting destructiveHint's confirm test fails.",
-            "decision": "none \u2014 the sink is append-only and matched by .type, which a sentinel string cannot carry",
-            "recorded": "2026-09-06",
-            "source": "PL-22 MUT-08, planted 2026-09-06"
-        },
-        {
             "module": "src/features/components/services/componentManager.ts",
             "anchors": [
                 "if (!componentDef.source?.package) {"
@@ -16079,18 +15640,6 @@
             "category": "branch",
             "reason": "Swapping && for || cannot change the render. worstLabel is DERIVED from worst (getStatusDisplay(worst?.status)?.label), so when worst is undefined getStatusDisplay(undefined) returns null and worstLabel is undefined too \u2014 both operands are falsy together. The only case where the two operators differ is worst truthy with worstLabel falsy, i.e. a SEVERITY row whose status has no entry in the shared vocabulary; SEVERITY has seven rows and every one of them is pinned by a test asserting the tile renders a dot for it, which is only possible when worstLabel is truthy. The pair is defence in depth for DashboardTile's rule that a dot always arrives with words, and it cannot be simplified away: worstLabel is string|undefined and DashboardTileStatus.tooltip is a required string, so dropping the second operand needs a cast at the call boundary, which this repo bans.",
             "decision": "none \u2014 the second operand is what makes the tooltip type-safe",
-            "recorded": "2026-09-06",
-            "source": "PL-22 batch MUT-02"
-        },
-        {
-            "module": "src/features/eds/services/storefront/servedStorefrontConfig.ts",
-            "anchors": [
-                "const defaults = json.public?.default;"
-            ],
-            "mutants": 1,
-            "category": "optionalChain",
-            "reason": "Dropping the ?. makes the read throw when config.json has no 'public' key \u2014 straight into this function's own catch, which returns undefined, which is exactly what the guard two lines below returns for the same body. Both paths produce the identical result for the identical input; only the debug line differs ('has no public.default block' vs 'Could not read <url>'). Verified by planting the mutation: all 19 tests stay green, and the enforcer in tests/sop/no-logger-wording-assertions.test.ts is explicit that a mutant whose only observable difference is which log line prints belongs here rather than being killed by pinning the wording.",
-            "decision": "none \u2014 the ?. is required by the type and keeps the diagnostic accurate",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-02"
         },
@@ -16612,7 +16161,7 @@
             "anchors": [
                 "const handleClick = useCallback((): void => onOpen?.(model.id), [model.id, onOpen]);"
             ],
-            "line": 81,
+            "line": 80,
             "mutants": 1,
             "category": "other",
             "reason": "Stryker drops the ?. and calls onOpen(model.id) unconditionally, but handleClick is only ever wired up inside pressProps, which is {} when onOpen is absent \u2014 no role, no tabIndex, no onClick and no onKeyDown \u2014 so there is no path on which handleClick runs with onOpen undefined. The guard is required by the compiler (onOpen is optional), not by any reachable input. Verified by planting a non-null-asserted call and re-running the suite: 29 tests, all still green.",
@@ -16717,10 +16266,11 @@
             ],
             "mutants": 1,
             "category": "branch",
-            "reason": "Stryker replaces the guard's condition with false, so the falsy-url fast path never fires. Nothing observable changes: every value that makes `!url` true is also rejected by `new URL`, which throws into the function's own `catch { return null }`. Verified by planting the mutation and diffing both versions over undefined, null, '', 0, false and NaN plus the valid and invalid URL cases the suite already covers \u2014 zero differences on any input. The function has no side effects and logs nothing, so there is no other channel a test could observe.",
+            "reason": "Stryker replaces the guard's condition with false, so the falsy-url fast path never fires. Nothing observable changes: every value that makes `!url` true is also rejected by `new URL`, which throws into the function's own `catch { return null }`. Verified by planting the mutation and diffing both versions over undefined, null, '', 0, false and NaN plus the valid and invalid URL cases the suite already covers \u2014 zero differences on any input. The function has no side effects and logs nothing, so there is no other channel a test could observe. (Pinned to parseGitHubUrl's guard on 2026-09-12: parseStorefrontLink below opens with the same line.)",
             "decision": "none \u2014 the guard is a correct, cheap fast path for the argument's declared `string | undefined` type",
             "recorded": "2026-09-06",
-            "source": "mutationLedger add"
+            "source": "mutationLedger add",
+            "line": 36
         },
         {
             "module": "src/core/utils/githubUrlParser.ts",
@@ -16990,13 +16540,376 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 100,
+            "line": 101,
             "mutants": 1,
             "category": "block",
             "reason": "REPLACES the block-library-publish catch entry removed 2026-09-10. Five identical per-step try/catch blocks became one `nonFatal` helper, so there is ONE equivalent mutant here where there were five. Emptying this catch still swallows the failure and still returns normally \u2014 every caller is declared non-fatal \u2014 so only the warn line differs.",
             "decision": "none \u2014 the warn line is what tells a pasted log which step failed",
             "recorded": "2026-09-10",
             "source": "manual \u2014 re-anchor after decomposition"
+        },
+        {
+            "module": "src/features/updates/services/preservedFiles.ts",
+            "anchors": [
+                "logger.debug(`[TemplateSync] File ${filePath} not found, skipping backup`);"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying the catch body in backupPreservedFiles changes nothing the caller can see: a preserved file that does not exist is skipped either way (the skip IS tested \u2014 a rejected readFile still yields a successful sync), and the body is one debug line. Asserting debug text is what the ratchet refuses to reward.",
+            "decision": "none \u2014 the line tells the Debug Logs reader why a preserved file was not restored",
+            "recorded": "2026-09-03",
+            "source": "PL-22 batch MUT-01, templateSyncService focus run"
+        },
+        {
+            "module": "src/features/prerequisites/services/PrerequisitesManager.ts",
+            "anchors": [
+                "errorObj.code === 'ENOENT' ||"
+            ],
+            "line": 349,
+            "mutants": 7,
+            "category": "branch",
+            "reason": "isCommandNotFound is read exactly once, by the if/else immediately below, and BOTH arms of that if/else call this.logger.info \u2014 one naming the command that was not on PATH, one quoting the error message. Nothing else reads it: status.installed is set false before the branch and the cache write after it is identical either way. So every way of weakening this disjunction changes only which info line prints.",
+            "decision": "Ledgered: killing it would mean asserting a logger call's arguments.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-01, 2026-09-04"
+        },
+        {
+            "module": "src/features/prerequisites/services/PrerequisitesManager.ts",
+            "anchors": [
+                "if (isCommandNotFound) {"
+            ],
+            "line": 355,
+            "mutants": 3,
+            "category": "branch",
+            "reason": "Both arms of this if/else do nothing but call this.logger.info. Flipping the condition either way, or emptying the block, changes only which of the two messages is written to the log; the status object and the cache write that follow are byte-identical.",
+            "decision": "Ledgered: killing it would mean asserting a logger call's arguments.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-01, 2026-09-04"
+        },
+        {
+            "module": "src/features/prerequisites/services/PrerequisitesManager.ts",
+            "anchors": [
+                "return firstInstalled?.component || undefined;"
+            ],
+            "line": 474,
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "extractVersionFromPerNodeStatus is called from exactly one place, under `if (anyInstalled)`, and anyInstalled is `perNodeVersionStatus.some(v => v.installed)` over the same array this searches. So the find always hits and firstInstalled is never undefined when the line runs.",
+            "decision": "Kept: the optional chain states the local contract without depending on the caller's guard.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-01, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/services/aiBundle/homeAiContextWriter.ts",
+            "anchors": [
+                "} catch (err) {"
+            ],
+            "line": 142,
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying this catch body changes nothing a test can observe. The contract is that ensureHomeAiContext never throws, and that is the catch itself, not its body; the body's only statement is a process.stderr.write. With the body gone the function still swallows the failure and still resolves undefined, and every file it did manage to write is still written. The only difference is whether a warning line reaches stderr, which is wording, and the tests already pin the never-throws half in 'never throws when a write fails'.",
+            "decision": "none \u2014 the warning is the right thing to emit on a best-effort path; there is nothing else to assert",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/project-creation/services/aiBundle/homeAiContextWriter.ts",
+            "anchors": [
+                "} catch (err) {"
+            ],
+            "line": 184,
+            "mutants": 1,
+            "category": "block",
+            "reason": "Same shape as the ensureHomeAiContext catch: the body is an ENOENT early return plus one process.stderr.write, so emptying it leaves refreshHomeAgentsMd resolving undefined on every failure exactly as it does now. No file is written either way and no value is returned either way, so the only observable difference is whether a warning line reaches stderr. The never-throws contract is pinned by two tests already.",
+            "decision": "none \u2014 the catch is correct; its body is reporting only",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/eds/services/configService/configServiceAccess.ts",
+            "anchors": [
+                "} catch {"
+            ],
+            "line": 179,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The catch body assigns undefined to a variable declared one line above without an initialiser, so it is already undefined when response.text() throws. Emptying the block leaves the same value on the same path, and the function returns the same object.",
+            "decision": "none - equivalent; the catch restores a value that was never changed.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-07"
+        },
+        {
+            "module": "src/features/eds/services/configService/configServiceAccess.ts",
+            "anchors": [
+                "if (status === 'ok') {"
+            ],
+            "line": 319,
+            "mutants": 4,
+            "category": "branch",
+            "reason": "Both branches of this condition are a single logger call - info on success, warn on failure - and the return below is the same object either way. Whether the grant succeeded is already asserted through that returned status; which log line printed is not behaviour.",
+            "decision": "none - equivalent; the condition selects a log line and nothing else.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-07"
+        },
+        {
+            "module": "src/features/eds/services/configService/configServiceAccess.ts",
+            "anchors": [
+                "} else {"
+            ],
+            "line": 321,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The else branch is a single logger.warn. Emptying it leaves the same return, and the failing-grant cases are pinned by the status the caller receives.",
+            "decision": "none - equivalent; only the presence of one warn line differs.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-07"
+        },
+        {
+            "module": "src/features/eds/services/configService/configServiceAccess.ts",
+            "anchors": [
+                "if (current.status !== 'ok' || !current.roles) {"
+            ],
+            "line": 398,
+            "mutants": 2,
+            "category": "branch",
+            "reason": "The two operands are the same predicate on every input this function can see. current comes straight from readSiteAccess, which sets roles only on an ok status and never on any other - including the drifted-shape case, which it deliberately reports as failed rather than as an ok with no roles. So status not-ok implies roles undefined, and status ok implies roles present: forcing the left operand false, or joining them with &&, produces the same decision on every path.",
+            "decision": "none - equivalent; readSiteAccess's own contract makes the two halves inseparable.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-07"
+        },
+        {
+            "module": "src/features/eds/services/configService/configServiceAccess.ts",
+            "anchors": [
+                "if (current.status !== 'ok' || !current.roles) {"
+            ],
+            "line": 430,
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Identical to the same guard in ensureSiteAdmin: current comes from readSiteAccess, which sets roles exactly when the status is ok, so the two operands agree on every input and neither mutation changes the decision.",
+            "decision": "none - equivalent; see the ensureSiteAdmin entry for the same guard.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-07"
+        },
+        {
+            "module": "src/features/eds/services/configService/configServiceAccess.ts",
+            "anchors": [
+                "const admins = current.roles[ADMIN_ROLE] ?? [];"
+            ],
+            "line": 434,
+            "mutants": 1,
+            "category": "other",
+            "reason": "This fallback is reached when the site has a role map with no admin key. Whatever the mutant seeds it with, the next line asks includesEmail(admins, email), which is false for any value that is not the email being revoked - so the function returns { status: 'ok', changed: false }, exactly what the real empty array produces.",
+            "decision": "none - equivalent; the seeded value cannot match the email and the no-op return is the same.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-07"
+        },
+        {
+            "module": "src/features/eds/services/configService/configServiceAccess.ts",
+            "anchors": [
+                "if (status === 'ok') {"
+            ],
+            "line": 474,
+            "mutants": 4,
+            "category": "branch",
+            "reason": "As in grantSiteAdmin, both branches are a single logger call and the return below is the same object either way. restoreSiteRoles's outcome is asserted through that returned status, for both the success and the refusal.",
+            "decision": "none - equivalent; the condition selects a log line and nothing else.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-07"
+        },
+        {
+            "module": "src/features/eds/services/configService/configServiceAccess.ts",
+            "anchors": [
+                "} else {"
+            ],
+            "line": 477,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The else branch is a single logger.warn, and the refusal it describes is already asserted through the status restoreSiteRoles returns.",
+            "decision": "none - equivalent; only the presence of one warn line differs.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-07"
+        },
+        {
+            "module": "src/features/eds/services/github/githubTokenService.ts",
+            "anchors": [
+                "this.logger.warn('[GitHub] Failed to parse stored token');"
+            ],
+            "line": 69,
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying the catch block leaves the function returning undefined implicitly, which is what the explicit return already produces. A caller cannot tell the two apart; only the warn line differs.",
+            "decision": "none \u2014 the explicit return states the contract at the site that satisfies it",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-08 focus run, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/services/github/githubTokenService.ts",
+            "anchors": [
+                "if (!token) {"
+            ],
+            "line": 193,
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Same shape as the validateToken guard: without it, token.token throws inside the try and the bare catch returns [], which is exactly what the guard returns. The graceful-degradation contract (the namespace picker falls back to personal-account-only) holds either way, so no assertion on the return value or on Octokit can separate them.",
+            "decision": "none \u2014 returning the answer beats throwing and catching it",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-08 focus run, 2026-09-05"
+        },
+        {
+            "module": "src/features/components/handlers/componentHandlers.ts",
+            "anchors": [
+                "if (!payload || typeof payload !== 'object') {"
+            ],
+            "line": 201,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Stryker replaces the typeof clause with false, leaving 'if (!payload)'. Every payload that reaches these handlers is a JSON value from a webview message or an in-process tool call, and for every truthy non-object JSON value \u2014 a string, a number, a boolean \u2014 the destructured fields come back undefined and the SECOND guard below refuses with the identical { success: false, error: 'Invalid payload' }. The only input that separates the two is a function or symbol carrying string-typed fields, which no caller can produce and no message channel can carry.",
+            "decision": "none \u2014 the clause is the shared object check every handler in this file runs; the field-type guard below makes it unobservable here, and deleting it would leave the other handlers inconsistent",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/components/handlers/componentHandlers.ts",
+            "anchors": [
+                "if (!payload || typeof payload !== 'object') {"
+            ],
+            "line": 242,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Stryker replaces the typeof clause with false, leaving 'if (!payload)'. Every payload that reaches these handlers is a JSON value from a webview message or an in-process tool call, and for every truthy non-object JSON value \u2014 a string, a number, a boolean \u2014 the destructured fields come back undefined and the SECOND guard below refuses with the identical { success: false, error: 'Invalid payload' }. The only input that separates the two is a function or symbol carrying string-typed fields, which no caller can produce and no message channel can carry.",
+            "decision": "none \u2014 the clause is the shared object check every handler in this file runs; the field-type guard below makes it unobservable here, and deleting it would leave the other handlers inconsistent",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/components/handlers/componentHandlers.ts",
+            "anchors": [
+                "if (!payload || typeof payload !== 'object') {"
+            ],
+            "line": 288,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Stryker replaces the typeof clause with false, leaving 'if (!payload)'. Every payload that reaches these handlers is a JSON value from a webview message or an in-process tool call, and for every truthy non-object JSON value \u2014 a string, a number, a boolean \u2014 the destructured fields come back undefined and the SECOND guard below refuses with the identical { success: false, error: 'Invalid payload' }. The only input that separates the two is a function or symbol carrying string-typed fields, which no caller can produce and no message channel can carry.",
+            "decision": "none \u2014 the clause is the shared object check every handler in this file runs; the field-type guard below makes it unobservable here, and deleting it would leave the other handlers inconsistent",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/components/handlers/componentHandlers.ts",
+            "anchors": [
+                "if (!payload || typeof payload !== 'object') {"
+            ],
+            "line": 338,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Stryker replaces the typeof clause with false, leaving 'if (!payload)'. Every payload that reaches these handlers is a JSON value from a webview message or an in-process tool call, and for every truthy non-object JSON value \u2014 a string, a number, a boolean \u2014 the destructured fields come back undefined and the SECOND guard below refuses with the identical { success: false, error: 'Invalid payload' }. The only input that separates the two is a function or symbol carrying string-typed fields, which no caller can produce and no message channel can carry.",
+            "decision": "none \u2014 the clause is the shared object check every handler in this file runs; the field-type guard below makes it unobservable here, and deleting it would leave the other handlers inconsistent",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/core/shell/retryStrategyManager.ts",
+            "anchors": [
+                "if (attempt > 1) {"
+            ],
+            "line": 144,
+            "mutants": 5,
+            "category": "branch",
+            "reason": "The whole body of this guard is one logger.debug announcing which retry is starting. Every mutant on it - the condition forced either way, the comparison loosened in both directions, the block emptied - changes only whether that line is written and with what attempt number. Nothing else in the loop reads the decision: the identical `attempt > 1` guard six lines above it drives the rate limiter, and that one IS pinned by tests asserting the limiter is called for the retry and not for the first try.",
+            "decision": "none - a log-only twin of the rate-limiter guard, which is tested",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-04, 2026-09-05"
+        },
+        {
+            "module": "src/core/shell/retryStrategyManager.ts",
+            "anchors": [
+                "const duration = Date.now() - startTime;"
+            ],
+            "line": 150,
+            "mutants": 1,
+            "category": "other",
+            "reason": "This value has exactly two consumers: the threshold comparison on the next decision line, whose only body is a logger.debug, and that same debug line's formatted text. Turning the subtraction into an addition makes the number large enough to cross the threshold, so the only visible consequence is that a success line prints when it otherwise would not, carrying a wrong duration. No result, no delay and no retry decision depends on it.",
+            "decision": "none - a duration measured solely to decide whether, and with what number, to log",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-04, 2026-09-05"
+        },
+        {
+            "module": "src/core/shell/retryStrategyManager.ts",
+            "anchors": [
+                "if (attempt > 1 || duration > TIMEOUTS.SLOW_COMMAND_THRESHOLD) {"
+            ],
+            "line": 152,
+            "mutants": 10,
+            "category": "branch",
+            "reason": "Ten mutants sit on this guard - each operand forced, both comparisons loosened, the operator swapped, the block emptied - and all of them decide the same single thing: whether a success line is written for a command that either was retried or ran slowly. The result is returned on the very next statement regardless. Separating the arms would mean asserting the logger's arguments, which pins wording rather than behaviour.",
+            "decision": "none - the guard chooses whether to narrate a success it does not otherwise affect",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-04, 2026-09-05"
+        },
+        {
+            "module": "src/core/shell/retryStrategyManager.ts",
+            "anchors": [
+                "if (attempt === strategy.maxAttempts) {"
+            ],
+            "line": 161,
+            "mutants": 4,
+            "category": "branch",
+            "reason": "The body is three consecutive logger.debug calls describing the final failure, and control continues to the timeout check either way. Forcing the comparison, inverting it, or emptying the block changes which attempts get narrated and nothing about which attempt runs next, how long the loop waits, or what it finally throws - all of which are pinned by separate tests on the rate limiter, the backoff delays and the rejection.",
+            "decision": "none - a log-only guard in front of three debug lines",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-04, 2026-09-05"
+        },
+        {
+            "module": "src/core/shell/retryStrategyManager.ts",
+            "anchors": [
+                "} else {"
+            ],
+            "line": 188,
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying this else arm removes a warning and a `throw error`. The loop then falls out of its final iteration and reaches the trailing `throw lastError || new Error(...)`, where lastError is the very error object the catch just assigned - so the caller receives the same rejection with the same identity, one statement later. A test proves the rejection and the attempt count; neither can see the difference.",
+            "decision": "none - the trailing throw re-raises the same error object this arm would have thrown",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-04, 2026-09-05"
+        },
+        {
+            "module": "src/features/ai/server/toolDescriptors.ts",
+            "anchors": [
+                "const events: CapturedEvent[] = [];"
+            ],
+            "line": 196,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker seeds the capture sink with a sentinel string. The sink has two readers: withCapturedProgress, which only appends, and payloadOfEvent, which walks backwards comparing each entry's .type to the requested event name \u2014 a string has no .type, so the sentinel can never match and never be returned. Any real event pushed by the handler sits after it and is found first. Verified by planting the sentinel: all 36 tests pass, while a planted control inverting destructiveHint's confirm test fails.",
+            "decision": "none \u2014 the sink is append-only and matched by .type, which a sentinel string cannot carry",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-08, planted 2026-09-06"
+        },
+        {
+            "module": "src/features/eds/handlers/byomOverlay.ts",
+            "anchors": [
+                "try {"
+            ],
+            "line": 299,
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying this try removes the URL parse and the scheme/host fingerprint, leaving the function to fall off the end and the warning to read 'undefined'. Same argument as the enclosing describeRejectedUrl entry: the value is log text and nothing else reads it. That an unparseable URL is REJECTED, which is what the try/catch is really deciding for the caller, is asserted by 'rejects unparseable URLs'.",
+            "decision": "none \u2014 parsing is how the fingerprint stays informative without echoing the value",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-03, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/handlers/byomOverlay.ts",
+            "anchors": [
+                "} catch {"
+            ],
+            "line": 302,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The catch arm returns the not-URL-shaped fingerprint. Emptying it makes the warning say 'undefined' for a value new URL() could not parse, and changes nothing else \u2014 the caller has already decided to fall through to fromConfig by the time this runs. Same argument as the try entry above.",
+            "decision": "none \u2014 'not URL-shaped' is the one fingerprint that tells an SC they pasted something that is not a URL at all",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-03, 2026-09-05"
         }
     ]
 }

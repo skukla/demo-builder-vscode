@@ -82,7 +82,7 @@ export async function deployMeshHeadless(
     const { project, stateManager, logger, extensionPath, onStatus, onProgress } = deps;
     const { authManager } = deps;
 
-    await onStatus?.('deploying', 'Checking requirements...');
+    await onStatus?.('deploying', 'Checking requirements');
 
     // PRE-FLIGHT: auth + correct org context (the shared gate). Passes silently
     // when already authed; only prompts when not (accepted headless behavior,
@@ -125,7 +125,7 @@ export async function deployMeshHeadless(
         return { success: false, blockedBy: 'no-mesh' };
     }
 
-    await onStatus?.('deploying', 'Starting deployment...');
+    await onStatus?.('deploying', 'Starting deployment');
     meshComponent.status = 'deploying';
     await stateManager.saveProject(project);
 
@@ -163,7 +163,7 @@ export async function deployMeshHeadless(
             // with its existing file, not stop working. Warn loudly instead.
             const meshComponentId = getMeshComponentId(project);
             if (meshComponentId) {
-                onProgress?.('Generating mesh configuration...');
+                onProgress?.('Generating mesh configuration');
                 try {
                     const { regenerateComponentEnvFile } = await import(
                         '@/features/project-creation/helpers/envFileGenerator'

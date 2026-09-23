@@ -15,7 +15,7 @@
  *
  * THE RULES THE TEXT FOLLOWS
  *
- * - `action` completes "Demo Builder: ___?" — a verb phrase, no trailing period.
+ * - `action` completes "Agent · ___?" — a verb phrase, no trailing period.
  * - `consequence` is ONE plain sentence saying what changes. It is not a
  *   description of the tool. The reader has already decided they want the thing;
  *   they are deciding whether they want it NOW, to THIS.
@@ -47,7 +47,7 @@
 
 /** Authored strings for one tool's alerts. */
 export interface AgentAlertCopy {
-    /** Completes "Demo Builder: ___?". Verb phrase, no full stop. */
+    /** Completes "Agent · ___?". Verb phrase, no full stop. */
     action: string;
     /** One sentence: what changes if they allow it. */
     consequence: string;
@@ -108,7 +108,7 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     delete_project: {
         action: 'Delete this project',
         consequence:
-            "Removes the project folder and its settings from this machine. Cloud resources aren't touched. This can't be undone.",
+            "Removes the project folder and settings from this machine; cloud resources stay. This can't be undone.",
         target: ['name'],
         sessionGrant: false,
     },
@@ -127,6 +127,23 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         target: ['projectName'],
         sessionGrant: false,
     },
+    rename_adobe_project: {
+        action: 'Rename an Adobe project',
+        consequence:
+            'Changes the Adobe Developer Console project title for everyone who uses it. Rename it back to undo.',
+        // The names, not projectId: a person can check a title, not a 19-digit id.
+        target: ['projectName', 'title'],
+        sessionGrant: false,
+    },
+    delete_adobe_workspace: {
+        action: 'Delete an Adobe workspace',
+        consequence:
+            "Deletes the workspace and its credentials from the Adobe project. Anything deployed to it stops working, and this can't be undone.",
+        // NOT workspaceId, for the same reason delete_adobe_project shows the name:
+        // nobody can verify a Console id by reading it.
+        target: ['workspaceName'],
+        sessionGrant: false,
+    },
     cleanup_dalive_site: {
         action: 'Delete all content for a site',
         consequence: "Removes every page and asset from the DA.live site. This can't be undone.",
@@ -136,8 +153,22 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     delete_page: {
         action: 'Delete a page',
         consequence:
-            "Unpublishes the page and removes it from the storefront. Visitors stop seeing it immediately. This can't be undone.",
+            "Unpublishes and removes the page; visitors stop seeing it at once. This can't be undone.",
         target: ['path'],
+        sessionGrant: false,
+    },
+    forget_added_demo: {
+        action: 'Forget an added demo',
+        consequence:
+            'Takes it off your Welcome step. With deleteRepository, also deletes the repository made from its zip file; projects built on it then lose reset and updates.',
+        target: ['owner', 'repo'],
+        sessionGrant: false,
+    },
+    remove_demo_package: {
+        action: 'Remove this demo package',
+        consequence:
+            'Takes the description file out of your storefront repository and the card off your Welcome step; colleagues can no longer add it from its link.',
+        target: [],
         sessionGrant: false,
     },
     reset_eds_project: {
@@ -172,7 +203,7 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     delete_event_provider: {
         action: 'Delete an event provider',
         consequence:
-            'Deletes the provider (and the named registrations first) from the project workspace. Events of these types can no longer be published.',
+            'Deletes the provider and its registrations from the workspace. Events of these types stop publishing.',
         target: ['providerId'],
         sessionGrant: false,
     },

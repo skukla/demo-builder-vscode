@@ -311,7 +311,7 @@ describe('registerSiteConfig', () => {
         expect(onProgress.mock.calls.map((c) => c[0])).toEqual(
             Array.from(
                 { length: n },
-                (_, i) => `Waiting for Configuration Service access (${i + 1}/${n})...`
+                (_, i) => `Waiting for Configuration Service access (${i + 1}/${n})`
             )
         );
     });

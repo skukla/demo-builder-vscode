@@ -19,6 +19,7 @@ import { AdobeEntityFetcher } from './adobeEntityFetcher';
 import { AdobeEntitySelector } from './adobeEntitySelector';
 import type { AdobeSDKClient } from './adobeSDKClient';
 import type { AuthCacheManager } from './authCacheManager';
+import type { OrgServicesStore } from './orgServicesSavedCatalog';
 import type { StepLogger } from '@/core/logging/stepLogger';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import type { Logger } from '@/types/logger';
@@ -48,6 +49,8 @@ export function createEntityServices(
      * absent the fetcher keeps its previous, blunter assertion.
      */
     isTokenValid?: () => Promise<boolean>,
+    /** Keeps the org's API list across window reloads (`context.globalState`). */
+    orgServicesStore?: OrgServicesStore,
 ): EntityServices {
     const selector = new AdobeEntitySelector(
         commandManager,
@@ -63,6 +66,7 @@ export function createEntityServices(
         {
             onNoOrgsAccessible: () => selector.clearConsoleContext(),
             ...(isTokenValid ? { isTokenValid } : {}),
+            ...(orgServicesStore ? { orgServicesStore } : {}),
         },
     );
 

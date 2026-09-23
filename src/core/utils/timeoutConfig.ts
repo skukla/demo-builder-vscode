@@ -145,13 +145,13 @@ export const TIMEOUTS = {
      *  capping a genuine hang (the picker surfaces failures with a Retry). */
     ORG_SERVICES_FETCH: 60000,
 
-    /** Pause before the ONE retry of a fast-failed org-services fetch.
-     *  Adobe's own error template for this endpoint says retry
-     *  (ERR_MSG_RETRY_ON_INTERNAL_ERROR), and the 2026-08-28 incident measured
-     *  the failure mode: intermittent sub-second 500s while a raw retry
-     *  succeeded. Short on purpose — the same fetch feeds the Add Integration
-     *  picker, whose fast-fail + Retry button must stay fast; timeouts are
-     *  never retried (they already spent the full budget). */
+    /** Pause between the tries of one org-services request (3 tries — see
+     *  `ORG_SERVICES_ATTEMPTS` in `adobeOrgServices.ts`). Adobe's own error
+     *  template for this endpoint says retry (ERR_MSG_RETRY_ON_INTERNAL_ERROR);
+     *  2026-08-28 measured sub-second 500s a raw retry got past, and 2026-09-21
+     *  a 60s gateway 504 that the next try got past in 31s. The tries run inside
+     *  the shared request, so the Manage APIs spinner waits through them rather
+     *  than showing an error while a retry it cannot see carries on. */
     ORG_SERVICES_RETRY_DELAY: 2000,
 
     /** Initial wait before first mesh verification poll (20 seconds) */
@@ -354,10 +354,10 @@ export const CACHE_TTL = {
     LONG: 3600000,
 
     /**
-     * Org entitled-services catalog (`getServicesForOrg`) — 30 minutes.
-     * The catalog is identical for every workspace in an org and changes rarely.
-     * The Add Integration modal prefetches (warms) this cache on open, so a longer
-     * TTL keeps the picker's later fetch fast across a whole add session.
+     * Org entitled-services catalog (`getServicesForOrg`) — refreshed after 30 minutes.
+     * Not an expiry: past this age the cached list is still returned at once, and a
+     * background refresh replaces it (`AdobeOrgServices.getServicesForOrg`). Only the
+     * session's first ask waits on Adobe.
      */
     ORG_SERVICES: 30 * 60 * 1000,
 } as const;

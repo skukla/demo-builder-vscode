@@ -7,6 +7,10 @@
  *   - NOTIFICATION — a static title naming the operation and its object
  *     ("Deploying API Mesh"), plus each STEP as it happens.
  *   - CARD — the operation named once ("Deploying Mesh"), then held still.
+ *   - MODAL (PL-59) — an integration operation the SC started on the integrations
+ *     screen narrates there instead: its stage, the step under it, and how long the
+ *     stage usually takes. The notification then does not open (`inModal`), which
+ *     keeps the rule below; the card still gets its one line.
  *
  * Two rules fall out, and both are enforced here rather than remembered:
  * **no two surfaces narrate the same step**, and the card's line is the verb plus
@@ -32,6 +36,7 @@
 
 import * as vscode from 'vscode';
 import { hasActivePhaseSinks, reportPhase } from '@/core/utils/agentPhaseChannel';
+import { formatDuration } from '@/core/utils/timeFormatting';
 
 /**
  * Build the card's in-flight line: verb + kind.
@@ -45,6 +50,37 @@ import { hasActivePhaseSinks, reportPhase } from '@/core/utils/agentPhaseChannel
  */
 export function cardInFlightLabel(verb: string, noun: string): string {
     return `${verb} ${noun}`;
+}
+
+/**
+ * A log of an operation's steps with how long each took: every step is written
+ * when it starts, and the step before it is closed with its duration. `finish`
+ * closes the last step and writes the total. The notification shows only the
+ * step in flight and is gone when it closes; this is what stays behind.
+ *
+ * @param write - where each line goes (a logger's debug, prefixed by the caller)
+ * @returns `step` for each reported step, `finish` once the operation ends
+ */
+export function timedSteps(write: (line: string) => void): { step: (message: string) => void; finish: () => void } {
+    const started = Date.now();
+    let current: { message: string; at: number } | undefined;
+    const close = (now: number): void => {
+        if (current) write(`${current.message} took ${formatDuration(now - current.at)}`);
+    };
+    return {
+        step: (message) => {
+            const now = Date.now();
+            close(now);
+            write(message);
+            current = { message, at: now };
+        },
+        finish: () => {
+            const now = Date.now();
+            close(now);
+            current = undefined;
+            write(`finished in ${formatDuration(now - started)}`);
+        },
+    };
 }
 
 export interface ProgressRegisterOptions {
@@ -68,6 +104,13 @@ export interface ProgressRegisterOptions {
      * are shared, which is precisely what this module exists to fix.
      */
     pushCardStatus?: (label: string) => void;
+    /**
+     * The operation's steps are shown in a modal the SC opened by starting it
+     * (PL-59), so no notification opens: two surfaces would narrate the same step.
+     * The card is still told, and `run`'s `report` does nothing — the caller sends
+     * its steps to the modal itself.
+     */
+    inModal?: boolean;
 }
 
 /**
@@ -86,7 +129,12 @@ export async function withProgressRegister<T>(
     options: ProgressRegisterOptions,
     run: (report: (message: string) => void) => Promise<T>,
 ): Promise<T> {
-    const { title, cardLabel, pushCardStatus } = options;
+    const { title, cardLabel, pushCardStatus, inModal } = options;
+
+    if (inModal) {
+        if (pushCardStatus) pushCardStatus(cardLabel ?? '');
+        return run(() => undefined);
+    }
 
     // AGENT calls already show a window notification (the agent-operation
     // notifier's), and every step reported here reaches it through the phase

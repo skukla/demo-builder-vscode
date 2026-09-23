@@ -19,6 +19,7 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { EnvFileWatcherService } from '@/core/vscode/envFileWatcherService';
 import { WorkspaceWatcherManager } from '@/core/vscode/workspaceWatcherManager';
 import { ACTION_DESCRIPTORS } from '@/features/ai/server/actionDescriptors';
+import { registerAddedDemoTools } from '@/features/ai/server/addedDemoTools';
 import { registerAdobeResourceTools } from '@/features/ai/server/adobeResourceTools';
 import { registerAdobeTools } from '@/features/ai/server/adobeTools';
 import {
@@ -39,6 +40,7 @@ import { registerCreateProjectTool } from '@/features/ai/server/createProjectToo
 import { registerCurrentProjectTool } from '@/features/ai/server/currentProjectTool';
 import { DATA_INSTALLER_DESCRIPTORS } from '@/features/ai/server/dataInstallerDescriptors';
 import { registerDeleteProjectTool } from '@/features/ai/server/deleteProjectTool';
+import { registerDemoPackageTools } from '@/features/ai/server/demoPackageTools';
 import { registerDiagnosticsTools } from '@/features/ai/server/diagnosticsTools';
 import { registerDiscoveryTools } from '@/features/ai/server/discoveryTools';
 import { registerEdsResetTool } from '@/features/ai/server/edsResetTool';
@@ -176,7 +178,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     logger = getLogger();
     const version = context.extension.packageJSON.version || '1.0.0';
-    logger.debug(`[Extension] Adobe Demo Builder v${version} starting...`);
+    logger.debug(`[Extension] Adobe Demo Builder v${version} starting`);
 
     // Third-party tooling opt-out: the ONE code point for the gate lives in
     // aiToolingGate (pure); the setting is injected here so every seam —
@@ -305,6 +307,7 @@ export async function activate(context: vscode.ExtensionContext) {
             context.extensionPath,
             logger,
             externalCommandManager,
+            context.globalState,
         );
 
         // Register AuthenticationService with ServiceLocator
@@ -591,7 +594,7 @@ export function deactivate() {
     // assigned once activation has got past its first few statements. Unguarded,
     // this line threw before any of the guarded ones could run — so the whole
     // defensive shape below it was unreachable in exactly the case it exists for.
-    logger?.info('Adobe Demo Builder extension is deactivating...');
+    logger?.info('Adobe Demo Builder extension is deactivating');
 
     // Clean up resources
     autoUpdater?.dispose();
@@ -733,6 +736,8 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
                 });
                 registerContentAuthoringTools(mcpServer, connCtxFactory);
                 registerEdsResetTool(mcpServer, connCtxFactory);
+                registerAddedDemoTools(mcpServer, connCtxFactory);
+                registerDemoPackageTools(mcpServer, connCtxFactory);
                 registerDeleteProjectTool(mcpServer, connCtxFactory);
                 registerApplyUpdatesTool(mcpServer, connCtxFactory);
                 registerViewTools(mcpServer, (commandId) =>

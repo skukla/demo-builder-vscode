@@ -25,6 +25,11 @@
  */
 
 import * as vscode from 'vscode';
+import {
+    narrateOutcomeToModal,
+    progressSurfaceOf,
+    pushComponentOperationProgress,
+} from './componentOperationProgress';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import {
@@ -32,13 +37,14 @@ import {
     listAppBuilderComponents,
     setAppBuilderComponent,
 } from '@/core/state/appBuilderComponentState';
-import { cardInFlightLabel, withProgressRegister } from '@/core/vscode/progressRegister';
+import { cardInFlightLabel, timedSteps, withProgressRegister } from '@/core/vscode/progressRegister';
 import {
     addAppBuilderComponent,
     deployAppBuilderComponent,
     removeAppBuilderComponent,
     type RuntimeCleanupSummary,
 } from '@/features/app-builder/services/appBuilderComponentRunner';
+import { OPERATION_STAGES, expectationFor } from '@/features/app-builder/services/operationStages';
 import {
     buildCustomIntegrationEntry,
     entryFitsProjectAxes,
@@ -85,13 +91,16 @@ export async function guardOrBlock(
     context: HandlerContext,
     project: Project,
     report: (message: string) => void,
+    progress?: 'modal',
 ): Promise<GuardableResult | undefined> {
-    report('Checking requirements…');
+    report(OPERATION_STAGES.checkingRequirements.label);
     const guardError = await runGuards(context, project);
     if (!guardError) {
         return undefined;
     }
-    vscode.window.showWarningMessage(guardError.error);
+    // A modal-hosted operation shows the refusal in its modal; a warning as well
+    // would be a second surface saying the same thing.
+    if (progress !== 'modal') vscode.window.showWarningMessage(guardError.error);
     return {
         success: false,
         error: guardError.error,
@@ -110,7 +119,7 @@ export async function runGuards(
     // 9+ minutes (2026-08-27) and NOTHING here said which guard was holding it
     // — the same silent-multi-step shape as the teardown (AI-5). Each step
     // names itself BEFORE it runs so the last line in the log is the culprit.
-    context.logger.debug('[Guards] 1/3 auth check…');
+    context.logger.debug('[Guards] 1/3 auth check');
     const authResult = await ensureAdobeIOAuth({
         authManager,
         logger: context.logger,
@@ -127,7 +136,7 @@ export async function runGuards(
         return { error: 'Adobe sign-in required.', code: ErrorCode.AUTH_REQUIRED };
     }
 
-    context.logger.debug('[Guards] 2/3 org-mismatch check…');
+    context.logger.debug('[Guards] 2/3 org-mismatch check');
     const { detectProjectOrgMismatch } = await import(
         '@/features/authentication/services/detectProjectOrgMismatch'
     );
@@ -138,7 +147,7 @@ export async function runGuards(
         };
     }
 
-    context.logger.debug('[Guards] 3/3 developer-permission check…');
+    context.logger.debug('[Guards] 3/3 developer-permission check');
     const permission = await authManager.testDeveloperPermissions();
     if (!permission.hasPermissions) {
         return {
@@ -350,107 +359,137 @@ export function buildToolchainConsent(
     return async () => refreshCli === true;
 }
 
-export const handleAddAppBuilderComponent: MessageHandler<
-    AddAppBuilderComponentRequestPayload
-> = async (context, payload) => {
-    const project = await context.stateManager.getCurrentProject();
-    if (!project) {
-        return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
-    }
+/**
+ * The id an add will give its integration, as the webview named it for the modal:
+ * the instance the SC named, a catalog id, or a custom repo's `owner-repo`
+ * (`buildCustomIntegrationEntry`).
+ */
+function addedIdOf(payload: AddAppBuilderComponentRequestPayload): string | undefined {
+    if (payload?.instanceId) return payload.instanceId;
+    if (payload?.id) return payload.id;
+    return payload?.source ? `${payload.source.owner}-${payload.source.repo}` : undefined;
+}
 
-    const entry = resolveAddEntry(payload ?? {});
-    if (!entry) {
-        return {
-            success: false,
-            error: 'Unknown appBuilderComponent',
-            code: ErrorCode.CONFIG_INVALID,
-        };
-    }
+/**
+ * Why this add must not go ahead, or `undefined` when it may. Three refusals, each
+ * answered before any progress opens because none of them costs a cloud call.
+ */
+function refuseAdd(
+    project: Project,
+    entry: AppBuilderComponentCatalogEntry,
+): HandlerResponse | undefined {
+    return stackRefusal(project, entry) ?? alreadyAddedRefusal(project, entry) ?? packageClashRefusal(project, entry);
+}
 
-    // Stack gate: galleries filter by the project's axes, but this add-by-id
-    // door resolves from the RAW catalog — without this check a Commerce-only
-    // entry (the starter kit) could be added to a project with no Commerce
-    // backend, then fail at install/association where nothing explains why.
-    if (
-        !entryFitsProjectAxes(
-            entry,
-            project.componentSelections?.backend ?? '',
-            project.componentSelections?.frontend ?? '',
-        )
-    ) {
-        return {
-            success: false,
-            error:
-                `"${entry.name ?? entry.id}" isn't compatible with this project's stack` +
-                (entry.compatibleBackends?.length
-                    ? ` — it requires one of these backends: ${entry.compatibleBackends.join(', ')}.`
-                    : '.'),
-            code: ErrorCode.CONFIG_INVALID,
-        };
-    }
+/**
+ * Stack gate: galleries filter by the project's axes, but this add-by-id door
+ * resolves from the RAW catalog — without this check a Commerce-only entry (the
+ * starter kit) could be added to a project with no Commerce backend, then fail at
+ * install/association where nothing explains why.
+ */
+function stackRefusal(
+    project: Project,
+    entry: AppBuilderComponentCatalogEntry,
+): HandlerResponse | undefined {
+    const fits = entryFitsProjectAxes(
+        entry,
+        project.componentSelections?.backend ?? '',
+        project.componentSelections?.frontend ?? '',
+    );
+    if (fits) return undefined;
+    const backends = entry.compatibleBackends?.length
+        ? ` — it requires one of these backends: ${entry.compatibleBackends.join(', ')}.`
+        : '.';
+    return {
+        success: false,
+        error: `"${entry.name ?? entry.id}" isn't compatible with this project's stack${backends}`,
+        code: ErrorCode.CONFIG_INVALID,
+    };
+}
 
-    // An id already in the keyed map means this add would REPLACE that component,
-    // not sit beside it: the id is simultaneously the `appBuilderComponents` slot,
-    // the clone folder, and — through `deriveOwPackage` — the OpenWhisk package, so
-    // the second deploy overwrites the first on Runtime too. Neither route into
-    // here mints a fresh id (`resolveAddEntry` returns a catalog entry unchanged,
-    // and a custom source with no instance falls back to `${owner}-${repo}`), so
-    // this is the one place that can catch it. Blank instances never reach it —
-    // they carry a collision-checked id derived from the user's name.
-    //
-    // `status: 'error'` is exempt: the runner persists that when a clone succeeded
-    // but the deploy failed, keeping the folder so the user can retry by adding
-    // again. Refusing there would block the documented recovery path.
+/**
+ * An id already in the keyed map means this add would REPLACE that component, not
+ * sit beside it: the id is simultaneously the `appBuilderComponents` slot, the clone
+ * folder, and — through `deriveOwPackage` — the OpenWhisk package, so the second
+ * deploy overwrites the first on Runtime too. Neither route into here mints a fresh
+ * id (`resolveAddEntry` returns a catalog entry unchanged, and a custom source with no
+ * instance falls back to `${owner}-${repo}`), so this is the one place that can catch
+ * it. Blank instances never reach it — they carry a collision-checked id derived from
+ * the user's name.
+ *
+ * `status: 'error'` is exempt: the runner persists that when a clone succeeded but
+ * the deploy failed, keeping the folder so the user can retry by adding again.
+ * Refusing there would block the documented recovery path.
+ */
+function alreadyAddedRefusal(
+    project: Project,
+    entry: AppBuilderComponentCatalogEntry,
+): HandlerResponse | undefined {
     const existing = project.appBuilderComponents?.[entry.id];
-    if (existing && existing.status !== 'error') {
-        return {
-            success: false,
-            error: `"${entry.name ?? entry.id}" is already added to this project.`,
-            code: ErrorCode.CONFIG_INVALID,
-        };
-    }
+    if (!existing || existing.status === 'error') return undefined;
+    return {
+        success: false,
+        error: `"${entry.name ?? entry.id}" is already added to this project.`,
+        code: ErrorCode.CONFIG_INVALID,
+    };
+}
 
-    // Extension-layout apps (App Management generation) ship FIXED OpenWhisk
-    // package names — the deploy path deliberately skips the per-id ow-package
-    // rewrite for them, so two apps built from the same source in ONE workspace
-    // overwrite each other on Runtime no matter what ids we mint (proven live,
-    // AB-2 spike 2026-08-27). The id check above cannot catch a seeded instance
-    // under a different name, so the same-source scan here is the real gate.
-    // The same-id error-retry exemption stays: that path returned before this.
-    if (entry.layout === 'extension') {
-        const clash = Object.entries(project.appBuilderComponents ?? {}).find(
-            ([existingId, component]) =>
-                existingId !== entry.id &&
-                component.source.owner === entry.source.owner &&
-                component.source.repo === entry.source.repo,
-        );
-        if (clash) {
-            const [, component] = clash;
-            return {
-                success: false,
-                error:
-                    `"${component.name ?? clash[0]}" is already built from ${entry.source.owner}/` +
-                    `${entry.source.repo}. Apps of this kind have fixed internal package names, so a ` +
-                    'second copy in the same workspace would overwrite the first. Remove the ' +
-                    'existing one first, or use a separate project.',
-                code: ErrorCode.CONFIG_INVALID,
-            };
-        }
-    }
+/**
+ * Extension-layout apps (App Management generation) ship FIXED OpenWhisk package
+ * names — the deploy path deliberately skips the per-id ow-package rewrite for them,
+ * so two apps built from the same source in ONE workspace overwrite each other on
+ * Runtime no matter what ids we mint (proven live, AB-2 spike 2026-08-27). The id
+ * check cannot catch a seeded instance under a different name, so the same-source
+ * scan here is the real gate. The same-id error-retry exemption stays: that path
+ * returned before this.
+ */
+function packageClashRefusal(
+    project: Project,
+    entry: AppBuilderComponentCatalogEntry,
+): HandlerResponse | undefined {
+    if (entry.layout !== 'extension') return undefined;
+    const clash = Object.entries(project.appBuilderComponents ?? {}).find(
+        ([existingId, component]) =>
+            existingId !== entry.id &&
+            component.source.owner === entry.source.owner &&
+            component.source.repo === entry.source.repo,
+    );
+    if (!clash) return undefined;
+    const [clashId, component] = clash;
+    return {
+        success: false,
+        error:
+            `"${component.name ?? clashId}" is already built from ${entry.source.owner}/` +
+            `${entry.source.repo}. Apps of this kind have fixed internal package names, so a ` +
+            'second copy in the same workspace would overwrite the first. Remove the ' +
+            'existing one first, or use a separate project.',
+        code: ErrorCode.CONFIG_INVALID,
+    };
+}
 
-    // The guards run INSIDE the progress: runGuards does the auth check, whose
-    // `aio config get` spawn costs seconds on a cold cache. Running it first left
-    // the user clicking Add and staring at nothing until it returned.
-    const result = await withComponentProgress(
+/**
+ * Run the add inside its progress. The guards run INSIDE it: runGuards does the auth
+ * check, whose `aio config get` spawn costs seconds on a cold cache. Running it first
+ * left the user clicking Add and staring at nothing until it returned.
+ */
+function runAdd(
+    context: HandlerContext,
+    project: Project,
+    entry: AppBuilderComponentCatalogEntry,
+    payload: AddAppBuilderComponentRequestPayload,
+): Promise<GuardableResult> {
+    const progress = progressSurfaceOf(payload);
+    return withComponentProgress(
         {
             title: 'Adding',
             id: entry.id,
             label: entry.name ?? entry.id,
             noun: kindNoun(entry.kind),
             logger: context.logger,
+            progress,
         },
         async (report): Promise<GuardableResult> => {
-            const refused = await guardOrBlock(context, project, report);
+            const refused = await guardOrBlock(context, project, report, progress);
             if (refused) {
                 return refused;
             }
@@ -458,16 +497,16 @@ export const handleAddAppBuilderComponent: MessageHandler<
             // Bucket-3 inputs → Configure FIRST (never silently deploy with missing inputs).
             //
             // This used to return `{success: true}` for opening a panel and adding
-            // NOTHING. The grid painted a component that was not there, and once
-            // the same handler became the `add_integration` tool an agent had no
-            // way to tell the route from a completed add — it is the defect the
-            // `needsUser` convention was written against (`ai/server/handoff.ts`).
+            // NOTHING. The grid painted a component that was not there, and once the
+            // same handler became the `add_integration` tool an agent had no way to
+            // tell the route from a completed add — it is the defect the `needsUser`
+            // convention was written against (`ai/server/handoff.ts`).
             //
-            // `blocked`, like a guard refusal: nothing ran and nothing persisted,
-            // so the caller must not take the failed-op path (error row + snapshot).
-            // The AGENT path never reaches here — `add_integration`'s preflight
-            // answers with the handoff before dispatching, so no panel opens for a
-            // call the user did not make.
+            // `blocked`, like a guard refusal: nothing ran and nothing persisted, so the
+            // caller must not take the failed-op path (error row + snapshot). The AGENT
+            // path never reaches here — `add_integration`'s preflight answers with the
+            // handoff before dispatching, so no panel opens for a call the user did not
+            // make.
             const userVars = userSuppliedEnvVars(entry);
             if (userVars.names.length > 0) {
                 await vscode.commands.executeCommand('demoBuilder.configureProject');
@@ -480,65 +519,97 @@ export const handleAddAppBuilderComponent: MessageHandler<
                 };
             }
 
-            // Attribute the picks to THIS integration before anything subscribes.
-            // Keyed by `entry.id`, which for a named blank instance is the
-            // collision-checked instanceId that resolveAddEntry already applied —
-            // the same key Manage APIs and the reconcile union read back.
-            const picks = payload?.apis ?? [];
-            if (picks.length > 0) {
-                project.componentApiPicks = {
-                    ...(project.componentApiPicks ?? {}),
-                    [entry.id]: [...new Set(picks)],
-                };
-                await context.stateManager.saveProject(project);
-            }
+            await recordApiPicks(context, project, entry.id, payload.apis);
 
-            report('Adding integration…');
-            // The deploy tails report every step; hand them the notification's
-            // reporter so a slow add narrates itself instead of sitting on one
-            // static title for the ~70s of subscribe + install + build + deploy.
+            report(OPERATION_STAGES.adding.label);
+            // The deploy tails report every step; hand them the reporter so a slow add
+            // narrates itself instead of sitting on one static title for the ~70s of
+            // subscribe + install + build + deploy.
             const deps = buildDefaultRunnerDeps(
                 await buildRunnerDepsContext(context, project, {
                     authManager: ServiceLocator.getAuthenticationService(),
                     commandManager: ServiceLocator.getCommandExecutor(),
                 }),
-                // The notification title already names the operation and its object, so
-                // the step line is the SUB-step alone when one exists — joining both
-                // produced two-line cards ('Deploying custom integration... Running
-                // aio app deploy'; owner screenshot, 2026-08-27).
-                (message, subMessage) => report(subMessage || message),
-                buildToolchainConsent(context, payload?.refreshCli),
+                (message, subMessage) => report(message, subMessage),
+                buildToolchainConsent(context, payload.refreshCli),
             );
             return addAppBuilderComponent(project, entry, deps);
         },
     );
+}
+
+/**
+ * Attribute the picked APIs to THIS integration before anything subscribes. Keyed by
+ * `entry.id`, which for a named blank instance is the collision-checked instanceId
+ * that resolveAddEntry already applied — the same key Manage APIs and the reconcile
+ * union read back.
+ */
+async function recordApiPicks(
+    context: HandlerContext,
+    project: Project,
+    id: string,
+    apis: string[] | undefined,
+): Promise<void> {
+    if (!apis || apis.length === 0) return;
+    project.componentApiPicks = {
+        ...(project.componentApiPicks ?? {}),
+        [id]: [...new Set(apis)],
+    };
+    await context.stateManager.saveProject(project);
+}
+
+/**
+ * Tell the grid how the add ended, and answer the caller.
+ *
+ * A success names what was added rather than answering a bare `{success: true}`. The
+ * webview ignores the response, but `add_integration` does not: `defaultShape`
+ * renders a bare success as the literal string "{}", and the id is the one thing the
+ * agent needs next — to deploy, remove, or ask the status of what it just added. For
+ * a CUSTOM source it never supplied that id; `resolveAddEntry` derived it.
+ */
+async function reportAddOutcome(
+    context: HandlerContext,
+    entry: AppBuilderComponentCatalogEntry,
+    result: GuardableResult,
+): Promise<HandlerResponse> {
     if (result.blocked) {
         return { success: false, error: result.error };
     }
-    if (!result.success) {
-        await postRowStatus(entry.id, 'error', result.error || 'Deployment failed');
-        // Even a failed add may have persisted the entry (clone/deploy died
-        // mid-flight) — the grid needs the fresh map either way.
-        await postComponentsSnapshot(context);
-        await refreshProjectStatus(context);
-        return { success: false, error: result.error };
-    }
-    await postRowStatus(entry.id, 'deployed', undefined);
+    await postRowStatus(
+        entry.id,
+        result.success ? 'deployed' : 'error',
+        result.success ? undefined : result.error || 'Deployment failed',
+    );
+    // Even a failed add may have persisted the entry (clone/deploy died mid-flight) —
+    // the grid needs the fresh map either way.
     await postComponentsSnapshot(context);
     await refreshProjectStatus(context);
-    // Name what was added rather than answering a bare `{success: true}`.
-    //
-    // The webview ignores this response (the flow posts and closes; progress
-    // arrives on the status channel), but `add_integration` does not: `defaultShape`
-    // renders a bare success as the literal string "{}", and the id is the one
-    // thing the agent needs next — to deploy, remove, or ask the status of what it
-    // just added. For a CUSTOM source it never supplied that id; `resolveAddEntry`
-    // derived it.
+    if (!result.success) {
+        return { success: false, error: result.error };
+    }
     return {
         success: true,
         added: { id: entry.id, name: entry.name ?? entry.id, kind: entry.kind },
     };
-};
+}
+
+export const handleAddAppBuilderComponent: MessageHandler<
+    AddAppBuilderComponentRequestPayload
+> = narrateOutcomeToModal(async (context, payload) => {
+    const project = await context.stateManager.getCurrentProject();
+    if (!project) {
+        return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
+    }
+    const entry = resolveAddEntry(payload ?? {});
+    if (!entry) {
+        return { success: false, error: 'Unknown appBuilderComponent', code: ErrorCode.CONFIG_INVALID };
+    }
+    const refusal = refuseAdd(project, entry);
+    if (refusal) return refusal;
+
+    const result = await runAdd(context, project, entry, payload ?? {});
+    return reportAddOutcome(context, entry, result);
+}, addedIdOf);
 
 /**
  * Resolve the two things every per-component handler needs first: a non-empty
@@ -647,8 +718,14 @@ function kindNoun(kind: AppBuilderComponentKind | undefined): string {
  * Every slow step belongs inside `run`, with `report('Checking requirements…')`
  * as its first line — the same shape `deployMeshHeadless` uses.
  *
- * @param options - the notification title, the row to telegraph, the user logger
- * @param run - the work; call its `report` to push each step to the NOTIFICATION
+ * **Started from the integrations screen, it narrates to a modal instead**
+ * (`progress: 'modal'`, PL-59): each stage, its step and the stage's expectation line
+ * go to the SC's modal, and no notification opens — the modal is the one surface
+ * narrating the steps. The card still gets its single line.
+ *
+ * @param options - the notification title, the row to telegraph, the user logger,
+ *                  and where the steps go
+ * @param run - the work; call its `report` with each stage, and the step under it
  * @returns whatever `run` resolves to
  */
 export async function withComponentProgress<T extends GuardableResult>(
@@ -659,11 +736,18 @@ export async function withComponentProgress<T extends GuardableResult>(
         /** What the card calls the thing — its KIND ("Mesh" / "Integration"). */
         noun: string;
         logger: HandlerContext['logger'];
+        /** `'modal'` when the SC started it from the integrations screen. */
+        progress?: 'modal';
     },
-    run: (report: (message: string) => void) => Promise<T>,
+    run: (report: (stage: string, step?: string) => void) => Promise<T>,
 ): Promise<T> {
     const { title, id, label, noun, logger } = options;
-    logger.info(`${title} ${label}...`);
+    const inModal = options.progress === 'modal';
+    logger.info(`${title} ${label}`);
+    // Every step also reaches the Debug Logs with how long the step before it
+    // took. The notification shows only the step in flight and is gone when it
+    // closes, so an update that stalled left nothing to read (owner, 2026-09-18).
+    const steps = timedSteps((line) => logger.debug(`[${title} ${label}] ${line}`));
 
     // The register split (steps -> notification, card -> one static line) is
     // SHARED with the mesh path, which is a separate implementation of the same
@@ -676,9 +760,35 @@ export async function withComponentProgress<T extends GuardableResult>(
             pushCardStatus: (cardLabel) => {
                 void postRowStatus(id, 'deploying', cardLabel);
             },
+            inModal,
         },
-        run,
+        // The notification's title already names the operation, so it shows the step
+        // alone when there is one ('Running aio app deploy', not both lines — owner
+        // screenshot, 2026-08-27). The modal has room for both, and the stage's
+        // expectation line under them.
+        (report) => run((stage, step) => {
+            steps.step(step || stage);
+            if (inModal) {
+                void pushComponentOperationProgress({
+                    id,
+                    state: 'running',
+                    stage,
+                    step: step || undefined,
+                    expectation: expectationFor(stage),
+                });
+            } else {
+                report(step || stage);
+            }
+        }),
     );
+    steps.finish();
+    if (inModal) {
+        await pushComponentOperationProgress(
+            result.success
+                ? { id, state: 'succeeded' }
+                : { id, state: 'failed', error: result.error ?? 'The operation did not finish.' },
+        );
+    }
 
     if (result.success) {
         logger.info(`${title} ${label} — done`);
@@ -696,6 +806,7 @@ async function deployById(
     context: HandlerContext,
     requestedId: string | undefined,
     refreshCli?: boolean,
+    progress?: 'modal',
 ) {
     const target = await resolveComponentTarget(context, requestedId);
     if (!target.ok) return target.error;
@@ -711,14 +822,15 @@ async function deployById(
             label: displayName,
             noun: kindNoun(getAppBuilderComponent(project, id)?.kind),
             logger: context.logger,
+            progress,
         },
         async (report): Promise<GuardableResult> => {
-            const refused = await guardOrBlock(context, project, report);
+            const refused = await guardOrBlock(context, project, report, progress);
             if (refused) {
                 return refused;
             }
 
-            report('Deploying…');
+            report(OPERATION_STAGES.deploying.label);
             // Same reuse as the add path: the deploy tail narrates its own steps.
             const deps = buildDefaultRunnerDeps(
                 await buildRunnerDepsContext(context, project, {
@@ -729,7 +841,7 @@ async function deployById(
                 // the step line is the SUB-step alone when one exists — joining both
                 // produced two-line cards ('Deploying custom integration... Running
                 // aio app deploy'; owner screenshot, 2026-08-27).
-                (message, subMessage) => report(subMessage || message),
+                (message, subMessage) => report(message, subMessage),
                 buildToolchainConsent(context, refreshCli),
             );
             return deployAppBuilderComponent(project, id, deps);
@@ -751,45 +863,86 @@ async function deployById(
 export const handleDeployAppBuilderComponent: MessageHandler<{
     id?: string;
     refreshCli?: boolean;
-}> = (context, payload) => deployById(context, payload?.id, payload?.refreshCli);
+    /** `'modal'` when the SC started it from the integrations screen (PL-59). */
+    progress?: 'modal';
+}> = narrateOutcomeToModal(
+    (context, payload) =>
+        deployById(context, payload?.id, payload?.refreshCli, progressSurfaceOf(payload)),
+    (payload) => payload?.id,
+);
 
 /** Redeploy is the same path (idempotent re-run of the deploy tail). */
 export const handleRedeployAppBuilderComponent = handleDeployAppBuilderComponent;
 
-/** Handle 'removeAppBuilderComponent' — guards → D1 removeAppBuilderComponent {id} (confirm is UI-side). */
-export const handleRemoveAppBuilderComponent: MessageHandler<{ id?: string }> = async (
-    context,
-    payload,
-) => {
-    const target = await resolveComponentTarget(context, payload?.id);
-    if (!target.ok) return target.error;
-    const { id, project } = target;
-
-    const displayName = getAppBuilderComponent(project, id)?.name ?? id;
-    const result = await withComponentProgress(
+/** Run the removal inside its progress; the guards run inside it, as for an add. */
+function runRemove(
+    context: HandlerContext,
+    project: Project,
+    id: string,
+    progress: 'modal' | undefined,
+): Promise<GuardableResult> {
+    return withComponentProgress(
         {
             title: 'Removing',
             id,
-            label: displayName,
+            label: getAppBuilderComponent(project, id)?.name ?? id,
             noun: kindNoun(getAppBuilderComponent(project, id)?.kind),
             logger: context.logger,
+            progress,
         },
         async (report): Promise<GuardableResult> => {
-            const refused = await guardOrBlock(context, project, report);
+            const refused = await guardOrBlock(context, project, report, progress);
             if (refused) {
                 return refused;
             }
 
             // Undeploy is a slow cloud op — telegraph it, or the grid sits frozen
             // while `aio app undeploy` runs with nothing on screen saying so.
-            report('Removing integration…');
-            const deps = buildDefaultRunnerDeps(await buildRunnerDepsContext(context, project, {
+            report(OPERATION_STAGES.removing.label);
+            const deps = buildDefaultRunnerDeps(
+                await buildRunnerDepsContext(context, project, {
                     authManager: ServiceLocator.getAuthenticationService(),
                     commandManager: ServiceLocator.getCommandExecutor(),
-                }));
+                }),
+            );
             return removeAppBuilderComponent(project, id, deps);
         },
     );
+}
+
+/**
+ * The warning for a removal whose Runtime cleanup did not finish, or `undefined`
+ * when it did.
+ *
+ * AB-7: the runner verifies the Runtime namespace after undeploy, and it can come back
+ * with code STILL DEPLOYED — a leftover whose delete failed, or a namespace it could
+ * not list at all. The handler used to throw that summary away and answer a bare
+ * `{ success: true }`, which is the exact failure AB-7 was filed for: "success that
+ * lies". The removal itself DID happen — the manifest is clean — so it stays a
+ * success; an incomplete cleanup is said out loud instead of swallowed.
+ */
+function cleanupWarning(
+    displayName: string,
+    cleanup: RuntimeCleanupSummary | undefined,
+): string | undefined {
+    const stillRunning = cleanup?.failed ?? [];
+    if (!cleanup || (stillRunning.length === 0 && cleanup.verified)) return undefined;
+    const detail =
+        stillRunning.length > 0
+            ? `${stillRunning.length} package(s) are still deployed: ${stillRunning.join(', ')}`
+            : (cleanup.note ?? 'the Runtime namespace could not be listed');
+    return (
+        `${displayName} was removed, but its Runtime cleanup did not finish — ${detail}. ` +
+        `Ask the agent to run list_runtime_packages before reusing this project.`
+    );
+}
+
+/** Tell the grid the removal ended, and answer the caller — with any cleanup warning. */
+async function reportRemoveOutcome(
+    context: HandlerContext,
+    displayName: string,
+    result: GuardableResult,
+): Promise<HandlerResponse> {
     if (!result.success) {
         return { success: false, error: result.error };
     }
@@ -797,32 +950,36 @@ export const handleRemoveAppBuilderComponent: MessageHandler<{ id?: string }> = 
     await postComponentsSnapshot(context);
     await refreshProjectStatus(context);
 
-    // AB-7: the runner verifies the Runtime namespace after undeploy, and it can
-    // come back with code STILL DEPLOYED — a leftover whose delete failed, or a
-    // namespace it could not list at all. This handler threw that summary away and
-    // answered a bare `{ success: true }`, which is the exact failure AB-7 was
-    // filed for: "success that lies". The removal itself DID happen — the manifest
-    // is clean — so this stays a success; what changes is that an incomplete
-    // cleanup is now said out loud instead of swallowed.
     const cleanup = result.runtimeCleanup;
-    const stillRunning = cleanup?.failed ?? [];
-    if (cleanup && (stillRunning.length > 0 || !cleanup.verified)) {
-        const detail =
-            stillRunning.length > 0
-                ? `${stillRunning.length} package(s) are still deployed: ${stillRunning.join(', ')}`
-                : (cleanup.note ?? 'the Runtime namespace could not be listed');
-        const warning =
-            `${displayName} was removed, but its Runtime cleanup did not finish — ${detail}. ` +
-            `Check the namespace with \`aio runtime package list\` before reusing this project.`;
-        // Both surfaces, deliberately: the toast is for the SC, and `data` carries
-        // it to an agent, which cannot see a toast. HandlerResponse already has
+    const warning = cleanupWarning(displayName, cleanup);
+    if (warning) {
+        // Both surfaces, deliberately: the toast is for the SC, and `data` carries it
+        // to an agent, which cannot see a toast. HandlerResponse already has
         // `data?: unknown`, so this needs no change to the message contract.
         vscode.window.showWarningMessage(warning);
         return { success: true, data: { runtimeCleanup: cleanup, warning } };
     }
-
     return { success: true, data: cleanup ? { runtimeCleanup: cleanup } : undefined };
-};
+}
+
+/** Handle 'removeAppBuilderComponent' — guards → D1 removeAppBuilderComponent {id} (confirm is UI-side). */
+export const handleRemoveAppBuilderComponent: MessageHandler<{
+    id?: string;
+    /** `'modal'` when the SC started it from the integrations screen (PL-59). */
+    progress?: 'modal';
+}> = narrateOutcomeToModal(
+    async (context, payload) => {
+        const target = await resolveComponentTarget(context, payload?.id);
+        if (!target.ok) return target.error;
+        const { id, project } = target;
+
+        // Read before the removal: the entry leaves the map when it succeeds.
+        const displayName = getAppBuilderComponent(project, id)?.name ?? id;
+        const result = await runRemove(context, project, id, progressSurfaceOf(payload));
+        return reportRemoveOutcome(context, displayName, result);
+    },
+    (payload) => payload?.id,
+);
 
 /**
  * validateInput for the rename input box: reject empty/whitespace-only names

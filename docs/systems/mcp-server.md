@@ -324,6 +324,27 @@ and nothing else:
 - `asRawText(text)` — wraps a string verbatim. For a refusal or error written as
   prose, and for the descriptor registrar's `shape()` output (already stringified).
 
+**A failed call says so: `isError: true`.** MCP has two error mechanisms and they are
+not interchangeable — a JSON-RPC error means the REQUEST was wrong (unknown tool,
+malformed call) and is opaque to a model, while `isError` on a normal result means the
+call RAN and failed. The specification asks clients to hand the second kind back to the
+model so it can self-correct and retry with different arguments.
+
+`asText` sets it from the answer's own top-level `success`, because handlers already
+answer `{ success, … }` (Pattern B) — so the fact is present and this only restates it
+in the protocol's vocabulary. `asRawText` takes a string and therefore has to be TOLD:
+`asRawText(text, { isError: true })`. The descriptor registrar does both — the handler's
+failure branch and the confirm refusal, which is an input-validation error an agent
+corrects by calling again with `confirm: true`.
+
+**Only the top-level `success` counts.** Cancellation is
+`{ success: true, data: { success: false, error: 'cancelled' } }` — a handler that ran
+correctly and is reporting that the user backed out. Marking that as a tool failure
+would tell an agent to retry something a person just declined.
+`tests/features/ai/server/toolFailureEnvelope.test.ts` pins all of this, including that
+case. Added 2026-09-11; before that the flag was set nowhere and every failure returned
+as a success whose text happened to say otherwise.
+
 So an agent **cannot** assume every response parses as JSON — refusals are prose,
 including the shared `"<tool> requires confirm:true to proceed."`. It can assume
 the envelope. Keep the JSON small and purposeful — it's consumed as LLM context

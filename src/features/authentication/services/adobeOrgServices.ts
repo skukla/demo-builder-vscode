@@ -1,7 +1,7 @@
 /**
  * AdobeOrgServices — the org's service catalog and credential subscriptions.
  *
- * Owns the entitled-services catalog (session-cached, single-flight per org),
+ * Owns the entitled-services catalog (cached, saved across reloads, single-flight per org),
  * the "what is this credential already subscribed to" read, and the two
  * subscribe calls — including {@link assertSubscribeAccepted}, the check that
  * catches Adobe refusing a subscription INSIDE an HTTP 200. SDK-only.
@@ -12,6 +12,7 @@
  */
 
 import type { AdobeSDKClient } from './adobeSDKClient';
+import { readSavedCatalog, saveCatalog, type OrgServicesStore } from './orgServicesSavedCatalog';
 import type { OrgServiceInfo, SDKResponse, ServiceSubscriptionInfo } from './types';
 import { getLogger } from '@/core/logging/debugLogger';
 import { tryWithTimeout } from '@/core/utils/promiseUtils';
@@ -76,6 +77,12 @@ function assertSubscribeAccepted(response: SDKResponse<unknown> | undefined): vo
 }
 
 /**
+ * How many times one catalog request asks Adobe before its waiters see the error:
+ * about three minutes at Adobe's 60s gateway cutoff (owner, 2026-09-21).
+ */
+const ORG_SERVICES_ATTEMPTS = 3;
+
+/**
  * Reads the org service catalog and subscribes credentials to services.
  */
 export class AdobeOrgServices {
@@ -89,7 +96,14 @@ export class AdobeOrgServices {
     /** In-flight catalog fetch per org — see getServicesForOrg. */
     private readonly servicesFlights = new Map<string, SingleFlight<OrgServiceInfo[]>>();
 
-    constructor(private sdkClient: AdobeSDKClient) {}
+    /**
+     * @param store - keeps the API list across window reloads. Without one the
+     *   list lives for the session only, and every reload waits on Adobe again.
+     */
+    constructor(
+        private sdkClient: AdobeSDKClient,
+        private readonly store?: OrgServicesStore,
+    ) {}
 
     /**
      * Ensure SDK is initialized (lazy init pattern)
@@ -106,25 +120,51 @@ export class AdobeOrgServices {
      * Each entry carries `{ code, platformList, domainMandatory?, ... }`.
      */
     async getServicesForOrg(orgId: string): Promise<OrgServiceInfo[]> {
-        // Session-TTL cache: the org's service catalog is identical for every
-        // workspace in the org and changes rarely, so avoid refetching it on every
-        // workspace commit. Return the cached list while it is still fresh.
-        const cached = this.servicesCache.get(orgId);
-        if (cached && Date.now() < cached.expiresAt) {
+        // Once loaded, the list is ALWAYS answered from memory — Developer Console's
+        // pattern. It is identical for every workspace in the org and barely changes,
+        // while a cold fetch takes about a minute and can hit Adobe's 60s gateway limit.
+        // An expired copy is still returned, and starts one background refresh; only
+        // the session's very first ask waits on Adobe. On 2026-09-21 a 30-minute expiry
+        // turned Manage APIs, opened 40 minutes after the warm-up, into a 60s timeout.
+        // The copy is also SAVED, so a window reload does not throw it away: the same
+        // day, the first open after a reload hit Adobe's 60s cutoff twice running.
+        const cached = this.servicesCache.get(orgId) ?? this.restoreSaved(orgId);
+        if (cached) {
+            if (Date.now() >= cached.expiresAt) {
+                this.flightFor(orgId)
+                    .run(() => this.fetchServicesForOrg(orgId))
+                    .catch(() => {
+                        // Keep the copy we have; the next ask tries again.
+                        this.debugLogger.debug('[Entity Fetcher] Background org services refresh failed');
+                    });
+            }
             return cached.services;
         }
+        return this.flightFor(orgId).run(() => this.fetchServicesForOrg(orgId));
+    }
 
-        // Single-flight PER ORG. The Add Integration modal PREFETCHES this on open
-        // and the API picker fetches it again when the user reaches that stage —
-        // a concurrent pair by construction, so without this both pulled the org's
-        // full ~90-row catalog. Third instance of the stampede (org list, token
-        // inspection, this).
+    /** Load the org's saved list into memory, keeping its age. */
+    private restoreSaved(orgId: string): { services: OrgServiceInfo[]; expiresAt: number } | undefined {
+        const saved = readSavedCatalog(this.store, orgId);
+        if (!saved) {
+            return undefined;
+        }
+        const entry = { services: saved.services, expiresAt: saved.fetchedAt + CACHE_TTL.ORG_SERVICES };
+        this.servicesCache.set(orgId, entry);
+        return entry;
+    }
+
+    /**
+     * The org's single-flight slot. The Add Integration modal and the dashboard's
+     * warm-up ask at once by construction; without this each pulled the full list.
+     */
+    private flightFor(orgId: string): SingleFlight<OrgServiceInfo[]> {
         let flight = this.servicesFlights.get(orgId);
         if (!flight) {
             flight = new SingleFlight<OrgServiceInfo[]>();
             this.servicesFlights.set(orgId, flight);
         }
-        return flight.run(() => this.fetchServicesForOrg(orgId));
+        return flight;
     }
 
     /** The uncached catalog fetch behind {@link getServicesForOrg}'s single-flight. */
@@ -138,27 +178,26 @@ export class AdobeOrgServices {
         // Bounded like every other SDK read (trySDKFetch's contract, which this
         // method predates): an unbounded call left the API picker spinning with no
         // log line and no ceiling when the endpoint stalled.
-        let outcome = await tryWithTimeout(client.getServicesForOrg(orgId), {
-            timeoutMs: TIMEOUTS.ORG_SERVICES_FETCH,
-            timeoutMessage: 'SDK org services fetch',
-        });
+        const attempt = (label: string) =>
+            tryWithTimeout(client.getServicesForOrg(orgId), {
+                timeoutMs: TIMEOUTS.ORG_SERVICES_FETCH,
+                timeoutMessage: `SDK org services fetch${label}`,
+            });
 
-        // ONE retry, and only for a FAST failure (owner-approved hardening,
-        // 2026-08-28). The endpoint intermittently answers sub-second 500s whose
-        // own template says retry-on-internal-error, and a retry was measured to
-        // succeed — three add attempts died on single 500s that day. A TIMEOUT is
-        // never retried: it already spent the full 60s budget, and doubling that
-        // wait is worse than the picker's fast-fail + Retry affordance.
-        const failedFast = !outcome.timedOut && (outcome.error || !outcome.result);
-        if (failedFast) {
+        // The tries live HERE, inside the one shared request, so everyone waiting on
+        // it — the Manage APIs spinner and the dashboard's warm-up alike — sees a
+        // single load that ends in the list or in one error. On 2026-09-21 the retry
+        // lived in the warm-up instead: Adobe's gateway cut the first try off at 60s,
+        // the dialog showed "Couldn't load Adobe APIs" while a retry it could not see
+        // loaded the list 31s later. A cold load that dies at the gateway usually
+        // leaves Adobe's side warmer, and Developer Console just keeps spinning.
+        let outcome = await attempt('');
+        for (let tryNumber = 2; tryNumber <= ORG_SERVICES_ATTEMPTS && !outcome.result; tryNumber++) {
             this.debugLogger.warn(
-                '[Entity Fetcher] Org services fetch failed fast — retrying once',
+                `[Entity Fetcher] Org services fetch failed — try ${tryNumber} of ${ORG_SERVICES_ATTEMPTS}`,
             );
             await sleep(TIMEOUTS.ORG_SERVICES_RETRY_DELAY);
-            outcome = await tryWithTimeout(client.getServicesForOrg(orgId), {
-                timeoutMs: TIMEOUTS.ORG_SERVICES_FETCH,
-                timeoutMessage: 'SDK org services fetch (retry)',
-            });
+            outcome = await attempt(` (try ${tryNumber})`);
         }
 
         if (outcome.timedOut || outcome.error || !outcome.result) {
@@ -187,6 +226,7 @@ export class AdobeOrgServices {
                 services,
                 expiresAt: Date.now() + CACHE_TTL.ORG_SERVICES,
             });
+            saveCatalog(this.store, orgId, services);
         }
         return services;
     }

@@ -19,6 +19,7 @@ import { parseGitHubUrl } from '@/core/utils/githubUrlParser';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { LibraryPublishHelix } from '@/features/eds/handlers/blockLibraryPublish';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
+import { contentIndexUrl } from '@/features/eds/services/contentIndex';
 import { DA_LIVE_BASE_URL } from '@/features/eds/services/daLive/daLiveConstants';
 import type { TokenProvider } from '@/features/eds/services/daLive/daLiveOrgOperations';
 import type { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
@@ -33,7 +34,7 @@ interface EdsContentConfig {
     contentSource: {
         org: string;
         site: string;
-        indexPath?: string;
+        indexPath: string;
     };
     /** Optional second content source for the customer account chrome
      *  (`/customer/*` + the `/customer/nav` fragment), overlaid after the main
@@ -173,11 +174,10 @@ export async function ensureEdsContent(
         return false;
     }
 
-    logger.info('[EDS Content] Content not found in DA.live, copying from template source...');
-    onProgress?.('Setting up storefront content...', 'Copying content from template');
+    logger.info('[EDS Content] Content not found in DA.live, copying from template source');
+    onProgress?.('Setting up storefront content', 'Copying content from template');
 
     const contentSource = config.contentSource;
-    const indexPath = contentSource.indexPath || '/full-index.json';
 
     // Aggregate per-page content-patch results so the final reportUnapplied call
     // can surface them in one warning toast (ADR-006 D1 — mirrors the create/reset
@@ -189,13 +189,13 @@ export async function ensureEdsContent(
         {
             org: contentSource.org,
             site: contentSource.site,
-            indexUrl: `https://main--${contentSource.site}--${contentSource.org}.aem.live${indexPath}`,
+            indexUrl: contentIndexUrl(contentSource),
         },
         config.daLiveOrg,
         config.daLiveSite,
         (progress) => {
             const msg = progress.message || `Copying content (${progress.processed}/${progress.total})`;
-            onProgress?.('Setting up storefront content...', msg);
+            onProgress?.('Setting up storefront content', msg);
         },
         config.contentPatches,
         config.contentPatchSource,
@@ -211,7 +211,7 @@ export async function ensureEdsContent(
     // Hybrid packages: overlay the B2B account chrome (/customer/* + /customer/nav)
     // from the canonical B2B content site on top of the brand content.
     if (config.accountContentSource) {
-        onProgress?.('Setting up storefront content...', 'Adding B2B account experience');
+        onProgress?.('Setting up storefront content', 'Adding B2B account experience');
         const overlay = await daLiveContentOps.overlayAccountChrome(
             config.accountContentSource, config.daLiveOrg, config.daLiveSite, patchReport,
         );
@@ -237,7 +237,7 @@ export async function ensureEdsContent(
     const helixService = makeHelix(logger, githubTokenService, daLiveTokenProvider);
 
     // DA.live permissions (non-fatal)
-    onProgress?.('Configuring site permissions...', 'Granting DA.live access');
+    onProgress?.('Configuring site permissions', 'Granting DA.live access');
     await nonFatal('Permissions setup', logger, async () => {
         const userEmail = await daLiveAuthService.getUserEmail();
         if (!userEmail) {
@@ -252,7 +252,7 @@ export async function ensureEdsContent(
     // Block library from template (non-fatal, skip if no template info)
     let libraryPaths: string[] = [];
     if (config.templateOwner && config.templateRepo) {
-        onProgress?.('Configuring block library...', 'Setting up block library from template');
+        onProgress?.('Configuring block library', 'Setting up block library from template');
         await nonFatal('Block library setup', logger, async () => {
             const { GitHubFileOperations } = await import('@/features/eds/services/github/githubFileOperations');
             const githubFileOps = new GitHubFileOperations(githubTokenService, logger);
@@ -271,19 +271,19 @@ export async function ensureEdsContent(
     }
 
     // EDS settings — AEM Assets / Universal Editor (non-fatal)
-    onProgress?.('Applying EDS settings...', 'Configuring AEM Assets and Universal Editor');
+    onProgress?.('Applying EDS settings', 'Configuring AEM Assets and Universal Editor');
     await nonFatal('EDS settings', logger, () =>
         applyDaLiveOrgConfigSettings(daLiveContentOps, config.daLiveOrg, config.daLiveSite, logger),
     );
 
     // Cache purge before publishing (non-fatal)
-    onProgress?.('Publishing storefront content...', 'Purging stale cache');
+    onProgress?.('Publishing storefront content', 'Purging stale cache');
     await nonFatal('Cache purge', logger, () =>
         helixService.purgeCacheAll(repoInfo.owner, repoInfo.repo, 'main'),
     );
 
     // Publish content to CDN (preview + live)
-    onProgress?.('Publishing storefront content...', 'Making content available on CDN');
+    onProgress?.('Publishing storefront content', 'Making content available on CDN');
 
     await helixService.publishAllSiteContent(
         `${repoInfo.owner}/${repoInfo.repo}`,

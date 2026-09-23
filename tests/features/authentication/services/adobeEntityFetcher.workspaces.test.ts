@@ -11,7 +11,7 @@ import {
 } from './adobeEntityFetcher.testUtils';
 
 import { ErrorCode } from '@/types/errorCodes';
-import { AppError } from '@/core/errors';
+import { AdobeOrgMismatchError } from '@/features/authentication/services/authenticationErrors';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
@@ -67,7 +67,10 @@ describe('AdobeEntityFetcher', () => {
             } catch (err) {
                 caught = err;
             }
-            expect(caught).toBeInstanceOf(AppError);
+            // The org-mismatch error moved OUT of the retired central hierarchy and in
+            // beside the code that throws it (2026-09-11). The assertion is about the
+            // same thing either way: a typed failure a caller can branch on.
+            expect(caught).toBeInstanceOf(AdobeOrgMismatchError);
             expect((caught as Error).message).not.toContain('aio console org select');
             expect((caught as Error).message.toLowerCase()).not.toContain('terminal');
         });

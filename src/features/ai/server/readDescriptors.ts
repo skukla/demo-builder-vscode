@@ -113,6 +113,15 @@ function shapeAiSetup(res: HandlerResponse, args: Record<string, unknown>): stri
     });
 }
 
+/**
+ * The probe answers `{ result }` (Pattern B, the dialog's shape); the agent
+ * wants the result itself, not a wrapper naming it.
+ */
+function shapeProbeResult(res: HandlerResponse): string {
+    const payload = payloadOf(res);
+    return payload && 'result' in payload ? JSON.stringify(payload.result) : defaultShape(res);
+}
+
 /** Unwrap a handler response to its payload, or `undefined` if it is an error. */
 function payloadOf(res: HandlerResponse): Record<string, unknown> | undefined {
     if (!res.success) return undefined;
@@ -297,7 +306,10 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
         description:
             "List the Adobe APIs (sdk codes + names) the org can subscribe to on this project's " +
             'Developer Console workspace, flagging the ones Demo Builder already manages. Use before ' +
-            'add_console_apis to find the right code — pass search to narrow it (e.g. "firefly").',
+            'add_console_apis to find the right code — pass search to narrow it (e.g. "firefly"). ' +
+            "Pass componentId for ONE integration's view: `added` becomes its own picks, and each " +
+            'row carries `ownership` (baseline / mine-required / other-required / mine-optional) ' +
+            'and `requiredBy` (the integrations that need it).',
         map: dashboardHandlers,
         type: 'listConsoleApis',
         inputSchema: {
@@ -305,8 +317,26 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
                 .string()
                 .optional()
                 .describe('Case-insensitive substring match on sdk code, name or group'),
+            // The handler always took this (the Manage APIs modal sends it); the tool
+            // dropped it, so an agent could only ever see the project's union.
+            componentId: z
+                .string()
+                .min(1)
+                .optional()
+                .describe("Show only this integration's picks; omit for the project-wide union"),
         },
         shape: shapeConsoleApis,
+    },
+    {
+        tool: 'list_runtime_packages',
+        needsAuth: ['adobe'],
+        readOnly: true,
+        description:
+            "List the packages deployed in this project's Adobe I/O Runtime namespace (its " +
+            'Developer Console workspace), with the namespace name. Use to check what an ' +
+            'integration left running after a removal, or what is deployed before a redeploy.',
+        map: dashboardHandlers,
+        type: 'listRuntimePackages',
     },
     {
         tool: 'get_store_structure',
@@ -319,6 +349,26 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
             'trusting a configured store scope.',
         map: edsHandlers,
         type: 'get-store-structure',
+    },
+    {
+        tool: 'probe_shared_demo',
+        needsAuth: ['github'],
+        readOnly: true,
+        description:
+            "Read a colleague's demo before adding it: what kind of storefront it is (Edge Delivery or headless), " +
+            'its store codes, whether its pages are published, and its company (B2B) posture. Takes owner+repo, or a GitHub link / demo site address as link. ' +
+            'Reads only; add_shared_demo adds it.',
+        map: dashboardHandlers,
+        type: 'probe-shared-demo',
+        inputSchema: {
+            owner: z.string().optional().describe('GitHub owner of the demo repository'),
+            repo: z.string().optional().describe('GitHub repository name'),
+            link: z
+                .string()
+                .optional()
+                .describe('Instead of owner+repo: a GitHub link, or the site address (main--repo--owner.aem.live)'),
+        },
+        shape: shapeProbeResult,
     },
     {
         tool: 'get_project_urls',

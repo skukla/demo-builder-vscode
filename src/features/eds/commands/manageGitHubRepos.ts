@@ -91,7 +91,7 @@ export async function manageGitHubReposCommand(context: vscode.ExtensionContext)
         await vscode.window.withProgress(
             {
                 location: vscode.ProgressLocation.Notification,
-                title: 'Loading GitHub repositories...',
+                title: 'Loading GitHub repositories',
                 cancellable: false,
             },
             async () => {

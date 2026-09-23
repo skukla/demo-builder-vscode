@@ -53,6 +53,8 @@ import {
     type ExtractParamsResult,
 } from './edsResetParams';
 import { resetRepoToTemplate } from './edsResetRepoHelper';
+import { COMPONENT_IDS } from '@/core/constants';
+import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
 
@@ -98,7 +100,7 @@ async function syncCodeAndPermissions(
 ): Promise<void> {
     const { repoOwner, repoName, daLiveOrg, daLiveSite } = params;
     // Step 4: Sync code to CDN
-    report(4, 'Syncing code to CDN...');
+    report(4, 'Syncing code to CDN');
     // tokenProvider required: DA.live auth headers needed for unpublish during bulk sync
     const helixServiceForCodeSync = new HelixService(
         context.logger,
@@ -113,11 +115,11 @@ async function syncCodeAndPermissions(
         context.logger.warn(
             `[EdsReset] Code sync request failed: ${(codeSyncError as Error).message}, continuing anyway`,
         );
-        report(4, 'Code sync pending...');
+        report(4, 'Code sync pending');
     }
 
     // Step 5: Configure site permissions
-    report(5, 'Configuring site permissions...');
+    report(5, 'Configuring site permissions');
     const daLiveAuthService = getDaLiveAuthService(context.context);
     const userEmail = await daLiveAuthService.getUserEmail();
     if (userEmail) {
@@ -212,8 +214,10 @@ async function runContentPipeline(
                     daLiveSite,
                     templateOwner,
                     templateRepo,
-                    clearExistingContent: true,
-                    skipContent: !contentSourceConfig,
+                    // Keep-my-current-content: an added demo's content site is gone,
+                    // the SC chose to reset the code only (content is not forkable).
+                    clearExistingContent: !params.keepContent,
+                    skipContent: Boolean(params.keepContent) || !contentSourceConfig,
                     contentSource: contentSourceConfig,
                     accountContentSource: accountContentSourceConfig,
                     contentPatches,
@@ -249,10 +253,26 @@ async function runContentPipeline(
         {
             logPrefix: '[EdsReset]',
             operationLabel: 'Reset',
-            onExpired: async () => report(8, 'DA.live session expired. Please re-authenticate...'),
-            onBeforeRetry: async () => report(8, 'Resuming content pipeline...'),
+            onExpired: async () => report(8, 'DA.live session expired. Please re-authenticate'),
+            onBeforeRetry: async () => report(8, 'Resuming content pipeline'),
         },
     );
+}
+
+/**
+ * Record the template commit the repository was reset onto as the storefront's
+ * `lastSyncedCommit` — the commit "Check for Updates" compares against. Called only
+ * once the reset's own work has succeeded; the save that persists it is the one the
+ * reset already makes. An unresolved commit leaves the old record in place rather
+ * than writing `undefined` over it.
+ */
+function recordSyncedCommit(project: Project, commitSha: string | undefined, logger: Logger): void {
+    const metadata = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.metadata;
+    if (!commitSha || !metadata) {
+        logger.warn('[EdsReset] Synced template commit not recorded — update checks may be stale');
+        return;
+    }
+    metadata.lastSyncedCommit = commitSha;
 }
 
 /**
@@ -267,17 +287,19 @@ async function finalizeReset(
     deps: MeshRedeployDeps,
     /** False when step 7 could not write the site config — see below. */
     configWritten: boolean,
+    /** The dry check's caveats for an added demo, from the repo reset. */
+    demoCaveats?: string[],
 ): Promise<EdsResetResult> {
     const { repoOwner, repoName, project, verifyCdn = false, redeployMesh = false } = params;
 
     if (verifyCdn) {
-        report(11, 'Verifying configuration...');
+        report(11, 'Verifying configuration');
         const verification = await verifyCdnResources(repoOwner, repoName, context.logger);
         if (verification.configVerified) {
             report(11, 'Configuration verified');
             context.logger.info('[EdsReset] config.json verified on CDN');
         } else {
-            report(11, 'Configuration propagating...');
+            report(11, 'Configuration propagating');
             context.logger.warn(
                 '[EdsReset] config.json CDN verification timed out - may need more time to propagate',
             );
@@ -316,6 +338,7 @@ async function finalizeReset(
         filesReset,
         contentCopied,
         meshRedeployed: redeployMesh,
+        ...(demoCaveats?.length ? { demoCaveats } : {}),
         ...(configWritten
             ? {}
             : {
@@ -441,6 +464,7 @@ export async function executeEdsReset(
             context,
             report,
         );
+        recordSyncedCommit(params.project, repoResetResult.templateCommitSha, context.logger);
 
         // Steps 11-12: CDN verification + optional mesh redeploy + state persistence
         return await finalizeReset(
@@ -451,6 +475,7 @@ export async function executeEdsReset(
             contentCopied,
             deps,
             configWritten,
+            repoResetResult.demoCaveats,
         );
     } catch (error) {
         return handleResetError(error, context.logger);

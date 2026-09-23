@@ -26,7 +26,7 @@ export const items: OrgItem[] = [
 
 export const baseLabels = {
     heading: '',
-    loadingMessage: 'Loading organizations...',
+    loadingMessage: 'Loading organizations',
     errorTitle: 'Error Loading Organizations',
     emptyTitle: 'No Organizations',
     emptyMessage: 'No organizations found.',

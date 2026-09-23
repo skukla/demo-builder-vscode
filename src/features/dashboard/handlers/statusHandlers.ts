@@ -22,12 +22,15 @@ import {
     handleRegenerateAiFiles,
     logAiVerification,
 } from '@/features/dashboard/handlers/aiHandlers';
+import { warmOrgServicesCatalog } from '@/features/dashboard/handlers/warmOrgServicesCatalog';
 import { createAiContextFreshnessCheck } from '@/features/dashboard/services/onOpenChecks/aiContextFreshnessCheck';
 import { createAiVerifyCheck } from '@/features/dashboard/services/onOpenChecks/aiVerifyCheck';
+import { createDemoSourceCheck } from '@/features/dashboard/services/onOpenChecks/demoSourceCheck';
 import { createMcpHealthCheck } from '@/features/dashboard/services/onOpenChecks/mcpHealthCheck';
 import { createMeshVerifyCheck } from '@/features/dashboard/services/onOpenChecks/meshVerifyCheck';
 import { runOnOpenChecks } from '@/features/dashboard/services/onOpenChecks/orchestrator';
 import { createOrgContextCheck } from '@/features/dashboard/services/onOpenChecks/orgContextCheck';
+import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { detectFrontendChanges } from '@/features/mesh/services/stalenessDetector';
 import {
     applicableMcpPackages,
@@ -139,6 +142,12 @@ export const handleRequestStatus: MessageHandler = async (context) => {
             detectDrift: detectMcpDrift,
             heal: () => handleRegenerateAiFiles(context),
         }),
+        // demo-source (projects built on an added demo): the repository and the
+        // content site still answer. Read-only; a renamed repository is followed.
+        createDemoSourceCheck({
+            repoOperations: () => getGitHubServices(context.context.secrets).repoOperations,
+            stateManager: () => ServiceLocator.getStateManager(),
+        }),
         // ai-context-freshness (all projects): both staleness axes — stamp-vs-constant
         // (did WE change the bundle?) and composition-vs-installed (did the PROJECT
         // gain a component whose tooling it never received?). Detect-only per the
@@ -188,6 +197,11 @@ export const handleRequestStatus: MessageHandler = async (context) => {
             }),
         );
     }
+
+    // Start loading the org's Adobe API list now, so it is ready before the user
+    // reaches a picker — see warmOrgServicesCatalog. Not an on-open check: it has
+    // no badge and nothing to report. Deliberately not awaited.
+    void warmOrgServicesCatalog(context);
 
     void runOnOpenChecks(
         {

@@ -182,6 +182,18 @@ describe('commerceSummaryGroup - ACCS', () => {
 });
 
 describe('storefrontSummaryGroup', () => {
+    it('names an added demo first, and says when its site will start empty', () => {
+        const demo = { kind: 'demo' as const, version: 1, name: 'Isle5 by Jen', source: { owner: 'jen', repo: 'isle5-demo' }, storefrontKind: 'eds' as const };
+        expect(storefrontSummaryGroup(state({ demo })).rows[0]).toEqual({
+            label: 'Demo',
+            value: 'Isle5 by Jen · Edge Delivery (no published pages yet: the site starts empty)',
+            done: true,
+        });
+        const withPages = { ...demo, contentSource: { org: 'jen', site: 'isle5-demo', indexPath: '/full-index.json' } };
+        expect(storefrontSummaryGroup(state({ demo: withPages })).rows[0].value).toBe('Isle5 by Jen · Edge Delivery');
+        expect(storefrontSummaryGroup(state({})).rows[0].label).not.toBe('Demo');
+    });
+
     it('heads "Storefront" and mirrors the sub-steps (existing repo → no Code Sync)', () => {
         const group = storefrontSummaryGroup(state({}));
         expect(group.heading).toBe('Storefront');

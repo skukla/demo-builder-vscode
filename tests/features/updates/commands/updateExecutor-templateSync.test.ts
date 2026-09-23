@@ -12,6 +12,7 @@ import { captureProgress, makeUpdateContext } from './updateExecutor.testUtils';
 import * as vscode from 'vscode';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { RESET_TO_TEMPLATE } from '@/features/updates/commands/templateConflictPrompt';
 import { performTemplateUpdates } from '@/features/updates/commands/updateExecutor';
 import type { TemplateUpdateItem } from '@/features/updates/commands/updateTypes';
 import type { TemplateSyncResult } from '@/features/updates/services/templateSyncService';
@@ -159,7 +160,7 @@ describe('performTemplateUpdates', () => {
 
             expect(syncWithTemplate).toHaveBeenCalledTimes(1);
             expect(syncWithTemplate).toHaveBeenCalledWith(idle, { strategy: 'merge' });
-            expect(report).toHaveBeenCalledWith({ message: 'b…', increment: 100 });
+            expect(report).toHaveBeenCalledWith({ message: 'b', increment: 100 });
             expect(result).toEqual(new Set(['/p/b']));
         });
     });
@@ -197,8 +198,8 @@ describe('performTemplateUpdates', () => {
 
             await performTemplateUpdates([makeItem(a), makeItem(b)], ctx);
 
-            expect(report).toHaveBeenNthCalledWith(1, { message: 'a…', increment: 50 });
-            expect(report).toHaveBeenNthCalledWith(2, { message: 'b…', increment: 50 });
+            expect(report).toHaveBeenNthCalledWith(1, { message: 'a', increment: 50 });
+            expect(report).toHaveBeenNthCalledWith(2, { message: 'b', increment: 50 });
         });
 
         it('on success records the synced commit through the state manager', async () => {
@@ -219,31 +220,98 @@ describe('performTemplateUpdates', () => {
             expect(showInfoMock).toHaveBeenCalledWith('Successfully synced 1 template(s).');
             expect(showErrorMock).not.toHaveBeenCalled();
         });
+    });
 
-        it('warns about conflicts only when the merge fell back to reset AND conflicts were listed', async () => {
+    describe('merge conflicts — the SC decides, nothing is reset on its own', () => {
+        const CONFLICTED: TemplateSyncResult = {
+            success: false,
+            strategy: 'merge',
+            syncedCommit: '',
+            conflicts: ['blocks/hero/hero.js', 'styles/styles.css'],
+            error: 'Merge conflicts in 2 files (blocks/hero/hero.js, styles/styles.css); the template update was not applied.',
+        };
+
+        it('asks with a modal that names every conflicted file and offers only a reset', async () => {
             const ctx = makeUpdateContext();
             const project = createMockProject({ name: 'demo' });
-            syncWithTemplate.mockResolvedValue(
-                synced({ strategy: 'reset', fallbackOccurred: true, conflicts: ['a.js', 'b.js'] }),
-            );
+            syncWithTemplate.mockResolvedValue(CONFLICTED);
+            showWarningMock.mockResolvedValue(undefined);
 
             await performTemplateUpdates([makeItem(project)], ctx);
 
             expect(showWarningMock).toHaveBeenCalledWith(
-                'demo: Merge conflicts in 2 files, fell back to reset.',
+                'demo: the template update conflicts with your edits in 2 files.\n\n'
+                    + 'blocks/hero/hero.js\nstyles/styles.css\n\n'
+                    + 'Nothing has been changed. "Reset to template" replaces those files with the '
+                    + "template's version and discards your edits to them. Cancel keeps your storefront as it is.",
+                { modal: true },
+                RESET_TO_TEMPLATE,
             );
         });
 
-        it.each([
-            ['fallback without a conflict list', { fallbackOccurred: true }],
-            ['a conflict list without fallback', { fallbackOccurred: false, conflicts: ['a.js'] }],
-        ])('does not warn on %s', async (_label, partial) => {
+        it('cancelled: no reset, no commit recorded, no error box, and the project is not a success', async () => {
             const ctx = makeUpdateContext();
-            syncWithTemplate.mockResolvedValue(synced(partial));
+            const project = createMockProject({ name: 'demo' });
+            syncWithTemplate.mockResolvedValue(CONFLICTED);
+            showWarningMock.mockResolvedValue(undefined);
 
-            await performTemplateUpdates([makeItem(createMockProject())], ctx);
+            const result = await performTemplateUpdates([makeItem(project)], ctx);
 
-            expect(showWarningMock).not.toHaveBeenCalled();
+            expect(syncWithTemplate).toHaveBeenCalledTimes(1);
+            expect(syncWithTemplate).toHaveBeenCalledWith(project, { strategy: 'merge' });
+            expect(updateLastSyncedCommit).not.toHaveBeenCalled();
+            expect(showErrorMock).not.toHaveBeenCalled();
+            expect(showInfoMock).not.toHaveBeenCalled();
+            expect(result.size).toBe(0);
+            // Kept is a decision, not a failure: it reaches the log at info, never error.
+            expect(ctx.logger.info).toHaveBeenCalledTimes(1);
+            expect(ctx.logger.error).not.toHaveBeenCalled();
+        });
+
+        it('Reset to template: runs the reset strategy as a SECOND call and records its commit', async () => {
+            const ctx = makeUpdateContext();
+            const project = createMockProject({ name: 'demo' });
+            syncWithTemplate
+                .mockResolvedValueOnce(CONFLICTED)
+                .mockResolvedValueOnce(synced({ strategy: 'reset', syncedCommit: 'ddd444' }));
+            showWarningMock.mockResolvedValue(RESET_TO_TEMPLATE);
+
+            const result = await performTemplateUpdates([makeItem(project)], ctx);
+
+            expect(syncWithTemplate.mock.calls).toEqual([
+                [project, { strategy: 'merge' }],
+                [project, { strategy: 'reset' }],
+            ]);
+            expect(updateLastSyncedCommit).toHaveBeenCalledWith(project, 'ddd444', ctx.stateManager);
+            expect(result).toEqual(new Set([project.path]));
+            expect(showInfoMock).toHaveBeenCalledWith('Successfully synced 1 template(s).');
+        });
+
+        it('a reset the SC asked for that then fails is an ordinary failure', async () => {
+            const ctx = makeUpdateContext();
+            syncWithTemplate
+                .mockResolvedValueOnce(CONFLICTED)
+                .mockResolvedValueOnce(synced({ success: false, strategy: 'reset', error: 'push rejected' }));
+            showWarningMock.mockResolvedValue(RESET_TO_TEMPLATE);
+
+            await performTemplateUpdates([makeItem(createMockProject({ name: 'demo' }))], ctx);
+
+            expect(showErrorMock).toHaveBeenCalledWith('Failed to sync template for demo: push rejected');
+        });
+
+        it('a kept conflict is counted apart from failures in the summary', async () => {
+            const ctx = makeUpdateContext();
+            const good = createMockProject({ name: 'good', path: '/p/good' });
+            const kept = createMockProject({ name: 'kept', path: '/p/kept' });
+            syncWithTemplate.mockResolvedValueOnce(synced()).mockResolvedValueOnce(CONFLICTED);
+            showWarningMock.mockResolvedValue(undefined);
+
+            const result = await performTemplateUpdates([makeItem(good), makeItem(kept)], ctx);
+
+            expect(showInfoMock).toHaveBeenCalledWith(
+                'Synced 1 template(s), 1 left unchanged (merge conflicts).',
+            );
+            expect(result).toEqual(new Set(['/p/good']));
         });
     });
 

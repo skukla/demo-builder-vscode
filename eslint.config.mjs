@@ -220,12 +220,27 @@ export default tseslint.config(
             'no-console': 'off',
             'max-nested-callbacks': 'off',
 
-            // Enforce test file size limits (added Step 2: Infrastructure)
-            'max-lines': ['warn', {
-                max: 500,
-                skipBlankLines: true,
-                skipComments: true,
-            }],
+            // NO `max-lines` HERE. Test file size is owned by
+            // `scripts/check-test-file-sizes.js` — one instrument, two tiers
+            // (warn >500, ERROR >750 which blocks CI), an exclusions file, and it
+            // runs both as its own CI workflow and as step 5 of `npm run gate`.
+            //
+            // A `max-lines: ['warn', {max: 500, skipBlankLines, skipComments}]`
+            // sat here until 2026-09-10 and was a SECOND opinion on the same
+            // policy that disagreed with the first: eslint counts code lines and
+            // the validator counts raw lines, so eslint named 12 files while the
+            // validator named 144. Twelve is not a worklist — it is an arbitrary
+            // slice of a population the repo knowingly tolerates, and six of the
+            // twelve were between 501 and 528 lines.
+            //
+            // Two reasons it had to go rather than be reconciled. Silent
+            // divergence between two copies of one rule is the thing this repo
+            // bans everywhere else; and a permanent 12-warning floor made the
+            // gate's stated bar — zero errors AND zero warnings — unreachable,
+            // which is how a warning stream stops being read at all.
+            //
+            // Nothing was lost: the same >500 advisory still prints for all 144
+            // files on every gate run, and >750 still fails CI.
         },
     },
     {

@@ -6,9 +6,10 @@
  * - select-workspace: Select a specific workspace
  */
 
-import { toAppError, isTimeout } from '@/core/errors';
+import { classifyTransience } from '@/core/errors';
 import { withTimeout } from '@/core/utils/promiseUtils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { isTimeoutError } from '@/core/utils/timeoutError';
 import { validateWorkspaceId } from '@/core/validation/validators/AdobeResourceValidator';
 import { isConsoleOpFailure, type AdobeWorkspace } from '@/features/authentication/services/types';
 import { ErrorCode } from '@/types/errorCodes';
@@ -32,7 +33,7 @@ export async function handleGetWorkspaces(
         if (currentProject) {
             await context.sendMessage('workspace-loading-status', {
                 isLoading: true,
-                message: 'Loading workspaces...',
+                message: 'Loading workspaces',
                 subMessage: `Fetching from project: ${currentProject.title || currentProject.name}`,
             });
         }
@@ -45,22 +46,29 @@ export async function handleGetWorkspaces(
         }
         const workspaces = await withTimeout(workspacesPromise, {
             timeoutMs: TIMEOUTS.NORMAL,
-            timeoutMessage: 'Request timed out. Please check your connection and try again.',
+            // A NOUN PHRASE: TimeoutError composes "<operation> took too long...".
+            timeoutMessage: 'Loading your Adobe workspaces',
         });
         await context.sendMessage('get-workspaces', workspaces);
         return { success: true, data: workspaces };
     } catch (error) {
-        const appError = toAppError(error);
-        const errorMessage = isTimeout(appError)
-            ? appError.userMessage
+        // THE SPLIT, in one place. The CODE comes from the guess, because a provider's
+        // own timeout arrives as a plain Error carrying timeout text and a caller
+        // branching on the code should still see TIMEOUT. The SENTENCE comes only from
+        // an error this repo wrote, because that is the one whose words we chose;
+        // anything else gets the honest generic rather than a library's phrasing.
+        const code =
+            classifyTransience(error).kind === 'timeout' ? ErrorCode.TIMEOUT : ErrorCode.UNKNOWN;
+        const errorMessage = isTimeoutError(error)
+            ? error.userMessage
             : 'Failed to load workspaces. Please try again.';
 
-        context.logger.error('[Workspace] Failed to get workspaces:', appError);
+        context.logger.error('[Workspace] Failed to get workspaces:', error);
         await context.sendMessage('get-workspaces', {
             error: errorMessage,
-            code: appError.code,
+            code,
         });
-        return { success: false, error: errorMessage, code: appError.code };
+        return { success: false, error: errorMessage, code };
     }
 }
 

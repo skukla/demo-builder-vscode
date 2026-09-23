@@ -39,7 +39,7 @@ export async function executeSampleDataPhase(
         return;
     }
 
-    progressTracker('Installing Datapack', 92, `Installing ${chosen.name}\u2026`);
+    progressTracker('Installing Datapack', 92, `Installing ${chosen.name}`);
 
     try {
         const { installSampleData } = await import(

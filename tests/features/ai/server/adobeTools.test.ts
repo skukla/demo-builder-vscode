@@ -15,7 +15,7 @@ import {
 } from '@/features/ai/server/adobeTargetStore';
 import { getActiveOrgContext } from '@/core/shell/orgContextEnv';
 import { ErrorCode } from '@/types/errorCodes';
-import { AuthError } from '@/core/errors';
+import { AdobeOrgMismatchError } from '@/features/authentication/services/authenticationErrors';
 import { expectWithinCeiling } from './responseCeilings';
 import { ctxFactoryWith, fakeServer, makeAuth, withToken } from './adobeTools.testUtils';
 
@@ -379,12 +379,15 @@ describe('orgMismatchResult', () => {
 
 describe('isOrgMismatchError', () => {
     it('detects an AuthError carrying ErrorCode.ORG_MISMATCH', () => {
-        const err = new AuthError(ErrorCode.ORG_MISMATCH, 'wrong org');
+        const err = new AdobeOrgMismatchError();
         expect(isOrgMismatchError(err)).toBe(true);
     });
 
-    it('returns false for a different AuthError code', () => {
-        const err = new AuthError(ErrorCode.AUTH_EXPIRED, 'expired');
+    it('returns false for an error carrying a different code', () => {
+        // The predicate reads the CODE, so the shape it is handed is incidental. This
+        // used to build an AuthError from the central hierarchy; that class is retired
+        // and the check it exercises is unchanged.
+        const err = Object.assign(new Error('expired'), { code: ErrorCode.AUTH_EXPIRED });
         expect(isOrgMismatchError(err)).toBe(false);
     });
 

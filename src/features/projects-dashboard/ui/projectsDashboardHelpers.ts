@@ -37,11 +37,11 @@ export function buildMenuItems(callbacks: MenuCallbacks): MenuItem[] {
     ];
 
     if (callbacks.onCopyFromExisting) {
-        items.push({ key: 'copy', label: 'Copy from Existing...', icon: 'copy' });
+        items.push({ key: 'copy', label: 'Copy from Existing', icon: 'copy' });
     }
 
     if (callbacks.onImportFromFile) {
-        items.push({ key: 'import', label: 'Import from File...', icon: 'import' });
+        items.push({ key: 'import', label: 'Import from File', icon: 'import' });
     }
 
     return items;

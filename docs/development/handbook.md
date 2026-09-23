@@ -290,6 +290,16 @@ check says so and names the file.
 > this repository is public.
 > Enforced by `tests/sop/credential-sink-settings-scoped.test.ts`.
 
+> **Convention.** Whoever names a content site names its index path. The catalog, the
+> project row and a description file all state where a site lists its pages; every reader
+> (the copy step, the import path, the reset door) takes the stated path from `contentIndex.ts`
+> and none guesses one. Only the Add a demo package probe looks a path up, for a repository that names
+> a site with no path, and it records what it found.
+> *Why:* the shipped brands publish their index under two different names. When readers each
+> spelled a default, a demo built from one brand read as "no published pages" in the probe while
+> the copy step knew better — found live, 2026-09-12.
+> Enforced by `tests/sop/content-index-path.test.ts`.
+
 ## 5. What survives between calls
 
 **Position.** Anything cached exists once per session, is built on first use, and can be
@@ -369,6 +379,46 @@ meant.
 > *Why:* an invented shape typechecks and passes its tests while agreeing with nothing. It has cost this repo whole screens.
 
 > **How to add one.** [webview-command-handler](../../.claude/skills/webview-command-handler/SKILL.md)
+
+> **Convention.** A domain error class lives with the domain that throws it.
+> `src/core/errors/` is the legacy central hierarchy and may only shrink.
+> *Why:* this states what is TRUE rather than what sounded tidy, and the difference
+> was measured. Across all 21 `Error` subclasses in `src/`, the central hierarchy
+> accounted for **four throws in the entire codebase** against 354 plain
+> `throw new Error(...)`; the errors people actually use are defined beside the code
+> that throws them — `DaLiveAuthError` 8 thrown and 11 caught, `DataInstallerApiError`
+> 9 and 4, `ToolManagerError` 9 and 1. A convention telling everyone to use the
+> central classes would have been a policy with 354 counter-examples.
+> *The evidence that it was not working:* three of core's six domain errors —
+> `ValidationError`, `PrerequisiteError`, `MeshError` — had never been thrown or caught
+> anywhere, while `docs/architecture/error-handling.md` listed all three as part of the
+> hierarchy. Deleted 2026-09-10; both typecheckers confirmed nothing referenced them.
+> Error SHAPE is ruled separately and already was — see the Pattern B convention above,
+> which is why this one is about where a type lives, not about how failure travels.
+> [ADR-023](../architecture/adr/023-error-handling.md) · Enforced by the `coreErrorClasses`
+> ratchet in `tests/sop/architecture-rules.test.ts`.
+
+> **Convention.** A failure a PERSON reads is translated, never the library's own words.
+> *Why:* the extension's job at a failure is to say what went wrong and what to do about
+> it, and `Request failed with status code 403` does neither — it names a transport
+> detail and leaves an SC to guess which permission, which account, which site.
+> Translated means a per-provider formatter (three exist), a domain error's own message,
+> or an honest generic — "Could not reach Adobe Console. See Debug Logs for details." —
+> which is less specific and never misleading. The raw text still goes to the Debug Logs,
+> where it is useful.
+>
+> **The rule is about WHOSE words reach the person, and that is not visible at the call
+> site.** `componentUpdater` passes its caught message straight through and is right to:
+> everything reaching it was thrown by this extension with a deliberate sentence, such as
+> "Build failed (exit 1): tsc: 3 errors". Substituting a generic there on 2026-09-11 made
+> the product worse and six tests said so within a minute. So the check detects the SHAPE
+> and a person decides which kind each site is when they retire it — a row leaving the
+> ledger is a claim that someone looked.
+>
+> 67 sites predate the rule and are ledgered; the list may only shrink, because a rule
+> arriving as 67 build failures is a rule people switch off.
+> [ADR-023](../architecture/adr/023-error-handling.md) · Enforced by
+> `tests/sop/user-facing-errors.test.ts` against a shrink-only ledger.
 
 ---
 
@@ -550,24 +600,42 @@ check says so and names the file.
 > *Why:* they escape the cascade layers, so they cannot be themed or overridden.
 > Enforced by `tests/sop/inline-styles.test.ts`.
 
-> **Convention.** Markup repeated in three or more places becomes a component.
-> *Why:* three is where copies start drifting apart instead of being found.
+> **Convention.** Copy-paste in `src/` may not grow. The clone count is a shrink-only
+> pin, and a fall must be banked.
+> *Why:* whether two similar blocks SHOULD be one is a judgement, and it is scheduled —
+> `component-extraction-scan` at release cuts. Nothing scheduled stops a third copy being
+> pasted on a Tuesday, and until 2026-09-11 nothing did: the existing clone ledger scans
+> `tests`, and the reuse-first hook fires only on WRITE of a path that does not exist yet,
+> which is not how a third copy arrives. Zero is deliberately not the target — the
+> remainder is adjudicated variants, and welding those together is worse than the
+> duplication.
+> Enforced by `scripts/check-source-duplication.mjs`, step 7 of `npm run gate`.
+>
+> **It does not enforce the Rule of Three, and must not be read as doing so.** A clone
+> pair is two fragments; a three-site pattern is a judgement about what they mean. The
+> entry that used to sit here claimed `tests/sop/component-extraction.test.ts` enforced
+> "markup repeated in three or more places becomes a component" — that suite checks
+> abstract classes, HOC naming and generic wrappers, and nothing about repeated markup, so
+> the rule was enforced by nothing for as long as the claim stood. Three copies becoming a
+> component now lives in §11, where its lack of an enforcer is stated rather than implied.
+
+> **Convention.** An abstract class has at least two implementations.
+> *Why:* one implementation behind an abstraction is a guess about the second, and the
+> guess shapes the first badly. `BaseCommand` and `BaseWebviewCommand` earn theirs with
+> ten each.
 > Enforced by `tests/sop/component-extraction.test.ts`.
->
-> **Two thresholds live here and they are not in conflict**, which is worth stating
-> because they look it. CREATING a component from repeated markup waits for the third
-> site — that is this rule. PROMOTING a component that already exists from a feature
-> into `core/` happens at the SECOND consumer
-> ([where-code-goes.md](../architecture/where-code-goes.md) rows 7, 8 and 11). Different
-> decisions: the first is "is this pattern real yet", the second is "does this belong to
-> one feature or to everyone", and the second question is already answered the moment a
-> second feature needs it.
->
-> The **override** — extract at two when the same behaviour has already been FIXED
-> separately on two surfaces — is judgement rather than law, and is stated where you
-> meet it (`src/core/ui/components/CLAUDE.md`, the `reuse-first` skill). It has no
-> violation condition, so it can have no enforcer: a bug fixed twice is evidence the
-> copies must agree, which is the thing the count of three is a proxy for.
+
+> **Convention.** No higher-order components — no `withX`, no `createXComponent`.
+> *Why:* hooks are this codebase's composition mechanism, and mixing the two means two
+> ways to share behaviour and no rule for which. `withTimeout` is a promise helper, not an
+> HOC, and is named in the allowlist for that reason.
+> Enforced by `tests/sop/component-extraction.test.ts`.
+
+> **Convention.** A component generic over `<T>` earns it with size and real reuse.
+> *Why:* a generic wrapper with one caller is indirection with no payer. The two that
+> qualify — `SearchableList` and `SelectionStepContent` — are named in the suite with
+> their line counts and consumers.
+> Enforced by `tests/sop/component-extraction.test.ts`.
 
 > **Convention.** A `HandlerContext` is built by a factory — `createPanelHandlerContext`
 > or `createHeadlessHandlerContext` — never assembled as an object literal at the surface.
@@ -801,6 +869,16 @@ check says so and names the file.
 > Enforced by the `dynamicClassSiteCeiling` ledger in
 > `tests/sop/webview-architecture-rules.exemptions.json`.
 
+> **Convention.** Text never ends in an ellipsis. A progress message says what is
+> happening — "Saving the demo package", not "Saving the demo package…" — and a button
+> that opens a picker says what it opens.
+> *Why:* house style (owner, 2026-09-14). Before the rule, about 470 strings across 160
+> files ended in `...` or `…`, in two spellings, and new work kept copying them. An
+> ellipsis that carries meaning stays: one marking a value that was cut
+> (`${text.slice(0, 80)}…`), syntax between two values (`${base}...${head}`), and "and
+> so on" mid-sentence.
+> Enforced by `tests/sop/no-trailing-ellipsis.test.ts`.
+
 ## 8. Agents are a second door, never the only one
 
 **Position.** Agents call the same functions the buttons call. Every capability has a human
@@ -834,6 +912,58 @@ promising an agent that every response parses.
 > halves of the server.
 > *Why:* one envelope is what lets an agent parse any tool's answer the same way — and the
 > helper has already been re-duplicated once after being extracted.
+
+> **Convention.** A capability that CREATES something names the capability that undoes
+> it, or states why none can exist. Both go in `tests/sop/reversibility.ledger.json`.
+> *Why:* this is the extension's first never-compromise property — "whatever can be done
+> can be undone" — and until 2026-09-10 it was the only one with no enforcement. Demos
+> get rebuilt, reset and re-run constantly, so an SC must be able to return to zero. A
+> capability that cannot be undone strands them on a demo they cannot rebuild.
+> *Where it is checked, and why only there:* the agent surface, because it is the one
+> fully enumerable list of capabilities in the repo — every tool is a `registerTool(…)`
+> call or a `{ tool: … }` row. The human surface has no equivalent registry (a button is
+> a React element), so this rules the half that can be ruled instead of guessing at the
+> rest. Of 109 tools, 15 create something; 11 name a reversal and 4 carry a written
+> reason they cannot, and that second number is pinned so it can only fall.
+> *The first pass wrote 6, and two of them were wrong* — a gap was recorded without
+> checking whether the capability already existed. `set_console_apis` sets
+> subscriptions to exactly a list, so it un-adds what `add_console_apis` added;
+> `reset_datapack` removes a datapack's data from the instance, which is what
+> `start_datapack_import` put there. Both were found by asking "is there already a
+> reversal?" instead of "is the name paired?", which is the question the ledger exists
+> to force and which its own author skipped.
+> *Not a naming rule, and that was measured:* inferring `delete_x` from `create_x` flags
+> ten tools of which at least three are reversible under another verb — `deploy_mesh` by
+> `delete_mesh`, `deploy_integration` by `remove_integration`, `publish_page` by
+> `delete_page`. A rule that fires on correct code teaches people to ignore it.
+> Enforced by `tests/sop/reversibility-ledger.test.ts`. It proves a reversal EXISTS, not
+> that it works — AB-7 is an open defect where `remove_integration` reported success
+> while leaving deployed code running, and this would not have caught it.
+
+> **Convention.** A tool that fails says so — the result carries `isError: true`. Never
+> a successful result whose text happens to report a failure.
+> *Why:* MCP has two error mechanisms and they are not interchangeable. A JSON-RPC error
+> means the REQUEST was wrong — unknown tool, malformed call — and is opaque to a model.
+> `isError` on a normal result means the call RAN and failed, and the specification asks
+> clients to hand those back: "Tool Execution Errors contain actionable feedback that
+> language models can use to self-correct and retry with adjusted parameters ... Clients
+> SHOULD provide tool execution errors to language models to enable self-correction."
+> Measured 2026-09-11: this flag was set NOWHERE in `src/`, so every failed call returned
+> as a success whose text said otherwise, and no client could tell them apart. The agent
+> surface had been losing its recovery path for as long as it existed.
+> *Only the TOP-LEVEL `success` counts.* Cancellation is
+> `{ success: true, data: { success: false, error: 'cancelled' } }` — a handler that ran
+> correctly and is reporting that the user backed out. A check that recursed would mark
+> every cancelled operation as a failure and teach agents to retry what a person just
+> declined.
+> *How it is set:* `asText` reads the answer's own top-level `success`, because handlers
+> already answer `{ success, … }` (Pattern B) — so this restates a fact rather than making
+> a judgement. `asRawText` takes a string and must be TOLD.
+> Enforced by `tests/features/ai/server/toolFailureEnvelope.test.ts`, which is not the
+> shape suite next to it: a response can be perfectly shaped and still lie about whether
+> it worked.
+> [ADR-023](../architecture/adr/023-error-handling.md) ·
+> [MCP spec, Tools](https://modelcontextprotocol.io/specification/2025-11-25/server/tools)
 
 > **Convention.** A tool requires an explicit `confirm: true` when its effect is hard to
 > walk back: it DELETES something, or it PUSHES to a live site. Merely mutating is
@@ -1421,6 +1551,25 @@ check says so and names the file.
 > *Why:* the test then checks the mock rather than the shipped configuration.
 > Enforced by `tests/sop/no-config-leaf-mocks.test.ts`.
 
+> **Convention.** A stylesheet change is not pushed until a RESTING visual
+> baseline has been captured while it was in the tree.
+> *Why:* a CSS change that breaks a surface produces no error anywhere — there are
+> eight webview bundles and a feature stylesheet reaches only the ones whose entry
+> imports it, so a class can be styled on one surface and absent on the next with
+> nothing failing. On 2026-09-10 a dashboard regression reached a release
+> spot-check because the day's CSS work was verified with the INTERACTION capture
+> alone, which cannot see a width, a padding, or a rule that stopped applying.
+> *How it is checked:* `scripts/check-css-baseline.mjs`, from `.githooks/pre-push`
+> — deliberately NOT from `npm run gate`, because gate is the inner-loop command
+> (mid-edit is exactly when no capture exists yet) and CI runs the same checks with
+> no browser and no records, where it would fail every time and be switched off. It
+> reads the `dirtyPaths` each capture records, so it asks a direct question rather
+> than comparing a capture time against a commit time — captures happen on a dirty
+> tree before the commit, so a timestamp rule would reject the correct workflow.
+> It proves a baseline was taken, not that anyone read the diff. Bypass with
+> `CSS_BASELINE_BYPASS="reason"`, which keeps the rest of the gate that
+> `--no-verify` discards.
+
 > **Convention.** Never assign a `jest.fn()` onto a Node builtin's namespace
 > (`fs`, `fs.promises`, `os`, …). Use `jest.spyOn`, and restore in `afterEach`.
 > *Why:* a builtin is ONE object per worker process, and jest resets its module
@@ -1458,11 +1607,11 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 25 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 50 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 54 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 111 conventions. 111 of them are enforced; 0 are not.**
+**This handbook states 121 conventions. 121 of them are enforced; 0 are not.**
 
 The last one to get there was "vendor CSS sits in the lowest cascade layer", and it was
 outstanding because it was **not yet true**: `@layer vendor` existed in no bundle, so a
@@ -1773,6 +1922,33 @@ passing it, delete it.
 > run that first.
 > *Why:* a cause is cheap to assert, expensive to retract, and the reader usually cannot
 > check it. **Not enforced.**
+
+> **Discipline.** Markup repeated in three or more places becomes a component.
+> *Why:* three is where copies start drifting apart instead of being found.
+> **Not enforced** — and the reason is worth stating precisely, because this rule spent a
+> long time appearing to be. A check can FIND the copies; `component-extraction-scan` does,
+> and `scripts/check-source-duplication.mjs` now stops their number growing. Neither can
+> decide that two similar blocks are the same job — that verdict is the rule, and it is
+> scheduled at release cuts rather than automated. This sat in the enforced list citing
+> `tests/sop/component-extraction.test.ts`, which checks four adjacent things and none of
+> this one; the citation resolved and the suite was green, so nothing ever said otherwise.
+> Found 2026-09-11 by the convention proofs, which could not plant a violation that made
+> the named enforcer fail.
+>
+> **Two thresholds live here and they are not in conflict**, which is worth stating
+> because they look it. CREATING a component from repeated markup waits for the third
+> site — that is this rule. PROMOTING a component that already exists from a feature
+> into `core/` happens at the SECOND consumer
+> ([where-code-goes.md](../architecture/where-code-goes.md) rows 7, 8 and 11). Different
+> decisions: the first is "is this pattern real yet", the second is "does this belong to
+> one feature or to everyone", and the second question is already answered the moment a
+> second feature needs it.
+>
+> The **override** — extract at two when the same behaviour has already been FIXED
+> separately on two surfaces — is judgement rather than law, and is stated where you
+> meet it (`src/core/ui/components/CLAUDE.md`, the `reuse-first` skill). A bug fixed
+> twice is evidence the copies must agree, which is the thing the count of three is a
+> proxy for.
 
 ## Where the reasoning lives
 

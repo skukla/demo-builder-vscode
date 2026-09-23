@@ -14,6 +14,7 @@
 import * as vscode from 'vscode';
 import { z } from 'zod';
 import { clearAdobeTarget } from './adobeTargetStore';
+import { agentNotice } from './agentNotice';
 import { asRawText, asText } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
 import { dispatchHandler } from '@/core/handlers/dispatchHandler';
@@ -63,8 +64,10 @@ interface ProviderStatus {
  */
 async function githubStatus(ctx: HandlerContext): Promise<ProviderStatus> {
     const { tokenService } = getGitHubServices(ctx.context.secrets);
-    const validation = await tokenService.validateToken();
-    if (!validation.valid) return githubVsCodeSessionStatus();
+    // Reading must not change anything: the default validate DELETES a rejected
+    // token, so asking this tool for status used to sign the window out.
+    const validation = await tokenService.validateToken({ clearInvalid: false });
+    if (!validation.valid) return githubVsCodeSessionStatus(validation.reason === 'rejected');
 
     // Orgs are ENRICHMENT, so their failure must not unseat the answer. Folding
     // this call into the outer `safeStatus` would report `authenticated: false`
@@ -92,7 +95,7 @@ async function githubStatus(ctx: HandlerContext): Promise<ProviderStatus> {
  * out" and recommended a needless sign-in; VS Code holding the session is the
  * common case, so the answer must say where the credential actually lives.
  */
-async function githubVsCodeSessionStatus(): Promise<ProviderStatus> {
+async function githubVsCodeSessionStatus(storedTokenRejected = false): Promise<ProviderStatus> {
     let session: vscode.AuthenticationSession | undefined;
     try {
         session = await vscode.authentication.getSession('github', [...GITHUB_SCOPES], {
@@ -104,6 +107,15 @@ async function githubVsCodeSessionStatus(): Promise<ProviderStatus> {
     }
     if (session) {
         return { authenticated: true, via: 'vscode-session', login: session.account.label };
+    }
+    if (storedTokenRejected) {
+        return {
+            authenticated: false,
+            note:
+                'The stored GitHub token is no longer accepted by GitHub, and VS Code holds no ' +
+                'session to adopt. The user needs to sign in to GitHub again. The token was left ' +
+                'in place: reading status changes nothing.',
+        };
     }
     return {
         authenticated: false,
@@ -237,14 +249,14 @@ export function registerAuthTools(server: McpToolServer, ctxFactory: () => Handl
             // the eventual outcome lands in the window (observed live
             // 2026-08-23 — the item this fixes).
             vscode.window.setStatusBarMessage(
-                '$(key) Demo Builder: an agent requested DA.live sign-in — complete the prompts in this window',
+                `$(key) ${agentNotice('DA.live sign-in requested')} — complete the prompts in this window`,
                 TIMEOUTS.STATUS_BAR_SUCCESS,
             );
             void showDaLiveAuthQuickPick(ctx).then(
                 (res) => {
                     if (res.success) {
                         vscode.window.setStatusBarMessage(
-                            '$(check) DA.live sign-in complete',
+                            `$(check) ${agentNotice('DA.live sign-in complete')}`,
                             TIMEOUTS.STATUS_BAR_SUCCESS,
                         );
                     }

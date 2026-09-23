@@ -55,12 +55,12 @@ describe('WebviewApp', () => {
     describe('initialization', () => {
         it('shows loading content while waiting for init', () => {
             render(
-                <WebviewApp loadingContent={<div>Loading...</div>}>
+                <WebviewApp loadingContent={<div>Loading</div>}>
                     <div>App content</div>
                 </WebviewApp>
             );
 
-            expect(screen.getByText('Loading...')).toBeInTheDocument();
+            expect(screen.getByText('Loading')).toBeInTheDocument();
             expect(screen.queryByText('App content')).not.toBeInTheDocument();
         });
 

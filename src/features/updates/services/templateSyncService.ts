@@ -3,10 +3,27 @@
  *
  * Applies upstream template updates to an EDS storefront project.
  * Supports two strategies:
- * - merge: Attempts git merge, preserving local customizations
- * - reset: Full reset to template (loses customizations)
+ * - merge: applies the template's change SINCE the storefront's recorded
+ *   template version (`lastSyncedCommit`) onto the SC's repo with a 3-way
+ *   apply, keeping the SC's own edits (`templateMergeBase.ts`). It does not use
+ *   `git merge`: a repo GitHub generates from a template has its own root commit
+ *   and shares no history with the template, and git refuses to merge unrelated
+ *   histories. A conflict STOPS the update and names the files; it is never
+ *   resolved by resetting. A storefront with no recorded version is asked to
+ *   reset once.
+ * - reset: Full reset to template (replaces the SC's edits). Only ever run when
+ *   the caller asked for it explicitly.
+ *
+ * Both strategies report the TEMPLATE commit the storefront now matches as
+ * `syncedCommit`; callers record it as `lastSyncedCommit`, and the update
+ * checker compares that against the template's latest commit.
  *
  * Key files (fstab.yaml, config.json) are preserved regardless of strategy.
+ *
+ * Branches: the SC's repo is `main` unless the caller names another, and the
+ * template is `main` unless the storefront records a `templateBranch` (an added
+ * demo's source may use another). The template branch is always fetched into
+ * `template/main`, so every later step names one ref.
  */
 
 import * as fs from 'fs/promises';
@@ -19,35 +36,99 @@ import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import { injectTokenIntoUrl } from '@/features/eds/services/github/githubHelpers';
+import {
+    backupPreservedFiles,
+    restorePreservedFiles,
+} from '@/features/updates/services/preservedFiles';
+import {
+    applyTemplateChangeSince,
+    readTemplateHead,
+    type GitStep,
+} from '@/features/updates/services/templateMergeBase';
+import { TemplateSyncStepError } from '@/features/updates/services/templateSyncStepError';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 
-/**
- * Options for template sync operation
- */
+/** Options for template sync operation */
 export interface TemplateSyncOptions {
-    /** Sync strategy: 'merge' attempts git merge, 'reset' does full reset */
+    /** Sync strategy: 'merge' applies the template's change, 'reset' does full reset */
     strategy: 'merge' | 'reset';
     /** Files to preserve (never overwritten) - always includes fstab.yaml */
     preserveFiles?: string[];
 }
 
-/**
- * Result of template sync operation
- */
+/** Result of template sync operation */
 export interface TemplateSyncResult {
     /** Whether sync completed successfully */
     success: boolean;
-    /** Strategy that was actually used (may differ from requested if fallback occurred) */
+    /** Strategy that ran */
     strategy: 'merge' | 'reset';
-    /** Commit SHA after sync */
+    /** The template commit the storefront now matches ('' on failure) */
     syncedCommit: string;
-    /** Files with merge conflicts (if any) */
+    /**
+     * Files where the template's changes collide with the SC's own edits. Set
+     * only on a merge that STOPPED: the checkout is restored, nothing is pushed,
+     * `success` is false and `error` names the files. The caller decides what
+     * happens next — a reset is a separate, explicit request, never a fallback.
+     */
     conflicts?: string[];
     /** Error message if sync failed */
     error?: string;
-    /** Whether fallback to reset occurred due to conflicts */
-    fallbackOccurred?: boolean;
+}
+
+/** Which repositories one sync moves between. */
+export interface TemplateSyncTarget {
+    repoOwner: string;
+    repoName: string;
+    templateOwner: string;
+    templateRepo: string;
+    /** The SC's branch to rewrite. Default `main`. */
+    repoBranch?: string;
+    /** The template's branch to read. Default `main`. */
+    templateBranch?: string;
+}
+
+/** A temp clone of the SC's repo with the template fetched and the preserved files backed up. */
+interface Checkout {
+    tempDir: string;
+    repoDir: string;
+    backups: Map<string, string>;
+    /** The SC's branch the result is pushed to. */
+    branch: string;
+}
+
+/** The error text a conflicted merge carries, so every surface says the same thing. */
+function describeTemplateConflicts(conflicts: string[]): string {
+    const noun = conflicts.length === 1 ? 'file' : 'files';
+    return `Merge conflicts in ${conflicts.length} ${noun} (${conflicts.join(', ')}); `
+        + 'the template update was not applied.';
+}
+
+const NO_RECORDED_VERSION = 'This storefront has no recorded template version to update from; '
+    + 'reset it to its template once so updates have a starting point.';
+
+/** A full or abbreviated commit SHA — the only shape a recorded version may take. */
+const COMMIT_SHA = /^[0-9a-f]{7,40}$/i;
+
+function notInTemplateHistory(base: string, target: TemplateSyncTarget): string {
+    return `The storefront's recorded template version (${base.substring(0, 7)}) is not in `
+        + `${target.templateOwner}/${target.templateRepo}'s history; reset it to its template `
+        + 'once so updates have a new starting point.';
+}
+
+function failure(strategy: 'merge' | 'reset', error: string): TemplateSyncResult {
+    return { success: false, strategy, syncedCommit: '', error };
+}
+
+/**
+ * What the SC reads when a step throws. A failed step says which step; anything
+ * else gets an honest generic. git's output is logged, never returned.
+ */
+function describeStepFailure(error: unknown): string {
+    const sentence = error instanceof TemplateSyncStepError
+        ? error.message
+        : 'The template update could not finish.';
+    return `${sentence} See Debug Logs for details.`;
 }
 
 /**
@@ -89,15 +170,9 @@ export class TemplateSyncService {
         project: Project,
         options: TemplateSyncOptions,
     ): Promise<TemplateSyncResult> {
-        // Extract EDS metadata
         const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
         if (!edsInstance?.metadata) {
-            return {
-                success: false,
-                strategy: options.strategy,
-                syncedCommit: '',
-                error: 'No EDS metadata found in project',
-            };
+            return failure(options.strategy, 'No EDS metadata found in project');
         }
 
         const metadata = edsInstance.metadata as Record<string, unknown>;
@@ -106,405 +181,221 @@ export class TemplateSyncService {
         const templateRepo = metadata.templateRepo as string | undefined;
 
         if (!githubRepo || !templateOwner || !templateRepo) {
-            return {
-                success: false,
-                strategy: options.strategy,
-                syncedCommit: '',
-                error: 'Missing required metadata: githubRepo, templateOwner, or templateRepo',
-            };
+            return failure(
+                options.strategy,
+                'Missing required metadata: githubRepo, templateOwner, or templateRepo',
+            );
         }
 
-        // Parse owner/repo from githubRepo
         const [repoOwner, repoName] = githubRepo.split('/');
         if (!repoOwner || !repoName) {
-            return {
-                success: false,
-                strategy: options.strategy,
-                syncedCommit: '',
-                error: `Invalid githubRepo format: ${githubRepo}`,
-            };
+            return failure(options.strategy, `Invalid githubRepo format: ${githubRepo}`);
         }
 
-        // Combine default and custom preserve files
-        const preserveFiles = [
-            ...DEFAULT_PRESERVE_FILES,
-            ...(options.preserveFiles ?? []),
-        ];
+        const templateBranch = typeof metadata.templateBranch === 'string' ? metadata.templateBranch : undefined;
+        const target: TemplateSyncTarget = {
+            repoOwner, repoName, templateOwner, templateRepo, ...(templateBranch ? { templateBranch } : {}),
+        };
+        const preserveFiles = [...DEFAULT_PRESERVE_FILES, ...(options.preserveFiles ?? [])];
 
-        // Execute sync based on strategy
-        if (options.strategy === 'merge') {
-            return this.mergeFromTemplate(
-                repoOwner,
-                repoName,
-                templateOwner,
-                templateRepo,
-                preserveFiles,
-            );
-        } else {
-            return this.resetToTemplate(
-                repoOwner,
-                repoName,
-                templateOwner,
-                templateRepo,
-                preserveFiles,
-            );
+        if (options.strategy === 'reset') {
+            return this.resetRepository(target, preserveFiles);
+        }
+
+        // The base of the merge. Thin-layer storefronts (ADR-006) record their
+        // last-known-good commit here, which templateUpdateChecker compares within
+        // the same template repo; their update policy is not changed by this service.
+        const base = metadata.lastSyncedCommit;
+        if (typeof base !== 'string' || !COMMIT_SHA.test(base)) {
+            return failure('merge', NO_RECORDED_VERSION);
+        }
+        return this.withCheckout('merge', target, preserveFiles, (checkout) =>
+            this.mergeFromBase(checkout, target, base, preserveFiles),
+        );
+    }
+
+    /**
+     * Replace a repository's content with its template's, keeping `preserveFiles`,
+     * and force-push. Needs no project: storefront setup calls it for an existing
+     * repository the SC chose to reset, a new repository started from an added demo,
+     * and `syncWithTemplate` for a project's reset.
+     */
+    async resetRepository(
+        target: TemplateSyncTarget,
+        preserveFiles: string[] = [],
+        commitMessage = 'chore: sync with template (reset)',
+    ): Promise<TemplateSyncResult> {
+        return this.withCheckout('reset', target, preserveFiles, (checkout) =>
+            this.performReset(checkout, commitMessage),
+        );
+    }
+
+    /** Run one git step in `cwd` with the shared shell. */
+    private git(cwd: string, command: string, timeout: number) {
+        return this.commandManager.execute(command, { cwd, timeout, shell: DEFAULT_SHELL });
+    }
+
+    /**
+     * Clone the SC's repo into a temp dir, back up the preserved files and fetch
+     * the template, then hand the checkout to `work`. Any thrown step becomes a
+     * failed result; the temp dir is always removed.
+     */
+    private async withCheckout(
+        strategy: 'merge' | 'reset',
+        target: TemplateSyncTarget,
+        preserveFiles: string[],
+        work: (checkout: Checkout) => Promise<TemplateSyncResult>,
+    ): Promise<TemplateSyncResult> {
+        // The SHARED instance. NOTE: this site only calls getToken() and never
+        // validates, so a fresh instance cost nothing here — this is consistency with
+        // the other call sites, not a fix for a redundant round trip.
+        const { tokenService: githubTokenService } = getGitHubServices(this.secrets);
+        const token = await githubTokenService.getToken();
+        if (!token) {
+            return failure(strategy, 'Not authenticated with GitHub');
+        }
+
+        const { repoOwner, repoName, templateOwner, templateRepo } = target;
+        const branch = target.repoBranch ?? 'main';
+        const templateBranch = target.templateBranch ?? 'main';
+        const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'template-sync-'));
+        this.logger.info(`[TemplateSync] Starting ${strategy} from ${templateOwner}/${templateRepo} to ${repoOwner}/${repoName}`);
+
+        try {
+            this.logger.debug(`[TemplateSync] Cloning user repo`);
+            const userRepoUrl = injectTokenIntoUrl(`https://github.com/${repoOwner}/${repoName}.git`, token.token);
+            const depth = strategy === 'merge' ? 50 : 1;
+            const clone = `git clone --depth ${depth} --branch ${branch} "${userRepoUrl}" repo`;
+            const cloneResult = await this.git(tempDir, clone, TIMEOUTS.LONG);
+            if (cloneResult.code !== 0) {
+                throw new TemplateSyncStepError(
+                    `Could not clone ${repoOwner}/${repoName} from GitHub.`, cloneResult.stderr,
+                );
+            }
+
+            const repoDir = path.join(tempDir, 'repo');
+            const backups = await backupPreservedFiles(repoDir, preserveFiles, this.logger);
+
+            this.logger.debug(`[TemplateSync] Fetching template repo`);
+            const templateUrl = `https://github.com/${templateOwner}/${templateRepo}.git`;
+            await this.git(repoDir, `git remote add template "${templateUrl}"`, TIMEOUTS.QUICK);
+            // Another branch is fetched INTO template/main, the one ref the later steps name.
+            const refspec = templateBranch === 'main' ? 'main' : `${templateBranch}:refs/remotes/template/main`;
+            const fetchResult = await this.git(repoDir, `git fetch template ${refspec}`, TIMEOUTS.LONG);
+            if (fetchResult.code !== 0) {
+                throw new TemplateSyncStepError(
+                    `Could not fetch the template ${templateOwner}/${templateRepo} from GitHub.`,
+                    fetchResult.stderr,
+                );
+            }
+
+            return await work({ tempDir, repoDir, backups, branch });
+        } catch (error) {
+            const gitOutput = error instanceof TemplateSyncStepError ? `: ${error.gitOutput.trim()}` : '';
+            const label = strategy === 'merge' ? 'Merge' : 'Reset';
+            this.logger.error(`[TemplateSync] ${label} failed${gitOutput}`, error as Error);
+            return failure(strategy, describeStepFailure(error));
+        } finally {
+            try {
+                await fs.rm(tempDir, { recursive: true, force: true });
+            } catch (cleanupError) {
+                this.logger.warn(`[TemplateSync] Failed to clean up temp directory: ${(cleanupError as Error).message}`);
+            }
         }
     }
 
     /**
-     * Smart merge from template preserving customizations
+     * Apply the template's change from the recorded `base` to its latest commit,
+     * keeping the SC's own edits, then commit and push.
      *
-     * Attempts git merge, falls back to reset if conflicts detected.
+     * A conflict means the SC edited the same region the template changed. The
+     * clone is restored and the files are reported; it is never turned into a
+     * reset here (a user's own edits are never overwritten — CLAUDE.md, rule 2).
      */
-    private async mergeFromTemplate(
-        repoOwner: string,
-        repoName: string,
-        templateOwner: string,
-        templateRepo: string,
+    private async mergeFromBase(
+        checkout: Checkout,
+        target: TemplateSyncTarget,
+        base: string,
         preserveFiles: string[],
     ): Promise<TemplateSyncResult> {
-        // The SHARED instance. NOTE: these two sites only call getToken() and never
-        // validate, so a fresh instance cost nothing here — this is consistency with
-        // the other 34 call sites, not a fix for a redundant round trip.
-        const { tokenService: githubTokenService } = getGitHubServices(this.secrets);
-        const token = await githubTokenService.getToken();
-        if (!token) {
-            return {
-                success: false,
-                strategy: 'merge',
-                syncedCommit: '',
-                error: 'Not authenticated with GitHub',
-            };
+        const { tempDir, repoDir } = checkout;
+        const git: GitStep = (command, timeout) => this.git(repoDir, command, timeout);
+        const patchFile = path.join(tempDir, 'template.patch');
+        const outcome = await applyTemplateChangeSince(git, { base, preserveFiles, patchFile });
+
+        switch (outcome.kind) {
+            case 'not-in-template':
+                return failure('merge', notInTemplateHistory(base, target));
+            case 'failed':
+                return failure('merge', `The template update could not be applied: ${outcome.reason}.`);
+            case 'conflicts': {
+                // The SC's repo stays exactly as it was: nothing pushed, the files named.
+                const { conflicts, restored } = outcome;
+                const note = restored ? '' : ' (temp clone not restored)';
+                const count = conflicts.length;
+                this.logger.warn(`[TemplateSync] Merge conflicts in ${count} file(s); not pushing${note}`);
+                return { ...failure('merge', describeTemplateConflicts(conflicts)), conflicts };
+            }
+            case 'unchanged':
+                this.logger.info(`[TemplateSync] No template change to apply`);
+                return { success: true, strategy: 'merge', syncedCommit: outcome.templateHead };
         }
 
-        const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'template-sync-'));
-        this.logger.info(`[TemplateSync] Starting merge from ${templateOwner}/${templateRepo} to ${repoOwner}/${repoName}`);
+        await restorePreservedFiles(repoDir, checkout.backups, this.logger);
+        await this.commitAndPush(repoDir, 'chore: sync with template', `git push origin ${checkout.branch}`);
 
-        try {
-            // Step 1: Clone user's repo
-            this.logger.debug(`[TemplateSync] Cloning user repo...`);
-            const userRepoUrl = injectTokenIntoUrl(`https://github.com/${repoOwner}/${repoName}.git`, token.token);
-            const cloneResult = await this.commandManager.execute(
-                `git clone --depth 50 --branch main "${userRepoUrl}" repo`,
-                { cwd: tempDir, timeout: TIMEOUTS.LONG, shell: DEFAULT_SHELL },
-            );
-            if (cloneResult.code !== 0) {
-                throw new Error(`Failed to clone user repo: ${cloneResult.stderr}`);
-            }
-
-            const repoDir = path.join(tempDir, 'repo');
-
-            // Step 2: Backup preserved files
-            const backups = await this.backupPreservedFiles(repoDir, preserveFiles);
-
-            // Step 3: Add template as remote and fetch
-            this.logger.debug(`[TemplateSync] Fetching template repo...`);
-            const templateUrl = `https://github.com/${templateOwner}/${templateRepo}.git`;
-            await this.commandManager.execute(`git remote add template "${templateUrl}"`, {
-                cwd: repoDir, timeout: TIMEOUTS.QUICK, shell: DEFAULT_SHELL,
-            });
-
-            const fetchResult = await this.commandManager.execute(`git fetch template main`, {
-                cwd: repoDir, timeout: TIMEOUTS.LONG, shell: DEFAULT_SHELL,
-            });
-            if (fetchResult.code !== 0) {
-                throw new Error(`Failed to fetch template: ${fetchResult.stderr}`);
-            }
-
-            // Step 4: Try merge (without commit)
-            this.logger.debug(`[TemplateSync] Attempting merge...`);
-            await this.commandManager.execute(
-                `git merge template/main --no-commit --no-ff`,
-                { cwd: repoDir, timeout: TIMEOUTS.NORMAL, shell: DEFAULT_SHELL },
-            );
-
-            // Step 5: Check for conflicts
-            const conflictResult = await this.commandManager.execute(
-                `git diff --name-only --diff-filter=U`,
-                { cwd: repoDir, timeout: TIMEOUTS.QUICK, shell: DEFAULT_SHELL },
-            );
-            const conflicts = conflictResult.stdout.trim().split('\n').filter(Boolean);
-
-            if (conflicts.length > 0) {
-                // Conflicts detected - abort merge and fall back to reset
-                this.logger.warn(`[TemplateSync] Merge conflicts detected in ${conflicts.length} files, falling back to reset`);
-                await this.commandManager.execute(`git merge --abort`, {
-                    cwd: repoDir, timeout: TIMEOUTS.QUICK, shell: DEFAULT_SHELL,
-                });
-
-                // Restore backups before reset
-                await this.restorePreservedFiles(repoDir, backups);
-
-                // Perform reset
-                const resetResult = await this.performReset(
-                    repoDir,
-                    templateOwner,
-                    templateRepo,
-                    preserveFiles,
-                    backups,
-                );
-
-                return {
-                    ...resetResult,
-                    conflicts,
-                    fallbackOccurred: true,
-                };
-            }
-
-            // Step 6: No conflicts - restore preserved files and commit
-            await this.restorePreservedFiles(repoDir, backups);
-
-            // Stage all changes
-            await this.commandManager.execute(`git add -A`, {
-                cwd: repoDir, timeout: TIMEOUTS.QUICK, shell: DEFAULT_SHELL,
-            });
-
-            // Check if there are changes to commit
-            const statusResult = await this.commandManager.execute(`git status --porcelain`, {
-                cwd: repoDir, timeout: TIMEOUTS.QUICK, shell: DEFAULT_SHELL,
-            });
-
-            if (statusResult.stdout.trim()) {
-                const commitResult = await this.commandManager.execute(
-                    `git commit -m "chore: sync with template"`,
-                    { cwd: repoDir, timeout: TIMEOUTS.QUICK, shell: DEFAULT_SHELL },
-                );
-                if (commitResult.code !== 0) {
-                    throw new Error(`Failed to commit: ${commitResult.stderr}`);
-                }
-            }
-
-            // Get commit SHA
-            const shaResult = await this.commandManager.execute(`git rev-parse HEAD`, {
-                cwd: repoDir, timeout: TIMEOUTS.QUICK, shell: DEFAULT_SHELL,
-            });
-            const syncedCommit = shaResult.stdout.trim();
-
-            // Step 7: Push to origin
-            this.logger.debug(`[TemplateSync] Pushing to origin...`);
-            const pushResult = await this.commandManager.execute(`git push origin main`, {
-                cwd: repoDir, timeout: TIMEOUTS.LONG, shell: DEFAULT_SHELL,
-            });
-            if (pushResult.code !== 0) {
-                throw new Error(`Failed to push: ${pushResult.stderr}`);
-            }
-
-            this.logger.info(`[TemplateSync] Merge completed successfully`);
-            return {
-                success: true,
-                strategy: 'merge',
-                syncedCommit,
-            };
-        } catch (error) {
-            this.logger.error(`[TemplateSync] Merge failed`, error as Error);
-            return {
-                success: false,
-                strategy: 'merge',
-                syncedCommit: '',
-                error: (error as Error).message,
-            };
-        } finally {
-            // Clean up temp directory
-            try {
-                await fs.rm(tempDir, { recursive: true, force: true });
-            } catch (cleanupError) {
-                this.logger.warn(`[TemplateSync] Failed to clean up temp directory: ${(cleanupError as Error).message}`);
-            }
-        }
+        this.logger.info(`[TemplateSync] Merge completed successfully`);
+        return { success: true, strategy: 'merge', syncedCommit: outcome.templateHead };
     }
 
-    /**
-     * Full reset to template (loses customizations except preserved files)
-     */
-    private async resetToTemplate(
-        repoOwner: string,
-        repoName: string,
-        templateOwner: string,
-        templateRepo: string,
-        preserveFiles: string[],
-    ): Promise<TemplateSyncResult> {
-        // The SHARED instance. NOTE: these two sites only call getToken() and never
-        // validate, so a fresh instance cost nothing here — this is consistency with
-        // the other 34 call sites, not a fix for a redundant round trip.
-        const { tokenService: githubTokenService } = getGitHubServices(this.secrets);
-        const token = await githubTokenService.getToken();
-        if (!token) {
-            return {
-                success: false,
-                strategy: 'reset',
-                syncedCommit: '',
-                error: 'Not authenticated with GitHub',
-            };
-        }
+    /** Reset the checkout to the template's content, keeping the preserved files; force-push. */
+    private async performReset(checkout: Checkout, commitMessage: string): Promise<TemplateSyncResult> {
+        const { repoDir, backups, branch } = checkout;
+        const git: GitStep = (command, timeout) => this.git(repoDir, command, timeout);
+        const templateHead = await readTemplateHead(git);
 
-        const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'template-sync-'));
-        this.logger.info(`[TemplateSync] Starting reset from ${templateOwner}/${templateRepo} to ${repoOwner}/${repoName}`);
-
-        try {
-            // Step 1: Clone user's repo
-            this.logger.debug(`[TemplateSync] Cloning user repo...`);
-            const userRepoUrl = injectTokenIntoUrl(`https://github.com/${repoOwner}/${repoName}.git`, token.token);
-            const cloneResult = await this.commandManager.execute(
-                `git clone --depth 1 --branch main "${userRepoUrl}" repo`,
-                { cwd: tempDir, timeout: TIMEOUTS.LONG, shell: DEFAULT_SHELL },
-            );
-            if (cloneResult.code !== 0) {
-                throw new Error(`Failed to clone user repo: ${cloneResult.stderr}`);
-            }
-
-            const repoDir = path.join(tempDir, 'repo');
-
-            // Step 2: Backup preserved files
-            const backups = await this.backupPreservedFiles(repoDir, preserveFiles);
-
-            // Step 3: Add template as remote and fetch
-            this.logger.debug(`[TemplateSync] Fetching template repo...`);
-            const templateUrl = `https://github.com/${templateOwner}/${templateRepo}.git`;
-            await this.commandManager.execute(`git remote add template "${templateUrl}"`, {
-                cwd: repoDir, timeout: TIMEOUTS.QUICK, shell: DEFAULT_SHELL,
-            });
-
-            const fetchResult = await this.commandManager.execute(`git fetch template main`, {
-                cwd: repoDir, timeout: TIMEOUTS.LONG, shell: DEFAULT_SHELL,
-            });
-            if (fetchResult.code !== 0) {
-                throw new Error(`Failed to fetch template: ${fetchResult.stderr}`);
-            }
-
-            // Step 4: Perform reset
-            const resetResult = await this.performReset(
-                repoDir,
-                templateOwner,
-                templateRepo,
-                preserveFiles,
-                backups,
-            );
-
-            return resetResult;
-        } catch (error) {
-            this.logger.error(`[TemplateSync] Reset failed`, error as Error);
-            return {
-                success: false,
-                strategy: 'reset',
-                syncedCommit: '',
-                error: (error as Error).message,
-            };
-        } finally {
-            // Clean up temp directory
-            try {
-                await fs.rm(tempDir, { recursive: true, force: true });
-            } catch (cleanupError) {
-                this.logger.warn(`[TemplateSync] Failed to clean up temp directory: ${(cleanupError as Error).message}`);
-            }
-        }
-    }
-
-    /**
-     * Perform the actual reset operation (shared by merge fallback and reset strategy)
-     */
-    private async performReset(
-        repoDir: string,
-        templateOwner: string,
-        templateRepo: string,
-        preserveFiles: string[],
-        backups: Map<string, string>,
-    ): Promise<TemplateSyncResult> {
-        // Reset to template's content
-        this.logger.debug(`[TemplateSync] Resetting to template content...`);
-        const readTreeResult = await this.commandManager.execute(
-            `git read-tree --reset -u template/main`,
-            { cwd: repoDir, timeout: TIMEOUTS.NORMAL, shell: DEFAULT_SHELL },
+        this.logger.debug(`[TemplateSync] Resetting to template content`);
+        const readTreeResult = await this.git(
+            repoDir, `git read-tree --reset -u template/main`, TIMEOUTS.NORMAL,
         );
         if (readTreeResult.code !== 0) {
-            throw new Error(`Failed to read template tree: ${readTreeResult.stderr}`);
+            throw new TemplateSyncStepError("Could not read the template's files.", readTreeResult.stderr);
         }
 
-        // Restore preserved files
-        await this.restorePreservedFiles(repoDir, backups);
-
-        // Stage and commit
-        await this.commandManager.execute(`git add -A`, {
-            cwd: repoDir, timeout: TIMEOUTS.QUICK, shell: DEFAULT_SHELL,
-        });
-
-        const statusResult = await this.commandManager.execute(`git status --porcelain`, {
-            cwd: repoDir, timeout: TIMEOUTS.QUICK, shell: DEFAULT_SHELL,
-        });
-
-        if (statusResult.stdout.trim()) {
-            const commitResult = await this.commandManager.execute(
-                `git commit -m "chore: sync with template (reset)"`,
-                { cwd: repoDir, timeout: TIMEOUTS.QUICK, shell: DEFAULT_SHELL },
-            );
-            if (commitResult.code !== 0) {
-                throw new Error(`Failed to commit: ${commitResult.stderr}`);
-            }
-        }
-
-        // Get commit SHA
-        const shaResult = await this.commandManager.execute(`git rev-parse HEAD`, {
-            cwd: repoDir, timeout: TIMEOUTS.QUICK, shell: DEFAULT_SHELL,
-        });
-        const syncedCommit = shaResult.stdout.trim();
-
-        // Push with force (reset may rewrite history)
-        this.logger.debug(`[TemplateSync] Pushing to origin...`);
-        const pushResult = await this.commandManager.execute(`git push origin main --force`, {
-            cwd: repoDir, timeout: TIMEOUTS.LONG, shell: DEFAULT_SHELL,
-        });
-        if (pushResult.code !== 0) {
-            throw new Error(`Failed to push: ${pushResult.stderr}`);
-        }
+        await restorePreservedFiles(repoDir, backups, this.logger);
+        // Force: a reset may rewrite history.
+        await this.commitAndPush(repoDir, commitMessage, `git push origin ${branch} --force`);
 
         this.logger.info(`[TemplateSync] Reset completed successfully`);
-        return {
-            success: true,
-            strategy: 'reset',
-            syncedCommit,
-        };
+        return { success: true, strategy: 'reset', syncedCommit: templateHead };
     }
 
-    /**
-     * Backup preserved files before sync
-     */
-    private async backupPreservedFiles(
+    /** Stage everything, commit when anything is staged, and push. */
+    private async commitAndPush(
         repoDir: string,
-        preserveFiles: string[],
-    ): Promise<Map<string, string>> {
-        const backups = new Map<string, string>();
+        message: string,
+        pushCommand: string,
+    ): Promise<void> {
+        const staged = await this.git(repoDir, `git add -A`, TIMEOUTS.QUICK);
+        if (staged.code !== 0) {
+            throw new TemplateSyncStepError("Could not stage the template's changes.", staged.stderr);
+        }
 
-        for (const filePath of preserveFiles) {
-            const fullPath = path.join(repoDir, filePath);
-            try {
-                const content = await fs.readFile(fullPath, 'utf-8');
-                backups.set(filePath, content);
-                this.logger.debug(`[TemplateSync] Backed up ${filePath}`);
-            } catch {
-                // File doesn't exist - that's okay, skip it
-                this.logger.debug(`[TemplateSync] File ${filePath} not found, skipping backup`);
+        const statusResult = await this.git(repoDir, `git status --porcelain`, TIMEOUTS.QUICK);
+        if (statusResult.stdout.trim()) {
+            const commit = `git commit -m "${message}"`;
+            const commitResult = await this.git(repoDir, commit, TIMEOUTS.QUICK);
+            if (commitResult.code !== 0) {
+                throw new TemplateSyncStepError(
+                    "Could not commit the template's changes.", commitResult.stderr,
+                );
             }
         }
 
-        return backups;
-    }
-
-    /**
-     * Restore preserved files after sync
-     */
-    private async restorePreservedFiles(
-        repoDir: string,
-        backups: Map<string, string>,
-    ): Promise<void> {
-        for (const [filePath, content] of backups) {
-            const fullPath = path.join(repoDir, filePath);
-            try {
-                // Ensure directory exists
-                await fs.mkdir(path.dirname(fullPath), { recursive: true });
-                await fs.writeFile(fullPath, content, 'utf-8');
-                this.logger.debug(`[TemplateSync] Restored ${filePath}`);
-            } catch (error) {
-                this.logger.warn(`[TemplateSync] Failed to restore ${filePath}: ${(error as Error).message}`);
-            }
+        this.logger.debug(`[TemplateSync] Pushing to origin`);
+        const pushResult = await this.git(repoDir, pushCommand, TIMEOUTS.LONG);
+        if (pushResult.code !== 0) {
+            throw new TemplateSyncStepError('Could not push the update to GitHub.', pushResult.stderr);
         }
     }
 

@@ -16,6 +16,7 @@
  * ("rejects a NON-standalone integration at the add door" and siblings).
  */
 
+import './appBuilderComponentRunner.runtimeMock';
 import type { AppBuilderComponentState, ComponentInstance, Project } from '@/types/base';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 

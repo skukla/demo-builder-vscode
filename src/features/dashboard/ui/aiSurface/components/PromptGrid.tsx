@@ -96,7 +96,7 @@ export function PromptGrid({
                 <SearchHeader
                     searchQuery={searchQuery}
                     onSearchQueryChange={setSearchQuery}
-                    searchPlaceholder="Search prompts..."
+                    searchPlaceholder="Search prompts"
                     totalCount={userPrompts.length}
                     filteredCount={filteredPrompts.length}
                     itemNoun="prompt"

@@ -39,7 +39,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
     });
 
     describe('resetting', () => {
-        // "Remove data…", not "Reset…": a project RESET restores the pack, so the
+        // "Remove data", not "Reset…": a project RESET restores the pack, so the
         // same word meant opposite things one menu apart.
         const resetButton = () => screen.getByRole('button', { name: /^remove data/i });
         const resetCalls = () => mockRequest.mock.calls.filter((c) => c[0] === 'reset-datapack');
@@ -138,7 +138,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
 
     /**
      * In-flight states use the HOUSE vocabulary, not silence: busy buttons swap
-     * their label and disable (ManageApisModal's 'Applying…' pattern), and the
+     * their label and disable (ManageApisModal's 'Applying' pattern), and the
      * body shows a LoadingDisplay while a start/reset is in flight. Both exist
      * because the first live dry run gave the user NO feedback of any kind
      * between the press and the verdict.
@@ -159,7 +159,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
 
             await press(screen.getByRole('button', { name: /^dry run$/i }));
 
-            expect(await screen.findByRole('button', { name: /checking…/i })).toBeInTheDocument();
+            expect(await screen.findByRole('button', { name: /^checking$/i })).toBeInTheDocument();
         });
 
         it('shows a spinner while an import is starting', async () => {
@@ -171,7 +171,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
             await press(startButton());
 
             expect(await screen.findByText(/starting import/i)).toBeInTheDocument();
-            expect(screen.getByRole('button', { name: /starting…/i })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /^starting$/i })).toBeInTheDocument();
         });
 
         // All three in-flight states share one visual: the form swaps for a
@@ -197,7 +197,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
             await press(screen.getByRole('checkbox', { name: 'Categories' }));
 
             await press(screen.getByRole('button', { name: /^dry run$/i }));
-            await screen.findByRole('button', { name: /checking…/i });
+            await screen.findByRole('button', { name: /^checking$/i });
 
             expect(screen.getByRole('button', { name: /start import/i })).toHaveAttribute(
                 'aria-disabled',
@@ -510,7 +510,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
             });
             renderModal();
 
-            expect(await screen.findByText(/Importing Products… 1 of 2 done/i)).toBeInTheDocument();
+            expect(await screen.findByText(/Importing Products · 1 of 2 done/i)).toBeInTheDocument();
         });
 
         /** Before any type reports there is no honest count, so the line stays away. */

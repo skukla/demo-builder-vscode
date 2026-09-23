@@ -349,6 +349,36 @@ describe('ADR-015: handlers return results (push-message ratchet)', () => {
     });
 });
 
+describe('a domain error lives with the domain that throws it', () => {
+    it('the central error hierarchy only shrinks', () => {
+        // Measured 2026-09-10 across all 21 Error subclasses in src/: the CENTRAL
+        // module accounted for four throws in the whole codebase, against 354 plain
+        // `throw new Error(...)`. The errors that are actually used are defined beside
+        // the code that throws them — DaLiveAuthError 8 thrown / 11 caught,
+        // DataInstallerApiError 9/4, ToolManagerError 9/1.
+        //
+        // Three of core's six domain errors — ValidationError, PrerequisiteError,
+        // MeshError — had never been thrown OR caught anywhere, while
+        // docs/architecture/error-handling.md listed all three as part of the
+        // hierarchy. They were deleted the day this was measured.
+        //
+        // So the rule is not "use the central errors" — that would be a policy against
+        // 354 counter-examples. It is that the central module is legacy and may only
+        // shrink; a new domain error goes next to its domain, where the used ones live.
+        // IT REACHED ZERO on 2026-09-11, and that broke this check's own control.
+        // The control asserted `count > 0` to prove the file was still being read — a
+        // control that depends on a real violation, which stops working the day the
+        // corpus is clean. The same thing happened twice on 2026-08-31 to two other
+        // checks here. So the control now proves the module is READ, by naming what
+        // replaced the hierarchy, and the count is pinned at zero like any other
+        // ratchet: it may not grow back.
+        const errorsModule = src.get('src/core/errors/index.ts') as string;
+        expect(errorsModule).toContain('export interface FailureShape');
+        const count = (errorsModule.match(/^export class \w+/gm) ?? []).length;
+        expectCeiling(LEDGER, 'coreErrorClasses', count);
+    });
+});
+
 describe('ADR-015: a handler translates and returns — it never renders', () => {
     /**
      * A handler's job is to turn a message into a result. The moment it imports

@@ -84,14 +84,14 @@ export class StepLogger {
         // Default templates
         const defaults: LoggingTemplates = {
             operations: {
-                checking: 'Checking {item}...',
-                fetching: 'Fetching {item}...',
-                installing: 'Installing {item}...',
-                creating: 'Creating {item}...',
-                loading: 'Loading {item}...',
-                validating: 'Validating {item}...',
-                configuring: 'Configuring {item}...',
-                starting: 'Starting {item}...',
+                checking: 'Checking {item}',
+                fetching: 'Fetching {item}',
+                installing: 'Installing {item}',
+                creating: 'Creating {item}',
+                loading: 'Loading {item}',
+                validating: 'Validating {item}',
+                configuring: 'Configuring {item}',
+                starting: 'Starting {item}',
                 completed: '{item} completed successfully',
                 failed: '{item} failed',
             },
@@ -258,7 +258,7 @@ export class StepLogger {
      */
     public logStepStart(stepId: string) {
         const stepName = this.getStepName(stepId);
-        this.logger.debug(`[${stepName}] Starting ${stepName.toLowerCase()}...`);
+        this.logger.debug(`[${stepName}] Starting ${stepName.toLowerCase()}`);
     }
 
     /**

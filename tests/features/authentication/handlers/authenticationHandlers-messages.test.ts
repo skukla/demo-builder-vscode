@@ -26,15 +26,15 @@ describe('authenticationHandlers - Message Patterns', () => {
         });
 
         describe('handleCheckAuth message behavior', () => {
-            it('should use constant "Checking authentication status..." during checking', async () => {
+            it('should use constant "Checking authentication status" during checking', async () => {
                 (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(false);
 
                 await handleCheckAuth(mockContext);
 
                 expect(mockContext.sendMessage).toHaveBeenCalledWith('auth-status', {
                     isChecking: true,
-                    message: 'Checking authentication status...',
-                    subMessage: 'Validating authorization token...',
+                    message: 'Checking authentication status',
+                    subMessage: 'Validating authorization token',
                 });
             });
 
@@ -49,14 +49,14 @@ describe('authenticationHandlers - Message Patterns', () => {
                 // Initial message is always the same
                 expect(mockContext.sendMessage).toHaveBeenCalledWith('auth-status', {
                     isChecking: true,
-                    message: 'Checking authentication status...',
-                    subMessage: 'Validating authorization token...',
+                    message: 'Checking authentication status',
+                    subMessage: 'Validating authorization token',
                 });
             });
         });
 
         describe('handleAuthenticate message constancy during loading', () => {
-            it('should use constant "Signing in..." when starting authentication', async () => {
+            it('should use constant "Signing in" when starting authentication', async () => {
                 (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(false);
                 (mockContext.authManager!.login as jest.Mock).mockResolvedValue(true);
                 (mockContext.authManager!.getCurrentOrganization as jest.Mock).mockResolvedValue(mockOrg);
@@ -66,8 +66,8 @@ describe('authenticationHandlers - Message Patterns', () => {
 
                 expect(mockContext.sendMessage).toHaveBeenCalledWith('auth-status', {
                     isChecking: true,
-                    message: 'Signing in...',
-                    subMessage: 'Opening browser...',
+                    message: 'Signing in',
+                    subMessage: 'Opening browser',
                     isAuthenticated: false,
                 });
             });
@@ -81,8 +81,8 @@ describe('authenticationHandlers - Message Patterns', () => {
 
                 expect(mockContext.sendMessage).toHaveBeenCalledWith('auth-status', {
                     isChecking: true,
-                    message: 'Signing in...',
-                    subMessage: 'Starting fresh login...',
+                    message: 'Signing in',
+                    subMessage: 'Starting fresh login',
                     isAuthenticated: false,
                 });
             });
@@ -99,8 +99,8 @@ describe('authenticationHandlers - Message Patterns', () => {
                 // Same message regardless of initial state
                 expect(mockContext.sendMessage).toHaveBeenCalledWith('auth-status', {
                     isChecking: true,
-                    message: 'Signing in...',
-                    subMessage: 'Starting fresh login...',
+                    message: 'Signing in',
+                    subMessage: 'Starting fresh login',
                     isAuthenticated: false,
                 });
             });
@@ -119,8 +119,8 @@ describe('authenticationHandlers - Message Patterns', () => {
                 // Check messages during already-authenticated flow
                 expect(mockContext.sendMessage).toHaveBeenCalledWith('auth-status', {
                     isChecking: true,
-                    message: 'Verifying authentication...',
-                    subMessage: 'Checking Adobe credentials...',
+                    message: 'Verifying authentication',
+                    subMessage: 'Checking Adobe credentials',
                     isAuthenticated: true, // Shows authenticated during check
                 });
             });
@@ -219,8 +219,8 @@ describe('authenticationHandlers - Message Patterns', () => {
 
                 expect(mockContext.sendMessage).toHaveBeenCalledWith('auth-status', {
                     isChecking: true,
-                    message: 'Signing in...',
-                    subMessage: 'Opening browser...',
+                    message: 'Signing in',
+                    subMessage: 'Opening browser',
                     isAuthenticated: false,
                 });
             });
@@ -234,8 +234,8 @@ describe('authenticationHandlers - Message Patterns', () => {
 
                 expect(mockContext.sendMessage).toHaveBeenCalledWith('auth-status', {
                     isChecking: true,
-                    message: 'Signing in...',
-                    subMessage: 'Starting fresh login...',
+                    message: 'Signing in',
+                    subMessage: 'Starting fresh login',
                     isAuthenticated: false,
                 });
             });

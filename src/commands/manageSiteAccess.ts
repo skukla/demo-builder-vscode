@@ -35,6 +35,10 @@ import type {
     ConfigWriteAccess,
 } from '@/features/eds/services/configService/configServiceAccess';
 import {
+    GITHUB_APP_SETTINGS_URL,
+    describeNoAdminRoleRemedy,
+} from '@/features/eds/services/configService/noAdminRoleRemedy';
+import {
     addSiteAdmin,
     listSiteAccess,
     looksLikeEmail,
@@ -44,10 +48,6 @@ import {
 } from '@/features/eds/services/configService/siteAccessManagerHeadless';
 import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
 import { GITHUB_APP_INSTALL_URL } from '@/features/eds/services/github/githubAppService';
-import {
-    GITHUB_APP_SETTINGS_URL,
-    describeNoAdminRoleRemedy,
-} from '@/features/eds/services/configService/noAdminRoleRemedy';
 import type { Project } from '@/types/base';
 import { getEdsRepoParts } from '@/types/typeGuards';
 
@@ -241,7 +241,7 @@ export class ManageSiteAccessCommand extends BaseCommand {
                     site,
                     this.logger,
                     (attempt, total) =>
-                        progress.report({ message: `Checking access (${attempt}/${total})…` }),
+                        progress.report({ message: `Checking access (${attempt}/${total})` }),
                 ),
         );
 
@@ -268,7 +268,7 @@ export class ManageSiteAccessCommand extends BaseCommand {
     /** Current admins as rows, plus the add action. */
     private buildItems(listing: SiteAccessListing): AccessAction[] {
         const items: AccessAction[] = [
-            { label: '$(add) Add a configuration admin…', action: 'add' },
+            { label: '$(add) Add a configuration admin', action: 'add' },
         ];
 
         const siteAdmins = listing.siteAdmins ?? [];

@@ -4,7 +4,7 @@
  * Org-context is surfaced two ways, both fed by the on-open orchestrator's
  * `checkResult` message (checkId `org-context`): a `pending` telegraph then an
  * `ok` / `warning` (mismatch) / `unknown` outcome.
- *  - the "IMS Org" STATUS BADGE — ambient health: blue "Checking…" → green with
+ *  - the "IMS Org" STATUS BADGE — ambient health: blue "Checking" → green with
  *    the org name (ok) / red with the (wrong) org name (mismatch) / gray "Not
  *    checked" + a "Sign in to check" action (unknown). Shown only for Adobe projects.
  *  - the mismatch BANNER — the actionable half: appears only on mismatch with a
@@ -65,7 +65,7 @@ describe('ProjectDashboardScreen - Org Context (badge + banner)', () => {
         await screen.findByText(/Switch IMS Org/i);
     };
 
-    it('shows a blue "Checking…" IMS Org badge before the check resolves', () => {
+    it('shows a blue "Checking" IMS Org badge before the check resolves', () => {
         renderDashboard({ hasAdobeContext: true });
 
         const badge = imsOrgBadge();
@@ -169,7 +169,7 @@ describe('ProjectDashboardScreen - Org Context (badge + banner)', () => {
         expect(webviewClient.request).toHaveBeenCalledWith('switchOrg');
     });
 
-    it('shows a disabled "Switching…" button while the forced switch is in flight', async () => {
+    it('shows a disabled "Switching" button while the forced switch is in flight', async () => {
         const { webviewClient } = require('@/core/ui/utils/WebviewClient');
         // Default request mock never resolves — the switch stays in flight.
         webviewClient.request.mockReturnValue(new Promise(() => {}));
@@ -190,7 +190,7 @@ describe('ProjectDashboardScreen - Org Context (badge + banner)', () => {
         await showMismatchBanner();
 
         // Re-query each time: after the first press the button flips to a disabled
-        // "Switching…" state — a second press must not fire the round-trip again.
+        // "Switching" state — a second press must not fire the round-trip again.
         const liveSwitchButton = () =>
             screen.getByText(/Switch IMS Org|Switching/i).closest('button')!;
         fireEvent.click(liveSwitchButton());

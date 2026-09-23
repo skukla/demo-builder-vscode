@@ -230,10 +230,30 @@ describe('start-datapack-export', () => {
             ],
         });
 
-        const result = await importHandlers['start-datapack-export'](makeImportHarness(), PAYLOAD);
+        const harness = makeImportHarness();
+        const result = await importHandlers['start-datapack-export'](harness, PAYLOAD);
 
         expect(result.success).toBe(true); // the call worked; the export did not
         expect(JSON.stringify(result.data)).toContain('MongoDB connection URI required');
+        // The logs say so too: the service answers 200 with the failure inside, and
+        // the door used to log "200" and "ok" — a failed export read as a success.
+        // The LEVEL is the assertion (a failure is a warning, not an info line); the
+        // wording is not pinned (tests/sop/no-logger-wording-assertions.test.ts).
+        expect(harness.logger.warn).toHaveBeenCalledTimes(1);
+        expect(harness.logger.info).not.toHaveBeenCalledWith(expect.stringContaining('Exported'));
+    });
+
+    it('logs each data type that exported, with its counts', async () => {
+        startExport.mockResolvedValue({
+            success: true,
+            perType: [{ dataType: 'attribute_sets', success: true, exported: 4, excluded: 1 }],
+        });
+        const harness = makeImportHarness();
+
+        await importHandlers['start-datapack-export'](harness, PAYLOAD);
+
+        expect(harness.logger.info).toHaveBeenCalledTimes(1);
+        expect(harness.logger.warn).not.toHaveBeenCalled();
     });
 
     it('refuses when the project has no usable Commerce credentials', async () => {

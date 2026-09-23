@@ -173,7 +173,7 @@ export function DatapackActivityView(): React.JSX.Element {
         return (
             <View height="100vh">
                 <Flex justifyContent="center" alignItems="center" height="100%">
-                    <LoadingDisplay size="L" message="Loading activity..." />
+                    <LoadingDisplay size="L" message="Loading activity" />
                 </Flex>
             </View>
         );
@@ -241,7 +241,7 @@ function renderActivityBody({
     if (!settled || (loading && entries.length === 0)) {
         // Inline, under the filter that is still on screen — not the full-block
         // takeover, which would remove it.
-        return <LoadingDisplay size="M" message="Loading activity..." />;
+        return <LoadingDisplay size="M" message="Loading activity" />;
     }
     if (entries.length === 0) {
         return (

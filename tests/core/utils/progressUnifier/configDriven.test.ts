@@ -137,7 +137,7 @@ describe('ProgressUnifier - Config-Driven Approach', () => {
             // Given: A step with synthetic progressStrategy (unknown duration)
             const step = createMockStep(
                 'Run build',
-                'Building...',
+                'Building',
                 'synthetic',
                 'npm run build',
                 20000 // estimated 20 seconds

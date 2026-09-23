@@ -119,6 +119,42 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
     list_github_repos: { bytes: 6_000, why: 'paged at 30; 2,835 live across 173 repos' },
     list_dalive_sites: { bytes: 8_000, why: 'paged summary; 204 live' },
     delete_github_repo: { bytes: 1_000, why: 'delete outcome or refusal' },
+    probe_shared_demo: {
+        bytes: 4_000,
+        why: 'one read: the kind, codes, pages, B2B posture, the description file when present, and its warnings',
+    },
+    add_shared_demo: {
+        bytes: 1_500,
+        why: 'the id, name, source and kind of the remembered row plus the probe warnings, or the zip confirm refusal',
+    },
+    forget_added_demo: {
+        bytes: 1_000,
+        why: 'the demo name, its source, a project count and the outcome, or the confirm or zip-repository refusal naming the same',
+    },
+    edit_added_demo: {
+        bytes: 600,
+        why: 'the id, the name and the description of the edited card, or the refusal naming the repository',
+    },
+    change_demo_source: {
+        bytes: 2_000,
+        why: 'the new and previous sources plus the probe warnings; the row itself is not echoed',
+    },
+    get_demo_package_preview: {
+        bytes: 2_500,
+        why: 'the prefilled draft, up to a handful of one-sentence checks, the link and three flags',
+    },
+    save_demo_package: {
+        bytes: 2_500,
+        why: 'the link, what happened to the file, the template flag, the same checks and one hint; or the refusal carrying the checks',
+    },
+    export_demo_bundle: {
+        bytes: 500,
+        why: 'the path, the file count, the byte size and the parts; or one error sentence',
+    },
+    remove_demo_package: {
+        bytes: 600,
+        why: 'what happened to the file, the card and the flag; or the refusal with the save date',
+    },
     cleanup_dalive_site: { bytes: 1_000, why: 'delete outcome or refusal' },
 
     // ── Diagnostics ─────────────────────────────────────────────────────────
@@ -190,6 +226,14 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
     create_adobe_workspace: {
         bytes: 1_000,
         why: 'created workspace id + name and the project it landed in',
+    },
+    delete_adobe_workspace: {
+        bytes: 1_000,
+        why: 'a delete verdict plus the two ids, or the reason Console refused',
+    },
+    rename_adobe_project: {
+        bytes: 1_000,
+        why: 'a rename verdict with the id and new title, or the reason Adobe refused',
     },
     delete_adobe_project: {
         bytes: 4_000,

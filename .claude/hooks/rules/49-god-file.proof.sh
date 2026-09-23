@@ -42,7 +42,7 @@ run() {
 }
 
 echo "=== over the limit for its kind ==="
-run "$ROOT/src/features/app-builder/services/appBuilderComponentRunner.ts"  "1121-line service (>400)"  god-file
+run "$ROOT/src/features/app-builder/services/appBuilderComponentRunner.ts"  "the runner, a service over 400 lines"  god-file
 run "$ROOT/src/features/projects-dashboard/handlers/dashboardHandlers.ts"   "928-line handler (>500)"   god-file
 run "$ROOT/src/features/dashboard/ui/components/ActionGrid.tsx"             "660-line component (>350)" god-file
 
@@ -58,9 +58,13 @@ run "$ROOT/src/types/messages.ts"                     "a barrel-ish types file" 
 
 echo
 echo "=== the message must state the MEASUREMENT, not just scold ==="
-payload=$(P="$ROOT/src/features/app-builder/services/appBuilderComponentRunner.ts" S="god-msg-$RANDOM$$" python3 -c 'import json,os;print(json.dumps({"tool_name":"Edit","tool_input":{"file_path":os.environ["P"],"new_string":"x"},"session_id":os.environ["S"]}))')
+# The count is read from the file, the way the rule reads it. A literal here (it was
+# 1251) failed the proof on the next one-line edit to the file it names.
+GOD_FILE="$ROOT/src/features/app-builder/services/appBuilderComponentRunner.ts"
+GOD_LINES=$(wc -l < "$GOD_FILE" | tr -d ' ')
+payload=$(P="$GOD_FILE" S="god-msg-$RANDOM$$" python3 -c 'import json,os;print(json.dumps({"tool_name":"Edit","tool_input":{"file_path":os.environ["P"],"new_string":"x"},"session_id":os.environ["S"]}))')
 msg=$(printf '%s' "$payload" | bash .claude/hooks/router.sh 2>&1)
-if printf '%s' "$msg" | grep -q '1121 lines' && printf '%s' "$msg" | grep -q '400-line limit'; then
+if printf '%s' "$msg" | grep -q "${GOD_LINES} lines" && printf '%s' "$msg" | grep -q '400-line limit'; then
   printf '%-58s expect=%-20s got=%-20s %s\n' "names the real line count and the limit" measured measured OK
 else
   printf '%-58s expect=%-20s got=%-20s %s\n' "names the real line count and the limit" measured vague '*** WRONG ***'

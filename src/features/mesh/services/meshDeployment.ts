@@ -59,7 +59,7 @@ async function validateMeshConfig(
     const meshConfigPath = path.join(componentPath, 'mesh.json');
     await fsPromises.access(meshConfigPath);
 
-    onProgress?.('Reading mesh configuration...', '');
+    onProgress?.('Reading mesh configuration', '');
 
     const meshConfigContent = await fsPromises.readFile(meshConfigPath, 'utf-8');
     const config = parseJSON<Record<string, unknown>>(meshConfigContent);
@@ -150,7 +150,7 @@ export async function deployMeshComponent(
         }
 
         onProgress?.(
-            'Deploying API Mesh...',
+            'Deploying API Mesh',
             existingMeshId ? 'Updating existing mesh' : 'Creating mesh',
         );
 
@@ -166,16 +166,16 @@ export async function deployMeshComponent(
                         const output = data.toLowerCase();
                         const verb = command === 'update' ? 'updated' : 'created';
                         if (output.includes('validating')) {
-                            onProgress?.('Deploying...', 'Validating configuration');
+                            onProgress?.('Deploying', 'Validating configuration');
                         } else if (output.includes('updating') || output.includes('creating')) {
                             onProgress?.(
-                                'Deploying...',
+                                'Deploying',
                                 `${command === 'update' ? 'Updating' : 'Creating'} mesh infrastructure`,
                             );
                         } else if (output.includes('deploying')) {
-                            onProgress?.('Deploying...', 'Deploying mesh');
+                            onProgress?.('Deploying', 'Deploying mesh');
                         } else if (output.includes('success')) {
-                            onProgress?.('Deploying...', `Mesh ${verb} successfully`);
+                            onProgress?.('Deploying', `Mesh ${verb} successfully`);
                         }
                     },
                     configureTelemetry: false,
@@ -198,7 +198,7 @@ export async function deployMeshComponent(
             meshAlreadyExists(deployResult)
         ) {
             logger.info('[Mesh Deployment] Workspace already has a mesh — retrying as update');
-            onProgress?.('Deploying API Mesh...', 'Existing mesh found — updating instead');
+            onProgress?.('Deploying API Mesh', 'Existing mesh found — updating instead');
             meshCommand = 'update';
             deployResult = await runMeshCommand('update');
         } else if (
@@ -207,7 +207,7 @@ export async function deployMeshComponent(
             meshNotFound(deployResult)
         ) {
             logger.info('[Mesh Deployment] Remote mesh no longer exists — retrying as create');
-            onProgress?.('Deploying API Mesh...', 'Mesh not found — creating instead');
+            onProgress?.('Deploying API Mesh', 'Mesh not found — creating instead');
             meshCommand = 'create';
             deployResult = await runMeshCommand('create');
         }
@@ -216,7 +216,7 @@ export async function deployMeshComponent(
             await handleDeployFailure(deployResult, logger);
         }
 
-        logger.debug(`[Mesh Deployment] ${meshCommand} command completed, verifying deployment...`);
+        logger.debug(`[Mesh Deployment] ${meshCommand} command completed, verifying deployment`);
 
         // Use shared verification utility (same as manual deploy command)
         const { waitForMeshDeployment } = await import('./meshDeploymentVerifier');
@@ -227,7 +227,7 @@ export async function deployMeshComponent(
             // rather than fetching a second one.
             commandManager,
             onProgress: () => {
-                onProgress?.('Verifying deployment...', 'Checking deployment status...');
+                onProgress?.('Verifying deployment', 'Checking deployment status');
             },
             logger: logger,
         });

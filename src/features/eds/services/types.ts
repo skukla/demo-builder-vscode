@@ -26,6 +26,14 @@ export interface GitHubTokenValidation {
     valid: boolean;
     /** Authenticated user info (if valid) */
     user?: GitHubUser;
+    /**
+     * Why it is not valid: there was no token to check, or GitHub rejected the
+     * one there is. A reader that must not change anything (get_auth_status)
+     * needs the difference to say what the SC should do. Absent when the check
+     * itself failed (a 500, a dropped connection), which says nothing about the
+     * credential.
+     */
+    reason?: 'no-token' | 'rejected';
 }
 
 // GitHubUser moved to @/types/webviewPayloads — ONE declaration shared with
@@ -48,6 +56,8 @@ export interface GitHubRepo {
     cloneUrl: string;
     /** Default branch name */
     defaultBranch: string;
+    /** GitHub's template flag (`is_template`). */
+    isTemplate?: boolean;
     /** Repository description (optional, for listing) */
     description?: string | null;
     /** Last updated timestamp (optional, for listing) */
@@ -176,7 +186,7 @@ export interface DaLiveContentSource {
     org: string;
     /** Source site name */
     site: string;
-    /** URL to fetch content index (full-index.json) */
+    /** URL of the content index to copy from (`contentIndexUrl` builds it) */
     indexUrl: string;
     /** Optional URL to fetch media index (media-index.json) */
     mediaIndexUrl?: string;
@@ -327,7 +337,7 @@ export interface EdsProjectConfig {
     contentSource?: {
         org: string;
         site: string;
-        indexPath?: string;
+        indexPath: string;
     };
     /** Selected backend component ID (from stack definition) */
     backendComponentId: string;
@@ -624,16 +634,16 @@ export interface EdsMetadata {
     templateOwner?: string;
     /** Template repository name for update checks */
     templateRepo?: string;
-    /** Commit SHA when project was created or last synced with template.
+    /** Commit SHA when project was created, last reset, or last synced with template.
      *
      *  For thin-layer storefronts (ADR-006), this is the verified canonical
-     *  Last-Known-Good (LKG) SHA read from the patches repo at create time —
+     *  Last-Known-Good (LKG) SHA read from the patches repo at create or reset time —
      *  NOT the template repo's `main` HEAD. `templateUpdateChecker` compares
      *  against the current LKG (read from `lkgSource`), so a storefront is
      *  up-to-date when it matches LKG even if canonical `main` is ahead. */
     lastSyncedCommit?: string;
     /** When set, the storefront is "thin-layer": `lastSyncedCommit` was read
-     *  from this patches repo's `last-known-good` file at create time, and the
+     *  from this patches repo's `last-known-good` file at create or reset time, and the
      *  update checker fetches the current LKG from the same source to compare.
      *  Absent for forked storefronts (legacy / non-thin-layer packages). */
     lkgSource?: {

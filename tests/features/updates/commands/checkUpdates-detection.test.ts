@@ -156,12 +156,12 @@ describe('CheckUpdatesCommand — check phase', () => {
 
             const messages = harness.mockProgress.report.mock.calls.map(([p]) => p.message);
             expect(messages.slice(0, 6)).toEqual([
-                'Checking for updates…',
-                'Checking all projects…',
-                'Checking source repos…',
-                'Checking EDS templates…',
-                'Checking add-ons…',
-                'Checking the Adobe AI tools…',
+                'Checking for updates',
+                'Checking all projects',
+                'Checking source repos',
+                'Checking EDS templates',
+                'Checking add-ons',
+                'Checking the Adobe AI tools',
             ]);
         });
 

@@ -227,7 +227,7 @@ export function SearchHeader(props: SearchHeaderProps) {
         action,
         countTrailing,
     } = props;
-    const searchPlaceholder = props.searchPlaceholder ?? 'Type to filter...';
+    const searchPlaceholder = props.searchPlaceholder ?? 'Type to filter';
     const isRefreshing = props.isRefreshing ?? false;
     const refreshAriaLabel = props.refreshAriaLabel ?? 'Refresh list';
     const autoFocus = props.autoFocus ?? false;

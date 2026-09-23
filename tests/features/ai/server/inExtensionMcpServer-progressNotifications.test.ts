@@ -108,8 +108,8 @@ describe('agent activity is reported to the chat', () => {
 
         expect(ok).toBe(true);
         // Attribution is the point: a chat can have several MCP servers connected,
-        // and an unattributed "Deploying…" is ambiguous the moment it has two.
-        expect(progressMessages).toContain('Demo Builder · Deploying the API mesh…');
+        // and an unattributed "Deploying" is ambiguous the moment it has two.
+        expect(progressMessages).toContain('Demo Builder · Deploying the API mesh');
     });
 
     it('announces READS too — the path is not the path without them', async () => {
@@ -124,7 +124,7 @@ describe('agent activity is reported to the chat', () => {
         );
 
         expect(ok).toBe(true);
-        expect(progressMessages).toContain('Demo Builder · Checking which project is open…');
+        expect(progressMessages).toContain('Demo Builder · Checking which project is open');
     });
 
     it('says nothing for a tool with no authored phrase', async () => {

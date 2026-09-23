@@ -148,12 +148,12 @@ describe('demo-packages.json — bodea package details (thin-layer B2B shape)', 
         });
     });
 
-    it('should carry the same b2b codePatches as the custom package', () => {
-        // Parity is against the real custom package, read from the same
+    it('should carry the same b2b codePatches as the starter package', () => {
+        // Parity is against the real starter package, read from the same
         // config — not a hardcoded copy that silently drifts.
-        const custom = packagesConfig.packages.find((p) => p.id === 'custom');
-        expect(custom).toBeDefined();
-        const customPatches = custom!.storefronts['eds-paas'].codePatches as string[];
+        const starter = packagesConfig.packages.find((p) => p.id === 'starter');
+        expect(starter).toBeDefined();
+        const customPatches = starter!.storefronts['eds-paas'].codePatches as string[];
         expect(customPatches.length).toBeGreaterThan(0);
 
         const pkg = getBodea();

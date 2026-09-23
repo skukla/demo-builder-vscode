@@ -75,7 +75,7 @@ describe('deriveIntegrationCard — status matrix', () => {
 
     // REGRESSION: the live step text used to land ONLY on `message`, which the
     // card FACE never renders (it prints `statusLabel`, IntegrationCard.tsx:181)
-    // — so a deploying integration card sat on a constant "Deploying…" while the
+    // — so a deploying integration card sat on a constant "Deploying" while the
     // steps went to a drawer nobody has open during a deploy. Harmless while the
     // progress notification also carried them; a silent regression the moment it
     // stopped. The mesh card never had this problem: its statusLabel IS the live
@@ -99,7 +99,7 @@ describe('deriveIntegrationCard — status matrix', () => {
     it('deploying with no step reported yet: falls back to the static label', () => {
         const model = deriveIntegrationCard(integration(), { status: 'deploying' });
 
-        expect(model.statusLabel).toBe('Deploying…');
+        expect(model.statusLabel).toBe('Deploying');
     });
 
     // Deliberately NOT promoted to the label: a failure reason is a full CLI
@@ -307,9 +307,9 @@ describe('deriveIntegrationCard — override precedence', () => {
     it('passes the override message through as the status label while deploying', () => {
         const model = deriveIntegrationCard(integration(), {
             status: 'deploying',
-            message: 'Installing dependencies…',
+            message: 'Installing dependencies',
         });
-        expect(model.statusLabel).toBe('Installing dependencies…');
+        expect(model.statusLabel).toBe('Installing dependencies');
         expect(model.message).toBeUndefined();
     });
 

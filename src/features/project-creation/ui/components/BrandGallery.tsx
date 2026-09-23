@@ -7,15 +7,17 @@
  * ArchitectureModal was retired in Slice 2 (Project Builder step).
  */
 
-import { Text } from '@adobe/react-spectrum';
+import { Item, Text } from '@adobe/react-spectrum';
 import React, { useState, useMemo, useCallback } from 'react';
 import { sortPackages, filterPackagesBySearchQuery } from './brandGalleryHelpers';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
+import { CardActionsMenu } from '@/core/ui/components/ui/CardActionsMenu';
 import { SelectionCheck } from '@/core/ui/components/ui/SelectionCheck';
 import { useActivateOnKey } from '@/core/ui/hooks/useActivateOnKey';
 import { cn } from '@/core/ui/utils/classNames';
 import { getBlockLibraryName } from '@/features/components/services/blockLibraryLoader';
+import { isAddedDemoId } from '@/features/components/services/storefrontResolver';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
@@ -34,6 +36,44 @@ export interface BrandGalleryProps {
     customBlockLibraries?: CustomBlockLibrary[];
     /** Optional content to render above the gallery (e.g., project name field) */
     headerContent?: React.ReactNode;
+    /** Open "Add a demo package". When absent the plus card is not rendered. */
+    onAddDemo?: () => void;
+    /** Forget an added demo (its card carries a menu only when this or Edit is given). */
+    onForgetDemo?: (packageId: string) => void;
+    /** Rename an added demo's card and change its description. */
+    onEditDemo?: (packageId: string) => void;
+}
+
+/** The plus card's words, accepted 2026-09-11. */
+export const ADD_DEMO_CARD = {
+    name: 'Add a demo package',
+    description: "Use a colleague's storefront or your own, from a link or a zip file.",
+} as const;
+
+/**
+ * The plus card at the end of the grid: the package card's shape with nothing
+ * to select, so it reads as one of the cards and behaves as a door.
+ */
+function AddDemoCard({ onOpen, isDimmed }: { onOpen: () => void; isDimmed: boolean }) {
+    const handleKeyDown = useActivateOnKey(onOpen);
+    return (
+        <div
+            role="button"
+            tabIndex={0}
+            data-testid="add-demo-card"
+            onClick={onOpen}
+            onKeyDown={handleKeyDown}
+            className={cn('expandable-brand-card', 'add-demo-card', isDimmed && 'dimmed')}
+            aria-label={`${ADD_DEMO_CARD.name}: ${ADD_DEMO_CARD.description}`}
+        >
+            <div className="brand-card-header">
+                <div className="brand-card-title-row">
+                    <Text UNSAFE_className="brand-card-name">{ADD_DEMO_CARD.name}</Text>
+                </div>
+                <Text UNSAFE_className="brand-card-description">{ADD_DEMO_CARD.description}</Text>
+            </div>
+        </div>
+    );
 }
 
 interface PackageCardProps {
@@ -45,6 +85,10 @@ interface PackageCardProps {
     isComplete: boolean;
     isDimmed: boolean;
     onCardClick: () => void;
+    /** Present only on an added demo's card: its menu's Remove. */
+    onForget?: () => void;
+    /** Present only on an added demo's card: its menu's Edit. */
+    onEdit?: () => void;
 }
 
 /**
@@ -59,6 +103,8 @@ function PackageCard({
     isComplete,
     isDimmed,
     onCardClick,
+    onForget,
+    onEdit,
 }: PackageCardProps) {
     const isComingSoon = pkg.status === 'coming-soon';
 
@@ -96,10 +142,30 @@ function PackageCard({
             aria-label={`${pkg.name}: ${pkg.description}`}
         >
             {isComingSoon && <span className="architecture-badge">Coming Soon</span>}
-            {isSelected && <SelectionCheck corner />}
+            {onForget || onEdit ? (
+                <CardActionsMenu
+                    ariaLabel={`More actions for ${pkg.name}`}
+                    className="brand-card-menu-button"
+                    onAction={(key) => (key === 'edit' ? onEdit?.() : onForget?.())}
+                >
+                    {onEdit ? (
+                        <Item key="edit" textValue="Edit">
+                            <Text>Edit</Text>
+                        </Item>
+                    ) : null}
+                    {onForget ? (
+                        <Item key="forget" textValue="Remove">
+                            <Text>Remove</Text>
+                        </Item>
+                    ) : null}
+                </CardActionsMenu>
+            ) : null}
             <div className="brand-card-header">
                 <div className="brand-card-title-row">
                     <Text UNSAFE_className="brand-card-name">{pkg.name}</Text>
+                    {/* Inline, beside the name: an added demo's menu holds the corner,
+                        the way the Integrations card's button does. */}
+                    {isSelected && <SelectionCheck />}
                 </div>
                 <Text UNSAFE_className="brand-card-description">{pkg.description}</Text>
             </div>
@@ -152,6 +218,9 @@ export function BrandGallery({
     selectedBlockLibraries = [],
     customBlockLibraries = [],
     headerContent,
+    onAddDemo,
+    onForgetDemo,
+    onEditDemo,
 }: BrandGalleryProps) {
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -187,7 +256,7 @@ export function BrandGallery({
             <SearchHeader
                 searchQuery={searchQuery}
                 onSearchQueryChange={setSearchQuery}
-                searchPlaceholder="Filter packages..."
+                searchPlaceholder="Filter packages"
                 searchThreshold={2}
                 totalCount={packages.length}
                 filteredCount={filteredPackages.length}
@@ -210,9 +279,18 @@ export function BrandGallery({
                             isComplete={isSelected && !!selectedStackObj}
                             isDimmed={isDimmed}
                             onCardClick={() => onPackageSelect(pkg.id)}
+                            onForget={
+                                onForgetDemo && isAddedDemoId(pkg.id)
+                                    ? () => onForgetDemo(pkg.id)
+                                    : undefined
+                            }
+                            onEdit={onEditDemo && isAddedDemoId(pkg.id) ? () => onEditDemo(pkg.id) : undefined}
                         />
                     );
                 })}
+                {onAddDemo && !searchQuery ? (
+                    <AddDemoCard onOpen={onAddDemo} isDimmed={selectedPackage !== undefined} />
+                ) : null}
             </div>
 
             {searchQuery && filteredPackages.length === 0 && (

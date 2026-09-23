@@ -11,7 +11,7 @@ description: Add a webview message handler/command end-to-end (MessageType → h
 
 ## Procedure
 1. Read the reference pair first: `src/features/mesh/handlers/subscribeHandler.ts` (a real shaped handler) and `src/features/mesh/handlers/meshHandlers.ts` (its feature map).
-2. Add the message type to the `MessageType` union in `src/types/messages.ts`. The union ends in `| string`, so omitting it compiles silently — add it anyway; it is the documented contract.
+2. Type the payload, not the message name. There is no `MessageType` union any more — `459dcbeeb` deleted it as a fake protocol surface (it ended in `| string`, so it checked nothing). A request's payload goes in `@/types/webviewRequests`, a push's in `@/types/webviewPayloads`, and the handler is typed `MessageHandler<ThatPayload>` (see "Typing the channel you touch" below).
 3. Create the handler in the owning feature's `handlers/` directory from the bundled [handler-template.ts](handler-template.ts). Keep the reference ordering: validate payload (`@/core/validation` — mandatory for any value that reaches an Adobe CLI command) → `ensureAuthenticated` pre-flight for Adobe operations → service call → shaped `{ success, error?, code? }` return. Return failures; never throw (`docs/development/sop/consistency-patterns.md` §2).
 4. Register it in the feature handler map: the `defineHandlers({...})` object literal (from `@/types/handlers`), keyed by the message type — e.g. `meshHandlers.ts`.
 5. If the wizard dispatches this message, ALSO register it in `src/features/project-creation/handlers/ProjectCreationHandlerRegistry.ts`. The wizard command (`createProject.ts`) auto-registers only the keys of that composite map via `getRegisteredTypes(projectCreationHandlers)` — a handler that exists only in the feature map is invisible to the wizard.
@@ -73,7 +73,7 @@ gates read, and for the fields its JSX renders. Three different lists.
   (auth + org-mismatch) performs the auth check, whose `aio config get` spawns the whole
   `aio` CLI — seconds on a cold cache. A handler that guards first, then opens
   `withProgress`, shows the user nothing for those seconds and reads as laggy. Put EVERY
-  slow step inside the progress callback with `report('Checking requirements…')` as its
+  slow step inside the progress callback with `report('Checking requirements')` as its
   first line — the shape `deployMeshHeadless` uses. Reported twice (2026-07-31: "it's not
   as immediate as it should be… We've hit this before"), so it is pinned by an ordering
   test in `appBuilderComponentHandlers-drawer.test.ts`.

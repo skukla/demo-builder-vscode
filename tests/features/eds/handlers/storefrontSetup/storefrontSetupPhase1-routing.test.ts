@@ -68,7 +68,6 @@ function makeServices() {
                 fullName: 'skukla/brand-new',
             }),
             waitForContent: jest.fn().mockResolvedValue(undefined),
-            resetToTemplate: jest.fn().mockResolvedValue(undefined),
         },
         githubAppService: {
             getInstallUrl: jest.fn().mockReturnValue('https://github.com/apps/aem-code-sync'),
@@ -145,7 +144,7 @@ describe('executePhaseGitHubRepo — which branch runs', () => {
         );
 
         expect(services.githubRepoOps.createFromTemplate).toHaveBeenCalled();
-        expect(messages(context)).not.toContain('Using existing repository...');
+        expect(messages(context)).not.toContain('Using existing repository');
     });
 
     it('creates a new repo when the mode is existing but no repo was named', async () => {
@@ -161,7 +160,7 @@ describe('executePhaseGitHubRepo — which branch runs', () => {
             config({ repoMode: 'new', createdRepo: CREATED_REPO }),
         );
 
-        expect(messages(context)).toContain('Using repository...');
+        expect(messages(context)).toContain('Using repository');
         expect(repoInfo).toEqual({
             repoOwner: 'skukla',
             repoName: 'made-by-the-wizard',
@@ -181,8 +180,8 @@ describe('executePhaseGitHubRepo — which branch runs', () => {
             }),
         );
 
-        expect(messages(context)).toContain('Using existing repository...');
-        expect(messages(context)).not.toContain('Using repository...');
+        expect(messages(context)).toContain('Using existing repository');
+        expect(messages(context)).not.toContain('Using repository');
         expect(services.githubRepoOps.createFromTemplate).not.toHaveBeenCalled();
     });
 });
@@ -201,8 +200,8 @@ describe('executePhaseGitHubRepo — the pre-created branch', () => {
         );
 
         expect(messages(context)).toEqual([
-            'Using repository...',
-            'Pinning to verified canonical state...',
+            'Using repository',
+            'Pinning to verified canonical state',
             'Repository ready',
         ]);
     });
@@ -215,7 +214,7 @@ describe('executePhaseGitHubRepo — the pre-created branch', () => {
         const sent = (context.sendMessage as jest.Mock).mock.calls.map(([, p]) => p);
         expect(sent[0]).toEqual({
             phase: 'repository',
-            message: 'Using repository...',
+            message: 'Using repository',
             subMessage: 'skukla/made-by-the-wizard',
             progress: 10,
             repoOwner: 'skukla',
@@ -224,7 +223,7 @@ describe('executePhaseGitHubRepo — the pre-created branch', () => {
         });
         expect(sent[1]).toEqual({
             phase: 'repository',
-            message: 'Pinning to verified canonical state...',
+            message: 'Pinning to verified canonical state',
             subMessage: 'skukla/made-by-the-wizard',
             progress: 12,
         });

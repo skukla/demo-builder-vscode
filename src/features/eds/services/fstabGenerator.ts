@@ -62,6 +62,27 @@ function validatePathSegment(value: string, field: string): void {
  * // mountpoints:
  * //   /: https://content.da.live/my-org/my-site/
  */
+/**
+ * Read the DA.live org and site back out of an `fstab.yaml`: the inverse of
+ * {@link generateFstabContent}, matching the one line it writes, and also the
+ * nested form a repository configured by hand or by the AEM Code Sync bot
+ * carries (`/:` over `url:` and `type: markup`), which is what a colleague's
+ * repository most often has — found live 2026-09-12, when a shared storefront
+ * read as having no content site at all. A repository whose fstab mounts
+ * something else (a SharePoint or Google Drive source, a BYOM markup service)
+ * has no DA.live content site to copy, and answers `undefined`.
+ *
+ * @param text - The file's contents
+ * @returns The mounted DA.live org and site, or `undefined`
+ */
+export function parseFstabContentSource(text: string): { org: string; site: string } | undefined {
+    const daLive = 'https:\\/\\/content\\.da\\.live\\/([^/\\s]+)\\/([^/\\s]+)\\/?\\s*$';
+    const oneLine = new RegExp(`^\\s*\\/:\\s*${daLive}`, 'm').exec(text);
+    const nested = new RegExp(`^\\s*\\/:\\s*\\n\\s+url:\\s*${daLive}`, 'm').exec(text);
+    const match = oneLine ?? nested;
+    return match ? { org: match[1], site: match[2] } : undefined;
+}
+
 export function generateFstabContent(config: FstabConfig): string {
     const { daLiveOrg, daLiveSite } = config;
 

@@ -4,7 +4,7 @@ kind: question
 area: platform
 needs: []
 value: high
-status: built
+status: shipped
 title: CSS has no architecture and no safety net — understand it before changing any of it
 parent: PL-30
 ---
@@ -459,3 +459,4 @@ WHAT THIS LEAVES. The layer fix is correct in principle — unlayered normal bea
 - 2026-09-10  2026-09-10  NOT shipped: every phase of its sequence is complete and the fingerprint is clean, but the last release is beta.145 (2026-08-28) and all 46 CSS commits are unreleased. This is user-facing CSS that no SC has seen. Stays 'built' until a release cut or an owner pass in the Extension Development Host.
 - 2026-09-10  fix(dashboard): tile labels stop breaking mid-word (`3d5aa4367`)
 - 2026-09-10  feat(tooling): a capture records itself, and there is one harness launcher (`ba9989f8d`)
+- 2026-09-11  Shipped in v1.0.0-beta.146 — the 46 CSS commits reached users; owner confirmed two dashboard defects and both were fixed in the same cut

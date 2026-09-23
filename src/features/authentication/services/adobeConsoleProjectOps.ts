@@ -29,6 +29,10 @@ import type {
 } from './types';
 import { getLogger } from '@/core/logging/debugLogger';
 
+
+/** What renaming an Adobe project answers: done, or Adobe's reason for refusing. */
+export type RemoteRenameResult = { ok: true } | { ok: false; error: string };
+
 /**
  * Creates, renames, and deletes Console projects and workspaces.
  */
@@ -176,21 +180,21 @@ export class AdobeConsoleProjectOps {
      * `patch_console_organizations__orgId__projects__projectId_`), so
      * `{ title }` alone is the deliberate payload — the machine `name` (part
      * of the project's identity) and description are never touched by a
-     * rename. Org/project ids come from the demo's persisted `adobe` config,
-     * not from the SDK's ambient selection: a wrong-org token gets a 403 from
-     * the API, which is the org guard a best-effort cosmetic sync needs —
-     * callers get `false` and move on, never an exception.
+     * rename. Org/project ids come from the caller, never from the SDK's ambient
+     * selection: a wrong-org token gets a 403 from the API. Never throws — a
+     * refusal comes back with Adobe's own words, so an explicit rename can say why
+     * (translated for the SC by the caller) and a best-effort sync can just move on.
      *
-     * @param orgId - Organization id from `project.adobe.organization`
-     * @param projectId - Project id from `project.adobe.projectId`
+     * @param orgId - Organization id
+     * @param projectId - Project id
      * @param title - The new human-readable title
-     * @returns true when the remote title was updated; false on any refusal
+     * @returns `{ ok: true }` when the remote title was updated, else why not
      */
-    async renameRemoteProject(orgId: string, projectId: string, title: string): Promise<boolean> {
+    async renameRemoteProject(orgId: string, projectId: string, title: string): Promise<RemoteRenameResult> {
         try {
             if (!this.sdkClient.isInitialized()) {
                 this.debugLogger.debug('[Entity Fetcher] SDK not available for project rename');
-                return false;
+                return { ok: false, error: 'The Adobe Console SDK is not available.' };
             }
 
             const client = this.sdkClient.getClient() as {
@@ -205,12 +209,11 @@ export class AdobeConsoleProjectOps {
             this.debugLogger.info(
                 `[Entity Fetcher] Renamed remote project ${projectId} title to "${title}"`,
             );
-            return true;
+            return { ok: true };
         } catch (error) {
-            this.debugLogger.warn(
-                `[Entity Fetcher] Remote project rename refused: ${error instanceof Error ? error.message : String(error)}`,
-            );
-            return false;
+            const reason = error instanceof Error ? error.message : String(error);
+            this.debugLogger.warn(`[Entity Fetcher] Remote project rename refused: ${reason}`);
+            return { ok: false, error: reason };
         }
     }
 
@@ -429,6 +432,63 @@ export class AdobeConsoleProjectOps {
             }
             this.debugLogger.error('[Entity Fetcher] Failed to create workspace', error as Error);
             return { error: message || 'Console rejected the workspace with no error message.' };
+        }
+    }
+
+    /**
+     * Delete a workspace from the selected project.
+     *
+     * THE REVERSAL OF `createWorkspace`, and it is shaped like it deliberately: same
+     * target resolution, same "never throws, returns a failure the caller can show"
+     * contract. `deleteConsoleProject` below throws instead, because its caller is a
+     * multi-step teardown that maps SDK errors itself; this one answers a single tool
+     * call.
+     *
+     * Adobe refuses to delete the Production workspace, and that refusal arrives as an
+     * SDK error rather than as anything this can check first — so it is surfaced rather
+     * than pre-empted with a guess about which names are protected.
+     */
+    async deleteWorkspace(
+        workspaceId: string,
+        target?: { orgId?: string; projectId?: string },
+    ): Promise<{ deleted: true } | ConsoleOpFailure> {
+        if (!workspaceId) {
+            return { error: 'A workspace id is required.' };
+        }
+
+        try {
+            await this.ensureSDKReady();
+
+            // Explicit target wins over the cache — same reason as createWorkspace: an
+            // agent's selection lives in `adobeTargetStore`, which never reaches this cache.
+            const orgId = target?.orgId ?? this.cacheManager.getCachedOrganization()?.id;
+            const projectId = target?.projectId ?? this.cacheManager.getCachedProject()?.id;
+            if (!orgId || !projectId) {
+                return { error: 'No organization or project selected.' };
+            }
+
+            if (!this.sdkClient.isInitialized()) {
+                return { error: 'Console SDK is not available — sign in to Adobe first.' };
+            }
+
+            const client = this.sdkClient.getClient() as {
+                deleteWorkspace: (
+                    orgId: string,
+                    projectId: string,
+                    workspaceId: string
+                ) => Promise<unknown>;
+            };
+
+            this.debugLogger.info(
+                `[Entity Fetcher] Deleting workspace ${workspaceId} from project ${projectId}`,
+            );
+            await client.deleteWorkspace(orgId, projectId, workspaceId);
+            this.debugLogger.info('[Entity Fetcher] Workspace deleted successfully');
+            return { deleted: true };
+        } catch (error) {
+            const message = (error as Error).message || '';
+            this.debugLogger.error('[Entity Fetcher] Failed to delete workspace', error as Error);
+            return { error: message || 'Console rejected the delete with no error message.' };
         }
     }
 

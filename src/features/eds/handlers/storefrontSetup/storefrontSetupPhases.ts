@@ -31,6 +31,7 @@ import {
     type PatchReport,
 } from '../../services/patches/patchReportHelper';
 import { getDaLiveAuthService } from '../edsHelpers';
+import { dryCheckDemo, withDemoContentSource } from './storefrontSetupDemo';
 import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
 import { executePhaseGitHubRepo } from './storefrontSetupPhase1';
 import { executePhaseHelixConfig, type BlockLibraryOptions } from './storefrontSetupPhase2';
@@ -40,6 +41,7 @@ import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getBlockLibraryContentSource } from '@/features/components/services/blockLibraryLoader';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import { projectTargetsStorefront } from '@/features/eds/services/catalogPrewarmService';
+import { TemplateSyncService } from '@/features/updates/services/templateSyncService';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
 import type {
@@ -65,6 +67,11 @@ function createSetupServices(context: HandlerContext): SetupServices {
             githubTokenService,
             ServiceLocator.getCommandExecutor(),
             context.logger,
+        ),
+        templateSync: new TemplateSyncService(
+            context.context.secrets,
+            context.logger,
+            ServiceLocator.getCommandExecutor(),
         ),
         githubFileOps: new GitHubFileOperations(githubTokenService, context.logger),
         githubAppService: new GitHubAppService(
@@ -206,7 +213,7 @@ async function runConfigCodeSyncPhases(
                 );
                 await context.sendMessage('storefront-setup-progress', {
                     phase: 'code-sync',
-                    message: 'Resuming setup...',
+                    message: 'Resuming setup',
                     progress: 40,
                 } satisfies StorefrontSetupProgressPayload);
             },
@@ -313,7 +320,7 @@ async function runEdsPipelineWithRecovery(
                 logger.info('[Storefront Setup] DA.live re-authenticated, resuming pipeline');
                 await context.sendMessage('storefront-setup-progress', {
                     phase: 'content',
-                    message: 'Resuming content copy...',
+                    message: 'Resuming content copy',
                     progress: 50,
                 } satisfies StorefrontSetupProgressPayload);
             },
@@ -439,6 +446,11 @@ export async function executeStorefrontSetupPhases(
         );
         if (phase1Result) return phase1Result;
 
+        // An added demo's code is never patched (D4); the dry check says what may not work.
+        if (edsConfig.demo) {
+            await dryCheckDemo(edsConfig.demo, repoInfo, { owner: templateOwner, repo: templateRepo }, logger);
+        }
+
         const { blockCollectionIds, earlyReturn } = await runConfigCodeSyncPhases(
             context,
             edsConfig,
@@ -459,7 +471,7 @@ export async function executeStorefrontSetupPhases(
             templateOwner,
             templateRepo,
             blockCollectionIds,
-            buildLibraryContentSources(effectiveBlockLibraries),
+            withDemoContentSource(buildLibraryContentSources(effectiveBlockLibraries), edsConfig.demo),
             wantsToResetContent,
             skipContent,
             buildPipelineProgressCallback(context),

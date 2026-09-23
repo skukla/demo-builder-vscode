@@ -83,7 +83,7 @@ describe('CreateProjectWebviewCommand - Edit-mode identity', () => {
         const command = createWizardCommand();
 
         expect(internals(command).getWebviewTitle()).toBe('Create Demo Project');
-        expect(internals(command).getLoadingMessage()).toBe('Loading Project Creation Wizard...');
+        expect(internals(command).getLoadingMessage()).toBe('Loading Project Creation Wizard');
         expect(internals(command).getLoadingHeader()).toEqual({
             title: 'Create Demo Project',
             subtitle: undefined,
@@ -99,7 +99,7 @@ describe('CreateProjectWebviewCommand - Edit-mode identity', () => {
         };
 
         expect(internals(command).getWebviewTitle()).toBe('Edit Project');
-        expect(internals(command).getLoadingMessage()).toBe('Loading Project Editor...');
+        expect(internals(command).getLoadingMessage()).toBe('Loading Project Editor');
         expect(internals(command).getLoadingHeader()).toEqual({
             title: 'Edit Project',
             subtitle: 'b2b-tester',

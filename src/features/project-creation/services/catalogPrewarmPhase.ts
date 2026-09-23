@@ -98,7 +98,7 @@ export async function executeCatalogPrewarmPhase(
                   daLiveTokenProvider,
               );
 
-        progressTracker('Pre-warming Catalog', 96, 'Publishing product pages…');
+        progressTracker('Pre-warming Catalog', 96, 'Publishing product pages');
 
         const result = await prewarmCatalog(
             project,

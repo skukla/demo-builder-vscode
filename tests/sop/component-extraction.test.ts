@@ -26,7 +26,8 @@ describe('SOP: Component Extraction', () => {
      * Pattern to detect HOC patterns (functions returning components)
      * Matches: withSomething, createSomething (common HOC naming)
      */
-    const HOC_FUNCTION_PATTERN = /export\s+(?:const|function)\s+(with[A-Z]\w*|create[A-Z]\w*(?:Component|Provider|Wrapper))/g;
+    const HOC_FUNCTION_PATTERN =
+        /export\s+(?:const|function)\s+(with[A-Z]\w*|create[A-Z]\w*(?:Component|Provider|Wrapper))/g;
 
     /**
      * Pattern to detect generic wrapper components
@@ -132,7 +133,7 @@ describe('SOP: Component Extraction', () => {
                         const hocName = match[1];
 
                         // Skip allowed patterns
-                        if (ALLOWED_PATTERNS.some(pattern => hocName.includes(pattern))) {
+                        if (ALLOWED_PATTERNS.some((pattern) => hocName.includes(pattern))) {
                             continue;
                         }
 
@@ -174,7 +175,7 @@ describe('SOP: Component Extraction', () => {
 
             for (const file of files) {
                 // Skip allowed files
-                if (ALLOWED_FILES.some(pattern => file.includes(pattern))) {
+                if (ALLOWED_FILES.some((pattern) => file.includes(pattern))) {
                     continue;
                 }
 
@@ -185,12 +186,12 @@ describe('SOP: Component Extraction', () => {
                     // Check for generic component pattern
                     if (GENERIC_COMPONENT_PATTERN.test(line)) {
                         // Skip if it matches allowed patterns
-                        if (ALLOWED_PATTERNS.some(pattern => pattern.test(line))) {
+                        if (ALLOWED_PATTERNS.some((pattern) => pattern.test(line))) {
                             return;
                         }
 
                         // Skip legitimate generics (>100 lines, justified by criteria)
-                        if (LEGITIMATE_GENERICS.some(name => line.includes(name))) {
+                        if (LEGITIMATE_GENERICS.some((name) => line.includes(name))) {
                             return;
                         }
 
@@ -257,22 +258,20 @@ describe('SOP: Component Extraction', () => {
             }
         );
 
-        it('should document single-usage components as acceptable debt', () => {
-            /**
-             * These components have 1 usage but are kept as acceptable technical debt:
-             * - LoadingOverlay: 64 lines, used by WizardContainer
-             * - NumberedInstructions: 72 lines, used by GitHubAppInstallDialog
-             *
-             * Rationale: Small components that may gain future usage.
-             * Inlining would cause code churn for minimal benefit.
-             */
-            const ACCEPTABLE_SINGLE_USAGE = [
-                'LoadingOverlay',
-                'NumberedInstructions',
-            ];
-
-            // This test documents the decision, not enforces a rule
-            expect(ACCEPTABLE_SINGLE_USAGE).toHaveLength(2);
-        });
+        /**
+         * SINGLE-USAGE COMPONENTS KEPT AS DEBT — a note, not a test.
+         *
+         * `LoadingOverlay` (64 lines, used by WizardContainer) and
+         * `NumberedInstructions` (72 lines, used by GitHubAppInstallDialog) have one
+         * consumer each and stay that way: they are small, they may gain a second, and
+         * inlining them is churn for nothing.
+         *
+         * This was an `it()` asserting that a two-element array literal declared three
+         * lines above it had two elements. It could only fail if someone edited that
+         * array, which is to say it checked nothing and counted as a passing test while
+         * doing it. Deleted 2026-09-11 rather than kept as decoration; the decision it
+         * recorded is worth keeping, so it is recorded here, where it does not pretend
+         * to be enforcement.
+         */
     });
 });

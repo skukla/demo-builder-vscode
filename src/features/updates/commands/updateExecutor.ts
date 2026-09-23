@@ -7,6 +7,7 @@
  */
 
 import * as vscode from 'vscode';
+import { syncTemplateWithConflictPrompt, templateSummary } from './templateConflictPrompt';
 import {
     shouldSkipBlockLibrary,
     type AdobeMcpUpdateItem,
@@ -142,7 +143,7 @@ export async function performTemplateUpdates(
         return succeededPaths;
     }
 
-    const { successCount, failCount } = await vscode.window.withProgress(
+    const { successCount, failCount, keptCount } = await vscode.window.withProgress(
         {
             location: vscode.ProgressLocation.Notification,
             title: 'Syncing Templates',
@@ -152,40 +153,39 @@ export async function performTemplateUpdates(
             const templateSyncService = new TemplateSyncService(ctx.secrets, ctx.logger, ctx.commandManager);
             let successCount = 0;
             let failCount = 0;
+            let keptCount = 0;
 
             for (const selection of filtered) {
                 const project = selection.project;
 
                 progress.report({
-                    message: `${project.name}…`,
+                    message: `${project.name}`,
                     increment: 100 / filtered.length,
                 });
 
                 try {
-                    const result = await templateSyncService.syncWithTemplate(project, {
-                        strategy: 'merge',
-                    });
+                    const outcome = await syncTemplateWithConflictPrompt(project, templateSyncService);
 
-                    if (result.success) {
+                    if (outcome.kind === 'synced') {
                         await templateSyncService.updateLastSyncedCommit(
                             project,
-                            result.syncedCommit,
+                            outcome.result.syncedCommit,
                             ctx.stateManager,
                         );
 
                         successCount++;
                         succeededPaths.add(project.path);
                         ctx.logger.info(
-                            `[Updates] Template synced for ${project.name} (${result.strategy}${result.fallbackOccurred ? ', fallback' : ''})`,
+                            `[Updates] Template synced for ${project.name} (${outcome.result.strategy})`,
                         );
-
-                        if (result.fallbackOccurred && result.conflicts) {
-                            vscode.window.showWarningMessage(
-                                `${project.name}: Merge conflicts in ${result.conflicts.length} files, fell back to reset.`,
-                            );
-                        }
+                    } else if (outcome.kind === 'kept') {
+                        // The SC chose to keep their edits; the modal already named the files.
+                        keptCount++;
+                        ctx.logger.info(
+                            `[Updates] Template update for ${project.name} left unchanged: merge conflicts in ${outcome.conflicts.join(', ')}`,
+                        );
                     } else {
-                        throw new Error(result.error || 'Unknown error');
+                        throw new Error(outcome.error);
                     }
                 } catch (error) {
                     failCount++;
@@ -200,16 +200,12 @@ export async function performTemplateUpdates(
                 }
             }
 
-            return { successCount, failCount };
+            return { successCount, failCount, keptCount };
         },
     );
 
     if (successCount > 0) {
-        const message =
-            failCount > 0
-                ? `Synced ${successCount} template(s), ${failCount} failed.`
-                : `Successfully synced ${successCount} template(s).`;
-        vscode.window.showInformationMessage(message);
+        vscode.window.showInformationMessage(templateSummary(successCount, failCount, keptCount));
     }
 
     return succeededPaths;
@@ -265,7 +261,7 @@ export async function performComponentUpdates(
                     if (!update.releaseInfo) continue;
 
                     progress.report({
-                        message: `${update.componentId} in ${project.name}…`,
+                        message: `${update.componentId} in ${project.name}`,
                         increment: 100 / totalUpdates,
                     });
 
@@ -357,7 +353,7 @@ export async function performAdobeMcpUpdates(
                 const { project, packageName, latestVersion } = item;
 
                 progress.report({
-                    message: `${packageName} → ${latestVersion} in ${project.name}…`,
+                    message: `${packageName} → ${latestVersion} in ${project.name}`,
                     increment: 100 / total,
                 });
 

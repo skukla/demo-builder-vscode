@@ -29,10 +29,11 @@ import Close from '@spectrum-icons/workflow/Close';
 import React from 'react';
 import type { CardAction, IntegrationCardModel } from './integrationCardModel';
 import { InlineRenameField } from '@/core/ui/components/forms/InlineRenameField';
+import { CommerceScopeList } from '@/core/ui/components/integrations/CommerceScopeList';
 import { IntegrationActionsMenu } from '@/core/ui/components/integrations/IntegrationActionsMenu';
+import { IntegrationStatusLabel } from '@/core/ui/components/integrations/IntegrationStatusLabel';
 import { CopyableText } from '@/core/ui/components/ui/CopyableText';
 import { Drawer } from '@/core/ui/components/ui/Drawer';
-import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import { cn } from '@/core/ui/utils/classNames';
 
 export interface IntegrationDetailPanelProps {
@@ -148,15 +149,7 @@ function PanelContent({
                         reading the status differently in each was the odd part. Both
                         share one CSS rule rather than repeating the four declarations. */}
                     <span className="integration-statusline">
-                        <StatusDot variant={model.dotVariant} size={6} />
-                        <span
-                            className={cn(
-                                'integration-card-status',
-                                model.status === 'error' && 'integration-card-status--error',
-                            )}
-                        >
-                            {model.statusLabel}
-                        </span>
+                        <IntegrationStatusLabel model={model} />
                     </span>
                     {model.message && (
                         <span className="integration-panel-status-message">{model.message}</span>
@@ -260,29 +253,7 @@ function PanelContent({
                     row. */}
                 {commerceScope?.length ? (
                     <PanelRow label="Commerce scope">
-                        {commerceScope.map(({ label, code, name }) => (
-                            <span key={label} className="integration-panel-scope">
-                                <span className="integration-panel-scope-key">{label}</span>
-                                {/* Name first, code parenthesised and muted: the
-                                    name is what the user picked, the code is what
-                                    is in the `.env` and what they would grep for.
-                                    With no name the code stands ALONE — not
-                                    "(unknown)", not an empty bracket. That is the
-                                    correct rendering for every project predating
-                                    name capture, and it must not look broken. */}
-                                <span className="integration-panel-scope-value">
-                                    {name && <>{name} </>}
-                                    <span
-                                        className={cn(
-                                            'integration-panel-scope-code',
-                                            name && 'integration-panel-scope-code--aside',
-                                        )}
-                                    >
-                                        {name ? `(${code})` : code}
-                                    </span>
-                                </span>
-                            </span>
-                        ))}
+                        <CommerceScopeList parts={commerceScope} />
                     </PanelRow>
                 ) : null}
                 {model.lastDeployed && (

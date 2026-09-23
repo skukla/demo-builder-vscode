@@ -1,6 +1,8 @@
 import * as path from 'path';
+import type { RemoteRenameResult } from './adobeConsoleProjectOps';
 import { isValidTokenResponse } from './authPredicates';
 import { withOrgContext, type OrgContextTarget } from './orgContextEnv';
+import type { OrgServicesStore } from './orgServicesSavedCatalog';
 import { getLogger } from '@/core/logging/debugLogger';
 import { StepLogger } from '@/core/logging/stepLogger';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
@@ -14,6 +16,7 @@ import { AuthCacheManager } from '@/features/authentication/services/authCacheMa
 import { AuthenticationErrorFormatter } from '@/features/authentication/services/authenticationErrorFormatter';
 import { OrganizationValidator } from '@/features/authentication/services/organizationValidator';
 import { withTiming } from '@/features/authentication/services/performanceTracker';
+import { createSignInGate } from '@/features/authentication/services/signInGate';
 import { TokenManager } from '@/features/authentication/services/tokenManager';
 import type {
     AdobeOrg,
@@ -47,11 +50,15 @@ export class AuthenticationService {
     private organizationValidator: OrganizationValidator;
     private sdkClient: AdobeSDKClient;
     private entities: EntityServices | null = null;
+    /** Every sign-in goes through here: one at a time (see signInGate). */
+    private readonly signIn: (force: boolean) => Promise<boolean>;
 
     constructor(
         extensionPath: string,
         logger: Logger,
         private commandManager: CommandExecutor,
+        /** Keeps the org's API list across window reloads (`context.globalState`). */
+        private readonly orgServicesStore?: OrgServicesStore,
     ) {
         this.logger = logger;
 
@@ -76,6 +83,15 @@ export class AuthenticationService {
         );
         // Note: entityService will be initialized lazily when first needed
         // because it depends on stepLogger which requires async initialization
+        this.signIn = createSignInGate({
+            run: (force) => this.runLogin(force),
+            signedInNow: () => {
+                this.cacheManager.clearTokenInspectionCache();
+                return this.tokenManager.isTokenValid();
+            },
+            adoptSignIn: () => this.forgetPreviousSignIn(),
+            logger,
+        });
     }
 
     /**
@@ -114,6 +130,7 @@ export class AuthenticationService {
                 // this same manager says the token has hours left — the state
                 // that had a user signing in three times to no effect.
                 async () => (await this.tokenManager.inspectToken()).valid,
+                this.orgServicesStore,
             );
 
             return stepLogger;
@@ -239,9 +256,30 @@ export class AuthenticationService {
     }
 
     /**
-     * Login - opens browser and waits for completion
+     * Login - opens browser and waits for completion. A request while a sign-in is
+     * already running joins that one (one browser tab); see signInGate.
      */
     async login(force = false): Promise<boolean> {
+        return this.signIn(force);
+    }
+
+    /**
+     * Drop what the previous sign-in left cached, so the new token is read afresh:
+     * the SDK client, the auth, validation and token-inspection caches, and the org
+     * and org-list caches (org-list-cache-first would otherwise re-supply the old org
+     * for the cache's short TTL, keeping the wizard on the wrong org).
+     */
+    private forgetPreviousSignIn(): void {
+        this.sdkClient.clear();
+        this.cacheManager.clearAuthStatusCache();
+        this.cacheManager.clearValidationCache();
+        this.cacheManager.clearTokenInspectionCache();
+        this.cacheManager.setCachedOrganization(undefined);
+        this.cacheManager.clearOrgListCache();
+    }
+
+    /** One sign-in: open the browser and wait for it. Callers go through `login`. */
+    private async runLogin(force: boolean): Promise<boolean> {
         return withTiming('login', async () => {
             try {
                 const stepLogger = await this.ensureStepLogger();
@@ -291,26 +329,15 @@ export class AuthenticationService {
                             {},
                         );
 
-                        this.sdkClient.clear();
-                        this.debugLogger.debug(
-                            '[Auth] Cleared SDK client to force re-init with new token',
-                        );
-
-                        if (!force) {
-                            this.cacheManager.clearAuthStatusCache();
-                            this.cacheManager.clearValidationCache();
-                            this.cacheManager.clearTokenInspectionCache();
-                            // Also clear the cached org AND the org-list cache so the org is
-                            // re-derived from the fresh token (the forced path clears both via
-                            // clearAll). Without clearing the LIST too, `getOrganizations()`
-                            // (org-list-cache-first) re-supplies the previous, stale org for
-                            // the cache's short TTL — keeping the wizard on the wrong org.
-                            this.cacheManager.setCachedOrganization(undefined);
-                            this.cacheManager.clearOrgListCache();
-                            this.debugLogger.debug(
-                                '[Auth] Cleared auth, validation, token inspection, and org caches after login',
-                            );
+                        // The forced path already cleared everything before it began.
+                        if (force) {
+                            this.sdkClient.clear();
+                        } else {
+                            this.forgetPreviousSignIn();
                         }
+                        this.debugLogger.debug(
+                            '[Auth] Cleared the SDK client and auth caches so the new token is read afresh',
+                        );
 
                         return true;
                     } else {
@@ -329,7 +356,9 @@ export class AuthenticationService {
                         stepLogger.logTemplate('adobe-auth', 'operations.retrying', {
                             item: 'authentication with fresh login',
                         });
-                        return await this.login(true);
+                        // Inside the running sign-in, so not through the gate — it
+                        // would join itself and never finish.
+                        return await this.runLogin(true);
                     }
                 } else {
                     const exitCode = result?.code ?? 'unknown';
@@ -529,7 +558,11 @@ export class AuthenticationService {
      * Sync a remote Adobe I/O project's title to a renamed demo (best-effort;
      * never throws past the fetcher — see `renameRemoteProject` there).
      */
-    async renameRemoteProject(orgId: string, projectId: string, title: string): Promise<boolean> {
+    async renameRemoteProject(
+        orgId: string,
+        projectId: string,
+        title: string,
+    ): Promise<RemoteRenameResult> {
         const { fetcher } = await this.ensureEntities();
         return fetcher.renameRemoteProject(orgId, projectId, title);
     }
@@ -573,6 +606,23 @@ export class AuthenticationService {
         return withTiming('createWorkspace', async () => {
             const { fetcher } = await this.ensureEntities();
             return fetcher.createWorkspace(name, description, target);
+        });
+    }
+
+    /**
+     * Delete a workspace from the selected project — the reversal of createWorkspace.
+     *
+     * Returns `{ deleted: true }`, or a ConsoleOpFailure naming the real reason. Adobe
+     * refuses to delete the Production workspace; that refusal arrives as an SDK error
+     * and is surfaced rather than guessed at up front.
+     */
+    async deleteWorkspace(
+        workspaceId: string,
+        target?: { orgId?: string; projectId?: string },
+    ): Promise<{ deleted: true } | ConsoleOpFailure> {
+        return withTiming('deleteWorkspace', async () => {
+            const { fetcher } = await this.ensureEntities();
+            return fetcher.deleteWorkspace(workspaceId, target);
         });
     }
 
@@ -625,6 +675,16 @@ export class AuthenticationService {
             idIntegration,
             serviceInfo,
         );
+    }
+
+    /** Every credential id in a workspace (read only). */
+    async listCredentialIds(
+        orgId: string,
+        projectId: string,
+        workspaceId: string,
+    ): Promise<string[]> {
+        const { fetcher } = await this.ensureEntities();
+        return fetcher.listCredentialIds(orgId, projectId, workspaceId);
     }
 
     /** Ensure the shared S2S credential exists; returns its `id_integration`. */

@@ -16,7 +16,7 @@
 
 import * as vscode from 'vscode';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import { isTimeout, toAppError } from '@/core/errors';
+import { classifyTransience } from '@/core/errors';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getRequiredNodeVersions, getNodeVersionMapping, checkPerNodeVersionStatus, determinePrerequisiteStatus, hasNodeVersions, getNodeVersionKeys } from '@/features/prerequisites/handlers/shared';
 import type { InstallStep, PrerequisiteDefinition, PrerequisiteStatus } from '@/features/prerequisites/services/PrerequisitesManager';
@@ -326,7 +326,7 @@ async function installPlugins(
                 index: prereqId,
                 name: prereq.name,
                 status: 'checking',
-                message: pluginCommands.message || `Installing ${plugin.name}${versionLabel}...`,
+                message: pluginCommands.message || `Installing ${plugin.name}${versionLabel}`,
                 required: !prereq.optional,
             };
             await context.sendMessage('prerequisite-status', pluginStatus);
@@ -376,7 +376,7 @@ async function handleVerificationError(
     error: unknown,
 ): Promise<SimpleResult> {
     const errorMessage = toError(error).message;
-    const isTimeoutErr = isTimeout(toAppError(error));
+    const isTimeoutErr = classifyTransience(error).kind === 'timeout';
 
     if (isTimeoutErr) {
         context.logger.warn(`[Prerequisites] ${prereq.name} verification timed out after ${TIMEOUTS.POLL.INTERVAL / 1000}s`);

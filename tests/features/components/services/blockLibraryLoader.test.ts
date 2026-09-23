@@ -42,7 +42,7 @@ describe('blockLibraryLoader', () => {
     describe('getAvailableBlockLibraries', () => {
         it('should return libraries for EDS stacks', () => {
             const edsStack = makeStack({ frontend: 'eds-storefront' });
-            const libs = getAvailableBlockLibraries(edsStack, 'custom');
+            const libs = getAvailableBlockLibraries(edsStack, 'starter');
 
             expect(libs.length).toBeGreaterThan(0);
             libs.forEach((lib) => {
@@ -73,7 +73,7 @@ describe('blockLibraryLoader', () => {
 
         it('should include CitiSignal blocks for non-CitiSignal packages', () => {
             const edsStack = makeStack();
-            const libs = getAvailableBlockLibraries(edsStack, 'custom');
+            const libs = getAvailableBlockLibraries(edsStack, 'starter');
 
             const citisignalLib = libs.find((l) => l.id === 'demo-team-blocks');
             expect(citisignalLib).toBeDefined();
@@ -91,7 +91,7 @@ describe('blockLibraryLoader', () => {
         it('should NOT offer isle5 to non-Isle5 packages (pinned via onlyForPackages)', () => {
             const edsStack = makeStack();
 
-            for (const pkg of ['citisignal', 'buildright', 'custom']) {
+            for (const pkg of ['citisignal', 'buildright', 'starter']) {
                 const libs = getAvailableBlockLibraries(edsStack, pkg);
                 const isle5 = libs.find((l) => l.id === 'isle5');
                 expect(isle5).toBeUndefined();
@@ -117,7 +117,7 @@ describe('blockLibraryLoader', () => {
 
         it('should not include pinned libraries for other packages', () => {
             const edsStack = makeStack();
-            const libs = getAvailableBlockLibraries(edsStack, 'custom');
+            const libs = getAvailableBlockLibraries(edsStack, 'starter');
 
             // BuildRight blocks are pinned to buildright only
             const buildrightLib = libs.find((l) => l.id === 'buildright-blocks');
@@ -126,7 +126,7 @@ describe('blockLibraryLoader', () => {
 
         it('should return only demo-team-blocks for Custom package on EDS', () => {
             const edsStack = makeStack();
-            const libs = getAvailableBlockLibraries(edsStack, 'custom');
+            const libs = getAvailableBlockLibraries(edsStack, 'starter');
 
             // Custom sees demo-team-blocks only (isle5 and buildright-blocks
             // are pinned to their own hidden packages via onlyForPackages)
@@ -144,7 +144,7 @@ describe('blockLibraryLoader', () => {
         it('should NOT offer bodea-blocks to non-Bodea packages (pinned via onlyForPackages)', () => {
             const edsStack = makeStack();
 
-            for (const pkg of ['custom', 'citisignal', 'isle5', 'buildright']) {
+            for (const pkg of ['starter', 'citisignal', 'isle5', 'buildright']) {
                 const libs = getAvailableBlockLibraries(edsStack, pkg);
                 expect(libs.map((l) => l.id)).not.toContain('bodea-blocks');
             }
@@ -184,7 +184,7 @@ describe('blockLibraryLoader', () => {
 
         it('should return no native libraries for Custom package', () => {
             const edsStack = makeStack();
-            const natives = getNativeBlockLibraries(edsStack, 'custom');
+            const natives = getNativeBlockLibraries(edsStack, 'starter');
 
             expect(natives).toHaveLength(0);
         });
@@ -200,7 +200,7 @@ describe('blockLibraryLoader', () => {
         it('should NOT report bodea-blocks as native for other packages', () => {
             const edsStack = makeStack();
 
-            for (const pkg of ['custom', 'citisignal', 'isle5', 'buildright']) {
+            for (const pkg of ['starter', 'citisignal', 'isle5', 'buildright']) {
                 const natives = getNativeBlockLibraries(edsStack, pkg);
                 expect(natives.map((l) => l.id)).not.toContain('bodea-blocks');
             }
@@ -234,7 +234,7 @@ describe('blockLibraryLoader', () => {
             // checkbox-default logic. Other libraries are pre-checked only when the
             // user explicitly sets `demoBuilder.blockLibraries.defaults` in VS Code.
             const edsStack = makeStack();
-            const defaults = getDefaultBlockLibraryIds(edsStack, 'custom');
+            const defaults = getDefaultBlockLibraryIds(edsStack, 'starter');
 
             expect(defaults).toStrictEqual([]);
         });
@@ -249,7 +249,7 @@ describe('blockLibraryLoader', () => {
 
         it('does not include storefront-specific libraries as defaults', () => {
             const edsStack = makeStack();
-            const defaults = getDefaultBlockLibraryIds(edsStack, 'custom');
+            const defaults = getDefaultBlockLibraryIds(edsStack, 'starter');
 
             expect(defaults).not.toContain('demo-team-blocks');
             expect(defaults).not.toContain('buildright-blocks');
@@ -268,7 +268,7 @@ describe('blockLibraryLoader', () => {
         it('uses userDefaults when provided (intersection with available)', () => {
             const edsStack = makeStack();
             const userDefaults = ['demo-team-blocks'];
-            const defaults = getDefaultBlockLibraryIds(edsStack, 'custom', userDefaults);
+            const defaults = getDefaultBlockLibraryIds(edsStack, 'starter', userDefaults);
 
             expect(defaults).not.toContain('isle5');
             expect(defaults).toContain('demo-team-blocks');
@@ -303,7 +303,7 @@ describe('blockLibraryLoader', () => {
             // pre-checking everything the package can see.
             const edsStack = makeStack();
 
-            expect(getDefaultBlockLibraryIds(edsStack, 'custom', ['isle5'])).toStrictEqual([]);
+            expect(getDefaultBlockLibraryIds(edsStack, 'starter', ['isle5'])).toStrictEqual([]);
         });
 
         it('ignores a stale isle5 userDefault for non-isle5 packages (pinned via onlyForPackages)', () => {
@@ -311,7 +311,7 @@ describe('blockLibraryLoader', () => {
             // (the enum no longer offers it) must not pre-check isle5 on other
             // packages — it is only available for the isle5 package itself.
             const edsStack = makeStack();
-            const defaults = getDefaultBlockLibraryIds(edsStack, 'custom', ['isle5']);
+            const defaults = getDefaultBlockLibraryIds(edsStack, 'starter', ['isle5']);
 
             expect(defaults).not.toContain('isle5');
         });
@@ -327,7 +327,7 @@ describe('blockLibraryLoader', () => {
 
         it('returns demo-team-blocks for Custom (both hybrid packages seed it)', () => {
             const edsStack = makeStack();
-            expect(getPackageDefaultBlockLibraryIds(edsStack, 'custom')).toEqual([
+            expect(getPackageDefaultBlockLibraryIds(edsStack, 'starter')).toEqual([
                 'demo-team-blocks',
             ]);
         });
@@ -573,7 +573,7 @@ describe('blockLibraryLoader', () => {
                 { ...BASE, id: 'not-preferred' },
             ]);
 
-            expect(loader.getDefaultBlockLibraryIds(makeStack(), 'custom')).toEqual(['preferred']);
+            expect(loader.getDefaultBlockLibraryIds(makeStack(), 'starter')).toEqual(['preferred']);
         });
     });
 });

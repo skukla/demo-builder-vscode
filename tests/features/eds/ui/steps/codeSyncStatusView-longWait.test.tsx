@@ -58,7 +58,7 @@ describe('the long Code Sync wait', () => {
     it('names the repository before any threshold passes', () => {
         renderView(CHECKING);
 
-        expect(screen.getByText('Verifying skukla/kukla-bodea...')).toBeInTheDocument();
+        expect(screen.getByText('Verifying skukla/kukla-bodea')).toBeInTheDocument();
     });
 
     it('speaks up once the wait outlives a glance', () => {
@@ -80,12 +80,12 @@ describe('the long Code Sync wait', () => {
     });
 
     it('never overwrites the retry loop, which knows more than the clock does', () => {
-        renderView(CHECKING, 'Repository is still being registered... (attempt 2 of 5)');
+        renderView(CHECKING, 'Repository is still being registered (attempt 2 of 5)');
 
         advance(SECOND.afterMs + 1000);
 
         expect(
-            screen.getByText('Repository is still being registered... (attempt 2 of 5)'),
+            screen.getByText('Repository is still being registered (attempt 2 of 5)'),
         ).toBeInTheDocument();
         expect(screen.queryByText(SECOND.message)).not.toBeInTheDocument();
     });

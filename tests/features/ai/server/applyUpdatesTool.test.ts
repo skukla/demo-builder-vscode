@@ -186,7 +186,24 @@ describe('apply_updates', () => {
             expect.anything(),
             expect.objectContaining({ extensionPath: '/ext' }),
             expect.any(Function),
+            { templateConflicts: 'stop' },
         );
+    });
+
+    it('a template conflict stops by default; resetTemplateOnConflict:true is the only way to reset', async () => {
+        // The reset discards the user's edits to the conflicted files, so it is
+        // never the default and never inferred — the agent has to say so.
+        const s = fakeServer();
+        registerApplyUpdatesTool(s, ctxFactory);
+
+        await s.call({ confirm: true, resetTemplateOnConflict: true });
+        await s.call({ confirm: true, resetTemplateOnConflict: false });
+
+        expect(applyMock.mock.calls.map((c) => c[3])).toEqual([
+            { templateConflicts: 'reset' },
+            { templateConflicts: 'stop' },
+        ]);
+        expect(s.definition().inputSchema.resetTemplateOnConflict.isOptional()).toBe(true);
     });
 
     it('hands the updater the selections it just computed', async () => {

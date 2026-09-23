@@ -73,7 +73,7 @@ describe('BaseWebviewCommand communication', () => {
 
             const [panel, , message, log, header] = (setLoadingState as jest.Mock).mock.calls[0];
             expect(panel).toBe(mintedPanels()[0]);
-            expect(message).toBe('Loading...');
+            expect(message).toBe('Loading');
             expect(log).toBe(logger);
             expect(header).toEqual({ title: 'Test Webview' });
         });

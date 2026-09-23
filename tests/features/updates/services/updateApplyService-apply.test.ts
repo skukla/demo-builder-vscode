@@ -53,7 +53,7 @@ describe('fork sync', () => {
 
         expect(ForkSyncServiceCtor).toHaveBeenCalledWith(ctx.secrets, ctx.logger);
         expect(mockSyncFork).toHaveBeenCalledWith('me', 'a', 'main');
-        expect(onProgress).toHaveBeenCalledWith('Syncing fork me/a...');
+        expect(onProgress).toHaveBeenCalledWith('Syncing fork me/a');
         expect(res.forkSync).toEqual({ successCount: 1, failCount: 0, errors: [] });
     });
 
@@ -126,7 +126,7 @@ describe('template sync', () => {
         );
         expect(mockSyncWithTemplate).toHaveBeenCalledWith(project, { strategy: 'merge' });
         expect(mockUpdateLastSyncedCommit).toHaveBeenCalledWith(project, 'c1', ctx.stateManager);
-        expect(onProgress).toHaveBeenCalledWith('Syncing template for demo...');
+        expect(onProgress).toHaveBeenCalledWith('Syncing template for demo');
         expect(res.template).toEqual({ successCount: 1, failCount: 0, errors: [] });
     });
 
@@ -149,6 +149,69 @@ describe('template sync', () => {
 
         expect(res.template).toEqual({ successCount: 0, failCount: 1, errors: [wording] });
         expect(mockUpdateLastSyncedCommit).not.toHaveBeenCalled();
+    });
+
+    describe('merge conflicts', () => {
+        const CONFLICTED = {
+            success: false,
+            strategy: 'merge',
+            syncedCommit: '',
+            conflicts: ['blocks/hero/hero.js'],
+            error: 'Merge conflicts in 1 file (blocks/hero/hero.js); the template update was not applied.',
+        };
+
+        it('by default STOP: reported as a failure naming the file, no reset, no commit recorded', async () => {
+            mockSyncWithTemplate.mockResolvedValue(CONFLICTED);
+            const project = edsProject();
+
+            const res = await applyUpdatesHeadless(
+                { ...emptySelections(), template: [{ project }] },
+                makeCtx()
+            );
+
+            expect(mockSyncWithTemplate.mock.calls).toEqual([[project, { strategy: 'merge' }]]);
+            expect(mockUpdateLastSyncedCommit).not.toHaveBeenCalled();
+            expect(res.template).toEqual({
+                successCount: 0,
+                failCount: 1,
+                errors: [`demo: ${CONFLICTED.error}`],
+            });
+        });
+
+        it("with templateConflicts 'reset': runs the reset strategy as a second call", async () => {
+            mockSyncWithTemplate
+                .mockResolvedValueOnce(CONFLICTED)
+                .mockResolvedValueOnce({ success: true, strategy: 'reset', syncedCommit: 'r1' });
+            const project = edsProject();
+
+            const res = await applyUpdatesHeadless(
+                { ...emptySelections(), template: [{ project }] },
+                makeCtx(),
+                undefined,
+                { templateConflicts: 'reset' }
+            );
+
+            expect(mockSyncWithTemplate.mock.calls).toEqual([
+                [project, { strategy: 'merge' }],
+                [project, { strategy: 'reset' }],
+            ]);
+            expect(mockUpdateLastSyncedCommit).toHaveBeenCalledWith(project, 'r1', expect.anything());
+            expect(res.template).toEqual({ successCount: 1, failCount: 0, errors: [] });
+        });
+
+        it("'reset' never runs a reset for a merge that failed WITHOUT conflicts", async () => {
+            mockSyncWithTemplate.mockResolvedValue({ success: false, strategy: 'merge', error: 'clone failed' });
+
+            const res = await applyUpdatesHeadless(
+                { ...emptySelections(), template: [{ project: edsProject() }] },
+                makeCtx(),
+                undefined,
+                { templateConflicts: 'reset' }
+            );
+
+            expect(mockSyncWithTemplate).toHaveBeenCalledTimes(1);
+            expect(res.template.errors).toEqual(['demo: clone failed']);
+        });
     });
 
     it('a thrown error is recorded sanitized to its first line', async () => {
@@ -240,7 +303,7 @@ describe('components', () => {
             'https://x/mesh.zip',
             '2.0.0'
         );
-        expect(onProgress).toHaveBeenCalledWith('Updating mesh in demo...');
+        expect(onProgress).toHaveBeenCalledWith('Updating mesh in demo');
     });
 
     it('does not build the updater or save anything when nothing is selected', async () => {
@@ -324,7 +387,7 @@ describe('Adobe MCP', () => {
         );
 
         expect(mockApplyAdobeMcpUpdate).toHaveBeenCalledWith(project, PKG, '2.0.0', ctx);
-        expect(onProgress).toHaveBeenCalledWith(`Updating ${PKG} → 2.0.0 in demo...`);
+        expect(onProgress).toHaveBeenCalledWith(`Updating ${PKG} → 2.0.0 in demo`);
         expect(res.adobeMcp).toEqual({ successCount: 1, failCount: 0, errors: [] });
     });
 
@@ -373,7 +436,7 @@ describe('add-ons', () => {
         );
 
         expect(mockApplyBlockLibraryUpdateResolved).toHaveBeenCalledWith(item, resolved, ctx);
-        expect(onProgress).toHaveBeenCalledWith('Updating block library Lib A...');
+        expect(onProgress).toHaveBeenCalledWith('Updating block library Lib A');
         expect(res.addon).toEqual(expected);
     });
 
@@ -414,7 +477,7 @@ describe('add-ons', () => {
             expect.any(Function)
         );
         expect(ctx.stateManager.saveProject).toHaveBeenCalledWith(project);
-        expect(onProgress).toHaveBeenCalledWith('Updating Inspector SDK in demo...');
+        expect(onProgress).toHaveBeenCalledWith('Updating Inspector SDK in demo');
         expect(res.addon.successCount).toBe(1);
     });
 

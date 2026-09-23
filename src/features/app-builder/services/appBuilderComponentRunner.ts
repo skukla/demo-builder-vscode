@@ -32,7 +32,16 @@
 
 import { recordDeployOutcome, type DeployOutcome } from './appBuilderDeployOutcome';
 import { detectAppLayout, listDeclaredPackageNames, type AppConfigLayout } from './appConfigPackages';
+import { OPERATION_STAGES } from './operationStages';
 import { deriveOwPackage } from './owPackageName';
+import {
+    commandFailure,
+    deleteRuntimePackage,
+    listRuntimePackages,
+    runInNamespace,
+    runtimeNamespaceEnv,
+    type RuntimeNamespaceEnv,
+} from './runtimeNamespace';
 import type { AppDeploymentResult } from './types';
 import { isMeshComponentId } from '@/core/constants';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
@@ -41,6 +50,7 @@ import { buildOrgTargetFromProjectAdobe, withOrgContext, type CachedOrgRef } fro
 import { getProvidedEnvVars } from '@/core/state/appBuilderComponentState';
 import { reconcileComponentSelections } from '@/core/state/componentSelectionReconcile';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { explainAdobeAccessFailure } from '@/features/authentication/services/authenticationErrorFormatter';
 import { buildCustomIntegrationEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type {
     ComponentInstallOptions,
@@ -453,6 +463,17 @@ function identityOf(
 }
 
 /**
+ * What the SC reads for a failure: Adobe's permission and outage refusals in plain words,
+ * anything else as it was written. Adobe's own words still reach Debug Logs.
+ */
+function readableFailure(reason: string, logger: Logger): string {
+    const plain = explainAdobeAccessFailure(reason);
+    if (!plain) return reason;
+    logger.warn(`[AppBuilderComponent Runner] Adobe refused: ${reason}`);
+    return plain;
+}
+
+/**
  * A failed deploy's outcome — INCLUDING why it failed.
  *
  * The reason used to be returned to the caller and dropped from state, so a
@@ -503,7 +524,7 @@ async function dispatchDeploy(
         try {
             // Step in the FIRST arg, matching the deploy tails' convention — the
             // caller renders arg 1 as the current step.
-            deps.onProgress?.('Generating mesh configuration...');
+            deps.onProgress?.(OPERATION_STAGES.generatingMeshConfig.label);
             await deps.writeComponentEnv(project, entry.id, componentPath);
         } catch (error) {
             // Deploying anyway is the ENOENT this step exists to prevent, so fail
@@ -549,7 +570,7 @@ async function dispatchDeploy(
     // installer cannot authenticate — the first live install proved it).
     let extraEnv: Record<string, string> | undefined;
     if (entry.lifecycle === 'app-management' && deps.resolveAppManagementEnv) {
-        deps.onProgress?.('Resolving Commerce IMS credentials...');
+        deps.onProgress?.(OPERATION_STAGES.resolvingCommerceCredentials.label);
         try {
             extraEnv = await deps.resolveAppManagementEnv(project);
         } catch (error) {
@@ -600,7 +621,10 @@ export async function addAppBuilderComponent(
         if (entry.nodeVersion) {
             // Visible, not silent: a first-time fnm install takes ~30s and the
             // progress channel is the surface every add path already has.
-            deps.onProgress?.(`Preparing Node ${entry.nodeVersion} (one-time install)...`);
+            deps.onProgress?.(
+            OPERATION_STAGES.preparingNode.label,
+            `Installing Node ${entry.nodeVersion} (one-time install)`,
+        );
             const nodeError = await deps.ensureNodeVersion?.(entry.nodeVersion);
             if (nodeError) {
                 return { success: false, error: nodeError };
@@ -609,7 +633,7 @@ export async function addAppBuilderComponent(
 
         // The subscribe's org-services fetch alone measured 43.5s cold — the
         // longest silent stretch in the chain (owner audit, 2026-08-27).
-        deps.onProgress?.('Subscribing Adobe APIs…');
+        deps.onProgress?.(OPERATION_STAGES.subscribingApis.label);
         await deps.subscribeRequiredApis(deps.catalog, project);
 
         const installed = await cloneAndInstall(project, entry, deps);
@@ -654,8 +678,9 @@ export async function addAppBuilderComponent(
         );
 
         if (!deployed.ok) {
-            await persistOutcome(project, entry, errorOutcome(entry, deployed.error), deps);
-            return { success: false, error: deployed.error };
+            const reason = readableFailure(deployed.error, deps.logger);
+            await persistOutcome(project, entry, errorOutcome(entry, reason), deps);
+            return { success: false, error: reason };
         }
 
         await persistOutcome(project, entry, deployed.outcome, deps);
@@ -664,7 +689,7 @@ export async function addAppBuilderComponent(
         return { success: true };
     } catch (error) {
         deps.logger.error('[AppBuilderComponent Runner] add failed', error as Error);
-        return { success: false, error: toError(error).message };
+        return { success: false, error: readableFailure(toError(error).message, deps.logger) };
     }
 }
 
@@ -686,8 +711,10 @@ async function installIfAppManagement(
         return;
     }
     const state = project.appBuilderComponents?.[entry.id];
+    // The installer's messages carry live detail (retry rounds), so they are the STEP
+    // under one install stage — the stage keeps its expectation line while they change.
     const result = await deps.installAppManagement(project, state?.deployedUrls, (message) =>
-        deps.onProgress?.(message),
+        deps.onProgress?.(OPERATION_STAGES.installingIntoCommerce.label, message),
     );
     if (state) {
         state.installation = {
@@ -701,7 +728,10 @@ async function installIfAppManagement(
         deps.logger.warn(
             `[AppBuilderComponent Runner] ${entry.id} deployed but not installed: ${result.detail}`,
         );
-        deps.onProgress?.(result.detail ?? 'Install into Commerce did not finish.');
+        deps.onProgress?.(
+            OPERATION_STAGES.installingIntoCommerce.label,
+            result.detail ?? 'Install into Commerce did not finish.',
+        );
     }
 }
 
@@ -724,7 +754,10 @@ export async function deployAppBuilderComponent(
 
     try {
         if (entry.nodeVersion) {
-            deps.onProgress?.(`Preparing Node ${entry.nodeVersion} (one-time install)...`);
+            deps.onProgress?.(
+            OPERATION_STAGES.preparingNode.label,
+            `Installing Node ${entry.nodeVersion} (one-time install)`,
+        );
             const nodeError = await deps.ensureNodeVersion?.(entry.nodeVersion);
             if (nodeError) {
                 return { success: false, error: nodeError };
@@ -738,7 +771,7 @@ export async function deployAppBuilderComponent(
         // adobeio_api). Idempotent reconcile — a subscribed credential is a
         // no-op PUT of the same union.
         if (entry.lifecycle === 'app-management') {
-            deps.onProgress?.('Subscribing Adobe APIs…');
+            deps.onProgress?.(OPERATION_STAGES.subscribingApis.label);
             await deps.subscribeRequiredApis(deps.catalog, project);
         }
 
@@ -758,9 +791,10 @@ export async function deployAppBuilderComponent(
             // (measured live 2026-08-27: manifest said deploying while the
             // handler had already returned the build error). The add path has
             // always persisted its error outcome; this makes redeploy match.
-            recordDeployOutcome(project, entry.kind, id, errorOutcome(entry, deployed.error));
+            const reason = readableFailure(deployed.error, deps.logger);
+            recordDeployOutcome(project, entry.kind, id, errorOutcome(entry, reason));
             await deps.saveProject(project);
-            return { success: false, error: deployed.error };
+            return { success: false, error: reason };
         }
         recordDeployOutcome(project, entry.kind, id, deployed.outcome);
         await deps.saveProject(project);
@@ -769,7 +803,7 @@ export async function deployAppBuilderComponent(
         return { success: true };
     } catch (error) {
         deps.logger.error('[AppBuilderComponent Runner] deploy failed', error as Error);
-        return { success: false, error: toError(error).message };
+        return { success: false, error: readableFailure(toError(error).message, deps.logger) };
     }
 }
 
@@ -827,7 +861,7 @@ async function uninstallIfAppManagement(
     }
     try {
         const result = await deps.uninstallAppManagement(project, state.deployedUrls, (message) =>
-            deps.onProgress?.(message),
+            deps.onProgress?.(OPERATION_STAGES.removingFromCommerce.label, message),
         );
         if (result.status === 'failed') {
             deps.logger.warn(
@@ -858,17 +892,30 @@ async function teardownRemote(
     deps: AppBuilderComponentRunnerDeps,
 ): Promise<void> {
     const componentPath = project.componentInstances?.[id]?.path;
-    const command = state.kind === 'mesh' ? MESH_DELETE_COMMAND : 'aio app undeploy';
-    await withOrgContext(targetFor(project, deps), () =>
-        deps.commandManager.execute(command, {
+    if (state.kind === 'mesh') {
+        await withOrgContext(targetFor(project, deps), () =>
+            deps.commandManager.execute(MESH_DELETE_COMMAND, {
+                cwd: componentPath,
+                useNodeVersion: 'auto',
+                enhancePath: true,
+                streaming: true,
+                shell: true,
+                timeout: TIMEOUTS.LONG,
+            }),
+        );
+        return;
+    }
+    // With the namespace key, as deploy has it (see runtimeNamespace.ts), and a
+    // refusal is thrown: a silent exit 2 left the ERP pair running on 2026-09-21.
+    const result = await withOrgContext(targetFor(project, deps), async () =>
+        runInNamespace(deps, 'aio app undeploy', await runtimeNamespaceEnv(deps), {
             cwd: componentPath,
-            useNodeVersion: 'auto',
-            enhancePath: true,
             streaming: true,
-            shell: true,
-            timeout: TIMEOUTS.LONG,
         }),
     );
+    if (result.code !== 0) {
+        throw new Error(commandFailure('aio app undeploy', result));
+    }
 }
 
 /**
@@ -895,18 +942,17 @@ async function verifyRuntimeTeardown(
     const expected = [...new Set([...expectedPackages, deriveOwPackage(id)])].filter((name) =>
         RUNTIME_PACKAGE_NAME.test(name),
     );
+    // The key is fetched once and used for the list and every delete. A list that
+    // cannot answer THROWS (runtimeNamespace.ts), so it lands here as "not
+    // verified" — it used to parse the empty output of a failed list as "nothing
+    // deployed" and report the namespace clean.
     let present: string[];
+    let env: RuntimeNamespaceEnv;
     try {
-        const listed = await withOrgContext(targetFor(project, deps), () =>
-            deps.commandManager.execute('aio runtime package list --json', {
-                useNodeVersion: 'auto',
-                enhancePath: true,
-                shell: true,
-                timeout: TIMEOUTS.LONG,
-            }),
-        );
-        const parsed = JSON.parse(listed.stdout || '[]') as Array<{ name?: string }>;
-        present = parsed.map((p) => p.name ?? '').filter(Boolean);
+        [env, present] = await withOrgContext(targetFor(project, deps), async () => {
+            const namespaceEnv = await runtimeNamespaceEnv(deps);
+            return [namespaceEnv, await listRuntimePackages(deps, namespaceEnv)] as const;
+        });
     } catch (error) {
         return {
             verified: false,
@@ -921,14 +967,7 @@ async function verifyRuntimeTeardown(
     const failed: string[] = [];
     for (const name of leftovers) {
         try {
-            await withOrgContext(targetFor(project, deps), () =>
-                deps.commandManager.execute(`aio runtime package delete ${name} --recursive`, {
-                    useNodeVersion: 'auto',
-                    enhancePath: true,
-                    shell: true,
-                    timeout: TIMEOUTS.LONG,
-                }),
-            );
+            await withOrgContext(targetFor(project, deps), () => deleteRuntimePackage(deps, name, env));
             deleted.push(name);
         } catch (error) {
             deps.logger.warn(

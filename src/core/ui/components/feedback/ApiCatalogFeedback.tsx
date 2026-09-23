@@ -66,13 +66,14 @@ export function renderApiCatalogFeedback(
     if (loading) {
         // A static label reads as FROZEN on a fetch this long (38.9s measured).
         // helperText sets the expectation up front; the staged subMessage shows it
-        // is still moving.
+        // is still moving. "First": after one load the list is saved, so later
+        // opens are instant; the first can span three tries at Adobe's 60s cutoff.
         return (
             <LoadingDisplay
                 size="L"
-                message="Loading Adobe APIs…"
+                message="Loading Adobe APIs"
                 subMessage={loadingStage}
-                helperText="This can take up to a minute"
+                helperText="The first load can take a few minutes"
             />
         );
     }

@@ -82,14 +82,16 @@ export function createMockAuthenticationService(
         getWorkspacesSdkOnly: jest.fn().mockResolvedValue([]),
         createProject: jest.fn().mockResolvedValue(undefined),
         createWorkspace: jest.fn().mockResolvedValue(undefined),
+        deleteWorkspace: jest.fn().mockResolvedValue(undefined),
         deleteConsoleProject: jest.fn().mockResolvedValue(undefined),
-        renameRemoteProject: jest.fn().mockResolvedValue(undefined),
+        renameRemoteProject: jest.fn().mockResolvedValue({ ok: true }),
 
         // --- credentials ---
         createAdobeIdCredential: jest.fn().mockResolvedValue(undefined),
         createWorkspaceCredential: jest.fn().mockResolvedValue(undefined),
         createWorkspaceS2SCredentialFor: jest.fn().mockResolvedValue(undefined),
         ensureOAuthCredentialId: jest.fn().mockResolvedValue(undefined),
+        listCredentialIds: jest.fn().mockResolvedValue([]),
         getS2SDeployCredentials: jest.fn().mockResolvedValue(undefined),
         getWorkspaceCredential: jest.fn().mockResolvedValue(undefined),
         getWorkspaceS2SCredential: jest.fn().mockResolvedValue(undefined),

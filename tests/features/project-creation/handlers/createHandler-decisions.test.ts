@@ -16,7 +16,6 @@ import { ServiceLocator as _ServiceLocator } from '@/core/di/serviceLocator';
 import * as vscode from 'vscode';
 import * as _fs from 'fs';
 import { promises as fsPromises } from 'fs';
-import { AppError } from '@/core/errors';
 import { ErrorCode } from '@/types/errorCodes';
 import { GitHubAppNotInstalledError } from '@/features/eds/services/types';
 import { MESH_DELETE_COMMAND } from '@/core/shell/meshDeleteCommand';
@@ -114,7 +113,7 @@ describe('Project Creation - Create Handler - Decisions', () => {
             expect(mockContext.sendMessage).toHaveBeenNthCalledWith(1, 'creationProgress', {
                 currentOperation: 'Initializing',
                 progress: 0,
-                message: 'Preparing to create your project...',
+                message: 'Preparing to create your project',
                 logs: [],
             });
         });
@@ -153,7 +152,9 @@ describe('Project Creation - Create Handler - Decisions', () => {
     describe('how a failure is classified', () => {
         it('treats a CANCELLED code as cancelled even when nothing said "cancelled by user"', async () => {
             (executor.executeProjectCreation as jest.Mock).mockRejectedValue(
-                new AppError('stopped', ErrorCode.CANCELLED)
+                // A plain Error carrying the code, which is what the handler reads.
+                // The retired AppError carried `code` the same way.
+                Object.assign(new Error('stopped'), { code: ErrorCode.CANCELLED })
             );
 
             const result = await handleCreateProject(mockContext, mockConfig);

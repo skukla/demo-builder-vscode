@@ -101,7 +101,7 @@ describe('resetRepoToTemplate — the one caller that means to rewrite history',
         } as Awaited<ReturnType<GitHubFileOperations['getBranchInfo']>>);
         (ops as unknown as { downloadRepoContents: jest.Mock }).downloadRepoContents = jest
             .fn()
-            .mockResolvedValue(new Map([['index.html', '<html></html>']]));
+            .mockResolvedValue(new Map([['index.html', { data: Buffer.from('<html></html>'), mode: '100644' }]]));
         (ops as unknown as { createTree: jest.Mock }).createTree = jest
             .fn()
             .mockResolvedValue('new-tree-sha');

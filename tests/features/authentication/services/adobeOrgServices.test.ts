@@ -78,15 +78,57 @@ describe('AdobeOrgServices — getServicesForOrg cache', () => {
         expect(client.getServicesForOrg).toHaveBeenCalledTimes(1);
     });
 
-    it('refetches AT the TTL boundary — the entry expires on, not after, its deadline', async () => {
+    // An old copy is never a wait. On 2026-09-21 a 30-minute expiry turned Manage
+    // APIs, opened 40 minutes after the warm-up, into a blocking fetch that timed
+    // out at 60s. The list barely changes, so the copy is answered at once and a
+    // refresh runs behind it.
+    it('answers an OLD copy at once, even while its refresh never lands', async () => {
         const { service, client } = makeService();
-        client.getServicesForOrg.mockResolvedValue({ body: SERVICES });
-
+        client.getServicesForOrg.mockResolvedValueOnce({ body: SERVICES });
         await service.getServicesForOrg('org-1');
+        client.getServicesForOrg.mockReturnValue(new Promise(() => undefined));
         nowSpy.mockReturnValue(1_000 + CACHE_TTL.ORG_SERVICES);
+
+        await expect(service.getServicesForOrg('org-1')).resolves.toEqual(SERVICES);
+        // The refresh starts AT the boundary — the age counts on, not after, it.
+        expect(client.getServicesForOrg).toHaveBeenCalledTimes(2);
+    });
+
+    it('starts ONE refresh however many callers find the copy old', async () => {
+        const { service, client } = makeService();
+        client.getServicesForOrg.mockResolvedValueOnce({ body: SERVICES });
         await service.getServicesForOrg('org-1');
+        client.getServicesForOrg.mockReturnValue(new Promise(() => undefined));
+        nowSpy.mockReturnValue(1_000 + CACHE_TTL.ORG_SERVICES);
+
+        await Promise.all([service.getServicesForOrg('org-1'), service.getServicesForOrg('org-1')]);
 
         expect(client.getServicesForOrg).toHaveBeenCalledTimes(2);
+    });
+
+    it('replaces the copy with what the refresh brings back', async () => {
+        const { service, client } = makeService();
+        client.getServicesForOrg.mockResolvedValueOnce({ body: SERVICES });
+        await service.getServicesForOrg('org-1');
+        const refreshed = [...SERVICES, { code: 'NewSDK' }];
+        client.getServicesForOrg.mockResolvedValueOnce({ body: refreshed });
+        nowSpy.mockReturnValue(1_000 + CACHE_TTL.ORG_SERVICES);
+        await service.getServicesForOrg('org-1');
+        await new Promise((resolve) => setImmediate(resolve));
+
+        await expect(service.getServicesForOrg('org-1')).resolves.toEqual(refreshed);
+    });
+
+    it('keeps the copy when the refresh fails', async () => {
+        const { service, client } = makeService();
+        client.getServicesForOrg.mockResolvedValueOnce({ body: SERVICES });
+        await service.getServicesForOrg('org-1');
+        client.getServicesForOrg.mockRejectedValue(new Error('504 Gateway Timeout'));
+        nowSpy.mockReturnValue(1_000 + CACHE_TTL.ORG_SERVICES);
+        await service.getServicesForOrg('org-1');
+        await new Promise((resolve) => setTimeout(resolve, 0));
+
+        await expect(service.getServicesForOrg('org-1')).resolves.toEqual(SERVICES);
     });
 
     it('never caches an empty catalog — the next call fetches again', async () => {
@@ -118,43 +160,34 @@ describe('AdobeOrgServices — getServicesForOrg cache', () => {
 describe('AdobeOrgServices — fetch budget and empty answers', () => {
     beforeEach(() => jest.clearAllMocks());
 
-    it('gives the first try exactly ORG_SERVICES_FETCH before timing out', async () => {
+    it('gives the first try exactly ORG_SERVICES_FETCH before trying again', async () => {
         jest.useFakeTimers();
         try {
             const { service, client } = makeService();
-            client.getServicesForOrg.mockImplementation(never);
-            let settled = false;
+            client.getServicesForOrg
+                .mockImplementationOnce(never)
+                .mockResolvedValueOnce({ body: SERVICES });
 
             const pending = service.getServicesForOrg('org-1');
-            pending.then(
-                () => (settled = true),
-                () => (settled = true)
-            );
-            // The handler must attach BEFORE the timers advance or the rejection is
-            // unhandled; the rule cannot see a deferred await.
-            // eslint-disable-next-line jest/valid-expect
-            const guard = expect(pending).rejects.toThrow(
-                `SDK org services fetch timed out after ${TIMEOUTS.ORG_SERVICES_FETCH}ms`
-            );
 
             await jest.advanceTimersByTimeAsync(TIMEOUTS.ORG_SERVICES_FETCH - 1);
-            expect(settled).toBe(false);
+            expect(client.getServicesForOrg).toHaveBeenCalledTimes(1);
 
             await jest.advanceTimersByTimeAsync(1);
-            await guard;
-            expect(settled).toBe(true);
+            await expect(pending).resolves.toEqual(SERVICES);
+            expect(client.getServicesForOrg).toHaveBeenCalledTimes(2);
         } finally {
             jest.useRealTimers();
         }
     });
 
-    it('gives the retry the same budget, and names it as the retry', async () => {
+    it('gives every try the same budget, and names the last one', async () => {
         jest.useFakeTimers();
         try {
             const { service, client } = makeService();
             client.getServicesForOrg
                 .mockRejectedValueOnce(new Error('500'))
-                .mockImplementationOnce(never);
+                .mockImplementation(never);
             let settled = false;
 
             const pending = service.getServicesForOrg('org-1');
@@ -164,13 +197,16 @@ describe('AdobeOrgServices — fetch budget and empty answers', () => {
             );
             // eslint-disable-next-line jest/valid-expect
             const guard = expect(pending).rejects.toThrow(
-                `SDK org services fetch (retry) timed out after ${TIMEOUTS.ORG_SERVICES_FETCH}ms`
+                `SDK org services fetch (try 3) timed out after ${TIMEOUTS.ORG_SERVICES_FETCH}ms`
             );
 
             await jest.advanceTimersByTimeAsync(TIMEOUTS.ORG_SERVICES_FETCH - 1);
-            expect(settled).toBe(false);
             expect(client.getServicesForOrg).toHaveBeenCalledTimes(2);
+            await jest.advanceTimersByTimeAsync(1);
+            expect(client.getServicesForOrg).toHaveBeenCalledTimes(3);
 
+            await jest.advanceTimersByTimeAsync(TIMEOUTS.ORG_SERVICES_FETCH - 1);
+            expect(settled).toBe(false);
             await jest.advanceTimersByTimeAsync(1);
             await guard;
         } finally {
@@ -178,7 +214,7 @@ describe('AdobeOrgServices — fetch budget and empty answers', () => {
         }
     });
 
-    it('an SDK that resolves nothing is a fast failure — retried once, retry answer lands', async () => {
+    it('an SDK that resolves nothing is a failure — tried again, the next answer lands', async () => {
         const { service, client } = makeService();
         client.getServicesForOrg
             .mockResolvedValueOnce(undefined)
@@ -190,7 +226,7 @@ describe('AdobeOrgServices — fetch budget and empty answers', () => {
         expect(sleep).toHaveBeenCalledWith(TIMEOUTS.ORG_SERVICES_RETRY_DELAY);
     });
 
-    it("two empty answers throw the module's own message, not a TypeError", async () => {
+    it("three empty answers throw the module's own message, not a TypeError", async () => {
         const { service, client } = makeService();
         client.getServicesForOrg.mockResolvedValue(undefined);
 

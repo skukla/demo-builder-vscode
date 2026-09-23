@@ -23,12 +23,13 @@
  */
 
 import { AdobeCliFallback } from './adobeCliFallback';
-import { AdobeConsoleProjectOps } from './adobeConsoleProjectOps';
+import { AdobeConsoleProjectOps, type RemoteRenameResult } from './adobeConsoleProjectOps';
 import { AdobeEntityReads } from './adobeEntityReads';
 import { AdobeOrgServices } from './adobeOrgServices';
 import type { AdobeSDKClient } from './adobeSDKClient';
 import { AdobeWorkspaceCredentials } from './adobeWorkspaceCredentials';
 import type { AuthCacheManager } from './authCacheManager';
+import type { OrgServicesStore } from './orgServicesSavedCatalog';
 import type {
     AdobeIdCredentialInput,
     AdobeOrg,
@@ -66,6 +67,8 @@ export interface AdobeEntityFetcherConfig {
      * caller behaving exactly as before.
      */
     isTokenValid?: () => Promise<boolean>;
+    /** Keeps the org's API list across window reloads — see {@link AdobeOrgServices}. */
+    orgServicesStore?: OrgServicesStore;
 }
 
 /**
@@ -100,7 +103,7 @@ export class AdobeEntityFetcher {
             () => this.getOrganizationsSdkOnly(),
         );
         this.credentials = new AdobeWorkspaceCredentials(sdkClient, cacheManager);
-        this.orgServices = new AdobeOrgServices(sdkClient);
+        this.orgServices = new AdobeOrgServices(sdkClient, config.orgServicesStore);
         this.projectOps = new AdobeConsoleProjectOps(sdkClient, cacheManager, (orgId, projectId) =>
             this.reads.fetchWorkspaces(orgId, projectId),
         );
@@ -167,6 +170,11 @@ export class AdobeEntityFetcher {
         input: AdobeIdCredentialInput,
     ): Promise<string | undefined> {
         return this.credentials.createAdobeIdCredential(orgId, projectId, workspaceId, input);
+    }
+
+    /** Every credential id in a workspace, read only — see {@link AdobeWorkspaceCredentials}. */
+    async listCredentialIds(orgId: string, projectId: string, workspaceId: string): Promise<string[]> {
+        return this.credentials.listCredentialIds(orgId, projectId, workspaceId);
     }
 
     /** Ensure the shared S2S credential exists — see {@link AdobeWorkspaceCredentials}. */
@@ -255,7 +263,7 @@ export class AdobeEntityFetcher {
     }
 
     /** Best-effort remote title sync — see {@link AdobeConsoleProjectOps}. */
-    async renameRemoteProject(orgId: string, projectId: string, title: string): Promise<boolean> {
+    async renameRemoteProject(orgId: string, projectId: string, title: string): Promise<RemoteRenameResult> {
         return this.projectOps.renameRemoteProject(orgId, projectId, title);
     }
 
@@ -275,6 +283,14 @@ export class AdobeEntityFetcher {
         target?: { orgId?: string; projectId?: string },
     ): Promise<AdobeWorkspace | ConsoleOpFailure> {
         return this.projectOps.createWorkspace(title, description, target);
+    }
+
+    /** Delete a workspace — the reversal of {@link createWorkspace}. */
+    async deleteWorkspace(
+        workspaceId: string,
+        target?: { orgId?: string; projectId?: string },
+    ): Promise<{ deleted: true } | ConsoleOpFailure> {
+        return this.projectOps.deleteWorkspace(workspaceId, target);
     }
 
     /** Delete a Console project (SDK errors propagate) — see {@link AdobeConsoleProjectOps}. */

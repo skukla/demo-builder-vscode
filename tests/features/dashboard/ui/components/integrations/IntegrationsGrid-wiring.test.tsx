@@ -214,8 +214,8 @@ describe('IntegrationsGrid wiring', () => {
             const panel = await openPanel(user, 'custom-app', 'Deployed');
             await user.click(within(panel).getByRole('button', { name: /^remove$/i }));
 
-            const dialog = screen.getByRole('dialog', { name: /remove app builder component/i });
-            expect(dialog).toHaveTextContent('Remove custom-app?');
+            const dialog = screen.getByRole('dialog', { name: 'Remove custom-app' });
+            expect(dialog).toHaveTextContent('custom-app will be undeployed from Adobe');
             expect(
                 within(dialog).queryByText(/storefront loses its API Mesh endpoint/i)
             ).not.toBeInTheDocument();
@@ -227,11 +227,11 @@ describe('IntegrationsGrid wiring', () => {
 
             const panel = await openPanel(user, 'custom-app', 'Deployed');
             await user.click(within(panel).getByRole('button', { name: /^remove$/i }));
-            const dialog = screen.getByRole('dialog', { name: /remove app builder component/i });
+            const dialog = screen.getByRole('dialog', { name: 'Remove custom-app' });
             await user.click(within(dialog).getByRole('button', { name: /^close$/i }));
 
             expect(
-                screen.queryByRole('dialog', { name: /remove app builder component/i })
+                screen.queryByRole('dialog', { name: 'Remove custom-app' })
             ).not.toBeInTheDocument();
         });
     });

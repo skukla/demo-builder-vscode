@@ -4,7 +4,8 @@
  * the catalog wiring so a row can't silently point at the wrong handler.
  */
 
-import { descriptorFor } from './readDescriptors.testUtils';
+import { z } from 'zod';
+import { descriptorFor, shapeOf, shaped } from './readDescriptors.testUtils';
 
 import { READ_DESCRIPTORS } from '@/features/ai/server/readDescriptors';
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
@@ -205,6 +206,19 @@ describe('list_console_apis emits the group legend once, not per row', () => {
     });
 });
 
+// The handler always accepted a componentId (the Manage APIs modal sends one), but
+// the tool's schema did not declare it, so the SDK stripped it before the handler
+// ran and an agent only ever saw the project's union (found live, 2026-09-21).
+describe('list_console_apis takes an integration to scope to', () => {
+    it('declares componentId, so it reaches the handler instead of being stripped', () => {
+        const schema = z.object(row('list_console_apis')!.inputSchema ?? {});
+
+        expect(schema.parse({ componentId: 'erp-integration' })).toEqual({
+            componentId: 'erp-integration',
+        });
+    });
+});
+
 describe('list_ai_prompts indexes by default and fetches one in full', () => {
     // Two prompts were 4,848 bytes, 97% of it the bodies. Prompt text is
     // unbounded, so the index cannot carry it.
@@ -287,5 +301,18 @@ describe('list_console_apis search', () => {
         expect(out.apis).toHaveLength(2);
         expect(out.matched).toBeUndefined();
         expect(out.totalUnfiltered).toBeUndefined();
+    });
+});
+
+describe('probe_shared_demo', () => {
+    it("answers the probe's result itself, not the {result} wrapper the dialog reads", () => {
+        const result = { outcome: 'read', fullName: 'jen/isle5-demo', kind: 'eds' };
+        expect(shaped('probe_shared_demo', { success: true, result })).toEqual(result);
+    });
+
+    it('answers a refusal as the default error line', () => {
+        expect(shapeOf('probe_shared_demo')({ success: false, error: 'owner and repo are required' }, {})).toBe(
+            'Error: owner and repo are required',
+        );
     });
 });

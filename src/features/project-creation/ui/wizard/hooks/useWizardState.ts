@@ -286,6 +286,7 @@ function buildEditModeState(firstStep: WizardStep, editProject: EditProjectConfi
         adobeProject: adobeContext.project,
         adobeWorkspace: adobeContext.workspace,
         selectedPackage: editSettings.selectedPackage,
+        demo: editSettings.demo,
         selectedStack: editSettings.selectedStack,
         // Restore the backend selection so the Commerce → Backend cards show the
         // project's backend pre-selected on edit (the cards read `selectedBackend`,
@@ -346,6 +347,7 @@ function computeInitialState(
         adobeProject: adobeContext.project,
         adobeWorkspace: adobeContext.workspace,
         selectedPackage: importedSettings?.selectedPackage,
+        demo: importedSettings?.demo,
         selectedStack: importedSettings?.selectedStack,
         selectedAddons: importedSettings?.selectedAddons,
         selectedBlockLibraries: importedSettings?.selectedBlockLibraries,

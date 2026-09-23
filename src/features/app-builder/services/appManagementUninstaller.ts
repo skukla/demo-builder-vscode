@@ -97,7 +97,7 @@ async function pollUninstallation(
         if (state && state.status !== 'in-progress') {
             return state;
         }
-        deps.onProgress?.('Removing the app from Commerce…');
+        deps.onProgress?.('Removing the app from Commerce');
     }
     return undefined;
 }
@@ -167,8 +167,8 @@ export async function uninstallAppManagementApp(
         for (let round = 1; round <= MAX_UNINSTALL_ROUNDS; round++) {
             deps.onProgress?.(
                 round === 1
-                    ? 'Removing the app from Commerce…'
-                    : `Retrying the uninstall (transient conflict, round ${round})…`,
+                    ? 'Removing the app from Commerce'
+                    : `Retrying the uninstall (transient conflict, round ${round})`,
             );
             const started = await client.startUninstallation({
                 appData,

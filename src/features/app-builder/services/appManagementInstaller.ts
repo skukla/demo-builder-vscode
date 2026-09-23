@@ -221,7 +221,7 @@ async function pollInstallation(
         if (state && state.status !== 'in-progress') {
             return state;
         }
-        deps.onProgress?.('Installing into Commerce…');
+        deps.onProgress?.('Installing into Commerce');
     }
     return undefined;
 }
@@ -334,7 +334,7 @@ export async function installAppManagementApp(
     const client = factory(baseUrl, auth);
 
     try {
-        deps.onProgress?.('Associating the app with your Commerce instance…');
+        deps.onProgress?.('Associating the app with your Commerce instance');
         await client.setAssociation({
             commerceBaseUrl: target.commerceBaseUrl,
             commerceEnv: target.commerceEnv,
@@ -348,8 +348,8 @@ export async function installAppManagementApp(
         for (let round = 1; round <= MAX_RECONCILE_ROUNDS; round++) {
             deps.onProgress?.(
                 round === 1
-                    ? 'Installing into Commerce (App Management)…'
-                    : `Retrying the install (transient conflict, round ${round})…`,
+                    ? 'Installing into Commerce (App Management)'
+                    : `Retrying the install (transient conflict, round ${round})`,
             );
             const reconciled = await client.reconcileInstallation({
                 appData,

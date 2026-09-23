@@ -96,9 +96,9 @@ describe('useProjectBuilder — the removal lock reads the CURRENT selection', (
         act(() => s.result.current.onRemoveAppBuilderComponent('native-thing'));
         expect(s.updateState).not.toHaveBeenCalled();
 
-        // 'custom' does not ship it natively, so the lock must lift.
+        // 'starter' does not ship it natively, so the lock must lift.
         s.rerender({
-            state: { ...s.stateRef.current, selectedPackage: 'custom' } as WizardState,
+            state: { ...s.stateRef.current, selectedPackage: 'starter' } as WizardState,
         });
         act(() => s.result.current.onRemoveAppBuilderComponent('native-thing'));
 

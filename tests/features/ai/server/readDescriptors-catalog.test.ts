@@ -67,7 +67,14 @@ const CATALOG: Row[] = [
         map: dashboardHandlers,
         type: 'listConsoleApis',
         needsAuth: ['adobe'],
-        args: ['search'],
+        args: ['search', 'componentId'],
+    },
+    {
+        tool: 'list_runtime_packages',
+        map: dashboardHandlers,
+        type: 'listRuntimePackages',
+        needsAuth: ['adobe'],
+        args: null,
     },
     {
         tool: 'get_store_structure',
@@ -75,6 +82,13 @@ const CATALOG: Row[] = [
         type: 'get-store-structure',
         needsAuth: ['commerce'],
         args: null,
+    },
+    {
+        tool: 'probe_shared_demo',
+        map: dashboardHandlers,
+        type: 'probe-shared-demo',
+        needsAuth: ['github'],
+        args: ['owner', 'repo', 'link'],
     },
     {
         tool: 'get_project_urls',

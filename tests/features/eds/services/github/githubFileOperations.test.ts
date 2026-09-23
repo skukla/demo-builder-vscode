@@ -152,7 +152,7 @@ describe('resetRepoToTemplate — target branch vs template ref separation', () 
         // committing a tree that would empty the repository.
         service.downloadRepoContents = jest
             .fn()
-            .mockResolvedValue(new Map([['index.html', '<html></html>']]));
+            .mockResolvedValue(new Map([['index.html', { data: Buffer.from('<html></html>'), mode: '100644' }]]));
 
         service.createTree = jest.fn().mockResolvedValue('new-tree-sha');
 
@@ -181,7 +181,7 @@ describe('resetRepoToTemplate — target branch vs template ref separation', () 
         });
 
         // Non-empty: an empty template now refuses rather than emptying the repo.
-        const downloadSpy = jest.fn().mockResolvedValue(new Map([['index.html', '<html></html>']]));
+        const downloadSpy = jest.fn().mockResolvedValue(new Map([['index.html', { data: Buffer.from('<html></html>'), mode: '100644' }]]));
 
         service.downloadRepoContents = downloadSpy;
 
@@ -214,7 +214,7 @@ describe('resetRepoToTemplate — target branch vs template ref separation', () 
         // committing a tree that would empty the repository.
         service.downloadRepoContents = jest
             .fn()
-            .mockResolvedValue(new Map([['index.html', '<html></html>']]));
+            .mockResolvedValue(new Map([['index.html', { data: Buffer.from('<html></html>'), mode: '100644' }]]));
 
         service.createTree = jest.fn().mockResolvedValue('new-tree-sha');
 
@@ -473,10 +473,13 @@ describe('resetRepoToTemplate — chunked tree creation', () => {
     let GitHubFileOperations: any;
     let mockTokenService: any;
 
-    /** An entry whose JSON weighs roughly `kb` kilobytes. */
-    const bigFile = (name: string, kb: number): [string, string] => [name, 'x'.repeat(kb * 1024)];
+    /** An archived file as `downloadRepoContents` answers it: text bytes, plain mode. */
+    const archived = (text: string) => ({ data: Buffer.from(text), mode: '100644' as const });
 
-    async function runReset(contents: Map<string, string>) {
+    /** An entry whose JSON weighs roughly `kb` kilobytes. */
+    const bigFile = (name: string, kb: number): [string, ReturnType<typeof archived>] => [name, archived('x'.repeat(kb * 1024))];
+
+    async function runReset(contents: Map<string, ReturnType<typeof archived>>) {
         const service = new GitHubFileOperations(mockTokenService);
         jest.spyOn(service, 'getBranchInfo').mockResolvedValue({
             commitSha: 'parent-sha',
@@ -552,8 +555,8 @@ describe('resetRepoToTemplate — chunked tree creation', () => {
     it('still issues a single request for a small template', async () => {
         const { createTree } = await runReset(
             new Map([
-                ['a.js', 'hello'],
-                ['b.js', 'world'],
+                ['a.js', archived('hello')],
+                ['b.js', archived('world')],
             ])
         );
 

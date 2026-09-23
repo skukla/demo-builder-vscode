@@ -48,8 +48,8 @@ a silent-failure bug of this exact shape.
 Make the generator inject the required flags, **data-driven per demo package**.
 
 - A demo package declares a `configFlags` object in
-  `src/features/components/config/demo-packages.json`. The unbranded `custom`
-  hybrid (displayed "Custom (B2B + B2C)") and the branded `citisignal` hybrid both
+  `src/features/components/config/demo-packages.json`. The unbranded `starter`
+  hybrid (displayed "Starter (B2B + B2C)"; `custom` until 2026-09-12) and the branded `citisignal` hybrid both
   declare `commerce-b2b-enabled: true` and `commerce-companies-enabled: true`.
 - `configGenerator` merges those into `config.public.default` via a single
   `injectConfigFlags` primitive — the **same** primitive used for addon-level

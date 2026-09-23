@@ -12,6 +12,7 @@
  */
 
 import { mockWithOrgContext } from './appBuilderComponentRunner.orgContextMock';
+import { TEST_RUNTIME_ENV } from './appBuilderComponentRunner.runtimeMock';
 import type { Project } from '@/types/base';
 
 jest.setTimeout(5000);
@@ -194,6 +195,7 @@ describe('post-undeploy runtime verification', () => {
                 enhancePath: true,
                 shell: true,
                 timeout: TIMEOUTS.LONG,
+                env: TEST_RUNTIME_ENV,
             }
         );
     });
@@ -214,8 +216,40 @@ describe('post-undeploy runtime verification', () => {
                 enhancePath: true,
                 shell: true,
                 timeout: TIMEOUTS.LONG,
+                env: TEST_RUNTIME_ENV,
             }
         );
+    });
+
+    // 2026-09-21: the list ran without the namespace key, failed, printed nothing,
+    // and the empty output was parsed as "nothing deployed" — so fifteen running
+    // packages were reported clean. A list that fails is NOT a verification.
+    it('a list that fails is "not verified", never an empty namespace', async () => {
+        const owPackage = deriveOwPackage(ID);
+        const deps = createDeps();
+        routeExecute(deps, { 'package list': { code: 2, stdout: '' } });
+
+        const result = await removeAppBuilderComponent(integrationProject(), ID, deps);
+
+        expect(result.runtimeCleanup).toMatchObject({ verified: false, deleted: [], failed: [] });
+        expect(result.runtimeCleanup?.note).toMatch(/Could not list the Runtime namespace/);
+        const deleteCall = (deps.commandManager.execute as jest.Mock).mock.calls.find(
+            (c: unknown[]) => String(c[0]).includes(`package delete ${owPackage}`)
+        );
+        expect(deleteCall).toBeUndefined();
+    });
+
+    it('a refused undeploy still has its leftovers deleted', async () => {
+        const owPackage = deriveOwPackage(ID);
+        const deps = createDeps();
+        routeExecute(deps, {
+            'app undeploy': { code: 2 },
+            'package list': { stdout: JSON.stringify([{ name: owPackage }]) },
+        });
+
+        const result = await removeAppBuilderComponent(integrationProject(), ID, deps);
+
+        expect(result.runtimeCleanup).toEqual({ verified: true, deleted: [owPackage], failed: [] });
     });
 
     it('a mesh removal runs NO runtime verification (its own status flow owns that)', async () => {

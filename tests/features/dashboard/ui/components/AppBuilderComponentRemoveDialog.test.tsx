@@ -66,7 +66,7 @@ describe('AppBuilderComponentRemoveDialog', () => {
         render(
             <AppBuilderComponentRemoveDialog
                 isOpen={false}
-                appBuilderComponentId="erp-sync"
+                componentName="ERP sync"
                 onConfirm={jest.fn()}
                 onClose={jest.fn()}
             />
@@ -75,23 +75,24 @@ describe('AppBuilderComponentRemoveDialog', () => {
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
 
-    it('names the appBuilderComponent and warns the undeploy is destructive when open', () => {
+    it('names the component as its card does, and says what happens to it', () => {
         render(
             <AppBuilderComponentRemoveDialog
                 isOpen
-                appBuilderComponentId="erp-sync"
+                componentName="ERP sync"
                 onConfirm={jest.fn()}
                 onClose={jest.fn()}
             />
         );
 
         expect(screen.getByRole('dialog')).toBeInTheDocument();
-        // Names the appBuilderComponent.
-        expect(screen.getByText(/erp-sync/)).toBeInTheDocument();
-        // Warns this is a destructive cloud teardown, not a local-only action.
-        expect(
-            screen.getByText(/permanently|destructive|undeploy|tear.?down|cloud/i)
-        ).toBeInTheDocument();
+        // The card's name, not the id: "erp-integration" meant nothing to the person
+        // clicking (owner, 2026-09-21).
+        expect(screen.getByRole('dialog', { name: 'Remove ERP sync' })).toBeInTheDocument();
+        // Says it leaves Adobe, not just this screen.
+        expect(screen.getByTestId('dialog-line')).toHaveTextContent(
+            'ERP sync will be undeployed from Adobe and removed from this project.',
+        );
     });
 
     it('renders the extra consequence as its OWN line when one is supplied', () => {
@@ -100,7 +101,7 @@ describe('AppBuilderComponentRemoveDialog', () => {
         render(
             <AppBuilderComponentRemoveDialog
                 isOpen
-                appBuilderComponentId="api-mesh"
+                componentName="API Mesh"
                 consequence="This also removes MESH_ENDPOINT from the storefront config."
                 onConfirm={jest.fn()}
                 onClose={jest.fn()}
@@ -118,7 +119,7 @@ describe('AppBuilderComponentRemoveDialog', () => {
         render(
             <AppBuilderComponentRemoveDialog
                 isOpen
-                appBuilderComponentId="erp-sync"
+                componentName="ERP sync"
                 onConfirm={jest.fn()}
                 onClose={jest.fn()}
             />
@@ -134,7 +135,7 @@ describe('AppBuilderComponentRemoveDialog', () => {
         render(
             <AppBuilderComponentRemoveDialog
                 isOpen
-                appBuilderComponentId="erp-sync"
+                componentName="ERP sync"
                 onConfirm={onConfirm}
                 onClose={onClose}
             />
@@ -149,7 +150,7 @@ describe('AppBuilderComponentRemoveDialog', () => {
         render(
             <AppBuilderComponentRemoveDialog
                 isOpen
-                appBuilderComponentId="erp-sync"
+                componentName="ERP sync"
                 onConfirm={jest.fn()}
                 onClose={jest.fn()}
             />
@@ -166,7 +167,7 @@ describe('AppBuilderComponentRemoveDialog', () => {
         render(
             <AppBuilderComponentRemoveDialog
                 isOpen
-                appBuilderComponentId="erp-sync"
+                componentName="ERP sync"
                 onConfirm={onConfirm}
                 onClose={onClose}
             />

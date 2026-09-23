@@ -186,7 +186,7 @@ each item's own file; what has already landed against an item is in its
 
 <!-- BEGIN GENERATED registry -->
 
-### ai  (33)
+### ai  (34)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -223,8 +223,9 @@ each item's own file; what has already landed against an item is in its
 | `AI-6` | fix | [One agent deploy, three progress notifications](2026-08-27-agent-deploy-duplicate-progress-notifications.md) | — | med | shipped |
 | `AI-7` | question | [Unattended teardown consent — how does a commissioned journey get to zero?](2026-08-28-unattended-teardown-consent.md) | — | med | shipped |
 | `AI-8` | question | [Audit our context files against what the research actually says](2026-08-29-context-file-audit-against-evidence.md) | — | high | backlog |
+| `AI-9` | question | [Should an agent's project delete also clean up the cloud, as a person's does?](2026-09-19-agent-project-delete-leaves-cloud.md) | — | med | open |
 
-### eds  (13)
+### eds  (24)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -239,7 +240,18 @@ each item's own file; what has already landed against an item is in its
 | `EDS-10` | feature | [Custom themes as savable entities](2026-08-28-custom-themes-as-savable-entities.md) | — | med | backlog |
 | `EDS-11` | fix | [RETRACTED — HelixService's optional credentials are not the hazard I described](2026-08-28-helix-auth-variance-unmodeled.md) | — | low | dropped |
 | `EDS-12` | fix | [Resetting the same EDS project does less from the dashboard than from the projects list](2026-09-02-two-reset-doors-differ.md) | — | med | built |
+| `EDS-13` | epic | [Portable demos: share storefronts, move whole projects](2026-09-11-colleague-built-storefront.md) | — | high | active |
+| `EDS-13a` | feature | └ ["Add a demo": build a project on a demo someone shared by link](2026-09-11-add-a-demo-import.md) | PL-56a | high | active |
+| `EDS-13b` | feature | └ ["Share this demo": turn an existing project into a demo others can add](2026-09-11-share-a-demo-export.md) | EDS-13c | med | active |
+| `EDS-13c` | chore | └ [The shareable-demo process, published: how to make a storefront addable](2026-09-11-shareable-demo-contract.md) | PL-56a | high | active |
+| `EDS-13d` | feature | └ [A team catalog of shared demos](2026-09-11-team-demo-catalog.md) | EDS-13a, EDS-13b | low | backlog |
+| `EDS-13e` | feature | └ [Share a headless demo](2026-09-11-share-a-headless-demo.md) | EDS-13b | low | superseded |
+| `EDS-13f` | feature | └ [Shared demos carry their boilerplate, their patches and a way to stay fixed](2026-09-14-shared-demo-patches-and-provenance.md) | EDS-13a, EDS-13b | high | planned |
+| `EDS-13g` | feature | └ [A headless project keeps its code in a repository of the SC's own, as Edge Delivery does](2026-09-15-headless-storefront-repository.md) | — | med | backlog |
+| `EDS-14` | fix | [Template update falls back to a full reset on conflict, overwriting the SC's own edits](2026-09-11-template-update-conflict-fallback-overwrites-edits.md) | — | med | active |
+| `EDS-15` | fix | ["Cleanup DA.live sites" builds its DA.live calls on the Adobe token DA.live refuses](2026-09-13-dalive-cleanup-command-token.md) | — | low | backlog |
 | `EDS-16` | fix | [The "no admin role" remedy sent people to a page that cannot grant anything](2026-09-14-site-access-remedy-dead-link.md) | — | high | built |
+| `EDS-17` | feature | [A storefront can live in an organization's repository, not only the SC's own](2026-09-16-storefront-in-an-org-repository.md) | — | high | backlog |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | backlog |
 
 ### app-builder  (13)
@@ -260,12 +272,13 @@ each item's own file; what has already landed against an item is in its
 | `AB-8` | question | [Where does event-provider management belong, and what does an SC do with it?](2026-09-09-event-provider-surface-design.md) | — | med | open |
 | `PL-24` | feature | [Component updates cannot follow an environment-variable rename](2026-08-30-env-var-rename-migration.md) | — | med | backlog |
 
-### data-installer  (2)
+### data-installer  (3)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
 | `DI-1` | feature | [Datapack authoring loop — export, modify, publish-your-own via project skills](2026-08-23-datapack-authoring-loop.md) | — | med | backlog |
 | `DI-2` | feature | [Instance wipe option — remove as much data as the service allows](2026-08-22-instance-wipe-option.md) | — | med | backlog |
+| `DI-3` | question | └ [Spike: export a pack to the service through the item APIs, end to end](2026-09-11-spike-export-a-pack-through-the-item-apis.md) | — | low | spiked |
 
 ### prerequisites  (3)
 
@@ -275,11 +288,12 @@ each item's own file; what has already landed against an item is in its
 | `PL-36` | fix | [The third Node-version sort in installHandler is untested](2026-09-02-install-handler-target-version-sort.md) | — | med | backlog |
 | `PR-1` | epic | [Reframe prerequisites: extension-wide tools vs project-shape requirements (Path A)](2026-06-11-prereqs-architecture-reframe.md) | — | low | backlog |
 
-### platform  (52)
+### platform  (64)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
-| `EDS-8` | chore | [Files over the god-file threshold](eds-services-over-size-threshold.md) | — | high | backlog |
+| `EDS-8` | chore | [Files over the god-file threshold](eds-services-over-size-threshold.md) | — | high | active |
+| `PL-56` | epic | └ [Project portability: export, import and copy carry the whole project](2026-09-11-project-portability.md) | — | high | planned |
 | `PL-1` | chore | [Manifest write-back migration — retire the legacy-format read layer](2026-08-24-manifest-write-back-migration.md) | — | med | shipped |
 | `PL-2` | chore | [Regroup crowded service directories into subfolders — where measurement says so](2026-08-23-services-directory-regrouping.md) | — | low | shipped |
 | `PL-3` | chore | [Monorepo Support with Independent Release Tracking - Implementation Plan](monorepo-independent-release-tracking/overview.md) | — | low | backlog |
@@ -313,7 +327,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-13` | chore | └ [ADR-015 convergence — empty the exemption ledger](2026-08-28-adr-015-convergence.md) | — | high | shipped |
 | `PL-19` | fix | └ [The sidebar is the only webview not using the shared client](2026-08-29-sidebar-converge-on-webview-client.md) | — | med | shipped |
 | `PL-20` | fix | └ [19 classes a component asks for that nothing styles](2026-08-29-triage-classes-defined-nowhere.md) | — | med | shipped |
-| `PL-21` | question | └ [CSS: understand it, then get a safety net, then rule on it — refactor last, if at all](2026-08-29-css-architecture-understand-before-refactor.md) | — | high | built |
+| `PL-21` | question | └ [CSS: understand it, then get a safety net, then rule on it — refactor last, if at all](2026-08-29-css-architecture-understand-before-refactor.md) | — | high | shipped |
 | `PL-26` | feature | └ [A glossary, so the agent describes things back in our words](project-glossary.md) | — | med | active |
 | `PL-27` | question | └ [Is any of our 37 skills doing a job a check should hold?](skills-vs-enforcement-layer.md) | — | low | open |
 | `PL-29` | epic | └ [Track 2 — documentation synthesis, and every document enforced](doc-synthesis-track.md) | PL-11 | high | active |
@@ -321,7 +335,9 @@ each item's own file; what has already landed against an item is in its
 | `PL-33` | chore | └ [Every convention is enforced, or it stops being a convention](2026-08-31-every-convention-enforced.md) | — | high | shipped |
 | `PL-34` | chore | └ [Every open finding from the 2026-09-01 toolchain day, in one list](2026-09-01-cast-and-builder-worklog.md) | — | high | shipped |
 | `PL-54` | fix | └ [The nudge rules cover two file shapes; reinvention happens in more than two](2026-09-10-agent-nudge-coverage.md) | — | high | shipped |
-| `PL-55` | chore | └ [Two architectural domains have no convention at all — one of them is a non-negotiable](2026-09-10-architecture-conventions-never-written.md) | — | high | backlog |
+| `PL-55` | chore | └ [Two architectural domains have no convention at all — one of them is a non-negotiable](2026-09-10-architecture-conventions-never-written.md) | — | high | built |
+| `PL-57` | chore | └ [The component-extraction convention was enforced by nothing](2026-09-11-component-extraction-convention-unenforced.md) | — | med | built |
+| `PL-58` | chore | └ [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) | — | high | backlog |
 | `PL-37` | chore | [The webview handshake's `stateVersion` is write-only](2026-09-02-webview-state-version-dead.md) | — | low | backlog |
 | `PL-38` | chore | [Our two most-mocked modules are faked 122 different ways](2026-09-02-webviewclient-mock-divergence.md) | — | med | shipped |
 | `PL-39` | chore | [An item can be marked done while its own body says what is left](2026-09-02-finished-items-carrying-remainders.md) | — | med | backlog |
@@ -331,6 +347,15 @@ each item's own file; what has already landed against an item is in its
 | `PL-51` | fix | [Test suites that rebuild a mock wall their family helper already owns](2026-09-08-suites-rebuilding-their-family-mock-wall.md) | — | med | active |
 | `PL-52` | fix | [A hook-proof suite fails under full parallel load and refuses pushes](2026-09-08-hook-proof-suite-flakes-under-load.md) | — | med | shipped |
 | `PL-53` | question | [351 of the god file's 647 classes appear in no source string — 254 rules deleted](2026-09-09-god-file-classes-nothing-uses.md) | — | med | shipped |
+| `PL-56a` | feature | └ [The portable-project contract: one versioned file, and the storefront slice of it](2026-09-11-portable-project-contract.md) | — | high | built |
+| `PL-56b` | chore | └ [Portability: delete what is already dead](2026-09-11-portability-delete-the-dead.md) | — | low | backlog |
+| `PL-56c` | feature | └ [Export carries the whole project, and never a credential](2026-09-11-export-carries-the-project.md) | PL-56a | high | backlog |
+| `PL-56d` | fix | └ [Import creates what the file says, re-proves sign-ins, and tells the SC what it did](2026-09-11-import-creates-what-the-file-says.md) | PL-56c | high | active |
+| `PL-56e` | fix | └ [Copy and Edit read the same complete file, so neither can drop what the other keeps](2026-09-11-copy-and-edit-on-one-file.md) | PL-56c, PL-56d | med | backlog |
+| `PL-56f` | feature | └ [Agent tools for import and copy](2026-09-11-portability-agent-tools.md) | PL-56d | med | backlog |
+| `PL-56g` | chore | └ [A feature page for moving projects](2026-09-11-portability-docs.md) | PL-56d | low | backlog |
+| `PL-59` | feature | [A long operation should say what it is doing, not just spin](2026-09-16-progress-surface-for-long-operations.md) | — | high | active |
+| `PL-62` | feature | [Adding something is a card, everywhere](2026-09-21-add-is-a-card.md) | — | low | backlog |
 
 <!-- END GENERATED registry -->
 
@@ -469,16 +494,17 @@ the table cannot hold: why the layers are ordered this way.*
 - `EDS-4` [Rebuild BuildRight on the thin-layer model](2026-06-10-buildright-eds-disposition.md) — backlog
 - `PR-1` [Reframe prerequisites: extension-wide tools vs project-shape requirements (Path A)](2026-06-11-prereqs-architecture-reframe.md) — backlog
 
-**G** — 6 items
+**G** — 7 items
 
 - `EDS-7` [The two EDS service cards are one shell rendered twice](2026-08-25-eds-service-cards-are-one-shell.md) — shipped
-- `EDS-8` [Files over the god-file threshold](eds-services-over-size-threshold.md) — backlog
+- `EDS-8` [Files over the god-file threshold](eds-services-over-size-threshold.md) — active
 - `PL-1` [Manifest write-back migration — retire the legacy-format read layer](2026-08-24-manifest-write-back-migration.md) — shipped
 - `PL-2` [Regroup crowded service directories into subfolders — where measurement says so](2026-08-23-services-directory-regrouping.md) — shipped
 - `PL-3` [Monorepo Support with Independent Release Tracking - Implementation Plan](monorepo-independent-release-tracking/overview.md) — backlog
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
+- `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — backlog
 
-*80 item(s) sit outside the A–G chain.*
+*104 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 
