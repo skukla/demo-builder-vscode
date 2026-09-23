@@ -1,7 +1,7 @@
 /**
  * Live import progress — what the spinner says while a pack lands.
  *
- * The modal used to show a bare "Importing…" for the whole run, sometimes
+ * The modal used to show a bare "Importing" for the whole run, sometimes
  * several minutes, because the per-type map only reached the webview when the
  * job finished. The map itself was never the problem: the runner builds a
  * partial one on every poll, and `classify` already depends on it being partial
@@ -137,7 +137,7 @@ describe('progressLabel', () => {
     it('names the current type and the count, in human words', () => {
         const label = progressLabel({ done: 5, total: 14, current: 'customer_groups', percent: 36 });
 
-        expect(label).toBe('Importing Customer groups… 5 of 14 done');
+        expect(label).toBe('Importing Customer groups · 5 of 14 done');
     });
 
     /** Between types there is nothing being processed, but a count still holds. */
@@ -152,7 +152,7 @@ describe('progressLabel', () => {
         expect(progressLabel({ done: 0, total: 14, percent: 0 })).toBeUndefined();
     });
 
-    // "Removing", not "Resetting": the button reads "Remove data…", and a
+    // "Removing", not "Resetting": the button reads "Remove data", and a
     // project RESET now RESTORES the pack — so "Resetting" here named the one
     // thing this operation is not. The `reset` operation id is unchanged.
     it('words a removal as removing, never as importing', () => {
@@ -161,6 +161,6 @@ describe('progressLabel', () => {
             'reset',
         );
 
-        expect(label).toBe('Removing Products… 2 of 6 done');
+        expect(label).toBe('Removing Products · 2 of 6 done');
     });
 });

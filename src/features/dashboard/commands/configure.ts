@@ -109,7 +109,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
     }
 
     protected getLoadingMessage(): string {
-        return 'Loading project configuration...';
+        return 'Loading project configuration';
     }
 
     /** Project name captured in execute() so the loading screen can show it. */
@@ -512,9 +512,9 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
                 // Narrate the steps the shared flip runs (editor.path always;
                 // Quick Edit + config.json regen are Experience-Workspace-only).
                 // The shared service performs the ordering internally.
-                progress.report({ message: 'Updating the DA.live editor link…' });
+                progress.report({ message: 'Updating the DA.live editor link' });
                 if (experience === 'experience-workspace') {
-                    progress.report({ message: 'Adding Quick Edit to the storefront…' });
+                    progress.report({ message: 'Adding Quick Edit to the storefront' });
                 }
                 await applyAuthoringExperienceFlip(project, experience, {
                     context: this.context,

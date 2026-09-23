@@ -27,55 +27,55 @@ export interface OperationStage {
 
 export const OPERATION_STAGES = {
     checkingRequirements: {
-        label: 'Checking requirements…',
+        label: 'Checking requirements',
         expectation: 'Usually a few seconds',
     },
     preparingNode: {
-        label: 'Preparing Node…',
+        label: 'Preparing Node',
         expectation: 'Up to 30 seconds, the first time only',
     },
     subscribingApis: {
-        label: 'Subscribing Adobe APIs…',
+        label: 'Subscribing Adobe APIs',
         expectation: 'Usually under a minute',
     },
     adding: {
-        label: 'Adding integration…',
+        label: 'Adding integration',
         expectation: 'Usually a few seconds',
     },
     deploying: {
-        label: 'Deploying…',
+        label: 'Deploying',
         expectation: 'Usually a few seconds',
     },
     removing: {
-        label: 'Removing integration…',
+        label: 'Removing integration',
         expectation: 'Usually under a minute',
     },
     generatingMeshConfig: {
-        label: 'Generating mesh configuration…',
+        label: 'Generating mesh configuration',
         expectation: 'Usually a few seconds',
     },
     resolvingCommerceCredentials: {
-        label: 'Resolving Commerce IMS credentials…',
+        label: 'Resolving Commerce IMS credentials',
         expectation: 'Usually a few seconds',
     },
     updatingCli: {
-        label: 'Updating Adobe CLI…',
+        label: 'Updating Adobe CLI',
         expectation: 'A minute or two, and only when the CLI is out of date',
     },
     deployingApp: {
-        label: 'Deploying the app…',
+        label: 'Deploying the app',
         expectation: 'Usually 1–2 minutes',
     },
     resolvingAppUrl: {
-        label: "Finding the app's address…",
+        label: "Finding the app's address",
         expectation: 'Usually a few seconds',
     },
     installingIntoCommerce: {
-        label: 'Installing into Commerce…',
+        label: 'Installing into Commerce',
         expectation: 'Usually under a minute, longer if Commerce asks for a retry',
     },
     removingFromCommerce: {
-        label: 'Removing the app from Commerce…',
+        label: 'Removing the app from Commerce',
         expectation: 'Usually under a minute, longer if Commerce asks for a retry',
     },
 } as const satisfies Record<string, OperationStage>;

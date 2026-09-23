@@ -344,6 +344,37 @@ describe('handleStartStorefrontSetup — the three outcomes', () => {
         });
     });
 
+    it("copies an added demo's row onto the config the phases read", async () => {
+        const demo = { kind: 'demo', version: 1, name: 'Isle5 by Jen', source: { owner: 'jen', repo: 'isle5-demo' }, storefrontKind: 'eds' } as const;
+        await handleStartStorefrontSetup(createContext(), payload({ demo }));
+        expect(mockExecutePhases).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({ demo }),
+            expect.anything(),
+            expect.anything(),
+        );
+    });
+
+    it("says what may not work on an added demo, under its own headline, not the PDP one", async () => {
+        mockExecutePhases.mockResolvedValue({
+            success: true,
+            repoUrl: 'https://github.com/demo-org/demo-repo',
+            repoOwner: 'demo-org',
+            repoName: 'demo-repo',
+            demoCaveats: ['Product links on this storefront use a different address format.'],
+        });
+        const context = createContext();
+
+        await handleStartStorefrontSetup(context, payload());
+
+        expect(messagePayload(context, 'storefront-setup-complete')).toEqual(
+            expect.objectContaining({
+                message: 'Storefront created. A few things to know about this demo.',
+                warnings: ['Product links on this storefront use a different address format.'],
+            }),
+        );
+    });
+
     it('hands the completed storefront back with its repo and its da.live site', async () => {
         const context = createContext();
 

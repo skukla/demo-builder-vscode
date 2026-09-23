@@ -80,7 +80,7 @@ async function performAtomicComponentSwap(
     projectPath: string,
     progressTracker: ProgressTracker,
 ): Promise<void> {
-    progressTracker('Applying Changes', 71, 'Swapping components...');
+    progressTracker('Applying Changes', 71, 'Swapping components');
     context.logger.info('[Project Edit] Swapping temporary components with production');
 
     try {

@@ -175,8 +175,8 @@ describe('ConfigureScreen - Operations', () => {
             const saveButton = screen.getByText('Save Changes').closest('button');
             if (saveButton) await user.click(saveButton);
 
-            // Button should show "Saving..." and be disabled
-            const savingButton = screen.getByText('Saving...').closest('button');
+            // Button should show "Saving" and be disabled
+            const savingButton = screen.getByText('Saving').closest('button');
             expect(savingButton).toBeInTheDocument();
             expect(savingButton).toBeDisabled();
 
@@ -240,7 +240,7 @@ describe('ConfigureScreen - Operations', () => {
 
             pushDeploying(true);
 
-            const button = screen.getByText('Deploying...').closest('button');
+            const button = screen.getByText('Deploying').closest('button');
             expect(button).toBeDisabled();
         });
 

@@ -1,0 +1,643 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$ref": "#/definitions/ProjectFile",
+  "definitions": {
+    "ProjectFile": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "project"
+        },
+        "version": {
+          "type": "number"
+        },
+        "exportedAt": {
+          "type": "string",
+          "description": "When the file was written (ISO 8601)."
+        },
+        "source": {
+          "$ref": "#/definitions/ProjectFileSource"
+        },
+        "title": {
+          "type": "string",
+          "description": "The project's display title."
+        },
+        "selectedPackage": {
+          "type": "string"
+        },
+        "selectedStack": {
+          "type": "string"
+        },
+        "selectedAddons": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "selectedBlockLibraries": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "customBlockLibraries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CustomBlockLibrary"
+          }
+        },
+        "demo": {
+          "$ref": "#/definitions/AddedDemo",
+          "description": "Present when the project was built on an added demo rather than a shipped brand."
+        },
+        "selections": {
+          "$ref": "#/definitions/SettingsSelections"
+        },
+        "configs": {
+          "$ref": "#/definitions/SettingsConfigs",
+          "description": "Config values by component. Credentials are never present."
+        },
+        "commerce": {
+          "$ref": "#/definitions/CommerceConfig"
+        },
+        "commerceStoreStructure": {
+          "$ref": "#/definitions/CommerceStoreStructure",
+          "description": "The discovered Commerce store hierarchy — websites, store groups and store views, each with its `code` AND its human `name`.\n\nThe pickers show the user \"CitiSignal Store\"; only `citisignal_store` was ever kept, so every later surface made them translate. The structure is the one thing that holds both, and it was fetched and thrown away on every discovery. Persisting it turns a name into an offline lookup BY CODE on any surface — which is also why nothing has to pair a name with a code defensively: the code IS the lookup key, so a name can never land on the wrong one.\n\nA CATALOG, not a selection: refreshed wholesale whenever discovery runs. Absent until it has run once (every project predating this) — consumers then show the bare code, which is a correct rendering, not a degraded one."
+        },
+        "datapack": {
+          "$ref": "#/definitions/DatapackReference"
+        },
+        "adobe": {
+          "$ref": "#/definitions/SettingsAdobeContext"
+        },
+        "appBuilderComponentSources": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/CustomIntegrationSource"
+          }
+        },
+        "componentApiPicks": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "aiPrompts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/AiPrompt"
+          }
+        }
+      },
+      "required": [
+        "kind",
+        "version",
+        "exportedAt",
+        "source",
+        "configs"
+      ],
+      "description": "What a project travels in. Everything the manifest persists that is not machine-local (the contract step's table), and never a credential."
+    },
+    "ProjectFileSource": {
+      "type": "object",
+      "properties": {
+        "project": {
+          "type": "string",
+          "description": "The source project's slug."
+        },
+        "title": {
+          "type": "string",
+          "description": "The source project's display title, when it had one."
+        },
+        "extension": {
+          "type": "string",
+          "description": "The extension version that wrote the file."
+        },
+        "storefront": {
+          "type": "object",
+          "properties": {
+            "githubRepo": {
+              "type": "string"
+            },
+            "daLiveOrg": {
+              "type": "string"
+            },
+            "daLiveSite": {
+              "type": "string"
+            }
+          },
+          "description": "The source project's storefront, so a reader can say where it lived; the receiver creates its own."
+        }
+      },
+      "required": [
+        "project",
+        "extension"
+      ],
+      "description": "Where an exported project came from. Provenance, never the receiver's identity."
+    },
+    "CustomBlockLibrary": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "User-provided display name (pre-filled from repo name)"
+        },
+        "source": {
+          "$ref": "#/definitions/AddonSource",
+          "description": "GitHub source (owner, repo, branch)"
+        }
+      },
+      "required": [
+        "name",
+        "source"
+      ],
+      "description": "A user-provided block library from a GitHub URL"
+    },
+    "AddonSource": {
+      "type": "object",
+      "properties": {
+        "owner": {
+          "type": "string",
+          "description": "GitHub owner/organization"
+        },
+        "repo": {
+          "type": "string",
+          "description": "GitHub repository name"
+        },
+        "branch": {
+          "type": "string",
+          "description": "Branch to fetch from"
+        }
+      },
+      "required": [
+        "owner",
+        "repo",
+        "branch"
+      ],
+      "description": "AddonSource - GitHub repository source for an addon\n\nUsed by addons that fetch content from an external repository (e.g., the Commerce Block Collection fetches blocks from isle5)."
+    },
+    "AddedDemo": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Display name for the package"
+        },
+        "configFlags": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "boolean"
+          },
+          "description": "Storefront config.json public flags injected for this package (e.g., commerce-b2b-enabled). Merged into config.public.default by the config generator — data-driven, mirrors addon configFlags."
+        },
+        "requiresMesh": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string",
+              "const": "optional"
+            }
+          ],
+          "description": "API Mesh requirement for this package.\n- true: mesh auto-included, no user choice\n- false (default): no mesh, no user choice\n- 'optional': mesh toggle shown, user decides"
+        },
+        "datapack": {
+          "$ref": "#/definitions/DatapackReference",
+          "description": "The datapack this demo expects (D26). The Sample Data step pre-selects it and says why; the SC can change it. Optional: shipped brands may leave the choice open."
+        },
+        "integrations": {
+          "$ref": "#/definitions/DemoIntegrations",
+          "description": "Integrations this demo depends on (D29). The Integrations area starts with them added; the SC can remove any. The same field a shared-demo description file carries, so the catalog and the slice cannot drift."
+        },
+        "kind": {
+          "type": "string",
+          "const": "demo"
+        },
+        "version": {
+          "type": "number"
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional here and below; `DemoPackage` requires them because a shipped brand always has a card and store codes."
+        },
+        "configDefaults": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Default configuration values (env var name to value) - embedded brand data"
+        },
+        "blockLibraries": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "contentSource": {
+          "$ref": "#/definitions/DaLiveContentSource"
+        },
+        "source": {
+          "type": "object",
+          "properties": {
+            "owner": {
+              "type": "string"
+            },
+            "repo": {
+              "type": "string"
+            },
+            "branch": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "owner",
+            "repo"
+          ]
+        },
+        "storefrontKind": {
+          "$ref": "#/definitions/StorefrontKind",
+          "description": "Read from the repository when the demo was added, never from the description file."
+        }
+      },
+      "required": [
+        "kind",
+        "name",
+        "source",
+        "storefrontKind",
+        "version"
+      ],
+      "description": "The stored storefront row for a project built on an added demo (D2): the slice plus where it came from and what kind it is. Every post-creation lookup resolves this before the catalog."
+    },
+    "DatapackReference": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "description": "A datapack a demo expects (D26). `version` absent means the catalog's default rule."
+    },
+    "DemoIntegrations": {
+      "type": "object",
+      "properties": {
+        "catalog": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "custom": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/CustomIntegrationSource"
+          }
+        }
+      },
+      "description": "Integrations a demo depends on (D29): catalog ids, and custom apps by link."
+    },
+    "CustomIntegrationSource": {
+      "type": "object",
+      "properties": {
+        "owner": {
+          "type": "string"
+        },
+        "repo": {
+          "type": "string"
+        },
+        "branch": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "owner",
+        "repo"
+      ],
+      "description": "A custom App Builder app by GitHub coordinates, the `appBuilderComponentSources` shape."
+    },
+    "DaLiveContentSource": {
+      "type": "object",
+      "properties": {
+        "org": {
+          "type": "string",
+          "description": "DA.live organization name"
+        },
+        "site": {
+          "type": "string",
+          "description": "DA.live site name"
+        },
+        "indexPath": {
+          "type": "string",
+          "description": "Where the site lists its pages. Required: whoever names a content site names its index path (the catalog, the project row, a description file); only the Add a demo package probe looks one up, for a repository that names no site of its own, and records what it found. `contentIndex.ts` builds the URL every reader uses."
+        }
+      },
+      "required": [
+        "org",
+        "site",
+        "indexPath"
+      ]
+    },
+    "StorefrontKind": {
+      "type": "string",
+      "enum": [
+        "eds",
+        "headless"
+      ],
+      "description": "The two kinds of storefront a repository can hold."
+    },
+    "SettingsSelections": {
+      "type": "object",
+      "properties": {
+        "frontend": {
+          "type": "string"
+        },
+        "backend": {
+          "type": "string"
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "integrations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "appBuilder": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Component selections - which components are chosen"
+    },
+    "SettingsConfigs": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "not": {}
+            }
+          ]
+        }
+      },
+      "description": "Component configs - environment variable values Maps componentId -> { VAR_NAME: value }"
+    },
+    "CommerceConfig": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "platform-as-a-service",
+            "software-as-a-service"
+          ]
+        },
+        "instance": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string"
+            },
+            "environmentId": {
+              "type": "string"
+            },
+            "storeView": {
+              "type": "string"
+            },
+            "websiteCode": {
+              "type": "string"
+            },
+            "storeCode": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "url",
+            "environmentId",
+            "storeView",
+            "websiteCode",
+            "storeCode"
+          ]
+        }
+      },
+      "required": [
+        "type",
+        "instance"
+      ]
+    },
+    "CommerceStoreStructure": {
+      "type": "object",
+      "properties": {
+        "websites": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CommerceWebsite"
+          },
+          "description": "All websites in the Commerce instance"
+        },
+        "storeGroups": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CommerceStoreGroup"
+          },
+          "description": "All store groups across all websites"
+        },
+        "storeViews": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CommerceStoreView"
+          },
+          "description": "All store views across all store groups"
+        }
+      },
+      "required": [
+        "websites",
+        "storeGroups",
+        "storeViews"
+      ],
+      "description": "Complete Commerce store hierarchy fetched from REST API. Contains all websites, store groups, and store views."
+    },
+    "CommerceWebsite": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "number",
+          "description": "Unique website ID"
+        },
+        "code": {
+          "type": "string",
+          "description": "Website code used in storefront configuration (e.g., 'base', 'citisignal')"
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable website name"
+        }
+      },
+      "required": [
+        "id",
+        "code",
+        "name"
+      ],
+      "description": "Commerce website — top-level entity that owns payment, shipping, tax, and pricing config. Maps to REST API: GET /V1/store/websites"
+    },
+    "CommerceStoreGroup": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "number",
+          "description": "Unique store group ID"
+        },
+        "code": {
+          "type": "string",
+          "description": "Store group code (e.g., 'citisignal_store')"
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable store group name"
+        },
+        "website_id": {
+          "type": "number",
+          "description": "Parent website ID — used for cascading filters"
+        },
+        "root_category_id": {
+          "type": "number",
+          "description": "Root category ID assigned to this store group"
+        }
+      },
+      "required": [
+        "id",
+        "code",
+        "name",
+        "website_id",
+        "root_category_id"
+      ],
+      "description": "Commerce store group — intermediate entity that owns root category. Maps to REST API: GET /V1/store/storeGroups\n\nProperty names match the Commerce REST API response format (snake_case)."
+    },
+    "CommerceStoreView": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "number",
+          "description": "Unique store view ID"
+        },
+        "code": {
+          "type": "string",
+          "description": "Store view code used in storefront configuration (e.g., 'citisignal_us')"
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable store view name"
+        },
+        "store_group_id": {
+          "type": "number",
+          "description": "Parent store group ID — used for cascading filters"
+        },
+        "website_id": {
+          "type": "number",
+          "description": "Grandparent website ID — denormalized for convenience"
+        },
+        "is_active": {
+          "type": [
+            "boolean",
+            "number"
+          ],
+          "description": "Whether this store view is active. Commerce's REST API sends the integers 1/0, not booleans — read from a real bodea manifest 2026-08-23, after the boolean-only declaration had every project load warning \"is_active must be boolean\" three times per view. Consumers check truthiness, which both shapes satisfy."
+        }
+      },
+      "required": [
+        "id",
+        "code",
+        "name",
+        "store_group_id",
+        "website_id",
+        "is_active"
+      ],
+      "description": "Commerce store view — leaf entity representing a language/locale. Maps to REST API: GET /V1/store/storeViews\n\nProperty names match the Commerce REST API response format (snake_case)."
+    },
+    "SettingsAdobeContext": {
+      "type": "object",
+      "properties": {
+        "orgId": {
+          "type": "string"
+        },
+        "orgName": {
+          "type": "string"
+        },
+        "projectId": {
+          "type": "string"
+        },
+        "projectName": {
+          "type": "string"
+        },
+        "projectTitle": {
+          "type": "string",
+          "description": "Human-readable project title (preferred for display)"
+        },
+        "workspaceId": {
+          "type": "string"
+        },
+        "workspaceName": {
+          "type": "string"
+        },
+        "workspaceTitle": {
+          "type": "string",
+          "description": "Human-readable workspace title (preferred for display)"
+        }
+      },
+      "description": "Adobe context - org/project/workspace binding\n\nNote: Both `name` and `title` fields exist because:\n- `name` is often an auto-generated ID (e.g., \"833BronzeShark\")\n- `title` is the human-readable display name (e.g., \"Citisignal Headless\")"
+    },
+    "AiPrompt": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "prompt": {
+          "type": "string"
+        },
+        "pinned": {
+          "type": "boolean",
+          "description": "When true: the prompt lives in globalState and appears in every project; render-time sort floats it above unpinned prompts. When falsy: project-scoped, visible only in the current project."
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "prompt"
+      ],
+      "description": "AiPrompt - A user-saved AI prompt\n\nStorage is scope-routed by the `pinned` field. Pinned prompts persist in VS Code globalState under `demoBuilder.ai.globalPrompts` and appear in every project. Unpinned prompts persist in the current project's `.demo-builder.json` manifest under `Project.aiPrompts` and stay project-specific. Toggling pin moves the prompt across stores.\n\nLegacy data: prompts pinned before the global-pin feature shipped remain in their project's manifest until the user manually unpins then re-pins them — no automatic migration.\n\nArray order within either store is preserved; render-time pinned-first sort happens in the UI layer."
+    }
+  }
+}

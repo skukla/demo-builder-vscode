@@ -49,8 +49,8 @@ export async function cloneAllComponents(context: InstallationContext): Promise<
     const { project, componentDefinitions, progressTracker, logger, saveProject, componentsDir } =
         context;
 
-    progressTracker('Downloading Components', 25, 'Cloning repositories...');
-    logger.debug('[Project Creation] Phase 1: Downloading components...');
+    progressTracker('Downloading Components', 25, 'Cloning repositories');
+    logger.debug('[Project Creation] Phase 1: Downloading components');
 
     // Determine target directory: use override if provided (edit mode), otherwise default
     const targetComponentsDir = componentsDir || path.join(project.path, 'components');
@@ -111,8 +111,8 @@ export async function cloneAllComponents(context: InstallationContext): Promise<
 export async function installAllComponents(context: InstallationContext): Promise<void> {
     const { project, componentDefinitions, progressTracker, logger } = context;
 
-    progressTracker('Installing Components', 40, 'Installing npm packages...');
-    logger.debug('[Project Creation] Phase 2: Installing components...');
+    progressTracker('Installing Components', 40, 'Installing npm packages');
+    logger.debug('[Project Creation] Phase 2: Installing components');
 
     const componentManager = new ComponentManager(logger, context.commandManager);
 

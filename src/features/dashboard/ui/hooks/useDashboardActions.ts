@@ -63,8 +63,6 @@ export interface UseDashboardActionsReturn {
     handleOpenDevConsole: () => void;
     /** Delete the project */
     handleDeleteProject: () => void;
-    /** Export the project's settings to a file */
-    handleExportProject: () => void;
     /** Republish DA.live content to CDN (EDS projects only) */
     handleRepublishContent: () => void;
     /** Reset the project to its initial state */
@@ -165,10 +163,6 @@ export function useDashboardActions({
         webviewClient.postMessage('deleteProject');
     }, []);
 
-    const handleExportProject = useCallback(() => {
-        webviewClient.postMessage('exportProject');
-    }, []);
-
     const handleRepublishContent = useCallback(() => {
         webviewClient.postMessage('republishContent');
     }, []);
@@ -208,7 +202,6 @@ export function useDashboardActions({
         handleEditProject,
         handleOpenDevConsole,
         handleDeleteProject,
-        handleExportProject,
         handleRepublishContent,
         handleResetProject,
         handleNavigateBack,

@@ -27,7 +27,7 @@ Publish/unpublish auth, Helix/DA.live config scoping, or CDN path-encoding probl
 
 - **B2B "My Account" nav renders EMPTY without `commerce-b2b-enabled: true`** (plus `commerce-companies-enabled`) in served `config.json` — `commerce-account-nav` builds links only inside an `auth/permissions` event that fires only when that flag is true (storefront `scripts/initializers/auth.js`). Silent failure; both hybrid packages declare the flags via `configFlags` in `demo-packages.json`.
 - **A storefront can have deps + blocks + initializers and still load zero dropins** — the historical b2b feature pack merged `package.json` deps and copied blocks but never vendored `__dropins__` or added import-map entries: 0/6 dropins at runtime. Presence of the dep proves nothing; check the vendored files and the map.
-- **Package id history**: the unbranded hybrid package id is `custom` (renamed from `b2b`); persisted old ids are normalized permanently by `normalizePackageId` in `src/core/state/projectFileLoader.ts`. Don't reintroduce a `b2b` package id.
+- **Package id history**: the unbranded hybrid package id is `starter` (was `b2b`, then `custom` until 2026-09-12); persisted old ids are normalized permanently by `normalizePackageId` in `src/core/state/projectFileLoader.ts`. Don't reintroduce a `b2b` or `custom` package id.
 - **Mixed dropin versions fail as a blank page, not an error banner** — a missing shared chunk (`preact-vendor.js` and friends) aborts module resolution. If a page goes blank after touching dropins, suspect version/base mismatch first.
 
 ## Verify

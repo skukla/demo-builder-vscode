@@ -25,7 +25,7 @@ export function getCancelButtonText(
         return 'Back';
     }
     if (isCancelling) {
-        return 'Cancelling...';
+        return 'Cancelling';
     }
     return 'Cancel';
 }

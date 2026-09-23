@@ -359,7 +359,7 @@ export function ApiAccessPicker({
                 itemNoun="API"
                 hasLoadedOnce
                 searchThreshold={API_SEARCH_THRESHOLD}
-                searchPlaceholder="Filter APIs…"
+                searchPlaceholder="Filter APIs"
             />
             {chips.length > 0 && (
                 <div className="intflow-api-chips" role="group" aria-label="Filter by product">

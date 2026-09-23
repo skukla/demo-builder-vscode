@@ -179,14 +179,14 @@ describe('Token Expiry Detection - handleAuthenticate()', () => {
 
             expect(mockContext.sendMessage).toHaveBeenCalledWith('auth-status', {
                 isChecking: true,
-                message: 'Signing in...',
-                subMessage: 'Loading organizations...',
+                message: 'Signing in',
+                subMessage: 'Loading organizations',
                 isAuthenticated: true,
             });
             expect(mockContext.sendMessage).toHaveBeenCalledWith('auth-status', {
                 isChecking: true,
-                message: 'Signing in...',
-                subMessage: 'Selecting organization...',
+                message: 'Signing in',
+                subMessage: 'Selecting organization',
                 isAuthenticated: true,
             });
         });

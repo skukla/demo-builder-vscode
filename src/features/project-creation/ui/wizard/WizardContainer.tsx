@@ -1,11 +1,12 @@
 import { View, Flex, Heading, Button, Text } from '@adobe/react-spectrum';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { loadStacks } from '../helpers/brandStackLoader';
 import { getPackageById, getSelectablePackages } from '../helpers/demoPackageLoader';
 import {
     filterComponentConfigsForStackChange,
     buildStackChangeStateReset,
 } from '../helpers/stackHelpers';
+import { addedDemoCards, withAddedDemo } from './addedDemoCards';
 import { buildAreaWalk } from './buildAreaWalk';
 import {
     getCompletedStepIndices,
@@ -32,9 +33,14 @@ import { useWizardNavigation } from '@/features/project-creation/ui/wizard/hooks
 import { useWizardState } from '@/features/project-creation/ui/wizard/hooks/useWizardState';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage } from '@/types/demoPackages';
+import { ADDED_DEMO_ID_PREFIX, type AddedDemo } from '@/types/projectFile';
 import type { Stack } from '@/types/stacks';
 import { ComponentSelection } from '@/types/webview';
-import type { BlockLibraryDefaultsUpdatedPayload, CustomBlockLibraryDefaultsUpdatedPayload } from '@/types/webviewPayloads';
+import type {
+    AddedDemosUpdatedPayload,
+    BlockLibraryDefaultsUpdatedPayload,
+    CustomBlockLibraryDefaultsUpdatedPayload,
+} from '@/types/webviewPayloads';
 import type { EditProjectConfig, ImportedSettings, WizardStepDefinition } from '@/types/wizard';
 
 // Extracted hooks
@@ -54,7 +60,12 @@ interface WizardContainerProps {
     blockLibraryDefaults?: string[];
     /** Custom block libraries from VS Code settings */
     customBlockLibraryDefaults?: CustomBlockLibrary[];
+    /** Demos the SC has added from a link, from VS Code settings */
+    addedDemos?: AddedDemo[];
 }
+
+/** Stable empty list for the added demos (a fresh `[]` per render would re-run every effect). */
+const NO_ADDED_DEMOS: AddedDemo[] = [];
 
 export function WizardContainer({
     componentDefaults,
@@ -65,6 +76,7 @@ export function WizardContainer({
     projectsViewMode,
     blockLibraryDefaults: initialBlockLibraryDefaults,
     customBlockLibraryDefaults: initialCustomBlockLibraryDefaults,
+    addedDemos: initialAddedDemos = NO_ADDED_DEMOS,
 }: WizardContainerProps) {
     // Block-library defaults — live state, refreshed when VS Code settings change.
     // The Project Builder step pre-selects built-in libs (`blockLibraryDefaults`)
@@ -73,6 +85,9 @@ export function WizardContainer({
     const [customBlockLibraryDefaults, setCustomBlockLibraryDefaults] = useState(
         initialCustomBlockLibraryDefaults,
     );
+    // The remembered demos, in the same shape: read at open, pushed live on change,
+    // and appended optimistically when the dialog adds one (the push then echoes it).
+    const [addedDemos, setAddedDemos] = useState<AddedDemo[]>(initialAddedDemos);
 
     useEffect(() => {
         const unsubDefaults = vscode.onMessage(
@@ -87,9 +102,13 @@ export function WizardContainer({
                 setCustomBlockLibraryDefaults(data.customBlockLibraryDefaults);
             },
         );
+        const unsubDemos = vscode.onMessage('addedDemosUpdated', (data: AddedDemosUpdatedPayload) => {
+            setAddedDemos(data.addedDemos);
+        });
         return () => {
             unsubDefaults();
             unsubCustom();
+            unsubDemos();
         };
     }, []);
 
@@ -165,6 +184,8 @@ export function WizardContainer({
         // "not loaded", not "absent", and acting on it looks up every project's
         // package needlessly. A control test caught exactly that.
         if (!packagesLoaded || !currentPackageId) return;
+        // An added demo's card comes from its row, never from the catalog.
+        if (currentPackageId.startsWith(ADDED_DEMO_ID_PREFIX)) return;
         if (packages.some((p) => p.id === currentPackageId)) return;
         let cancelled = false;
         void getPackageById(currentPackageId).then((own) => {
@@ -176,6 +197,22 @@ export function WizardContainer({
             cancelled = true;
         };
     }, [currentPackageId, packages, packagesLoaded]);
+
+    // The grid's cards: the shipped catalog, then the remembered demos (`addedDemoCards`
+    // says which, and why a project's own row survives a removed setting).
+    const addedDemoPackages = useMemo(
+        () => addedDemoCards(addedDemos, state.demo, state.selectedStack),
+        [addedDemos, state.demo, state.selectedStack],
+    );
+    const allPackages = useMemo(
+        () => (addedDemoPackages.length === 0 ? packages : [...packages, ...addedDemoPackages]),
+        [packages, addedDemoPackages],
+    );
+
+    /** The dialog added (and the host remembered) a demo: show its card at once. */
+    const handleDemoAdded = useCallback((demo: AddedDemo): void => {
+        setAddedDemos((prev) => withAddedDemo(prev, demo));
+    }, []);
 
     // Reconcile committed custom library selections against current settings.
     // Runs on mount (edit mode may have stale saved libraries) and when
@@ -392,8 +429,10 @@ export function WizardContainer({
                                     goBack,
                                     setCanProceed,
                                     componentsData,
-                                    packages,
+                                    packages: allPackages,
                                     stacks,
+                                    addedDemos,
+                                    onDemoAdded: handleDemoAdded,
                                     existingProjectNames,
                                     projectsViewMode,
                                     importedSettings,

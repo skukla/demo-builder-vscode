@@ -80,7 +80,7 @@ export function OrgContextNotice({
                                     aria-label="Switching organization"
                                     UNSAFE_className="inline-notice-spinner"
                                 />
-                                <Text>Switching…</Text>
+                                <Text>Switching</Text>
                             </>
                         ) : (
                             <Text>Switch IMS Org</Text>

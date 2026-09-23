@@ -241,7 +241,7 @@ export class StartDemoCommand extends BaseCommand {
                 }
 
                 // Kill the process using ProcessCleanup (event-driven, no hardcoded delay)
-                this.logger.debug(`[Start Demo] Stopping process on port ${port}...`);
+                this.logger.debug(`[Start Demo] Stopping process on port ${port}`);
                 try {
                     const portFreed = await this.killProcessOnPort(port);
                     if (!portFreed) {

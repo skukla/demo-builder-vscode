@@ -89,7 +89,7 @@ describe('ProjectDashboardScreen - Rendering and Status', () => {
             });
         });
 
-        it('should display "Starting..." when starting', async () => {
+        it('should display "Starting" when starting', async () => {
             renderDashboard();
 
             ctx.triggerMessage('statusUpdate', {

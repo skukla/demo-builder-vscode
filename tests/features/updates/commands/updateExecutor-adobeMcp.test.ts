@@ -88,8 +88,8 @@ describe('performAdobeMcpUpdates', () => {
             makeCtx(),
         );
 
-        expect(report).toHaveBeenNthCalledWith(1, { message: `${PKG} → 2.0.0 in a…`, increment: 50 });
-        expect(report).toHaveBeenNthCalledWith(2, { message: `${PKG} → 2.0.0 in b…`, increment: 50 });
+        expect(report).toHaveBeenNthCalledWith(1, { message: `${PKG} → 2.0.0 in a`, increment: 50 });
+        expect(report).toHaveBeenNthCalledWith(2, { message: `${PKG} → 2.0.0 in b`, increment: 50 });
     });
 
     it('a running project whose demo the user keeps is dropped, and alone it means no progress bar', async () => {
@@ -115,7 +115,7 @@ describe('performAdobeMcpUpdates', () => {
 
         expect(coreMock).toHaveBeenCalledTimes(1);
         expect(coreMock).toHaveBeenCalledWith(idle.project, PKG, '2.0.0', ctx);
-        expect(report).toHaveBeenCalledWith({ message: `${PKG} → 2.0.0 in b…`, increment: 100 });
+        expect(report).toHaveBeenCalledWith({ message: `${PKG} → 2.0.0 in b`, increment: 100 });
     });
 
     it('counts successes and failures separately in the summary', async () => {

@@ -8,6 +8,7 @@
 
 import {
     describeScope,
+    parseStorefrontConfigJson,
     fetchServedStorefrontConfig,
     scopesMatch,
     type StoreScope,
@@ -205,5 +206,31 @@ describe('describeScope', () => {
 
     it('marks absent codes rather than printing undefined', () => {
         expect(describeScope({ websiteCode: 'w' })).toBe('w / — / —');
+    });
+});
+
+describe('parseStorefrontConfigJson', () => {
+    it('reads the scope, the endpoint and every boolean flag, and nothing that is not a flag', () => {
+        const parsed = parseStorefrontConfigJson({
+            public: {
+                default: {
+                    'commerce-endpoint': 'https://example.invalid/graphql',
+                    'commerce-assets-enabled': true,
+                    'commerce-b2b-enabled': true,
+                    analytics: { 'store-id': 1 },
+                    headers: { cs: { 'Magento-Website-Code': 'w', 'Magento-Store-Code': 's', 'Magento-Store-View-Code': 'v' } },
+                },
+            },
+        });
+        expect(parsed).toEqual({
+            commerceEndpoint: 'https://example.invalid/graphql',
+            scope: { websiteCode: 'w', storeCode: 's', storeViewCode: 'v' },
+            flags: { 'commerce-assets-enabled': true, 'commerce-b2b-enabled': true },
+        });
+    });
+
+    it('is undefined for JSON that is not a storefront config', () => {
+        expect(parseStorefrontConfigJson({ hello: 'world' })).toBeUndefined();
+        expect(parseStorefrontConfigJson(null)).toBeUndefined();
     });
 });

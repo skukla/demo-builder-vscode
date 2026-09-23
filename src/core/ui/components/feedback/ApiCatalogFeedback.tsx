@@ -71,7 +71,7 @@ export function renderApiCatalogFeedback(
         return (
             <LoadingDisplay
                 size="L"
-                message="Loading Adobe APIs…"
+                message="Loading Adobe APIs"
                 subMessage={loadingStage}
                 helperText="The first load can take a few minutes"
             />

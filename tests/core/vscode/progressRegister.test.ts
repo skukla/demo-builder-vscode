@@ -48,13 +48,13 @@ describe('withProgressRegister', () => {
         await withProgressRegister(
             { title: 'Deploying API Mesh', cardLabel: 'Deploying Mesh', pushCardStatus: jest.fn() },
             async (step) => {
-                step('Reading mesh configuration...');
-                step('Deploying...');
+                step('Reading mesh configuration');
+                step('Deploying');
             }
         );
 
-        expect(report).toHaveBeenCalledWith({ message: 'Reading mesh configuration...' });
-        expect(report).toHaveBeenCalledWith({ message: 'Deploying...' });
+        expect(report).toHaveBeenCalledWith({ message: 'Reading mesh configuration' });
+        expect(report).toHaveBeenCalledWith({ message: 'Deploying' });
     });
 
     it('tells the card once, and only the label', async () => {
@@ -64,8 +64,8 @@ describe('withProgressRegister', () => {
         await withProgressRegister(
             { title: 'Deploying API Mesh', cardLabel: 'Deploying Mesh', pushCardStatus },
             async (step) => {
-                step('Reading mesh configuration...');
-                step('Deploying...');
+                step('Reading mesh configuration');
+                step('Deploying');
             }
         );
 
@@ -154,7 +154,7 @@ describe('withProgressRegister — inside an agent tool call', () => {
                     pushCardStatus: jest.fn(),
                 },
                 async (step) => {
-                    step('Checking requirements…');
+                    step('Checking requirements');
                     return 'done';
                 }
             )
@@ -163,7 +163,7 @@ describe('withProgressRegister — inside an agent tool call', () => {
         expect(result).toBe('done');
         expect(vscode.window.withProgress).not.toHaveBeenCalled();
         expect(report).not.toHaveBeenCalled();
-        expect(sink).toHaveBeenCalledWith('Checking requirements…');
+        expect(sink).toHaveBeenCalledWith('Checking requirements');
     });
 
     it('still tells the CARD its line — the card is not a notification', async () => {
@@ -191,13 +191,13 @@ describe('withProgressRegister — inside an agent tool call', () => {
 
         const result = await withPhaseSinks([sink], () =>
             withProgressRegister({ title: 'Changing destination' }, async (step) => {
-                step('Checking requirements…');
+                step('Checking requirements');
                 return 'done';
             })
         );
 
         expect(result).toBe('done');
-        expect(sink).toHaveBeenCalledWith('Checking requirements…');
+        expect(sink).toHaveBeenCalledWith('Checking requirements');
     });
 
     it('control: OUTSIDE an agent call the notification opens exactly as before', async () => {
@@ -232,13 +232,13 @@ describe('withProgressRegister — operations with no card', () => {
         const result = await withProgressRegister(
             { title: 'Changing destination' },
             async (step) => {
-                step('Checking requirements…');
+                step('Checking requirements');
                 return 'done';
             }
         );
 
         expect(result).toBe('done');
-        expect(report).toHaveBeenCalledWith({ message: 'Checking requirements…' });
+        expect(report).toHaveBeenCalledWith({ message: 'Checking requirements' });
     });
 
     it('still pushes the card line when a card IS supplied', async () => {

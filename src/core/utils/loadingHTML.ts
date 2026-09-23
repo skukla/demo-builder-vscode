@@ -39,7 +39,7 @@ function escapeHtml(text: string): string {
  *                 PageHeader-style band above the centered spinner
  * @returns HTML string for the loading state
  */
-function getLoadingHTML(message = 'Loading...', header?: LoadingHeader): string {
+function getLoadingHTML(message = 'Loading', header?: LoadingHeader): string {
     const isDark = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark;
     const safeMessage = escapeHtml(message);
 
@@ -158,7 +158,7 @@ function getLoadingHTML(message = 'Loading...', header?: LoadingHeader): string 
 export async function setLoadingState(
     panel: vscode.WebviewPanel,
     getContent: () => Promise<string>,
-    message = 'Loading...',
+    message = 'Loading',
     _logger?: { info: (msg: string) => void; debug?: (msg: string) => void },
     header?: LoadingHeader,
 ): Promise<void> {

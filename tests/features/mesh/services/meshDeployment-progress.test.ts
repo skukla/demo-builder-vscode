@@ -65,7 +65,7 @@ describe('MeshDeployment - Progress Reporting', () => {
                 onProgress
             );
 
-            expect(onProgress).toHaveBeenCalledWith('Reading mesh configuration...', '');
+            expect(onProgress).toHaveBeenCalledWith('Reading mesh configuration', '');
         });
 
         it('should report deployment start', async () => {
@@ -83,7 +83,7 @@ describe('MeshDeployment - Progress Reporting', () => {
             );
 
             // Now uses create-first approach (create, then fallback to update if mesh exists)
-            expect(onProgress).toHaveBeenCalledWith('Deploying API Mesh...', 'Creating mesh');
+            expect(onProgress).toHaveBeenCalledWith('Deploying API Mesh', 'Creating mesh');
         });
 
         it('should report verification status', async () => {
@@ -111,7 +111,7 @@ describe('MeshDeployment - Progress Reporting', () => {
                 onProgress
             );
 
-            expect(onProgress).toHaveBeenCalledWith('Verifying deployment...', 'Checking deployment status...');
+            expect(onProgress).toHaveBeenCalledWith('Verifying deployment', 'Checking deployment status');
         });
 
         it('should report completion', async () => {
@@ -152,13 +152,13 @@ describe('MeshDeployment - Progress Reporting', () => {
 
             // Verify progress phases appear in correct order
             const messages = progressCalls.map(([msg]) => msg);
-            expect(messages).toContain('Reading mesh configuration...');
-            expect(messages).toContain('Deploying API Mesh...');
+            expect(messages).toContain('Reading mesh configuration');
+            expect(messages).toContain('Deploying API Mesh');
             expect(messages).toContain('✓ Deployment Complete');
 
             // Reading should come before deploying
-            const readingIndex = messages.indexOf('Reading mesh configuration...');
-            const deployingIndex = messages.indexOf('Deploying API Mesh...');
+            const readingIndex = messages.indexOf('Reading mesh configuration');
+            const deployingIndex = messages.indexOf('Deploying API Mesh');
             const completeIndex = messages.indexOf('✓ Deployment Complete');
 
             expect(readingIndex).toBeLessThan(deployingIndex);

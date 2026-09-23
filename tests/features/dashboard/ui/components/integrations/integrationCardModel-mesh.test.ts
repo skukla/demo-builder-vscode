@@ -56,7 +56,7 @@ describe('deriveMeshCard — failure reason', () => {
 
 describe('deriveMeshCard — status matrix', () => {
     it('checking: neutral dot, NO menu', () => {
-        const model = deriveMeshCard(display({ color: 'gray', text: 'Checking…' }), 'checking', meshEntry(), false);
+        const model = deriveMeshCard(display({ color: 'gray', text: 'Checking' }), 'checking', meshEntry(), false);
 
         expect(model.status).toBe('checking');
         expect(model.dotVariant).toBe('neutral');
@@ -64,7 +64,7 @@ describe('deriveMeshCard — status matrix', () => {
     });
 
     it('undefined status behaves as checking (unresolved)', () => {
-        const model = deriveMeshCard(display({ color: 'gray', text: 'Checking…' }), undefined, undefined, false);
+        const model = deriveMeshCard(display({ color: 'gray', text: 'Checking' }), undefined, undefined, false);
 
         expect(model.status).toBe('checking');
         expect(model.menuActions).toStrictEqual([]);

@@ -145,7 +145,7 @@ describe('the verification progress notification', () => {
 
         expect(withProgressOptions[0]).toEqual({
             location: 15,
-            title: 'Verifying DA.live credentials...',
+            title: 'Verifying DA.live credentials',
             cancellable: false,
         });
     });

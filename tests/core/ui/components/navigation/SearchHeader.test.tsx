@@ -61,7 +61,7 @@ describe('SearchHeader', () => {
                 <SearchHeader
                     {...defaultProps}
                     totalCount={10}
-                    searchPlaceholder="Filter projects..."
+                    searchPlaceholder="Filter projects"
                 />
             );
 

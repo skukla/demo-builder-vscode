@@ -62,7 +62,7 @@ export class CheckUpdatesCommand extends BaseCommand {
                         cancellable: false,
                     },
                     async (progress) => {
-                        progress.report({ message: 'Checking for updates…' });
+                        progress.report({ message: 'Checking for updates' });
 
                         // Wait to ensure message is visible before making GitHub API call
                         await sleep(TIMEOUTS.UPDATE_MESSAGE_DELAY);
@@ -74,7 +74,7 @@ export class CheckUpdatesCommand extends BaseCommand {
                         const extensionUpdate = await updateManager.checkExtensionUpdate();
 
                         // Load ALL projects
-                        progress.report({ message: 'Checking all projects…' });
+                        progress.report({ message: 'Checking all projects' });
                         const projectMetadata = await this.stateManager.getAllProjects();
                         const allProjects: Project[] = [];
 
@@ -90,7 +90,7 @@ export class CheckUpdatesCommand extends BaseCommand {
                         }
 
                         // Phase 2: Check fork sync for source repos
-                        progress.report({ message: 'Checking source repos…' });
+                        progress.report({ message: 'Checking source repos' });
                         const forkSyncItems = await this.checkForkSyncUpdates(allProjects);
 
                         // Phase 3: Check component updates across all projects
@@ -99,7 +99,7 @@ export class CheckUpdatesCommand extends BaseCommand {
                             : [];
 
                         // Check template updates for EDS projects
-                        progress.report({ message: 'Checking EDS templates…' });
+                        progress.report({ message: 'Checking EDS templates' });
                         const templateUpdateChecker = new TemplateUpdateChecker(this.context.secrets, this.logger);
                         const templateUpdates: Array<{ project: Project; update: TemplateUpdateResult }> = [];
 
@@ -111,13 +111,13 @@ export class CheckUpdatesCommand extends BaseCommand {
                         }
 
                         // Phase 4: Check add-on updates
-                        progress.report({ message: 'Checking add-ons…' });
+                        progress.report({ message: 'Checking add-ons' });
                         const { blockLibraryItems, inspectorItems } = await this.checkAddonUpdates(
                             allProjects, currentProject ?? null,
                         );
 
                         // Phase 5: Check Adobe MCP package updates per storefront
-                        progress.report({ message: 'Checking the Adobe AI tools…' });
+                        progress.report({ message: 'Checking the Adobe AI tools' });
                         const adobeMcpItems = await this.checkAdobeMcpUpdates(
                             allProjects, currentProject ?? null,
                         );

@@ -18,7 +18,7 @@ projects-dashboard/
   or `Stopped`. EDS projects have no running state, so they get this line only
   while an operation is in flight (`Republishing…`, `Resetting…`).
 - **Deployment** (`getDeploymentSummary`) — the CLOUD side, worst-of across mesh,
-  storefront and integrations: `Deployed` / `Attention needed` / `Deploying…` /
+  storefront and integrations: `Deployed` / `Attention needed` / `Deploying` /
   `Not deployed`. Absent when the project has nothing deployable.
 
 **The card deliberately does not name individual components.** It used to render

@@ -75,12 +75,12 @@ export const citisignal: DemoPackage = {
     },
 };
 
-export const custom: DemoPackage = {
-    id: 'custom',
-    name: 'Custom',
-    description: 'Custom package',
+export const starter: DemoPackage = {
+    id: 'starter',
+    name: 'Starter',
+    description: 'Starter package',
     configDefaults: {},
-    storefronts: { 'headless-paas': { name: 'Custom HL', description: '', source: mockGitSource } },
+    storefronts: { 'headless-paas': { name: 'Starter HL', description: '', source: mockGitSource } },
 };
 
 /**
@@ -119,7 +119,7 @@ export function setup(initial: Partial<WizardState> = {}, extras: SetupExtras = 
         onArchitectureChange,
         blockLibraryDefaults,
         customBlockLibraryDefaults,
-        packages = [citisignal, custom, withAddons],
+        packages = [citisignal, starter, withAddons],
         stacks = [edsStack, headlessStack, edsRequiresStack],
     } = extras;
     const stateRef: { current: WizardState } = {

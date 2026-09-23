@@ -223,7 +223,7 @@ describe('the reset path', () => {
 
         expect(sentPayloads(context)[1]).toEqual({
             phase: 'repository',
-            message: 'Resetting repository to template...',
+            message: 'Resetting repository to template',
             subMessage: 'acme/store',
             progress: 6,
         });
@@ -293,23 +293,24 @@ describe('creating a brand-new repo', () => {
         });
     });
 
-    it('reports creating, waiting and ready, in that order', async () => {
+    it('reports creating, waiting and ready, in that order — and no pin line for a storefront with no patches', async () => {
+        // The pin is announced only when there is one to make (the routing suite
+        // covers the patched case); a colleague's code carries no patches (D4).
         const { context } = await run(config({ repoMode: 'new' }), makeServices(), { ...NEW });
 
         expect(sentPayloads(context).map((p) => p.message)).toEqual([
-            'Creating GitHub repository from template...',
-            'Waiting for repository content...',
-            'Pinning to verified canonical state...',
+            'Creating GitHub repository from template',
+            'Waiting for repository content',
             'Repository ready',
         ]);
         expect(sentPayloads(context)[0]).toEqual({
             phase: 'repository',
-            message: 'Creating GitHub repository from template...',
+            message: 'Creating GitHub repository from template',
             subMessage: 'brand-new',
             progress: 5,
         });
         expect(sentPayloads(context)[1]).toMatchObject({
-            message: 'Waiting for repository content...',
+            message: 'Waiting for repository content',
             progress: 10,
             repoOwner: 'skukla',
             repoName: 'brand-new',

@@ -255,6 +255,20 @@ describe('CreateProjectWebviewCommand - Config Change Listener', () => {
         );
     });
 
+    it('sends the remembered demos when the demos.added setting changes', async () => {
+        await command.execute();
+        mockSendMessage.mockClear();
+
+        configChangeCallback!({
+            affectsConfiguration: (section: string) => section === 'demoBuilder.demos.added',
+        });
+
+        expect(mockSendMessage).toHaveBeenCalledWith(
+            'addedDemosUpdated',
+            expect.objectContaining({ addedDemos: expect.any(Array) }),
+        );
+    });
+
     it('should NOT send update when unrelated settings change', async () => {
         // Given: The command is executed
         await command.execute();

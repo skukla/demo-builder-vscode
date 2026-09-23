@@ -11,6 +11,7 @@
 
 import { Text, Form } from '@adobe/react-spectrum';
 import React, { useEffect, useMemo, useRef } from 'react';
+import { missingStructure } from './businessStructureFit';
 import {
     computeCommerceSectionValidity,
     isConnectionGroup,
@@ -23,6 +24,7 @@ import {
     ACCS_STORE_VIEW_CODE,
     PAAS_STORE_VIEW_CODE,
 } from '@/core/config/envVarKeys';
+import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
@@ -189,6 +191,13 @@ export function ConnectStoreStepContent({
         onStoreLoadingChange?.(isFetching);
     }, [isFetching, onStoreLoadingChange]);
 
+    // What the demo's storefront expects that the backend does not have. Only the
+    // Business Structure view says so: it is where the structure is known and chosen.
+    const missing = useMemo(
+        () => (section === 'business-structure' ? missingStructure(packageConfigDefaults, storeDiscoveryData) : []),
+        [section, packageConfigDefaults, storeDiscoveryData],
+    );
+
     // Whether store view code is filled (gate for showing dependent groups like AEM Assets)
     const storeSelectionComplete = useMemo(() => {
         const configs = liveConfigs ?? {};
@@ -214,7 +223,7 @@ export function ConnectStoreStepContent({
             <CenteredFeedbackContainer>
                 <LoadingDisplay
                     size="L"
-                    message="Loading component configurations..."
+                    message="Loading component configurations"
                     helperText="This should only take a moment"
                 />
             </CenteredFeedbackContainer>
@@ -266,7 +275,7 @@ export function ConnectStoreStepContent({
             <CenteredFeedbackContainer>
                 <LoadingDisplay
                     size="L"
-                    message="Detecting store structure..."
+                    message="Detecting store structure"
                     helperText="This may take up to 30 seconds"
                 />
             </CenteredFeedbackContainer>
@@ -277,6 +286,15 @@ export function ConnectStoreStepContent({
         // padding 0: the surrounding .step-view already supplies the content padding —
         // a second 24px here pushed the first group heading well below the tab strip.
         <SingleColumnLayout padding="0px">
+            {missing.length > 0 ? (
+                <InlineNotice
+                    title="Your backend doesn't have the business structure this storefront needs"
+                    hint="Create them in Commerce, then press Re-detect."
+                    testId="business-structure-missing"
+                >
+                    {`Missing: ${missing.join(', ')}.`}
+                </InlineNotice>
+            ) : null}
             <Form UNSAFE_className="container-form">
                 <ServiceGroupList
                     groups={visibleGroups}

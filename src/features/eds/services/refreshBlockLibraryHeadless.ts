@@ -146,7 +146,7 @@ export async function refreshBlockLibraryHeadless(
                 logger.warn(
                     `${LOG_PREFIX} DA.live token expired, attempting re-auth (attempt ${attempt})`,
                 );
-                onProgress?.('DA.live session expired. Please re-authenticate...');
+                onProgress?.('DA.live session expired. Please re-authenticate');
                 const authResult = await ensureDaLiveAuth(handlerContext, LOG_PREFIX);
                 if (!authResult.authenticated) {
                     return authResult.cancelled
@@ -160,7 +160,7 @@ export async function refreshBlockLibraryHeadless(
                               error: `DA.live re-authentication failed: ${authResult.error}`,
                           };
                 }
-                onProgress?.('Resuming block library refresh...');
+                onProgress?.('Resuming block library refresh');
                 continue;
             }
             logger.error(

@@ -63,9 +63,9 @@ export async function cleanupOrphanedDirectory(
         const existingFiles = await fs.readdir(projectPath);
         if (existingFiles.length > 0) {
             context.logger.debug(
-                `[Project Creation] Found ${existingFiles.length} files, cleaning up...`,
+                `[Project Creation] Found ${existingFiles.length} files, cleaning up`,
             );
-            progressTracker('Preparing Project', 5, 'Removing existing project data...');
+            progressTracker('Preparing Project', 5, 'Removing existing project data');
             await fs.rm(projectPath, { recursive: true, force: true });
         } else {
             await fs.rmdir(projectPath);

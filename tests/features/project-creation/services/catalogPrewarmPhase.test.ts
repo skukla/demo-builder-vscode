@@ -98,7 +98,7 @@ describe('executeCatalogPrewarmPhase', () => {
         expect(progress).toHaveBeenCalledWith(
             'Pre-warming Catalog',
             96,
-            'Publishing product pages…'
+            'Publishing product pages'
         );
         expect(progress.mock.invocationCallOrder[0]).toBeLessThan(
             mockPrewarmCatalog.mock.invocationCallOrder[0]

@@ -214,7 +214,7 @@ export async function fetchDeployedMeshConfig(
         const { getMeshNodeVersion } = await import('@/core/utils/meshConfig');
         const commandManager = deps.commandManager;
 
-        logger.debug('[Mesh Staleness] Fetching deployed mesh config from Adobe I/O...');
+        logger.debug('[Mesh Staleness] Fetching deployed mesh config from Adobe I/O');
 
         // Pre-check: Verify authentication status without triggering browser auth
         // Use getTokenStatus() which reads token file directly (no CLI call, no browser popup)

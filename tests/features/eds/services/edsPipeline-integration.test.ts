@@ -86,7 +86,7 @@ describe('executeEdsPipeline - integration', () => {
             await executeEdsPipeline(
                 {
                     ...baseParams,
-                    contentSource: { org: 'o', site: 's' },
+                    contentSource: { org: 'o', site: 's', indexPath: '/full-index.json' },
                     includeBlockLibrary: true,
                     purgeCache: true,
                 },
@@ -122,7 +122,7 @@ describe('executeEdsPipeline - integration', () => {
             );
 
             await executeEdsPipeline(
-                { ...baseParams, contentSource: { org: 'o', site: 's' } },
+                { ...baseParams, contentSource: { org: 'o', site: 's', indexPath: '/full-index.json' } },
                 services,
                 onProgress
             );
@@ -161,7 +161,7 @@ describe('executeEdsPipeline - integration', () => {
             );
 
             await executeEdsPipeline(
-                { ...baseParams, contentSource: { org: 'o', site: 's' } },
+                { ...baseParams, contentSource: { org: 'o', site: 's', indexPath: '/full-index.json' } },
                 services,
                 onProgress
             );
@@ -432,7 +432,7 @@ describe('executeEdsPipeline - integration', () => {
             const result = await executeEdsPipeline(
                 {
                     ...baseParams,
-                    contentSource: { org: 'o', site: 's' },
+                    contentSource: { org: 'o', site: 's', indexPath: '/full-index.json' },
                     includeBlockLibrary: true,
                     purgeCache: true,
                 },
@@ -456,7 +456,7 @@ describe('executeEdsPipeline - integration', () => {
             const result = await executeEdsPipeline(
                 {
                     ...baseParams,
-                    contentSource: { org: 'o', site: 's' },
+                    contentSource: { org: 'o', site: 's', indexPath: '/full-index.json' },
                     includeBlockLibrary: true,
                 },
                 services
@@ -474,7 +474,7 @@ describe('executeEdsPipeline - integration', () => {
             const result = await executeEdsPipeline(
                 {
                     ...baseParams,
-                    contentSource: { org: 'o', site: 's' },
+                    contentSource: { org: 'o', site: 's', indexPath: '/full-index.json' },
                     byomOverlayUrl: 'https://overlay.example',
                     project: createMockProject({ name: 'p' }),
                 },

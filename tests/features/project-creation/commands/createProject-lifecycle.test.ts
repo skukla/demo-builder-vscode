@@ -80,7 +80,7 @@ describe('what the wizard calls itself', () => {
         const command = build();
 
         expect(internals(command).getWebviewTitle()).toBe('Create Demo Project');
-        expect(internals(command).getLoadingMessage()).toBe('Loading Project Creation Wizard...');
+        expect(internals(command).getLoadingMessage()).toBe('Loading Project Creation Wizard');
         expect(internals(command).getLoadingHeader()).toEqual({
             title: 'Create Demo Project',
             subtitle: undefined,
@@ -93,7 +93,7 @@ describe('what the wizard calls itself', () => {
         await command.execute({ editProject: EDIT_PROJECT });
 
         expect(internals(command).getWebviewTitle()).toBe('Edit Project');
-        expect(internals(command).getLoadingMessage()).toBe('Loading Project Editor...');
+        expect(internals(command).getLoadingMessage()).toBe('Loading Project Editor');
         expect(internals(command).getLoadingHeader()).toEqual({
             title: 'Edit Project',
             subtitle: 'acme-demo',

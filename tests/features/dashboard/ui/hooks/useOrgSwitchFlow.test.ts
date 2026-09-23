@@ -3,7 +3,7 @@
  *
  * The forced org-switch flow state extracted from ProjectDashboardScreen
  * (decompose pass after ADR-011 D3): attempt flag for the no-loop hint,
- * in-flight "Switching…" state, a synchronous re-entry guard, and the
+ * in-flight "Switching" state, a synchronous re-entry guard, and the
  * reset-on-clean effect (only a RESOLVED clean check clears the attempt —
  * the transient 'checking' a re-check passes through must not).
  *

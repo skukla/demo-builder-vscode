@@ -171,11 +171,11 @@ describe('shipped demo-packages.json (config integrity)', () => {
         expect(packages).toHaveLength(5);
         const ids = packages.map((p) => p.id);
         expect(ids).toEqual(
-            expect.arrayContaining(['citisignal', 'isle5', 'buildright', 'custom', 'bodea'])
+            expect.arrayContaining(['citisignal', 'isle5', 'buildright', 'starter', 'bodea'])
         );
         // citisignal-b2b retired — merged into the hybrid `citisignal` package.
         expect(ids).not.toContain('citisignal-b2b');
-        // `b2b` id retired — the unbranded hybrid is now `custom` ("Custom (B2B + B2C)").
+        // `b2b` and `custom` retired — the unbranded hybrid is now `starter` ("Starter (B2B + B2C)").
         expect(ids).not.toContain('b2b');
     });
 
@@ -188,7 +188,7 @@ describe('shipped demo-packages.json (config integrity)', () => {
         // unhidden once its four pre-unhide items closed (store scope read live,
         // group-hash portability answered, configurator keeper settled, VIP nav
         // gating deleted).
-        expect(ids).toEqual(expect.arrayContaining(['citisignal', 'custom', 'bodea']));
+        expect(ids).toEqual(expect.arrayContaining(['citisignal', 'starter', 'bodea']));
         expect(ids).not.toContain('isle5');
         expect(ids).not.toContain('buildright');
         // None of the returned packages are hidden.

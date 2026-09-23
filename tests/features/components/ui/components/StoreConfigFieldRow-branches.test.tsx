@@ -195,7 +195,7 @@ describe('StoreConfigFieldRow — which fields render at all', () => {
             hasStoreData: false,
         });
 
-        expect(screen.getByText('Detecting store structure...')).toBeInTheDocument();
+        expect(screen.getByText('Detecting store structure')).toBeInTheDocument();
         expect(screen.queryByTestId('store-selection-row')).not.toBeInTheDocument();
     });
 });

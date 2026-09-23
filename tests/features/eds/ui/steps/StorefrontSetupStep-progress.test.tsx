@@ -33,7 +33,7 @@ describe('StorefrontSetupStep — idle', () => {
         const { setCanProceed } = renderStep();
 
         expect(setCanProceed).toHaveBeenCalledWith(false);
-        expect(loader()).toHaveTextContent('Starting storefront setup...');
+        expect(loader()).toHaveTextContent('Starting storefront setup');
         expect(loader()).toHaveAttribute('data-progress', '0');
         expect(loader()).toHaveAttribute('data-size', 'L');
         // 'idle' has no static expectation to show — the switch's default arm.

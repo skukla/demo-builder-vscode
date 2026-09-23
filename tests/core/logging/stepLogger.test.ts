@@ -54,7 +54,7 @@ describe('StepLogger', () => {
 
             // Default templates should be available
             stepLogger.logTemplate('welcome', 'operations.checking', { item: 'test' });
-            expect(mockLogger.info).toHaveBeenCalledWith('[Project Setup] Checking test...');
+            expect(mockLogger.info).toHaveBeenCalledWith('[Project Setup] Checking test');
         });
 
         it('should override step names with provided wizard steps', () => {
@@ -123,7 +123,7 @@ describe('StepLogger', () => {
 
             // Verify default templates work
             stepLogger.logTemplate('welcome', 'operations.fetching', { item: 'projects' });
-            expect(mockLogger.info).toHaveBeenCalledWith('[Project Setup] Fetching projects...');
+            expect(mockLogger.info).toHaveBeenCalledWith('[Project Setup] Fetching projects');
         });
 
         it('never reads a templates file when no path is given', () => {
@@ -186,7 +186,7 @@ describe('StepLogger', () => {
 
             // Should still work with defaults
             stepLogger.logTemplate('welcome', 'operations.checking', { item: 'test' });
-            expect(mockLogger.info).toHaveBeenCalledWith('[Project Setup] Checking test...');
+            expect(mockLogger.info).toHaveBeenCalledWith('[Project Setup] Checking test');
             // ...and the swallowed read failure is reported rather than silent.
             expect(mockLogger.debug).toHaveBeenCalledTimes(1);
         });
@@ -203,7 +203,7 @@ describe('StepLogger', () => {
 
             // Should still work with defaults (parseJSON returns null for invalid JSON)
             stepLogger.logTemplate('welcome', 'operations.checking', { item: 'test' });
-            expect(mockLogger.info).toHaveBeenCalledWith('[Project Setup] Checking test...');
+            expect(mockLogger.info).toHaveBeenCalledWith('[Project Setup] Checking test');
         });
     });
 
@@ -361,7 +361,7 @@ describe('StepLogger', () => {
             stepLogger.logTemplate('welcome', 'operations.checking', { item: 'Node.js' });
 
             expect(mockLogger.info).toHaveBeenCalledWith(
-                '[Project Setup] Checking Node.js...'
+                '[Project Setup] Checking Node.js'
             );
         });
 
@@ -369,7 +369,7 @@ describe('StepLogger', () => {
             stepLogger.logTemplate('welcome', 'checking', { item: 'npm' });
 
             expect(mockLogger.info).toHaveBeenCalledWith(
-                '[Project Setup] Checking npm...'
+                '[Project Setup] Checking npm'
             );
         });
 
@@ -434,7 +434,7 @@ describe('StepLogger', () => {
             });
 
             expect(mockLogger.info).toHaveBeenCalledWith(
-                '[Project Setup] Checking ...'
+                '[Project Setup] Checking '
             );
         });
     });
@@ -449,7 +449,7 @@ describe('StepLogger', () => {
             stepLogger.logStepStart('welcome');
 
             expect(mockLogger.debug).toHaveBeenCalledWith(
-                '[Project Setup] Starting project setup...'
+                '[Project Setup] Starting project setup'
             );
         });
 
@@ -457,7 +457,7 @@ describe('StepLogger', () => {
             stepLogger.logStepStart('prerequisites');
 
             expect(mockLogger.debug).toHaveBeenCalledWith(
-                '[Prerequisites] Starting prerequisites...'
+                '[Prerequisites] Starting prerequisites'
             );
         });
     });
@@ -622,7 +622,7 @@ describe('StepLoggerContext', () => {
         it('should delegate to parent with step ID', () => {
             context.logTemplate('operations.checking', { item: 'test' });
 
-            expect(mockLogger.info).toHaveBeenCalledWith('[Project Setup] Checking test...');
+            expect(mockLogger.info).toHaveBeenCalledWith('[Project Setup] Checking test');
         });
 
         it('should support level parameter', () => {
@@ -637,7 +637,7 @@ describe('StepLoggerContext', () => {
             context.logStart();
 
             expect(mockLogger.debug).toHaveBeenCalledWith(
-                '[Project Setup] Starting project setup...'
+                '[Project Setup] Starting project setup'
             );
         });
     });

@@ -13,12 +13,15 @@
  * anywhere but here.
  */
 
-import { buildEdsConfigFromStorefront } from '@/features/project-creation/ui/steps/edsConfigFromStorefront';
+import {
+    STOREFRONT_DERIVED_FIELDS,
+    buildEdsConfigFromStorefront,
+} from '@/features/project-creation/ui/steps/edsConfigFromStorefront';
 import type { Storefront } from '@/types/demoPackages';
 import type { EDSConfig } from '@/types/webview';
 
-/** Every field this derivation takes from the storefront. Adding one? Add it here too. */
-const STOREFRONT_DERIVED_FIELDS = [
+/** The list is the source's own; this pins its content so a field cannot slip in or out unnoticed. */
+const PINNED_FIELDS = [
     'templateOwner',
     'templateRepo',
     'contentSource',
@@ -31,6 +34,10 @@ const STOREFRONT_DERIVED_FIELDS = [
     'codePatchSource',
     'brandAssets',
 ] as const;
+
+it('the one derived-field list is exactly the eleven fields', () => {
+    expect([...STOREFRONT_DERIVED_FIELDS]).toEqual([...PINNED_FIELDS]);
+});
 
 /** Fields the user owns — carried over from the previous config, never from the storefront. */
 const USER_OWNED_FIELDS = [

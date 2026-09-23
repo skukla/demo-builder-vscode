@@ -357,7 +357,7 @@ export async function handleCreateProject(
         await context.sendMessage('creationProgress', {
             currentOperation: 'Initializing',
             progress: 0,
-            message: 'Preparing to create your project...',
+            message: 'Preparing to create your project',
             logs: [],
         });
 

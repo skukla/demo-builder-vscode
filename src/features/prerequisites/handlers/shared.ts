@@ -127,7 +127,7 @@ export function getPluginNodeVersions(
  * Format progress message for prerequisite checking
  *
  * For Node.js with multiple required versions, shows which versions are being checked.
- * Example: "Checking Node.js (v20, v24)..."
+ * Example: "Checking Node.js (v20, v24)"
  *
  * SOP §2: Extracted helper for progress message generation
  *
@@ -143,10 +143,10 @@ export function formatProgressMessage(
     if (prereq.id === 'node' && hasNodeVersions(nodeVersionMapping)) {
         const versions = getNodeVersionKeys(nodeVersionMapping);
         if (versions.length > 1) {
-            return `Checking ${prereq.name} (v${versions.join(', v')})...`;
+            return `Checking ${prereq.name} (v${versions.join(', v')})`;
         }
     }
-    return `Checking ${prereq.name}...`;
+    return `Checking ${prereq.name}`;
 }
 
 /**

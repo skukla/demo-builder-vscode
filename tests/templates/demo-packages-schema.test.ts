@@ -167,6 +167,51 @@ describe('demo-packages.schema.json - validation rules', () => {
         });
     });
 
+    describe('closed shapes (program plan step 01: a config field lives in three places)', () => {
+        const baseStorefront = {
+            name: 'S',
+            description: 'D',
+            source: { type: 'git', url: 'https://github.com/test/repo', branch: 'main', gitOptions: { shallow: true } },
+        };
+        const withPackage = (pkg: Record<string, unknown>, storefront: Record<string, unknown> = baseStorefront) => ({
+            version: '1.0.0',
+            packages: [
+                { id: 'p', name: 'P', description: 'D', configDefaults: {}, storefronts: { 'eds-paas': storefront }, ...pkg },
+            ],
+        });
+
+        it('accepts every package field the code reads: hidden, configFlags, requiresMesh, datapack, integrations', () => {
+            const validate = new Ajv().compile(schema);
+            const valid = validate(withPackage({
+                hidden: true,
+                configFlags: { 'commerce-b2b-enabled': true },
+                requiresMesh: 'optional',
+                datapack: { name: 'bodea', version: 'main' },
+                integrations: { catalog: ['eds-accs-mesh'], custom: { x: { owner: 'o', repo: 'r' } } },
+            }));
+            expect(validate.errors ?? []).toStrictEqual([]);
+            expect(valid).toBe(true);
+        });
+
+        it('accepts every storefront field the code reads: byomOverlayUrl, patches, requiresMesh', () => {
+            const validate = new Ajv().compile(schema);
+            const valid = validate(withPackage({}, {
+                ...baseStorefront,
+                byomOverlayUrl: 'https://example.invalid/render',
+                patches: ['p1'],
+                requiresMesh: true,
+            }));
+            expect(validate.errors ?? []).toStrictEqual([]);
+            expect(valid).toBe(true);
+        });
+
+        it('rejects a field neither the package nor the storefront type has', () => {
+            const validate = new Ajv().compile(schema);
+            expect(validate(withPackage({ somethingNew: 1 }))).toBe(false);
+            expect(validate(withPackage({}, { ...baseStorefront, somethingNew: 1 }))).toBe(false);
+        });
+    });
+
     describe('valid configurations', () => {
         it('should accept valid source.type "git"', () => {
             const ajv = new Ajv();
@@ -253,7 +298,6 @@ describe('demo-packages.schema.json - validation rules', () => {
                         id: 'test-package',
                         name: 'Test Package',
                         description: 'Test description',
-                        icon: 'test-icon',
                         featured: true,
                         addons: {
                             'some-addon': 'required'

@@ -177,7 +177,7 @@ describe('re-checking after "Check Again"', () => {
     };
 
     it('stops on the first definite answer instead of waiting out five attempts', async () => {
-        // "Repository is still being registered... (attempt 3 of 5)" is what the
+        // "Repository is still being registered (attempt 3 of 5)" is what the
         // user saw for a repo whose App was simply never installed. The retry
         // keyed off `codeStatus === undefined`, which a definitive Helix 404 also
         // satisfies — so it spent 25 seconds waiting for a state no amount of

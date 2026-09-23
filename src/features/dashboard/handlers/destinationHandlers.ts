@@ -130,7 +130,7 @@ async function applyDestination(
         return { success: true, data: { destination: project.adobe, unchanged: true } };
     }
 
-    report('Checking requirements…');
+    report('Checking requirements');
     const guardError = await runGuards(context, project);
     if (guardError) {
         return { success: false, error: guardError.error, code: guardError.code };
@@ -161,7 +161,7 @@ async function applyDestination(
         workspaceTitle: nextWorkspace.title,
     };
 
-    report(`Saving destination ${target}…`);
+    report(`Saving destination ${target}`);
     await context.stateManager.saveProject(project);
     context.logger.info(
         `[Destination] Now deploying to ${project.adobe.projectTitle ?? project.adobe.projectName}` +
@@ -179,7 +179,7 @@ async function applyDestination(
 
     // `project.adobe` already holds the NEW destination, so every deploy the
     // migration runs targets it; `previous` is what addresses the old one.
-    report(`Moving ${movingIds.length} integration${movingIds.length === 1 ? '' : 's'}…`);
+    report(`Moving ${movingIds.length} integration${movingIds.length === 1 ? '' : 's'}`);
     const deps = buildDefaultRunnerDeps(
         await buildRunnerDepsContext(context, project, {
                     authManager: ServiceLocator.getAuthenticationService(),

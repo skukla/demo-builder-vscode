@@ -343,7 +343,7 @@ describe('meshSetupService deployNewMesh', () => {
                 attempt: 1,
                 maxAttempts: 3,
                 elapsedSeconds: 0,
-                message: 'Deploying mesh to Adobe I/O...',
+                message: 'Deploying mesh to Adobe I/O',
             });
         });
 
@@ -431,7 +431,7 @@ describe('meshSetupService deployNewMesh', () => {
                 attempt: 2,
                 maxAttempts: 3,
                 elapsedSeconds: DEPLOY_MS / 1000,
-                message: 'Deploying mesh to Adobe I/O...',
+                message: 'Deploying mesh to Adobe I/O',
             });
         });
 

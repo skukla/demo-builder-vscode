@@ -194,7 +194,7 @@ describe('Primary zone — the Restart tile', () => {
  *
  * Removing the runtime status text was right for the steady states — the tile
  * showing "Stop" already means running, and a green dot beside it is the same
- * fact twice. But it silently took "Starting…", "Stopping…" and "Error" with it,
+ * fact twice. But it silently took "Starting", "Stopping…" and "Error" with it,
  * and the tile says nothing about those: it looks identical mid-start and
  * mid-failure.
  *
@@ -205,8 +205,8 @@ describe('Primary zone — the lifecycle dot', () => {
     const status = (color: 'blue' | 'red' | 'green' | 'gray', text: string) => ({ color, text });
 
     it.each([
-        ['starting', 'blue', 'Starting...', 'info'],
-        ['stopping', 'blue', 'Stopping...', 'info'],
+        ['starting', 'blue', 'Starting', 'info'],
+        ['stopping', 'blue', 'Stopping', 'info'],
         ['error', 'red', 'Error', 'error'],
     ] as const)('marks %s, which the tile cannot show', (_s, color, text, variant) => {
         render(<ActionGrid {...defaultProps} demoStatus={status(color, text)} />);
@@ -227,11 +227,11 @@ describe('Primary zone — the lifecycle dot', () => {
 
     it('keeps the words in the tooltip', () => {
         const { container } = render(
-            <ActionGrid {...defaultProps} demoStatus={status('blue', 'Starting...')} />
+            <ActionGrid {...defaultProps} demoStatus={status('blue', 'Starting')} />
         );
 
         expect(within(getZone(container, 'primary')).getAllByRole('tooltip')[0]).toHaveTextContent(
-            'Starting...'
+            'Starting'
         );
     });
 
@@ -273,7 +273,7 @@ describe('Primary zone — the lifecycle dot', () => {
 describe('ActionGrid — every dot has words', () => {
     const cases: Array<[string, Record<string, unknown>]> = [
         ['stopped', { ...defaultProps, demoStatus: { color: 'gray', text: 'Stopped' } }],
-        ['starting', { ...defaultProps, demoStatus: { color: 'blue', text: 'Starting...' } }],
+        ['starting', { ...defaultProps, demoStatus: { color: 'blue', text: 'Starting' } }],
         ['errored', { ...defaultProps, demoStatus: { color: 'red', text: 'Error' } }],
         ['needing a restart', { ...defaultProps, isRunning: true, demoStatus: needsRestart }],
         ['EDS, published', { ...edsProps, demoStatus: published }],

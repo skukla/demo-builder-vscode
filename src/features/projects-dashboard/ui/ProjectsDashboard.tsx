@@ -125,7 +125,7 @@ export function ProjectsDashboard({
             <div ref={containerRef}>
                 <View height="100vh" backgroundColor="gray-50">
                     <Flex justifyContent="center" alignItems="center" height="100%">
-                        <LoadingDisplay size="L" message="Loading projects…" />
+                        <LoadingDisplay size="L" message="Loading projects" />
                     </Flex>
                 </View>
             </div>
@@ -169,7 +169,7 @@ export function ProjectsDashboard({
                                 <SearchHeader
                                     searchQuery={searchQuery}
                                     onSearchQueryChange={setSearchQuery}
-                                    searchPlaceholder="Filter projects..."
+                                    searchPlaceholder="Filter projects"
                                     searchThreshold={0}
                                     totalCount={projects.length}
                                     filteredCount={filteredProjects.length}

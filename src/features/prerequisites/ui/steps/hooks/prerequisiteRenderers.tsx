@@ -163,7 +163,7 @@ export function renderPrerequisiteMessage(check: PrerequisiteCheck): React.React
                     : 'prerequisite-message prerequisite-message-default',
                 'animate-fade-in',
             )}>
-                {check.message || 'Waiting...'}
+                {check.message || 'Waiting'}
             </Text>
         );
     }

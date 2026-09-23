@@ -164,8 +164,8 @@ describe('ImportDatapackModal — decisions', () => {
             renderModal();
             await settle();
 
-            expect(await screen.findByText('Removing…')).toBeInTheDocument();
-            expect(screen.getByText(/Removing Categories… 0 of 2 done/)).toBeInTheDocument();
+            expect(await screen.findByText('Removing')).toBeInTheDocument();
+            expect(screen.getByText(/Removing Categories · 0 of 2 done/)).toBeInTheDocument();
         });
 
         it('CONTROL — narrates a running import as an import', async () => {
@@ -173,8 +173,8 @@ describe('ImportDatapackModal — decisions', () => {
             renderModal();
             await settle();
 
-            expect(await screen.findByText('Importing…')).toBeInTheDocument();
-            expect(screen.getByText(/Importing Categories… 0 of 2 done/)).toBeInTheDocument();
+            expect(await screen.findByText('Importing')).toBeInTheDocument();
+            expect(screen.getByText(/Importing Categories · 0 of 2 done/)).toBeInTheDocument();
         });
 
         it('says the REMOVAL continues on the server once watching stops', async () => {
@@ -201,7 +201,7 @@ describe('ImportDatapackModal — decisions', () => {
             withStatus(runningRecord({ perType: { categories: 'success' } }));
             renderModal();
             await settle();
-            await screen.findByText('Importing…');
+            await screen.findByText('Importing');
 
             expect(screen.getByRole('progressbar')).toHaveAttribute('value', '50');
         });
@@ -217,7 +217,7 @@ describe('ImportDatapackModal — decisions', () => {
             renderModal();
             await awaitForm();
 
-            expect(screen.queryByText('Checking with the service…')).not.toBeInTheDocument();
+            expect(screen.queryByText('Checking with the service')).not.toBeInTheDocument();
         });
 
         it('does not show the watch for a record whose job has already finished', async () => {
@@ -274,7 +274,7 @@ describe('ImportDatapackModal — decisions', () => {
 
             await press(screen.getByRole('button', { name: /remove the data/i }));
 
-            expect(screen.getByText('Starting removal…')).toBeInTheDocument();
+            expect(screen.getByText('Starting removal')).toBeInTheDocument();
         });
 
         it('says credentials are being set up, and labels Start for that wait', async () => {
@@ -301,8 +301,8 @@ describe('ImportDatapackModal — decisions', () => {
                 await screen.findByRole('button', { name: /set up credentials automatically/i })
             );
 
-            expect(screen.getByText('Setting up credentials…')).toBeInTheDocument();
-            expect(screen.getByRole('button', { name: 'Setting up…' })).toBeInTheDocument();
+            expect(screen.getByText('Setting up credentials')).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Setting up' })).toBeInTheDocument();
         });
     });
 

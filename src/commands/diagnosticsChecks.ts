@@ -274,15 +274,15 @@ export function checkOrphanedSettings(): string[] {
 
 export async function runTests(): Promise<TestResults> {
     // Test browser launch capability
-    getLogger().debug('Testing browser launch...');
+    getLogger().debug('Testing browser launch');
     const browserLaunch = await testBrowserLaunch();
 
     // Test Adobe login command
-    getLogger().debug('Testing Adobe login command...');
+    getLogger().debug('Testing Adobe login command');
     const adobeLoginCommand = await testAdobeLogin();
 
     // Test file system access
-    getLogger().debug('Testing file system access...');
+    getLogger().debug('Testing file system access');
     const fileSystem = await testFileSystem();
 
     return {

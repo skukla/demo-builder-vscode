@@ -44,7 +44,7 @@ function SuccessContent({ isOpeningProject }: { isOpeningProject: boolean }) {
     if (isOpeningProject) {
         return (
             <CenteredFeedbackContainer>
-                <LoadingDisplay size="L" message="Loading your projects..." />
+                <LoadingDisplay size="L" message="Loading your projects" />
             </CenteredFeedbackContainer>
         );
     }
@@ -186,7 +186,7 @@ function StepContentArea(props: {
                 <LoadingDisplay
                     size="L"
                     message="Initializing"
-                    subMessage="Preparing to create your project..."
+                    subMessage="Preparing to create your project"
                 />
             </CenteredFeedbackContainer>
         );

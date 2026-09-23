@@ -255,8 +255,30 @@ describe('GitHub Token Service', () => {
 
             const result = await service.validateToken();
 
-            expect(result).toEqual({ valid: false });
+            expect(result).toEqual({ valid: false, reason: 'rejected' });
             expect(mockSecretStorage.delete).toHaveBeenCalledWith('github-token');
+        });
+
+        it('KEEPS a rejected token for a caller that is only reading', async () => {
+            // get_auth_status is declared read-only, and clearing here signed a
+            // window out as a side effect of being asked a question (2026-09-17).
+            const service = new GitHubTokenService(mockSecretStorage);
+            mockSecretStorage.get.mockResolvedValue(JSON.stringify(STORED));
+            await useOctokit(
+                jest.fn().mockRejectedValue(Object.assign(new Error('Bad credentials'), { status: 401 }))
+            );
+
+            const result = await service.validateToken({ clearInvalid: false });
+
+            expect(result).toEqual({ valid: false, reason: 'rejected' });
+            expect(mockSecretStorage.delete).not.toHaveBeenCalled();
+        });
+
+        it('says which kind of failure it was, so a reader can word it', async () => {
+            const service = new GitHubTokenService(mockSecretStorage);
+            mockSecretStorage.get.mockResolvedValue(undefined);
+
+            expect(await service.validateToken()).toEqual({ valid: false, reason: 'no-token' });
         });
 
         it('KEEPS the token when the failure is not a 401', async () => {
@@ -336,7 +358,7 @@ describe('GitHub Token Service', () => {
             mockSecretStorage.get.mockResolvedValue(JSON.stringify({ token: 'xxx' }));
             const mockRequest = jest.fn().mockResolvedValueOnce({
                 data: [
-                    { email: 'khalil@example.com', primary: true, verified: true, visibility: 'private' },
+                    { email: 'personal@example.com', primary: true, verified: true, visibility: 'private' },
                     { email: 'sc@adobe.example', primary: false, verified: true, visibility: null },
                 ],
             });
@@ -344,7 +366,7 @@ describe('GitHub Token Service', () => {
             (Octokit as unknown as jest.Mock).mockImplementation(() => ({ request: mockRequest }));
 
             await expect(service.getUserEmails()).resolves.toEqual([
-                { email: 'khalil@example.com', primary: true, verified: true },
+                { email: 'personal@example.com', primary: true, verified: true },
                 { email: 'sc@adobe.example', primary: false, verified: true },
             ]);
             expect(mockRequest).toHaveBeenCalledWith('GET /user/emails', expect.objectContaining({ per_page: 100 }));

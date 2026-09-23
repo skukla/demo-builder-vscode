@@ -78,7 +78,7 @@ describe('workspaceHandlers', () => {
 
             expect(mockContext.sendMessage).toHaveBeenCalledWith('workspace-loading-status', {
                 isLoading: true,
-                message: 'Loading workspaces...',
+                message: 'Loading workspaces',
                 subMessage: 'Fetching from project: Test Project Title',
             });
         });
@@ -94,7 +94,7 @@ describe('workspaceHandlers', () => {
 
             expect(mockContext.sendMessage).toHaveBeenCalledWith('workspace-loading-status', {
                 isLoading: true,
-                message: 'Loading workspaces...',
+                message: 'Loading workspaces',
                 subMessage: 'Fetching from project: Test Project',
             });
         });

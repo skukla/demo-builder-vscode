@@ -86,7 +86,7 @@ describe('useElapsedStage', () => {
     // than relying on the elapsed clock sitting at zero.
     it('shows nothing while inactive even for a stage with a zero threshold', () => {
         const { result } = renderHook(() =>
-            useElapsedStage(false, [{ afterMs: 0, message: 'Starting…' }])
+            useElapsedStage(false, [{ afterMs: 0, message: 'Starting' }])
         );
 
         expect(result.current).toBeUndefined();

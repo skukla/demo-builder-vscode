@@ -12,8 +12,11 @@
 
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     getGitHubServices: jest.fn(),
+    getDaLiveAuthService: jest.fn(() => mockDaLiveAuth),
 }));
 
+/** The DA.live session: no token by default, so the suites drive the IMS fallback they were written for. */
+const mockDaLiveAuth = { getAccessToken: jest.fn(async (): Promise<string | null> => null) };
 const mockInspectToken = jest.fn();
 const mockListOrgSites = jest.fn();
 const mockDeleteAllSiteContent = jest.fn();
@@ -30,6 +33,9 @@ jest.mock('@/features/eds/services/daLive/daLiveOrgOperations', () => ({
 }));
 jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     DaLiveContentOperations: jest.fn(() => ({ deleteAllSiteContent: mockDeleteAllSiteContent })),
+    createDaLiveServiceTokenProvider: (service: { getAccessToken(): Promise<string | null> }) => ({
+        getAccessToken: () => service.getAccessToken(),
+    }),
 }));
 jest.mock('@/features/ai/server/adobeTargetStore', () => ({
     getAdobeTarget: jest.fn(() => ({ orgId: 'org-stored' })),
@@ -49,7 +55,7 @@ export { runWithAdobeTarget } from '@/features/ai/server/adobeTargetStore';
 export { DaLiveOrgOperations } from '@/features/eds/services/daLive/daLiveOrgOperations';
 export { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
 
-export { mockInspectToken, mockListOrgSites, mockDeleteAllSiteContent };
+export { mockDaLiveAuth, mockInspectToken, mockListOrgSites, mockDeleteAllSiteContent };
 export const getGitHubServicesMock = getGitHubServices as jest.Mock;
 
 /**

@@ -28,6 +28,11 @@ function addOptionalManifestFields(manifest: Record<string, unknown>, project: P
     if (project.selectedPackage !== undefined) {
         manifest.selectedPackage = project.selectedPackage;
     }
+    // The storefront row for a project built on an added demo (D2): read before
+    // the catalog by every post-creation lookup, so it has to travel with the project.
+    if (project.demo !== undefined) {
+        manifest.demo = project.demo;
+    }
     if (project.selectedStack !== undefined) {
         manifest.selectedStack = project.selectedStack;
     }

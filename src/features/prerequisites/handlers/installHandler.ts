@@ -326,7 +326,7 @@ async function installPlugins(
                 index: prereqId,
                 name: prereq.name,
                 status: 'checking',
-                message: pluginCommands.message || `Installing ${plugin.name}${versionLabel}...`,
+                message: pluginCommands.message || `Installing ${plugin.name}${versionLabel}`,
                 required: !prereq.optional,
             };
             await context.sendMessage('prerequisite-status', pluginStatus);

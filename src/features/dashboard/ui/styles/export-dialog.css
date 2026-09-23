@@ -1,0 +1,130 @@
+/* The Export dialog and its parts. Stage chrome and the section label are the
+   Add Integration flow's (`.intflow-*`); only the parts' own layout lives here. */
+
+@layer theme {
+    .export-body {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .export-section {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+        padding-top: 16px;
+        border-top: 1px solid var(--spectrum-global-color-gray-300);
+    }
+
+    .export-parts {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .export-part {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        font-size: 13px;
+        line-height: 1.4;
+    }
+
+    .export-part-name {
+        font-weight: 600;
+    }
+
+    .export-part-note {
+        font-size: 12px;
+        line-height: 1.4;
+        color: var(--spectrum-global-color-gray-700);
+    }
+
+    .export-file-form {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .export-link-form {
+        align-self: stretch;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .export-link {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+        font-size: 13px;
+        line-height: 1.4;
+    }
+
+    .export-link-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        max-width: 100%;
+    }
+
+    .export-link-text {
+        font-family: var(--vscode-editor-font-family, monospace);
+        font-size: 13px;
+        padding: 4px 8px;
+        border-radius: 4px;
+        background-color: var(--spectrum-global-color-gray-100);
+        overflow-wrap: anywhere;
+    }
+
+    .export-section-text {
+        margin: 0;
+        font-size: 13px;
+        line-height: 1.5;
+    }
+
+    .demo-package-body {
+        display: flex;
+        flex-direction: column;
+        align-self: stretch;
+        gap: 16px;
+    }
+
+    .demo-package-checks-title {
+        margin: 0 0 6px;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .demo-package-checks {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .demo-package-check {
+        display: flex;
+        gap: 8px;
+        align-items: baseline;
+        font-size: 13px;
+        line-height: 1.4;
+    }
+
+    .demo-package-hint {
+        display: block;
+        margin: 4px 0 0;
+        font-size: 12px;
+        line-height: 1.4;
+        color: var(--spectrum-global-color-gray-700);
+    }
+}

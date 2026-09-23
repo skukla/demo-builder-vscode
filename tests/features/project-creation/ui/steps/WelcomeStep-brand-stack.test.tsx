@@ -25,7 +25,6 @@ describe('WelcomeStep - Package + Stack Selection', () => {
             id: 'default',
             name: 'Default',
             description: 'Generic storefront with default content',
-            icon: 'default',
             configDefaults: {},
             storefronts: {
                 headless: {
@@ -44,7 +43,6 @@ describe('WelcomeStep - Package + Stack Selection', () => {
             id: 'citisignal',
             name: 'CitiSignal',
             description: 'Telecommunications demo with CitiSignal branding',
-            icon: 'citisignal',
             featured: true,
             configDefaults: {
                 ADOBE_COMMERCE_WEBSITE_CODE: 'citisignal',

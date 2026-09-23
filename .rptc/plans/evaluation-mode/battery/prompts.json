@@ -859,12 +859,101 @@
         "why": "The ERP journey's build phase ran on general knowledge; the commerce-extensibility server ships the starter-kit rules. Measures whether a build-phase question reaches that surface at all."
     },
     {
-      "id": "rename-adobe-project",
-      "prompt": "Rename my Adobe project 'Kukla Test' to 'Kukla Bodea'.",
-      "expect": [
-        "rename_adobe_project"
-      ],
-      "why": "Added with the tool (2026-09-19): a demo moved onto another Adobe project needs that project renamed to match, and the only rename before this was a side effect of renaming a demo. Judges whether the tool is findable from a plain request."
+        "id": "t2-change-demo-source",
+        "prompt": "My battery-scratch project was built on a colleague's demo and their repository is gone. Point it at my own fork, github.com/battery-scratch/isle5-demo, using the extension's tool \u2014 don't edit the project file by hand.",
+        "expect": [
+            "change_demo_source"
+        ],
+        "why": "Step 06 of the shareable-demo program (EDS-13a): the repoint is the one recovery for a project whose added demo vanished; without the tool an agent rewrites .demo-builder.json and leaves the instance metadata behind, which is exactly the split the tool exists to prevent. Tier 2: it writes the current project, so it runs only under --tier2 against the scratch project.",
+        "tier": 2
+    },
+    {
+        "id": "t2-forget-added-demo",
+        "prompt": "Forget the added demo at github.com/battery-scratch/isle5-demo \u2014 take it off my Add a demo list. Keep my copy of the code.",
+        "expect": [
+            "forget_added_demo"
+        ],
+        "why": "Step 06 of the shareable-demo program (EDS-13a): the list lives in a user setting, so an agent without the tool edits settings.json directly and skips the project count the confirmation is built around. Tier 2: it writes a user setting, so it runs only under --tier2.",
+        "tier": 2
+    },
+    {
+        "id": "t2-edit-added-demo",
+        "prompt": "Rename the Isle5 demo package I added from github.com/battery-scratch/isle5-demo to \"Isle5 luxury\" and give it the description \"Luxury B2C on Edge Delivery\".",
+        "expect": [
+            "edit_added_demo"
+        ],
+        "why": "The Welcome step's Edit on an added demo package (EDS-13a): the card lives in a user setting, so an agent without the tool edits settings.json directly and can break the row the card reads. Tier 2: it writes a user setting, so it runs only under --tier2.",
+        "tier": 2
+    },
+    {
+        "id": "probe-shared-demo",
+        "prompt": "A colleague sent me https://main--isle5-demo--jen.aem.live and says it's a demo I can build on. Before I add it, tell me what kind of storefront it is, its store codes, and whether its pages are published.",
+        "expect": [
+            "probe_shared_demo"
+        ],
+        "why": "Step 07 of the shareable-demo program (EDS-13a): the read that the Add a demo dialog does before offering a demo. Without the tool the agent hand-fetches fstab.yaml and config.json from GitHub and guesses the kind; the tool answers all of it in one call, from a link or owner+repo."
+    },
+    {
+        "id": "t2-add-shared-demo",
+        "prompt": "Add my colleague's demo at https://github.com/battery-scratch/isle5-demo to my Add a demo list without making a copy of it, so I can create projects from it.",
+        "expect": [
+            "add_shared_demo"
+        ],
+        "why": "Step 07 of the shareable-demo program (EDS-13a): the dialog's Add commit. The list lives in a user setting, so an agent without the tool writes settings.json by hand and skips the probe that decides the row's kind and codes. Tier 2: it writes a user setting, so it runs only under --tier2.",
+        "tier": 2
+    },
+    {
+        "id": "t1-get-demo-package-preview",
+        "prompt": "Before I save this storefront as a demo package, tell me what a project built from it would get: is my repository public, which branch, how many pages are published, and is the datapack in the service?",
+        "expect": [
+            "get_demo_package_preview"
+        ],
+        "why": "Step 09 of the shareable-demo program (EDS-13b): the read behind the Save as demo package dialog. Without it an agent runs four separate GitHub, aem.live and datapack calls and never learns the link or the prefilled name. Tier 1: a read.",
+        "tier": 1
+    },
+    {
+        "id": "t2-save-demo-package",
+        "prompt": "Save this storefront as a demo package so it shows up on my Welcome step and my colleague can add it from a link. Call it \"Bodea by Steve\" and don't mark the repository as a template.",
+        "expect": [
+            "save_demo_package"
+        ],
+        "why": "Step 09 of the shareable-demo program (EDS-13b): the Save commit. Without the tool an agent writes demo.demo-builder.json by hand from memory of the format, pushes it, and edits the demos.added setting, skipping the ownership rule that keeps a hand-edited file from being overwritten. Tier 2: it writes into the SC's GitHub repository and a user setting, so it runs only under --tier2.",
+        "tier": 2
+    },
+    {
+        "id": "t2-remove-demo-package",
+        "prompt": "Remove this demo package. Take the description file back out of my repository and the card off my Welcome step.",
+        "expect": [
+            "remove_demo_package"
+        ],
+        "why": "Step 09 of the shareable-demo program (EDS-13b): the undo. Without the tool an agent deletes the file with a GitHub call and leaves the card, the template flag and the project's record behind. Tier 2: it removes a file from the SC's GitHub repository, so it runs only under --tier2.",
+        "tier": 2
+    },
+    {
+        "id": "t2-add-demo-from-zip",
+        "prompt": "A colleague sent me their storefront as ~/Downloads/summit-main.zip instead of a link. Add it to my Add a demo list: make it a repository in my own GitHub account first, kept private.",
+        "expect": [
+            "add_shared_demo"
+        ],
+        "why": "Step 10 of the shareable-demo program (EDS-13a): the zip door. Without it an agent unzips by hand, runs git init and push with a token it has to find, and pastes its own link back into the add tool. Tier 2: it creates a repository in the SC's GitHub account, so it runs only under --tier2.",
+        "tier": 2
+    },
+    {
+        "id": "t2-export-demo-bundle",
+        "prompt": "My colleague can't get to my GitHub repository or our shared services. Export this project as one file I can send them, with my setup and the storefront in it, so they can add the demo from the file.",
+        "expect": [
+            "export_demo_bundle"
+        ],
+        "why": "Export umbrella (PL-56), the file form: one bundle of the ticked parts (owner, 2026-09-13: export hands an artifact to someone else, by link or by file). Without the tool an agent downloads the archive with curl, forgets the description file, and sends the settings file with credentials in it. Tier 2: it writes a file into the project directory, so it runs only under --tier2.",
+        "tier": 2
+    },
+    {
+        "id": "rename-adobe-project",
+        "prompt": "Rename my Adobe project 'Kukla Test' to 'Kukla Bodea'.",
+        "expect": [
+          "rename_adobe_project"
+        ],
+        "why": "Added with the tool (2026-09-19): a demo moved onto another Adobe project needs that project renamed to match, and the only rename before this was a side effect of renaming a demo. Judges whether the tool is findable from a plain request."
     },
     {
         "id": "delete-workspace",

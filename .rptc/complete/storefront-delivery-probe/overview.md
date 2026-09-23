@@ -2,7 +2,7 @@
 
 ## Context
 
-Khalil's PDP failures could not be answered from the extension: the storefront runs
+A colleague's PDP failures could not be answered from the extension: the storefront runs
 in a browser against aem.live while the extension is a local process, so nothing
 reported whether the prerender path was even installed. Triage relied on reading
 setup logs from the run that CREATED the site, which says what was attempted, not
@@ -25,7 +25,7 @@ Established empirically against `skukla/demo-builder-test`, not assumed:
 | **Did the PDP dropin hydrate?** | client-side only | **yes** |
 | **Client-side GraphQL req/res** | client-side only | **yes** |
 
-The first group is Khalil's entire class of problem and needs no storefront change,
+The first group is that colleague's entire class of problem and needs no storefront change,
 so it works on sites already in the wild. The second needs code running in the page.
 
 **Decision (user, 2026-08-07): build the extension-side probe.** In-page console

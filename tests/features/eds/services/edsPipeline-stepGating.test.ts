@@ -120,7 +120,7 @@ describe('executeEdsPipeline - step gating', () => {
 
         it('publishes when content was copied', async () => {
             await executeEdsPipeline(
-                { ...params, contentSource: { org: 'src-org', site: 'src-site' } },
+                { ...params, contentSource: { org: 'src-org', site: 'src-site', indexPath: '/full-index.json' } },
                 services
             );
 

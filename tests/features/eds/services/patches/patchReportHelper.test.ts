@@ -355,6 +355,10 @@ describe('isDeferredReference', () => {
 const TAIL =
     ' during create/reset. The demo continues with these omitted. If this repeats on ' +
     'every create/reset, the patch is likely obsolete — please report it.';
+/** With no patch involved, the cause is the content site's, and the line says so (2026-09-12). */
+const REFERENCE_TAIL =
+    ' during create/reset. The demo continues with these omitted. ' +
+    "Those pages don't exist on the content site the demo copies from.";
 
 describe('formatUnappliedToast clause selection', () => {
     it('names one patch in the singular and adds no reference clause', () => {
@@ -374,12 +378,12 @@ describe('formatUnappliedToast clause selection', () => {
         );
     });
 
-    it('names several missing documents in the plural and adds no patch clause', () => {
+    it('names several missing documents in the plural, adds no patch clause, and blames the content site, not a patch', () => {
         const r = createPatchReport();
         addReferenceResult(r, '/customer/nav', 'missing');
         addReferenceResult(r, '/customer/footer', 'missing');
         expect(formatUnappliedToast(getUnapplied(r))).toBe(
-            `Demo Builder: 2 referenced documents couldn't be copied (/customer/nav, /customer/footer)${TAIL}`
+            `Demo Builder: 2 referenced documents couldn't be copied (/customer/nav, /customer/footer)${REFERENCE_TAIL}`
         );
     });
 

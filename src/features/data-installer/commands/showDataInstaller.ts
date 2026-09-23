@@ -47,7 +47,7 @@ export class ShowDataInstallerCommand extends BaseWebviewCommand<DataInstallerIn
     }
 
     protected getLoadingMessage(): string {
-        return 'Loading Data Installer...';
+        return 'Loading Data Installer';
     }
 
     protected async getWebviewContent(): Promise<string> {

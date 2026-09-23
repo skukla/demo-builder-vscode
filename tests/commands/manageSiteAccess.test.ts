@@ -107,20 +107,49 @@ describe('ManageSiteAccessCommand — no admin role', () => {
         // absence checks below are reading a run that went all the way through.
         expect(showWarning.mock.calls[0]).toContain('Open Code Sync App');
         expect(mockOpenUrl).toHaveBeenCalledTimes(1);
-        expect(everythingWarned()).not.toMatch(/AEM setup|tools\.aem\.live/);
+        expect(everythingWarned()).not.toMatch(/AEM setup page|bot\/setup/);
+        // The User Admin tool went with it: measured 2026-09-23, it refuses the same
+        // identity this command does, so offering it sent people to another 403.
+        expect(everythingWarned()).not.toMatch(/User Admin/);
         const opened = mockOpenUrl.mock.calls.map(([url]) => url);
-        expect(opened.join(' ')).not.toContain('tools.aem.live');
+        // The SETUP page specifically, not all of tools.aem.live: User Admin lives on
+        // that host too and IS offered, so a blanket host check would forbid the remedy.
+        expect(opened.join(' ')).not.toContain('/bot/setup');
     });
 
-    it('tells the user which repository to grant on GitHub', async () => {
+    it('names the repository and gives the reinstall remedy', async () => {
         showWarning.mockResolvedValueOnce('Close');
 
         await command().execute();
 
         const message = showWarning.mock.calls[0][0] as string;
         expect(message).toContain('nobody who can grant it is visible');
-        expect(message).toContain('save its access to wire');
-        expect(message).toContain('"Site users"');
+        // Measured 2026-09-23: a full uninstall/reinstall of the Code Sync app writes
+        // the roster entry; re-saving a repository does not. The message must carry
+        // both halves or it sends people down the path that does nothing.
+        expect(message).toContain('uninstall AEM Code Sync completely');
+        expect(message).toContain('single repository is NOT enough');
+        expect(message).toContain('every demo-org repository');
+    });
+
+    it('offers the GitHub settings page, because the app\'s own page cannot uninstall', async () => {
+        showWarning.mockResolvedValueOnce('Open GitHub App Settings');
+
+        await command().execute();
+
+        expect(showWarning.mock.calls[0]).toContain('Open GitHub App Settings');
+        expect(mockOpenUrl).toHaveBeenCalledWith('https://github.com/settings/installations');
+        expect(mockWait).toHaveBeenCalled();
+    });
+
+    it('checks the two things that make the reinstall fail, when it never lands', async () => {
+        showWarning.mockResolvedValueOnce('Open Code Sync App');
+
+        await command().execute();
+
+        const last = showWarning.mock.calls[showWarning.mock.calls.length - 1][0] as string;
+        expect(last).toContain('UNINSTALLED');
+        expect(last).toContain('primary email');
     });
 
     it('opens the Code Sync App on GitHub and polls for the grant', async () => {
@@ -145,7 +174,6 @@ describe('ManageSiteAccessCommand — no admin role', () => {
 
         const last = showWarning.mock.calls[showWarning.mock.calls.length - 1][0] as string;
         expect(last).toMatch(/still refused/i);
-        expect(last).toContain('installed AEM Code Sync');
         expect(last).toContain('Adobe');
     });
 
@@ -162,43 +190,52 @@ describe('ManageSiteAccessCommand — no admin role', () => {
         );
     });
 
-    it("explains a GitHub primary email that is not the Adobe identity, opens AEM's User Admin tool, and polls", async () => {
-        // Reported 2026-09-15 (kmanns): Code Sync gave the role to his personal GitHub email.
-        const explanation = 'AEM Code Sync gives the admin role to the primary email of the GitHub account that installed it.';
+    it('leads with the email change, offers the page that makes it, and polls', async () => {
+        // The primary email is a PRECONDITION of the reinstall: the role is minted for
+        // whichever address is primary at install time, so reinstalling first grants it
+        // to the wrong one and reads as the remedy having failed.
+        const explanation = 'Before you reinstall, change your GitHub primary email.';
         mockListSiteAccess.mockResolvedValue({
             ...REFUSED,
-            identityMismatch: { githubPrimaryEmail: 'khalil@example.com', adobeEmail: 'sc@adobe.example', explanation },
+            identityMismatch: {
+                githubPrimaryEmail: 'personal@example.com',
+                adobeEmail: 'sc@adobe.example',
+                explanation,
+            },
         });
-        showWarning.mockResolvedValueOnce('Open AEM User Admin');
+        showWarning.mockResolvedValueOnce('Open GitHub Email Settings');
 
         await command().execute();
 
-        expect(showWarning.mock.calls[0]).toStrictEqual([
-            `You hold no admin role on ${REFUSED.site}. ${explanation}`,
-            'Open AEM User Admin',
-            'Close',
-        ]);
-        expect(mockOpenUrl).toHaveBeenCalledWith('https://tools.aem.live/tools/user-admin/index.html');
+        const [message, ...buttons] = showWarning.mock.calls[0] as [string, ...string[]];
+        expect(message).toContain(explanation);
+        expect(message).toContain('uninstall AEM Code Sync completely');
+        expect(buttons).toEqual(['Open GitHub Email Settings', 'Open GitHub App Settings', 'Close']);
+        expect(mockOpenUrl).toHaveBeenCalledWith('https://github.com/settings/emails');
         expect(mockWait).toHaveBeenCalled();
+
         const last = showWarning.mock.calls[showWarning.mock.calls.length - 1][0] as string;
-        expect(last).toBe(
-            "Still refused. Once sc@adobe.example is added as an admin in AEM's User Admin tool, " +
-                'run Manage Site Access again.',
-        );
+        expect(last).toContain('Make sc@adobe.example your primary email on GitHub, THEN');
+        // The order is the whole point, so the consequence of getting it wrong is stated.
+        expect(last).toContain('grants the role to personal@example.com instead');
     });
 
     it('adds the readable org admins to the email explanation rather than replacing it', async () => {
         mockListSiteAccess.mockResolvedValue({
             ...REFUSED,
             orgAdmins: ['admin@example.test'],
-            identityMismatch: { githubPrimaryEmail: 'khalil@example.com', adobeEmail: 'sc@adobe.example', explanation: 'Explained.' },
+            identityMismatch: {
+                githubPrimaryEmail: 'personal@example.com',
+                adobeEmail: 'sc@adobe.example',
+                explanation: 'Explained.',
+            },
         });
         showWarning.mockResolvedValueOnce('Close');
 
         await command().execute();
 
         expect(showWarning.mock.calls[0][0]).toBe(
-            `You hold no admin role on ${REFUSED.site}. Explained. An org admin can also add you: admin@example.test.`,
+            `You hold no admin role on ${REFUSED.site}. Explained. An org admin can also add you without any of that: admin@example.test.`,
         );
         expect(mockOpenUrl).not.toHaveBeenCalled();
     });

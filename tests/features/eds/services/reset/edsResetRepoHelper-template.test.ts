@@ -18,6 +18,7 @@ import {
 } from './edsResetRepoHelper.testUtils';
 import type { CodePatchResult } from '@/features/eds/services/patches/codePatchRegistry';
 import type { CodePatchSource } from '@/types/demoPackages';
+import { createMockProject } from '../../../../helpers/projectFake';
 
 const PATCH_SOURCE: CodePatchSource = {
     owner: 'adobe',
@@ -59,6 +60,38 @@ describe('resetRepoToTemplate — the bulk template reset', () => {
         expect(overrides?.get('demo-config.json')).toBe('{"cfg":1}');
         expect(report).toHaveBeenCalledWith(1, 'Reset 20 files');
         expect(mocks.installQuickEdit).toHaveBeenCalledWith(githubFileOps, 'me', 'shop', context.logger);
+    });
+
+    it('carries the demo package description file through the reset for a project that saved one', async () => {
+        // The reset replaces the tree with the template's; the file a Save wrote
+        // is Demo Builder's to keep, like fstab.yaml (owner, 2026-09-14).
+        const params = buildParams({
+            project: createMockProject({ name: 'p', path: '/p', demoPackage: { fileSha: 'blob-1', savedAt: 'x' } }),
+        });
+        const file = { content: '{"kind":"demo","name":"Bodea"}\n', sha: 'blob-1' };
+
+        const { overrides, getFileContent } = await runReset(params, undefined, file);
+
+        expect(getFileContent).toHaveBeenCalledWith('me', 'shop', 'demo.demo-builder.json');
+        expect(overrides?.get('demo.demo-builder.json')).toBe(file.content);
+    });
+
+    it('a saved package whose file is gone from the repository adds nothing', async () => {
+        const params = buildParams({
+            project: createMockProject({ name: 'p', path: '/p', demoPackage: { fileSha: 'blob-1', savedAt: 'x' } }),
+        });
+
+        const { overrides } = await runReset(params);
+
+        expect(overrides?.has('demo.demo-builder.json')).toBe(false);
+    });
+
+    it('never reads the description file for a project without a package record', async () => {
+        // A project built FROM an added demo takes the source's file with the rest of the tree.
+        const { overrides, getFileContent } = await runReset(buildParams());
+
+        expect(getFileContent).not.toHaveBeenCalled();
+        expect(overrides?.has('demo.demo-builder.json')).toBe(false);
     });
 
     it('leaves config.json out of the commit when generation fails, even if stale content is returned', async () => {

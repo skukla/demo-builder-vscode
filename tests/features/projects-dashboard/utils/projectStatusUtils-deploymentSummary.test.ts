@@ -114,7 +114,7 @@ describe('getDeploymentSummary — one line for the whole project', () => {
             withDeployables({ mesh: 'deployed', integrations: ['deploying'] })
         );
 
-        expect(summary?.text).toBe('Deploying…');
+        expect(summary?.text).toBe('Deploying');
     });
 
     it('lets attention win over an in-flight deploy', () => {
@@ -167,12 +167,12 @@ describe('getRuntimeSummary — the local axis only', () => {
     it('keeps the line while an EDS operation IS in flight', () => {
         const summary = getRuntimeSummary(eds({ status: 'republishing' }));
 
-        expect(summary?.text).toBe('Republishing...');
+        expect(summary?.text).toBe('Republishing');
         expect(summary?.variant).toBe('warning');
     });
 
     it('keeps a reset visible too', () => {
-        expect(getRuntimeSummary(eds({ status: 'resetting' }))?.text).toBe('Resetting...');
+        expect(getRuntimeSummary(eds({ status: 'resetting' }))?.text).toBe('Resetting');
     });
 
     it('leaves a NON-EDS project reporting Running/Stopped — control', () => {

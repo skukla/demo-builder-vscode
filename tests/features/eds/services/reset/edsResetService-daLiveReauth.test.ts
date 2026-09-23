@@ -88,7 +88,7 @@ function createResetParams() {
         daLiveSite: 'test-repo',
         templateOwner: 'template-owner',
         templateRepo: 'template-repo',
-        contentSource: { org: 'content-org', site: 'content-site' },
+        contentSource: { org: 'content-org', site: 'content-site', indexPath: '/full-index.json' },
         project: createProject(),
     };
 }

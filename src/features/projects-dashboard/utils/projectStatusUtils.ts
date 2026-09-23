@@ -29,10 +29,10 @@ export function getStatusText(status: ProjectStatus, port?: number, isEds?: bool
     // EDS projects show "Published" unless they're in a transitional state
     if (isEds) {
         if (status === 'resetting') {
-            return 'Resetting...';
+            return 'Resetting';
         }
         if (status === 'republishing') {
-            return 'Republishing...';
+            return 'Republishing';
         }
         return 'Published';
     }
@@ -41,13 +41,13 @@ export function getStatusText(status: ProjectStatus, port?: number, isEds?: bool
         case 'running':
             return port ? `Running on port ${port}` : 'Running';
         case 'starting':
-            return 'Starting...';
+            return 'Starting';
         case 'stopping':
-            return 'Stopping...';
+            return 'Stopping';
         case 'resetting':
-            return 'Resetting...';
+            return 'Resetting';
         case 'republishing':
-            return 'Republishing...';
+            return 'Republishing';
         case 'stopped':
         case 'ready':
             return 'Stopped';
@@ -197,7 +197,7 @@ export interface DeploymentSummary {
 
 const CONCERN_DISPLAY: Record<DeploymentConcern, DeploymentSummary> = {
     attention: { text: 'Attention needed', variant: 'warning' },
-    deploying: { text: 'Deploying…', variant: 'info' },
+    deploying: { text: 'Deploying', variant: 'info' },
     'not-deployed': { text: 'Not deployed', variant: 'neutral' },
     current: { text: 'Deployed', variant: 'success' },
 };

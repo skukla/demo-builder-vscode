@@ -49,7 +49,7 @@ interface MigrationOutcome {
 export class MigrateStorefrontNamesCommand extends BaseCommand {
     public async execute(): Promise<void> {
         const logger = getLogger();
-        logger.info(`${LOG_PREFIX} Scanning all projects for storefront-name mismatches…`);
+        logger.info(`${LOG_PREFIX} Scanning all projects for storefront-name mismatches`);
 
         // Step 1: find every project that needs migration.
         const candidates = await this.findCandidates();
@@ -165,7 +165,7 @@ export class MigrateStorefrontNamesCommand extends BaseCommand {
                     const candidate = candidates[i];
                     progress.report({
                         increment: 100 / candidates.length,
-                        message: `${candidate.projectName} (${i + 1}/${candidates.length})…`,
+                        message: `${candidate.projectName} (${i + 1}/${candidates.length})`,
                     });
 
                     try {

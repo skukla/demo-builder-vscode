@@ -129,7 +129,7 @@ export function AiCapabilitiesModal({
             onClose={onClose}
             actionButtons={[
                 {
-                    label: isBusy ? 'Regenerating…' : 'Regenerate AI files',
+                    label: isBusy ? 'Regenerating' : 'Regenerate AI files',
                     variant: 'secondary',
                     onPress: () => {
                         void onRegenerate();
@@ -183,7 +183,7 @@ export function AiCapabilitiesModal({
                             // common case 1. Use neutral copy that fits both.
                             <>
                                 <Spinner size="L" aria-label="Checking AI setup" />
-                                <Text UNSAFE_className="text-gray-700">Checking AI setup…</Text>
+                                <Text UNSAFE_className="text-gray-700">Checking AI setup</Text>
                             </>
                         )}
                     </Flex>

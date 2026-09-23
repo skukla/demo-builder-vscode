@@ -202,7 +202,7 @@ describe('useDashboardStatus', () => {
                     name: 'Test Project',
                     path: '/test/path',
                     status: 'ready',
-                    mesh: { status: 'deploying', message: 'Deploying...' },
+                    mesh: { status: 'deploying', message: 'Deploying' },
                 });
             });
 

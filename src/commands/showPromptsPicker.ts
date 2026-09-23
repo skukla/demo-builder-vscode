@@ -66,7 +66,7 @@ export class ShowPromptsPickerCommand extends BaseCommand {
             { label: 'Prompts', kind: vscode.QuickPickItemKind.Separator },
             ...promptItems,
             { label: '', kind: vscode.QuickPickItemKind.Separator },
-            { label: '$(gear) Manage prompts…', action: 'manage' },
+            { label: '$(gear) Manage prompts', action: 'manage' },
         ];
     }
 

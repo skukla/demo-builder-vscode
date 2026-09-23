@@ -180,7 +180,7 @@ export async function republishStorefrontConfig(params: RepublishParams): Promis
 
     try {
         // Step 1: Extract EDS metadata
-        onProgress?.('Extracting configuration...');
+        onProgress?.('Extracting configuration');
         logger.debug('[StorefrontRepublish] Starting republish for project:', project.name);
 
         const extractResult = extractRepublishParams(project);
@@ -194,7 +194,7 @@ export async function republishStorefrontConfig(params: RepublishParams): Promis
         const { repoOwner, repoName, componentPath } = extractResult;
 
         // Step 2: Generate config.json
-        onProgress?.('Generating config.json...');
+        onProgress?.('Generating config.json');
         logger.debug('[StorefrontRepublish] Generating config.json');
 
         // Snapshot the configs THIS publish is generated from, before the push.
@@ -227,7 +227,7 @@ export async function republishStorefrontConfig(params: RepublishParams): Promis
         // That seam is scoped to the generated AI BUNDLE (`aiBundle/`), which lands in a
         // project people then edit. Reaching for it here would be applying the right rule
         // to the wrong file.
-        onProgress?.('Writing config.json...');
+        onProgress?.('Writing config.json');
         const configJsonPath = path.join(componentPath, 'config.json');
 
         try {
@@ -241,7 +241,7 @@ export async function republishStorefrontConfig(params: RepublishParams): Promis
         }
 
         // Step 4: Sync to GitHub and CDN
-        onProgress?.('Syncing to GitHub and CDN...');
+        onProgress?.('Syncing to GitHub and CDN');
         logger.info(`[StorefrontRepublish] Syncing config.json to ${repoOwner}/${repoName}`);
 
         const syncResult = await syncConfigToRemote({
@@ -389,7 +389,7 @@ export async function republishStorefrontContent(
         const daLiveContentOps = new DaLiveContentOperations(daLiveTokenProvider, logger);
 
         // Step 1: Apply EDS site config (AEM Assets, authoring experience).
-        report('Applying EDS configuration…');
+        report('Applying EDS configuration');
         const experience = resolveProjectAuthoringExperience(project);
         await applyDaLiveOrgConfigSettings(
             daLiveContentOps,
@@ -400,7 +400,7 @@ export async function republishStorefrontContent(
         );
 
         // Step 2: Regenerate + sync config.json (picks up env var changes).
-        report('Regenerating storefront configuration…');
+        report('Regenerating storefront configuration');
         const configResult = await republishStorefrontConfig({
             project,
             secrets,
@@ -413,11 +413,11 @@ export async function republishStorefrontContent(
         }
 
         // Step 3: Sync code to CDN + configure site permissions.
-        report('Syncing code to CDN…');
+        report('Syncing code to CDN');
         await helixService.previewCode(repoOwner, repoName, '/*');
         const userEmail = await daLiveAuthService.getUserEmail();
         if (userEmail) {
-            report('Configuring site permissions…');
+            report('Configuring site permissions');
             await configureDaLivePermissions(
                 daLiveTokenProvider,
                 daLiveOrg,
@@ -430,9 +430,9 @@ export async function republishStorefrontContent(
         }
 
         // Step 4: Purge stale cache + publish all content.
-        report('Purging stale cache…');
+        report('Purging stale cache');
         await helixService.purgeCacheAll(repoOwner, repoName, 'main');
-        report('Publishing content to CDN…');
+        report('Publishing content to CDN');
         await helixService.publishAllSiteContent(
             `${repoOwner}/${repoName}`,
             'main',
@@ -451,7 +451,7 @@ export async function republishStorefrontContent(
         try {
             const overlayUrl = resolveByomOverlayConfig(undefined, daLiveOrg, daLiveSite);
             if (overlayUrl) {
-                report('Loading the product pages so they are quick for visitors…');
+                report('Loading the product pages so they are quick for visitors');
                 const prewarm = await prewarmCatalog(
                     project,
                     overlayUrl,
@@ -474,7 +474,7 @@ export async function republishStorefrontContent(
         }
 
         // Step 6: Verify config.json on the CDN (best-effort).
-        report('Verifying CDN…');
+        report('Verifying CDN');
         const cdnVerified = await verifyConfigOnCdn(repoOwner, repoName, logger);
         return { success: true, cdnVerified };
     } catch (error) {

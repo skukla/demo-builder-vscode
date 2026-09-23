@@ -55,6 +55,7 @@ describe('DemoPackage type (nested storefronts structure)', () => {
                     contentSource: {
                         org: 'test-org',
                         site: 'test-site',
+                        indexPath: '/full-index.json',
                     },
                 },
             },
@@ -104,7 +105,6 @@ describe('DemoPackage type (nested storefronts structure)', () => {
             id: 'citisignal',
             name: 'CitiSignal',
             description: 'Telecommunications demo',
-            icon: 'citisignal',
             featured: true,
             addons: {
                 'adobe-commerce-aco': 'optional',
@@ -128,7 +128,6 @@ describe('DemoPackage type (nested storefronts structure)', () => {
             },
         };
 
-        expect(pkg.icon).toBe('citisignal');
         expect(pkg.featured).toBe(true);
         expect(pkg.addons?.['adobe-commerce-aco']).toBe('optional');
         expect(pkg.configDefaults.ADOBE_COMMERCE_WEBSITE_CODE).toBe('citisignal');
@@ -139,7 +138,6 @@ describe('DemoPackage type (nested storefronts structure)', () => {
             id: 'citisignal',
             name: 'CitiSignal',
             description: 'Telecommunications demo with CitiSignal branding',
-            icon: 'citisignal',
             featured: true,
             addons: {
                 'custom-addon': 'optional',
@@ -205,7 +203,6 @@ describe('DemoPackage type (nested storefronts structure)', () => {
             id: 'buildright',
             name: 'BuildRight',
             description: 'Construction/hardware demo with BuildRight branding',
-            icon: 'buildright',
             featured: false,
             addons: {
                 'adobe-commerce-aco': 'required',
@@ -298,7 +295,6 @@ describe('DemoPackagesConfig type', () => {
                     id: 'citisignal',
                     name: 'CitiSignal',
                     description: 'Telecommunications demo',
-                    icon: 'citisignal',
                     featured: true,
                     configDefaults: {
                         ADOBE_COMMERCE_WEBSITE_CODE: 'citisignal',

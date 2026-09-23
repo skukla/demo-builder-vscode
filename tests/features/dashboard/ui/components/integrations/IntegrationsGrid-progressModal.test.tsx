@@ -23,7 +23,7 @@ const DEPLOYING = { 'custom-app': { ...DEPLOYED_INTEGRATION, status: 'deploying'
 const RUNNING: ComponentOperationProgressPayload = {
     id: 'custom-app',
     state: 'running',
-    stage: 'Deploying the app…',
+    stage: 'Deploying the app',
     step: 'Running aio app deploy',
     expectation: 'Usually 1–2 minutes',
 };
@@ -53,7 +53,7 @@ describe('the progress modal', () => {
         const modal = await startDeploy(user);
 
         expect(within(modal).getByText('Not deployed')).toBeInTheDocument();
-        expect(within(modal).getByText('Starting…')).toBeInTheDocument();
+        expect(within(modal).getByText('Starting')).toBeInTheDocument();
     });
 
     it('shows the stage, its step, and how long the stage usually takes', async () => {
@@ -63,7 +63,7 @@ describe('the progress modal', () => {
 
         push(RUNNING);
 
-        expect(within(modal).getByText('Deploying the app…')).toBeInTheDocument();
+        expect(within(modal).getByText('Deploying the app')).toBeInTheDocument();
         expect(within(modal).getByText('Running aio app deploy')).toBeInTheDocument();
         expect(within(modal).getByText('Usually 1–2 minutes')).toBeInTheDocument();
     });
@@ -75,7 +75,7 @@ describe('the progress modal', () => {
 
         push({ ...RUNNING, id: 'someone-else' });
 
-        expect(within(modal).queryByText('Deploying the app…')).not.toBeInTheDocument();
+        expect(within(modal).queryByText('Deploying the app')).not.toBeInTheDocument();
     });
 
     it('closes by itself when the operation succeeds', async () => {
@@ -113,7 +113,7 @@ describe('the progress modal', () => {
         });
         const again = screen.getByRole('dialog', { name: 'custom-app' });
         expect(within(again).queryByText('Adobe refused this.')).not.toBeInTheDocument();
-        expect(within(again).getByText('Starting…')).toBeInTheDocument();
+        expect(within(again).getByText('Starting')).toBeInTheDocument();
     });
 
     it('a new run never asks for the last run\'s state; a reopened one does', async () => {
@@ -128,7 +128,7 @@ describe('the progress modal', () => {
 
         await user.click(within(modal).getByRole('button', { name: 'Run in background' }));
         setCards(cardsFor({ appBuilderComponents: DEPLOYING }));
-        await user.click(card('custom-app', 'Deploying…'));
+        await user.click(card('custom-app', 'Deploying'));
 
         expect(getClient().request).toHaveBeenCalledWith('getComponentOperationProgress', {
             id: 'custom-app',
@@ -163,7 +163,7 @@ describe('the progress modal', () => {
         await user.click(within(modal).getByRole('button', { name: 'Run in background' }));
 
         setCards(cardsFor({ appBuilderComponents: DEPLOYING }));
-        await user.click(card('custom-app', 'Deploying…'));
+        await user.click(card('custom-app', 'Deploying'));
 
         expect(screen.getByRole('dialog', { name: 'custom-app' })).toBeInTheDocument();
         expect(screen.queryByRole('dialog', { name: 'custom-app details' })).not.toBeInTheDocument();
@@ -173,7 +173,7 @@ describe('the progress modal', () => {
         const user = setupUser();
         renderGrid({ appBuilderComponents: DEPLOYING });
 
-        await user.click(card('custom-app', 'Deploying…'));
+        await user.click(card('custom-app', 'Deploying'));
 
         expect(screen.queryByRole('dialog', { name: 'custom-app' })).not.toBeInTheDocument();
         expect(screen.getByRole('dialog', { name: 'custom-app details' })).toBeInTheDocument();

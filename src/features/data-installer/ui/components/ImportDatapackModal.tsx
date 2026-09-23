@@ -514,16 +514,16 @@ function ModalBody({ view, ctx }: { view: ModalView; ctx: BodyContext }): React.
 /** Which in-flight operation the one busy spinner is narrating. */
 function busyMessage(starting: boolean, resetting: boolean, provisioning: boolean): string {
     if (starting) {
-        return 'Starting import…';
+        return 'Starting import';
     }
     if (resetting) {
         // "removal", matching the button and the progress verb.
-        return 'Starting removal…';
+        return 'Starting removal';
     }
     if (provisioning) {
-        return 'Setting up credentials…';
+        return 'Setting up credentials';
     }
-    return 'Checking with the service…';
+    return 'Checking with the service';
 }
 
 /** The footer, one row per view. */
@@ -577,7 +577,7 @@ function buildActions(a: {
     // ManageApisModal's 'Applying…' pattern.
     return [
         {
-            label: a.checking ? 'Checking…' : 'Dry run',
+            label: a.checking ? 'Checking' : 'Dry run',
             variant: 'secondary',
             onPress: a.validate,
             isDisabled: !a.canStart,
@@ -588,7 +588,7 @@ function buildActions(a: {
         // deletes it and imports the same one again — so the same word meant
         // opposite things one menu apart, and this modal's own confirm text
         // ("cannot be undone") was true here and false there.
-        { label: 'Remove data…', variant: 'secondary', onPress: a.armReset, isDisabled: !a.canStart },
+        { label: 'Remove data', variant: 'secondary', onPress: a.armReset, isDisabled: !a.canStart },
         {
             label: startLabel(a.provisioning, a.starting),
             variant: 'accent',
@@ -616,7 +616,7 @@ function WatchProgress({
     // variable serving both is how "The reset continues on the server" survived.
     const op = record.operation === 'reset' ? 'reset' : 'import';
     const noun = record.operation === 'reset' ? 'removal' : 'import';
-    const active = record.operation === 'reset' ? 'Removing…' : 'Importing…';
+    const active = record.operation === 'reset' ? 'Removing' : 'Importing';
 
     // The LIVE map, pushed each poll. `record.perType` is empty for the whole
     // run — it is only written when the watch settles — so reading it here is
@@ -651,10 +651,10 @@ function WatchProgress({
  */
 function startLabel(provisioning: boolean, starting: boolean): string {
     if (provisioning) {
-        return 'Setting up…';
+        return 'Setting up';
     }
     if (starting) {
-        return 'Starting…';
+        return 'Starting';
     }
     return 'Start import';
 }

@@ -73,6 +73,20 @@ describe('ensureAuthenticated', () => {
     });
 });
 
+describe('getLatestCommitMessage', () => {
+    it("answers the branch's latest commit message, and null for a branch or repository that is not there", async () => {
+        mockRequest.mockResolvedValueOnce({ data: { commit: { sha: 'head', commit: { message: 'Add storefront from a zip file' } } } });
+        await expect(ops().getLatestCommitMessage('me', 'shop', 'main')).resolves.toBe('Add storefront from a zip file');
+        expect(mockRequest).toHaveBeenLastCalledWith('GET /repos/{owner}/{repo}/branches/{branch}', { owner: 'me', repo: 'shop', branch: 'main' });
+
+        mockRequest.mockRejectedValueOnce(Object.assign(new Error('Not Found'), { status: 404 }));
+        await expect(ops().getLatestCommitMessage('me', 'gone')).resolves.toBeNull();
+
+        mockRequest.mockRejectedValueOnce(Object.assign(new Error('Bad credentials'), { status: 401 }));
+        await expect(ops().getLatestCommitMessage('me', 'shop')).rejects.toThrow('Bad credentials');
+    });
+});
+
 describe('getFileContent', () => {
     it('decodes the file and reports its sha and path', async () => {
         mockRequest.mockResolvedValue({

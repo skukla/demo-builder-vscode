@@ -16,7 +16,11 @@ import * as vscode from 'vscode';
 import { GitHubTokenService } from '../services/github/githubTokenService';
 import { GITHUB_SCOPES } from '../services/types';
 import { getGitHubServices } from './edsHelpers';
+import { createRepoFromSource } from './storefrontSetup/storefrontSetupPhase1';
+import { ServiceLocator } from '@/core/di/serviceLocator';
+import { TemplateSyncService } from '@/features/updates/services/templateSyncService';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
+import type { Logger } from '@/types/logger';
 import type { GitHubAuthStatusPayload, GitHubOAuthErrorPayload } from '@/types/webviewPayloads';
 
 // ==========================================================
@@ -67,21 +71,10 @@ export async function handleCheckGitHubAuth(
 
         // Check VS Code for existing GitHub session (without prompting)
         // This catches users who are already signed into GitHub in VS Code
-        const existingSession = await vscode.authentication.getSession(
-            'github',
-            [...GITHUB_SCOPES],
-            { createIfNone: false, silent: true },
-        );
+        const existingSession = await adoptExistingGitHubSession(tokenService);
 
         if (existingSession) {
             context.logger.debug('[EDS] Found existing VS Code GitHub session:', existingSession.account.label);
-
-            // Store the token for API operations
-            await tokenService.storeToken({
-                token: existingSession.accessToken,
-                tokenType: 'bearer',
-                scopes: [...GITHUB_SCOPES],
-            });
 
             // Get full user info by validating the new token
             const validation = await tokenService.validateToken();
@@ -114,84 +107,89 @@ export async function handleCheckGitHubAuth(
 }
 
 /**
- * Initiate GitHub OAuth flow
+ * Sign in to GitHub through VS Code's provider, recovering from a session that
+ * VS Code still caches but GitHub no longer accepts.
  *
- * Uses VS Code's built-in GitHub authentication provider for a seamless experience.
- * The token is stored in GitHubTokenService for subsequent API calls.
+ * ONE sign-in path, called by the webview handler below and by the
+ * "Sign in to GitHub" palette command. A second copy would drift, and the
+ * drifting one would be whichever nobody watched.
+ *
+ * @param tokenService - stores the token every GitHub call then uses
+ * @param logger - receives each step
+ * @param options - `force` skips straight to a fresh browser sign-in
+ * @returns the GitHub login, or why there is none
+ */
+export async function signInToGitHub(
+    tokenService: GitHubTokenService,
+    logger: Logger,
+    options: { force?: boolean } = {},
+): Promise<{ login: string } | { error: string; cancelled?: boolean }> {
+    const reauth = 'Your previous GitHub authorization is no longer valid. Re-authorize Demo Builder to continue.';
+    let session = options.force
+        ? await acquireGitHubSession(tokenService, { forceNew: true, reauthDetail: reauth })
+        : await acquireGitHubSession(tokenService, { forceNew: false });
+    if (!session) {
+        logger.debug('[EDS] GitHub auth cancelled by user');
+        return { error: 'Authentication cancelled', cancelled: true };
+    }
+    logger.debug('[EDS] GitHub session obtained for:', session.account.label);
+
+    if (!options.force) {
+        // The common failure here isn't a real auth problem — it's VS Code
+        // returning a stale cached session for a token revoked since (the OAuth
+        // app cleared in GitHub Settings, a password reset, an org de-authorizing
+        // it). `forceNewSession` invalidates the cache and mints a working token.
+        const validation = await tokenService.validateToken();
+        if (!validation.valid) {
+            logger.warn(
+                '[EDS] Initial GitHub token failed validation — likely stale cached VS Code session; forcing fresh OAuth',
+            );
+            // `validateToken` clears the stored token on 401 as a side effect.
+            // Explicit here too: a future refactor of it must not break the
+            // precondition that the store is empty before the re-auth writes.
+            await tokenService.clearToken();
+            session = await acquireGitHubSession(tokenService, { forceNew: true, reauthDetail: reauth });
+            if (!session) {
+                logger.debug('[EDS] GitHub re-authorization cancelled by user');
+                return { error: 'Re-authorization cancelled', cancelled: true };
+            }
+            logger.info('[EDS] GitHub re-authorization succeeded for:', session.account.label);
+        }
+    }
+
+    // session.account.label is the GitHub login. Do NOT re-validate after a
+    // forced re-auth — the token was just minted; a transient 401 here would
+    // falsely flag a working session as broken and re-prompt indefinitely.
+    return { login: session.account.label };
+}
+
+/**
+ * Handle GitHub OAuth authentication for the wizard.
+ *
+ * Signs in through `signInToGitHub`, then pushes the identity and the org
+ * memberships the namespace picker needs.
  *
  * @param context - Handler context with logging and messaging
  * @returns Success with user info or error
  */
-export async function handleGitHubOAuth(
-    context: HandlerContext,
-): Promise<HandlerResponse> {
+export async function handleGitHubOAuth(context: HandlerContext): Promise<HandlerResponse> {
     try {
         context.logger.debug('[EDS] Starting GitHub OAuth via VS Code authentication');
         const { tokenService } = getGitHubServices(context.context.secrets);
-
-        // First attempt: let VS Code return its cached session if one exists,
-        // or prompt fresh auth via createIfNone. This is the fast path for
-        // the common case.
-        let session = await acquireGitHubSession(tokenService, { forceNew: false });
-        if (!session) {
-            context.logger.debug('[EDS] GitHub auth cancelled by user');
+        const outcome = await signInToGitHub(tokenService, context.logger);
+        if ('error' in outcome) {
             await context.sendMessage('github-oauth-error', {
-                error: 'Authentication cancelled',
+                error: outcome.error,
             } satisfies GitHubOAuthErrorPayload);
-            return { success: false, error: 'Authentication cancelled' };
-        }
-        context.logger.debug('[EDS] GitHub session obtained for:', session.account.label);
-
-        // Sanity-check the token. The common failure here isn't a real auth
-        // problem — it's VS Code returning a stale cached session for a
-        // token that's been revoked since (user cleared the OAuth app in
-        // GitHub Settings, password reset, OAuth app de-authorized at the
-        // org level, etc.). In that case, `forceNewSession` invalidates the
-        // cache and prompts a fresh browser-side OAuth flow that mints a
-        // working token. See the `validateToken` side-effect note below.
-        const validation = await tokenService.validateToken();
-        if (!validation.valid) {
-            context.logger.warn(
-                '[EDS] Initial GitHub token failed validation — likely stale cached VS Code session; forcing fresh OAuth',
-            );
-
-            // `validateToken` clears the stored token on 401 as a side effect.
-            // Defensive explicit clear here as well: future refactors of
-            // `validateToken` mustn't break the precondition that our store is
-            // empty before the forced re-auth writes a new token.
-            await tokenService.clearToken();
-
-            session = await acquireGitHubSession(tokenService, {
-                forceNew: true,
-                reauthDetail: 'Your previous GitHub authorization is no longer valid. Re-authorize Demo Builder to continue.',
-            });
-            if (!session) {
-                context.logger.debug('[EDS] GitHub re-authorization cancelled by user');
-                await context.sendMessage('github-oauth-error', {
-                    error: 'Re-authorization cancelled',
-                } satisfies GitHubOAuthErrorPayload);
-                return { success: false, error: 'Re-authorization cancelled' };
-            }
-            context.logger.info('[EDS] GitHub re-authorization succeeded for:', session.account.label);
+            return { success: false, error: outcome.error };
         }
 
-        // session.account.label is the GitHub login. Do NOT re-validate after a
-        // forced re-auth — the token was just minted; a transient 401 here
-        // would falsely flag a working session as broken and re-prompt
-        // indefinitely. Trust VS Code's session as the source of truth for the
-        // user identity; richer profile fields are fetched lazily by
-        // downstream code that needs them.
-        const user = {
-            login: session.account.label,
-            email: null,
-            name: null,
-            avatarUrl: null,
-        };
+        // Richer profile fields are fetched lazily by downstream code that needs them.
+        const user = { login: outcome.login, email: null, name: null, avatarUrl: null };
 
-        // Fetch the user's GitHub org memberships for the wizard's namespace
-        // picker. read:org is already in GITHUB_SCOPES, so no extra auth
-        // prompt fires. Failures degrade to "personal account only" — see
-        // githubTokenService.getUserOrgs for the contract.
+        // The user's GitHub org memberships, for the wizard's namespace picker.
+        // read:org is already in GITHUB_SCOPES, so no extra prompt fires;
+        // failures degrade to "personal account only" (getUserOrgs' contract).
         const orgs = await tokenService.getUserOrgs();
         context.logger.debug(
             `[EDS] GitHub OAuth completed for user: ${user.login}, orgs: ${orgs.join(', ') || '(none)'}`,
@@ -212,6 +210,29 @@ export async function handleGitHubOAuth(
         } satisfies GitHubOAuthErrorPayload);
         return { success: false, error: errorMessage };
     }
+}
+
+/**
+ * Adopt the GitHub session VS Code already holds, without prompting: an SC
+ * signed into GitHub in VS Code has a session the extension can use, and
+ * this stores its token for the API operations. Undefined when there is none.
+ * Shared by the auth check and by the reads that run before the Storefront
+ * step's sign-in (the Add a demo package probe).
+ */
+export async function adoptExistingGitHubSession(
+    tokenService: GitHubTokenService,
+): Promise<vscode.AuthenticationSession | undefined> {
+    const session = await vscode.authentication.getSession('github', [...GITHUB_SCOPES], {
+        createIfNone: false,
+        silent: true,
+    });
+    if (!session) return undefined;
+    await tokenService.storeToken({
+        token: session.accessToken,
+        tokenType: 'bearer',
+        scopes: [...GITHUB_SCOPES],
+    });
+    return session;
 }
 
 /**
@@ -360,6 +381,12 @@ interface CreateGitHubRepoPayload {
     templateOwner: string;
     templateRepo: string;
     isPrivate?: boolean;
+    /**
+     * The template is an added demo's source, which may not be a GitHub
+     * template: check the flag and fall back to an empty repository reset onto
+     * the source (`createRepoFromSource`). Shipped brands never set this.
+     */
+    fromAddedDemo?: boolean;
 }
 
 /**
@@ -377,7 +404,7 @@ export async function handleCreateGitHubRepo(
     context: HandlerContext,
     payload?: CreateGitHubRepoPayload,
 ): Promise<HandlerResponse> {
-    const { repoName, templateOwner, templateRepo, isPrivate } = payload || {};
+    const { repoName, templateOwner, templateRepo, isPrivate, fromAddedDemo } = payload || {};
 
     if (!repoName || !templateOwner || !templateRepo) {
         const error = 'Missing required parameters: repoName, templateOwner, templateRepo';
@@ -389,18 +416,25 @@ export async function handleCreateGitHubRepo(
         context.logger.info(`[EDS] Creating GitHub repository: ${repoName} from ${templateOwner}/${templateRepo}`);
         const { repoOperations } = getGitHubServices(context.context.secrets);
 
-        // Create repository from template
-        const repo = await repoOperations.createFromTemplate(
+        // Create repository from template — or, for an added demo whose source
+        // is not a template, an empty repository reset onto the source.
+        const templateSync = new TemplateSyncService(
+            context.context.secrets,
+            context.logger,
+            ServiceLocator.getCommandExecutor(),
+        );
+        const repo = await createRepoFromSource(
+            { repoOps: repoOperations, templateSync },
+            { newRepoName: repoName, isPrivate: isPrivate ?? false, fromAddedDemo: Boolean(fromAddedDemo) },
             templateOwner,
             templateRepo,
-            repoName,
-            isPrivate ?? false,
+            context.logger,
         );
 
         context.logger.debug(`[EDS] Repository created: ${repo.fullName}`);
 
         // Wait for template content to be populated
-        context.logger.debug('[EDS] Waiting for repository content...');
+        context.logger.debug('[EDS] Waiting for repository content');
         await repoOperations.waitForContent(repo.fullName.split('/')[0], repo.name);
 
         context.logger.info(`[EDS] Repository ready: ${repo.htmlUrl}`);

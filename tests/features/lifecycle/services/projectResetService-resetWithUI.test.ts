@@ -524,11 +524,11 @@ describe('resetProjectWithUI — the rebuild itself', () => {
         await run();
 
         expect(progressReport.mock.calls.map((c) => c[0].message)).toEqual([
-            'Loading component definitions…',
-            'Removing existing components…',
-            'Downloading components…',
-            'Installing dependencies…',
-            'Regenerating configuration files…',
+            'Loading component definitions',
+            'Removing existing components',
+            'Downloading components',
+            'Installing dependencies',
+            'Regenerating configuration files',
         ]);
     });
 });

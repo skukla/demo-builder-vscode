@@ -585,10 +585,10 @@ describe('ConfigureProjectWebviewCommand - save spine', () => {
                 expect.any(Function)
             );
             expect(ewMessages).toEqual([
-                'Updating the DA.live editor link…',
-                'Adding Quick Edit to the storefront…',
+                'Updating the DA.live editor link',
+                'Adding Quick Edit to the storefront',
             ]);
-            expect(classicMessages).toEqual(['Updating the DA.live editor link…']);
+            expect(classicMessages).toEqual(['Updating the DA.live editor link']);
         });
 
         it('gives the flip the INJECTED GitHub token service when the command has one', async () => {

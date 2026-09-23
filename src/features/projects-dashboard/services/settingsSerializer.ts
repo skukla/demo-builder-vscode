@@ -184,6 +184,7 @@ export function extractSettingsFromProject(
             : undefined,
         // Package/Stack/Addons selections for import/copy retention
         selectedPackage: project.selectedPackage,
+        demo: project.demo,
         selectedStack: project.selectedStack,
         selectedAddons: project.selectedAddons,
         selectedBlockLibraries: project.selectedBlockLibraries,

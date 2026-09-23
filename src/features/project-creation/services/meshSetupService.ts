@@ -190,8 +190,8 @@ export async function deployNewMesh(
     }
 
     // Generate mesh .env BEFORE deployment (mesh needs commerce URLs from .env)
-    progressTracker('Configuring API Mesh', 70, 'Generating mesh configuration...');
-    logger.info('[Project Creation] Phase 3: Configuring and deploying API Mesh...');
+    progressTracker('Configuring API Mesh', 70, 'Generating mesh configuration');
+    logger.info('[Project Creation] Phase 3: Configuring and deploying API Mesh');
 
     await generateComponentEnvFile(
         meshComponent.path,
@@ -206,7 +206,7 @@ export async function deployNewMesh(
     // of this brand-new project. Runs once (idempotent), before the retry loop.
     // Surfaced to the user: this is where the mesh's API access is provisioned
     // now that the Add-Integration modal defers all subscription to the build.
-    progressTracker('Configuring API Mesh', 72, 'Enabling API access...');
+    progressTracker('Configuring API Mesh', 72, 'Enabling API access');
     const { ensureMeshApiSubscribed } = await import(
         '@/features/app-builder/services/ensureMeshApiSubscribed'
     );
@@ -248,13 +248,13 @@ export async function deployNewMesh(
         const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
 
         // Update progress and mesh phase
-        progressTracker('Deploying API Mesh', 75, 'Deploying mesh to Adobe I/O...');
+        progressTracker('Deploying API Mesh', 75, 'Deploying mesh to Adobe I/O');
         updateMeshPhase({
             status: 'deploying',
             attempt,
             maxAttempts: MAX_MESH_ATTEMPTS,
             elapsedSeconds,
-            message: 'Deploying mesh to Adobe I/O...',
+            message: 'Deploying mesh to Adobe I/O',
         });
 
         try {
@@ -305,7 +305,7 @@ export async function deployNewMesh(
                     message: 'Mesh deployment failed',
                 });
 
-                logger.debug('[Project Creation] Waiting for user decision (retry or cancel)...');
+                logger.debug('[Project Creation] Waiting for user decision (retry or cancel)');
                 const decision = await waitForMeshDecision();
 
                 if (decision === 'cancel') {
@@ -350,8 +350,8 @@ export async function linkExistingMesh(
     const meshComponent = getMeshComponentInstance(project);
     const meshComponentId = getMeshComponentId(project);
 
-    progressTracker('Configuring API Mesh', 75, 'Updating existing mesh configuration...');
-    logger.info('[Project Creation] Phase 3: Configuring and deploying API Mesh...');
+    progressTracker('Configuring API Mesh', 75, 'Updating existing mesh configuration');
+    logger.info('[Project Creation] Phase 3: Configuring and deploying API Mesh');
 
     // Generate mesh .env file (needed for deployment)
     if (meshComponent?.path && meshDefinition && meshComponentId) {
@@ -366,7 +366,7 @@ export async function linkExistingMesh(
         // CRITICAL: Deploy/update the mesh with the configuration from the cloned repository
         // Even if a mesh exists in the workspace, we need to update it with our mesh.json
         // This ensures the mesh has the correct schema (e.g., CATALOG_SERVICE_ENDPOINT vs ADOBE_CATALOG_SERVICE_ENDPOINT)
-        logger.debug('[Mesh Setup] Deploying mesh configuration to Adobe I/O...');
+        logger.debug('[Mesh Setup] Deploying mesh configuration to Adobe I/O');
         
         const meshDeployResult = await deployMeshComponent(
             meshComponent.path,

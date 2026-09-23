@@ -12,6 +12,7 @@
 import type { Dispatch, SetStateAction } from 'react';
 import type { DashboardStatusUpdatePayload, VerifyAiSetupResponse } from './dashboardStatusTypes';
 import type { OrgMismatchInfo } from '@/features/authentication/services/detectProjectOrgMismatch';
+import type { DemoSourceCheckData } from '@/features/dashboard/services/onOpenChecks/demoSourceCheck';
 import type { MeshVerifyCheckData } from '@/features/dashboard/services/onOpenChecks/meshVerifyCheck';
 import type { OrgContextCheckData } from '@/features/dashboard/services/onOpenChecks/orgContextCheck';
 import type { CheckOutcome, CheckStatus } from '@/features/dashboard/services/onOpenChecks/types';
@@ -29,6 +30,14 @@ export interface CheckRoutingActions {
     setVerifyResult: (result: VerifyAiSetupResponse | null) => void;
     setVerifyFailed: (failed: boolean) => void;
     setAiBusy: (busy: boolean) => void;
+    /** The demo-source notice: the sentence to show, or nothing to show. */
+    setDemoSourceIssue: (issue: DemoSourceIssue | undefined) => void;
+}
+
+/** What the demo-source notice shows: a warning outcome's sentence and payload. */
+export interface DemoSourceIssue {
+    message: string;
+    data?: DemoSourceCheckData;
 }
 
 /**
@@ -74,6 +83,19 @@ export function routeCheckOutcome(
         // activation sweep repairs it silently (ADR-013 hash-and-skip).
         // reRunnable, so a Regenerate clears this on the next refresh.
         actions.setAiToolingMissing(outcome.status === 'warning');
+        return;
+    }
+
+    if (outcome.checkId === CHECK_IDS.DEMO_SOURCE) {
+        // `warning` = the added demo's repository or content site does not
+        // answer → the notice with the check's own sentence; anything else
+        // clears it (re-runnable: "Change source" re-requests status).
+        const demoOutcome = outcome as CheckOutcome<DemoSourceCheckData>;
+        actions.setDemoSourceIssue(
+            demoOutcome.status === 'warning' && demoOutcome.message
+                ? { message: demoOutcome.message, data: demoOutcome.data }
+                : undefined,
+        );
         return;
     }
 

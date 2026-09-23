@@ -185,7 +185,7 @@ describe('checkGitHubAppForExistingRepo', () => {
             await checkGitHubAppForExistingRepo(context, outer404(), REPO_INFO);
 
             // ALL progress messages, not the first: this function opens with
-            // "Verifying GitHub App installation...", which sentPayload would
+            // "Verifying GitHub App installation", which sentPayload would
             // return and which would pass this assertion for the wrong reason.
             const messages = (context.sendMessage as unknown as jest.Mock).mock.calls
                 .filter((c) => c[0] === 'storefront-setup-progress')

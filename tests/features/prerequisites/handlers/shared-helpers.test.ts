@@ -126,7 +126,7 @@ describe('getPluginNodeVersions', () => {
 describe('formatProgressMessage', () => {
     it('names every major when Node is checked for more than one', () => {
         expect(formatProgressMessage(node, { '24': 'Headless', '20': 'Mesh' })).toBe(
-            'Checking Node.js (v20, v24)...'
+            'Checking Node.js (v20, v24)'
         );
     });
 
@@ -135,7 +135,7 @@ describe('formatProgressMessage', () => {
         ['Node with no mapping', node, {}],
         ['a non-Node prerequisite, whatever the mapping', git, { '20': 'Mesh', '24': 'Headless' }],
     ])('is the plain line for %s', (_name, prereq, mapping) => {
-        expect(formatProgressMessage(prereq, mapping)).toBe(`Checking ${prereq.name}...`);
+        expect(formatProgressMessage(prereq, mapping)).toBe(`Checking ${prereq.name}`);
     });
 });
 

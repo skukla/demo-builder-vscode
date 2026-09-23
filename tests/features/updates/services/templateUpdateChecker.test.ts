@@ -179,6 +179,42 @@ describe('checkForUpdates — forked path (legacy)', () => {
 });
 
 // ==========================================================================
+// An added demo: the branch recorded at creation, not main
+// ==========================================================================
+
+describe('checkForUpdates — an added demo on a branch', () => {
+    it("reads the demo's recorded branch instead of main", async () => {
+        mockGetLatestBranchCommit.mockResolvedValue(OLD_SHA);
+        const checker = new TemplateUpdateChecker(mockSecrets, mockLogger);
+
+        await checker.checkForUpdates(makeProject({
+            templateOwner: 'jen',
+            templateRepo: 'isle5-demo',
+            templateBranch: 'demo-2026',
+            lastSyncedCommit: OLD_SHA,
+        }));
+
+        expect(mockGetLatestBranchCommit).toHaveBeenCalledWith(
+            mockSecrets, 'jen', 'isle5-demo', 'demo-2026',
+        );
+    });
+
+    it('ignores a branch that is not a string', async () => {
+        mockGetLatestBranchCommit.mockResolvedValue(OLD_SHA);
+        const checker = new TemplateUpdateChecker(mockSecrets, mockLogger);
+
+        await checker.checkForUpdates(makeProject({
+            templateOwner: 'jen',
+            templateRepo: 'isle5-demo',
+            templateBranch: 7,
+            lastSyncedCommit: OLD_SHA,
+        }));
+
+        expect(mockGetLatestBranchCommit).toHaveBeenCalledWith(mockSecrets, 'jen', 'isle5-demo', 'main');
+    });
+});
+
+// ==========================================================================
 // Common preconditions (apply to both paths)
 // ==========================================================================
 

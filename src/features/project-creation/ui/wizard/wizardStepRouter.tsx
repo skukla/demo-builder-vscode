@@ -17,6 +17,7 @@ import { ReviewStep } from '@/features/project-creation/ui/steps/ReviewStep';
 import { WelcomeStep } from '@/features/project-creation/ui/steps/WelcomeStep';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage } from '@/types/demoPackages';
+import type { AddedDemo } from '@/types/projectFile';
 import type { Stack } from '@/types/stacks';
 import type { WizardState } from '@/types/webview';
 import type { GetComponentsDataResponse } from '@/types/webviewRequests';
@@ -31,6 +32,10 @@ export interface WizardStepRouterArgs {
     componentsData: GetComponentsDataResponse | null;
     packages: DemoPackage[];
     stacks: Stack[];
+    /** Demos the SC has added from a link (cards on the Welcome grid, and the dialog's list). */
+    addedDemos: AddedDemo[];
+    /** The dialog added a demo: the container shows its card. */
+    onDemoAdded: (demo: AddedDemo) => void;
     existingProjectNames?: string[];
     projectsViewMode?: 'cards' | 'rows';
     importedSettings?: ImportedSettings | null;
@@ -49,6 +54,8 @@ export function renderWizardStep({
     componentsData,
     packages,
     stacks,
+    addedDemos,
+    onDemoAdded,
     existingProjectNames,
     projectsViewMode,
     importedSettings,
@@ -74,6 +81,8 @@ export function renderWizardStep({
                     initialViewMode={projectsViewMode}
                     packages={packages}
                     stacks={stacks}
+                    addedDemos={addedDemos}
+                    onDemoAdded={onDemoAdded}
                 />
             );
         case 'prerequisites':

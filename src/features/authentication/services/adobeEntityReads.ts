@@ -187,7 +187,7 @@ export class AdobeEntityReads {
             }
 
             if (mappedOrgs.length === 0 && this.config.onNoOrgsAccessible) {
-                this.logger.info('No organizations accessible. Clearing previous selections...');
+                this.logger.info('No organizations accessible. Clearing previous selections');
                 await this.config.onNoOrgsAccessible();
             }
 

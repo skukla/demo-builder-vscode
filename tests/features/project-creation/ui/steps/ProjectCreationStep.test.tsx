@@ -300,7 +300,7 @@ describe('ProjectCreationStep', () => {
 
             // After clicking, shows loading state while transitioning
             await waitFor(() => {
-                expect(screen.getByText('Loading your projects...')).toBeInTheDocument();
+                expect(screen.getByText('Loading your projects')).toBeInTheDocument();
             });
         });
     });

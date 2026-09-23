@@ -189,6 +189,49 @@ describe('ConnectStoreStepContent - section filtering', () => {
     // -----------------------------------------------------------------------
 
     describe('section="business-structure"', () => {
+        const DISCOVERED = {
+            websites: [{ id: 1, code: 'base', name: 'Main Website' }],
+            storeGroups: [{ id: 1, code: 'main_website_store', name: 'Main Store', website_id: 1, root_category_id: 2 }],
+            storeViews: [{ id: 1, code: 'default', name: 'Default Store View', store_group_id: 1, website_id: 1, is_active: 1 }],
+        };
+
+        it("warns when the backend lacks the business structure the demo's storefront needs", () => {
+            mockUseComponentConfig.serviceGroups = [paasServiceGroup];
+            configurePaasConnectionFilled();
+            mockUseStoreDiscovery.hasStoreData = true;
+
+            renderWithProvider(
+                <ConnectStoreStepContent
+                    {...defaultProps}
+                    section="business-structure"
+                    storeDiscoveryData={DISCOVERED}
+                    packageConfigDefaults={{ ACCS_WEBSITE_CODE: 'adobe', ACCS_STORE_CODE: 'main_website_store', ACCS_STORE_VIEW_CODE: 'usaistore' }}
+                />
+            );
+
+            const notice = screen.getByTestId('business-structure-missing');
+            expect(notice).toHaveTextContent("Your backend doesn't have the business structure this storefront needs");
+            expect(notice).toHaveTextContent('Missing: website adobe, store view usaistore.');
+            expect(screen.getByTestId('store-selection-row-adobe-commerce')).toBeInTheDocument();
+        });
+
+        it('says nothing when the backend has every code the demo expects', () => {
+            mockUseComponentConfig.serviceGroups = [paasServiceGroup];
+            configurePaasConnectionFilled();
+            mockUseStoreDiscovery.hasStoreData = true;
+
+            renderWithProvider(
+                <ConnectStoreStepContent
+                    {...defaultProps}
+                    section="business-structure"
+                    storeDiscoveryData={DISCOVERED}
+                    packageConfigDefaults={{ ACCS_WEBSITE_CODE: 'base', ACCS_STORE_CODE: 'main_website_store', ACCS_STORE_VIEW_CODE: 'default' }}
+                />
+            );
+
+            expect(screen.queryByTestId('business-structure-missing')).not.toBeInTheDocument();
+        });
+
         it('should render the store-view cascade', () => {
             mockUseComponentConfig.serviceGroups = [paasServiceGroup];
             configurePaasConnectionFilled();
@@ -236,7 +279,7 @@ describe('ConnectStoreStepContent - section filtering', () => {
             expect(screen.queryByText('Catalog Service')).not.toBeInTheDocument();
         });
 
-        it('shows the step-level "Detecting store structure..." loader (centered, like auth) while detecting', () => {
+        it('shows the step-level "Detecting store structure" loader (centered, like auth) while detecting', () => {
             mockUseComponentConfig.serviceGroups = [paasServiceGroup];
             configurePaasConnectionFilled();
             // Detection in flight: no store data yet.
@@ -250,7 +293,7 @@ describe('ConnectStoreStepContent - section filtering', () => {
             // Same treatment as the auth step: LoadingDisplay inside CenteredFeedbackContainer.
             const centered = screen.getByTestId('centered-feedback');
             expect(within(centered).getByTestId('loading-display')).toHaveTextContent(
-                'Detecting store structure...'
+                'Detecting store structure'
             );
             // The cascade is NOT rendered while detecting (step-level loader replaces it).
             expect(

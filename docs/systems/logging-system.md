@@ -9,7 +9,7 @@ thing with more to it: why step messages are configuration.
 `config/logging.json` holds two vocabularies:
 
 ```json
-{ "operations": { "checking": "Checking {item}...", "installing": "Installing {item}..." },
+{ "operations": { "checking": "Checking {item}", "installing": "Installing {item}" },
   "statuses":   { ... } }
 ```
 

@@ -83,8 +83,8 @@ describe('MigrateStorefrontNamesCommand — the progress notification', () => {
         await migrateCommand(sm).execute();
 
         expect(progressReports).toStrictEqual([
-            { increment: 50, message: 'a-store (1/2)…' },
-            { increment: 50, message: 'b-store (2/2)…' },
+            { increment: 50, message: 'a-store (1/2)' },
+            { increment: 50, message: 'b-store (2/2)' },
         ]);
     });
 });

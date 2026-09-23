@@ -32,14 +32,14 @@ export async function executePhaseCodeSync(
 
     await context.sendMessage('storefront-setup-progress', {
         phase: 'code-sync',
-        message: 'Verifying code synchronization...',
+        message: 'Verifying code synchronization',
         subMessage: `${repoInfo.repoOwner}/${repoInfo.repoName}`,
         progress: 40,
     } satisfies StorefrontSetupProgressPayload);
 
     await context.sendMessage('storefront-setup-progress', {
         phase: 'code-sync',
-        message: 'Publishing code to CDN...',
+        message: 'Publishing code to CDN',
         subMessage: `${repoInfo.repoOwner}/${repoInfo.repoName}`,
         progress: 43,
     } satisfies StorefrontSetupProgressPayload);
@@ -59,7 +59,7 @@ export async function executePhaseCodeSync(
 
     await context.sendMessage('storefront-setup-progress', {
         phase: 'site-config',
-        message: 'Configuring site permissions...',
+        message: 'Configuring site permissions',
         subMessage: `${repoInfo.repoOwner}/${repoInfo.repoName}`,
         progress: 46,
     } satisfies StorefrontSetupProgressPayload);
@@ -144,7 +144,7 @@ async function confirmCodeSync(
 
     await context.sendMessage('storefront-setup-progress', {
         phase: 'site-config',
-        message: 'Verifying AEM Code Sync...',
+        message: 'Verifying AEM Code Sync',
         subMessage: `${repoInfo.repoOwner}/${repoInfo.repoName}`,
         progress: 48,
     } satisfies StorefrontSetupProgressPayload);

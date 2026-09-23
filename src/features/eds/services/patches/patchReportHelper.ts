@@ -182,7 +182,15 @@ export function formatUnappliedToast(
         clauses.push(obsolete.join('; '));
     }
 
-    return `Demo Builder: ${clauses.join('; ')} during create/reset. The demo continues with these omitted. If this repeats on every create/reset, the patch is likely obsolete — please report it.`;
+    // The closing line names the cause a reader can act on. A missed PATCH is
+    // ours to retire; a referenced page that is not there is the content site's
+    // (a colleague's demo most often), and calling it a patch sent an SC
+    // looking for one that did not exist (2026-09-12).
+    const tail =
+        patches.length > 0 || obsolete.length > 0
+            ? 'If this repeats on every create/reset, the patch is likely obsolete — please report it.'
+            : "Those pages don't exist on the content site the demo copies from.";
+    return `Demo Builder: ${clauses.join('; ')} during create/reset. The demo continues with these omitted. ${tail}`;
 }
 
 /**

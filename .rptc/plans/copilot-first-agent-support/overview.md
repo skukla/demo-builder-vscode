@@ -1,6 +1,6 @@
 # Copilot-first agent support, without losing Claude Code
 
-Backlog item: [[AI-9]]. Research: `.rptc/research/copilot-first-development/` (read that first;
+Backlog item: [[AI-10]]. Research: `.rptc/research/copilot-first-development/` (read that first;
 every fact below comes from it, and each claim there is labelled Doc / Source / Inferred /
 UNVERIFIED).
 

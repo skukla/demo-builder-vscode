@@ -117,7 +117,7 @@ describe('executeAppBuilderIntegrationsPhase', () => {
         expect(progressTracker).toHaveBeenCalledWith(
             'Deploying Integrations',
             expect.any(Number),
-            'Enabling API access...'
+            'Enabling API access'
         );
     });
 

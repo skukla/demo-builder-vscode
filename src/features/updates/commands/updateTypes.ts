@@ -87,13 +87,17 @@ export function formatBehindLabel(count: number): string {
  * Extract template source owner/repo from a project's EDS storefront metadata.
  * Returns null if the project has no EDS component or metadata.
  */
-export function getTemplateSource(project: Project): { owner: string; repo: string } | null {
+export function getTemplateSource(
+    project: Project,
+): { owner: string; repo: string; branch?: string } | null {
     const edsMetadata = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]
         ?.metadata as Record<string, unknown> | undefined;
     const owner = edsMetadata?.templateOwner as string | undefined;
     const repo = edsMetadata?.templateRepo as string | undefined;
     if (!owner || !repo) return null;
-    return { owner, repo };
+    // An added demo's branch, recorded at creation; a shipped template is on main.
+    const branch = edsMetadata?.templateBranch;
+    return { owner, repo, ...(typeof branch === 'string' ? { branch } : {}) };
 }
 
 /**

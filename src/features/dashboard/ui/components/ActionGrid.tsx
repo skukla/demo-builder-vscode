@@ -104,6 +104,8 @@ type OverflowKey =
     | 'syncStorefront'
     | 'refreshBlockLibrary'
     | 'devConsole'
+    | 'changeDemoSource'
+    | 'saveDemoPackage'
     | 'reset'
     | 'delete';
 
@@ -187,6 +189,17 @@ export interface ActionGridProps {
     handleEditProject?: () => void;
     /** Handler for the Export overflow item */
     handleExportProject: () => void;
+    /**
+     * Handler for the Change Demo Source overflow item. Present only for a
+     * project built on an added demo: it points the project at another copy
+     * of that demo (the notice offers the same door when the source is gone).
+     */
+    handleChangeDemoSource?: () => void;
+    /**
+     * "Save as demo package" (EDS only): turn this storefront into a card on the
+     * SC's own Welcome step. About the SC; Export is about handing over.
+     */
+    handleSaveDemoPackage?: () => void;
     /** Handler for the Reset overflow item (always shown, last in the menu) */
     handleResetProject: () => void;
     /** Handler for Delete button */
@@ -505,6 +518,8 @@ export function ActionGrid({
     handleOpenDevConsole,
     handleEditProject,
     handleExportProject,
+    handleChangeDemoSource,
+    handleSaveDemoPackage,
     handleResetProject,
     handleDeleteProject,
 }: ActionGridProps): React.ReactElement {
@@ -529,6 +544,8 @@ export function ActionGrid({
             syncStorefront: handleSyncStorefront,
             refreshBlockLibrary: handleRefreshBlockLibrary,
             devConsole: handleOpenDevConsole,
+            changeDemoSource: handleChangeDemoSource,
+            saveDemoPackage: handleSaveDemoPackage,
             reset: handleResetProject,
             delete: handleDeleteProject,
         });
@@ -636,6 +653,9 @@ export function ActionGrid({
                             </ActionButton>
                             <Menu onAction={handleOverflowAction}>
                                 <Item key="export">Export</Item>
+                                {isEds && handleSaveDemoPackage ? (
+                                    <Item key="saveDemoPackage">Save as demo package</Item>
+                                ) : null}
                                 {isEds && handleSyncStorefront ? (
                                     <Item key="syncStorefront">Sync Storefront</Item>
                                 ) : null}
@@ -643,6 +663,9 @@ export function ActionGrid({
                                     <Item key="refreshBlockLibrary">Refresh Block Library</Item>
                                 ) : null}
                                 <Item key="devConsole">Dev Console</Item>
+                                {handleChangeDemoSource ? (
+                                    <Item key="changeDemoSource">Change Demo Source</Item>
+                                ) : null}
                                 <Item key="reset">Reset</Item>
                                 {/* Destructive — LAST, per overflow-menu convention.
                                     The confirm dialog behind handleDeleteProject

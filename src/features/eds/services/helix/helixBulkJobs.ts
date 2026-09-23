@@ -233,7 +233,7 @@ export async function pollJobCompletion(
             if (!response.ok) {
                 // Job endpoint may not exist immediately, retry
                 if (response.status === 404) {
-                    logger.debug(`[Helix] Job not found yet, retrying...`);
+                    logger.debug(`[Helix] Job not found yet, retrying`);
                     await sleep(JOB_POLL_INTERVAL_MS);
                     continue;
                 }
@@ -272,7 +272,7 @@ export async function pollJobCompletion(
             const errorMessage = (error as Error).message;
             // Timeout errors should be retried
             if (errorMessage.includes('timed out') || errorMessage.includes('timeout')) {
-                logger.debug(`[Helix] Job status request timed out, retrying...`);
+                logger.debug(`[Helix] Job status request timed out, retrying`);
                 await sleep(JOB_POLL_INTERVAL_MS);
                 continue;
             }

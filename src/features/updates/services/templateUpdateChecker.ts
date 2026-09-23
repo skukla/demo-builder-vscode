@@ -80,7 +80,7 @@ export class TemplateUpdateChecker {
         const metadata = this.extractEdsMetadata(project);
         if (!metadata) return null;
 
-        const { templateOwner, templateRepo, lastSyncedCommit, lkgSource } = metadata;
+        const { templateOwner, templateRepo, lastSyncedCommit, lkgSource, templateBranch } = metadata;
 
         try {
             if (lkgSource) {
@@ -89,7 +89,7 @@ export class TemplateUpdateChecker {
                 );
             }
             return await this.checkForkedUpdates(
-                templateOwner, templateRepo, lastSyncedCommit,
+                templateOwner, templateRepo, lastSyncedCommit, templateBranch,
             );
         } catch (error) {
             this.logger.error(`[TemplateUpdates] Failed to check updates for ${project.name}`, error as Error);
@@ -109,6 +109,8 @@ export class TemplateUpdateChecker {
         templateRepo: string;
         lastSyncedCommit: string;
         lkgSource?: { owner: string; repo: string; lkgFile?: string };
+        /** An added demo's branch, recorded at creation; absent for a shipped template. */
+        templateBranch?: string;
     } | null {
         const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
         if (!edsInstance?.metadata) {
@@ -137,7 +139,14 @@ export class TemplateUpdateChecker {
             return null;
         }
 
-        return { templateOwner, templateRepo, lastSyncedCommit, lkgSource };
+        const templateBranch = metadata.templateBranch;
+        return {
+            templateOwner,
+            templateRepo,
+            lastSyncedCommit,
+            lkgSource,
+            ...(typeof templateBranch === 'string' ? { templateBranch } : {}),
+        };
     }
 
     /**
@@ -198,9 +207,10 @@ export class TemplateUpdateChecker {
         templateOwner: string,
         templateRepo: string,
         lastSyncedCommit: string,
+        templateBranch = 'main',
     ): Promise<TemplateUpdateResult | null> {
         const latestCommit = await getLatestBranchCommit(
-            this.secrets, templateOwner, templateRepo, 'main',
+            this.secrets, templateOwner, templateRepo, templateBranch,
         );
         if (!latestCommit) {
             this.logger.warn(`[TemplateUpdates] Could not fetch latest commit for ${templateOwner}/${templateRepo}`);

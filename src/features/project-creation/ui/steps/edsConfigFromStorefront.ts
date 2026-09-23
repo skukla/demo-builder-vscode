@@ -23,6 +23,42 @@ import type { Storefront } from '@/types/demoPackages';
 import type { EDSConfig } from '@/types/webview';
 
 /**
+ * Every field a storefront entry contributes to `edsConfig`: the ONE list.
+ * The wizard's mapper writes them, the create request carries them, and
+ * edit-mode rehydration restores them (two half-lists used to disagree —
+ * shareable-demo step 05 closed them). Adding a field means adding it here
+ * and nowhere else; `edsConfigFromStorefront.test.ts` pins the list.
+ */
+export const STOREFRONT_DERIVED_FIELDS = [
+    'templateOwner',
+    'templateRepo',
+    'contentSource',
+    'accountContentSource',
+    'byomOverlayUrl',
+    'patches',
+    'contentPatches',
+    'contentPatchSource',
+    'codePatches',
+    'codePatchSource',
+    'brandAssets',
+] as const;
+
+export type StorefrontDerivedField = (typeof STOREFRONT_DERIVED_FIELDS)[number];
+
+/** The storefront-derived slice of a config (or a storefront), and nothing else. */
+export function pickStorefrontDerived(
+    source: Pick<Storefront, StorefrontDerivedField> | Pick<EDSConfig, StorefrontDerivedField>,
+): Pick<EDSConfig, StorefrontDerivedField> {
+    const out: Partial<Pick<EDSConfig, StorefrontDerivedField>> = {};
+    for (const field of STOREFRONT_DERIVED_FIELDS) {
+        // The two shapes agree on every derived field's type; the loop keeps the
+        // assignment keyed so a field added to the list is copied without a second edit.
+        (out as Record<string, unknown>)[field] = (source as Record<string, unknown>)[field];
+    }
+    return out as Pick<EDSConfig, StorefrontDerivedField>;
+}
+
+/**
  * Build the EDS config for a storefront, preserving the user's own entries.
  *
  * Storefront-derived fields are always overwritten — a stale value from a previously
@@ -48,16 +84,6 @@ export function buildEdsConfigFromStorefront(
         daLiveOrg: prev?.daLiveOrg || '',
         daLiveSite: prev?.daLiveSite || '',
         // Storefront-derived — the storefront is the source of truth.
-        templateOwner: storefront.templateOwner,
-        templateRepo: storefront.templateRepo,
-        contentSource: storefront.contentSource,
-        accountContentSource: storefront.accountContentSource,
-        byomOverlayUrl: storefront.byomOverlayUrl,
-        patches: storefront.patches,
-        contentPatches: storefront.contentPatches,
-        contentPatchSource: storefront.contentPatchSource,
-        codePatches: storefront.codePatches,
-        codePatchSource: storefront.codePatchSource,
-        brandAssets: storefront.brandAssets,
+        ...pickStorefrontDerived(storefront),
     } as EDSConfig;
 }

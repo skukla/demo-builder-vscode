@@ -197,7 +197,7 @@ async function applyRegistrationResult(
     logger: Logger,
 ): Promise<SiteRegistrationOutcome | null> {
     if (result.statusCode === 409) {
-        logger.info('[ConfigService] Site config exists, updating...');
+        logger.info('[ConfigService] Site config exists, updating');
         const update = await configurationService.updateSiteConfig(siteParams);
         // The UPDATE's 401 throws too. Checking only the first response meant an
         // existing site — every reset and every edit, since those always 409 —
@@ -254,10 +254,10 @@ async function retryWhilePropagating(
         const delayMs = delays[attempt];
         logger.info(
             `[ConfigService] 403 — retrying after ${delayMs / 1000}s ` +
-                `(attempt ${attempt + 1}/${delays.length}). Waiting for admin-role propagation...`,
+                `(attempt ${attempt + 1}/${delays.length}). Waiting for admin-role propagation`,
         );
         await onProgress?.(
-            `Waiting for Configuration Service access (${attempt + 1}/${delays.length})...`,
+            `Waiting for Configuration Service access (${attempt + 1}/${delays.length})`,
         );
         await sleep(delayMs);
 

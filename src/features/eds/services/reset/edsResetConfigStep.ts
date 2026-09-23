@@ -92,7 +92,7 @@ export async function publishConfigAndRegisterSite(
     // pinning a site admin, which sets `requireAuth: "auto"` and makes Helix
     // admin refuse anything but the DA.live bearer. Without it this 401s and
     // the CDN keeps serving a stale config.json (seen live 2026-08-15).
-    report(6, 'Publishing config.json to CDN...');
+    report(6, 'Publishing config.json to CDN');
     logger.info(`[EdsReset] Publishing config.json to CDN for ${repoOwner}/${repoName}`);
     const makeHelix =
         services?.makeHelix ??
@@ -104,13 +104,13 @@ export async function publishConfigAndRegisterSite(
         report(6, 'config.json published');
     } catch (configError) {
         logger.warn(`[EdsReset] Failed to publish config.json: ${(configError as Error).message}`);
-        report(6, 'config.json publish failed, continuing...');
+        report(6, 'config.json publish failed, continuing');
     }
 
     // Step 7: Update Configuration Service with current content source.
     // Folder mapping is intentionally NOT configured — deprecated by Adobe
     // (see aem.live/developer/byom). CitiSignal handles /products/{sku} via client-side routing.
-    report(7, 'Updating Configuration Service...');
+    report(7, 'Updating Configuration Service');
     // Same telegraph as the create path: state access before the write that
     // depends on it, so a reset log explains itself.
     await logConfigAccessState(tokenProvider, { owner: repoOwner, repo: repoName }, logger);

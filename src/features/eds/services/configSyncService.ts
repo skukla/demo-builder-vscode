@@ -143,7 +143,7 @@ export async function syncConfigToRemote(params: ConfigSyncParams): Promise<Conf
 
         try {
             // Check if config.json already exists on GitHub (to get SHA for update)
-            logger.debug(`[ConfigSync] Checking for existing config.json on GitHub...`);
+            logger.debug(`[ConfigSync] Checking for existing config.json on GitHub`);
             const existingFile = await githubFileOperations.getFileContent(
                 repoOwner,
                 repoName,
@@ -153,7 +153,7 @@ export async function syncConfigToRemote(params: ConfigSyncParams): Promise<Conf
 
             // Push config.json to GitHub
             logger.debug(
-                `[ConfigSync] Pushing config.json to GitHub (${repoOwner}/${repoName})...`,
+                `[ConfigSync] Pushing config.json to GitHub (${repoOwner}/${repoName})`,
             );
             await githubFileOperations.createOrUpdateFile(
                 repoOwner,
@@ -177,7 +177,7 @@ export async function syncConfigToRemote(params: ConfigSyncParams): Promise<Conf
         // After pushing to GitHub, we must preview/publish via Helix Admin API
         // for the CDN to serve the updated config.json
         try {
-            logger.debug(`[ConfigSync] Publishing config.json to Helix CDN...`);
+            logger.debug(`[ConfigSync] Publishing config.json to Helix CDN`);
 
             // HelixService needs GitHub token for admin API auth
             // Note: Code preview/publish only requires GitHub auth (no DA.live token)
@@ -192,7 +192,7 @@ export async function syncConfigToRemote(params: ConfigSyncParams): Promise<Conf
             logger.info(`[ConfigSync] config.json published to Helix CDN`);
 
             // Step 4: Verify CDN accessibility for config.json
-            onProgress?.('Waiting for configuration to reach CDN edge...');
+            onProgress?.('Waiting for configuration to reach CDN edge');
 
             const verification = await verifyCdnResources(repoOwner, repoName, logger);
 
@@ -317,7 +317,7 @@ export async function verifyConfigOnCdn(
                     // After first success, wait a bit more for edge propagation
                     if (attempt < 3) {
                         logger.debug(
-                            `[ConfigSync] CDN returned valid config, waiting for edge propagation...`,
+                            `[ConfigSync] CDN returned valid config, waiting for edge propagation`,
                         );
                         await sleep(CDN_VERIFY_INTERVAL * 2);
                     }
@@ -328,11 +328,11 @@ export async function verifyConfigOnCdn(
                 }
 
                 logger.debug(
-                    `[ConfigSync] CDN returned config but missing commerce-endpoint, retrying...`,
+                    `[ConfigSync] CDN returned config but missing commerce-endpoint, retrying`,
                 );
             } else {
                 logger.debug(
-                    `[ConfigSync] CDN returned ${response.status}, retrying (${attempt}/${CDN_VERIFY_ATTEMPTS})...`,
+                    `[ConfigSync] CDN returned ${response.status}, retrying (${attempt}/${CDN_VERIFY_ATTEMPTS})`,
                 );
             }
         } catch (error) {

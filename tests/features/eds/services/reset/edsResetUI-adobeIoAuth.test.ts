@@ -63,21 +63,24 @@ import {
     createResetContext,
     meshDeps,
 } from './edsResetService.testUtils';
+import { makeDemoPackage, makeStorefront } from '../../../../helpers/demoPackageFixtures';
 import { createMockProject } from '../../../../helpers/projectFake';
 
 
 
 // Injected demo-packages fixture for extractResetParams (replaces config leaf mock)
-const testPackages = [{
-    id: 'citisignal',
-    storefronts: {
-        'eds-paas': {
-            templateOwner: 'test-owner',
-            templateRepo: 'test-template',
-            contentSource: { org: 'content-org', site: 'content-site', indexPath: 'index.json' },
+const testPackages = [
+    makeDemoPackage({
+        id: 'citisignal',
+        storefronts: {
+            'eds-paas': makeStorefront({
+                templateOwner: 'test-owner',
+                templateRepo: 'test-template',
+                contentSource: { org: 'content-org', site: 'content-site', indexPath: 'index.json' },
+            }),
         },
-    },
-}];
+    }),
+];
 
 // =============================================================================
 // Helpers

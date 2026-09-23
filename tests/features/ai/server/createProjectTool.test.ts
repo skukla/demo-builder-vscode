@@ -412,6 +412,7 @@ describe('create_project', () => {
                     edsConfig: {
                         repoName: 'my-repo',
                         repoMode: 'new',
+                        githubOwner: 'steve',
                         daLiveOrg: 'org',
                         daLiveSite: 'site',
                         accsEndpoint: undefined,

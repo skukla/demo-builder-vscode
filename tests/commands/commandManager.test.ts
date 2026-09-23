@@ -157,14 +157,16 @@ describe('CommandManager', () => {
             );
         });
 
-        it('should register all 36 commands (resetAll only in dev mode)', () => {
+        it('should register all 37 commands (resetAll only in dev mode)', () => {
             commandManager.registerCommands();
 
-            // 34 → 36: `signInAdobe` (PL-5) and `signInDaLive` (EDS-9), the
-            // command-palette doors to re-auth — until now an expired token
-            // outside a wizard flow had no human-reachable handle.
+            // 34 → 37: `signInAdobe` (PL-5), `signInDaLive` (EDS-9) and
+            // `signInGitHub` (2026-09-17), the command-palette doors to re-auth —
+            // until each, an expired token outside a wizard flow had no
+            // human-reachable handle. GitHub's was the last one missing, and a
+            // stale GitHub token refused a colleague's public demo.
             // resetAll stays excluded, dev mode only.
-            expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(36);
+            expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(37);
 
             // Verify all commands are registered (in order of registration)
             const expectedCommands = [
@@ -201,6 +203,7 @@ describe('CommandManager', () => {
                 'demoBuilder.diagnostics',
             'demoBuilder.signInAdobe',
             'demoBuilder.signInDaLive',
+            'demoBuilder.signInGitHub',
                 'demoBuilder.registerGlobalMcp',
                 'demoBuilder.migrateStorefrontNames',
                 'demoBuilder.setRecommendedZoom',

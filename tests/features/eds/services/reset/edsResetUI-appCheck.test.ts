@@ -212,10 +212,10 @@ describe('resetEdsProjectWithUI — inside the progress window', () => {
         await run(createProject());
 
         expect(report.mock.calls.map((c) => c[0])).toEqual([
-            { message: 'Checking authentication…' },
-            { message: 'Checking Adobe I/O authentication…' },
-            { message: 'Checking Adobe organization…' },
-            { message: 'Checking GitHub App…' },
+            { message: 'Checking authentication' },
+            { message: 'Checking Adobe I/O authentication' },
+            { message: 'Checking Adobe organization' },
+            { message: 'Checking GitHub App' },
         ]);
 
         const onProgress = mockedReset.mock.calls[0][4]!;

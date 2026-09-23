@@ -43,6 +43,7 @@
 
     /* TextField and SearchField styling - transparent background to blend with page */
     body [class*="spectrum-Textfield"] input,
+    body [class*="spectrum-Textfield"] textarea,
     body [class*="spectrum-SearchField"] input {
         background-color: transparent;
         color: var(--spectrum-global-color-gray-900);
@@ -50,6 +51,7 @@
     }
 
     body [class*="spectrum-Textfield"] input:focus,
+    body [class*="spectrum-Textfield"] textarea:focus,
     body [class*="spectrum-SearchField"] input:focus {
         border-color: var(--spectrum-global-color-blue-500);
     }

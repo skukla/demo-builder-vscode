@@ -105,7 +105,7 @@ export async function pollGitHubAppInstallation(
             // next attempt may resolve it.
             if (result.undetermined && attempt < maxAttempts) {
                 setRecheckMessage(
-                    `Repository is still being registered... (attempt ${attempt + 1} of ${maxAttempts})`,
+                    `Repository is still being registered (attempt ${attempt + 1} of ${maxAttempts})`,
                 );
                 await sleep(retryDelayMs);
                 continue;
@@ -433,7 +433,7 @@ export function buildAppStatusFromResult(result: GitHubAppCheckResult): GitHubAp
  * The three-minute figure is read from the timeout above, not estimated.
  */
 export const CODE_SYNC_CHECK_STAGES: ElapsedStage[] = [
-    { afterMs: 6000, message: 'Still waiting on Adobe\u2026' },
+    { afterMs: 6000, message: 'Still waiting on Adobe' },
     {
         afterMs: 20000,
         message:
@@ -481,12 +481,12 @@ export function CodeSyncStatusView({
             <CenteredFeedbackContainer fill>
                 <LoadingDisplay
                     size="L"
-                    message="Checking AEM Code Sync..."
+                    message="Checking AEM Code Sync"
                     // A caller-supplied line is always more specific than an
                     // elapsed-time guess -- the retry loop's "attempt 2 of 5" must
                     // not be overwritten by it.
                     subMessage={
-                        recheckMessage || longWait || `Verifying ${owner}/${repo}...`
+                        recheckMessage || longWait || `Verifying ${owner}/${repo}`
                     }
                     helperText="This may take a minute after a fresh install"
                 />
@@ -799,6 +799,7 @@ export function ResetToTemplateOption({
     disabled = false,
     readiness,
     unusable = false,
+    templateName,
 }: {
     resetToTemplate: boolean;
     onResetToTemplateChange: (isSelected: boolean) => void;
@@ -812,6 +813,8 @@ export function ResetToTemplateOption({
      * is the only thing asking for attention.
      */
     unusable?: boolean;
+    /** What the reset goes back to, when it is an added demo ("Reset to Isle5 by Jen"). */
+    templateName?: string;
 }): React.ReactElement {
     const { checked, locked, tone, message } = describeResetOption(
         readiness,
@@ -823,7 +826,7 @@ export function ResetToTemplateOption({
     return (
         <Flex direction="column" gap="size-50" UNSAFE_className="reset-to-template-top">
             <Checkbox isSelected={checked} isDisabled={locked} onChange={onResetToTemplateChange}>
-                Reset to template (replaces all content)
+                {`Reset to ${templateName ?? 'template'} (replaces all content)`}
             </Checkbox>
 
             <View marginStart="size-300" UNSAFE_className="reset-warning-container">

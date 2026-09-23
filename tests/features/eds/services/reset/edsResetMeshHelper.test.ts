@@ -202,7 +202,7 @@ describe('redeployApiMesh — skip and preflight', () => {
     it('runs the preflight with the auth service, the project and the reset wording', async () => {
         const { context, project, report } = await run();
 
-        expect(report).toHaveBeenNthCalledWith(1, 12, 'Checking Adobe organization access...');
+        expect(report).toHaveBeenNthCalledWith(1, 12, 'Checking Adobe organization access');
         expect(mockEnsureProjectAdobeContext).toHaveBeenCalledWith({
             authManager: meshDeps.authManager,
             project,
@@ -265,7 +265,7 @@ describe('redeployApiMesh — the targeted deploy', () => {
     it('deploys the mesh at the component path with the reset deps and logger', async () => {
         const { context, report } = await run();
 
-        expect(report).toHaveBeenNthCalledWith(2, 12, 'Redeploying API Mesh...');
+        expect(report).toHaveBeenNthCalledWith(2, 12, 'Redeploying API Mesh');
         expect(mockFetchMeshInfo).toHaveBeenCalledWith(meshDeps.commandManager, context.logger);
         expect(mockDeployMeshComponent).toHaveBeenCalledWith(
             MESH_PATH,

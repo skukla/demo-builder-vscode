@@ -77,7 +77,7 @@ export function CatalogStage({
                 itemNoun="integration"
                 hasLoadedOnce
                 searchThreshold={CATALOG_SEARCH_THRESHOLD}
-                searchPlaceholder="Filter integrations…"
+                searchPlaceholder="Filter integrations"
             />
             {filtered.length === 0 ? (
                 <div className="intflow-empty">No integrations match “{query}”.</div>

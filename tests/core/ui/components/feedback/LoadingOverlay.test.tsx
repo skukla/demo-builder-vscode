@@ -60,9 +60,9 @@ describe('LoadingOverlay', () => {
         });
 
         it('uses message as aria-label when provided', () => {
-            renderWithProviders(<LoadingOverlay isVisible={true} message="Saving..." />);
+            renderWithProviders(<LoadingOverlay isVisible={true} message="Saving" />);
 
-            expect(screen.getByRole('status')).toHaveAttribute('aria-label', 'Saving...');
+            expect(screen.getByRole('status')).toHaveAttribute('aria-label', 'Saving');
         });
     });
 
@@ -119,12 +119,12 @@ describe('LoadingOverlay', () => {
 
         it('handles changing message while visible', () => {
             const { rerender } = renderWithProviders(
-                <LoadingOverlay isVisible={true} message="Loading..." />
+                <LoadingOverlay isVisible={true} message="Loading" />
             );
-            expect(screen.getByText('Loading...')).toBeInTheDocument();
+            expect(screen.getByText('Loading')).toBeInTheDocument();
 
             rerender(<LoadingOverlay isVisible={true} message="Almost done..." />);
-            expect(screen.queryByText('Loading...')).not.toBeInTheDocument();
+            expect(screen.queryByText('Loading')).not.toBeInTheDocument();
             expect(screen.getByText('Almost done...')).toBeInTheDocument();
         });
     });

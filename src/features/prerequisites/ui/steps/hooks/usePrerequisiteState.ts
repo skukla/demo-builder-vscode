@@ -42,19 +42,19 @@ function toPrerequisiteCheckState(p: PrerequisitesLoadedPayload['prerequisites']
         canInstall: false,
         isOptional: p.optional || false,
         plugins: p.plugins,
-        message: 'Waiting...',
+        message: 'Waiting',
     };
 }
 
 /** Initial loading placeholder shown before backend sends prerequisites */
 export const INITIAL_LOADING_STATE: PrerequisiteCheck[] = [
     {
-        name: 'Loading prerequisites...',
+        name: 'Loading prerequisites',
         description: 'Fetching prerequisite configuration',
         status: 'checking',
         canInstall: false,
         isOptional: false,
-        message: 'Initializing...',
+        message: 'Initializing',
     },
 ];
 
@@ -132,7 +132,7 @@ export function usePrerequisiteState(
         setChecks(prev => {
             const newChecks = [...prev];
             newChecks[index].status = 'checking';
-            newChecks[index].message = 'Installing... (this could take up to 3 minutes)';
+            newChecks[index].message = 'Installing (this could take up to 3 minutes)';
             return newChecks;
         });
     }, []);

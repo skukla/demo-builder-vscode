@@ -302,7 +302,7 @@ describe('AiCapabilitiesModal', () => {
         );
     });
 
-    it('changes the action label to "Regenerating…" while busy so the disabled state has visible cause', () => {
+    it('changes the action label to "Regenerating" while busy so the disabled state has visible cause', () => {
         renderModal({ skills: SKILLS, mcps: MCPS, isBusy: true });
         expect(
             screen.queryByRole('button', { name: /^regenerate ai files$/i })

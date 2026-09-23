@@ -61,3 +61,7 @@ authorization step — the same shape as the site-access explanation in [[EDS-16
 - Whether an SC can be granted repository-creation rights in a team organization, which
   would make step 1 "create or adopt" instead of "adopt".
 - Whether AEM Code Sync can be approved once for an organization rather than per repository.
+
+## Shipped so far
+
+- 2026-09-16  docs(backlog): EDS-17 — a storefront can live in an org's repository (`e4643022a`)

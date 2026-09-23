@@ -434,7 +434,7 @@ async function unpublishCdnContent(
     if (!githubOwner || !githubRepo) return;
 
     try {
-        progress.report({ message: 'Unpublishing CDN content…' });
+        progress.report({ message: 'Unpublishing CDN content' });
         const initKeyStore =
             services?.initKeyStore ??
             ((secrets: vscode.SecretStorage, globalState: vscode.Memento) =>
@@ -485,7 +485,7 @@ async function performDaLiveCleanup(
 ): Promise<void> {
     if (!options.deleteDaLiveSite || !edsMetadata?.daLiveOrg || !edsMetadata?.daLiveSite) return;
 
-    progress.report({ message: 'Deleting DA.live site…' });
+    progress.report({ message: 'Deleting DA.live site' });
     const resourceName = `${edsMetadata.daLiveOrg}/${edsMetadata.daLiveSite}`;
 
     try {
@@ -507,7 +507,7 @@ async function performDaLiveCleanup(
             services,
         );
 
-        progress.report({ message: 'Deleting DA.live site content…' });
+        progress.report({ message: 'Deleting DA.live site content' });
         const cleanupResult = await deleteDaLiveSite(
             daLiveContentOps,
             edsMetadata.daLiveOrg,
@@ -559,7 +559,7 @@ async function performGitHubCleanup(
     results: CleanupResultItem[],
     progress: vscode.Progress<{ message?: string }>,
 ): Promise<void> {
-    progress.report({ message: 'Deleting GitHub repository…' });
+    progress.report({ message: 'Deleting GitHub repository' });
 
     try {
         const { getGitHubServices } = await import('@/features/eds/handlers/edsHelpers');
@@ -655,7 +655,7 @@ async function deleteDirectoryWithRetry(path: string, context: HandlerContext): 
 
             if (isRetryable && attempt < MAX_RETRIES - 1) {
                 const delay = BASE_DELAY * Math.pow(2, attempt);
-                context.logger.debug(`[Delete Project] Waiting ${delay}ms before retry...`);
+                context.logger.debug(`[Delete Project] Waiting ${delay}ms before retry`);
                 await sleep(delay);
             } else if (isRetryable) {
                 throw new Error(`Failed to delete project after ${MAX_RETRIES} attempts: ${err.message}`);

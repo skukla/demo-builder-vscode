@@ -6,6 +6,7 @@
  */
 
 import type { CustomBlockLibrary, InstalledBlockLibrary } from '@/types/blockLibraries';
+import type { AddedDemo } from '@/types/projectFile';
 
 /**
  * Component selections - which components are chosen
@@ -91,6 +92,8 @@ export interface SettingsFile {
     adobe?: SettingsAdobeContext;
     /** Package ID selected during project creation (e.g., 'citisignal', 'buildright') */
     selectedPackage?: string;
+    /** The storefront row when the project was built on an added demo (D2). */
+    demo?: AddedDemo;
     /** Stack ID selected during project creation (e.g., 'headless-paas') */
     selectedStack?: string;
     /** Optional addons selected during project creation (e.g., ['adobe-commerce-aco']) */

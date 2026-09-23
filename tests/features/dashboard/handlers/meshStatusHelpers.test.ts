@@ -206,7 +206,7 @@ describe('sendDemoStatusUpdate', () => {
 
         expect(payloadFrom(postMessage).mesh).toEqual({
             status: 'deploying',
-            message: 'Deploying...',
+            message: 'Deploying',
         });
     });
 

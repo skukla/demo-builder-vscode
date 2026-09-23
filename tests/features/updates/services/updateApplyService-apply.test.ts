@@ -53,7 +53,7 @@ describe('fork sync', () => {
 
         expect(ForkSyncServiceCtor).toHaveBeenCalledWith(ctx.secrets, ctx.logger);
         expect(mockSyncFork).toHaveBeenCalledWith('me', 'a', 'main');
-        expect(onProgress).toHaveBeenCalledWith('Syncing fork me/a...');
+        expect(onProgress).toHaveBeenCalledWith('Syncing fork me/a');
         expect(res.forkSync).toEqual({ successCount: 1, failCount: 0, errors: [] });
     });
 
@@ -126,7 +126,7 @@ describe('template sync', () => {
         );
         expect(mockSyncWithTemplate).toHaveBeenCalledWith(project, { strategy: 'merge' });
         expect(mockUpdateLastSyncedCommit).toHaveBeenCalledWith(project, 'c1', ctx.stateManager);
-        expect(onProgress).toHaveBeenCalledWith('Syncing template for demo...');
+        expect(onProgress).toHaveBeenCalledWith('Syncing template for demo');
         expect(res.template).toEqual({ successCount: 1, failCount: 0, errors: [] });
     });
 
@@ -303,7 +303,7 @@ describe('components', () => {
             'https://x/mesh.zip',
             '2.0.0'
         );
-        expect(onProgress).toHaveBeenCalledWith('Updating mesh in demo...');
+        expect(onProgress).toHaveBeenCalledWith('Updating mesh in demo');
     });
 
     it('does not build the updater or save anything when nothing is selected', async () => {
@@ -387,7 +387,7 @@ describe('Adobe MCP', () => {
         );
 
         expect(mockApplyAdobeMcpUpdate).toHaveBeenCalledWith(project, PKG, '2.0.0', ctx);
-        expect(onProgress).toHaveBeenCalledWith(`Updating ${PKG} → 2.0.0 in demo...`);
+        expect(onProgress).toHaveBeenCalledWith(`Updating ${PKG} → 2.0.0 in demo`);
         expect(res.adobeMcp).toEqual({ successCount: 1, failCount: 0, errors: [] });
     });
 
@@ -436,7 +436,7 @@ describe('add-ons', () => {
         );
 
         expect(mockApplyBlockLibraryUpdateResolved).toHaveBeenCalledWith(item, resolved, ctx);
-        expect(onProgress).toHaveBeenCalledWith('Updating block library Lib A...');
+        expect(onProgress).toHaveBeenCalledWith('Updating block library Lib A');
         expect(res.addon).toEqual(expected);
     });
 
@@ -477,7 +477,7 @@ describe('add-ons', () => {
             expect.any(Function)
         );
         expect(ctx.stateManager.saveProject).toHaveBeenCalledWith(project);
-        expect(onProgress).toHaveBeenCalledWith('Updating Inspector SDK in demo...');
+        expect(onProgress).toHaveBeenCalledWith('Updating Inspector SDK in demo');
         expect(res.addon.successCount).toBe(1);
     });
 

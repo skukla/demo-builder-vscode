@@ -45,7 +45,7 @@ describe('projectStatusUtils', () => {
             expect(result).toBe('Running');
         });
 
-        it('should return "Starting..." for starting status', () => {
+        it('should return "Starting" for starting status', () => {
             // Given: Starting status
             const status: ProjectStatus = 'starting';
 
@@ -53,10 +53,10 @@ describe('projectStatusUtils', () => {
             const result = getStatusText(status);
 
             // Then: Should include ellipsis
-            expect(result).toBe('Starting...');
+            expect(result).toBe('Starting');
         });
 
-        it('should return "Stopping..." for stopping status', () => {
+        it('should return "Stopping" for stopping status', () => {
             // Given: Stopping status
             const status: ProjectStatus = 'stopping';
 
@@ -64,7 +64,7 @@ describe('projectStatusUtils', () => {
             const result = getStatusText(status);
 
             // Then: Should include ellipsis
-            expect(result).toBe('Stopping...');
+            expect(result).toBe('Stopping');
         });
 
         it('should return "Stopped" for stopped status', () => {

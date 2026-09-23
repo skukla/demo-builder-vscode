@@ -7,7 +7,13 @@
  * validate against, so it is checked explicitly.
  */
 
+jest.mock('@/features/project-creation/services/addedDemoSettings', () => ({
+    readAddedDemos: jest.fn(() => []),
+}));
+
 import { registerDiscoveryTools } from '@/features/ai/server/discoveryTools';
+import { readAddedDemos } from '@/features/project-creation/services/addedDemoSettings';
+import { makeAddedDemo } from '../../../helpers/demoPackageFixtures';
 import { fakeServer } from './discoveryTools.testUtils';
 import { expectWithinCeiling } from './responseCeilings';
 
@@ -44,6 +50,26 @@ describe('registerDiscoveryTools', () => {
         // availableStacks are the keys of the storefronts map — the valid pairs.
         expect(citisignal!.availableStacks.length).toBeGreaterThan(0);
         expect(citisignal!.availableStacks).toContain('eds-paas');
+    });
+
+    it('list_demo_packages lists the added demos after the shipped ones, with their repository and the stacks of their kind', async () => {
+        (readAddedDemos as jest.Mock).mockReturnValueOnce([
+            makeAddedDemo(),
+            makeAddedDemo({ name: 'Bob', source: { owner: 'bob', repo: 'next-shop' }, storefrontKind: 'headless' }),
+        ]);
+        const server = fakeServer();
+        registerDiscoveryTools(server);
+
+        const packages = (await server.call('list_demo_packages')) as Array<Record<string, unknown>>;
+
+        expect(packages.find((p) => p.id === 'citisignal')).toMatchObject({ source: 'shipped' });
+        const jen = packages.find((p) => p.id === 'added:jen/isle5-demo');
+        expect(jen).toMatchObject({ name: 'Isle5 by Jen', source: 'added', repository: 'jen/isle5-demo' });
+        expect(jen!.availableStacks).toContain('eds-paas');
+        expect(jen!.availableStacks).not.toContain('headless-paas');
+        const bob = packages.find((p) => p.id === 'added:bob/next-shop');
+        expect(bob!.availableStacks).toContain('headless-paas');
+        expect(packages.indexOf(jen!)).toBeGreaterThan(packages.indexOf(packages.find((p) => p.id === 'citisignal')!));
     });
 
     it('list_components groups components by type with id + name', async () => {

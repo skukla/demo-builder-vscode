@@ -81,7 +81,7 @@ describe('ProjectDashboardWebviewCommand - lifecycle and push channels', () => {
 
             expect(internals(command).getWebviewId()).toBe('demoBuilder.projectDashboard');
             expect(internals(command).getWebviewTitle()).toBe('Project Dashboard');
-            expect(internals(command).getLoadingMessage()).toBe('Loading Project Dashboard...');
+            expect(internals(command).getLoadingMessage()).toBe('Loading Project Dashboard');
         });
 
         it('reopens the welcome surface when it is disposed', () => {

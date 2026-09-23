@@ -10,6 +10,7 @@
  */
 
 import type { Dispatch, SetStateAction } from 'react';
+import type { DemoSourceIssue } from './dashboardCheckRouting';
 import type { OrgMismatchInfo } from '@/features/authentication/services/detectProjectOrgMismatch';
 import type { AiRegenerateProgress } from '@/features/dashboard/ui/components/AiCapabilitiesModal';
 import type { McpInventoryEntry, SkillInventoryEntry } from '@/types/ai';
@@ -67,8 +68,8 @@ export interface AiReadyState {
         | 'Ready'
         | 'Setup incomplete'
         | 'Broken'
-        | 'Updating AI configuration…'
-        | 'Regenerating AI files…'
+        | 'Updating AI configuration'
+        | 'Regenerating AI files'
         | 'AI tooling missing';
 }
 
@@ -157,6 +158,8 @@ export interface UseDashboardStatusReturn {
     orgMismatch: OrgMismatchInfo | undefined;
     /** Org-context check lifecycle — telegraphs checking → mismatch/ok/none */
     orgCheckState: OrgCheckState;
+    /** The demo-source check's warning, for a project built on an added demo; undefined otherwise */
+    demoSourceIssue: DemoSourceIssue | undefined;
     /** "IMS Org" status badge display (color + org name), or null when N/A */
     imsOrgDisplay: StatusDisplay | null;
     /** Derived AI Ready badge state */

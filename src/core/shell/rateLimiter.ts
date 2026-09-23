@@ -64,7 +64,7 @@ export class RateLimiter {
             this.logger.debug(
                 `[Rate Limiter] Rate limit exceeded for ${resource} ` +
                 `(${recentOps.length}/${this.maxOpsPerSecond} ops/sec). ` +
-                `Waiting ${waitTime}ms...`,
+                `Waiting ${waitTime}ms`,
             );
 
             // Wait until rate limit resets

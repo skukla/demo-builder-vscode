@@ -118,7 +118,7 @@ describe('phases reach the chat', () => {
 
         const messages = await callWithProgress(socketPath, 'deploy_mesh');
 
-        expect(messages[0]).toBe('Demo Builder · Deploying the API mesh…');
+        expect(messages[0]).toBe('Demo Builder · Deploying the API mesh');
         expect(messages).toContain('Demo Builder · Reading mesh configuration…');
         expect(messages).toContain('Demo Builder · Deploying to Runtime…');
     });

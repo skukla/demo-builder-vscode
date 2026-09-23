@@ -11,8 +11,14 @@
 import { normalizePackageId } from '@/core/state/projectFileLoader';
 
 describe('normalizePackageId', () => {
-    it('maps the legacy `b2b` id to `custom` (the unbranded hybrid)', () => {
-        expect(normalizePackageId('b2b')).toBe('custom');
+    it('maps the legacy `b2b` id to `starter` (the unbranded hybrid)', () => {
+        expect(normalizePackageId('b2b')).toBe('starter');
+    });
+
+    it('maps the retired `custom` id to `starter` in one hop, not through `b2b`', () => {
+        // The map is a flat table, not a chain: every retired id names the
+        // CURRENT id directly, so a rename never needs a second lookup.
+        expect(normalizePackageId('custom')).toBe('starter');
     });
 
     it('maps the retired `citisignal-b2b` id to `citisignal`', () => {
@@ -20,7 +26,7 @@ describe('normalizePackageId', () => {
     });
 
     it('passes through current ids unchanged', () => {
-        expect(normalizePackageId('custom')).toBe('custom');
+        expect(normalizePackageId('starter')).toBe('starter');
         expect(normalizePackageId('citisignal')).toBe('citisignal');
         expect(normalizePackageId('isle5')).toBe('isle5');
         expect(normalizePackageId('buildright')).toBe('buildright');

@@ -123,12 +123,12 @@ describe('useAsyncOperation', () => {
         it('should use initial message when provided', () => {
             const { result } = renderHook(() =>
                 useAsyncOperation({
-                    initialMessage: 'Starting...',
+                    initialMessage: 'Starting',
                     initialSubMessage: 'Please wait',
                 })
             );
 
-            expect(result.current.message).toBe('Starting...');
+            expect(result.current.message).toBe('Starting');
             expect(result.current.subMessage).toBe('Please wait');
         });
 

@@ -103,7 +103,7 @@ describe('executeSampleDataPhase', () => {
             1,
             'Installing Datapack',
             92,
-            'Installing bodea\u2026'
+            'Installing bodea'
         );
     });
 

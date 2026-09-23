@@ -65,8 +65,8 @@ export type ConfigureScreenProps = Pick<ConfigureInitialData, 'project' | 'compo
 
 /** Derive save button label from saving/deploying state */
 function getSaveButtonLabel(isSaving: boolean, isDeploying: boolean): string {
-    if (isSaving) return 'Saving...';
-    if (isDeploying) return 'Deploying...';
+    if (isSaving) return 'Saving';
+    if (isDeploying) return 'Deploying';
     return 'Save Changes';
 }
 

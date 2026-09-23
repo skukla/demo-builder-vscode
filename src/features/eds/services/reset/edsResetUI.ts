@@ -17,6 +17,8 @@
  */
 
 import type { GitHubAppService } from '../github/githubAppService';
+import type { GitHubRepoOperations } from '../github/githubRepoOperations';
+import { checkDemoSource, type DemoSourceCheck } from './demoSourceCheck';
 import type { MeshRedeployDeps } from './edsResetMeshHelper';
 import {
     executeEdsReset,
@@ -76,6 +78,13 @@ export interface EdsResetWithUIOptions {
      * ADR-016's wall. A dynamic import has no seam unless the caller offers one.
      */
     githubAppService?: GitHubAppService;
+    /**
+     * GitHub repository reads, for the added-demo source check. Injectable for
+     * tests; defaults to the cached services built from the context's secrets.
+     */
+    repoOperations?: Pick<GitHubRepoOperations, 'getRepository'>;
+    /** The published-index probe for the demo's content site; defaults to global fetch. */
+    fetchImpl?: typeof fetch;
 }
 
 // ==========================================================
@@ -309,6 +318,14 @@ async function showResetResultNotifications(
                 `${result.error} Commerce features may not work until mesh is manually redeployed.`,
             );
         }
+
+        // The dry check's caveats for an added demo (D23): the same sentences the
+        // wizard's completion card shows, on the reset's own surface.
+        if (result.demoCaveats?.length) {
+            vscode.window.showWarningMessage(
+                `A few things to know about this demo: ${result.demoCaveats.join(' ')}`,
+            );
+        }
     } else if (result.errorType === 'GITHUB_APP_NOT_INSTALLED') {
         const selection = await vscode.window.showErrorMessage(
             `Cannot reset EDS project: The AEM Code Sync GitHub App is not installed on ${result.errorDetails?.owner}/${result.errorDetails?.repo}. ` +
@@ -377,6 +394,33 @@ export async function resetEdsProjectWithUI(options: EdsResetWithUIOptions): Pro
     const { createDaLiveServiceTokenProvider } = await import('../daLive/daLiveContentOperations');
     const { getMeshComponentInstance } = await import('@/types/typeGuards');
 
+    // An added demo's source is checked BEFORE the first modal (decided 2026-09-11):
+    // a reset that cannot reach the demo refuses in a sentence here rather than
+    // failing midway with git output. A renamed repository is followed silently.
+    let keepContent = false;
+    if (project.demo) {
+        const { getGitHubServices } = await import('../../handlers/edsHelpers');
+        const sourceCheck = await checkDemoSource(
+            project,
+            options.repoOperations ?? getGitHubServices(context.context.secrets).repoOperations,
+            context,
+            options.fetchImpl,
+        );
+        if (!sourceCheck.reachable) {
+            context.logger.warn(`${logPrefix} resetEds: ${sourceCheck.message}`);
+            void vscode.window.showWarningMessage(sourceCheck.message);
+            return { success: false, error: sourceCheck.message, errorType: 'DEMO_SOURCE_UNREACHABLE' };
+        }
+        if (!sourceCheck.contentReachable) {
+            const keep = await offerToKeepContent(vscode, project.demo.name, sourceCheck);
+            if (keep === undefined) {
+                context.logger.info(`${logPrefix} resetEds: User cancelled reset (content site unreachable)`);
+                return { success: false, cancelled: true };
+            }
+            keepContent = keep;
+        }
+    }
+
     const paramsResult = extractResetParams(project, packages);
     if (!paramsResult.success) {
         context.logger.error(`${logPrefix} resetEds: ${paramsResult.error}`);
@@ -441,7 +485,7 @@ export async function resetEdsProjectWithUI(options: EdsResetWithUIOptions): Pro
                 context.logger.info(`${logPrefix} Resetting EDS project: ${repoFullName}`);
 
                 // Pre-flight auth checks
-                progress.report({ message: 'Checking authentication…' });
+                progress.report({ message: 'Checking authentication' });
                 const daLiveResult = await checkDaLiveAuth(
                     context,
                     project,
@@ -460,7 +504,7 @@ export async function resetEdsProjectWithUI(options: EdsResetWithUIOptions): Pro
                 // reset never runs against the wrong org; the gate aborts with a
                 // "Switch IMS Org" prompt, mirroring DeployMeshCommand.
                 if (project.adobe?.organization) {
-                    progress.report({ message: 'Checking Adobe I/O authentication…' });
+                    progress.report({ message: 'Checking Adobe I/O authentication' });
                     const adobeResult = await checkAdobeAuth(
                         project,
                         context,
@@ -470,7 +514,7 @@ export async function resetEdsProjectWithUI(options: EdsResetWithUIOptions): Pro
                     );
                     if (adobeResult) return adobeResult;
 
-                    progress.report({ message: 'Checking Adobe organization…' });
+                    progress.report({ message: 'Checking Adobe organization' });
                     const orgResult = await checkOrgContext(
                         project,
                         context,
@@ -481,7 +525,7 @@ export async function resetEdsProjectWithUI(options: EdsResetWithUIOptions): Pro
                     if (orgResult) return orgResult;
                 }
 
-                progress.report({ message: 'Checking GitHub App…' });
+                progress.report({ message: 'Checking GitHub App' });
                 const appResult = await checkGitHubAppInstallation(
                     vscode,
                     context,
@@ -510,6 +554,7 @@ export async function resetEdsProjectWithUI(options: EdsResetWithUIOptions): Pro
                     includeBlockLibrary,
                     verifyCdn,
                     redeployMesh: redeployMesh ?? hasMesh,
+                    ...(keepContent ? { keepContent } : {}),
                 };
 
                 // BEFORE the storefront reset, because the pipeline's last step
@@ -539,6 +584,26 @@ export async function resetEdsProjectWithUI(options: EdsResetWithUIOptions): Pro
         project.status = originalStatus;
         await context.stateManager.saveProject(project);
     }
+}
+
+/**
+ * The demo's content site cannot be reached: reset the code only and keep the
+ * current content, or stop. Content is not forkable, so there is nothing else
+ * to offer. Undefined = cancelled.
+ */
+async function offerToKeepContent(
+    vscode: typeof import('vscode'),
+    demoName: string,
+    check: DemoSourceCheck,
+): Promise<boolean | undefined> {
+    const keepButton: import('vscode').MessageItem = { title: 'Keep current content' };
+    const answer = await vscode.window.showWarningMessage(
+        `${check.contentMessage ?? `The ${demoName} demo's pages can't be reached right now.`} ` +
+            'You can reset the code and keep the content this site has now.',
+        { modal: true },
+        keepButton,
+    );
+    return answer?.title === keepButton.title ? true : undefined;
 }
 
 /**
@@ -654,7 +719,7 @@ async function removeProjectSampleData(
     progress: { report: (value: { message: string }) => void },
 ): Promise<void> {
     try {
-        progress.report({ message: 'Removing datapack…' });
+        progress.report({ message: 'Removing datapack' });
 
         const { removeSampleData } = await import(
             '@/features/data-installer/services/sampleDataInstall'

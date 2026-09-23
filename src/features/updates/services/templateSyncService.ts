@@ -20,8 +20,10 @@
  *
  * Key files (fstab.yaml, config.json) are preserved regardless of strategy.
  *
- * Known limit: both the template and the SC's repo are assumed to use `main`;
- * the storefront metadata records no branch for either.
+ * Branches: the SC's repo is `main` unless the caller names another, and the
+ * template is `main` unless the storefront records a `templateBranch` (an added
+ * demo's source may use another). The template branch is always fetched into
+ * `template/main`, so every later step names one ref.
  */
 
 import * as fs from 'fs/promises';
@@ -80,6 +82,10 @@ export interface TemplateSyncTarget {
     repoName: string;
     templateOwner: string;
     templateRepo: string;
+    /** The SC's branch to rewrite. Default `main`. */
+    repoBranch?: string;
+    /** The template's branch to read. Default `main`. */
+    templateBranch?: string;
 }
 
 /** A temp clone of the SC's repo with the template fetched and the preserved files backed up. */
@@ -87,6 +93,8 @@ interface Checkout {
     tempDir: string;
     repoDir: string;
     backups: Map<string, string>;
+    /** The SC's branch the result is pushed to. */
+    branch: string;
 }
 
 /** The error text a conflicted merge carries, so every surface says the same thing. */
@@ -184,7 +192,10 @@ export class TemplateSyncService {
             return failure(options.strategy, `Invalid githubRepo format: ${githubRepo}`);
         }
 
-        const target: TemplateSyncTarget = { repoOwner, repoName, templateOwner, templateRepo };
+        const templateBranch = typeof metadata.templateBranch === 'string' ? metadata.templateBranch : undefined;
+        const target: TemplateSyncTarget = {
+            repoOwner, repoName, templateOwner, templateRepo, ...(templateBranch ? { templateBranch } : {}),
+        };
         const preserveFiles = [...DEFAULT_PRESERVE_FILES, ...(options.preserveFiles ?? [])];
 
         if (options.strategy === 'reset') {
@@ -206,14 +217,16 @@ export class TemplateSyncService {
     /**
      * Replace a repository's content with its template's, keeping `preserveFiles`,
      * and force-push. Needs no project: storefront setup calls it for an existing
-     * repository the SC chose to reset, and `syncWithTemplate` for a project's reset.
+     * repository the SC chose to reset, a new repository started from an added demo,
+     * and `syncWithTemplate` for a project's reset.
      */
     async resetRepository(
         target: TemplateSyncTarget,
         preserveFiles: string[] = [],
+        commitMessage = 'chore: sync with template (reset)',
     ): Promise<TemplateSyncResult> {
         return this.withCheckout('reset', target, preserveFiles, (checkout) =>
-            this.performReset(checkout),
+            this.performReset(checkout, commitMessage),
         );
     }
 
@@ -243,14 +256,16 @@ export class TemplateSyncService {
         }
 
         const { repoOwner, repoName, templateOwner, templateRepo } = target;
+        const branch = target.repoBranch ?? 'main';
+        const templateBranch = target.templateBranch ?? 'main';
         const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'template-sync-'));
         this.logger.info(`[TemplateSync] Starting ${strategy} from ${templateOwner}/${templateRepo} to ${repoOwner}/${repoName}`);
 
         try {
-            this.logger.debug(`[TemplateSync] Cloning user repo...`);
+            this.logger.debug(`[TemplateSync] Cloning user repo`);
             const userRepoUrl = injectTokenIntoUrl(`https://github.com/${repoOwner}/${repoName}.git`, token.token);
             const depth = strategy === 'merge' ? 50 : 1;
-            const clone = `git clone --depth ${depth} --branch main "${userRepoUrl}" repo`;
+            const clone = `git clone --depth ${depth} --branch ${branch} "${userRepoUrl}" repo`;
             const cloneResult = await this.git(tempDir, clone, TIMEOUTS.LONG);
             if (cloneResult.code !== 0) {
                 throw new TemplateSyncStepError(
@@ -261,10 +276,12 @@ export class TemplateSyncService {
             const repoDir = path.join(tempDir, 'repo');
             const backups = await backupPreservedFiles(repoDir, preserveFiles, this.logger);
 
-            this.logger.debug(`[TemplateSync] Fetching template repo...`);
+            this.logger.debug(`[TemplateSync] Fetching template repo`);
             const templateUrl = `https://github.com/${templateOwner}/${templateRepo}.git`;
             await this.git(repoDir, `git remote add template "${templateUrl}"`, TIMEOUTS.QUICK);
-            const fetchResult = await this.git(repoDir, `git fetch template main`, TIMEOUTS.LONG);
+            // Another branch is fetched INTO template/main, the one ref the later steps name.
+            const refspec = templateBranch === 'main' ? 'main' : `${templateBranch}:refs/remotes/template/main`;
+            const fetchResult = await this.git(repoDir, `git fetch template ${refspec}`, TIMEOUTS.LONG);
             if (fetchResult.code !== 0) {
                 throw new TemplateSyncStepError(
                     `Could not fetch the template ${templateOwner}/${templateRepo} from GitHub.`,
@@ -272,7 +289,7 @@ export class TemplateSyncService {
                 );
             }
 
-            return await work({ tempDir, repoDir, backups });
+            return await work({ tempDir, repoDir, backups, branch });
         } catch (error) {
             const gitOutput = error instanceof TemplateSyncStepError ? `: ${error.gitOutput.trim()}` : '';
             const label = strategy === 'merge' ? 'Merge' : 'Reset';
@@ -325,19 +342,19 @@ export class TemplateSyncService {
         }
 
         await restorePreservedFiles(repoDir, checkout.backups, this.logger);
-        await this.commitAndPush(repoDir, 'chore: sync with template', 'git push origin main');
+        await this.commitAndPush(repoDir, 'chore: sync with template', `git push origin ${checkout.branch}`);
 
         this.logger.info(`[TemplateSync] Merge completed successfully`);
         return { success: true, strategy: 'merge', syncedCommit: outcome.templateHead };
     }
 
     /** Reset the checkout to the template's content, keeping the preserved files; force-push. */
-    private async performReset(checkout: Checkout): Promise<TemplateSyncResult> {
-        const { repoDir, backups } = checkout;
+    private async performReset(checkout: Checkout, commitMessage: string): Promise<TemplateSyncResult> {
+        const { repoDir, backups, branch } = checkout;
         const git: GitStep = (command, timeout) => this.git(repoDir, command, timeout);
         const templateHead = await readTemplateHead(git);
 
-        this.logger.debug(`[TemplateSync] Resetting to template content...`);
+        this.logger.debug(`[TemplateSync] Resetting to template content`);
         const readTreeResult = await this.git(
             repoDir, `git read-tree --reset -u template/main`, TIMEOUTS.NORMAL,
         );
@@ -347,9 +364,7 @@ export class TemplateSyncService {
 
         await restorePreservedFiles(repoDir, backups, this.logger);
         // Force: a reset may rewrite history.
-        await this.commitAndPush(
-            repoDir, 'chore: sync with template (reset)', 'git push origin main --force',
-        );
+        await this.commitAndPush(repoDir, commitMessage, `git push origin ${branch} --force`);
 
         this.logger.info(`[TemplateSync] Reset completed successfully`);
         return { success: true, strategy: 'reset', syncedCommit: templateHead };
@@ -377,7 +392,7 @@ export class TemplateSyncService {
             }
         }
 
-        this.logger.debug(`[TemplateSync] Pushing to origin...`);
+        this.logger.debug(`[TemplateSync] Pushing to origin`);
         const pushResult = await this.git(repoDir, pushCommand, TIMEOUTS.LONG);
         if (pushResult.code !== 0) {
             throw new TemplateSyncStepError('Could not push the update to GitHub.', pushResult.stderr);

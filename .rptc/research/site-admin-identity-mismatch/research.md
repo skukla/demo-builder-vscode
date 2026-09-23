@@ -23,8 +23,8 @@ org may have no users at all (inference from the wizard code, below).
 | # | Step | Status |
 |---|------|--------|
 | 1 | Open github.com/settings/emails and note his primary email. If he changed it since installing Code Sync, the older one is the likely admin. | Page is standard GitHub. That the admin is this email: Adobe's page copy, not code |
-| 2 | Sign in to the admin service with an account that has THAT email. `https://admin.hlx.page/login/kmanns/wire/main?idp=google&selectAccount=true` for a Gmail. Microsoft: `?idp=microsoft&tenantId=common`. | Redirects measured (302 to Google / Microsoft). Role match on a Google or Microsoft identity for a DA-backed site: **unverified** |
-| 3 | Install the AEM Sidekick browser extension (the tools site cannot sign in without it). Open `https://tools.aem.live/tools/user-admin/index.html`, enter org `kmanns`, leave Site blank, Fetch Users, add his Adobe email with the `admin` role. | Tool, fields and Sidekick requirement verified in source. That it works for him: **unverified** |
+| 2 | Sign in to the admin service with an account that has THAT email. `https://admin.hlx.page/login/{org}/{site}/main?idp=google&selectAccount=true` for a Gmail. Microsoft: `?idp=microsoft&tenantId=common`. | Redirects measured (302 to Google / Microsoft). Role match on a Google or Microsoft identity for a DA-backed site: **unverified** |
+| 3 | Install the AEM Sidekick browser extension (the tools site cannot sign in without it). Open `https://tools.aem.live/tools/user-admin/index.html`, enter the GitHub org, leave Site blank, Fetch Users, add his Adobe email with the `admin` role. | Tool, fields and Sidekick requirement verified in source. That it works for him: **unverified** |
 | 4 | Back in Demo Builder, run Manage Site Access to confirm the 403 turned into 200, then Repair Site Configuration. | Existing extension flow |
 | 5 | If 1-3 fail (no account with that email, or the org is empty): ask Adobe. The docs say "Contact an Adobe representative if you need a different admin user." | Documented |
 
@@ -91,7 +91,7 @@ is private: not found.
 `login_adobe`, `login_adobe-stage` (each with a `_sa` select-account variant).
 There is no GitHub sign-in.
 
-`GET https://admin.hlx.page/login/kmanns/wire/main` → 302 to Adobe IMS
+`GET https://admin.hlx.page/login/{org}/{site}/main` → 302 to Adobe IMS
 (`client_id=helix-admin`). With `?idp=google` → 302 to accounts.google.com.
 With `?idp=microsoft&tenantId=common` → 302 to login.microsoftonline.com/common.
 With `?idp=github` → falls back to Adobe IMS.
@@ -163,7 +163,7 @@ admin role already; authorization is per org.
   update" lets an app send users to its Setup URL "after they update an
   installation" — https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/about-the-setup-url .
   Whether AEM Code Sync turns that on, and whether the bot mints a new key on
-  update: **not found** (the EDS-16 test Khalil was asked to run answers this).
+  update: **not found** (the EDS-16 test the reporter was asked to run answers this).
 - **Even if it does:** for an org that already exists, the setup key is site-level
   and the page hides "Organization users" (`bot-info.js` lines 150 and 321-324:
   "The key lives at org level for new orgs, otherwise at site level."). So the best
@@ -220,4 +220,4 @@ admin role already; authorization is per org.
 - Whether the admin service accepts a Google or Microsoft identity for a DA-backed
   site's roles.
 - Whether AEM Code Sync redirects to setup on installation update (EDS-16).
-- When kmanns first installed Code Sync (before or after 2026-07-20).
+- When the reporter first installed Code Sync (before or after 2026-07-20).

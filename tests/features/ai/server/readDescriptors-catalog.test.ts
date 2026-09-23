@@ -84,6 +84,13 @@ const CATALOG: Row[] = [
         args: null,
     },
     {
+        tool: 'probe_shared_demo',
+        map: dashboardHandlers,
+        type: 'probe-shared-demo',
+        needsAuth: ['github'],
+        args: ['owner', 'repo', 'link'],
+    },
+    {
         tool: 'get_project_urls',
         map: dashboardHandlers,
         type: 'getProjectUrls',

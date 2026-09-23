@@ -239,6 +239,25 @@ describe('registerAuthTools', () => {
         expect(status.github.note).toMatch(/managed by VS Code/);
     });
 
+    it('leaves a rejected token in place and says so, rather than signing the window out', async () => {
+        // Reading status used to DELETE the credential: validateToken clears on
+        // a 401, and this tool is declared read-only (2026-09-17).
+        const validateToken = jest.fn(async () => ({ valid: false, reason: 'rejected' }));
+        (getGitHubServices as jest.Mock).mockImplementationOnce(() => ({
+            tokenService: { validateToken, getUserOrgs: jest.fn(async () => []) },
+        }));
+        mockGetSession.mockResolvedValueOnce(undefined);
+        const server = fakeServer();
+        registerAuthTools(server, makeCtxFactory(true));
+
+        const { github } = await server.call('get_auth_status');
+
+        expect(validateToken).toHaveBeenCalledWith({ clearInvalid: false });
+        expect(github.authenticated).toBe(false);
+        expect(github.note).toMatch(/no longer accepted by GitHub/);
+        expect(github.note).toMatch(/left in place/);
+    });
+
     it('treats a failing VS Code session read as no session, not as an error', async () => {
         // The account system can throw (no provider registered in a remote or
         // headless host). That is "no session", not a GitHub outage — reporting

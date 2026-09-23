@@ -123,7 +123,7 @@ describe('StorefrontSetupStep — the start request on retry', () => {
         failThenRetry();
 
         const loader = screen.getByTestId('loading');
-        expect(loader).toHaveTextContent('Retrying storefront setup...');
+        expect(loader).toHaveTextContent('Retrying storefront setup');
         expect(loader).toHaveAttribute('data-progress', '0');
         expect(screen.queryByText('Storefront Setup Failed')).not.toBeInTheDocument();
 

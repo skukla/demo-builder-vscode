@@ -17,8 +17,243 @@ import type { AdobeConfig } from './base';
 import type { CustomBlockLibrary } from './blockLibraries';
 import type { CommerceStoreStructure } from './commerceStore';
 import type { ComponentConfigs, EnvVarDefinition, ServiceDefinition } from './components';
+import type { DaLiveContentSource } from './demoPackages';
+import type { AddedDemo, RememberedDemo, SharedDemoDescription, StorefrontKind } from './projectFile';
+import type { SettingsFile } from './settingsFile';
 import type { GitHubRepoItem } from './webview';
 import type { GitHubUser } from './webviewPayloads';
+
+/**
+ * `probe-shared-demo` — read a colleague's repository before "Add a demo package"
+ * offers it (shareable-demo step 03). Owner and repo, already split by the
+ * sender; the handler validates the charset.
+ */
+export interface ProbeSharedDemoRequest {
+    owner?: string;
+    repo?: string;
+    /** A GitHub link or an Edge Delivery site address, read to owner/repo when those are absent. */
+    link?: string;
+}
+
+/**
+ * "Add a storefront from a zip file" (step 10): the host picks the file when no
+ * path is given, unpacks it, creates a repository in the SC's own account and
+ * pushes the files; the dialog then continues as for a link.
+ */
+export interface ImportStorefrontZipRequest {
+    /** Absent from the webview: the host opens its file picker. */
+    zipPath?: string;
+    /** Defaults to the zip's root folder name. */
+    repoName?: string;
+    /** Public by default; clearing the dialog's tick box makes it private. */
+    isPrivate?: boolean;
+}
+
+export interface ImportStorefrontZipResult {
+    /** The picker was dismissed; nothing was created. */
+    cancelled?: boolean;
+    owner?: string;
+    repo?: string;
+    fullName?: string;
+    /** How many files were pushed, and how many entries the zip held that a repository would not. */
+    fileCount?: number;
+    dropped?: number;
+    isPrivate?: boolean;
+    /** A demo bundle's setup part, when the zip carried one; the dialog offers to start from it. */
+    setup?: SettingsFile;
+}
+
+/** Start a project from a bundle's setup, on the card its storefront became. */
+export interface UseBundleSetupRequest {
+    setup: SettingsFile;
+    demo: AddedDemo;
+}
+
+/** Which of the storefront kinds a repository holds, or that it holds none. */
+export type SharedDemoKind = StorefrontKind | 'not-a-storefront';
+
+/** Where a value in the probe result came from, so the dialog can say what was overridden. */
+export type SharedDemoValueSource = 'description-file' | 'config-json' | 'dependencies' | 'fstab';
+
+/**
+ * What `probe-shared-demo` answers. Three outcomes the dialog branches on: the
+ * link is one of our own shipped templates (select that card instead, D30); the
+ * repository could not be read at all; or it was read, and every field is what
+ * was READ — nothing here is written anywhere. `description` is the repository's
+ * own `demo.demo-builder.json` when present and readable; its values already win
+ * in the other fields, and `overrides` names which ones it replaced (D10).
+ */
+export type SharedDemoProbeResult =
+    | { outcome: 'shipped'; shippedPackageId: string; fullName: string }
+    | { outcome: 'unreadable'; reason: string }
+    | SharedDemoRead;
+
+export interface SharedDemoRead {
+    outcome: 'read';
+    /** The repository as GitHub names it now; differs from the request after a rename. */
+    fullName: string;
+    defaultBranch: string;
+    /** GitHub's template flag on the repository. */
+    isTemplate: boolean;
+    kind: SharedDemoKind;
+    /** For `not-a-storefront`: the canonical files that were missing, or the reason nothing could be read. */
+    missing?: string[];
+    /** The DA.live site the storefront's `fstab.yaml` mounts, for an EDS storefront. */
+    contentSource?: DaLiveContentSource;
+    /** Whether the content site publishes an index, and how many pages it lists. */
+    contentPublished: { indexFound: boolean; pageCount?: number };
+    /** Store codes read from `config.json`, or from the description file's defaults. */
+    storeCodes?: { websiteCode?: string; storeCode?: string; storeViewCode?: string };
+    /** B2B posture and where it was read from; `unknown` when nothing said. */
+    b2b: 'on' | 'off' | 'unknown';
+    b2bSource?: SharedDemoValueSource;
+    /** The description file's content, when the repository carries one that validates. */
+    description?: SharedDemoDescription;
+    /** Which read values the description file replaced, in the result's field names. */
+    overrides: string[];
+    /** Things the SC should hear, in plain words. */
+    warnings: string[];
+}
+
+/**
+ * `add-shared-demo` — the dialog's "Add demo" commit: remember the row as the
+ * dialog built it from the probe. Nothing is created on GitHub (no copy since
+ * 2026-09-14, shareable-demo step 11).
+ */
+export interface AddSharedDemoRequest {
+    demo: RememberedDemo;
+}
+
+export interface AddSharedDemoResult {
+    /** The remembered card. */
+    demo: RememberedDemo;
+}
+
+/**
+ * `forget-added-demo` — take a demo off your Welcome step. The host asks
+ * for confirmation itself (it knows how many projects on this computer were
+ * built on the demo) and, when the remembered card's repository was made from
+ * a zip and is still the SC's own, offers to delete it too (off by default,
+ * confirmed twice).
+ */
+export interface ForgetAddedDemoRequest {
+    name: string;
+    source: { owner: string; repo: string };
+}
+
+export interface ForgetAddedDemoResult {
+    /** False when the SC cancelled at the confirmation. */
+    forgotten: boolean;
+    /** Set when the repository made from the zip was deleted from GitHub as well. */
+    deletedRepository?: boolean;
+}
+
+/**
+ * `edit-added-demo` — rename an added demo package's card and change its
+ * description. Settings only, so no confirmation: editing again undoes it.
+ * The card updates through the settings listener's `addedDemosUpdated` push.
+ */
+export interface EditAddedDemoRequest {
+    source: { owner: string; repo: string };
+    name: string;
+    /** '' takes the description off the card. */
+    description: string;
+}
+
+export interface EditAddedDemoResult {
+    demo: AddedDemo;
+}
+
+/**
+ * `change-demo-source` — point the current project at another copy of its
+ * demo (the same storefront kind). Rewrites the project's row and the
+ * instance metadata the update check reads; the demo package on the Welcome
+ * step only when asked. Touches neither the SC's repository nor their site, so pointing
+ * back undoes it (decided 2026-09-11).
+ */
+export interface ChangeDemoSourceRequest {
+    demo: AddedDemo;
+    updateDemoPackage: boolean;
+}
+
+/**
+ * "Save as demo package" (step 09). `getDemoPackagePreview` answers what the
+ * card would carry and what a project built from it will need; `saveDemoPackage`
+ * writes the description file, puts the card on the SC's own Welcome step
+ * and answers the link; `removeDemoPackage` undoes exactly what saveDemoPackage
+ * did.
+ */
+export interface DemoPackageCheck {
+    id: 'repository' | 'index' | 'datapack' | 'custom-app';
+    ok: boolean;
+    message: string;
+    action?: 'republish';
+    repository?: string;
+}
+
+export interface DemoPackagePreview {
+    /** Prefilled from the brand or demo the project was built on; the SC edits before writing. */
+    draft: { name: string; description: string };
+    checks: DemoPackageCheck[];
+    /** The link a colleague pastes into "Add a demo package". */
+    link: string;
+    /** Whether the description file in the repository is ours (written by a save). */
+    saved: boolean;
+    /** Whether the card is on the SC's own Welcome step. */
+    onList: boolean;
+}
+
+export interface SaveDemoPackageRequest {
+    name: string;
+    description: string;
+}
+
+export interface SaveDemoPackageResult {
+    link: string;
+    /** What happened to the file: written, unchanged, or skipped because it is not ours. */
+    file: 'written' | 'unchanged' | 'skipped';
+    /** Why the file was skipped, when it was. */
+    fileReason?: string;
+    /** The card is on the SC's own Welcome step now (always, after a save). */
+    onList: true;
+    checks: DemoPackageCheck[];
+}
+
+/**
+ * Export, "Send a file": one bundle with the ticked parts (owner, 2026-09-13).
+ * Saved where the SC says (the host's save dialog), or at `path` inside the
+ * project directory when an agent asks. Setup alone is the plain settings file
+ * the projects list imports today; anything with the storefront is a bundle.
+ */
+export interface ExportDemoBundleRequest {
+    path?: string;
+    /** The setup part (default true). */
+    setup?: boolean;
+    /** The storefront part (default true; Edge Delivery projects only). */
+    storefront?: boolean;
+}
+
+export interface ExportDemoBundleResult {
+    /** The save dialog was dismissed; nothing was written. */
+    cancelled?: boolean;
+    path?: string;
+    fileCount?: number;
+    bytes?: number;
+    parts?: Array<'setup' | 'storefront'>;
+}
+
+export interface RemoveDemoPackageResult {
+    file: 'removed' | 'skipped' | 'absent';
+    /** The card was on the SC's list and is now off it. */
+    removedFromList: boolean;
+}
+
+export interface ChangeDemoSourceResult {
+    /** The project's row now. */
+    demo: AddedDemo;
+    /** Where the project read from before, so the change can be pointed back. */
+    previous: { owner: string; repo: string };
+}
 
 /**
  * Frontend source from template (same shape as TemplateSource)
@@ -64,6 +299,8 @@ export interface ProjectCreationConfig {
     importedMeshEndpoint?: string;
     // Package/Stack selections
     selectedPackage?: string;
+    /** The storefront row when the project is built on an added demo (D2); persisted with the project. */
+    demo?: AddedDemo;
     datapack?: { name: string; version: string };
     selectedStack?: string;
     // Selected App Builder integration ids (Model B deploy) + custom GitHub sources
@@ -108,7 +345,7 @@ export interface ProjectCreationConfig {
         contentSource?: {
             org: string;
             site: string;
-            indexPath?: string;
+            indexPath: string;
         };
         // Second content source for the account chrome (hybrid packages).
         accountContentSource?: {
@@ -250,6 +487,8 @@ export interface StorefrontSetupStartPayload {
     selectedPackage?: string;
     /** Selected stack ID (e.g. 'eds-accs') — needed to resolve package-derived settings */
     selectedStack?: string;
+    /** The storefront row when the project is built on an added demo: the phases read it for the repo branch, the pages and the dry check. */
+    demo?: AddedDemo;
     edsConfig: {
         repoName: string;
         repoMode?: 'new' | 'existing';
@@ -267,7 +506,7 @@ export interface StorefrontSetupStartPayload {
         contentSource?: {
             org: string;
             site: string;
-            indexPath?: string;
+            indexPath: string;
         };
         // Second content source for the account chrome (hybrid packages).
         accountContentSource?: {
@@ -285,6 +524,11 @@ export interface StorefrontSetupStartPayload {
          * as a bogus "Config Service incomplete" warning.
          */
         byomAbsentReason?: string;
+        /**
+         * The added demo's row, copied here by the handler from the payload so
+         * the phases read one config. Absent for a shipped brand.
+         */
+        demo?: AddedDemo;
         // Selected existing repository — the wizard's own repo-list item type
         // (ONE declaration; this used to be an inline four-field twin).
         selectedRepo?: GitHubRepoItem;

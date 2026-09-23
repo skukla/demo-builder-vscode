@@ -26,10 +26,10 @@ describe('DebugLogger call-tag stamping', () => {
 
     it('tags the SUBSYSTEM bracket, keeping it first — the scanning anchor', () => {
         runWithCallTag(47, () => {
-            logger.debug('[Guards] 1/3 auth check…');
+            logger.debug('[Guards] 1/3 auth check');
         });
 
-        expect(mockDebugChannel.info).toHaveBeenCalledWith('[debug] [Guards #47] 1/3 auth check…');
+        expect(mockDebugChannel.info).toHaveBeenCalledWith('[debug] [Guards #47] 1/3 auth check');
     });
 
     it('level prefixes ([debug]/[trace]) are skipped, never tagged', () => {
@@ -61,10 +61,10 @@ describe('DebugLogger call-tag stamping', () => {
     });
 
     it('outside any call, every line is byte-identical to today', () => {
-        logger.debug('[Guards] 1/3 auth check…');
+        logger.debug('[Guards] 1/3 auth check');
         logger.info('[AppBuilder] plain line');
 
-        expect(mockDebugChannel.info).toHaveBeenCalledWith('[debug] [Guards] 1/3 auth check…');
+        expect(mockDebugChannel.info).toHaveBeenCalledWith('[debug] [Guards] 1/3 auth check');
         expect(mockDebugChannel.info).toHaveBeenCalledWith('[AppBuilder] plain line');
     });
 

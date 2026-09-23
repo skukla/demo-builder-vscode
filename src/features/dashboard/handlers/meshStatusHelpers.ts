@@ -82,7 +82,7 @@ export async function sendDemoStatusUpdate(context: HandlerContext): Promise<voi
 
     if (meshComponent) {
         if (meshComponent.status === 'deploying') {
-            meshStatus = { status: 'deploying', message: 'Deploying...' };
+            meshStatus = { status: 'deploying', message: 'Deploying' };
         } else if (meshComponent.status === 'error') {
             meshStatus = { status: 'error', message: 'Deployment error' };
         } else if (hasMeshDeploymentRecord(project)) {

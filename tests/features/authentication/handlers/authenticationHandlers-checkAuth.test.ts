@@ -121,8 +121,8 @@ describe('authenticationHandlers - handleCheckAuth', () => {
 
             expect(mockContext.sendMessage).toHaveBeenCalledWith('auth-status', {
                 isChecking: true,
-                message: 'Checking authentication status...',
-                subMessage: 'Validating authorization token...',
+                message: 'Checking authentication status',
+                subMessage: 'Validating authorization token',
             });
         });
 

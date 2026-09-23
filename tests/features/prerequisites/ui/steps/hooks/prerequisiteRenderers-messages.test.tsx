@@ -188,13 +188,13 @@ describe('renderPrerequisiteMessage', () => {
     it('shows the placeholder for a successful Node.js check that has no message yet', () => {
         expect(text(renderPrerequisiteMessage(makeCheck({
             name: 'Node.js', status: 'success', message: undefined,
-        })))).toBe('Waiting...');
+        })))).toBe('Waiting');
     });
 
     it('shows the placeholder for a failed Adobe I/O CLI check that has no message yet', () => {
         expect(text(renderPrerequisiteMessage(makeCheck({
             name: 'Adobe I/O CLI', status: 'error', message: undefined,
-        })))).toBe('Waiting...');
+        })))).toBe('Waiting');
     });
 
     it('styles a failure message with the error class', () => {
@@ -208,7 +208,7 @@ describe('renderPrerequisiteMessage', () => {
     });
 
     it('shows a placeholder when a check has produced no message yet', () => {
-        expect(text(renderPrerequisiteMessage(makeCheck({ status: 'pending' })))).toBe('Waiting...');
+        expect(text(renderPrerequisiteMessage(makeCheck({ status: 'pending' })))).toBe('Waiting');
     });
 
     it('renders nothing once a successful check has plugin rows to show instead', () => {

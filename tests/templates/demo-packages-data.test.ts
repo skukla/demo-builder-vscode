@@ -109,17 +109,19 @@ describe('demo-packages.json', () => {
             expect(uniqueIds.size).toBe(ids.length);
         });
 
-        it('should have citisignal, isle5, buildright, custom, and bodea packages', () => {
+        it('should have citisignal, isle5, buildright, starter, and bodea packages', () => {
             const ids = packagesConfig.packages.map(p => p.id);
             expect(ids).toContain('citisignal');
             expect(ids).toContain('isle5');
             expect(ids).toContain('buildright');
-            expect(ids).toContain('custom');
+            expect(ids).toContain('starter');
             expect(ids).toContain('bodea');
             // citisignal-b2b retired — merged into the hybrid `citisignal` package.
             expect(ids).not.toContain('citisignal-b2b');
-            // `b2b` id retired — the unbranded hybrid is now `custom` ("Custom (B2B + B2C)").
+            // `b2b` and then `custom` retired — the unbranded hybrid is now `starter`
+            // ("Starter (B2B + B2C)"); both old ids load through the rename map.
             expect(ids).not.toContain('b2b');
+            expect(ids).not.toContain('custom');
         });
     });
 

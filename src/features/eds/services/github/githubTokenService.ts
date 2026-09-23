@@ -90,10 +90,18 @@ export class GitHubTokenService {
     }
 
     /**
-     * Validate token with GitHub API
-     * @returns Validation result with user info
+     * Validate token with GitHub API.
+     *
+     * A rejected token is DELETED by default: every caller but one is about to
+     * act, and acting with a token GitHub refuses only fails later. The
+     * exception is a pure reader — `get_auth_status` is declared read-only and
+     * was deleting the SC's credential as a side effect of being asked a
+     * question (found 2026-09-17, when a status call signed a window out).
+     *
+     * @param options - `clearInvalid: false` to leave a rejected token alone
+     * @returns Validation result with user info, and why it failed
      */
-    async validateToken(): Promise<GitHubTokenValidation> {
+    async validateToken(options: { clearInvalid?: boolean } = {}): Promise<GitHubTokenValidation> {
         // Check cache first
         if (this.validationCache) {
             const cacheAge = Date.now() - this.validationCache.timestamp;
@@ -105,7 +113,7 @@ export class GitHubTokenService {
 
         const token = await this.getToken();
         if (!token) {
-            return { valid: false };
+            return { valid: false, reason: 'no-token' };
         }
 
         try {
@@ -130,10 +138,15 @@ export class GitHubTokenService {
             const apiError = error as GitHubApiError;
 
             if (apiError.status === 401) {
-                // Token is invalid/expired - clear it
-                await this.clearToken();
+                // Token is invalid/expired - clear it, unless the caller is only reading.
+                if (options.clearInvalid !== false) {
+                    await this.clearToken();
+                }
+                return { valid: false, reason: 'rejected' };
             }
 
+            // A 500 or a dropped connection says nothing about the credential,
+            // so it claims nothing about it either.
             return { valid: false };
         }
     }

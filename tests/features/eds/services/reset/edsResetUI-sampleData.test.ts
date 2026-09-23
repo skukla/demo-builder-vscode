@@ -68,6 +68,7 @@ jest.mock('@/features/data-installer/services/commerceCredentials', () => ({
 import { removeSampleData } from '@/features/data-installer/services/sampleDataInstall';
 import { resolveCommerceCredentials } from '@/features/data-installer/services/commerceCredentials';
 import { executeEdsReset } from '@/features/eds/services/reset/edsResetService';
+import { makeDemoPackage, makeStorefront } from '../../../../helpers/demoPackageFixtures';
 import { createMeshDepsFake } from '../../../../helpers/meshDepsFake';
 import { createMockStateManager } from '../../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../../helpers/loggerFake';
@@ -93,13 +94,13 @@ const RESET = 'Reset Project';
 const REMOVE = { title: 'Remove Datapack' };
 
 const testPackages = [
-    {
+    makeDemoPackage({
         id: 'citisignal',
         storefronts: {
-            'eds-paas': { templateOwner: 'test-owner', templateRepo: 'test-template' },
+            'eds-paas': makeStorefront({ templateOwner: 'test-owner', templateRepo: 'test-template' }),
         },
-    },
-] as unknown as Parameters<typeof resetEdsProjectWithUI>[0]['packages'];
+    }),
+];
 
 function createProject(datapack?: { name: string; version: string }): Project {
     return {

@@ -167,6 +167,8 @@ export function registerEdsResetTool(
                 return asText({
                     reset: true,
                     project: project.name,
+                    // What may not work on an added demo (D23), in the same words the SC sees.
+                    ...(result.demoCaveats?.length ? { caveats: result.demoCaveats } : {}),
                     filesReset: result.filesReset,
                     contentCopied: result.contentCopied,
                     meshRedeployed: result.meshRedeployed,

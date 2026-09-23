@@ -469,7 +469,7 @@ export async function showDaLiveAuthQuickPick(
     return vscode.window.withProgress(
         {
             location: vscode.ProgressLocation.Notification,
-            title: 'Verifying DA.live credentials...',
+            title: 'Verifying DA.live credentials',
             cancellable: false,
         },
         () => validateAndStoreToken(context, token, orgName),

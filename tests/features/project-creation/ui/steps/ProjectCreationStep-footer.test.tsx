@@ -97,7 +97,7 @@ describe('what the footer states actually render', () => {
     it('reads Cancelling… and disables the button once the cancel is in flight', () => {
         renderFooter({ isActive: true, isCancelling: true });
 
-        expect(screen.getByRole('button')).toHaveTextContent('Cancelling...');
+        expect(screen.getByRole('button')).toHaveTextContent('Cancelling');
         expect(screen.getByRole('button')).toBeDisabled();
     });
 

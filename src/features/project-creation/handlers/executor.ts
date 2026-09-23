@@ -135,6 +135,9 @@ export function buildInitialProject(
         commerceStoreStructure:
             typedConfig.commerceStoreStructure ?? existingProject?.commerceStoreStructure,
         selectedPackage: typedConfig.selectedPackage,
+        // The storefront row for a project built on an added demo (D2). Same
+        // fallback as the fields below: an edit session keeps what it had.
+        demo: typedConfig.demo ?? existingProject?.demo,
         // Same fallback reasoning as `commerceStoreStructure` above: this rebuilds
         // the whole Project, and an edit session that never opened the Sample
         // Data area carries no choice. Overwriting a recorded one with undefined
@@ -209,7 +212,7 @@ export async function executeProjectCreation(
     // PROJECT INITIALIZATION
     // ========================================================================
 
-    progressTracker('Setting Up Project', 10, 'Creating project directory structure...');
+    progressTracker('Setting Up Project', 10, 'Creating project directory structure');
 
     const componentsDir = path.join(projectPath, 'components');
     await fsPromises.mkdir(componentsDir, { recursive: true });
@@ -217,7 +220,7 @@ export async function executeProjectCreation(
 
     context.logger.debug(`[Project Creation] Created directory: ${projectPath}`);
 
-    progressTracker('Setting Up Project', 15, 'Initializing project configuration...');
+    progressTracker('Setting Up Project', 15, 'Initializing project configuration');
 
     const project: import('@/types/base').Project = buildInitialProject(
         typedConfig,
@@ -267,7 +270,7 @@ export async function executeProjectCreation(
     // LOAD COMPONENT DEFINITIONS
     // ========================================================================
 
-    progressTracker('Loading Components', 20, 'Preparing component definitions...');
+    progressTracker('Loading Components', 20, 'Preparing component definitions');
 
     const registryManager = componentRegistryFrom(context);
     const registry = await registryManager.loadRegistry();

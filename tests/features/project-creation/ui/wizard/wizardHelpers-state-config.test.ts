@@ -27,6 +27,19 @@ const REVIEW_BASE = {
     adobeAuth: NEUTRAL_AUTH,
 } satisfies Partial<WizardState>;
 
+describe('buildProjectConfig — the added demo row', () => {
+    it('carries the row to the create request, and nothing when there is none', () => {
+        const demo = { kind: 'demo' as const, version: 1, name: 'Isle5 by Jen', source: { owner: 'jen', repo: 'isle5-demo' }, storefrontKind: 'eds' as const };
+        expect(buildProjectConfig({ ...REVIEW_BASE, demo } as WizardState).demo).toEqual(demo);
+        expect(buildProjectConfig({ ...REVIEW_BASE } as WizardState).demo).toBeUndefined();
+    });
+
+    it('leaves the card\'s zip record behind: the project row never carries it', () => {
+        const demo = { kind: 'demo' as const, version: 1, name: 'Maddie', source: { owner: 'steve', repo: 'maddie' }, storefrontKind: 'eds' as const };
+        expect(buildProjectConfig({ ...REVIEW_BASE, demo: { ...demo, createdFromZip: true } } as WizardState).demo).toStrictEqual(demo);
+    });
+});
+
 describe('wizardHelpers - state & config', () => {
     // State Initialization Helpers
     describe('initializeComponentsFromImport', () => {
@@ -376,6 +389,7 @@ describe('wizardHelpers - state & config', () => {
                     contentSource: {
                         org: 'content-org',
                         site: 'content-site',
+                        indexPath: '/full-index.json',
                     },
                 },
             };
@@ -409,6 +423,7 @@ describe('wizardHelpers - state & config', () => {
             expect(config.edsConfig?.contentSource).toEqual({
                 org: 'content-org',
                 site: 'content-site',
+                indexPath: '/full-index.json',
             });
         });
 
@@ -474,6 +489,49 @@ describe('wizardHelpers - state & config', () => {
             const config = buildProjectConfig(state);
 
             expect(config.customBlockLibraries).toStrictEqual([]);
+        });
+
+        it('keeps a stated GitHub owner over the auth status, and falls back to the signed-in login', () => {
+            const packages = [
+                {
+                    id: 'citisignal',
+                    name: 'CitiSignal',
+                    description: '',
+                    configDefaults: {},
+                    storefronts: {
+                        'eds-paas': {
+                            name: 'CitiSignal EDS',
+                            description: '',
+                            source: {
+                                type: 'git' as const,
+                                url: 'https://github.com/demo-system-stores/accs-citisignal',
+                                branch: 'main',
+                                gitOptions: { shallow: true },
+                            },
+                        },
+                    },
+                },
+            ];
+            const base = {
+                ...REVIEW_BASE,
+                selectedPackage: 'citisignal',
+                selectedStack: 'eds-paas',
+            };
+            const auth = { isAuthenticated: true, user: { login: 'steve', name: 'Steve', email: null, avatarUrl: null } } as WizardState['edsConfig'] extends infer E ? (E extends { githubAuth?: infer A } ? A : never) : never;
+
+            const stated = buildProjectConfig(
+                { ...base, edsConfig: { repoName: 'r', daLiveOrg: 'o', daLiveSite: 's', githubOwner: 'kukla-demos', githubAuth: auth } },
+                null,
+                packages,
+            );
+            expect(stated.edsConfig?.githubOwner).toBe('kukla-demos');
+
+            const fromAuth = buildProjectConfig(
+                { ...base, edsConfig: { repoName: 'r', daLiveOrg: 'o', daLiveSite: 's', githubAuth: auth } },
+                null,
+                packages,
+            );
+            expect(fromAuth.edsConfig?.githubOwner).toBe('steve');
         });
 
         it('should handle missing frontendSource and contentSource gracefully', () => {

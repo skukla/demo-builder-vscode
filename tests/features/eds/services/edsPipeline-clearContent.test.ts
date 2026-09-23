@@ -108,7 +108,7 @@ describe('executeEdsPipeline - clearing content', () => {
 
             expect(progress[0]).toEqual({
                 operation: 'content-clear',
-                message: 'Clearing existing DA.live content...',
+                message: 'Clearing existing DA.live content',
                 subMessage: 'test-org/test-site',
             });
         });
@@ -216,7 +216,7 @@ describe('executeEdsPipeline - clearing content', () => {
 
             expect(progress).toContainEqual({
                 operation: 'content-clear',
-                message: 'Unpublishing 2 CDN pages...',
+                message: 'Unpublishing 2 CDN pages',
             });
         });
 

@@ -38,7 +38,7 @@ class TestWebviewCommand extends BaseWebviewCommand {
         return {};
     }
     protected getLoadingMessage(): string {
-        return 'Loading...';
+        return 'Loading';
     }
 
     // Expose protected method for testing

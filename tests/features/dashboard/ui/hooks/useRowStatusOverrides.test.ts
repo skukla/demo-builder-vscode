@@ -7,7 +7,7 @@
  * The prune is the load-bearing half. Removing an integration used to leave its
  * `deploying` override behind forever: the entry left the persisted map, but
  * `buildIntegrationCards` synthesizes a pending card for any unknown-id
- * `deploying` override, so the grid kept a GHOST card stuck on "Deploying…"
+ * `deploying` override, so the grid kept a GHOST card stuck on "Deploying"
  * (reported 2026-07-31, with a screenshot of exactly that).
  *
  */
@@ -88,7 +88,7 @@ describe('useRowStatusOverrides', () => {
         // THE ghost-card regression.
         it('drops an override for an id the snapshot no longer holds', () => {
             const { result } = renderHook(() => useRowStatusOverrides());
-            pushStatus({ id: 'erp', status: 'deploying', message: 'Removing…' });
+            pushStatus({ id: 'erp', status: 'deploying', message: 'Removing' });
             expect(result.current.erp).toBeDefined();
 
             pushSnapshot({});
@@ -124,7 +124,7 @@ describe('useRowStatusOverrides', () => {
             // A malformed push must never blank live status, the same contract
             // `useLiveAppBuilderComponents` states for the map itself.
             const { result } = renderHook(() => useRowStatusOverrides());
-            pushStatus({ id: 'erp', status: 'deploying', message: 'Deploying…' });
+            pushStatus({ id: 'erp', status: 'deploying', message: 'Deploying' });
 
             pushSnapshot(undefined as unknown as Record<string, unknown>);
 

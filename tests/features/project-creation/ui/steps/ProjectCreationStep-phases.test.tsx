@@ -174,7 +174,7 @@ describe('ProjectCreationStep phases', () => {
             await press(cancel);
 
             expect(mockPostMessage).toHaveBeenCalledWith('cancel-project-creation');
-            expect(screen.getByRole('button', { name: 'Cancelling...' })).toBeDisabled();
+            expect(screen.getByRole('button', { name: 'Cancelling' })).toBeDisabled();
         });
     });
 
@@ -184,7 +184,7 @@ describe('ProjectCreationStep phases', () => {
 
             await press(screen.getByRole('button', { name: 'View Projects' }));
 
-            expect(screen.getByText('Loading your projects...')).toBeInTheDocument();
+            expect(screen.getByText('Loading your projects')).toBeInTheDocument();
             expect(screen.queryByRole('button', { name: 'View Projects' })).not.toBeInTheDocument();
             expect(mockPostMessage).not.toHaveBeenCalledWith('openProject');
 

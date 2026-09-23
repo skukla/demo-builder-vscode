@@ -61,7 +61,7 @@ describe('projectsDashboardHelpers', () => {
                 expect(result).toHaveLength(2);
                 expect(result[1]).toEqual({
                     key: 'copy',
-                    label: 'Copy from Existing...',
+                    label: 'Copy from Existing',
                     icon: 'copy',
                 });
             });
@@ -112,7 +112,7 @@ describe('projectsDashboardHelpers', () => {
                 expect(result).toHaveLength(2);
                 expect(result[1]).toEqual({
                     key: 'import',
-                    label: 'Import from File...',
+                    label: 'Import from File',
                     icon: 'import',
                 });
             });

@@ -16,10 +16,10 @@
 import * as vscode from 'vscode';
 
 /** Sign-in. The wording the extension has used for this since the auth guard. */
-export const BROWSER_SIGN_IN_TITLE = 'Opening a browser window to sign in to Adobe…';
+export const BROWSER_SIGN_IN_TITLE = 'Opening a browser window to sign in to Adobe';
 
 /** Org switch — a forced sign-in, so name the outcome rather than the mechanism. */
-export const BROWSER_ORG_SWITCH_TITLE = 'Opening browser to switch organization…';
+export const BROWSER_ORG_SWITCH_TITLE = 'Opening browser to switch organization';
 
 /**
  * Run a browser-opening auth call behind a progress notification.

@@ -1,0 +1,60 @@
+/* The "Add a demo package" dialog and its card on the Welcome grid. Stage chrome is the
+   Add Integration flow's (`.intflow-*`); the found rows are the Build summary's
+   (`.sum-*`). Only what neither has lives here. */
+
+@layer theme {
+    .add-demo-stage {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .add-demo-found {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .add-demo-note {
+        margin: 4px 0 0;
+        font-size: 12px;
+        line-height: 1.4;
+        color: var(--spectrum-global-color-gray-700);
+    }
+
+    .add-demo-warnings {
+        margin: 0;
+        padding-left: 18px;
+        font-size: 12px;
+        line-height: 1.5;
+        color: var(--spectrum-global-color-gray-700);
+    }
+
+    .add-demo-b2b {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    /* The plus card: the same card as a brand, drawn as an invitation. */
+    .expandable-brand-card.add-demo-card {
+        border-style: dashed;
+        background: transparent;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .expandable-brand-card.add-demo-card .brand-card-name::before {
+        content: '+ ';
+    }
+
+    /* An added demo's menu, in the brand card's corner (the selection check sits
+       beside the card's name). Always visible (owner, 2026-09-13): removing a card
+       an SC added is an affordance the card itself has to show, not one that
+       appears on hover. */
+    .brand-card-menu-button {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+    }
+}

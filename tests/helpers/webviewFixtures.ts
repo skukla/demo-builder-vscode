@@ -13,7 +13,7 @@
  *   3. the same push then used the wrong ENVELOPE — `data` where the client
  *      hands over `payload` — and crashed them again
  *   4. the on-disk manifest stores no `path` or `status` (the loader adds them),
- *      so the projects list sat on "Loading projects…" forever
+ *      so the projects list sat on "Loading projects" forever
  *   5. `WebviewClient` matches a response on `isResponse` + `responseToId`, not
  *      `type:'response'` + `requestId` — so NO request was ever answered, and it
  *      looked fine because every surface still rendered from its init payload
