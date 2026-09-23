@@ -50,11 +50,6 @@ agent asked "share this demo with Jen" can.
 - Name: "Share this demo" / "Stop sharing".
 - The template flag is a tick box in the share dialog, off by default; unticking undoes it.
 
-## Open
-
-- Where the SC's description text and icon come from at share time (a prompt, or defaults
-  from the package they started on).
-
 ## Decided 2026-09-13
 
 - Renamed **"Save as demo package"** / **"Remove demo package"** after the owner pushed back on
