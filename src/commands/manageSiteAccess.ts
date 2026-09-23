@@ -113,7 +113,7 @@ export class ManageSiteAccessCommand extends BaseCommand {
      *
      * This command used to open `tools.aem.live/bot/setup` with the site in the
      * query string. Without the key that page cannot read the config or add a
-     * user, so it never granted anything (reproduced 2026-09-14, kmanns/wire).
+     * user, so it never granted anything (reproduced 2026-09-14 on a reported site).
      *
      * Note this is NOT the wizard's Code Sync step. That one proves the GitHub
      * App is installed — a different fact, and one that can be true while this
@@ -174,10 +174,11 @@ export class ManageSiteAccessCommand extends BaseCommand {
 
     /**
      * The refusal has a known cause: Code Sync gave the role to the GitHub
-     * account's primary email, and Demo Builder signs in to Adobe as another one
-     * (2026-09-15, kmanns). The explanation names both, so the user knows which
-     * account to sign in to AEM's User Admin tool with. Readable org admins are
-     * still named, and then they are the only route offered.
+     * account's primary email as it was when Code Sync was installed, and Demo
+     * Builder signs in to Adobe as another one (reported 2026-09-15). The
+     * explanation names the addresses to try, so the user knows which account to
+     * sign in to AEM's User Admin tool with. Readable org admins are still named,
+     * and then they are the only route offered.
      */
     private async reportIdentityMismatch(
         project: Project,
