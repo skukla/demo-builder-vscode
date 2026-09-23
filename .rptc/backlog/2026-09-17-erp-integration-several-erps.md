@@ -24,6 +24,37 @@ common, and a project can hold one ERP today.
   app per workspace (the AB-2 spike's finding). Its Commerce webhook and event subscription
   names are fixed per app id, so two integrations on one Commerce collide (AB-15).
 
+## Why anyone runs several ERPs — and the open decision (owner, 2026-09-23)
+
+The reason, from a customer call: a company built by MERGERS AND ACQUISITIONS holds
+different product records in different ERPs, aggregates them into one online catalogue,
+and then has to decide how an order splits between those systems. They know a full order
+management system exists and may be needed one day; they are betting on native Adobe
+Commerce plus customization for now, and the owner thinks that bet is sound. So the demo's
+job is to SHOW what that looks like — native Commerce and App Builder, no OMS on stage.
+
+Two audiences, both real: the IT and architecture people who decide to integrate and own
+the routing rules, and the operations person who lives with the result (a part-shipped
+order, a line that went to the wrong system, a part that failed to send).
+
+**The order customization is its own integration, layered on the ERP one** (owner): the ERP
+integration stays one-ERP and generic. Which leaves the decision this item has to make:
+
+- **A — foundation plus add-on.** The ERP integration exposes a seam; a routing integration
+  sits above it when a project holds two ERPs. One codebase for ERP behaviour.
+- **B — a complete multi-ERP integration type** in the catalog: one card, everything wired.
+
+Leaning (not decided): **A underneath, B on the surface** — one ERP codebase and a separate
+routing layer, with a catalog card that adds all three at once (ERP A, ERP B, routing), so
+the SC picks one thing. A true B forks the ERP logic: the same order, price, stock and
+status behaviour living twice, with the second copy drifting. Two COPIES of one app already
+collided on one Commerce store (AB-15); two different codebases doing one job would be
+worse.
+
+What decides it is the SEAM — what the routing layer needs the ERP integration to expose so
+it never reaches inside it. Being established in
+`.rptc/research/multi-erp-order-routing/research.md`.
+
 ## The shape, rewritten by AB-17 (2026-09-20)
 
 **Both limits above were limits of ONE SHARED WORKSPACE, and that is being removed**

@@ -199,3 +199,4 @@ Filed 2026-09-22.
 - 2026-09-22  History and Retry for orders sent to the ERP, in skukla/commerce-erp-integration on feature/sync-history (2244a65, 1aedb8e); not pushed, not deployed
 - 2026-09-22  docs(plan): AB-25 history and retry, built in the ERP integration repo (`f88eee0e8`)
 - 2026-09-22  ERP → Commerce events in the same history, with Retry, in skukla/commerce-erp-integration on feature/sync-history (7ae953a); not pushed, not deployed
+- 2026-09-23  docs(research): what ERPs, integrations and commerce connectors actually ship (`541a33cac`)
