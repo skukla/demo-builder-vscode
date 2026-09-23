@@ -358,7 +358,7 @@ describe('GitHub Token Service', () => {
             mockSecretStorage.get.mockResolvedValue(JSON.stringify({ token: 'xxx' }));
             const mockRequest = jest.fn().mockResolvedValueOnce({
                 data: [
-                    { email: 'khalil@example.com', primary: true, verified: true, visibility: 'private' },
+                    { email: 'personal@example.com', primary: true, verified: true, visibility: 'private' },
                     { email: 'sc@adobe.example', primary: false, verified: true, visibility: null },
                 ],
             });
@@ -366,7 +366,7 @@ describe('GitHub Token Service', () => {
             (Octokit as unknown as jest.Mock).mockImplementation(() => ({ request: mockRequest }));
 
             await expect(service.getUserEmails()).resolves.toEqual([
-                { email: 'khalil@example.com', primary: true, verified: true },
+                { email: 'personal@example.com', primary: true, verified: true },
                 { email: 'sc@adobe.example', primary: false, verified: true },
             ]);
             expect(mockRequest).toHaveBeenCalledWith('GET /user/emails', expect.objectContaining({ per_page: 100 }));

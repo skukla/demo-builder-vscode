@@ -107,17 +107,31 @@ describe('listSiteAccess', () => {
         mockProbe.mockResolvedValue('refused');
         mockAdobeEmail.mockResolvedValue('sc@adobe.example');
         mockGitHubEmails.mockResolvedValue([
-            { email: 'khalil@example.com', primary: true, verified: true },
+            { email: 'personal@example.com', primary: true, verified: true },
             { email: 'sc@adobe.example', primary: false, verified: true },
         ]);
 
         const result = await listSiteAccess(project, context, logger);
 
         expect(result.identityMismatch).toEqual({
-            githubPrimaryEmail: 'khalil@example.com',
+            githubPrimaryEmail: 'personal@example.com',
             adobeEmail: 'sc@adobe.example',
-            explanation: expect.stringContaining('Your GitHub primary email is khalil@example.com'),
+            explanation: expect.stringContaining('Before you reinstall'),
         });
+    });
+
+    it('says nothing when the primary email is already the Adobe one, whatever else is on the account', async () => {
+        // Nothing to warn about: a reinstall mints the address they want. This used to
+        // report the other address as a likely holder of the role; that advice was
+        // tested on 2026-09-23 and the address was refused exactly as the first was.
+        mockProbe.mockResolvedValue('refused');
+        mockAdobeEmail.mockResolvedValue('sc@adobe.example');
+        mockGitHubEmails.mockResolvedValue([
+            { email: 'sc@adobe.example', primary: true, verified: true },
+            { email: 'personal@example.com', primary: false, verified: true },
+        ]);
+
+        expect((await listSiteAccess(project, context, logger)).identityMismatch).toBeUndefined();
     });
 
     it('adds no explanation when the emails agree, or when either cannot be read', async () => {

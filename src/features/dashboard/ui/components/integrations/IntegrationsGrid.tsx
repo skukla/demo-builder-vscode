@@ -179,11 +179,10 @@ export function IntegrationsGrid({
     const closeRemoveDialog = useCallback((): void => setPendingRemoveId(null), []);
     const confirmRemove = useCallback((): void => {
         if (pendingRemoveId) {
-            const target = cards.find((card) => (card.componentId ?? card.id) === pendingRemoveId);
-            operations.run(pendingRemoveId, target?.name ?? pendingRemoveId, 'remove');
+            operations.run(pendingRemoveId, pendingRemove?.name ?? pendingRemoveId, 'remove');
         }
         setPendingRemoveId(null);
-    }, [cards, operations, pendingRemoveId]);
+    }, [operations, pendingRemove, pendingRemoveId]);
 
     return (
         // No section heading, count, or Add button here: the SCREEN's page header

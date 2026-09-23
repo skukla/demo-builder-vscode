@@ -145,7 +145,7 @@ for an org that already exists, which only an affected user can answer.
 
 The shipped remedy for a user holding no role was a deep link to
 `tools.aem.live/bot/setup?user=&site=&url=&org=`. It does not work, for anyone.
-Reproduced for kmanns/wire and kmanns/hardie: the page shows "We couldn't load your
+Reproduced for both reported sites: the page shows "We couldn't load your
 configuration for editing", and the bare URL printed in the 403 message reproduces
 the console exactly (`GET admin.hlx.page/config/.json Failed to fetch`).
 

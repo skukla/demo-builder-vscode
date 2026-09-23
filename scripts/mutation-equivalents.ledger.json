@@ -16756,32 +16756,6 @@
             "source": "PL-22 MUT-08 focus run, 2026-09-05"
         },
         {
-            "module": "src/features/eds/handlers/byomOverlay.ts",
-            "anchors": [
-                "try {"
-            ],
-            "line": 298,
-            "mutants": 1,
-            "category": "block",
-            "reason": "Emptying this try removes the URL parse and the scheme/host fingerprint, leaving the function to fall off the end and the warning to read 'undefined'. Same argument as the enclosing describeRejectedUrl entry: the value is log text and nothing else reads it. That an unparseable URL is REJECTED, which is what the try/catch is really deciding for the caller, is asserted by 'rejects unparseable URLs'.",
-            "decision": "none \u2014 parsing is how the fingerprint stays informative without echoing the value",
-            "recorded": "2026-09-05",
-            "source": "PL-22 MUT-03, 2026-09-05"
-        },
-        {
-            "module": "src/features/eds/handlers/byomOverlay.ts",
-            "anchors": [
-                "} catch {"
-            ],
-            "line": 301,
-            "mutants": 1,
-            "category": "block",
-            "reason": "The catch arm returns the not-URL-shaped fingerprint. Emptying it makes the warning say 'undefined' for a value new URL() could not parse, and changes nothing else \u2014 the caller has already decided to fall through to fromConfig by the time this runs. Same argument as the try entry above.",
-            "decision": "none \u2014 'not URL-shaped' is the one fingerprint that tells an SC they pasted something that is not a URL at all",
-            "recorded": "2026-09-05",
-            "source": "PL-22 MUT-03, 2026-09-05"
-        },
-        {
             "module": "src/features/components/handlers/componentHandlers.ts",
             "anchors": [
                 "if (!payload || typeof payload !== 'object') {"
@@ -16910,6 +16884,32 @@
             "decision": "none \u2014 the sink is append-only and matched by .type, which a sentinel string cannot carry",
             "recorded": "2026-09-06",
             "source": "PL-22 MUT-08, planted 2026-09-06"
+        },
+        {
+            "module": "src/features/eds/handlers/byomOverlay.ts",
+            "anchors": [
+                "try {"
+            ],
+            "line": 299,
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying this try removes the URL parse and the scheme/host fingerprint, leaving the function to fall off the end and the warning to read 'undefined'. Same argument as the enclosing describeRejectedUrl entry: the value is log text and nothing else reads it. That an unparseable URL is REJECTED, which is what the try/catch is really deciding for the caller, is asserted by 'rejects unparseable URLs'.",
+            "decision": "none \u2014 parsing is how the fingerprint stays informative without echoing the value",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-03, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/handlers/byomOverlay.ts",
+            "anchors": [
+                "} catch {"
+            ],
+            "line": 302,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The catch arm returns the not-URL-shaped fingerprint. Emptying it makes the warning say 'undefined' for a value new URL() could not parse, and changes nothing else \u2014 the caller has already decided to fall through to fromConfig by the time this runs. Same argument as the try entry above.",
+            "decision": "none \u2014 'not URL-shaped' is the one fingerprint that tells an SC they pasted something that is not a URL at all",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-03, 2026-09-05"
         }
     ]
 }
