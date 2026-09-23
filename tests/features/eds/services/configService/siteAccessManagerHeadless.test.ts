@@ -107,16 +107,37 @@ describe('listSiteAccess', () => {
         mockProbe.mockResolvedValue('refused');
         mockAdobeEmail.mockResolvedValue('sc@adobe.example');
         mockGitHubEmails.mockResolvedValue([
-            { email: 'khalil@example.com', primary: true, verified: true },
+            { email: 'personal@example.com', primary: true, verified: true },
             { email: 'sc@adobe.example', primary: false, verified: true },
         ]);
 
         const result = await listSiteAccess(project, context, logger);
 
         expect(result.identityMismatch).toEqual({
-            githubPrimaryEmail: 'khalil@example.com',
+            githubPrimaryEmail: 'personal@example.com',
             adobeEmail: 'sc@adobe.example',
-            explanation: expect.stringContaining('Your GitHub primary email is khalil@example.com'),
+            candidateEmails: ['personal@example.com'],
+            explanation: expect.stringContaining('Your GitHub primary email is personal@example.com'),
+        });
+    });
+
+    it('explains a refusal when another verified address may hold the role, though the primary matches', async () => {
+        // The role is minted from whatever was primary when Code Sync was
+        // installed, so making the Adobe email primary later does not move it.
+        mockProbe.mockResolvedValue('refused');
+        mockAdobeEmail.mockResolvedValue('sc@adobe.example');
+        mockGitHubEmails.mockResolvedValue([
+            { email: 'sc@adobe.example', primary: true, verified: true },
+            { email: 'personal@example.com', primary: false, verified: true },
+        ]);
+
+        const result = await listSiteAccess(project, context, logger);
+
+        expect(result.identityMismatch).toEqual({
+            githubPrimaryEmail: 'sc@adobe.example',
+            adobeEmail: 'sc@adobe.example',
+            candidateEmails: ['personal@example.com'],
+            explanation: expect.stringContaining('was primary earlier: personal@example.com'),
         });
     });
 

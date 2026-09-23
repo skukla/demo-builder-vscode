@@ -122,8 +122,9 @@ async function explainRefusal(
         const mismatch = findAdminIdentityMismatch(adobeEmail, githubEmails);
         if (!mismatch) return undefined;
         logger.info(
-            `[SiteAccess] ${site}: GitHub primary email ${maskEmail(mismatch.githubPrimaryEmail)} is not the ` +
-                `Adobe identity ${maskEmail(mismatch.adobeEmail)}; the Code Sync admin role likely went to the former`,
+            `[SiteAccess] ${site}: the Code Sync admin role may sit on a GitHub address other than the ` +
+                `Adobe identity ${maskEmail(mismatch.adobeEmail)}; candidates ` +
+                `${mismatch.candidateEmails.map(maskEmail).join(', ')}`,
         );
         return { ...mismatch, explanation: describeAdminIdentityMismatch(mismatch, site) };
     } catch (error) {

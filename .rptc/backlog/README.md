@@ -241,7 +241,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-11` | fix | [RETRACTED — HelixService's optional credentials are not the hazard I described](2026-08-28-helix-auth-variance-unmodeled.md) | — | low | dropped |
 | `EDS-12` | fix | [Resetting the same EDS project does less from the dashboard than from the projects list](2026-09-02-two-reset-doors-differ.md) | — | med | built |
 | `EDS-14` | fix | [Template update falls back to a full reset on conflict, overwriting the SC's own edits](2026-09-11-template-update-conflict-fallback-overwrites-edits.md) | — | med | active |
-| `EDS-16` | fix | [The "no admin role" remedy sent people to a page that cannot grant anything](2026-09-14-site-access-remedy-dead-link.md) | _Khalil re-saving his Code Sync installation on hardie to show whether GitHub reopens the AEM setup page with a key_ | high | gated |
+| `EDS-16` | fix | [The "no admin role" remedy sent people to a page that cannot grant anything](2026-09-14-site-access-remedy-dead-link.md) | _the reporter re-saving his Code Sync installation to show whether GitHub reopens the AEM setup page with a key_ | high | gated |
 | `EDS-17` | feature | [A storefront can live in an organization's repository, not only the SC's own](2026-09-16-storefront-in-an-org-repository.md) | — | high | backlog |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | backlog |
 
