@@ -20,7 +20,7 @@ identity association. Observed on `leahrayard/leah-b2b-demo` (2026-08-13):
 Helix bulk publish and DA.live accepted the same IMS token that `/config/*`
 refused; the repo is hers and Code Sync was verified installed. The failure was
 silent for months (registration was a warning) until the BYOM overlay made the
-config entry load-bearing for PDPs. Same class as the Jen/Khalil triage that
+config entry load-bearing for PDPs. Same class as the two-colleague triage that
 produced `configServiceProbe.ts`.
 
 Today the extension has NO grant mechanism — nothing writes the Helix access
