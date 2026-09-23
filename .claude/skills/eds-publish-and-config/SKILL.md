@@ -49,7 +49,39 @@ Dropin loading, `__dropins__` vendoring, import maps, or `config.json` flag inje
   `lostGrants` when the write-back fails. Nothing in the app can restore them
   afterwards — the access endpoint needs the very role that went missing.
 
-  **Both calls need the role already.** The access endpoint sits behind the SAME `[admin]` gate as the config read, so a caller refused on the read is refused on the grant — no self-heal is possible. Authorization is per-ORG: an admin of one org cannot grant into another. And the POST **REPLACES** the `admin` list, so go through `ensureSiteAdmin`/`revokeSiteAdmin` (read-merge-write) or you silently drop every other admin.
+  **Both calls need the role already** — but there IS a way in, and it is not the API.
+  Measured end to end 2026-09-23 on a colleague's own namespace. Every door over the
+  API refuses a user who holds no role: the org config read, an org config WRITE
+  (`POST config/{org}.json` → 403, empty body), the site config read, and the site's
+  access record — for an Adobe identity and a Google one alike, in a clean incognito
+  session with the identity confirmed by `GET /login/{org}/{site}/main`. AEM's own
+  User Admin tool refuses them too, because it carries the same identity: `Failed to
+  load users`, `403 [admin] not authorized`. **Do not send a refused user to User
+  Admin.**
+
+  **What works is reinstalling the GitHub App, and the distinction is exact:**
+
+  | | mints a 30-min admin API key | writes the `users` roster entry |
+  |---|---|---|
+  | Re-saving a repository on an existing installation | yes | **NO** |
+  | Uninstalling the app and installing it again | yes | **YES** |
+
+  Both land on a page reading "AEM Code Sync registration updated", so the useless
+  one is indistinguishable from the fix. The org config in question had accumulated
+  EIGHT `helix-bot setup-wizard (admin, 30m)` keys over three months while `users`
+  stayed empty — every prior attempt had been the first row of that table. The role
+  is minted for the GitHub account's PRIMARY email at install time, so check
+  github.com/settings/emails first or it is granted to the wrong address.
+
+  **Two inferences that look safe and are not.** A `403` is returned for an org that
+  does not exist as well as one you are not on — verified by an org admin reading a
+  made-up org name — so a 403 tells you nothing about whether the org was ever
+  created. And an org config can exist for months, serving live sites, with nobody
+  on its roster: the one here was `created` in July and refused its owner until
+  September.
+
+  In-extension copy for all of this is `noAdminRoleRemedy.ts`, stated once because
+  four surfaces say it and all four were wrong simultaneously before it existed. Authorization is per-ORG: an admin of one org cannot grant into another. And the POST **REPLACES** the `admin` list, so go through `ensureSiteAdmin`/`revokeSiteAdmin` (read-merge-write) or you silently drop every other admin.
 
   **A fresh site has no access doc.** Registering a site (`PUT .../sites/{site}.json` → 201) does NOT create `access/admin.json` — it 404s, and the site config has no `access` key. `POST` onto that 404 returns 200 and creates it. So "404 on the access read" means *no grants yet*, not *broken*; treat it as empty. (Measured 2026-08-14 with two throwaway sites.)
 
