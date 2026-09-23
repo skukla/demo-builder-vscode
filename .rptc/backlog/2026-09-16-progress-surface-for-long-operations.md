@@ -61,6 +61,25 @@ Whatever is chosen has to answer:
 `StorefrontSetupStep.tsx` (the pattern to reuse), `progressRegister.ts`, and the webview
 surfaces that host the cards.
 
+## Merging develop into this branch: the wording rule (settled 2026-09-23)
+
+A merge of develop into `feature/erp-integration` conflicts on 257 hunks, and 64 of
+them differ ONLY inside string literals — the progress lines a person reads. Both
+sides have tests pinning their own version, so it cannot be left to whichever file
+git happens to favour.
+
+**This branch's wording wins, every time.** Develop never rewrote those labels: its
+only change to them was `4b2b4f172 style: no text ends in an ellipsis`. This branch's
+came from `d8cc4b097 feat(progress): say it in the SC's words, everywhere they watch`
+— one deliberate pass over every progress line, reviewed with the owner, trading our
+vocabulary for theirs. Develop's side is the OLD text minus its ellipsis.
+
+Taking develop there would revert that pass while looking like a routine merge
+resolution, which is exactly why it is written down rather than decided again at
+the keyboard. The remaining 158 hunks differ in code structure and still need
+reading one at a time; `adobeOrgServices.ts` is the one to be most careful with,
+because it holds the credential-APIs fix that develop does not have.
+
 ## Shipped so far
 
 - 2026-09-16  docs(backlog): PL-59 — a long operation should say what it is doing (`66b95506c`)
