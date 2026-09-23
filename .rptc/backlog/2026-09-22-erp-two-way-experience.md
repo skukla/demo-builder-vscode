@@ -112,6 +112,51 @@ article calls a fallback mandatory and something you build — decision 7's offl
 side, the ERP order carries the web order number and the buyer's PO number, with an inbound
 list that flags errors and filters by channel (Business Central, NetSuite): the start of part 6.
 
+## Validated against the market (2026-09-23)
+
+The owner, before any more building: "we need to validate that they are actually features
+that SAP and other ERPs would provide, and that they are features that would be DESIRED. I
+don't want to build features just because they are cool." And then, on the evidence: iPaaS
+products are not ERPs — a customer runs Boomi or Celigo ALONGSIDE App Builder, in the same
+position, so what they ship is evidence about an INTEGRATION, not about what an ERP hands
+you out of the box.
+
+So every verdict names its tier. Full pass with citations:
+`.rptc/research/erp-ux-validation/research.md`.
+
+| Part | The ERP itself | The integration layer (ours) | A commerce-admin connector | Wanted |
+|---|---|---|---|---|
+| History of what crossed | standard | standard | standard | yes |
+| Retry one failed record | standard | standard | standard | strongest of the seven |
+| Follow one order end to end | partial | standard | not found | strong |
+| Why this buyer got this price | standard (SAP) | not found | not found | no evidence found |
+| ERP pricing rules read-only | — | not found | not found | no evidence found |
+| Switches for how Commerce USES the ERP | — | not found | standard | yes, the offline choice especially |
+| The ERP user's side | standard | — | — | yes; Microsoft shipped more in BC 2025 wave 2 |
+
+**Two things this file said that were wrong**, both corrected by the pass:
+
+- "An end-to-end trace is not a named feature anywhere." Celigo shipped it in January 2026
+  as TraceView, and Boomi, MuleSoft and SAP's integration suite have weaker versions. It is
+  standard in the integration layer — our tier — and still absent from every commerce admin.
+  So the line to a customer is "your integration team already has this; we put it where your
+  operations person works", NOT "nobody has this".
+- "Rules read-only in Commerce: not seen anywhere" was right about Commerce and wrong about
+  the ERP for the price EXPLANATION beside it: SAP's sales order has had the Conditions tab's
+  Analysis button for decades, listing every condition and why it did or did not apply, and
+  the pricing API SAP Commerce calls returns that breakdown — SAP Commerce shows the merchant
+  only the final number.
+
+**Strongest demand evidence found:** a Magento core feature request open since February 2021,
+unassigned, for exactly retry-of-a-failed-send to an external system.
+
+**Recommendation to the owner** (his call, not made here): keep parts 2 and 4 as built and
+re-word the trace's demo narrative; build the ERP-offline switch (decision 7's third option),
+which a commerce-admin connector ships today and Adobe's own guidance calls mandatory; DROP
+part 3's rule list (nobody ships it, nobody asked, and the market chose other answers); and
+decide part 3's price explanation on product intent — it is the best differentiator here and
+has no demand evidence at all.
+
 ## Parts
 
 1. **The Admin menu reads "ERP integration" twice.** The section heading and the item both

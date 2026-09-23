@@ -75,3 +75,4 @@ reach the same workspace.
 
 - 2026-09-20  Rewritten around AB-17's answer: the two-projects-one-workspace case disappears with AB-23 and needs no refusal; the Commerce-instance collision remains, and a per-copy app id could later make it a fix.
 - 2026-09-22  feat(app-builder): a second copy is told which copy it is (`ed6e6b56c`)
+- 2026-09-22  feat(app-builder): a second ERP calls itself by its name in Commerce (`a4913e015`)
