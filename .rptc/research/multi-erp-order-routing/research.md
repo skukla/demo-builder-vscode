@@ -537,16 +537,17 @@ legible to the IT audience rather than a magic demo.
    clean seam says the routing layer becomes the only subscriber and stands the copies
    down. That changes the foundation's default behaviour when a routing layer is present.
    Is that acceptable, or must the foundation be untouched?
-3. **Is the ownership marker a native inventory source, or a product attribute?** Source is
-   richer and already mirrored into our ERP; attribute is blunter and explains itself in
-   one sentence on stage.
+3. ~~**Is the ownership marker a native inventory source, or a product attribute?**~~
+   **ANSWERED (owner, 2026-09-23): Inventory Management IS in the ACCS backend, so the
+   marker is a SOURCE.** It is the richer of the two and our integration already mirrors
+   stock per source into the ERP's warehouses, so the mapping exists on both sides.
 4. **How far does the failure story go?** Re-send a failed part (cheap, convincing) versus
    re-route a line to a different ERP (expensive, and honestly the beginning of an OMS).
 5. **Does the demo run on ACCS, PaaS, or both?** Both the ERP integration and the mock ERP
-   declare both backends, but I could not establish whether Adobe Commerce as a Cloud
-   Service exposes Inventory Management sources and custom order statuses in its Admin. If
-   ACCS does not, the ownership marker must be a product attribute and step 8 may not exist
-   there.
+   declare both backends. The Inventory Management half of this is settled — the owner
+   confirmed on 2026-09-23 that MSI is in the ACCS backend, so sources and the
+   two-sources-one-order moment exist there. Custom order statuses on ACCS are still
+   unchecked.
 6. **Do we say the OMS sentence?** Section 5 names the point where the customer would need
    one. Saying it builds trust and opens an OMS conversation. Not saying it keeps the demo
    tighter.
@@ -555,10 +556,10 @@ legible to the IT audience rather than a magic demo.
 
 ## What I could not establish
 
-- **Inventory Management on Adobe Commerce as a Cloud Service.** The ACCS overview does not
-  list feature availability, and no public page I found states whether sources and stocks
-  exist there. Check it directly in an ACCS Admin: *Stores > Inventory > Sources*. Do this
-  before the demo design depends on sources.
+- ~~**Inventory Management on Adobe Commerce as a Cloud Service.**~~ **Settled 2026-09-23:
+  the owner confirmed MSI is in the ACCS backend.** No public page states it, which is why
+  this pass could not; the answer came from someone with an ACCS Admin open. Custom order
+  statuses on ACCS remain unchecked.
 - **`ext_order_id` in public documentation.** Our code proves it accepts a write. Adobe's
   public REST reference does not describe the field.
 - **A preview/simulation screen in any OMS product.** Fluent and Sterling document rules,

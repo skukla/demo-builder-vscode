@@ -137,3 +137,4 @@ wins — for one-integration-per-ERP, it is AB-17's step 6: two copies with diff
 
 - 2026-09-20  Rewritten around AB-17's answer: the renaming work is deleted (a workspace each gives every ERP its own namespace and database), and one-integration-per-ERP becomes a choice rather than an impossibility. Now waits on AB-23.
 - 2026-09-23  docs(backlog): AB-16, why several ERPs, and the layering decision it has to make (`201eb587e`)
+- 2026-09-23  docs(research): what the mock ERP lacks, and where multi-ERP routing belongs (`8d1c8d75e`)
