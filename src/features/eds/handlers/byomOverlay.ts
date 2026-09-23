@@ -11,8 +11,8 @@
 
 import * as vscode from 'vscode';
 import { getLogger } from '@/core/logging/debugLogger';
-import type { Logger } from '@/types/logger';
 import { describeNoAdminRoleRemedy } from '@/features/eds/services/configService/noAdminRoleRemedy';
+import type { Logger } from '@/types/logger';
 
 const BYOM_MAX_URL_LENGTH = 2048;
 const BYOM_LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);

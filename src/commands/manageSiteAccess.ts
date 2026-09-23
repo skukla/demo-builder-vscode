@@ -35,6 +35,10 @@ import type {
     ConfigWriteAccess,
 } from '@/features/eds/services/configService/configServiceAccess';
 import {
+    GITHUB_APP_SETTINGS_URL,
+    describeNoAdminRoleRemedy,
+} from '@/features/eds/services/configService/noAdminRoleRemedy';
+import {
     addSiteAdmin,
     listSiteAccess,
     looksLikeEmail,
@@ -44,10 +48,6 @@ import {
 } from '@/features/eds/services/configService/siteAccessManagerHeadless';
 import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
 import { GITHUB_APP_INSTALL_URL } from '@/features/eds/services/github/githubAppService';
-import {
-    GITHUB_APP_SETTINGS_URL,
-    describeNoAdminRoleRemedy,
-} from '@/features/eds/services/configService/noAdminRoleRemedy';
 import type { Project } from '@/types/base';
 import { getEdsRepoParts } from '@/types/typeGuards';
 

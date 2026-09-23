@@ -36,11 +36,11 @@ import { DA_LIVE_BASE_URL } from '../daLive/daLiveConstants';
 import { HELIX_ADMIN_URL } from '../helix/helixApiClient';
 import { deriveRegisterKeyUrl } from '../pdp/pdp404Snippet';
 import { readOrgAdmins } from './configServiceAccess';
+import { NO_ADMIN_ROLE_REMEDY_SHORT } from './noAdminRoleRemedy';
 import { maskEmail } from '@/core/utils/maskEmail';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { resolveByomOverlayUrl } from '@/features/eds/handlers/edsHelpers';
 import type { Logger } from '@/types/logger';
-import { NO_ADMIN_ROLE_REMEDY_SHORT } from './noAdminRoleRemedy';
 
 // Host constant shared from helixApiClient — one definition (2026-08-22 spine sweep).
 // Host constant shared from daLiveConstants — one definition (2026-08-22 spine sweep).
