@@ -29,6 +29,7 @@ import { AppBuilderComponentRemoveDialog } from '../AppBuilderComponentRemoveDia
 import { ManageApisModal } from '../ManageApisModal';
 import { type CardAction, type IntegrationCardModel } from './integrationCardModel';
 import { IntegrationDetailPanel } from './IntegrationDetailPanel';
+import { requestRename } from './requestRename';
 import { IntegrationCard } from '@/core/ui/components/integrations/IntegrationCard';
 import { IntegrationRow } from '@/core/ui/components/integrations/IntegrationRow';
 import type { ViewMode } from '@/core/ui/components/navigation/SearchHeader';
@@ -42,10 +43,7 @@ export interface IntegrationsGridProps {
      * without a second source of truth.
      */
     cards: IntegrationCardModel[];
-    /**
-     * Cards (the default) or rows — the same models, the same drawer, dialogs and
-     * actions; only the shape of each item changes (owner, 2026-09-24).
-     */
+    /** Cards (the default) or rows: same models, drawer and actions; only each item's shape changes. */
     viewMode?: ViewMode;
     /** Mesh callbacks — the mesh card routes here, never to the keyed messages. */
     onDeployMesh?: () => void;
@@ -61,23 +59,6 @@ export interface IntegrationsGridProps {
      * flow starts operations too, and both must open the same progress modal.
      */
     operations: ComponentOperationControls;
-}
-
-/**
- * Commit an in-drawer rename. Mirrors the InlineRenameField contract
- * (null = success, string = inline error); the payload `name` makes the
- * handler skip its input box and round-trip validation errors.
- */
-async function requestRename(id: string, name: string): Promise<string | null> {
-    try {
-        const response = await webviewClient.request<{ success: boolean; error?: string }>(
-            'renameAppBuilderComponent',
-            { id, name },
-        );
-        return response?.success ? null : (response?.error ?? 'Rename failed');
-    } catch (error) {
-        return error instanceof Error ? error.message : 'Rename failed';
-    }
 }
 
 /** The integrations card grid + its hosted drawer, modals, and confirm dialog. */
@@ -184,6 +165,7 @@ export function IntegrationsGrid({
         ? 'Your storefront loses its API Mesh endpoint until you deploy a new mesh.'
         : undefined;
 
+    const Item = viewMode === 'rows' ? IntegrationRow : IntegrationCard;
     const closeRemoveDialog = useCallback((): void => setPendingRemoveId(null), []);
     const confirmRemove = useCallback((): void => {
         if (pendingRemoveId) {
@@ -200,31 +182,18 @@ export function IntegrationsGrid({
             {/* The grid owns the full width; the detail FLYOUT overlays it rather
                 than taking a column beside it. Plain divs — a Spectrum Flex caps
                 at 450px (utilities.css). */}
-            {viewMode === 'rows' ? (
-                <div className="integration-row-list">
-                    {cards.map((model) => (
-                        <IntegrationRow
-                            key={model.id}
-                            model={model}
-                            onOpen={openCard}
-                            onAction={handleAction}
-                            onRename={requestRename}
-                        />
-                    ))}
-                </div>
-            ) : (
-                <div className="integrations-grid">
-                    {cards.map((model) => (
-                        <IntegrationCard
-                            key={model.id}
-                            model={model}
-                            onOpen={openCard}
-                            onAction={handleAction}
-                            onRename={requestRename}
-                        />
-                    ))}
-                </div>
-            )}
+            {/* Cards or rows: the same models and handlers, one item component or the other. */}
+            <div className={viewMode === 'rows' ? 'integration-row-list' : 'integrations-grid'}>
+                {cards.map((model) => (
+                    <Item
+                        key={model.id}
+                        model={model}
+                        onOpen={openCard}
+                        onAction={handleAction}
+                        onRename={requestRename}
+                    />
+                ))}
+            </div>
 
             <IntegrationDetailPanel
                 model={selected}
