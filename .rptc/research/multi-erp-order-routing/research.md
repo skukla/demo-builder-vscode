@@ -609,3 +609,25 @@ Where the parts' numbers live: each pair writes its ERP number into its own cust
 attribute on the Commerce order (Adobe Commerce as a Cloud Service; the Admin shows them on
 the order view), symmetrically; `ext_order_id` carries the prefixed number of the pair that
 took the order. Validation of the write path is an API-inventory row.
+
+### 12a. Two deployment shapes, one pattern (owner, 2026-09-24)
+
+The customer is not bound by Demo Builder's constraints, and would most likely NOT deploy a
+separate app for the router. Their natural shape is one App Builder app in one workspace:
+a consumer action for the order event that routes, one group of actions per ERP (the same
+handler code, configured for that ERP), and a shared library. The starter kit is built
+that way, and the AB-2 spike found that a workspace holds one App Management app, which
+pushes a customer towards one app rather than several.
+
+The demo keeps separate pieces (two pairs, one router, each its own catalog entry and
+workspace) for Demo Builder's own reasons: an SC adds, resets, restyles and removes an ERP
+as a unit, and may run one today and two next week. That is reversibility and reuse inside
+the demo tool, not a claim about how the customer should deploy.
+
+The pattern is identical in both shapes and the code should be written so that it is
+literally re-homed, not rewritten: the router as a library plus thin action wrappers; the
+pair's handlers keyed by configuration with no knowledge of siblings; the seams "send this
+part" and "report this part's outcome" become an internal action invocation and a history
+record when everything lives in one app. The relay material shows both shapes side by
+side, "how the demo deploys it and why" beside "how you would deploy it and why", so the SC
+never explains away a workspace.
