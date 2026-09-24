@@ -12,7 +12,7 @@
 
 import type { AppManagementAuth } from './appManagementClient';
 import { callWithIms } from './erpIntegrationClient';
-import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
+import type { AppBuilderComponentCatalogEntry, WebActionCall } from '@/types/appBuilderComponents';
 
 export interface SystemWipeResult {
     /** skipped: the entry declares no wipe, or its action was never deployed. */
@@ -28,18 +28,19 @@ export interface SystemWipeDeps {
 }
 
 /**
- * The wipe URL: the deployed URL of the declared action, plus its path.
+ * A declared call's URL: the deployed URL of its action, plus its path. Shared
+ * by the wipe (here) and the first sync (`recordSync.ts`).
  *
- * @param wipe - the entry's declared wipe call
- * @param deployedUrls - the system's per-action URL map
+ * @param call - the entry's declared call
+ * @param deployedUrls - the component's per-action URL map
  * @returns the URL, or undefined when that action was not deployed
  */
-export function deriveWipeUrl(
-    wipe: NonNullable<AppBuilderComponentCatalogEntry['wipe']>,
+export function deriveActionCallUrl(
+    call: WebActionCall,
     deployedUrls: Record<string, string> | undefined,
 ): string | undefined {
-    const actionUrl = Object.values(deployedUrls ?? {}).find((url) => url.endsWith(`/${wipe.action}`));
-    return actionUrl && `${actionUrl}/${wipe.path}`;
+    const actionUrl = Object.values(deployedUrls ?? {}).find((url) => url.endsWith(`/${call.action}`));
+    return actionUrl && `${actionUrl}/${call.path}`;
 }
 
 /**
@@ -57,7 +58,7 @@ export async function wipeSystemRecords(
     name: string,
     deps: SystemWipeDeps,
 ): Promise<SystemWipeResult> {
-    const url = entry.wipe && deriveWipeUrl(entry.wipe, deployedUrls);
+    const url = entry.wipe && deriveActionCallUrl(entry.wipe, deployedUrls);
     if (!url) {
         return { status: 'skipped' };
     }

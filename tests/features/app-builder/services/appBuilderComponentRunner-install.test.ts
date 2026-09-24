@@ -302,3 +302,78 @@ describe('install-after-deploy wiring', () => {
         expect(installAppManagement).not.toHaveBeenCalled();
     });
 });
+
+describe('the first sync after the install (recordSync, 2026-09-24)', () => {
+    // The ERP integration: its install stands, so the ERP it serves is filled from
+    // Commerce without anyone pressing Sync records.
+    const ERP_ENTRY: AppBuilderComponentCatalogEntry = {
+        ...KIT_ENTRY,
+        id: 'erp-integration',
+        name: 'ERP Integration',
+        sync: { action: 'erp', path: 'mirror?background=true' },
+    };
+    const ERP_URLS = {
+        ...KIT_URLS,
+        'runtime/erp/erp': 'https://ns.adobeioruntime.net/api/v1/web/erp/erp',
+    };
+
+    function erpDeps(overrides: Partial<Record<string, unknown>> = {}) {
+        const syncRecords =
+            (overrides.syncRecords as jest.Mock | undefined) ?? jest.fn().mockResolvedValue({ status: 'started' });
+        const { deps, installAppManagement } = kitDeps({
+            deployApp: jest.fn().mockResolvedValue({
+                success: true,
+                data: { url: 'https://app/api', deployedUrls: ERP_URLS },
+            }),
+            ...overrides,
+            syncRecords,
+        });
+        return { deps, installAppManagement, syncRecords };
+    }
+
+    it('add: an INSTALLED entry with a declared sync starts it with its own deployed URLs (args pinned)', async () => {
+        const { deps, syncRecords } = erpDeps();
+        const project = createProject();
+
+        const result = await addAppBuilderComponent(project, ERP_ENTRY, deps);
+
+        expect(result.success).toBe(true);
+        expect(syncRecords).toHaveBeenCalledWith(project, ERP_ENTRY, ERP_URLS);
+    });
+
+    it('add: an install that FAILED or was skipped starts no sync', async () => {
+        for (const status of ['failed', 'skipped'] as const) {
+            const { deps, syncRecords } = erpDeps({
+                installAppManagement: jest.fn().mockResolvedValue({ status, detail: 'reason' }),
+            });
+
+            await addAppBuilderComponent(createProject(), ERP_ENTRY, deps);
+
+            expect(syncRecords).not.toHaveBeenCalled();
+        }
+    });
+
+    it('add: an entry without a declared sync never touches it, installed or not', async () => {
+        const { deps, syncRecords } = erpDeps();
+
+        await addAppBuilderComponent(createProject(), KIT_ENTRY, deps);
+
+        expect(syncRecords).not.toHaveBeenCalled();
+    });
+
+    it('add: a sync that did not start keeps the deploy AND the install green, and says so', async () => {
+        const onProgress = jest.fn();
+        const { deps } = erpDeps({
+            onProgress,
+            syncRecords: jest.fn().mockResolvedValue({ status: 'failed', detail: '500: Commerce refused' }),
+        });
+        const project = createProject();
+
+        const result = await addAppBuilderComponent(project, ERP_ENTRY, deps);
+
+        expect(result.success).toBe(true);
+        expect(project.appBuilderComponents?.[ERP_ENTRY.id]?.installation).toMatchObject({ status: 'installed' });
+        expect(onProgress).toHaveBeenCalledWith(expect.any(String), 'Starting the first sync');
+        expect(onProgress).toHaveBeenCalledWith(expect.any(String), 'Sync did not start: 500: Commerce refused');
+    });
+});

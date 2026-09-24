@@ -5,7 +5,7 @@
  * URL keys are what `aio app get-url` answers: `runtime/<package>/<action>`.
  */
 
-import { deriveWipeUrl, wipeSystemRecords } from '@/features/app-builder/services/systemRecordsWipe';
+import { deriveActionCallUrl, wipeSystemRecords } from '@/features/app-builder/services/systemRecordsWipe';
 
 const URLS = {
     'runtime/demo-erp/health': 'https://ns.adobeioruntime.net/api/v1/web/demo-erp/health',
@@ -26,14 +26,14 @@ function deps(fetchImpl: typeof fetch, signedIn = true) {
     return { getAuth: jest.fn(async () => (signedIn ? AUTH : undefined)), onProgress: jest.fn(), fetchImpl };
 }
 
-describe('deriveWipeUrl', () => {
+describe('deriveActionCallUrl', () => {
     it("appends the path to the declared action's deployed URL", () => {
-        expect(deriveWipeUrl(WIPE.wipe, URLS)).toBe('https://ns.adobeioruntime.net/api/v1/web/demo-erp/admin/wipe');
+        expect(deriveActionCallUrl(WIPE.wipe, URLS)).toBe('https://ns.adobeioruntime.net/api/v1/web/demo-erp/admin/wipe');
     });
 
     it('answers nothing when that action was not deployed', () => {
-        expect(deriveWipeUrl(WIPE.wipe, { 'runtime/demo-erp/health': URLS['runtime/demo-erp/health'] })).toBeUndefined();
-        expect(deriveWipeUrl(WIPE.wipe, undefined)).toBeUndefined();
+        expect(deriveActionCallUrl(WIPE.wipe, { 'runtime/demo-erp/health': URLS['runtime/demo-erp/health'] })).toBeUndefined();
+        expect(deriveActionCallUrl(WIPE.wipe, undefined)).toBeUndefined();
     });
 });
 

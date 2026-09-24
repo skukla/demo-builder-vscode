@@ -87,6 +87,10 @@
       "kind": "integration",
       "layout": "extension",
       "lifecycle": "app-management",
+      "sync": {
+        "action": "erp",
+        "path": "mirror?background=true"
+      },
       "nodeVersion": "24",
       "compatibleBackends": [
         "adobe-commerce-paas",

@@ -202,6 +202,27 @@
               "description": "The path under it that wipes, POSTed with no body, e.g. wipe."
             }
           }
+        },
+        "sync": {
+          "type": "object",
+          "required": [
+            "action",
+            "path"
+          ],
+          "additionalProperties": false,
+          "description": "lifecycle 'app-management' only: the web action call that fills the system this integration serves from Commerce, POSTed with no body once the Commerce install succeeds on an add (the ERP integration's erp/mirror?background=true, the call the ERP's Sync records button makes).",
+          "properties": {
+            "action": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]*$",
+              "description": "The web action, e.g. erp."
+            },
+            "path": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]*(\\?[a-z]+=[a-z0-9]+)?$",
+              "description": "The path under it that starts the sync, with at most one query flag, e.g. mirror?background=true."
+            }
+          }
         }
       }
     },

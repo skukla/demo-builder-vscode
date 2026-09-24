@@ -66,6 +66,7 @@ import {
 import type { CommerceDetachResult } from './erpDetach';
 import type { SourceUpdateResult, UpdateCheckResult } from './integrationSourceUpdate';
 import { deriveOwPackage } from './owPackageName';
+import type { RecordSyncResult } from './recordSync';
 import type { DeclaredRuntime } from './runtimeNamespace';
 import type { AppDeploymentResult } from './types';
 import { isMeshComponentId } from '@/core/constants';
@@ -287,6 +288,18 @@ export interface AppBuilderComponentRunnerDeps extends TeardownDeps {
         onProgress?: (message: string) => void,
         options?: AppManagementInstallOptions,
     ) => Promise<AppManagementInstallResult>;
+    /**
+     * Start the first sync of the system an app-management entry serves, once
+     * its Commerce install stands (recordSync; the entry's `sync` call). The ERP's
+     * screens and both READMEs promised the ERP is filled at install, and until
+     * 2026-09-24 nothing did it. Never fails the deploy. Optional: deploy-only
+     * paths and bare tests never need it.
+     */
+    syncRecords?: (
+        project: Project,
+        entry: AppBuilderComponentCatalogEntry,
+        deployedUrls: Record<string, string> | undefined,
+    ) => Promise<RecordSyncResult>;
     /** The version an app's manifest declares (appManifestVersion); optional for bare tests. */
     readAppVersion?: (componentPath: string) => Promise<string | undefined>;
     /** Fast-forward a clone to its branch (integrationSourceUpdate); update only. */
@@ -1011,6 +1024,9 @@ async function installIfAppManagement(
         recordInstallation(state, result);
         await deps.saveProject(project);
     }
+    if (result.status === 'installed') {
+        await syncAfterInstall(project, entry, state?.deployedUrls, deps);
+    }
     if (result.status === 'upgraded' && result.detail) {
         deps.onProgress?.(result.detail);
     }
@@ -1021,6 +1037,34 @@ async function installIfAppManagement(
         deps.onProgress?.(
             OPERATION_STAGES.installingIntoCommerce.label,
             result.detail ?? 'Install into Commerce did not finish.',
+        );
+    }
+}
+
+/**
+ * The first sync from Commerce, once the install stands: the call the ERP's Sync
+ * records button makes, made without the button. No-op for an entry that declares
+ * no `sync`, and when the caller wired none. A failure never fails the deploy —
+ * the pair is installed, merely empty — and the line says so.
+ */
+async function syncAfterInstall(
+    project: Project,
+    entry: AppBuilderComponentCatalogEntry,
+    deployedUrls: Record<string, string> | undefined,
+    deps: AppBuilderComponentRunnerDeps,
+): Promise<void> {
+    if (!entry.sync || !deps.syncRecords) {
+        return;
+    }
+    deps.onProgress?.(OPERATION_STAGES.installingIntoCommerce.label, 'Starting the first sync');
+    const result = await deps.syncRecords(project, entry, deployedUrls);
+    if (result.status === 'failed') {
+        deps.logger.warn(
+            `[AppBuilderComponent Runner] ${entry.id} installed but its first sync did not start: ${result.detail}`,
+        );
+        deps.onProgress?.(
+            OPERATION_STAGES.installingIntoCommerce.label,
+            `Sync did not start: ${result.detail ?? 'no reason given'}`,
         );
     }
 }

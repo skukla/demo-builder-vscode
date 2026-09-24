@@ -43,6 +43,7 @@ import {
     fastForwardClone,
     type GitRunner,
 } from '@/features/app-builder/services/integrationSourceUpdate';
+import { startRecordSync } from '@/features/app-builder/services/recordSync';
 import { buildS2SDeployEnv } from '@/features/app-builder/services/s2sDeployEnv';
 import { wipeSystemRecords } from '@/features/app-builder/services/systemRecordsWipe';
 import { forgetScreenKey } from '@/features/app-builder/services/systemScreen';
@@ -147,6 +148,8 @@ export function buildDefaultRunnerDeps(
     // Git in an integration's clone, for update and its check.
     const gitIn: GitRunner = (command, cwd) =>
         ctx.commandManager.execute(command, { cwd, enhancePath: true, shell: DEFAULT_SHELL, timeout: TIMEOUTS.LONG });
+    // The signed-in identity every per-app API call carries (five callers below).
+    const authFor = (project: Project) => () => resolveAppManagementAuth(project, ctx.authManager);
     return {
         confirmToolchainRefresh: confirmToolchainRefresh ?? promptForToolchainRefresh,
         // Where the deploy tails' steps go. Callers with a progress notification
@@ -195,12 +198,15 @@ export function buildDefaultRunnerDeps(
         // outcome; a failure never fails the deploy.
         installAppManagement: (project, componentId, installProgress, options) =>
             installAppManagementApp(project, componentId, deployedUrlsOf(project, componentId), {
-                getAuth: () => resolveAppManagementAuth(project, ctx.authManager),
+                getAuth: authFor(project),
                 logger: ctx.logger,
                 onProgress: installProgress,
                 appVersion: options?.appVersion,
                 since: options?.since,
             }),
+        // The first sync from Commerce once the install stands (the ERP's Sync records call).
+        syncRecords: (project, entry, deployedUrls) =>
+            startRecordSync(entry, deployedUrls, { getAuth: authFor(project) }),
         readAppVersion: readAppManifestVersion,
         // Update: fast-forward the clone, then the same dependency install the
         // add path runs (ComponentManager, with the entry's Node version).
@@ -213,23 +219,17 @@ export function buildDefaultRunnerDeps(
         // (appBuilderComponentTeardown). First the ERP integration's undo of its
         // Commerce writes:
         detachFromCommerce: (project, deployedUrls, detachProgress) =>
-            detachErpWrites(deployedUrls, {
-                getAuth: () => resolveAppManagementAuth(project, ctx.authManager),
-                onProgress: detachProgress,
-            }),
+            detachErpWrites(deployedUrls, { getAuth: authFor(project), onProgress: detachProgress }),
         // then the app's own uninstall API, which takes down what its installer created:
         uninstallAppManagement: (project, componentId, uninstallProgress) =>
             uninstallAppManagementApp(project, componentId, deployedUrlsOf(project, componentId), {
-                getAuth: () => resolveAppManagementAuth(project, ctx.authManager),
+                getAuth: authFor(project),
                 logger: ctx.logger,
                 onProgress: uninstallProgress,
             }),
         // and a system's records, deleted while its wipe action still exists.
         wipeSystemRecords: (project, entry, deployedUrls, name) =>
-            wipeSystemRecords(entry, deployedUrls, name, {
-                getAuth: () => resolveAppManagementAuth(project, ctx.authManager),
-                onProgress,
-            }),
+            wipeSystemRecords(entry, deployedUrls, name, { getAuth: authFor(project), onProgress }),
         resolveSecretEnv: (project, entry) => resolveSecretDeployEnv(ctx.secrets, project.path, entry),
         forgetScreenKey: (project, entry) => forgetScreenKey(ctx.secrets, project.path, entry),
         // The AIO_COMMERCE_AUTH_IMS_* deploy env for app-management entries:

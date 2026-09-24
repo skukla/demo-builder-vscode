@@ -33,7 +33,12 @@ Adobe's Commerce integration starter kit. The design record is
 | Screen | its own, served by its `screen` action, opened with a key | the Commerce Admin page, on the workspace's static site |
 
 They are a **unit**. Adding the integration adds and deploys the ERP first, then the
-integration, into the project's one App Builder workspace. Removing the integration first
+integration, into the project's one App Builder workspace. Once the integration is installed
+into Commerce, Demo Builder starts the ERP's first sync (the integration's
+`POST erp/mirror?background=true`, declared as `sync` in the catalog — the call the ERP's
+Sync records button makes), so the ERP holds Commerce's products, companies and inventory
+sources before anyone opens it; the ERP's own last-import time says when it landed. Until
+2026-09-24 nothing made that call and a fresh pair sat empty. Removing the integration first
 calls its `erp/detach`, which undoes the company credit limits, company blocks and ERP order
 numbers it wrote into Commerce (Commerce keeps the order notes; it cannot delete them); then
 it uninstalls the integration from Commerce and deletes the ERP's records (the ERP's

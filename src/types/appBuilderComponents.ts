@@ -64,6 +64,14 @@ export interface ComponentSettings {
 }
 
 /** A pre-built appBuilderComponent catalog entry. */
+/** One of a component's own web actions, called by POST with no body. */
+export interface WebActionCall {
+    /** The web action, e.g. "admin". */
+    action: string;
+    /** The path under it, e.g. "wipe" or "mirror?background=true". */
+    path: string;
+}
+
 export interface AppBuilderComponentCatalogEntry {
     id: string;
     name: string;
@@ -165,12 +173,16 @@ export interface AppBuilderComponentCatalogEntry {
      * without it a removed system's records stay there with nothing left to
      * reach them.
      */
-    wipe?: {
-        /** The web action, e.g. "admin". */
-        action: string;
-        /** The path under it that wipes, POSTed with no body, e.g. "wipe". */
-        path: string;
-    };
+    wipe?: WebActionCall;
+    /**
+     * The call that fills the system this integration serves from Commerce,
+     * made once the Commerce install SUCCEEDS on an add: the ERP integration's
+     * `POST erp/mirror?background=true`, the same call the ERP's Sync records
+     * button makes. Until 2026-09-24 nothing made it, and a fresh pair sat
+     * empty while the ERP's home screen and two READMEs said it was filled at
+     * install. A failure never fails the deploy; the line names the button.
+     */
+    sync?: WebActionCall;
     /** Pre-built source repo (owner/repo/branch). */
     source: AddonSource;
     /** Backend ids this appBuilderComponent fits (omitted/empty = any backend). */
