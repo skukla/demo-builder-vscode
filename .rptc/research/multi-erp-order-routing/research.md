@@ -583,3 +583,29 @@ legible to the IT audience rather than a magic demo.
 - **B2B shared catalogs as an ownership axis.** Not investigated.
 - One Adobe blog page (back-office integrations) timed out on fetch; its characterisation
   above comes from the search result and Adobe's developer docs, not from reading it.
+
+
+---
+
+## 12. The pattern, in the words to relay to the customer (owner decision, 2026-09-24)
+
+**One consumer, many handlers, across apps.** Adobe's integration starter kit shapes every
+integration as a consumer action that receives a Commerce event and hands it to the handler
+for that event's kind, inside one app. The routing integration is the same shape one level
+up: it is the ONLY subscriber to Commerce's order event. Its consumer action reads the
+order, decides which ERP owns each line (the product's owning-system attribute, which a PIM
+would write into Commerce in a real deployment), splits the order into parts, and dispatches
+each part to that ERP pair's own runtime actions, which then raise that pair's own events
+towards its ERP. The pairs stop listening to Commerce for new orders and know nothing of one
+another; each stays exactly the single-ERP product.
+
+What the customer hears: "an order placed in Commerce is consumed once; a routing layer
+decides who owns each line; each ERP integration receives only its part, through the same
+actions it uses for a single-ERP store." What that buys them: the ERP integrations are
+generic and reusable, adding an ERP adds a pair and a rule, and the split logic lives in one
+place that can be replaced (an OMS, one day) without touching any pair.
+
+Where the parts' numbers live: each pair writes its ERP number into its own custom order
+attribute on the Commerce order (Adobe Commerce as a Cloud Service; the Admin shows them on
+the order view), symmetrically; `ext_order_id` carries the prefixed number of the pair that
+took the order. Validation of the write path is an API-inventory row.

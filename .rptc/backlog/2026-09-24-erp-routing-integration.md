@@ -6,7 +6,7 @@ parent: AB-26
 needs: [AB-16, AB-26j]
 value: high
 status: gated
-waiting-on: owner confirmation of Q2 (explained 2026-09-24, leaning yes); the order-attributes validation for Q-num. S1 is answered: the story does not depend on the client's ERPs or PIM; a product attribute in Commerce names the owning ERP
+waiting-on: the order-attributes validation for Q-num (a credential). Q2 and S1 are decided; AB-16 still blocks
 ---
 
 # The routing integration — one Commerce order split across ERP pairs
@@ -24,3 +24,4 @@ Harness with TWO in-process ERPs behind two integration copies and one fake Comm
 ## Shipped so far
 
 - 2026-09-24  S1 decided by the owner: the ERPs may never be known and the demo does not model a PIM; the `erp_owner`-style product attribute (ownership mode `attribute`) is the solve, and the story says a PIM would write it into Commerce. Q-num: investigate custom order attributes (ACCS, SaaS-only) as the home for each ERP's number; recorded in the plan §8. Q2 explained; confirmation pending
+- 2026-09-24  Q2 decided by the owner: only the routing integration subscribes to Commerce's order event. Named as the pattern to relay to the customer: one consumer action routes each order's parts to the owning ERP's runtime actions and events; the pairs stay generic (routing research §12)
