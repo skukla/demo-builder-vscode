@@ -53,6 +53,14 @@ ERP round trip — have no in-app way back to zero.
   (`start_datapack_export` already captures customers/companies) so a rehearsal's records can
   be put back as a datapack.
 - **Not in scope:** deleting products or catalog structure (that is the datapack's job).
+- **A limit to state up front (measured 2026-09-24):** after a company and its admin were
+  deleted in Admin, the Customers grid kept a row for the admin with a blank Status; Edit
+  answered "Something went wrong while editing the customer" and a grid delete of the
+  selected row answered "An item needs to be selected" — Commerce found no entity behind the
+  id. The row lives in the grid's index table, not in customer data, and only a full rebuild
+  of the customer grid index removes it, which on ACCS is Adobe's schedule. No cleanup tool
+  can delete what is already deleted; the tool should recognise the state ("index row only,
+  no customer") and say so rather than fail.
 
 ## Open questions for the owner
 
