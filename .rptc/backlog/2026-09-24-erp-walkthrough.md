@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-26
 needs: [AB-26e, AB-26m, AB-26l]
 value: high
-status: backlog
+status: active
 ---
 
 # The walk-through — what to look at in the ERP, what to look at in Commerce, and how each relates
@@ -47,3 +47,4 @@ relates" row names a real join field from the composite-entity research (AB-26a)
 demo path can be walked from the document alone by someone who has not seen the build.
 
 ## Shipped so far
+- 2026-09-24  Picked up (lane 1: a document written from the preview; the live re-check is the owner's). Staleness check: every screen it names exists in the preview and has a headless check (T-2: home, orders, shipments, invoices, products, partners, pricing, events, settings, plus the documents); the entity map (AB-26m) and the composite-entity research (AB-26a) exist to draw the relation tables from. Dependencies AB-26e (built to its supervised edge), AB-26m and AB-26l (built) are on the same branch (loop report decision 7). Written as commerce-erp-integration/docs/walkthrough.md, with each screen named by its preview address so every look is reproducible without committing images

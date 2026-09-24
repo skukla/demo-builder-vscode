@@ -309,6 +309,25 @@ document uses; the walk-in account, which has no credit relationship, shows dash
 Commerce company id moved off that list onto the document so the columns fit a 1,440-pixel
 window. Commit: `demo-erp` `ce2c9a5`. Tests: 262 pass; 16 headless checks stable.
 
+### The documents (AB-26p) — shipped
+
+The order document gained a Timeline: its stored history (created, confirmed, held,
+released, cancelled with the reason) merged by time with its shipments and its invoice,
+each a link. A line's SKU now opens the product on the same trail, so Back returns to the
+order. The invoice shows a Due date, the billing date plus the sold-to's payment terms;
+terms that name no number of days leave it a dash rather than a guess. The customer
+document has a meter under the credit figures (exposure as a share of the limit, red past
+it) and its orders split into Open items, which add up to the exposure figure above them,
+and History. The product page's Pricing card says in words when no rule names the product.
+
+Found and fixed along the way, in the screen check: when a document's fingerprint did not
+match, the check reopened the document by the address bar, but clicking a row never
+writes the document into the address bar, so the retry reopened the list and fingerprinted
+that. It had been wrong since the check was written and invisible because no document
+had changed after its fingerprint was recorded. The retry now reopens by the row's key
+and waits for the document's own title. Commit: `demo-erp` `64e0148`. Tests: 264 pass; 17
+headless checks stable.
+
 ### The demo setup guide — written
 
 `commerce-erp-integration/docs/demo-setup.md`, for the person preparing a demo. Three
@@ -336,6 +355,7 @@ the demo can have whatever it needs, as long as it is written down.
 | AB-26m | the entity map: the Mapping tab, nine cards, joins with their settings, ownership arrows, sync per direction, ERP figures; the company / SKU look-up on two cards | integration `c419327`, `bb06879` | 12 view-model + 10 look-up tests, 379 suite, preview driven headlessly with a clean console |
 | AB-26q | Settings: Document numbering card; the ERP's own currency as the money fallback | `demo-erp` `f04c897` | 258 tests incl. the counter pin; 15 screen checks |
 | AB-26o | the lists: shipping and billing badges and a stage filter on orders, sold-to on shipments and invoices, the plant's ERP name, exposure and available on customers | `demo-erp` `ce2c9a5` | row fields pinned through the actions; 16 headless checks incl. the four lists' headers |
+| AB-26p | the documents: timeline, product from a line, due date, credit meter, open items, pricing wording | `demo-erp` `64e0148` | due date pinned; a headless check walks order → product and reads the due date, meter and open items |
 | screen checks hardening | sizes out of the fingerprint, pointer parked, 3 samples, retry once, mismatch rows kept; the accept mode needs two agreeing loads | `demo-erp` `66c215e`, `8ebf768` | no flake in the 14 later full runs; the one-off shipments sample caught and refused |
 
 ## Handed off (finished to the supervised edge)
@@ -375,6 +395,9 @@ the demo can have whatever it needs, as long as it is written down.
   while designing the box's journeys; fixed the same hour (`demo-erp` `d600650`).
 - The ERP README's pointer to the setup guide is a GitHub URL on the integration's `main`
   branch; it resolves once the loop branch is merged there.
+- The UI audit's pricing column on order lines ("Contract price CP01 · −12%") needs the
+  applied condition recorded on the line when the order is created, which means the
+  integration running the quote at order time and a contract addition. Not built; on AB-26p.
 - The screen-realism plan's Products list wanted nine columns (Type, Base unit, Sales
   status, List price, On hand, Committed, Available among them). Eight fit a 1,440-pixel
   window with the rail open; the ninth clipped. Committed is on the product page, and the

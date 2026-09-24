@@ -294,12 +294,12 @@ each item's own file; what has already landed against an item is in its
 | `AB-26m` | feature | └ [The entity map — the Commerce Admin page where the settings are the mapping](2026-09-24-erp-entity-map.md) | AB-26j, AB-26g | high | built |
 | `AB-26n` | feature | └ [Screen redesign 1 — shell and navigation](2026-09-24-erp-ui-shell.md) | AB-26l | med | built |
 | `AB-26o` | feature | └ [Screen redesign 2 — lists](2026-09-24-erp-ui-lists.md) | AB-26k | med | built |
-| `AB-26p` | feature | └ [Screen redesign 3 — documents](2026-09-24-erp-ui-documents.md) | AB-26j, AB-26k | med | active |
+| `AB-26p` | feature | └ [Screen redesign 3 — documents](2026-09-24-erp-ui-documents.md) | AB-26j, AB-26k | med | built |
 | `AB-26q` | feature | └ [Screen redesign 4 — settings and journal](2026-09-24-erp-ui-settings-journal.md) | AB-26j | med | built |
 | `AB-26r` | feature | └ [Credit memo and Repeat order — the way back from invoiced and cancelled](2026-09-24-erp-credit-memo.md) | AB-26g | med | gated |
 | `AB-26s` | feature | └ [Order to cash — the payment leg (incoming payment, open items, company balance)](2026-09-24-erp-payment-leg.md) | AB-26b, AB-26r | med | backlog |
 | `AB-26t` | feature | └ [The routing integration — one Commerce order split across ERP pairs](2026-09-24-erp-routing-integration.md) | AB-16, AB-26j | high | gated |
-| `AB-26u` | feature | └ [The walk-through — what to look at in the ERP, what to look at in Commerce, and how each relates](2026-09-24-erp-walkthrough.md) | AB-26e, AB-26m, AB-26l | high | backlog |
+| `AB-26u` | feature | └ [The walk-through — what to look at in the ERP, what to look at in Commerce, and how each relates](2026-09-24-erp-walkthrough.md) | AB-26e, AB-26m, AB-26l | high | active |
 | `PL-24` | feature | [Component updates cannot follow an environment-variable rename](2026-08-30-env-var-rename-migration.md) | — | med | backlog |
 
 ### data-installer  (2)
