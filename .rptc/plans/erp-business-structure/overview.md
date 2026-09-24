@@ -101,10 +101,19 @@ in the same pair of commits; the integration's `contract:check` reports the gap 
 
 ### Integration `businessConfig` (commerce-erp-integration)
 
-| Name | Type | Default | Label |
-|---|---|---|---|
-| `structure_sales_org` | `text` (4 chars, validated `^[A-Z0-9]{4}$` on save) | `1000` | "ERP sales organisation for this website" |
-| `structure_sales_org_name` | `text` | `""` (the ERP prints the website's name when empty) | "Sales organisation name" |
+| Name | Scope | Type | Default | Label |
+|---|---|---|---|---|
+| `structure_sales_org` | per website | `text` (4 chars, validated `^[A-Z0-9]{4}$` on save) | `1000` | "ERP sales organisation for this website" |
+| `structure_sales_org_name` | per website | `text` | `""` (the ERP prints the website's name when empty) | "Sales organisation name" |
+| `structure_order_prefix` | Default Config (per pair) | `text` (1–6 chars, `^[A-Z0-9]{1,6}$`) | derived from the ERP display name at first read (first four letters, upper-cased; `ACME`) | "Prefix on ERP order numbers in Commerce" — multi-ERP rule M4: `ext_order_id` = `ACME-0000001042`; added on write-back, stripped on the way in, the ERP never sees it |
+| `structure_owns` | Default Config (per pair) | `list`: `all` · `sources` · `attribute` | `all` | "Which products belong to this ERP" — rule M3; `all` keeps today's behaviour for a single pair |
+| `structure_owns_sources` | Default Config | `text` (comma-separated source codes) | `""` | "Inventory sources this ERP ships from" (used when `structure_owns = sources`) |
+| `structure_owns_attribute` | Default Config | `text` (`code=value`, e.g. `erp_owner=ACME`) | `""` | "Product attribute that names this ERP" (used when `structure_owns = attribute`; the mode for a store without sources) |
+
+The mirror, the product events and the stock events filter by `structure_owns`; the order
+handler still takes every new order (which ERP sells a mixed order is the routing layer's
+call, out of scope here) but, under `sources`/`attribute`, an order with NO owned line is
+skipped with a journal entry saying why.
 
 `settings-view.js` gains `{ prefix: 'structure', title: 'Structure' }` and both fields join
 it by name. Read for an order through the existing `settingsFor(order.store_id)` — the scope
@@ -128,7 +137,7 @@ before it in the build order there. Build this plan fifth, after those.
 | # | Step | Repo(s) | Lands |
 |---|---|---|---|
 | 01 | Pin the record shapes and bump the contract: `test/records-shape.test.js` (exact keys of a stored partner, order, shipment, invoice, condition, settings vs a checked-in fixture), `contractVersion 2` with the additions, vendored copy synced | demo-erp, integration | the drift guard, before any field moves |
-| 02 | Integration: the two settings + Structure section; the order carries `salesOrg`/`salesOrgName`; the mirror carries the company's legal fields, admin website and `salesOrgs`, and the `structure` block (websites + Store Information) | integration | every value the ERP needs arrives |
+| 02 | Integration: the Structure settings (sales org per website; prefix and ownership per pair); the order carries `salesOrg`/`salesOrgName` and its written-back number carries the prefix; the mirror and the product/stock events filter by ownership; the mirror carries the company's legal fields, admin website and `salesOrgs`, and the `structure` block (websites + Store Information) | integration | every value the ERP needs arrives; a second pair can sit alongside |
 | 03 | ERP: the data model above (`partners`, `orders`, `conditions`, `settings.warehouses`, `structure.js`), the read-time upgrades, `salesOrg` removed; pricing honours the scope | demo-erp | the records |
 | 04 | ERP screen: Settings → Organisation card + Warehouses (names editable); order header, customer document and shipment print real structure; Pricing Rules gain the optional scope; preview `fakeApi` mirrors the shapes | demo-erp | what the audience sees |
 | 05 | Record: the routing client's facts into `../research/multi-erp-order-routing/` ("who this is for"); README collection/route tables; plan → `complete/` with what was NOT verified | worktree, demo-erp, integration | no drift in the docs |
@@ -179,5 +188,5 @@ storage that nothing reads — harmless, and cleared by uninstall.
 | # | Question | Recommendation |
 |---|---|---|
 | P1 | Walk-in partner: member of every sales organisation (`['*']`) or of none? | `['*']` — it exists so any website's order has a sold-to. |
-| P2 | Should the company code be `1000` fixed, or the ERP's copy number (`1000`, `2000` for a second ERP)? | Fixed `1000`; two ERPs are two company codes in two systems, and each says `1000`. Commerce tells them apart by name. |
+| P2 | Should the company code be `1000` fixed, or the ERP's copy number (`1000`, `2000` for a second ERP)? | Fixed `1000`; two ERPs are two company codes in two systems, and each says `1000`. Commerce tells them apart by the order-number prefix (M4, owner 2026-09-24). |
 | P3 | Show the seller's VAT and address on the invoice document from the mapped website's Store Information? | Yes, in the invoice header — that is what a real invoice carries and it costs a lookup. |

@@ -12,6 +12,21 @@
    `SETTING_DEFAULTS` follows from the schema; `settingsFor` needs no change — website
    values already reach a store view through the tree.
 
+## The pair's own settings: prefix and ownership (rules M3, M4)
+
+3a. RED: `saveProblem` refuses a prefix outside `^[A-Z0-9]{1,6}$`; `ownershipFilter(settings)`
+    answers a predicate over a mirrored product: `all` → true; `sources` → any of the
+    product's source codes is in the list; `attribute` → `customAttributes[code] === value`.
+3b. `order-sync.js`: the number written to `ext_order_id` is `${prefix}-${number}`; the note
+    says "Created in Acme ERP as sales order 0000001042". `detach` clears the field as
+    before (it reads Commerce order ids from the ERP, not the prefix). Any read that
+    compares `ext_order_id` to an ERP number strips the prefix first — grep every
+    `ext_order_id` / `extOrderId` use and pin each with a test.
+3c. `mirror-run.js`, `product-commerce/*`, `stock-commerce/updated`: apply the predicate;
+    a filtered-out product is skipped with a debug line, never sent. Under `sources` /
+    `attribute`, an order with no owned line is skipped with a journal entry
+    ("no line of order 000000307 belongs to this ERP").
+
 ## Orders carry the sales organisation
 
 4. RED (`test/lib/order-sync.test.js`): `erpOrderFrom(order, entityId, settings)` puts

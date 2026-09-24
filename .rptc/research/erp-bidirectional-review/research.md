@@ -24,6 +24,36 @@ are the stated exception — the ERP number is cleared from them. Any new ERP �
 has to answer: can Commerce undo it, and if so, where is it ledgered?* This is the test every
 item below is held to.
 
+## Multi-ERP independence (owner, 2026-09-24 — rules for every slice from here)
+
+Each ERP integration is a complete, independent pair: one ERP and one integration in their
+own App Builder workspace, with their own records, settings, event journal, ledger and
+reset. A pair never reads another pair's data or calls another pair's ERP, and behaves the
+same whether it is the only pair or one of three. Only the routing layer knows there are
+several, and it reaches each pair through the door a single pair already has. (Decisions 7,
+13 and 23 already point here; this makes it a rule.)
+
+| # | Rule | What it means in code |
+|---|---|---|
+| M1 | **No shared state between pairs.** | Each pair's ledger, App Management business config, event provider and ERP database are its own. Each ERP is company code `1000` in its own books. |
+| M2 | **Every Commerce event reaches every pair, so every Commerce → ERP handler first asks "is this mine?" — by asking its OWN ERP.** | Before acting on a Commerce order/shipment/invoice/cancel/hold event, the integration asks its ERP whether it holds that Commerce order (`GET orders?commerceOrderId=`, one cheap read). Never a shared table. Built once, in the Commerce-side order-changes work (order item 3), used by every handler. |
+| M3 | **Each pair mirrors only the products it owns; ownership is read from Commerce.** | A per-pair setting "Which products belong to this ERP": **All** (default — a single pair behaves exactly as today) · **Stocked in these inventory sources** (the marker the multi-ERP research chose; the PIM/merchant assigns sources per SKU) · **Product attribute equals** (`erp_owner = ACME`, for a store that does not use sources). The mirror, the product events and the stock events filter by it. |
+| M4 | **The ERP number written back to Commerce carries the ERP's identity as a prefix** (owner's choice, 2026-09-24). | `ext_order_id` = `<PREFIX>-<ten digits>`, e.g. `ACME-0000001042`. The prefix is a per-pair setting, default derived from the ERP display name (first 4 letters, upper-cased), shown on the Organisation card as the company code's document prefix. SAP's flexible sales-document numbering does exactly this per company code (DE-, IT-). The ERP's own number stays ten digits; the prefix is added by the integration on write-back and stripped on the way in, so the ERP knows nothing of it. |
+| M5 | **Customers exist in every pair that fulfils their orders.** | Already true: each pair mirrors companies from Commerce on its own. |
+
+**The "no sources" case (owner's caveat).** A store that does not use Commerce inventory
+sources (one default source) has no per-SKU location to own products by. M3 covers it with
+the third mode: an attribute the PIM feed or the merchant sets. If neither exists on a real
+store, the honest fallback is **All** on one pair and the routing layer deciding by an
+attribute of its own — never a hidden default like "unassigned SKUs go to the first ERP".
+The demo should exercise both the source mode and the attribute mode so the story does not
+depend on how a given store was set up.
+
+**Where these land.** M2 → order item 3 (Commerce-side changes). M3 and M4 → the
+structure plan (`../../plans/erp-business-structure/`), step 02: the ownership setting and
+the prefix are two more per-pair business-config fields, and the mirror filters by the
+first. M1 and M5 are already true and are written here so nothing later trades them away.
+
 ## Entity coverage matrix (added 2026-09-24, owner's gate before the order split)
 
 Owner, 2026-09-24: before the order split — a major customisation — every native Commerce
