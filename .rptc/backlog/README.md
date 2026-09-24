@@ -304,7 +304,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-8` | fix | [Dedup pass over the pre-boundary clones the sweeps filed](2026-08-27-dedup-pass-pre-boundary-clones.md) | — | med | shipped |
 | `PL-9` | chore | └ [Tests-tree dedup — the census after the first-ever scan](2026-08-27-tests-tree-dedup-census.md) | — | med | shipped |
 | `PL-10` | question | └ [Testing approach audit — do the tests need the same scan toolkit the code got?](2026-08-28-testing-approach-audit.md) | — | med | shipped |
-| `PL-14` | chore | └ [ADR-016 enforcement tooling — the seven artifacts](2026-08-28-adr-016-enforcement-tooling.md) | — | high | built |
+| `PL-14` | chore | └ [ADR-016 enforcement tooling — the seven artifacts](2026-08-28-adr-016-enforcement-tooling.md) | — | high | shipped |
 | `PL-15` | chore | └ [Run-noise burn-down to zero](2026-08-28-noise-burndown.md) | PL-14 | med | shipped |
 | `PL-16` | fix | └ [Give StateManager and Project fixtures a shared builder, the way HandlerContext has one](2026-08-28-shared-test-builders.md) | — | high | shipped |
 | `PL-22` | question | └ [93% was the ceiling, not the norm — mutation scores fall as async density rises](2026-08-30-mutation-score-beyond-confident-modules.md) | PL-9 | med | shipped |
@@ -335,8 +335,8 @@ each item's own file; what has already landed against an item is in its
 | `PL-33` | chore | └ [Every convention is enforced, or it stops being a convention](2026-08-31-every-convention-enforced.md) | — | high | shipped |
 | `PL-34` | chore | └ [Every open finding from the 2026-09-01 toolchain day, in one list](2026-09-01-cast-and-builder-worklog.md) | — | high | shipped |
 | `PL-54` | fix | └ [The nudge rules cover two file shapes; reinvention happens in more than two](2026-09-10-agent-nudge-coverage.md) | — | high | shipped |
-| `PL-55` | chore | └ [Two architectural domains have no convention at all — one of them is a non-negotiable](2026-09-10-architecture-conventions-never-written.md) | — | high | built |
-| `PL-57` | chore | └ [The component-extraction convention was enforced by nothing](2026-09-11-component-extraction-convention-unenforced.md) | — | med | built |
+| `PL-55` | chore | └ [Two architectural domains have no convention at all — one of them is a non-negotiable](2026-09-10-architecture-conventions-never-written.md) | — | high | shipped |
+| `PL-57` | chore | └ [The component-extraction convention was enforced by nothing](2026-09-11-component-extraction-convention-unenforced.md) | — | med | shipped |
 | `PL-58` | chore | └ [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) | — | high | backlog |
 | `PL-37` | chore | [The webview handshake's `stateVersion` is write-only](2026-09-02-webview-state-version-dead.md) | — | low | backlog |
 | `PL-38` | chore | [Our two most-mocked modules are faked 122 different ways](2026-09-02-webviewclient-mock-divergence.md) | — | med | shipped |

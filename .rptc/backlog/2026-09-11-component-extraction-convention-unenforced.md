@@ -5,7 +5,7 @@ area: platform
 parent: PL-30
 needs: []
 value: med
-status: built
+status: shipped
 ---
 
 # The component-extraction convention was enforced by nothing
