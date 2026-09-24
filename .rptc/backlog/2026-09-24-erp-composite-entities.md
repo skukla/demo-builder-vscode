@@ -23,3 +23,4 @@ A field table for every §5a row; every field names its owner; every Commerce fi
 ## Shipped so far
 - 2026-09-24  Two readers out: Commerce native records per composite (REST/B2B refs), SAP counterparts (api.sap.com entities); codebase half to follow
 - 2026-09-24  Research written: .rptc/research/erp-composite-entities/research.md — nine concepts on three sides (Commerce REST read by four readers, SAP help.sap.com pages, the two repos), field ownership per row, two SAP name corrections (scales entity A_SlsPrcgCndnRecordScale; credit API API_CRDTMBUSINESSPARTNER_0001), four Commerce events the plan assumed do not exist by those names, seller legal identity readable over REST in neither system
+- 2026-09-24  docs(research): composite entities — nine business concepts, record by record, on three sides (`c9432d8e4`)
