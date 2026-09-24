@@ -33,6 +33,7 @@ import { registerAuthTools } from '@/features/ai/server/authTools';
 import { registerCloudResourceTools } from '@/features/ai/server/cloudResourceTools';
 import { registerCommerceEndpointsTool } from '@/features/ai/server/commerceEndpointsTool';
 import { registerCommerceQueryTool } from '@/features/ai/server/commerceQueryTool';
+import { registerCommerceRestTool } from '@/features/ai/server/commerceRestTool';
 import { registerComponentRequirementsTool } from '@/features/ai/server/componentRequirementsTool';
 import { registerConfigureProjectTool } from '@/features/ai/server/configureProjectTool';
 import { registerContentAuthoringTools } from '@/features/ai/server/contentAuthoringTools';
@@ -716,6 +717,7 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
                 registerProjectStatusTool(mcpServer, connState);
                 registerCommerceEndpointsTool(mcpServer, connState);
                 registerCommerceQueryTool(mcpServer, connState);
+                registerCommerceRestTool(mcpServer, connCtxFactory);
                 registerValidateSelectionTool(mcpServer, connCtxFactory);
                 registerComponentRequirementsTool(mcpServer);
                 registerAdobeResourceTools(mcpServer, connCtxFactory);

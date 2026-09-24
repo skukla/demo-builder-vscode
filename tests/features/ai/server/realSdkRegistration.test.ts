@@ -41,6 +41,7 @@ import { registerEdsResetTool } from '@/features/ai/server/edsResetTool';
 import { registerLifecycleTools } from '@/features/ai/server/lifecycleTools';
 import { registerCommerceEndpointsTool } from '@/features/ai/server/commerceEndpointsTool';
 import { registerCommerceQueryTool } from '@/features/ai/server/commerceQueryTool';
+import { registerCommerceRestTool } from '@/features/ai/server/commerceRestTool';
 import { registerProjectStatusTool } from '@/features/ai/server/projectStatusTool';
 import { registerSettingsTools } from '@/features/ai/server/settingsTools';
 import { registerSiteTools } from '@/features/ai/server/siteTools';
@@ -131,6 +132,7 @@ describe('registration against the real MCP SDK', () => {
             registerProjectStatusTool(s, stateManager);
             registerCommerceEndpointsTool(s, stateManager);
             registerCommerceQueryTool(s, stateManager);
+            registerCommerceRestTool(s, ctxFactory);
             registerValidateSelectionTool(s, ctxFactory);
             registerComponentRequirementsTool(s);
             registerAdobeResourceTools(s, ctxFactory);

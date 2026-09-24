@@ -49,7 +49,9 @@ const EXPECTED: Record<string, number> = {
     // 37 -> 38 when develop added list_runtime_packages (picked 2026-09-21).
     // 38 -> 42 on 2026-09-24, develop merged into the ERP branch: the branch's
     // ERP, settings, update and runtime tools join develop's shared-demo tools.
-    adobe: 42,
+    // 42 -> 43 on 2026-09-24: run_commerce_rest signs with the workspace credential,
+    // which it can only fetch through the Adobe sign-in.
+    adobe: 43,
     dalive: 21,
     // 10 -> 12 on 2026-09-12: forget_added_demo and change_demo_source (step 06
     // of the shareable-demo program) both read and write GitHub; 12 -> 14 the
@@ -69,7 +71,7 @@ const EXPECTED: Record<string, number> = {
 };
 
 /**
- * 131 tools, and the counts above sum to 135 provider slots — a difference of FOUR,
+ * 132 tools, and the counts above sum to 136 provider slots — a difference of FOUR,
  * which is exactly the four tools the original commit says need two sign-ins each
  * (check_github_app, create_project, republish, sync_content). That arithmetic is the
  * cross-check: the derivation below reproduces both numbers from the source without
@@ -79,7 +81,7 @@ const EXPECTED: Record<string, number> = {
  * files. That counts text, not declarations, and was roughly double. The CONTROL below
  * caught it — which is the argument for having one.)
  */
-const EXPECTED_TOOLS = 131;
+const EXPECTED_TOOLS = 132;
 
 interface Declaration {
     name: string;

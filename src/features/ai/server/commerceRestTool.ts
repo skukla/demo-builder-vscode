@@ -1,0 +1,279 @@
+/**
+ * run_commerce_rest — a GET against this project's Commerce REST API, signed with
+ * the workspace credential the project's integrations already deploy with.
+ *
+ * ## Why it exists (AB-29, 2026-09-24)
+ *
+ * The extension's only Commerce read was `run_commerce_query`, the shopper-facing
+ * GraphQL. It cannot see a B2B company, a company's credit, a customer record or
+ * an order, so validating the ERP pair meant reading those in Commerce Admin by
+ * hand — and on the day a customer sign-up created an account the storefront
+ * then refused to sign in, nothing here could look at the record to say why.
+ * The REST API can. The owner's word: "Can you not use the Commerce API to do
+ * your work?"
+ *
+ * ## The credential, read before writing (not guessed)
+ *
+ * ACCS REST accepts an IMS bearer from a server-to-server credential registered
+ * with the instance and subscribed to `ACCS-REST-API`. The ERP integration's
+ * workspace credential is one, and `resolveAppManagementEnv` already resolves
+ * its full identity for deploys (`getS2SDeployCredentials`). The token is the
+ * client-credentials call `aio-lib-ims` makes (`POST /ims/token/v2`, form:
+ * grant_type, client_id, client_secret, org_id, scope — `ims.js` line 387), and
+ * the scopes are what `aio-commerce-lib-api` ensures for SaaS: `openid`,
+ * `additional_info.projectedProductContext`, `commerce.accs` (its
+ * `COMMERCE_SAAS_IMS_REQUIRED_SCOPES`), on top of the baseline
+ * `s2sDeployEnv.ts` requests. The URL is the tenant base plus `/V1/<path>` with
+ * a `Store` header (`getCommerceUrl` and `buildCommerceHttpClientSaaS`, same
+ * library). PaaS takes an admin token from a username and password, which is a
+ * hand-back to the user, not a parameter; it is refused here until AB-29 adds it.
+ *
+ * ## Read-only, by construction
+ *
+ * Only GET is sent. The delete half of AB-29 is a separate, confirm-gated tool
+ * with its own dialog, never an option on this one.
+ *
+ * @module features/ai/server/commerceRestTool
+ */
+
+import { z } from 'zod';
+import { buildCommerceEndpoints } from './commerceEndpointsTool';
+import { asRawText } from './mcpToolResult';
+import type { McpToolServer } from './mcpToolServer';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
+import { deriveAccsTenantId } from '@/features/components/services/envVarHelpers';
+import type { Project } from '@/types/base';
+import type { HandlerContext } from '@/types/handlers';
+
+/** The same bound `run_commerce_query` holds, with the cut declared in the payload. */
+const MAX_RESPONSE_CHARS = 30_000;
+/** Where a server-to-server token is minted (aio-lib-ims `getAccessTokenByClientCredentials`). */
+const IMS_TOKEN_URL = 'https://ims-na1.adobelogin.com/ims/token/v2';
+/** The scopes a SaaS REST call needs, per aio-commerce-lib-api, on the deploy baseline. */
+const REST_SCOPES = [
+    'AdobeID',
+    'openid',
+    'read_organizations',
+    'additional_info.projectedProductContext',
+    'commerce.accs',
+];
+/** The Adobe API a credential must hold for ACCS REST to accept its token. */
+const ACCS_REST_API = 'ACCS-REST-API';
+/** A minted token is reused until this close to its expiry. */
+const TOKEN_MARGIN_MS = 60_000;
+/** A relative REST path with a query string: no scheme, no leading slash, no parent hops. */
+const PATH = /^[A-Za-z0-9_.\-/?=&%,:+@[\] ]{1,600}$/u;
+
+interface MintedToken {
+    token: string;
+    expiresAt: number;
+}
+
+/** Tokens by workspace id; a workspace has one credential, so one token serves it. */
+const tokens = new Map<string, MintedToken>();
+
+/** Test seam. */
+export function resetCommerceRestTokens(): void {
+    tokens.clear();
+}
+
+/** A path that reaches only the REST API under the tenant, or why not. */
+export function validateRestPath(raw: unknown): { path: string } | { error: string } {
+    const path = String(raw ?? '').trim();
+    if (!path) return { error: '`path` is required, e.g. customers/search?searchCriteria[pageSize]=20' };
+    if (path.startsWith('/') || /^[a-z]+:\/\//i.test(path)) {
+        return { error: 'Give the path under /V1 only, without a leading slash or a host.' };
+    }
+    if (path.split('?')[0].split('/').includes('..') || !PATH.test(path)) {
+        return { error: 'That path has characters the REST API does not take.' };
+    }
+    return { path };
+}
+
+/**
+ * The workspace whose credential can call ACCS REST: the first integration whose
+ * catalog entry requires the API and that has a workspace of its own, else the
+ * project's workspace. Deterministic and stated, rather than probing credentials.
+ */
+export function restWorkspaceId(project: Project): string | undefined {
+    const catalog = getAppBuilderComponentCatalog();
+    for (const [id, state] of Object.entries(project.appBuilderComponents ?? {})) {
+        if (state.kind !== 'integration' || !state.workspace?.id) continue;
+        // The catalog row by its id (a re-keyed second copy names its catalog id);
+        // a custom integration has no row and is skipped rather than rebuilt.
+        const catalogId = state.catalogId ?? id;
+        const entry = catalog.find((row) => row.id === catalogId);
+        if (entry?.requiredApis?.includes(ACCS_REST_API)) {
+            return state.workspace.id;
+        }
+    }
+    return project.adobe?.workspace;
+}
+
+async function mintToken(
+    workspaceId: string,
+    credentials: { clientId: string; clientSecret: string; imsOrgCode: string },
+    fetchImpl: typeof fetch,
+): Promise<string> {
+    const cached = tokens.get(workspaceId);
+    if (cached && cached.expiresAt - TOKEN_MARGIN_MS > Date.now()) return cached.token;
+    const body = new URLSearchParams({
+        grant_type: 'client_credentials',
+        client_id: credentials.clientId,
+        client_secret: credentials.clientSecret,
+        org_id: credentials.imsOrgCode,
+        scope: REST_SCOPES.join(','),
+    });
+    const res = await fetchImpl(IMS_TOKEN_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: body.toString(),
+    });
+    const text = await res.text();
+    if (!res.ok) throw new Error(`IMS refused the credential (HTTP ${res.status}): ${text.slice(0, 300)}`);
+    const answer = JSON.parse(text) as { access_token?: string; expires_in?: number };
+    if (!answer.access_token) throw new Error('IMS answered without an access token.');
+    tokens.set(workspaceId, {
+        token: answer.access_token,
+        expiresAt: Date.now() + (answer.expires_in ?? 0) * 1000,
+    });
+    return answer.access_token;
+}
+
+/** The tenant's REST base from its GraphQL endpoint: the same host and tenant, no `/graphql`. */
+function restBase(commerceGraphQl: string): string | undefined {
+    const tenant = deriveAccsTenantId(commerceGraphQl);
+    if (!tenant) return undefined;
+    return commerceGraphQl.replace(/\/graphql\/?$/i, '');
+}
+
+function explainStatus(status: number, body: string): string {
+    if (status === 401 || status === 403) {
+        return (
+            `Error: Commerce REST answered HTTP ${status}. The workspace credential is not accepted ` +
+            `by this instance — it needs the ${ACCS_REST_API} API subscribed and the instance must ` +
+            'know it (installing the ERP integration does both). ' +
+            body.slice(0, 300)
+        );
+    }
+    return `Error: Commerce REST answered HTTP ${status}. ${body.slice(0, 500)}`;
+}
+
+/**
+ * Register `run_commerce_rest`.
+ *
+ * @param server - the tool server
+ * @param ctxFactory - the headless handler context (project state + sign-in)
+ * @param fetchImpl - injected so tests drive the real shaping without a network
+ */
+export function registerCommerceRestTool(
+    server: McpToolServer,
+    ctxFactory: () => HandlerContext,
+    fetchImpl: typeof fetch = fetch,
+): void {
+    server.registerTool(
+        'run_commerce_rest',
+        {
+            needsAuth: ['adobe'],
+            annotations: { readOnlyHint: true, destructiveHint: false },
+            title: 'Run Commerce REST GET',
+            description:
+                "GET one path of this project's Commerce REST API (the /V1 endpoints: customers, " +
+                'company, companyCredits, orders, products, inventory), signed with the workspace ' +
+                'credential the ERP integration deploys with. Reads what GraphQL cannot: B2B ' +
+                'companies and credit, customer records, orders. Read-only; ACCS backends only for now.',
+            inputSchema: {
+                path: z
+                    .string()
+                    .describe(
+                        'The path under /V1 with its query string, e.g. "customers/43" or ' +
+                            '"customers/search?searchCriteria[filter_groups][0][filters][0][field]=email' +
+                            '&searchCriteria[filter_groups][0][filters][0][value]=a@b.c"',
+                    ),
+                storeView: z
+                    .string()
+                    .optional()
+                    .describe('The store view code for the Store header; defaults to the project\'s'),
+            },
+        },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        async (args: any) => runRest(ctxFactory(), args, fetchImpl),
+    );
+}
+
+async function runRest(
+    ctx: HandlerContext,
+    args: { path?: unknown; storeView?: unknown } | undefined,
+    fetchImpl: typeof fetch,
+): Promise<ReturnType<typeof asRawText>> {
+    const checked = validateRestPath(args?.path);
+    if ('error' in checked) return asRawText(`Error: ${checked.error}`);
+    const project = await ctx.stateManager.getCurrentProject();
+    if (!project) return asRawText('Error: no current project. Use list_projects then set the current project.');
+    const facts = buildCommerceEndpoints(project);
+    if (facts.backend !== 'accs') {
+        return asRawText(
+            'Error: run_commerce_rest reaches ACCS backends only for now. A PaaS backend takes an ' +
+                'admin username and password, which is not a tool parameter (AB-29).',
+        );
+    }
+    const base = facts.endpoints.commerceGraphQl && restBase(facts.endpoints.commerceGraphQl);
+    if (!base) return asRawText('Error: this project has no ACCS Commerce endpoint configured.');
+    const signedIn = await ctx.authManager?.isAuthenticated().catch(() => false);
+    if (!ctx.authManager || !signedIn) {
+        return asRawText(
+            'Error: Adobe sign-in required. Check get_auth_status, then sign_in(provider:"adobe", confirm:true) once the user agrees.',
+        );
+    }
+    const { organization, projectId } = project.adobe ?? {};
+    const workspaceId = restWorkspaceId(project);
+    if (!organization || !projectId || !workspaceId) {
+        return asRawText('Error: the project has no Adobe org, project and workspace to take a credential from.');
+    }
+    let token: string;
+    try {
+        const credentials = await ctx.authManager.getS2SDeployCredentials(organization, projectId, workspaceId);
+        token = await mintToken(workspaceId, credentials, fetchImpl);
+    } catch (error) {
+        return asRawText(`Error: could not sign the request — ${error instanceof Error ? error.message : String(error)}`);
+    }
+    const storeView = typeof args?.storeView === 'string' && args.storeView ? args.storeView : facts.headers.all?.Store;
+    return fetchRest(`${base}/V1/${checked.path}`, token, storeView, fetchImpl);
+}
+
+async function fetchRest(
+    url: string,
+    token: string,
+    storeView: string | undefined,
+    fetchImpl: typeof fetch,
+): Promise<ReturnType<typeof asRawText>> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), TIMEOUTS.NORMAL);
+    let res: Response;
+    try {
+        res = await fetchImpl(url, {
+            method: 'GET',
+            headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: 'application/json',
+                ...(storeView ? { Store: storeView } : {}),
+            },
+            signal: controller.signal,
+        });
+    } catch (error) {
+        return asRawText(`Error: the request failed — ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+        clearTimeout(timer);
+    }
+    const body = await res.text();
+    if (!res.ok) return asRawText(explainStatus(res.status, body));
+    if (body.length > MAX_RESPONSE_CHARS) {
+        return asRawText(
+            `[truncated: ${body.length} chars, showing the first ${MAX_RESPONSE_CHARS}. ` +
+                'Narrow the read — a smaller pageSize, or a fields= filter.]\n' +
+                body.slice(0, MAX_RESPONSE_CHARS),
+        );
+    }
+    return asRawText(body);
+}

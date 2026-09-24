@@ -51,6 +51,13 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
             'must raise this with it.',
     },
 
+    run_commerce_rest: {
+        bytes: 31_000,
+        why:
+            'ENFORCED the same way run_commerce_query is: the tool cuts the body at 30,000 ' +
+            'characters and declares the cut. A customers/search page can be far larger; ' +
+            'the bound is what the code holds, not a figure measured once (2026-09-24).',
+    },
     run_commerce_query: {
         bytes: 31_000,
         why:
