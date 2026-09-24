@@ -103,8 +103,8 @@ against a deployed pair is the owner's, at the gates marked ◆.
 
 | # | Slice | Workstream | Repos | Depends on | Decision needed | Exit criteria |
 |---|---|---|---|---|---|---|
-| **Done** | Order document (slice 1); Customer document; Shipments and Invoice as documents with partial shipment and Close remaining; derived statuses; cancel reason to Commerce; credit hold **records and moves** (held / release / reject, blocking levels) | A | erp, integration | — | — | `demo-erp` `6009a62` `ffc7be2` `1c00e32` `c865750`; integration `64a6844` `0fcec33` |
-| 1 | **Credit hold on screen**: order header credit field, Release / Reject on the document, blocking picker and held-orders count on the customer, Customers list badge; preview mirror | A + B | erp | done backend | — | demo step 11 walkable in the preview |
+| **Done** | Order document (slice 1); Customer document; Shipments and Invoice as documents with partial shipment and Close remaining; derived statuses; cancel reason to Commerce; **credit hold** — records, moves and screen (held / release / reject, four blocking levels, demo step 11 walkable in the preview) | A + B | erp, integration | — | — | `demo-erp` `6009a62` `ffc7be2` `1c00e32` `c865750` + screen commit; integration `64a6844` `0fcec33` + contract sync |
+| 1 | *(done — folded into the row above)* | | | | | |
 | 2 | **Hold → Commerce hold/unhold**, detach unholds; new event `sales_order_hold`, handler, contract | C | erp, integration | 1 | ◆ owner runs the deploy | a held ERP order shows On Hold in Commerce; reset returns it |
 | 3 | **Commerce-side order changes → ERP**: shipment, invoice, cancel, hold made in Commerce Admin; the `origin` marker so the ERP does not echo; the **"is this mine?" check against the pair's own ERP** (M2) | C | erp, integration | 1 | ◆ subscription change: uninstall + install | ship in Commerce Admin → ERP shows the shipment; no second Commerce shipment |
 | 4 | **Per-source stock → ERP** (G2) and the small decisions: product delete (G1), credit balance (G3 — recommend the ERP's exposure is the demo's truth), currency (G5, via slice 6) | C | integration, erp | — | G3 | a non-default source edit in Commerce reaches the ERP |
@@ -145,9 +145,9 @@ AB-23.
 
 | Workstream | Built | Next | Blocked on |
 |---|---|---|---|
-| A · ERP documents and behaviour | order, customer, shipment, invoice documents; derived statuses; cancel reason; credit hold (records) | credit hold on screen (slice 1) | — |
+| A · ERP documents and behaviour | order, customer, shipment, invoice documents; derived statuses; cancel reason; credit hold (records, moves, screen) | pricing conditions (slice 5) after the sync gaps | — |
 | B · Modern UI | shared Card, Field, DocumentPage, trail navigation, status badges, four themes | Home, journal naming, pricing value help (with 5 and 8) | — |
-| C · Bidirectional sync | every ERP → Commerce write, reversible; cancel reason | hold → Commerce (2); Commerce-side changes → ERP (3); per-source stock (4) | owner's deploys ◆ |
+| C · Bidirectional sync | every ERP → Commerce write, reversible; cancel reason | hold → Commerce (2) — **next** — then Commerce-side changes → ERP (3); per-source stock (4) | owner's deploys ◆ |
 | D · Business structure | plan written; nothing built | slice 6 | S3, P1–P3 (recommendations given) |
 | E · Commerce Admin | history, retry, one-order trace, settings page | "why this price"; ERP-down choice | 5 |
 | F · Multi-ERP | copy identity; AB-23 active | AB-16; routing integration | client answers; seam question |
