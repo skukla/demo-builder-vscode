@@ -805,6 +805,18 @@ Home and Products are scene-setting. The slices are ordered to match.
 
 ## 8. Slices
 
+**Status, 2026-09-24.** Built on `demo-erp` `feature/erp-grids` (commits `6009a62`,
+`ffc7be2`): the **customer document** (slice 3's `CustomerDetail`, with derived credit
+exposure — the hold/release half of slice 3 is NOT built), and all of **slice 4** except
+"Committed / Available on products" (shipments as documents, partial shipment, Close
+remaining, the invoice as a document, derived statuses, `upgradeOrder`, the two read-only
+actions, `stockSourceCode` on the shipment event, the related-documents strip). One
+departure from §3.5, recorded in `lib/fulfilment.js createInvoice`: the invoice's lines are
+the order AS PLACED — what Commerce invoices with `capture: true` and no items — so a
+closed line still bills and the two systems' invoice totals agree. Slice 1 shipped
+earlier. Slices 2, 5, 6, 7 and the credit hold are open.
+
+
 Each is independently shippable and demoable. Sizes are rough: S ≈ 1 day, M ≈ 2–3, L ≈ 4–5.
 
 There is **no "polish" slice**. The audit's cheap bundle (unit of measure, one money helper,
