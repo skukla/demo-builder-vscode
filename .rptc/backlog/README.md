@@ -286,7 +286,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-26e` | feature | └ [Sync validation — every entity, both directions, proved (V)](2026-09-24-erp-sync-validation.md) | AB-26c | high | backlog |
 | `AB-26f` | feature | └ [The credit hold reaches Commerce (hold / unhold), undone on reset](2026-09-24-erp-hold-to-commerce.md) | AB-26b | high | active |
 | `AB-26g` | feature | └ [Changes made in Commerce Admin flow back to the ERP (shipment, invoice, cancel, hold)](2026-09-24-erp-commerce-side-changes.md) | AB-26b | high | backlog |
-| `AB-26h` | feature | └ [Per-source stock changes reach the ERP, plus the small gaps (product delete, credit truth, currency)](2026-09-24-erp-per-source-stock.md) | AB-26b | med | backlog |
+| `AB-26h` | feature | └ [Per-source stock changes reach the ERP, plus the small gaps (product delete, credit truth, currency)](2026-09-24-erp-per-source-stock.md) | AB-26b | med | active |
 | `AB-26i` | feature | └ [Pricing conditions with validity, minimum quantity, value help and "why not"](2026-09-24-erp-pricing-conditions.md) | — | high | built |
 | `AB-26j` | feature | └ [Business structure — sales organisation per website, prefix and ownership per pair, legal identity, warehouse names, the Organisation card](2026-09-24-erp-business-structure.md) | AB-26g, AB-26h | high | planned |
 | `AB-26k` | feature | └ [The product as a master record — available, open orders, sales status](2026-09-24-erp-product-master.md) | AB-26j | med | backlog |
