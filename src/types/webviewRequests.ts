@@ -19,6 +19,7 @@ import type { CustomBlockLibrary } from './blockLibraries';
 import type { CommerceStoreStructure } from './commerceStore';
 import type { ComponentConfigs, EnvVarDefinition, ServiceDefinition } from './components';
 import type { ErrorCode } from './errorCodes';
+import type { ViewMode, ViewModeList } from './viewMode';
 import type { GitHubRepoItem } from './webview';
 import type { GitHubUser } from './webviewPayloads';
 
@@ -179,12 +180,13 @@ export interface ComponentDataDTO {
 }
 
 /**
- * `setIntegrationsViewModeOverride` — the integrations screen's cards/rows toggle,
- * kept for the session over the `demoBuilder.integrationsViewMode` setting (the
- * projects list's `setViewModeOverride`, for the other list).
+ * `setViewModeOverride` — a list's cards/rows toggle, kept for the session over
+ * that list's `demoBuilder.*ViewMode` setting. One message for every list that
+ * offers the toggle; `list` says which (`core/handlers/viewModeHandler`).
  */
-export interface SetIntegrationsViewModeOverridePayload {
-    viewMode: 'cards' | 'rows';
+export interface SetViewModeOverridePayload {
+    list: ViewModeList;
+    viewMode: ViewMode;
 }
 
 /** The `data` half of the `get-components-data` response. */

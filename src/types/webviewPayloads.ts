@@ -24,6 +24,7 @@ import type { CustomBlockLibrary } from './blockLibraries';
 import type { CommerceStoreStructure } from './commerceStore';
 import type { EnvVarDefinition, TransformedComponentDefinition } from './components';
 import type { SettingsFile } from './settingsFile';
+import type { ViewMode } from './viewMode';
 import type { ComponentSelection, CreationProgress, ThemeMode, UnifiedProgress } from './webview';
 import type { EditProjectConfig, WizardStepDefinition } from './wizard';
 import type { ProjectDisplayName } from '@/core/utils/projectDisplayName';
@@ -106,7 +107,7 @@ export interface WizardInitialData {
     /** Edit-mode configuration — `null` in create mode. */
     editProject: EditProjectConfig | null;
     /** Initial view mode for the template gallery (from settings). */
-    projectsViewMode: 'cards' | 'rows';
+    projectsViewMode: ViewMode;
     /** User's saved block library default preferences (from settings). */
     blockLibraryDefaults: string[];
     /** Custom block libraries from VS Code settings. */
@@ -194,7 +195,7 @@ export interface IntegrationsInitialData {
      * Cards or rows, as the projects list has (`projectsViewMode`): the session's
      * choice when there is one, else `demoBuilder.integrationsViewMode`.
      */
-    integrationsViewMode: 'cards' | 'rows';
+    integrationsViewMode: ViewMode;
     /** Adobe project/workspace TITLES — the shared deploy destination banner. */
     destination: DestinationTitles;
     /** Committed destination ID — the add flow reads presence as a boolean. */
@@ -575,7 +576,7 @@ export interface DaLiveTokenWithOrgResultPayload {
 
 /** `configChanged` — projects-list view-mode setting changed (or re-sent on reveal). */
 export interface ConfigChangedPayload {
-    projectsViewMode: 'cards' | 'rows';
+    projectsViewMode: ViewMode;
 }
 
 /** `projectsUpdated` — the full refreshed project list for the cards/rows grid. */

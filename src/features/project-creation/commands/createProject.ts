@@ -8,6 +8,7 @@ import { ServiceLocator } from '@/core/di/serviceLocator';
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 import { getLogger } from '@/core/logging/debugLogger';
 import { StepLogger } from '@/core/logging/stepLogger';
+import { readViewModeSetting } from '@/core/state/viewModePreference';
 import { getBundleUri } from '@/core/utils/bundleUri';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
 import { showOneTimeTip } from '@/core/utils/oneTimeTip';
@@ -303,10 +304,9 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand<WizardInitia
         const allProjects = await this.stateManager.getAllProjects();
         const existingProjectNames = allProjects.map((p) => p.name);
 
-        // Get view mode setting
-        const config = vscode.workspace.getConfiguration('demoBuilder');
-        const projectsViewMode = config.get<'cards' | 'rows'>('projectsViewMode', 'cards');
+        const projectsViewMode = readViewModeSetting('projects');
 
+        const config = vscode.workspace.getConfiguration('demoBuilder');
         // Get block library default settings (single array setting)
         const blockLibraryDefaults = config.get<string[]>('blockLibraries.defaults', []);
 

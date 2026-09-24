@@ -100,7 +100,6 @@ export {
     handleRenameProject,
     handleResetProject,
     handleSetProjectPinned,
-    handleSetViewModeOverride,
     handleStartDemo,
     handleStopDemo,
 } from '@/features/projects-dashboard/handlers/dashboardHandlers';

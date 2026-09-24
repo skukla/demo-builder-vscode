@@ -26,7 +26,6 @@ import {
     handleRenameProject,
     handleOpenHelp,
     handleOpenSettings,
-    handleSetViewModeOverride,
     handleOpenAiForProject,
     handleSetProjectPinned,
 } from './dashboardHandlers';
@@ -36,6 +35,7 @@ import {
 } from '@/core/vscode/operationProgress';
 import { handleAnswerOperationPrompt } from '@/core/vscode/operationPrompt';
 import { handleOpenDebugLogs } from '@/features/dashboard/handlers/panelNavigationHandlers';
+import { handleSetViewModeOverride } from '@/core/handlers/viewModeHandler';
 import { defineHandlers } from '@/types/handlers';
 
 /**

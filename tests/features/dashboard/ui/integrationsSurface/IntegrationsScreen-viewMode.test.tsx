@@ -52,7 +52,8 @@ describe('IntegrationsScreen — cards or rows', () => {
         });
 
         expect(screen.getByTestId('grid')).toHaveAttribute('data-view-mode', 'rows');
-        expect(getClient().postMessage).toHaveBeenCalledWith('setIntegrationsViewModeOverride', {
+        expect(getClient().postMessage).toHaveBeenCalledWith('setViewModeOverride', {
+            list: 'integrations',
             viewMode: 'rows',
         });
 
@@ -61,7 +62,8 @@ describe('IntegrationsScreen — cards or rows', () => {
         });
 
         expect(screen.getByTestId('grid')).toHaveAttribute('data-view-mode', 'cards');
-        expect(getClient().postMessage).toHaveBeenLastCalledWith('setIntegrationsViewModeOverride', {
+        expect(getClient().postMessage).toHaveBeenLastCalledWith('setViewModeOverride', {
+            list: 'integrations',
             viewMode: 'cards',
         });
     });

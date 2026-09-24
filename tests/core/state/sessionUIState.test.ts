@@ -5,7 +5,8 @@
  * This singleton manages panel visibility and view mode overrides.
  */
 
-import { sessionUIState, ViewMode } from '@/core/state/sessionUIState';
+import { sessionUIState } from '@/core/state/sessionUIState';
+import type { ViewMode } from '@/types/viewMode';
 
 describe('sessionUIState', () => {
     // Reset state before each test to ensure isolation
@@ -18,31 +19,35 @@ describe('sessionUIState', () => {
             expect(sessionUIState.isLogsViewShown).toBe(false);
         });
 
-        it('should default viewModeOverride to undefined', () => {
-            expect(sessionUIState.viewModeOverride).toBeUndefined();
-        });
-
-        it('defaults the integrations view override to undefined', () => {
-            expect(sessionUIState.integrationsViewModeOverride).toBeUndefined();
+        it('holds no view choice for any list', () => {
+            expect(sessionUIState.getViewModeOverride('projects')).toBeUndefined();
+            expect(sessionUIState.getViewModeOverride('integrations')).toBeUndefined();
         });
     });
 
-    // The integrations screen's toggle is its own choice: switching the projects
-    // list to rows must not switch the integrations screen, and vice versa.
-    describe('integrationsViewModeOverride', () => {
-        it('is held apart from the projects list override', () => {
-            sessionUIState.viewModeOverride = 'rows';
-            sessionUIState.integrationsViewModeOverride = 'cards';
+    // Each list's toggle is its own choice: switching the projects list to rows
+    // must not switch the integrations screen, and vice versa.
+    describe('view mode overrides, per list', () => {
+        it('keeps each list apart', () => {
+            sessionUIState.setViewModeOverride('projects', 'rows');
+            sessionUIState.setViewModeOverride('integrations', 'cards');
 
-            expect(sessionUIState.viewModeOverride).toBe('rows');
-            expect(sessionUIState.integrationsViewModeOverride).toBe('cards');
+            expect(sessionUIState.getViewModeOverride('projects')).toBe('rows');
+            expect(sessionUIState.getViewModeOverride('integrations')).toBe('cards');
+        });
+
+        it('forgets a list\'s choice when set to undefined', () => {
+            sessionUIState.setViewModeOverride('projects', 'rows');
+            sessionUIState.setViewModeOverride('projects', undefined);
+
+            expect(sessionUIState.getViewModeOverride('projects')).toBeUndefined();
         });
 
         it('is cleared by reset', () => {
-            sessionUIState.integrationsViewModeOverride = 'rows';
+            sessionUIState.setViewModeOverride('integrations', 'rows');
             sessionUIState.reset();
 
-            expect(sessionUIState.integrationsViewModeOverride).toBeUndefined();
+            expect(sessionUIState.getViewModeOverride('integrations')).toBeUndefined();
         });
     });
 
@@ -71,32 +76,32 @@ describe('sessionUIState', () => {
         });
     });
 
-    describe('view mode override', () => {
+    describe('view mode override (the projects list, through the keyed API)', () => {
         it('should set viewModeOverride to cards', () => {
-            sessionUIState.viewModeOverride = 'cards';
+            sessionUIState.setViewModeOverride('projects', 'cards');
 
-            expect(sessionUIState.viewModeOverride).toBe('cards');
+            expect(sessionUIState.getViewModeOverride('projects')).toBe('cards');
         });
 
         it('should set viewModeOverride to rows', () => {
-            sessionUIState.viewModeOverride = 'rows';
+            sessionUIState.setViewModeOverride('projects', 'rows');
 
-            expect(sessionUIState.viewModeOverride).toBe('rows');
+            expect(sessionUIState.getViewModeOverride('projects')).toBe('rows');
         });
 
         it('should clear viewModeOverride by setting to undefined', () => {
-            sessionUIState.viewModeOverride = 'cards';
-            sessionUIState.viewModeOverride = undefined;
+            sessionUIState.setViewModeOverride('projects', 'cards');
+            sessionUIState.setViewModeOverride('projects', undefined);
 
-            expect(sessionUIState.viewModeOverride).toBeUndefined();
+            expect(sessionUIState.getViewModeOverride('projects')).toBeUndefined();
         });
 
         it('should allow changing viewModeOverride between values', () => {
-            sessionUIState.viewModeOverride = 'cards';
-            expect(sessionUIState.viewModeOverride).toBe('cards');
+            sessionUIState.setViewModeOverride('projects', 'cards');
+            expect(sessionUIState.getViewModeOverride('projects')).toBe('cards');
 
-            sessionUIState.viewModeOverride = 'rows';
-            expect(sessionUIState.viewModeOverride).toBe('rows');
+            sessionUIState.setViewModeOverride('projects', 'rows');
+            expect(sessionUIState.getViewModeOverride('projects')).toBe('rows');
         });
     });
 
@@ -110,21 +115,21 @@ describe('sessionUIState', () => {
         });
 
         it('should reset viewModeOverride to undefined', () => {
-            sessionUIState.viewModeOverride = 'cards';
+            sessionUIState.setViewModeOverride('projects', 'cards');
 
             sessionUIState.reset();
 
-            expect(sessionUIState.viewModeOverride).toBeUndefined();
+            expect(sessionUIState.getViewModeOverride('projects')).toBeUndefined();
         });
 
         it('should reset all state at once', () => {
             sessionUIState.isLogsViewShown = true;
-            sessionUIState.viewModeOverride = 'rows';
+            sessionUIState.setViewModeOverride('projects', 'rows');
 
             sessionUIState.reset();
 
             expect(sessionUIState.isLogsViewShown).toBe(false);
-            expect(sessionUIState.viewModeOverride).toBeUndefined();
+            expect(sessionUIState.getViewModeOverride('projects')).toBeUndefined();
         });
     });
 
@@ -137,7 +142,7 @@ describe('sessionUIState', () => {
                 const fresh = require('@/core/state/sessionUIState').sessionUIState;
 
                 expect(fresh.isLogsViewShown).toBe(false);
-                expect(fresh.viewModeOverride).toBeUndefined();
+                expect(fresh.getViewModeOverride('projects')).toBeUndefined();
             });
         });
     });
@@ -146,30 +151,30 @@ describe('sessionUIState', () => {
         it('should return the same instance on multiple imports', () => {
             // Modify state
             sessionUIState.isLogsViewShown = true;
-            sessionUIState.viewModeOverride = 'rows';
+            sessionUIState.setViewModeOverride('projects', 'rows');
 
             // Require the module again - should get same instance
 
             const { sessionUIState: sameInstance } = require('@/core/state/sessionUIState');
 
             expect(sameInstance.isLogsViewShown).toBe(true);
-            expect(sameInstance.viewModeOverride).toBe('rows');
+            expect(sameInstance.getViewModeOverride('projects')).toBe('rows');
         });
     });
 
     describe('type safety - ViewMode', () => {
         it('should accept cards as valid ViewMode', () => {
             const mode: ViewMode = 'cards';
-            sessionUIState.viewModeOverride = mode;
+            sessionUIState.setViewModeOverride('projects', mode);
 
-            expect(sessionUIState.viewModeOverride).toBe('cards');
+            expect(sessionUIState.getViewModeOverride('projects')).toBe('cards');
         });
 
         it('should accept rows as valid ViewMode', () => {
             const mode: ViewMode = 'rows';
-            sessionUIState.viewModeOverride = mode;
+            sessionUIState.setViewModeOverride('projects', mode);
 
-            expect(sessionUIState.viewModeOverride).toBe('rows');
+            expect(sessionUIState.getViewModeOverride('projects')).toBe('rows');
         });
     });
 });
