@@ -268,7 +268,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-13` | feature | └ [An installed integration takes an update: new code, then Commerce brought to it](2026-09-17-integration-updates.md) | — | high | active |
 | `AB-14` | question | └ [Where does an ERP price go when the project also has ACO?](2026-09-17-erp-pricing-to-aco.md) | PL-60 | low | gated |
 | `AB-15` | fix | └ [Refuse an ERP integration that would collide with another project's](2026-09-17-erp-integration-conflicting-setups.md) | AB-23 | med | active |
-| `AB-16` | feature | └ [One integration, several ERPs](2026-09-17-erp-integration-several-erps.md) | AB-23 | med | backlog |
+| `AB-16` | feature | └ [One integration, several ERPs](2026-09-17-erp-integration-several-erps.md) | AB-23 | med | active |
 | `AB-17` | question | └ [Should each system and integration get its own Adobe workspace?](2026-09-17-workspace-per-system.md) | — | high | shipped |
 | `AB-18` | fix | └ [A Commerce product profile the SC is not a developer on locks them out of their own project](2026-09-17-accs-subscription-makes-project-read-only.md) | — | high | backlog |
 | `AB-19` | feature | └ [Ask the ERP live whether it can ship this, and when](2026-09-18-live-availability-check.md) | — | med | active |
@@ -298,7 +298,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-26q` | feature | └ [Screen redesign 4 — settings and journal](2026-09-24-erp-ui-settings-journal.md) | AB-26j | med | built |
 | `AB-26r` | feature | └ [Credit memo and Repeat order — the way back from invoiced and cancelled](2026-09-24-erp-credit-memo.md) | AB-26g | med | backlog |
 | `AB-26s` | feature | └ [Order to cash — the payment leg (incoming payment, open items, company balance)](2026-09-24-erp-payment-leg.md) | AB-26b, AB-26r | med | backlog |
-| `AB-26t` | feature | └ [The routing integration — one Commerce order split across ERP pairs](2026-09-24-erp-routing-integration.md) | AB-16, AB-26j | high | gated |
+| `AB-26t` | feature | └ [The routing integration — one Commerce order split across ERP pairs](2026-09-24-erp-routing-integration.md) | AB-16, AB-26j | high | superseded |
 | `AB-26u` | feature | └ [The walk-through — what to look at in the ERP, what to look at in Commerce, and how each relates](2026-09-24-erp-walkthrough.md) | AB-26e, AB-26m, AB-26l | high | built |
 | `AB-26v` | feature | └ [Reconciling partial invoices against one Commerce order — a customization opportunity](2026-09-24-erp-partial-invoice-reconciliation.md) | — | med | backlog |
 | `PL-24` | feature | [Component updates cannot follow an environment-variable rename](2026-08-30-env-var-rename-migration.md) | — | med | backlog |

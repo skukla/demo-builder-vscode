@@ -631,3 +631,12 @@ part" and "report this part's outcome" become an internal action invocation and 
 record when everything lives in one app. The relay material shows both shapes side by
 side, "how the demo deploys it and why" beside "how you would deploy it and why", so the SC
 never explains away a workspace.
+
+### 12b. Decided: one integration, several ERPs (owner, 2026-09-24, later the same day)
+
+§3's "its own integration" and §12a's two shapes resolve to the customer's shape: ONE ERP
+integration serving one or more configured targets, with the routing consumer inside it
+(pass-through for one target) and the mock ERPs as separate systems. AB-16 carries the
+build; AB-26t is superseded by it. The single-ERP skeleton is nailed down first — merged,
+proven live, its record true — and the target list grows out of it. What §12 says about
+the pattern stands unchanged; only the app boundary moved.

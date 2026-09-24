@@ -5,8 +5,8 @@ area: app-builder
 parent: AB-26
 needs: [AB-16, AB-26j]
 value: high
-status: gated
-waiting-on: the order-attributes validation for Q-num (a credential). Q2 and S1 are decided; AB-16 still blocks
+status: superseded
+superseded-by: AB-16
 ---
 
 # The routing integration — one Commerce order split across ERP pairs
@@ -31,3 +31,4 @@ Harness with TWO in-process ERPs behind two integration copies and one fake Comm
 - 2026-09-24  2026-09-24, owner: the customer is not bound by our constraints and would likely fold routing into one app as namespaced action groups (one consumer, per-ERP handler groups, a shared library). Recorded as research §12a: same pattern, two deployment shapes; the demo keeps separate pieces for Demo Builder's reuse and reversibility, and the router is to be written as a library plus thin wrappers so the customer re-homes it rather than rewrites it. The relay material shows both shapes side by side
 - 2026-09-24  docs(research): one routing pattern, two deployment shapes — the demo's and the customer's (`5836b5a2a`)
 - 2026-09-24  2026-09-24: may fold into AB-16 as the routing consumer inside the one ERP integration (pass-through with one target) if the owner confirms the 'one integration, several ERPs' shape; the separate-app decision of this morning would then be superseded. Not rewritten yet
+- 2026-09-24  2026-09-24: superseded by AB-16 — the routing consumer lives inside the one ERP integration (pass-through with one target); the seam design (S1–S4), the nine moments and research §12's pattern carry over as AB-16's routing slice
