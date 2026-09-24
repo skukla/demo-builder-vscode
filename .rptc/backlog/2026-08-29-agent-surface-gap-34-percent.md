@@ -73,7 +73,7 @@ are real, we want 2 of them, and the scan should stop counting the other 37".
 
 ## Why this is not AI-1b
 
-`AI-1b` asks the inverse question — 104 tools exist and agents reach 20 of them,
+`AI-1b` asks the inverse question — 104 tools existed and agents reached 20 of them (2026-08-25),
 so what is wrong with the ones we HAVE. This asks what is missing. Both feed
 `AI-1`; neither answers the other. A tool can be both present and unused
 (`AI-1b`) while a job has no tool at all (here).

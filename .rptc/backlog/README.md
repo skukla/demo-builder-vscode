@@ -192,7 +192,7 @@ each item's own file; what has already landed against an item is in its
 |---|---|---|---|---|---|
 | `AI-1` | epic | [Is the surface good enough for an agent to do the work?](epic-ai-surface-good-enough.md) | — | high | open |
 | `AI-1a` | question | └ [AI-surface coverage: do the MCP tools, skills and agents empower an agent to USE the extension?](2026-08-16-mcp-surface-for-sc-design-work.md) | AI-1c | high | active |
-| `AI-1b` | question | └ [104 tools, and agents reach 20 of them](2026-08-25-agents-barely-use-the-tool-surface.md) | AI-1c | high | open |
+| `AI-1b` | question | └ [104 tools, and agents reach 20 of them (measured 2026-08-25; 121 tools now)](2026-08-25-agents-barely-use-the-tool-surface.md) | AI-1c | high | open |
 | `AI-1c` | feature | └ [The other half of suggestions: finding holes in OUR tools](2026-08-26-find-the-gaps-in-our-own-surface.md) | — | high | shipped |
 | `AI-1d` | feature | └ [Journeys, not prompts, are what the battery should measure](2026-08-26-journeys-not-prompts-are-the-battery.md) | AI-1c | high | shipped |
 | `AI-1e` | feature | └ [Agent round-trip optimisation — four measured candidates](2026-08-24-agent-round-trip-optimisation.md) | AI-1c | med | shipped |
@@ -449,7 +449,7 @@ the table cannot hold: why the layers are ordered this way.*
 **A** — 3 items
 
 - `AI-1a` [AI-surface coverage: do the MCP tools, skills and agents empower an agent to USE the extension?](2026-08-16-mcp-surface-for-sc-design-work.md) — active
-- `AI-1b` [104 tools, and agents reach 20 of them](2026-08-25-agents-barely-use-the-tool-surface.md) — open
+- `AI-1b` [104 tools, and agents reach 20 of them (measured 2026-08-25; 121 tools now)](2026-08-25-agents-barely-use-the-tool-surface.md) — open
 - `PL-22` [93% was the ceiling, not the norm — mutation scores fall as async density rises](2026-08-30-mutation-score-beyond-confident-modules.md) — shipped
 
 **B** — 6 items

@@ -24,7 +24,7 @@ needs (`AI-1a`).
 | | |
 |---|---|
 | `AI-1a` | Agents have no visual feedback on a storefront |
-| `AI-1b` | 105 tools, and agents reach 20 of them |
+| `AI-1b` | 104 tools, and agents reach 20 of them (measured 2026-08-25) |
 | `AI-1c` | Find the gaps in our own surface — **the evidence engine** |
 | `AI-1d` | Measurement battery (plan: `evaluation-mode/measurement/`) |
 | `AI-1e` | Agent round-trip optimisation |

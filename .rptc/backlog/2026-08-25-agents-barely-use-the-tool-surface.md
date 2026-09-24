@@ -8,7 +8,7 @@ value: high
 status: open
 layer: A
 ---
-# 104 tools, and agents reach 20 of them
+# 104 tools, and agents reach 20 of them (measured 2026-08-25; 121 tools now)
 
 ## Index hook
 
