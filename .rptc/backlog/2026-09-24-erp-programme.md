@@ -56,3 +56,4 @@ routing integration) · AB-26r (credit memo) · AB-26s (the payment leg) · AB-2
 - 2026-09-24  Merge develop into loop/2026-09-24-erp-programme (180 commits; 120 files resolved hunk by hunk) (`496d8eff5`)
 - 2026-09-24  feat(app-builder): the ERP's first sync from Commerce starts when its integration is installed (`daca8e0d9`)
 - 2026-09-24  feat(ai): lookup_erp_record and follow_erp_order read Commerce companies and orders through the ERP integration (`d6ac0c337`)
+- 2026-09-24  refactor(ai): the two ERP reads take the get_ prefix the read-only name rule recognises (`18c2fe6ea`)
