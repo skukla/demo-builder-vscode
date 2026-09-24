@@ -276,7 +276,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-23` | feature | └ [Every integration and system gets its own Adobe workspace](2026-09-20-workspace-per-integration.md) | — | high | active |
 | `AB-25` | epic | └ [The two-way ERP integration, as the two business users experience it](2026-09-22-erp-two-way-experience.md) | — | med | active |
 | `AB-26` | epic | └ [The ERP programme — every ERP slice, in one order, run by the loop](2026-09-24-erp-programme.md) | — | high | active |
-| `AB-27` | fix | └ [The first add of an integration dies on a Console 504 that the second add gets past](2026-09-24-console-first-try-504-on-credential-read.md) | — | high | backlog |
+| `AB-27` | fix | └ [The first add of an integration dies on a Console 504 that the second add gets past](2026-09-24-console-first-try-504-on-credential-read.md) | — | high | built |
 | `AB-21` | feature | [An integration's settings live on its tile, not on Configure Project](2026-09-18-integration-settings-on-tile.md) | — | med | active |
 | `AB-22` | feature | [Import a colleague's integration, and ask only for what it really needs](2026-09-18-import-colleague-integration.md) | AB-21 | med | backlog |
 | `AB-24` | chore | [Stop creating a Stage workspace](2026-09-20-drop-the-stage-workspace.md) | — | med | built |

@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-9
 needs: []
 value: high
-status: backlog
+status: built
 ---
 
 # The first add of an integration dies on a Console 504 that the second add gets past
@@ -52,3 +52,7 @@ creating nothing, a refusal never retried) and `tests/core/utils/transientRetry.
 - Not run live yet. The owner's next first add of an integration is the check.
 
 Filed 2026-09-24.
+
+## Shipped so far
+
+- 2026-09-24  fix(app-builder): a 504 on the deploy-time credential read is retried once, so a first add survives it (`964ff4950`)
