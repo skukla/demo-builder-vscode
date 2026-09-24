@@ -49,3 +49,4 @@ routing integration) · AB-26r (credit memo) · AB-26s (the payment leg) · AB-2
 - 2026-09-24  docs(backlog): AB-26a and AB-26b active — the loop's first two slices under way (`7100ade98`)
 - 2026-09-24  docs(handoff): loop report through the business structure slice (`fc91c5e66`)
 - 2026-09-24  docs(rptc): the loop stopped on the owner's word — report closed, PL-36 back to the backlog (`5b3a25a2e`)
+- 2026-09-24  docs(rptc): the owner's answers to O4, O5, O8 and S1; Q-num points at custom order attributes for both ERPs (`afeecb448`)
