@@ -88,7 +88,7 @@ export function validateRestPath(raw: unknown): { path: string } | { error: stri
  * catalog row requires the API and that has a workspace of its own, else the
  * project's workspace. Deterministic and stated, rather than probing credentials.
  */
-export function restWorkspaceId(project: Project): string | undefined {
+export function restWorkspaceId(project: Pick<Project, 'adobe' | 'appBuilderComponents'>): string | undefined {
     const catalog = getAppBuilderComponentCatalog();
     for (const [id, state] of Object.entries(project.appBuilderComponents ?? {})) {
         if (state.kind !== 'integration' || !state.workspace?.id) continue;

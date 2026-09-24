@@ -15,7 +15,9 @@
 import { resetCommerceRestTokens, restWorkspaceId, validateRestPath } from '@/features/ai/server/commerceRestClient';
 import { registerCommerceRestTool } from '@/features/ai/server/commerceRestTool';
 import type { McpToolSchema } from '@/features/ai/server/mcpToolServer';
+import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => ({
@@ -55,10 +57,15 @@ const ACCS_PROJECT = {
     },
     componentInstances: {},
     appBuilderComponents: {
-        mesh: { kind: 'mesh', status: 'deployed' },
-        'erp-integration': { kind: 'integration', status: 'deployed', workspace: { id: 'ws-erp', name: 'AcmeERP' } },
+        mesh: { kind: 'mesh', status: 'deployed', source: { owner: 'skukla', repo: 'mesh' } },
+        'erp-integration': {
+            kind: 'integration',
+            status: 'deployed',
+            source: { owner: 'skukla', repo: 'commerce-erp-integration' },
+            workspace: { id: 'ws-erp', name: 'AcmeERP' },
+        },
     },
-};
+} satisfies Pick<Project, 'adobe' | 'appBuilderComponents'> & Record<string, unknown>;
 
 const PAAS_PROJECT = {
     name: 'paas-demo',
@@ -90,10 +97,13 @@ const getS2SDeployCredentials = jest.fn();
 const stateManager = createMockStateManager({ getCurrentProject });
 
 function ctx(withAuth = true): HandlerContext {
-    return {
-        stateManager,
-        authManager: withAuth ? ({ isAuthenticated, getS2SDeployCredentials } as unknown as HandlerContext['authManager']) : undefined,
-    } as unknown as HandlerContext;
+    const context = createMockHandlerContext({ stateManager });
+    if (withAuth) {
+        Object.assign(context.authManager as object, { isAuthenticated, getS2SDeployCredentials });
+    } else {
+        context.authManager = undefined;
+    }
+    return context;
 }
 
 /** Answers the IMS token call, then the REST call, in order. */
@@ -235,13 +245,18 @@ describe('validateRestPath', () => {
 
 describe('restWorkspaceId', () => {
     it("prefers the workspace of an integration whose entry requires ACCS-REST-API, else the project's", () => {
-        expect(restWorkspaceId(ACCS_PROJECT as never)).toBe('ws-erp');
-        const kitOnly = {
-            ...ACCS_PROJECT,
+        expect(restWorkspaceId(ACCS_PROJECT)).toBe('ws-erp');
+        const kitOnly: Pick<Project, 'adobe' | 'appBuilderComponents'> = {
+            adobe: ACCS_PROJECT.adobe,
             appBuilderComponents: {
-                'commerce-integration-starter-kit': { kind: 'integration', status: 'deployed', workspace: { id: 'ws-kit', name: 'Kit' } },
+                'commerce-integration-starter-kit': {
+                    kind: 'integration',
+                    status: 'deployed',
+                    source: { owner: 'adobe', repo: 'commerce-integration-starter-kit' },
+                    workspace: { id: 'ws-kit', name: 'Kit' },
+                },
             },
         };
-        expect(restWorkspaceId(kitOnly as never)).toBe('ws-project');
+        expect(restWorkspaceId(kitOnly)).toBe('ws-project');
     });
 });

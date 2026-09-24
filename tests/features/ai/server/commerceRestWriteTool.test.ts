@@ -10,6 +10,7 @@ import { registerCommerceRestWriteTool } from '@/features/ai/server/commerceRest
 import { AGENT_ALERT_COPY } from '@/features/ai/server/agentAlertCopy';
 import type { McpToolSchema } from '@/features/ai/server/mcpToolServer';
 import type { HandlerContext } from '@/types/handlers';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => ({
@@ -47,7 +48,12 @@ const ACCS_PROJECT = {
     },
     componentInstances: {},
     appBuilderComponents: {
-        'erp-integration': { kind: 'integration', status: 'deployed', workspace: { id: 'ws-erp', name: 'AcmeERP' } },
+        'erp-integration': {
+            kind: 'integration',
+            status: 'deployed',
+            source: { owner: 'skukla', repo: 'commerce-erp-integration' },
+            workspace: { id: 'ws-erp', name: 'AcmeERP' },
+        },
     },
 };
 
@@ -63,11 +69,11 @@ const getCurrentProject = jest.fn();
 const isAuthenticated = jest.fn();
 const getS2SDeployCredentials = jest.fn();
 const stateManager = createMockStateManager({ getCurrentProject });
-const ctx = (): HandlerContext =>
-    ({
-        stateManager,
-        authManager: { isAuthenticated, getS2SDeployCredentials } as unknown as HandlerContext['authManager'],
-    }) as unknown as HandlerContext;
+const ctx = (): HandlerContext => {
+    const context = createMockHandlerContext({ stateManager });
+    Object.assign(context.authManager as object, { isAuthenticated, getS2SDeployCredentials });
+    return context;
+};
 
 function answering(restStatus: number, restBody: string) {
     return jest
