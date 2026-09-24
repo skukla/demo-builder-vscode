@@ -90,3 +90,4 @@ So the shape is TWO generic tools over the whole REST surface, not per-entity to
 ## Shipped so far
 
 - 2026-09-24  feat(ai): run_commerce_rest reads the Commerce REST API with the workspace credential (AB-29, read half) (`877793333`)
+- 2026-09-24  feat(ai): write_commerce_rest changes Commerce data over its REST API, confirm-gated with a consent dialog (AB-29) (`3955e0550`)
