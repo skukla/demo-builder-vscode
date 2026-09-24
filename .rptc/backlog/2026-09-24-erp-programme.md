@@ -38,3 +38,7 @@ AB-26i (pricing conditions) · AB-26j (business structure) · AB-26k (product ma
 AB-26l (Home and search) · AB-26m (the entity map) · AB-26n–q (the four screen redesigns) ·
 AB-19, AB-20 (live webhooks, existing) · AB-23, AB-16 (second pair, existing) · AB-26t (the
 routing integration) · AB-26r (credit memo) · AB-26s (the payment leg).
+
+## Shipped so far
+
+- 2026-09-24  docs(backlog): the ERP programme as an epic with nineteen slice items, dependencies and verification blocks (`6b3cccb2b`)
