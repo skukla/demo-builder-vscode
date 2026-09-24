@@ -512,3 +512,32 @@ Each is one decision or one action, minutes each:
 7. **Building on built, unmerged items.** The loop built the structure slice on top of
    items that are built but not merged, following the programme's order of work. Say if
    the merge should come first from here on.
+
+## Validation still owed (added 2026-09-24, afternoon — owner: "we are not done validating")
+
+What the loop built last night and this morning has been gated and headless-checked, and
+today the add/remove/update paths were proven live on Bodea. The DEMO CONTENT paths have not
+been run against a deployed pair by a person. Each line is one live check; none needs code.
+
+1. **The sync baseline and a first import.** Bodea's ERP holds no partners and no products
+   (`lastImportAt: null`). Run the integration's sync from Commerce once and confirm the
+   ERP's Products, Customers and Pricing screens fill, and the Mapping tab's ERP figures
+   match. Everything below reads better with data in it.
+2. **The ERP screens the loop built** (product master with availability and sales status,
+   Settings with numbering and currency, the four list screens with their filters and
+   badges, the document trail with the timeline). Headless fingerprints passed; nobody has
+   looked at them with records present.
+3. **The credit hold round trip**: a credit hold in the ERP puts the Commerce order on hold
+   and Confirm refuses until release; a hold made in Commerce Admin holds the ERP order too
+   (decision 4). Neither direction has been seen on a live store.
+4. **The Mapping tab on a real Commerce Admin**, beside App Management's own settings form
+   (AB-26m's handoff), including the lookup on the buying and item cards.
+5. **The walk-through** (`commerce-erp-integration/docs/walkthrough.md`) walked once against
+   the deployed pair; correct what reads differently (AB-26u).
+6. **The demo setup guide** (`docs/demo-setup.md`): say whether the two-website and two-ERP
+   stories are the ones to prepare (AB-26j), now that AB-16 is decided as one integration
+   with targets.
+7. **Decisions 3 to 7 above**, each a yes or a sentence; and the credit memo question (O5).
+
+Order of the rest of the release path, agreed 2026-09-24: the AB-16 stored-shape read,
+develop merged into this branch, then this list, then the cut from develop.

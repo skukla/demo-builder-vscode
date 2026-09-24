@@ -133,6 +133,45 @@ ONE workspace, which is no longer the plan. What replaces them belongs to the sh
 wins — for one-integration-per-ERP, it is AB-17's step 6: two copies with different
 `metadata.id` on one Commerce, and the first copy's webhooks untouched.
 
+## Stored shapes the target list will move (read 2026-09-24, before the baseline release)
+
+Read once so the single-ERP baseline can ship knowing what a target list changes. Nothing
+here is built; the point is that every field below has an obvious one-target migration,
+so releasing the baseline first costs a mechanical migration and nothing more.
+
+**Extension side, per pair today.**
+
+| Where | Field | Under targets |
+|---|---|---|
+| `componentConfigs['erp-integration']` | `ERP_DISPLAY_NAME` (typed at add, else the catalog default) | one name per target |
+| `appBuilderComponents['demo-erp'].providesEnvVars` | `ERP_BASE_URL` (the ERP's deployed web base) | one address per target |
+| deploy env of the integration | `ERP_BASE_URL`, `ERP_DISPLAY_NAME` as single action params | a target list the actions read (a config the integration owns, not N env vars) |
+| `appBuilderComponents['erp-integration']` | `workspace` (own, shared with its ERP), `commerceAppId`, `name` ("<ERP> Integration"), `installation`, `updateAvailable` | unchanged; `name` reverts to the catalog's or names the targets |
+| the pair model | `boundTo` 1:1, `pairedInstanceId`, `findMissingProvider`, `linkBroughtSystem`, copy numbering (`erp-integration-2` ↔ `demo-erp-2`) | the ONE real shape change: several systems bound to one integration. Every helper above assumes one partner |
+| SecretStorage | the ERP's screen key; the ERP login the integration uses | one of each per target (the ERP side already keys them per ERP) |
+
+**Integration side, per Commerce scope (global, website, store view) through
+`@adobe/aio-commerce-lib-config`** (`app.commerce.config.ts` → `businessConfig.schema`,
+read by `src/lib/settings.js`):
+
+| Setting | Under targets |
+|---|---|
+| `orders_send`, `orders_hold_offline`, `orders_status_on_confirm` | integration-wide, unchanged |
+| `pricing_contract_prices`, `pricing_discount_ceiling` | per target (each ERP prices its own products) |
+| `structure_sales_org`, `structure_sales_org_name` | per target per scope (each ERP has its own structure) |
+| `structure_order_prefix` | per target — the number's owner |
+| `structure_owns`, `structure_owns_sources` (and the attribute rule) | per target — the routing rule IS the target's ownership |
+
+**ERP side** (appearance, numbering, currency, company structure): already per ERP in the
+ERP's own database. Nothing moves.
+
+**The migration for a project on the baseline:** its one pair becomes target #1 — address
+from `ERP_BASE_URL`, name from `ERP_DISPLAY_NAME`, its `structure_*` and `pricing_*` values
+at each scope copied under that target. One-to-one, no information lost, no user input.
+
+**Verdict:** release the baseline. The only structural change is the pair model going from
+one partner to several, and that is AB-16's own work either way.
+
 ## Shipped so far
 
 - 2026-09-20  Rewritten around AB-17's answer: the renaming work is deleted (a workspace each gives every ERP its own namespace and database), and one-integration-per-ERP becomes a choice rather than an impossibility. Now waits on AB-23.
