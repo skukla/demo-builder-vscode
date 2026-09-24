@@ -47,30 +47,28 @@ own shipment behaviour, inside the exception, and the ERP does NOT deduct stock 
 Ordered by how much the ERP would stop looking like the system of record if an audience
 pressed on it.
 
-### 1. A Commerce-side shipment or invoice leaves the ERP wrong (HIGH)
+### 1. A Commerce-side shipment or invoice leaves the ERP wrong (HIGH) — IN SCOPE
 
 If an SC (or the merchant in the story) ships or invoices an order **in Commerce Admin**, the
-ERP still says *confirmed*. Nothing subscribes to Commerce's shipment or invoice events. For
-a system of record that is the one failure that cannot be explained away on stage.
+ERP still says *confirmed*. Nothing subscribes to Commerce's shipment or invoice events.
+
+**Owner decision, 2026-09-24: build it.** The first draft of this section leaned toward
+skipping it because the demo script fulfils from the ERP. That was reasoning from the script,
+not the goal: a system of record that a click in Commerce Admin can make wrong is not one,
+and "what if the warehouse ships it in Commerce?" is exactly where a real customer probes.
+In a real business fulfilment happens where the goods are, and a real ERP integration
+carries a Commerce-side shipment back so the ERP's record matches.
 
 **Fix.** Subscribe to `observer.sales_order_shipment_save_commit_after` and
-`observer.sales_order_invoice_save_commit_after` (both exist in Commerce eventing; the kit's
-`order-commerce/*` route is the shape), and tell the ERP: `POST orders/:n/shipments` (lines
-from the Commerce shipment's items by `order_item_id` → the ERP's `commerceItemId`) then
-`…/post`; `POST orders/:n/invoice`. **The loop has to be closed by design:** the ERP's post
-raises `order.shipped`, which would create a SECOND Commerce shipment. Two honest ways:
-
-- (a) the ERP takes an `origin: { event }` on these moves (the pattern `journalOrder` already
-  uses for imports), journals the inbound entry, and **does not emit** the outbound event
-  when an origin is present — "this came from Commerce, Commerce already has it";
-- (b) the handler carries a marker Commerce ignores. There is none — Commerce has no
-  idempotency key on shipments.
-
-(a) is the one. It is an ERP change (`fulfilment.js`: skip `emit` when `origin` given; journal
-via `receive`) plus a new pair of Commerce-event handlers in the integration, and a contract
-addition (`origin` on the move requests). **Owner decision needed:** this makes Commerce
-Admin a second place orders are fulfilled from, which the demo story (decision 19) does not
-show — is it wanted, or is "fulfil only from the ERP" the rule and the gap acceptable?
+`observer.sales_order_invoice_save_commit_after` (the kit's `order-commerce/*` route is the
+shape) and tell the ERP: `POST orders/:n/shipments` (lines from the Commerce shipment's
+items by `order_item_id` → the ERP's `commerceItemId`) then `…/post`; `POST orders/:n/invoice`.
+**The loop is closed by design:** the ERP's post would raise `order.shipped` and create a
+SECOND Commerce shipment. So the moves take an `origin: { event }` (the pattern
+`journalOrder` already uses for imports); with an origin present the ERP journals the
+inbound entry and does **not** emit the outbound event — "this came from Commerce, Commerce
+already has it". Contract: `origin` on the move requests. Changing a subscription after
+install needs an uninstall/install cycle (README).
 
 ### 2. Credit hold is the missing beat, and it is bidirectional (HIGH)
 
@@ -78,17 +76,16 @@ Plan §6.1 / slice 3: an over-limit or blocked customer's order is **created and
 Confirm and Create shipment refuse; Release / Reject clear it. Demo step 11 depends on it and
 nothing else on the path is missing.
 
-**The Commerce half.** Commerce has `POST orders/{id}/hold` and `POST orders/{id}/unhold`,
-which put an order in status *On Hold* and back. A held ERP order → a held Commerce order
-is the most convincing "the ERP decided" moment the integration can show, and it is
-**reversible by construction** (unhold). Per the standard: can Commerce undo it? Yes. Where is
-it ledgered? It need not be — detach should simply unhold every order the ERP holds
-(read from the ERP's own order list, as it clears `ext_order_id`). Reject → the existing
-cancel event with reason *Credit rejected*.
+**The Commerce half — owner decision 2026-09-24: build it.** Commerce has
+`POST orders/{id}/hold` and `POST orders/{id}/unhold`, which put an order in status *On Hold*
+and back. A held ERP order → a held Commerce order is the most convincing "the ERP decided"
+moment the integration can show, and it is **reversible by construction** (unhold). Per the
+standard: can Commerce undo it? Yes. Where is it ledgered? It need not be — detach unholds
+every order the ERP holds (read from the ERP's own order list, as it clears `ext_order_id`).
+Reject → the existing cancel event with reason *Credit rejected*.
 
 New event `be-observer.sales_order_hold` (value: the order payload + `held: true|false` +
-`reason`), one handler, contract change. **Owner decision:** the hold-in-Commerce half —
-show it, or keep the hold ERP-side only?
+`reason`), one handler, contract change.
 
 ### 3. `stockSourceCode` shipped, but the ERP cannot name a warehouse (MEDIUM)
 
@@ -127,14 +124,36 @@ journal shows both directions. No change.
   documents; the shipment event carries that shipment's items and `stockSourceCode`
   (the handler already read and defaulted it). Contract vendored.
 
+### 7. Business structure: nothing maps Commerce's websites to ERP sales organisations (MEDIUM)
+
+Every partner carries `salesOrg`, defaulting to `'1000'` (`lib/partners.js importPartners`);
+the mirror never sets it (no `salesOrg` anywhere in the integration's `src/`), orders carry no
+sales organisation of their own, and the ERP has no screen for the structure. So the
+customer and order documents print "Sales organisation 1000" for everyone — present and
+meaningless, the failure the realism audit ranks worst.
+
+An ERP's business structure (SAP: sales organisation → distribution channel → division;
+BC: company → responsibility centre) and Commerce's (website → store → store view) are two
+hierarchies that a real integration MAPS, and the mapping is configured on the Commerce side
+because that is where the merchant's structure is owned. The integration already has the
+mechanism: its settings are scoped per Default Config / website / store / store view
+(`businessConfig` in `app.commerce.config.ts`, read by `lib/settings.js`, edited in the
+Admin screen's settings view with a scope picker). A `sales_org` setting in that schema —
+"ERP sales organisation for this website", default `1000` — makes the mapping a per-website
+merchant setting on the injected Admin screen. Then: the order request carries the website's
+`salesOrg` (contract: `order.request` gains it), a partner's sales organisation comes from the
+website its company's users last ordered through (or stays the default), and the ERP's
+Settings gains a read-only **Organisation** card listing the sales organisations it has seen
+and how many customers and orders each holds. Two ERPs on two websites (the multi-ERP
+research) then read as two sales organisations, which is what they are.
+
 ## Recommended order
 
-1. **Credit hold, ERP side** (slice 3's remainder) — needed for demo step 11, no cross-repo
-   change, and it is where "the ERP looks like the system of record" is most visible.
-2. **Hold → Commerce hold/unhold**, with detach unholding — after the owner's yes.
-3. **Commerce-side shipment/invoice → ERP** with origin-suppressed events — after the
-   owner's yes on whether Commerce Admin is a fulfilment surface in this demo.
-4. Warehouse names; pricing source on lines.
+1. **Credit hold, ERP side** (slice 3's remainder) — demo step 11, no cross-repo change.
+2. **Hold → Commerce hold/unhold**, with detach unholding.
+3. **Commerce-side shipment/invoice → ERP** with origin-suppressed events.
+4. **Sales organisation mapping** as a per-website setting on the Admin screen (item 7).
+5. Warehouse names; pricing source on lines.
 
 Nothing here is unattended-safe to *deploy*: 2 and 3 are new Commerce writes and event
 subscriptions, and changing a subscription after install needs an uninstall/install cycle
