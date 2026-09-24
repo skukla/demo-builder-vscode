@@ -65,3 +65,4 @@ still renders. That is a smaller claim and worth not confusing with the larger o
 - 2026-09-24  fix(gate): the CSS baseline check accepts a resting capture taken at the commit being pushed (`80b15aae0`)
 - 2026-09-23  docs(backlog): PL-63 — the CSS baseline check cannot be satisfied by a merge (`c658c93c5`)
 - 2026-09-24  BUILT — option 1 from the item: check-css-baseline.mjs accepts a resting record whose sha equals HEAD when the range is a commit range (origin/x..HEAD); the dirty-tree question (range HEAD, the convention proof) keeps the dirtyPaths rule only, proven still REFUSED by convention-proofs css-baseline-before-push. Option 2 (ask on the feature branch) not done. First real use: today's develop push carrying seven stylesheets from the integrations view-mode work.
+- 2026-09-24  fix(gate): the CSS baseline check accepts a resting capture taken at the commit being pushed (`17f7a567d`)
