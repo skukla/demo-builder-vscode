@@ -20,10 +20,18 @@
  *   3. THIS — the push refuses when the evidence is absent
  *
  * WHAT IT ASSERTS. For the stylesheets in this push, at least one RESTING capture
- * ran while one of them was modified. The record carries `dirtyPaths` — the files
- * dirty at capture time — so this is a direct question rather than a timestamp
- * guess: captures happen on a dirty tree BEFORE the commit, so comparing a capture
- * time against a commit time would reject the correct workflow.
+ * is evidence about them, one of two ways:
+ *   - it ran while one of them was MODIFIED (the record carries `dirtyPaths`, the
+ *     files dirty at capture time): the authoring workflow, where captures happen on
+ *     a dirty tree BEFORE the commit, so a timestamp comparison would reject it;
+ *   - or it ran AT THE COMMIT BEING PUSHED (the record's `sha` equals HEAD, and the
+ *     range is a commit range): the merge and cherry-pick workflow, where the
+ *     stylesheets arrive already committed and are never dirty on this branch
+ *     (PL-63, 2026-09-24 — the check had refused two releases and a push on that
+ *     path, and its only outcome there was the bypass, which is the failure mode,
+ *     not the refusal). A capture of the exact tree being pushed is stronger
+ *     evidence than one taken mid-edit, not weaker. The dirty-tree question
+ *     (`HEAD` alone, the convention proof) keeps the dirtyPaths rule only.
  *
  * WHY IT IS NOT IN `npm run gate`. Two reasons, each fatal to that placement.
  * `gate` is the inner-loop command, run constantly while iterating — and mid-edit
@@ -107,6 +115,9 @@ Capture one:
 
 The capture records itself; re-run the push once it has.
 
+A merge or cherry-pick that brought the stylesheets in already committed is not a
+reason to bypass: capture at HEAD and the record's sha satisfies this check.
+
 Genuinely cannot capture here (no browser on this machine)?
   CSS_BASELINE_BYPASS="reason" git push
 That keeps the rest of the quality gate, which --no-verify does not.
@@ -133,19 +144,30 @@ if (records === null) {
     fail(sheets, 'reports/visual-baseline/ does not exist — no capture has ever run here.');
 }
 
+const head = sh('git rev-parse HEAD');
+// The sha route answers "was THIS commit captured" — a question only a commit range
+// asks. `HEAD` alone asks about the dirty tree, where a capture of the last commit
+// says nothing about the edit sitting on top of it.
+const committedRange = range.includes('..');
 const matched = records.filter(
-    (r) => Array.isArray(r.dirtyPaths) && r.dirtyPaths.some((p) => sheets.includes(p))
+    (r) =>
+        (Array.isArray(r.dirtyPaths) && r.dirtyPaths.some((p) => sheets.includes(p))) ||
+        (committedRange && Boolean(head) && r.sha === head)
 );
 
 if (matched.length === 0) {
     fail(
         sheets,
         records.length
-            ? `${records.length} resting capture(s) recorded, none while these files were modified.`
+            ? `${records.length} resting capture(s) recorded, none while these files were modified and none at HEAD ${String(head).slice(0, 9)}.`
             : 'No resting capture has been recorded at all.'
     );
 }
 
+const how =
+    matched[0].sha === head && committedRange
+        ? 'captured at the commit being pushed'
+        : 'captured while the files were modified';
 console.log(`css-baseline: OK — ${sheets.length} stylesheet(s), baseline ${matched[0].name}`);
-console.log(`  captured ${matched[0].capturedAt} at ${String(matched[0].sha).slice(0, 9)}`);
+console.log(`  ${how}: ${matched[0].capturedAt} at ${String(matched[0].sha).slice(0, 9)}`);
 process.exit(0);
