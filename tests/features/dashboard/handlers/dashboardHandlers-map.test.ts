@@ -251,7 +251,7 @@ describe('dashboardHandlers', () => {
             //
             // lookupErpRecord + followErpOrder (60 → 62, 2026-09-24): the ERP Admin
             // page's two reads — one record as both systems hold it, one order's whole
-            // life — behind the agent tools lookup_erp_record and follow_erp_order.
+            // life — behind the agent tools get_erp_record and get_erp_order_trace.
             expect(types).toHaveLength(62);
         });
 

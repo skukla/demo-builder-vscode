@@ -62,7 +62,7 @@ const EXPECTED: Record<string, number> = {
     // 45 -> 46 on 2026-09-14: edit_added_demo renames a card in a user setting,
     // and needs no sign-in.
     // 46 -> 50 on 2026-09-24, the same merge.
-    // 50 -> 52 on 2026-09-24: lookup_erp_record and follow_erp_order declare
+    // 50 -> 52 on 2026-09-24: get_erp_record and get_erp_order_trace declare
     // no sign-in the way get_erp_status does — the handler resolves the IMS
     // identity itself and answers a typed AUTH_REQUIRED when there is none.
     none: 52,

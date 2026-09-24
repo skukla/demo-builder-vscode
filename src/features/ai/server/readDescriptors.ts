@@ -318,7 +318,7 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
         },
     },
     {
-        tool: 'lookup_erp_record',
+        tool: 'get_erp_record',
         needsAuth: false,
         readOnly: true,
         description:
@@ -335,7 +335,7 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
         },
     },
     {
-        tool: 'follow_erp_order',
+        tool: 'get_erp_order_trace',
         needsAuth: false,
         readOnly: true,
         description:

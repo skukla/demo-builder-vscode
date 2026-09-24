@@ -221,9 +221,10 @@ server IS — transport, lifecycle, scoping, security — is in
 | `check_datapack_service` | read | Check whether the Data Installer API is configured and reachable. Use before the |
 | `check_mesh` | read | Report whether the current project's API mesh is deployed and up to date |
 | `find_datapacks` | read | List Adobe Commerce sample-data datapacks the Data Installer holds. Returns one row |
-| `follow_erp_order` | read | Read one Commerce order's whole life across Commerce, the ERP integration and the |
 | `get_datapack` | read | One datapack's metadata plus which of its declared data types the service actually |
 | `get_datapack_activity` | read | The Data Installer's own request log — which packs were imported, exported or |
+| `get_erp_order_trace` | read | Read one Commerce order's whole life across Commerce, the ERP integration and the |
+| `get_erp_record` | read | Read one product (by SKU) or one B2B company (by Commerce id) as BOTH Commerce and |
 | `get_erp_status` | read | Read the ERP integration's state: the ERP's health as the integration sees it |
 | `get_integration_install_status` | read | Read an App Management integration's Commerce install state: the persisted |
 | `get_integration_settings` | read | Read one integration's Settings: each setting's current value, whether each secret |
@@ -234,7 +235,6 @@ server IS — transport, lifecycle, scoping, security — is in
 | `list_datapack_data_types` | read | The data types the Data Installer can process for one operation mode, in dependency |
 | `list_installed_datapacks` | read | Datapacks the Data Installer records as installed, and the Commerce instance each |
 | `list_runtime_packages` | read | List the packages deployed in this project's Adobe I/O Runtime namespace (its |
-| `lookup_erp_record` | read | Read one product (by SKU) or one B2B company (by Commerce id) as BOTH Commerce and |
 | `probe_shared_demo` | read | Read a colleague's demo before adding it: what kind of storefront it is (Edge Delivery or headless), |
 | `verify_ai_setup` | read | Check the project's AI setup (context files, MCP config, skills) and report status. |
 

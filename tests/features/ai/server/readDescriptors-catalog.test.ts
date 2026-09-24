@@ -70,14 +70,14 @@ const CATALOG: Row[] = [
         args: ['id'],
     },
     {
-        tool: 'lookup_erp_record',
+        tool: 'get_erp_record',
         map: dashboardHandlers,
         type: 'lookupErpRecord',
         needsAuth: false,
         args: ['id', 'sku', 'company'],
     },
     {
-        tool: 'follow_erp_order',
+        tool: 'get_erp_order_trace',
         map: dashboardHandlers,
         type: 'followErpOrder',
         needsAuth: false,

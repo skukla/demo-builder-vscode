@@ -177,8 +177,8 @@ export const TOOL_NARRATION: Record<string, string> = {
     get_integration_install_status: 'Reading the Commerce install',
     // The ERP integration's pair (plan step 05).
     get_erp_status: 'Reading the ERP status',
-    lookup_erp_record: 'Comparing a record with the ERP',
-    follow_erp_order: 'Following an order into the ERP',
+    get_erp_record: 'Comparing a record with the ERP',
+    get_erp_order_trace: 'Following an order into the ERP',
     reset_erp_records: 'Resetting the ERP records',
     open_erp_screen: "Opening the ERP's screen",
     get_agent_trace: 'Reading the agent activity',

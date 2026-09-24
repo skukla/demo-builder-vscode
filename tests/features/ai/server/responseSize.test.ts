@@ -417,8 +417,8 @@ describe('rows with no output safety net are classified', () => {
         // `handleLookupErpRecord` returns `{id, erp, lookup}` where lookup holds a
         // handful of labelled rows; `handleFollowErpOrder` returns
         // `{id, erp, orderNumber, trace}` — one order's steps.
-        'lookup_erp_record',
-        'follow_erp_order',
+        'get_erp_record',
+        'get_erp_order_trace',
         // An integration's Settings (AB-21), read before listing:
         // `handleGetIntegrationSettings` returns `{id, settings: {fields, connected}}`
         // and `saveIntegrationSettings` returns `{success, saved, settings}` —
@@ -541,12 +541,12 @@ describe('the ceiling table tracks the tool surface', () => {
         'reset_erp_records',
         // Three strings: the integration id, the ERP id and the screen address.
         'open_erp_screen',
-        // `lookup_erp_record`: a fixed set of labelled rows (three for a product,
-        // five for a company), each two short strings. `follow_erp_order`: one
+        // `get_erp_record`: a fixed set of labelled rows (three for a product,
+        // five for a company), each two short strings. `get_erp_order_trace`: one
         // order's steps — bounded by what happened to ONE order, never by the
         // project, the catalog or the instance.
-        'lookup_erp_record',
-        'follow_erp_order',
+        'get_erp_record',
+        'get_erp_order_trace',
         // One row per setting the catalog entry declares — a handful, bounded by
         // the entry, not by the project or the instance.
         'get_integration_settings',
