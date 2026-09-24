@@ -113,6 +113,16 @@ is read. Field type `text` must be confirmed against the library's supported typ
 02 (the researched page lists `list` and `dynamicList`; plain text is assumed, verified at
 build).
 
+## Where this sits (owner's gate, 2026-09-24)
+
+Before the order split, every native Commerce entity must have its ERP counterpart and a
+sync in both directions where one belongs. The entity coverage matrix in
+`../../research/erp-bidirectional-review/research.md` is that check; this plan closes its
+"planned" rows (website → sales organisation, Store Information, the company's legal
+identity, currency). The matrix's open gaps that this plan does NOT close — Commerce-side
+shipment/invoice/cancel/hold flowing back to the ERP, and per-source stock changes — sit
+before it in the build order there. Build this plan fifth, after those.
+
 ## Steps
 
 | # | Step | Repo(s) | Lands |
