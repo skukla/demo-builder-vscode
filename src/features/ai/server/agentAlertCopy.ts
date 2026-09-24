@@ -135,6 +135,15 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         target: ['projectName', 'title'],
         sessionGrant: false,
     },
+    write_commerce_rest: {
+        action: 'Change data in the Commerce store',
+        consequence:
+            "Sends this write to the project's live Commerce instance: it changes real store data, and a delete can't be undone.",
+        // The method and the path ARE the decision: "DELETE customers/43" reads as
+        // what it is. The body can be long and is in the debug log.
+        target: ['method', 'path'],
+        sessionGrant: false,
+    },
     delete_adobe_workspace: {
         action: 'Delete an Adobe workspace',
         consequence:

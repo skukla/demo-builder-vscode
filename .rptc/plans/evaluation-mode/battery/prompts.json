@@ -913,6 +913,15 @@
     "why": "2026-09-24: this exact question came up live and nothing could answer it — run_commerce_query is shopper GraphQL with no customer read. The REST customers/search is the only path, and the tool signs it with the workspace credential. get_erp_record cannot help: it takes a company id or SKU, not a customer."
   },
   {
+    "id": "commerce-rest-write-credit",
+    "prompt": "Raise the credit limit of Commerce company 12 to 50000 through the Commerce API.",
+    "expect": [
+      "write_commerce_rest"
+    ],
+    "cwd": "project",
+    "why": "2026-09-24 (owner): the tools should allow everything the Commerce REST API allows on the project's instance. This is a write with a body (PUT companyCredits/{id}); the agent must read the credit first, then call the write tool with confirm:true, which raises the consent dialog naming the method and path. Tier 3: never run unattended."
+  },
+  {
     "id": "integration-settings-read",
     "prompt": "What is my ERP integration's ERP called, and which of its settings still need a value?",
     "expect": [

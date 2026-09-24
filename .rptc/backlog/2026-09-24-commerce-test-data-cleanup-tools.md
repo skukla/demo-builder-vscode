@@ -62,6 +62,22 @@ ERP round trip — have no in-app way back to zero.
   can delete what is already deleted; the tool should recognise the state ("index row only,
   no customer") and say so rather than fail.
 
+## Decision and progress (owner, 2026-09-24, afternoon)
+
+Owner: "we need to add to the demo builder MCP tools that allow you to do everything the
+Commerce REST API would allow you to do in the instance that is configured for the project."
+So the shape is TWO generic tools over the whole REST surface, not per-entity tools:
+
+- `run_commerce_rest` (GET; built, `877793333`) and `write_commerce_rest` (POST, PUT,
+  DELETE; built the same afternoon), sharing one signed client (`commerceRestClient.ts`).
+  The write tool requires `confirm: true` and is in `AGENT_ALERT_COPY`, so every write
+  raises the consent dialog naming the method and the path (principle 5). The answer
+  carries the server's body so the caller reads back what changed (principle 1).
+- Still open from the shape above: the PaaS admin-token path (a `needsUser` hand-back),
+  and whether an export-before-delete belongs on the write tool or stays the caller's job.
+- Not yet run live: the shared MCP socket was held by a develop-checkout dev host at the
+  time (see the loop report).
+
 ## Open questions for the owner
 
 1. Does cleanup belong in the extension, or in the data-installer service (which already

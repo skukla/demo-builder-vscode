@@ -12,12 +12,8 @@
  * uses, plus the ERP integration's own workspace.
  */
 
-import {
-    registerCommerceRestTool,
-    resetCommerceRestTokens,
-    restWorkspaceId,
-    validateRestPath,
-} from '@/features/ai/server/commerceRestTool';
+import { resetCommerceRestTokens, restWorkspaceId, validateRestPath } from '@/features/ai/server/commerceRestClient';
+import { registerCommerceRestTool } from '@/features/ai/server/commerceRestTool';
 import type { McpToolSchema } from '@/features/ai/server/mcpToolServer';
 import type { HandlerContext } from '@/types/handlers';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
@@ -200,6 +196,7 @@ describe('refusals, each before any call', () => {
         getCurrentProject.mockResolvedValue(PAAS_PROJECT);
         const out = await serve().raw({ path: 'customers/43' });
         expect(out).toContain('ACCS backends only');
+        expect(out).toContain('Error:');
         expect(fetchMock).not.toHaveBeenCalled();
     });
 

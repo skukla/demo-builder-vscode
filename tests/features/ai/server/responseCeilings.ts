@@ -51,6 +51,12 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
             'must raise this with it.',
     },
 
+    write_commerce_rest: {
+        bytes: 31_000,
+        why:
+            'ENFORCED like run_commerce_rest: the shared client cuts the body at 30,000 characters ' +
+            'and declares the cut. A write answers the record it changed (2026-09-24).',
+    },
     run_commerce_rest: {
         bytes: 31_000,
         why:
