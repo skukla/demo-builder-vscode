@@ -232,16 +232,16 @@ loop report (`.rptc/handoff/2026-09-24-loop-report.md`).
 
 | # | Question | Source | Recommendation |
 |---|---|---|---|
-| O4 | Cancellation terminal plus Repeat order, or an un-cancel? | screen plan §10 | Terminal; Commerce cannot un-cancel either |
-| O5 | Credit memo: new event + Commerce handler (slice 13)? | screen plan §10 | Yes, full credit only; it is the reversibility answer for `invoiced` |
+| O4 | Cancellation terminal plus Repeat order, or an un-cancel? | screen plan §10 | **Decided 2026-09-24 (owner): terminal**, with Repeat order |
+| O5 | Credit memo: new event + Commerce handler (slice 13)? | screen plan §10 | **Decided 2026-09-24 (owner): yes**, full credit only. Also: document the reconciliation of PARTIAL invoices against one Commerce order as a customization opportunity, alongside order routing (backlog AB-26v) |
 | O6 | Mirror customer addresses? | screen plan §10 | **Answered by the structure plan**: legal name, tax id, reseller id, legal address, admin's website |
-| O8 | Does a second ERP need to look different? | screen plan §10 | Display name and prefix only |
-| S1 | Which ERPs does the routing client run; does the PIM carry an owning-system attribute? | structure research §9 | Ask the client before slice 12 |
+| O8 | Does a second ERP need to look different? | screen plan §10 | **Decided 2026-09-24 (owner): yes, it looks different** — its own display name and its own Appearance (theme, palette, mark; the Settings → Appearance card built for this), and its own order-number prefix in Commerce |
+| S1 | Which ERPs does the routing client run; does the PIM carry an owning-system attribute? | structure research §9 | **Decided 2026-09-24 (owner): the story does not depend on the answer.** The ERPs may never be known; the demo does not model a PIM. A product ATTRIBUTE in Commerce names the owning ERP (`structure_owns = attribute`, e.g. `erp_owner`), and the story says a PIM would write that attribute into Commerce (and read it back) in a real deployment. Attribute is now the primary ownership mode for the two-ERP story; inventory sources stay as the alternative |
 | S3 | Mapping on the Commerce side, accepting the manual scope sync? | structure research §9 | Yes |
 | P1–P3 | Walk-in partner in every sales org; company code fixed `1000`; seller block on the invoice | structure plan | `['*']`; fixed; yes |
 | G3 | Whose exposure is the demo's truth? | entity matrix | The ERP's, stated on the card |
-| Q2 | Does the routing integration become the only order-event subscriber? | multi-ERP research §11 | Yes; it is what keeps the pairs generic |
-| Q-num | Where does the second ERP's number live? | multi-ERP research §11 | Prefix on `ext_order_id` for the selling ERP (M4); the parts in the routing app and comments |
+| Q2 | Does the routing integration become the only order-event subscriber? | multi-ERP research §11 | Yes; it is what keeps the pairs generic. **Owner 2026-09-24: leaning yes, asked for the plain-English explanation before confirming** (given in the session; confirmation pending) |
+| Q-num | Where does the second ERP's number live? | multi-ERP research §11 | Prefix on `ext_order_id` for the selling ERP (M4) stays. **Owner 2026-09-24: look into Commerce's custom order attributes** — Adobe Commerce as a Cloud Service shows and edits custom order attributes (code + value) on the Admin order view, created via GraphQL or the Admin, editable only while the order is Pending (Experience League: order-processing; ACCS release notes). **Direction (owner, 2026-09-24): use them for BOTH ERPs**, symmetric — every pair writes its number into its own custom order attribute (`erp_<name>_number`), so no pair is the special one; `ext_order_id` keeps the prefixed number of the pair that took the order, so the standard field still reads in a single-ERP demo. To validate live (API inventory row): the write path over REST or GraphQL, and the Pending-only edit rule against when each pair writes |
 | E-first | Which Admin differentiator first? | UX validation | "Why did this buyer get this price" |
 
 ## 8a. The deliverable at the end: the walk-through (owner, 2026-09-24)

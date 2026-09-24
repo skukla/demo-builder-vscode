@@ -5,8 +5,7 @@ area: app-builder
 parent: AB-26
 needs: [AB-26g]
 value: med
-status: gated
-waiting-on: owner question O5 (credit memo yes/no)
+status: backlog
 ---
 
 # Credit memo and Repeat order — the way back from invoiced and cancelled
@@ -22,3 +21,4 @@ Slice of [[AB-26]] — `.rptc/plans/erp-programme/overview.md` §6. **Lane: 2 �
 Harness journey credit → Commerce credit memo recorded → statuses; refusal texts tested; live in the scratch workspace.
 
 ## Shipped so far
+- 2026-09-24  Ungated 2026-09-24: the owner answered O5 yes (full credit only) and O4 terminal (Repeat order, no un-cancel). Still needs AB-26g's live proof before the Commerce credit-memo call is built on it
