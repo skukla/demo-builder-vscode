@@ -45,7 +45,20 @@ of it is then refused in words), and the product page lists the orders holding i
 Then the entity map you asked for on the Commerce Admin page: the Settings tab is now a
 Mapping tab. One card per business concept the two systems share, Commerce's records on
 the left, the ERP's on the right, an arrow saying which side owns each piece, and the
-setting that joins them sitting on the join itself. The settings are the mapping.
+setting that joins them sitting on the join itself. The settings are the mapping. Two
+cards look up one company id or SKU as both systems hold it.
+
+Then the screens caught up with the UI audit: Settings' document numbering and the ERP's
+own currency; lists whose rows say where each document stands; documents with a timeline,
+a due date, a credit meter and open items. And the walk-through you asked for at the
+start: the ERP screen by screen, Commerce from the other side, one relation table per
+concept, in the integration's docs.
+
+**Every startable slice of the ERP programme is now built or built to its supervised
+edge.** What is left in the programme waits on you (a credential, the live looks, the merge)
+or on a gate you own (the credit memo's question, the routing client's answers). The loop
+moved on to the fallback you named at kickoff, fixes first; those are reported below the
+ERP sections as they land.
 
 The research the later slices depend on is written: nine business concepts, each written
 out record by record in Adobe Commerce, in SAP, and in our two repos, with the owner of
@@ -328,6 +341,23 @@ had changed after its fingerprint was recorded. The retry now reopens by the row
 and waits for the document's own title. Commit: `demo-erp` `64e0148`. Tests: 264 pass; 17
 headless checks stable.
 
+### The walk-through (AB-26u) — written
+
+Your end deliverable: what to look at in the ERP and how it relates, then what to look at
+in Commerce and how it relates. `commerce-erp-integration/docs/walkthrough.md`, in three
+parts. The ERP screen by screen along the twenty-minute demo path, saying on each screen
+which values are mirrored from Commerce and which are the ERP's own, and what to say.
+Commerce screen by screen from the other side (the cart, the order and its comments,
+shipments and invoices, the product, the company, the integration's Admin page), naming
+the ERP action that put each thing there. And one table per business concept: this ERP
+screen, this Commerce screen, what joins them, who owns each field. That third part is the
+printable twin of the Mapping tab. Every ERP screen is named by its address in the
+preview, so each look is reproducible without committing images. Two claims were checked
+against the code before publishing and one sentence corrected (any blocking level, not
+only "all business", writes back to Commerce as blocked). What it has not had: a walk
+against a deployed pair, which is the first thing to do before a showing. Commits:
+integration `91fb8ce`; `demo-erp` `806b196` (README pointer).
+
 ### The demo setup guide — written
 
 `commerce-erp-integration/docs/demo-setup.md`, for the person preparing a demo. Three
@@ -356,6 +386,7 @@ the demo can have whatever it needs, as long as it is written down.
 | AB-26q | Settings: Document numbering card; the ERP's own currency as the money fallback | `demo-erp` `f04c897` | 258 tests incl. the counter pin; 15 screen checks |
 | AB-26o | the lists: shipping and billing badges and a stage filter on orders, sold-to on shipments and invoices, the plant's ERP name, exposure and available on customers | `demo-erp` `ce2c9a5` | row fields pinned through the actions; 16 headless checks incl. the four lists' headers |
 | AB-26p | the documents: timeline, product from a line, due date, credit meter, open items, pricing wording | `demo-erp` `64e0148` | due date pinned; a headless check walks order → product and reads the due date, meter and open items |
+| AB-26u | the walk-through: the ERP screen by screen, Commerce from the other side, one relation table per concept | integration `91fb8ce`, `demo-erp` `806b196` | every named screen has a headless check; two claims verified against the code |
 | screen checks hardening | sizes out of the fingerprint, pointer parked, 3 samples, retry once, mismatch rows kept; the accept mode needs two agreeing loads | `demo-erp` `66c215e`, `8ebf768` | no flake in the 14 later full runs; the one-off shipments sample caught and refused |
 
 ## Handed off (finished to the supervised edge)
@@ -434,6 +465,22 @@ the demo can have whatever it needs, as long as it is written down.
 - The integration's `npm run contract:check` compares the vendored contract with
   `demo-erp`'s `main`, so it reports a difference until the loop branch is merged there.
   Expected, and the reason it is not a gate.
+
+## The walkthrough queue, in order
+
+Each is one decision or one action, minutes each:
+
+1. Merge the three loop branches (decision 1 below).
+2. Add the ERP integration to a project (decision 2): five minutes, and it unblocks every
+   live proof in this report.
+3. Look at the Admin page's Mapping tab on a real Commerce Admin, and at App Management's
+   own settings form beside it (AB-26m's handoff).
+4. Walk `docs/walkthrough.md` once against the deployed pair and correct what reads
+   differently (AB-26u's handoff).
+5. Read `docs/demo-setup.md` and say whether the two-website and two-ERP stories are the
+   ones you want prepared (AB-26j's handoff).
+6. Decisions 3 to 7 below, each a yes or a sentence.
+7. The credit memo question (O5), which gates AB-26r and behind it the payment leg.
 
 ## Your decisions
 

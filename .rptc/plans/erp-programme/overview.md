@@ -221,7 +221,7 @@ in to the Adobe project; the repos hold no local credentials):
 | T-1 / T-2 · Test harnesses | memory-db, injected readers, contract tests, the preview; **headless screen checks with fingerprints** (T-2, AB-26d: 13 checks, retry-once, mismatch rows kept) | pair-in-a-box after API-1's fixtures | API-1's fixtures |
 | V · Sync validation | the entity matrix, read from code | journeys as T-1 tests; the live baseline once the owner authorizes writes on the demo instance | authorization |
 | B · Screen redesign (UI-1..4) | the house style: cards, badges, trail, themes | scheduled behind the slices whose data they show | — |
-| Docs / drift | contract tests both repos; record-shape pin; plan status blocks; this overview; **the demo setup guide** (AB-26j step 05) | keep the guide true when a live run corrects it | — |
+| Docs / drift | contract tests both repos; record-shape pin; plan status blocks; this overview; **the demo setup guide** (AB-26j step 05); **the walk-through** (AB-26u, `commerce-erp-integration/docs/walkthrough.md`) | keep both true when a live run corrects them; the two-pair section once the routing integration exists | ◆ a live re-check before a first showing |
 
 Everything the loop built on 2026-09-24 is on the `loop/2026-09-24-erp-programme` branch of
 all three repos, pushed (owner authorization 1). The `develop` push in `demo-builder-vscode`
