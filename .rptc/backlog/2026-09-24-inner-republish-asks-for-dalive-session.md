@@ -4,7 +4,7 @@ kind: fix
 area: eds
 needs: []
 value: high
-status: backlog
+status: built
 ---
 
 # The republish inside an add, a deploy or a save asks for the DA.live sign-in, and says when the CDN did not take it
@@ -63,3 +63,7 @@ answer through one `answerWithWarnings`. Pinned in `storefrontRepublishConfig-pe
   missing session; the guard's own message covers the common case now.
 
 Filed 2026-09-24.
+
+## Shipped so far
+
+- 2026-09-24  fix(eds): the republish inside an add, deploy or save asks for the DA.live sign-in, and a CDN publish that did not land is heard (`7e974485a`)

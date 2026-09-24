@@ -56,3 +56,4 @@ Filed 2026-09-24.
 ## Shipped so far
 
 - 2026-09-24  fix(app-builder): a 504 on the deploy-time credential read is retried once, so a first add survives it (`964ff4950`)
+- 2026-09-24  LIVE 2026-09-24 09:54 — first add of commerce-integration-starter-kit on Bodea through add_integration, on this build: succeeded first try in 2m 59s. The subscribe 504'd and the EXISTING retry got past it (org services 59s); the credential read that failed this morning took 1.1s, so the NEW retry had nothing to retry — not exercised live yet. Commerce install needed three rounds (transient conflict), ended installed at 1.0.2. Side warning: the storefront republish could not publish config.json to the CDN (401, no DA.live session) — the storefront still serves the previous config.json.
