@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-26
 needs: []
 value: med
-status: active
+status: built
 ---
 
 # Headless screen checks over the ERP preview (T-2)
@@ -22,3 +22,4 @@ Every screen in the preview has a check; a deliberate fingerprint re-accept is a
 
 ## Shipped so far
 - 2026-09-24  Started: Playwright + headless Chromium installed in demo-erp (devDependency); test will start the preview server in-process and fingerprint every screen
+- 2026-09-24  BUILT on demo-erp loop branch: test/screens.test.js — 9 areas + 5 documents, console clean, computed-style fingerprint vs test/fixtures/screen-fingerprints.json, stable across 3 consecutive runs after adding a settle step (Spectrum grids size columns a frame after mount). Preview server exports startPreview(). Playwright devDependency; npx playwright install chromium once per machine.
