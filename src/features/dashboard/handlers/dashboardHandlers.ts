@@ -84,13 +84,10 @@ import {
     handleListConsoleApis,
     handleSetConsoleApis,
 } from '@/features/dashboard/handlers/consoleApiHandlers';
-import { handleListRuntimePackages } from '@/features/dashboard/handlers/runtimePackageHandlers';
-import { handleAddSharedDemo } from '@/features/eds/handlers/addSharedDemoHandler';
-import { handleChangeDemoSource } from '@/features/eds/handlers/changeDemoSourceHandler';
-import { handleImportStorefrontZip, handleUseBundleSetup } from '@/features/eds/handlers/importStorefrontZipHandler';
-import { handleProbeSharedDemo } from '@/features/eds/handlers/probeSharedDemoHandler';
 import {
+    handleFollowErpOrder,
     handleGetErpStatus,
+    handleLookupErpRecord,
     handleOpenErpScreen,
     handleResetErpRecords,
 } from '@/features/dashboard/handlers/erpIntegrationHandlers';
@@ -98,6 +95,11 @@ import {
     handleCheckIntegrationUpdates,
     handleUpdateAppBuilderComponent,
 } from '@/features/dashboard/handlers/integrationUpdateHandlers';
+import { handleListRuntimePackages } from '@/features/dashboard/handlers/runtimePackageHandlers';
+import { handleAddSharedDemo } from '@/features/eds/handlers/addSharedDemoHandler';
+import { handleChangeDemoSource } from '@/features/eds/handlers/changeDemoSourceHandler';
+import { handleImportStorefrontZip, handleUseBundleSetup } from '@/features/eds/handlers/importStorefrontZipHandler';
+import { handleProbeSharedDemo } from '@/features/eds/handlers/probeSharedDemoHandler';
 import { deployMeshFromScreen } from '@/features/mesh/handlers/deployHandler';
 import { MESH_OPERATION_ID } from '@/features/mesh/services/deployMeshWithFeedback';
 import {
@@ -327,6 +329,10 @@ export const dashboardHandlers = defineHandlers({
     getErpStatus: handleGetErpStatus,
     resetErpRecords: handleResetErpRecords,
     openErpScreen: handleOpenErpScreen,
+    // The Admin page's two reads, for agents (2026-09-24): one record as both
+    // systems hold it, and one order's whole life across both.
+    lookupErpRecord: handleLookupErpRecord,
+    followErpOrder: handleFollowErpOrder,
     // An integration's Settings (AB-21): the read, and the save that stores then
     // redeploys.
     getIntegrationSettings: handleGetIntegrationSettings,

@@ -886,6 +886,24 @@
     "why": "2026-09-16: the ERP serves its own screen from an action, opened with a key only the extension holds, so the agent has to use the tool rather than hand the user a URL."
   },
   {
+    "id": "erp-lookup-company",
+    "prompt": "Does company 3 in my Commerce store have a credit limit, and does the ERP behind my ERP integration agree about it?",
+    "expect": [
+      "lookup_erp_record"
+    ],
+    "cwd": "project",
+    "why": "2026-09-24: the agent surface could read Commerce products through GraphQL but had no way to see a B2B company or its credit. The prompt asks for BOTH systems' view of one company, which only the integration's own lookup answers (the Admin page's lookup card); run_commerce_query cannot, since GraphQL has no company read."
+  },
+  {
+    "id": "erp-follow-order",
+    "prompt": "Where is Commerce order 000000123 right now: did it reach the ERP, and what has the ERP done with it?",
+    "expect": [
+      "follow_erp_order"
+    ],
+    "cwd": "project",
+    "why": "2026-09-24: 'where is order X' is the store operator's question and it took three screens to answer. The trace merges the Commerce order, the integration's history and the ERP's own order by time. The prompt names an order and asks for its life across both sides, which get_erp_status (counts only) cannot answer."
+  },
+  {
     "id": "integration-settings-read",
     "prompt": "What is my ERP integration's ERP called, and which of its settings still need a value?",
     "expect": [

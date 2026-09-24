@@ -151,6 +151,11 @@ settings only (AB-21).
 ## For agents
 
 `get_erp_status` reads the ERP's health as the integration sees it plus both rows.
+`lookup_erp_record` reads one product (by SKU) or one company (by Commerce id) as both
+systems hold it, field by field, and `follow_erp_order` reads one Commerce order's whole
+life across Commerce, the integration and the ERP (the Admin page's lookup card and Follow
+an order, 2026-09-24). They exist because an agent validating the pair could read Commerce
+products through GraphQL but had no way to see a B2B company, its credit, or an order.
 `get_integration_settings` reads the integration's settings, and `set_integration_settings`
 changes a text setting (the ERP's name) and redeploys; a secret setting is entered on the
 tile, never passed to a tool.

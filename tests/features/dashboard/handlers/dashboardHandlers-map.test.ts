@@ -248,7 +248,11 @@ describe('dashboardHandlers', () => {
             // setViewModeOverride (51 → 52, 2026-09-24): the integrations screen's
             // cards/rows toggle — the shared handler the projects list also registers
             // (core/handlers/viewModeHandler), under the same name.
-            expect(types).toHaveLength(60);
+            //
+            // lookupErpRecord + followErpOrder (60 → 62, 2026-09-24): the ERP Admin
+            // page's two reads — one record as both systems hold it, one order's whole
+            // life — behind the agent tools lookup_erp_record and follow_erp_order.
+            expect(types).toHaveLength(62);
         });
 
         it('should have handlers as functions', () => {

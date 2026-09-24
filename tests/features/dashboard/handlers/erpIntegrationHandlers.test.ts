@@ -1,5 +1,5 @@
 /**
- * erpIntegrationHandlers — the ERP pair's two verbs (plan step 05).
+ * erpIntegrationHandlers — the ERP pair's verbs (plan step 05) and the Admin page's two reads.
  *
  * The ERP client, the auth resolver, the catalog loader and the guards are
  * mocked; assertions pin the ARGUMENTS each collaborator receives and the shape
@@ -17,6 +17,8 @@ jest.mock('@/features/project-creation/services/appBuilderComponentRunnerDeps', 
 
 const mockStatus = jest.fn();
 const mockReset = jest.fn();
+const mockLookup = jest.fn();
+const mockTraceOrder = jest.fn();
 const mockClientCtor = jest.fn();
 jest.mock('@/features/app-builder/services/erpIntegrationClient', () => ({
     ...jest.requireActual('@/features/app-builder/services/erpIntegrationClient'),
@@ -26,6 +28,8 @@ jest.mock('@/features/app-builder/services/erpIntegrationClient', () => ({
         }
         status = () => mockStatus();
         reset = () => mockReset();
+        lookup = (query: unknown) => mockLookup(query);
+        traceOrder = (orderNumber: string) => mockTraceOrder(orderNumber);
     },
 }));
 
@@ -68,7 +72,12 @@ jest.mock('@/features/dashboard/commands/showDashboard', () => ({
 
 import { setupMocks } from './dashboardHandlers.testUtils';
 import * as vscode from 'vscode';
-import { handleGetErpStatus, handleResetErpRecords } from '@/features/dashboard/handlers/erpIntegrationHandlers';
+import {
+    handleFollowErpOrder,
+    handleGetErpStatus,
+    handleLookupErpRecord,
+    handleResetErpRecords,
+} from '@/features/dashboard/handlers/erpIntegrationHandlers';
 import { ErrorCode } from '@/types/errorCodes';
 
 const INT_URLS = {
@@ -207,5 +216,98 @@ describe('handleResetErpRecords', () => {
         const { mockContext } = setupMocks(pairProject());
         const result = await handleResetErpRecords(mockContext, undefined);
         expect(result.success).toBe(false);
+    });
+});
+
+describe('handleLookupErpRecord', () => {
+    // Shapes from the integration's lib/lookup.js (read 2026-09-24).
+    const LOOKUP = { kind: 'company', key: '3', found: { commerce: true, erp: true }, rows: [], erpHash: '#partners?open=C000102' };
+
+    it('asks the integration for the company by its Commerce id and answers the lookup beside the ERP row', async () => {
+        mockLookup.mockResolvedValue(LOOKUP);
+        const { mockContext } = setupMocks(pairProject());
+
+        const result = await handleLookupErpRecord(mockContext, { id: 'erp-integration', company: ' 3 ' });
+
+        expect(mockClientCtor).toHaveBeenCalledWith(INT_URLS, expect.objectContaining({ imsOrgId: 'ABC@AdobeOrg' }));
+        expect(mockLookup).toHaveBeenCalledWith({ company: '3' });
+        expect(result).toEqual({
+            success: true,
+            data: { id: 'erp-integration', erp: expect.objectContaining({ id: 'demo-erp' }), lookup: LOOKUP },
+        });
+        expect(mockEnsureAdobeIOAuth).not.toHaveBeenCalled();
+    });
+
+    it('asks by SKU when a sku is named', async () => {
+        mockLookup.mockResolvedValue({ ...LOOKUP, kind: 'product', key: 'P-1' });
+        const { mockContext } = setupMocks(pairProject());
+
+        await handleLookupErpRecord(mockContext, { id: 'erp-integration', sku: 'P-1' });
+
+        expect(mockLookup).toHaveBeenCalledWith({ sku: 'P-1' });
+    });
+
+    it('refuses none, both, a malformed SKU and a non-numeric company id before any call', async () => {
+        const { mockContext } = setupMocks(pairProject());
+        const bad = [
+            { id: 'erp-integration' },
+            { id: 'erp-integration', sku: 'P-1', company: '3' },
+            { id: 'erp-integration', sku: 'a"b' },
+            { id: 'erp-integration', company: 'C000102' },
+        ];
+        for (const payload of bad) {
+            const result = await handleLookupErpRecord(mockContext, payload);
+            expect(result).toMatchObject({ success: false, code: ErrorCode.CONFIG_INVALID });
+        }
+        expect(mockClientCtor).not.toHaveBeenCalled();
+    });
+
+    it('a failed read is reported, not thrown', async () => {
+        mockLookup.mockRejectedValue(new Error('ERP lookup answered 500: the ERP answered 503 for partners'));
+        const { mockContext } = setupMocks(pairProject());
+
+        const result = await handleLookupErpRecord(mockContext, { id: 'erp-integration', sku: 'P-1' });
+
+        expect(result).toEqual({ success: false, error: expect.stringContaining('the ERP answered 503') });
+    });
+});
+
+describe('handleFollowErpOrder', () => {
+    // Shape from the integration's lib/order-trace.js buildOrderTrace (read 2026-09-24).
+    const TRACE = {
+        summary: { incrementId: '000000123', commerceStatus: 'processing', erpNumber: '0000001003', erpStatus: 'confirmed', reachedErp: true },
+        steps: [{ at: '2026-09-24T10:00:00Z', where: 'commerce', what: 'Order 000000123 placed' }],
+    };
+
+    it('asks the integration to trace the order and answers the trace beside the ERP row', async () => {
+        mockTraceOrder.mockResolvedValue(TRACE);
+        const { mockContext } = setupMocks(pairProject());
+
+        const result = await handleFollowErpOrder(mockContext, { id: 'erp-integration', orderNumber: '000000123' });
+
+        expect(mockTraceOrder).toHaveBeenCalledWith('000000123');
+        expect(result).toEqual({
+            success: true,
+            data: { id: 'erp-integration', erp: expect.objectContaining({ id: 'demo-erp' }), orderNumber: '000000123', trace: TRACE },
+        });
+    });
+
+    it('refuses a missing or malformed order number before any call', async () => {
+        const { mockContext } = setupMocks(pairProject());
+        for (const payload of [{ id: 'erp-integration' }, { id: 'erp-integration', orderNumber: '12 3' }]) {
+            const result = await handleFollowErpOrder(mockContext, payload);
+            expect(result).toMatchObject({ success: false, code: ErrorCode.CONFIG_INVALID });
+        }
+        expect(mockClientCtor).not.toHaveBeenCalled();
+    });
+
+    it('answers AUTH_REQUIRED typed, never a dialog, with no sign-in', async () => {
+        mockResolveAppManagementAuth.mockResolvedValue(undefined);
+        const { mockContext } = setupMocks(pairProject());
+
+        const result = await handleFollowErpOrder(mockContext, { id: 'erp-integration', orderNumber: '000000123' });
+
+        expect(result).toMatchObject({ success: false, code: ErrorCode.AUTH_REQUIRED });
+        expect(mockTraceOrder).not.toHaveBeenCalled();
     });
 });

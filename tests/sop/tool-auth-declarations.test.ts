@@ -62,11 +62,14 @@ const EXPECTED: Record<string, number> = {
     // 45 -> 46 on 2026-09-14: edit_added_demo renames a card in a user setting,
     // and needs no sign-in.
     // 46 -> 50 on 2026-09-24, the same merge.
-    none: 50,
+    // 50 -> 52 on 2026-09-24: lookup_erp_record and follow_erp_order declare
+    // no sign-in the way get_erp_status does — the handler resolves the IMS
+    // identity itself and answers a typed AUTH_REQUIRED when there is none.
+    none: 52,
 };
 
 /**
- * 129 tools, and the counts above sum to 133 provider slots — a difference of FOUR,
+ * 131 tools, and the counts above sum to 135 provider slots — a difference of FOUR,
  * which is exactly the four tools the original commit says need two sign-ins each
  * (check_github_app, create_project, republish, sync_content). That arithmetic is the
  * cross-check: the derivation below reproduces both numbers from the source without
@@ -76,7 +79,7 @@ const EXPECTED: Record<string, number> = {
  * files. That counts text, not declarations, and was roughly double. The CONTROL below
  * caught it — which is the argument for having one.)
  */
-const EXPECTED_TOOLS = 129;
+const EXPECTED_TOOLS = 131;
 
 interface Declaration {
     name: string;

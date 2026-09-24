@@ -1,5 +1,5 @@
 /**
- * The ERP integration's own actions, as Demo Builder calls them: `erp/status`
+ * The ERP integration's own actions, as Demo Builder calls them: `erp/status`, `erp/lookup`, `erp/history`,
  * (what the integration sees of its ERP), `erp/reset` (undo the ledgered
  * Commerce writes, wipe the ERP, mirror Commerce again; decisions 8 and 11) and
  * `erp/detach` (the undo alone, run before the integration is removed).
@@ -44,7 +44,46 @@ export interface ErpDetachReport {
     orders?: { cleared: number; failed: unknown[] };
 }
 
-export type ErpAction = 'status' | 'reset' | 'detach';
+export type ErpAction = 'status' | 'reset' | 'detach' | 'lookup' | 'history';
+
+/**
+ * What `erp/lookup` answers (the integration's `lib/lookup.js`, `productLookup` and
+ * `companyLookup`): one entity as both systems hold it, one row per field. A side
+ * that does not have it answers `null` cells; that is the answer, not an error.
+ */
+export interface ErpLookup {
+    kind: 'product' | 'company';
+    /** The SKU or the Commerce company id asked for. */
+    key: string;
+    found: { commerce: boolean; erp: boolean };
+    rows: Array<{ label: string; commerce: string | null; erp: string | null }>;
+    /** The ERP screen's hash for the record, when the ERP has it. */
+    erpHash: string | null;
+}
+
+/**
+ * What `erp/history?trace=<order>` answers (the integration's `lib/order-trace.js`,
+ * `buildOrderTrace`): one order's whole life across Commerce, the integration and
+ * the ERP, oldest step first.
+ */
+export interface ErpOrderTrace {
+    summary: {
+        incrementId: string | null;
+        commerceStatus: string | null;
+        erpNumber: string | null;
+        erpStatus: string | null;
+        reachedErp: boolean;
+    };
+    steps: Array<{
+        at: string;
+        where: string;
+        what: string;
+        detail?: string;
+        outcome?: string;
+        tries?: number;
+        retry?: unknown;
+    }>;
+}
 
 /**
  * The deployed URL of one `erp/<action>` web action, or undefined when the
@@ -103,11 +142,23 @@ export class ErpIntegrationClient {
         return (await this.call('detach', 'POST')) as ErpDetachReport;
     }
 
-    private async call(action: ErpAction, method: 'GET' | 'POST'): Promise<unknown> {
-        const url = deriveErpActionUrl(this.deployedUrls, action);
-        if (!url) {
+    /** One product (by SKU) or one company (by Commerce id) as both systems hold it. */
+    async lookup(query: { sku: string } | { company: string }): Promise<ErpLookup> {
+        return (await this.call('lookup', 'GET', query)) as ErpLookup;
+    }
+
+    /** One Commerce order's whole life across both systems and the integration. */
+    async traceOrder(incrementId: string): Promise<ErpOrderTrace> {
+        const answer = (await this.call('history', 'GET', { trace: incrementId })) as { trace: ErpOrderTrace };
+        return answer.trace;
+    }
+
+    private async call(action: ErpAction, method: 'GET' | 'POST', query?: Record<string, string>): Promise<unknown> {
+        const base = deriveErpActionUrl(this.deployedUrls, action);
+        if (!base) {
             throw new Error(`This integration deployed no erp/${action} action.`);
         }
+        const url = query ? `${base}?${new URLSearchParams(query).toString()}` : base;
         const answer = await callWithIms(url, method, this.auth, this.fetchImpl);
         if (!answer.ok) {
             throw new ErpIntegrationApiError(action, answer.status, answer.detail);

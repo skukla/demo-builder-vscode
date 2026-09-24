@@ -212,3 +212,71 @@ export const handleOpenErpScreen: MessageHandler<{ id?: string }> = async (conte
 function errorText(error: unknown): string {
     return error instanceof Error ? error.message : String(error);
 }
+
+/** What the integration's own `erp/lookup` accepts (`actions/erp/lookup/index.js`). */
+const SKU = /^[A-Za-z0-9 _./-]{1,64}$/u;
+const COMPANY_ID = /^\d{1,12}$/u;
+/** What `erp/history?trace=` accepts: a Commerce order number. */
+const ORDER_NUMBER = /^[A-Za-z0-9-]{1,50}$/u;
+
+export interface LookupErpRecordPayload {
+    id?: string;
+    /** The product, by SKU. */
+    sku?: string;
+    /** The company, by its Commerce id. */
+    company?: string;
+}
+
+/**
+ * Handle 'lookupErpRecord' — one product or one company as Commerce and the ERP
+ * hold it, row by row (the Mapping tab's lookup card, for an agent). A side that
+ * does not have it answers empty cells, which is the answer, not an error.
+ */
+export const handleLookupErpRecord: MessageHandler<LookupErpRecordPayload> = async (
+    context,
+    payload,
+): Promise<HandlerResponse> => {
+    const sku = payload?.sku?.trim();
+    const company = payload?.company?.trim();
+    if ((sku === undefined) === (company === undefined)) {
+        return { success: false, error: 'Name ONE record: a sku or a company id.', code: ErrorCode.CONFIG_INVALID };
+    }
+    if (sku !== undefined && !SKU.test(sku)) {
+        return { success: false, error: 'That is not a SKU Commerce allows.', code: ErrorCode.CONFIG_INVALID };
+    }
+    if (company !== undefined && !COMPANY_ID.test(company)) {
+        return { success: false, error: 'A company is looked up by its numeric Commerce id.', code: ErrorCode.CONFIG_INVALID };
+    }
+    const call = await openErpCall(context, payload, 'look up a record');
+    if ('error' in call) return call.error;
+    try {
+        const client = new ErpIntegrationClient(call.integration.deployedUrls, call.auth);
+        const lookup = await client.lookup(sku !== undefined ? { sku } : { company: company as string });
+        return { success: true, data: { id: call.id, erp: shapeErpRow(call.erp), lookup } };
+    } catch (error) {
+        return { success: false, error: `Could not look up the record: ${errorText(error)}` };
+    }
+};
+
+/**
+ * Handle 'followErpOrder' — one Commerce order's whole life: placed in Commerce,
+ * sent to the ERP (or held, and why), what the ERP did to it, and each ERP event
+ * applied back to Commerce, oldest first (the Admin page's Follow an order).
+ */
+export const handleFollowErpOrder: MessageHandler<{ id?: string; orderNumber?: string }> = async (
+    context,
+    payload,
+): Promise<HandlerResponse> => {
+    const orderNumber = payload?.orderNumber?.trim();
+    if (!orderNumber || !ORDER_NUMBER.test(orderNumber)) {
+        return { success: false, error: 'Name the order to follow by its Commerce order number.', code: ErrorCode.CONFIG_INVALID };
+    }
+    const call = await openErpCall(context, payload, 'follow an order');
+    if ('error' in call) return call.error;
+    try {
+        const trace = await new ErpIntegrationClient(call.integration.deployedUrls, call.auth).traceOrder(orderNumber);
+        return { success: true, data: { id: call.id, erp: shapeErpRow(call.erp), orderNumber, trace } };
+    } catch (error) {
+        return { success: false, error: `Could not follow the order: ${errorText(error)}` };
+    }
+};

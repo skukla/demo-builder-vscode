@@ -318,6 +318,39 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
         },
     },
     {
+        tool: 'lookup_erp_record',
+        needsAuth: false,
+        readOnly: true,
+        description:
+            'Read one product (by SKU) or one B2B company (by Commerce id) as BOTH Commerce and ' +
+            'the ERP hold it, field by field: name, status, price and availability, credit limit ' +
+            'and blocking. Use to check the two systems agree, or whether a company or product ' +
+            'exists in Commerce at all. Name exactly one of sku or company.',
+        map: dashboardHandlers,
+        type: 'lookupErpRecord',
+        inputSchema: {
+            id: z.string().describe('The ERP integration id (from get_project)'),
+            sku: z.string().optional().describe('The product SKU to look up'),
+            company: z.string().optional().describe('The Commerce company id to look up'),
+        },
+    },
+    {
+        tool: 'follow_erp_order',
+        needsAuth: false,
+        readOnly: true,
+        description:
+            "Read one Commerce order's whole life across Commerce, the ERP integration and the " +
+            'ERP, oldest step first: placed, sent to the ERP (or held, and why), confirmed, ' +
+            'shipped, invoiced, held or cancelled there, and each ERP event applied back to ' +
+            'Commerce. Use to answer "where is order 1042" or to see whether the two sides agree.',
+        map: dashboardHandlers,
+        type: 'followErpOrder',
+        inputSchema: {
+            id: z.string().describe('The ERP integration id (from get_project)'),
+            orderNumber: z.string().describe('The Commerce order number (increment id, e.g. 000000123)'),
+        },
+    },
+    {
         tool: 'get_integration_settings',
         needsAuth: false,
         readOnly: true,

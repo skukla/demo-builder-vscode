@@ -1,5 +1,5 @@
 /**
- * erpIntegrationClient — the integration's erp/status and erp/reset, called with
+ * erpIntegrationClient — the integration's erp/status, erp/reset, erp/lookup and erp/history, called with
  * the signed-in IMS identity, addressed by the URLs the deploy answered.
  */
 
@@ -13,6 +13,8 @@ const URLS = {
     'runtime/erp/status': 'https://ns.adobeioruntime.net/api/v1/web/erp/status',
     'runtime/erp/reset': 'https://ns.adobeioruntime.net/api/v1/web/erp/reset',
     'runtime/erp/mirror': 'https://ns.adobeioruntime.net/api/v1/web/erp/mirror',
+    'runtime/erp/lookup': 'https://ns.adobeioruntime.net/api/v1/web/erp/lookup',
+    'runtime/erp/history': 'https://ns.adobeioruntime.net/api/v1/web/erp/history',
 };
 const AUTH = { accessToken: 'fake-test-pw-not-a-secret', imsOrgId: 'ABC@AdobeOrg' };
 
@@ -58,6 +60,35 @@ describe('ErpIntegrationClient', () => {
         expect(fetchImpl.mock.calls[0][0]).toBe(URLS['runtime/erp/reset']);
         expect((fetchImpl.mock.calls[0][1] as RequestInit).method).toBe('POST');
         expect(report.mirrored?.counts).toEqual({ products: 40, companies: 3 });
+    });
+
+    it('GETs lookup with the one query the action takes, encoded, and answers the lookup', async () => {
+        // Shape from lib/lookup.js productLookup (read 2026-09-24).
+        const body = { kind: 'product', key: 'A 1/B', found: { commerce: true, erp: false }, rows: [], erpHash: null };
+        const fetchImpl = answering(200, body);
+
+        const lookup = await new ErpIntegrationClient(URLS, AUTH, fetchImpl).lookup({ sku: 'A 1/B' });
+
+        expect(fetchImpl.mock.calls[0][0]).toBe(`${URLS['runtime/erp/lookup']}?sku=A+1%2FB`);
+        expect((fetchImpl.mock.calls[0][1] as RequestInit).method).toBe('GET');
+        expect(lookup).toEqual(body);
+
+        await new ErpIntegrationClient(URLS, AUTH, fetchImpl).lookup({ company: '12' });
+        expect(fetchImpl.mock.calls[1][0]).toBe(`${URLS['runtime/erp/lookup']}?company=12`);
+    });
+
+    it('GETs history?trace=<order> and unwraps the trace the action returns under `trace`', async () => {
+        // Shape from lib/order-trace.js buildOrderTrace, wrapped as history/index.js answers it.
+        const trace = {
+            summary: { incrementId: '000000123', commerceStatus: 'processing', erpNumber: '0000001003', erpStatus: 'confirmed', reachedErp: true },
+            steps: [{ at: '2026-09-24T10:00:00Z', where: 'commerce', what: 'Order 000000123 placed' }],
+        };
+        const fetchImpl = answering(200, { trace });
+
+        const answer = await new ErpIntegrationClient(URLS, AUTH, fetchImpl).traceOrder('000000123');
+
+        expect(fetchImpl.mock.calls[0][0]).toBe(`${URLS['runtime/erp/history']}?trace=000000123`);
+        expect(answer).toEqual(trace);
     });
 
     it("a non-2xx answer throws with the action's own message", async () => {
