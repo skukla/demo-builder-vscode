@@ -19,9 +19,11 @@ const mockStatus = jest.fn();
 const mockReset = jest.fn();
 const mockLookup = jest.fn();
 const mockTraceOrder = jest.fn();
+const mockCallErpApi = jest.fn();
 const mockClientCtor = jest.fn();
 jest.mock('@/features/app-builder/services/erpIntegrationClient', () => ({
     ...jest.requireActual('@/features/app-builder/services/erpIntegrationClient'),
+    callErpApi: (...args: unknown[]) => mockCallErpApi(...args),
     ErpIntegrationClient: class {
         constructor(...args: unknown[]) {
             mockClientCtor(...args);
@@ -76,7 +78,9 @@ import {
     handleFollowErpOrder,
     handleGetErpStatus,
     handleLookupErpRecord,
+    handleReadErpApi,
     handleResetErpRecords,
+    handleWriteErpApi,
 } from '@/features/dashboard/handlers/erpIntegrationHandlers';
 import { ErrorCode } from '@/types/errorCodes';
 
@@ -91,11 +95,16 @@ const INTEGRATION: AppBuilderComponentState = {
     source: { owner: 'skukla', repo: 'commerce-erp-integration' },
     deployedUrls: INT_URLS,
 };
+const ERP_URLS = {
+    'runtime/demo-erp/partners': 'https://ns.adobeioruntime.net/api/v1/web/demo-erp/partners',
+    'runtime/demo-erp/orders': 'https://ns.adobeioruntime.net/api/v1/web/demo-erp/orders',
+};
 const ERP: AppBuilderComponentState = {
     kind: 'system',
     status: 'deployed',
     name: 'Nordwind',
     source: { owner: 'skukla', repo: 'demo-erp' },
+    deployedUrls: ERP_URLS,
     url: 'https://ns.adobeio-static.net/index.html',
     lastDeployed: '2026-09-14T00:00:00Z',
 };
@@ -309,5 +318,76 @@ describe('handleFollowErpOrder', () => {
 
         expect(result).toMatchObject({ success: false, code: ErrorCode.AUTH_REQUIRED });
         expect(mockTraceOrder).not.toHaveBeenCalled();
+    });
+});
+
+describe("the ERP's own API (readErpApi / writeErpApi)", () => {
+    it("GETs the route against the ERP's deployed URLs with the sign-in and answers the body", async () => {
+        mockCallErpApi.mockResolvedValue({ ok: true, status: 200, body: { items: [{ id: 'C21' }] }, detail: '' });
+        const { mockContext } = setupMocks(pairProject());
+
+        const result = await handleReadErpApi(mockContext, { id: 'erp-integration', path: 'partners' });
+
+        expect(mockCallErpApi).toHaveBeenCalledWith(
+            ERP_URLS,
+            expect.objectContaining({ imsOrgId: 'ABC@AdobeOrg' }),
+            'GET',
+            'partners',
+            undefined,
+        );
+        expect(result).toEqual({
+            success: true,
+            data: {
+                id: 'erp-integration',
+                erp: expect.objectContaining({ id: 'demo-erp' }),
+                method: 'GET',
+                path: 'partners',
+                answer: { items: [{ id: 'C21' }] },
+            },
+        });
+        expect(mockEnsureAdobeIOAuth).not.toHaveBeenCalled();
+    });
+
+    it('a write passes the method and body through, and answers what the ERP answered', async () => {
+        mockCallErpApi.mockResolvedValue({ ok: true, status: 200, body: { number: '0000001003', status: 'confirmed' }, detail: '' });
+        const { mockContext } = setupMocks(pairProject());
+
+        const result = await handleWriteErpApi(mockContext, {
+            id: 'erp-integration',
+            method: 'post',
+            path: 'orders/0000001003/confirm',
+            body: { reason: 'demo' },
+        });
+
+        expect(mockCallErpApi).toHaveBeenCalledWith(ERP_URLS, expect.anything(), 'POST', 'orders/0000001003/confirm', { reason: 'demo' });
+        expect(result).toMatchObject({ success: true, data: { method: 'POST', answer: { status: 'confirmed' } } });
+    });
+
+    it('refuses a missing route, a GET on the write verb, and a malformed route the client refuses', async () => {
+        const { mockContext } = setupMocks(pairProject());
+
+        expect(await handleReadErpApi(mockContext, { id: 'erp-integration' })).toMatchObject({ success: false, code: ErrorCode.CONFIG_INVALID });
+        expect(await handleWriteErpApi(mockContext, { id: 'erp-integration', method: 'GET', path: 'partners' })).toMatchObject({
+            success: false,
+            code: ErrorCode.CONFIG_INVALID,
+        });
+        mockCallErpApi.mockResolvedValue({ refusal: 'An ERP route is <action>[/<rest>]' });
+        expect(await handleReadErpApi(mockContext, { id: 'erp-integration', path: '../x' })).toMatchObject({
+            success: false,
+            code: ErrorCode.CONFIG_INVALID,
+        });
+    });
+
+    it("an ERP error is answered with its status and words, and a long answer is cut and declared", async () => {
+        mockCallErpApi.mockResolvedValue({ ok: false, status: 409, body: {}, detail: 'order already confirmed' });
+        const { mockContext } = setupMocks(pairProject());
+        expect(await handleWriteErpApi(mockContext, { id: 'erp-integration', method: 'POST', path: 'orders/1/confirm' })).toEqual({
+            success: false,
+            error: 'The ERP answered 409 for POST orders/1/confirm: order already confirmed',
+        });
+
+        mockCallErpApi.mockResolvedValue({ ok: true, status: 200, body: { items: 'x'.repeat(40_000) }, detail: '' });
+        const result = await handleReadErpApi(mockContext, { id: 'erp-integration', path: 'orders' });
+        expect(result).toMatchObject({ success: true, data: { answer: { truncated: true, chars: expect.any(Number) } } });
     });
 });

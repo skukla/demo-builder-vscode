@@ -57,6 +57,28 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
             'ENFORCED like run_commerce_rest: the shared client cuts the body at 30,000 characters ' +
             'and declares the cut. A write answers the record it changed (2026-09-24).',
     },
+    run_erp_rest: {
+        bytes: 31_000,
+        why:
+            'ENFORCED: the handler cuts the ERP answer at 30,000 characters and declares the cut ' +
+            '(an orders or products list can be long). 2026-09-24.',
+    },
+    write_erp_rest: {
+        bytes: 31_000,
+        why: 'ENFORCED like run_erp_rest; a write answers the record it changed. 2026-09-24.',
+    },
+    list_runtime_activations: {
+        bytes: 12_000,
+        why:
+            'BOUNDED by the CLI: at most 50 rows, each five short fields (about 180 bytes on the ' +
+            'live shape read 2026-09-24), so 50 rows stay under 10,000 bytes.',
+    },
+    read_runtime_activation: {
+        bytes: 40_000,
+        why:
+            'Runtime caps an activation log at 10 MB but the CLI prints the lines; a handler log ' +
+            'seen 2026-09-24 was under 2 KB. Not yet enforced by a cut: measure and tighten.',
+    },
     run_commerce_rest: {
         bytes: 31_000,
         why:

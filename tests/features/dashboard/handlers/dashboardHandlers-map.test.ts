@@ -252,7 +252,11 @@ describe('dashboardHandlers', () => {
             // lookupErpRecord + followErpOrder (60 → 62, 2026-09-24): the ERP Admin
             // page's two reads — one record as both systems hold it, one order's whole
             // life — behind the agent tools get_erp_record and get_erp_order_trace.
-            expect(types).toHaveLength(62);
+            //
+            // readErpApi + writeErpApi + listRuntimeActivations + readRuntimeActivation
+            // (62 → 66, 2026-09-24): the ERP's own API for agents (its screens' reads and
+            // actions without the screen), and what RAN in a Runtime namespace.
+            expect(types).toHaveLength(66);
         });
 
         it('should have handlers as functions', () => {

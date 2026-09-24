@@ -362,6 +362,27 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         },
     },
     {
+        tool: 'write_erp_rest',
+        needsAuth: false,
+        readOnly: false,
+        description:
+            "POST, PUT, PATCH or DELETE one of the ERP's own routes — the actions a person takes " +
+            "on its screens, without the screen: confirm, ship, invoice, hold, release or cancel an " +
+            'order (orders/<number>/confirm …), change a price or list price (PATCH products/<sku>), ' +
+            'a credit limit or block (PATCH partners/<id>), add a pricing condition (POST pricing). ' +
+            'The ERP publishes the change to the integration, which applies it to Commerce. Requires ' +
+            'confirm:true. Takes the ERP integration id, the method, the route and a JSON body.',
+        map: dashboardHandlers,
+        type: 'writeErpApi',
+        confirm: true,
+        inputSchema: {
+            id: z.string().describe('The ERP integration id (from get_project)'),
+            method: z.enum(['POST', 'PUT', 'PATCH', 'DELETE']).describe('The ERP route\'s verb'),
+            path: z.string().describe('The ERP route, e.g. "orders/0000001003/confirm" or "partners/C21"'),
+            body: z.record(z.unknown()).optional().describe('The JSON body the route takes'),
+        },
+    },
+    {
         tool: 'open_erp_screen',
         needsAuth: false,
         // NOT read-only: it opens a browser window, same as open_url.

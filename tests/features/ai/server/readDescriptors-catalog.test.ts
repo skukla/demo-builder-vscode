@@ -77,6 +77,13 @@ const CATALOG: Row[] = [
         args: ['id', 'sku', 'company'],
     },
     {
+        tool: 'run_erp_rest',
+        map: dashboardHandlers,
+        type: 'readErpApi',
+        needsAuth: false,
+        args: ['id', 'path'],
+    },
+    {
         tool: 'get_erp_order_trace',
         map: dashboardHandlers,
         type: 'followErpOrder',
@@ -96,6 +103,20 @@ const CATALOG: Row[] = [
         type: 'listConsoleApis',
         needsAuth: ['adobe'],
         args: ['search', 'componentId'],
+    },
+    {
+        tool: 'list_runtime_activations',
+        map: dashboardHandlers,
+        type: 'listRuntimeActivations',
+        needsAuth: ['adobe'],
+        args: ['componentId', 'action', 'limit'],
+    },
+    {
+        tool: 'read_runtime_activation',
+        map: dashboardHandlers,
+        type: 'readRuntimeActivation',
+        needsAuth: ['adobe'],
+        args: ['componentId', 'activationId'],
     },
     {
         tool: 'list_runtime_packages',

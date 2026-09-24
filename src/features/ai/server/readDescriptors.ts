@@ -335,6 +335,23 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
         },
     },
     {
+        tool: 'run_erp_rest',
+        needsAuth: false,
+        readOnly: true,
+        description:
+            "GET one of the ERP's own routes as its screens read them: partners, partners/<id>, " +
+            'products, products/<sku>, pricing, orders, orders/<number>, shipments, invoices, ' +
+            'settings, health, search?q=. Use to see what the ERP holds (credit exposure, held ' +
+            'orders, open lines) beside get_erp_record, which compares one record across both ' +
+            'systems. Takes the ERP integration id and the route.',
+        map: dashboardHandlers,
+        type: 'readErpApi',
+        inputSchema: {
+            id: z.string().describe('The ERP integration id (from get_project)'),
+            path: z.string().describe('The ERP route, e.g. "partners/C21" or "orders"'),
+        },
+    },
+    {
         tool: 'get_erp_order_trace',
         needsAuth: false,
         readOnly: true,
@@ -391,6 +408,38 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
                 .describe("Show only this integration's picks; omit for the project-wide union"),
         },
         shape: shapeConsoleApis,
+    },
+    {
+        tool: 'list_runtime_activations',
+        needsAuth: ['adobe'],
+        readOnly: true,
+        description:
+            "List what RAN in this project's Adobe I/O Runtime namespace, newest first: each " +
+            'activation with its action, start time, duration and status code (0 ok, 1 app error). ' +
+            'Use to see whether an event handler or a timer job fired, and when. Pass componentId ' +
+            'to read the workspace that integration deploys into, action to filter (e.g. ' +
+            '"erp/refresh-job"), limit up to 50.',
+        map: dashboardHandlers,
+        type: 'listRuntimeActivations',
+        inputSchema: {
+            componentId: z.string().min(1).optional().describe('An integration id, to read its own workspace'),
+            action: z.string().optional().describe('Only this action, e.g. "erp/refresh-job"'),
+            limit: z.number().int().min(1).max(50).optional().describe('How many, newest first (default 30, max 50)'),
+        },
+    },
+    {
+        tool: 'read_runtime_activation',
+        needsAuth: ['adobe'],
+        readOnly: true,
+        description:
+            "Read one Runtime activation's log lines and result, by the id list_runtime_activations " +
+            'gives. Use to see why a handler or timer job failed in its own words.',
+        map: dashboardHandlers,
+        type: 'readRuntimeActivation',
+        inputSchema: {
+            componentId: z.string().min(1).optional().describe('An integration id, to read its own workspace'),
+            activationId: z.string().describe('The 32-character activation id'),
+        },
     },
     {
         tool: 'list_runtime_packages',

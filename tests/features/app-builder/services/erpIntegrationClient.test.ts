@@ -6,6 +6,7 @@
 import {
     ErpIntegrationApiError,
     ErpIntegrationClient,
+    callErpApi,
     deriveErpActionUrl,
 } from '@/features/app-builder/services/erpIntegrationClient';
 
@@ -102,6 +103,48 @@ describe('ErpIntegrationClient', () => {
     it('an integration without the action is refused before any call', async () => {
         const fetchImpl = answering(200, {});
         await expect(new ErpIntegrationClient({}, AUTH, fetchImpl).status()).rejects.toThrow(/deployed no erp\/status action/);
+        expect(fetchImpl).not.toHaveBeenCalled();
+    });
+});
+
+describe("callErpApi — the ERP's own routes", () => {
+    const ERP_URLS = {
+        'runtime/demo-erp/partners': 'https://ns.adobeioruntime.net/api/v1/web/demo-erp/partners',
+        'runtime/demo-erp/orders': 'https://ns.adobeioruntime.net/api/v1/web/demo-erp/orders',
+    };
+
+    it('addresses <action>/<rest>?query under the deployed action and sends the JSON body with the sign-in', async () => {
+        const fetchImpl = answering(200, { number: '0000001003', status: 'confirmed' });
+
+        const answer = await callErpApi(ERP_URLS, AUTH, 'POST', 'orders/0000001003/confirm?force=1', { reason: 'demo' }, fetchImpl);
+
+        expect(fetchImpl).toHaveBeenCalledWith('https://ns.adobeioruntime.net/api/v1/web/demo-erp/orders/0000001003/confirm?force=1', {
+            method: 'POST',
+            headers: {
+                Authorization: 'Bearer fake-test-pw-not-a-secret',
+                'x-gw-ims-org-id': 'ABC@AdobeOrg',
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ reason: 'demo' }),
+        });
+        expect(answer).toMatchObject({ ok: true, status: 200, body: { status: 'confirmed' } });
+    });
+
+    it('a GET carries no body and no Content-Type', async () => {
+        const fetchImpl = answering(200, { items: [] });
+        await callErpApi(ERP_URLS, AUTH, 'GET', 'partners', undefined, fetchImpl);
+        const [, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit & { headers: Record<string, string> }];
+        expect(init.method).toBe('GET');
+        expect(init.body).toBeUndefined();
+        expect(init.headers['Content-Type']).toBeUndefined();
+    });
+
+    it('refuses a malformed route and an action the ERP does not deploy, before any call', async () => {
+        const fetchImpl = answering(200, {});
+        expect(await callErpApi(ERP_URLS, AUTH, 'GET', '../admin', undefined, fetchImpl)).toHaveProperty('refusal');
+        expect(await callErpApi(ERP_URLS, AUTH, 'GET', 'https://x/partners', undefined, fetchImpl)).toHaveProperty('refusal');
+        expect(await callErpApi(ERP_URLS, AUTH, 'GET', 'pricing', undefined, fetchImpl)).toEqual({ refusal: 'The ERP deploys no "pricing" action.' });
         expect(fetchImpl).not.toHaveBeenCalled();
     });
 });

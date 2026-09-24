@@ -89,12 +89,18 @@ import {
     handleGetErpStatus,
     handleLookupErpRecord,
     handleOpenErpScreen,
+    handleReadErpApi,
     handleResetErpRecords,
+    handleWriteErpApi,
 } from '@/features/dashboard/handlers/erpIntegrationHandlers';
 import {
     handleCheckIntegrationUpdates,
     handleUpdateAppBuilderComponent,
 } from '@/features/dashboard/handlers/integrationUpdateHandlers';
+import {
+    handleListRuntimeActivations,
+    handleReadRuntimeActivation,
+} from '@/features/dashboard/handlers/runtimeActivationHandlers';
 import { handleListRuntimePackages } from '@/features/dashboard/handlers/runtimePackageHandlers';
 import { handleAddSharedDemo } from '@/features/eds/handlers/addSharedDemoHandler';
 import { handleChangeDemoSource } from '@/features/eds/handlers/changeDemoSourceHandler';
@@ -333,6 +339,14 @@ export const dashboardHandlers = defineHandlers({
     // systems hold it, and one order's whole life across both.
     lookupErpRecord: handleLookupErpRecord,
     followErpOrder: handleFollowErpOrder,
+    // The ERP's own API, for agents (2026-09-24): its screens' reads and actions
+    // without the screen — how the ERP → Commerce half is driven headless.
+    readErpApi: handleReadErpApi,
+    writeErpApi: handleWriteErpApi,
+    // What RAN in a Runtime namespace (2026-09-24): the list of recent activations
+    // and one activation's log and result — the read that placed the event fault.
+    listRuntimeActivations: handleListRuntimeActivations,
+    readRuntimeActivation: handleReadRuntimeActivation,
     // An integration's Settings (AB-21): the read, and the save that stores then
     // redeploys.
     getIntegrationSettings: handleGetIntegrationSettings,

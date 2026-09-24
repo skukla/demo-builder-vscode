@@ -96,6 +96,8 @@ describe('ACTION_DESCRIPTORS', () => {
             // Says "set", not "delete", and removes on a live workspace credential
             // — exactly the case the delete_* rule above cannot see.
             'set_console_apis',
+            // Acts on the ERP as its screens do; the ERP then writes into Commerce.
+            'write_erp_rest',
         ]);
     });
 

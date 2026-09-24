@@ -20,8 +20,10 @@ jest.mock('@/features/app-builder/services/runtimeCredentials', () => ({
 
 import {
     deleteRuntimeEntity,
+    listRuntimeActivations,
     listRuntimeNames,
     listRuntimePackages,
+    readRuntimeActivation,
     runInNamespace,
     runtimeNamespaceEnv,
 } from '@/features/app-builder/services/runtimeNamespace';
@@ -210,5 +212,85 @@ describe('deleteRuntimeEntity', () => {
         await expect(deleteRuntimeEntity(deps, 'package', 'demo-erp', ENV)).rejects.toThrow(
             'aio runtime package delete demo-erp --recursive: exited with code 2'
         );
+    });
+});
+
+describe('listRuntimeActivations', () => {
+    // One row exactly as `aio runtime activation list --json` printed it live on 2026-09-24.
+    const RAW = [
+        {
+            activationId: '583ceebe8d6249edbceebe8d62f9edd7',
+            annotations: [
+                { key: 'path', value: '285361-ns-acmeerp/demo-erp/events-retry' },
+                { key: 'waitTime', value: 9 },
+                { key: 'kind', value: 'nodejs:22' },
+                { key: 'timeout', value: false },
+            ],
+            duration: 102,
+            end: 1790287255084,
+            name: 'events-retry',
+            namespace: '285361-ns-acmeerp',
+            publish: false,
+            start: 1790287254982,
+            statusCode: 0,
+            version: '0.0.2',
+        },
+    ];
+
+    it('runs the list with the key, caps the limit at 50, filters by action, and shapes each row', async () => {
+        const deps = makeDeps();
+        deps.commandManager.execute.mockResolvedValue(createSuccessResult(JSON.stringify(RAW)));
+
+        const rows = await listRuntimeActivations(deps, ENV, { limit: 500, action: 'demo-erp/events-retry' });
+
+        expect(deps.commandManager.execute).toHaveBeenCalledWith(
+            'aio runtime activation list "demo-erp/events-retry" --json --limit 50',
+            expect.objectContaining({ env: ENV, shell: true }),
+        );
+        expect(rows).toEqual([
+            {
+                activationId: '583ceebe8d6249edbceebe8d62f9edd7',
+                action: 'demo-erp/events-retry',
+                startedAt: new Date(1790287254982).toISOString(),
+                durationMs: 102,
+                statusCode: 0,
+                kind: 'nodejs:22',
+            },
+        ]);
+    });
+
+    it('throws when the list fails or is not a list — never an empty answer', async () => {
+        const deps = makeDeps();
+        deps.commandManager.execute.mockResolvedValue(createFailureResult(' ›   Error: An AUTH key must be specified'));
+        await expect(listRuntimeActivations(deps, ENV)).rejects.toThrow(/AUTH key/);
+        deps.commandManager.execute.mockResolvedValue(createSuccessResult('{"not":"a list"}'));
+        await expect(listRuntimeActivations(deps, ENV)).rejects.toThrow(/not a list/);
+    });
+});
+
+describe('readRuntimeActivation', () => {
+    it('reads the logs without the CLI banner and the result as JSON, by id, with the key', async () => {
+        const deps = makeDeps();
+        deps.commandManager.execute
+            .mockResolvedValueOnce(createSuccessResult('=== activation logs 583ceebe8d6249edbceebe8d62f9edd7\n2026-09-24T21:43:03.598Z stdout: error: partner refresh failed\n'))
+            .mockResolvedValueOnce(createSuccessResult('{"result":{"body":{"delivered":0}}}'));
+
+        const read = await readRuntimeActivation(deps, ENV, '583ceebe8d6249edbceebe8d62f9edd7');
+
+        expect(deps.commandManager.execute.mock.calls.map((c) => c[0])).toEqual([
+            'aio runtime activation logs 583ceebe8d6249edbceebe8d62f9edd7',
+            'aio runtime activation result 583ceebe8d6249edbceebe8d62f9edd7',
+        ]);
+        expect(read).toEqual({
+            activationId: '583ceebe8d6249edbceebe8d62f9edd7',
+            logs: ['2026-09-24T21:43:03.598Z stdout: error: partner refresh failed'],
+            result: { result: { body: { delivered: 0 } } },
+        });
+    });
+
+    it('refuses an id that is not 32 hex characters before running anything', async () => {
+        const deps = makeDeps();
+        await expect(readRuntimeActivation(deps, ENV, 'abc; rm -rf /')).rejects.toThrow(/32 hex/);
+        expect(deps.commandManager.execute).not.toHaveBeenCalled();
     });
 });

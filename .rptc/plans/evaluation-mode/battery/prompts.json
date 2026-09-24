@@ -922,6 +922,42 @@
     "why": "2026-09-24 (owner): the tools should allow everything the Commerce REST API allows on the project's instance. This is a write with a body (PUT companyCredits/{id}); the agent must read the credit first, then call the write tool with confirm:true, which raises the consent dialog naming the method and path. Tier 3: never run unattended."
   },
   {
+    "id": "erp-rest-read-orders",
+    "prompt": "Show me the open sales orders the ERP behind my ERP integration is holding, with their credit status.",
+    "expect": [
+      "run_erp_rest"
+    ],
+    "cwd": "project",
+    "why": "2026-09-24: the ERP's screens read its own API; an agent had no way to. get_erp_status gives counts only and get_erp_order_trace takes one Commerce order number, so a list of the ERP's orders is only answerable by reading its orders route."
+  },
+  {
+    "id": "erp-rest-write-confirm",
+    "prompt": "In the ERP, confirm sales order 0000001003 so Commerce moves the order to Processing.",
+    "expect": [
+      "write_erp_rest"
+    ],
+    "cwd": "project",
+    "why": "2026-09-24: the ERP to Commerce half (confirm, ship, invoice, hold, price, credit) was only reachable through the ERP's screen. This is one of its screen actions as an API call; confirm-gated, with the consent dialog naming the method and route. Tier 3: never run unattended."
+  },
+  {
+    "id": "runtime-activations-list",
+    "prompt": "Did the ERP integration's product event handler run in the last hour? List what ran in its Runtime namespace.",
+    "expect": [
+      "list_runtime_activations"
+    ],
+    "cwd": "project",
+    "why": "2026-09-24: 'did the handler ever fire' was answered by hand with a downloaded credential and aio runtime activation list; the answer (no handler activation in 150 rows) placed a delivery fault in one minute. list_runtime_packages says what is deployed, not what ran."
+  },
+  {
+    "id": "runtime-activation-read",
+    "prompt": "The ERP integration's refresh job ran a minute ago in Runtime. Show me that activation's log and result so I can see why it failed.",
+    "expect": [
+      "read_runtime_activation"
+    ],
+    "cwd": "project",
+    "why": "2026-09-24: the refresh job reported success while its log said 'partner refresh failed: Request timed out'. Only the activation's own log says that; the extension's debug log cannot see inside Runtime."
+  },
+  {
     "id": "integration-settings-read",
     "prompt": "What is my ERP integration's ERP called, and which of its settings still need a value?",
     "expect": [

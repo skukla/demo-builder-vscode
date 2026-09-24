@@ -419,6 +419,15 @@ describe('rows with no output safety net are classified', () => {
         // `{id, erp, orderNumber, trace}` — one order's steps.
         'get_erp_record',
         'get_erp_order_trace',
+        // The ERP's own API and what ran in Runtime (2026-09-24), read before listing:
+        // `handleReadErpApi`/`handleWriteErpApi` return `{id, erp, method, path, answer}` with
+        // the answer cut at 30,000 chars; `handleListRuntimeActivations` returns
+        // `{namespace, activations}` (at most 50 rows); `handleReadRuntimeActivation` returns
+        // `{namespace, activationId, logs, result}`.
+        'run_erp_rest',
+        'write_erp_rest',
+        'list_runtime_activations',
+        'read_runtime_activation',
         // An integration's Settings (AB-21), read before listing:
         // `handleGetIntegrationSettings` returns `{id, settings: {fields, connected}}`
         // and `saveIntegrationSettings` returns `{success, saved, settings}` —

@@ -135,6 +135,13 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         target: ['projectName', 'title'],
         sessionGrant: false,
     },
+    write_erp_rest: {
+        action: 'Change something in the ERP',
+        consequence:
+            'Acts on the demo ERP the way its screens do; the ERP then sends the change to Commerce, where it lands on real products, companies or orders.',
+        target: ['method', 'path'],
+        sessionGrant: false,
+    },
     write_commerce_rest: {
         action: 'Change data in the Commerce store',
         consequence:

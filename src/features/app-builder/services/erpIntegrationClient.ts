@@ -187,11 +187,14 @@ export interface ImsCallAnswer {
  * @param fetchImpl - fetch, injectable for tests
  * @returns the answer; never throws on an HTTP failure
  */
+export type ImsCallMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+
 export async function callWithIms(
     url: string,
-    method: 'GET' | 'POST',
+    method: ImsCallMethod,
     auth: AppManagementAuth,
     fetchImpl: typeof fetch,
+    payload?: unknown,
 ): Promise<ImsCallAnswer> {
     const response = await fetchImpl(url, {
         method,
@@ -199,7 +202,9 @@ export async function callWithIms(
             Authorization: `Bearer ${auth.accessToken}`,
             'x-gw-ims-org-id': auth.imsOrgId,
             Accept: 'application/json',
+            ...(payload !== undefined ? { 'Content-Type': 'application/json' } : {}),
         },
+        ...(payload !== undefined ? { body: JSON.stringify(payload) } : {}),
     });
     const text = await response.text();
     let body: unknown = {};
@@ -211,4 +216,38 @@ export async function callWithIms(
     const fields = body as { error?: string; errorMessage?: string };
     const detail = fields.error ?? fields.errorMessage ?? (text || 'no detail');
     return { ok: response.ok, status: response.status, body, detail };
+}
+
+/** An ERP route: `<action>[/<rest>][?query]`, the way the ERP's own actions document them. */
+const ERP_ROUTE = /^[a-z][a-z0-9-]*(\/[A-Za-z0-9_.\-%]+)*(\?[A-Za-z0-9_.\-%=&]+)?$/u;
+
+/**
+ * Call one of the ERP's own routes (`partners/C2`, `orders/0000001003/confirm`,
+ * `pricing`, `admin/wipe`) with the signed-in identity: the first segment names
+ * the ERP's web action, the rest is the path under it. The ERP's routes are
+ * documented in each action's header in `skukla/demo-erp` (`actions/<action>/index.js`).
+ *
+ * @param deployedUrls - the ERP component's per-action URL map
+ * @returns the answer, or the refusal when the route is malformed or the action is not deployed
+ */
+export async function callErpApi(
+    deployedUrls: Record<string, string> | undefined,
+    auth: AppManagementAuth,
+    method: ImsCallMethod,
+    route: string,
+    body: unknown,
+    fetchImpl: typeof fetch = globalThis.fetch,
+): Promise<ImsCallAnswer | { refusal: string }> {
+    const trimmed = route.trim().replace(/^\/+/, '');
+    if (!ERP_ROUTE.test(trimmed)) {
+        return { refusal: 'An ERP route is <action>[/<rest>], e.g. "partners/C2" or "orders/0000001003/confirm".' };
+    }
+    const [action, ...rest] = trimmed.split('?')[0].split('/');
+    const query = trimmed.includes('?') ? `?${trimmed.split('?')[1]}` : '';
+    const actionUrl = Object.values(deployedUrls ?? {}).find((url) => url.endsWith(`/${action}`));
+    if (!actionUrl) {
+        return { refusal: `The ERP deploys no "${action}" action.` };
+    }
+    const url = `${actionUrl}${rest.length ? `/${rest.join('/')}` : ''}${query}`;
+    return callWithIms(url, method, auth, fetchImpl, body);
 }

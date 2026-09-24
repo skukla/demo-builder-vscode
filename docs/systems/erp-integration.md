@@ -156,6 +156,14 @@ systems hold it, field by field, and `get_erp_order_trace` reads one Commerce or
 life across Commerce, the integration and the ERP (the Admin page's lookup card and Follow
 an order, 2026-09-24). They exist because an agent validating the pair could read Commerce
 products through GraphQL but had no way to see a B2B company, its credit, or an order.
+`run_erp_rest` reads any of the ERP's own routes (partners, products, pricing, orders,
+shipments, invoices, settings, health, search) and `write_erp_rest` (confirm-gated, with a
+consent dialog naming the method and route) takes the actions its screens take — confirm,
+ship, invoice, hold, a price or credit change — so the ERP → Commerce half runs without the
+screen. `list_runtime_activations` and `read_runtime_activation` read what RAN in the pair's
+Runtime namespace and one activation's log; on 2026-09-24 that read placed a Commerce event
+fault in one minute. Beside them, `run_commerce_rest` and `write_commerce_rest` reach the
+Commerce REST API for the same instance (AB-29).
 `get_integration_settings` reads the integration's settings, and `set_integration_settings`
 changes a text setting (the ERP's name) and redeploys; a secret setting is entered on the
 tile, never passed to a tool.

@@ -35,8 +35,10 @@ import type { AppManagementAuth } from '@/features/app-builder/services/appManag
 import { catalogEntryFor } from '@/features/app-builder/services/componentEntry';
 import {
     ErpIntegrationClient,
+    callErpApi,
     deriveErpActionUrl,
     type ErpResetReport,
+    type ImsCallMethod,
 } from '@/features/app-builder/services/erpIntegrationClient';
 import { deriveScreenUrl, readScreenKey, screenLink } from '@/features/app-builder/services/systemScreen';
 import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
@@ -279,4 +281,79 @@ export const handleFollowErpOrder: MessageHandler<{ id?: string; orderNumber?: s
     } catch (error) {
         return { success: false, error: `Could not follow the order: ${errorText(error)}` };
     }
+};
+
+/** The same bound the Commerce REST tools hold: an ERP list can be long, and the cut is declared. */
+const MAX_ERP_ANSWER_CHARS = 30_000;
+const ERP_WRITE_METHODS: ReadonlyArray<ImsCallMethod> = ['POST', 'PUT', 'PATCH', 'DELETE'];
+
+/** The ERP's answer as an agent reads it: the body, cut and declared past the ceiling. */
+function shapeErpAnswer(body: unknown): unknown {
+    const text = typeof body === 'string' ? body : JSON.stringify(body);
+    if (text.length <= MAX_ERP_ANSWER_CHARS) return body;
+    return {
+        truncated: true,
+        chars: text.length,
+        note: `Showing the first ${MAX_ERP_ANSWER_CHARS} characters. Ask for one record, or a narrower list.`,
+        body: text.slice(0, MAX_ERP_ANSWER_CHARS),
+    };
+}
+
+/** Both ERP API verbs share this: the pair resolved, the route called, the answer shaped. */
+async function callErpRoute(
+    context: HandlerContext,
+    payload: { id?: string; path?: string; body?: unknown } | undefined,
+    method: ImsCallMethod,
+    verb: string,
+): Promise<HandlerResponse> {
+    const route = payload?.path?.trim();
+    if (!route) {
+        return { success: false, error: 'Name the ERP route, e.g. "partners" or "orders/0000001003".', code: ErrorCode.CONFIG_INVALID };
+    }
+    const call = await openErpCall(context, payload, verb);
+    if ('error' in call) return call.error;
+    if (!call.erp) {
+        return { success: false, error: `"${call.id}" has no ERP in this project.`, code: ErrorCode.INVALID_OPERATION };
+    }
+    try {
+        const answer = await callErpApi(call.erp.deployedUrls, call.auth, method, route, payload?.body);
+        if ('refusal' in answer) {
+            return { success: false, error: answer.refusal, code: ErrorCode.CONFIG_INVALID };
+        }
+        if (!answer.ok) {
+            return { success: false, error: `The ERP answered ${answer.status} for ${method} ${route}: ${answer.detail}` };
+        }
+        return { success: true, data: { id: call.id, erp: shapeErpRow(call.erp), method, path: route, answer: shapeErpAnswer(answer.body) } };
+    } catch (error) {
+        return { success: false, error: `Could not reach the ERP: ${errorText(error)}` };
+    }
+}
+
+/**
+ * Handle 'readErpApi' — GET one of the ERP's own routes (partners, products, pricing,
+ * orders, shipments, invoices, settings, health, search) as the ERP's screens read them.
+ */
+export const handleReadErpApi: MessageHandler<{ id?: string; path?: string }> = (context, payload) =>
+    callErpRoute(context, payload, 'GET', 'read the ERP');
+
+/**
+ * Handle 'writeErpApi' — POST, PUT, PATCH or DELETE one of the ERP's own routes: the
+ * actions a person takes on the ERP's screens (confirm, ship, invoice, hold, a price or
+ * credit change), made without the screen. The ERP publishes the resulting event to the
+ * integration, which applies it to Commerce, so this is how the ERP → Commerce half is
+ * driven from the agent surface.
+ */
+export const handleWriteErpApi: MessageHandler<{ id?: string; method?: string; path?: string; body?: unknown }> = (
+    context,
+    payload,
+) => {
+    const method = String(payload?.method ?? '').toUpperCase() as ImsCallMethod;
+    if (!ERP_WRITE_METHODS.includes(method)) {
+        return Promise.resolve({
+            success: false,
+            error: 'method must be POST, PUT, PATCH or DELETE. For reads use run_erp_rest.',
+            code: ErrorCode.CONFIG_INVALID,
+        });
+    }
+    return callErpRoute(context, payload, method, 'change the ERP');
 };
