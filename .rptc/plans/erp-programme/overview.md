@@ -96,6 +96,27 @@ Specified in `../erp-business-structure/overview.md` § "The data model" (the pi
 \* structure plan · † pricing slice · ‡ product slice · § credit memo, gated on O5.
 Contract: `contractVersion` 1 → 2 in the structure plan; every change is additive.
 
+## 5a. The composite entities (owner, 2026-09-24)
+
+A business concept such as "a buying organization" exists in neither system as one record.
+Each system represents it with a composite of native records, and the concept only exists
+when both composites are read together through one join. The entity matrix (bidirectional
+review) lists the native records; this table lists the concepts. Slice 9's cards and slice
+V's journeys are per concept. Confirmed by the owner 2026-09-24 as the right set; each row
+is written out record by record, with field ownership, in the composite-entity research
+(to be done — see §6, slice CE).
+
+| Concept | Commerce composite | ERP composite | Join |
+|---|---|---|---|
+| **Buying organization** | company · company admin and users (customers) · customer group · shared catalog · company credit · company address book · payment/shipping allowances · (quotes, purchase orders) | business partner (sold-to) · credit limit · exposure (derived) · blocking level · payment terms · sales-organisation memberships · its pricing conditions · legal identity | company id |
+| **Selling organization** | website · Store Information (address, VAT, currency) · stores and store views · the website's stock | company code · sales organisation · order-number prefix | the per-website setting |
+| **Sellable item** | product · attributes · configurable parent and variants · source assignments · website assignments | product · base unit · type · variants · warehouses · sales status · conditions naming it | SKU |
+| **Price** | list price · website-scoped price · shared-catalog custom price · cart-time ERP price (webhook) · discount ceiling (webhook) | list price · contract price · contract discount · maximum discount · validity, minimum quantity, sales-org scope | SKU + company + sales org |
+| **Inventory position** | source items · stock per website · salable quantity | warehouses · committed to open orders · available | SKU + source code |
+| **Credit** | company credit: limit, balance, currency, allow-to-exceed | limit · exposure · available · held orders · blocking | company id |
+| **Order** — the order and the documents it becomes; NOT order-to-cash: it stops at the invoice, and the ERP keeps no receivable, payment or dunning (realism audit Tier 3; owner 2026-09-24). A payment leg, if ever wanted, is its own composite (Commerce capture ↔ ERP incoming payment) and is out of scope | order · items · comments · hold · shipments · invoices · credit memos · `ext_order_id` | sales order · lines (shipped / open / closed) · credit decision · shipments · invoice · credit memo · history | `ext_order_id` with prefix |
+| **Fulfilment source** | inventory source | warehouse, its ERP name; which ERP, in the two-pair case | source code |
+
 ## 6. The order of work
 
 Six workstreams, one sequence. Each row is a slice with its own plan or step file, TDD, its
@@ -106,6 +127,8 @@ against a deployed pair is the owner's, at the gates marked ◆.
 |---|---|---|---|---|---|---|
 | **Done** | Order document (slice 1); Customer document; Shipments and Invoice as documents with partial shipment and Close remaining; derived statuses; cancel reason to Commerce; **credit hold** — records, moves and screen (held / release / reject, four blocking levels, demo step 11 walkable in the preview) | A + B | erp, integration | — | — | `demo-erp` `6009a62` `ffc7be2` `1c00e32` `c865750` + screen commit; integration `64a6844` `0fcec33` + contract sync |
 | 1 | *(done — folded into the row above)* | | | | | |
+| **CE** | **Composite-entity research**: each concept in §5a written out record by record on both sides — record, field, type, owner (which system decides it), mirrored today or not, the join — from the Commerce REST and B2B references, our two repos, and SAP's record structure for the counterpart (customer master's three layers, material master views, sales document header and item, credit account). Output: `.rptc/research/erp-composite-entities/`. It is the input to V's journeys and 9's cards | research | worktree | — | — | every §5a row has its field table, and every field says who owns it |
+| **API-1** | **Commerce API inventory and validation** (owner, 2026-09-24): one document listing every Commerce API the programme needs — REST (products, source items, stocks, store configs and websites, companies, company credits, customers, orders, ship, invoice, hold/unhold, cancel, comments, credit memo), Commerce events (product, stock, order, shipment, invoice saves), the two webhooks, Admin UI SDK extension points, App Management business config — one row per API with the slice that needs it. Each validated to EXIST on the backend the demo runs on (Adobe Commerce as a Cloud Service and PaaS are not guaranteed identical) by a read-only call against a live instance, with the real request and response captured as a fixture (ADR-016 contract tier: a fixture captured live is the contract; a shape typed from memory is not) and pinned by a test that the code sends and reads exactly that. On the ERP side, `erp-contract.json` grows from key lists to full request/response shapes at version 2, SAP's terms carried in descriptions (sold-to, sales organisation, delivering plant) without renaming fields that work — "closer to SAP, not too picky". Before slices 2–4, which add five new Commerce calls; the live calls are the owner's ◆ | C / docs | integration, erp | — | ◆ live read-only calls | every API a later slice uses has a captured contract before that slice starts |
 | 2 | **Hold → Commerce hold/unhold**, detach unholds; new event `sales_order_hold`, handler, contract | C | erp, integration | 1 | ◆ owner runs the deploy | a held ERP order shows On Hold in Commerce; reset returns it |
 | 3 | **Commerce-side order changes → ERP**: shipment, invoice, cancel, hold made in Commerce Admin; the `origin` marker so the ERP does not echo; the **"is this mine?" check against the pair's own ERP** (M2) | C | erp, integration | 1 | ◆ subscription change: uninstall + install | ship in Commerce Admin → ERP shows the shipment; no second Commerce shipment |
 | 4 | **Per-source stock → ERP** (G2) and the small decisions: product delete (G1), credit balance (G3 — recommend the ERP's exposure is the demo's truth), currency (G5, via slice 6) | C | integration, erp | — | G3 | a non-default source edit in Commerce reaches the ERP |
@@ -124,8 +147,10 @@ against a deployed pair is the owner's, at the gates marked ◆.
 | **UI-3** | **Documents redesign**: order timeline card from `history`; product link from an order line; credit meter and open-items/history split on the customer; due date and seller block on the invoice; ERP warehouse names on the shipment; the product page on the shared `Card` | B | erp | 6 (names, seller block), 7 | — | UI audit §Order, §Shipment/Invoice, §Customer, §Product |
 | **UI-4** | **Settings and journal redesign**: Organisation, Warehouses, Currency and Document numbering cards; event journal naming documents, plain kinds in the list, live refresh; Wipe confirmation that names what is lost | B | erp | 6 | — | UI audit §Settings, §Event Journal |
 
-**Why this order.** V's baseline runs first — it is a read, and it tells us whether the
-matrix is right before anything is built on it. 1 finishes what is half-built. 2–4 close the entity matrix's gaps
+**Why this order.** CE and API-1 come first and are research: CE says what the concepts are
+made of, API-1 says which Commerce calls exist and what they answer, and V's baseline then
+proves what syncs today. Nothing is built on an unverified call or an unwritten composite.
+1 finishes what is half-built. 2–4 close the entity matrix's gaps
 before the structure changes touch the same handlers. 5 is independent and carries two demo
 steps. 6 needs 3's "is this mine?" check and is the precondition for two pairs (R5). 7–9
 are screen work that can interleave. 11–12 are the multi-ERP half and wait on the client's
@@ -158,6 +183,8 @@ AB-23.
 | D · Business structure | plan written; nothing built | slice 6 | S3, P1–P3 (recommendations given) |
 | E · Commerce Admin | history, retry, one-order trace, settings page | the entity map (slice 9), after the structure slice | 6, 3 |
 | F · Multi-ERP | copy identity; AB-23 active | AB-16; routing integration | client answers; seam question |
+| CE · Composite entities | the concept list (§5a), owner-confirmed | the record-by-record research | — |
+| API-1 · Commerce API inventory | the calls the code makes today, in `lib/commerce.js` and the handlers | the inventory, then live validation with captured fixtures | ◆ |
 | V · Sync validation | the entity matrix, read from code | the baseline journey against a deployed pair (needs the owner) | ◆ |
 | B · Screen redesign (UI-1..4) | the house style: cards, badges, trail, themes | scheduled behind the slices whose data they show | — |
 | Docs / drift | contract tests both repos; plan status blocks; this overview | record-shape pin (slice 6 step 01); demo setup guide | — |
