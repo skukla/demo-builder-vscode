@@ -356,7 +356,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-56g` | chore | └ [A feature page for moving projects](2026-09-11-portability-docs.md) | PL-56d | low | backlog |
 | `PL-59` | feature | [A long operation should say what it is doing, not just spin](2026-09-16-progress-surface-for-long-operations.md) | — | high | active |
 | `PL-62` | feature | [Adding something is a card, everywhere](2026-09-21-add-is-a-card.md) | — | low | backlog |
-| `PL-63` | fix | [The CSS baseline check refuses every push that MERGES a stylesheet change](2026-09-23-css-baseline-cannot-accept-a-merged-capture.md) | — | med | backlog |
+| `PL-63` | fix | [The CSS baseline check refuses every push that MERGES a stylesheet change](2026-09-23-css-baseline-cannot-accept-a-merged-capture.md) | — | med | built |
 
 <!-- END GENERATED registry -->
 
