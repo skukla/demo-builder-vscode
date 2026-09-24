@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-26
 needs: [AB-26b]
 value: high
-status: backlog
+status: active
 ---
 
 # Changes made in Commerce Admin flow back to the ERP (shipment, invoice, cancel, hold)
@@ -21,3 +21,4 @@ Subscribe to Commerce's shipment, invoice and non-new order saves; tell the ERP 
 Harness: ship in the fake Commerce → ERP shipment exists → NO second Commerce shipment recorded; same for invoice, cancel, hold; a second pair's handler ignores an order it does not hold; live in the scratch workspace.
 
 ## Shipped so far
+- 2026-09-24  BUILT TO THE EDGE — demo-erp ce52126 (origin-aware moves: commerce-shipment, commerce-invoice, credit/hold, cancel and credit/release with origin; recorded and journaled, no outbound event; idempotent; contract order.fromCommerce) + integration f42e6f2 (handlers order-commerce/shipped, /invoiced, /changed on the shipment save, invoice save and non-new order save events; is-this-mine via ext_order_id → ERP GET (M2); 503 waits / 400 ends; Admin history rows; manifest regenerated; 332 tests). NOT done: live proof — the two new subscriptions (their payload fields are assumed from the REST shapes) and the unhold rule need the scratch deploy; the harness journeys in the verification block need AB-26c
