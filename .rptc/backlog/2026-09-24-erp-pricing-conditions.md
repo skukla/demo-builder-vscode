@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-26
 needs: []
 value: high
-status: backlog
+status: active
 ---
 
 # Pricing conditions with validity, minimum quantity, value help and "why not"
