@@ -289,7 +289,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-26h` | feature | └ [Per-source stock changes reach the ERP, plus the small gaps (product delete, credit truth, currency)](2026-09-24-erp-per-source-stock.md) | AB-26b | med | active |
 | `AB-26i` | feature | └ [Pricing conditions with validity, minimum quantity, value help and "why not"](2026-09-24-erp-pricing-conditions.md) | — | high | built |
 | `AB-26j` | feature | └ [Business structure — sales organisation per website, prefix and ownership per pair, legal identity, warehouse names, the Organisation card](2026-09-24-erp-business-structure.md) | AB-26g, AB-26h | high | built |
-| `AB-26k` | feature | └ [The product as a master record — available, open orders, sales status](2026-09-24-erp-product-master.md) | AB-26j | med | backlog |
+| `AB-26k` | feature | └ [The product as a master record — available, open orders, sales status](2026-09-24-erp-product-master.md) | AB-26j | med | built |
 | `AB-26l` | feature | └ [Home as a work list, rail counts, the journal naming documents, global search](2026-09-24-erp-home-and-search.md) | AB-26i | med | built |
 | `AB-26m` | feature | └ [The entity map — the Commerce Admin page where the settings are the mapping](2026-09-24-erp-entity-map.md) | AB-26j, AB-26g | high | backlog |
 | `AB-26n` | feature | └ [Screen redesign 1 — shell and navigation](2026-09-24-erp-ui-shell.md) | AB-26l | med | built |

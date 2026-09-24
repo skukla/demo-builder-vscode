@@ -38,6 +38,10 @@ numbers Commerce sees, and a rule for which products belong to this ERP. The fak
 on every customer is gone. A setup guide for the person preparing a demo says what the
 Commerce instance needs for each story and how to undo it.
 
+After that, the product became a master record: the ERP now says what is committed to
+open orders and what is available, a product can be blocked for sales (and every shipment
+of it is then refused in words), and the product page lists the orders holding its stock.
+
 The research the later slices depend on is written: nine business concepts, each written
 out record by record in Adobe Commerce, in SAP, and in our two repos, with the owner of
 every field. It corrected two SAP names in earlier notes and found that four Commerce events
@@ -207,6 +211,36 @@ Commits: `demo-erp` `86be509`, `7e8b1cf`, `126cf5f`, `df2075c`; integration `50b
 244 pass; integration 363 pass, biome clean; 14 headless screen checks stable across two
 runs; six screens looked at.
 
+### Product master (AB-26k) — shipped
+
+Committed is the quantity ordered and not yet shipped on orders that still stand (not
+cancelled, not invoiced); available is on hand less committed, and goes below zero when
+more is sold than is on the shelf, which the screen shows rather than hides. Neither is
+stored: both are read off the order lines the fulfilment module keeps, the same way
+Home's cues are counted, so a product cannot disagree with its orders. A product gains a
+sales status, sellable or blocked for sales. It is the ERP's own decision: Commerce is
+not told, an import never resets it, and a blocked product is refused when a shipment is
+created and again when one is posted ("Product B2 is blocked for sales."), while the
+order's other lines still ship. The stored record grew by exactly that one key, which the
+record-shape pin confirmed.
+
+On screen, the Products list shows On hand and Available with a three-tint status (in
+stock, low stock under ten, out of stock) that says "Blocked for sales" first when it
+applies. A ninth column clipped the grid at 1,440 pixels, so Committed lives on the
+product page, which moved onto the shared Card (its own copy was a duplicate) and gained
+Basic data (base unit, product type in ERP words, the Blocked for sales switch), Open
+orders (a row opens the order) and a stock line on Inventory.
+
+Two things found on the way, both fixed. The preview's configurable parent had no
+variants, so its page had rendered blank, and no headless check had ever opened it; it
+now has three variants and a check opens it. And the fingerprint accept mode recorded a
+single sample of the Shipments screen, which this slice never touched, and the next two
+runs failed on it; a changed look is now re-accepted only when two fresh loads agree,
+and a refused accept keeps the recorded fingerprint rather than dropping the key.
+
+Commit: `demo-erp` `8ebf768`. Tests: 255 pass; 15 headless checks stable across two runs;
+four screens looked at.
+
 ### The demo setup guide — written
 
 `commerce-erp-integration/docs/demo-setup.md`, for the person preparing a demo. Three
@@ -230,7 +264,8 @@ the demo can have whatever it needs, as long as it is written down.
 | AB-26n | sticky title line | `demo-erp` `bc5be55` | scroll check |
 | AB-26c | pair-in-a-box harness, eleven journeys | integration `test/box/` | 343 tests green |
 | AB-26j | business structure: Structure settings, prefix, ownership, legal identity, warehouse names, Organisation card, the setup guide | `demo-erp` `86be509` `7e8b1cf` `126cf5f` `df2075c`; integration `50b1927` `2807a46` `5625033` `7537745` `965e7fe` | 244 + 363 tests, record-shape pin, 14 screen checks, six screens looked at |
-| screen checks hardening | sizes out of the fingerprint, pointer parked, 3 samples, retry once, mismatch rows kept | `demo-erp` `66c215e` | no flake in the 14 later full runs |
+| AB-26k | product master: committed, available, sales status refusing shipment, Basic data and Open orders cards, three-tint status | `demo-erp` `8ebf768` | 255 tests, record-shape pin, 15 screen checks incl. the product page and the parent, four screens looked at |
+| screen checks hardening | sizes out of the fingerprint, pointer parked, 3 samples, retry once, mismatch rows kept; the accept mode needs two agreeing loads | `demo-erp` `66c215e`, `8ebf768` | no flake in the 14 later full runs; the one-off shipments sample caught and refused |
 
 ## Handed off (finished to the supervised edge)
 
@@ -267,6 +302,10 @@ the demo can have whatever it needs, as long as it is written down.
   while designing the box's journeys; fixed the same hour (`demo-erp` `d600650`).
 - The ERP README's pointer to the setup guide is a GitHub URL on the integration's `main`
   branch; it resolves once the loop branch is merged there.
+- The screen-realism plan's Products list wanted nine columns (Type, Base unit, Sales
+  status, List price, On hand, Committed, Available among them). Eight fit a 1,440-pixel
+  window with the rail open; the ninth clipped. Committed is on the product page, and the
+  sales status is folded into the Status column. Recorded on AB-26k.
 
 ## Retracted / corrected
 
