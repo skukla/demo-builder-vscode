@@ -4,7 +4,7 @@ kind: question
 area: platform
 needs: []
 value: high
-status: open
+status: shipped
 parent: PL-11
 ---
 

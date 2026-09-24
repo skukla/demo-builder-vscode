@@ -6,6 +6,7 @@ parent: AB-1
 needs: AB-1
 value: low
 status: gated
+waiting-on: the first real package-bound integration — nothing to auto-attach until one exists
 ---
 # App Builder app — package-bound apps (auto-attach to a demo template)
 
