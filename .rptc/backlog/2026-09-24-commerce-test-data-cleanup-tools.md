@@ -4,7 +4,7 @@ kind: feature
 area: app-builder
 needs: []
 value: med
-status: backlog
+status: active
 ---
 
 # Commerce test data cleanup tools
@@ -70,3 +70,7 @@ ERP round trip — have no in-app way back to zero.
 2. Which entities first: customers + companies (this afternoon's blocker), or orders too?
 3. Should a delete require the record to have been created after the project was (a
    "test data" test), or trust the SC?
+
+## Shipped so far
+
+- 2026-09-24  feat(ai): run_commerce_rest reads the Commerce REST API with the workspace credential (AB-29, read half) (`877793333`)
