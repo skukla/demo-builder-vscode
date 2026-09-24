@@ -416,9 +416,11 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
         description:
             "List what RAN in this project's Adobe I/O Runtime namespace, newest first: each " +
             'activation with its action, start time, duration and status code (0 ok, 1 app error). ' +
-            'Use to see whether an event handler or a timer job fired, and when. Pass componentId ' +
-            'to read the workspace that integration deploys into, action to filter (e.g. ' +
-            '"erp/refresh-job"), limit up to 50.',
+            'Use to see when a timer job or an event handler ran and how it ended. CAVEAT (Adobe ' +
+            'Runtime): a SUCCESSFUL blocking web-action call is not recorded unless it was sent with ' +
+            'X-OW-EXTRA-LOGGING on; failures and timer/async runs always are. So a missing row means ' +
+            '"no failure recorded", never "did not run". Pass componentId to read the workspace that ' +
+            'integration deploys into, action to filter (e.g. "erp/refresh-job"), limit up to 50.',
         map: dashboardHandlers,
         type: 'listRuntimeActivations',
         inputSchema: {

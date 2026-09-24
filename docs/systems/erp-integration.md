@@ -161,8 +161,10 @@ shipments, invoices, settings, health, search) and `write_erp_rest` (confirm-gat
 consent dialog naming the method and route) takes the actions its screens take — confirm,
 ship, invoice, hold, a price or credit change — so the ERP → Commerce half runs without the
 screen. `list_runtime_activations` and `read_runtime_activation` read what RAN in the pair's
-Runtime namespace and one activation's log; on 2026-09-24 that read placed a Commerce event
-fault in one minute. Beside them, `run_commerce_rest` and `write_commerce_rest` reach the
+Runtime namespace and one activation's log. One thing they cannot show, per Adobe's Runtime
+logging guide: a successful blocking web-action call leaves no activation record unless it was
+sent with `X-OW-EXTRA-LOGGING: on`; failures and timer runs always do. A missing row is "no
+failure recorded", never "did not run". Beside them, `run_commerce_rest` and `write_commerce_rest` reach the
 Commerce REST API for the same instance (AB-29).
 `get_integration_settings` reads the integration's settings, and `set_integration_settings`
 changes a text setting (the ERP's name) and redeploys; a secret setting is entered on the

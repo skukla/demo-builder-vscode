@@ -623,6 +623,21 @@ develop merged into this branch, then this list, then the cut from develop.
   detach's revert as well, so removal could not have restored a changed limit or block.
   Fixed in `commerce-erp-integration` `5b72975` (main and loop pushed): each writer reads
   the record and writes it whole. Redeploy and re-test follow.
+- **RETRACTED (evening):** the claim above that "Commerce → ERP event delivery is NOT arriving"
+  rested on the namespace holding no handler activation. Adobe's Runtime logging guide (read
+  2026-09-24 after the owner asked for a docs check) says the system "skips persisting the
+  activation that succeeded" for blocking calls unless `X-OW-EXTRA-LOGGING: on` is sent;
+  failures and timer runs are kept. Measured the same evening: the ERP's block event was
+  applied to Commerce (company 21 → status 3) with NO activation row, while every failed credit
+  run left one. So absent rows prove nothing about success. What still stands on its own
+  evidence: the ERP's copy of the changed product price and credit did not update for forty
+  minutes (the outcome, not the log), and the timer job's own logs show Commerce reads timing
+  out. The Commerce → ERP event path is UNPROVEN either way, not disproven.
+- **Open after the credit fix:** Commerce holds credit 150000 while the ERP holds 160000. The
+  150000 write predates the fix and its handler run is recorded as a timeout, so Commerce
+  may have applied a PUT the handler gave up on; the 160000 event (ERP journal: delivered,
+  no error) left no failure row, yet Commerce did not change. Re-check when the sandbox is
+  healthy before concluding anything.
 - **Still owed from the owner's request** ("bidirectionally integrated" and "when an ERP is
   deleted, the resetting of the records in commerce works"): an order placed on the storefront
   as a Kukla Studios user (Commerce→ERP), ERP-side changes read back in Commerce (price via
