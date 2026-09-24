@@ -11,7 +11,9 @@
 import * as vscode from 'vscode';
 import { warmOrgServicesCatalog } from './warmOrgServicesCatalog';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
+import { sessionUIState } from '@/core/state/sessionUIState';
 import { MessageHandler } from '@/types/handlers';
+import type { SetIntegrationsViewModeOverridePayload } from '@/types/webviewRequests';
 
 /**
  * Handle 'configure' message - Open configuration UI
@@ -125,4 +127,20 @@ export const handleShowProjectDashboard: MessageHandler = async (context) => {
             error: 'Failed to return to the project dashboard',
         };
     }
+};
+
+/**
+ * The integrations screen's cards/rows toggle, kept for the session over the
+ * `demoBuilder.integrationsViewMode` setting — the projects list's
+ * `setViewModeOverride`, for the other list. Fire-and-forget from the webview,
+ * which already switched; the next open of the screen reads it back through
+ * the init payload (`ShowIntegrationsCommand.getInitialData`).
+ */
+export const handleSetIntegrationsViewModeOverride: MessageHandler<
+    SetIntegrationsViewModeOverridePayload
+> = async (_context, payload) => {
+    if (payload?.viewMode === 'cards' || payload?.viewMode === 'rows') {
+        sessionUIState.integrationsViewModeOverride = payload.viewMode;
+    }
+    return { success: true };
 };

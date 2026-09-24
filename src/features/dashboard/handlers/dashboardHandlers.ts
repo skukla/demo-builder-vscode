@@ -21,8 +21,8 @@
  */
 
 import * as vscode from 'vscode';
-import { handleGetDemoPackagePreview, handleSaveDemoPackage, handleRemoveDemoPackage } from './demoPackageHandlers';
 import { handleGetComponentOperationProgress } from './componentOperationProgress';
+import { handleGetDemoPackagePreview, handleSaveDemoPackage, handleRemoveDemoPackage } from './demoPackageHandlers';
 import { handleSetProjectDestination } from './destinationHandlers';
 import {
     handleSyncStorefront,
@@ -45,6 +45,7 @@ import {
     handleOpenDebugLogs,
     handleOpenIntegrations,
     handleShowProjectDashboard,
+    handleSetIntegrationsViewModeOverride,
 } from './panelNavigationHandlers';
 import {
     handleEditProject,
@@ -71,11 +72,11 @@ import {
     handleListConsoleApis,
     handleSetConsoleApis,
 } from '@/features/dashboard/handlers/consoleApiHandlers';
+import { handleListRuntimePackages } from '@/features/dashboard/handlers/runtimePackageHandlers';
 import { handleAddSharedDemo } from '@/features/eds/handlers/addSharedDemoHandler';
 import { handleChangeDemoSource } from '@/features/eds/handlers/changeDemoSourceHandler';
 import { handleImportStorefrontZip, handleUseBundleSetup } from '@/features/eds/handlers/importStorefrontZipHandler';
 import { handleProbeSharedDemo } from '@/features/eds/handlers/probeSharedDemoHandler';
-import { handleListRuntimePackages } from '@/features/dashboard/handlers/runtimePackageHandlers';
 import {
     MessageHandler,
     defineHandlers,
@@ -256,6 +257,7 @@ export const dashboardHandlers = defineHandlers({
     getProjectUrls: handleGetProjectUrls,
     navigateBack: handleNavigateBack,
     openIntegrations: handleOpenIntegrations,
+    setIntegrationsViewModeOverride: handleSetIntegrationsViewModeOverride,
     openDataInstaller: handleOpenDataInstaller,
     showProjectDashboard: handleShowProjectDashboard,
 

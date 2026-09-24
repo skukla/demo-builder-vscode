@@ -43,13 +43,14 @@ import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { FullScreenSurface } from '@/core/ui/components/layout/FullScreenSurface';
 import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 import { PageLayout } from '@/core/ui/components/layout/PageLayout';
-import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
+import { SearchHeader, type ViewMode } from '@/core/ui/components/navigation/SearchHeader';
 import { DestinationContext } from '@/core/ui/components/ui/DestinationContext';
 import { matchesSearchFields } from '@/core/ui/hooks/useSearchFilter';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { Project } from '@/types/base';
 import type { IntegrationsInitialData } from '@/types/webviewPayloads';
+import type { SetIntegrationsViewModeOverridePayload } from '@/types/webviewRequests';
 
 /** Module-level stable empty catalog — avoids a new array ref each render. */
 const EMPTY_CATALOG: AppBuilderComponentCatalogEntry[] = [];
@@ -103,6 +104,7 @@ export function IntegrationsScreen({
     adobeWorkspaceId,
     adobeOrgId,
     commerceStoreStructure,
+    integrationsViewMode,
 }: IntegrationsScreenProps): React.ReactElement {
     // No props: the four values read here depend on the status pushes alone.
     // `hasAdobeContext` reaches only the hook's org-check state, which this
@@ -115,6 +117,15 @@ export function IntegrationsScreen({
     const overrides = useRowStatusOverrides();
     const [searchQuery, setSearchQuery] = useState('');
     const [addOpen, setAddOpen] = useState(false);
+    // Cards or rows, the projects list's toggle (owner, 2026-09-24). Seeded from
+    // the init payload — the session's last choice, else the setting — and kept
+    // for the session on the extension side so reopening the screen agrees.
+    const [viewMode, setViewMode] = useState<ViewMode>(integrationsViewMode ?? 'cards');
+    const handleViewModeChange = useCallback((mode: ViewMode): void => {
+        setViewMode(mode);
+        const payload: SetIntegrationsViewModeOverridePayload = { viewMode: mode };
+        webviewClient.postMessage('setIntegrationsViewModeOverride', payload);
+    }, []);
     const operations = useComponentOperation();
     // One modal instance, two journeys — `mode` selects the stage set, so a
     // second <AddIntegrationFlowAdapter> would just duplicate its state.
@@ -250,6 +261,8 @@ export function IntegrationsScreen({
                                 itemNoun="integration"
                                 onRefresh={handleRefresh}
                                 refreshAriaLabel="Refresh integrations"
+                                viewMode={viewMode}
+                                onViewModeChange={handleViewModeChange}
                                 hasLoadedOnce
                                 alwaysShowCount
                                 // The count row is space-between and its right
@@ -312,6 +325,7 @@ export function IntegrationsScreen({
                 ) : (
                     <IntegrationsGrid
                         cards={visibleCards}
+                        viewMode={viewMode}
                         onDeployMesh={handleDeployMesh}
                         onReAuthenticate={handleReAuthenticate}
                         destinationLabel={destinationLabel}

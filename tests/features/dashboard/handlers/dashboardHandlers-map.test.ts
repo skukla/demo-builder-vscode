@@ -211,7 +211,11 @@ describe('dashboardHandlers', () => {
             // the integrations surface's Eventing section — workspace-scoped
             // I/O event providers/registrations, same service as the MCP
             // event tools.
-            expect(types).toHaveLength(49);
+            //
+            // setIntegrationsViewModeOverride (49 → 50): the integrations
+            // screen's cards/rows toggle, kept for the session the way the
+            // projects list keeps its own (owner, 2026-09-24).
+            expect(types).toHaveLength(50);
         });
 
         it('should have handlers as functions', () => {

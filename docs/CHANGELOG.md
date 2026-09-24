@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **A list view for the integrations screen.** The cards-or-rows toggle the projects list has, on the integrations screen too: the same names, statuses and actions as one row per integration. The choice is kept for the session; `demoBuilder.integrationsViewMode` sets the default.
+
 ## [1.0.0-beta.148] - 2026-09-23
 
 Demos become shareable: a storefront a colleague built can be added to your own

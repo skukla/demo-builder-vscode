@@ -202,6 +202,11 @@ export interface IntegrationsInitialData {
     commerceStoreStructure?: CommerceStoreStructure;
     /** Stack-filtered catalog for the add-integration picker. */
     appBuilderComponentCatalog: AppBuilderComponentCatalogEntry[];
+    /**
+     * Cards or rows, as the projects list has (`projectsViewMode`): the session's
+     * choice when there is one, else `demoBuilder.integrationsViewMode`.
+     */
+    integrationsViewMode: 'cards' | 'rows';
     /** Adobe project/workspace TITLES — the shared deploy destination banner. */
     destination: DestinationTitles;
     /** Committed destination ID — the add flow reads presence as a boolean. */

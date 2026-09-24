@@ -320,4 +320,75 @@
 .integration-panel-danger {
     margin-left: auto;
 }
+
+/* ---- Rows: the list view of the same cards --------------------------------------
+ * The integrations screen's List view (owner, 2026-09-24), the twin of the projects
+ * list's `.project-row`: the same name, status line and kebab as the card, laid out
+ * as one full-width row per integration. Same gray-50 base, hover lift and focus
+ * ring as the card so switching views moves nothing but the shape. */
+.integration-row-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 8px;
+}
+
+.integration-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    width: 100%;
+    padding: 14px 20px;
+    background: var(--spectrum-global-color-gray-50);
+    border: 1px solid var(--spectrum-global-color-gray-300);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all var(--spectrum-global-animation-duration-600) ease;
+}
+
+.integration-row:hover,
+.integration-row:focus {
+    background: var(--spectrum-global-color-gray-75);
+    border-color: var(--spectrum-global-color-gray-400);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    outline: none;
+}
+
+.integration-row:focus-visible {
+    outline: 2px solid var(--spectrum-global-color-blue-400);
+    outline-offset: 2px;
+}
+
+.integration-row-main {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.integration-row-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--spectrum-global-color-gray-900);
+}
+
+/* The kind ("Pre-built", "API Mesh") as the projects row shows its components. */
+.integration-row-kind {
+    font-size: 12px;
+    color: var(--spectrum-global-color-gray-500);
+    padding-left: 12px;
+    border-left: 1px solid var(--spectrum-global-color-gray-300);
+}
+
+.integration-row-trailing {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 0 0 auto;
+}
+
+.integration-row-chevron {
+    color: var(--spectrum-global-color-gray-500);
+}
 }
