@@ -42,3 +42,8 @@ two-line addition, and guessing at it once already produced a failing test.
 The path also needs `getInstalledNodeVersions` mocked, which only
 `installHandler-plugins.test.ts` currently does — so the test may belong there
 rather than in the nodeVersions suite.
+
+## Shipped so far
+
+- 2026-09-24  Picked up by the loop as the first fallback fix (lane 1). Staleness check: the third sort is still at installHandler.ts resolvePerNodeTargetVersions (targetVersions = installableVersions.sort(numeric)) and reaches executeInstallSteps; installHandler-plugins.test.ts still mocks getInstalledNodeVersions, so the test belongs there, asserting the order the install steps run in
+- 2026-09-24  The loop stopped on the owner's word (2026-09-24) before any work on this item; the pickup note above stands as the staleness check for whoever picks it up next

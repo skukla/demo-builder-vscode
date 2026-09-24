@@ -57,8 +57,12 @@ concept, in the integration's docs.
 **Every startable slice of the ERP programme is now built or built to its supervised
 edge.** What is left in the programme waits on you (a credential, the live looks, the merge)
 or on a gate you own (the credit memo's question, the routing client's answers). The loop
-moved on to the fallback you named at kickoff, fixes first; those are reported below the
-ERP sections as they land.
+had just picked up the first fallback fix (the untested Node-version sort, PL-36) when you
+stopped it; no work was done on it and it is back in the backlog with its staleness note.
+
+**Stopped on your word, 2026-09-24.** Nothing was left half-done: every commit on the three
+loop branches is gated and pushed, the record matches the code, and the hygiene scan at
+close was clean.
 
 The research the later slices depend on is written: nine business concepts, each written
 out record by record in Adobe Commerce, in SAP, and in our two repos, with the owner of
