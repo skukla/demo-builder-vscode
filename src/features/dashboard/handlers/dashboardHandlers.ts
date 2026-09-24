@@ -83,7 +83,6 @@ import {
     handleListConsoleApis,
     handleSetConsoleApis,
 } from '@/features/dashboard/handlers/consoleApiHandlers';
-import { handleListRuntimePackages } from '@/features/dashboard/handlers/runtimePackageHandlers';
 import {
     handleGetErpStatus,
     handleOpenErpScreen,
@@ -93,6 +92,7 @@ import {
     handleCheckIntegrationUpdates,
     handleUpdateAppBuilderComponent,
 } from '@/features/dashboard/handlers/integrationUpdateHandlers';
+import { handleListRuntimePackages } from '@/features/dashboard/handlers/runtimePackageHandlers';
 import { deployMeshFromScreen } from '@/features/mesh/handlers/deployHandler';
 import { MESH_OPERATION_ID } from '@/features/mesh/services/deployMeshWithFeedback';
 import {
