@@ -42,6 +42,11 @@ After that, the product became a master record: the ERP now says what is committ
 open orders and what is available, a product can be blocked for sales (and every shipment
 of it is then refused in words), and the product page lists the orders holding its stock.
 
+Then the entity map you asked for on the Commerce Admin page: the Settings tab is now a
+Mapping tab. One card per business concept the two systems share, Commerce's records on
+the left, the ERP's on the right, an arrow saying which side owns each piece, and the
+setting that joins them sitting on the join itself. The settings are the mapping.
+
 The research the later slices depend on is written: nine business concepts, each written
 out record by record in Adobe Commerce, in SAP, and in our two repos, with the owner of
 every field. It corrected two SAP names in earlier notes and found that four Commerce events
@@ -241,6 +246,35 @@ and a refused accept keeps the recorded fingerprint rather than dropping the key
 Commit: `demo-erp` `8ebf768`. Tests: 255 pass; 15 headless checks stable across two runs;
 four screens looked at.
 
+### The entity map (AB-26m, step 1) — built to the supervised edge
+
+The Commerce Admin page's Settings tab became a Mapping tab. Nine cards, one per composite
+entity from the programme's list (buying organization, selling organization, sellable
+item, price, inventory position, credit, order, payment / receivable, fulfilment source).
+Each card opens with its join in a sentence and, where a setting makes the join, that
+setting editable right there: the sales organisation per website on Selling organization,
+the order-number prefix on Order, the ownership rule on Fulfilment source. The pieces of
+the composite are rows, Commerce's record on the left and the ERP's on the right, with an
+arrow between them saying which side the truth flows from (Commerce owns, the ERP owns, or
+both, with the rule written under it), taken from the composite-entity research's
+field-ownership table. The card's other switches sit under its rows: the order switches
+on Order, the pricing switches on Price. The foot of each card carries the ERP's live
+figures (counts, sales organisations, warehouses), what has crossed for that card in each
+direction from the history records, and where in the ERP's own screen its records live.
+Payment / receivable is on the map with no join, saying it is not connected yet. A
+setting no card has claimed lands on an Other card, so a new setting always has a home.
+
+The old settings form is deleted rather than kept beside the map: one place to change a
+setting. The view model is pure and tested (card order, every setting on exactly one card,
+inherited and clearable rules at each scope, sync counts, figures); the tab was looked at
+in the page's own preview with a clean console. Commit: integration `c419327`. Tests: 368
+pass.
+
+What is left on the item: a lookup on the Buying organization and Sellable item cards
+("what do you hold for company X / SKU Y", both sides). What needs you: one look at the
+live Admin page once a pair is deployed, and one look at whether App Management's own
+settings form agrees with this page on a saved value (same library, same store).
+
 ### The demo setup guide — written
 
 `commerce-erp-integration/docs/demo-setup.md`, for the person preparing a demo. Three
@@ -265,6 +299,7 @@ the demo can have whatever it needs, as long as it is written down.
 | AB-26c | pair-in-a-box harness, eleven journeys | integration `test/box/` | 343 tests green |
 | AB-26j | business structure: Structure settings, prefix, ownership, legal identity, warehouse names, Organisation card, the setup guide | `demo-erp` `86be509` `7e8b1cf` `126cf5f` `df2075c`; integration `50b1927` `2807a46` `5625033` `7537745` `965e7fe` | 244 + 363 tests, record-shape pin, 14 screen checks, six screens looked at |
 | AB-26k | product master: committed, available, sales status refusing shipment, Basic data and Open orders cards, three-tint status | `demo-erp` `8ebf768` | 255 tests, record-shape pin, 15 screen checks incl. the product page and the parent, four screens looked at |
+| AB-26m step 1 | the entity map: the Mapping tab, nine cards, joins with their settings, ownership arrows, sync per direction, ERP figures | integration `c419327` | 12 view-model tests, 368 suite, preview screenshot with a clean console |
 | screen checks hardening | sizes out of the fingerprint, pointer parked, 3 samples, retry once, mismatch rows kept; the accept mode needs two agreeing loads | `demo-erp` `66c215e`, `8ebf768` | no flake in the 14 later full runs; the one-off shipments sample caught and refused |
 
 ## Handed off (finished to the supervised edge)
@@ -282,6 +317,8 @@ the demo can have whatever it needs, as long as it is written down.
   reference; proved live before the subscriptions ship.
 - **AB-26e live baseline**: the box is the unit half; the live script and baseline run wait
   for the credential.
+- **AB-26m, the live look**: the Mapping tab on a real Commerce Admin, and whether App
+  Management's own settings form and the map agree on a saved value.
 - **AB-26j, two live looks**: whether App Management's own form renders the Structure text
   fields the way the integration's Admin screen does (one person, one look), and the exact
   `store/websites` and `store/storeConfigs` field names on Adobe Commerce as a Cloud Service
@@ -353,11 +390,15 @@ the demo can have whatever it needs, as long as it is written down.
    Commerce" as the reason, and Confirm refuses in the ERP until it is released. That reads
    Commerce's generic hold as a credit-style hold. If you want Commerce's hold kept apart
    from the ERP's credit decision, say so; the change is small.
-5. **A website with no Structure setting of its own sells through `1000`.** The default
+5. **The Mapping tab replaced the Settings tab and opens first.** Your words were that the
+   settings are the mapping, so the map is where they live now; nothing else changed about
+   how a setting is saved or scoped. Payment / receivable appears as a card before its
+   slice ships, labelled not connected yet. Say if either should be otherwise.
+6. **A website with no Structure setting of its own sells through `1000`.** The default
    applies at every scope, so nothing is ever "unmapped"; a second website only becomes a
    second sales organisation when someone sets it. Recommended as is: a single-website
    store gets the right answer without touching a setting. The alternative, flagging an
    unset website on the Organisation card, is a small change if you want the nudge.
-6. **Building on built, unmerged items.** The loop built the structure slice on top of
+7. **Building on built, unmerged items.** The loop built the structure slice on top of
    items that are built but not merged, following the programme's order of work. Say if
    the merge should come first from here on.
