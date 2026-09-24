@@ -72,3 +72,4 @@ the flyout, the agent tools · 06 live acceptance on Bodea and docs.
 - 2026-09-17  fix(app-builder): removing the ERP integration undoes what it changed in Commerce (`5754b0c1d`)
 - 2026-09-17  feat(integrations): the ERP is a card of its own, and removal cleans up before it undeploys (`2365f948c`)
 - 2026-09-17  docs(plan): decision 24 — the ERP's offline switch is removed, not kept (`bc15c7a7f`)
+- 2026-09-24  docs(plan): the ERP programme — every piece of ERP research and planning in one order of work (`99c0539da`)
