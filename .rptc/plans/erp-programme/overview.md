@@ -210,22 +210,23 @@ in to the Adobe project; the repos hold no local credentials):
 
 | Workstream | Built | Next | Blocked on |
 |---|---|---|---|
-| A · ERP documents and behaviour | order, customer, shipment, invoice documents; derived statuses; cancel reason; credit hold (records, moves, screen) | pricing conditions (slice 5) after the sync gaps | — |
-| B · Modern UI | shared Card, Field, DocumentPage, trail navigation, status badges, four themes | Home, journal naming, pricing value help (with 5 and 8) | — |
+| A · ERP documents and behaviour | order, customer, shipment, invoice documents; derived statuses; cancel reason; credit hold (records, moves, screen); **pricing conditions** with validity, minimum quantity, value help and why-not (AB-26i, 2026-09-24) | product master (slice 7) once the structure slice names warehouses | — |
+| B · Modern UI | shared Card, Field, DocumentPage, trail navigation, status badges, four themes; **Home as a work list, rail counts, shell-bar search, journal sentences** (AB-26l, 2026-09-24) | sticky document title line (UI-1's last piece); lists redesign behind slice 7 | — |
 | C · Bidirectional sync | every ERP → Commerce write, reversible; cancel reason | hold → Commerce (2) — **next** — then Commerce-side changes → ERP (3); per-source stock (4) | owner's deploys ◆ |
 | D · Business structure | plan written; nothing built | slice 6 | S3, P1–P3 (recommendations given) |
 | E · Commerce Admin | history, retry, one-order trace, settings page | the entity map (slice 9), after the structure slice | 6, 3 |
 | F · Multi-ERP | copy identity; AB-23 active | AB-16; routing integration | client answers; seam question |
-| CE · Composite entities | the concept list (§5a), owner-confirmed | the record-by-record research | — |
-| API-1 · Commerce API inventory | the calls the code makes today, in `lib/commerce.js` and the handlers | the inventory, then live validation with captured fixtures | ◆ |
-| T-1 / T-2 · Test harnesses | memory-db, injected readers, contract tests, the preview | pair-in-a-box after API-1's fixtures; headless screen checks any time | — |
+| CE · Composite entities | the concept list (§5a), owner-confirmed; **the research, record by record on three sides** (`.rptc/research/erp-composite-entities/`, AB-26a, 2026-09-24) | slice 9 reads it | — |
+| API-1 · Commerce API inventory | the calls the code makes today; **the inventory document** (`commerce-erp-integration/docs/commerce-api-inventory.md`, AB-26b) | live validation with captured fixtures | ◆ a credential: the owner adds the ERP integration to a project, then the loop reads |
+| T-1 / T-2 · Test harnesses | memory-db, injected readers, contract tests, the preview; **headless screen checks with fingerprints** (T-2, AB-26d: 13 checks, retry-once, mismatch rows kept) | pair-in-a-box after API-1's fixtures | API-1's fixtures |
 | V · Sync validation | the entity matrix, read from code | journeys as T-1 tests; the live baseline once the owner authorizes writes on the demo instance | authorization |
 | B · Screen redesign (UI-1..4) | the house style: cards, badges, trail, themes | scheduled behind the slices whose data they show | — |
 | Docs / drift | contract tests both repos; plan status blocks; this overview | record-shape pin (slice 6 step 01); demo setup guide | — |
 
-All of it is committed locally and unpushed: `demo-erp` `feature/erp-grids`,
-`commerce-erp-integration` `feature/sync-history`, this worktree `feature/erp-integration`.
-The `develop` push in `demo-builder-vscode` still needs the owner at the keyboard.
+Everything the loop built on 2026-09-24 is on the `loop/2026-09-24-erp-programme` branch of
+all three repos, pushed (owner authorization 1). The `develop` push in `demo-builder-vscode`
+still needs the owner at the keyboard; the loop branches await the merge decision in the
+loop report (`.rptc/handoff/2026-09-24-loop-report.md`).
 
 ## 8. Decisions still open, consolidated
 

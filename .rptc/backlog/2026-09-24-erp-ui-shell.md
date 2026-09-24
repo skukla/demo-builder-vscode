@@ -21,3 +21,4 @@ UI audit §Shell: count badges on rail items that carry work; global search in t
 Headless checks with fingerprints on every surface; no layout regression on the eight preview screens.
 
 ## Shipped so far
+- 2026-09-24  Staleness: three of this item's four pieces shipped with AB-26l (rail counts, shell search, Home label) — demo-erp 5b2a269. What remains is the sticky document title line
