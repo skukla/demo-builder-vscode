@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-26
 needs: []
 value: high
-status: backlog
+status: active
 ---
 
 # Commerce API inventory and validation — every call the programme needs, proven to exist, captured as fixtures
@@ -21,3 +21,4 @@ One document (`commerce-erp-integration/docs/commerce-api-inventory.md`): every 
 A test in the integration that every fixture matches what the code sends and reads; `contract.test.js` in both repos green at version 2; the inventory names, for every API a later slice uses, the fixture that holds its contract. An API that does not exist on the target backend is a finding on the slice that needs it, not a silent gap.
 
 ## Shipped so far
+- 2026-09-24  Inventory drafted from the code (commerce-erp-integration docs/commerce-api-inventory.md, loop branch): 18 calls used today, 12 to validate, 9 events, 4 webhooks, 3 Admin features; live validation blocked on aio app use -g → Adobe Console API 503, retrying

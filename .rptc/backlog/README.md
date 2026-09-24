@@ -279,8 +279,8 @@ each item's own file; what has already landed against an item is in its
 | `AB-21` | feature | [An integration's settings live on its tile, not on Configure Project](2026-09-18-integration-settings-on-tile.md) | — | med | active |
 | `AB-22` | feature | [Import a colleague's integration, and ask only for what it really needs](2026-09-18-import-colleague-integration.md) | AB-21 | med | backlog |
 | `AB-24` | chore | [Stop creating a Stage workspace](2026-09-20-drop-the-stage-workspace.md) | — | med | built |
-| `AB-26a` | feature | └ [Composite-entity research: what a buying organization (and seven others) is made of, record by record](2026-09-24-erp-composite-entities.md) | — | high | backlog |
-| `AB-26b` | feature | └ [Commerce API inventory and validation — every call the programme needs, proven to exist, captured as fixtures](2026-09-24-erp-commerce-api-inventory.md) | — | high | backlog |
+| `AB-26a` | feature | └ [Composite-entity research: what a buying organization (and seven others) is made of, record by record](2026-09-24-erp-composite-entities.md) | — | high | active |
+| `AB-26b` | feature | └ [Commerce API inventory and validation — every call the programme needs, proven to exist, captured as fixtures](2026-09-24-erp-commerce-api-inventory.md) | — | high | active |
 | `AB-26c` | feature | └ [Pair-in-a-box: the ERP in-process behind the integration, a fake Commerce in front (T-1)](2026-09-24-erp-pair-in-a-box.md) | AB-26b | high | backlog |
 | `AB-26d` | feature | └ [Headless screen checks over the ERP preview (T-2)](2026-09-24-erp-headless-screen-checks.md) | — | med | backlog |
 | `AB-26e` | feature | └ [Sync validation — every entity, both directions, proved (V)](2026-09-24-erp-sync-validation.md) | AB-26c | high | backlog |

@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-26
 needs: []
 value: high
-status: backlog
+status: active
 ---
 
 # Composite-entity research: what a buying organization (and seven others) is made of, record by record
@@ -21,3 +21,4 @@ Each concept in the plan's §5a written out on both sides: record, field, type, 
 A field table for every §5a row; every field names its owner; every Commerce field is cited from a doc read (not a snippet); the doc lists what could not be established.
 
 ## Shipped so far
+- 2026-09-24  Two readers out: Commerce native records per composite (REST/B2B refs), SAP counterparts (api.sap.com entities); codebase half to follow
