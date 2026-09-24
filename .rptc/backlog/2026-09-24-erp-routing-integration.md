@@ -25,3 +25,4 @@ Harness with TWO in-process ERPs behind two integration copies and one fake Comm
 
 - 2026-09-24  S1 decided by the owner: the ERPs may never be known and the demo does not model a PIM; the `erp_owner`-style product attribute (ownership mode `attribute`) is the solve, and the story says a PIM would write it into Commerce. Q-num: investigate custom order attributes (ACCS, SaaS-only) as the home for each ERP's number; recorded in the plan §8. Q2 explained; confirmation pending
 - 2026-09-24  Q2 decided by the owner: only the routing integration subscribes to Commerce's order event. Named as the pattern to relay to the customer: one consumer action routes each order's parts to the owning ERP's runtime actions and events; the pairs stay generic (routing research §12)
+- 2026-09-24  docs(rptc): Q2 decided — only the routing integration subscribes; the consumer pattern to relay (`1f6239172`)
