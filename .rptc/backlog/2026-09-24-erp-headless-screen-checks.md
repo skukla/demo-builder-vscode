@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-26
 needs: []
 value: med
-status: backlog
+status: active
 ---
 
 # Headless screen checks over the ERP preview (T-2)
@@ -21,3 +21,4 @@ A script drives the ERP preview (`npm run preview`) with a headless browser — 
 Every screen in the preview has a check; a deliberate fingerprint re-accept is a reviewed diff; the 2026-09-24 Spectrum table crash, replayed, fails it.
 
 ## Shipped so far
+- 2026-09-24  Started: Playwright + headless Chromium installed in demo-erp (devDependency); test will start the preview server in-process and fingerprint every screen

@@ -22,3 +22,5 @@ A test in the integration that every fixture matches what the code sends and rea
 
 ## Shipped so far
 - 2026-09-24  Inventory drafted from the code (commerce-erp-integration docs/commerce-api-inventory.md, loop branch): 18 calls used today, 12 to validate, 9 events, 4 webhooks, 3 Admin features; live validation blocked on aio app use -g → Adobe Console API 503, retrying
+- 2026-09-24  ENVIRONMENT: the deployed pair is gone — project Kukla Bodea now has only its Production workspace (NorthwindERP no longer exists), so no S2S credential with the Commerce API is available locally and aio app use answers 404. Live read-only validation parked for the walkthrough: the owner adds the ERP integration to a project through Demo Builder (minutes), then the loop runs the reads and captures fixtures. Inventory doc drafted meanwhile (loop branch, pending the repo's biome gate).
+- 2026-09-24  Inventory doc committed and pushed (commerce-erp-integration loop branch 6b665cc); the repo's biome check was red in untouched files and is clean again (5c8886e). Live half parked (see above).
