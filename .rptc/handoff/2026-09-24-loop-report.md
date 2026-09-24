@@ -283,6 +283,19 @@ What needs you: one look at the live Admin page once a pair is deployed, and one
 whether App Management's own settings form agrees with this page on a saved value (same
 library, same store).
 
+### Settings: document numbering and the ERP's own currency (AB-26q) — shipped
+
+Most of what the UI audit asked of Settings and the Event Journal had already shipped in
+earlier slices (the Organisation and Warehouses cards, the journal's sentences and live
+refresh, the Wipe confirmation), so the first unit of work was saying so on the item. What
+remained: a Document numbering card, which shows each document type's range and its next
+number without reserving it, with the rule that a counter never rewinds, not even across a
+wipe; and the ERP's own currency. Money with no currency of its own (list prices, credit
+limits) used to fall back to dollars on every screen, so a euro demo showed two symbols. It
+now follows the company code's currency, which the structure slice reads from the website
+mapped to it, and the card says which currency stands in and why. Commit: `demo-erp`
+`f04c897`. Tests: 258 pass; 15 screen checks stable.
+
 ### The demo setup guide — written
 
 `commerce-erp-integration/docs/demo-setup.md`, for the person preparing a demo. Three
@@ -308,6 +321,7 @@ the demo can have whatever it needs, as long as it is written down.
 | AB-26j | business structure: Structure settings, prefix, ownership, legal identity, warehouse names, Organisation card, the setup guide | `demo-erp` `86be509` `7e8b1cf` `126cf5f` `df2075c`; integration `50b1927` `2807a46` `5625033` `7537745` `965e7fe` | 244 + 363 tests, record-shape pin, 14 screen checks, six screens looked at |
 | AB-26k | product master: committed, available, sales status refusing shipment, Basic data and Open orders cards, three-tint status | `demo-erp` `8ebf768` | 255 tests, record-shape pin, 15 screen checks incl. the product page and the parent, four screens looked at |
 | AB-26m | the entity map: the Mapping tab, nine cards, joins with their settings, ownership arrows, sync per direction, ERP figures; the company / SKU look-up on two cards | integration `c419327`, `bb06879` | 12 view-model + 10 look-up tests, 379 suite, preview driven headlessly with a clean console |
+| AB-26q | Settings: Document numbering card; the ERP's own currency as the money fallback | `demo-erp` `f04c897` | 258 tests incl. the counter pin; 15 screen checks |
 | screen checks hardening | sizes out of the fingerprint, pointer parked, 3 samples, retry once, mismatch rows kept; the accept mode needs two agreeing loads | `demo-erp` `66c215e`, `8ebf768` | no flake in the 14 later full runs; the one-off shipments sample caught and refused |
 
 ## Handed off (finished to the supervised edge)
