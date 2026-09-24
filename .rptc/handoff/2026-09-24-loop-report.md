@@ -610,6 +610,19 @@ develop merged into this branch, then this list, then the cut from develop.
   (`list_runtime_activations` / `read_activation_logs`, done tonight by downloading the
   workspace credential to a temp file for one shell command), and a signed ERP API
   passthrough (`run_erp_rest`) so ERP → Commerce paths can be driven without the screen.
+- **Four more agent tools, and the two defects they found (evening):** `run_erp_rest` /
+  `write_erp_rest` (the ERP's own routes, the write confirm-gated) and
+  `list_runtime_activations` / `read_runtime_activation` (what ran in a namespace, and one
+  activation's log and result), all live on Bodea. The Commerce REST client was moved onto
+  Adobe's documented server-to-server shape (token v3, seven scopes, x-api-key and org
+  headers) after the owner asked for a docs check. First ERP → Commerce write through the
+  new tool (a credit limit change on Kukla Studios in the ERP) reached the integration —
+  the event pipeline from the ERP works — and its handler failed with 400: Commerce's
+  credit PUT requires `currency_code`, which the integration never sent. The same read
+  showed the company status PUT (`{id, status}` only) is refused too. Both writers serve
+  detach's revert as well, so removal could not have restored a changed limit or block.
+  Fixed in `commerce-erp-integration` `5b72975` (main and loop pushed): each writer reads
+  the record and writes it whole. Redeploy and re-test follow.
 - **Still owed from the owner's request** ("bidirectionally integrated" and "when an ERP is
   deleted, the resetting of the records in commerce works"): an order placed on the storefront
   as a Kukla Studios user (Commerce→ERP), ERP-side changes read back in Commerce (price via
