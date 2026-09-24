@@ -14,6 +14,7 @@ import {
     resolveDeployInputs,
     resolveDisplayName,
 } from '@/features/app-builder/services/deployInputs';
+import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import { createMockProject } from '../../../helpers/projectFake';
 
@@ -148,7 +149,39 @@ describe('resolveDisplayName', () => {
     it('reads the row name from the named input, else the entry name', () => {
         expect(resolveDisplayName(SYSTEM, { ERP_DISPLAY_NAME: 'Nordwind' })).toBe('Nordwind');
         expect(resolveDisplayName(SYSTEM, { ERP_DISPLAY_NAME: '  ' })).toBe('ERP');
+        // An entry that does not name itself from an input ignores the input.
         expect(resolveDisplayName(INTEGRATION, { ERP_DISPLAY_NAME: 'Nordwind' })).toBe('ERP integration');
+    });
+
+    // An integration is named for the system it talks to (owner, 2026-09-24):
+    // "Northwind ERP Integration", never a bare "ERP Integration" beside an ERP
+    // called something else.
+    it('appends nameSuffix to the input-supplied name; an empty input falls back to the entry name, suffix and all', () => {
+        const named: AppBuilderComponentCatalogEntry = {
+            ...INTEGRATION,
+            nameFromEnvVar: 'ERP_DISPLAY_NAME',
+            nameSuffix: ' Integration',
+        };
+        expect(resolveDisplayName(named, { ERP_DISPLAY_NAME: 'Northwind ERP' })).toBe('Northwind ERP Integration');
+        expect(resolveDisplayName(named, { ERP_DISPLAY_NAME: '  Northwind ERP ' })).toBe('Northwind ERP Integration');
+        expect(resolveDisplayName(named, { ERP_DISPLAY_NAME: '' })).toBe('ERP integration');
+        expect(resolveDisplayName(named, {})).toBe('ERP integration');
+    });
+
+    // The shipped catalog, not a fixture: this is the contract the dashboard row,
+    // the agent's get_erp_status and the add's progress title all read.
+    it('the shipped ERP integration is named for its ERP — by default, and as typed', () => {
+        const erpIntegration = getAppBuilderComponentCatalog().find((entry) => entry.id === 'erp-integration');
+        expect(erpIntegration).toBeDefined();
+        const entry = erpIntegration as AppBuilderComponentCatalogEntry;
+
+        expect(resolveDisplayName(entry, resolveDeployInputs(createMockProject(), entry))).toBe(
+            'Acme ERP Integration',
+        );
+        const typed = createMockProject({
+            componentConfigs: { 'erp-integration': { ERP_DISPLAY_NAME: 'Northwind ERP' } },
+        });
+        expect(displayNameInProject(typed, entry)).toBe('Northwind ERP Integration');
     });
 });
 

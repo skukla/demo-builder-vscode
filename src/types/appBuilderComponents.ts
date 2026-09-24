@@ -141,6 +141,13 @@ export interface AppBuilderComponentCatalogEntry {
      */
     nameFromEnvVar?: string;
     /**
+     * Appended to the name `nameFromEnvVar` supplies: the ERP integration's row
+     * reads "Acme ERP Integration" (owner, 2026-09-24 — an integration is named
+     * for the ERP it talks to). Meaningless without `nameFromEnvVar`; when the
+     * input is empty the row falls back to `name`, suffix and all.
+     */
+    nameSuffix?: string;
+    /**
      * A screen this component serves from one of its own web actions, opened by
      * a link that carries a key Demo Builder generates (the ERP; see
      * `systemScreen.ts` for why it cannot use the static site).

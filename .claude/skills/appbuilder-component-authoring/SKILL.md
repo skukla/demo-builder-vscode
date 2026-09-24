@@ -17,7 +17,9 @@ silently if you don't know them. Learned the hard way shipping the blank shell
   its own. It names its integration in `boundTo` and the two are a UNIT — the runner adds
   and deploys the system FIRST (`addBoundSystemFirst`), removes it AFTER its integration,
   and refuses to remove it alone. Its `providesEnvVars` resolve to its deployed package's
-  web base (`deployInputs.ts`); `nameFromEnvVar` names its row from an input; a text
+  web base (`deployInputs.ts`); `nameFromEnvVar` names its row from an input, and on the
+  INTEGRATION the same field plus `nameSuffix` names it for its system ("Northwind ERP
+  Integration" — owner, 2026-09-24; `resolveDisplayName`); a text
   `envSchema` var with a `default` never blocks the add. Text inputs and provided values
   reach the deploy through the process env (`resolveDeployInputs`), the same way the S2S
   credentials do — catalog repos ship no `.env`.

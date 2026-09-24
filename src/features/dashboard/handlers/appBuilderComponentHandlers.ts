@@ -43,6 +43,7 @@ import {
     removeAppBuilderComponent,
     type RuntimeCleanupSummary,
 } from '@/features/app-builder/services/appBuilderComponentRunner';
+import { resolveDeployInputs, resolveDisplayName } from '@/features/app-builder/services/deployInputs';
 import type { CommerceDetachResult } from '@/features/app-builder/services/erpDetach';
 import {
     buildCustomIntegrationEntry,
@@ -454,7 +455,7 @@ function runAdd(
         {
             title: 'Adding',
             id: entry.id,
-            label: entry.name ?? entry.id,
+            label: addLabel(project, entry, payload.name),
             noun: kindNoun(entry.kind),
             logger: context.logger,
             progress,
@@ -506,10 +507,38 @@ function runAdd(
 }
 
 /**
- * A typed name on a PAIRED entry names its bound SYSTEM.
+ * What the add is called while it runs: the name its inputs give it — for the ERP
+ * integration, "<ERP name> Integration" — with the name the SC just typed for the
+ * bound system applied BEFORE anything is recorded, because the title is fixed
+ * when the progress starts and the recording happens inside it.
+ */
+function addLabel(
+    project: Project,
+    entry: AppBuilderComponentCatalogEntry,
+    typedName: string | undefined,
+): string {
+    const inputs = resolveDeployInputs(project, entry);
+    const key = pairedNameKey(entry);
+    const typed = typedName?.trim();
+    if (key && typed) inputs[key] = typed;
+    return resolveDisplayName(entry, inputs);
+}
+
+/** The input the entry's bound system is NAMED from, when it has one. */
+function pairedNameKey(entry: AppBuilderComponentCatalogEntry): string | undefined {
+    const kind = entry.catalogId ?? entry.id;
+    const bound = getAppBuilderComponentCatalog().find(
+        (candidate) => candidate.kind === 'system' && candidate.boundTo === kind,
+    );
+    return bound?.nameFromEnvVar;
+}
+
+/**
+ * A typed name on a PAIRED entry names its bound SYSTEM — and, through
+ * `nameSuffix`, the integration too ("Northwind ERP Integration").
  *
- * The ERP integration is called what the catalog calls it; the ERP it talks to is
- * called whatever the SC typed. Recorded against the INTEGRATION's id because
+ * The ERP it talks to is called whatever the SC typed. Recorded against the
+ * INTEGRATION's id because
  * that is the owner `resolveDeployInputs` reads first for a bound pair, so the
  * system picks it up when it deploys — and the pair keeps arriving together,
  * which forking the entry under a minted id had broken (owner, 2026-09-20).
@@ -527,17 +556,14 @@ async function recordPairedSystemName(
 ): Promise<void> {
     const typed = name?.trim();
     if (!typed) return;
-    const kind = entry.catalogId ?? entry.id;
-    const bound = getAppBuilderComponentCatalog().find(
-        (candidate) => candidate.kind === 'system' && candidate.boundTo === kind,
-    );
-    if (!bound?.nameFromEnvVar) return;
+    const key = pairedNameKey(entry);
+    if (!key) return;
 
     project.componentConfigs = {
         ...(project.componentConfigs ?? {}),
         [entry.id]: {
             ...(project.componentConfigs?.[entry.id] ?? {}),
-            [bound.nameFromEnvVar]: typed,
+            [key]: typed,
         },
     };
     await context.stateManager.saveProject(project);

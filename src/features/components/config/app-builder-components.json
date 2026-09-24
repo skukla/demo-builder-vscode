@@ -81,6 +81,8 @@
     {
       "id": "erp-integration",
       "name": "ERP Integration",
+      "nameFromEnvVar": "ERP_DISPLAY_NAME",
+      "nameSuffix": " Integration",
       "description": "Adobe Commerce and an ERP, on the Commerce integration starter kit: orders get an ERP number, price, stock and order-status changes in the ERP land in Commerce, contract prices apply in the cart, and a screen inside the Commerce Admin shows it all. Comes with its own ERP.",
       "kind": "integration",
       "layout": "extension",

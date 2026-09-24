@@ -172,7 +172,9 @@ export function deriveProvidedValues(
 /**
  * The display name a component's row carries when its catalog entry says the
  * name comes from an input (`nameFromEnvVar`: the ERP is called whatever the
- * SC named it). Falls back to the entry's own name.
+ * SC named it), with the entry's `nameSuffix` appended — so the integration
+ * bound to "Northwind ERP" reads "Northwind ERP Integration" (owner,
+ * 2026-09-24). Falls back to the entry's own name when the input is empty.
  *
  * @param entry - the catalog entry
  * @param inputs - the resolved deploy inputs
@@ -182,8 +184,9 @@ export function resolveDisplayName(
     entry: AppBuilderComponentCatalogEntry,
     inputs: Record<string, string>,
 ): string {
-    const fromInput = entry.nameFromEnvVar ? inputs[entry.nameFromEnvVar] : undefined;
-    return fromInput?.trim() || entry.name;
+    const fromInput = entry.nameFromEnvVar ? inputs[entry.nameFromEnvVar]?.trim() : undefined;
+    if (!fromInput) return entry.name;
+    return `${fromInput}${entry.nameSuffix ?? ''}`;
 }
 
 /**
