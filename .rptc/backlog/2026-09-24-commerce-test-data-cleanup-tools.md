@@ -91,3 +91,5 @@ So the shape is TWO generic tools over the whole REST surface, not per-entity to
 
 - 2026-09-24  feat(ai): run_commerce_rest reads the Commerce REST API with the workspace credential (AB-29, read half) (`877793333`)
 - 2026-09-24  feat(ai): write_commerce_rest changes Commerce data over its REST API, confirm-gated with a consent dialog (AB-29) (`3955e0550`)
+- 2026-09-24  fix(ai): Commerce REST writes get the long timeout; a company POST outran the normal one (`02577755a`)
+- 2026-09-24  test(ai): the REST tool suites use the canonical HandlerContext fake and typed fixtures (`0f988f1a1`)
