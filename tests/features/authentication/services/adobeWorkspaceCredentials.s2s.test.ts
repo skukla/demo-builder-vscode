@@ -9,6 +9,8 @@
  * read the same day (created/detail/secrets keys).
  */
 
+jest.mock('@/core/utils/sleep', () => ({ sleep: jest.fn().mockResolvedValue(undefined) }));
+
 import { makeCredentials, makeSdkClient, ORG, PROJ, WS } from './adobeWorkspaceCredentials.testUtils';
 
 describe('createWorkspaceS2SCredentialFor — org-unique naming', () => {
@@ -268,5 +270,79 @@ describe('SDK readiness', () => {
         await makeCredentials(fake.sdkClient).getWorkspaceS2SCredential(ORG, PROJ, WS);
 
         expect(fake.ensureInitialized).not.toHaveBeenCalled();
+    });
+});
+
+/**
+ * The reads an ADD dies on get the one Console retry.
+ *
+ * 2026-09-24: the first add of every integration failed with
+ * `[CoreConsoleAPISDK:ERROR_GET_INTEGRATION] 504 - Gateway Timeout` on the
+ * deploy-time credential read, 61s after the subscribe before it had already
+ * been retried past its own 504; the second add went through in 22s. The
+ * subscribe and the org-services credential read retried; this one did not.
+ */
+describe('getS2SDeployCredentials — a 504 on a credential read is retried once', () => {
+    const GATEWAY_TIMEOUT = new Error(
+        '[CoreConsoleAPISDK:ERROR_GET_INTEGRATION] 504 - Gateway Timeout ("upstream request timeout")',
+    );
+
+    it('a 504 on the detail read is retried once and the identity is built from the second answer', async () => {
+        const { client, sdkClient } = makeSdkClient();
+        // The live-shaped default detail, answered on the SECOND try only.
+        const detail = await client.getIntegration();
+        client.getIntegration.mockReset().mockRejectedValueOnce(GATEWAY_TIMEOUT).mockResolvedValueOnce(detail);
+
+        const result = await makeCredentials(sdkClient).getS2SDeployCredentials(ORG, PROJ, WS);
+
+        expect(result.clientId).toBe('client-id-abc');
+        expect(client.getIntegration).toHaveBeenCalledTimes(2);
+        expect(client.getIntegration).toHaveBeenLastCalledWith(ORG, '1099001');
+    });
+
+    it('a 504 on the secret read is retried once', async () => {
+        const { client, sdkClient } = makeSdkClient({
+            getIntegrationSecrets: jest.fn().mockRejectedValueOnce(GATEWAY_TIMEOUT).mockResolvedValueOnce({
+                body: { client_secrets: [{ client_secret: 'fake-test-pw-not-a-secret' }] },
+            }),
+        });
+
+        const result = await makeCredentials(sdkClient).getS2SDeployCredentials(ORG, PROJ, WS);
+
+        expect(result.clientSecret).toBe('fake-test-pw-not-a-secret');
+        expect(client.getIntegrationSecrets).toHaveBeenCalledTimes(2);
+    });
+
+    it('a 504 on the credential LIST (the ensure step) is retried once, and nothing is created', async () => {
+        const { client, sdkClient } = makeSdkClient({
+            getCredentials: jest.fn().mockRejectedValueOnce(GATEWAY_TIMEOUT).mockResolvedValueOnce({
+                body: [
+                    {
+                        integration_type: 'oauth_server_to_server',
+                        id_integration: '1055555',
+                        client_id: 'client-id-abc',
+                    },
+                ],
+            }),
+        });
+
+        await makeCredentials(sdkClient).getS2SDeployCredentials(ORG, PROJ, WS);
+
+        expect(client.getCredentials).toHaveBeenCalledTimes(2);
+        expect(client.createOAuthServerToServerCredential).not.toHaveBeenCalled();
+        expect(client.getIntegration).toHaveBeenCalledWith(ORG, '1055555');
+    });
+
+    // Repeating the same call with the same credentials does the same thing.
+    it('a refusal on the detail read is thrown at once, never retried', async () => {
+        const refused = new Error('403 Forbidden — not entitled');
+        const { client, sdkClient } = makeSdkClient({
+            getIntegration: jest.fn().mockRejectedValue(refused),
+        });
+
+        await expect(makeCredentials(sdkClient).getS2SDeployCredentials(ORG, PROJ, WS)).rejects.toBe(
+            refused,
+        );
+        expect(client.getIntegration).toHaveBeenCalledTimes(1);
     });
 });

@@ -20,13 +20,13 @@ import type {
     ServiceSubscriptionInfo,
     SubscribedService,
 } from './types';
-import { classifyTransience } from '@/core/errors';
 import { getLogger } from '@/core/logging/debugLogger';
 import { tryWithTimeout , firstSuccess } from '@/core/utils/promiseUtils';
 import { SingleFlight } from '@/core/utils/singleFlight';
 import { sleep } from '@/core/utils/sleep';
 import { formatDuration } from '@/core/utils/timeFormatting';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { withOneTransientRetry } from '@/core/utils/transientRetry';
 
 /**
  * The subscribe response, only as deep as the refusal check reads.
@@ -154,40 +154,13 @@ export class AdobeOrgServices {
     }
 
     /**
-     * Run a Developer Console call, retrying ONCE when it fails transiently.
-     *
-     * Console answers 504 Gateway Timeout when its own licence service times out —
-     * nothing the SC did, and nothing they can fix. On 2026-09-20 one of those
-     * aborted an add three minutes in and sent the SC away to "try again in a few
-     * minutes", which is exactly what a retry does without asking them.
-     *
-     * The classifier decides what counts (`classifyTransience`): a timeout or a
-     * network failure retries, an auth failure never does, because repeating the
-     * same call with the same credentials does the same thing.
-     *
-     * ONE retry, like the org-services fetch above. A second adds delay to a case
-     * that is already unlucky, and the surfaces this serves all carry a Retry.
-     *
-     * Safe for the subscribe PUT as well as the reads: that call REPLACES the
-     * credential's whole service list with what it was given, so sending the same
-     * list again converges on the same state whether or not the first one landed —
-     * which is the thing a 504 leaves unknown.
-     *
-     * @param label - what to call it in the logs
-     * @param run - the call, re-invoked on a transient failure
-     * @returns whatever the call answers
+     * The shared one-retry (`@/core/utils/transientRetry`), logging under this
+     * service's prefix. The rationale lives on the helper.
      */
-    private async withOneTransientRetry<T>(label: string, run: () => Promise<T>): Promise<T> {
-        try {
-            return await run();
-        } catch (error) {
-            if (!classifyTransience(error).retryable) throw error;
-            this.debugLogger.warn(
-                `[Entity Fetcher] ${label} failed transiently — retrying once`,
-            );
-            await sleep(TIMEOUTS.ORG_SERVICES_RETRY_DELAY);
-            return run();
-        }
+    private withOneTransientRetry<T>(label: string, run: () => Promise<T>): Promise<T> {
+        return withOneTransientRetry(`[Entity Fetcher] ${label}`, run, (message) =>
+            this.debugLogger.warn(message),
+        );
     }
 
     /** The uncached catalog fetch behind {@link getServicesForOrg}'s single-flight. */

@@ -25,6 +25,7 @@ import type {
     WorkspaceS2SCredentialIds,
 } from './types';
 import { getLogger } from '@/core/logging/debugLogger';
+import { withOneTransientRetry } from '@/core/utils/transientRetry';
 
 /**
  * Name/description for the shared S2S credential created by ensureOAuthCredentialId.
@@ -66,6 +67,17 @@ export class AdobeWorkspaceCredentials {
         if (!this.sdkClient.isInitialized()) {
             await this.sdkClient.ensureInitialized();
         }
+    }
+
+    /**
+     * The shared one-retry (`@/core/utils/transientRetry`) for Console READS.
+     * Never used on a create: credential names are org-unique and a repeated
+     * create answers 409.
+     */
+    private retryOnce<T>(label: string, run: () => Promise<T>): Promise<T> {
+        return withOneTransientRetry(`[Workspace Credentials] ${label}`, run, (message) =>
+            this.debugLogger.warn(message),
+        );
     }
 
     /**
@@ -427,8 +439,17 @@ export class AdobeWorkspaceCredentials {
             ) => Promise<SDKResponse<{ client_secrets?: Array<{ client_secret?: string }> }>>;
         };
 
-        const detail = (await client.getIntegration(orgId, idIntegration))?.body;
-        const secrets = (await client.getIntegrationSecrets(orgId, idIntegration))?.body;
+        // Each read gets the one Console retry: on 2026-09-24 the FIRST add of
+        // every integration died here on a 504 Gateway Timeout (61s) while the
+        // subscribe just before it had already retried past its own.
+        const detail = (
+            await this.retryOnce('getIntegration', () => client.getIntegration(orgId, idIntegration))
+        )?.body;
+        const secrets = (
+            await this.retryOnce('getIntegrationSecrets', () =>
+                client.getIntegrationSecrets(orgId, idIntegration),
+            )
+        )?.body;
 
         // Validated field-by-field into a fully typed candidate — the
         // error names the first gap, and no non-null assertion is needed.
@@ -483,7 +504,11 @@ export class AdobeWorkspaceCredentials {
             ) => Promise<SDKResponse<RawWorkspaceCredential[]>>;
         };
 
-        const credentials = (await client.getCredentials(orgId, projectId, workspaceId))?.body;
+        const credentials = (
+            await this.retryOnce('getCredentials', () =>
+                client.getCredentials(orgId, projectId, workspaceId),
+            )
+        )?.body;
         const s2s = credentials?.find(
             (c) => c.integration_type === 'oauth_server_to_server' && c.id_integration,
         );
