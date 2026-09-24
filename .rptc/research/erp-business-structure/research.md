@@ -3,18 +3,19 @@
 Date: 2026-09-24. Mode: hybrid (codebase + external). Four parallel report-only researchers
 read SAP (help.sap.com through its JSON page endpoints), Dynamics 365 Business Central and
 Finance & Supply Chain Management (learn.microsoft.com), and Adobe Commerce (Experience
-League `.md` sources, `AdobeDocs/*` repos, the starter kit clone at `019a03b`). A fifth on
-Infor is pending (section 6). Codebase facts I read myself. Labels throughout: **read** (the
+League `.md` sources, `AdobeDocs/*` repos, the starter kit clone at `019a03b`). Codebase facts I read myself. Labels throughout: **read** (the
 page was read), **snippet** (search excerpt only), **inferred**, **marketing**.
 
 Builds on, and does not repeat: `../erp-realism-audit/`, `../multi-erp-order-routing/`,
 `../erp-bidirectional-review/` (item 7), `.rptc/plans/erp-integration/overview.md`
 (decisions 3, 5, 15).
 
-**Which real ERPs matter.** The multi-ERP order-routing client (acquisitions, several ERPs,
-one Commerce catalog, orders with lines owned by different entities) runs an **Infor** ERP,
-product unconfirmed. A different client runs **Dynamics 365**. The mock ERP is a composite
-legible to SAP, Dynamics and Infor users (plan §1.1), so all three are covered.
+**Which real ERPs matter.** The multi-ERP order-routing client (acquisitions) runs
+**several ERPs, none named**; each **product line lives in its own ERP**, and an **inRiver
+PIM aggregates them into one online catalog**. That per-line ownership is why an order must
+split (owner, 2026-09-24; an earlier "Infor" reading was wrong and its research was
+stopped). A different client runs **Dynamics 365**. The mock ERP is a composite legible to
+SAP and Dynamics users (plan §1.1), so both are covered; section 6 is the routing client.
 
 ---
 
@@ -275,15 +276,42 @@ defined during discovery" (marketing; its manual PDF could not be read). Corevis
 were unreadable. Webkul's SAP B1 connector picks one warehouse and price list in a
 Magento-side config view with no per-website mapping (read).
 
-## 6. Infor — pending
+## 6. The routing client: product lines per ERP, aggregated by a PIM
 
-The routing client's ERP. A researcher is reading Infor M3 (company → division → facility →
-warehouse), Infor LN (company → enterprise unit → site → warehouse) and CloudSuite
-Industrial / SyteLine (site → entity), plus Infor's own commerce products. This section is
-filled when it reports; the model in section 8 is written so that a fourth vocabulary
-slots in without changing the levels. One fact already on record: the realism audit cites
-Infor CloudSuite Industrial for credit hold with a reason code
-([About Credit Hold](https://docs.infor.com/csi/9.01.x/en-us/csbiolh/lsm1454144036235.html)).
+What the owner has from the client (2026-09-24), stated as given: several ERPs, not named;
+each product line is mastered in its own ERP; inRiver, a product information management
+system, aggregates the lines into the single catalog the web store sells; therefore one
+order can hold lines owned by different ERPs and must be split. Nothing below about this
+client is from vendor documentation.
+
+**What this changes in the model.** Ownership is a **per-SKU fact that originates upstream**
+of Commerce — the PIM knows which ERP mastered each product line — and it is NOT a
+website mapping. The two seller axes stay distinct:
+
+| Axis | Owner of the fact | Where it lands in Commerce | What it decides |
+|---|---|---|---|
+| Which selling unit (legal entity / sales org) | the merchant's structure | website | which ERP's sales organisation an ORDER is placed in; `ext_order_id`; the seller's address and VAT on the invoice |
+| Which system owns the goods | the PIM, per product line | the SKU's **inventory source** (and/or an ownership attribute the PIM feed sets) | which ERP fulfils a LINE; where the shipment ships from |
+
+The multi-ERP research already chose inventory sources as the native ownership marker
+(`../multi-erp-order-routing/` §1.1: "the closest native thing to 'which system owns this
+SKU'"). The PIM fact fits it: a source per ERP ("Acme plant", "Contoso plant"), assigned to
+each SKU by the PIM's feed or by the merchant. If the client's PIM cannot drive source
+assignment, a product attribute (`erp_owner`) set by the feed is the fallback, and the
+routing integration reads whichever the merchant chooses. **inRiver itself is out of our
+scope**: the demo does not model a PIM; the mock ERP's products arrive from Commerce, so
+the demo's stand-in for "the PIM assigned this line to ERP B" is the SKU's source.
+
+**The selling entity for a split order.** With lines owned by two ERPs, one ERP is still
+the seller of record for the order (D365's selling company; SAP Commerce's sub-order per
+back end still carries one sold-to per part). The website's sales-organisation mapping
+(8.2) names it; the owning ERP's part references the selling ERP's number. This is the one
+place the two axes meet, and it is exactly what the routing integration exists to decide.
+
+**Open with the client**, to be asked rather than assumed: which ERPs; whether the PIM
+already carries an "owning system" attribute per product; whether Commerce inventory
+sources are already one per ERP; who the seller of record is for a mixed order (the
+website's entity, or the entity owning the majority of lines).
 
 ---
 
@@ -403,7 +431,7 @@ work list can be filtered by sales organisation once two exist.
 
 | # | Question | Recommendation |
 |---|---|---|
-| S1 | Which Infor product does the routing client run (M3 / LN / CloudSuite Industrial / SX.e)? The vocabulary and the multi-company mechanism differ. | Confirm before the Infor section is written up; the levels in 8.1 hold for all four. |
+| S1 | Which ERPs does the routing client run, and does inRiver already carry an "owning system" attribute per product line? | Ask the client; the model in 8.1 holds for any ERP, and the ownership axis lands on the SKU's source either way. |
 | S2 | Which Dynamics edition does the other client run? | F&SCM assumed (legal entities, intercompany); BC noted where it differs. |
 | S3 | Does the mapping go on the Commerce side (8.2), accepting that App Management's scope tree needs a manual sync when a website is added? | Yes — it is the only placement that survives an ERP reset and matches "Commerce is the system of record". |
 | S4 | Mirror the buyer's legal fields (Company Legal Name, VAT/Tax ID, Reseller ID, Legal Address) into the partner's general data? Widens O6. | Yes; it is what every ERP's business-partner general data holds, and the customer document is visibly thin without it. |
@@ -423,4 +451,4 @@ work list can be filtered by sales organisation once two exist.
   "Global"); whether the business-config form can appear under Stores → Configuration.
 - Any Adobe Commerce ERP connector's documented mapping field — every vendor page was
   marketing, gated or unreadable (i95Dev PDF 406, Corevist empty).
-- Infor: everything, pending section 6.
+- The routing client: which ERPs, and how the PIM expresses ownership. Not vendor-documentable; a client question (S1).
