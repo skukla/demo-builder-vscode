@@ -37,6 +37,7 @@ jest.mock('@/features/eds/services/storefront/storefrontStalenessDetector', () =
 
 import {
     extractRepublishParams,
+    NO_DALIVE_SESSION_MESSAGE,
     republishStorefrontConfig,
 } from '@/features/eds/services/storefront/storefrontRepublishService';
 import type { Logger } from '@/types/logger';
@@ -143,5 +144,80 @@ describe('extractRepublishParams — daLiveSite fallback', () => {
         expect(result).toEqual(
             expect.objectContaining({ success: true, daLiveSite: 'shop-content' })
         );
+    });
+});
+
+/**
+ * The DA.live session the CDN publish needs (2026-09-24).
+ *
+ * Every storefront the extension sets up carries a site admin role, and with it
+ * every Helix admin call needs the DA.live session. The republish inside an add
+ * never asked for one: it pushed to GitHub, the CDN publish answered 401, the add
+ * reported done, and the storefront kept serving the previous config.json with
+ * the Republish tile green over it.
+ */
+describe('republishStorefrontConfig — the DA.live session guard', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockGenerate.mockReturnValue({ success: true, content: '{}' });
+        mockSync.mockResolvedValue({ success: true });
+        (fsPromises.writeFile as jest.Mock).mockResolvedValue(undefined);
+    });
+
+    it('asks for the session BEFORE the push, and a granted one changes nothing', async () => {
+        const order: string[] = [];
+        mockSync.mockImplementation(async () => {
+            order.push('sync');
+            return { success: true, cdnPublished: true };
+        });
+        const ensureDaLiveSession = jest.fn(async () => {
+            order.push('session');
+            return { authenticated: true };
+        });
+
+        const { project, result } = run({ ensureDaLiveSession });
+        await result;
+
+        expect(order).toEqual(['session', 'sync']);
+        expect(project).toHaveProperty('edsStorefrontStatusSummary', 'published');
+    });
+
+    it('a declined sign-in still pushes to GitHub, names the reason, and leaves the storefront STALE', async () => {
+        mockSync.mockResolvedValue({
+            success: true,
+            githubPushed: true,
+            cdnPublished: false,
+            cdnError: 'Adobe rejected the request (401).',
+        });
+        const ensureDaLiveSession = jest.fn(async () => ({ authenticated: false, cancelled: true }));
+
+        const { project, persist, result } = run({ ensureDaLiveSession });
+        const outcome = await result;
+
+        expect(mockSync).toHaveBeenCalledTimes(1);
+        expect(outcome).toMatchObject({ success: true, cdnError: NO_DALIVE_SESSION_MESSAGE });
+        // The tile stays amber: the live config.json is the old one, which is
+        // what stale means, and the published baseline is not advanced.
+        expect(project).toHaveProperty('edsStorefrontStatusSummary', 'stale');
+        expect(project.edsStorefrontState).toBeUndefined();
+        expect(persist).toHaveBeenCalledWith(project);
+    });
+
+    it('a CDN failure under a good session keeps the CDN\'s own reason, and is stale too', async () => {
+        mockSync.mockResolvedValue({ success: true, githubPushed: true, cdnError: 'CDN said no' });
+
+        const { project, result } = run({ ensureDaLiveSession: async () => ({ authenticated: true }) });
+        const outcome = await result;
+
+        expect(outcome).toMatchObject({ cdnError: 'CDN said no' });
+        expect(project).toHaveProperty('edsStorefrontStatusSummary', 'stale');
+    });
+
+    it('without a guard (nobody to ask) the publish runs as before', async () => {
+        const { project, result } = run();
+        await result;
+
+        expect(mockSync).toHaveBeenCalledTimes(1);
+        expect(project).toHaveProperty('edsStorefrontStatusSummary', 'published');
     });
 });

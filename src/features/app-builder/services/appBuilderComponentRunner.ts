@@ -113,9 +113,11 @@ export interface RunnerResult {
     /** What removal undid of the ERP integration's Commerce writes (remove only). */
     commerceDetach?: CommerceDetachResult;
     /**
-     * What a removal could not finish, in plain words for the SC (remove only):
-     * a Commerce uninstall that failed, a system that was not removed with its
-     * integration. The removal itself stands.
+     * What the operation could not finish, in plain words for the SC, while the
+     * operation itself stands: a Commerce uninstall that failed or a system not
+     * removed with its integration (remove); a storefront republish whose CDN
+     * publish did not land, so the storefront still serves its previous
+     * config.json (add and deploy).
      */
     warnings?: string[];
 }
@@ -342,7 +344,9 @@ export interface AppBuilderComponentRunnerDeps extends TeardownDeps {
         workspace: { id: string; name: string },
     ) => Promise<{ error: string } | undefined>;
     /** Storefront config regen + republish (step 04 generalized providesEnvVars path). */
-    republishStorefront: (input: RepublishInput) => Promise<{ success: boolean; error?: string }>;
+    republishStorefront: (
+        input: RepublishInput,
+    ) => Promise<{ success: boolean; error?: string; cdnError?: string }>;
     /** Every appBuilderComponent in the project's catalog (for the union subscribe). */
     catalog: AppBuilderComponentCatalogEntry[];
     /** Secret storage forwarded to the republish path. */
@@ -512,15 +516,36 @@ const STOREFRONT_PROVIDED_VAR = 'MESH_ENDPOINT';
  * storefront config READS (else no-op). A component that provides only to other
  * components — the ERP's base URL to its integration — changes nothing the
  * storefront serves, so it earns no republish.
+ *
+ * @returns a warning for the SC when the republish did not fully land — the
+ *   operation stands, but the storefront is not current. On 2026-09-24 an add
+ *   reported done over a CDN publish refused for want of a DA.live session, and
+ *   only the Debug Logs knew.
  */
 async function republishIfProvided(
     project: Project,
     deps: AppBuilderComponentRunnerDeps,
-): Promise<void> {
+): Promise<string | undefined> {
     if (!(STOREFRONT_PROVIDED_VAR in getProvidedEnvVars(project))) {
-        return;
+        return undefined;
     }
-    await deps.republishStorefront({ project, secrets: deps.secrets, logger: deps.logger });
+    const published = await deps.republishStorefront({
+        project,
+        secrets: deps.secrets,
+        logger: deps.logger,
+    });
+    if (!published.success) {
+        return `The storefront was not republished: ${published.error ?? 'the republish did not finish'}`;
+    }
+    if (published.cdnError) {
+        return `The storefront still serves its previous config.json: ${published.cdnError}`;
+    }
+    return undefined;
+}
+
+/** A finished add or deploy, carrying the republish warning when there is one. */
+function withRepublishWarning(warning: string | undefined): RunnerResult {
+    return { success: true, ...(warning ? { warnings: [warning] } : {}) };
 }
 
 /** Build the persisted AppBuilderComponentState from a successful mesh deploy. */
@@ -944,8 +969,7 @@ async function runAdd(
         await persistOutcome(project, entry, deployed.outcome, deps);
         if (linkBroughtSystem(project, entry.id, deps.catalog)) await deps.saveProject(project);
         await installIfAppManagement(project, entry, deps, { componentPath: installed.path, since });
-        await republishIfProvided(project, deps);
-        return { success: true };
+        return withRepublishWarning(await republishIfProvided(project, deps));
     } catch (error) {
         deps.logger.error('[AppBuilderComponent Runner] add failed', error as Error);
         return { success: false, error: readableFailure(toError(error).message, deps.logger) };
@@ -1075,8 +1099,7 @@ export async function deployAppBuilderComponent(
         recordDeployOutcome(project, entry.kind, id, deployed.outcome);
         await deps.saveProject(project);
         await installIfAppManagement(project, entry, deps, { componentPath, since });
-        await republishIfProvided(project, deps);
-        return { success: true };
+        return withRepublishWarning(await republishIfProvided(project, deps));
     } catch (error) {
         deps.logger.error('[AppBuilderComponent Runner] deploy failed', error as Error);
         const reason = readableFailure(toError(error).message, deps.logger);

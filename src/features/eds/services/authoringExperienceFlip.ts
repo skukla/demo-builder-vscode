@@ -29,6 +29,7 @@ import { HelixService } from './helix/helixService';
 import { installQuickEdit } from './quickEditPublisher';
 import { republishStorefrontConfig } from './storefront/storefrontRepublishService';
 import { COMPONENT_IDS } from '@/core/constants';
+import { ensureDaLiveAuth } from '@/features/eds/handlers/edsHelpers';
 import type { AuthoringExperience, Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 
@@ -208,6 +209,7 @@ async function regenerateStorefrontConfig(
             secrets: context.secrets,
             logger,
             persist: saveProject,
+            ensureDaLiveSession: () => ensureDaLiveAuth({ context, logger }, '[Configure]'),
         });
         if (!result.success) {
             logger.warn(

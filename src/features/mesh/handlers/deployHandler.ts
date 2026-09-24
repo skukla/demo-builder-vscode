@@ -16,6 +16,7 @@
 
 import * as vscode from 'vscode';
 import { ServiceLocator } from '@/core/di/serviceLocator';
+import { ensureDaLiveAuth } from '@/features/eds/handlers/edsHelpers';
 import { republishStorefrontConfig } from '@/features/eds/services/storefront/storefrontRepublishService';
 import type { DeployMeshHeadlessResult, MeshDeployBlock } from '@/features/mesh/services/deployMeshHeadless';
 import {
@@ -53,6 +54,7 @@ function meshDeps(context: HandlerContext, project: Project): DeployMeshWithFeed
                 secrets: context.context.secrets,
                 logger: context.logger,
                 persist: (p) => context.stateManager.saveProject(p),
+                ensureDaLiveSession: () => ensureDaLiveAuth(context, '[Mesh Deploy]'),
             }),
     };
 }

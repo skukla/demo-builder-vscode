@@ -49,6 +49,7 @@ import { forgetScreenKey } from '@/features/app-builder/services/systemScreen';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { ComponentManager } from '@/features/components/services/componentManager';
+import { ensureDaLiveAuth } from '@/features/eds/handlers/edsHelpers';
 import { republishStorefrontConfig } from '@/features/eds/services/storefront/storefrontRepublishService';
 import { deployMeshComponent } from '@/features/mesh/services/meshDeployment';
 import {
@@ -77,6 +78,8 @@ export interface RunnerDepsContext {
     subscriberClient: ApiSubscriberClient;
     catalog: AppBuilderComponentCatalogEntry[];
     secrets: vscode.SecretStorage;
+    /** The DA.live sign-in ask before a republish's CDN publish (`RepublishParams.ensureDaLiveSession`). */
+    ensureDaLiveSession: () => Promise<{ authenticated: boolean; error?: string }>;
     /**
      * Load the component registry — the source of a mesh's `requiredEnvVars`.
      *
@@ -326,6 +329,7 @@ export function buildDefaultRunnerDeps(
                 secrets: ctx.secrets,
                 logger: ctx.logger,
                 persist: ctx.saveProject,
+                ensureDaLiveSession: ctx.ensureDaLiveSession,
             }),
     };
 }
@@ -383,6 +387,7 @@ export async function buildRunnerDepsContext(
         subscriberClient: createApiSubscriberClient(authManager),
         catalog: resolveCatalog(project),
         secrets: context.context.secrets,
+        ensureDaLiveSession: () => ensureDaLiveAuth(context, '[AppBuilderComponent Runner]'),
         loadRegistry: async () => {
             const { ComponentRegistryManager } = await import(
                 '@/features/components/services/ComponentRegistryManager'

@@ -179,8 +179,11 @@ export async function syncConfigToRemote(params: ConfigSyncParams): Promise<Conf
         try {
             logger.debug(`[ConfigSync] Publishing config.json to Helix CDN...`);
 
-            // HelixService needs GitHub token for admin API auth
-            // Note: Code preview/publish only requires GitHub auth (no DA.live token)
+            // HelixService needs the GitHub token for admin API auth, and — on any
+            // site carrying a site admin role, which every storefront the extension
+            // sets up now does — the DA.live session as well (`tryAdminBearer`).
+            // Callers that can ask for that session do so before reaching here
+            // (`RepublishParams.ensureDaLiveSession`); a missing one answers 401.
             // No provider passed: HelixService falls back to the one registered at
             // activation. The DA.live session is a per-host singleton, so threading
             // it through every caller would model a plurality that does not exist.

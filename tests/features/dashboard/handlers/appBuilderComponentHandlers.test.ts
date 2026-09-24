@@ -660,3 +660,69 @@ describe('handleAddAppBuilderComponent — duplicate ids', () => {
         expect(mockAddAppBuilderComponent).toHaveBeenCalled();
     });
 });
+
+/**
+ * A republish that did not land reaches BOTH surfaces (2026-09-24).
+ *
+ * The runner carries it as a warning; the handler shows the SC a warning
+ * notification and hands an agent `data.warning`, the way a removal's leftovers
+ * already travel. The durable signal — the Republish tile staying amber — is the
+ * service's job and pinned in its own suite.
+ */
+describe('add and deploy — a storefront republish warning reaches the SC and the agent', () => {
+    const WARNING =
+        'The storefront still serves its previous config.json: No DA.live session — ' +
+        'sign in to DA.live and republish from the dashboard.';
+
+    beforeEach(() => {
+        resetHandlerMocks();
+    });
+
+    it('an add with a republish warning still reports what it added, plus the warning', async () => {
+        const { mockContext } = setupMocks();
+        mockTestDeveloperPermissions(true);
+        mockAddAppBuilderComponent.mockResolvedValue({ success: true, warnings: [WARNING] });
+
+        const result = await handleAddAppBuilderComponent(mockContext, { id: 'erp-sync' });
+
+        expect(result.success).toBe(true);
+        expect(result.added).toEqual({ id: 'erp-sync', name: 'ERP Sync', kind: 'integration' });
+        expect((result.data as { warning?: string }).warning).toBe(WARNING);
+        const vscode = require('vscode');
+        expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(WARNING);
+    });
+
+    it('a deploy with a republish warning answers success with the warning on data', async () => {
+        const { mockContext } = setupMocks({
+            appBuilderComponents: {
+                'erp-sync': {
+                    kind: 'integration' as const,
+                    status: 'deployed' as const,
+                    name: 'ERP Sync',
+                    source: { owner: 'acme', repo: 'erp-sync', branch: 'main' },
+                },
+            },
+        });
+        mockTestDeveloperPermissions(true);
+        mockDeployAppBuilderComponent.mockResolvedValue({ success: true, warnings: [WARNING] });
+
+        const result = await handleDeployAppBuilderComponent(mockContext, { id: 'erp-sync' });
+
+        expect(result.success).toBe(true);
+        expect((result.data as { warning?: string }).warning).toBe(WARNING);
+        const vscode = require('vscode');
+        expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(WARNING);
+    });
+
+    it('control: a clean add or deploy shows no warning toast', async () => {
+        const { mockContext } = setupMocks();
+        mockTestDeveloperPermissions(true);
+
+        const result = await handleAddAppBuilderComponent(mockContext, { id: 'erp-sync' });
+
+        expect(result.success).toBe(true);
+        expect(result.data).toBeUndefined();
+        const vscode = require('vscode');
+        expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
+    });
+});

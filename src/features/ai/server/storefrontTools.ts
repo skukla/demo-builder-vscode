@@ -105,6 +105,11 @@ export function registerStorefrontTools(
 
             const github = await requireGitHub(ctx, ' to push config.json');
             if (github) return asText(github);
+            // The CDN publish needs the DA.live session on every storefront the
+            // extension sets up (site admin role). An agent gets the refusal it can
+            // act on — the same one sync_content gives — never a dialog.
+            const daLive = await requireDaLive(ctx, ' to publish config.json to the CDN');
+            if (daLive) return asText(daLive);
 
             try {
                 // Run under the stored session org context so any `aio` work

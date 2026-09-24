@@ -593,7 +593,7 @@ async function reportAddOutcome(
         return { success: false, error: result.error };
     }
     return {
-        success: true,
+        ...answerWithWarnings({}, result.warnings ?? []),
         added: { id: entry.id, name: entry.name ?? entry.id, kind: entry.kind },
     };
 }
@@ -694,9 +694,33 @@ export type GuardableResult = {
     runtimeCleanup?: RuntimeCleanupSummary;
     /** Set by `removeAppBuilderComponent` for the ERP integration: its Commerce writes undone. */
     commerceDetach?: CommerceDetachResult;
-    /** Set by `removeAppBuilderComponent`: what it could not finish, in plain words. */
+    /**
+     * What the operation could not finish, in plain words: a removal's leftovers,
+     * or an add's/deploy's storefront republish whose CDN publish did not land.
+     */
     warnings?: string[];
 };
+
+/**
+ * Answer a finished operation, carrying its warnings to BOTH surfaces: a warning
+ * notification for the SC, and `data.warning` for an agent, which cannot see a
+ * toast. HandlerResponse already has `data?: unknown`, so the message contract
+ * does not change. The durable signal is elsewhere — a republish that did not
+ * land leaves the storefront stale, so the Republish tile stays amber after the
+ * toast is gone (`storefrontRepublishService`).
+ */
+function answerWithWarnings(
+    data: Record<string, unknown>,
+    warnings: (string | undefined)[],
+): HandlerResponse {
+    const present = warnings.filter((warning): warning is string => Boolean(warning));
+    if (present.length > 0) {
+        const warning = present.join(' ');
+        vscode.window.showWarningMessage(warning);
+        return { success: true, data: { ...data, warning } };
+    }
+    return { success: true, data: Object.keys(data).length > 0 ? data : undefined };
+}
 
 /** What the card calls a component: its kind, title-cased for the status line. */
 function kindNoun(kind: AppBuilderComponentKind | undefined): string {
@@ -866,7 +890,9 @@ async function deployById(
     // Terminal either way — the persisted status changed; refresh the grid map.
     await postComponentsSnapshot(context);
     await refreshProjectStatus(context);
-    return result.success ? { success: true } : { success: false, error: result.error };
+    return result.success
+        ? answerWithWarnings({}, result.warnings ?? [])
+        : { success: false, error: result.error };
 }
 
 /** Handle 'deployAppBuilderComponent' — deploy the given appBuilderComponent's tail. */
@@ -946,24 +972,17 @@ async function reportRemoveOutcome(
 
     const cleanup = result.runtimeCleanup;
     const commerceDetach = result.commerceDetach;
-    const warnings = [
-        runtimeWarning(displayName, cleanup),
-        detachWarning(displayName, commerceDetach),
-        ...(result.warnings ?? []),
-    ].filter((warning): warning is string => Boolean(warning));
-    const data = {
-        ...(cleanup ? { runtimeCleanup: cleanup } : {}),
-        ...(commerceDetach ? { commerceDetach } : {}),
-    };
-    if (warnings.length > 0) {
-        const warning = warnings.join(' ');
-        // Both surfaces, deliberately: the toast is for the SC, and `data` carries
-        // it to an agent, which cannot see a toast. HandlerResponse already has
-        // `data?: unknown`, so this needs no change to the message contract.
-        vscode.window.showWarningMessage(warning);
-        return { success: true, data: { ...data, warning } };
-    }
-    return { success: true, data: Object.keys(data).length > 0 ? data : undefined };
+    return answerWithWarnings(
+        {
+            ...(cleanup ? { runtimeCleanup: cleanup } : {}),
+            ...(commerceDetach ? { commerceDetach } : {}),
+        },
+        [
+            runtimeWarning(displayName, cleanup),
+            detachWarning(displayName, commerceDetach),
+            ...(result.warnings ?? []),
+        ],
+    );
 }
 
 /** Handle 'removeAppBuilderComponent' — guards → D1 removeAppBuilderComponent {id} (confirm is UI-side). */

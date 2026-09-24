@@ -103,12 +103,27 @@ describe('republish', () => {
         getGitHubServicesMock.mockReturnValue({
             tokenService: { validateToken: jest.fn(async () => ({ valid: true })) },
         });
+        getDaLiveAuthServiceMock.mockReturnValue({ isAuthenticated: jest.fn(async () => true) });
         republishMock.mockResolvedValue({
             success: true,
             githubPushed: true,
             cdnPublished: true,
             cdnVerified: true,
         });
+    });
+
+    // Every storefront the extension sets up carries a site admin role, so the CDN
+    // publish needs the DA.live session. On 2026-09-24 a republish with none ran
+    // anyway, pushed to GitHub, and the CDN kept the previous config.json. An agent
+    // gets the refusal it can act on — never a dialog.
+    it('refuses without a DA.live session, before publishing anything', async () => {
+        getDaLiveAuthServiceMock.mockReturnValueOnce({
+            isAuthenticated: jest.fn(async () => false),
+        });
+        const s = fakeServer();
+        registerStorefrontTools(s, ctxFactory);
+        expect(await s.call('republish', { confirm: true })).toMatchObject({ needsAuth: 'dalive' });
+        expect(republishMock).not.toHaveBeenCalled();
     });
 
     it('errors when no current project is open', async () => {

@@ -64,11 +64,17 @@ export class DeployMeshCommand extends BaseCommand {
                         const { republishStorefrontConfig } = await import(
                             '@/features/eds/services/storefront/storefrontRepublishService'
                         );
+                        const { ensureDaLiveAuth } = await import('@/features/eds/handlers/edsHelpers');
                         return republishStorefrontConfig({
                             project: deployed,
                             secrets: this.context.secrets,
                             logger: this.logger,
                             persist: (p) => this.stateManager.saveProject(p),
+                            ensureDaLiveSession: () =>
+                                ensureDaLiveAuth(
+                                    { context: this.context, logger: this.logger },
+                                    '[Mesh Deploy]',
+                                ),
                         });
                     },
                 });

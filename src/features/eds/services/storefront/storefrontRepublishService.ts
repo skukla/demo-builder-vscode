@@ -49,6 +49,24 @@ export interface RepublishParams {
     /** Optional progress callback */
     onProgress?: PhaseProgressCallback;
     /**
+     * Ask for the DA.live sign-in before the CDN publish, when there is someone
+     * to ask. Every storefront the extension sets up carries a site admin role,
+     * and with that role every Helix admin call — the code publish included —
+     * needs the DA.live session. The dashboard's Republish button asked; the
+     * republish that runs inside an add, a deploy, a mesh deploy or a Configure
+     * save did not, so on 2026-09-24 an add finished "done" while the CDN kept
+     * the previous config.json and only the Debug Logs said so.
+     *
+     * The prompt's surface follows the operation's (the `ensureDaLiveAuth` rule,
+     * owner 2026-09-20): the sign-in form in a modal-hosted operation, a modal
+     * under an agent call, a notification with Sign In from a plain button. A
+     * refusal does not stop the GitHub push; it names the reason on `cdnError`
+     * and leaves the storefront STALE, so the Republish tile stays amber.
+     *
+     * Optional only for callers with nobody to ask; production callers pass it.
+     */
+    ensureDaLiveSession?: () => Promise<{ authenticated: boolean; error?: string }>;
+    /**
      * Persist the project after the publish clears its stale flag.
      *
      * REQUIRED, not optional. This service used to set
@@ -84,6 +102,10 @@ export interface RepublishResult {
      */
     cdnError?: string;
 }
+
+/** What `cdnError` says when the SC declined (or nobody could answer) the sign-in. */
+export const NO_DALIVE_SESSION_MESSAGE =
+    'No DA.live session — sign in to DA.live and republish from the dashboard.';
 
 // ==========================================================
 // Parameter Extraction
@@ -176,7 +198,7 @@ export function extractRepublishParams(project: Project):
  * @returns Republish result
  */
 export async function republishStorefrontConfig(params: RepublishParams): Promise<RepublishResult> {
-    const { project, secrets, logger, onProgress, persist } = params;
+    const { project, secrets, logger, onProgress, persist, ensureDaLiveSession } = params;
 
     try {
         // Step 1: Extract EDS metadata
@@ -240,7 +262,16 @@ export async function republishStorefrontConfig(params: RepublishParams): Promis
             };
         }
 
-        // Step 4: Sync to GitHub and CDN
+        // Step 4: the DA.live session the CDN publish needs — asked for BEFORE the
+        // push, so a declined sign-in is known when the CDN answer comes back.
+        const session = ensureDaLiveSession ? await ensureDaLiveSession() : undefined;
+        if (session && !session.authenticated) {
+            logger.warn(
+                '[StorefrontRepublish] No DA.live session — pushing to GitHub, the CDN publish will not land',
+            );
+        }
+
+        // Step 5: Sync to GitHub and CDN
         onProgress?.('Syncing to GitHub and CDN...');
         logger.info(`[StorefrontRepublish] Syncing config.json to ${repoOwner}/${repoName}`);
 
@@ -263,28 +294,38 @@ export async function republishStorefrontConfig(params: RepublishParams): Promis
             };
         }
 
-        // Step 5: Update storefront state
-        logger.debug('[StorefrontRepublish] Updating storefront state');
-        updateStorefrontState(project, publishedConfigs);
-        project.edsStorefrontStatusSummary = 'published';
-        // To DISK, not just memory — see `persist` on RepublishParams.
-        await persist(project);
+        // A refused sign-in explains the 401 better than the 401 does.
+        const cdnError =
+            syncResult.cdnError && session?.authenticated === false
+                ? NO_DALIVE_SESSION_MESSAGE
+                : syncResult.cdnError;
 
-        if (syncResult.cdnError) {
+        // Step 6: Update storefront state — only when the CDN actually took it.
+        // A GitHub push the CDN did not publish leaves the storefront serving the
+        // previous config.json, which is exactly what `stale` means; recording the
+        // new baseline here would turn the Republish tile green over a storefront
+        // that is not current, and nothing else would ever say so.
+        if (cdnError) {
+            project.edsStorefrontStatusSummary = 'stale';
             logger.warn(
                 '[StorefrontRepublish] Republished to GitHub, but the CDN still serves the ' +
-                    `previous config.json: ${syncResult.cdnError}`,
+                    `previous config.json: ${cdnError}`,
             );
         } else {
+            logger.debug('[StorefrontRepublish] Updating storefront state');
+            updateStorefrontState(project, publishedConfigs);
+            project.edsStorefrontStatusSummary = 'published';
             logger.info('[StorefrontRepublish] Storefront config republished successfully');
         }
+        // To DISK, not just memory — see `persist` on RepublishParams.
+        await persist(project);
 
         return {
             success: true,
             githubPushed: syncResult.githubPushed,
             cdnPublished: syncResult.cdnPublished,
             cdnVerified: syncResult.cdnVerified,
-            cdnError: syncResult.cdnError,
+            cdnError,
         };
     } catch (error) {
         const errorMessage = (error as Error).message;

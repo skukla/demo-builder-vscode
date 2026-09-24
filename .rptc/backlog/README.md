@@ -225,10 +225,11 @@ each item's own file; what has already landed against an item is in its
 | `AI-8` | question | [Audit our context files against what the research actually says](2026-08-29-context-file-audit-against-evidence.md) | — | high | backlog |
 | `AI-9` | question | [Should an agent's project delete also clean up the cloud, as a person's does?](2026-09-19-agent-project-delete-leaves-cloud.md) | — | med | active |
 
-### eds  (15)
+### eds  (16)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
+| `AB-28` | fix | [The republish inside an add, a deploy or a save asks for the DA.live sign-in, and says when the CDN did not take it](2026-09-24-inner-republish-asks-for-dalive-session.md) | — | high | backlog |
 | `EDS-1` | epic | [Multi-Locale Storefront — Implementation Plan (Phase 1)](2026-05-19-multisite-multilocale.md) | — | med | backlog |
 | `EDS-2` | epic | [Plan — Hybrid storefront (Tier 2) + B2B-ready prerequisite & detection](hybrid-storefront-model/overview.md) | — | low | backlog |
 | `EDS-3` | feature | [EDS site-scraping capability for Demo Builder](2026-05-28-eds-site-scraping.md) | — | med | backlog |
@@ -528,7 +529,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-56` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — backlog
 
-*128 item(s) sit outside the A–G chain.*
+*129 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 

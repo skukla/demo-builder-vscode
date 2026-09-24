@@ -7646,7 +7646,7 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 333,
+            "line": 336,
             "mutants": 1,
             "category": "block",
             "reason": "The else arm of the response.ok check contains a single logger.debug naming the status that came back. Emptying it leaves the loop doing the same thing: no assignment, no return, straight on to the between-attempts sleep and the next fetch. That a non-OK status does not end the loop early is pinned by 'does not accept a body served under a non-OK status', which counts all ten attempts; the arm's remaining content is the status number in a debug line.",
@@ -7659,7 +7659,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 338,
+            "line": 341,
             "mutants": 1,
             "category": "block",
             "reason": "This catch exists to swallow a failed fetch so the loop keeps trying; its body is one logger.debug naming the attempt and the error. Emptying it removes the log and nothing else \u2014 control still leaves the try, still hits the between-attempts sleep, still comes back for the next attempt. 'waits between attempts but not after the last one' drives ten rejected fetches through this exact path and pins the ten attempts and the nine waits; what the empty block loses is the message, not a decision.",
@@ -8343,7 +8343,7 @@
             "anchors": [
                 "if (result.success) {"
             ],
-            "line": 803,
+            "line": 827,
             "mutants": 7,
             "category": "branch",
             "reason": "The three-way tail of withComponentProgress writes one USER-log line per outcome and nothing else \u2014 no return value changes, no channel is pushed. Forcing any branch, or emptying any body, changes only which line prints, which is what the ratchet exists to refuse to reward. The outcome itself is asserted through the returned result and the row-status pushes.",
@@ -9422,7 +9422,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 1276,
+            "line": 1299,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single deps.logger.warn. Emptying it leaves the catch itself in place, so a failing remote teardown is swallowed exactly as before and the removal continues to clear local state - which the remove-contracts suite asserts directly with a rejecting executor. Only the log line differs.",
@@ -9448,7 +9448,7 @@
             "anchors": [
                 "if (cleared.componentApiPicks) {"
             ],
-            "line": 1434,
+            "line": 1457,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this guard true assigns cleared.componentApiPicks onto the caller's project when it is undefined. cleared is spread from that same project, so an undefined value there means the caller's field was already undefined and the assignment writes back exactly what was there. The mutation is a no-op for every input on which the guard was false.",
@@ -9461,7 +9461,7 @@
             "anchors": [
                 "if (cleared.componentConfigs) {"
             ],
-            "line": 1437,
+            "line": 1460,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this guard true assigns cleared.componentConfigs onto the caller's project when it is undefined. cleared is spread from that same project, so an undefined value there means the caller's field was already undefined and the assignment writes back exactly what was there. The mutation is a no-op for every input on which the guard was false.",
