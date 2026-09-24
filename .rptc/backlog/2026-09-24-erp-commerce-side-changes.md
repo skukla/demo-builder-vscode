@@ -22,3 +22,4 @@ Harness: ship in the fake Commerce → ERP shipment exists → NO second Commerc
 
 ## Shipped so far
 - 2026-09-24  BUILT TO THE EDGE — demo-erp ce52126 (origin-aware moves: commerce-shipment, commerce-invoice, credit/hold, cancel and credit/release with origin; recorded and journaled, no outbound event; idempotent; contract order.fromCommerce) + integration f42e6f2 (handlers order-commerce/shipped, /invoiced, /changed on the shipment save, invoice save and non-new order save events; is-this-mine via ext_order_id → ERP GET (M2); 503 waits / 400 ends; Admin history rows; manifest regenerated; 332 tests). NOT done: live proof — the two new subscriptions (their payload fields are assumed from the REST shapes) and the unhold rule need the scratch deploy; the harness journeys in the verification block need AB-26c
+- 2026-09-24  docs(backlog): AB-26g Commerce-side changes built to the edge on both sides (`728ad6ad6`)

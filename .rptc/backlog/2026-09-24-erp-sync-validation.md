@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-26
 needs: [AB-26c]
 value: high
-status: backlog
+status: active
 ---
 
 # Sync validation — every entity, both directions, proved (V)
@@ -21,3 +21,4 @@ For each row of the entity coverage matrix (`.rptc/research/erp-bidirectional-re
 Every matrix row has a journey; the baseline's failures match the matrix's gaps (G1–G5) and nothing else; the live run's results are recorded per row with the date.
 
 ## Shipped so far
+- 2026-09-24  Unit half BUILT as the box journeys (AB-26c): every entity-matrix row has a journey in both directions with reset asserted where a write is ledgered. Live half (docs/sync-validation.md script + baseline run on the demo instance) waits for a credential
