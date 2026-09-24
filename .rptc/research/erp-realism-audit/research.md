@@ -64,7 +64,10 @@ Two things I verified by grep rather than by reading alone:
   `creditUsed: existing?.creditUsed ?? 0` (`lib/partners.js:37`) and `creditUsed: 0`
   (`lib/partners.js:61`). No order, no quote, no import moves it. On screen it is a money-
   formatted $0.00 forever.
-- **`salesOrg` is stored and never displayed** anywhere in `screen/`.
+- **`salesOrg` is stored and never displayed** anywhere in `screen/`. *(2026-09-24: replaced by
+  `salesOrgs` on the partner and `salesOrg` on the order, both printed; built by
+  `.rptc/complete/erp-business-structure/`. Item 18's warehouse names are the ERP's own now,
+  same plan. The statements around this line describe the code as it was on 2026-09-23.)*
 
 Partner resolution for quotes and orders: partner id → Commerce company id → email domain →
 customer group → default partner (`lib/partners.js:83-101`). There is **no partner detail page**.

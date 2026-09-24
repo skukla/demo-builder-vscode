@@ -210,6 +210,10 @@ journal shows both directions. No change.
 
 ### 7. Business structure: nothing maps Commerce's websites to ERP sales organisations (MEDIUM)
 
+*Built 2026-09-24 by `.rptc/complete/erp-business-structure/` (Structure settings per website
+and per pair, the order's sales organisation, the partner's sales organisations and legal
+identity, the Organisation card). The paragraphs below describe the state before it.*
+
 Every partner carries `salesOrg`, defaulting to `'1000'` (`lib/partners.js importPartners`);
 the mirror never sets it (no `salesOrg` anywhere in the integration's `src/`), orders carry no
 sales organisation of their own, and the ERP has no screen for the structure. So the

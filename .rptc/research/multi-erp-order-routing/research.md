@@ -2,6 +2,18 @@
 
 Researched 2026-09-23 on `feature/erp-integration`. External + codebase.
 
+## Who this is for (added 2026-09-24)
+
+Two real prospects shaped this, neither named here (public repo). The first grew by
+acquisition and runs several ERPs, each the master of its own product lines; a PIM
+aggregates the lines into one catalog, and one Commerce storefront sells all of it. The
+question for them is which ERP each order line reaches. The second runs Dynamics 365 and
+asks the plainer one-ERP question. The business-structure work
+(`.rptc/complete/erp-business-structure/`, shipped 2026-09-24) put both axes the routing
+layer will read in place: the sales organisation per website (Structure settings) and the
+product's owner per pair (inventory sources or an `erp_owner` attribute). The demo does not
+model a PIM; the product's owner stands in for "the PIM assigned this line to that ERP".
+
 The customer grew by acquisition and runs several ERPs. Different SKUs are mastered in
 different ERPs. One Adobe Commerce catalog sells all of them. An order can contain lines
 owned by two ERPs, and each part has to reach the right system while the shopper keeps one

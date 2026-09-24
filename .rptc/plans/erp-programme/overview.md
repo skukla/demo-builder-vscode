@@ -213,7 +213,7 @@ in to the Adobe project; the repos hold no local credentials):
 | A · ERP documents and behaviour | order, customer, shipment, invoice documents; derived statuses; cancel reason; credit hold (records, moves, screen); **pricing conditions** with validity, minimum quantity, value help and why-not (AB-26i, 2026-09-24) | product master (slice 7) once the structure slice names warehouses | — |
 | B · Modern UI | shared Card, Field, DocumentPage, trail navigation, status badges, four themes; **Home as a work list, rail counts, shell-bar search, journal sentences** (AB-26l, 2026-09-24) | sticky document title line (UI-1's last piece); lists redesign behind slice 7 | — |
 | C · Bidirectional sync | every ERP → Commerce write, reversible; cancel reason | hold → Commerce (2) — **next** — then Commerce-side changes → ERP (3); per-source stock (4) | owner's deploys ◆ |
-| D · Business structure | plan written; nothing built | slice 6 | S3, P1–P3 (recommendations given) |
+| D · Business structure | **shipped** (AB-26j, 2026-09-24): Structure settings per website and per pair, the order's sales organisation, prefix on `ext_order_id`, ownership filter, legal identity, warehouse names, the Organisation card, the SC setup guide (`commerce-erp-integration/docs/demo-setup.md`); plan in `.rptc/complete/erp-business-structure/` | product master (AB-26k), entity map (AB-26m) | ◆ live look at App Management's text fields; ACCS `store/*` fixture |
 | E · Commerce Admin | history, retry, one-order trace, settings page | the entity map (slice 9), after the structure slice | 6, 3 |
 | F · Multi-ERP | copy identity; AB-23 active | AB-16; routing integration | client answers; seam question |
 | CE · Composite entities | the concept list (§5a), owner-confirmed; **the research, record by record on three sides** (`.rptc/research/erp-composite-entities/`, AB-26a, 2026-09-24) | slice 9 reads it | — |
@@ -221,7 +221,7 @@ in to the Adobe project; the repos hold no local credentials):
 | T-1 / T-2 · Test harnesses | memory-db, injected readers, contract tests, the preview; **headless screen checks with fingerprints** (T-2, AB-26d: 13 checks, retry-once, mismatch rows kept) | pair-in-a-box after API-1's fixtures | API-1's fixtures |
 | V · Sync validation | the entity matrix, read from code | journeys as T-1 tests; the live baseline once the owner authorizes writes on the demo instance | authorization |
 | B · Screen redesign (UI-1..4) | the house style: cards, badges, trail, themes | scheduled behind the slices whose data they show | — |
-| Docs / drift | contract tests both repos; plan status blocks; this overview | record-shape pin (slice 6 step 01); demo setup guide | — |
+| Docs / drift | contract tests both repos; record-shape pin; plan status blocks; this overview; **the demo setup guide** (AB-26j step 05) | keep the guide true when a live run corrects it | — |
 
 Everything the loop built on 2026-09-24 is on the `loop/2026-09-24-erp-programme` branch of
 all three repos, pushed (owner authorization 1). The `develop` push in `demo-builder-vscode`

@@ -3,8 +3,17 @@
 Plan written 2026-09-24 from `.rptc/research/erp-business-structure/research.md` (§8, the
 recommended model) after the owner asked whether the data model was understood and pinned.
 Repos: `demo-erp` (`feature/erp-grids`) and `commerce-erp-integration`
-(`feature/sync-history`), siblings of this worktree. Status: **APPROVED FOR PLANNING — no
-code written**.
+(`feature/sync-history`), siblings of this worktree. Status: **SHIPPED 2026-09-24** on the `loop/2026-09-24-erp-programme` branches of
+`demo-erp` (86be509, 7e8b1cf, 126cf5f, df2075c) and `commerce-erp-integration`
+(50b1927, 2807a46, 5625033, 7537745, 965e7fe); backlog AB-26j. **Not verified:** App
+Management's rendering of the `text` fields on its own form (needs a deployed app and a
+Commerce Admin); the `GET store/websites` / `store/storeConfigs` field names on Adobe
+Commerce as a Cloud Service (read from the PaaS reference, no live fixture captured: no
+credential for the pair on this machine). **Changed from the plan:** Store Information
+(address, VAT) is not readable over REST, so the `structure` block and the Organisation
+card carry the store configuration's currency and locale and leave address and VAT null;
+P3 is answered as far as the API allows (sales organisation and country on the invoice,
+VAT blank). P1 and P2 taken as recommended.
 
 ## What this builds, in one paragraph
 
