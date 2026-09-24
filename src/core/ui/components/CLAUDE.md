@@ -27,6 +27,7 @@ The counterpart index for hooks is `../hooks/CLAUDE.md`.
 | Card overflow (kebab) menu | `ui/CardActionsMenu` + `ui/menuIcons` | a bespoke `MenuTrigger` |
 | A menu row's icon | `renderMenuIcon('<concept>')` | importing a Spectrum icon per menu |
 | One integration in a list or grid | `integrations/IntegrationCard` | a per-surface integration row |
+| One integration as a full-width row (the List view) | `integrations/IntegrationRow` | The card's twin for the integrations screen's rows mode: same model, same rename/kebab/status; `IntegrationsGrid` picks card or row from `viewMode` |
 | The deploy destination, once per surface | `ui/DestinationContext` | a per-card "Deploys to" line |
 | Rename in place | `forms/InlineRenameField` | a bespoke pencil + TextField |
 | Any modal | `ui/Modal` | `DialogContainer` assembled by hand |

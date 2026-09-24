@@ -36,6 +36,8 @@ import { IntegrationDetailPanel } from './IntegrationDetailPanel';
 import { useFlaggedCardDialog } from './useFlaggedCardDialog';
 import { useIntegrationSettings } from './useIntegrationSettings';
 import { IntegrationCard } from '@/core/ui/components/integrations/IntegrationCard';
+import { IntegrationRow } from '@/core/ui/components/integrations/IntegrationRow';
+import type { ViewMode } from '@/core/ui/components/navigation/SearchHeader';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { ComponentSettings } from '@/types/appBuilderComponents';
 
@@ -47,6 +49,11 @@ export interface IntegrationsGridProps {
      * without a second source of truth.
      */
     cards: IntegrationCardModel[];
+    /**
+     * Cards (the default) or rows — the same models, the same drawer, dialogs and
+     * actions; only the shape of each item changes (owner, 2026-09-24).
+     */
+    viewMode?: ViewMode;
     /** Mesh callbacks — the mesh card routes here, never to the keyed messages. */
     onDeployMesh?: () => void;
     /** User-initiated re-auth for the mesh needs-auth state. */
@@ -133,6 +140,7 @@ async function requestRename(id: string, name: string): Promise<string | null> {
 /** The integrations card grid + its hosted drawer, modals, and confirm dialog. */
 export function IntegrationsGrid({
     cards: derivedCards,
+    viewMode = 'cards',
     onDeployMesh,
     onReAuthenticate,
     destinationLabel,
@@ -293,17 +301,31 @@ export function IntegrationsGrid({
             {/* The grid owns the full width; the detail FLYOUT overlays it rather
                 than taking a column beside it. Plain divs — a Spectrum Flex caps
                 at 450px (utilities.css). */}
-            <div className="integrations-grid">
-                {cards.map((model) => (
-                    <IntegrationCard
-                        key={model.id}
-                        model={model}
-                        onOpen={openCard}
-                        onAction={handleAction}
-                        onRename={requestRename}
-                    />
-                ))}
-            </div>
+            {viewMode === 'rows' ? (
+                <div className="integration-row-list">
+                    {cards.map((model) => (
+                        <IntegrationRow
+                            key={model.id}
+                            model={model}
+                            onOpen={openCard}
+                            onAction={handleAction}
+                            onRename={requestRename}
+                        />
+                    ))}
+                </div>
+            ) : (
+                <div className="integrations-grid">
+                    {cards.map((model) => (
+                        <IntegrationCard
+                            key={model.id}
+                            model={model}
+                            onOpen={openCard}
+                            onAction={handleAction}
+                            onRename={requestRename}
+                        />
+                    ))}
+                </div>
+            )}
 
             <IntegrationDetailPanel
                 model={selected}

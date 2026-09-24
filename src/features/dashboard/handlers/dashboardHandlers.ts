@@ -42,6 +42,7 @@ import {
     handleOpenDebugLogs,
     handleOpenIntegrations,
     handleShowProjectDashboard,
+    handleSetIntegrationsViewModeOverride,
 } from './panelNavigationHandlers';
 import {
     handleEditProject,
@@ -295,6 +296,7 @@ export const dashboardHandlers = defineHandlers({
     getProjectUrls: handleGetProjectUrls,
     navigateBack: handleNavigateBack,
     openIntegrations: handleOpenIntegrations,
+    setIntegrationsViewModeOverride: handleSetIntegrationsViewModeOverride,
     openDataInstaller: handleOpenDataInstaller,
     showProjectDashboard: handleShowProjectDashboard,
 

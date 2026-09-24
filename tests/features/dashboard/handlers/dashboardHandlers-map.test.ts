@@ -223,7 +223,11 @@ describe('dashboardHandlers', () => {
             //
             // listRuntimePackages (50 → 51, 2026-09-21): the list_runtime_packages
             // read — what a removal left running in the Runtime namespace.
-            expect(types).toHaveLength(51);
+            //
+            // setIntegrationsViewModeOverride (51 → 52, 2026-09-24): the integrations
+            // screen's cards/rows toggle, kept for the session the way the projects
+            // list keeps its own.
+            expect(types).toHaveLength(52);
         });
 
         it('should have handlers as functions', () => {

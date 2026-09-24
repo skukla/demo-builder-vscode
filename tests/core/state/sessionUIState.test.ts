@@ -21,6 +21,29 @@ describe('sessionUIState', () => {
         it('should default viewModeOverride to undefined', () => {
             expect(sessionUIState.viewModeOverride).toBeUndefined();
         });
+
+        it('defaults the integrations view override to undefined', () => {
+            expect(sessionUIState.integrationsViewModeOverride).toBeUndefined();
+        });
+    });
+
+    // The integrations screen's toggle is its own choice: switching the projects
+    // list to rows must not switch the integrations screen, and vice versa.
+    describe('integrationsViewModeOverride', () => {
+        it('is held apart from the projects list override', () => {
+            sessionUIState.viewModeOverride = 'rows';
+            sessionUIState.integrationsViewModeOverride = 'cards';
+
+            expect(sessionUIState.viewModeOverride).toBe('rows');
+            expect(sessionUIState.integrationsViewModeOverride).toBe('cards');
+        });
+
+        it('is cleared by reset', () => {
+            sessionUIState.integrationsViewModeOverride = 'rows';
+            sessionUIState.reset();
+
+            expect(sessionUIState.integrationsViewModeOverride).toBeUndefined();
+        });
     });
 
     describe('panel visibility - isLogsViewShown', () => {

@@ -31,6 +31,8 @@ class SessionUIState {
 
     // Session preference overrides (override VS Code settings for this session only)
     private _viewModeOverride?: ViewMode;
+    /** The integrations screen's own toggle — a separate list, a separate choice. */
+    private _integrationsViewModeOverride?: ViewMode;
 
     // =====================================================
     // Panel visibility state
@@ -64,6 +66,15 @@ class SessionUIState {
         this._viewModeOverride = value;
     }
 
+    /** The integrations screen's view for this session, over `demoBuilder.integrationsViewMode`. */
+    get integrationsViewModeOverride(): ViewMode | undefined {
+        return this._integrationsViewModeOverride;
+    }
+
+    set integrationsViewModeOverride(value: ViewMode | undefined) {
+        this._integrationsViewModeOverride = value;
+    }
+
     // =====================================================
     // Utility methods
     // =====================================================
@@ -75,6 +86,7 @@ class SessionUIState {
     reset(): void {
         this._isLogsViewShown = false;
         this._viewModeOverride = undefined;
+        this._integrationsViewModeOverride = undefined;
     }
 }
 

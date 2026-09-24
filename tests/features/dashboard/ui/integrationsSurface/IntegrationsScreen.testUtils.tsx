@@ -64,8 +64,10 @@ jest.mock('@/core/ui/components/navigation/SearchHeader', () => ({
         searchThreshold,
         countTrailing,
         countText,
+        viewMode,
+        onViewModeChange,
     }: any) => (
-        <div data-testid="search-header">
+        <div data-testid="search-header" data-view-mode={viewMode}>
             <span data-testid="count-text">{countText}</span>
             <span data-testid="total-count">{totalCount}</span>
             <span data-testid="filtered-count">{filteredCount}</span>
@@ -76,6 +78,14 @@ jest.mock('@/core/ui/components/navigation/SearchHeader', () => ({
                 />
             )}
             <button onClick={onRefresh}>refresh</button>
+            {/* The real header renders its toggle only when BOTH props arrive
+                (renderViewToggle); the same gate here keeps the screen honest. */}
+            {viewMode !== undefined && onViewModeChange !== undefined && (
+                <>
+                    <button aria-label="Card view" onClick={() => onViewModeChange('cards')} />
+                    <button aria-label="List view" onClick={() => onViewModeChange('rows')} />
+                </>
+            )}
             {countTrailing}
         </div>
     ),
@@ -123,8 +133,8 @@ jest.mock('@/features/dashboard/ui/components/integrations/IntegrationsGrid', ()
     // handed isActionDisabled, and the only visible consequence is an empty menu.
     // The two mesh callbacks get real buttons for the same reason: without them
     // nothing in the suite ever invoked handleDeployMesh/handleReAuthenticate.
-    IntegrationsGrid: ({ cards, onAddRequest, onDeployMesh, onReAuthenticate }: any) => (
-        <div data-testid="grid">
+    IntegrationsGrid: ({ cards, viewMode, onAddRequest, onDeployMesh, onReAuthenticate }: any) => (
+        <div data-testid="grid" data-view-mode={viewMode}>
             {cards.map((c: any) => (
                 <div
                     key={c.id}

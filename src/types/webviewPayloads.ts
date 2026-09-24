@@ -190,6 +190,11 @@ export interface IntegrationsInitialData {
      * something to set. Secrets as "is set" only, never a value.
      */
     componentSettings: Record<string, ComponentSettings>;
+    /**
+     * Cards or rows, as the projects list has (`projectsViewMode`): the session's
+     * choice when there is one, else `demoBuilder.integrationsViewMode`.
+     */
+    integrationsViewMode: 'cards' | 'rows';
     /** Adobe project/workspace TITLES — the shared deploy destination banner. */
     destination: DestinationTitles;
     /** Committed destination ID — the add flow reads presence as a boolean. */

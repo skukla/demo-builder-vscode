@@ -208,6 +208,15 @@
                         "default": "cards",
                         "description": "Default view mode for the projects list: cards (grid layout) or rows (list layout)"
                     },
+                    "demoBuilder.integrationsViewMode": {
+                        "type": "string",
+                        "enum": [
+                            "cards",
+                            "rows"
+                        ],
+                        "default": "cards",
+                        "description": "Default view mode for a project's integrations screen: cards (grid layout) or rows (list layout)"
+                    },
                     "demoBuilder.cleanupBehavior": {
                         "type": "string",
                         "enum": [

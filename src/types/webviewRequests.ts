@@ -178,6 +178,15 @@ export interface ComponentDataDTO {
     recommended?: boolean;
 }
 
+/**
+ * `setIntegrationsViewModeOverride` — the integrations screen's cards/rows toggle,
+ * kept for the session over the `demoBuilder.integrationsViewMode` setting (the
+ * projects list's `setViewModeOverride`, for the other list).
+ */
+export interface SetIntegrationsViewModeOverridePayload {
+    viewMode: 'cards' | 'rows';
+}
+
 /** The `data` half of the `get-components-data` response. */
 export interface ComponentsDataPayload {
     frontends: ComponentDataDTO[];
