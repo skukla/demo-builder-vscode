@@ -7,16 +7,21 @@
  * ACCS REST accepts an IMS bearer from a server-to-server credential registered
  * with the instance and subscribed to `ACCS-REST-API`. The ERP integration's
  * workspace credential is one, and `resolveAppManagementEnv` already resolves
- * its full identity for deploys (`getS2SDeployCredentials`). The token is the
- * client-credentials call `aio-lib-ims` makes (`POST /ims/token/v2`, form:
- * grant_type, client_id, client_secret, org_id, scope — `ims.js` line 387), and
- * the scopes are what `aio-commerce-lib-api` ensures for SaaS: `openid`,
- * `additional_info.projectedProductContext`, `commerce.accs` (its
- * `COMMERCE_SAAS_IMS_REQUIRED_SCOPES`), on top of the baseline `s2sDeployEnv.ts`
- * requests. The URL is the tenant base plus `/V1/<path>` with a `Store` header
- * (`getCommerceUrl` and `buildCommerceHttpClientSaaS`, same library). PaaS takes
- * an admin token from a username and password, which is a hand-back to the user,
- * not a parameter; it is refused here until AB-29 adds it.
+ * its full identity for deploys (`getS2SDeployCredentials`).
+ *
+ * The token request and the call headers follow Adobe's server-to-server guide
+ * for Commerce as a Cloud Service (developer.adobe.com/commerce/webapi/rest/
+ * authentication/server-to-server, read 2026-09-24): `POST /ims/token/v3` with
+ * `grant_type=client_credentials`, the scopes `openid, AdobeID, email, profile,
+ * additional_info.roles, additional_info.projectedProductContext, commerce.accs`
+ * ("be sure to include the commerce.accs scope"), and on every REST call
+ * `Authorization: Bearer`, `x-api-key: <client id>` and `x-gw-ims-org-id`. The
+ * first version used aio-lib-ims's `/ims/token/v2` and fewer scopes and worked
+ * live; it was moved to the documented shape the same day. The URL is the tenant
+ * base plus `/V1/<path>` with a `Store` header (`getCommerceUrl` and
+ * `buildCommerceHttpClientSaaS` in aio-commerce-lib-api). PaaS takes an admin
+ * token from a username and password, which is a hand-back to the user, not a
+ * parameter; it is refused here until AB-29 adds it.
  *
  * @module features/ai/server/commerceRestClient
  */
@@ -30,13 +35,15 @@ import type { HandlerContext } from '@/types/handlers';
 
 /** The same bound `run_commerce_query` holds, with the cut declared in the payload. */
 export const MAX_RESPONSE_CHARS = 30_000;
-/** Where a server-to-server token is minted (aio-lib-ims `getAccessTokenByClientCredentials`). */
-const IMS_TOKEN_URL = 'https://ims-na1.adobelogin.com/ims/token/v2';
-/** The scopes a SaaS REST call needs, per aio-commerce-lib-api, on the deploy baseline. */
+/** Where a server-to-server token is minted (Adobe's Cloud Service server-to-server guide). */
+const IMS_TOKEN_URL = 'https://ims-na1.adobelogin.com/ims/token/v3';
+/** The scopes that guide lists for a Cloud Service REST token, in its order. */
 const REST_SCOPES = [
-    'AdobeID',
     'openid',
-    'read_organizations',
+    'AdobeID',
+    'email',
+    'profile',
+    'additional_info.roles',
     'additional_info.projectedProductContext',
     'commerce.accs',
 ];
@@ -54,6 +61,9 @@ export interface RestTarget {
     /** The tenant's REST base, e.g. https://na1-sandbox.api.commerce.adobe.com/<tenant> */
     base: string;
     token: string;
+    /** The credential's client id and org: the `x-api-key` and `x-gw-ims-org-id` headers. */
+    clientId: string;
+    imsOrgCode: string;
     storeView?: string;
 }
 
@@ -174,7 +184,7 @@ export async function resolveRestTarget(
         const credentials = await ctx.authManager.getS2SDeployCredentials(organization, projectId, workspaceId);
         const token = await mintToken(workspaceId, credentials, fetchImpl);
         const storeView = typeof storeViewArg === 'string' && storeViewArg ? storeViewArg : facts.headers.all?.Store;
-        return { base, token, storeView };
+        return { base, token, clientId: credentials.clientId, imsOrgCode: credentials.imsOrgCode, storeView };
     } catch (error) {
         return { refusal: `Error: could not sign the request — ${error instanceof Error ? error.message : String(error)}` };
     }
@@ -215,6 +225,8 @@ export async function sendRest(
             method,
             headers: {
                 Authorization: `Bearer ${target.token}`,
+                'x-api-key': target.clientId,
+                'x-gw-ims-org-id': target.imsOrgCode,
                 Accept: 'application/json',
                 ...(target.storeView ? { Store: target.storeView } : {}),
                 ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),

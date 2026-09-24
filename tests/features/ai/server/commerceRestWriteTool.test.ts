@@ -139,6 +139,8 @@ describe('the signed write (args pinned)', () => {
         expect(init.method).toBe('PUT');
         expect(init.headers).toEqual({
             Authorization: 'Bearer minted-token',
+            'x-api-key': 'client-abc',
+            'x-gw-ims-org-id': 'ABC@AdobeOrg',
             Accept: 'application/json',
             Store: 'bodea_us',
             'Content-Type': 'application/json',

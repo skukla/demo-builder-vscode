@@ -1,11 +1,11 @@
 /**
  * run_commerce_rest — a signed GET against the project's Commerce REST API.
  *
- * The token request is pinned ARGUMENT BY ARGUMENT against what aio-lib-ims sends
- * (`getAccessTokenByClientCredentials`, ims.js line 387: form-encoded grant_type,
- * client_id, client_secret, org_id, scope) and the REST call against what
- * aio-commerce-lib-api builds for SaaS (`<base>/V1/<path>`, a `Store` header) —
- * both read on 2026-09-24. A mocked fetch cannot see a malformed call, so the
+ * The token request is pinned ARGUMENT BY ARGUMENT against Adobe's Cloud Service
+ * server-to-server guide (`POST /ims/token/v3`, client_credentials, its seven scopes)
+ * and the REST call against that guide's headers (Bearer, x-api-key, x-gw-ims-org-id)
+ * plus what aio-commerce-lib-api builds for SaaS (`<base>/V1/<path>`, a `Store`
+ * header) — all read on 2026-09-24. A mocked fetch cannot see a malformed call, so the
  * assertions are on the calls, not on the outcome.
  *
  * The project fixture is bodea's ACCS shape, the one `commerceQueryTool.test.ts`
@@ -149,7 +149,7 @@ describe('the signed GET (args pinned)', () => {
 
         expect(getS2SDeployCredentials).toHaveBeenCalledWith('org-1', 'proj-1', 'ws-erp');
         const [tokenUrl, tokenInit] = fetchMock.mock.calls[0];
-        expect(tokenUrl).toBe('https://ims-na1.adobelogin.com/ims/token/v2');
+        expect(tokenUrl).toBe('https://ims-na1.adobelogin.com/ims/token/v3');
         expect(tokenInit.method).toBe('POST');
         expect(tokenInit.headers).toEqual({ 'Content-Type': 'application/x-www-form-urlencoded' });
         expect(Object.fromEntries(new URLSearchParams(tokenInit.body))).toEqual({
@@ -157,7 +157,7 @@ describe('the signed GET (args pinned)', () => {
             client_id: 'client-abc',
             client_secret: 'fake-test-pw-not-a-secret',
             org_id: 'ABC@AdobeOrg',
-            scope: 'AdobeID,openid,read_organizations,additional_info.projectedProductContext,commerce.accs',
+            scope: 'openid,AdobeID,email,profile,additional_info.roles,additional_info.projectedProductContext,commerce.accs',
         });
         const [restUrl, restInit] = fetchMock.mock.calls[1];
         expect(restUrl).toBe(
@@ -166,6 +166,8 @@ describe('the signed GET (args pinned)', () => {
         expect(restInit.method).toBe('GET');
         expect(restInit.headers).toEqual({
             Authorization: 'Bearer minted-token',
+            'x-api-key': 'client-abc',
+            'x-gw-ims-org-id': 'ABC@AdobeOrg',
             Accept: 'application/json',
             Store: 'bodea_us',
         });
