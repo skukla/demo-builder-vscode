@@ -246,7 +246,7 @@ and a refused accept keeps the recorded fingerprint rather than dropping the key
 Commit: `demo-erp` `8ebf768`. Tests: 255 pass; 15 headless checks stable across two runs;
 four screens looked at.
 
-### The entity map (AB-26m, step 1) — built to the supervised edge
+### The entity map (AB-26m) — built to the supervised edge
 
 The Commerce Admin page's Settings tab became a Mapping tab. Nine cards, one per composite
 entity from the programme's list (buying organization, selling organization, sellable
@@ -270,10 +270,18 @@ inherited and clearable rules at each scope, sync counts, figures); the tab was 
 in the page's own preview with a clean console. Commit: integration `c419327`. Tests: 368
 pass.
 
-What is left on the item: a lookup on the Buying organization and Sellable item cards
-("what do you hold for company X / SKU Y", both sides). What needs you: one look at the
-live Admin page once a pair is deployed, and one look at whether App Management's own
-settings form agrees with this page on a saved value (same library, same store).
+The second step followed: a look-up on the Buying organization and Sellable item cards.
+Type a Commerce company id or a SKU and the card answers with both systems' records lined
+up row by row (name, status, credit limit and position, legal name, VAT, payment terms,
+sales organisations for a company; name, type, price, status, stock and availability for
+a product), each column saying "not found" when that side lacks it, plus the hash that
+opens the record in the ERP's own screen. Behind it is one new action that asks both
+sides and a pure arrangement of the answers, tested on what it asks and what it answers.
+Commit: integration `bb06879`; suite 379.
+
+What needs you: one look at the live Admin page once a pair is deployed, and one look at
+whether App Management's own settings form agrees with this page on a saved value (same
+library, same store).
 
 ### The demo setup guide — written
 
@@ -299,7 +307,7 @@ the demo can have whatever it needs, as long as it is written down.
 | AB-26c | pair-in-a-box harness, eleven journeys | integration `test/box/` | 343 tests green |
 | AB-26j | business structure: Structure settings, prefix, ownership, legal identity, warehouse names, Organisation card, the setup guide | `demo-erp` `86be509` `7e8b1cf` `126cf5f` `df2075c`; integration `50b1927` `2807a46` `5625033` `7537745` `965e7fe` | 244 + 363 tests, record-shape pin, 14 screen checks, six screens looked at |
 | AB-26k | product master: committed, available, sales status refusing shipment, Basic data and Open orders cards, three-tint status | `demo-erp` `8ebf768` | 255 tests, record-shape pin, 15 screen checks incl. the product page and the parent, four screens looked at |
-| AB-26m step 1 | the entity map: the Mapping tab, nine cards, joins with their settings, ownership arrows, sync per direction, ERP figures | integration `c419327` | 12 view-model tests, 368 suite, preview screenshot with a clean console |
+| AB-26m | the entity map: the Mapping tab, nine cards, joins with their settings, ownership arrows, sync per direction, ERP figures; the company / SKU look-up on two cards | integration `c419327`, `bb06879` | 12 view-model + 10 look-up tests, 379 suite, preview driven headlessly with a clean console |
 | screen checks hardening | sizes out of the fingerprint, pointer parked, 3 samples, retry once, mismatch rows kept; the accept mode needs two agreeing loads | `demo-erp` `66c215e`, `8ebf768` | no flake in the 14 later full runs; the one-off shipments sample caught and refused |
 
 ## Handed off (finished to the supervised edge)
