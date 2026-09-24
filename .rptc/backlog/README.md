@@ -245,7 +245,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-17` | feature | [A storefront can live in an organization's repository, not only the SC's own](2026-09-16-storefront-in-an-org-repository.md) | — | high | backlog |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | backlog |
 
-### app-builder  (30)
+### app-builder  (51)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -267,7 +267,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-12` | feature | └ [Removing an integration leaves it "Associated" in App Management](2026-09-17-app-management-teardown-order.md) | — | low | backlog |
 | `AB-13` | feature | └ [An installed integration takes an update: new code, then Commerce brought to it](2026-09-17-integration-updates.md) | — | high | active |
 | `AB-14` | question | └ [Where does an ERP price go when the project also has ACO?](2026-09-17-erp-pricing-to-aco.md) | PL-60 | low | gated |
-| `AB-15` | fix | └ [Refuse an ERP integration that would collide with another project's](2026-09-17-erp-integration-conflicting-setups.md) | AB-23 | med | backlog |
+| `AB-15` | fix | └ [Refuse an ERP integration that would collide with another project's](2026-09-17-erp-integration-conflicting-setups.md) | AB-23 | med | active |
 | `AB-16` | feature | └ [One integration, several ERPs](2026-09-17-erp-integration-several-erps.md) | AB-23 | med | backlog |
 | `AB-17` | question | └ [Should each system and integration get its own Adobe workspace?](2026-09-17-workspace-per-system.md) | — | high | shipped |
 | `AB-18` | fix | └ [A Commerce product profile the SC is not a developer on locks them out of their own project](2026-09-17-accs-subscription-makes-project-read-only.md) | — | high | backlog |
@@ -275,9 +275,30 @@ each item's own file; what has already landed against an item is in its
 | `AB-20` | feature | └ [Ask the ERP live whether the account has the credit, as the order is placed](2026-09-18-live-credit-check.md) | — | med | backlog |
 | `AB-23` | feature | └ [Every integration and system gets its own Adobe workspace](2026-09-20-workspace-per-integration.md) | — | high | active |
 | `AB-25` | epic | └ [The two-way ERP integration, as the two business users experience it](2026-09-22-erp-two-way-experience.md) | — | med | active |
+| `AB-26` | epic | └ [The ERP programme — every ERP slice, in one order, run by the loop](2026-09-24-erp-programme.md) | — | high | active |
 | `AB-21` | feature | [An integration's settings live on its tile, not on Configure Project](2026-09-18-integration-settings-on-tile.md) | — | med | active |
 | `AB-22` | feature | [Import a colleague's integration, and ask only for what it really needs](2026-09-18-import-colleague-integration.md) | AB-21 | med | backlog |
 | `AB-24` | chore | [Stop creating a Stage workspace](2026-09-20-drop-the-stage-workspace.md) | — | med | built |
+| `AB-26a` | feature | └ [Composite-entity research: what a buying organization (and seven others) is made of, record by record](2026-09-24-erp-composite-entities.md) | — | high | backlog |
+| `AB-26b` | feature | └ [Commerce API inventory and validation — every call the programme needs, proven to exist, captured as fixtures](2026-09-24-erp-commerce-api-inventory.md) | — | high | backlog |
+| `AB-26c` | feature | └ [Pair-in-a-box: the ERP in-process behind the integration, a fake Commerce in front (T-1)](2026-09-24-erp-pair-in-a-box.md) | AB-26b | high | backlog |
+| `AB-26d` | feature | └ [Headless screen checks over the ERP preview (T-2)](2026-09-24-erp-headless-screen-checks.md) | — | med | backlog |
+| `AB-26e` | feature | └ [Sync validation — every entity, both directions, proved (V)](2026-09-24-erp-sync-validation.md) | AB-26c | high | backlog |
+| `AB-26f` | feature | └ [The credit hold reaches Commerce (hold / unhold), undone on reset](2026-09-24-erp-hold-to-commerce.md) | AB-26b | high | backlog |
+| `AB-26g` | feature | └ [Changes made in Commerce Admin flow back to the ERP (shipment, invoice, cancel, hold)](2026-09-24-erp-commerce-side-changes.md) | AB-26b | high | backlog |
+| `AB-26h` | feature | └ [Per-source stock changes reach the ERP, plus the small gaps (product delete, credit truth, currency)](2026-09-24-erp-per-source-stock.md) | AB-26b | med | backlog |
+| `AB-26i` | feature | └ [Pricing conditions with validity, minimum quantity, value help and "why not"](2026-09-24-erp-pricing-conditions.md) | — | high | backlog |
+| `AB-26j` | feature | └ [Business structure — sales organisation per website, prefix and ownership per pair, legal identity, warehouse names, the Organisation card](2026-09-24-erp-business-structure.md) | AB-26g, AB-26h | high | planned |
+| `AB-26k` | feature | └ [The product as a master record — available, open orders, sales status](2026-09-24-erp-product-master.md) | AB-26j | med | backlog |
+| `AB-26l` | feature | └ [Home as a work list, rail counts, the journal naming documents, global search](2026-09-24-erp-home-and-search.md) | AB-26i | med | backlog |
+| `AB-26m` | feature | └ [The entity map — the Commerce Admin page where the settings are the mapping](2026-09-24-erp-entity-map.md) | AB-26j, AB-26g | high | backlog |
+| `AB-26n` | feature | └ [Screen redesign 1 — shell and navigation](2026-09-24-erp-ui-shell.md) | AB-26l | med | backlog |
+| `AB-26o` | feature | └ [Screen redesign 2 — lists](2026-09-24-erp-ui-lists.md) | AB-26k | med | backlog |
+| `AB-26p` | feature | └ [Screen redesign 3 — documents](2026-09-24-erp-ui-documents.md) | AB-26j, AB-26k | med | backlog |
+| `AB-26q` | feature | └ [Screen redesign 4 — settings and journal](2026-09-24-erp-ui-settings-journal.md) | AB-26j | med | backlog |
+| `AB-26r` | feature | └ [Credit memo and Repeat order — the way back from invoiced and cancelled](2026-09-24-erp-credit-memo.md) | AB-26g | med | gated |
+| `AB-26s` | feature | └ [Order to cash — the payment leg (incoming payment, open items, company balance)](2026-09-24-erp-payment-leg.md) | AB-26b, AB-26r | med | backlog |
+| `AB-26t` | feature | └ [The routing integration — one Commerce order split across ERP pairs](2026-09-24-erp-routing-integration.md) | AB-16, AB-26j | high | gated |
 | `PL-24` | feature | [Component updates cannot follow an environment-variable rename](2026-08-30-env-var-rename-migration.md) | — | med | backlog |
 
 ### data-installer  (2)
@@ -504,7 +525,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-56` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — backlog
 
-*104 item(s) sit outside the A–G chain.*
+*125 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 
