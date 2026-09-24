@@ -42,3 +42,4 @@ routing integration) · AB-26r (credit memo) · AB-26s (the payment leg) · AB-2
 ## Shipped so far
 
 - 2026-09-24  docs(backlog): the ERP programme as an epic with nineteen slice items, dependencies and verification blocks (`6b3cccb2b`)
+- 2026-09-24  docs(backlog,plan): AB-26u — the owner's walk-through of both systems, filed so it is not forgotten (`c28810d79`)
