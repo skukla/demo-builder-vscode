@@ -5,7 +5,7 @@ area: eds
 parent: EDS-13
 needs: [PL-56a]
 value: high
-status: active
+status: built
 ---
 
 # The shareable-demo process, published: how to make a storefront addable
