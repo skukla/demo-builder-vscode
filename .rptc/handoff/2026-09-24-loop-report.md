@@ -541,3 +541,28 @@ been run against a deployed pair by a person. Each line is one live check; none 
 
 Order of the rest of the release path, agreed 2026-09-24: the AB-16 stored-shape read,
 develop merged into this branch, then this list, then the cut from develop.
+
+### Progress on the list (2026-09-24, afternoon, owner present)
+
+- **Item 1 is done.** `reset_erp_records` on Bodea mirrored 4 companies and 182 products in
+  32 seconds; the ERP's status shows the import time, one warehouse (Default Source, 162
+  products) and one sales organisation (Main Website, 4 customers, USD).
+- **Why the ERP had been empty:** nothing started the first sync. The extension's ERP client
+  called only status, reset and detach, and the integration has no install-time hook, while
+  the ERP's home screen, both READMEs and the demo setup guide said it was filled at install.
+  Fixed on this branch (`daca8e0d9`): the catalog entry declares `sync` (the integration's
+  `erp/mirror?background=true`, the Sync records button's call) and the runner makes it once
+  the Commerce install answers `installed`. Proven by the re-add at the end of the round trip,
+  not yet.
+- **Two agent reads added** (`d6ac0c337`, renamed `18c2fe6ea`): `get_erp_record` (one SKU or
+  Commerce company id as both systems hold it) and `get_erp_order_trace` (one order's whole
+  life). They wrap the integration's Admin page lookup and Follow an order. Live on Bodea: the
+  product lookup agrees on both sides; company 2 (Kukla Studios) shows a 100000 USD credit
+  limit mirrored; a trace of a missing order answers an empty trace.
+- **Still owed from the owner's request** ("bidirectionally integrated" and "when an ERP is
+  deleted, the resetting of the records in commerce works"): an order placed on the storefront
+  as a Kukla Studios user (Commerce→ERP), ERP-side changes read back in Commerce (price via
+  Catalog Service, credit and order state via `get_erp_record` / `get_erp_order_trace`), then
+  `remove_integration` with before/after reads to prove detach reverted the credit limit, the
+  block and the ERP order number, then a fresh add to prove the install-time sync.
+
