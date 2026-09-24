@@ -4,7 +4,7 @@ kind: fix
 area: eds
 needs: []
 value: med
-status: built
+status: shipped
 ---
 
 # Template update falls back to a full reset on conflict, overwriting the SC's own edits

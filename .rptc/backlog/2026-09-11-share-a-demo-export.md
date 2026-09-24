@@ -5,7 +5,7 @@ area: eds
 parent: EDS-13
 needs: [EDS-13c]
 value: med
-status: built
+status: shipped
 ---
 
 # "Share this demo": turn an existing project into a demo others can add

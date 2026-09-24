@@ -239,18 +239,18 @@ each item's own file; what has already landed against an item is in its
 | `EDS-9` | feature | [DA.live sign-in has no command palette entry](2026-08-26-dalive-sign-in-from-command-palette.md) | — | med | shipped |
 | `EDS-10` | feature | [Custom themes as savable entities](2026-08-28-custom-themes-as-savable-entities.md) | — | med | backlog |
 | `EDS-11` | fix | [RETRACTED — HelixService's optional credentials are not the hazard I described](2026-08-28-helix-auth-variance-unmodeled.md) | — | low | dropped |
-| `EDS-12` | fix | [Resetting the same EDS project does less from the dashboard than from the projects list](2026-09-02-two-reset-doors-differ.md) | — | med | built |
+| `EDS-12` | fix | [Resetting the same EDS project does less from the dashboard than from the projects list](2026-09-02-two-reset-doors-differ.md) | — | med | shipped |
 | `EDS-13` | epic | [Portable demos: share storefronts, move whole projects](2026-09-11-colleague-built-storefront.md) | — | high | active |
-| `EDS-13a` | feature | └ ["Add a demo": build a project on a demo someone shared by link](2026-09-11-add-a-demo-import.md) | PL-56a | high | built |
-| `EDS-13b` | feature | └ ["Share this demo": turn an existing project into a demo others can add](2026-09-11-share-a-demo-export.md) | EDS-13c | med | built |
-| `EDS-13c` | chore | └ [The shareable-demo process, published: how to make a storefront addable](2026-09-11-shareable-demo-contract.md) | PL-56a | high | built |
+| `EDS-13a` | feature | └ ["Add a demo": build a project on a demo someone shared by link](2026-09-11-add-a-demo-import.md) | PL-56a | high | shipped |
+| `EDS-13b` | feature | └ ["Share this demo": turn an existing project into a demo others can add](2026-09-11-share-a-demo-export.md) | EDS-13c | med | shipped |
+| `EDS-13c` | chore | └ [The shareable-demo process, published: how to make a storefront addable](2026-09-11-shareable-demo-contract.md) | PL-56a | high | shipped |
 | `EDS-13d` | feature | └ [A team catalog of shared demos](2026-09-11-team-demo-catalog.md) | EDS-13a, EDS-13b | low | backlog |
 | `EDS-13e` | feature | └ [Share a headless demo](2026-09-11-share-a-headless-demo.md) | EDS-13b | low | superseded |
 | `EDS-13f` | feature | └ [Shared demos carry their boilerplate, their patches and a way to stay fixed](2026-09-14-shared-demo-patches-and-provenance.md) | EDS-13a, EDS-13b | high | planned |
 | `EDS-13g` | feature | └ [A headless project keeps its code in a repository of the SC's own, as Edge Delivery does](2026-09-15-headless-storefront-repository.md) | — | med | backlog |
-| `EDS-14` | fix | [Template update falls back to a full reset on conflict, overwriting the SC's own edits](2026-09-11-template-update-conflict-fallback-overwrites-edits.md) | — | med | built |
+| `EDS-14` | fix | [Template update falls back to a full reset on conflict, overwriting the SC's own edits](2026-09-11-template-update-conflict-fallback-overwrites-edits.md) | — | med | shipped |
 | `EDS-15` | fix | ["Cleanup DA.live sites" builds its DA.live calls on the Adobe token DA.live refuses](2026-09-13-dalive-cleanup-command-token.md) | — | low | shipped |
-| `EDS-16` | fix | [The "no admin role" remedy sent people to a page that cannot grant anything](2026-09-14-site-access-remedy-dead-link.md) | — | high | built |
+| `EDS-16` | fix | [The "no admin role" remedy sent people to a page that cannot grant anything](2026-09-14-site-access-remedy-dead-link.md) | — | high | shipped |
 | `EDS-17` | feature | [A storefront can live in an organization's repository, not only the SC's own](2026-09-16-storefront-in-an-org-repository.md) | — | high | backlog |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | backlog |
 
@@ -268,7 +268,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-2` | epic | [Move deliberately to a per-SC Adobe I/O project (Option 2)](per-sc-io-project.md) | — | med | spiked |
 | `AB-3` | fix | [Integration add must fail on install error](2026-08-27-integration-add-must-fail-on-install-error.md) | — | med | shipped |
 | `AB-6` | feature | [Event-provider lifecycle tooling — so eventing round-trips to zero](2026-08-28-event-provider-lifecycle-tooling.md) | — | high | active |
-| `AB-7` | fix | [remove_integration reports success while leaving deployed code running](2026-08-28-remove-integration-leaves-runtime-deployed.md) | — | high | built |
+| `AB-7` | fix | [remove_integration reports success while leaving deployed code running](2026-08-28-remove-integration-leaves-runtime-deployed.md) | — | high | shipped |
 | `AB-8` | question | [Where does event-provider management belong, and what does an SC do with it?](2026-09-09-event-provider-surface-design.md) | — | med | open |
 | `PL-24` | feature | [Component updates cannot follow an environment-variable rename](2026-08-30-env-var-rename-migration.md) | — | med | backlog |
 
@@ -347,7 +347,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-51` | fix | [Test suites that rebuild a mock wall their family helper already owns](2026-09-08-suites-rebuilding-their-family-mock-wall.md) | — | med | active |
 | `PL-52` | fix | [A hook-proof suite fails under full parallel load and refuses pushes](2026-09-08-hook-proof-suite-flakes-under-load.md) | — | med | shipped |
 | `PL-53` | question | [351 of the god file's 647 classes appear in no source string — 254 rules deleted](2026-09-09-god-file-classes-nothing-uses.md) | — | med | shipped |
-| `PL-56a` | feature | └ [The portable-project contract: one versioned file, and the storefront slice of it](2026-09-11-portable-project-contract.md) | — | high | built |
+| `PL-56a` | feature | └ [The portable-project contract: one versioned file, and the storefront slice of it](2026-09-11-portable-project-contract.md) | — | high | shipped |
 | `PL-56b` | chore | └ [Portability: delete what is already dead](2026-09-11-portability-delete-the-dead.md) | — | low | backlog |
 | `PL-56c` | feature | └ [Export carries the whole project, and never a credential](2026-09-11-export-carries-the-project.md) | PL-56a | high | backlog |
 | `PL-56d` | fix | └ [Import creates what the file says, re-proves sign-ins, and tells the SC what it did](2026-09-11-import-creates-what-the-file-says.md) | PL-56c | high | active |

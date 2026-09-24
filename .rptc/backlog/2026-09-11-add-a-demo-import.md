@@ -5,7 +5,7 @@ area: eds
 parent: EDS-13
 needs: [PL-56a]
 value: high
-status: built
+status: shipped
 ---
 
 # "Add a demo": build a project on a demo someone shared by link
