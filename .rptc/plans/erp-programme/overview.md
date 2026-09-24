@@ -38,6 +38,7 @@ These are settled. A slice that trades one away stops and asks.
 | R7 | **Nothing is soft-deprecated.** A field that becomes obsolete leaves in the same commit. | repo rule; `credit`'s `blocked` → `blocking` is the worked example |
 | R8 | **The demo may require Commerce setup; it is documented, never designed around.** | owner, 2026-09-24; structure plan step 05 (`docs/demo-setup.md`) |
 | R9 | **Cloud deploys and event-subscription changes are the owner's to run**, never unattended; a changed subscription needs uninstall + install. | repo rule; integration README |
+| R10 | **The ERP holds the account of record, not the relationship.** Companies become business partners (sold-to, with credit, terms, legal identity); individuals, contacts and pipeline are a CRM's and are not mirrored. Every reference system keeps a customer master in the ERP: SAP's customer master with company-code and sales-area data, D365's customer per legal entity, BC's customer card. | `erp-integration` decision 5; `erp-business-structure` research §2–4 (owner asked 2026-09-24) |
 
 ## 3. The evidence, and what each document is for
 
@@ -112,13 +113,19 @@ against a deployed pair is the owner's, at the gates marked ◆.
 | 6 | **Business structure** (`../erp-business-structure/`, five steps): record-shape pin + contract v2; per-website sales org, per-pair prefix and ownership setting, mirror filter; legal identity; warehouse names; Organisation card; currency; demo setup guide | D | erp, integration | 3 (uses the M2 check), 4 | S3 answered yes; P1–P3 | no "1000" that is not a real sales org; a second pair can sit alongside |
 | 7 | **Product master** (slice 6): Available = on hand − committed; open orders for a product; sales status; low-stock tint; `Card` reuse | A + B | erp | 6 (warehouse names) | — | demo step 2 |
 | 8 | **Home and search** (slice 7): work list, rail count badges, event journal naming documents and refreshing live, global search, order timeline, sticky title line | B | erp | 1, 5 | — | demo steps 1 and 12 |
-| 9 | **Commerce Admin differentiators** (AB-25): "why did this buyer get this price" on the order view; the three-way ERP-down choice; Origin / ERP ID grid columns | E | integration | 5 (needs `notApplied`) | which of the three first | UX validation candidates 4 and 6 built |
+| 9 | **The Commerce Admin as the place the integration is configured** (AB-10, AB-25; owner 2026-09-24: the bare minimum differentiation is the entity mapping): one Admin page with the mapping settings between the systems — website → sales organisation, order-number prefix, which products this ERP owns (source / attribute), plus the existing order and pricing switches — the sync status per entity and direction (Adobe's own Data Feed Sync Status shape), the ERP-down choice, and Origin / ERP number columns on the order grid. "Why did this buyer get this price" moves to the ideas list (§9a) | E | integration | 6 (the settings exist after the structure slice) | none | a merchant can read and change every mapping without leaving Commerce Admin |
 | 10 | **Live webhooks** AB-19 (availability) and AB-20 (credit at order placement), `required: true` | C / E | integration, erp | 1, 7 | already decided (decision 26) | an over-limit cart is stopped with the ERP's sentence |
 | 11 | **Second pair installs** — AB-23 (workspace per pair, active) then AB-16 | F | extension | — | — | two pairs on one store, both working alone |
 | 12 | **The routing integration** — its own catalog entry (`kind: integration`), added beside the pairs; owns the ownership map, the split, the dispatch through the seam, the merge, the failure; Admin UI SDK screens; each pair gains seam S2 (send this part) and S3 (per-part outcome); S1 stands a pair down | F | new repo, integration, extension | 6, 11 | the client's answers (S1); seam question (routing owns the order event); where the second number goes | the nine moments |
 | 13 | **Credit memo** (slice 5) and Repeat order | A / C | erp, integration | 3 | **O5** | reversibility rule met for `invoiced` |
+| **V** | **Sync validation — every entity, both directions, proved** (owner 2026-09-24: a comprehensive check that everything that can be bidirectional is). For each row of the entity matrix: a unit test in the repo that owns the direction, and a **live journey script** (`docs/sync-validation.md` in the integration) that an SC or the owner runs against a deployed pair — change it in Commerce, see it in the ERP; change it in the ERP, see it in Commerce; reset, see it undone — with the expected result written beside each step. Runs first as a baseline against what exists today (finding the gaps the matrix reads from code), then again after slices 2–4 and 6, and before every release. Products are the first row: create, rename, reprice, restock per source, delete, in both directions | C | integration, erp | — for the baseline; 2–4, 6 for the full pass | — | every matrix row has a test and a journey step, and the journey passes end to end |
+| **UI-1** | **Shell and navigation redesign**: rail with count badges, global search in the shell bar, sticky document title line, Home rail label | B | erp | 8 (Home) | — | UI audit §Shell, §Home |
+| **UI-2** | **Lists redesign**: filter chips (Open · In process · Completed · Cancelled) and Shipping/Billing badges on Sales Orders; Exposure/Available columns and a blocking badge on Customers; Sold-to on Shipments and Invoices; three-tint stock status on Products | B | erp | 1, 7 | — | UI audit §Sales Orders, §Customers, §Shipments/Invoices, §Products |
+| **UI-3** | **Documents redesign**: order timeline card from `history`; product link from an order line; credit meter and open-items/history split on the customer; due date and seller block on the invoice; ERP warehouse names on the shipment; the product page on the shared `Card` | B | erp | 6 (names, seller block), 7 | — | UI audit §Order, §Shipment/Invoice, §Customer, §Product |
+| **UI-4** | **Settings and journal redesign**: Organisation, Warehouses, Currency and Document numbering cards; event journal naming documents, plain kinds in the list, live refresh; Wipe confirmation that names what is lost | B | erp | 6 | — | UI audit §Settings, §Event Journal |
 
-**Why this order.** 1 finishes what is half-built. 2–4 close the entity matrix's gaps
+**Why this order.** V's baseline runs first — it is a read, and it tells us whether the
+matrix is right before anything is built on it. 1 finishes what is half-built. 2–4 close the entity matrix's gaps
 before the structure changes touch the same handlers. 5 is independent and carries two demo
 steps. 6 needs 3's "is this mine?" check and is the precondition for two pairs (R5). 7–9
 are screen work that can interleave. 11–12 are the multi-ERP half and wait on the client's
@@ -151,6 +158,8 @@ AB-23.
 | D · Business structure | plan written; nothing built | slice 6 | S3, P1–P3 (recommendations given) |
 | E · Commerce Admin | history, retry, one-order trace, settings page | "why this price"; ERP-down choice | 5 |
 | F · Multi-ERP | copy identity; AB-23 active | AB-16; routing integration | client answers; seam question |
+| V · Sync validation | the entity matrix, read from code | the baseline journey against a deployed pair (needs the owner) | ◆ |
+| B · Screen redesign (UI-1..4) | the house style: cards, badges, trail, themes | scheduled behind the slices whose data they show | — |
 | Docs / drift | contract tests both repos; plan status blocks; this overview | record-shape pin (slice 6 step 01); demo setup guide | — |
 
 All of it is committed locally and unpushed: `demo-erp` `feature/erp-grids`,
@@ -172,6 +181,20 @@ The `develop` push in `demo-builder-vscode` still needs the owner at the keyboar
 | Q2 | Does the routing integration become the only order-event subscriber? | multi-ERP research §11 | Yes; it is what keeps the pairs generic |
 | Q-num | Where does the second ERP's number live? | multi-ERP research §11 | Prefix on `ext_order_id` for the selling ERP (M4); the parts in the routing app and comments |
 | E-first | Which Admin differentiator first? | UX validation | "Why did this buyer get this price" |
+
+## 9a. Ideas kept, not scheduled
+
+Owner, 2026-09-24: open to more Commerce Admin ideas, but the mapping settings are the
+bare minimum and "why did this buyer get this price" is not strong enough to lead.
+
+- "Why did this buyer get this price" on the order view, from the ERP's `notApplied[]`
+  (UX validation candidate 4 — novel at tiers 2 and 3, no demand evidence).
+- A dry-run box on the routing app's page: paste an order, see where each line would go,
+  nothing sent (multi-ERP research §10 moment 3).
+- Per-record resync from the Admin page (candidate 2 — standard, strongest demand; the
+  Retry that exists is per order, not per entity).
+- Read-only ERP pricing rules in the Admin (candidate 5 — weakest; would only follow
+  candidate 4).
 
 ## 9. Out of scope, deliberately
 
