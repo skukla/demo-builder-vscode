@@ -37,7 +37,7 @@ checks) · AB-26c (pair-in-a-box harness) · AB-26e (sync validation) · AB-26f 
 AB-26i (pricing conditions) · AB-26j (business structure) · AB-26k (product master) ·
 AB-26l (Home and search) · AB-26m (the entity map) · AB-26n–q (the four screen redesigns) ·
 AB-19, AB-20 (live webhooks, existing) · AB-23, AB-16 (second pair, existing) · AB-26t (the
-routing integration) · AB-26r (credit memo) · AB-26s (the payment leg).
+routing integration) · AB-26r (credit memo) · AB-26s (the payment leg) · AB-26u (the owner's walk-through of both systems, last).
 
 ## Shipped so far
 

@@ -243,6 +243,15 @@ The `develop` push in `demo-builder-vscode` still needs the owner at the keyboar
 | Q-num | Where does the second ERP's number live? | multi-ERP research §11 | Prefix on `ext_order_id` for the selling ERP (M4); the parts in the routing app and comments |
 | E-first | Which Admin differentiator first? | UX validation | "Why did this buyer get this price" |
 
+## 8a. The deliverable at the end: the walk-through (owner, 2026-09-24)
+
+When it is built, the owner needs a walk-through: what to look at in the ERP and how it
+relates, then what to look at in Commerce and how it relates. Filed as **AB-26u**: an
+SC-facing `docs/walkthrough.md` in the integration — the ERP screen by screen along the demo
+path, Commerce screen by screen from the other side, and one relation table per composite
+entity (the printable twin of the entity map). Written from the preview so it is
+reproducible; re-checked live on the owner's word.
+
 ## 9a. Ideas kept, not scheduled
 
 Owner, 2026-09-24: open to more Commerce Admin ideas, but the mapping settings are the
