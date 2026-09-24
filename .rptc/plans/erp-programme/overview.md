@@ -143,6 +143,8 @@ against a deployed pair is the owner's, at the gates marked ◆.
 | 12 | **The routing integration** — its own catalog entry (`kind: integration`), added beside the pairs; owns the ownership map, the split, the dispatch through the seam, the merge, the failure; Admin UI SDK screens; each pair gains seam S2 (send this part) and S3 (per-part outcome); S1 stands a pair down | F | new repo, integration, extension | 6, 11 | the client's answers (S1); seam question (routing owns the order event); where the second number goes | the nine moments |
 | 13 | **Credit memo** (slice 5) and Repeat order | A / C | erp, integration | 3 | **O5** | reversibility rule met for `invoiced` |
 | 14 | **Order to cash — the payment leg** (owner, 2026-09-24). Commerce → ERP: when Commerce captures an invoice's payment, the ERP records an incoming payment and clears the open item; the ERP gains a receivables view (open items per customer, payments, overdue by payment terms) on the customer document and Home. ERP → Commerce: for orders paid on account, a payment posted in the ERP reimburses the company's credit balance — a company-credit write, ledgered and reverted like the credit limit. Exact Commerce calls (payment transactions, company credit balance operations) are read live in API-1 before this is built; if a leg does not exist on the target backend, the slice says so and stops at the leg that does | A / C | erp, integration | API-1 (the calls), 13 (credit memo, so a credited invoice clears) | none beyond API-1's findings | an invoice goes from open to paid in the ERP when Commerce captures it; a reset returns the company balance |
+| **T-1** | **Pair-in-a-box harness** (owner, 2026-09-24: testing and validation without the owner). The ERP's actions run in-process against the in-memory database; the integration's handlers call them directly instead of over HTTP; a fake Commerce in front records every write and answers from the fixtures API-1 captured. Every bidirectional journey then runs as a test in seconds — a price changed in the ERP becomes a recorded Commerce write; a shipment made in the fake Commerce becomes an ERP shipment; a reset reverts the ledger — both directions, no cloud. Joins pieces that exist (`test/helpers/memory-db.js`, the mirror's injected readers, the contract tests). Lives in the integration repo, requiring `demo-erp` as a dev dependency by path | tests | integration, erp | API-1 (fixtures) | — | slice V's journeys are tests the loop runs; a journey that fails names the entity and the direction |
+| **T-2** | **Headless screen checks**: a script drives the ERP preview with a headless browser (never the owner's Chrome) and asserts per screen — rendered, expected documents and actions present, console clean, computed-style fingerprint equal to the last accepted one (the `webview-visual-baseline` idea on the ERP). Catches what unit tests cannot: the Spectrum table crash of 2026-09-24 fails this, not a unit test | tests | erp | — | — | every screen in the preview has a check; a fingerprint change must be accepted deliberately |
 | **V** | **Sync validation — every entity, both directions, proved** (owner 2026-09-24: a comprehensive check that everything that can be bidirectional is). For each row of the entity matrix: a unit test in the repo that owns the direction, and a **live journey script** (`docs/sync-validation.md` in the integration) that an SC or the owner runs against a deployed pair — change it in Commerce, see it in the ERP; change it in the ERP, see it in Commerce; reset, see it undone — with the expected result written beside each step. Runs first as a baseline against what exists today (finding the gaps the matrix reads from code), then again after slices 2–4 and 6, and before every release. Products are the first row: create, rename, reprice, restock per source, delete, in both directions | C | integration, erp | — for the baseline; 2–4, 6 for the full pass | — | every matrix row has a test and a journey step, and the journey passes end to end |
 | **UI-1** | **Shell and navigation redesign**: rail with count badges, global search in the shell bar, sticky document title line, Home rail label | B | erp | 8 (Home) | — | UI audit §Shell, §Home |
 | **UI-2** | **Lists redesign**: filter chips (Open · In process · Completed · Cancelled) and Shipping/Billing badges on Sales Orders; Exposure/Available columns and a blocking badge on Customers; Sold-to on Shipments and Invoices; three-tint stock status on Products | B | erp | 1, 7 | — | UI audit §Sales Orders, §Customers, §Shipments/Invoices, §Products |
@@ -175,6 +177,35 @@ in Commerce (one `ext_order_id`); the prefix (M4) makes each number self-identif
 the routing app's own screen and order comments carry the parts. Backlog: AB-16, blocked on
 AB-23.
 
+## 6a. How every slice is verified without the owner (owner, 2026-09-24)
+
+Every slice item carries a **verification block, written before its code**, and the loop's
+done gate checks the block:
+
+1. **Tests it adds** — unit tests in the repo that owns the logic (`node --test` · vitest),
+   argument-asserting where a collaborator is mocked.
+2. **Journeys it must pass** in the pair-in-a-box harness (T-1), named from slice V's list
+   — both directions for every entity the slice touches.
+3. **Contracts** — the event/route pins in both repos, and the Commerce fixtures from API-1
+   replayed: a handler test runs against the captured response, and a mismatch, not a
+   live call, is what says a contract moved.
+4. **Screens** — the headless checks (T-2) over every screen the slice changed, fingerprints
+   re-accepted on purpose.
+5. **Mutation floor** — `mutation-test-pilot` on the ERP `lib/` modules the slice touched;
+   the ERP's logic is small, synchronous and unmocked, the case where the score is real.
+6. **Scans** — the loop's mechanical trio, and the judgment scans the shape triggers.
+
+**What still needs a person, verified 2026-09-24 rather than assumed** (the CLI is signed
+in to the Adobe project; the repos hold no local credentials):
+
+| Step | Who | Why |
+|---|---|---|
+| API-1's live read-only calls | **the loop** | reads are inside the rails; the workspace config supplies the credential; an expired session defers, never prompts |
+| Deploying the pair for slices 2, 3, 6, 14 | **the loop, once the owner widens the rail** | decision 17 lets the agent create and delete its own scratch workspace; "no cloud writes" is the unattended rail and needs the owner's explicit "deploy the pair to a scratch workspace" |
+| Commerce Admin rendering of the business-config form | **a person** | a browser sign-in to Commerce Admin; forbidden unattended. Fallback: the library validates the schema at build, and the risk is accepted in the slice's report |
+| V's live baseline on the demo instance | **the loop, with the owner's authorization** | it places and ships orders — writes to real demo data |
+| Pushing `loop/` branches to the two public repos | **the owner's yes** | a remote write not previously authorized for those repos |
+
 ## 7. Where the programme stands (update with every commit set)
 
 | Workstream | Built | Next | Blocked on |
@@ -187,7 +218,8 @@ AB-23.
 | F · Multi-ERP | copy identity; AB-23 active | AB-16; routing integration | client answers; seam question |
 | CE · Composite entities | the concept list (§5a), owner-confirmed | the record-by-record research | — |
 | API-1 · Commerce API inventory | the calls the code makes today, in `lib/commerce.js` and the handlers | the inventory, then live validation with captured fixtures | ◆ |
-| V · Sync validation | the entity matrix, read from code | the baseline journey against a deployed pair (needs the owner) | ◆ |
+| T-1 / T-2 · Test harnesses | memory-db, injected readers, contract tests, the preview | pair-in-a-box after API-1's fixtures; headless screen checks any time | — |
+| V · Sync validation | the entity matrix, read from code | journeys as T-1 tests; the live baseline once the owner authorizes writes on the demo instance | authorization |
 | B · Screen redesign (UI-1..4) | the house style: cards, badges, trail, themes | scheduled behind the slices whose data they show | — |
 | Docs / drift | contract tests both repos; plan status blocks; this overview | record-shape pin (slice 6 step 01); demo setup guide | — |
 
