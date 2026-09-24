@@ -296,6 +296,19 @@ now follows the company code's currency, which the structure slice reads from th
 mapped to it, and the card says which currency stands in and why. Commit: `demo-erp`
 `f04c897`. Tests: 258 pass; 15 screen checks stable.
 
+### The lists (AB-26o) — shipped
+
+A list row now says what the document behind it is in the middle of. Sales Orders shows
+Shipping and Billing badges (not shipped, partly shipped, fully shipped; not invoiced,
+invoiced, credited) in place of a line count nobody sorted by, and a Stage filter (open,
+in process, completed, cancelled) beside the work filter the Home cues drive. Shipments and
+Invoices name the sold-to, and a shipment's ship-from prints the ERP's own name for the
+plant instead of Commerce's source name. Customers shows Exposure and Available beside
+each credit limit, worked out in one pass over the orders by the same rule the customer
+document uses; the walk-in account, which has no credit relationship, shows dashes. The
+Commerce company id moved off that list onto the document so the columns fit a 1,440-pixel
+window. Commit: `demo-erp` `ce2c9a5`. Tests: 262 pass; 16 headless checks stable.
+
 ### The demo setup guide — written
 
 `commerce-erp-integration/docs/demo-setup.md`, for the person preparing a demo. Three
@@ -322,6 +335,7 @@ the demo can have whatever it needs, as long as it is written down.
 | AB-26k | product master: committed, available, sales status refusing shipment, Basic data and Open orders cards, three-tint status | `demo-erp` `8ebf768` | 255 tests, record-shape pin, 15 screen checks incl. the product page and the parent, four screens looked at |
 | AB-26m | the entity map: the Mapping tab, nine cards, joins with their settings, ownership arrows, sync per direction, ERP figures; the company / SKU look-up on two cards | integration `c419327`, `bb06879` | 12 view-model + 10 look-up tests, 379 suite, preview driven headlessly with a clean console |
 | AB-26q | Settings: Document numbering card; the ERP's own currency as the money fallback | `demo-erp` `f04c897` | 258 tests incl. the counter pin; 15 screen checks |
+| AB-26o | the lists: shipping and billing badges and a stage filter on orders, sold-to on shipments and invoices, the plant's ERP name, exposure and available on customers | `demo-erp` `ce2c9a5` | row fields pinned through the actions; 16 headless checks incl. the four lists' headers |
 | screen checks hardening | sizes out of the fingerprint, pointer parked, 3 samples, retry once, mismatch rows kept; the accept mode needs two agreeing loads | `demo-erp` `66c215e`, `8ebf768` | no flake in the 14 later full runs; the one-off shipments sample caught and refused |
 
 ## Handed off (finished to the supervised edge)
