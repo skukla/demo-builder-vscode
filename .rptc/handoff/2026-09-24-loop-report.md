@@ -559,6 +559,24 @@ develop merged into this branch, then this list, then the cut from develop.
   life). They wrap the integration's Admin page lookup and Follow an order. Live on Bodea: the
   product lookup agrees on both sides; company 2 (Kukla Studios) shows a 100000 USD credit
   limit mirrored; a trace of a missing order answers an empty trace.
+- **`run_commerce_rest` built (AB-29 read half, `877793333`)**: a GET under /V1 of the ACCS
+  backend, signed with the ERP integration's workspace credential (IMS client-credentials
+  token, scopes and URL read from aio-lib-ims and aio-commerce-lib-api). Not yet run live:
+  the shared MCP socket is held by a SECOND Extension Development Host running the develop
+  checkout (window6, started 15:22:59), and this extension's rule is "first window wins,
+  no retry" (`inExtensionMcpServer.ts`), so the ERP-branch host yields at start-up. Two
+  reload races lost; stopping the develop window's processes and parking its socket file
+  were both refused by the session's permission classifier. Needs the owner at the
+  keyboard: close the develop dev host, reload the ERP one. Finding for later: a
+  yielding host should retry the bind (or offer a `rebind` tool) — two dev hosts on one
+  machine is the normal state of a worktree workflow.
+- **The storefront sign-up puzzle, as far as it is known**: creating an account works
+  (a second try answers "already exists"), the automatic sign-in after it fails with the
+  storefront's generic "Unable to log in", email confirmation is OFF, and the sign-in
+  mutation itself answers normally for a fake account on both endpoints. The customer
+  record is the next thing to read, which is what run_commerce_rest is for. Two deleted
+  customers (ids 3 and 42) still show in the Admin grid as index leftovers with blank
+  Status; the grid index was invalidated by adding a column and should clear on rebuild.
 - **Still owed from the owner's request** ("bidirectionally integrated" and "when an ERP is
   deleted, the resetting of the records in commerce works"): an order placed on the storefront
   as a Kukla Studios user (Commerce→ERP), ERP-side changes read back in Commerce (price via
