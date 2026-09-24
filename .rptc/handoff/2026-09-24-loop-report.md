@@ -29,6 +29,15 @@ test process behind a fake Commerce that records every write, and eleven journey
 entity matrix both ways, asking each time whether the change arrived and whether nothing
 came back twice. This is the test-without-the-owner instrument the plan asked for.
 
+Then the business structure. The ERP now has the three seller levels a real one has: a
+company code (itself), sales organisations (one per Commerce website) and warehouses (one
+per inventory source, with the ERP's own names). Which sales organisation sells through a
+website is a merchant setting on the integration's Commerce Admin screen, and two more
+settings there let a second ERP pair sit beside the first: a prefix on the ERP order
+numbers Commerce sees, and a rule for which products belong to this ERP. The fake "1000"
+on every customer is gone. A setup guide for the person preparing a demo says what the
+Commerce instance needs for each story and how to undo it.
+
 The research the later slices depend on is written: nine business concepts, each written
 out record by record in Adobe Commerce, in SAP, and in our two repos, with the owner of
 every field. It corrected two SAP names in earlier notes and found that four Commerce events
@@ -114,7 +123,9 @@ moved under a new stock-only import that does not count as a sync; the ERP's own
 noted so they are not echoed back. A product deleted in Commerce leaves the ERP (new
 subscription; the payload's `sku` is assumed until proved live); a deleted parent's
 variants stay as products of their own. The customer card states the exposure rule (G3;
-**assumes your decision, see below**). Currency (G5) waits for the structure slice.
+**assumes your decision, see below**). Currency (G5) came with the structure slice: the
+mirror reads each website's base currency from the store configuration, and the ERP's
+Organisation card and invoice print it.
 Commits: `demo-erp` `88b6679`, `52b1acd`; integration `6488c0d`, `0ccb226`.
 
 ### Changes made in Commerce Admin → ERP (AB-26g) — built to the supervised edge
@@ -151,6 +162,62 @@ the one Demo Builder project on this machine has a mesh and a storefront and no 
 other repos' `.env` files hold Commerce admin passwords for a different host, which the
 loop does not borrow. Handed off.
 
+### Business structure (AB-26j) — shipped, five steps
+
+The plan (`.rptc/complete/erp-business-structure/`) was written from the structure
+research and built in order. Step 01 pinned what the ERP stores: a test compares every
+stored record's keys with a checked-in fixture, so a field can only appear or vanish on
+purpose, and the contract went to version 2 with the new fields. Step 02, on the
+integration: a Structure group of settings on the Commerce Admin screen. Per website, the
+ERP sales organisation that sells through it and its name. Per pair, the prefix put in
+front of ERP order numbers written onto Commerce orders (`ACME-0000001042`, so two ERPs on
+one store tell their orders apart; every read strips it) and which products belong to this
+ERP: all of them, the ones stocked in named inventory sources, or the ones whose attribute
+names this ERP. The mirror and the product and stock events filter by that rule, and an
+order with no owned line is skipped with a history entry saying why. The mirror also
+carries each company's legal identity and its admin's website, and a block describing
+Commerce's websites with their base currency and locale. Step 03, on the ERP: a partner
+belongs to sales organisations (plural) and is widened by each order that arrives; an order
+carries its own sales organisation; a pricing condition may be scoped to one; warehouses
+have ERP names that survive a wipe; the structure (company code, sales organisations with
+counts, warehouses) is derived on read, never stored. The old `salesOrg` field left the
+partner record in the same commit. Step 04, the screens: Settings gained Organisation and
+Warehouses cards (click a plant to rename it), the customer document a "Sold-to in" line
+and a Legal identity card, the order header its sales organisation, the invoice a Seller
+card, the shipment its ship-from with the ERP's plant name, and Pricing a scope column with
+pickers on Add rule and Test a Price. Step 05 is this record, both READMEs, and the setup
+guide.
+
+What changed from the plan: Store Information (the seller's address and VAT number) is not
+readable over Commerce's REST API, which the composite research had established, so the
+Organisation and Seller cards print the store configuration's currency and locale and
+leave address and VAT blank, and the guide says so. The three open questions were taken as
+recommended: the walk-in partner belongs to every sales organisation; the company code is
+`1000` fixed; the invoice carries the seller's sales organisation and country.
+
+One thing to know about the dependency check: the backlog tool now treats a `built` item
+as still blocking, since "shipped" means released. The programme's own order of work put
+this slice after the Commerce-side changes, which are built to their supervised edge on the
+same branch, and the code this slice needed from them (the "is this mine?" check) is there.
+The loop took the plan's order as the owner's; if you would rather it wait for a merge
+before building on a built item, say so and it will.
+
+Commits: `demo-erp` `86be509`, `7e8b1cf`, `126cf5f`, `df2075c`; integration `50b1927`,
+`2807a46`, `5625033`, `7537745`, `965e7fe`; this worktree `969c66fc4`. Tests: `demo-erp`
+244 pass; integration 363 pass, biome clean; 14 headless screen checks stable across two
+runs; six screens looked at.
+
+### The demo setup guide — written
+
+`commerce-erp-integration/docs/demo-setup.md`, for the person preparing a demo. Three
+stories: one ERP (nothing to prepare), the business structure (a second website with its
+own currency, the sales organisation on the Structure settings, a company whose admin sits
+on that website), and two ERPs (products split by inventory source or by an `erp_owner`
+text attribute, a prefix per pair). Every requirement names the Commerce Admin path, a
+read-only API call that proves it, and how to undo it. It closes with what a first live
+run must confirm. Linked from both READMEs. Your words from this morning are its licence:
+the demo can have whatever it needs, as long as it is written down.
+
 ---
 
 ## Shipped (on the loop branches, gated, awaiting merge)
@@ -162,6 +229,7 @@ loop does not borrow. Handed off.
 | AB-26l | Home work list, rail counts, shell search, journal sentences | `demo-erp` `5b2a269`, integration `8a313fd` | 13 headless checks incl. cue count = list rows |
 | AB-26n | sticky title line | `demo-erp` `bc5be55` | scroll check |
 | AB-26c | pair-in-a-box harness, eleven journeys | integration `test/box/` | 343 tests green |
+| AB-26j | business structure: Structure settings, prefix, ownership, legal identity, warehouse names, Organisation card, the setup guide | `demo-erp` `86be509` `7e8b1cf` `126cf5f` `df2075c`; integration `50b1927` `2807a46` `5625033` `7537745` `965e7fe` | 244 + 363 tests, record-shape pin, 14 screen checks, six screens looked at |
 | screen checks hardening | sizes out of the fingerprint, pointer parked, 3 samples, retry once, mismatch rows kept | `demo-erp` `66c215e` | no flake in the 14 later full runs |
 
 ## Handed off (finished to the supervised edge)
@@ -179,6 +247,10 @@ loop does not borrow. Handed off.
   reference; proved live before the subscriptions ship.
 - **AB-26e live baseline**: the box is the unit half; the live script and baseline run wait
   for the credential.
+- **AB-26j, two live looks**: whether App Management's own form renders the Structure text
+  fields the way the integration's Admin screen does (one person, one look), and the exact
+  `store/websites` and `store/storeConfigs` field names on Adobe Commerce as a Cloud Service
+  (one read-only call each, then a fixture).
 
 ## Filed (recorded, not forced)
 
@@ -193,11 +265,16 @@ loop does not borrow. Handed off.
 - The ERP → Commerce shipment path had an open echo: Commerce's shipment event for a
   shipment the integration itself made would have created a second ERP shipment. Found
   while designing the box's journeys; fixed the same hour (`demo-erp` `d600650`).
+- The ERP README's pointer to the setup guide is a GitHub URL on the integration's `main`
+  branch; it resolves once the loop branch is merged there.
 
 ## Retracted / corrected
 
-- Nothing retracted this run. Two earlier notes' SAP entity names were wrong and are
-  corrected in the research.
+- The `demo-erp` commit message for the structure records (`7e8b1cf`) says "246 tests".
+  The suite had 243 at that commit and the run was green; the number in the message is
+  wrong and the suite was right. Logged on the item; the message itself stands (history is
+  not rewritten).
+- Two earlier notes' SAP entity names were wrong and are corrected in the research.
 
 ## Environment facts
 
@@ -216,7 +293,12 @@ loop does not borrow. Handed off.
   this run did not touch; not run. The duplication the run added on purpose is the
   preview's stand-in API mirroring the ERP's rules, documented in `preview/fakeApi.js` as
   the hand-mirrored shapes it has always carried; the box's fake Commerce is a second such
-  stand-in, on the other side.
+  stand-in, on the other side. `lib/structure.js` is new in both repos and each does a
+  different job (the ERP derives its structure; the integration reads Commerce's), so the
+  shared name is not a shared implementation.
+- The integration's `npm run contract:check` compares the vendored contract with
+  `demo-erp`'s `main`, so it reports a difference until the loop branch is merged there.
+  Expected, and the reason it is not a gate.
 
 ## Your decisions
 
@@ -232,3 +314,11 @@ loop does not borrow. Handed off.
    Commerce" as the reason, and Confirm refuses in the ERP until it is released. That reads
    Commerce's generic hold as a credit-style hold. If you want Commerce's hold kept apart
    from the ERP's credit decision, say so; the change is small.
+5. **A website with no Structure setting of its own sells through `1000`.** The default
+   applies at every scope, so nothing is ever "unmapped"; a second website only becomes a
+   second sales organisation when someone sets it. Recommended as is: a single-website
+   store gets the right answer without touching a setting. The alternative, flagging an
+   unset website on the Organisation card, is a small change if you want the nudge.
+6. **Building on built, unmerged items.** The loop built the structure slice on top of
+   items that are built but not merged, following the programme's order of work. Say if
+   the merge should come first from here on.
