@@ -577,6 +577,18 @@ develop merged into this branch, then this list, then the cut from develop.
   record is the next thing to read, which is what run_commerce_rest is for. Two deleted
   customers (ids 3 and 42) still show in the Admin grid as index leftovers with blank
   Status; the grid index was invalidated by adding a column and should clear on rebuild.
+- **Commerce made demo-ready through the REST tools (evening, consent setting off by the
+  owner):** customers 3 and 42 confirmed as index ghosts (404 on GET); stray sign-up
+  customer 43 deleted; company 21 "Kukla Studios" created, Approved, with customer 44
+  (steve@test.com) as admin and a 100000 USD credit limit; companies 18, 19, 20 moved from
+  Pending to Approved (a pending company's admin cannot sign in — the likely cause of the
+  "Unable to log in" screen for the demo users); nine customers, no orphan company links;
+  ERP reset mirrored 4 companies and 182 products and `get_erp_record` shows company 21
+  agreeing on both sides, company 2 gone from both. Learned: a company POST/PUT can take
+  Commerce over 30s on this sandbox (welcome mail with no server), so writes now get
+  TIMEOUTS.LONG; `PUT companyCredits/{id}` takes its object under `creditLimit`; a US
+  company needs `region_id` (North Carolina = 44). Not yet proven: a storefront sign-in as
+  steve@test.com, which is the owner's next click.
 - **Still owed from the owner's request** ("bidirectionally integrated" and "when an ERP is
   deleted, the resetting of the records in commerce works"): an order placed on the storefront
   as a Kukla Studios user (Commerce→ERP), ERP-side changes read back in Commerce (price via
