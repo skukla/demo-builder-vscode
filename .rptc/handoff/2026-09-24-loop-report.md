@@ -589,6 +589,27 @@ develop merged into this branch, then this list, then the cut from develop.
   TIMEOUTS.LONG; `PUT companyCredits/{id}` takes its object under `creditLimit`; a US
   company needs `region_id` (North Carolina = 44). Not yet proven: a storefront sign-in as
   steve@test.com, which is the owner's next click.
+- **Commerce → ERP event delivery is NOT arriving (found 2026-09-24 evening, live):** a REST
+  price change (accessmesh 49 → 52) and a credit change (company 21, 100000 → 120000)
+  reached Commerce; forty minutes later the ERP still read 49 and 100000. Both halves of
+  the wiring look right — Commerce holds the provider (id 12) and subscriptions for
+  product save/delete, order save, shipment, invoice and stock (`eventing/getEventSubscriptions`);
+  the AcmeERP workspace holds 17 enabled, verified webhook registrations pointing at
+  `acp/sync_event_handler_*` in namespace `…-acmeerp` — yet the namespace's last 150
+  activations (since 17:09) hold NO `acp/*` activation at all. So Commerce is not
+  publishing (or I/O Events is not delivering) and the fault is upstream of our code.
+  The every-minute `erp/refresh-job` DOES run, but its log shows Commerce timing out
+  its reads ("partner refresh failed: Request timed out", "stock refresh failed: 503"),
+  which is why the credit change did not arrive by that route either: the ACCS sandbox's
+  REST was slow and flapping all evening (our own reads saw 503s and 30s+ answers).
+  What would settle it: the registration's delivery trace in Developer Console (not
+  reachable from the CLI), Commerce's eventing config/queue state (Admin only), or a
+  retry when the sandbox is healthy. Commerce now holds 52 and 120000; the next reset
+  re-mirrors them.
+- **Tools this diagnosis wanted and did not have:** a Runtime activation read
+  (`list_runtime_activations` / `read_activation_logs`, done tonight by downloading the
+  workspace credential to a temp file for one shell command), and a signed ERP API
+  passthrough (`run_erp_rest`) so ERP → Commerce paths can be driven without the screen.
 - **Still owed from the owner's request** ("bidirectionally integrated" and "when an ERP is
   deleted, the resetting of the records in commerce works"): an order placed on the storefront
   as a Kukla Studios user (Commerce→ERP), ERP-side changes read back in Commerce (price via
