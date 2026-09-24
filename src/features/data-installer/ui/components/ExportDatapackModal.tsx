@@ -158,7 +158,7 @@ export function ExportDatapackModal({ onClose }: ExportDatapackModalProps): Reac
                         ? [{ label: 'Back', variant: 'secondary', onPress: goBack }]
                         : [
                               {
-                                  label: run.loading ? 'Exporting…' : 'Export',
+                                  label: run.loading ? 'Exporting' : 'Export',
                                   variant: 'accent',
                                   onPress: start,
                                   isDisabled: !canExport,
@@ -283,7 +283,7 @@ function renderTypeChoices({
     // so frame 1 fell past this and drew an empty type grid before the note
     // appeared.
     if (loading || !settled) {
-        return <p className="datapack-export-note">Loading what can be exported…</p>;
+        return <p className="datapack-export-note">Loading what can be exported</p>;
     }
     return (
         <div className="datapack-type-grid">

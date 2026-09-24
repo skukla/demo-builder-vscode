@@ -316,16 +316,16 @@ export function AdobeProjectPicker({
                 disabledIds={deletingId ? [deletingId] : NO_DISABLED_IDS}
                 labels={{
                     heading: '',
-                    loadingMessage: 'Loading your Adobe projects...',
+                    loadingMessage: 'Loading your Adobe projects',
                     loadingSubMessage: state.adobeOrg?.name
-                        ? `Fetching from organization: ${state.adobeOrg.name}...`
-                        : 'Fetching projects...',
+                        ? `Fetching from organization: ${state.adobeOrg.name}`
+                        : 'Fetching projects',
                     errorTitle: 'Error Loading Projects',
                     emptyTitle: 'No Projects Found',
                     emptyMessage: state.adobeOrg?.name
                         ? `No projects found in organization ${state.adobeOrg.name}. Please create a project in Adobe Console first.`
                         : 'No projects found. Please create a project in Adobe Console first.',
-                    searchPlaceholder: 'Type to filter projects...',
+                    searchPlaceholder: 'Type to filter projects',
                     itemNoun: 'project',
                     ariaLabel: 'Adobe I/O Projects',
                 }}

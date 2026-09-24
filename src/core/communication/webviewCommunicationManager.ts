@@ -83,6 +83,20 @@ const REQUEST_TIMEOUTS: Record<string, number> = {
     // Adobe Console project teardown (modal think-time + registrations +
     // providers + project delete; see PROJECT_TEARDOWN's budget math)
     'delete-adobe-project': TIMEOUTS.PROJECT_TEARDOWN, // 900s
+
+    // Shareable demos (2026-09-14). A zip import took 30.6s of host work on a
+    // 3,475-file storefront AFTER its file picker, so the dialog reported a timeout
+    // while the repository was created, and the retry met "name already exists".
+    // The two that wait on a file dialog and move a whole storefront get the
+    // extended budget; the rest wait on GitHub (a read of the published pages,
+    // a description file write) or on a person (Remove's two confirmations).
+    'import-storefront-zip': TIMEOUTS.EXTENDED, // 10min - picker + unpack + create + push
+    exportDemoBundle: TIMEOUTS.EXTENDED, // 10min - save dialog + archive download
+    'probe-shared-demo': TIMEOUTS.LONG, // 180s - repository reads + published-page index
+    'forget-added-demo': TIMEOUTS.LONG, // 180s - two confirmations + optional repo delete
+    getDemoPackagePreview: TIMEOUTS.LONG, // 180s - repository reads + published-page index
+    saveDemoPackage: TIMEOUTS.LONG, // 180s - description file write + card
+    removeDemoPackage: TIMEOUTS.LONG, // 180s - description file delete + card
 };
 
 /**

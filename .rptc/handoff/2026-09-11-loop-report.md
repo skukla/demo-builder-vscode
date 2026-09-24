@@ -194,7 +194,7 @@ before there is anything to complain about.
 
 ## Filed, not forced
 
-- **PL-56** — the third never-compromise property with no rule: "a user's own edits are
+- **PL-58** (filed as PL-56; renumbered 2026-09-15) — the third never-compromise property with no rule: "a user's own edits are
   never overwritten." It carries a lead I did not chase: one file in the generated
   AI-bundle directory writes files directly eight times, bypassing the mechanism meant
   to protect hand-edits. **Not verified** — the item says to read it before believing

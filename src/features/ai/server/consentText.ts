@@ -14,6 +14,7 @@
  */
 
 import { alertCopyFor } from './agentAlertCopy';
+import { agentNotice } from './agentNotice';
 
 /** Longest arg value the consent dialog will print before eliding. */
 const CONSENT_DETAIL_VALUE_MAX = 60;
@@ -112,7 +113,7 @@ export function buildConsentPrompt(
         ? renderTargetForConsent(args, copy.target)
         : (fallbackTarget ?? '');
     return {
-        title: `Demo Builder: ${copy.action}?`,
+        title: `${agentNotice(copy.action)}?`,
         detail: [copy.consequence, target].filter(Boolean).join('\n\n'),
     };
 }

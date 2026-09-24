@@ -71,9 +71,12 @@ export async function populateEdsMetadata(
     // it falls through to template HEAD. The lkgSource — when set — is
     // persisted alongside so the update checker can compare against the
     // same LKG file the create flow consulted. Reset records through the
-    // same resolver, so a reset storefront and a fresh one agree.
+    // same resolver, so a reset storefront and a fresh one agree. An added demo's
+    // code may live on a branch other than main; the update check and the
+    // baseline commit both read that branch.
+    const templateBranch = typedConfig.demo?.source.branch;
     const lastSyncedCommit = await resolveTemplateCommitSha(
-        typedConfig.edsConfig,
+        { ...typedConfig.edsConfig, ...(templateBranch ? { templateBranch } : {}) },
         getGitHubServices(context.context.secrets).fileOperations,
         context.logger,
     );
@@ -100,6 +103,7 @@ export async function populateEdsMetadata(
         daLiveSite: typedConfig.edsConfig.daLiveSite,
         templateOwner,
         templateRepo,
+        ...(templateBranch ? { templateBranch } : {}),
         lastSyncedCommit,
         ...(lkgSource ? { lkgSource } : {}),
     };

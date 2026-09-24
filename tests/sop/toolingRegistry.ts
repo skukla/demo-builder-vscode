@@ -330,6 +330,13 @@ const JUDGEMENT: readonly Instrument[] = [
  * and `validate:eslint-rules` worked fine and nothing ran them, while
  * `validate:test-guidelines` was outright failing unseen. They are wired into
  * `npm run sweep` now, which is why the failure is visible.
+ *
+ * `validate:eslint-rules` is gone (2026-09-23). Being run is what exposed it: it
+ * demanded a `max-lines` eslint rule that was DELETED on 2026-09-10 as a second
+ * opinion disagreeing with `check-test-file-sizes.js`, which owns that policy. A
+ * validator for a retired rule is the same soft-deprecation the rule's own removal
+ * avoided, so it went rather than being taught the new answer — it had no other
+ * check in it.
  */
 const NPM_CHECKS: readonly Instrument[] = [
     {
@@ -397,14 +404,6 @@ const NPM_CHECKS: readonly Instrument[] = [
         resultKind: 'gate',
         what: 'jest config drift',
         runs: 'npm run validate:jest-config',
-    },
-    {
-        id: 'validate:eslint-rules',
-        kind: 'npm-script',
-        cadence: 'periodic',
-        resultKind: 'gate',
-        what: 'eslint rule config drift',
-        runs: 'npm run validate:eslint-rules',
     },
     {
         id: 'validate:test-guidelines',

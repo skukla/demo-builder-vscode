@@ -65,7 +65,7 @@ describe('installAppManagementApp — upgrading an installed app', () => {
             version: '0.2.0',
             detail: 'Upgraded in Commerce to version 0.2.0.',
         });
-        expect(progress).toContain('Upgrading in Commerce…');
+        expect(progress).toContain('Upgrading in Commerce');
         expect(client.getInstallationState).not.toHaveBeenCalled();
     });
 

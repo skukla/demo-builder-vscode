@@ -21,6 +21,8 @@ import {
     mockGetTokenStatus,
     mockLogin,
     mockRegisterGlobalMcp,
+    mockSignInToGitHub,
+    mockValidateGitHubToken,
     resetVsCode,
     vscode,
 } from './commandManager.testUtils';
@@ -38,6 +40,8 @@ beforeEach(() => {
     mockLogin.mockReset().mockResolvedValue(true);
     mockDaLiveAuthQuickPick.mockReset().mockResolvedValue({ success: true });
     mockRegisterGlobalMcp.mockReset().mockResolvedValue('/home/sc/.claude.json');
+    mockValidateGitHubToken.mockReset().mockResolvedValue({ valid: false, reason: 'no-token' });
+    mockSignInToGitHub.mockReset().mockResolvedValue({ login: 'sayurihanki' });
     mockAccess.mockReset().mockResolvedValue(undefined);
 });
 
@@ -465,5 +469,92 @@ describe('openComponent', () => {
         expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
             'Failed to open component: no workbench'
         );
+    });
+});
+
+// =============================================================================
+// signInGitHub
+// =============================================================================
+
+describe('signInGitHub', () => {
+    it('signs in and names the account on the status bar', async () => {
+        const h = harness();
+
+        await h.handlerFor('demoBuilder.signInGitHub')();
+
+        expect(mockSignInToGitHub).toHaveBeenCalledWith(expect.anything(), expect.anything(), { force: false });
+        expect(vscode.window.setStatusBarMessage).toHaveBeenCalledWith(
+            '$(check) Signed in to GitHub as sayurihanki',
+            5000
+        );
+        expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
+    });
+
+    it('offers a fresh sign-in when one is already valid, and forces it', async () => {
+        const h = harness();
+        mockValidateGitHubToken.mockResolvedValue({ valid: true, user: { login: 'steve' } });
+        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Sign in again');
+
+        await h.handlerFor('demoBuilder.signInGitHub')();
+
+        expect((vscode.window.showInformationMessage as jest.Mock).mock.calls[0][0]).toBe(
+            'Already signed in to GitHub as steve.'
+        );
+        expect(mockSignInToGitHub).toHaveBeenCalledWith(expect.anything(), expect.anything(), { force: true });
+    });
+
+    it('does nothing when that offer is declined', async () => {
+        const h = harness();
+        mockValidateGitHubToken.mockResolvedValue({ valid: true, user: { login: 'steve' } });
+        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Cancel');
+
+        await h.handlerFor('demoBuilder.signInGitHub')();
+
+        expect(mockSignInToGitHub).not.toHaveBeenCalled();
+        expect(vscode.window.setStatusBarMessage).not.toHaveBeenCalled();
+    });
+
+    it('signs straight in when the stored token is one GitHub rejects', async () => {
+        // The case this command exists for: nothing to offer, just fix it.
+        const h = harness();
+        mockValidateGitHubToken.mockResolvedValue({ valid: false, reason: 'rejected' });
+
+        await h.handlerFor('demoBuilder.signInGitHub')();
+
+        expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
+        expect(mockSignInToGitHub).toHaveBeenCalled();
+    });
+
+    it('reads the current token WITHOUT clearing it', async () => {
+        const h = harness();
+
+        await h.handlerFor('demoBuilder.signInGitHub')();
+
+        expect(mockValidateGitHubToken).toHaveBeenCalledWith({ clearInvalid: false });
+    });
+
+    it('warns when the sign-in failed, and stays silent when the SC cancelled', async () => {
+        const h = harness();
+        mockSignInToGitHub.mockResolvedValue({ error: 'GitHub said no' });
+        await h.handlerFor('demoBuilder.signInGitHub')();
+        expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
+            expect.stringContaining('GitHub said no')
+        );
+
+        (vscode.window.showWarningMessage as jest.Mock).mockClear();
+        mockSignInToGitHub.mockResolvedValue({ error: 'Authentication cancelled', cancelled: true });
+        await h.handlerFor('demoBuilder.signInGitHub')();
+        expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
+    });
+
+    it('runs inside a progress notification', async () => {
+        const h = harness();
+
+        await h.handlerFor('demoBuilder.signInGitHub')();
+
+        expect((vscode.window.withProgress as jest.Mock).mock.calls[0][0]).toEqual({
+            location: vscode.ProgressLocation.Notification,
+            title: 'Signing in to GitHub',
+        });
     });
 });

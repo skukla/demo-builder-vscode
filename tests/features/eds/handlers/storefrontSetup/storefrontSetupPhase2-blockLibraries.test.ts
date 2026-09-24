@@ -211,7 +211,7 @@ describe('executePhaseHelixConfig — custom block libraries', () => {
         ]);
         expect(progressPushes(sendMessage)).toContainEqual({
             phase: 'storefront-code',
-            message: 'Installing blocks from 2 libraries...',
+            message: 'Installing blocks from 2 libraries',
             subMessage: 'Isle5 Blocks, Demo Team Blocks',
             progress: 28,
         });
@@ -224,7 +224,7 @@ describe('executePhaseHelixConfig — custom block libraries', () => {
 
         expect(progressPushes(sendMessage)).toContainEqual({
             phase: 'storefront-code',
-            message: 'Installing blocks from 1 library...',
+            message: 'Installing blocks from 1 library',
             subMessage: 'Demo Team Blocks',
             progress: 28,
         });

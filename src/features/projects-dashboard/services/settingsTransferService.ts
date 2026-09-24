@@ -30,30 +30,43 @@ import { SETTINGS_FILE_VERSION } from '@/types/settingsFile';
  * Returns the parsed settings to be passed to the wizard.
  */
 export async function importSettingsFromFile(context: HandlerContext): Promise<HandlerResponse> {
+    const fileUri = await pickImportFile(context);
+    if (!fileUri) {
+        return { success: true, data: { success: false, error: 'cancelled' } };
+    }
+    return importSettingsFromUri(context, fileUri);
+}
+
+/**
+ * The Import picker: a settings file, or a demo bundle (what Export's "Send a
+ * file" writes). The caller branches on the extension.
+ *
+ * @returns The picked file, or nothing when dismissed
+ */
+export async function pickImportFile(context: HandlerContext): Promise<vscode.Uri | undefined> {
+    context.logger.info('Opening file picker for import');
+    const fileUris = await vscode.window.showOpenDialog({
+        canSelectFiles: true,
+        canSelectFolders: false,
+        canSelectMany: false,
+        filters: {
+            'Demo Builder settings or bundle': ['json', 'zip'],
+            'All Files': ['*'],
+        },
+        title: 'Import a settings file or a demo bundle',
+    });
+    return fileUris?.[0];
+}
+
+/**
+ * Import a settings JSON file and open the wizard pre-filled from it.
+ *
+ * @param context - Handler context
+ * @param fileUri - The settings file
+ * @returns `{ success, data }` in the shape the projects list reads
+ */
+export async function importSettingsFromUri(context: HandlerContext, fileUri: vscode.Uri): Promise<HandlerResponse> {
     try {
-        context.logger.info('Opening file picker for settings import');
-
-        // Open file picker dialog
-        const fileUris = await vscode.window.showOpenDialog({
-            canSelectFiles: true,
-            canSelectFolders: false,
-            canSelectMany: false,
-            filters: {
-                'Demo Builder Settings': ['json'],
-                'All Files': ['*'],
-            },
-            title: 'Import Settings File',
-        });
-
-        if (!fileUris || fileUris.length === 0) {
-            // User cancelled
-            return {
-                success: true,
-                data: { success: false, error: 'cancelled' },
-            };
-        }
-
-        const fileUri = fileUris[0];
         const fileContent = await vscode.workspace.fs.readFile(fileUri);
         const jsonString = Buffer.from(fileContent).toString('utf8');
 

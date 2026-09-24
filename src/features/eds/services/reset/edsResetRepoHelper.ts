@@ -10,17 +10,16 @@
  */
 
 import { installBlockCollections } from '../blockCollectionHelpers';
-import { generateConfigJson, buildConfigGeneratorParams } from '../configGenerator';
-import { generateFstabContent } from '../fstabGenerator';
 import type { GitHubFileOperations } from '../github/githubFileOperations';
 import { generateInspectorTreeEntries, installInspectorTagging } from '../inspectorHelpers';
 import { applyCanonicalCodePatches } from '../patches/codePatchPipelineHelpers';
 import type { CodePatchResult } from '../patches/codePatchRegistry';
+import { addedDemoCaveats } from '../patches/loadBearingPatches';
 import { installSmart404Handler } from '../pdp/pdp404HandlerPublisher';
-import { addPlaceholderStubOverrides } from '../placeholderStubs';
 import { installQuickEdit } from '../quickEditPublisher';
 import { resolveTemplateCommitSha } from '../templateCommitResolver';
 import type { GitHubTreeInput } from '../types';
+import { buildResetFileOverrides } from './edsResetFileOverrides';
 import { type EdsResetParams } from './edsResetParams';
 import {
     getBlockLibrarySource,
@@ -94,7 +93,7 @@ async function installWithBlockLibraries(
 ): Promise<string[]> {
     report(
         2,
-        `Re-installing blocks from ${allLibraries.length} ${allLibraries.length === 1 ? 'library' : 'libraries'}...`,
+        `Re-installing blocks from ${allLibraries.length} ${allLibraries.length === 1 ? 'library' : 'libraries'}`,
     );
     const blockResult = await installBlockCollections(
         githubFileOps,
@@ -221,7 +220,7 @@ async function reinstallBlockLibraries(
 
 /**
  * Step 1: Reset repository to template using bulk Git Tree operations.
- * Builds file overrides (fstab.yaml, config.json, placeholders) and pushes a single commit.
+ * Takes its file overrides from buildResetFileOverrides and pushes a single commit.
  * @returns Number of files reset, optional block collection IDs, and the template commit reset onto.
  */
 export async function resetRepoToTemplate(
@@ -234,6 +233,8 @@ export async function resetRepoToTemplate(
     blockCollectionIds?: string[];
     libraryContentSources: Array<{ org: string; site: string }>;
     canonicalCodePatchResults?: CodePatchResult[];
+    /** The dry check's caveats for an added demo (D23); absent for a shipped brand. */
+    demoCaveats?: string[];
     /** The template commit the repository now matches; absent when it could not be resolved. */
     templateCommitSha?: string;
 }> {
@@ -252,54 +253,32 @@ export async function resetRepoToTemplate(
     report(1, 'Resetting the repository');
     context.logger.info(`[EdsReset] Resetting repo using bulk tree operations`);
 
-    const fstabContent = generateFstabContent({ daLiveOrg, daLiveSite });
-    const fileOverrides = new Map<string, string>();
-    fileOverrides.set('fstab.yaml', fstabContent);
-
-    // Generate config.json with Commerce configuration
-    const configResult = generateConfigJson(buildConfigGeneratorParams(project), context.logger);
-    if (configResult.success && configResult.content) {
-        fileOverrides.set('config.json', configResult.content);
-        fileOverrides.set('demo-config.json', configResult.content);
-        context.logger.info('[EdsReset] Generated config.json for reset');
-    } else {
-        context.logger.warn(
-            `[EdsReset] Failed to generate demo-config.json: ${configResult.error}`,
-        );
-    }
-
-    // Placeholder sheets are deliberately NOT fetched here (fetch deleted
-    // 2026-08-23). They are UI-label dictionaries and belong to CONTENT: the
-    // DA.live copy's full-tree walk carries any /placeholders sheets a source
-    // authors (sheets are .xlsx on DA.live — see daLiveContentCopy), verified
-    // live on isle5. Dropins ship English defaults compiled in. What DOES go
-    // in are static sentinel STUBS — the boilerplate requests these 16 sheets
-    // per page load and the browser prints every 404 to the console, which no
-    // JS can suppress; the stubs answer 200 and are shadowed by real DA
-    // content the moment a brand authors sheets (content-over-code).
-    addPlaceholderStubOverrides(fileOverrides);
+    const fileOverrides = await buildResetFileOverrides(params, githubFileOps, context.logger);
 
     // Determine the template revision to reset onto — the same commit project
     // creation records: the verified LKG for thin-layer storefronts, otherwise the
-    // template's `main` head (see resolveTemplateCommitSha for the LKG fallback).
+    // head of the template's branch (see resolveTemplateCommitSha for the LKG
+    // fallback). An added demo resets to its source's own branch (D4: their code,
+    // as it is); everything else uses `main`.
     //
     // The download is PINNED to the resolved SHA, even for a branch reset, and that
     // SHA is what the caller records as `lastSyncedCommit`. Recording a head fetched
     // separately from the download could name a commit the repository does not match
-    // if `main` moved in between; pinning makes the record exactly what was written.
-    // When no SHA can be resolved the reset still proceeds from `main` (ADR-006 D1
+    // if the branch moved in between; pinning makes the record exactly what was written.
+    // When no SHA can be resolved the reset still proceeds from the branch (ADR-006 D1
     // proceed-and-warn) and returns no commit, so the old record is left alone.
+    const templateBranch = project.demo?.source.branch ?? 'main';
     const templateCommitSha = await resolveTemplateCommitSha(
-        { templateOwner, templateRepo, codePatchSource },
+        { templateOwner, templateRepo, codePatchSource, templateBranch },
         githubFileOps,
         context.logger,
     );
-    const templateRef = templateCommitSha ?? 'main';
+    const templateRef = templateCommitSha ?? templateBranch;
     if (templateCommitSha) {
         context.logger.info(`[EdsReset] Pinning reset to ${templateCommitSha.substring(0, 7)}`);
     } else {
         context.logger.warn(
-            '[EdsReset] Template commit unresolved — resetting from main; synced commit not updated',
+            `[EdsReset] Template commit unresolved — resetting from ${templateBranch}; synced commit not updated`,
         );
     }
 
@@ -334,6 +313,11 @@ export async function resetRepoToTemplate(
         `[EdsReset] Repository reset complete: ${resetResult.fileCount} files, commit ${resetResult.commitSha.substring(0, 7)}`,
     );
     report(1, `Reset ${resetResult.fileCount} files`);
+
+    // An added demo's dry check re-runs on every reset; its caveats ride the result (D23).
+    const demoCaveats = project.demo
+        ? await addedDemoCaveats(project.demo, { owner: templateOwner, repo: templateRepo }, context.logger)
+        : undefined;
 
     const { blockCollectionIds, libraryContentSources } = await reinstallBlockLibraries(
         project,
@@ -380,6 +364,7 @@ export async function resetRepoToTemplate(
     await installQuickEdit(githubFileOps, repoOwner, repoName, context.logger);
 
     return {
+        ...(demoCaveats ? { demoCaveats } : {}),
         filesReset: resetResult.fileCount,
         blockCollectionIds,
         libraryContentSources,

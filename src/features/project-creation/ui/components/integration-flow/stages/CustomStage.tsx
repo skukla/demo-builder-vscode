@@ -1,8 +1,8 @@
 /**
  * CustomStage — the Add Integration flow's custom GitHub-URL stage (`'source-custom'`).
  *
- * Presentational relocation of the old CustomIntegrationRow's URL-form core: a single
- * TextField whose validity feeds the modal footer via `onSourceChange` — a valid,
+ * The shared `GitHubLinkField` with this flow's words, whose validity feeds the modal
+ * footer via `onSourceChange` — a valid,
  * not-yet-added repo emits the parsed `{owner, repo}`; anything else emits `undefined`
  * (with an inline message for invalid/duplicate input). There is NO Add button here —
  * the footer's Continue commits; this stage only maintains validity.
@@ -10,10 +10,9 @@
  * @module features/project-creation/ui/components/integration-flow/stages/CustomStage
  */
 
-import { TextField } from '@adobe/react-spectrum';
-import React, { useState } from 'react';
+import React from 'react';
 import { OptionalNameField } from '../OptionalNameField';
-import { parseGitHubUrl } from '@/core/utils/githubUrlParser';
+import { GitHubLinkField } from '@/core/ui/components/forms/GitHubLinkField';
 
 /** A parsed custom-integration source. */
 export interface CustomSource {
@@ -37,21 +36,6 @@ export interface CustomStageProps {
 const INVALID_MESSAGE = 'Enter a public GitHub repository URL (https://github.com/owner/repo).';
 const DUPLICATE_MESSAGE = 'This integration is already added.';
 
-/** Evaluate a raw URL against the parser + duplicate guard. */
-function evaluateUrl(
-    raw: string,
-    selectedIds: string[],
-): { source?: CustomSource; message?: string } {
-    const trimmed = raw.trim();
-    if (trimmed === '') return {};
-    const parsed = parseGitHubUrl(trimmed);
-    if (!parsed) return { message: INVALID_MESSAGE };
-    if (selectedIds.includes(`${parsed.owner}-${parsed.repo}`)) {
-        return { message: DUPLICATE_MESSAGE };
-    }
-    return { source: { owner: parsed.owner, repo: parsed.repo } };
-}
-
 /**
  * The custom-source stage body.
  *
@@ -65,27 +49,19 @@ export function CustomStage({
     label,
     onLabelChange,
 }: CustomStageProps): React.ReactElement {
-    const [url, setUrl] = useState(() =>
-        source ? `https://github.com/${source.owner}/${source.repo}` : '',
-    );
-    const { message } = evaluateUrl(url, selectedIds);
-    const handleChange = (next: string): void => {
-        setUrl(next);
-        onSourceChange(evaluateUrl(next, selectedIds).source);
-    };
     return (
         <div className="intflow-custom">
             <p className="intflow-stage-lead">
                 Add your own custom integration from a public GitHub repository.
             </p>
-            <TextField
+            <GitHubLinkField
                 label="GitHub URL"
                 placeholder="https://github.com/owner/repo"
-                value={url}
-                onChange={handleChange}
-                validationState={message ? 'invalid' : undefined}
-                errorMessage={message}
-                width="100%"
+                invalidMessage={INVALID_MESSAGE}
+                duplicateMessage={DUPLICATE_MESSAGE}
+                isDuplicate={(parsed) => selectedIds.includes(`${parsed.owner}-${parsed.repo}`)}
+                source={source}
+                onSourceChange={onSourceChange}
             />
             {/* Always on screen, disabled until the URL names a repo — same reason as
                 the catalog stage: a field appearing mid-step grew the dialog. */}

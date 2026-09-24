@@ -116,7 +116,7 @@ function makeConfig(overrides = {}) {
         repoUrl: 'https://github.com/test-owner/test-repo',
         daLiveOrg: 'test-org',
         daLiveSite: 'test-site',
-        contentSource: { org: 'source-org', site: 'source-site' },
+        contentSource: { org: 'source-org', site: 'source-site', indexPath: '/full-index.json' },
         ...overrides,
     };
 }

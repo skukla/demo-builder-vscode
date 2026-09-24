@@ -252,7 +252,7 @@ describe('surfacing the store-detection wait', () => {
         // message alone cannot tell the two treatments apart.
         expect(
             within(screen.getByTestId('centered-feedback')).getByTestId('loading-display')
-        ).toHaveTextContent('Detecting store structure...');
+        ).toHaveTextContent('Detecting store structure');
     });
 });
 

@@ -210,6 +210,46 @@ describe('executeEdsReset - error mapping', () => {
     });
 });
 
+describe('executeEdsReset - an added demo', () => {
+    it("carries the repo reset's caveats into the result", async () => {
+        mockResetRepoToTemplate.mockResolvedValue({
+            ...REPO_RESULT,
+            demoCaveats: ['Product links may not work.'],
+        });
+
+        const { result } = await runReset();
+
+        expect(result.success).toBe(true);
+        expect(result.demoCaveats).toEqual(['Product links may not work.']);
+    });
+
+    it('carries no caveats key when the repo reset had none', async () => {
+        const { result } = await runReset();
+
+        expect('demoCaveats' in result).toBe(false);
+    });
+
+    it('keeps the current content when asked: the pipeline neither clears nor copies pages', async () => {
+        await runReset({ keepContent: true, contentSource: { org: 'jen', site: 'isle5-content' } });
+
+        expect(mockExecuteEdsPipeline).toHaveBeenCalledWith(
+            expect.objectContaining({ clearExistingContent: false, skipContent: true }),
+            expect.anything(),
+            expect.anything(),
+        );
+    });
+
+    it('clears and copies content by default', async () => {
+        await runReset({ contentSource: { org: 'jen', site: 'isle5-content' } });
+
+        expect(mockExecuteEdsPipeline).toHaveBeenCalledWith(
+            expect.objectContaining({ clearExistingContent: true, skipContent: false }),
+            expect.anything(),
+            expect.anything(),
+        );
+    });
+});
+
 describe('executeEdsReset - the synced commit record', () => {
     // What "Check for Updates" compares against. Reset replaces the repository with
     // a revision of the template, so the record has to move with it.

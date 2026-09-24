@@ -89,9 +89,9 @@ describe('performComponentUpdates', () => {
         expect(updateComponent).toHaveBeenCalledTimes(2);
         expect(ctx.stateManager.saveProject).toHaveBeenCalledTimes(1);
         expect(ctx.stateManager.saveProject).toHaveBeenCalledWith(project);
-        expect(report).toHaveBeenNthCalledWith(1, { message: 'api-mesh in demo…', increment: 50 });
+        expect(report).toHaveBeenNthCalledWith(1, { message: 'api-mesh in demo', increment: 50 });
         expect(report).toHaveBeenNthCalledWith(2, {
-            message: 'eds-storefront in demo…',
+            message: 'eds-storefront in demo',
             increment: 50,
         });
     });
@@ -149,7 +149,7 @@ describe('performComponentUpdates', () => {
 
         expect(updateComponent).toHaveBeenCalledTimes(1);
         expect(updateComponent).toHaveBeenCalledWith(idle, 'api-mesh', RELEASE.downloadUrl, '2.0.0');
-        expect(report).toHaveBeenCalledWith({ message: 'api-mesh in b…', increment: 100 });
+        expect(report).toHaveBeenCalledWith({ message: 'api-mesh in b', increment: 100 });
     });
 
     it('all succeed: no warning summary', async () => {

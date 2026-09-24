@@ -290,6 +290,16 @@ check says so and names the file.
 > this repository is public.
 > Enforced by `tests/sop/credential-sink-settings-scoped.test.ts`.
 
+> **Convention.** Whoever names a content site names its index path. The catalog, the
+> project row and a description file all state where a site lists its pages; every reader
+> (the copy step, the import path, the reset door) takes the stated path from `contentIndex.ts`
+> and none guesses one. Only the Add a demo package probe looks a path up, for a repository that names
+> a site with no path, and it records what it found.
+> *Why:* the shipped brands publish their index under two different names. When readers each
+> spelled a default, a demo built from one brand read as "no published pages" in the probe while
+> the copy step knew better — found live, 2026-09-12.
+> Enforced by `tests/sop/content-index-path.test.ts`.
+
 ## 5. What survives between calls
 
 **Position.** Anything cached exists once per session, is built on first use, and can be
@@ -981,6 +991,16 @@ check says so and names the file.
 > every class exists goes blind.
 > Enforced by the `dynamicClassSiteCeiling` ledger in
 > `tests/sop/webview-architecture-rules.exemptions.json`.
+
+> **Convention.** Text never ends in an ellipsis. A progress message says what is
+> happening — "Saving the demo package", not "Saving the demo package…" — and a button
+> that opens a picker says what it opens.
+> *Why:* house style (owner, 2026-09-14). Before the rule, about 470 strings across 160
+> files ended in `...` or `…`, in two spellings, and new work kept copying them. An
+> ellipsis that carries meaning stays: one marking a value that was cut
+> (`${text.slice(0, 80)}…`), syntax between two values (`${base}...${head}`), and "and
+> so on" mid-sentence.
+> Enforced by `tests/sop/no-trailing-ellipsis.test.ts`.
 
 ## 8. Agents are a second door, never the only one
 
@@ -1710,11 +1730,11 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 25 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 56 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 58 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 124 conventions. 123 of them are enforced; 1 is not.**
+**This handbook states 126 conventions. 125 of them are enforced; 1 is not.**
 
 The last one to get there was "vendor CSS sits in the lowest cascade layer", and it was
 outstanding because it was **not yet true**: `@layer vendor` existed in no bundle, so a

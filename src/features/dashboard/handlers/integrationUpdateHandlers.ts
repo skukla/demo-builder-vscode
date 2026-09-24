@@ -97,7 +97,7 @@ function nameOf(project: Project, id: string): string {
 
 /** Update one component, telegraphing its row. */
 async function updateOne(project: Project, id: string, deps: AppBuilderComponentRunnerDeps): Promise<UpdateResult> {
-    await postRowStatus(id, 'deploying', 'Updating…');
+    await postRowStatus(id, 'deploying', 'Updating');
     const result = await updateAppBuilderComponent(project, id, deps);
     if (result.success) {
         await postRowStatus(id, 'deployed');

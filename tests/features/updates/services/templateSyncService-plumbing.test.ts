@@ -353,6 +353,31 @@ describe('reset strategy — the exact git conversation', () => {
         expect(result).toEqual({ success: true, strategy: 'reset', syncedCommit: TEMPLATE_HEAD });
     });
 
+    it("rewrites the named branch from the template's named branch, fetched into template/main", async () => {
+        dirtyTree();
+
+        const result = await service().resetRepository(
+            {
+                repoOwner: 'skukla',
+                repoName: 'demo-storefront',
+                templateOwner: 'jen',
+                templateRepo: 'isle5-demo',
+                repoBranch: 'trunk',
+                templateBranch: 'demo-2026',
+            },
+            [],
+            'chore: start from the demo',
+        );
+
+        const calls = gitCalls();
+        expect(calls[0]).toMatch(/^git clone --depth 1 --branch trunk "/);
+        expect(calls).toContain('git fetch template demo-2026:refs/remotes/template/main');
+        expect(calls).toContain('git read-tree --reset -u template/main');
+        expect(calls).toContain('git commit -m "chore: start from the demo"');
+        expect(calls).toContain('git push origin trunk --force');
+        expect(result).toEqual({ success: true, strategy: 'reset', syncedCommit: TEMPLATE_HEAD });
+    });
+
     it('does not commit when the tree already matches the template', async () => {
         answer(/git status --porcelain/, '\n');
 

@@ -58,8 +58,6 @@ export interface UseDashboardActionsReturn {
     /** Open Adobe Developer Console */
     handleOpenDevConsole: () => void;
     /** Delete the project */
-    /** Export the project's settings to a file */
-    handleExportProject: () => void;
     /** Republish DA.live content to CDN (EDS projects only) */
     /** Navigate back to projects list */
     handleNavigateBack: () => void;
@@ -140,10 +138,6 @@ export function useDashboardActions({
         webviewClient.postMessage('openDevConsole');
     }, []);
 
-    const handleExportProject = useCallback(() => {
-        webviewClient.postMessage('exportProject');
-    }, []);
-
     const handleNavigateBack = useCallback(() => {
         webviewClient.postMessage('navigateBack');
     }, []);
@@ -171,7 +165,6 @@ export function useDashboardActions({
         handleConfigure,
         handleEditProject,
         handleOpenDevConsole,
-        handleExportProject,
         handleNavigateBack,
         handleReAuthenticate,
         handleSwitchOrg,

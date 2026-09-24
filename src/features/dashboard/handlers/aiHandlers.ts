@@ -183,7 +183,7 @@ export async function handleRegenerateAiFiles(context: HandlerContext): Promise<
         return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
     }
 
-    context.logger.info('[AI Verify] Regenerating AI files…');
+    context.logger.info('[AI Verify] Regenerating AI files');
 
     // Reuse the wizard's `creationProgress` channel so the AI Capabilities modal
     // can render per-step LoadingDisplay instead of a static spinner. Steps:
@@ -226,7 +226,7 @@ export async function handleRegenerateAiFiles(context: HandlerContext): Promise<
         const packages = applicableMcpPackages(project);
         // No duration claim — the first install is minutes, later runs are
         // seconds, and npm's own streamed lines are the honest signal.
-        emit('Downloading AI tool packages', `Fetching ${packages.join(', ')}…`);
+        emit('Downloading AI tool packages', `Fetching ${packages.join(', ')}`);
         // MCP tools install into the per-project isolated dir (keyed to
         // project.path), decoupled from the storefront manifest.
         const installResult = await installAiDefaultsMcpTools(

@@ -278,7 +278,7 @@ export function ManageApisModal({
                     closeLabel="Cancel"
                     actionButtons={[
                         {
-                            label: isApplying ? 'Applying…' : 'Apply',
+                            label: isApplying ? 'Applying' : 'Apply',
                             variant: 'accent',
                             onPress: () => {
                                 void handleApply();

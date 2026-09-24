@@ -24,11 +24,17 @@ jest.mock('fs', () => ({
     realpathSync: jest.fn((p: string) => p),
 }));
 
-export const mockImportSettingsFromFile = jest.fn();
+export const mockPickImportFile = jest.fn();
+export const mockImportSettingsFromUri = jest.fn();
 export const mockCopySettingsFromProject = jest.fn();
+export const mockImportDemoBundle = jest.fn();
+jest.mock('@/features/eds/handlers/importStorefrontZipHandler', () => ({
+    importDemoBundle: (...args: unknown[]) => mockImportDemoBundle(...args),
+}));
 export const mockExportProjectSettings = jest.fn();
 jest.mock('@/features/projects-dashboard/services/settingsTransferService', () => ({
-    importSettingsFromFile: (...args: unknown[]) => mockImportSettingsFromFile(...args),
+    pickImportFile: (...args: unknown[]) => mockPickImportFile(...args),
+    importSettingsFromUri: (...args: unknown[]) => mockImportSettingsFromUri(...args),
     copySettingsFromProject: (...args: unknown[]) => mockCopySettingsFromProject(...args),
     exportProjectSettings: (...args: unknown[]) => mockExportProjectSettings(...args),
 }));

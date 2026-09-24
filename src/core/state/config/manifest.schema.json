@@ -167,6 +167,10 @@
         "selectedPackage": {
           "type": "string"
         },
+        "demo": {
+          "$ref": "#/definitions/AddedDemo",
+          "description": "The storefront row for a project built on an added demo (D2): the demo's description and its repository. Read before the catalog by `resolveStorefrontForProject`; absent for a project on a shipped brand."
+        },
         "datapack": {
           "type": "object",
           "properties": {
@@ -831,6 +835,184 @@
         "system"
       ],
       "description": "An App Builder component's kind: a mesh artifact, an App Builder integration, or a SYSTEM — a stand-in for an external system an integration talks to (the demo ERP). A system is a plain App Builder app with no Commerce install; it never gets a card of its own and comes and goes with the integration it is bound to (`AppBuilderComponentCatalogEntry.boundTo`; decision 13, 2026-09-14)."
+    },
+    "AddedDemo": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Display name for the package"
+        },
+        "configFlags": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "boolean"
+          },
+          "description": "Storefront config.json public flags injected for this package (e.g., commerce-b2b-enabled). Merged into config.public.default by the config generator — data-driven, mirrors addon configFlags."
+        },
+        "requiresMesh": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string",
+              "const": "optional"
+            }
+          ],
+          "description": "API Mesh requirement for this package.\n- true: mesh auto-included, no user choice\n- false (default): no mesh, no user choice\n- 'optional': mesh toggle shown, user decides"
+        },
+        "datapack": {
+          "$ref": "#/definitions/DatapackReference",
+          "description": "The datapack this demo expects (D26). The Sample Data step pre-selects it and says why; the SC can change it. Optional: shipped brands may leave the choice open."
+        },
+        "integrations": {
+          "$ref": "#/definitions/DemoIntegrations",
+          "description": "Integrations this demo depends on (D29). The Integrations area starts with them added; the SC can remove any. The same field a shared-demo description file carries, so the catalog and the slice cannot drift."
+        },
+        "kind": {
+          "type": "string",
+          "const": "demo"
+        },
+        "version": {
+          "type": "number"
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional here and below; `DemoPackage` requires them because a shipped brand always has a card and store codes."
+        },
+        "configDefaults": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Default configuration values (env var name to value) - embedded brand data"
+        },
+        "blockLibraries": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "contentSource": {
+          "$ref": "#/definitions/DaLiveContentSource"
+        },
+        "source": {
+          "type": "object",
+          "properties": {
+            "owner": {
+              "type": "string"
+            },
+            "repo": {
+              "type": "string"
+            },
+            "branch": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "owner",
+            "repo"
+          ]
+        },
+        "storefrontKind": {
+          "$ref": "#/definitions/StorefrontKind",
+          "description": "Read from the repository when the demo was added, never from the description file."
+        }
+      },
+      "required": [
+        "kind",
+        "name",
+        "source",
+        "storefrontKind",
+        "version"
+      ],
+      "description": "The stored storefront row for a project built on an added demo (D2): the slice plus where it came from and what kind it is. Every post-creation lookup resolves this before the catalog."
+    },
+    "DatapackReference": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "description": "A datapack a demo expects (D26). `version` absent means the catalog's default rule."
+    },
+    "DemoIntegrations": {
+      "type": "object",
+      "properties": {
+        "catalog": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "custom": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/CustomIntegrationSource"
+          }
+        }
+      },
+      "description": "Integrations a demo depends on (D29): catalog ids, and custom apps by link."
+    },
+    "CustomIntegrationSource": {
+      "type": "object",
+      "properties": {
+        "owner": {
+          "type": "string"
+        },
+        "repo": {
+          "type": "string"
+        },
+        "branch": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "owner",
+        "repo"
+      ],
+      "description": "A custom App Builder app by GitHub coordinates, the `appBuilderComponentSources` shape."
+    },
+    "DaLiveContentSource": {
+      "type": "object",
+      "properties": {
+        "org": {
+          "type": "string",
+          "description": "DA.live organization name"
+        },
+        "site": {
+          "type": "string",
+          "description": "DA.live site name"
+        },
+        "indexPath": {
+          "type": "string",
+          "description": "Where the site lists its pages. Required: whoever names a content site names its index path (the catalog, the project row, a description file); only the Add a demo package probe looks one up, for a repository that names no site of its own, and records what it found. `contentIndex.ts` builds the URL every reader uses."
+        }
+      },
+      "required": [
+        "org",
+        "site",
+        "indexPath"
+      ]
+    },
+    "StorefrontKind": {
+      "type": "string",
+      "enum": [
+        "eds",
+        "headless"
+      ],
+      "description": "The two kinds of storefront a repository can hold."
     },
     "CustomBlockLibrary": {
       "type": "object",

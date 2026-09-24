@@ -57,7 +57,7 @@ export async function detachErpWrites(
     if (!deriveErpActionUrl(deployedUrls, 'detach')) {
         return { status: 'skipped' };
     }
-    deps.onProgress?.("Undoing the ERP's changes in Commerce…");
+    deps.onProgress?.("Undoing the ERP's changes in Commerce");
     const auth = await deps.getAuth();
     if (!auth) {
         return {

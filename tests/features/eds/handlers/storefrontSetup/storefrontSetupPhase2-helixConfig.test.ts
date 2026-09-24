@@ -169,19 +169,19 @@ describe('executePhaseHelixConfig — progress', () => {
         expect(progressPushes(sendMessage)).toEqual([
             {
                 phase: 'storefront-code',
-                message: 'Configuring Edge Delivery Services...',
+                message: 'Configuring Edge Delivery Services',
                 subMessage: 'acme/shop',
                 progress: 20,
             },
             {
                 phase: 'storefront-code',
-                message: 'Connecting content source...',
+                message: 'Connecting content source',
                 subMessage: 'fstab.yaml → acme/shop',
                 progress: 25,
             },
             {
                 phase: 'storefront-code',
-                message: 'Preparing inspector tagging...',
+                message: 'Preparing inspector tagging',
                 progress: 27,
             },
             {

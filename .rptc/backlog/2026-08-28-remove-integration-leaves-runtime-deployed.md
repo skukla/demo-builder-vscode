@@ -4,7 +4,7 @@ kind: fix
 area: app-builder
 needs: []
 value: high
-status: built
+status: shipped
 ---
 
 # remove_integration reports success while leaving deployed code running

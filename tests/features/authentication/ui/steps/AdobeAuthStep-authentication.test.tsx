@@ -118,7 +118,7 @@ describe('AdobeAuthStep - Authentication Flow', () => {
             renderStep(state);
 
             expect(screen.getByTestId('loading-display')).toBeInTheDocument();
-            expect(screen.getByText('Connecting to Adobe services...')).toBeInTheDocument();
+            expect(screen.getByText('Connecting to Adobe services')).toBeInTheDocument();
         });
 
         it('shows loading when there is no verdict yet, even with no check in flight', () => {
@@ -329,7 +329,7 @@ describe('AdobeAuthStep - Authentication Flow', () => {
             });
         });
 
-        it('should not display "Opening browser..." at any point during login flow', async () => {
+        it('should not display "Opening browser" at any point during login flow', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const state = {
                 ...baseState,

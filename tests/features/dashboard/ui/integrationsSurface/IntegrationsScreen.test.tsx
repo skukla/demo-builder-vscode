@@ -387,7 +387,7 @@ describe('IntegrationsScreen', () => {
                 });
             });
 
-            expect(screen.getByTestId('card-erp-sync')).toHaveTextContent('Deploying…');
+            expect(screen.getByTestId('card-erp-sync')).toHaveTextContent('Deploying');
             expect(screen.getByTestId('card-other-app')).toHaveTextContent('Deployed');
         });
 

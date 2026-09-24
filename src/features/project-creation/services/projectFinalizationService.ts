@@ -35,7 +35,7 @@ export async function generateEnvironmentFiles(context: FinalizationContext): Pr
     const { project, logger } = setupContext;
 
     progressTracker('Configuring Environment', 85, 'Generating environment files');
-    logger.debug('[Project Creation] Phase 4: Generating environment configuration...');
+    logger.debug('[Project Creation] Phase 4: Generating environment configuration');
 
     // Generate all config files for all non-mesh components
     // (treats .env and site.json as peers - all just "config files in different formats")

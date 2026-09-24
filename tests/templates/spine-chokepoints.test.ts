@@ -380,4 +380,24 @@ describe('spine choke-points', () => {
         expect(killHits).toEqual(expect.arrayContaining(killSpine));
         expect(killHits.filter((f) => !killSpine.includes(f))).toStrictEqual([]);
     });
+
+    it('storefront LOOKUP: the bundled catalog is read by the loader and the resolver only', () => {
+        // Audited 2026-09-12 (shareable-demo step 01): "what storefront is this
+        // project on" is answered by resolveStorefrontForProject, which reads
+        // the project's own row before the catalog. Six readers used to import
+        // the catalog JSON and look the package up by selectedPackage
+        // themselves; a project built on a colleague's demo would have been
+        // invisible to each of them. The primitive is the catalog module
+        // itself: import it anywhere else and the row is bypassed again.
+        const primitive = /demo-packages\.json['"]\)?;?$/;
+        const spine = [
+            'features/components/services/demoPackageLoader.ts',
+            'features/components/services/storefrontResolver.ts',
+        ];
+
+        const hits = filesTouchingPrimitive(primitive);
+
+        expect(hits).toEqual(expect.arrayContaining(spine));
+        expect(hits.filter((f) => !spine.includes(f))).toStrictEqual([]);
+    });
 });

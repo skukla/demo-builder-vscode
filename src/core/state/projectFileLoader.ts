@@ -28,11 +28,17 @@ import { getComponentInstancesByType, parseJSON } from '@/types/typeGuards';
  * the load boundary, and the current id is rewritten on the next save. Add a
  * line whenever a package id is retired/renamed; never remove lines.
  *
- * - `b2b` → `custom`        : the B2B boilerplate became the unbranded hybrid
+ * Flat, not chained: every retired id names the CURRENT id, so a second rename
+ * updates the old rows rather than adding a hop.
+ *
+ * - `b2b` → `starter`       : the B2B boilerplate became the unbranded hybrid
+ * - `custom` → `starter`    : renamed 2026-09-12; "Custom" read as make-it-yourself
+ *                             beside the "Add a demo package" card, and named the mechanism
  * - `citisignal-b2b` → `citisignal` : merged into the hybrid citisignal package
  */
 const RENAMED_PACKAGE_IDS: Readonly<Record<string, string>> = {
-    b2b: 'custom',
+    b2b: 'starter',
+    custom: 'starter',
     'citisignal-b2b': 'citisignal',
 };
 
@@ -87,6 +93,7 @@ export interface ProjectManifest {
     edsStorefrontState?: Project['edsStorefrontState'];
     edsStorefrontStatusSummary?: Project['edsStorefrontStatusSummary'];
     selectedPackage?: string;
+    demo?: Project['demo'];
     datapack?: { name: string; version: string };
     selectedStack?: string;
     selectedAddons?: string[];
@@ -184,6 +191,7 @@ export class ProjectFileLoader {
                 edsStorefrontState: manifest.edsStorefrontState,
                 edsStorefrontStatusSummary: manifest.edsStorefrontStatusSummary,
                 selectedPackage: normalizePackageId(manifest.selectedPackage),
+                demo: manifest.demo,
                 datapack: manifest.datapack,
                 selectedStack: manifest.selectedStack,
                 selectedAddons: manifest.selectedAddons,

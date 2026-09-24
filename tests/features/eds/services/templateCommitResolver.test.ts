@@ -90,6 +90,19 @@ describe('resolveTemplateCommitSha', () => {
         expect(getLatestCommitSha).toHaveBeenCalledWith('tpl-owner', 'tpl-repo', 'main');
     });
 
+    it("answers the head of the source's own branch when one is named", async () => {
+        const { github, getLatestCommitSha } = githubWithHead(async () => HEAD_SHA);
+
+        const sha = await resolveTemplateCommitSha(
+            { templateOwner: 'jen', templateRepo: 'isle5-demo', templateBranch: 'demo-2026' },
+            github,
+            createMockLogger(),
+        );
+
+        expect(sha).toBe(HEAD_SHA);
+        expect(getLatestCommitSha).toHaveBeenCalledWith('jen', 'isle5-demo', 'demo-2026');
+    });
+
     it('answers nothing when the template branch does not exist', async () => {
         const { github } = githubWithHead(async () => null);
 

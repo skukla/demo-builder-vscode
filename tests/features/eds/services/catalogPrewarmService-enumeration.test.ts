@@ -80,7 +80,7 @@ describe('catalog enumeration — the request it sends', () => {
 
         expect(onProgress).toHaveBeenCalledWith({
             operation: 'catalog-prewarm',
-            message: 'Enumerating catalog...',
+            message: 'Enumerating catalog',
         });
     });
 });

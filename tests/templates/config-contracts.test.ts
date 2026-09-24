@@ -40,7 +40,14 @@ function findSchemaFiles(dir: string, out: string[] = []): string[] {
  * .demo-builder.json files at load time (manifestValidation.ts); its
  * freshness is pinned by manifest-schema-freshness.test.ts.
  */
-const NO_SIBLING_DATA = new Set(['core/state/config/manifest.schema.json']);
+const NO_SIBLING_DATA = new Set([
+    'core/state/config/manifest.schema.json',
+    // The exported project file and the shared-demo description file are
+    // user files too (program plan step 01); generated from their types and
+    // pinned fresh by the same freshness suite.
+    'core/state/config/project-file.schema.json',
+    'core/state/config/shared-demo.schema.json',
+]);
 
 const schemaFiles = findSchemaFiles(SRC_ROOT).filter(
     (f) => !NO_SIBLING_DATA.has(path.relative(SRC_ROOT, f))

@@ -2,7 +2,7 @@
  * Every tool has words, and they were written rather than derived.
  *
  * WHY THIS EXISTS. Narration used to be built from the tool's name, so the chat
- * announced "Deploy mesh…" (a button label) above "Deploying…" (a status line),
+ * announced "Deploy mesh…" (a button label) above "Deploying" (a status line),
  * and about ten tools got phrases that were not English: "Set project pinned…",
  * "Set console APIs…", "Republish…" — republish what?
  *

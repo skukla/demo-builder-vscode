@@ -158,23 +158,6 @@ export const handleResetProject: MessageHandler<ResetProjectPayload> = narrateOu
 );
 
 /**
- * Handle 'exportProject' message - Export the current project's settings to a file
- *
- * Reuses the shared exportProjectSettings service (same one the kebab uses).
- */
-export const handleExportProject: MessageHandler = async (context) => {
-    const project = await context.stateManager.getCurrentProject();
-    if (!project) {
-        return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
-    }
-
-    const { exportProjectSettings } = await import(
-        '@/features/projects-dashboard/services/settingsTransferService'
-    );
-    return exportProjectSettings(context, project);
-};
-
-/**
  * Handle 'renameProject' message - Rename the current project
  *
  * Resolves the project via getCurrentProject() (the {newName} payload is the

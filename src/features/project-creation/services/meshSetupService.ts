@@ -191,7 +191,7 @@ export async function deployNewMesh(
 
     // Generate mesh .env BEFORE deployment (mesh needs commerce URLs from .env)
     progressTracker('Configuring API Mesh', 70, 'Generating mesh configuration');
-    logger.info('[Project Creation] Phase 3: Configuring and deploying API Mesh...');
+    logger.info('[Project Creation] Phase 3: Configuring and deploying API Mesh');
 
     await generateComponentEnvFile(
         meshComponent.path,
@@ -305,7 +305,7 @@ export async function deployNewMesh(
                     message: 'Mesh deployment failed',
                 });
 
-                logger.debug('[Project Creation] Waiting for user decision (retry or cancel)...');
+                logger.debug('[Project Creation] Waiting for user decision (retry or cancel)');
                 const decision = await waitForMeshDecision();
 
                 if (decision === 'cancel') {
@@ -351,7 +351,7 @@ export async function linkExistingMesh(
     const meshComponentId = getMeshComponentId(project);
 
     progressTracker('Configuring API Mesh', 75, 'Updating existing mesh configuration');
-    logger.info('[Project Creation] Phase 3: Configuring and deploying API Mesh...');
+    logger.info('[Project Creation] Phase 3: Configuring and deploying API Mesh');
 
     // Generate mesh .env file (needed for deployment)
     if (meshComponent?.path && meshDefinition && meshComponentId) {
@@ -366,7 +366,7 @@ export async function linkExistingMesh(
         // CRITICAL: Deploy/update the mesh with the configuration from the cloned repository
         // Even if a mesh exists in the workspace, we need to update it with our mesh.json
         // This ensures the mesh has the correct schema (e.g., CATALOG_SERVICE_ENDPOINT vs ADOBE_CATALOG_SERVICE_ENDPOINT)
-        logger.debug('[Mesh Setup] Deploying mesh configuration to Adobe I/O...');
+        logger.debug('[Mesh Setup] Deploying mesh configuration to Adobe I/O');
         
         const meshDeployResult = await deployMeshComponent(
             meshComponent.path,

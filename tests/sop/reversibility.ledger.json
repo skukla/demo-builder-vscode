@@ -15,6 +15,10 @@
             "reverses": "remove_integration"
         },
         {
+            "tool": "add_shared_demo",
+            "reverses": "forget_added_demo"
+        },
+        {
             "tool": "create_adobe_project",
             "reverses": "delete_adobe_project"
         },

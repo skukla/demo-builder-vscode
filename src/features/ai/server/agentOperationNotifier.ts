@@ -29,6 +29,7 @@
 
 import * as vscode from 'vscode';
 import { alertCopyFor } from './agentAlertCopy';
+import { agentNotice } from './agentNotice';
 import { outcomeOf, type AgentOutcome } from './agentOutcome';
 import { buildConsentPrompt } from './consentText';
 import type { ConsentVerdict } from './inExtensionMcpServer';
@@ -150,7 +151,7 @@ export function createAgentConsentGate(
         // window, this await was a silent indefinite hang — the tool's args line
         // was the last log anywhere, and the hang site took a live bisection to
         // find (AI-5, 2026-08-27).
-        logger.info(`[MCP] ${toolName} awaiting the user consent dialog in the VS Code window…`);
+        logger.info(`[MCP] ${toolName} awaiting the user consent dialog in the VS Code window`);
         // The dialog cannot be closed programmatically, so an unanswered one
         // resolves as a timeout refusal rather than blocking the agent forever.
         // A click that comes after the timer fires grants nothing — the call
@@ -159,7 +160,7 @@ export function createAgentConsentGate(
         let timedOut = false;
         const choice = await Promise.race([
             vscode.window.showWarningMessage(
-                prompt?.title ?? `Demo Builder: ${toolName}?`,
+                prompt?.title ?? `${agentNotice(toolName)}?`,
                 { modal: true, detail: prompt?.detail || undefined },
                 ...buttons,
             ),
@@ -206,8 +207,10 @@ export function createAgentConsentGate(
     };
 }
 
-/** A phase's own "…" or "...": the notification's spinner already says it is working. */
-const TRAILING_ELLIPSIS = /\s*(…|\.\.\.)$/;
+/** A phase line for the card: the services' trailing ellipsis removed, the step counter kept. */
+export function phaseLine(message: string): string {
+    return message.replace(/(?:\.{3}|…)(\s*\(\d+\/\d+\))?$/, '$1').trimEnd();
+}
 
 /**
  * Land a returned call's outcome in the window. Only a clean finish is quiet: a
@@ -220,11 +223,11 @@ function landOutcome(title: string, toolName: string, outcome: AgentOutcome, log
         return;
     }
     if (outcome.kind === 'needsUser') {
-        void vscode.window.showWarningMessage(`Demo Builder — ${title} is waiting on you: ${outcome.text}.`);
+        void vscode.window.showWarningMessage(`${agentNotice(title)} is waiting on you: ${outcome.text}.`);
         return;
     }
     logger.warn(`[MCP] agent operation ${toolName} answered a failure: ${outcome.text}`);
-    void vscode.window.showWarningMessage(`Demo Builder — ${title} failed: ${outcome.text}`);
+    void vscode.window.showWarningMessage(`${agentNotice(title)} failed: ${outcome.text}`);
 }
 
 /**
@@ -252,7 +255,7 @@ export function createAgentOperationNotifier(
                     // on the card ("Source: Adobe Demo Builder"). No colon and no
                     // ellipsis: VS Code renders `title: message` itself, so either
                     // one here doubled it (owner, 2026-09-16 and 2026-09-19).
-                    title: `Agent · ${label(toolName, args)}`,
+                    title: agentNotice(label(toolName, args)),
                     cancellable: false,
                 },
                 async (progress) => {
@@ -262,7 +265,7 @@ export function createAgentOperationNotifier(
                         // took nothing, so the notification could only ever show
                         // the tool's title while the phases went nowhere.
                         const result = await run((message) =>
-                            progress.report({ message: message.replace(TRAILING_ELLIPSIS, '') }),
+                            progress.report({ message: phaseLine(message) }),
                         );
                         landOutcome(label(toolName, args), toolName, outcomeOf(result), logger);
                         return result;
@@ -272,7 +275,7 @@ export function createAgentOperationNotifier(
                         // A toast, not a status-bar flash: a failed live-site
                         // mutation is the one outcome the user must not miss.
                         void vscode.window.showWarningMessage(
-                            `Demo Builder — ${label(toolName, args)} failed: ${message}`,
+                            `${agentNotice(label(toolName, args))} failed: ${message}`,
                         );
                         throw error;
                     }

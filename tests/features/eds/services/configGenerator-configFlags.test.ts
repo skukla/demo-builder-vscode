@@ -145,7 +145,7 @@ describe("configGenerator — flags, escaping & params", () => {
         // hybrids and declare the flags in demo-packages.json (configFlags):
         // B2C customers still get the standard view, B2B customers the company nav.
         it.each<[string, string]>([
-            ['custom, the unbranded hybrid', 'custom'],
+            ['starter, the unbranded hybrid', 'starter'],
             ['citisignal, the hybrid on the b2b boilerplate template', 'citisignal'],
         ])('injects the B2B flags for %s', (_label, selectedPackage) => {
             const result = generateConfigJson({ ...baseParams, selectedPackage }, mockLogger);
@@ -183,21 +183,21 @@ describe("configGenerator — flags, escaping & params", () => {
 
         it('extractConfigParams threads selectedPackage from the project (reset path)', () => {
             const project = createMockProject({
-                selectedPackage: 'custom',
+                selectedPackage: 'starter',
                 componentConfigs: {},
                 componentSelections: { backend: 'adobe-commerce-paas' },
             });
 
             const params = extractConfigParams(project);
 
-            expect(params.selectedPackage).toBe('custom');
+            expect(params.selectedPackage).toBe('starter');
         });
     });
 
     describe('buildConfigGeneratorParams', () => {
         function projectWithEdsMetadata(overrides: Record<string, unknown> = {}): Project {
             return createMockProject({
-                selectedPackage: 'custom',
+                selectedPackage: 'starter',
                 componentConfigs: {},
                 componentSelections: { backend: 'adobe-commerce-paas' },
                 componentInstances: {
@@ -225,7 +225,7 @@ describe("configGenerator — flags, escaping & params", () => {
             expect(params.daLiveOrg).toBe('acme-da-org');
             expect(params.daLiveSite).toBe('acme-da-site');
             // Threaded from extractConfigParams (proves the spread happened)
-            expect(params.selectedPackage).toBe('custom');
+            expect(params.selectedPackage).toBe('starter');
             expect(params.environmentType).toBe('paas');
         });
 

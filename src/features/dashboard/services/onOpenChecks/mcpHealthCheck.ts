@@ -40,7 +40,7 @@ export interface McpHealthCheckData {
     missing?: string[];
 }
 
-const HEALING_MESSAGE = 'Updating AI configuration…';
+const HEALING_MESSAGE = 'Updating AI configuration';
 const RETRY_HINT = 'AI configuration update failed — retry from View AI Capabilities';
 
 /**

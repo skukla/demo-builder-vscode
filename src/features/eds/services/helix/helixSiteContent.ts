@@ -203,7 +203,7 @@ export class HelixSiteContent {
 
         // 202 = Bulk preview scheduled (async job created)
         if (response.status === 202) {
-            this.logger.debug('[Helix] Bulk preview job created, polling for completion...');
+            this.logger.debug('[Helix] Bulk preview job created, polling for completion');
 
             const { jobName, jobTopic } = await parseBulkJobResponse(
                 response,
@@ -317,7 +317,7 @@ export class HelixSiteContent {
 
         // 202 = Bulk publish scheduled (async job created)
         if (response.status === 202) {
-            this.logger.debug('[Helix] Bulk publish job created, polling for completion...');
+            this.logger.debug('[Helix] Bulk publish job created, polling for completion');
 
             const { jobName, jobTopic } = await parseBulkJobResponse(response, 'live', this.logger);
 
@@ -455,7 +455,7 @@ export class HelixSiteContent {
         // Report: Discovering content (still needed to get page count for progress)
         onProgress?.({
             phase: SITE_PUBLISH_PHASES.DISCOVERING,
-            message: 'Discovering content to publish...',
+            message: 'Discovering content to publish',
         });
 
         // List all publishable pages from DA.live to get count for progress reporting
@@ -500,7 +500,7 @@ export class HelixSiteContent {
         // Phase 1: Bulk preview (sync from DA.live to preview CDN)
         onProgress?.({
             phase: SITE_PUBLISH_PHASES.PUBLISHING,
-            message: 'Previewing all content...',
+            message: 'Previewing all content',
             current: 0,
             total: pages.length,
         });
@@ -525,7 +525,7 @@ export class HelixSiteContent {
         // Phase 2: Bulk publish (sync from preview to live CDN)
         onProgress?.({
             phase: SITE_PUBLISH_PHASES.PUBLISHING,
-            message: 'Publishing to live CDN...',
+            message: 'Publishing to live CDN',
             current: Math.floor(pages.length / 2),
             total: pages.length,
         });

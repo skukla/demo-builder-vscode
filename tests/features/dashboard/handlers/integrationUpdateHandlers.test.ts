@@ -296,8 +296,8 @@ describe('handleUpdateAppBuilderComponent', () => {
         await handleUpdateAppBuilderComponent(mockContext, { id: 'erp-integration' });
 
         const waiting = seen.findIndex((call) => call[0] === 'erp-integration' && call[2] === 'Waiting to update');
-        const erpUpdating = seen.findIndex((call) => call[0] === 'demo-erp' && call[2] === 'Updating…');
-        const integrationUpdating = seen.findIndex((call) => call[0] === 'erp-integration' && call[2] === 'Updating…');
+        const erpUpdating = seen.findIndex((call) => call[0] === 'demo-erp' && call[2] === 'Updating');
+        const integrationUpdating = seen.findIndex((call) => call[0] === 'erp-integration' && call[2] === 'Updating');
         expect(waiting).toBeGreaterThanOrEqual(0);
         expect(waiting).toBeLessThan(erpUpdating);
         expect(erpUpdating).toBeLessThan(integrationUpdating);

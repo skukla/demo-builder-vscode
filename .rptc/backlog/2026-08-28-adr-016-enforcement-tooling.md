@@ -5,7 +5,7 @@ area: platform
 parent: PL-11
 needs: []
 value: high
-status: built
+status: shipped
 ---
 
 # ADR-016 enforcement tooling — the seven artifacts

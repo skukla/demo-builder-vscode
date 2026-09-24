@@ -134,7 +134,7 @@ export async function waitForMeshDeployment(
     const { onProgress, logger, commandManager } = options;
 
     // Initial wait - mesh won't be ready immediately after update command
-    logger?.info(`[Mesh Verification] Waiting ${initialWait / 1000}s for mesh provisioning...`);
+    logger?.info(`[Mesh Verification] Waiting ${initialWait / 1000}s for mesh provisioning`);
     await sleep(initialWait);
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {

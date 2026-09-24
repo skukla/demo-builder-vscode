@@ -19,6 +19,7 @@ import { parseGitHubUrl } from '@/core/utils/githubUrlParser';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { LibraryPublishHelix } from '@/features/eds/handlers/blockLibraryPublish';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
+import { contentIndexUrl } from '@/features/eds/services/contentIndex';
 import { DA_LIVE_BASE_URL } from '@/features/eds/services/daLive/daLiveConstants';
 import type { TokenProvider } from '@/features/eds/services/daLive/daLiveOrgOperations';
 import type { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
@@ -33,7 +34,7 @@ interface EdsContentConfig {
     contentSource: {
         org: string;
         site: string;
-        indexPath?: string;
+        indexPath: string;
     };
     /** Optional second content source for the customer account chrome
      *  (`/customer/*` + the `/customer/nav` fragment), overlaid after the main
@@ -173,11 +174,10 @@ export async function ensureEdsContent(
         return false;
     }
 
-    logger.info('[EDS Content] Content not found in DA.live, copying from template source...');
+    logger.info('[EDS Content] Content not found in DA.live, copying from template source');
     onProgress?.('Setting up the content', 'Copying content from template');
 
     const contentSource = config.contentSource;
-    const indexPath = contentSource.indexPath || '/full-index.json';
 
     // Aggregate per-page content-patch results so the final reportUnapplied call
     // can surface them in one warning toast (ADR-006 D1 — mirrors the create/reset
@@ -189,7 +189,7 @@ export async function ensureEdsContent(
         {
             org: contentSource.org,
             site: contentSource.site,
-            indexUrl: `https://main--${contentSource.site}--${contentSource.org}.aem.live${indexPath}`,
+            indexUrl: contentIndexUrl(contentSource),
         },
         config.daLiveOrg,
         config.daLiveSite,

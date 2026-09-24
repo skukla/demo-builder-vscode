@@ -54,6 +54,8 @@ import '@/core/ui/styles/step-scaffold.css';
 import '@/core/ui/styles/vstep-list.css';
 // .choice-* — the option cards, also rendered on the integrations surface.
 import '../styles/choice-cards.css';
+// The "Add a demo package" dialog and its plus card; sits on the flow and summary styles above.
+import '../styles/add-demo.css';
 // .db-* — the shared detail drawer.
 import '@/core/ui/styles/drawer.css';
 // .two-* — the shared two-column layout's stacking breakpoint.
@@ -88,7 +90,7 @@ root.render(
         }}
         loadingContent={
             <View padding="size-400">
-                <div>Initializing...</div>
+                <div>Initializing</div>
             </View>
         }
     >
@@ -108,6 +110,7 @@ root.render(
                     projectsViewMode={init.projectsViewMode}
                     blockLibraryDefaults={init.blockLibraryDefaults}
                     customBlockLibraryDefaults={init.customBlockLibraryDefaults}
+                    addedDemos={init.addedDemos}
                 />
             );
         }}

@@ -81,7 +81,7 @@ export class ShowProjectsListCommand extends BaseWebviewCommand<ProjectsListInit
     }
 
     protected getLoadingMessage(): string {
-        return 'Loading Projects...';
+        return 'Loading Projects';
     }
 
     protected initializeMessageHandlers(comm: WebviewCommunicationManager): void {

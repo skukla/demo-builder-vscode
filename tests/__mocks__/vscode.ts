@@ -92,7 +92,8 @@ export const window = {
     })),
     showQuickPick: jest.fn(),
     showInputBox: jest.fn(),
-    showSaveDialog: jest.fn(),
+    showOpenDialog: jest.fn(),
+        showSaveDialog: jest.fn(),
     createQuickPick: jest.fn(),
     terminals: [],
     activeColorTheme: {

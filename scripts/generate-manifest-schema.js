@@ -1,48 +1,75 @@
 #!/usr/bin/env node
 /**
- * Generate the .demo-builder.json manifest schema from the ProjectManifest
- * TypeScript interface (src/core/state/projectFileLoader.ts).
+ * Generate the JSON schemas for the three USER files the extension reads, from
+ * their TypeScript interfaces:
  *
- * The manifest is USER-machine data written by any historical extension
- * version; the loader validates it against this schema at load time in
- * WARN mode (see src/core/state/manifestValidation.ts — never refuses a
- * load). The schema is generated, not hand-written, so it cannot drift from
- * the interface — and tests/templates/manifest-schema-freshness.test.ts
- * regenerates it and diffs against the committed file, so the committed copy
- * cannot drift from the generator either. If that test fails:
+ *   - the project manifest `.demo-builder.json`      ← ProjectManifest
+ *   - the exported project `<name>.project.demo-builder.json` ← ProjectFile
+ *   - the shared-demo description `demo.demo-builder.json`    ← SharedDemoDescription
+ *
+ * All three cross extension versions in BOTH directions (a file written by a
+ * newer build is read by an older one), so every schema is tolerant on purpose
+ * (`additionalProperties: true`): unknown fields are expected and must not
+ * warn; known fields still get their types checked. Version fields, not
+ * strictness, are the mechanism.
+ *
+ * The schemas are generated, not hand-written, so they cannot drift from the
+ * interfaces — and tests/templates/manifest-schema-freshness.test.ts regenerates
+ * each one and diffs against the committed file, so the committed copies cannot
+ * drift from the generator either. If that test fails:
  *
  *   npm run generate:manifest-schema
- *
- * Tolerant on purpose (`additionalProperties: true`): manifests cross
- * extension versions in BOTH directions, so unknown fields are expected and
- * must not warn. Known fields still get their types checked.
  */
 
 const path = require('path');
 
-const OUTPUT = path.join(__dirname, '../src/core/state/config/manifest.schema.json');
+const ROOT = path.join(__dirname, '..');
+const CONFIG_DIR = path.join(ROOT, 'src/core/state/config');
 
-/** The one generation config — the freshness test imports this. */
-function generateManifestSchema() {
+/** The generation targets — the freshness test iterates this list. */
+const TARGETS = [
+    {
+        typeName: 'ProjectManifest',
+        source: path.join(ROOT, 'src/core/state/projectFileLoader.ts'),
+        output: path.join(CONFIG_DIR, 'manifest.schema.json'),
+    },
+    {
+        typeName: 'ProjectFile',
+        source: path.join(ROOT, 'src/types/projectFile.ts'),
+        output: path.join(CONFIG_DIR, 'project-file.schema.json'),
+    },
+    {
+        typeName: 'SharedDemoDescription',
+        source: path.join(ROOT, 'src/types/projectFile.ts'),
+        output: path.join(CONFIG_DIR, 'shared-demo.schema.json'),
+    },
+];
+
+/** One generation config per target — the freshness test calls this too. */
+function generateSchema(target) {
     // Lazy require: ts-json-schema-generator is a devDependency; this module
     // is only ever loaded at build/test time, never bundled into the extension.
     const { createGenerator } = require('ts-json-schema-generator');
     const generator = createGenerator({
-        path: path.join(__dirname, '../src/core/state/projectFileLoader.ts'),
-        tsconfig: path.join(__dirname, '../tsconfig.json'),
-        type: 'ProjectManifest',
+        path: target.source,
+        tsconfig: path.join(ROOT, 'tsconfig.json'),
+        type: target.typeName,
         skipTypeCheck: true,
         additionalProperties: true,
     });
-    return generator.createSchema('ProjectManifest');
+    return generator.createSchema(target.typeName);
 }
 
-module.exports = { generateManifestSchema, OUTPUT };
+module.exports = { TARGETS, generateSchema };
 
 if (require.main === module) {
     const fs = require('fs');
-    const schema = generateManifestSchema();
-    fs.mkdirSync(path.dirname(OUTPUT), { recursive: true });
-    fs.writeFileSync(OUTPUT, JSON.stringify(schema, null, 2) + '\n');
-    console.log(`wrote ${path.relative(process.cwd(), OUTPUT)} (${JSON.stringify(schema).length} bytes)`);
+    for (const target of TARGETS) {
+        const schema = generateSchema(target);
+        fs.mkdirSync(path.dirname(target.output), { recursive: true });
+        fs.writeFileSync(target.output, JSON.stringify(schema, null, 2) + '\n');
+        console.log(
+            `wrote ${path.relative(process.cwd(), target.output)} (${JSON.stringify(schema).length} bytes)`,
+        );
+    }
 }

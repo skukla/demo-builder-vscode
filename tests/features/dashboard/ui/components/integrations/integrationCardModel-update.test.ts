@@ -52,7 +52,7 @@ describe('deriveIntegrationCard with a recorded update', () => {
     it('shows the live deploy over the recorded update while Update runs', () => {
         const card = deriveIntegrationCard(integration({ updateAvailable: UPDATE }), {
             status: 'deploying',
-            message: 'Updating…',
+            message: 'Updating',
         });
 
         expect(card.status).toBe('deploying');

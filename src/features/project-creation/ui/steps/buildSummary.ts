@@ -17,6 +17,7 @@ import { isAdobeSignedIn, meshComponentForStack } from './tileStatus';
 import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { resolveIntegrationRows } from '@/features/project-creation/ui/components/integration-flow/integrationRows';
 import type { DemoPackage } from '@/types/demoPackages';
+import type { AddedDemo } from '@/types/projectFile';
 import type { Stack } from '@/types/stacks';
 import type { WizardState } from '@/types/webview';
 
@@ -76,6 +77,8 @@ export function storefrontSummaryGroup(state: WizardState): SummaryGroup {
         (state.selectedBlockLibraries?.length ?? 0) + (state.customBlockLibraries?.length ?? 0);
 
     const rows: SummaryRow[] = [
+        // An added demo names itself first (D21): the card is far away by now.
+        ...(state.demo ? [demoRow(state.demo)] : []),
         {
             label: STOREFRONT_SECTION_TITLES.accounts,
             value: accountsDone ? 'Connected' : undefined,
@@ -102,6 +105,13 @@ export function storefrontSummaryGroup(state: WizardState): SummaryGroup {
         done: libCount > 0,
     });
     return { heading: 'Storefront', rows };
+}
+
+/** "Demo — Isle5 by Jen · Edge Delivery", with a note when it has no pages to copy. */
+function demoRow(demo: AddedDemo): SummaryRow {
+    const kind = demo.storefrontKind === 'headless' ? 'Headless' : 'Edge Delivery';
+    const pages = demo.storefrontKind === 'eds' && !demo.contentSource ? ' (no published pages yet: the site starts empty)' : '';
+    return { label: 'Demo', value: `${demo.name} · ${kind}${pages}`, done: true };
 }
 
 /**

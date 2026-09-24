@@ -49,6 +49,7 @@ jest.mock('@/core/di/serviceLocator', () => ({
 import {
     createAgentConsentGate,
     createAgentOperationNotifier,
+    phaseLine,
 } from '@/features/ai/server/agentOperationNotifier';
 import { asText } from '@/features/ai/server/mcpToolResult';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -144,7 +145,7 @@ describe('createAgentOperationNotifier', () => {
         await notifier('republish', async () => asText({ needsAuth: 'github', message: 'for the agent' }));
 
         expect(mockShowWarningMessage).toHaveBeenCalledWith(
-            'Demo Builder — Republishing the storefront is waiting on you: Sign in to GitHub.'
+            'Agent · Republishing the storefront is waiting on you: Sign in to GitHub.'
         );
         expect(mockSetStatusBarMessage).not.toHaveBeenCalled();
     });
@@ -155,7 +156,7 @@ describe('createAgentOperationNotifier', () => {
         await notifier('republish', async () => asText({ success: false, error: 'CDN said no' }));
 
         expect(mockShowWarningMessage).toHaveBeenCalledWith(
-            'Demo Builder — Republishing the storefront failed: CDN said no'
+            'Agent · Republishing the storefront failed: CDN said no'
         );
         expect(mockSetStatusBarMessage).not.toHaveBeenCalled();
     });
@@ -175,6 +176,13 @@ describe('createAgentOperationNotifier', () => {
             expect.stringContaining('Republishing the storefront failed: CDN said no')
         );
         expect(mockSetStatusBarMessage).not.toHaveBeenCalled();
+    });
+
+    it('drops the services\' trailing dots from a phase line and keeps the step counter', () => {
+        expect(phaseLine('Resetting repository to template (3/11)')).toBe('Resetting repository to template (3/11)');
+        expect(phaseLine('Publishing to CDN…')).toBe('Publishing to CDN');
+        expect(phaseLine('Published 49 pages to CDN')).toBe('Published 49 pages to CDN');
+        expect(phaseLine('Site is live!')).toBe('Site is live!');
     });
 
     it("feeds the operation's own phase strings into the notification", async () => {
@@ -237,7 +245,7 @@ describe('createAgentConsentGate', () => {
         await gate('delete_project', { confirm: true });
 
         expect(consentTitle(mockShowWarningMessage.mock.calls[0])).toBe(
-            'Demo Builder: Delete this project?'
+            'Agent · Delete this project?'
         );
     });
 
@@ -294,7 +302,7 @@ describe('createAgentConsentGate', () => {
         await gate('some_unwritten_tool', { confirm: true });
 
         expect(consentTitle(mockShowWarningMessage.mock.calls[0])).toBe(
-            'Demo Builder: some_unwritten_tool?'
+            'Agent · some_unwritten_tool?'
         );
     });
 

@@ -11,6 +11,7 @@
 
 import * as vscode from 'vscode';
 import { getLogger } from '@/core/logging/debugLogger';
+import { describeNoAdminRoleRemedy } from '@/features/eds/services/configService/noAdminRoleRemedy';
 import type { Logger } from '@/types/logger';
 
 const BYOM_MAX_URL_LENGTH = 2048;
@@ -138,18 +139,18 @@ export const BYOM_OVERLAY_REGISTRATION_FAILED_MESSAGE =
  * used to, as a self-serve route, and it never was one: the page authenticates
  * only with a one-time key the Code Sync bot places in its URL during a GitHub App
  * install. Opened from a link, bare or with the site in the query string, it can
- * neither read the config nor add a user — reproduced 2026-09-14 for kmanns/wire
- * and kmanns/hardie ("We couldn't load your configuration for editing").
+ * neither read the config nor add a user — reproduced 2026-09-14 on two reported
+ * sites ("We couldn't load your configuration for editing").
  */
 export const BYOM_OVERLAY_NOT_AUTHORIZED_MESSAGE =
     'Product detail pages will not load: the Configuration Service refused the BYOM overlay ' +
     'registration (403 not authorized). Your Adobe identity holds no admin role on this ' +
-    "site's configuration — the role is minted for the GitHub user who first installs the " +
-    'AEM Code Sync GitHub App, so an older site can refuse even its own owner. Fix: run ' +
-    '"Demo Builder: Manage Site Access" — it names anyone who can grant you the role, and ' +
-    'when nobody is visible it opens the AEM Code Sync app on GitHub. Once you hold the role, ' +
-    'run "Demo Builder: Repair Site Configuration" to retry this write and republish. ' +
-    'Resetting the storefront retries with the same identity and will be refused again.';
+    "site's configuration — the role is minted for the GitHub account that installs the " +
+    'AEM Code Sync GitHub App, so an older site can refuse even its own owner. ' +
+    `${describeNoAdminRoleRemedy()} Then run "Demo Builder: Repair Site Configuration" to ` +
+    'retry this write and republish. Run "Demo Builder: Manage Site Access" first if you ' +
+    'would rather have someone else grant it — it names anyone who can. Resetting the ' +
+    'storefront retries with the same identity and will be refused again.';
 
 /**
  * Pick the user-facing message for a failed overlay registration.

@@ -103,7 +103,7 @@ async function buildMesh(
     const prefix = opts.logPrefix ?? '[Build]';
     const execOptions = buildExecOptions(componentPath, opts.nodeVersion);
 
-    logger.debug(`${prefix} Building component...`);
+    logger.debug(`${prefix} Building component`);
     onProgress?.(OPERATION_STAGES.buildingMesh.label, 'Installing dependencies');
 
     const installResult = await commandManager.execute(INSTALL_COMMAND, execOptions);
@@ -157,7 +157,7 @@ async function buildIntegration(
     }
 
     const prefix = opts.logPrefix ?? '[Build]';
-    logger.debug(`${prefix} Installing integration dependencies...`);
+    logger.debug(`${prefix} Installing integration dependencies`);
     onProgress?.(OPERATION_STAGES.buildingApp.label, 'Installing dependencies');
 
     const installResult = await commandManager.execute(

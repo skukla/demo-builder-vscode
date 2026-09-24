@@ -137,6 +137,9 @@ export function buildInitialProject(
         commerceStoreStructure:
             typedConfig.commerceStoreStructure ?? existingProject?.commerceStoreStructure,
         selectedPackage: typedConfig.selectedPackage,
+        // The storefront row for a project built on an added demo (D2). Same
+        // fallback as the fields below: an edit session keeps what it had.
+        demo: typedConfig.demo ?? existingProject?.demo,
         // Same fallback reasoning as `commerceStoreStructure` above: this rebuilds
         // the whole Project, and an edit session that never opened the Sample
         // Data area carries no choice. Overwriting a recorded one with undefined

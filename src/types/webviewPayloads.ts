@@ -23,6 +23,7 @@ import type {
 import type { CustomBlockLibrary } from './blockLibraries';
 import type { CommerceStoreStructure } from './commerceStore';
 import type { EnvVarDefinition, TransformedComponentDefinition } from './components';
+import type { AddedDemo } from './projectFile';
 import type { SettingsFile } from './settingsFile';
 import type { ViewMode } from './viewMode';
 import type { ComponentSelection, CreationProgress, ThemeMode, UnifiedProgress } from './webview';
@@ -61,7 +62,7 @@ export interface DashboardInitialData {
     edsDaLiveUrl?: string;
     /** Initial EDS storefront status (for dynamic status display) */
     initialEdsStorefrontStatus?: Project['edsStorefrontStatusSummary'];
-    /** Whether the project has an Adobe org (drives the "Checking organization…" telegraph) */
+    /** Whether the project has an Adobe org (drives the "Checking organization" telegraph) */
     hasAdobeContext: boolean;
     /**
      * Whether the Data Installer is switched on AND pointed at an API. Decided
@@ -70,6 +71,14 @@ export interface DashboardInitialData {
     dataInstallerAvailable: boolean;
     /** Keyed appBuilderComponents map (drives the summary tile's count + dot). */
     appBuilderComponents?: Record<string, AppBuilderComponentState>;
+    /**
+     * The added demo this project was built on, when it was: enough for the
+     * "Change source" door (same storefront kind only) and the notice's words.
+     * `demoPackageName` is the name of the demo package on the SC's Welcome step
+     * that reads from the same repository, when there is one: Change source offers
+     * to update it.
+     */
+    demo?: Pick<AddedDemo, 'name' | 'source' | 'storefrontKind'> & { demoPackageName?: string };
 }
 
 /**
@@ -112,6 +121,8 @@ export interface WizardInitialData {
     blockLibraryDefaults: string[];
     /** Custom block libraries from VS Code settings. */
     customBlockLibraryDefaults: CustomBlockLibrary[];
+    /** Demos the SC has added from a link, remembered in VS Code settings. */
+    addedDemos: AddedDemo[];
 }
 
 /**
@@ -600,6 +611,20 @@ export interface BlockLibraryDefaultsUpdatedPayload {
 /** `customBlockLibraryDefaultsUpdated` — the custom block-library setting changed. */
 export interface CustomBlockLibraryDefaultsUpdatedPayload {
     customBlockLibraryDefaults: CustomBlockLibrary[];
+}
+
+/**
+ * `storefront-zip-progress` — the step a zip import is on, for the Add a demo
+ * package dialog's spinner: the step, and a detail such as a running file count.
+ */
+export interface StorefrontZipProgressPayload {
+    message: string;
+    detail?: string;
+}
+
+/** `addedDemosUpdated` — the remembered-demos setting changed. */
+export interface AddedDemosUpdatedPayload {
+    addedDemos: AddedDemo[];
 }
 
 /**

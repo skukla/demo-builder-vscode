@@ -508,7 +508,7 @@ describe('IntegrationDetailPanel', () => {
             renderPanel(
                 makeModel({
                     status: 'deploying',
-                    statusLabel: 'Deploying…',
+                    statusLabel: 'Deploying',
                     menuActions: [],
                 })
             );

@@ -1,7 +1,7 @@
 /**
  * useDashboardStatus — the org-context badge and the AI regenerate cycle.
  *
- * The "IMS Org" badge has a lifecycle, not a value. It telegraphs "Checking…"
+ * The "IMS Org" badge has a lifecycle, not a value. It telegraphs "Checking"
  * until BOTH the async check has answered AND a minimum display time has passed,
  * so a warm-cache check does not flash the indicator and make the mismatch
  * banner appear out of nowhere. Every state below is asserted on the badge the
@@ -60,14 +60,14 @@ describe('the IMS Org badge lifecycle', () => {
         expect(result.current.imsOrgDisplay).toBeNull();
     });
 
-    it('starts on Checking… before the check has answered', () => {
+    it('starts on Checking before the check has answered', () => {
         const { result } = renderWithOrg();
 
         expect(result.current.orgCheckState).toBe('checking');
-        expect(result.current.imsOrgDisplay).toEqual({ color: 'blue', text: 'Checking…' });
+        expect(result.current.imsOrgDisplay).toEqual({ color: 'blue', text: 'Checking' });
     });
 
-    it('STAYS on Checking… when the answer beats the minimum display time', () => {
+    it('STAYS on Checking when the answer beats the minimum display time', () => {
         const { result } = renderWithOrg();
 
         deliverOrgCheck('ok', { currentOrg: 'Acme' });
@@ -77,7 +77,7 @@ describe('the IMS Org badge lifecycle', () => {
         expect(result.current.orgCheckState).toBe('checking');
     });
 
-    it('STAYS on Checking… when the time elapses before the answer', () => {
+    it('STAYS on Checking when the time elapses before the answer', () => {
         const { result } = renderWithOrg();
 
         elapseMinDisplay();
@@ -154,7 +154,7 @@ describe('the IMS Org badge lifecycle', () => {
 
     it('re-renders the badge as the org state moves, rather than freezing the first value', () => {
         const { result } = renderWithOrg();
-        expect(result.current.imsOrgDisplay).toEqual({ color: 'blue', text: 'Checking…' });
+        expect(result.current.imsOrgDisplay).toEqual({ color: 'blue', text: 'Checking' });
 
         deliverOrgCheck('ok', { currentOrg: 'Acme' });
         elapseMinDisplay();
@@ -180,7 +180,7 @@ describe('the IMS Org badge lifecycle', () => {
         deliverOrgCheck('ok', { currentOrg: 'Acme' });
         elapseMinDisplay();
 
-        // The effect has to re-run on the prop, or the badge sits on Checking…
+        // The effect has to re-run on the prop, or the badge sits on Checking
         // forever for a project that acquired its org after mount.
         expect(result.current.orgCheckState).toBe('ok');
     });
@@ -585,14 +585,14 @@ describe('the mesh badge for states the shared vocabulary does not carry', () =>
         });
     }
 
-    it('shows a transient Checking status... while the mesh is being read', () => {
+    it('shows a transient Checking status while the mesh is being read', () => {
         const { result } = renderHook(() => useDashboardStatus({ hasMesh: true }));
 
         meshStatus('checking');
 
         expect(result.current.meshStatusDisplay).toEqual({
             color: 'blue',
-            text: 'Checking status...',
+            text: 'Checking status',
         });
     });
 
@@ -604,7 +604,7 @@ describe('the mesh badge for states the shared vocabulary does not carry', () =>
         expect(result.current.meshStatusDisplay).toEqual({ color: 'gray', text: 'Unknown' });
     });
 
-    it('keeps showing Loading status... for a mesh project whose status has not arrived', () => {
+    it('keeps showing Loading status for a mesh project whose status has not arrived', () => {
         const { result } = renderHook(() => useDashboardStatus({ hasMesh: true }));
 
         act(() => {
@@ -613,18 +613,18 @@ describe('the mesh badge for states the shared vocabulary does not carry', () =>
 
         expect(result.current.meshStatusDisplay).toEqual({
             color: 'blue',
-            text: 'Loading status...',
+            text: 'Loading status',
         });
     });
 
-    it('shows Loading status... before anything has arrived, mesh or not', () => {
+    it('shows Loading status before anything has arrived, mesh or not', () => {
         const { result } = renderHook(() => useDashboardStatus({ hasMesh: false }));
 
         // Nothing is known yet; hiding the section here makes it appear later,
         // which reads as the page jumping.
         expect(result.current.meshStatusDisplay).toEqual({
             color: 'blue',
-            text: 'Loading status...',
+            text: 'Loading status',
         });
     });
 

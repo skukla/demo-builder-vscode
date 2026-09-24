@@ -4,12 +4,12 @@ kind: fix
 area: eds
 needs: []
 value: med
-status: active
+status: shipped
 ---
 
 # Template update falls back to a full reset on conflict, overwriting the SC's own edits
 
-Filed 2026-09-11 while designing shared demos (EDS-13, on the `feature/colleague-storefront`
+Filed 2026-09-11 while designing shared demos ([[EDS-13]], on the `feature/colleague-storefront`
 branch); pre-existing, applies to every shipped storefront today. Fixed on its own branch
 `fix/template-update-conflict` so it can ship ahead of the shared-demo work.
 
@@ -20,8 +20,9 @@ project's second principle says a user's own edits are never overwritten; a conf
 exactly the case where the SC HAS edited the region. The fallback turns the one situation
 that needs a human into the one situation that silently destroys their work.
 
-Forking shared demos (D16) routes more updates through this path, which is why it is filed
-now rather than left implicit.
+Shared demos (EDS-13a) route more updates through this path, which is why it is filed now
+rather than left implicit. (It was filed against forking them, D16, which was removed
+2026-09-14; added demos still update through the template merge.)
 
 ## Decided (2026-09-14)
 

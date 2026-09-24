@@ -105,7 +105,7 @@ export async function repairSiteConfig(
     const overlayUrl = resolveOverlayUrl(daLiveOrg, daLiveSite);
     const siteParams = buildSiteConfigParams(repoOwner, repoName, daLiveOrg, overlayUrl);
 
-    await onProgress?.(`Re-registering ${repoOwner}/${repoName}...`);
+    await onProgress?.(`Re-registering ${repoOwner}/${repoName}`);
 
     let outcome;
     try {
@@ -160,7 +160,7 @@ export async function repairSiteConfig(
     // already re-minted inside `registerSiteConfig`.
     await pinSiteAdmin(tokenProvider, { owner: repoOwner, repo: repoName }, userEmail, logger);
 
-    await onProgress?.('Confirming the overlay is registered...');
+    await onProgress?.('Confirming the overlay is registered');
     const readBack = await configurationService.readSiteOverlayUrl(repoOwner, repoName);
 
     // With BYOM off there is no overlay to find, so a readable config IS the

@@ -146,14 +146,14 @@ export function AdobeWorkspacePicker({
             selectedId={selectedWorkspaceId ?? state.adobeWorkspace?.id}
             onSelect={selectItem}
             labels={{
-                loadingMessage: 'Loading workspaces...',
+                loadingMessage: 'Loading workspaces',
                 loadingSubMessage: state.adobeProject
-                    ? `Fetching from project: ${state.adobeProject.title || state.adobeProject.name}...`
+                    ? `Fetching from project: ${state.adobeProject.title || state.adobeProject.name}`
                     : undefined,
                 errorTitle: 'Error Loading Workspaces',
                 emptyTitle: 'No Workspaces Found',
                 emptyMessage: `No workspaces found in project ${state.adobeProject?.title || state.adobeProject?.name}. Please create a workspace in Adobe Console first.`,
-                searchPlaceholder: 'Type to filter workspaces...',
+                searchPlaceholder: 'Type to filter workspaces',
                 itemNoun: 'workspace',
                 ariaLabel: 'Adobe I/O Workspaces',
             }}

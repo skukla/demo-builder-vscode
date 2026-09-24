@@ -608,7 +608,7 @@ async function deleteDirectoryWithRetry(path: string, context: HandlerContext): 
 
             if (isRetryable && attempt < MAX_RETRIES - 1) {
                 const delay = BASE_DELAY * Math.pow(2, attempt);
-                context.logger.debug(`[Delete Project] Waiting ${delay}ms before retry...`);
+                context.logger.debug(`[Delete Project] Waiting ${delay}ms before retry`);
                 await sleep(delay);
             } else if (isRetryable) {
                 throw new Error(`Failed to delete project after ${MAX_RETRIES} attempts: ${err.message}`);

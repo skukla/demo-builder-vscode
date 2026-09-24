@@ -163,7 +163,7 @@ export function IntegrationSettingsModal({
                     onClose={onClose}
                     closeLabel={isSaving ? 'Close' : 'Cancel'}
                     actionButtons={[{
-                        label: isSaving ? 'Saving and redeploying…' : 'Save and redeploy',
+                        label: isSaving ? 'Saving and redeploying' : 'Save and redeploy',
                         variant: 'accent',
                         onPress: () => {
                             void handleSave();

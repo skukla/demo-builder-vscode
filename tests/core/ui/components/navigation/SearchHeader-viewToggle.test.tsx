@@ -218,12 +218,12 @@ describe('SearchHeader search-field focus', () => {
     it('does not steal focus by default', () => {
         renderHeader();
 
-        expect(document.activeElement).not.toBe(screen.getByPlaceholderText('Type to filter...'));
+        expect(document.activeElement).not.toBe(screen.getByPlaceholderText('Type to filter'));
     });
 
     it('takes focus when the caller asks for it', () => {
         renderHeader({ autoFocus: true });
 
-        expect(document.activeElement).toBe(screen.getByPlaceholderText('Type to filter...'));
+        expect(document.activeElement).toBe(screen.getByPlaceholderText('Type to filter'));
     });
 });

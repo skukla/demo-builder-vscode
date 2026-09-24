@@ -12,6 +12,7 @@ import { getBundleUri } from '@/core/utils/bundleUri';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { loadDemoPackages } from '@/features/components/services/demoPackageLoader';
+import { resolveStorefrontForProject } from '@/features/components/services/storefrontResolver';
 import { aiHandlers } from '@/features/dashboard/handlers/aiHandlers';
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
 import { armOnOpenChecks } from '@/features/dashboard/services/onOpenChecks/orchestrator';
@@ -20,9 +21,10 @@ import {
     getEwCanvasBranch,
     resolveProjectAuthoringExperience,
 } from '@/features/eds/handlers/edsHelpers';
+import { addedDemoKey, readAddedDemos } from '@/features/project-creation/services/addedDemoSettings';
 import { ComponentInstance, Project, type AppBuilderComponentState } from '@/types/base';
-import type { DemoPackage } from '@/types/demoPackages';
 import { HandlerContext } from '@/types/handlers';
+import type { AddedDemo } from '@/types/projectFile';
 import type { Stack, StacksConfig } from '@/types/stacks';
 import {
     getComponentInstanceValues,
@@ -84,6 +86,13 @@ export function shouldAutoReopenProjectsList(
     // rel === '' is the projects root itself (the always-root home); a non-empty
     // rel is a project subdir. Both should reopen the list.
     return true;
+}
+
+/** The demo package on the Welcome step reading from the project's source, by its card name, when there is one. */
+function demoPackageNameFor(demo: AddedDemo): { demoPackageName?: string } {
+    const key = addedDemoKey(demo);
+    const card = readAddedDemos().find((row) => addedDemoKey(row) === key);
+    return card ? { demoPackageName: card.name } : {};
 }
 
 /**
@@ -199,6 +208,16 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand<Dashboard
             // No catalog seed: the add-integration picker lives on the dedicated
             // integrations surface, whose own payload carries the catalog.
             appBuilderComponents: project?.appBuilderComponents,
+            ...(project?.demo
+                ? {
+                      demo: {
+                          name: project.demo.name,
+                          source: project.demo.source,
+                          storefrontKind: project.demo.storefrontKind,
+                          ...demoPackageNameFor(project.demo),
+                      },
+                  }
+                : {}),
         };
     }
 
@@ -219,10 +238,9 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand<Dashboard
 
             // Resolve package name
             if (project.selectedPackage) {
-                const packages = await loadDemoPackages();
-                const pkg = packages.find((p: DemoPackage) => p.id === project.selectedPackage);
-                if (pkg) {
-                    result.packageName = pkg.name;
+                const resolved = resolveStorefrontForProject(project, await loadDemoPackages());
+                if (resolved) {
+                    result.packageName = resolved.package.name;
                 }
             }
 
@@ -255,7 +273,7 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand<Dashboard
     }
 
     protected getLoadingMessage(): string {
-        return 'Loading Project Dashboard...';
+        return 'Loading Project Dashboard';
     }
 
     protected shouldReopenWelcomeOnDispose(): boolean {

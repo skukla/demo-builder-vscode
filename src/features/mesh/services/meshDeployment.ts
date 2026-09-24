@@ -219,7 +219,7 @@ export async function deployMeshComponent(
             await handleDeployFailure(deployResult, logger);
         }
 
-        logger.debug(`[Mesh Deployment] ${meshCommand} command completed, verifying deployment...`);
+        logger.debug(`[Mesh Deployment] ${meshCommand} command completed, verifying deployment`);
 
         // Use shared verification utility (same as manual deploy command)
         const { waitForMeshDeployment } = await import('./meshDeploymentVerifier');

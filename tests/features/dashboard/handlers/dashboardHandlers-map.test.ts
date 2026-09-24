@@ -97,10 +97,12 @@ describe('dashboardHandlers', () => {
         it('should include the More-menu action handlers', () => {
             // Given: dashboardHandlers object
             // When: Checking for the More-menu message types
-            // Then: editProject, exportProject, republishContent, renameProject
-            // present (copyPath removed — Copy Path lives on the project-card kebab)
+            // Then: editProject, republishContent, renameProject present
+            // (copyPath removed — Copy Path lives on the project-card kebab;
+            // exportProject removed 2026-09-13 — the Export dialog's file form
+            // goes through exportDemoBundle, and setup alone through the same door)
             expect(hasHandler(dashboardHandlers, 'editProject')).toBe(true);
-            expect(hasHandler(dashboardHandlers, 'exportProject')).toBe(true);
+            expect(hasHandler(dashboardHandlers, 'exportProject')).toBe(false);
             expect(hasHandler(dashboardHandlers, 'republishContent')).toBe(true);
             expect(hasHandler(dashboardHandlers, 'renameProject')).toBe(true);
             expect(hasHandler(dashboardHandlers, 'getProjectUrls')).toBe(true);
@@ -125,19 +127,19 @@ describe('dashboardHandlers', () => {
         });
 
         it('registers the headless exportProjectSettings handler (export_project_settings tool)', () => {
-            // Distinct from the UI 'exportProject' (save-dialog) More-menu action:
-            // this is the path-based, dialog-free variant the agent tool dispatches.
+            // The path-based, dialog-free variant the agent tool dispatches; the
+            // dashboard's own Export goes through exportDemoBundle.
             expect(hasHandler(dashboardHandlers, 'exportProjectSettings')).toBe(true);
         });
 
-        it('should have exactly 51 handlers', () => {
+        it('should have exactly 60 handlers', () => {
             // Given: dashboardHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(dashboardHandlers) as Array<
                 keyof typeof dashboardHandlers
             >;
 
-            // Then: exactly 51 — the 41 below, then the additions noted after the
+            // Then: exactly 60 — the 49 below, then the additions noted after the
             // table — derived in the map's own declaration order so a
             // reader can check it against the source top to bottom.
             //
@@ -165,18 +167,37 @@ describe('dashboardHandlers', () => {
             //                      and backgroundComponentOperation ("Run in
             //                      background" hands it to a notification)
             //   3  console APIs    listConsoleApis, addConsoleApis, setConsoleApis
+            //   1  runtime         listRuntimePackages (the list_runtime_packages
+            //                      read: what a removal left running, 2026-09-21)
             //   2  storefront      syncStorefront, refreshBlockLibrary
             //   2  auth            reAuthenticate, switchOrg
             //   1  delete          deleteProject
-            //   5  project actions editProject, renameProject, exportProject,
-            //                      exportProjectSettings (headless twin, for the
+            //   4  project actions editProject, renameProject,
+            //                      exportProjectSettings (headless, for the
             //                      export_project_settings MCP tool),
             //                      republishContent
             //   1  reset           resetProject
             //   1  destination     setProjectDestination
             //   2  ERP integration getErpStatus, resetErpRecords (plan step 05)
+            //   5  demo source     probe-shared-demo (the Add a demo package dialog's
+            //                      read, shared with the wizard),
+            //                      change-demo-source (point a project built on
+            //                      an added demo at another copy of it),
+            //                      add-shared-demo (the dialog's other commit;
+            //                      the dashboard never opens that mode, but a
+            //                      message the dialog can send is answered),
+            //                      import-storefront-zip and use-bundle-setup
+            //                      (the dialog's zip door and the bundle's setup,
+            //                      registered for the same reason)
+            //   4  export parts    getDemoPackagePreview (the Export dialog's
+            //                      storefront part: draft, checks, link),
+            //                      saveDemoPackage (write the description file into
+            //                      the SC's own storefront repository and put the
+            //                      card on their list), removeDemoPackage (take
+            //                      back only what we did), and exportDemoBundle
+            //                      (Export's "Send a file": one bundle of the ticked parts)
             //  ==
-            //  41
+            //  49
             //
             // Retired, so they are absent by design: verifyAppBuilderComponent
             // (2026-08-03); the 4 singular App Builder actions (addApp,
@@ -227,7 +248,7 @@ describe('dashboardHandlers', () => {
             // setViewModeOverride (51 → 52, 2026-09-24): the integrations screen's
             // cards/rows toggle — the shared handler the projects list also registers
             // (core/handlers/viewModeHandler), under the same name.
-            expect(types).toHaveLength(52);
+            expect(types).toHaveLength(60);
         });
 
         it('should have handlers as functions', () => {

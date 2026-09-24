@@ -311,9 +311,9 @@ describe('the deploy path', () => {
             m: string,
             s?: string
         ) => void;
-        reporter('Installing dependencies…', undefined);
+        reporter('Installing dependencies', undefined);
 
-        expect(report).toHaveBeenCalledWith({ message: 'Installing dependencies…' });
+        expect(report).toHaveBeenCalledWith({ message: 'Installing dependencies' });
     });
 
     it('posts the runner OWN error on the row when the deploy fails', async () => {

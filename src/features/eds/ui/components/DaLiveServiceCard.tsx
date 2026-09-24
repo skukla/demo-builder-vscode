@@ -203,7 +203,7 @@ export function DaLiveServiceCard({
         >
             <ServiceCardStatus
                 isLoading={isLoading}
-                loadingLabel={isAuthenticating ? 'Verifying...' : 'Checking...'}
+                loadingLabel={isAuthenticating ? 'Verifying' : 'Checking'}
                 customState={inputForm}
                 isConnected={isAuthenticated}
                 compact={compact}

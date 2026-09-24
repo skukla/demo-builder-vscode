@@ -31,6 +31,7 @@ import type { CardAction, IntegrationCardModel } from './integrationCardModel';
 import { LinkedSection } from './LinkedSection';
 import { PanelRow } from './PanelRow';
 import { InlineRenameField } from '@/core/ui/components/forms/InlineRenameField';
+import { CommerceScopeList } from '@/core/ui/components/integrations/CommerceScopeList';
 import { IntegrationActionsMenu } from '@/core/ui/components/integrations/IntegrationActionsMenu';
 import { IntegrationStatusLabel } from '@/core/ui/components/integrations/IntegrationStatusLabel';
 import { CopyableText } from '@/core/ui/components/ui/CopyableText';
@@ -248,29 +249,7 @@ function PanelContent({
                     row. */}
                 {commerceScope?.length ? (
                     <PanelRow label="Commerce scope">
-                        {commerceScope.map(({ label, code, name }) => (
-                            <span key={label} className="integration-panel-scope">
-                                <span className="integration-panel-scope-key">{label}</span>
-                                {/* Name first, code parenthesised and muted: the
-                                    name is what the user picked, the code is what
-                                    is in the `.env` and what they would grep for.
-                                    With no name the code stands ALONE — not
-                                    "(unknown)", not an empty bracket. That is the
-                                    correct rendering for every project predating
-                                    name capture, and it must not look broken. */}
-                                <span className="integration-panel-scope-value">
-                                    {name && <>{name} </>}
-                                    <span
-                                        className={cn(
-                                            'integration-panel-scope-code',
-                                            name && 'integration-panel-scope-code--aside',
-                                        )}
-                                    >
-                                        {name ? `(${code})` : code}
-                                    </span>
-                                </span>
-                            </span>
-                        ))}
+                        <CommerceScopeList parts={commerceScope} />
                     </PanelRow>
                 ) : null}
                 {model.lastDeployed && (

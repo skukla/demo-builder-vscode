@@ -64,7 +64,7 @@ describe('resetRepoToTemplate — block library reinstall', () => {
             [INSPECTOR_ENTRY],
         );
         expect(mocks.installInspectorTagging).not.toHaveBeenCalled();
-        expect(report).toHaveBeenCalledWith(2, 'Re-installing blocks from 2 libraries...');
+        expect(report).toHaveBeenCalledWith(2, 'Re-installing blocks from 2 libraries');
         expect(result.blockCollectionIds).toEqual(['hero', 'cards']);
         expect(result.libraryContentSources).toEqual([{ org: 'content-org', site: 'content-site' }]);
     });
@@ -101,7 +101,7 @@ describe('resetRepoToTemplate — block library reinstall', () => {
         expect(mocks.installBlockCollections.mock.calls[0][3]).toEqual([
             { source: SOURCE_A, name: 'Library A' },
         ]);
-        expect(report).toHaveBeenCalledWith(2, 'Re-installing blocks from 1 library...');
+        expect(report).toHaveBeenCalledWith(2, 'Re-installing blocks from 1 library');
         expect(result.libraryContentSources).toEqual([{ org: 'ghost-org', site: 'ghost-site' }]);
     });
 

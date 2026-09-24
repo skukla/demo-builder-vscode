@@ -37,13 +37,27 @@ export interface GitSource {
  * Used by EDS storefronts to specify the source of demo content.
  * This is explicit configuration, NOT derived from the GitHub template URL.
  */
+/** A DA.live site named without an index: pages are copied from it by path, not from a list. */
+export interface DaLiveSite {
+    /** DA.live organization name */
+    org: string;
+    /** DA.live site name */
+    site: string;
+}
+
 export interface DaLiveContentSource {
     /** DA.live organization name */
     org: string;
     /** DA.live site name */
     site: string;
-    /** Optional custom path to content index (defaults to /full-index.json) */
-    indexPath?: string;
+    /**
+     * Where the site lists its pages. Required: whoever names a content site
+     * names its index path (the catalog, the project row, a description file);
+     * only the Add a demo package probe looks one up, for a repository that names no
+     * site of its own, and records what it found. `contentIndex.ts` builds the
+     * URL every reader uses.
+     */
+    indexPath: string;
 }
 
 /**
@@ -139,7 +153,7 @@ export interface Storefront {
      *  packages whose brand/catalog content comes from one site but whose B2B
      *  account experience must come from the canonical B2B content site
      *  (B2B base + brand overlay). Overlaid after the main content copy. */
-    accountContentSource?: DaLiveContentSource;
+    accountContentSource?: DaLiveSite;
     /** Optional BYOM content overlay URL. When set, Config Service registers a
      *  `content.overlay` alongside the DA.live content source so a backend
      *  service can serve dynamic markup (e.g., per-SKU PDP HTML).
@@ -208,6 +222,26 @@ export type AddonConfig = 'required' | 'optional' | 'excluded';
  */
 export type Addons = Record<string, AddonConfig>;
 
+/** A datapack a demo expects (D26). `version` absent means the catalog's default rule. */
+export interface DatapackReference {
+    name: string;
+    version?: string;
+}
+
+/** A custom App Builder app by GitHub coordinates, the `appBuilderComponentSources` shape. */
+export interface CustomIntegrationSource {
+    owner: string;
+    repo: string;
+    branch?: string;
+    name?: string;
+}
+
+/** Integrations a demo depends on (D29): catalog ids, and custom apps by link. */
+export interface DemoIntegrations {
+    catalog?: string[];
+    custom?: Record<string, CustomIntegrationSource>;
+}
+
 /**
  * DemoPackage - A unified demo package definition
  *
@@ -224,9 +258,6 @@ export interface DemoPackage {
 
     /** Description of the package */
     description: string;
-
-    /** Icon identifier for the package */
-    icon?: string;
 
     /** Whether this package should be featured in the UI */
     featured?: boolean;
@@ -260,6 +291,19 @@ export interface DemoPackage {
      * config generator — data-driven, mirrors addon configFlags.
      */
     configFlags?: Record<string, boolean>;
+
+    /**
+     * The datapack this demo expects (D26). The Sample Data step pre-selects it and
+     * says why; the SC can change it. Optional: shipped brands may leave the choice open.
+     */
+    datapack?: DatapackReference;
+
+    /**
+     * Integrations this demo depends on (D29). The Integrations area starts with them
+     * added; the SC can remove any. The same field a shared-demo description file
+     * carries, so the catalog and the slice cannot drift.
+     */
+    integrations?: DemoIntegrations;
 
     /** Storefronts keyed by stack ID (e.g., 'headless-paas', 'eds-paas', 'eds-accs') */
     storefronts: Record<string, Storefront>;

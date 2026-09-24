@@ -107,7 +107,7 @@ export class ProgressUnifier {
                         },
                         command: {
                             type: 'indeterminate',
-                            detail: this.enhanceDetailWithElapsedTime('Starting...'),
+                            detail: this.enhanceDetailWithElapsedTime('Starting'),
                             confidence: 'synthetic',
                         },
                     });

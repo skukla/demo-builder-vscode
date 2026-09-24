@@ -47,7 +47,7 @@ describe('AdobeWorkspacePicker — what it hands SelectionStepContent', () => {
     describe('labels', () => {
         it('names the project by title in the loading and empty copy', () => {
             const { labels } = listProps();
-            expect(labels.loadingSubMessage).toBe('Fetching from project: Test Project...');
+            expect(labels.loadingSubMessage).toBe('Fetching from project: Test Project');
             expect(labels.emptyMessage).toBe(
                 'No workspaces found in project Test Project. ' +
                     'Please create a workspace in Adobe Console first.',
@@ -59,7 +59,7 @@ describe('AdobeWorkspacePicker — what it hands SelectionStepContent', () => {
                 ...baseState,
                 adobeProject: { id: 'project1', name: 'test-project' },
             });
-            expect(labels.loadingSubMessage).toBe('Fetching from project: test-project...');
+            expect(labels.loadingSubMessage).toBe('Fetching from project: test-project');
             expect(labels.emptyMessage).toContain('in project test-project.');
         });
 

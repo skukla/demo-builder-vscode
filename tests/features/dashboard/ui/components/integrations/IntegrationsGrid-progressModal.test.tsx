@@ -186,7 +186,7 @@ describe('the progress modal', () => {
 
         await user.click(within(modal).getByRole('button', { name: 'Run in background' }));
         setCards(cardsFor({ appBuilderComponents: DEPLOYING }));
-        await user.click(card('custom-app', 'Deploying…'));
+        await user.click(card('custom-app', 'Deploying'));
 
         expect(getClient().request).toHaveBeenCalledWith('getOperationProgress', {
             id: 'custom-app',
@@ -249,7 +249,7 @@ describe('the progress modal', () => {
         await user.click(within(modal).getByRole('button', { name: 'Run in background' }));
 
         setCards(cardsFor({ appBuilderComponents: DEPLOYING }));
-        await user.click(card('custom-app', 'Deploying…'));
+        await user.click(card('custom-app', 'Deploying'));
 
         expect(screen.getByRole('dialog', { name: 'Deploying custom-app' })).toBeInTheDocument();
         expect(screen.queryByRole('dialog', { name: 'custom-app details' })).not.toBeInTheDocument();
@@ -259,7 +259,7 @@ describe('the progress modal', () => {
         const user = setupUser();
         renderGrid({ appBuilderComponents: DEPLOYING });
 
-        await user.click(card('custom-app', 'Deploying…'));
+        await user.click(card('custom-app', 'Deploying'));
 
         expect(screen.queryByRole('dialog', { name: 'Deploying custom-app' })).not.toBeInTheDocument();
         expect(screen.getByRole('dialog', { name: 'custom-app details' })).toBeInTheDocument();

@@ -5,6 +5,8 @@
 import { isMeshComponentId } from '@/core/constants';
 import { clearCompletedFrom } from '@/core/ui/utils/stepCompletion';
 import { getStackById } from '@/features/components/services/demoPackageLoader';
+import { projectRowOf } from '@/features/components/services/storefrontResolver';
+import { pickStorefrontDerived } from '@/features/project-creation/ui/steps/edsConfigFromStorefront';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage, GitSource } from '@/types/demoPackages';
 import type { WizardStep, WizardState, WizardMode, ComponentSelection } from '@/types/webview';
@@ -536,20 +538,16 @@ function buildProjectEdsConfig(wizardState: ProjectConfigSource) {
         daLiveOrg: eds.daLiveOrg || '',
         daLiveSite: eds.selectedSite?.name || eds.daLiveSite || '',
         accsEndpoint: eds.accsHost,
-        githubOwner: eds.githubAuth?.user?.login || '',
+        // A stated owner wins (the agent's create tool names one; the wizard's
+        // namespace picker writes it); the auth status is the wizard's default.
+        githubOwner: eds.githubOwner || eds.githubAuth?.user?.login || '',
         isPrivate: eds.selectedRepo?.isPrivate,
         skipContent: eds.skipContent,
         skipTools: !wizardState.selectedAddons?.includes('adobe-commerce-aco'),
         resetSiteContent: eds.resetSiteContent || false,
-        templateOwner: eds.templateOwner,
-        templateRepo: eds.templateRepo,
-        contentSource: eds.contentSource,
-        accountContentSource: eds.accountContentSource,
-        patches: eds.patches,
-        contentPatches: eds.contentPatches,
-        contentPatchSource: eds.contentPatchSource,
-        codePatches: eds.codePatches,
-        codePatchSource: eds.codePatchSource,
+        // The whole storefront-derived slice, from the one list (step 05 closed
+        // the half-list that used to live here).
+        ...pickStorefrontDerived(eds),
         repoUrl: eds.repoUrl,
         preflightComplete: eds.preflightComplete,
     };
@@ -609,6 +607,7 @@ export type ProjectConfigSource = Pick<
     | 'apiMesh'
     | 'storeDiscoveryData'
     | 'selectedPackage'
+    | 'demo'
     | 'datapack'
     | 'selectedAppBuilderComponents'
     | 'appBuilderComponentSources'
@@ -669,6 +668,8 @@ export function buildProjectConfig(
         importedWorkspaceId: importedSettings?.adobe?.workspaceId,
         importedMeshEndpoint,
         selectedPackage: wizardState.selectedPackage,
+        // The row travels with the project (D2); absent for a shipped brand.
+        demo: projectRowOf(wizardState.demo),
         selectedStack: wizardState.selectedStack,
         // Recorded for the dashboard to install later — never imported here.
         datapack: wizardState.datapack,

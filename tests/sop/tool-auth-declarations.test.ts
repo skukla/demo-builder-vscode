@@ -41,15 +41,32 @@ const PROVIDERS = new Set(['adobe', 'dalive', 'github', 'commerce']);
  * some tool's declared sign-ins changed, which is a product decision, not a refactor.
  */
 const EXPECTED: Record<string, number> = {
-    adobe: 44,
-    dalive: 19,
-    github: 10,
+    // 37 -> 35 and 19 -> 21 on 2026-09-12: list_dalive_sites and cleanup_dalive_site
+    // build their DA.live operations on the DA.live session, the sign-in DA.live
+    // accepts (the IMS token listed zero sites and was refused, measured live).
+    // 35 -> 36 when develop added delete_adobe_workspace (merged 2026-09-15).
+    // 36 -> 37 when develop added rename_adobe_project (picked 2026-09-21).
+    // 37 -> 38 when develop added list_runtime_packages (picked 2026-09-21).
+    // 38 -> 42 on 2026-09-24, develop merged into the ERP branch: the branch's
+    // ERP, settings, update and runtime tools join develop's shared-demo tools.
+    adobe: 42,
+    dalive: 21,
+    // 10 -> 12 on 2026-09-12: forget_added_demo and change_demo_source (step 06
+    // of the shareable-demo program) both read and write GitHub; 12 -> 14 the
+    // same day for probe_shared_demo and add_shared_demo (step 07).
+    // 14 -> 17 on 2026-09-13: get_demo_package_preview, save_demo_package and
+    // remove_demo_package (step 09) read and write the SC's own storefront repository.
+    // 17 -> 18 on 2026-09-13: export_demo_bundle reads the SC's own repository archive.
+    github: 18,
     commerce: 2,
-    none: 49,
+    // 45 -> 46 on 2026-09-14: edit_added_demo renames a card in a user setting,
+    // and needs no sign-in.
+    // 46 -> 50 on 2026-09-24, the same merge.
+    none: 50,
 };
 
 /**
- * 117 tools, and the counts above sum to 121 provider slots — a difference of FOUR,
+ * 129 tools, and the counts above sum to 133 provider slots — a difference of FOUR,
  * which is exactly the four tools the original commit says need two sign-ins each
  * (check_github_app, create_project, republish, sync_content). That arithmetic is the
  * cross-check: the derivation below reproduces both numbers from the source without
@@ -59,7 +76,7 @@ const EXPECTED: Record<string, number> = {
  * files. That counts text, not declarations, and was roughly double. The CONTROL below
  * caught it — which is the argument for having one.)
  */
-const EXPECTED_TOOLS = 120;
+const EXPECTED_TOOLS = 129;
 
 interface Declaration {
     name: string;

@@ -35,7 +35,6 @@
 
 import type * as vscode from 'vscode';
 import { COMPONENT_IDS } from '@/core/constants';
-import demoPackagesConfig from '@/features/components/config/demo-packages.json';
 import { getDaLiveAuthService, resolveByomOverlayConfig } from '@/features/eds/handlers/edsHelpers';
 import { ConfigurationService } from '@/features/eds/services/configService/configurationService';
 import {
@@ -43,10 +42,7 @@ import {
     DaLiveContentOperations,
 } from '@/features/eds/services/daLive/daLiveContentOperations';
 import { registerPublishKey } from '@/features/eds/services/pdp/publishKeyRegistrar';
-import {
-    resolveStorefrontConfig,
-    type StorefrontConfigSource,
-} from '@/features/eds/services/reset/edsResetParams';
+import { resolveStorefrontConfig } from '@/features/eds/services/reset/edsResetParams';
 import {
     migrateStorefrontNamingIfNeeded,
     type MigrationConfigService,
@@ -116,10 +112,7 @@ function resolveOverlayForNewName(
     repoName: string,
 ): string | undefined {
     try {
-        const { byomOverlayUrl } = resolveStorefrontConfig(
-            project,
-            demoPackagesConfig.packages as unknown as StorefrontConfigSource[],
-        );
+        const { byomOverlayUrl } = resolveStorefrontConfig(project);
         return resolveByomOverlayConfig(byomOverlayUrl, daLiveOrg, repoName);
     } catch {
         return undefined;
@@ -184,7 +177,7 @@ export async function migrateStorefrontNameForProject(
     };
 
     await onProgress?.(
-        `Migrating ${candidate.daLiveOrg}/${candidate.daLiveSite} → ${candidate.repoName}...`,
+        `Migrating ${candidate.daLiveOrg}/${candidate.daLiveSite} → ${candidate.repoName}`,
     );
     const result = await migrateStorefrontNamingIfNeeded(
         ctx,
@@ -203,7 +196,7 @@ export async function migrateStorefrontNameForProject(
 
     await persist(candidate.project);
 
-    await onProgress?.('Re-minting the site publish key...');
+    await onProgress?.('Re-minting the site publish key');
     await registerPublishKey(
         tokenProvider,
         { owner: candidate.repoOwner, repo: candidate.repoName },

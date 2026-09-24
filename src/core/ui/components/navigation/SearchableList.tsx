@@ -46,7 +46,7 @@ export interface SearchableListProps<T extends SearchableListItem> {
     itemNoun?: string;
     /** Plural noun for item type (default: itemNoun + 's') */
     itemNounPlural?: string;
-    /** Placeholder text for search field (default: "Type to filter...") */
+    /** Placeholder text for search field (default: "Type to filter") */
     searchPlaceholder?: string;
     /** Aria label for refresh button (default: "Refresh list") */
     refreshAriaLabel?: string;
@@ -101,7 +101,7 @@ export function SearchableList<T extends SearchableListItem>({
     renderItem,
     itemNoun = 'item',
     itemNounPlural,
-    searchPlaceholder = 'Type to filter...',
+    searchPlaceholder = 'Type to filter',
     refreshAriaLabel = 'Refresh list',
     action,
 }: SearchableListProps<T>) {

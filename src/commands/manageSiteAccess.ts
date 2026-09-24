@@ -36,6 +36,10 @@ import type {
     ConfigWriteAccess,
 } from '@/features/eds/services/configService/configServiceAccess';
 import {
+    GITHUB_APP_SETTINGS_URL,
+    describeNoAdminRoleRemedy,
+} from '@/features/eds/services/configService/noAdminRoleRemedy';
+import {
     addSiteAdmin,
     listSiteAccess,
     looksLikeEmail,
@@ -50,10 +54,11 @@ import { getEdsRepoParts } from '@/types/typeGuards';
 
 /** The button that opens the AEM Code Sync app on GitHub. */
 const OPEN_CODE_SYNC_APP = 'Open Code Sync App';
+const OPEN_GITHUB_APP_SETTINGS = 'Open GitHub App Settings';
 
 /** The button that opens AEM's User Admin tool, and where it goes. */
-const OPEN_USER_ADMIN = 'Open AEM User Admin';
-const AEM_USER_ADMIN_URL = 'https://tools.aem.live/tools/user-admin/index.html';
+const OPEN_GITHUB_EMAIL_SETTINGS = 'Open GitHub Email Settings';
+const GITHUB_EMAIL_SETTINGS_URL = 'https://github.com/settings/emails';
 
 /** QuickPick rows carry their action so the handler does not re-parse labels. */
 interface AccessAction extends vscode.QuickPickItem {
@@ -104,17 +109,18 @@ export class ManageSiteAccessCommand extends BaseCommand {
      * Explain a refusal AND offer what is left to a user who holds no role —
      * rather than showing an inert menu.
      *
-     * Named admins come first: one of them adding you is the route that is known
-     * to work. The Code Sync app on GitHub is the other, and it is deliberately
-     * paired with a poll. The AEM setup page can only grant a role when the Code
-     * Sync bot opens it with a one-time key during a GitHub App install; whether
-     * saving an EXISTING installation's repository access does that is unverified.
-     * So the command waits for the config read to flip 403 → 200 and says "still
-     * refused" when it does not, naming who can still help.
+     * Named admins come first: one of them adding you is the quickest route when
+     * somebody is visible. When nobody is, the user fixes it THEMSELVES by
+     * reinstalling the Code Sync app — the whole of that is in
+     * `noAdminRoleRemedy.ts`, including what was measured to establish it.
+     *
+     * The poll stays: the grant lands on Adobe's side within a minute of the
+     * reinstall, so waiting for the config read to flip 403 -> 200 turns the
+     * remedy into something the command can confirm rather than merely suggest.
      *
      * This command used to open `tools.aem.live/bot/setup` with the site in the
      * query string. Without the key that page cannot read the config or add a
-     * user, so it never granted anything (reproduced 2026-09-14, kmanns/wire).
+     * user, so it never granted anything (reproduced 2026-09-14 on a reported site).
      *
      * Note this is NOT the wizard's Code Sync step. That one proves the GitHub
      * App is installed — a different fact, and one that can be true while this
@@ -157,28 +163,34 @@ export class ManageSiteAccessCommand extends BaseCommand {
         const site = siteRef(project);
         const choice = await vscode.window.showWarningMessage(
             `You hold no admin role on ${listing.site}, and nobody who can grant it is visible. ` +
-                `On GitHub, configure the AEM Code Sync app and save its access to ${site.repo}. ` +
-                'If GitHub then opens AEM\'s setup page, add your Adobe email under "Site users".',
+                describeNoAdminRoleRemedy(site.owner),
+            // Uninstalling comes first and the app's own page cannot do it, so the
+            // settings page leads. Both are offered because the remedy needs both.
+            OPEN_GITHUB_APP_SETTINGS,
             OPEN_CODE_SYNC_APP,
             'Close',
         );
-        if (choice !== OPEN_CODE_SYNC_APP) return;
+        if (choice !== OPEN_GITHUB_APP_SETTINGS && choice !== OPEN_CODE_SYNC_APP) return;
 
-        await openUrl(GITHUB_APP_INSTALL_URL);
+        await openUrl(choice === OPEN_GITHUB_APP_SETTINGS ? GITHUB_APP_SETTINGS_URL : GITHUB_APP_INSTALL_URL);
         await this.pollForAccess(
             site,
-            'Still refused. If GitHub did not open AEM\'s setup page, that route is closed for ' +
-                'this site. The role belongs to the GitHub user who installed AEM Code Sync ' +
-                'for it: ask them to add you, or ask Adobe to.',
+            'Still refused. Check that AEM Code Sync was UNINSTALLED and installed again — ' +
+                'removing and re-adding a repository reports the same success and does not ' +
+                'grant the role — and that your GitHub primary email is the address you sign ' +
+                'in to Adobe with. If it was, ask whoever else administers ' +
+                `${site.owner}, or Adobe.`,
         );
     }
 
     /**
-     * The refusal has a known cause: Code Sync gave the role to the GitHub
-     * account's primary email, and Demo Builder signs in to Adobe as another one
-     * (2026-09-15, kmanns). The explanation names both, so the user knows which
-     * account to sign in to AEM's User Admin tool with. Readable org admins are
-     * still named, and then they are the only route offered.
+     * The refusal comes with a precondition the user has to fix FIRST: their GitHub
+     * primary email is not the Adobe identity, and the reinstall that grants the
+     * role grants it to whichever address is primary at the time. So this leads
+     * with the email change and offers the page that makes it, then the remedy.
+     *
+     * Reinstalling before changing it is not a harmless extra attempt — it mints
+     * the role for the wrong address, and the next reinstall has to undo that.
      */
     private async reportIdentityMismatch(
         project: Project,
@@ -187,22 +199,31 @@ export class ManageSiteAccessCommand extends BaseCommand {
     ): Promise<void> {
         const mismatch = listing.identityMismatch;
         if (!mismatch) return;
+        const site = siteRef(project);
         const intro = `You hold no admin role on ${listing.site}. ${mismatch.explanation}`;
         if (admins.length > 0) {
+            // Someone can grant it directly, which needs none of this.
             await vscode.window.showWarningMessage(
-                `${intro} An org admin can also add you: ${admins.join(', ')}.`,
+                `${intro} An org admin can also add you without any of that: ${admins.join(', ')}.`,
                 'Close',
             );
             return;
         }
-        const choice = await vscode.window.showWarningMessage(intro, OPEN_USER_ADMIN, 'Close');
-        if (choice !== OPEN_USER_ADMIN) return;
+        const choice = await vscode.window.showWarningMessage(
+            `${intro} ${describeNoAdminRoleRemedy(site.owner)}`,
+            OPEN_GITHUB_EMAIL_SETTINGS,
+            OPEN_GITHUB_APP_SETTINGS,
+            'Close',
+        );
+        if (choice !== OPEN_GITHUB_EMAIL_SETTINGS && choice !== OPEN_GITHUB_APP_SETTINGS) return;
 
-        await openUrl(AEM_USER_ADMIN_URL);
+        await openUrl(choice === OPEN_GITHUB_EMAIL_SETTINGS ? GITHUB_EMAIL_SETTINGS_URL : GITHUB_APP_SETTINGS_URL);
         await this.pollForAccess(
-            siteRef(project),
-            `Still refused. Once ${mismatch.adobeEmail} is added as an admin in AEM's User Admin ` +
-                'tool, run Manage Site Access again.',
+            site,
+            `Still refused. Make ${mismatch.adobeEmail} your primary email on GitHub, THEN ` +
+                'uninstall AEM Code Sync completely and install it again, re-granting every ' +
+                'repository. Doing it in the other order grants the role to ' +
+                `${mismatch.githubPrimaryEmail} instead.`,
         );
     }
 
@@ -248,7 +269,7 @@ export class ManageSiteAccessCommand extends BaseCommand {
     /** Current admins as rows, plus the add action. */
     private buildItems(listing: SiteAccessListing): AccessAction[] {
         const items: AccessAction[] = [
-            { label: '$(add) Add a configuration admin…', action: 'add' },
+            { label: '$(add) Add a configuration admin', action: 'add' },
         ];
 
         const siteAdmins = listing.siteAdmins ?? [];

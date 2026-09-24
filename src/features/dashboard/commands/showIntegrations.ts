@@ -78,7 +78,7 @@ export class ShowIntegrationsCommand extends BaseWebviewCommand<IntegrationsInit
     }
 
     protected getLoadingMessage(): string {
-        return 'Loading Integrations...';
+        return 'Loading Integrations';
     }
 
     /**

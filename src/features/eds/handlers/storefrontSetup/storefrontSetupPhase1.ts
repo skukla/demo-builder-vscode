@@ -7,11 +7,14 @@
  * @module features/eds/handlers/storefrontSetup/storefrontSetupPhase1
  */
 
+import type { GitHubRepoOperations } from '../../services/github/githubRepoOperations';
 import { pinRepoToLkg } from '../../services/patches/lkgPinHelper';
 import type { PatchReport } from '../../services/patches/patchReportHelper';
+import type { GitHubRepo } from '../../services/types';
 import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
 import { checkGitHubAppForExistingRepo } from './storefrontSetupPhaseHelpers';
 import type { RepoInfo, SetupServices, StorefrontSetupResult } from './storefrontSetupTypes';
+import type { TemplateSyncService } from '@/features/updates/services/templateSyncService';
 import type { HandlerContext } from '@/types/handlers';
 import type { StorefrontSetupProgressPayload } from '@/types/webviewPayloads';
 
@@ -48,7 +51,7 @@ export async function executePhaseGitHubRepo(
         );
         await context.sendMessage('storefront-setup-progress', {
             phase: 'repository',
-            message: 'Using repository...',
+            message: 'Using repository',
             subMessage: `${repoInfo.repoOwner}/${repoInfo.repoName}`,
             progress: 10,
             ...repoInfo,
@@ -119,12 +122,17 @@ async function announcePinAndComplete(
     templateRepo: string,
     patchReport: PatchReport | undefined,
 ): Promise<void> {
-    await context.sendMessage('storefront-setup-progress', {
-        phase: 'repository',
-        message: 'Pinning to verified canonical state...',
-        subMessage: `${repoInfo.repoOwner}/${repoInfo.repoName}`,
-        progress: 12,
-    } satisfies StorefrontSetupProgressPayload);
+    // Announced only when there is a pin to make: an added demo carries no
+    // patches (D4), and "Pinning to verified canonical state" over a colleague's
+    // code named a step that was not happening (seen live, 2026-09-12).
+    if (edsConfig.codePatchSource && edsConfig.codePatches) {
+        await context.sendMessage('storefront-setup-progress', {
+            phase: 'repository',
+            message: 'Pinning to verified canonical state',
+            subMessage: `${repoInfo.repoOwner}/${repoInfo.repoName}`,
+            progress: 12,
+        } satisfies StorefrontSetupProgressPayload);
+    }
     await pinIfThinLayer(
         edsConfig,
         services,
@@ -244,7 +252,7 @@ async function executePhaseExistingRepo(
     );
     await context.sendMessage('storefront-setup-progress', {
         phase: 'repository',
-        message: 'Using existing repository...',
+        message: 'Using existing repository',
         subMessage: `${repoInfo.repoOwner}/${repoInfo.repoName}`,
         progress: 5,
         ...repoInfo,
@@ -272,10 +280,10 @@ async function executePhaseExistingRepo(
     }
 
     if (edsConfig.resetToTemplate) {
-        logger.info('[Storefront Setup] Resetting repository to template...');
+        logger.info('[Storefront Setup] Resetting repository to template');
         await context.sendMessage('storefront-setup-progress', {
             phase: 'repository',
-            message: 'Resetting repository to template...',
+            message: 'Resetting repository to template',
             subMessage: `${repoInfo.repoOwner}/${repoInfo.repoName}`,
             progress: 6,
         } satisfies StorefrontSetupProgressPayload);
@@ -329,6 +337,67 @@ async function executePhaseExistingRepo(
 }
 
 /**
+ * Create the new repository from its source. A shipped brand's template is a
+ * GitHub template, so `generate` is the whole story. An added demo's source
+ * is whatever the colleague has: when GitHub flags it as a template (a zip
+ * import flags the repository it creates) `generate` still works; otherwise
+ * an empty repository is created and reset onto the source, the same reset an
+ * existing repo gets. Read live, not from the row, so a flag set after the add
+ * is honoured and a removed one does not break the run.
+ */
+export interface NewRepoRequest {
+    newRepoName: string;
+    isPrivate: boolean;
+    /** The GitHub namespace to create under; undefined = the authenticated user. */
+    namespace?: string;
+    /** The source is an added demo's repository, which may not be a GitHub template. */
+    fromAddedDemo: boolean;
+}
+
+/** What creating a repository from its source calls: GitHub, and the shared template reset. */
+export interface NewRepoServices {
+    repoOps: Pick<GitHubRepoOperations, 'createFromTemplate' | 'createEmptyRepository' | 'getRepository'>;
+    templateSync: Pick<TemplateSyncService, 'resetRepository'>;
+}
+
+export async function createRepoFromSource(
+    { repoOps, templateSync }: NewRepoServices,
+    request: NewRepoRequest,
+    templateOwner: string,
+    templateRepo: string,
+    logger: HandlerContext['logger'],
+): Promise<GitHubRepo> {
+    const { newRepoName, isPrivate, namespace } = request;
+    if (!request.fromAddedDemo) {
+        return repoOps.createFromTemplate(templateOwner, templateRepo, newRepoName, isPrivate, namespace);
+    }
+    const source = await repoOps.getRepository(templateOwner, templateRepo);
+    if (source.isTemplate) {
+        logger.info(`[Storefront Setup] ${templateOwner}/${templateRepo} is a template — generating`);
+        return repoOps.createFromTemplate(templateOwner, templateRepo, newRepoName, isPrivate, namespace);
+    }
+    logger.info(
+        `[Storefront Setup] ${templateOwner}/${templateRepo} is not a template — creating an empty repository and resetting it onto the source`,
+    );
+    const created = await repoOps.createEmptyRepository(newRepoName, isPrivate, namespace);
+    const [owner, name] = created.fullName.split('/');
+    const reset = await templateSync.resetRepository(
+        {
+            repoOwner: owner,
+            repoName: name,
+            templateOwner,
+            templateRepo,
+            repoBranch: created.defaultBranch,
+            templateBranch: source.defaultBranch,
+        },
+        [],
+        'chore: start from the demo',
+    );
+    if (!reset.success) throw new Error(reset.error);
+    return created;
+}
+
+/**
  * Handle new repository creation from template
  */
 async function executePhaseNewRepo(
@@ -345,7 +414,7 @@ async function executePhaseNewRepo(
 
     await context.sendMessage('storefront-setup-progress', {
         phase: 'repository',
-        message: 'Creating GitHub repository from template...',
+        message: 'Creating GitHub repository from template',
         subMessage: repoInfo.repoName,
         progress: 5,
     } satisfies StorefrontSetupProgressPayload);
@@ -358,12 +427,17 @@ async function executePhaseNewRepo(
     // when daLiveOrg is empty preserves the legacy default of "create under
     // the authenticated user" — defensive against any state that escapes
     // the picker (e.g., direct invocation paths).
-    const repo = await services.githubRepoOps.createFromTemplate(
+    const repo = await createRepoFromSource(
+        { repoOps: services.githubRepoOps, templateSync: services.templateSync },
+        {
+            newRepoName: repoInfo.repoName,
+            isPrivate: edsConfig.isPrivate ?? false,
+            namespace: edsConfig.daLiveOrg || undefined,
+            fromAddedDemo: Boolean(edsConfig.demo),
+        },
         templateOwner,
         templateRepo,
-        repoInfo.repoName,
-        edsConfig.isPrivate ?? false,
-        edsConfig.daLiveOrg || undefined,
+        logger,
     );
 
     repoInfo.repoUrl = repo.htmlUrl;
@@ -379,7 +453,7 @@ async function executePhaseNewRepo(
 
     await context.sendMessage('storefront-setup-progress', {
         phase: 'repository',
-        message: 'Waiting for repository content...',
+        message: 'Waiting for repository content',
         subMessage: `${repoInfo.repoOwner}/${repoInfo.repoName}`,
         progress: 10,
         ...repoInfo,

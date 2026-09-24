@@ -11,6 +11,8 @@
  */
 
 import {
+    mockDaLiveAuth,
+    DaLiveOrgOperations,
     ctxFactory,
     fakeServer,
     getGitHubServicesMock,
@@ -285,7 +287,7 @@ describe('cloud-resource tools (DA.live)', () => {
             const s = fakeServer();
             registerCloudResourceTools(s, ctxFactory);
             expect(await s.call('list_dalive_sites', { org: 'acme' })).toMatchObject({
-                needsAuth: 'adobe',
+                needsAuth: 'dalive',
             });
             expect(mockListOrgSites).not.toHaveBeenCalled();
         });
@@ -371,7 +373,7 @@ describe('cloud-resource tools (DA.live)', () => {
                 confirm: true,
                 confirmName: 'acme/shop',
             });
-            expect(res).toMatchObject({ needsAuth: 'adobe' });
+            expect(res).toMatchObject({ needsAuth: 'dalive' });
             expect(mockDeleteAllSiteContent).not.toHaveBeenCalled();
         });
 
@@ -462,5 +464,33 @@ describe('response-size ceilings', () => {
         const s = fakeServer();
         registerCloudResourceTools(s, ctxFactory);
         expectWithinCeiling(tool, JSON.stringify(await s.call(tool, args)));
+    });
+});
+
+describe('DA.live operations — which sign-in they are built on', () => {
+    it('builds on the DA.live session when there is one, without consulting the IMS token', async () => {
+        mockDaLiveAuth.getAccessToken.mockResolvedValue('fake-dalive-token-not-a-secret');
+        mockListOrgSites.mockResolvedValue([]);
+        const s = fakeServer();
+        registerCloudResourceTools(s, ctxFactory);
+
+        await s.call('list_dalive_sites', { org: 'acme' });
+
+        const provider = (DaLiveOrgOperations as jest.Mock).mock.calls.at(-1)?.[0] as { getAccessToken(): Promise<string | null> };
+        await expect(provider.getAccessToken()).resolves.toBe('fake-dalive-token-not-a-secret');
+        expect(mockInspectToken).not.toHaveBeenCalled();
+        mockDaLiveAuth.getAccessToken.mockResolvedValue(null);
+    });
+
+    it('falls back to the IMS token when there is no DA.live session', async () => {
+        mockInspectToken.mockResolvedValue({ valid: true, token: 'fake-ims-token-not-a-secret' });
+        mockListOrgSites.mockResolvedValue([]);
+        const s = fakeServer();
+        registerCloudResourceTools(s, ctxFactory);
+
+        await s.call('list_dalive_sites', { org: 'acme' });
+
+        const provider = (DaLiveOrgOperations as jest.Mock).mock.calls.at(-1)?.[0] as { getAccessToken(): Promise<string | null> };
+        await expect(provider.getAccessToken()).resolves.toBe('fake-ims-token-not-a-secret');
     });
 });

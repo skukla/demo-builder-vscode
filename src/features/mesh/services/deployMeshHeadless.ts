@@ -88,7 +88,7 @@ export async function deployMeshHeadless(
     const { project, stateManager, logger, extensionPath, onStatus, onProgress } = deps;
     const { authManager } = deps;
 
-    await onStatus?.('deploying', 'Checking requirements...');
+    await onStatus?.('deploying', 'Checking requirements');
     onProgress?.(OPERATION_STAGES.checkingRequirements.label);
 
     // PRE-FLIGHT: auth + correct org context (the shared gate). Passes silently
@@ -132,7 +132,7 @@ export async function deployMeshHeadless(
         return { success: false, blockedBy: 'no-mesh' };
     }
 
-    await onStatus?.('deploying', 'Starting deployment...');
+    await onStatus?.('deploying', 'Starting deployment');
     meshComponent.status = 'deploying';
     await stateManager.saveProject(project);
 

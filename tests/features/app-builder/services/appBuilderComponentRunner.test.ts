@@ -392,7 +392,7 @@ describe('addAppBuilderComponent partial-failure', () => {
     });
 
     // The deploy tails ALREADY report every step — buildMeshComponent,
-    // "Reading mesh configuration…", "Deploying…" — and the dep type has declared
+    // "Reading mesh configuration…", "Deploying" — and the dep type has declared
     // `onProgress` all along. The creation path passes one; dispatchDeploy called
     // the tail with three arguments and dropped it, so a dashboard add showed one
     // static title for 70 seconds while 42s of API subscribe, 21s of npm install
@@ -405,8 +405,8 @@ describe('addAppBuilderComponent partial-failure', () => {
 
         deps.deployMesh.mockImplementation(
             async (_path, _cmd, _log, onProgress?: (m: string, s?: string) => void) => {
-                onProgress?.('Reading mesh configuration...', '');
-                onProgress?.('Deploying...', 'Validating configuration');
+                onProgress?.('Reading mesh configuration', '');
+                onProgress?.('Deploying', 'Validating configuration');
                 // `meshId` is REQUIRED on MeshDeploymentResult and the runner records
                 // it; omitting it here fed `undefined` into the deploy outcome. This
                 // test only asserts progress forwarding, so nothing failed — but a
@@ -432,8 +432,8 @@ describe('addAppBuilderComponent partial-failure', () => {
             OPERATION_STAGES.subscribingApis.label,
             OPERATION_STAGES.gettingCode.label,
             OPERATION_STAGES.generatingMeshConfig.label,
-            'Reading mesh configuration...',
-            'Deploying...',
+            'Reading mesh configuration',
+            'Deploying',
         ]);
     });
 

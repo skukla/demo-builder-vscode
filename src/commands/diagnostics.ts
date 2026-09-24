@@ -157,7 +157,7 @@ export class DiagnosticsCommand extends BaseCommand {
     }
 
     public async execute(): Promise<void> {
-        this.logger.info('Running Demo Builder diagnostics...');
+        this.logger.info('Running Demo Builder diagnostics');
         this.debugLogger.show(false); // Show log channel and take focus
 
         // Clear channel for fresh diagnostics
@@ -177,23 +177,23 @@ export class DiagnosticsCommand extends BaseCommand {
 
         try {
             // System information
-            this.logger.debug('Collecting system information...');
+            this.logger.debug('Collecting system information');
             report.system = await getSystemInfo();
 
             // VS Code information
-            this.logger.debug('Collecting VS Code information...');
+            this.logger.debug('Collecting VS Code information');
             report.vscode = getVSCodeInfo();
 
             // Tool versions
-            this.logger.debug('Checking tool versions...');
+            this.logger.debug('Checking tool versions');
             report.tools = await checkTools();
 
             // Adobe CLI status
-            this.logger.debug('Checking Adobe CLI...');
+            this.logger.debug('Checking Adobe CLI');
             report.adobe = await checkAdobeCLI(report.tools.aio);
 
             // Environment variables
-            this.logger.debug('Collecting environment variables...');
+            this.logger.debug('Collecting environment variables');
             report.environment = getEnvironment();
 
             // Settings whose value stopped applying when the key was renamed.
@@ -201,17 +201,17 @@ export class DiagnosticsCommand extends BaseCommand {
             report.orphanedSettings = checkOrphanedSettings();
 
             // Run diagnostic tests
-            this.logger.debug('Running diagnostic tests...');
+            this.logger.debug('Running diagnostic tests');
             report.tests = await runTests();
 
             // In-extension MCP server tool surface
-            this.logger.debug('Probing in-extension MCP server...');
+            this.logger.debug('Probing in-extension MCP server');
             report.mcp = await this.checkMcp();
 
             // Claude Code's ~/.claude footprint. Local disk walk, no network —
             // and strictly on-demand: this is the one place it may run (never
             // activation; the tree is multi-GB).
-            this.logger.debug('Measuring Claude Code storage footprint...');
+            this.logger.debug('Measuring Claude Code storage footprint');
             report.claudeCode = await collectClaudeCodeFootprint();
 
             // The four remote probes run CONCURRENTLY: each is pure HTTP against
@@ -225,7 +225,7 @@ export class DiagnosticsCommand extends BaseCommand {
             // aio-cli-telemetry.optOut` — a write to a shared config file guarded
             // only by in-process flags — so running those concurrently would race
             // that write for a saving these three already cover.
-            this.logger.debug('Probing GitHub, Config Service and storefront...');
+            this.logger.debug('Probing GitHub, Config Service and storefront');
             const [githubCredential, configService, storefront, credentialService] =
                 await Promise.all([
                     this.checkGitHubCredential(),

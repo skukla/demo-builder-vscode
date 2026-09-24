@@ -14,11 +14,15 @@ import React, { useState, useRef } from 'react';
 import { ActionGrid } from './components/ActionGrid';
 import { AiCapabilitiesModal } from './components/AiCapabilitiesModal';
 import { DashboardStatusHeader } from './components/DashboardStatusHeader';
+import { DemoPackageModal } from './components/demo-package/DemoPackageModal';
+import { DemoSourceNotice } from './components/DemoSourceNotice';
+import { ExportModal } from './components/export/ExportModal';
 import { OrgContextNotice } from './components/OrgContextNotice';
 import { isStartActionDisabled } from './dashboardPredicates';
 import { useDashboardActions } from './hooks/useDashboardActions';
 import { useDashboardOperations } from './hooks/useDashboardOperations';
 import { useDashboardStatus, isMeshBusy } from './hooks/useDashboardStatus';
+import { useHandoverDialogs } from './hooks/useHandoverDialogs';
 import { useInlineRename } from './hooks/useInlineRename';
 import { useLiveDaLiveUrl } from './hooks/useLiveDaLiveUrl';
 import { useOrgSwitchFlow } from './hooks/useOrgSwitchFlow';
@@ -28,7 +32,16 @@ import { ControlPanelLayout } from '@/core/ui/components/layout/ControlPanelLayo
 import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 import { PageLayout } from '@/core/ui/components/layout/PageLayout';
 import { useFocusTrap } from '@/core/ui/hooks/useFocusTrap';
+import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import { AddDemoModal } from '@/features/project-creation/ui/components/add-demo/AddDemoModal';
+import type { DemoPackage } from '@/types/demoPackages';
+import type { AddedDemo } from '@/types/projectFile';
 import type { DashboardInitialData } from '@/types/webviewPayloads';
+
+/** The change-source dialog lists no catalog and no remembered demos: a link is the way in. */
+const NO_PACKAGES: DemoPackage[] = [];
+const NO_ADDED_DEMOS: AddedDemo[] = [];
+const noop = (): void => undefined;
 
 /**
  * Props for the ProjectDashboardScreen component
@@ -63,6 +76,7 @@ export function ProjectDashboardScreen({
     hasAdobeContext,
     dataInstallerAvailable,
     appBuilderComponents,
+    demo,
 }: ProjectDashboardScreenProps) {
     // Capture isEds on first render and never change it (project type doesn't change)
     const isEdsRef = useRef(isEds);
@@ -89,6 +103,14 @@ export function ProjectDashboardScreen({
     // State for browser opening (passed to actions hook)
     const [isOpeningBrowser, setIsOpeningBrowser] = useState(false);
     const [showCapabilities, setShowCapabilities] = useState(false);
+    // "Change source" (a project built on an added demo): the Add a demo package dialog in
+    // change mode; afterwards status is re-requested so the source check re-runs.
+    const [changeSourceOpen, setChangeSourceOpen] = useState(false);
+    const openChangeSource = demo ? () => setChangeSourceOpen(true) : undefined;
+    const onSourceChanged = (): void => {
+        webviewClient.postMessage('requestStatus');
+    };
+    const handover = useHandoverDialogs(isEdsStable); // Export, Save as demo package
     // Inline title rename commit (null = success; string = inline error).
     const renameInline = useInlineRename();
 
@@ -103,6 +125,7 @@ export function ProjectDashboardScreen({
         meshStatus,
         orgMismatch,
         orgCheckState,
+        demoSourceIssue,
         imsOrgDisplay,
         aiReady,
         aiSkills,
@@ -129,7 +152,6 @@ export function ProjectDashboardScreen({
         handleConfigure,
         handleEditProject,
         handleOpenDevConsole,
-        handleExportProject,
         handleRestartDemo,
         handleNavigateBack,
         handleReAuthenticate,
@@ -232,6 +254,12 @@ export function ProjectDashboardScreen({
                                 isSwitching={isSwitchingOrg}
                                 onSwitchOrg={onSwitchOrg}
                             />
+
+                            <DemoSourceNotice
+                                issue={demoSourceIssue}
+                                onChangeSource={openChangeSource}
+                                onSaveDemoPackage={handover.openDemoPackage}
+                            />
                         </>
                     }
                     primary={
@@ -267,7 +295,9 @@ export function ProjectDashboardScreen({
                                     handleConfigure={handleConfigure}
                                     handleOpenDevConsole={handleOpenDevConsole}
                                     handleEditProject={handleEditProject}
-                                    handleExportProject={handleExportProject}
+                                    handleExportProject={handover.openExport}
+                                    handleSaveDemoPackage={handover.openDemoPackage}
+                                    handleChangeDemoSource={openChangeSource}
                                     handleResetProject={handleResetProject}
                                     handleDeleteProject={handleDeleteProject}
                                 />
@@ -276,6 +306,28 @@ export function ProjectDashboardScreen({
                     }
                 />
             </PageLayout>
+
+            {/* Change source — mounted only while open, so the dashboard at rest
+                carries none of the dialog. */}
+            {changeSourceOpen && demo ? (
+                <AddDemoModal
+                    isOpen
+                    mode="change"
+                    currentKind={demo.storefrontKind}
+                    demoPackageName={demo.demoPackageName}
+                    packages={NO_PACKAGES}
+                    addedDemos={NO_ADDED_DEMOS}
+                    onUseShipped={noop}
+                    onDemoAdded={onSourceChanged}
+                    onClose={() => setChangeSourceOpen(false)}
+                />
+            ) : null}
+
+            {/* Export — mounted only while open, like Change source. */}
+            {handover.exportOpen ? (
+                <ExportModal isOpen isEds={isEdsStable} onClose={handover.closeExport} />
+            ) : null}
+            {handover.demoPackageOpen ? <DemoPackageModal isOpen onClose={handover.closeDemoPackage} /> : null}
 
             {/* Capability catalog — reached from the "View AI Capabilities" link,
                 NOT the health badge. Two sections (skills + MCP servers) plus a

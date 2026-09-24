@@ -214,8 +214,10 @@ async function runContentPipeline(
                     daLiveSite,
                     templateOwner,
                     templateRepo,
-                    clearExistingContent: true,
-                    skipContent: !contentSourceConfig,
+                    // Keep-my-current-content: an added demo's content site is gone,
+                    // the SC chose to reset the code only (content is not forkable).
+                    clearExistingContent: !params.keepContent,
+                    skipContent: Boolean(params.keepContent) || !contentSourceConfig,
                     contentSource: contentSourceConfig,
                     accountContentSource: accountContentSourceConfig,
                     contentPatches,
@@ -285,6 +287,8 @@ async function finalizeReset(
     deps: MeshRedeployDeps,
     /** False when step 7 could not write the site config — see below. */
     configWritten: boolean,
+    /** The dry check's caveats for an added demo, from the repo reset. */
+    demoCaveats?: string[],
 ): Promise<EdsResetResult> {
     const { repoOwner, repoName, project, verifyCdn = false, redeployMesh = false } = params;
 
@@ -334,6 +338,7 @@ async function finalizeReset(
         filesReset,
         contentCopied,
         meshRedeployed: redeployMesh,
+        ...(demoCaveats?.length ? { demoCaveats } : {}),
         ...(configWritten
             ? {}
             : {
@@ -470,6 +475,7 @@ export async function executeEdsReset(
             contentCopied,
             deps,
             configWritten,
+            repoResetResult.demoCaveats,
         );
     } catch (error) {
         return handleResetError(error, context.logger);

@@ -61,7 +61,7 @@ export async function wipeSystemRecords(
     if (!url) {
         return { status: 'skipped' };
     }
-    deps.onProgress?.(`Deleting ${name}'s records…`);
+    deps.onProgress?.(`Deleting ${name}'s records`);
     const auth = await deps.getAuth();
     if (!auth) {
         return { status: 'failed', detail: 'could not sign in' };

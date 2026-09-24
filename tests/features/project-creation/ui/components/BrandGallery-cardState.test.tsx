@@ -42,6 +42,11 @@ describe('BrandGallery — selection and dimming', () => {
         expect(passedOver).toHaveAttribute('data-dimmed', 'true');
 
         expect(container.querySelectorAll('.selection-check')).toHaveLength(1);
+        // Beside the name, not in the corner: an added demo's menu holds the corner
+        // (owner, 2026-09-14), and every card shows selection in the same place.
+        const check = chosen.querySelector('.selection-check');
+        expect(check?.closest('.brand-card-title-row')).not.toBeNull();
+        expect(check).not.toHaveClass('selection-check-corner');
     });
 
     it('dims nothing at all before a package is chosen', () => {

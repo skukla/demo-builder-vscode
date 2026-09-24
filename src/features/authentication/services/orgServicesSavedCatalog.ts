@@ -25,7 +25,7 @@ export interface OrgServicesStore {
 }
 
 /** One org's saved list, and when Adobe sent it. */
-interface SavedCatalog {
+export interface SavedCatalog {
     services: OrgServiceInfo[];
     fetchedAt: number;
 }
@@ -40,7 +40,7 @@ function isSavedCatalog(value: unknown): value is SavedCatalog {
 }
 
 /** The org's saved list, or `undefined` when there is none worth using. */
-function readSavedCatalog(
+export function readSavedCatalog(
     store: OrgServicesStore | undefined,
     orgId: string,
 ): SavedCatalog | undefined {
@@ -49,7 +49,7 @@ function readSavedCatalog(
 }
 
 /** Save a fresh list for the next session. A failed save costs only that. */
-function saveCatalog(
+export function saveCatalog(
     store: OrgServicesStore | undefined,
     orgId: string,
     services: OrgServiceInfo[],

@@ -133,7 +133,7 @@ export async function executeAppBuilderIntegrationsPhase(
     // (the Add-Integration modal no longer subscribes anything itself).
     progressTracker(OPERATION_STAGES.deployingIntegrations.label, 69, 'Enabling API access');
     for (const entry of entries) {
-        progressTracker(OPERATION_STAGES.deployingIntegrations.label, 70, `Deploying ${entry.name}...`);
+        progressTracker(OPERATION_STAGES.deployingIntegrations.label, 70, `Deploying ${entry.name}`);
         const result = await addAppBuilderComponent(project, entry, deps);
         if (!result.success) {
             throw new Error(result.error || 'App Builder integration deployment failed');

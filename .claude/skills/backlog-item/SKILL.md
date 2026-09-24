@@ -203,15 +203,23 @@ historical" prose** when this was introduced on 2026-08-26.
 | `planned` | has a plan, not started |
 | `spiked` | feasibility ANSWERED, build NOT decided |
 | `active` | being built |
-| `built` | **code landed, not verified by use** |
+| `built` | **code landed, not yet in a release** |
 | `blocked` / `gated` | waiting on a named thing |
-| `shipped` | done and used |
+| `shipped` | **released** — a tag contains the commits |
 | `dropped` | decided against; reason in the body |
 | `superseded` | replaced — requires `superseded-by: <id>` |
 
 **`built` is the one people reach for a banner instead of.** Evaluation Mode's
 step 10 sat there on 2026-08-26 — green tests, full build, nobody had opened the
-panel — and was nearly archived as done. Tests passing is not use.
+panel — and was nearly archived as done. Tests passing is not shipping, and that
+case still lands on `built` under the rule below.
+
+**The boundary moved on 2026-09-23, because the old one could not be checked.**
+`shipped` used to mean "done and used", and nothing reports use back to a backlog
+file — so items entered `built` and no evidence could ever get them out. A state
+nothing can leave stops describing anything. It is now RELEASED: does a tag
+contain the item's commits. Mechanical, anybody can check it, and a defect found
+in something released is a new item rather than a reason to unship it.
 
 **`spiked` is not `planned`.** Feasibility answered with no decision to build is
 its own state; calling it `planned` implies an intent nobody has formed.

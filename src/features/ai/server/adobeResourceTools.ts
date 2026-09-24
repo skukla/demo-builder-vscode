@@ -277,7 +277,7 @@ export function registerAdobeResourceTools(
             // Step-level debug lines: when this hung headless (AI-5) the args log
             // was the LAST line anywhere, so the hang site was unfindable.
             const ctx = ctxFactory();
-            ctx.logger.debug('[delete_adobe_project] checking auth…');
+            ctx.logger.debug('[delete_adobe_project] checking auth');
             const mgr = await authedManager(ctx);
             if (!mgr) return asText(NEEDS_ADOBE);
 

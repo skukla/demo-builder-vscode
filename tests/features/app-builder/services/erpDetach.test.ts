@@ -47,7 +47,7 @@ describe('detachErpWrites', () => {
                 Accept: 'application/json',
             },
         });
-        expect(d.onProgress).toHaveBeenCalledWith("Undoing the ERP's changes in Commerce…");
+        expect(d.onProgress).toHaveBeenCalledWith("Undoing the ERP's changes in Commerce");
     });
 
     it('skips, silently and without signing in, a component that deploys no detach', async () => {

@@ -175,7 +175,7 @@ function WatchProgress({
     // variable serving both is how "The reset continues on the server" survived.
     const op = record.operation === 'reset' ? 'reset' : 'import';
     const noun = record.operation === 'reset' ? 'removal' : 'import';
-    const active = record.operation === 'reset' ? 'Removing…' : 'Importing…';
+    const active = record.operation === 'reset' ? 'Removing' : 'Importing';
 
     // The LIVE map, pushed each poll. `record.perType` is empty for the whole
     // run — it is only written when the watch settles — so reading it here is

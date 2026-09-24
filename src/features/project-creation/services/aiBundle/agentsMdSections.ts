@@ -23,14 +23,13 @@ import {
 import { integrationWorkspaceLines } from './agentsMdWorkspaces';
 import { aiDefaultsEntryApplies, projectNeedsAppBuilderTooling } from './aiToolingGate';
 import { COMPONENT_IDS } from '@/core/constants';
-import demoPackagesJson from '@/features/components/config/demo-packages.json';
+import { resolveStorefrontForProject } from '@/features/components/services/storefrontResolver';
 import {
     getEwCanvasBranch,
     resolveProjectAuthoringExperience,
 } from '@/features/eds/handlers/edsHelpers';
 import type { AiDefaults } from '@/types/aiDefaults';
 import type { Project } from '@/types/base';
-import type { DemoPackagesConfig } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
 import {
     isEdsProject,
@@ -39,8 +38,6 @@ import {
     getEdsDaLiveUrl,
     getMeshEndpointUrl,
 } from '@/types/typeGuards';
-
-const demoPackages = demoPackagesJson as unknown as DemoPackagesConfig;
 
 /**
  * Adobe's Commerce/EDS documentation router, pinned to a reviewed commit.
@@ -53,7 +50,7 @@ const WAYFINDER_ROUTER_URL =
 
 export function buildHeader(project: Project, stacksConfig: Stack[]): string {
     const packageName = escapeMarkdown(
-        sanitizeTemplateValue(resolvePackageName(project.selectedPackage)),
+        sanitizeTemplateValue(resolvePackageName(project)),
     );
     const stackName = escapeMarkdown(
         sanitizeTemplateValue(resolveStackName(project.selectedStack, stacksConfig)),
@@ -636,10 +633,9 @@ export function buildNotesForAgents(project: Project): string {
 
 // ─── Lookup helpers ──────────────────────────────────────────────────────────
 
-function resolvePackageName(packageId: string | undefined): string {
-    if (!packageId) return 'Unknown';
-    const pkg = demoPackages.packages.find((p) => p.id === packageId);
-    return pkg?.name ?? packageId;
+function resolvePackageName(project: Project): string {
+    if (!project.selectedPackage && !project.demo) return 'Unknown';
+    return resolveStorefrontForProject(project)?.package.name ?? project.selectedPackage ?? 'Unknown';
 }
 
 function resolveStackName(stackId: string | undefined, stacksConfig: Stack[]): string {

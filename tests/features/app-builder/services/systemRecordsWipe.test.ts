@@ -53,7 +53,7 @@ describe('wipeSystemRecords', () => {
                 Accept: 'application/json',
             },
         });
-        expect(d.onProgress).toHaveBeenCalledWith("Deleting Nordwind's records…");
+        expect(d.onProgress).toHaveBeenCalledWith("Deleting Nordwind's records");
     });
 
     it('skips an entry that declares no wipe, or whose action is not deployed, without signing in', async () => {

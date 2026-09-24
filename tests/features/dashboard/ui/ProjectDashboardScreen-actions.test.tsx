@@ -7,6 +7,17 @@ import userEvent from '@testing-library/user-event';
 
 import { setupTestContext, renderDashboard, TestContext } from './ProjectDashboardScreen.testUtils';
 
+jest.mock('@/features/dashboard/ui/components/export/ExportModal', () => ({
+    // The real dialog renders the core Modal, whose Spectrum pieces this suite's
+    // partial Spectrum mock does not carry (same reason the Add a demo package dialog is
+    // stubbed in the demo-source suite). Its own suite renders it real.
+    ExportModal: ({ onClose }: any) => (
+        <div role="dialog" aria-label="Export">
+            <button onClick={onClose}>Close</button>
+        </div>
+    ),
+}));
+
 describe('ProjectDashboardScreen - Action Buttons', () => {
     let ctx: TestContext;
 
@@ -165,13 +176,13 @@ describe('ProjectDashboardScreen - Action Buttons', () => {
             expect(ctx.mockPostMessage).toHaveBeenCalledWith('editProject');
         });
 
-        it('should send exportProject message when Export clicked', async () => {
+        it('opens the Export dialog when Export clicked, and posts nothing by itself', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             renderDashboard();
 
             await user.click(screen.getByText('Export'));
-
-            expect(ctx.mockPostMessage).toHaveBeenCalledWith('exportProject');
+            expect(screen.getByRole('dialog', { name: 'Export' })).toBeInTheDocument();
+            expect(ctx.mockPostMessage).not.toHaveBeenCalledWith('exportProject');
         });
 
         // A REQUEST, not a push: the reset narrates into this screen's progress

@@ -109,7 +109,7 @@ export async function followUpgrade(
         if (!isActive(attempt)) {
             return describeAttempt(attempt);
         }
-        onProgress?.('Upgrading in Commerce…');
+        onProgress?.('Upgrading in Commerce');
         await wait(ATTEMPT_POLL_MS);
     }
     return { status: 'failed', detail: 'The upgrade in Commerce is still running.' };

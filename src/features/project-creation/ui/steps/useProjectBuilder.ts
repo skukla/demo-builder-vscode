@@ -32,6 +32,7 @@ import { getResolvedMeshRequirement } from '@/features/components/services/demoP
 import type { BlankInstance } from '@/features/project-creation/ui/components/integration-flow/flowStages';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage } from '@/types/demoPackages';
+import type { AddedDemo } from '@/types/projectFile';
 import type { Stack } from '@/types/stacks';
 import type { EDSConfig, WizardState } from '@/types/webview';
 
@@ -130,6 +131,34 @@ function buildEdsConfigUpdate(
 }
 
 /**
+ * The integrations an added demo's row names (D29): catalog ids as they are,
+ * custom apps by link through the same record the by-link door writes, under
+ * the id that door would mint (`owner-repo`).
+ */
+export function integrationSeed(
+    demo: AddedDemo | undefined,
+    existingSources: WizardState['appBuilderComponentSources'],
+): { ids: string[]; sources?: WizardState['appBuilderComponentSources'] } | undefined {
+    const integrations = demo?.integrations;
+    if (!integrations) return undefined;
+    const ids = [...(integrations.catalog ?? [])];
+    const custom = integrations.custom ?? {};
+    const sources = { ...(existingSources ?? {}) };
+    for (const [key, source] of Object.entries(custom)) {
+        const id = key || `${source.owner}-${source.repo}`;
+        ids.push(id);
+        sources[id] = {
+            owner: source.owner,
+            repo: source.repo,
+            ...(source.branch ? { branch: source.branch } : {}),
+            ...(source.name ? { name: source.name } : {}),
+        };
+    }
+    if (ids.length === 0) return undefined;
+    return { ids, ...(Object.keys(custom).length > 0 ? { sources } : {}) };
+}
+
+/**
  * Seed the default addons for a newly-selected stack: the package's `required`
  * addons unioned with the stack's `default` optional addons.
  */
@@ -173,11 +202,17 @@ function resolveBlockLibrarySeed(
     blockLibraryDefaults: string[] | undefined,
     customBlockLibraryDefaults: CustomBlockLibrary[] | undefined,
     stateCustomLibraries: CustomBlockLibrary[] | undefined,
+    demo?: AddedDemo,
 ): BlockLibrarySeed {
     if (stackObj?.frontend !== 'eds-storefront' || !packageId) {
         return { blockLibraries: [], customLibraries: [] };
     }
-    const defaults = getDefaultBlockLibraryIds(stackObj, packageId, blockLibraryDefaults);
+    // An added demo's description file may name shipped libraries to pre-tick
+    // (D22): only those the stack and package can take, never locked.
+    const askedByDemo = demo?.blockLibraries
+        ? getDefaultBlockLibraryIds(stackObj, packageId, demo.blockLibraries)
+        : [];
+    const defaults = [...askedByDemo, ...getDefaultBlockLibraryIds(stackObj, packageId, blockLibraryDefaults)];
     const nativeIds = getNativeBlockLibraries(stackObj, packageId).map((l) => l.id);
     // Package-declared defaults (defaultForPackages): seeded checked but
     // DESELECTABLE — they stay in the selectable list, unlike locked natives.
@@ -237,6 +272,7 @@ export function useProjectBuilder(
                 blockLibraryDefaults,
                 customBlockLibraryDefaults,
                 stateCustomBlockLibraries,
+                state.demo,
             );
 
             // On a stack CHANGE (not the initial pick), notify the wizard so it can
@@ -253,11 +289,18 @@ export function useProjectBuilder(
             // unconditional reset wiped the edit-seeded mesh and silently dropped
             // it on Finish.
             const isSameStack = selectedStack === stackId;
+            // The integrations an added demo depends on (D29) start added on the
+            // first pick, through the same selection the Integrations area writes;
+            // the SC can remove any. A same-stack re-select re-adds nothing.
+            const demoSeed = isSameStack ? undefined : integrationSeed(state.demo, state.appBuilderComponentSources);
             const meshReconciledComponents = isSameStack
                 ? undefined
                 : [
-                      ...selectedAppBuilderComponents.filter((id) => !isMeshComponentId(id)),
-                      ...(meshDeps ?? []),
+                      ...new Set([
+                          ...selectedAppBuilderComponents.filter((id) => !isMeshComponentId(id)),
+                          ...(meshDeps ?? []),
+                          ...(demoSeed?.ids ?? []),
+                      ]),
                   ];
 
             updateState({
@@ -265,6 +308,7 @@ export function useProjectBuilder(
                 ...(meshReconciledComponents !== undefined
                     ? { selectedAppBuilderComponents: meshReconciledComponents }
                     : {}),
+                ...(demoSeed?.sources ? { appBuilderComponentSources: demoSeed.sources } : {}),
                 edsConfig,
                 selectedAddons: addons,
                 selectedBlockLibraries: blockLibraries,
@@ -278,6 +322,8 @@ export function useProjectBuilder(
             selectedStack,
             selectedAppBuilderComponents,
             state.edsConfig,
+            state.demo,
+            state.appBuilderComponentSources,
             stateCustomBlockLibraries,
             blockLibraryDefaults,
             customBlockLibraryDefaults,

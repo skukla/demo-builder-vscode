@@ -100,7 +100,6 @@ describe('useDashboardActions', () => {
             expect(result.current.handleNavigateBack).toBeDefined();
             expect(result.current.handleReAuthenticate).toBeDefined();
             expect(result.current.handleEditProject).toBeDefined();
-            expect(result.current.handleExportProject).toBeDefined();
         });
 
         it('should return functions for all handlers', () => {
@@ -251,16 +250,6 @@ describe('useDashboardActions', () => {
             });
 
             expect(mockPostMessage).toHaveBeenCalledWith('editProject');
-        });
-
-        it('should send exportProject message', () => {
-            const { result } = renderActionsHook();
-
-            act(() => {
-                result.current.handleExportProject();
-            });
-
-            expect(mockPostMessage).toHaveBeenCalledWith('exportProject');
         });
 
 

@@ -30,6 +30,8 @@ export const CHECK_IDS = {
     MCP_HEALTH: 'mcp-health',
     AI_VERIFY: 'ai-verify',
     AI_CONTEXT_FRESHNESS: 'ai-context-freshness',
+    /** An added demo's source (repository and content site) still answers. */
+    DEMO_SOURCE: 'demo-source',
 } as const;
 
 export type CheckId = (typeof CHECK_IDS)[keyof typeof CHECK_IDS];

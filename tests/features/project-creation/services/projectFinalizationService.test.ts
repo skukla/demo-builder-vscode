@@ -283,7 +283,7 @@ describe('projectFinalizationService', () => {
             await generateEnvironmentFiles(context);
 
             expect(mockSetupContext.logger.debug).toHaveBeenCalledWith(
-                '[Project Creation] Phase 4: Generating environment configuration...'
+                '[Project Creation] Phase 4: Generating environment configuration'
             );
             expect(mockSetupContext.logger.debug).toHaveBeenCalledWith(
                 '[Project Creation] Phase 4 complete: Environment configured'

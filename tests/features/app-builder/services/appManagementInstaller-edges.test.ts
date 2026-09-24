@@ -320,8 +320,8 @@ describe('installAppManagementApp — what it tells the user', () => {
         );
 
         expect(progressFrom(onProgress.mock.calls.map((c) => c[0] as string))).toEqual([
-            'Associating the app with your Commerce instance…',
-            'Installing into Commerce (App Management)…',
+            'Associating the app with your Commerce instance',
+            'Installing into Commerce (App Management)',
         ]);
     });
 
@@ -349,8 +349,8 @@ describe('installAppManagementApp — what it tells the user', () => {
         );
 
         const messages = onProgress.mock.calls.map((c) => c[0] as string);
-        expect(messages).toContain('Installing into Commerce (App Management)…');
-        expect(messages).toContain('Retrying the install (transient conflict, round 2)…');
+        expect(messages).toContain('Installing into Commerce (App Management)');
+        expect(messages).toContain('Retrying the install (transient conflict, round 2)');
     });
 
     // Each round used to re-send "Installing into Commerce…", and every resend read
@@ -375,8 +375,8 @@ describe('installAppManagementApp — what it tells the user', () => {
         );
 
         expect(onProgress.mock.calls.map((c) => c[0] as string)).toEqual([
-            'Associating the app with your Commerce instance…',
-            'Installing into Commerce (App Management)…',
+            'Associating the app with your Commerce instance',
+            'Installing into Commerce (App Management)',
         ]);
     });
 });

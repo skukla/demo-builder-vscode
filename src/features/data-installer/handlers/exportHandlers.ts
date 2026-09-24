@@ -31,6 +31,7 @@ import { resolveProjectCredentials } from '../services/commerceCredentialBroker'
 import {
     DataInstallerWriteClient,
     type ExportRequest,
+    type ExportOutcome,
 } from '../services/dataInstallerWriteClient';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
 import { ACCS_GRAPHQL_ENDPOINT, PAAS_URL } from '@/core/config/envVarKeys';
@@ -104,7 +105,9 @@ export const exportHandlers = defineHandlers({
             return prepared.response;
         }
         try {
-            return { success: true, data: await prepared.writeClient.startExport(prepared.request) };
+            const outcome = await prepared.writeClient.startExport(prepared.request);
+            logExportVerdicts(context, prepared.request.id, outcome);
+            return { success: true, data: outcome };
         } catch (error) {
             return {
                 success: false,
@@ -114,6 +117,36 @@ export const exportHandlers = defineHandlers({
         }
     },
 });
+
+/**
+ * The verdict, in the logs, per data type. The service answers a failed export
+ * with HTTP 200 and `success: false` inside, so the door used to log "200" and
+ * "ok" and nothing else: an SC reading the logs after a failed export saw a
+ * success (found 2026-09-13, reading the logs of an export that stored
+ * nothing). A failure is a warning in the User Logs, in the service's words.
+ */
+function logExportVerdicts(
+    context: HandlerContext,
+    id: { name: string; version: string },
+    outcome: ExportOutcome,
+): void {
+    const pack = `${id.name}@${id.version}`;
+    for (const type of outcome.perType) {
+        if (type.success) {
+            context.logger.info(
+                `[Data Installer] Exported ${type.exported} ${type.dataType} to ${pack}` +
+                    (type.excluded ? ` (${type.excluded} excluded)` : ''),
+            );
+        } else {
+            context.logger.warn(
+                `[Data Installer] ${type.dataType} export to ${pack} failed: ${type.reason ?? 'the service gave no reason'}`,
+            );
+        }
+    }
+    if (!outcome.success && outcome.perType.length === 0) {
+        context.logger.warn(`[Data Installer] Export to ${pack} failed; the service named no data type`);
+    }
+}
 
 /** Payload for the two export message types. */
 export interface ExportPayload {

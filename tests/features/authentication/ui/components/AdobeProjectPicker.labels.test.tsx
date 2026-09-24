@@ -62,7 +62,7 @@ describe('AdobeProjectPicker — what it hands SelectionStepContent', () => {
     describe('labels', () => {
         it('names the organization in the loading and empty copy', () => {
             const { labels } = listProps();
-            expect(labels.loadingSubMessage).toBe('Fetching from organization: Test Organization...');
+            expect(labels.loadingSubMessage).toBe('Fetching from organization: Test Organization');
             expect(labels.emptyMessage).toBe(
                 'No projects found in organization Test Organization. ' +
                     'Please create a project in Adobe Console first.',
@@ -71,7 +71,7 @@ describe('AdobeProjectPicker — what it hands SelectionStepContent', () => {
 
         it('falls back to generic copy when no org is selected', () => {
             const { labels } = listProps({ ...baseState, adobeOrg: undefined });
-            expect(labels.loadingSubMessage).toBe('Fetching projects...');
+            expect(labels.loadingSubMessage).toBe('Fetching projects');
             expect(labels.emptyMessage).toBe(
                 'No projects found. Please create a project in Adobe Console first.',
             );

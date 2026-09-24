@@ -482,7 +482,7 @@ describe('progress register', () => {
 
         // ONCE is the assertion, not merely "at some point". Before the swap the
         // card received a push per step and one of them happened to read
-        // "Deploying…", so a toHaveBeenCalledWith would have passed against the
+        // "Deploying", so a toHaveBeenCalledWith would have passed against the
         // broken code and proved nothing.
         const inProgress = mockSendAppBuilderComponentStatusUpdate.mock.calls.filter(
             (call: unknown[]) => call[1] === 'deploying'

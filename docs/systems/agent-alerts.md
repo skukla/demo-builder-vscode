@@ -54,6 +54,9 @@ Deleting things
 
 Replacing or wiping
 - `reset_eds_project` · `reset_datapack` · `migrate_storefront_name` · `reset_erp_records`
+- `reset_eds_project` · `reset_datapack` · `migrate_storefront_name`
+- `forget_added_demo` (with `deleteRepository` it deletes the repository made from a zip)
+- `remove_demo_package` (takes the description file colleagues add the demo from out of the repository)
 
 Reaching other people
 - `set_site_admin` · `republish` · `sync_content` · `rename_adobe_project`
@@ -164,7 +167,7 @@ point the claim is made rather than in review.
 
 ## Writing the copy
 
-`action` completes "Demo Builder: ___?" — a verb phrase, no full stop.
+`action` completes "Agent · ___?" — a verb phrase, no full stop. Every agent notification opens with the same "Agent ·" (`agentNotice.ts`).
 `consequence` is ONE sentence saying what changes.
 
 - Say what changes, not what the tool is. The reader already wants the thing;

@@ -1,4 +1,4 @@
-import { parseGitHubUrl } from '@/core/utils/githubUrlParser';
+import { gitHubSourceProblem, parseGitHubUrl, parseStorefrontLink } from '@/core/utils/githubUrlParser';
 
 describe('parseGitHubUrl', () => {
     describe('valid URLs', () => {
@@ -63,5 +63,49 @@ describe('parseGitHubUrl', () => {
         it('should return null for GitHub URL with only trailing slash', () => {
             expect(parseGitHubUrl('https://github.com/')).toBeNull();
         });
+    });
+});
+
+describe('parseStorefrontLink', () => {
+    it('reads the repository out of an Edge Delivery site address', () => {
+        expect(parseStorefrontLink('https://main--booth3-summit--vinodsivagnanam-pm.aem.live')).toEqual({
+            owner: 'vinodsivagnanam-pm',
+            repo: 'booth3-summit',
+        });
+        expect(parseStorefrontLink('https://main--isle5-demo--jen.aem.page/products/default')).toEqual({
+            owner: 'jen',
+            repo: 'isle5-demo',
+        });
+        expect(parseStorefrontLink('main--isle5-demo--jen.hlx.live')).toEqual({ owner: 'jen', repo: 'isle5-demo' });
+    });
+
+    it('reads a chat client\'s long dashes as the two hyphens they were', () => {
+        expect(parseStorefrontLink('https://main\u2014booth3-summit\u2014vinodsivagnanam-pm.aem.live')).toEqual({
+            owner: 'vinodsivagnanam-pm',
+            repo: 'booth3-summit',
+        });
+    });
+
+    it('still reads a GitHub link, and refuses everything else', () => {
+        expect(parseStorefrontLink('https://github.com/jen/isle5-demo')).toEqual({ owner: 'jen', repo: 'isle5-demo' });
+        expect(parseStorefrontLink('https://da.live/#/jen/isle5-demo')).toBeNull();
+        expect(parseStorefrontLink('https://example.aem.live')).toBeNull();
+        expect(parseStorefrontLink('https://--repo--owner.aem.live')).toBeNull();
+        expect(parseStorefrontLink('not a link')).toBeNull();
+        expect(parseStorefrontLink(undefined)).toBeNull();
+    });
+});
+
+describe('gitHubSourceProblem', () => {
+    it('answers nothing for a usable owner and repo', () => {
+        expect(gitHubSourceProblem('jen', 'isle5-demo.v2')).toBeUndefined();
+    });
+
+    it('names the owner when the owner is unusable, before looking at the repo', () => {
+        expect(gitHubSourceProblem('jen smith', '..')).toBe('Invalid GitHub owner: "jen smith"');
+    });
+
+    it('names the repo when only the repo is unusable', () => {
+        expect(gitHubSourceProblem('jen', '..')).toBe('Invalid GitHub repo: ".."');
     });
 });

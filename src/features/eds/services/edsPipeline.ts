@@ -19,6 +19,7 @@
 
 import { failedTargets, publishBrandAssets } from './brandAssetPublisher';
 import { prewarmCatalog } from './catalogPrewarmService';
+import { contentIndexUrl } from './contentIndex';
 import type { DaLiveContentOperations } from './daLive/daLiveContentOperations';
 import type { GitHubFileOperations } from './github/githubFileOperations';
 import type { HelixService } from './helix/helixService';
@@ -65,7 +66,7 @@ export interface EdsPipelineParams {
     /** Delete all existing DA.live content before populating (true = clean slate) */
     clearExistingContent?: boolean;
     skipContent?: boolean;
-    contentSource?: { org: string; site: string; indexPath?: string };
+    contentSource?: { org: string; site: string; indexPath: string };
     /** Optional second content source for the customer account chrome
      *  (`/customer/*` + the `/customer/nav` fragment), overlaid after the main
      *  copy. Used by hybrid packages (B2B base + brand overlay). */
@@ -250,7 +251,7 @@ async function pipelineClearContent(
 
     onProgress?.({
         operation: 'content-clear',
-        message: 'Clearing existing DA.live content...',
+        message: 'Clearing existing DA.live content',
         subMessage: `${daLiveOrg}/${daLiveSite}`,
     });
     logger.info(`[EdsPipeline] Clearing all DA.live content for ${daLiveOrg}/${daLiveSite}`);
@@ -279,7 +280,7 @@ async function pipelineClearContent(
 
         onProgress?.({
             operation: 'content-clear',
-            message: `Unpublishing ${webPaths.length} CDN pages...`,
+            message: `Unpublishing ${webPaths.length} CDN pages`,
         });
 
         try {
@@ -334,7 +335,7 @@ async function pipelineClearContent(
  */
 async function pipelineCopyContent(
     daLiveContentOps: DaLiveContentOperations,
-    contentSource: { org: string; site: string; indexPath?: string },
+    contentSource: { org: string; site: string; indexPath: string },
     daLiveOrg: string,
     daLiveSite: string,
     contentPatches: string[] | undefined,
@@ -347,7 +348,7 @@ async function pipelineCopyContent(
 ): Promise<number> {
     onProgress?.({
         operation: 'content-copy',
-        message: 'Populating DA.live content...',
+        message: 'Populating DA.live content',
         subMessage: `from ${contentSource.org}/${contentSource.site}`,
     });
 
@@ -361,11 +362,10 @@ async function pipelineCopyContent(
         ];
     }
 
-    const indexPath = contentSource.indexPath || '/full-index.json';
     const fullContentSource = {
         org: contentSource.org,
         site: contentSource.site,
-        indexUrl: `https://main--${contentSource.site}--${contentSource.org}.aem.live${indexPath}`,
+        indexUrl: contentIndexUrl(contentSource),
     };
 
     logger.info(
@@ -439,7 +439,7 @@ async function pipelinePublishContent(
 ): Promise<void> {
     onProgress?.({
         operation: 'content-publish',
-        message: 'Publishing content to CDN...',
+        message: 'Publishing content to CDN',
         subMessage: `${repoOwner}/${repoName}`,
     });
 
@@ -504,7 +504,7 @@ async function pipelineConfigureBlockLibrary(
 
     onProgress?.({
         operation: 'block-library',
-        message: 'Configuring block library...',
+        message: 'Configuring block library',
         // Which storefront it is building the library into — the same slot, and
         // the same org/site shape, the other DA.live steps fill.
         subMessage: `${daLiveOrg}/${daLiveSite}`,
@@ -744,7 +744,7 @@ const PIPELINE_STEPS: PipelineStep[] = [
         run: async ({ params, services, onProgress }) => {
             onProgress?.({
                 operation: 'eds-settings',
-                message: 'Applying EDS configuration...',
+                message: 'Applying EDS configuration',
             });
             const { applyDaLiveOrgConfigSettings } = await import('../handlers/edsHelpers');
             await applyDaLiveOrgConfigSettings(
@@ -762,7 +762,7 @@ const PIPELINE_STEPS: PipelineStep[] = [
         run: async ({ params, services, onProgress }) => {
             onProgress?.({
                 operation: 'cache-purge',
-                message: 'Purging stale cache...',
+                message: 'Purging stale cache',
             });
             await services.helixService.purgeCacheAll(params.repoOwner, params.repoName, 'main');
             services.logger.info('[EdsPipeline] Stale cache purged');
@@ -834,10 +834,10 @@ async function pipelinePublishLibrary({ params, services, ctx, onProgress }: Pip
     // 2026-08-23). Say what is actually happening: how much, then which half.
     onProgress?.({
         operation: 'library-publish',
-        message: 'Publishing block library...',
+        message: 'Publishing block library',
         subMessage: `Publishing ${ctx.libraryPaths.length} library ${
             ctx.libraryPaths.length === 1 ? 'path' : 'paths'
-        }...`,
+        }`,
     });
 
     const { publishLibraryPaths, verifyLibraryPreviewed } = await import('../handlers/edsHelpers');
@@ -850,8 +850,8 @@ async function pipelinePublishLibrary({ params, services, ctx, onProgress }: Pip
     );
     onProgress?.({
         operation: 'library-publish',
-        message: 'Publishing block library...',
-        subMessage: 'Verifying the library previewed...',
+        message: 'Publishing block library',
+        subMessage: 'Verifying the library previewed',
     });
     const previewed = await verifyLibraryPreviewed(
         params.repoOwner,

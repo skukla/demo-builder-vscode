@@ -13,7 +13,8 @@ cannot tell what is running."* Not which MCP server, not which tool, not which
 phase of a long operation.
 
 **Partly shipped.** MCP progress notifications narrate each tool call into the
-terminal, and `toolNarration.ts` gives 105 tools authored plain-English phrases.
+terminal, and `toolNarration.ts` gives every tool an authored plain-English phrase
+(121 of them on 2026-09-23; the count moves with the surface, the coverage does not).
 What is missing is the summary and anything interactive — MCP only lets us speak
 in response to a tool call, and we never learn that a turn ended.
 

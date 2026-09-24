@@ -76,7 +76,7 @@ export function AiMcpsList({
         return (
             <Flex gap="size-100" alignItems="center" data-testid="ai-mcps-loading">
                 <Spinner size="S" aria-label="Checking" />
-                <Text UNSAFE_className="text-gray-700">Checking the project's MCP servers…</Text>
+                <Text UNSAFE_className="text-gray-700">Checking the project's MCP servers</Text>
             </Flex>
         );
     }

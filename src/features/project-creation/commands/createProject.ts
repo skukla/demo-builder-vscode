@@ -17,12 +17,14 @@ import { getEndpoint as getEndpointHelper } from '@/features/mesh/services/meshE
 // Handler utilities and handlers
 import { projectCreationHandlers } from '@/features/project-creation/handlers/ProjectCreationHandlerRegistry';
 import { formatGroupName as formatGroupNameHelper } from '@/features/project-creation/helpers/formatters';
+import { ADDED_DEMOS_SETTING, readAddedDemos } from '@/features/project-creation/services/addedDemoSettings';
 import { parseCustomBlockLibrarySettings } from '@/features/project-creation/services/customBlockLibraryUtils';
 import { HandlerContext, SharedState } from '@/types/handlers';
 import type { SettingsFile } from '@/types/settingsFile';
 import { parseJSON } from '@/types/typeGuards';
 import type { ComponentSelection } from '@/types/webview';
-import type { BlockLibraryDefaultsUpdatedPayload, CustomBlockLibraryDefaultsUpdatedPayload, WizardInitialData } from '@/types/webviewPayloads';
+import type { BlockLibraryDefaultsUpdatedPayload, AddedDemosUpdatedPayload,
+    CustomBlockLibraryDefaultsUpdatedPayload, WizardInitialData } from '@/types/webviewPayloads';
 import type { EditProjectConfig, WizardStepDefinition } from '@/types/wizard';
 
 /**
@@ -315,6 +317,9 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand<WizardInitia
             config.get<string[]>('blockLibraries.custom', []),
         );
 
+        // Demos the SC has added from a link, in the same shape as the custom libraries.
+        const addedDemos = readAddedDemos();
+
         // Debug: Log EDS config being sent to webview
         if (this.editProject?.settings?.edsConfig) {
             this.logger.debug(
@@ -343,6 +348,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand<WizardInitia
             projectsViewMode,
             blockLibraryDefaults,
             customBlockLibraryDefaults,
+            addedDemos,
         };
     }
 
@@ -458,6 +464,11 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand<WizardInitia
                 this.sendMessage('customBlockLibraryDefaultsUpdated', {
                     customBlockLibraryDefaults: updated,
                 } satisfies CustomBlockLibraryDefaultsUpdatedPayload);
+            }
+            if (e.affectsConfiguration(`demoBuilder.${ADDED_DEMOS_SETTING}`)) {
+                this.sendMessage('addedDemosUpdated', {
+                    addedDemos: readAddedDemos(),
+                } satisfies AddedDemosUpdatedPayload);
             }
             if (e.affectsConfiguration('demoBuilder.blockLibraries.defaults')) {
                 const config = vscode.workspace.getConfiguration('demoBuilder');

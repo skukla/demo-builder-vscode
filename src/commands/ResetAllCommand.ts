@@ -34,7 +34,7 @@ export class ResetAllCommand extends BaseCommand {
                 return;
             }
 
-            this.logger.info('Resetting all Demo Builder state...');
+            this.logger.info('Resetting all Demo Builder state');
 
             // 1. Stop any running processes first
             try {

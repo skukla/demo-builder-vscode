@@ -165,7 +165,7 @@ describe('IntegrationCard', () => {
         const { card } = renderCard(
             makeModel({
                 status: 'deploying',
-                statusLabel: 'Deploying…',
+                statusLabel: 'Deploying',
                 dotVariant: 'info',
                 menuActions: [],
             }),

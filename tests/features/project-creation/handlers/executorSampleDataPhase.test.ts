@@ -104,7 +104,7 @@ describe('executeSampleDataPhase', () => {
             1,
             OPERATION_STAGES.installingDatapack.label,
             92,
-            'Installing bodea\u2026'
+            'Installing bodea'
         );
     });
 

@@ -159,7 +159,7 @@ export async function performTemplateUpdates(
                 const project = selection.project;
 
                 progress.report({
-                    message: `${project.name}…`,
+                    message: `${project.name}`,
                     increment: 100 / filtered.length,
                 });
 
@@ -261,7 +261,7 @@ export async function performComponentUpdates(
                     if (!update.releaseInfo) continue;
 
                     progress.report({
-                        message: `${update.componentId} in ${project.name}…`,
+                        message: `${update.componentId} in ${project.name}`,
                         increment: 100 / totalUpdates,
                     });
 
@@ -353,7 +353,7 @@ export async function performAdobeMcpUpdates(
                 const { project, packageName, latestVersion } = item;
 
                 progress.report({
-                    message: `${packageName} → ${latestVersion} in ${project.name}…`,
+                    message: `${packageName} → ${latestVersion} in ${project.name}`,
                     increment: 100 / total,
                 });
 

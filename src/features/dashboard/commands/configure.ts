@@ -103,7 +103,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
     }
 
     protected getLoadingMessage(): string {
-        return 'Loading project configuration...';
+        return 'Loading project configuration';
     }
 
     /** Project name captured in execute() so the loading screen can show it. */
