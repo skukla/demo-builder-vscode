@@ -212,9 +212,9 @@ describe('dashboardHandlers', () => {
             // I/O event providers/registrations, same service as the MCP
             // event tools.
             //
-            // setIntegrationsViewModeOverride (49 → 50): the integrations
-            // screen's cards/rows toggle, kept for the session the way the
-            // projects list keeps its own (owner, 2026-09-24).
+            // setViewModeOverride (49 → 50, 2026-09-24): the integrations screen's
+            // cards/rows toggle — the shared handler the projects list also
+            // registers (core/handlers/viewModeHandler), under the same name.
             expect(types).toHaveLength(50);
         });
 

@@ -36,8 +36,9 @@ import ViewGrid from '@spectrum-icons/workflow/ViewGrid';
 import ViewList from '@spectrum-icons/workflow/ViewList';
 import React from 'react';
 import { Spinner } from '../ui/Spinner';
-/** Available view modes */
-export type ViewMode = 'cards' | 'rows';
+/** The shared cards/rows type, re-exported so the header's callers keep one import. */
+export type { ViewMode } from '@/types/viewMode';
+import type { ViewMode } from '@/types/viewMode';
 
 export interface SearchHeaderProps {
     /** Current search query */

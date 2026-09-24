@@ -17,7 +17,6 @@ import {
     handleOpenHelp,
     handleOpenSettings,
     handleSetProjectPinned,
-    handleSetViewModeOverride,
     handleStartDemo,
     handleStopDemo,
     mockCopySettingsFromProject,
@@ -94,27 +93,6 @@ describe('handleOpenSettings', () => {
         const result = await handleOpenSettings(context);
 
         expect(result).toEqual({ success: false, error: 'Failed to open settings' });
-    });
-});
-
-describe('handleSetViewModeOverride', () => {
-    it('records the requested view mode on the session state', async () => {
-        const context = createProjectsDashboardContext([]);
-
-        const result = await handleSetViewModeOverride(context, { viewMode: 'rows' });
-
-        expect(sessionUIState.viewModeOverride).toBe('rows');
-        expect(result).toEqual({ success: true });
-    });
-
-    it('leaves the existing override alone when no payload is given', async () => {
-        const context = createProjectsDashboardContext([]);
-        sessionUIState.viewModeOverride = 'cards';
-
-        const result = await handleSetViewModeOverride(context);
-
-        expect(sessionUIState.viewModeOverride).toBe('cards');
-        expect(result).toEqual({ success: true });
     });
 });
 

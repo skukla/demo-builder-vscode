@@ -13,6 +13,7 @@ is the inventory plus the handful of behaviours the source will not tell you.
 | **Talking to the extension** | |
 | `useVSCodeMessage` | Subscribe to extension messages, unsubscribing on unmount |
 | `useVSCodeRequest` | Request/response with loading/error/data state — **see the gotcha below before using it** |
+| `useViewModePreference` | A list's cards/rows choice: `choose` switches and tells the extension (kept for the session), `adopt` takes a view the extension announced |
 | **State** | |
 | `useLoadingState` | Loading/error/data, plus `hasLoadedOnce` and `isRefreshing` |
 | `useSelection` | Single-item selection with key extraction |

@@ -55,6 +55,7 @@ export const SETTING_KEYS = [
     'demoBuilder.updateChannel',
     'demoBuilder.logLevel',
     'demoBuilder.projectsViewMode',
+    'demoBuilder.integrationsViewMode',
     'demoBuilder.cleanupBehavior',
     'demoBuilder.blockLibraries.defaults',
     'demoBuilder.blockLibraries.custom',

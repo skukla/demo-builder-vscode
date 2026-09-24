@@ -10,6 +10,7 @@ import { createRoot } from 'react-dom/client';
 import type { ProjectActions } from './components/ProjectActionsMenu';
 import { ProjectsDashboard } from './ProjectsDashboard';
 import { WebviewApp } from '@/core/ui/components/WebviewApp';
+import { useViewModePreference } from '@/core/ui/hooks/useViewModePreference';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { sleep } from '@/core/utils/sleep';
 import type { Project } from '@/types/base';
@@ -56,7 +57,9 @@ function ProjectsDashboardApp() {
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
-    const [initialViewMode, setInitialViewMode] = useState<'cards' | 'rows'>('cards');
+    // Destructured to the hook's STABLE callbacks — the object itself is rebuilt each
+    // render, and fetchProjects/the config listener depend on what they call.
+    const { viewMode, choose: chooseViewMode, adopt: adoptViewMode } = useViewModePreference('projects');
     const [runningProjectPath, setRunningProjectPath] = useState<string | undefined>(undefined);
     // Track whether initial fetch was triggered (prevent StrictMode double-fetch)
     const initialFetchTriggeredRef = useRef(false);
@@ -85,7 +88,7 @@ function ProjectsDashboardApp() {
                 projectList = response.data.projects;
                 // View mode comes from backend (includes session override if set)
                 if (response.data.projectsViewMode) {
-                    setInitialViewMode(response.data.projectsViewMode);
+                    adoptViewMode(response.data.projectsViewMode);
                 }
                 // Update running project path from response
                 setRunningProjectPath(response.data.runningProjectPath);
@@ -99,7 +102,7 @@ function ProjectsDashboardApp() {
             setIsLoading(false);
             setIsRefreshing(false);
         }
-    }, []);
+    }, [adoptViewMode]);
 
     // Fetch projects on mount and listen for messages
     useEffect(() => {
@@ -114,7 +117,7 @@ function ProjectsDashboardApp() {
         const unsubscribeConfig = webviewClient.onMessage('configChanged', (data) => {
             const configData = data as Partial<ConfigChangedPayload> | undefined;
             if (configData?.projectsViewMode) {
-                setInitialViewMode(configData.projectsViewMode);
+                adoptViewMode(configData.projectsViewMode);
             }
         });
 
@@ -143,7 +146,7 @@ function ProjectsDashboardApp() {
             unsubscribeDeleted();
             unsubscribeDemoState();
         };
-    }, [fetchProjects]);
+    }, [fetchProjects, adoptViewMode]);
 
     // Handle refresh
     const handleRefresh = useCallback(() => {
@@ -418,13 +421,6 @@ function ProjectsDashboardApp() {
         [fetchProjects],
     );
 
-    // Handle view mode override - saves to backend for session persistence
-    const handleViewModeOverride = useCallback((mode: 'cards' | 'rows') => {
-        setInitialViewMode(mode);
-        // Persist to backend so it survives webview recreations
-        webviewClient.postMessage('setViewModeOverride', { viewMode: mode });
-    }, []);
-
     // Bundle all project action callbacks into a single object
     const projectActions: ProjectActions = useMemo(
         () => ({
@@ -474,8 +470,8 @@ function ProjectsDashboardApp() {
             isRefreshing={isRefreshing}
             onRefresh={handleRefresh}
             hasLoadedOnce={hasLoadedOnce}
-            initialViewMode={initialViewMode}
-            onViewModeOverride={handleViewModeOverride}
+            initialViewMode={viewMode}
+            onViewModeOverride={chooseViewMode}
         />
     );
 }

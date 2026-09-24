@@ -45,7 +45,6 @@ import {
     handleOpenDebugLogs,
     handleOpenIntegrations,
     handleShowProjectDashboard,
-    handleSetIntegrationsViewModeOverride,
 } from './panelNavigationHandlers';
 import {
     handleEditProject,
@@ -55,6 +54,7 @@ import {
     handleExportProjectSettings,
 } from './projectManagementHandlers';
 import { handleRequestStatus, handleReAuthenticate, handleSwitchOrg } from './statusHandlers';
+import { handleSetViewModeOverride } from '@/core/handlers/viewModeHandler';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import {
     handleAddAppBuilderComponent,
@@ -257,7 +257,7 @@ export const dashboardHandlers = defineHandlers({
     getProjectUrls: handleGetProjectUrls,
     navigateBack: handleNavigateBack,
     openIntegrations: handleOpenIntegrations,
-    setIntegrationsViewModeOverride: handleSetIntegrationsViewModeOverride,
+    setViewModeOverride: handleSetViewModeOverride,
     openDataInstaller: handleOpenDataInstaller,
     showProjectDashboard: handleShowProjectDashboard,
 

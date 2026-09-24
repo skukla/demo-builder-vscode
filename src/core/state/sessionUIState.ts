@@ -17,7 +17,7 @@
  * - Clears when extension is deactivated/reloaded
  */
 
-export type ViewMode = 'cards' | 'rows';
+import type { ViewMode, ViewModeList } from '@/types/viewMode';
 
 /**
  * Centralized session UI state
@@ -29,10 +29,9 @@ class SessionUIState {
     // Panel visibility toggles
     private _isLogsViewShown = false;
 
-    // Session preference overrides (override VS Code settings for this session only)
-    private _viewModeOverride?: ViewMode;
-    /** The integrations screen's own toggle — a separate list, a separate choice. */
-    private _integrationsViewModeOverride?: ViewMode;
+    // Session preference overrides (override VS Code settings for this session only):
+    // each list's cards/rows choice, held apart — switching one never switches another.
+    private _viewModeOverrides: Partial<Record<ViewModeList, ViewMode>> = {};
 
     // =====================================================
     // Panel visibility state
@@ -50,29 +49,18 @@ class SessionUIState {
     // Session preference overrides
     // =====================================================
 
-    /**
-     * Get the view mode override for the Projects List
-     * Returns undefined if no override is set (use VS Code setting)
-     */
-    get viewModeOverride(): ViewMode | undefined {
-        return this._viewModeOverride;
+    /** The list's choice for this session, if the SC made one (over its setting). */
+    getViewModeOverride(list: ViewModeList): ViewMode | undefined {
+        return this._viewModeOverrides[list];
     }
 
-    /**
-     * Set a session-only view mode override
-     * This overrides the VS Code setting until extension is reloaded
-     */
-    set viewModeOverride(value: ViewMode | undefined) {
-        this._viewModeOverride = value;
-    }
-
-    /** The integrations screen's view for this session, over `demoBuilder.integrationsViewMode`. */
-    get integrationsViewModeOverride(): ViewMode | undefined {
-        return this._integrationsViewModeOverride;
-    }
-
-    set integrationsViewModeOverride(value: ViewMode | undefined) {
-        this._integrationsViewModeOverride = value;
+    /** Keep the list's choice for this session; `undefined` forgets it. */
+    setViewModeOverride(list: ViewModeList, value: ViewMode | undefined): void {
+        if (value === undefined) {
+            delete this._viewModeOverrides[list];
+        } else {
+            this._viewModeOverrides[list] = value;
+        }
     }
 
     // =====================================================
@@ -85,8 +73,7 @@ class SessionUIState {
      */
     reset(): void {
         this._isLogsViewShown = false;
-        this._viewModeOverride = undefined;
-        this._integrationsViewModeOverride = undefined;
+        this._viewModeOverrides = {};
     }
 }
 

@@ -26,10 +26,10 @@ import {
     handleRenameProject,
     handleOpenHelp,
     handleOpenSettings,
-    handleSetViewModeOverride,
     handleOpenAiForProject,
     handleSetProjectPinned,
 } from './dashboardHandlers';
+import { handleSetViewModeOverride } from '@/core/handlers/viewModeHandler';
 import { defineHandlers } from '@/types/handlers';
 
 /**

@@ -30,7 +30,7 @@ import { createPanelHandlerContext } from '@/commands/handlerContextFactory';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { WebviewCommunicationManager } from '@/core/communication/webviewCommunicationManager';
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
-import { sessionUIState } from '@/core/state/sessionUIState';
+import { resolveViewMode } from '@/core/state/viewModePreference';
 import { getBundleUri } from '@/core/utils/bundleUri';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
 import { asDisplayName, getProjectDisplayName } from '@/core/utils/projectDisplayName';
@@ -103,11 +103,7 @@ export class ShowIntegrationsCommand extends BaseWebviewCommand<IntegrationsInit
             appBuilderComponentCatalog: this.resolveCatalog(project ?? null),
             // Session choice over the setting, as the projects list does. In the
             // init payload rather than a request, so the first paint is right.
-            integrationsViewMode:
-                sessionUIState.integrationsViewModeOverride ??
-                vscode.workspace
-                    .getConfiguration('demoBuilder')
-                    .get<'cards' | 'rows'>('integrationsViewMode', 'cards'),
+            integrationsViewMode: resolveViewMode('integrations'),
             destination: {
                 projectTitle: project?.adobe?.projectTitle,
                 workspaceTitle: project?.adobe?.workspaceTitle,

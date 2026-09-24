@@ -13,6 +13,7 @@ import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { WebviewCommunicationManager } from '@/core/communication/webviewCommunicationManager';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
+import { readViewModeSetting, VIEW_MODE_SETTING } from '@/core/state/viewModePreference';
 import { getBundleUri } from '@/core/utils/bundleUri';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
 import { projectsListHandlers } from '@/features/projects-dashboard/handlers/projectsListHandlers';
@@ -96,9 +97,8 @@ export class ShowProjectsListCommand extends BaseWebviewCommand<ProjectsListInit
 
         // Listen for configuration changes and notify webview
         const configListener = vscode.workspace.onDidChangeConfiguration((e) => {
-            if (e.affectsConfiguration('demoBuilder.projectsViewMode')) {
-                const config = vscode.workspace.getConfiguration('demoBuilder');
-                const projectsViewMode = config.get<'cards' | 'rows'>('projectsViewMode', 'cards');
+            if (e.affectsConfiguration(`demoBuilder.${VIEW_MODE_SETTING.projects}`)) {
+                const projectsViewMode = readViewModeSetting('projects');
                 this.sendMessage('configChanged', { projectsViewMode } satisfies ConfigChangedPayload);
             }
         });
@@ -165,8 +165,7 @@ export class ShowProjectsListCommand extends BaseWebviewCommand<ProjectsListInit
             return;
         }
 
-        const config = vscode.workspace.getConfiguration('demoBuilder');
-        const projectsViewMode = config.get<'cards' | 'rows'>('projectsViewMode', 'cards');
+        const projectsViewMode = readViewModeSetting('projects');
         await this.sendMessage('configChanged', { projectsViewMode } satisfies ConfigChangedPayload);
     }
 

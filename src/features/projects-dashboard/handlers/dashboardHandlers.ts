@@ -15,7 +15,7 @@ import { ServiceLocator } from '@/core/di/serviceLocator';
 import { executeCommandForProject } from '@/core/handlers/projectCommandHelper';
 import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell/orgContextEnv';
 import { hasMeshDeploymentRecord } from '@/core/state/appBuilderComponentState';
-import { sessionUIState } from '@/core/state/sessionUIState';
+import { resolveViewMode } from '@/core/state/viewModePreference';
 import { openInIncognito } from '@/core/utils/browserUtils';
 import { validateProjectPath } from '@/core/validation/PathSafetyValidator';
 import { validateURL } from '@/core/validation/URLValidator';
@@ -117,11 +117,9 @@ export const handleGetProjects: MessageHandler = async (
             return a.name.localeCompare(b.name);
         });
 
-        // Include config in response (avoids race condition with init message)
-        // Session override takes precedence over VS Code setting
-        const config = vscode.workspace.getConfiguration('demoBuilder');
-        const configViewMode = config.get<'cards' | 'rows'>('projectsViewMode', 'cards');
-        const projectsViewMode = sessionUIState.viewModeOverride ?? configViewMode;
+        // In the response rather than a separate request (no race with init):
+        // the session's choice over the setting (`core/state/viewModePreference`).
+        const projectsViewMode = resolveViewMode('projects');
 
         // Find running project path (if any)
         const runningProject = projects.find((p) => p.status === 'running');
@@ -331,19 +329,6 @@ export const handleOpenSettings: MessageHandler = async (
             error: 'Failed to open settings',
         };
     }
-};
-
-/**
- * Set view mode override for the session
- */
-export const handleSetViewModeOverride: MessageHandler<{ viewMode: 'cards' | 'rows' }> = async (
-    _context: HandlerContext,
-    payload?: { viewMode: 'cards' | 'rows' },
-): Promise<HandlerResponse> => {
-    if (payload?.viewMode) {
-        sessionUIState.viewModeOverride = payload.viewMode;
-    }
-    return { success: true };
 };
 
 // ============================================================================
