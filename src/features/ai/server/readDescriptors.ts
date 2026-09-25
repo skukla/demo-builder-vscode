@@ -419,14 +419,21 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
             'Use to see when a timer job or an event handler ran and how it ended. CAVEAT (Adobe ' +
             'Runtime): a SUCCESSFUL blocking web-action call is not recorded unless it was sent with ' +
             'X-OW-EXTRA-LOGGING on; failures and timer/async runs always are. So a missing row means ' +
-            '"no failure recorded", never "did not run". Pass componentId to read the workspace that ' +
-            'integration deploys into, action to filter (e.g. "erp/refresh-job"), limit up to 50.',
+            '"no failure recorded", never "did not run" — invoke_runtime_action replays a run and ' +
+            'answers its record. Pass componentId to read the workspace that integration deploys ' +
+            'into, action to filter (e.g. "erp/refresh-job"), limit up to 50, skip to page past 50, ' +
+            'since (ISO time), failedOnly to keep only runs that did not succeed. The timer firings ' +
+            'themselves are hidden unless includeTriggers is true.',
         map: dashboardHandlers,
         type: 'listRuntimeActivations',
         inputSchema: {
             componentId: z.string().min(1).optional().describe('An integration id, to read its own workspace'),
             action: z.string().optional().describe('Only this action, e.g. "erp/refresh-job"'),
             limit: z.number().int().min(1).max(50).optional().describe('How many, newest first (default 30, max 50)'),
+            skip: z.number().int().min(0).optional().describe('Skip this many newest rows, to page past 50'),
+            since: z.string().optional().describe('Only activations after this ISO 8601 time'),
+            failedOnly: z.boolean().optional().describe('Only runs that did not succeed (status other than 0)'),
+            includeTriggers: z.boolean().optional().describe('Keep the timer firings themselves; hidden by default'),
         },
     },
     {

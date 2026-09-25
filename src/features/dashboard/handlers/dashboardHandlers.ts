@@ -98,6 +98,7 @@ import {
     handleUpdateAppBuilderComponent,
 } from '@/features/dashboard/handlers/integrationUpdateHandlers';
 import {
+    handleInvokeRuntimeAction,
     handleListRuntimeActivations,
     handleReadRuntimeActivation,
 } from '@/features/dashboard/handlers/runtimeActivationHandlers';
@@ -347,6 +348,7 @@ export const dashboardHandlers = defineHandlers({
     // and one activation's log and result — the read that placed the event fault.
     listRuntimeActivations: handleListRuntimeActivations,
     readRuntimeActivation: handleReadRuntimeActivation,
+    invokeRuntimeAction: handleInvokeRuntimeAction,
     // An integration's Settings (AB-21): the read, and the save that stores then
     // redeploys.
     getIntegrationSettings: handleGetIntegrationSettings,

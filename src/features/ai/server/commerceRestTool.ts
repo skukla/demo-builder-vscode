@@ -47,7 +47,9 @@ export function registerCommerceRestTool(
                 'company, companyCredits, orders, products, inventory), signed with the workspace ' +
                 'credential the ERP integration deploys with. Reads what GraphQL cannot: B2B ' +
                 'companies and credit, customer records, orders. Read-only; ACCS backends only for now. ' +
-                'To change data, use write_commerce_rest.',
+                'Keep answers small: add fields= (e.g. "orders/6?fields=increment_id,status,ext_order_id"), ' +
+                'and a searchCriteria[pageSize] on searches — a search without one gets pageSize 20 and ' +
+                'says so. Answers past 30,000 characters are cut. To change data, use write_commerce_rest.',
             inputSchema: {
                 path: z
                     .string()

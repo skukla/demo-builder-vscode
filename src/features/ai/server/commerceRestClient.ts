@@ -51,6 +51,26 @@ const REST_SCOPES = [
 const ACCS_REST_API = 'ACCS-REST-API';
 /** A minted token is reused until this close to its expiry. */
 const TOKEN_MARGIN_MS = 60_000;
+/** A search with no page size answers 20 rows and says so; Commerce's own default is every row. */
+export const DEFAULT_PAGE_SIZE = 20;
+
+/**
+ * A search path with no `searchCriteria[pageSize]` gets one, and the caller is told: a
+ * `customers/search` or `orders` read with no page size answers the whole table, most of
+ * it past the 30,000-character cut (measured 2026-09-25 on the orders list). Explicit is
+ * untouched; only the bare search is bounded.
+ */
+export function boundSearch(path: string): { path: string; note?: string } {
+    if (!/searchCriteria/u.test(path) || /searchCriteria\[pageSize\]/u.test(path)) {
+        return { path };
+    }
+    const joiner = path.includes('?') ? '&' : '?';
+    return {
+        path: `${path}${joiner}searchCriteria[pageSize]=${DEFAULT_PAGE_SIZE}`,
+        note: `[pageSize ${DEFAULT_PAGE_SIZE} applied; pass searchCriteria[pageSize] to change it]`,
+    };
+}
+
 /** A relative REST path with a query string: no scheme, no leading slash, no parent hops. */
 const PATH = /^[A-Za-z0-9_.\-/?=&%,:+@[\] ]{1,600}$/u;
 
@@ -214,6 +234,7 @@ export async function sendRest(
     fetchImpl: typeof fetch,
 ): Promise<string> {
     const controller = new AbortController();
+    const bounded = method === 'GET' ? boundSearch(path) : { path };
     // Commerce on the sandbox can take far longer than 30s to answer anything:
     // a company POST ran past it while sending welcome mail no server delivers,
     // and by evening plain GETs (eventing/supportedList, companyCredits) were
@@ -223,7 +244,7 @@ export async function sendRest(
     const timer = setTimeout(() => controller.abort(), TIMEOUTS.LONG);
     let res: Response;
     try {
-        res = await fetchImpl(`${target.base}/V1/${path}`, {
+        res = await fetchImpl(`${target.base}/V1/${bounded.path}`, {
             method,
             headers: {
                 Authorization: `Bearer ${target.token}`,
@@ -243,12 +264,13 @@ export async function sendRest(
     }
     const text = await res.text();
     if (!res.ok) return explainStatus(res.status, text);
+    const prefix = bounded.note ? `${bounded.note}\n` : '';
     if (text.length > MAX_RESPONSE_CHARS) {
         return (
-            `[truncated: ${text.length} chars, showing the first ${MAX_RESPONSE_CHARS}. ` +
+            `${prefix}[truncated: ${text.length} chars, showing the first ${MAX_RESPONSE_CHARS}. ` +
             'Narrow the read — a smaller pageSize, or a fields= filter.]\n' +
             text.slice(0, MAX_RESPONSE_CHARS)
         );
     }
-    return text || `{"ok":true,"status":${res.status}}`;
+    return `${prefix}${text || `{"ok":true,"status":${res.status}}`}`;
 }

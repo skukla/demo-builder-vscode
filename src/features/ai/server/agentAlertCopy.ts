@@ -135,6 +135,13 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         target: ['projectName', 'title'],
         sessionGrant: false,
     },
+    invoke_runtime_action: {
+        action: 'Run a Runtime action',
+        consequence:
+            "Runs one deployed action in the project's Adobe I/O Runtime namespace with the payload given, as if Commerce or a timer had called it; the action may write to Commerce or the ERP.",
+        target: ['action'],
+        sessionGrant: false,
+    },
     write_erp_rest: {
         action: 'Change something in the ERP',
         consequence:

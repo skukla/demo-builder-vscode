@@ -383,6 +383,30 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         },
     },
     {
+        tool: 'invoke_runtime_action',
+        needsAuth: ['adobe'],
+        readOnly: false,
+        description:
+            "Run one deployed action in this project's Adobe I/O Runtime namespace (or the " +
+            'workspace an integration deploys into), blocking, with a payload, and answer its result, ' +
+            'status and log lines. Use to replay an event handler ("order-commerce/created" with ' +
+            '{data:{value:<the order>}}) or a webhook ("webhook/item-prices" with the cart payload) ' +
+            'when Commerce or a timer cannot be made to fire it, and to read what a SUCCESSFUL run ' +
+            'did — which list_runtime_activations never records. A web action (a cart webhook, an ' +
+            "ERP route) is called through its URL with the user's Adobe token and its recorded run " +
+            'is read; any other action is invoked blocking. The action may write to Commerce or the ' +
+            'ERP, so this requires confirm:true. Takes componentId (optional), action ' +
+            '(<package>/<action>) and payload (a JSON object).',
+        map: dashboardHandlers,
+        type: 'invokeRuntimeAction',
+        confirm: true,
+        inputSchema: {
+            componentId: z.string().min(1).optional().describe('An integration id, to run in its own workspace'),
+            action: z.string().describe('The action, as <package>/<action>, e.g. "webhook/item-prices"'),
+            payload: z.record(z.unknown()).optional().describe("The action's parameters as a JSON object"),
+        },
+    },
+    {
         tool: 'open_erp_screen',
         needsAuth: false,
         // NOT read-only: it opens a browser window, same as open_url.

@@ -109,7 +109,7 @@ const CATALOG: Row[] = [
         map: dashboardHandlers,
         type: 'listRuntimeActivations',
         needsAuth: ['adobe'],
-        args: ['componentId', 'action', 'limit'],
+        args: ['componentId', 'action', 'limit', 'skip', 'since', 'failedOnly', 'includeTriggers'],
     },
     {
         tool: 'read_runtime_activation',

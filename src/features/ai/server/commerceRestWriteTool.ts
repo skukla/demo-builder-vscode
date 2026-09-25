@@ -50,7 +50,8 @@ export function registerCommerceRestWriteTool(
                 'the workspace credential the ERP integration deploys with: create or change customers, ' +
                 'companies, credit limits, orders, products, stock, or delete a record. Changes LIVE ' +
                 'store data; a DELETE cannot be undone. Requires confirm:true and raises a dialog for the ' +
-                'user. Read the record first with run_commerce_rest. ACCS backends only for now.',
+                'user. Read the record first with run_commerce_rest (with fields= to keep it small). ' +
+                'The answer is the record Commerce returns, cut at 30,000 characters. ACCS backends only for now.',
             inputSchema: {
                 method: z.enum(WRITE_METHODS).describe('POST creates, PUT replaces or updates, DELETE removes'),
                 path: z

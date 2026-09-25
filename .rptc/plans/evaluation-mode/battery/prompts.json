@@ -958,6 +958,15 @@
     "why": "2026-09-24: the refresh job reported success while its log said 'partner refresh failed: Request timed out'. Only the activation's own log says that; the extension's debug log cannot see inside Runtime."
   },
   {
+    "id": "runtime-invoke-replay",
+    "prompt": "The contract-price webhook left a cart at Commerce's price and its successful run left no record in Runtime. Run webhook/item-prices yourself with a cart payload for customer group 18 and show me what it answered and logged.",
+    "expect": [
+      "invoke_runtime_action"
+    ],
+    "cwd": "project",
+    "why": "2026-09-25: a successful blocking run is not recorded by Runtime, so the only way to see what a webhook did was to invoke it by hand with curl and the CLI's token. The tool replays an action with a payload and answers its record."
+  },
+  {
     "id": "integration-settings-read",
     "prompt": "What is my ERP integration's ERP called, and which of its settings still need a value?",
     "expect": [

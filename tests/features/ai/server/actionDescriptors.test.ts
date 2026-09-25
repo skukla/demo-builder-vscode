@@ -84,6 +84,8 @@ describe('ACTION_DESCRIPTORS', () => {
             // this row stretches is that a confirm gate is about SURPRISE as much
             // as about loss.
             'install_prerequisite',
+            // Runs a deployed action with a payload; the action may write to Commerce or the ERP.
+            'invoke_runtime_action',
             // Opens a browser window — gated for the same surprise reason as open_url.
             'open_erp_screen',
             'refresh_block_library',

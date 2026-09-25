@@ -8,11 +8,17 @@
 
 const mockListRuntimeActivations = jest.fn();
 const mockReadRuntimeActivation = jest.fn();
+const mockInvokeRuntimeAction = jest.fn();
 const mockRuntimeNamespaceEnv = jest.fn();
+jest.mock('@/features/app-builder/services/runtimeActivations', () => ({
+    ...jest.requireActual('@/features/app-builder/services/runtimeActivations'),
+    listRuntimeActivations: (...args: unknown[]) => mockListRuntimeActivations(...args),
+    invokeRuntimeAction: (...args: unknown[]) => mockInvokeRuntimeAction(...args),
+    invokeWebAction: (...args: unknown[]) => mockInvokeWebAction(...args),
+    readRuntimeActivation: (...args: unknown[]) => mockReadRuntimeActivation(...args),
+}));
 jest.mock('@/features/app-builder/services/runtimeNamespace', () => ({
     ...jest.requireActual('@/features/app-builder/services/runtimeNamespace'),
-    listRuntimeActivations: (...args: unknown[]) => mockListRuntimeActivations(...args),
-    readRuntimeActivation: (...args: unknown[]) => mockReadRuntimeActivation(...args),
     runtimeNamespaceEnv: (...args: unknown[]) => mockRuntimeNamespaceEnv(...args),
 }));
 jest.mock('@/features/dashboard/handlers/appBuilderComponentHandlers', () => ({
@@ -23,13 +29,19 @@ jest.mock('@/core/shell/orgContextEnv', () => ({
     withOrgContext: jest.fn((_t: unknown, fn: () => Promise<unknown>) => fn()),
 }));
 const mockCommandExecutor = { execute: jest.fn() };
+const mockResolveAppManagementAuth = jest.fn();
+jest.mock('@/features/project-creation/services/appBuilderComponentRunnerDeps', () => ({
+    resolveAppManagementAuth: (...args: unknown[]) => mockResolveAppManagementAuth(...args),
+}));
+const mockInvokeWebAction = jest.fn();
 jest.mock('@/core/di/serviceLocator', () => ({
-    ServiceLocator: { getCommandExecutor: jest.fn(() => mockCommandExecutor) },
+    ServiceLocator: { getCommandExecutor: jest.fn(() => mockCommandExecutor), getAuthenticationService: jest.fn(() => ({ fake: 'auth service' })) },
 }));
 
 import { withOrgContext } from '@/core/shell/orgContextEnv';
 import { runGuards } from '@/features/dashboard/handlers/appBuilderComponentHandlers';
 import {
+    handleInvokeRuntimeAction,
     handleListRuntimeActivations,
     handleReadRuntimeActivation,
 } from '@/features/dashboard/handlers/runtimeActivationHandlers';
@@ -61,6 +73,10 @@ beforeEach(() => {
     mockListRuntimeActivations.mockResolvedValue([ROW]);
     mockReadRuntimeActivation.mockResolvedValue({
         activationId: ROW.activationId,
+        action: 'erp/refresh-job',
+        status: 'application error',
+        success: false,
+        durationMs: 20206,
         logs: ['error: partner refresh failed: Request timed out'],
         result: { body: { delivered: 0 } },
     });
@@ -80,7 +96,7 @@ describe('handleListRuntimeActivations', () => {
         expect(mockListRuntimeActivations).toHaveBeenCalledWith(
             { commandManager: mockCommandExecutor, logger: context.logger },
             ENV,
-            { limit: 10, action: 'erp/refresh-job' },
+            { limit: 10, action: 'erp/refresh-job', skip: undefined, since: undefined, failedOnly: false, includeTriggers: false },
         );
         expect(JSON.stringify(result)).not.toContain(ENV.AIO_RUNTIME_AUTH);
     });
@@ -103,6 +119,25 @@ describe('handleListRuntimeActivations', () => {
             { orgId: 'org-1', projectId: 'proj-1', workspaceId: 'ws-erp' },
             expect.any(Function),
         );
+    });
+
+    it('passes skip, since, failedOnly and includeTriggers through, and refuses a since that is not a time', async () => {
+        const context = contextWith(createMockProject());
+
+        await handleListRuntimeActivations(context, { skip: 50, since: '2026-09-25T13:00:00Z', failedOnly: true, includeTriggers: true });
+        expect(mockListRuntimeActivations.mock.calls[0][2]).toEqual({
+            limit: undefined,
+            action: undefined,
+            skip: 50,
+            since: '2026-09-25T13:00:00Z',
+            failedOnly: true,
+            includeTriggers: true,
+        });
+
+        expect(await handleListRuntimeActivations(context, { since: 'yesterday' })).toMatchObject({
+            success: false,
+            code: ErrorCode.CONFIG_INVALID,
+        });
     });
 
     it('refuses a malformed action filter and an unknown integration before any Adobe touch', async () => {
@@ -151,6 +186,10 @@ describe('handleReadRuntimeActivation', () => {
             data: {
                 namespace: 'ns-stage',
                 activationId: ROW.activationId,
+                action: 'erp/refresh-job',
+                status: 'application error',
+                success: false,
+                durationMs: 20206,
                 logs: ['error: partner refresh failed: Request timed out'],
                 result: { body: { delivered: 0 } },
             },
@@ -171,5 +210,150 @@ describe('handleReadRuntimeActivation', () => {
             });
         }
         expect(mockRuntimeNamespaceEnv).not.toHaveBeenCalled();
+    });
+});
+
+
+describe('handleInvokeRuntimeAction', () => {
+    const INVOKED = {
+        activationId: ROW.activationId,
+        status: 'success',
+        success: true,
+        durationMs: 2597,
+        result: { body: [{ op: 'replace', path: 'result/price_updates', value: [{ base_price: 40, item_id: 34 }] }] },
+        logs: ['13:52:19.100 info: item-prices: partner C21, 1 line(s) priced'],
+    };
+
+    beforeEach(() => {
+        mockInvokeRuntimeAction.mockResolvedValue(INVOKED);
+    });
+
+    it("runs the action with the payload in the integration's workspace and answers the record with the namespace", async () => {
+        const project = createMockProject({
+            appBuilderComponents: {
+                'erp-integration': {
+                    kind: 'integration',
+                    status: 'deployed',
+                    source: { owner: 'skukla', repo: 'commerce-erp-integration' },
+                    workspace: { id: 'ws-erp', name: 'AcmeERP' },
+                },
+            },
+        });
+        const context = contextWith(project);
+        const payload = { quote: { customer_group_id: 18 }, shippingAssignment: { items: [] } };
+
+        const result = await handleInvokeRuntimeAction(context, { componentId: 'erp-integration', action: 'webhook/item-prices', payload });
+
+        expect(result).toEqual({ success: true, data: { namespace: 'ns-stage', ...INVOKED } });
+        expect(withOrgContext).toHaveBeenCalledWith(
+            { orgId: 'org-1', projectId: 'proj-1', workspaceId: 'ws-erp' },
+            expect.any(Function),
+        );
+        expect(mockInvokeRuntimeAction).toHaveBeenCalledWith(
+            { commandManager: mockCommandExecutor, logger: context.logger },
+            ENV,
+            'webhook/item-prices',
+            payload,
+        );
+        expect(JSON.stringify(result)).not.toContain(ENV.AIO_RUNTIME_AUTH);
+    });
+
+    it("calls a WEB action through its deployed URL with the user's auth, then reads the run the extra-logging header recorded", async () => {
+        const project = createMockProject({
+            appBuilderComponents: {
+                'erp-integration': {
+                    kind: 'integration',
+                    status: 'deployed',
+                    source: { owner: 'skukla', repo: 'commerce-erp-integration' },
+                    workspace: { id: 'ws-erp', name: 'AcmeERP' },
+                    deployedUrls: { 'runtime/webhook/item-prices': 'https://ns.adobeioruntime.net/api/v1/web/webhook/item-prices' },
+                },
+            },
+        });
+        const auth = { accessToken: 'fake-test-token-not-a-secret', imsOrgId: 'ORG@AdobeOrg' };
+        mockResolveAppManagementAuth.mockResolvedValue(auth);
+        mockInvokeWebAction.mockResolvedValue({ httpStatus: 200, ok: true, result: [{ op: 'replace' }] });
+        mockListRuntimeActivations.mockResolvedValue([{ ...ROW, action: 'webhook/item-prices', durationMs: 2597 }]);
+        const payload = { quote: { customer_group_id: 18 } };
+
+        const result = await handleInvokeRuntimeAction(contextWith(project), { componentId: 'erp-integration', action: 'webhook/item-prices', payload });
+
+        expect(mockInvokeWebAction).toHaveBeenCalledWith(
+            'https://ns.adobeioruntime.net/api/v1/web/webhook/item-prices',
+            auth,
+            payload,
+            expect.any(Function),
+        );
+        expect(mockInvokeRuntimeAction).not.toHaveBeenCalled();
+        expect(mockListRuntimeActivations.mock.calls[0][2]).toEqual({ action: 'webhook/item-prices', limit: 1, since: expect.any(String) });
+        expect(mockReadRuntimeActivation).toHaveBeenCalledWith(expect.anything(), ENV, ROW.activationId);
+        expect(result).toEqual({
+            success: true,
+            data: {
+                namespace: 'ns-stage',
+                mode: 'web',
+                httpStatus: 200,
+                success: true,
+                result: [{ op: 'replace' }],
+                activationId: ROW.activationId,
+                durationMs: 2597,
+                logs: ['error: partner refresh failed: Request timed out'],
+            },
+        });
+        expect(JSON.stringify(result)).not.toContain(auth.accessToken);
+    });
+
+    it('a web action with no Adobe sign-in is a refusal naming the sign-in', async () => {
+        const project = createMockProject({
+            appBuilderComponents: {
+                'erp-integration': {
+                    kind: 'integration',
+                    status: 'deployed',
+                    source: { owner: 'skukla', repo: 'commerce-erp-integration' },
+                    deployedUrls: { 'runtime/webhook/discounts': 'https://ns.adobeioruntime.net/api/v1/web/webhook/discounts' },
+                },
+            },
+        });
+        mockResolveAppManagementAuth.mockResolvedValue(undefined);
+        expect(await handleInvokeRuntimeAction(contextWith(project), { componentId: 'erp-integration', action: 'webhook/discounts' })).toMatchObject({
+            success: false,
+            code: ErrorCode.AUTH_REQUIRED,
+        });
+        expect(mockInvokeWebAction).not.toHaveBeenCalled();
+    });
+
+    it('runs with an empty payload when none is given', async () => {
+        await handleInvokeRuntimeAction(contextWith(createMockProject()), { action: 'erp/refresh-job' });
+        expect(mockInvokeRuntimeAction.mock.calls[0].slice(2)).toEqual(['erp/refresh-job', {}]);
+    });
+
+    it('refuses a missing or malformed action and a payload that is not an object, before any call', async () => {
+        const context = contextWith(createMockProject());
+        for (const payload of [
+            {},
+            { action: '' },
+            { action: 'webhook/item-prices; rm -rf /' },
+            { action: 'webhook/item-prices', payload: [1, 2] as unknown as Record<string, unknown> },
+            { action: 'webhook/item-prices', payload: 'text' as unknown as Record<string, unknown> },
+        ]) {
+            expect(await handleInvokeRuntimeAction(context, payload)).toMatchObject({ success: false, code: ErrorCode.CONFIG_INVALID });
+        }
+        expect(mockRuntimeNamespaceEnv).not.toHaveBeenCalled();
+        expect(mockInvokeRuntimeAction).not.toHaveBeenCalled();
+    });
+
+    it('runs the guard chain first, and a namespace that cannot be reached is a refusal in plain words', async () => {
+        (runGuards as jest.Mock).mockResolvedValueOnce({ error: 'Sign in to Adobe', code: ErrorCode.AUTH_REQUIRED });
+        expect(await handleInvokeRuntimeAction(contextWith(createMockProject()), { action: 'erp/refresh-job' })).toEqual({
+            success: false,
+            error: 'Sign in to Adobe',
+            code: ErrorCode.AUTH_REQUIRED,
+        });
+
+        mockInvokeRuntimeAction.mockRejectedValue(new Error('An AUTH key must be specified'));
+        expect(await handleInvokeRuntimeAction(contextWith(createMockProject()), { action: 'erp/refresh-job' })).toEqual({
+            success: false,
+            error: "Could not read this project's Adobe Runtime namespace. See Debug Logs for the reason.",
+        });
     });
 });

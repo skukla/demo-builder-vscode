@@ -428,6 +428,9 @@ describe('rows with no output safety net are classified', () => {
         'write_erp_rest',
         'list_runtime_activations',
         'read_runtime_activation',
+        // `handleInvokeRuntimeAction` returns `{namespace, activationId, status, success,
+        // durationMs, result, logs}` with the logs compacted and cut (2026-09-25).
+        'invoke_runtime_action',
         // An integration's Settings (AB-21), read before listing:
         // `handleGetIntegrationSettings` returns `{id, settings: {fields, connected}}`
         // and `saveIntegrationSettings` returns `{success, saved, settings}` —

@@ -164,7 +164,10 @@ screen. `list_runtime_activations` and `read_runtime_activation` read what RAN i
 Runtime namespace and one activation's log. One thing they cannot show, per Adobe's Runtime
 logging guide: a successful blocking web-action call leaves no activation record unless it was
 sent with `X-OW-EXTRA-LOGGING: on`; failures and timer runs always do. A missing row is "no
-failure recorded", never "did not run". Beside them, `run_commerce_rest` and `write_commerce_rest` reach the
+failure recorded", never "did not run" — which is what `invoke_runtime_action` is for: it runs
+one deployed action with a payload (an event handler's `{data:{value}}`, a webhook's cart) and
+answers the whole record, result and log lines, of the run it started. The list takes
+`failedOnly`, `since` and `skip`, and hides the timer firings unless asked. Beside them, `run_commerce_rest` and `write_commerce_rest` reach the
 Commerce REST API for the same instance (AB-29).
 `get_integration_settings` reads the integration's settings, and `set_integration_settings`
 changes a text setting (the ERP's name) and redeploys; a secret setting is entered on the

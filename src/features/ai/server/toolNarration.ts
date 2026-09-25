@@ -183,6 +183,7 @@ export const TOOL_NARRATION: Record<string, string> = {
     write_erp_rest: 'Changing the ERP',
     list_runtime_activations: 'Reading what ran in Runtime',
     read_runtime_activation: "Reading one activation's log",
+    invoke_runtime_action: 'Invoking a Runtime action',
     get_erp_record: 'Comparing a record with the ERP',
     get_erp_order_trace: 'Following an order into the ERP',
     reset_erp_records: 'Resetting the ERP records',

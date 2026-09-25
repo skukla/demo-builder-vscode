@@ -174,6 +174,25 @@ describe('the signed GET (args pinned)', () => {
         expect(JSON.parse(out).total_count).toBe(1);
     });
 
+    it('a search with no page size gets 20 and says so; an explicit one and a plain read are untouched', async () => {
+        const out = await serve().raw({ path: 'orders?searchCriteria[filter_groups][0][filters][0][field]=status&searchCriteria[filter_groups][0][filters][0][value]=pending' });
+        expect(fetchMock.mock.calls[1][0]).toBe(
+            'https://na1-sandbox.api.commerce.adobe.com/UoGYsHrcxMyeoVd2zUktZi/V1/orders?searchCriteria[filter_groups][0][filters][0][field]=status&searchCriteria[filter_groups][0][filters][0][value]=pending&searchCriteria[pageSize]=20',
+        );
+        expect(out.split('\n')[0]).toBe('[pageSize 20 applied; pass searchCriteria[pageSize] to change it]');
+
+        // The token is cached after the first mint, so from here every fetch is the REST call itself.
+        const restOnly = (body: string) => jest.fn().mockResolvedValue({ ok: true, status: 200, text: async () => body });
+        fetchMock = restOnly('{"items":[]}');
+        await serve().raw({ path: 'customers/search?searchCriteria[pageSize]=5' });
+        expect(String(fetchMock.mock.calls[0][0])).toMatch(/searchCriteria\[pageSize\]=5$/u);
+
+        fetchMock = restOnly('{"id":44}');
+        const plain = await serve().raw({ path: 'customers/44?fields=id' });
+        expect(String(fetchMock.mock.calls[0][0])).toMatch(/customers\/44\?fields=id$/u);
+        expect(plain).toBe('{"id":44}');
+    });
+
     it('reuses a minted token for the same workspace instead of asking IMS again', async () => {
         const s = serve();
         await s.raw({ path: 'customers/43' });

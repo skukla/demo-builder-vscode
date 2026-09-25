@@ -29,11 +29,15 @@ import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell/org
 import { deployWorkspaceId } from '@/features/app-builder/services/componentWorkspace';
 import {
     ACTIVATION_ID,
+    RUNTIME_ACTION_NAME,
+    invokeRuntimeAction,
+    invokeWebAction,
     listRuntimeActivations,
     readRuntimeActivation,
-    runtimeNamespaceEnv,
     type RuntimeActivationRow,
-} from '@/features/app-builder/services/runtimeNamespace';
+} from '@/features/app-builder/services/runtimeActivations';
+import { runtimeNamespaceEnv } from '@/features/app-builder/services/runtimeNamespace';
+import { resolveAppManagementAuth } from '@/features/project-creation/services/appBuilderComponentRunnerDeps';
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, HandlerResponse, MessageHandler } from '@/types/handlers';
@@ -102,7 +106,17 @@ export interface ListRuntimeActivationsPayload {
     limit?: number;
     /** Only this action, e.g. "erp/refresh-job". */
     action?: string;
+    /** Skip this many newest rows (paging past 50). */
+    skip?: number;
+    /** Only activations after this ISO time. */
+    since?: string;
+    /** Only runs that did not succeed. */
+    failedOnly?: boolean;
+    /** Keep the timer firings themselves; off by default. */
+    includeTriggers?: boolean;
 }
+
+const ACTION_NAME_WORDS = 'An action name is <package>/<action>, in letters, digits, dots, dashes and underscores.';
 
 /**
  * Handle 'listRuntimeActivations' — recent activations in a Runtime namespace,
@@ -118,9 +132,88 @@ export const handleListRuntimeActivations: MessageHandler<ListRuntimeActivations
     if (action && !/^[A-Za-z0-9_./-]{1,120}$/u.test(action)) {
         return { success: false, error: 'An action name is letters, digits, dots, dashes and slashes.', code: ErrorCode.CONFIG_INVALID };
     }
+    const since = typeof payload?.since === 'string' && payload.since.trim() ? payload.since.trim() : undefined;
+    if (since && Number.isNaN(Date.parse(since))) {
+        return { success: false, error: '`since` is an ISO 8601 time, e.g. 2026-09-25T13:00:00Z.', code: ErrorCode.CONFIG_INVALID };
+    }
     return inNamespace(context, opened, payload?.componentId, async (deps, env) => ({
-        activations: (await listRuntimeActivations(deps, env, { limit: payload?.limit, action })) as RuntimeActivationRow[],
+        activations: (await listRuntimeActivations(deps, env, {
+            limit: payload?.limit,
+            action,
+            skip: payload?.skip,
+            since,
+            failedOnly: payload?.failedOnly === true,
+            includeTriggers: payload?.includeTriggers === true,
+        })) as RuntimeActivationRow[],
     }));
+};
+
+export interface InvokeRuntimeActionPayload {
+    componentId?: string;
+    /** `<package>/<action>`, e.g. "webhook/item-prices" or "order-commerce/created". */
+    action?: string;
+    /** The action's parameters: an event handler takes `{ data: { value } }`, a web action its fields. */
+    payload?: Record<string, unknown>;
+}
+
+/** The deployed web URL of an integration's action, when the record has one. */
+function webUrlOf(project: Project, componentId: string | undefined, action: string): string | undefined {
+    if (!componentId) return undefined;
+    const url = project.appBuilderComponents?.[componentId]?.deployedUrls?.[`runtime/${action}`];
+    return typeof url === 'string' && url.includes('/web/') ? url : undefined;
+}
+
+/**
+ * Handle 'invokeRuntimeAction' — run one deployed action with a payload and answer its
+ * result, status and log lines. A web action (the cart webhooks, the ERP's own routes) is
+ * called through its URL with the signed-in user's token, because its Adobe-auth validator
+ * refuses a direct invoke; then its recorded run is read. Any other action is invoked
+ * blocking through the CLI. The replay that no Commerce event or timer can be made to do.
+ */
+export const handleInvokeRuntimeAction: MessageHandler<InvokeRuntimeActionPayload> = async (
+    context,
+    payload,
+): Promise<HandlerResponse> => {
+    const action = payload?.action?.trim();
+    if (!action || !RUNTIME_ACTION_NAME.test(action)) {
+        return { success: false, error: ACTION_NAME_WORDS, code: ErrorCode.CONFIG_INVALID };
+    }
+    const params = payload?.payload;
+    if (params !== undefined && (typeof params !== 'object' || params === null || Array.isArray(params))) {
+        return { success: false, error: '`payload` is a JSON object of the action\'s parameters.', code: ErrorCode.CONFIG_INVALID };
+    }
+    const opened = await openNamespaceRead(context, payload?.componentId);
+    if ('error' in opened) return opened.error;
+    const webUrl = webUrlOf(opened.project, payload?.componentId, action);
+    if (!webUrl) {
+        return inNamespace(context, opened, payload?.componentId, (deps, env) =>
+            invokeRuntimeAction(deps, env, action, params ?? {}),
+        );
+    }
+    const auth = await resolveAppManagementAuth(opened.project, ServiceLocator.getAuthenticationService());
+    if (!auth) {
+        return { success: false, error: 'Adobe sign-in required to call a web action.', code: ErrorCode.AUTH_REQUIRED };
+    }
+    const startedAt = new Date().toISOString();
+    let web;
+    try {
+        web = await invokeWebAction(webUrl, auth, params ?? {}, fetch);
+    } catch (error) {
+        return { success: false, error: `The web action did not answer: ${toError(error).message}` };
+    }
+    // The extra-logging header made Runtime keep the run; its newest activation is this one.
+    return inNamespace(context, opened, payload?.componentId, async (deps, env) => {
+        const [newest] = await listRuntimeActivations(deps, env, { action, limit: 1, since: startedAt });
+        const run = newest ? await readRuntimeActivation(deps, env, newest.activationId) : undefined;
+        return {
+            mode: 'web',
+            httpStatus: web.httpStatus,
+            success: web.ok,
+            result: web.result,
+            ...(newest ? { activationId: newest.activationId, durationMs: newest.durationMs } : {}),
+            logs: run?.logs ?? [],
+        };
+    });
 };
 
 /**

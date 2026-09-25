@@ -76,8 +76,14 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
     read_runtime_activation: {
         bytes: 40_000,
         why:
-            'Runtime caps an activation log at 10 MB but the CLI prints the lines; a handler log ' +
-            'seen 2026-09-24 was under 2 KB. Not yet enforced by a cut: measure and tighten.',
+            'ENFORCED: log lines are compacted (one timestamp, no action path, node deprecation ' +
+            'noise dropped) and cut at 30,000 characters with the cut declared (2026-09-25).',
+    },
+    invoke_runtime_action: {
+        bytes: 40_000,
+        why:
+            "ENFORCED like read_runtime_activation: the action's result plus its compacted log lines, " +
+            'cut at 30,000 characters (2026-09-25).',
     },
     run_commerce_rest: {
         bytes: 31_000,

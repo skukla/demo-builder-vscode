@@ -254,9 +254,10 @@ describe('dashboardHandlers', () => {
             // life — behind the agent tools get_erp_record and get_erp_order_trace.
             //
             // readErpApi + writeErpApi + listRuntimeActivations + readRuntimeActivation
+            // (66 → 67, 2026-09-25): invokeRuntimeAction — replay a Runtime action with a payload.
             // (62 → 66, 2026-09-24): the ERP's own API for agents (its screens' reads and
             // actions without the screen), and what RAN in a Runtime namespace.
-            expect(types).toHaveLength(66);
+            expect(types).toHaveLength(67);
         });
 
         it('should have handlers as functions', () => {
