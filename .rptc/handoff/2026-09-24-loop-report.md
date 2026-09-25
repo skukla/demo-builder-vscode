@@ -688,6 +688,16 @@ develop merged into this branch, then this list, then the cut from develop.
   ERP call, so the Admin page showed only the failed hold, not the send. The trace tool
   answers nothing at all when the Commerce read times out; it should fall back to the ERP's
   own record (not done; noted).
+- **PROVEN LIVE after the three fixes (2026-09-25, 12:24 UTC): the order path both ways.** A
+  third REST order (Commerce 3000000007, $114) became ERP sales order 0000001001 booked to
+  Kukla Studios, credit approved against its 150,000 limit, and the ERP's number was on the
+  Commerce order within 46 seconds of placement. The trace tool shows all three sides
+  (placed, created in the ERP, sent) and Runtime recorded no failed run for it. Going the
+  other way, rejecting the wrongly booked order 0000001000 in the ERP cancelled Commerce
+  order 3000000006 in 35 seconds, and the trace shows "Cancellation applied to Commerce".
+  Left behind on purpose: I/O Events will keep retrying the stale credit-hold notice for the
+  cancelled order 6 for up to a day; each retry fails harmlessly and shows as a failed
+  activation.
 - **Still owed from the owner's request** ("bidirectionally integrated" and "when an ERP is
   deleted, the resetting of the records in commerce works"): an order placed on the storefront
   as a Kukla Studios user (Commerce→ERP), ERP-side changes read back in Commerce (price via
